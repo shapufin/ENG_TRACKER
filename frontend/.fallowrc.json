@@ -1,0 +1,78 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "ignoreDependencies": ["autoprefixer"],
+  "dynamicallyLoaded": [
+    "src/pages/admin/LeaveRequestsPage.tsx",
+    "src/pages/admin/OvertimeLogsPage.tsx",
+    "src/pages/admin/StandbyLogsPage.tsx",
+    "src/pages/calendar/CalendarPage.tsx",
+    "src/pages/team/TLApprovalDashboard.tsx",
+    "src/plugins/control_room/pages/ControlRoomDashboardPage.tsx",
+    "src/plugins/control_room/pages/ControlRoomAccessPage.tsx",
+    "src/plugins/control_room/components/crTestFixtures.ts"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/select.tsx",
+        "src/components/dashboard/widgetRegistry.ts"
+      ],
+      "rules": {
+        "unused-exports": "off"
+      }
+    },
+    {
+      "files": ["src/services/pluginService.ts"],
+      "rules": {
+        "unused-types": "off"
+      }
+    }
+  ],
+  "ignoreExports": [
+    {
+      "file": "src/plugins/organigrama/generatedMeta.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "src/plugins/organigrama/pages/groupHelpers.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "src/plugins/organigrama/types.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "src/plugins/organigrama/components/builderEdgeHelpers.ts",
+      "exports": ["markerEndFor", "builderEdgeType"]
+    },
+    {
+      "file": "src/plugins/organigrama/components/BuilderEdge.tsx",
+      "exports": ["ReportsToEdge", "ContainsEdge", "DottedLineEdge", "AssistantEdge", "AssociationEdge"]
+    },
+    {
+      "file": "src/plugins/organigrama/hooks/useBuilderGraphOps.ts",
+      "exports": ["makeNode"]
+    },
+    {
+      "file": "src/plugins/organigrama/hooks/useOrganigramaQueries.ts",
+      "exports": ["useOrganigramaSubtree"]
+    },
+    {
+      "file": "src/hooks/useMutationHandlers.ts",
+      "exports": ["createMutationHandlers"]
+    },
+    {
+      "file": "src/components/offline/OfflineIndicator.tsx",
+      "exports": ["InlineOfflineBadge"]
+    },
+    {
+      "file": "src/plugins/control_room/utils/controlRoomFormatters.ts",
+      "exports": ["statusBadgeClass", "statusColor", "formatPercent"]
+    },
+    {
+      "file": "src/pages/admin/hooks/hoursLogsFilter.ts",
+      "exports": ["calculateHoursStats", "filterHoursLogs"]
+    }
+  ]
+}

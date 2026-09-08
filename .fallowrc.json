@@ -1,0 +1,52 @@
+﻿{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "ignorePatterns": [
+    "venv/**",
+    "htmlcov/**",
+    ".pytest_cache/**",
+    "frontend/dist/**",
+    "frontend/node_modules/**",
+    "**/*.min.js",
+    "**/*.min.css"
+  ],
+  "ignoreDependencies": ["autoprefixer"],
+  "dynamicallyLoaded": [
+    "frontend/src/pages/admin/LeaveRequestsPage.tsx",
+    "frontend/src/pages/admin/OvertimeLogsPage.tsx",
+    "frontend/src/pages/admin/StandbyLogsPage.tsx",
+    "frontend/src/pages/calendar/CalendarPage.tsx",
+    "frontend/src/pages/team/TLApprovalDashboard.tsx",
+    "frontend/src/plugins/control_room/pages/ControlRoomDashboardPage.tsx",
+    "frontend/src/plugins/control_room/pages/ControlRoomAccessPage.tsx"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "frontend/src/components/ui/dialog.tsx",
+        "frontend/src/components/ui/select.tsx",
+        "frontend/src/components/dashboard/widgetRegistry.ts"
+      ],
+      "rules": {
+        "unused-exports": "off"
+      }
+    },
+    {
+      "files": ["frontend/src/services/pluginService.ts"],
+      "rules": {
+        "unused-types": "off"
+      }
+    },
+    {
+      "files": [
+        "frontend/scripts/visual-route-manifest.mjs",
+        "frontend/scripts/visual-capture-helpers.mjs",
+        "frontend/scripts/visual-route-manifest.test.mjs",
+        "frontend/scripts/visual-capture-helpers.test.mjs"
+      ],
+      "rules": {
+        "unused-exports": "off",
+        "unused-files": "off"
+      }
+    }
+  ]
+}

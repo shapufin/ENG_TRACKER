@@ -1,0 +1,5 @@
+# Development / CI dependencies (NOT installed in the production Docker image).
+# Install with: pip install -r requirements.txt -r requirements-dev.txt
+
+# Lint
+ruff==0.15.20

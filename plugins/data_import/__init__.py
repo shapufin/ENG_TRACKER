@@ -1,0 +1,1 @@
+default_app_config = 'plugins.data_import.apps.DataImportConfig'

@@ -1,0 +1,202 @@
+# Production Docker Compose for Engineering Tracker
+#
+# Usage:
+#   docker compose up -d
+#
+# Required environment variables (set in .env or shell):
+#   SECRET_KEY - Django secret key (use: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")
+#   ALLOWED_HOSTS - comma-separated list of allowed hosts
+#   FRONTEND_URL - public URL of the frontend (for CORS)
+#   DB_NAME, DB_USER, DB_PASSWORD - PostgreSQL credentials
+#   REDIS_PASSWORD - Redis password (required for production)
+#   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY - Web Push keys (python -m py_vapid generate)
+#
+# Optional:
+#   EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
+#   DB_SSL_MODE - PostgreSQL SSL mode (default: prefer)
+
+name: engineering-tracker
+
+services:
+  db:
+    image: postgres:16-slim
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-engtracker}
+      POSTGRES_USER: ${DB_USER:-engtracker}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend_net
+    # No port published — only accessible within the backend network
+    security_opt:
+      - no-new-privileges:true
+    # P1-6: resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+
+  redis:
+    image: redis:7-slim
+    restart: unless-stopped
+    # P1-5: Redis password required in production
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      # P1-5: healthcheck must authenticate with the password
+      test: ["CMD", "redis-cli", "-a", "$${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    networks:
+      - backend_net
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings_production
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
+      FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
+      USE_REDIS: "true"
+      # P1-5: Redis URL includes password
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-engtracker}
+      DB_USER: ${DB_USER:-engtracker}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      # P1-10: Database SSL — use 'prefer' by default, 'require' for managed DBs
+      DB_SSL_MODE: ${DB_SSL_MODE:-prefer}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-True}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-}
+      CACHE_VERSION: ${CACHE_VERSION:-1}
+    volumes:
+      - media_files:/app/media
+      - static_files:/app/staticfiles
+    networks:
+      - backend_net
+      - frontend_net
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/ready/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-8080}:8080"
+    networks:
+      - frontend_net
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+
+  # P2-4: Nightly database backup service.
+  # Runs pg_dump once and exits. Schedule via host cron or a cron sidecar:
+  #   docker compose --profile backup run --rm db-backup
+  # Or schedule nightly (host crontab):
+  #   0 2 * * * cd /path/to/project && docker compose --profile backup run --rm db-backup
+  # Backups are written to the db_backup volume as
+  # engtracker_YYYY-MM-DD_HHMMSS.dump (custom-format pg_dump -Fc).
+  # Copy offsite to an encrypted location (see README.md → Database → Backups).
+  db-backup:
+    image: postgres:16-slim
+    profiles: ["backup"]  # not started by `docker compose up`
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: ${DB_USER:-engtracker}
+      PGDATABASE: ${DB_NAME:-engtracker}
+    volumes:
+      - db_backup:/backups
+    entrypoint: >
+      sh -c "pg_dump -Fc -f /backups/engtracker_$$(date +%Y-%m-%d_%H%M%S).dump"
+    networks:
+      - backend_net
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_files:
+  static_files:
+  db_backup:
+
+networks:
+  # P1-5: network segmentation
+  # backend_net: db + redis + backend only (no frontend access)
+  # frontend_net: frontend + backend only (no db/redis access)
+  backend_net:
+    driver: bridge
+    internal: true
+  frontend_net:
+    driver: bridge

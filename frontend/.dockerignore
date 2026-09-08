@@ -1,0 +1,29 @@
+node_modules
+dist
+.vite
+coverage
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# Docker
+Dockerfile
+*.dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Agent / Devin
+.devin
+.agents
+.claude
+.codeium
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Docs
+*.md

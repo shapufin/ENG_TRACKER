@@ -1,0 +1,115 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django
+*.log
+logs/
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Stray dev directories (orphaned seed/test files)
+tutorials/
+ticket_imports/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+frontend/coverage/
+frontend/eslint-results.json
+
+# AI/Analyzer artifacts (regenerable)
+health.json
+urls_inventory.json
+frontend/fallow_full.json
+*.fallow.json
+.fallow/cache.bin
+.fallow/graph-cache.bin
+
+# Design audit (local dev only — designlang output)
+design-audit/
+
+# Design screenshots (regenerable — scraped by scripts/scrape-screenshots.mjs)
+design-screenshots/
+
+# Visual fingerprints (regenerable — captured by scripts/visual-verify.mjs)
+design-fingerprints/
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Backup files
+*.bak
+*.backup
+
+# VAPID keys (Web Push)
+.vapid_keys.json
+
+# Local AI assistant workflows (Devin/opencode) — local dev only, never push
+.devin/
+.opencode/
+opencode.json
+
+# Local AI assistant configs (tool-specific, not app code)
+.claude/
+.agents/
+.fallow/
+.ruff_cache/
+
+# PII / export data (real employee data — never push)
+*.csv
+*.xlsx
+export_skills_plugin.py
+
+# Design mockups (HTML reference, not app source)
+Time Tracker UI Project/
+
+# Skills lock file (local tool state)
+skills-lock.json

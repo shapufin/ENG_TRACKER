@@ -1,0 +1,62 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv
+*.egg-info
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Django
+db.sqlite3
+*.log
+logs/
+media/
+staticfiles/
+
+# Node / Frontend
+frontend/node_modules
+frontend/dist
+frontend/.vite
+frontend/coverage
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docker
+Dockerfile
+*.dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Devin / Agent
+.devin
+.agents
+.claude
+.codeium
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Environment files (secrets — never bake into image)
+.env
+.env.*
+!.env.example
+
+# Docs (not needed in image)
+*.md
+docs/

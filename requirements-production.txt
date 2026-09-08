@@ -1,0 +1,7 @@
+# Production dependencies (on top of requirements.txt)
+# Install with: pip install -r requirements.txt -r requirements-production.txt
+
+gunicorn==23.0.0
+psycopg2-binary==2.9.10
+django-redis==5.4.0
+whitenoise==6.9.0
