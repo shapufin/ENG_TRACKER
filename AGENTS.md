@@ -20,6 +20,29 @@ only; historical detail lives in `.devin/tracking/`.
   `.devin/tracking/agents-archive-<date>.md`.
 - Never commit or push unless explicitly requested.
 
+### trace-mcp (code intelligence graph)
+
+trace-mcp is wired as an MCP server for both Devin (`.devin/mcp_config.json`)
+and Claude Code (`~/.claude.json` + hooks). It indexes the codebase graph
+(1,426 files / 5,864 symbols) and serves framework-aware cross-stack queries
+that `code_search` and `.devin/` context cannot replicate in one call.
+
+- **Use for:** cross-stack impact analysis ("what breaks if I change
+  `OvertimeLog`?"), call-graph traversal, type hierarchy, find-usages across
+  Django↔React boundaries, `get_task_context` for composite tasks.
+- **Do NOT use for:** tasks the `.devin/` router already covers (domain rules,
+  invariants, permission checks, plan creation). The router is faster for
+  curated context; trace-mcp is for structural/dependency questions.
+- **Benchmark (2026-09-08, synthetic):** 91.6% token reduction on structured
+  tasks (905,753 → 75,729). Production mixed-workload expectation: ~40-55%
+  on tasks the router doesn't pre-cover. Re-measure with
+  `trace-mcp savings` after real usage.
+- **Maintenance:** daemon runs on `127.0.0.1:3741`; auto-reindex after
+  every edit via PostToolUse hooks (Claude Code: `~/.claude/hooks/`,
+  Devin: `.devin/hooks.v1.json` + `.devin/hooks/trace-mcp-reindex.ps1`).
+  For full schema changes (new migration, model rename across files),
+  run `trace-mcp index .` manually. Config: `.devin/mcp_config.json`.
+
 Validation: `.devin/validate-state.ps1 -Event Manual` is the repository state
 check. It must report only known warnings.
 
@@ -74,6 +97,29 @@ check. It must report only known warnings.
   overtime/standby approval transitions are row-locked and idempotent; the
   overtime approval client no longer sends an unused rejection payload.
   Focused verification: backend 142/142 and frontend service tests 7/7.
+
+## Current session outcome — 2026-09-08 (GitHub setup + trace-mcp wiring)
+
+- GitHub repo created and first commit pushed: `shapufin/ENG_TRACKER.git`,
+  branch `main`, commit `9884859`, 1501 files. `.gitignore` hardened before
+  push: added `*.csv`, `*.xlsx`, `export_skills_plugin.py`,
+  `Time Tracker UI Project/`, `.claude/`, `.agents/`, `.fallow/`,
+  `.ruff_cache/`, `skills-lock.json` — all real employee PII and local AI
+  tool configs excluded. Secrets scan: 0 hardcoded secrets in source; dev
+  `SECRET_KEY` is intentional and guarded by `settings_production.py`.
+- trace-mcp (code intelligence graph) installed, indexed (1,426 files /
+  5,864 symbols, 14s), and wired into both Devin (`.devin/mcp_config.json`,
+  stdio `trace-mcp serve --preset standard`) and Claude Code (`~/.claude.json`
+  + hooks via `trace-mcp init`). Auto-reindex hooks installed for BOTH
+  agents: Claude Code PostToolUse hook (`~/.claude/hooks/`) and Devin
+  PostToolUse hook (`.devin/hooks.v1.json` +
+  `.devin/hooks/trace-mcp-reindex.ps1`) — both fire after edit/write and
+  run `trace-mcp index-file <path>` for incremental reindex. Benchmark:
+  91.6% synthetic token reduction
+  on structured tasks (905,753 → 75,729); production expectation ~40-55% on
+  tasks the `.devin/` router doesn't pre-cover. Use for cross-stack impact
+  analysis, call graphs, type hierarchy — NOT for router-covered domain rules.
+  Re-measure with `trace-mcp savings` after real usage.
 
 ## Current session outcome — 2026-09-03 (theme fidelity pass: sidebar sections + admin conversion)
 

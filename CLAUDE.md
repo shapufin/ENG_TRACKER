@@ -32,6 +32,7 @@ calendar, or plugins, also read the linked domain file.
 | file location, where is, find file | `.devin/context/PROJECT_INDEX.md` | Directory inventory |
 | plan, create plan, megaplan, optimize plan | `.devin/context/11-PLAN-CREATION.md` | Senior plan protocol: zero-hallucination specs + self-correcting gates |
 | past bug, session history, what changed | `AGENTS.md` (recent) + `.devin/tracking/agents-archive-*.md` | Session logs |
+| cross-stack impact, blast radius, call graph, type hierarchy | trace-mcp MCP server (`get_change_impact`, `get_call_graph`) | Precomputed graph — use instead of 10 grep/read calls |
 
 ## Hot Invariants
 

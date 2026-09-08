@@ -102,6 +102,7 @@ opencode.json
 .agents/
 .fallow/
 .ruff_cache/
+.trace-mcp/
 
 # PII / export data (real employee data — never push)
 *.csv
