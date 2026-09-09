@@ -118,7 +118,9 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="no-scrollbar grid min-h-0 flex-1 gap-4 overflow-y-auto px-1 py-1 md:grid-cols-2">
+        {/* Each panel scrolls independently (max-h-[min(...,50vh)] below) — the
+            wrapper itself must not also scroll, or it double-scrolls. */}
+        <div className="grid min-h-0 flex-1 gap-4 px-1 py-1 md:grid-cols-2">
           {/* Left panel: current members */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">

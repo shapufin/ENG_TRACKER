@@ -1,5 +1,12 @@
 import React, { useMemo } from "react";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { Mail, User, Calendar, Paperclip } from "lucide-react";
@@ -25,15 +32,15 @@ export const EmailThreadViewer: React.FC<EmailThreadViewerProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg" className="max-h-[80vh]">
-        <div className="shrink-0">
+        <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
             {email?.subject || "Email Thread"}
           </DialogTitle>
           <DialogDescription>Parsed email preview for this evidence item.</DialogDescription>
-        </div>
+        </DialogHeader>
 
-        <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-1 py-1">
+        <DialogBody>
           {isLoading && <p className="text-sm text-muted-foreground">Loading preview...</p>}
 
           {!isLoading && !email && (
@@ -99,7 +106,7 @@ export const EmailThreadViewer: React.FC<EmailThreadViewerProps> = ({
               )}
             </div>
           )}
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

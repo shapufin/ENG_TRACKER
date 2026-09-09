@@ -48,7 +48,14 @@ describe("TechMembersDialog scroll contract", () => {
     expect(dlg.className).toContain("flex-col");
     expect(dlg.className).toContain("overflow-hidden");
     expect(dlg.className).not.toContain("overflow-y-auto");
-    expect(document.querySelectorAll(".flex-1.overflow-y-auto").length).toBeGreaterThan(0);
+    // Two independently-scrolling panels (members / candidates), each capped
+    // to a viewport-relative height — NOT flex-1, since a flex-1 wrapper
+    // around both would double-scroll against these.
+    const panelScrollers = document.querySelectorAll(".overflow-y-auto");
+    expect(panelScrollers.length).toBe(2);
+    panelScrollers.forEach((el) => {
+      expect(el.className).not.toContain("flex-1");
+    });
   });
 
   it("panel caps are viewport-relative, never fixed px", async () => {

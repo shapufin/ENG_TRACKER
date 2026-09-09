@@ -3,6 +3,7 @@ import { Download, Share, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -53,13 +54,15 @@ export function SidebarInstallButton({ collapsed }: SidebarInstallButtonProps) {
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent size="sm">
-          <DialogHeader className="shrink-0">
+          <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Download className="h-5 w-5" />
               Install Engineering Tracker
             </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
             <DialogDescription asChild>
-              <div className="space-y-3 pt-2 text-sm text-muted-foreground">
+              <div className="space-y-3 text-sm text-muted-foreground">
                 {isIOS ? (
                   <div className="space-y-2">
                     <p>
@@ -112,7 +115,7 @@ export function SidebarInstallButton({ collapsed }: SidebarInstallButtonProps) {
                 )}
               </div>
             </DialogDescription>
-          </DialogHeader>
+          </DialogBody>
         </DialogContent>
       </Dialog>
     </>
