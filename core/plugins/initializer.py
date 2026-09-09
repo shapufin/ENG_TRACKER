@@ -110,18 +110,31 @@ class PluginTableManager:
                 PluginTableManager.backup_plugin_data(plugin_name)
             
             tables = PluginTableManager.get_plugin_tables(plugin_name)
-            
+
             if not tables:
                 logger.info(f"No tables found for plugin {plugin_name}")
                 return True
-            
+
+            # Defense-in-depth: only drop tables that are still present in a
+            # fresh introspection pass and belong to this plugin's prefix.
+            # `tables` already comes from introspection, but re-validating
+            # here means a future caller can never smuggle an arbitrary
+            # table name into this method and have it reach raw SQL.
+            existing_tables = PluginTableManager.get_existing_tables()
+            pattern = f"{plugin_name}_"
+            safe_tables = [
+                t for t in tables
+                if t in existing_tables and t.startswith(pattern)
+            ]
+
             with connection.cursor() as cursor:
-                for table in tables:
+                for table in safe_tables:
+                    quoted_table = connection.ops.quote_name(table)
                     try:
                         if connection.vendor == 'sqlite':
-                            cursor.execute(f"DROP TABLE IF EXISTS {table}")
+                            cursor.execute(f"DROP TABLE IF EXISTS {quoted_table}")
                         else:
-                            cursor.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
+                            cursor.execute(f"DROP TABLE IF EXISTS {quoted_table} CASCADE")
                         logger.info(f"Dropped table: {table}")
                     except Exception as e:
                         logger.error(f"Failed to drop table {table}: {e}")
