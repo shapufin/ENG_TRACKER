@@ -1,6 +1,7 @@
 import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoadingCard } from "@/components/ui/LoadingCard";
+import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/badge";
@@ -252,9 +253,16 @@ export const CalendarManagementPage: React.FC = () => {
                   </p>
                   <h3 className="text-xl font-semibold">Global & Workspace Holidays</h3>
                 </div>
-                <Button onClick={() => openHolidayForm()}>
-                  <CalendarDays className="mr-2 h-4 w-4" /> Add Holiday
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <PluginImportButton
+                    targetKey="public_holidays"
+                    label="Import holidays"
+                    invalidateKeys={[["admin"]]}
+                  />
+                  <Button onClick={() => openHolidayForm()}>
+                    <CalendarDays className="mr-2 h-4 w-4" /> Add Holiday
+                  </Button>
+                </div>
               </div>
             </GlassCard>
             <HolidayTable

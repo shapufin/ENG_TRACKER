@@ -32,6 +32,13 @@ import { usePermissions } from "@/context/PermissionContext";
 import { useLeaveBalances } from "@/hooks/useLeaveBalances";
 import { useLeaveBalanceForm } from "./hooks/useLeaveBalanceForm";
 
+// PluginImportButton (admin page headers) reads the active-plugin list. With
+// data_import inactive it renders nothing — the same graceful path taken when
+// the plugin is disabled or removed.
+vi.mock("@/context/PluginContext", () => ({
+  usePlugins: () => ({ activePlugins: [], isLoading: false }),
+}));
+
 const mockForm = {
   formOpen: false,
   setFormOpen: vi.fn(),

@@ -24,6 +24,13 @@ vi.mock("sonner", () => ({
 // Import the mocked toast so we can assert on it directly (vi.mock hoists).
 import { toast } from "sonner";
 
+// PluginImportButton (admin page headers) reads the active-plugin list. With
+// data_import inactive it renders nothing — the same graceful path taken when
+// the plugin is disabled or removed.
+vi.mock("@/context/PluginContext", () => ({
+  usePlugins: () => ({ activePlugins: [], isLoading: false }),
+}));
+
 // Mock the child dialogs — TechsPage owns their open state, but we don't
 // want to exercise their internals here. We expose onConfirm/onOpenChange
 // so the page's mutation wiring stays under test.

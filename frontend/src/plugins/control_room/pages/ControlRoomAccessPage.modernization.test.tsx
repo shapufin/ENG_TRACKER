@@ -16,6 +16,13 @@ afterEach(() => vi.unstubAllGlobals());
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ControlRoomAccessPage } from "./ControlRoomAccessPage";
 
+// PluginImportButton (admin page headers) reads the active-plugin list. With
+// data_import inactive it renders nothing — the same graceful path taken when
+// the plugin is disabled or removed.
+vi.mock("@/context/PluginContext", () => ({
+  usePlugins: () => ({ activePlugins: [], isLoading: false }),
+}));
+
 vi.mock("../hooks/useControlRoomAccessPage", () => ({
   useControlRoomAccessPage: () => ({
     accessList: [],

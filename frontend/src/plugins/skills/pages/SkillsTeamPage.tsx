@@ -1,6 +1,7 @@
 /** TL/HR team skills matrix page with KPI cards, 2D sticky table, and export. */
 import React, { useEffect, useState } from "react";
 import { PageShell } from "@/components/layout/PageShell";
+import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -193,14 +194,21 @@ export const SkillsTeamPage: React.FC = () => {
       subtitle="View and rate your team's skill proficiencies"
       category="Skills"
       actions={
-        <Button
-          onClick={handleExport}
-          size="sm"
-          variant="outline"
-          disabled={exportMutation.isPending}
-        >
-          <Download className="mr-1 h-4 w-4" /> Export CSV
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <PluginImportButton
+            targetKey="user_skills"
+            label="Import ratings"
+            invalidateKeys={[["skills"]]}
+          />
+          <Button
+            onClick={handleExport}
+            size="sm"
+            variant="outline"
+            disabled={exportMutation.isPending}
+          >
+            <Download className="mr-1 h-4 w-4" /> Export CSV
+          </Button>
+        </div>
       }
     >
       {/* Eyebrow pill (mockup header) */}

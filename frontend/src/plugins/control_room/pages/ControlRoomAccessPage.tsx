@@ -17,6 +17,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataTable } from "@/components/ui/DataTable";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PageShell } from "@/components/layout/PageShell";
+import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { extractApiErrorMessage } from "@/lib/apiFormError";
@@ -250,6 +251,7 @@ export const ControlRoomAccessPage: React.FC = () => {
       subtitle="Control who can view standby data and keep team visibility scoped by design."
       actions={
         <>
+          <PluginImportButton targetKey="control_room_access" invalidateKeys={[["control-room"]]} />
           <Button variant="outline" onClick={() => state.setGrantOpen(true)}>
             <ShieldCheck className="mr-2 h-4 w-4" /> Grant access
           </Button>

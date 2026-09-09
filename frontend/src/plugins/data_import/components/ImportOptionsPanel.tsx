@@ -1,3 +1,12 @@
+/**
+ * Import options, rendered entirely from the importer's option schema.
+ *
+ * There is deliberately no branch on `target_key` here: an importer declares
+ * its own options server-side, so adding a target never requires a change in
+ * this file. The one target-shaped control that remains is the password
+ * column picker, and it is driven by the `password_strategy` option's value,
+ * not by which target is selected.
+ */
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -11,35 +20,46 @@ import {
 } from "@/components/ui/select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { PasswordStrategy } from "../types/dataImport";
+import type { ImportOption } from "../types/dataImport";
+
+const NO_COLUMN = "__skip__";
 
 interface ImportOptionsPanelProps {
-  targetKey: string | null;
+  /** The selected target's option schema. */
+  optionSchema: ImportOption[];
   detectedColumns: string[];
   passwordColumn: string | null;
   onPasswordColumnChange: (column: string | null) => void;
-  options: {
-    update_existing?: boolean;
-    match_by_email?: boolean;
-    password_strategy?: PasswordStrategy;
-    default_password?: string;
-    overwrite_existing_password?: boolean;
-  };
-  onChange: <K extends keyof ImportOptionsPanelProps["options"]>(
-    key: K,
-    value: ImportOptionsPanelProps["options"][K]
-  ) => void;
+  options: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
 }
 
+/** True when every dependency in `depends_on` currently holds its value. */
+const isVisible = (option: ImportOption, values: Record<string, unknown>): boolean => {
+  if (!option.depends_on) return true;
+  return Object.entries(option.depends_on).every(([key, expected]) => values[key] === expected);
+};
+
 export const ImportOptionsPanel: React.FC<ImportOptionsPanelProps> = ({
-  targetKey,
+  optionSchema,
   detectedColumns,
   passwordColumn,
   onPasswordColumnChange,
   options,
   onChange,
 }) => {
-  const isUsers = targetKey === "users";
+  /** The effective value: what the user chose, else the schema default. */
+  const valueOf = (option: ImportOption): unknown =>
+    options[option.key] ?? option.default ?? undefined;
+
+  const effectiveValues = Object.fromEntries(
+    optionSchema.map((option) => [option.key, valueOf(option)])
+  );
+
+  const visibleOptions = optionSchema.filter((option) => isVisible(option, effectiveValues));
+  const needsPasswordColumn = effectiveValues.password_strategy === "column";
+
+  if (visibleOptions.length === 0 && !needsPasswordColumn) return null;
 
   return (
     <GlassCard isHoverLift={false}>
@@ -47,108 +67,93 @@ export const ImportOptionsPanel: React.FC<ImportOptionsPanelProps> = ({
         <CardTitle>Import Options</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="space-y-0.5">
-            <Label htmlFor="update-existing">Update existing records</Label>
-            <p className="text-xs text-muted-foreground">
-              Update matched records instead of skipping them.
-            </p>
-          </div>
-          <Switch
-            id="update-existing"
-            checked={!!options.update_existing}
-            onCheckedChange={(v) => onChange("update_existing", v)}
-          />
-        </div>
+        {visibleOptions.map((option) => {
+          const id = `import-option-${option.key}`;
+          const value = effectiveValues[option.key];
 
-        {isUsers && (
-          <>
-            <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="match-by-email">Match by email if username not found</Label>
-                <p className="text-xs text-muted-foreground">
-                  Useful when the export has different usernames.
-                </p>
-              </div>
-              <Switch
-                id="match-by-email"
-                checked={!!options.match_by_email}
-                onCheckedChange={(v) => onChange("match_by_email", v)}
-              />
-            </div>
-
-            <div className="space-y-4 rounded-lg border p-4">
-              <div className="space-y-2">
-                <Label htmlFor="password-strategy">Password Strategy</Label>
-                <Select
-                  value={options.password_strategy ?? "generate"}
-                  onValueChange={(v) => onChange("password_strategy", v as PasswordStrategy)}
-                >
-                  <SelectTrigger id="password-strategy">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="generate">Generate a random password per user</SelectItem>
-                    <SelectItem value="fixed">
-                      Use a fixed default password for all users
-                    </SelectItem>
-                    <SelectItem value="column">Use the mapped Password column</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {options.password_strategy === "fixed" && (
-                <div className="space-y-2">
-                  <Label htmlFor="default-password">Default Password</Label>
-                  <Input
-                    id="default-password"
-                    type="password"
-                    value={options.default_password ?? ""}
-                    onChange={(e) => onChange("default_password", e.target.value)}
-                    placeholder="Enter default password for all new users"
-                  />
-                </div>
-              )}
-
-              {options.password_strategy === "column" && (
-                <div className="space-y-2">
-                  <Label htmlFor="password-column">Password Column</Label>
-                  <Select
-                    value={passwordColumn ?? "__skip__"}
-                    onValueChange={(value) =>
-                      onPasswordColumnChange(value === "__skip__" ? null : value)
-                    }
-                  >
-                    <SelectTrigger id="password-column">
-                      <SelectValue placeholder="Select the password column" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__skip__">— Select a column —</SelectItem>
-                      {detectedColumns.map((col) => (
-                        <SelectItem key={col} value={col}>
-                          {col}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
+          if (option.option_type === "bool") {
+            return (
+              <div
+                key={option.key}
+                className="flex items-center justify-between gap-4 rounded-lg border p-4"
+              >
                 <div className="space-y-0.5">
-                  <Label htmlFor="overwrite-password">Overwrite existing passwords</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Change existing users' passwords when updating.
-                  </p>
+                  <Label htmlFor={id}>{option.label}</Label>
+                  {option.help_text && (
+                    <p className="text-xs text-muted-foreground">{option.help_text}</p>
+                  )}
                 </div>
                 <Switch
-                  id="overwrite-password"
-                  checked={!!options.overwrite_existing_password}
-                  onCheckedChange={(v) => onChange("overwrite_existing_password", v)}
+                  id={id}
+                  checked={value === true}
+                  onCheckedChange={(checked) => onChange(option.key, checked)}
                 />
               </div>
+            );
+          }
+
+          if (option.option_type === "choice") {
+            return (
+              <div key={option.key} className="space-y-2 rounded-lg border p-4">
+                <Label htmlFor={id}>{option.label}</Label>
+                <Select
+                  value={typeof value === "string" ? value : ""}
+                  onValueChange={(next) => onChange(option.key, next)}
+                >
+                  <SelectTrigger id={id}>
+                    <SelectValue placeholder={`Select ${option.label.toLowerCase()}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(option.choices ?? []).map(([code, label]) => (
+                      <SelectItem key={code} value={code}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {option.help_text && (
+                  <p className="text-xs text-muted-foreground">{option.help_text}</p>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <div key={option.key} className="space-y-2 rounded-lg border p-4">
+              <Label htmlFor={id}>{option.label}</Label>
+              <Input
+                id={id}
+                type={option.option_type === "secret" ? "password" : "text"}
+                value={typeof value === "string" ? value : ""}
+                onChange={(e) => onChange(option.key, e.target.value)}
+              />
+              {option.help_text && (
+                <p className="text-xs text-muted-foreground">{option.help_text}</p>
+              )}
             </div>
-          </>
+          );
+        })}
+
+        {needsPasswordColumn && (
+          <div className="space-y-2 rounded-lg border p-4">
+            <Label htmlFor="import-password-column">Password column</Label>
+            <Select
+              value={passwordColumn ?? NO_COLUMN}
+              onValueChange={(next) => onPasswordColumnChange(next === NO_COLUMN ? null : next)}
+            >
+              <SelectTrigger id="import-password-column">
+                <SelectValue placeholder="Select the password column" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_COLUMN}>— Select a column —</SelectItem>
+                {detectedColumns.map((column) => (
+                  <SelectItem key={column} value={column}>
+                    {column}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
       </CardContent>
     </GlassCard>

@@ -11,7 +11,12 @@ describe("TargetPicker modernization", () => {
             target_key: "users",
             display_name: "Users",
             description: "Users",
+            permission_scope: "manage",
+            icon: "Users",
+            page_route: "/admin/users",
             fields: [],
+            options: [],
+            sample_rows: [],
             dedupe_keys: [],
           },
         ]}

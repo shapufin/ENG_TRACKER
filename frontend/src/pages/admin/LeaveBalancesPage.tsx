@@ -5,6 +5,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageShell } from "@/components/layout/PageShell";
+import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
@@ -76,9 +77,12 @@ const LeaveBalancesContent: React.FC = () => {
     <PageShell
       title="Leave Balances"
       actions={
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" /> Add Balance
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <PluginImportButton targetKey="leave_balances" invalidateKeys={[["admin", "balances"]]} />
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" /> Add Balance
+          </Button>
+        </div>
       }
     >
       <GlassCard delay={0} className="p-4">

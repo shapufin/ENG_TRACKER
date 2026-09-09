@@ -1,3 +1,11 @@
+/**
+ * Cross-target import workspace.
+ *
+ * Each admin page also opens its own scoped ImportDialog; this page adds the
+ * target picker, saved mapping profiles and the batch history. Wizard steps
+ * are rendered by the shared ImportWizardBody so there is one implementation
+ * of mapping, options, preview and results.
+ */
 import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PageShell } from "@/components/layout/PageShell";
@@ -11,23 +19,18 @@ import { usePermissions } from "@/context/PermissionContext";
 import { Upload, ArrowLeft, ArrowRight, Play, RotateCcw, History } from "lucide-react";
 
 import { dataImportService } from "../services/dataImportService";
-import type { ImportTarget } from "../types/dataImport";
+import type { ImportStep, ImportTarget } from "../types/dataImport";
 import { useDataImportWizard } from "./hooks/useDataImportWizard";
 import { useImportProfiles } from "./hooks/useImportProfiles";
 
 import { TargetPicker } from "../components/TargetPicker";
-import { ImportFileDropzone } from "../components/ImportFileDropzone";
-import { ColumnMappingForm } from "../components/ColumnMappingForm";
-import { ImportOptionsPanel } from "../components/ImportOptionsPanel";
-import { ImportProfileBar } from "../components/ImportProfileBar";
-import { ImportSummaryCards } from "../components/ImportSummaryCards";
-import { ImportPreviewTable } from "../components/ImportPreviewTable";
 import { ImportCredentialsDialog } from "../components/ImportCredentialsDialog";
-import { ValueTransformPanel } from "../components/ValueTransformPanel";
 import { ImportHistoryTab } from "../components/ImportHistoryTab";
+import { ImportSampleButton } from "../components/ImportSampleButton";
+import { ImportWizardBody } from "../components/ImportWizardBody";
+import { stepCanAdvance } from "../components/importStepGating";
 
-const STEPS = ["target", "upload", "map", "preview", "result"] as const;
-type WizardStep = (typeof STEPS)[number];
+const STEPS: ImportStep[] = ["target", "upload", "map", "preview", "result"];
 
 const stepLabels: Record<string, string> = {
   target: "1. Select target",
@@ -35,29 +38,6 @@ const stepLabels: Record<string, string> = {
   map: "3. Map columns",
   preview: "4. Preview",
   result: "5. Results",
-};
-
-/** True when the current step's gating requirements are satisfied. */
-const stepCanAdvance = (
-  step: string,
-  state: {
-    targetKey: string | null;
-    file: File | null;
-    isAnalyzing: boolean;
-    fieldMapping: Record<string, string | null>;
-    defaultValues: Record<string, unknown>;
-  },
-  target: ImportTarget | null
-): boolean => {
-  if (step === "target") return !!state.targetKey;
-  if (step === "upload") return !!state.file && !state.isAnalyzing;
-  if (step === "map") {
-    const requiredFields = target?.fields.filter((f) => f.required) ?? [];
-    return requiredFields.every(
-      (f) => state.fieldMapping[f.key] || state.defaultValues[f.key] !== undefined
-    );
-  }
-  return false;
 };
 
 /** Label for the primary action button on each step. */
@@ -77,121 +57,6 @@ const nextButtonLabel = (step: string, isWorking: boolean): React.ReactNode => {
       Next <ArrowRight className="ml-2 h-4 w-4" />
     </>
   );
-};
-
-interface StepContentProps {
-  state: ReturnType<typeof useDataImportWizard>["state"];
-  target: ImportTarget | null;
-  targets: ImportTarget[];
-  targetsLoading: boolean;
-  targetsError: Error | null;
-  profiles: ReturnType<typeof useImportProfiles>["profiles"];
-  wizard: ReturnType<typeof useDataImportWizard>;
-  onSetSearchParams: (params: Record<string, string>) => void;
-  onSaveProfile: (name: string) => void;
-}
-
-/** Renders the body of the current wizard step. */
-const WizardStepContent: React.FC<StepContentProps> = ({
-  state,
-  target,
-  targets,
-  targetsLoading,
-  targetsError,
-  profiles,
-  wizard,
-  onSetSearchParams,
-  onSaveProfile,
-}) => {
-  if (state.step === "target") {
-    if (targetsError) {
-      return <ErrorCard title="Failed to load import targets" message={targetsError.message} />;
-    }
-    return (
-      <LoadingStateWrapper isLoading={targetsLoading}>
-        <TargetPicker
-          targets={targets}
-          selectedTargetKey={state.targetKey}
-          onSelect={(key) => {
-            wizard.selectedTarget(key);
-            onSetSearchParams({ target: key });
-          }}
-        />
-      </LoadingStateWrapper>
-    );
-  }
-
-  if (state.step === "upload") {
-    return (
-      <div className="space-y-4">
-        <ImportFileDropzone file={state.file} onFileAccepted={wizard.setFile} />
-        {state.analyzeError && <ErrorCard title="Analysis failed" message={state.analyzeError} />}
-      </div>
-    );
-  }
-
-  if (state.step === "map" && target) {
-    return (
-      <div className="space-y-4">
-        <ImportProfileBar
-          profiles={profiles}
-          targetKey={target.target_key}
-          onLoadProfile={wizard.loadProfile}
-          onSaveProfile={onSaveProfile}
-        />
-        <ColumnMappingForm
-          fields={target.fields}
-          detectedColumns={state.detectedColumns}
-          fieldMapping={state.fieldMapping}
-          defaultValues={state.defaultValues}
-          onFieldMappingChange={wizard.setFieldMapping}
-          onDefaultValueChange={wizard.setDefaultValue}
-        />
-        {target.fields.some((f) => f.field_type === "choice") && (
-          <ValueTransformPanel
-            fields={target.fields}
-            fieldMapping={state.fieldMapping}
-            detectedValues={state.detectedValues}
-            valueTransforms={state.options.value_transforms ?? {}}
-            onTransformChange={wizard.setValueTransform}
-          />
-        )}
-        <ImportOptionsPanel
-          targetKey={state.targetKey}
-          detectedColumns={state.detectedColumns}
-          passwordColumn={state.fieldMapping.password ?? null}
-          onPasswordColumnChange={(column) => wizard.setFieldMapping("password", column)}
-          options={state.options}
-          onChange={wizard.setOption}
-        />
-      </div>
-    );
-  }
-
-  if (state.step === "preview" && state.previewResult) {
-    return (
-      <div className="space-y-4">
-        <ImportSummaryCards summary={state.previewResult.summary} mode="preview" />
-        <ImportPreviewTable rows={state.previewResult.rows} />
-      </div>
-    );
-  }
-
-  if (state.step === "result" && state.commitResult) {
-    return (
-      <div className="space-y-4">
-        <ImportSummaryCards summary={state.commitResult.summary} mode="commit" />
-        {state.commitResult.row_errors.length > 0 && (
-          <ErrorCard
-            title="Import errors"
-            message={`${state.commitResult.row_errors.length} row(s) could not be imported.`}
-          />
-        )}
-      </div>
-    );
-  }
-
-  return null;
 };
 
 export const DataImportPage: React.FC = () => {
@@ -236,7 +101,7 @@ export const DataImportPage: React.FC = () => {
   const canGoNext = useMemo(() => stepCanAdvance(state.step, state, target), [state, target]);
 
   const handleNext = async () => {
-    const idx = STEPS.indexOf(state.step as WizardStep);
+    const idx = STEPS.indexOf(state.step as ImportStep);
     if (state.step === "upload") {
       await analyze();
       return;
@@ -258,7 +123,7 @@ export const DataImportPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    const idx = STEPS.indexOf(state.step as WizardStep);
+    const idx = STEPS.indexOf(state.step as ImportStep);
     if (idx > 0) {
       goToStep(STEPS[idx - 1]);
     }
@@ -292,13 +157,16 @@ export const DataImportPage: React.FC = () => {
   return (
     <PageShell
       title="Universal Data Import"
-      subtitle="Bulk-import users, leave balances, and more from CSV/Excel files."
+      subtitle="Bulk-import users, clients, teams, skills and more from CSV/Excel files."
       actions={
         state.step !== "target" && (
-          <Button variant="outline" onClick={reset}>
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Start over
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <ImportSampleButton targetKey={state.targetKey} />
+            <Button variant="outline" onClick={reset}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Start over
+            </Button>
+          </div>
         )
       }
     >
@@ -332,17 +200,33 @@ export const DataImportPage: React.FC = () => {
             </div>
           </GlassCard>
 
-          <WizardStepContent
-            state={state}
-            target={target}
-            targets={targets}
-            targetsLoading={targetsLoading}
-            targetsError={targetsError}
-            profiles={profiles}
-            wizard={wizard}
-            onSetSearchParams={setSearchParams}
-            onSaveProfile={handleSaveProfile}
-          />
+          {state.step === "target" ? (
+            targetsError ? (
+              <ErrorCard title="Failed to load import targets" message={targetsError.message} />
+            ) : (
+              <LoadingStateWrapper isLoading={targetsLoading}>
+                <TargetPicker
+                  targets={targets}
+                  selectedTargetKey={state.targetKey}
+                  onSelect={(key) => {
+                    selectedTarget(key);
+                    setSearchParams({ target: key });
+                  }}
+                />
+              </LoadingStateWrapper>
+            )
+          ) : (
+            target && (
+              <ImportWizardBody
+                step={state.step as ImportStep}
+                state={state}
+                target={target}
+                wizard={wizard}
+                profiles={profiles}
+                onSaveProfile={handleSaveProfile}
+              />
+            )
+          )}
 
           {state.step !== "target" && state.step !== "result" && (
             <div className="flex flex-wrap items-center justify-between gap-2">

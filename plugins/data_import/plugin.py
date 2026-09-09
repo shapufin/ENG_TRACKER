@@ -18,14 +18,15 @@ class DataImportPlugin(BasePlugin):
     @property
     def description(self) -> str:
         return (
-            "Admin tool to bulk-import Users, Leave Balances, and other data "
-            "from CSV/Excel files exported from other systems, with dynamic "
-            "column mapping — no fixed file format required."
+            "Bulk-import users, clients, teams, techs, leave balances, "
+            "holidays, skills and Control Room access from CSV/Excel files, "
+            "with dynamic column mapping and a downloadable sample per target. "
+            "Each admin page opens its own scoped import."
         )
 
     @property
     def version(self) -> str:
-        return "1.0.0"
+        return "2.0.0"
 
     def get_urls(self):
         return urlpatterns

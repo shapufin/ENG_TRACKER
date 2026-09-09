@@ -67,6 +67,13 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
     DataImportPage: lazy(() =>
       import("./data_import/pages/DataImportPage").then((m) => ({ default: m.DataImportPage }))
     ),
+    // Consumed by core admin pages through PluginImportButton, never imported
+    // directly, so removing the plugin cannot break their build.
+    ImportPageButton: lazy(() =>
+      import("./data_import/components/ImportPageButton").then((m) => ({
+        default: m.ImportPageButton,
+      }))
+    ),
   },
   control_room: {
     ControlRoomDashboardPage: lazy(() =>

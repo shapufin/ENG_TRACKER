@@ -4,6 +4,13 @@ import { MemoryRouter } from "react-router-dom";
 import { SkillsTeamPage } from "./SkillsTeamPage";
 import type { TeamMatrixRow, SkillCoverage, SkillCategory } from "../types/skills";
 
+// PluginImportButton (admin page headers) reads the active-plugin list. With
+// data_import inactive it renders nothing — the same graceful path taken when
+// the plugin is disabled or removed.
+vi.mock("@/context/PluginContext", () => ({
+  usePlugins: () => ({ activePlugins: [], isLoading: false }),
+}));
+
 const useMatrixMock = vi.fn();
 const useCoverageMock = vi.fn();
 const useGapReportMock = vi.fn();

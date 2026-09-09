@@ -3,6 +3,13 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { ClientsPage } from "./ClientsPage";
 import * as useClientManagement from "./hooks/useClientManagement";
 
+// PluginImportButton (admin page headers) reads the active-plugin list. With
+// data_import inactive it renders nothing — the same graceful path taken when
+// the plugin is disabled or removed.
+vi.mock("@/context/PluginContext", () => ({
+  usePlugins: () => ({ activePlugins: [], isLoading: false }),
+}));
+
 class ResizeObserverMock {
   observe() {}
   unobserve() {}

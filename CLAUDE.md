@@ -37,6 +37,7 @@ calendar, or plugins, also read the linked domain file.
 | ticket, KPI, evidence upload | `.devin/context/PLUGINS/03-ticket-kpi.md` | Ticket KPI invariants |
 | skills, proficiency, matrix, gap report, skill rating | `.devin/context/PLUGINS/04-skills.md` | Skills plugin invariants |
 | organigrama, org chart, Tech grouping | `.devin/context/PLUGINS/05-organigrama.md` | Live chart + builder invariants |
+| import, CSV, Excel, bulk upload, data import, sample template, importer | `.devin/context/PLUGINS/06-data-import.md` | Importer contract + per-target authority |
 | calendar, workspace, workspace_users | `.devin/context/07-CALENDAR.md` | Calendar privacy + workspace rules |
 | chart, Recharts, analytics visualization | `.devin/context/08-ANALYTICS-VISUALIZATION.md` | Chart sizing + data-source rules |
 | plugin permission, render surface, resource access | `.devin/context/09-RESOURCE-ACCESS.md` + `.devin/context/10-PLUGIN-PERMISSIONS.md` | Group grants + plugin gates |
@@ -95,6 +96,15 @@ calendar, or plugins, also read the linked domain file.
   as-is (transition + zoom-in glyph baked in) and the gradient
   `AnimatedNumber` badge pattern from `BulkActionBar`/`BulkDrawerHeader` —
   never a flat `bg-primary` circle or an unanimated bulk bar.
+- **Data import** — the importer class is the single source of truth for a
+  target's fields, options, sample rows and authority. Never branch on
+  `target_key` in the frontend; never invent per-target plugin permission
+  actions (the platform allows only `view`/`manage`/`configure`/`export`).
+  Each importer's `check_authority` re-applies the authority its own admin
+  page requires, so the plugin `manage` grant does not unlock every target.
+  Upload size is checked before the file is parsed. Template downloads use
+  `file_format=`, not `format=` (DRF reserves it). Read
+  `.devin/context/PLUGINS/06-data-import.md` before adding a target.
 - **UI/accessibility baseline** — prefer existing shared primitives
   (`GlassCard`, `StatCard`, `DataTable`, `EmptyState`, `ConfirmDialog`) and
   semantic theme tokens over ad hoc markup; no raw hex or slate/zinc/gray

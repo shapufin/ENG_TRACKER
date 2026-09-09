@@ -1,5 +1,7 @@
 import api from "@/lib/api";
+import { downloadBlobResponse } from "@/lib/download";
 import type {
+  TemplateFormat,
   AnalyzeResult,
   CommitResult,
   ImportBatch,
@@ -15,6 +17,20 @@ export const dataImportService = {
   async getTargets(): Promise<{ targets: ImportTarget[] }> {
     const { data } = await api.get(`${BASE}/targets/`);
     return data;
+  },
+
+  /**
+   * Download the schema-generated sample file for one target.
+   *
+   * The query parameter is `file_format`, not `format`: DRF reserves `format`
+   * for renderer negotiation and answers 404 for an unknown value.
+   */
+  async downloadTemplate(targetKey: string, fileFormat: TemplateFormat): Promise<void> {
+    const { data } = await api.get(`${BASE}/targets/${targetKey}/template/`, {
+      params: { file_format: fileFormat },
+      responseType: "blob",
+    });
+    downloadBlobResponse(data, `${targetKey}_import_template.${fileFormat}`);
   },
 
   async analyze(file: File, targetKey: string): Promise<AnalyzeResult> {

@@ -7,13 +7,35 @@ export interface ImportField {
   help_text?: string;
 }
 
+/** One import option, rendered generically from the importer's schema. */
+export interface ImportOption {
+  key: string;
+  label: string;
+  option_type: "bool" | "string" | "secret" | "choice";
+  default: unknown;
+  choices?: [string, string][] | null;
+  help_text?: string;
+  /** Show this option only while every listed option holds the given value. */
+  depends_on?: Record<string, unknown> | null;
+}
+
 export interface ImportTarget {
   target_key: string;
   display_name: string;
   description: string;
+  /** Plugin permission action guarding this target. */
+  permission_scope: string;
+  /** lucide-react icon name for the target picker. */
+  icon: string;
+  /** Admin route that owns this data. */
+  page_route: string;
   fields: ImportField[];
+  options: ImportOption[];
+  sample_rows: Record<string, unknown>[];
   dedupe_keys: string[];
 }
+
+export type TemplateFormat = "csv" | "xlsx";
 
 export interface ImportProfile {
   id: number;
@@ -29,12 +51,12 @@ export interface ImportProfile {
 
 export type PasswordStrategy = "fixed" | "generate" | "column";
 
-export interface ImportOptions {
-  update_existing?: boolean;
-  match_by_email?: boolean;
-  password_strategy?: PasswordStrategy;
-  default_password?: string;
-  overwrite_existing_password?: boolean;
+/**
+ * Option values are keyed by the importer's option schema, so the shape is
+ * open: a new target's options need no change here. `value_transforms` is the
+ * one option the wizard itself writes, so it stays named.
+ */
+export interface ImportOptions extends Record<string, unknown> {
   value_transforms?: Record<string, Record<string, string>>;
 }
 

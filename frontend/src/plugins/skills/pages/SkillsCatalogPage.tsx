@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/layout/PageShell";
+import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ErrorCard } from "@/components/ui/ErrorCard";
@@ -169,16 +170,28 @@ export const SkillsCatalogPage: React.FC = () => {
       subtitle="Manage skill categories and catalog items"
       category="Admin"
       actions={
-        <Button
-          size="sm"
-          onClick={() => {
-            setEditingSkill(null);
-            setSkillFormError(undefined);
-            setSkillDialogOpen(true);
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> New skill
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <PluginImportButton
+            targetKey="skill_categories"
+            label="Import categories"
+            invalidateKeys={[["skills"]]}
+          />
+          <PluginImportButton
+            targetKey="skills"
+            label="Import skills"
+            invalidateKeys={[["skills"]]}
+          />
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditingSkill(null);
+              setSkillFormError(undefined);
+              setSkillDialogOpen(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> New skill
+          </Button>
+        </div>
       }
     >
       {categoriesQuery.error && !categories.length && (

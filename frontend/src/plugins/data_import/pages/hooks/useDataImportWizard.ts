@@ -1,18 +1,20 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { dataImportService } from "../../services/dataImportService";
 import type { CommitResult, ImportOptions, ImportStep, WizardState } from "../../types/dataImport";
 
-const initialOptions: ImportOptions = {
-  update_existing: false,
-  match_by_email: false,
-  password_strategy: "generate",
-  overwrite_existing_password: false,
-};
+/**
+ * Option values start empty: the importer's schema supplies the defaults, both
+ * for display (ImportOptionsPanel) and on the server. Seeding them here would
+ * duplicate that schema in the frontend.
+ */
+const initialOptions: ImportOptions = {};
 
-const initialState: WizardState = {
-  step: "target",
-  targetKey: null,
+const buildInitialState = (initialTargetKey?: string): WizardState => ({
+  // With a target fixed by the caller (the per-page dialog) the picker step is
+  // skipped entirely.
+  step: initialTargetKey ? "upload" : "target",
+  targetKey: initialTargetKey ?? null,
   file: null,
   detectedColumns: [],
   detectedValues: {},
@@ -26,49 +28,66 @@ const initialState: WizardState = {
   isAnalyzing: false,
   isPreviewing: false,
   isCommitting: false,
-};
+});
 
-export function useDataImportWizard() {
-  const [state, setState] = useState<WizardState>(initialState);
+/**
+ * Drives the import wizard.
+ *
+ * @param initialTargetKey - Fixes the target and starts at the upload step.
+ *
+ * Every callback is stable: async actions read the latest state from a ref
+ * rather than closing over it, so passing them down does not re-render the
+ * whole wizard on each keystroke.
+ */
+export function useDataImportWizard(initialTargetKey?: string) {
+  const [state, setState] = useState<WizardState>(() => buildInitialState(initialTargetKey));
 
-  const selectedTarget = useCallback((targetKey: string) => {
-    setState((prev) => ({
-      ...prev,
-      targetKey,
-      step: "upload",
-      detectedColumns: [],
-      detectedValues: {},
-      fieldMapping: {},
-      defaultValues: {},
-      options: initialOptions,
-      selectedProfileId: null,
-      previewResult: null,
-      commitResult: null,
-      analyzeError: null,
-    }));
+  // Mirrors `state` for the async actions; `setState` stays the only writer.
+  const stateRef = useRef(state);
+  const update = useCallback((updater: (prev: WizardState) => WizardState) => {
+    setState((prev) => {
+      const next = updater(prev);
+      stateRef.current = next;
+      return next;
+    });
   }, []);
 
-  const setFile = useCallback((file: File | null) => {
-    setState((prev) => ({
-      ...prev,
-      file,
-      detectedColumns: [],
-      detectedValues: {},
-      fieldMapping: {},
-      previewResult: null,
-      commitResult: null,
-      analyzeError: null,
-    }));
-  }, []);
+  const selectedTarget = useCallback(
+    (targetKey: string) => {
+      update((prev) => ({
+        ...prev,
+        ...buildInitialState(targetKey),
+        step: "upload",
+        file: prev.targetKey === targetKey ? prev.file : null,
+      }));
+    },
+    [update]
+  );
+
+  const setFile = useCallback(
+    (file: File | null) => {
+      update((prev) => ({
+        ...prev,
+        file,
+        detectedColumns: [],
+        detectedValues: {},
+        fieldMapping: {},
+        previewResult: null,
+        commitResult: null,
+        analyzeError: null,
+      }));
+    },
+    [update]
+  );
 
   const analyze = useCallback(async () => {
-    const { file, targetKey } = state;
+    const { file, targetKey } = stateRef.current;
     if (!file || !targetKey) return;
 
-    setState((prev) => ({ ...prev, isAnalyzing: true, analyzeError: null }));
+    update((prev) => ({ ...prev, isAnalyzing: true, analyzeError: null }));
     try {
       const result = await dataImportService.analyze(file, targetKey);
-      setState((prev) => ({
+      update((prev) => ({
         ...prev,
         detectedColumns: result.detected_columns,
         detectedValues: result.detected_values ?? {},
@@ -80,38 +99,41 @@ export function useDataImportWizard() {
       }));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to analyze file";
-      setState((prev) => ({ ...prev, isAnalyzing: false, analyzeError: message }));
+      update((prev) => ({ ...prev, isAnalyzing: false, analyzeError: message }));
       toast.error(message);
     }
-  }, [state]);
+  }, [update]);
 
-  const setFieldMapping = useCallback((fieldKey: string, column: string | null) => {
-    setState((prev) => ({
-      ...prev,
-      fieldMapping: { ...prev.fieldMapping, [fieldKey]: column },
-    }));
-  }, []);
-
-  const setDefaultValue = useCallback((fieldKey: string, value: unknown) => {
-    setState((prev) => ({
-      ...prev,
-      defaultValues: { ...prev.defaultValues, [fieldKey]: value },
-    }));
-  }, []);
-
-  const setOption = useCallback(
-    <K extends keyof ImportOptions>(key: K, value: ImportOptions[K]) => {
-      setState((prev) => ({
+  const setFieldMapping = useCallback(
+    (fieldKey: string, column: string | null) => {
+      update((prev) => ({
         ...prev,
-        options: { ...prev.options, [key]: value },
+        fieldMapping: { ...prev.fieldMapping, [fieldKey]: column },
       }));
     },
-    []
+    [update]
+  );
+
+  const setDefaultValue = useCallback(
+    (fieldKey: string, value: unknown) => {
+      update((prev) => ({
+        ...prev,
+        defaultValues: { ...prev.defaultValues, [fieldKey]: value },
+      }));
+    },
+    [update]
+  );
+
+  const setOption = useCallback(
+    (key: string, value: unknown) => {
+      update((prev) => ({ ...prev, options: { ...prev.options, [key]: value } }));
+    },
+    [update]
   );
 
   const setValueTransform = useCallback(
     (fieldKey: string, rawValue: string, canonicalValue: string | null) => {
-      setState((prev) => {
+      update((prev) => {
         const existing = prev.options.value_transforms?.[fieldKey] ?? {};
         const updated = { ...existing };
         if (canonicalValue === null || canonicalValue === undefined) {
@@ -128,7 +150,7 @@ export function useDataImportWizard() {
         };
       });
     },
-    []
+    [update]
   );
 
   const loadProfile = useCallback(
@@ -137,7 +159,7 @@ export function useDataImportWizard() {
       default_values: Record<string, unknown>;
       options: ImportOptions;
     }) => {
-      setState((prev) => ({
+      update((prev) => ({
         ...prev,
         fieldMapping: Object.fromEntries(
           Object.entries(profile.field_mapping).map(([key, value]) => [key, value ?? null])
@@ -146,14 +168,14 @@ export function useDataImportWizard() {
         options: { ...initialOptions, ...(profile.options ?? {}) },
       }));
     },
-    []
+    [update]
   );
 
   const preview = useCallback(async () => {
-    const { file, targetKey, fieldMapping, defaultValues, options } = state;
+    const { file, targetKey, fieldMapping, defaultValues, options } = stateRef.current;
     if (!file || !targetKey) return;
 
-    setState((prev) => ({ ...prev, isPreviewing: true, previewResult: null }));
+    update((prev) => ({ ...prev, isPreviewing: true, previewResult: null }));
     try {
       const result = await dataImportService.preview(
         file,
@@ -162,7 +184,7 @@ export function useDataImportWizard() {
         defaultValues,
         options
       );
-      setState((prev) => ({
+      update((prev) => ({
         ...prev,
         previewResult: result,
         step: "preview",
@@ -170,17 +192,17 @@ export function useDataImportWizard() {
       }));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to preview import";
-      setState((prev) => ({ ...prev, isPreviewing: false }));
+      update((prev) => ({ ...prev, isPreviewing: false }));
       toast.error(message);
     }
-  }, [state]);
+  }, [update]);
 
   const commit = useCallback(
     async (saveProfile?: { name: string }): Promise<CommitResult | undefined> => {
-      const { file, targetKey, fieldMapping, defaultValues, options } = state;
+      const { file, targetKey, fieldMapping, defaultValues, options } = stateRef.current;
       if (!file || !targetKey) return;
 
-      setState((prev) => ({ ...prev, isCommitting: true, commitResult: null }));
+      update((prev) => ({ ...prev, isCommitting: true, commitResult: null }));
       try {
         const result = await dataImportService.commit(
           file,
@@ -190,7 +212,7 @@ export function useDataImportWizard() {
           options,
           saveProfile
         );
-        setState((prev) => ({
+        update((prev) => ({
           ...prev,
           commitResult: result,
           step: "result",
@@ -202,20 +224,23 @@ export function useDataImportWizard() {
         return result;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to commit import";
-        setState((prev) => ({ ...prev, isCommitting: false }));
+        update((prev) => ({ ...prev, isCommitting: false }));
         toast.error(message);
       }
     },
-    [state]
+    [update]
   );
 
   const reset = useCallback(() => {
-    setState(initialState);
-  }, []);
+    update(() => buildInitialState(initialTargetKey));
+  }, [update, initialTargetKey]);
 
-  const goToStep = useCallback((step: ImportStep) => {
-    setState((prev) => ({ ...prev, step }));
-  }, []);
+  const goToStep = useCallback(
+    (step: ImportStep) => {
+      update((prev) => ({ ...prev, step }));
+    },
+    [update]
+  );
 
   return {
     state,

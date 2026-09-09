@@ -1,5 +1,6 @@
 import React from "react";
 import { PageShell } from "@/components/layout/PageShell";
+import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { Button } from "@/components/ui/button";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
@@ -37,10 +38,13 @@ export const ClientsPage: React.FC = () => {
     <PageShell
       title="Clients"
       actions={
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Client
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <PluginImportButton targetKey="clients" invalidateKeys={[["overtime", "clients"]]} />
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Client
+          </Button>
+        </div>
       }
     >
       <ClientDataTable clients={clients} onEdit={openEdit} onDelete={setConfirmDelete} />

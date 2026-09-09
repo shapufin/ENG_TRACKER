@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageShell } from "@/components/layout/PageShell";
+import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Plus } from "lucide-react";
@@ -54,10 +55,13 @@ export const TeamsPage: React.FC = () => {
     <PageShell
       title="Teams"
       actions={
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Team
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <PluginImportButton targetKey="teams" invalidateKeys={[["admin"]]} />
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Team
+          </Button>
+        </div>
       }
     >
       <CalendarGroupsSummary groups={groupsData} />

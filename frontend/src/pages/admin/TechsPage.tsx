@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PageShell } from "@/components/layout/PageShell";
+import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -70,7 +71,10 @@ export const TechsPage: React.FC = () => {
   });
 
   return (
-    <PageShell title="Tech">
+    <PageShell
+      title="Tech"
+      actions={<PluginImportButton targetKey="techs" invalidateKeys={[["admin", "techs"]]} />}
+    >
       <GlassCard isHoverLift={false} className="p-4">
         <h2 className="mb-3 font-semibold">{editing ? `Edit ${editing.name}` : "Add Tech"}</h2>
         <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto] sm:items-end">

@@ -26,6 +26,7 @@ class AuditLog(models.Model):
         ('analytics_export', _('Analytics Export')),
         ('analytics_export_job_created', _('Analytics Export Job Created')),
         ('plugin_uninstall', _('Plugin Uninstall')),
+        ('data_import', _('Data Import')),
         ('payroll_config_update', _('Payroll Config Update')),
         ('payroll_wage_create', _('Payroll Wage Create')),
         ('payroll_wage_update', _('Payroll Wage Update')),
