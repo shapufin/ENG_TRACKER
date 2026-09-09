@@ -26,7 +26,7 @@ class Command(BaseCommand):
                 cache.set(cache_key, role, CacheTTL.LONG)
                 role_count += 1
             
-            self.stdout.write(f'✓ Warmed {role_count} roles')
+            self.stdout.write(f'Warmed {role_count} roles')
             
             # Warm permission cache
             permissions = Permission.objects.all()
@@ -36,22 +36,22 @@ class Command(BaseCommand):
                 cache.set(cache_key, perm, CacheTTL.LONG)
                 perm_count += 1
             
-            self.stdout.write(f'✓ Warmed {perm_count} permissions')
+            self.stdout.write(f'Warmed {perm_count} permissions')
             
             # Warm group cache
-            groups = Group.objects.all().prefetch_related('permissions')
+            groups = Group.objects.all()
             group_count = 0
             for group in groups:
                 cache_key = f"group:{group.id}"
                 cache.set(cache_key, group, CacheTTL.LONG)
                 group_count += 1
             
-            self.stdout.write(f'✓ Warmed {group_count} groups')
-            
+            self.stdout.write(f'Warmed {group_count} groups')
+
             total = role_count + perm_count + group_count
             self.stdout.write(
                 self.style.SUCCESS(
-                    f'\n✓ Cache warming complete! Warmed {total} items'
+                    f'\nCache warming complete! Warmed {total} items'
                 )
             )
             
