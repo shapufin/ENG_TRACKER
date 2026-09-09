@@ -1461,7 +1461,13 @@ class EndToEndUploadFlowTests(TestCase):
     def test_trend_returns_data_after_upload(self):
         """Dashboard trend endpoint returns data after upload."""
         self._import(self.member)
-        response = self._trend(self.member)
+        # `_trend`'s default months=6 is a rolling window from today, so a
+        # fixed month far enough in the past falls out of range once real
+        # time moves on. Widen the window to guarantee 2026-03 is covered
+        # regardless of when the suite runs.
+        now = timezone.now()
+        months_since_march_2026 = (now.year - 2026) * 12 + (now.month - 3) + 1
+        response = self._trend(self.member, months=max(6, months_since_march_2026))
         self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response.data, list)
         self.assertTrue(len(response.data) > 0)
@@ -1589,7 +1595,14 @@ class EndToEndUploadFlowTests(TestCase):
         ).encode('utf-8')
         self._import(self.member, file_content=april_csv, month='2026-04-01')
 
-        response = self._trend(self.tl, target_user_id=self.member.id)
+        # See test_trend_returns_data_after_upload: widen the default
+        # 6-month rolling window so 2026-03 stays in range as real time
+        # moves past it.
+        now = timezone.now()
+        months_since_march_2026 = (now.year - 2026) * 12 + (now.month - 3) + 1
+        response = self._trend(
+            self.tl, months=max(6, months_since_march_2026), target_user_id=self.member.id
+        )
         self.assertEqual(response.status_code, 200)
         months_with_data = [d for d in response.data if d['total_tickets'] > 0]
         self.assertEqual(len(months_with_data), 2)

@@ -42,7 +42,14 @@ jobs:
       - name: Tests with coverage
         run: npm test -- --run --coverage
       - name: Fallow health (with runtime coverage)
-        run: npx fallow health --format json --quiet --runtime-coverage coverage/coverage-final.json
+        run: |
+          # --runtime-coverage needs the fallow-cov sidecar binary, which
+          # `npx fallow` does not pull in automatically (only the fallow
+          # CLI itself). Install it explicitly so this step works on a
+          # fresh CI runner, not just a dev machine that happened to have
+          # it cached already.
+          npm install --no-save @fallow-cli/fallow-cov@latest
+          npx fallow health --format json --quiet --runtime-coverage coverage/coverage-final.json
       - name: Fallow dead-code
         run: npx fallow dead-code --format json --quiet
 
