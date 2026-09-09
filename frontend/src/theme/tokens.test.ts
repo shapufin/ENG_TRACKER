@@ -8,6 +8,9 @@ const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
 const darkStart = css.indexOf(".dark");
 if (darkStart === -1) throw new Error("index.css is missing the .dark block");
 const lightBlock = css.slice(0, darkStart);
+// NOTE: darkBlock terminates at the FIRST `}` after `.dark`. Keep the `.dark`
+// token list flat — a nested rule, or a `}` inside a comment, truncates this
+// slice and cascades misleading failures across every assertion below.
 const darkBlock = css.slice(
   darkStart,
   css.indexOf("}", darkStart) === -1 ? css.length : css.indexOf("}", darkStart)
@@ -62,5 +65,18 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
   it("preserves the WCAG-pinned values", () => {
     expect(css).toContain("--muted-foreground: 220 9% 43%");
     expect(css).toContain("--destructive: 0 84% 48%");
+  });
+
+  it("defines the surface radius scale and overlay in both modes", () => {
+    for (const block of [lightBlock, darkBlock]) {
+      expect(block).toContain("--radius-control: 0.75rem");
+      expect(block).toContain("--radius-surface: 1rem");
+      expect(block).toContain("--radius-dialog: 1.5rem");
+      expect(block).toContain("--overlay: 0 0% 0% / 0.75");
+    }
+  });
+
+  it("keeps --radius unchanged (drives rounded-lg/md/sm app-wide)", () => {
+    expect(lightBlock).toContain("--radius: 0.625rem");
   });
 });

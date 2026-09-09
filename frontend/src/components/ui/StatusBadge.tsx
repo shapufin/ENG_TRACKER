@@ -24,21 +24,21 @@ const VARIANT_CONFIG: Record<
 > = {
   pending: {
     base: "bg-warning/10",
-    text: "text-amber-700 dark:text-warning",
+    text: "text-tone-warning-text",
     border: "border-warning/20",
     icon: AlertCircle,
     defaultLabel: "Pending",
   },
   approved: {
     base: "bg-success/10",
-    text: "text-emerald-700 dark:text-success",
+    text: "text-tone-success-text",
     border: "border-success/20",
     icon: CheckCircle2,
     defaultLabel: "Approved",
   },
   rejected: {
     base: "bg-destructive/10",
-    text: "text-rose-700 dark:text-destructive",
+    text: "text-tone-danger-text",
     border: "border-destructive/20",
     icon: XCircle,
     defaultLabel: "Rejected",
@@ -71,7 +71,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
         cfg.base,
         cfg.text,
         cfg.border,
-        isCompact && "gap-1 px-1.5 py-0 text-[10px]",
+        isCompact && "gap-1 px-1.5 py-0 text-micro",
         className
       )}
     >

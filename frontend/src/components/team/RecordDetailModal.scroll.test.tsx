@@ -32,8 +32,8 @@ describe("RecordDetailModal scroll contract", () => {
     expect(dlg.className).toContain("flex-col");
     expect(dlg.className).toContain("overflow-hidden");
     expect(dlg.className).toContain("max-h-[90vh]");
-    // Mockup balance modal is max-w-xl; the field grid needs the room.
-    expect(dlg.className).toContain("max-w-xl");
+    // size="lg" on the dialog size scale (672px); the field grid needs the room.
+    expect(dlg.className).toContain("max-w-2xl");
     expect(dlg.className).not.toContain("overflow-y-auto");
     expect(document.querySelectorAll(".flex-1.overflow-y-auto").length).toBeGreaterThan(0);
     expect(document.querySelectorAll(".shrink-0").length).toBeGreaterThan(0);

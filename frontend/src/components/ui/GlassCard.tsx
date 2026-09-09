@@ -13,9 +13,9 @@ const GlassCardComponent = React.forwardRef<HTMLDivElement, GlassCardProps>(
     const shouldReduceMotion = useReducedMotion();
     const glowMap = {
       primary: "before:bg-primary/10",
-      success: "before:bg-emerald-500/10",
-      warning: "before:bg-amber-500/10",
-      destructive: "before:bg-rose-500/10",
+      success: "before:bg-success/10",
+      warning: "before:bg-warning/10",
+      destructive: "before:bg-destructive/10",
       none: "before:bg-transparent",
     };
 

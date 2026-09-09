@@ -286,7 +286,7 @@ export const PayrollWagesPage: React.FC = () => {
           isSubmitting={isSaving}
           submitLabel={editingId ? "Update" : "Assign Wage"}
           submitDisabled={!form.user || !form.gross_monthly_wage || invalidDateRange || invalidWage}
-          contentClassName="sm:max-w-md"
+          size="sm"
         >
           <div>
             <Label>Employee</Label>

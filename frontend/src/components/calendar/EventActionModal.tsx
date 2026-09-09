@@ -34,7 +34,7 @@ export const EventActionModal: React.FC<EventActionModalProps> = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex max-h-[90vh] max-w-lg flex-col overflow-hidden border border-border bg-popover p-0 text-popover-foreground [&>button]:hidden">
+        <DialogContent size="md" hideClose padded={false}>
           <DialogTitle className="sr-only">Record Actions</DialogTitle>
           <DialogDescription className="sr-only">
             Manage {event.type} record for {event.userName}

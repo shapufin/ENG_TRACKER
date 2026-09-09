@@ -79,7 +79,7 @@ export function ResourceAccessMemberDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-md">
+      <DialogContent size="sm">
         <DialogHeader className="shrink-0">
           <DialogTitle>Add member to {groupName}</DialogTitle>
           <DialogDescription>Search users and add one to this group.</DialogDescription>

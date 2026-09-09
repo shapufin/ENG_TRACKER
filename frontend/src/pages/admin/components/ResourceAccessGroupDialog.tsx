@@ -64,7 +64,7 @@ export function ResourceAccessGroupDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-md">
+      <DialogContent size="sm">
         <DialogHeader className="shrink-0">
           <DialogTitle>{isEdit ? "Edit group" : "Create group"}</DialogTitle>
           <DialogDescription>

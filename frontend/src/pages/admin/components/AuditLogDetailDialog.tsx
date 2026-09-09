@@ -15,7 +15,7 @@ interface AuditLogDetailDialogProps {
 
 export const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({ log, onClose }) => (
   <Dialog open={!!log} onOpenChange={onClose}>
-    <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
+    <DialogContent size="lg">
       <DialogHeader className="shrink-0">
         <DialogTitle>Audit Log Details</DialogTitle>
         <DialogDescription>Detailed information about this audit log entry</DialogDescription>

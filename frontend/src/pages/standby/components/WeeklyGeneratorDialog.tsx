@@ -91,7 +91,7 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
       title="Generate Weekly Standby (7 days)"
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
-      contentClassName="sm:max-w-2xl"
+      size="lg"
     >
       <div className="space-y-4">
         {isAdmin && (

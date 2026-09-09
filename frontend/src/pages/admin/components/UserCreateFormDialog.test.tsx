@@ -57,13 +57,24 @@ const renderDialog = () => {
   );
 };
 
-// Selected user-type tabs share the failing tint pair (bg-primary/10 +
-// text-primary ≈ 3.2:1 dark) — selected text must be text-foreground.
-describe("UserCreateFormDialog user-type toggle contrast", () => {
-  it("selected tab uses text-foreground, not text-primary", () => {
+// The user-type toggle is an OptionPills radiogroup. Selection must be exposed
+// to assistive tech via aria-checked, and the selected tint must not be the
+// failing bg-primary/10 + text-primary pair (≈ 3.2:1 in dark).
+describe("UserCreateFormDialog user-type toggle", () => {
+  it("exposes the selection as a radiogroup", () => {
     renderDialog();
-    const tab = screen.getByRole("button", { name: "Standard User" });
-    expect(tab.className).toContain("text-foreground");
+    expect(screen.getByRole("radiogroup", { name: "Account type" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Standard User" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+    expect(screen.getByRole("radio", { name: "CR User" })).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("selected pill uses a tone token, not text-primary", () => {
+    renderDialog();
+    const tab = screen.getByRole("radio", { name: "Standard User" });
+    expect(tab.className).toContain("text-tone-accent-text");
     expect(tab.className).not.toMatch(/(^|\s)text-primary(\s|$)/);
   });
 });

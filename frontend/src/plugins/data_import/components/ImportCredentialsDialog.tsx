@@ -61,7 +61,7 @@ export const ImportCredentialsDialog: React.FC<ImportCredentialsDialogProps> = (
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden">
+      <DialogContent size="xl">
         <DialogHeader className="shrink-0">
           <DialogTitle>Imported User Credentials</DialogTitle>
           <DialogDescription>

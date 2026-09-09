@@ -32,7 +32,7 @@ export const GroupRenameDialog: React.FC<GroupRenameDialogProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden border-border">
+      <DialogContent>
         <DialogHeader className="shrink-0">
           <DialogTitle>Edit Calendar Group</DialogTitle>
           <DialogDescription>

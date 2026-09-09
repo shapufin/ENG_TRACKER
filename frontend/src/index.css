@@ -61,6 +61,28 @@
     --accent-yellow: 48 96% 53%;
     --accent-violet: 262 83% 58%;
     --accent-emerald: 150 60% 45%;
+    --radius-control: 0.75rem;
+    --radius-surface: 1rem;
+    --radius-dialog: 1.5rem;
+    --overlay: 0 0% 0% / 0.75;
+    --tone-success-surface: 150 60% 45% / 0.15;
+    --tone-success-border: 150 60% 45% / 0.3;
+    --tone-success-text: 163 94% 24%;
+    --tone-warning-surface: 38 92% 50% / 0.15;
+    --tone-warning-border: 38 92% 50% / 0.3;
+    --tone-warning-text: 26 90% 37%;
+    --tone-danger-surface: 0 84% 48% / 0.15;
+    --tone-danger-border: 0 84% 48% / 0.3;
+    --tone-danger-text: 347 77% 41%;
+    --tone-info-surface: 221 83% 53% / 0.15;
+    --tone-info-border: 221 83% 53% / 0.3;
+    --tone-info-text: 226 71% 40%;
+    --tone-accent-surface: 262 83% 58% / 0.15;
+    --tone-accent-border: 262 83% 58% / 0.3;
+    --tone-accent-text: 263 70% 50%;
+    --tone-neutral-surface: 220 14% 95% / 0.6;
+    --tone-neutral-border: 220 14% 88%;
+    --tone-neutral-text: 220 9% 43%;
   }
 
   .dark {
@@ -111,6 +133,28 @@
     --accent-yellow: 48 96% 53%;
     --accent-violet: 262 83% 58%;
     --accent-emerald: 150 60% 45%;
+    --radius-control: 0.75rem;
+    --radius-surface: 1rem;
+    --radius-dialog: 1.5rem;
+    --overlay: 0 0% 0% / 0.75;
+    --tone-success-surface: 150 60% 45% / 0.15;
+    --tone-success-border: 150 60% 45% / 0.3;
+    --tone-success-text: 158 64% 52%;
+    --tone-warning-surface: 38 92% 50% / 0.15;
+    --tone-warning-border: 38 92% 50% / 0.3;
+    --tone-warning-text: 43 96% 56%;
+    --tone-danger-surface: 0 84% 48% / 0.15;
+    --tone-danger-border: 0 84% 48% / 0.3;
+    --tone-danger-text: 351 95% 71%;
+    --tone-info-surface: 221 83% 53% / 0.15;
+    --tone-info-border: 221 83% 53% / 0.3;
+    --tone-info-text: 213 94% 68%;
+    --tone-accent-surface: 262 83% 58% / 0.15;
+    --tone-accent-border: 262 83% 58% / 0.3;
+    --tone-accent-text: 258 90% 66%;
+    --tone-neutral-surface: 221 33% 14% / 0.6;
+    --tone-neutral-border: 219 30% 17%;
+    --tone-neutral-text: 220 9% 60%;
   }
 }
 

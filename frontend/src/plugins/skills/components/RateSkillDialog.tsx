@@ -28,7 +28,7 @@ export const RateSkillDialog: React.FC<RateSkillDialogProps> = ({
   const canIncrement = !!target && target.currentLevel < 5;
   return (
     <Dialog open={!!target} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[90vh] max-w-sm flex-col overflow-hidden border-border/70 bg-popover">
+      <DialogContent size="sm" className="border-border/70">
         <DialogHeader className="shrink-0">
           <DialogTitle>Rate Skill</DialogTitle>
           <DialogDescription>Choose a proficiency level for this skill.</DialogDescription>

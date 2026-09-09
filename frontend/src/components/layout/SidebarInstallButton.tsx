@@ -52,7 +52,7 @@ export function SidebarInstallButton({ collapsed }: SidebarInstallButtonProps) {
       </Button>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="flex max-h-[90vh] max-w-[92vw] flex-col overflow-hidden sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Download className="h-5 w-5" />

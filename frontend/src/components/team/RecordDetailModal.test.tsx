@@ -105,7 +105,8 @@ describe("RecordDetailModal", () => {
   it("calls onOpenChange when close clicked", () => {
     const onOpenChange = vi.fn();
     render(<RecordDetailModal open={true} onOpenChange={onOpenChange} record={overtimeRecord} />);
-    fireEvent.click(screen.getAllByText("Close")[1]);
+    // The dialog uses hideClose, so its own header close is the only one.
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

@@ -103,7 +103,7 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden">
+      <DialogContent size="xl">
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             Manage Members

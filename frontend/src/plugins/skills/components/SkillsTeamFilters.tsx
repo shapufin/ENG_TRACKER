@@ -163,7 +163,7 @@ export const SkillsTeamFilters: React.FC<SkillsTeamFiltersProps> = ({
 
       {isMobile && (
         <Dialog open={filtersOpen} onOpenChange={onFiltersOpenChange}>
-          <DialogContent className="flex max-h-[90vh] max-w-[92vw] flex-col overflow-hidden">
+          <DialogContent>
             <DialogHeader className="shrink-0">
               <DialogTitle>Team filters</DialogTitle>
               <DialogDescription>Narrow the team view by proficiency level.</DialogDescription>

@@ -63,7 +63,7 @@ export function ColumnVisibilityMenu<TData>({
           <span className="sm:hidden">Columns</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[300px]">
+      <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>Toggle Columns</DialogTitle>
         </DialogHeader>

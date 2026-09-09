@@ -119,7 +119,7 @@ export const TicketKPIEvidenceSection: React.FC<TicketKPIEvidenceSectionProps> =
       </Card>
 
       <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-        <DialogContent className="flex max-h-[90vh] max-w-lg flex-col overflow-hidden">
+        <DialogContent size="md">
           <DialogHeader className="shrink-0">
             <DialogTitle>Upload KPI Evidence</DialogTitle>
             <DialogDescription>

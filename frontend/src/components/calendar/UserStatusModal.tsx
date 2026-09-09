@@ -45,7 +45,7 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="pointer-events-auto flex max-h-[90vh] max-w-2xl flex-col overflow-hidden border border-border bg-popover p-0 text-popover-foreground shadow-2xl backdrop-blur-xl sm:rounded-3xl [&>button]:hidden">
+      <DialogContent size="lg" hideClose padded={false} className="pointer-events-auto">
         <DialogTitle className="sr-only">Vacation Balance</DialogTitle>
         <DialogDescription className="sr-only">
           Overview of vacation, carry-over and upcoming holidays for {user.first_name}{" "}
@@ -148,7 +148,7 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                     <CurrentYearCard currentDetail={currentDetail} vacationYear={vacationYear} />
                   </div>
                   <UpcomingHolidays holidays={upcomingHolidays} />
-                  <div className="mt-4 flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <div className="mt-4 flex items-center gap-2 text-micro text-muted-foreground">
                     <Info className="h-3 w-3" />
                     Carry-over days automatically expire on 31 March if unused.
                   </div>

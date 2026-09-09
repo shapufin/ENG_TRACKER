@@ -1,14 +1,15 @@
 import React from "react";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  type DialogSize,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 interface FormDialogProps {
   open: boolean;
@@ -21,8 +22,8 @@ interface FormDialogProps {
   submitLabel?: string;
   /** Extra submit disable rule (e.g. form validation). Affects only submit. */
   submitDisabled?: boolean;
-  /** Override the dialog max-width. Defaults to "sm:max-w-lg". */
-  contentClassName?: string;
+  /** Dialog width. Defaults to "lg" (672px) — enough room for 2-column forms. */
+  size?: DialogSize;
 }
 
 export const FormDialog: React.FC<FormDialogProps> = ({
@@ -35,26 +36,18 @@ export const FormDialog: React.FC<FormDialogProps> = ({
   isSubmitting = false,
   submitLabel = "Save",
   submitDisabled = false,
-  contentClassName,
+  size = "lg",
 }) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent
-      className={cn(
-        "flex max-h-[calc(100dvh-var(--safe-area-top)-var(--safe-area-bottom)-1rem)] flex-col overflow-hidden sm:max-h-[90vh]",
-        contentClassName ?? "sm:max-w-lg"
-      )}
-      aria-describedby={undefined}
-    >
+    <DialogContent size={size} aria-describedby={undefined}>
       <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-        <DialogHeader className="shrink-0">
+        <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         {/* Scrollable body — keeps header + footer always visible */}
-        <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
-          {children}
-        </div>
-        <DialogFooter className="shrink-0 border-t pt-4">
+        <DialogBody>{children}</DialogBody>
+        <DialogFooter>
           <Button
             type="button"
             variant="outline"

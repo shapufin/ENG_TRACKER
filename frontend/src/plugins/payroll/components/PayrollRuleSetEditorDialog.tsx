@@ -374,7 +374,7 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
       onSubmit={submit}
       isSubmitting={isSaving}
       submitLabel={mode === "edit" ? "Save calculation" : "Create version"}
-      contentClassName="sm:max-w-4xl"
+      size="xl"
     >
       <p className="text-sm text-muted-foreground">
         {mode === "edit"

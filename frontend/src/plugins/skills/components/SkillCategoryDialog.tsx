@@ -47,7 +47,7 @@ export const SkillCategoryDialog: React.FC<SkillCategoryDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
-      <DialogContent className="flex max-h-[90vh] max-w-md flex-col overflow-hidden">
+      <DialogContent size="sm">
         <DialogHeader className="shrink-0">
           <DialogTitle>{editing ? "Edit Category" : "New Category"}</DialogTitle>
           <DialogDescription>

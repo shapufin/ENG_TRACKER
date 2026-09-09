@@ -116,7 +116,7 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
       </div>
 
       <Dialog open={exportDialogOpen} onOpenChange={onExportDialogOpenChange}>
-        <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden">
+        <DialogContent>
           <DialogHeader className="shrink-0">
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>

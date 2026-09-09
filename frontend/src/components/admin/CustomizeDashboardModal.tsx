@@ -32,7 +32,7 @@ export const CustomizeDashboardModal: React.FC<CustomizeDashboardModalProps> = (
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
+      <DialogContent size="lg">
         <DialogHeader className="shrink-0">
           <DialogTitle>Customize Dashboard</DialogTitle>
           <DialogDescription>

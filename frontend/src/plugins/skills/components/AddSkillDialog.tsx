@@ -120,7 +120,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && handleClose()}>
-      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
+      <DialogContent size="lg">
         <DialogHeader className="shrink-0">
           <DialogTitle>Add skills to your profile</DialogTitle>
           <DialogDescription>

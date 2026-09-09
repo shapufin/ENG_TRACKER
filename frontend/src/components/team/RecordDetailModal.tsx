@@ -202,7 +202,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-xl flex-col overflow-hidden border border-border bg-popover p-0 text-popover-foreground [&>button]:hidden">
+      <DialogContent size="lg" hideClose padded={false}>
         <DialogTitle className="sr-only">Record Details</DialogTitle>
         <DialogDescription className="sr-only">
           View details for {recordType} record for {userName}
@@ -285,7 +285,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      <p className="mb-0.5 text-micro font-medium uppercase tracking-wide text-muted-foreground">
                         {field.label}
                       </p>
                       <p

@@ -395,7 +395,7 @@ export const PayrollCalendarPage: React.FC = () => {
                         <div className="text-xs font-semibold">{cell.day}</div>
                         {isHoliday && cell.workday?.holiday_name && (
                           <div
-                            className="mt-0.5 truncate text-[10px] text-destructive"
+                            className="mt-0.5 truncate text-micro text-destructive"
                             title={cell.workday.holiday_name}
                           >
                             {cell.workday.holiday_name}
@@ -487,7 +487,7 @@ export const PayrollCalendarPage: React.FC = () => {
 
       {/* Add Holiday dialog */}
       <Dialog open={addHolidayOpen} onOpenChange={setAddHolidayOpen}>
-        <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader className="shrink-0">
             <DialogTitle>Add Holiday</DialogTitle>
             <DialogDescription>Add a holiday to the work calendar.</DialogDescription>
@@ -540,7 +540,7 @@ export const PayrollCalendarPage: React.FC = () => {
           }
         }}
       >
-        <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader className="shrink-0">
             <DialogTitle>Edit Holiday</DialogTitle>
             <DialogDescription>Update the holiday name.</DialogDescription>

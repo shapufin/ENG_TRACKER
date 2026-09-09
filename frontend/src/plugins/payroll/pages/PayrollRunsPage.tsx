@@ -111,7 +111,7 @@ export const PayrollRunsPage: React.FC = () => {
       </GlassCard>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden">
+        <DialogContent>
           <DialogHeader className="shrink-0">
             <DialogTitle>New Payroll Run</DialogTitle>
             <DialogDescription>Start a new payroll run for a processing period.</DialogDescription>

@@ -109,7 +109,7 @@ export const AnalyticsConfigModal: React.FC<AnalyticsConfigModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-[500px]">
+      <DialogContent size="md">
         <DialogHeader className="shrink-0">
           <DialogTitle>Analytics Configuration</DialogTitle>
           <DialogDescription>

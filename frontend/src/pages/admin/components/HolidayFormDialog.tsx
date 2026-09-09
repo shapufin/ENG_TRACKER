@@ -3,6 +3,7 @@ import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SwitchField } from "@/components/common/forms/SwitchField";
+import { ModalSection } from "@/components/ui/ModalSection";
 import {
   Select,
   SelectContent,
@@ -59,7 +60,7 @@ export const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
     >
-      <div className="space-y-3">
+      <ModalSection columns={2}>
         <div className="space-y-1">
           <Label htmlFor="holiday-name">Name</Label>
           <Input
@@ -96,15 +97,17 @@ export const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
             placeholder="Optional details"
           />
         </div>
-        <SwitchField
-          id="holiday-global"
-          label="Applies to all workspaces"
-          description="Global holidays apply to every calendar workspace."
-          checked={form.is_global}
-          onCheckedChange={(checked) => updateField("is_global", checked)}
-        />
+        <div className="sm:col-span-2">
+          <SwitchField
+            id="holiday-global"
+            label="Applies to all workspaces"
+            description="Global holidays apply to every calendar workspace."
+            checked={form.is_global}
+            onCheckedChange={(checked) => updateField("is_global", checked)}
+          />
+        </div>
         {!form.is_global && (
-          <div className="space-y-1">
+          <div className="space-y-1 sm:col-span-2">
             <Label htmlFor="holiday-workspace">Workspace</Label>
             <Select value={form.calendar} onValueChange={(value) => updateField("calendar", value)}>
               <SelectTrigger id="holiday-workspace">
@@ -121,7 +124,7 @@ export const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
             </Select>
           </div>
         )}
-      </div>
+      </ModalSection>
     </FormDialog>
   );
 };

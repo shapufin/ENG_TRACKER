@@ -98,7 +98,7 @@ export const BulkSkillAddDialog: React.FC<BulkSkillAddDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
-      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
+      <DialogContent size="lg">
         <DialogHeader className="shrink-0">
           <DialogTitle>Add skills to {category?.name ?? "category"}</DialogTitle>
           <DialogDescription>

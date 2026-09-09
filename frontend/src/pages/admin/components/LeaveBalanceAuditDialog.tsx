@@ -48,7 +48,7 @@ export const LeaveBalanceAuditDialog: React.FC<LeaveBalanceAuditDialogProps> = (
 
   return (
     <Dialog open={balance !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden sm:rounded-3xl">
+      <DialogContent size="lg">
         <DialogHeader className="shrink-0">
           <DialogTitle>Allowance Audit</DialogTitle>
           <DialogDescription>
@@ -80,7 +80,7 @@ export const LeaveBalanceAuditDialog: React.FC<LeaveBalanceAuditDialogProps> = (
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-border bg-surface-sunken p-3.5">
-                <span className="text-[11px] text-muted-foreground">Remaining</span>
+                <span className="text-micro-lg text-muted-foreground">Remaining</span>
                 <div className="mt-0.5 font-mono text-2xl font-black">
                   {fmt(remaining)}
                   <span className="text-xs font-normal text-muted-foreground"> d</span>
@@ -92,12 +92,12 @@ export const LeaveBalanceAuditDialog: React.FC<LeaveBalanceAuditDialogProps> = (
                     style={{ width: `${pct(remaining, total)}%` }}
                   />
                 </div>
-                <div className="mt-1 font-mono text-[10px] text-muted-foreground">
+                <div className="mt-1 font-mono text-micro text-muted-foreground">
                   {pct(remaining, total)}% of {fmt(total)}d
                 </div>
               </div>
               <div className="rounded-2xl border border-border bg-surface-sunken p-3.5">
-                <span className="text-[11px] text-muted-foreground">Used</span>
+                <span className="text-micro-lg text-muted-foreground">Used</span>
                 <div className="mt-0.5 font-mono text-2xl font-black text-rose-700 dark:text-rose-400">
                   {fmt(used)}
                   <span className="text-xs font-normal text-muted-foreground"> d</span>
@@ -109,12 +109,12 @@ export const LeaveBalanceAuditDialog: React.FC<LeaveBalanceAuditDialogProps> = (
                     style={{ width: `${pct(used, total)}%` }}
                   />
                 </div>
-                <div className="mt-1 font-mono text-[10px] text-muted-foreground">
+                <div className="mt-1 font-mono text-micro text-muted-foreground">
                   {pct(used, total)}% of {fmt(total)}d
                 </div>
               </div>
               <div className="rounded-2xl border border-border bg-surface-sunken p-3.5">
-                <span className="text-[11px] text-muted-foreground">Pending review</span>
+                <span className="text-micro-lg text-muted-foreground">Pending review</span>
                 <div className="mt-0.5 font-mono text-2xl font-black text-amber-700 dark:text-amber-400">
                   {fmt(pending)}
                   <span className="text-xs font-normal text-muted-foreground"> d</span>
@@ -126,7 +126,7 @@ export const LeaveBalanceAuditDialog: React.FC<LeaveBalanceAuditDialogProps> = (
                     style={{ width: `${pct(pending, total)}%` }}
                   />
                 </div>
-                <div className="mt-1 font-mono text-[10px] text-muted-foreground">
+                <div className="mt-1 font-mono text-micro text-muted-foreground">
                   {pct(pending, total)}% in review
                 </div>
               </div>

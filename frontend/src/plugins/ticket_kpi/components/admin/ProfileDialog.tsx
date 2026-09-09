@@ -93,7 +93,7 @@ export const ProfileDialog: React.FC<ProfileDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden border-border">
+      <DialogContent size="lg">
         <DialogHeader className="shrink-0">
           <DialogTitle>{profile ? "Edit Profile" : "Create Profile"}</DialogTitle>
           <DialogDescription>

@@ -95,7 +95,7 @@ export const CRBulkCommandDrawer: React.FC<CRBulkCommandDrawerProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
+      <DialogContent size="lg">
         <div className="shrink-0">
           <BulkDrawerHeader
             count={selectedCount}

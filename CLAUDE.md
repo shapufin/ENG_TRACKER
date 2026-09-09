@@ -28,6 +28,7 @@ calendar, or plugins, also read the linked domain file.
 | model, field, migration, queryset, schema | `.devin/context/02-DATA-MODELS.md` | Entity relationships before queries |
 | component, hook, page, context, React, frontend test | `.devin/context/03-FRONTEND-PATTERNS.md` | Composition + test conventions |
 | screenshot, fingerprint, visual verify/diff, UI refactor verification | `.devin/context/12-VISUAL-VERIFICATION.md` | Fingerprint capture + diff tooling |
+| modal, dialog, form dialog, confirm | `.devin/context/03-FRONTEND-PATTERNS.md` §13 | Dialog contract + tone scale |
 | endpoint, serializer, ViewSet, API, URL, service | `.devin/context/04-API-PATTERNS.md` | DRF + service layer patterns |
 | add feature, new page, new endpoint, end-to-end | `.devin/context/05-COMMON-TASKS.md` | Step-by-step recipes |
 | overtime, standby, leave, balance, MonthlyLock, carryover | `.devin/context/06-DOMAIN-INVARIANTS.md` | Domain rules that must not break |
@@ -81,6 +82,15 @@ calendar, or plugins, also read the linked domain file.
 - **React Query keys** — include every result-changing parameter (userId,
   workspaceScope, page_size, month/year filters). Never build a constant key
   with conditionals like `condition ? scope : "self"`.
+- **Dialog contract** — set width with `size` (sm 448 / md 512 / lg 672 /
+  xl 896); never pass `max-w-*`, `flex`/`overflow` or `p-0` to
+  `DialogContent` (use `padded={false}`, `hideClose`). The one scroll
+  region is `DialogBody`. `cn` is tailwind-merge: prefixed and unprefixed
+  classes are SEPARATE merge groups, so a callsite class does not always
+  win. Colors use tone tokens (`bg-tone-<t>-surface`, `text-tone-<t>-text`
+  for success/warning/danger/info/accent/neutral) — they carry the
+  light/dark pair, so a `dark:` variant is a bug. Before claiming a modal
+  change done: `node scripts/modal-audit.mjs` (exit 0).
 - **UI/accessibility baseline** — prefer existing shared primitives
   (`GlassCard`, `StatCard`, `DataTable`, `EmptyState`, `ConfirmDialog`) and
   semantic theme tokens over ad hoc markup; no raw hex or slate/zinc/gray

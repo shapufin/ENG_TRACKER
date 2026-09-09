@@ -49,7 +49,7 @@ export const PluginConfigDialog: React.FC<PluginConfigDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden">
+      <DialogContent size="xl">
         <DialogHeader className="shrink-0">
           <DialogTitle>{plugin.verbose_name} Configuration</DialogTitle>
           <DialogDescription>

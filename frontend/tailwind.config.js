@@ -73,6 +73,43 @@ export default {
         "accent-yellow": "hsl(var(--accent-yellow))",
         "accent-violet": "hsl(var(--accent-violet))",
         "accent-emerald": "hsl(var(--accent-emerald))",
+        "glass-border": "hsl(var(--glass-border))",
+        overlay: "hsl(var(--overlay))",
+        // Semantic tone scale — the single source of truth for tinted status
+        // surfaces. Use these instead of raw palette classes
+        // (`bg-emerald-500/15`, `text-rose-700 dark:text-rose-400`, ...).
+        tone: {
+          success: {
+            surface: "hsl(var(--tone-success-surface))",
+            border: "hsl(var(--tone-success-border))",
+            text: "hsl(var(--tone-success-text))",
+          },
+          warning: {
+            surface: "hsl(var(--tone-warning-surface))",
+            border: "hsl(var(--tone-warning-border))",
+            text: "hsl(var(--tone-warning-text))",
+          },
+          danger: {
+            surface: "hsl(var(--tone-danger-surface))",
+            border: "hsl(var(--tone-danger-border))",
+            text: "hsl(var(--tone-danger-text))",
+          },
+          info: {
+            surface: "hsl(var(--tone-info-surface))",
+            border: "hsl(var(--tone-info-border))",
+            text: "hsl(var(--tone-info-text))",
+          },
+          accent: {
+            surface: "hsl(var(--tone-accent-surface))",
+            border: "hsl(var(--tone-accent-border))",
+            text: "hsl(var(--tone-accent-text))",
+          },
+          neutral: {
+            surface: "hsl(var(--tone-neutral-surface))",
+            border: "hsl(var(--tone-neutral-border))",
+            text: "hsl(var(--tone-neutral-text))",
+          },
+        },
       },
       fontFamily: {
         sans: ["Plus Jakarta Sans Variable", ...defaultTheme.fontFamily.sans],
@@ -82,6 +119,19 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        // Tokenized surface scale. Values equal Tailwind's own xl/2xl/3xl
+        // defaults (0.75/1/1.5rem), so this remap is zero-visual-change.
+        xl: "var(--radius-control)",
+        "2xl": "var(--radius-surface)",
+        "3xl": "var(--radius-dialog)",
+      },
+      fontSize: {
+        // Retires the `text-[10px]` / `text-[11px]` arbitrary values used for
+        // mono uppercase micro-labels.
+        // Size only — tracking belongs to the label component, not the token,
+        // so these also fit non-uppercase captions.
+        micro: ["0.625rem", { lineHeight: "0.875rem" }],
+        "micro-lg": ["0.6875rem", { lineHeight: "1rem" }],
       },
       boxShadow: {
         glass: "var(--glass-shadow)",

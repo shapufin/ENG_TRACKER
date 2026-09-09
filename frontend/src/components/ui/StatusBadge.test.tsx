@@ -18,12 +18,18 @@ describe("StatusBadge", () => {
     expect(screen.getByText("Rejected")).toBeInTheDocument();
   });
 
-  it("uses AA light-mode text (-700) with semantic token dark text", () => {
+  // Text colour comes from the tone scale, which already carries the AA
+  // light-mode (-700 range) and lighter dark-mode values — so no `dark:`
+  // variant should appear at the callsite.
+  it("uses tone tokens for text, with no dark: variant", () => {
     const { container: pending } = render(<StatusBadge variant="pending" />);
     const { container: approved } = render(<StatusBadge variant="approved" />);
     const { container: rejected } = render(<StatusBadge variant="rejected" />);
-    expect(pending.firstElementChild?.className).toContain("text-amber-700 dark:text-warning");
-    expect(approved.firstElementChild?.className).toContain("text-emerald-700 dark:text-success");
-    expect(rejected.firstElementChild?.className).toContain("text-rose-700 dark:text-destructive");
+    expect(pending.firstElementChild?.className).toContain("text-tone-warning-text");
+    expect(approved.firstElementChild?.className).toContain("text-tone-success-text");
+    expect(rejected.firstElementChild?.className).toContain("text-tone-danger-text");
+    for (const c of [pending, approved, rejected]) {
+      expect(c.firstElementChild?.className).not.toContain("dark:");
+    }
   });
 });

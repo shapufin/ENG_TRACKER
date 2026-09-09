@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ModalSection } from "@/components/ui/ModalSection";
+import { OptionPills } from "@/components/ui/OptionPills";
+import { InfoCallout } from "@/components/ui/InfoCallout";
 import { FormInputField } from "./userFormFields";
 import { UserFormCore } from "./UserFormCore";
 import { TeamMultiSelect } from "@/components/admin/TeamMultiSelect";
@@ -134,53 +137,36 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
       isSubmitting={submitting}
       submitLabel={userType === "cr" ? "Create & Grant CR Access" : undefined}
     >
-      {/* User Type toggle — only shown for full admins (CR admins use CreateCRUserDialog directly) */}
-      <div className="flex gap-2 rounded-lg border border-border/40 p-1">
-        <button
-          type="button"
-          onClick={() => setUserType("standard")}
-          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            userType === "standard"
-              ? "bg-primary/10 text-foreground"
-              : "text-muted-foreground hover:bg-accent"
-          }`}
-        >
-          Standard User
-        </button>
-        <button
-          type="button"
-          onClick={() => setUserType("cr")}
-          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            userType === "cr"
-              ? "bg-primary/10 text-foreground"
-              : "text-muted-foreground hover:bg-accent"
-          }`}
-        >
-          CR User
-        </button>
-      </div>
+      {/* User Type — only shown for full admins (CR admins use CreateCRUserDialog directly) */}
+      <OptionPills
+        label="Account type"
+        columns={2}
+        value={userType}
+        onChange={setUserType}
+        options={[
+          { value: "standard", label: "Standard User" },
+          { value: "cr", label: "CR User" },
+        ]}
+      />
 
       {userType === "cr" && crError && (
-        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{crError}</span>
-        </div>
+        <InfoCallout tone="danger" label={crError} icon={<AlertCircle className="h-4 w-4" />} />
       )}
 
-      <FormInputField
-        label="Username"
-        value={form.username}
-        onChange={(v) => updateField("username", v)}
-        error={formErrors.username}
-      />
-      <FormInputField
-        label="Email"
-        value={form.email}
-        onChange={(v) => updateField("email", v)}
-        error={formErrors.email}
-        type="email"
-      />
-      <div className="grid grid-cols-2 gap-3">
+      <ModalSection title="Account" columns={2}>
+        <FormInputField
+          label="Username"
+          value={form.username}
+          onChange={(v) => updateField("username", v)}
+          error={formErrors.username}
+        />
+        <FormInputField
+          label="Email"
+          value={form.email}
+          onChange={(v) => updateField("email", v)}
+          error={formErrors.email}
+          type="email"
+        />
         <div className="space-y-2">
           <Label htmlFor="user-create-first-name">First Name</Label>
           <Input
@@ -197,14 +183,14 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
             onChange={(e) => updateField("last_name", e.target.value)}
           />
         </div>
-      </div>
-      <FormInputField
-        label="Password"
-        value={form.password}
-        onChange={(v) => updateField("password", v)}
-        error={formErrors.password}
-        type="password"
-      />
+        <FormInputField
+          label="Password"
+          value={form.password}
+          onChange={(v) => updateField("password", v)}
+          error={formErrors.password}
+          type="password"
+        />
+      </ModalSection>
 
       {userType === "standard" ? (
         <UserFormCore
