@@ -112,14 +112,15 @@ class Command(BaseCommand):
                 (uid, m) for (uid, m) in active_pair_set if uid == user_id
             }
 
-        orphaned_kpis = MonthlyKPI.objects.none()
-        for kpi in MonthlyKPI.objects.all():
+        orphaned_pks = []
+        for kpi in MonthlyKPI.objects.only('pk', 'user_id', 'month').iterator():
             if user_id and kpi.user_id != user_id:
                 continue
             if (kpi.user_id, kpi.month) not in active_pair_set:
-                orphaned_kpis = orphaned_kpis | MonthlyKPI.objects.filter(pk=kpi.pk)
+                orphaned_pks.append(kpi.pk)
 
-        orphaned_count = orphaned_kpis.count()
+        orphaned_kpis = MonthlyKPI.objects.filter(pk__in=orphaned_pks)
+        orphaned_count = len(orphaned_pks)
         if orphaned_count > 0:
             if dry_run:
                 self.stdout.write(

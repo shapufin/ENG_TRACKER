@@ -1685,6 +1685,35 @@ class EndToEndUploadFlowTests(TestCase):
             MonthlyKPI.objects.filter(user=self.member, month=date(2026, 3, 1)).exists()
         )
 
+    def test_recompute_kpis_deletes_multiple_orphaned_records(self):
+        """recompute_kpis deletes every MonthlyKPI whose (user, month) has no
+        non-overridden batch, not just a single one. Regression for the
+        orphan-cleanup loop rewrite (queryset-OR-chaining -> pk__in)."""
+        self._import(self.member)
+        # Two orphaned KPIs: no TicketImportBatch backs either (user, month) pair.
+        orphan_1 = MonthlyKPI.objects.create(
+            user=self.member, month=date(2025, 1, 1), total_tickets=1
+        )
+        orphan_2 = MonthlyKPI.objects.create(
+            user=self.outsider, month=date(2025, 2, 1), total_tickets=2
+        )
+        call_command('recompute_kpis')
+        self.assertFalse(MonthlyKPI.objects.filter(pk=orphan_1.pk).exists())
+        self.assertFalse(MonthlyKPI.objects.filter(pk=orphan_2.pk).exists())
+        # The real KPI backed by an actual batch must survive.
+        self.assertTrue(
+            MonthlyKPI.objects.filter(user=self.member, month=date(2026, 3, 1)).exists()
+        )
+
+    def test_recompute_kpis_dry_run_does_not_delete_orphans(self):
+        """--dry-run reports orphaned records without deleting them."""
+        self._import(self.member)
+        orphan = MonthlyKPI.objects.create(
+            user=self.member, month=date(2024, 6, 1), total_tickets=3
+        )
+        call_command('recompute_kpis', dry_run=True)
+        self.assertTrue(MonthlyKPI.objects.filter(pk=orphan.pk).exists())
+
     # --- Duplicate upload prevention ---
 
     def test_duplicate_upload_same_month_returns_403(self):
