@@ -28,6 +28,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ModalSection } from "@/components/ui/ModalSection";
 import { payrollService } from "../services/payrollService";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { handleApiError } from "@/lib/error-handler";
@@ -492,25 +493,27 @@ export const PayrollCalendarPage: React.FC = () => {
             <DialogTitle>Add Holiday</DialogTitle>
             <DialogDescription>Add a holiday to the work calendar.</DialogDescription>
           </DialogHeader>
-          <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
-            <div>
-              <Label htmlFor="new-holiday-date">Date</Label>
-              <Input
-                id="new-holiday-date"
-                type="date"
-                value={newHolidayDate}
-                onChange={(e) => setNewHolidayDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="new-holiday-name">Holiday Name</Label>
-              <Input
-                id="new-holiday-name"
-                value={newHolidayName}
-                onChange={(e) => setNewHolidayName(e.target.value)}
-                placeholder="e.g. Independence Day"
-              />
-            </div>
+          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-1 py-1">
+            <ModalSection columns={2}>
+              <div>
+                <Label htmlFor="new-holiday-date">Date</Label>
+                <Input
+                  id="new-holiday-date"
+                  type="date"
+                  value={newHolidayDate}
+                  onChange={(e) => setNewHolidayDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-holiday-name">Holiday Name</Label>
+                <Input
+                  id="new-holiday-name"
+                  value={newHolidayName}
+                  onChange={(e) => setNewHolidayName(e.target.value)}
+                  placeholder="e.g. Independence Day"
+                />
+              </div>
+            </ModalSection>
           </div>
           <DialogFooter className="shrink-0 border-t pt-4">
             <Button
