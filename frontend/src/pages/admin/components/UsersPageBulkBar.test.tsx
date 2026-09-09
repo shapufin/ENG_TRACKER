@@ -11,13 +11,7 @@ describe("UsersPageBulkBar", () => {
   it("shows the selection count and bulk edit action", () => {
     const onClear = vi.fn();
     const onBulkActions = vi.fn();
-    render(
-      <UsersPageBulkBar
-        selectedCount={2}
-        onClear={onClear}
-        onBulkActions={onBulkActions}
-      />
-    );
+    render(<UsersPageBulkBar selectedCount={2} onClear={onClear} onBulkActions={onBulkActions} />);
 
     expect(screen.getByRole("status")).toHaveTextContent("2 users selected");
     fireEvent.click(screen.getByRole("button", { name: "Clear selection" }));

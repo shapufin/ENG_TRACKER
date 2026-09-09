@@ -171,13 +171,7 @@ describe("HRReportActionBar", () => {
   });
 
   it("shows payroll export dialog with processing-period description", () => {
-    render(
-      <HRReportActionBar
-        {...baseProps}
-        exportDialogOpen={true}
-        exportType="payroll"
-      />
-    );
+    render(<HRReportActionBar {...baseProps} exportDialogOpen={true} exportType="payroll" />);
     expect(
       screen.getByRole("heading", { name: "Export for Payroll (by Processing Period)" })
     ).toBeInTheDocument();

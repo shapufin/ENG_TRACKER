@@ -18,7 +18,10 @@ describe("calendarAdminService URL contracts", () => {
   it("createWorkspace POSTs to /dashboard/calendar-workspaces/", async () => {
     vi.mocked(api.post).mockResolvedValue({ data: {} } as any);
     await calendarAdminService.createWorkspace({ name: "WS", code: "ws" });
-    expect(api.post).toHaveBeenCalledWith("/dashboard/calendar-workspaces/", { name: "WS", code: "ws" });
+    expect(api.post).toHaveBeenCalledWith("/dashboard/calendar-workspaces/", {
+      name: "WS",
+      code: "ws",
+    });
   });
 
   it("updateWorkspace PUTs /dashboard/calendar-workspaces/:id/", async () => {

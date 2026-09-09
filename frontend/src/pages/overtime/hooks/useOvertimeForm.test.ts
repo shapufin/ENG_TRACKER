@@ -49,9 +49,7 @@ describe("useOvertimeForm", () => {
 
   it("preserves evidence_type in edit mode", () => {
     const { result } = renderHook(() => useOvertimeForm());
-    act(() =>
-      result.current.openEdit({ ...baseLog, evidence_type: "ticket" } as OvertimeLog)
-    );
+    act(() => result.current.openEdit({ ...baseLog, evidence_type: "ticket" } as OvertimeLog));
     expect(result.current.form.evidence_type).toBe("ticket");
   });
 

@@ -29,7 +29,12 @@ export const BulkDrawerHeader: React.FC<BulkDrawerHeaderProps> = ({
           </p>
         </div>
       </div>
-      <Button variant="outline" size="sm" onClick={onClearAndClose} className="w-full shrink-0 sm:w-auto">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onClearAndClose}
+        className="w-full shrink-0 sm:w-auto"
+      >
         <X className="mr-1 h-4 w-4" /> Clear & Close
       </Button>
     </div>

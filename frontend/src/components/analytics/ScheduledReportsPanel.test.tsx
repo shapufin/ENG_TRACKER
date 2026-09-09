@@ -70,7 +70,7 @@ describe("ScheduledReportsPanel", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("No scheduled reports. Create one to automate report delivery via email."),
+        screen.getByText("No scheduled reports. Create one to automate report delivery via email.")
       ).toBeInTheDocument();
     });
   });

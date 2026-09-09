@@ -41,11 +41,7 @@ export const useStandbyQueries = (options: UseStandbyQueriesOptions) => {
     ? `${options.customDateRange.from}_${options.customDateRange.to}`
     : "current_month";
 
-  const logsQueryKey = [
-    "standby",
-    options.userId ?? "anonymous",
-    rangeKey,
-  ];
+  const logsQueryKey = ["standby", options.userId ?? "anonymous", rangeKey];
 
   const { data, isLoading } = useQuery({
     queryKey: logsQueryKey,

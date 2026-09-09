@@ -26,7 +26,7 @@ export const DateRangeHistoryButton: React.FC<DateRangeHistoryButtonProps> = ({
   const [open, setOpen] = useState(false);
   const { from, to, setFrom, setTo } = useAutoMonthEnd(
     customDateRange?.from ?? "",
-    customDateRange?.to ?? "",
+    customDateRange?.to ?? ""
   );
 
   // Sync internal draft state when the parent's customDateRange changes
@@ -71,29 +71,17 @@ export const DateRangeHistoryButton: React.FC<DateRangeHistoryButtonProps> = ({
           <div className="space-y-3">
             <div className="space-y-1">
               <Label>From Date</Label>
-              <DatePicker
-                value={from}
-                onChange={setFrom}
-                placeholder="DD/MM/YYYY"
-              />
+              <DatePicker value={from} onChange={setFrom} placeholder="DD/MM/YYYY" />
             </div>
             <div className="space-y-1">
               <Label>To Date</Label>
-              <DatePicker
-                value={to}
-                onChange={setTo}
-                placeholder="DD/MM/YYYY"
-              />
+              <DatePicker value={to} onChange={setTo} placeholder="DD/MM/YYYY" />
             </div>
             <div className="flex justify-between gap-2 pt-2">
               <Button variant="outline" size="sm" onClick={handleReset}>
                 Current Month
               </Button>
-              <Button
-                size="sm"
-                onClick={handleApply}
-                disabled={!from || !to}
-              >
+              <Button size="sm" onClick={handleApply} disabled={!from || !to}>
                 Apply
               </Button>
             </div>

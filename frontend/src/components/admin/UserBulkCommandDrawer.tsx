@@ -90,8 +90,7 @@ const RoleToggle: React.FC<{
   value: TriStateValue;
   onChange: (value: TriStateValue) => void;
 }> = ({ id, label, value, onChange }) => {
-  const stateLabel =
-    value === "indeterminate" ? "unchanged" : value === true ? "on" : "off";
+  const stateLabel = value === "indeterminate" ? "unchanged" : value === true ? "on" : "off";
   return (
     <label
       htmlFor={id}
@@ -163,8 +162,10 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
     const payload: Omit<BulkUserUpdatePayload, "user_ids"> = {};
     if (applyTeams) payload.teams = teamIds;
     if (applyTechs) payload.techs = techIds;
-    if (italianTl !== "unchanged") payload.italian_tl = italianTl === "remove" ? null : Number(italianTl);
-    if (albanianTl !== "unchanged") payload.albanian_tl = albanianTl === "remove" ? null : Number(albanianTl);
+    if (italianTl !== "unchanged")
+      payload.italian_tl = italianTl === "remove" ? null : Number(italianTl);
+    if (albanianTl !== "unchanged")
+      payload.albanian_tl = albanianTl === "remove" ? null : Number(albanianTl);
     if (hrRole !== "indeterminate") payload.is_hr = hrRole === true;
     if (italianRole !== "indeterminate") payload.is_italian_tl_role = italianRole === true;
     if (albanianRole !== "indeterminate") payload.is_albanian_tl_role = albanianRole === true;
@@ -303,8 +304,17 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
             <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isMutating}>
               Cancel
             </Button>
-            <Button onClick={handleApply} disabled={!hasChanges || selectedCount === 0 || isMutating}>
-              {isMutating ? "Applying changes..." : <><Save className="mr-2 h-4 w-4" /> Apply changes</>}
+            <Button
+              onClick={handleApply}
+              disabled={!hasChanges || selectedCount === 0 || isMutating}
+            >
+              {isMutating ? (
+                "Applying changes..."
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" /> Apply changes
+                </>
+              )}
             </Button>
           </div>
         </div>

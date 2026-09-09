@@ -185,14 +185,11 @@ export const useTLApprovalDashboard = (canManageTeam: boolean) => {
    * custom-range filters are overridden. Selecting a custom date range
    * afterwards simply overwrites these values again.
    */
-  const handleMonthSelect = useCallback(
-    (monthIso: string) => {
-      const { firstDay, lastDay } = getMonthRange(monthIso);
-      setDateFrom(firstDay);
-      setDateTo(lastDay);
-    },
-    []
-  );
+  const handleMonthSelect = useCallback((monthIso: string) => {
+    const { firstDay, lastDay } = getMonthRange(monthIso);
+    setDateFrom(firstDay);
+    setDateTo(lastDay);
+  }, []);
 
   return {
     activeTab,

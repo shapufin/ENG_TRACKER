@@ -30,8 +30,8 @@ export interface TicketOvertimeLink {
   linked_by: number | null;
   linked_by_username: string;
   linked_at: string;
-  link_method: 'manual' | 'auto';
-  review_status: 'confirmed' | 'pending' | 'rejected';
+  link_method: "manual" | "auto";
+  review_status: "confirmed" | "pending" | "rejected";
   reviewed_by: number | null;
   reviewed_at: string | null;
   note: string;

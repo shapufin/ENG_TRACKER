@@ -28,7 +28,7 @@ async function apiRequest(
     },
     data: body ? JSON.stringify(body) : undefined,
   });
-  let json: unknown = null;
+  let json: unknown;
   try {
     json = await response.json();
   } catch {

@@ -361,9 +361,10 @@ export const ticketKPIService = {
   async getLinks(params?: {
     review_status?: "pending" | "confirmed" | "rejected";
   }): Promise<TicketOvertimeLink[]> {
-    const { data } = await api.get<
-      TicketOvertimeLink[] | PaginatedResponse<TicketOvertimeLink>
-    >("/plugins/ticket_kpi/links/", { params });
+    const { data } = await api.get<TicketOvertimeLink[] | PaginatedResponse<TicketOvertimeLink>>(
+      "/plugins/ticket_kpi/links/",
+      { params }
+    );
     return normalizeList(data);
   },
   async createLink(

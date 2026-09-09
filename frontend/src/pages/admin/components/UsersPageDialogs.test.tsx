@@ -14,7 +14,9 @@ vi.mock("@/components/ui/FormDialog", () => ({
 vi.mock("@/components/ui/ConfirmDialog", () => ({
   ConfirmDialog: ({ onConfirm, onOpenChange, title, open }: any) =>
     title === "Delete selected users" && !open ? null : (
-      <div data-testid={title === "Delete selected users" ? "bulk-confirm-dialog" : "confirm-dialog"}>
+      <div
+        data-testid={title === "Delete selected users" ? "bulk-confirm-dialog" : "confirm-dialog"}
+      >
         <button onClick={onConfirm}>confirm</button>
         <button onClick={() => onOpenChange(false)}>cancel</button>
       </div>
