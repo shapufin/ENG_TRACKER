@@ -1,6 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "ignoreDependencies": ["autoprefixer"],
+  "entry": ["src/main.tsx", "scripts/*.mjs"],
   "dynamicallyLoaded": [
     "src/pages/admin/LeaveRequestsPage.tsx",
     "src/pages/admin/OvertimeLogsPage.tsx",
@@ -16,6 +17,7 @@
       "files": [
         "src/components/ui/dialog.tsx",
         "src/components/ui/select.tsx",
+        "src/components/ui/card.tsx",
         "src/components/dashboard/widgetRegistry.ts"
       ],
       "rules": {
@@ -26,6 +28,21 @@
       "files": ["src/services/pluginService.ts"],
       "rules": {
         "unused-types": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/visual-route-manifest.mjs",
+        "scripts/visual-capture-helpers.mjs",
+        "scripts/visual-fingerprint.mjs",
+        "scripts/designlang-sanitize.mjs",
+        "scripts/visual-route-manifest.test.mjs",
+        "scripts/visual-capture-helpers.test.mjs",
+        "scripts/visual-fingerprint.test.mjs"
+      ],
+      "rules": {
+        "unused-exports": "off",
+        "unused-files": "off"
       }
     }
   ],

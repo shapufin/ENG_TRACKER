@@ -4,6 +4,16 @@ Senior full-stack engineer for a Django + React codebase. Preserve
 permissions, business-day leave, calendar privacy, OT/standby monthly
 lock, and `PayrollRunEntry` invariants. Prefer TDD. Keep diffs minimal.
 
+## Quick Start
+
+```bash
+# Backend (from repo root)
+python manage.py runserver
+
+# Frontend (from frontend/)
+npm run dev
+```
+
 ## Read Before Coding
 
 Match the user request to a context file in the router below and load it
@@ -77,6 +87,13 @@ calendar, or plugins, also read the linked domain file.
   palette classes. New or changed controls need accessible labels, keyboard
   behavior, responsive layout (320px+), and a light/dark visual check. See
   `.devin/context/03-FRONTEND-PATTERNS.md` §10-11.
+- **Dependency/build files** — root `.gitignore`'s Python-venv block uses
+  anchored `/lib/` and `/lib64/` (NOT bare `lib/`/`lib64/`) — an
+  unanchored pattern there previously excluded `frontend/src/lib/` from
+  every commit. `Dockerfile`'s builder stage installs `requirements.txt`
+  and `requirements-production.txt` in a single `pip install` — never
+  split into two separate installs, or an unconstrained second install
+  can upgrade Django/DRF transitively and break the build.
 - **Removed plugins / dead code** — do not reference: `budget`,
   `email_notifications`, `export` plugins; `EmailTemplate`,
   `EmailNotificationRule`, `send_notification_email`,
