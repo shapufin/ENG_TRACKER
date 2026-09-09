@@ -1,6 +1,10 @@
 ﻿# Generated manually to restore team memberships lost in migration 0008
 
+import logging
+
 from django.db import migrations
+
+logger = logging.getLogger(__name__)
 
 
 def restore_team_memberships(apps, schema_editor):
@@ -19,11 +23,11 @@ def restore_team_memberships(apps, schema_editor):
         defaults={'name': 'SIAE Team', 'calendar_group': 'it'}
     )
     if created:
-        print("Created missing SIAE_TEAM (code='siae')")
+        logger.info("Created missing SIAE_TEAM (code='siae')")
 
     # Assign all users to SIAE_TEAM
     count = 0
-    for profile in UserProfile.objects.all():
+    for profile in UserProfile.objects.all().iterator():
         # Check if user already has this team membership
         if not TeamMembership.objects.filter(user_profile=profile, team=siae_team).exists():
             TeamMembership.objects.create(
@@ -33,9 +37,9 @@ def restore_team_memberships(apps, schema_editor):
                 joined_date=profile.hire_date
             )
             count += 1
-            print(f"Created TeamMembership for {profile.user.username}")
+            logger.info("Created TeamMembership for %s", profile.user.username)
 
-    print(f"Restored {count} team memberships to SIAE_TEAM")
+    logger.info("Restored %d team memberships to SIAE_TEAM", count)
 
 
 def reverse_restore_team_memberships(apps, schema_editor):
@@ -45,7 +49,7 @@ def reverse_restore_team_memberships(apps, schema_editor):
     TeamMembership = apps.get_model('users', 'TeamMembership')
     # Remove all team memberships (this is a destructive reverse)
     TeamMembership.objects.all().delete()
-    print("Removed all team memberships")
+    logger.info("Removed all team memberships")
 
 
 class Migration(migrations.Migration):
