@@ -105,7 +105,7 @@ describe("CRBulkCommandDrawer", () => {
         onClearSelection={vi.fn()}
       />
     );
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByLabelText("3 selected")).toBeInTheDocument();
     expect(screen.getByText(/alice, bob, carol/)).toBeInTheDocument();
   });
 
