@@ -3,3 +3,7 @@
 
 # Lint
 ruff==0.15.20
+
+# Dev convenience (shell_plus, runserver_plus, etc.) - stripped from
+# INSTALLED_APPS in production via config/settings_production.py.
+django-extensions==4.1
