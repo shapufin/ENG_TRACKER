@@ -79,7 +79,7 @@ export const SkillsHistoryPage: React.FC = () => {
       {/* Filters */}
       <GlassCard
         isHoverLift={false}
-        className="mb-4 flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end"
+        className="mb-4 flex flex-col gap-4 p-4 sm:flex-row sm:flex-wrap sm:items-end"
       >
         <div className="flex-1">
           <Label htmlFor="history-skill-filter">Skill</Label>

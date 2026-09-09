@@ -106,7 +106,7 @@ export const SkillsHeatmapGrid: React.FC<SkillsHeatmapGridProps> = ({
           {/* Header strip — NOT virtualized. Sticky top. Contains all N skill
               headers as flex labels. Sibling of the body, not inside the
               virtualizer. */}
-          <div className="sticky top-0 z-20 flex flex-col bg-muted shadow-sm">
+          <div className="sticky top-0 z-20 flex flex-col bg-muted shadow-sm backdrop-blur-sm">
             {/* Category super-header row */}
             <div className="flex">
               <div className="sticky left-0 z-30 flex h-6 w-44 shrink-0 items-center border-b border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">

@@ -182,39 +182,43 @@ export const MySkillsPage: React.FC = () => {
       }
     >
       {!isLoading && !error && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <GlassCard isHoverLift={false} className="p-3.5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <GlassCard isHoverLift={false} className="flex flex-col gap-2 p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <TrendingUp className="h-4 w-4" aria-hidden="true" />
-              <span className="text-xs font-medium uppercase tracking-wide">Rated skills</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">Rated skills</span>
             </div>
-            <p className="mt-2 font-mono text-2xl font-semibold tabular-nums">
+            <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
               {userSkills.length}
             </p>
           </GlassCard>
-          <GlassCard isHoverLift={false} className="p-3.5">
+          <GlassCard isHoverLift={false} className="flex flex-col gap-2 p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <TrendingUp className="h-4 w-4" aria-hidden="true" />
-              <span className="text-xs font-medium uppercase tracking-wide">Categories</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">Categories</span>
             </div>
-            <p className="mt-2 font-mono text-2xl font-semibold tabular-nums">{categoryCount}</p>
+            <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
+              {categoryCount}
+            </p>
           </GlassCard>
-          <GlassCard isHoverLift={false} className="p-3.5">
+          <GlassCard isHoverLift={false} className="flex flex-col gap-2 p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Gauge className="h-4 w-4" aria-hidden="true" />
-              <span className="text-xs font-medium uppercase tracking-wide">Average level</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">Average level</span>
             </div>
-            <p className="mt-2 font-mono text-2xl font-semibold tabular-nums">
+            <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
               {avgLevel !== null ? `L${avgLevel}` : "—"}
             </p>
           </GlassCard>
-          <GlassCard isHoverLift={false} className="p-3.5">
+          <GlassCard isHoverLift={false} className="flex flex-col gap-2 p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Trophy className="h-4 w-4" aria-hidden="true" />
-              <span className="text-xs font-medium uppercase tracking-wide">Strongest skill</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                Strongest skill
+              </span>
             </div>
             <p
-              className="mt-2 truncate font-mono text-lg font-semibold"
+              className="truncate font-mono text-lg font-bold text-foreground"
               title={strongestSkill?.skill_name}
             >
               {strongestSkill ? `${strongestSkill.skill_name} · L${strongestSkill.level}` : "—"}
@@ -254,7 +258,7 @@ export const MySkillsPage: React.FC = () => {
                     return (
                       <div
                         key={us.id}
-                        className="grid gap-3 bg-card p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                        className="grid gap-3 bg-card p-4 transition-colors duration-150 hover:bg-muted/30 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           <ProficiencyBadge level={us.level} showLabel />
