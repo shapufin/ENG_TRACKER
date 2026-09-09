@@ -2,6 +2,7 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Calendar, User } from "lucide-react";
+import { toneSurfaceClass } from "@/components/ui/tone";
 import type { ConflictEntry } from "./ConflictsModal";
 
 interface ConflictCardProps {
@@ -11,23 +12,23 @@ interface ConflictCardProps {
 const getStatusColor = (status: string) => {
   switch (status) {
     case "approved":
-      return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-400 border-emerald-500/30";
+      return toneSurfaceClass.success;
     case "rejected":
-      return "bg-rose-500/15 text-rose-800 dark:text-rose-400 border-rose-500/30";
+      return toneSurfaceClass.danger;
     case "pending":
     default:
-      return "bg-amber-500/15 text-amber-800 dark:text-amber-400 border-amber-500/30";
+      return toneSurfaceClass.warning;
   }
 };
 
 const getTypeColor = (type: string) => {
   switch (type) {
     case "vacation":
-      return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-400 border-emerald-500/30";
+      return toneSurfaceClass.success;
     case "sick":
-      return "bg-rose-500/15 text-rose-800 dark:text-rose-400 border-rose-500/30";
+      return toneSurfaceClass.danger;
     default:
-      return "bg-muted-foreground/15 text-muted-foreground border-muted-foreground/30";
+      return toneSurfaceClass.neutral;
   }
 };
 
@@ -40,10 +41,7 @@ export const ConflictCard: React.FC<ConflictCardProps> = ({ conflict }) => (
           <Calendar className="h-4 w-4 text-muted-foreground" />
           <span className="font-medium">{conflict.date}</span>
         </div>
-        <Badge
-          variant="outline"
-          className="border-rose-500/30 bg-rose-500/15 text-rose-800 dark:text-rose-400"
-        >
+        <Badge variant="outline" className={toneSurfaceClass.danger}>
           {conflict.users.length} member{conflict.users.length !== 1 ? "s" : ""}
         </Badge>
       </div>

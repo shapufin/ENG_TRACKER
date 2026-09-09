@@ -23,13 +23,13 @@ export const CarryOverCard: React.FC<CarryOverCardProps> = ({
   if (!carryOverDetail) return null;
 
   return (
-    <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4">
+    <div className="rounded-3xl border border-tone-success-border bg-tone-success-surface p-4">
       <div className="mb-4 flex items-center gap-3">
-        <div className="rounded-xl bg-emerald-500/10 p-2">
-          <CalendarDays className="h-4 w-4 text-emerald-400" />
+        <div className="rounded-xl bg-tone-success-surface p-2">
+          <CalendarDays className="h-4 w-4 text-tone-success-text" />
         </div>
 
-        <h4 className="text-lg font-semibold text-emerald-300">Carry-over</h4>
+        <h4 className="text-lg font-semibold text-tone-success-text">Carry-over</h4>
       </div>
 
       <div className="mb-4">
@@ -58,7 +58,7 @@ export const CarryOverCard: React.FC<CarryOverCardProps> = ({
         <div className="mt-2 flex items-center justify-between text-xs">
           <span className="text-muted-foreground">Remaining</span>
 
-          <span className="font-medium text-emerald-300">
+          <span className="font-medium text-tone-success-text">
             {carryOverDetail.effectiveAvailableDays ?? 0}d
           </span>
         </div>

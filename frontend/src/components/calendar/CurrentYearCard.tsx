@@ -20,16 +20,16 @@ export const CurrentYearCard: React.FC<CurrentYearCardProps> = ({
   if (!currentDetail) return null;
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-indigo-500/20 bg-indigo-500/[0.04] p-4">
-      <div className="absolute bottom-0 right-0 h-32 w-32 rounded-full bg-indigo-500/10 blur-3xl" />
+    <div className="relative overflow-hidden rounded-3xl border border-tone-accent-border bg-tone-accent-surface p-4">
+      <div className="absolute bottom-0 right-0 h-32 w-32 rounded-full bg-tone-accent-surface blur-3xl" />
 
       <div className="relative">
         <div className="mb-4 flex items-center gap-3">
-          <div className="rounded-xl bg-indigo-500/10 p-2">
-            <CalendarDays className="h-4 w-4 text-indigo-400" />
+          <div className="rounded-xl bg-tone-accent-surface p-2">
+            <CalendarDays className="h-4 w-4 text-tone-accent-text" />
           </div>
 
-          <h4 className="text-lg font-semibold text-indigo-300">Current year balance</h4>
+          <h4 className="text-lg font-semibold text-tone-accent-text">Current year balance</h4>
         </div>
 
         <div className="mb-3 flex items-end gap-2">

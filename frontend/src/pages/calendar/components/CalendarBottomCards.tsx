@@ -1,6 +1,7 @@
 import React from "react";
 import { MetricBar } from "@/components/calendar/MetricBar";
 import { ConflictItem } from "@/components/calendar/ConflictItem";
+import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 
 interface Metric {
   label: string;
@@ -44,10 +45,10 @@ const VacationBalanceCard: React.FC<{
           <h3 className="text-xl font-semibold text-foreground dark:text-white">
             {formatDays(remainingDays)}d
           </h3>
-          <span className="text-[11px] text-emerald-600 dark:text-emerald-300">remaining</span>
+          <span className={`text-[11px] ${toneTextClass.success}`}>remaining</span>
         </div>
       </div>
-      <div className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+      <div className={`rounded-full px-2 py-0.5 text-[9px] ${toneSurfaceClass.success}`}>
         {formatDays(totalDays)}d total
       </div>
     </div>
@@ -73,8 +74,10 @@ const CarryOverCard: React.FC<{
   const year = carryOver?.year ?? new Date().getFullYear();
   const availableDays = carryOver?.available_days ?? 0;
   return (
-    <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-2 dark:border-emerald-400/30 dark:bg-emerald-500/10">
-      <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.3em] text-emerald-700 dark:text-emerald-200">
+    <div className={`rounded-2xl border p-2 ${toneSurfaceClass.success}`}>
+      <div
+        className={`flex items-center justify-between text-[9px] uppercase tracking-[0.3em] ${toneTextClass.success}`}
+      >
         <p>Carryover</p>
         <span>from {year}</span>
       </div>
@@ -82,15 +85,15 @@ const CarryOverCard: React.FC<{
         <h3 className="text-xl font-semibold text-foreground dark:text-white">
           {formatDays(availableDays)}d
         </h3>
-        <p className="text-[11px] text-emerald-600 dark:text-emerald-200">available</p>
+        <p className={`text-[11px] ${toneTextClass.success}`}>available</p>
       </div>
-      <div className="mt-2 h-1 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-500/20">
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-tone-success-surface">
         <div
-          className="h-full rounded-full bg-emerald-500 dark:bg-emerald-400"
+          className="h-full rounded-full bg-tone-success-text"
           style={{ width: `${availableDays > 0 ? 100 : 0}%` }}
         />
       </div>
-      <div className="mt-2 text-[10px] text-emerald-700 dark:text-emerald-100">
+      <div className={`mt-2 text-[10px] ${toneTextClass.success}`}>
         <p>Expires Mar 31, {year + 1}</p>
       </div>
     </div>
@@ -106,7 +109,7 @@ const ConflictsCard: React.FC<{
       <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
         Upcoming conflicts
       </p>
-      <div className="rounded-full bg-rose-100 px-2 py-0.5 text-[9px] text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+      <div className={`rounded-full px-2 py-0.5 text-[9px] ${toneSurfaceClass.danger}`}>
         {conflictEntries.length}
       </div>
     </div>

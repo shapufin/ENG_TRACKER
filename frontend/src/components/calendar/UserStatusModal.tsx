@@ -57,8 +57,8 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
             <div className="shrink-0 p-6 pb-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/15">
-                    <Plane className="h-7 w-7 text-indigo-400" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-tone-accent-surface">
+                    <Plane className="h-7 w-7 text-tone-accent-text" />
                   </div>
                   <div>
                     <h2 className="text-3xl font-semibold tracking-tight">Vacation balance</h2>
@@ -96,7 +96,7 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                     </h3>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
                     {primaryTeam && (
-                      <Badge className="mt-2 rounded-full border-0 bg-indigo-500/15 px-3 py-1 text-indigo-300 hover:bg-indigo-500/15">
+                      <Badge className="mt-2 rounded-full border-0 bg-tone-accent-surface px-3 py-1 text-tone-accent-text hover:bg-tone-accent-surface">
                         {primaryTeam}
                       </Badge>
                     )}
@@ -113,13 +113,13 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                 <>
                   <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
                     <StatCard
-                      icon={<CalendarDays className="h-6 w-6 text-indigo-400" />}
+                      icon={<CalendarDays className="h-6 w-6 text-tone-accent-text" />}
                       label="Remaining"
                       value={remainingDays.toFixed(2)}
                       suffix="d"
                       sub={`out of ${totalDays.toFixed(2)} d`}
                       progress={remainingProgress}
-                      color="bg-indigo-500"
+                      color="bg-tone-accent-text"
                     />
                     <StatCard
                       icon={<Clock3 className="h-6 w-6 text-pink-400" />}
@@ -131,13 +131,13 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                       color="bg-pink-500"
                     />
                     <StatCard
-                      icon={<Hourglass className="h-6 w-6 text-amber-400" />}
+                      icon={<Hourglass className="h-6 w-6 text-tone-warning-text" />}
                       label="Pending"
                       value={pendingDays.toFixed(2)}
                       suffix="d"
                       sub={`out of ${totalDays.toFixed(2)} d`}
                       progress={pendingProgress}
-                      color="bg-amber-500"
+                      color="bg-tone-warning-text"
                     />
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

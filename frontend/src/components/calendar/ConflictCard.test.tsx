@@ -17,17 +17,20 @@ const conflict: ConflictEntry = {
 const html = (ui: React.ReactElement) => render(ui).container.innerHTML;
 
 describe("ConflictCard", () => {
-  it("does not use dark-mode-only -300 text tints that fail AA in light mode", () => {
+  // Status/type colour now comes from the tone scale (tone.ts), which already
+  // carries the AA-verified light/dark pair per tone — no raw palette classes
+  // or `dark:` variants should appear at this callsite.
+  it("does not use raw palette classes for status/type badges", () => {
     expect(html(<ConflictCard conflict={conflict} />)).not.toMatch(
-      /text-(emerald|rose|amber|indigo)-300/
+      /(text|bg|border)-(emerald|rose|amber|indigo)-\d/
     );
   });
 
-  it("renders status and type badges with AA-verified light/dark tint pairs", () => {
+  it("renders status and type badges with tone tokens", () => {
     const markup = html(<ConflictCard conflict={conflict} />);
-    expect(markup).toContain("text-emerald-800 dark:text-emerald-400");
-    expect(markup).toContain("text-rose-800 dark:text-rose-400");
-    expect(markup).toContain("text-amber-800 dark:text-amber-400");
+    expect(markup).toContain("text-tone-success-text");
+    expect(markup).toContain("text-tone-danger-text");
+    expect(markup).toContain("text-tone-warning-text");
   });
 
   it("does not use raw bg-white surfaces in light mode", () => {
