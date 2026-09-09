@@ -43,10 +43,12 @@ describe("NotificationPreferencesSection", () => {
     const push = await screen.findByRole("switch", { name: /push notifications/i });
     fireEvent.click(push);
 
-    await waitFor(() => expect(notificationService.updatePreference).toHaveBeenCalledWith(
-      "own_leave_updated",
-      { in_app_enabled: true, push_enabled: false }
-    ));
+    await waitFor(() =>
+      expect(notificationService.updatePreference).toHaveBeenCalledWith("own_leave_updated", {
+        in_app_enabled: true,
+        push_enabled: false,
+      })
+    );
   });
 
   it("rolls back when persistence fails", async () => {

@@ -110,8 +110,7 @@ export const useUsersPage = () => {
   // false and the fetch never happens — no broken references.
   const { activePlugins } = usePlugins();
   const crActive = activePlugins.some((p) => p.name === "control_room");
-  const isCROnlyAdmin =
-    isCRAdmin && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
+  const isCROnlyAdmin = isCRAdmin && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
   const [crOnly, setCrOnly] = useState(false);
   const [crAccessUserIds, setCrAccessUserIds] = useState<Set<number>>(new Set());
   const [crAccessByUserId, setCrAccessByUserId] = useState<Map<number, ControlRoomAccess>>(
@@ -160,9 +159,7 @@ export const useUsersPage = () => {
       setRowSelection((previous) => {
         const next = typeof updater === "function" ? updater(previous) : updater;
         const visibleIds = new Set(crFilteredData.map((profile) => String(profile.id)));
-        return Object.fromEntries(
-          Object.entries(next).filter(([id]) => visibleIds.has(id))
-        );
+        return Object.fromEntries(Object.entries(next).filter(([id]) => visibleIds.has(id)));
       });
     },
     [crFilteredData]
@@ -227,9 +224,9 @@ export const useUsersPage = () => {
       techs: profile.techs || [],
       albanian_tl: profile.albanian_tl ? String(profile.albanian_tl) : "none",
       italian_tl: profile.italian_tl ? String(profile.italian_tl) : "none",
-      is_hr_user: profile.is_hr_user || roles.includes('hr'),
-      is_italian_tl_role: profile.is_italian_tl_role || roles.includes('italian_tl'),
-      is_albanian_tl_role: profile.is_albanian_tl_role || roles.includes('albanian_tl'),
+      is_hr_user: profile.is_hr_user || roles.includes("hr"),
+      is_italian_tl_role: profile.is_italian_tl_role || roles.includes("italian_tl"),
+      is_albanian_tl_role: profile.is_albanian_tl_role || roles.includes("albanian_tl"),
       is_cr_admin: profile.user.is_cr_admin || false,
       roles: roles,
       hire_date: profile.hire_date || "",

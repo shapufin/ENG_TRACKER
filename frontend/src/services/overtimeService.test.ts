@@ -6,7 +6,9 @@ vi.mock("@/lib/api", () => ({
   default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn(), put: vi.fn() },
 }));
 
-vi.mock("@/lib/api-utils", () => ({ normalizeList: (d: any) => (Array.isArray(d) ? d : d?.results ?? []) }));
+vi.mock("@/lib/api-utils", () => ({
+  normalizeList: (d: any) => (Array.isArray(d) ? d : (d?.results ?? [])),
+}));
 vi.mock("@/lib/download", () => ({ downloadBlobResponse: vi.fn(), paginatedFetchAll: vi.fn() }));
 vi.mock("@/lib/offline/offlineQueue", () => ({
   requestWithOfflineQueue: vi.fn(async (fn: () => Promise<any>) => fn()),

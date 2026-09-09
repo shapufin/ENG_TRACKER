@@ -40,10 +40,7 @@ export const leaveService = {
   }): Promise<LeaveRequest> {
     return requestWithOfflineQueue(
       async () => {
-        const { data } = await api.post<LeaveRequest>(
-          "/leave-management/requests/",
-          payload
-        );
+        const { data } = await api.post<LeaveRequest>("/leave-management/requests/", payload);
         return data;
       },
       {

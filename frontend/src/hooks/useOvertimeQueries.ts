@@ -39,11 +39,7 @@ export const useOvertimeQueries = (options: UseOvertimeQueriesOptions) => {
     ? `${options.customDateRange.from}_${options.customDateRange.to}`
     : "current_month";
 
-  const logsQueryKey = [
-    "overtime",
-    options.userId ?? "anonymous",
-    rangeKey,
-  ];
+  const logsQueryKey = ["overtime", options.userId ?? "anonymous", rangeKey];
   const summaryQueryKey = ["overtime", options.userId ?? "anonymous", "summary"];
 
   const { data, isLoading } = useQuery({

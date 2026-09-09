@@ -45,11 +45,7 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({
 
   return (
     <Select value={selected} onValueChange={onMonthChange} disabled={disabled}>
-      <SelectTrigger
-        className={className}
-        style={{ width: triggerWidth }}
-        aria-label={ariaLabel}
-      >
+      <SelectTrigger className={className} style={{ width: triggerWidth }} aria-label={ariaLabel}>
         <SelectValue placeholder={placeholder}>
           {selected ? formatMonthLabel(selected) : placeholder}
         </SelectValue>

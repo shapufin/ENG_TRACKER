@@ -26,7 +26,7 @@ interface SkillsKpiCardsProps {
 const MiniBar: React.FC<{ pct: number; fillClass: string }> = ({ pct, fillClass }) => (
   <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
     <div
-      className={cn("h-full rounded-full transition-[width]", fillClass)}
+      className={cn("h-full rounded-full transition-[width] duration-300 ease-out", fillClass)}
       style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
     />
   </div>
@@ -124,7 +124,7 @@ export const SkillsKpiCards: React.FC<SkillsKpiCardsProps> = ({ coverage, gaps, 
   if (!seniority && !domain && !gap && !verification) return null;
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:gap-4">
       <SeniorityCard kpi={seniority} />
       {domain && <DomainCard {...domain} />}
       <GapCard kpi={gap} />

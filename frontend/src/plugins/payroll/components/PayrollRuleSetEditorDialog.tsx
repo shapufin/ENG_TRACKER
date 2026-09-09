@@ -73,7 +73,9 @@ const getBackendErrorMessage = (error: unknown): string | null => {
   if (typeof payload.error === "string") return payload.error;
   const fields = Object.entries(payload)
     .filter(([, value]) => value)
-    .map(([field, value]) => `${field}: ${Array.isArray(value) ? value.join(", ") : String(value)}`);
+    .map(
+      ([field, value]) => `${field}: ${Array.isArray(value) ? value.join(", ") : String(value)}`
+    );
   return fields.length > 0 ? fields.join("; ") : null;
 };
 

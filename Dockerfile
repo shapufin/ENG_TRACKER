@@ -18,10 +18,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /build
 
-# Install dependencies to a separate prefix for clean copy
-COPY requirements.txt .
-RUN pip install --prefix=/install -r requirements.txt \
-    && pip install --prefix=/install gunicorn==23.0.0 psycopg2-binary==2.9.10 django-redis==5.4.0 whitenoise==6.9.0
+# Install dependencies to a separate prefix for clean copy. Both requirement
+# files are resolved together so production-only pins (django-redis, etc.)
+# can't silently drag in a Django version incompatible with the one pinned
+# in requirements.txt (a prior separate `pip install` here pulled in an
+# unconstrained Django and broke DRF's `django.utils.cache` import).
+COPY requirements.txt requirements-production.txt .
+RUN pip install --prefix=/install -r requirements.txt -r requirements-production.txt
 
 # ---- Runtime stage: minimal image, non-root user ----
 FROM python:3.12-slim AS runtime

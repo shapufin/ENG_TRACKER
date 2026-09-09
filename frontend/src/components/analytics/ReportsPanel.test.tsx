@@ -99,7 +99,7 @@ describe("ReportsPanel", () => {
     await waitFor(() => {
       expect(mockApi.post).toHaveBeenCalledWith(
         "plugins/analytics/metrics/export-jobs/create/",
-        expect.objectContaining({ format: "excel" }),
+        expect.objectContaining({ format: "excel" })
       );
     });
   });

@@ -5,7 +5,13 @@ import { UserBulkCommandDrawer } from "./UserBulkCommandDrawer";
 const onBulkUpdate = vi.fn();
 
 vi.mock("./TeamMultiSelect", () => ({
-  TeamMultiSelect: ({ onChange, disabled }: { onChange: (ids: number[]) => void; disabled?: boolean }) => (
+  TeamMultiSelect: ({
+    onChange,
+    disabled,
+  }: {
+    onChange: (ids: number[]) => void;
+    disabled?: boolean;
+  }) => (
     <button type="button" disabled={disabled} onClick={() => onChange([1, 2])}>
       Choose teams
     </button>

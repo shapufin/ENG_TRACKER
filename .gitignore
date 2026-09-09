@@ -13,8 +13,11 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Anchored to repo root: an unqualified `lib/`/`lib64/` also matched
+# frontend/src/lib/ (the @/lib/* source directory) and silently excluded
+# it from every commit — venv/env/ENV above already cover virtualenvs.
+/lib/
+/lib64/
 parts/
 sdist/
 var/

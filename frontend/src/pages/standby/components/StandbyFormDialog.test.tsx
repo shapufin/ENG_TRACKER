@@ -30,7 +30,12 @@ vi.mock("@/components/ui/select", () => ({
 }));
 vi.mock("@/components/ui/checkbox", () => ({
   Checkbox: ({ checked, onCheckedChange }: any) => (
-    <input type="checkbox" checked={checked} onChange={() => onCheckedChange()} data-testid="checkbox" />
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={() => onCheckedChange()}
+      data-testid="checkbox"
+    />
   ),
 }));
 
@@ -40,7 +45,15 @@ describe("StandbyFormDialog", () => {
     onOpenChange: vi.fn(),
     editing: false,
     isAdmin: true,
-    form: { user: "", date: "", start_time: "", end_time: "", hours: "", description: "", client_ids: [] },
+    form: {
+      user: "",
+      date: "",
+      start_time: "",
+      end_time: "",
+      hours: "",
+      description: "",
+      client_ids: [],
+    },
     formErrors: {},
     users: [
       { id: 1, full_name: "Alice" },

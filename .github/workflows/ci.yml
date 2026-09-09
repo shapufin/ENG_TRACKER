@@ -42,7 +42,14 @@ jobs:
       - name: Tests with coverage
         run: npm test -- --run --coverage
       - name: Fallow health (with runtime coverage)
-        run: npx fallow health --format json --quiet --runtime-coverage coverage/coverage-final.json
+        run: |
+          # --runtime-coverage needs the fallow-cov sidecar binary, which
+          # `npx fallow` does not pull in automatically (only the fallow
+          # CLI itself). Install it explicitly so this step works on a
+          # fresh CI runner, not just a dev machine that happened to have
+          # it cached already.
+          npm install --no-save @fallow-cli/fallow-cov@latest
+          npx fallow health --format json --quiet --runtime-coverage coverage/coverage-final.json
       - name: Fallow dead-code
         run: npx fallow dead-code --format json --quiet
 
@@ -57,11 +64,16 @@ jobs:
           cache: pip
           cache-dependency-path: |
             requirements.txt
+            requirements-production.txt
             requirements-dev.txt
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
+          # requirements-production.txt is needed here too: the deployment
+          # check below runs with --settings=config.settings_production,
+          # which requires psycopg2 (django-redis, etc. are importable
+          # without a real Postgres/Redis backend, so this is safe for CI).
+          pip install -r requirements.txt -r requirements-production.txt -r requirements-dev.txt
       - name: Ruff check
         run: ruff check apps core config plugins
       - name: Django system check

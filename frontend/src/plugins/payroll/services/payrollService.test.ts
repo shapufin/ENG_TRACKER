@@ -7,7 +7,9 @@ vi.mock("@/lib/api", () => ({
 }));
 
 vi.mock("@/lib/download", () => ({ downloadBlobResponse: vi.fn() }));
-vi.mock("@/lib/api-utils", () => ({ normalizeList: (d: any) => (Array.isArray(d) ? d : d?.results ?? []) }));
+vi.mock("@/lib/api-utils", () => ({
+  normalizeList: (d: any) => (Array.isArray(d) ? d : (d?.results ?? [])),
+}));
 
 const BASE = "/plugins/payroll";
 

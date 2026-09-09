@@ -23,7 +23,7 @@ export const ProficiencyBadge: React.FC<ProficiencyBadgeProps> = ({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded border font-semibold",
+        "inline-flex items-center gap-1.5 rounded border font-mono font-semibold tabular-nums",
         colorClass,
         sizeClass,
         className

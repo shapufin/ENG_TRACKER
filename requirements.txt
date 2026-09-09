@@ -5,7 +5,8 @@ Django==5.2.17
 django-cors-headers==4.9.0
 django-crispy-forms==2.6
 django-extensions==4.1
-djangorestframework==3.17.1
+django-filter==26.1
+djangorestframework==3.17.2
 djangorestframework_simplejwt==5.5.1
 drf-spectacular==0.29.0
 extract-msg==0.55.0

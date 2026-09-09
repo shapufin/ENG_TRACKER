@@ -32,7 +32,8 @@ calendar, or plugins, also read the linked domain file.
 | file location, where is, find file | `.devin/context/PROJECT_INDEX.md` | Directory inventory |
 | plan, create plan, megaplan, optimize plan | `.devin/context/11-PLAN-CREATION.md` | Senior plan protocol: zero-hallucination specs + self-correcting gates |
 | past bug, session history, what changed | `AGENTS.md` (recent) + `.devin/tracking/agents-archive-*.md` | Session logs |
-| cross-stack impact, blast radius, call graph, type hierarchy | trace-mcp MCP server (`get_change_impact`, `get_call_graph`) | Precomputed graph — use instead of 10 grep/read calls |
+| production security, deploy, Docker, TLS, CORS, gunicorn | relevant production-security plan + `.devin/context/04-API-PATTERNS.md` | Deployment hardening rules |
+| cross-stack impact, blast radius, call graph, type hierarchy, find usages across Django↔React | `.devin/context/trace-mcp.md` (usage guidance) + trace-mcp MCP server (`get_change_impact`, `get_call_graph`, `find_usages`) | Precomputed graph — use instead of 10 grep/read calls |
 
 ## Hot Invariants
 
@@ -67,6 +68,15 @@ calendar, or plugins, also read the linked domain file.
   `http://127.0.0.1:8000/api`. Plugin services must use
   `BASE = "/plugins/<name>"`, NOT `"/api/plugins/<name>"` (doubled
   `api/` → 404). Tests mock the API layer and don't validate URL paths.
+- **React Query keys** — include every result-changing parameter (userId,
+  workspaceScope, page_size, month/year filters). Never build a constant key
+  with conditionals like `condition ? scope : "self"`.
+- **UI/accessibility baseline** — prefer existing shared primitives
+  (`GlassCard`, `StatCard`, `DataTable`, `EmptyState`, `ConfirmDialog`) and
+  semantic theme tokens over ad hoc markup; no raw hex or slate/zinc/gray
+  palette classes. New or changed controls need accessible labels, keyboard
+  behavior, responsive layout (320px+), and a light/dark visual check. See
+  `.devin/context/03-FRONTEND-PATTERNS.md` §10-11.
 - **Removed plugins / dead code** — do not reference: `budget`,
   `email_notifications`, `export` plugins; `EmailTemplate`,
   `EmailNotificationRule`, `send_notification_email`,
@@ -138,3 +148,13 @@ Claude-optimized lens. When a `.devin/` file changes, mirror only the
 delta: (1) update the router table row, (2) update the affected Hot
 Invariant. Do not copy full contents from `.devin/`. Keep under 200
 lines. `validate-state.ps1 -Event Manual` is the cross-tool validator.
+
+## Workflow Sync Command
+
+When you say "update workflow" or "sync workflow":
+1. Read `.devin/rules/CONTEXT.md` and compare its router table with CLAUDE.md router table
+2. Add any missing keyword → file mappings to CLAUDE.md (paths must be `.devin/context/` for Claude)
+3. Compare CONTEXT.md Critical Guardrails with CLAUDE.md Hot Invariants
+4. Add any missing invariants to CLAUDE.md
+5. Compare verification commands and update if needed
+6. Report what was added/changed

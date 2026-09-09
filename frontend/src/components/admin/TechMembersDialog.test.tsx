@@ -32,8 +32,24 @@ const members: TechMember[] = [
 ];
 
 const candidateUsers: User[] = [
-  { id: 12, username: "carol", email: "carol@example.com", first_name: "Carol", last_name: "White", is_staff: false, is_superuser: false } as User,
-  { id: 13, username: "dave", email: "dave@example.com", first_name: "Dave", last_name: "Brown", is_staff: false, is_superuser: false } as User,
+  {
+    id: 12,
+    username: "carol",
+    email: "carol@example.com",
+    first_name: "Carol",
+    last_name: "White",
+    is_staff: false,
+    is_superuser: false,
+  } as User,
+  {
+    id: 13,
+    username: "dave",
+    email: "dave@example.com",
+    first_name: "Dave",
+    last_name: "Brown",
+    is_staff: false,
+    is_superuser: false,
+  } as User,
 ];
 
 const renderWithProvider = (ui: React.ReactElement) => {
@@ -44,17 +60,21 @@ const renderWithProvider = (ui: React.ReactElement) => {
 describe("TechMembersDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(userService.getTechMembers).mockResolvedValue({ count: members.length, results: members } as never);
+    vi.mocked(userService.getTechMembers).mockResolvedValue({
+      count: members.length,
+      results: members,
+    } as never);
     // getUsers now receives search param; default returns candidates
-    vi.mocked(userService.getUsers).mockResolvedValue({ count: candidateUsers.length, results: candidateUsers } as never);
+    vi.mocked(userService.getUsers).mockResolvedValue({
+      count: candidateUsers.length,
+      results: candidateUsers,
+    } as never);
     vi.mocked(userService.addTechMembers).mockResolvedValue({ added: 1 } as never);
     vi.mocked(userService.removeTechMembers).mockResolvedValue({ removed: 1 } as never);
   });
 
   it("renders current members in the left panel", async () => {
-    renderWithProvider(
-      <TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />,
-    );
+    renderWithProvider(<TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText("Alice Smith")).toBeInTheDocument();
@@ -63,9 +83,7 @@ describe("TechMembersDialog", () => {
   });
 
   it("shows candidates (non-members) in the right panel", async () => {
-    renderWithProvider(
-      <TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />,
-    );
+    renderWithProvider(<TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText("Carol White")).toBeInTheDocument();
@@ -74,9 +92,7 @@ describe("TechMembersDialog", () => {
   });
 
   it("calls getUsers with search param when search is typed", async () => {
-    renderWithProvider(
-      <TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />,
-    );
+    renderWithProvider(<TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText("Carol White")).toBeInTheDocument());
 
@@ -84,17 +100,18 @@ describe("TechMembersDialog", () => {
     fireEvent.change(searchInput, { target: { value: "carol" } });
 
     // Wait for debounce (300ms) + query
-    await waitFor(() => {
-      expect(userService.getUsers).toHaveBeenCalledWith(
-        expect.objectContaining({ search: "carol" }),
-      );
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(userService.getUsers).toHaveBeenCalledWith(
+          expect.objectContaining({ search: "carol" })
+        );
+      },
+      { timeout: 2000 }
+    );
   });
 
   it("calls addTechMembers when add button clicked", async () => {
-    renderWithProvider(
-      <TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />,
-    );
+    renderWithProvider(<TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText("Carol White")).toBeInTheDocument());
 
@@ -107,9 +124,7 @@ describe("TechMembersDialog", () => {
   });
 
   it("calls removeTechMembers when remove button clicked", async () => {
-    renderWithProvider(
-      <TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />,
-    );
+    renderWithProvider(<TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByText("Alice Smith")).toBeInTheDocument());
 
@@ -122,9 +137,7 @@ describe("TechMembersDialog", () => {
   });
 
   it("shows member count in left panel header", async () => {
-    renderWithProvider(
-      <TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />,
-    );
+    renderWithProvider(<TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText("Members (2)")).toBeInTheDocument();
@@ -133,9 +146,7 @@ describe("TechMembersDialog", () => {
 
   it("shows loading state for candidates while fetching", async () => {
     vi.mocked(userService.getUsers).mockReturnValue(new Promise(() => {}) as never);
-    renderWithProvider(
-      <TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />,
-    );
+    renderWithProvider(<TechMembersDialog tech={tech} open={true} onOpenChange={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText("Searching...")).toBeInTheDocument();

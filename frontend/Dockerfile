@@ -15,7 +15,10 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # ---- Runtime: nginx serves static bundle ----
-FROM nginx:1.27-slim AS runtime
+# nginx has no Debian "-slim" variant (unlike node/python) — only the
+# default Debian image or an "-alpine"/"-alpine-slim" variant exist, so
+# `nginx:1.27-slim` was never a real tag and this build failed at pull.
+FROM nginx:1.27-alpine-slim AS runtime
 
 # Remove default nginx config + static site
 RUN rm /etc/nginx/conf.d/default.conf
@@ -26,11 +29,11 @@ COPY docker/nginx.conf /etc/nginx/conf.d/app.conf
 # Copy built assets
 COPY --from=builder /build/dist /usr/share/nginx/html
 
-# Install wget for the healthcheck (nginx:1.27-slim does not include it).
-# Without this the healthcheck exits 127 and Docker marks the container
-# permanently unhealthy (P0-7 addendum).
-RUN apt-get update && apt-get install -y --no-install-recommends wget \
-    && rm -rf /var/lib/apt/lists/*
+# Install wget for the healthcheck (the alpine-slim variant does not
+# include it). Without this the healthcheck exits 127 and Docker marks
+# the container permanently unhealthy (P0-7 addendum). Alpine uses apk,
+# not apt-get.
+RUN apk add --no-cache wget
 
 # Run as non-root (nginx unprivileged user)
 USER 101:101

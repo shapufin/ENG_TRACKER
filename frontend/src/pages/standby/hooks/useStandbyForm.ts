@@ -121,7 +121,15 @@ export const useStandbyForm = () => {
   );
 
   const resetForm = () => {
-    setForm({ user: "", date: "", start_time: "", end_time: "", hours: "", description: "", client_ids: [] });
+    setForm({
+      user: "",
+      date: "",
+      start_time: "",
+      end_time: "",
+      hours: "",
+      description: "",
+      client_ids: [],
+    });
     setFormErrors({});
   };
   const resetWeeklyForm = () => {

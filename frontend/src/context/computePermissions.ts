@@ -18,7 +18,8 @@ const hasDatabaseRole = (user: any, code: string): boolean | undefined => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const computeRoles = (user: any) => {
   const isItalianTL = hasDatabaseRole(user, "italian_tl") ?? roleFlag(user, "is_italian_tl_role");
-  const isAlbanianTL = hasDatabaseRole(user, "albanian_tl") ?? roleFlag(user, "is_albanian_tl_role");
+  const isAlbanianTL =
+    hasDatabaseRole(user, "albanian_tl") ?? roleFlag(user, "is_albanian_tl_role");
   const isTeamLeader = anyRole(isItalianTL, isAlbanianTL, roleFlag(user, "is_team_leader"));
   const isHR = hasDatabaseRole(user, "hr") ?? roleFlag(user, "is_hr");
   const isAdmin = roleFlag(user, "is_staff");

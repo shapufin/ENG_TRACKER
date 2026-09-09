@@ -92,7 +92,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
   return (
     <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
       {/* ─── Category sidebar ─── */}
-      <GlassCard isHoverLift={false} className="h-fit p-3">
+      <GlassCard isHoverLift={false} className="h-fit p-3 lg:sticky lg:top-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -121,7 +121,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
             type="button"
             aria-pressed={selectedCategory === "all"}
             onClick={() => onCategoryChange("all")}
-            className={`flex min-h-11 w-full items-center justify-between rounded-lg px-3 text-left text-sm transition-all ${
+            className={`flex min-h-11 w-full items-center justify-between rounded-lg px-3 text-left text-sm transition-all duration-150 ${
               selectedCategory === "all"
                 ? "bg-primary/10 font-medium text-foreground ring-1 ring-primary/20"
                 : "hover:bg-accent"
@@ -141,7 +141,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
             return (
               <div
                 key={category.id}
-                className={`group flex items-center gap-1 rounded-lg transition-colors ${
+                className={`group flex items-center gap-1 rounded-lg transition-colors duration-150 ${
                   isSelected ? "bg-primary/10 ring-1 ring-primary/20" : "hover:bg-accent/50"
                 }`}
               >
@@ -339,8 +339,8 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
                   {visibleSkills.map((skill) => (
                     <tr
                       key={skill.id}
-                      className={`transition-colors ${
-                        selectedIds.has(skill.id) ? "bg-primary/5" : "hover:bg-muted/40"
+                      className={`transition-colors duration-150 ${
+                        selectedIds.has(skill.id) ? "bg-primary/5" : "hover:bg-muted/30"
                       }`}
                     >
                       <td className="px-3 py-3 text-center">
@@ -430,7 +430,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
               {visibleSkills.map((skill) => (
                 <div
                   key={skill.id}
-                  className={`rounded-lg border p-3 transition-colors ${
+                  className={`rounded-lg border p-3 transition-colors duration-150 ${
                     selectedIds.has(skill.id)
                       ? "border-primary/30 bg-primary/5"
                       : "border-border/70"

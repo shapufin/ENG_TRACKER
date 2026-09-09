@@ -33,7 +33,9 @@ describe("leaveService URL contracts", () => {
   it("getTeamLogs calls /leave-management/requests/team_logs/", async () => {
     vi.mocked(api.get).mockResolvedValue({ data: { results: [], count: 0 } } as any);
     await leaveService.getTeamLogs();
-    expect(api.get).toHaveBeenCalledWith("/leave-management/requests/team_logs/", { params: undefined });
+    expect(api.get).toHaveBeenCalledWith("/leave-management/requests/team_logs/", {
+      params: undefined,
+    });
   });
 
   it("getBalances calls /leave-management/balances/", async () => {

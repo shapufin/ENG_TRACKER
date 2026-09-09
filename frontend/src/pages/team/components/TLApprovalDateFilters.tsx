@@ -17,7 +17,10 @@ export const TLApprovalDateFilters: React.FC<TLApprovalDateFiltersProps> = ({
   onDateToChange,
 }) => {
   const { handleFromChange, handleToChange } = useAutoMonthEndHandlers(
-    dateFrom, dateTo, onDateFromChange, onDateToChange,
+    dateFrom,
+    dateTo,
+    onDateFromChange,
+    onDateToChange
   );
 
   return (

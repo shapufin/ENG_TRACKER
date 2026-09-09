@@ -11,7 +11,8 @@ import type { TeamMatrixRow } from "../types/skills";
 /** Row height shared with the skill-cell rows of both grids. */
 export const GRID_CELL_HEIGHT = "h-7";
 /** Crosshair highlight for cells in the hovered row/column. */
-export const GRID_HOVER_HIGHLIGHT = "bg-foreground/5 dark:bg-foreground/10";
+export const GRID_HOVER_HIGHLIGHT =
+  "bg-foreground/5 dark:bg-foreground/10 transition-colors duration-100";
 
 interface SkillsMemberColumnProps {
   rows: TeamMatrixRow[];

@@ -28,7 +28,7 @@ async function apiRequest(
     },
     data: body ? JSON.stringify(body) : undefined,
   });
-  let json: unknown = null;
+  let json: unknown;
   try {
     json = await response.json();
   } catch {
@@ -169,5 +169,63 @@ test.describe("Skills pages", () => {
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1); // +1 for rounding
+  });
+
+  test("My Skills page stat cards are visible and readable for employee", async ({ page }) => {
+    await loginAsUser(page, E2E_CREDENTIALS.employeeA);
+    await page.goto("/skills");
+    await expect(page.getByRole("heading", { name: /My Skills/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText(/Rated skills/i)).toBeVisible();
+    await expect(page.getByText(/Average level/i)).toBeVisible();
+  });
+
+  test("KPI cards visible on team skills page for TL", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "Desktop-only coverage");
+    await loginAsUser(page, E2E_CREDENTIALS.admin);
+    await ensureSkillsData(page);
+    await logoutViaUI(page);
+    await loginAsUser(page, E2E_CREDENTIALS.teamLeader);
+    await page.goto("/skills/team");
+    await expect(page.getByRole("heading", { name: /Team Skills/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByText(/Team Seniority/i).or(page.getByText(/Strongest Domain/i))
+    ).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("catalog split-pane: category sidebar sticky on desktop", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "Desktop-only coverage");
+    await loginAsUser(page, E2E_CREDENTIALS.admin);
+    await ensureSkillsData(page);
+    await page.goto("/admin/skills/catalog");
+    await expect(page.getByRole("heading", { name: /Skills Catalog/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText("Categories")).toBeVisible();
+  });
+
+  test("skill history page filter bar renders for TL", async ({ page }) => {
+    await loginAsUser(page, E2E_CREDENTIALS.teamLeader);
+    await page.goto("/skills/history");
+    await expect(page.getByRole("heading", { name: /Skill History/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText(/Skill/i).first()).toBeVisible();
+  });
+
+  test("no horizontal overflow at 393px on My Skills page", async ({ page }) => {
+    await loginAsUser(page, E2E_CREDENTIALS.employeeA);
+    await page.setViewportSize({ width: 393, height: 844 });
+    await page.goto("/skills");
+    await expect(page.getByRole("heading", { name: /My Skills/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.waitForTimeout(800);
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
   });
 });
