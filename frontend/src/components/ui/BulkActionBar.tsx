@@ -2,6 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GlassCard } from "./GlassCard";
 import { Button } from "./button";
+import { AnimatedNumber } from "./AnimatedNumber";
 import { X } from "lucide-react";
 
 interface BulkAction {
@@ -40,8 +41,13 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
           >
             <div className="flex flex-wrap items-center justify-between gap-2 bg-primary/5 px-4 py-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                  {selectedCount}
+                <div
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-accent-violet to-primary text-xs font-bold text-primary-foreground shadow-sm shadow-accent-violet/25"
+                  aria-label={`${selectedCount} selected`}
+                >
+                  <span aria-hidden="true">
+                    <AnimatedNumber value={selectedCount} duration={0.4} />
+                  </span>
                 </div>
                 <span className="text-sm font-medium">
                   {selectedCount === 1
