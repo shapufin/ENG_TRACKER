@@ -98,14 +98,14 @@ export const LeaveBalanceAuditDialog: React.FC<LeaveBalanceAuditDialogProps> = (
               </div>
               <div className="rounded-2xl border border-border bg-surface-sunken p-3.5">
                 <span className="text-micro-lg text-muted-foreground">Used</span>
-                <div className="mt-0.5 font-mono text-2xl font-black text-rose-700 dark:text-rose-400">
+                <div className="mt-0.5 font-mono text-2xl font-black text-tone-danger-text">
                   {fmt(used)}
                   <span className="text-xs font-normal text-muted-foreground"> d</span>
                 </div>
                 <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-input-bg">
                   <div
                     data-testid="audit-progress-used"
-                    className="h-full rounded-full bg-rose-500"
+                    className="h-full rounded-full bg-tone-danger-text"
                     style={{ width: `${pct(used, total)}%` }}
                   />
                 </div>
@@ -115,14 +115,14 @@ export const LeaveBalanceAuditDialog: React.FC<LeaveBalanceAuditDialogProps> = (
               </div>
               <div className="rounded-2xl border border-border bg-surface-sunken p-3.5">
                 <span className="text-micro-lg text-muted-foreground">Pending review</span>
-                <div className="mt-0.5 font-mono text-2xl font-black text-amber-700 dark:text-amber-400">
+                <div className="mt-0.5 font-mono text-2xl font-black text-tone-warning-text">
                   {fmt(pending)}
                   <span className="text-xs font-normal text-muted-foreground"> d</span>
                 </div>
                 <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-input-bg">
                   <div
                     data-testid="audit-progress-pending"
-                    className="h-full rounded-full bg-amber-500"
+                    className="h-full rounded-full bg-tone-warning-text"
                     style={{ width: `${pct(pending, total)}%` }}
                   />
                 </div>

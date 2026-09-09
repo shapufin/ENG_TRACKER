@@ -15,6 +15,7 @@ import {
   type VerificationKpi,
 } from "../utils/skillKpis";
 import { avgTone, categoryAccent } from "../utils/categoryAccents";
+import { toneTextClass } from "@/components/ui/tone";
 
 interface SkillsKpiCardsProps {
   coverage: SkillCoverage[];
@@ -86,13 +87,13 @@ const GapCard: React.FC<{ kpi: GapKpi | null }> = ({ kpi }) =>
           {kpi.skillName}
         </span>
       }
-      valueColorClass="text-rose-700 dark:text-rose-400"
+      valueColorClass={toneTextClass.danger}
       trend={
         <span className="block font-mono tabular-nums">
           {kpi.ratedCount} / {kpi.teamSize} rated
           <MiniBar
             pct={(kpi.ratedCount / Math.max(1, kpi.teamSize)) * 100}
-            fillClass="bg-rose-500/70"
+            fillClass="bg-tone-danger-text/70"
           />
         </span>
       }
@@ -105,11 +106,11 @@ const VerificationCard: React.FC<{ kpi: VerificationKpi | null }> = ({ kpi }) =>
       label="Verification Rate"
       icon={ShieldCheck}
       value={<span className="font-mono">{`${kpi.pct}%`}</span>}
-      valueColorClass="text-emerald-700 dark:text-emerald-400"
+      valueColorClass={toneTextClass.success}
       trend={
         <span className="block font-mono tabular-nums">
           {kpi.rated} / {kpi.total} ratings
-          <MiniBar pct={kpi.pct} fillClass="bg-emerald-500/70" />
+          <MiniBar pct={kpi.pct} fillClass="bg-tone-success-text/70" />
         </span>
       }
     />

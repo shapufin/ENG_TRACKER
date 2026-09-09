@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { Badge } from "@/components/ui/badge";
+import { toneTextClass } from "@/components/ui/tone";
 
 interface ReportUserTableProps {
   activeTab: "overtime_standby" | "vacation";
@@ -30,21 +31,25 @@ const ReportUserRow: React.FC<{ activeTab: ReportUserTableProps["activeTab"]; us
     {activeTab === "overtime_standby" ? (
       <>
         <td className="px-6 py-4 text-right font-mono">
-          <span className="font-bold text-blue-600">{u.overtime?.total_hours || 0}h</span>
+          <span className="font-bold text-foreground">{u.overtime?.total_hours || 0}h</span>
           <span className="mx-1 text-muted-foreground">/</span>
-          <span className="font-bold text-green-600">{u.overtime?.approved_hours || 0}h</span>
+          <span className={`font-bold ${toneTextClass.success}`}>
+            {u.overtime?.approved_hours || 0}h
+          </span>
         </td>
         <td className="px-6 py-4 text-right font-mono">
-          <span className="font-bold text-purple-600">{u.standby?.total_hours || 0}h</span>
+          <span className="font-bold text-foreground">{u.standby?.total_hours || 0}h</span>
           <span className="mx-1 text-muted-foreground">/</span>
-          <span className="font-bold text-green-600">{u.standby?.approved_hours || 0}h</span>
+          <span className={`font-bold ${toneTextClass.success}`}>
+            {u.standby?.approved_hours || 0}h
+          </span>
         </td>
       </>
     ) : (
       <td className="px-6 py-4 text-right font-mono">
-        <span className="font-bold text-green-700">{u.leave?.total_days || 0}d</span>
+        <span className="font-bold text-foreground">{u.leave?.total_days || 0}d</span>
         <span className="mx-1 text-sm text-muted-foreground">/</span>
-        <span className="font-bold text-green-600">{u.leave?.approved_days || 0}d</span>
+        <span className={`font-bold ${toneTextClass.success}`}>{u.leave?.approved_days || 0}d</span>
       </td>
     )}
   </tr>

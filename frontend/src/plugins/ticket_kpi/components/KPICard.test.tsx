@@ -32,7 +32,7 @@ describe("KPICard", () => {
     );
     const badge = screen.getByText("+5");
     expect(badge).toBeInTheDocument();
-    expect(badge.closest("span")).toHaveClass("text-emerald-600");
+    expect(badge.closest("span")).toHaveClass("text-tone-success-text");
   });
 
   it("renders a negative delta as red for higher-is-better metrics", () => {
@@ -48,7 +48,7 @@ describe("KPICard", () => {
     );
     const badge = screen.getByText("-5");
     expect(badge).toBeInTheDocument();
-    expect(badge.closest("span")).toHaveClass("text-red-600");
+    expect(badge.closest("span")).toHaveClass("text-tone-danger-text");
   });
 
   it("renders a negative delta as green for lower-is-better metrics (resolution time)", () => {
@@ -65,7 +65,7 @@ describe("KPICard", () => {
     );
     const badge = screen.getByText("-2");
     expect(badge).toBeInTheDocument();
-    expect(badge.closest("span")).toHaveClass("text-emerald-600");
+    expect(badge.closest("span")).toHaveClass("text-tone-success-text");
   });
 
   it("renders zero delta as neutral", () => {

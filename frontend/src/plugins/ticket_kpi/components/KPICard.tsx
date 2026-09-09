@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
 import { cn } from "@/lib/utils";
+import { toneSurfaceClass } from "@/components/ui/tone";
 
 interface KPICardProps {
   title: string;
@@ -42,8 +43,8 @@ export const KPICard: React.FC<KPICardProps> = ({
     <span
       className={cn(
         "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 font-medium",
-        isGood && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-        isBad && "bg-red-500/10 text-red-600 dark:text-red-400",
+        isGood && toneSurfaceClass.success,
+        isBad && toneSurfaceClass.danger,
         !isGood && !isBad && "bg-muted text-muted-foreground"
       )}
       title={deltaLabel}

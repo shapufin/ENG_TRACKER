@@ -24,7 +24,8 @@ const avatarClasses = {
 
 const buttonClasses = {
   add: "border-primary/20 bg-primary/10 text-foreground hover:bg-primary/20",
-  remove: "border-red-500/20 bg-red-500/10 text-red-700 hover:bg-red-500/20 dark:text-red-400",
+  remove:
+    "border-tone-danger-border bg-tone-danger-surface text-tone-danger-text hover:bg-tone-danger-surface",
 };
 
 const TeamListItem: React.FC<TeamListItemProps> = ({

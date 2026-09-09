@@ -34,7 +34,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
         iconWellClass="bg-accent-red/10"
         trend="Requires your action"
         progressPercent={pendingTotal > 0 ? 100 : 0}
-        progressColorClass="bg-rose-500"
+        progressColorClass="bg-tone-danger-text"
       />
       <StatCard
         label="Pending OT"
@@ -45,7 +45,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
         iconWellClass="bg-accent-orange/10"
         trend="Overtime requests"
         progressPercent={otPercent}
-        progressColorClass="bg-orange-500"
+        progressColorClass="bg-tone-warning-text"
       />
       <StatCard
         label="Pending SB"
@@ -55,7 +55,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
         iconColorClass="text-accent-yellow"
         trend="Standby requests"
         progressPercent={sbPercent}
-        progressColorClass="bg-amber-500"
+        progressColorClass="bg-tone-warning-text"
         iconWellClass="bg-accent-yellow/10"
       />
       <StatCard
@@ -66,7 +66,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
         iconColorClass="text-accent-violet"
         trend="Vacation requests"
         progressPercent={vacPercent}
-        progressColorClass="bg-violet-500"
+        progressColorClass="bg-tone-accent-text"
         iconWellClass="bg-accent-violet/10"
       />
       <StatCard
@@ -77,7 +77,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
         iconColorClass="text-success"
         trend="Recently approved"
         progressPercent={approvedPercent}
-        progressColorClass="bg-emerald-500"
+        progressColorClass="bg-tone-success-text"
         iconWellClass="bg-accent-emerald/10"
       />
     </div>
