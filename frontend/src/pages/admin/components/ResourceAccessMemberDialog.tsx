@@ -3,6 +3,7 @@ import { Loader2, Search, UserPlus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -78,11 +79,12 @@ export function ResourceAccessMemberDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-md">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Add member to {groupName}</DialogTitle>
+          <DialogDescription>Search users and add one to this group.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
           {/* Search input */}
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -143,7 +145,7 @@ export function ResourceAccessMemberDialog({
           {/* Results */}
           {!selected && search.length > 0 && (
             <div
-              className="max-h-64 space-y-1 overflow-y-auto"
+              className="no-scrollbar max-h-64 space-y-1 overflow-y-auto"
               role="listbox"
               aria-label="User results"
             >
@@ -203,7 +205,7 @@ export function ResourceAccessMemberDialog({
             </p>
           )}
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t pt-4">
           <Button
             type="button"
             variant="outline"

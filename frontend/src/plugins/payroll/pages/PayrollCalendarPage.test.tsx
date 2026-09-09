@@ -240,6 +240,7 @@ describe("PayrollCalendarPage", () => {
     // Open the Add Holiday dialog (button is unique while dialog is closed).
     fireEvent.click(screen.getByRole("button", { name: "Add Holiday" }));
     const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Add a holiday to the work calendar.")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Date")).toBeInTheDocument();
 
     // Fill in the date + name inputs.

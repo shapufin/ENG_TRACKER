@@ -55,6 +55,7 @@ export const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       title={editing ? "Edit Team" : "New Team"}
+      description="Teams define who approves requests and shares calendars."
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
     >

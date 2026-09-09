@@ -45,7 +45,6 @@ export const useEventActions = (event: CalendarEvent | null, onClose: () => void
   };
 
   const remove = async () => {
-    if (!confirm("Are you sure you want to delete this record?")) return;
     await withSubmitting(async () => {
       if (isLeave) {
         await leaveService.deleteRequest(recordId);

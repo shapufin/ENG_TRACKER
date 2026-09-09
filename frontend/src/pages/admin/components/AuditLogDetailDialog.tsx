@@ -15,13 +15,13 @@ interface AuditLogDetailDialogProps {
 
 export const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({ log, onClose }) => (
   <Dialog open={!!log} onOpenChange={onClose}>
-    <DialogContent className="max-w-2xl">
-      <DialogHeader>
+    <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
+      <DialogHeader className="shrink-0">
         <DialogTitle>Audit Log Details</DialogTitle>
         <DialogDescription>Detailed information about this audit log entry</DialogDescription>
       </DialogHeader>
       {log && (
-        <div className="space-y-4">
+        <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Timestamp</p>
@@ -42,12 +42,12 @@ export const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({ log,
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Object</p>
-            <p className="text-sm">{log.object_repr || "N/A"}</p>
+            <p className="break-words text-sm">{log.object_repr || "N/A"}</p>
           </div>
           {log.changes_summary && (
             <div>
               <p className="text-xs font-medium text-muted-foreground">Changes Summary</p>
-              <p className="text-sm">{log.changes_summary}</p>
+              <p className="break-words text-sm">{log.changes_summary}</p>
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
@@ -57,7 +57,7 @@ export const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({ log,
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">User Agent</p>
-              <p className="text-sm text-muted-foreground">{log.user_agent || "N/A"}</p>
+              <p className="break-words text-sm text-muted-foreground">{log.user_agent || "N/A"}</p>
             </div>
           </div>
         </div>

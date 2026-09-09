@@ -17,11 +17,11 @@ describe("RateSkillDialog", () => {
     );
 
     expect(screen.getByText("Rate Skill")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "L1" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "L2" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "L3" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "L4" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "L5" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "L1 Foundational" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "L2 Developing" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "L3 Proficient" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "L4 Advanced" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "L5 Mastery" })).toBeInTheDocument();
     expect(screen.getByText(/Currently rated/i)).toBeInTheDocument();
     expect(screen.getByText(/L3 — Proficient/i)).toBeInTheDocument();
   });
@@ -31,8 +31,12 @@ describe("RateSkillDialog", () => {
       <RateSkillDialog target={target} isPending={false} onSubmit={vi.fn()} onClose={vi.fn()} />
     );
 
-    expect(screen.getByRole("button", { name: "L3" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "L4" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("button", { name: "L3 Proficient" }).getAttribute("aria-pressed")).toBe(
+      "true"
+    );
+    expect(screen.getByRole("button", { name: "L4 Advanced" }).getAttribute("aria-pressed")).toBe(
+      "false"
+    );
   });
 
   it("calls onSubmit with the selected level", () => {
@@ -41,7 +45,7 @@ describe("RateSkillDialog", () => {
       <RateSkillDialog target={target} isPending={false} onSubmit={onSubmit} onClose={vi.fn()} />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "L4" }));
+    fireEvent.click(screen.getByRole("button", { name: "L4 Advanced" }));
 
     expect(onSubmit).toHaveBeenCalledWith(4);
   });
@@ -51,7 +55,13 @@ describe("RateSkillDialog", () => {
       <RateSkillDialog target={target} isPending={true} onSubmit={vi.fn()} onClose={vi.fn()} />
     );
 
-    for (const level of ["L1", "L2", "L3", "L4", "L5"]) {
+    for (const level of [
+      "L1 Foundational",
+      "L2 Developing",
+      "L3 Proficient",
+      "L4 Advanced",
+      "L5 Mastery",
+    ]) {
       expect(screen.getByRole("button", { name: level })).toBeDisabled();
     }
   });

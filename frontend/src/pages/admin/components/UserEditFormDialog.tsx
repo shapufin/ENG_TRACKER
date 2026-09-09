@@ -69,6 +69,7 @@ export const UserEditFormDialog: React.FC<UserEditFormDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       title={editing ? `Edit ${editing.user?.username}` : "Edit User"}
+      description="Update account details, teams, and roles."
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
     >

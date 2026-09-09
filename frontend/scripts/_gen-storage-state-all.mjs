@@ -116,7 +116,10 @@ try {
           origin: "http://127.0.0.1:5173",
           localStorage: [
             { name: "user", value: JSON.stringify(tokens.user) },
-            { name: "theme", value: "dark" },
+            // NOTE: no "theme" key — the app falls back to system preference,
+            // so designlang's light context renders light and its dark
+            // context (colorScheme: dark) renders dark. A hardcoded theme
+            // here would force BOTH passes onto one theme.
             // Pre-seed the access token in localStorage so the app can use it
             // immediately without waiting for the refresh endpoint.
             { name: "access_token", value: tokens.access },

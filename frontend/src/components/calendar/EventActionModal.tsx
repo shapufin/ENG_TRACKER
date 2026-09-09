@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Trash2 } from "lucide-react";
 import type { CalendarEvent } from "./types";
 import { useEventActions } from "./useEventActions";
 import { EventModalHeader } from "./EventModalHeader";
@@ -22,6 +24,7 @@ export const EventActionModal: React.FC<EventActionModalProps> = ({
   canViewTeamData,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { isSubmitting, saveEdit, remove, approve, reject } = useEventActions(event, () =>
     onOpenChange(false)
   );
@@ -29,31 +32,52 @@ export const EventActionModal: React.FC<EventActionModalProps> = ({
   if (!event) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md border border-border bg-popover p-0 text-popover-foreground [&>button]:hidden">
-        <DialogTitle className="sr-only">Record Actions</DialogTitle>
-        <DialogDescription className="sr-only">
-          Manage {event.type} record for {event.userName}
-        </DialogDescription>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="flex max-h-[90vh] max-w-lg flex-col overflow-hidden border border-border bg-popover p-0 text-popover-foreground [&>button]:hidden">
+          <DialogTitle className="sr-only">Record Actions</DialogTitle>
+          <DialogDescription className="sr-only">
+            Manage {event.type} record for {event.userName}
+          </DialogDescription>
 
-        <div className="p-6">
-          <EventModalHeader event={event} onClose={() => onOpenChange(false)} />
-          <EventInfoDisplay event={event} isEditing={isEditing} />
-          <EventActionButtons
-            event={event}
-            isEditing={isEditing}
-            isSubmitting={isSubmitting}
-            currentUser={currentUser}
-            canViewTeamData={canViewTeamData}
-            onEditStart={() => setIsEditing(true)}
-            onEditCancel={() => setIsEditing(false)}
-            onSave={saveEdit}
-            onApprove={approve}
-            onReject={reject}
-            onRemove={remove}
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
+          <div className="flex min-h-0 flex-1 flex-col p-6">
+            <div className="shrink-0">
+              <EventModalHeader event={event} onClose={() => onOpenChange(false)} />
+            </div>
+            <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
+              <EventInfoDisplay event={event} isEditing={isEditing} />
+            </div>
+            <div className="shrink-0 pt-4">
+              <EventActionButtons
+                event={event}
+                isEditing={isEditing}
+                isSubmitting={isSubmitting}
+                currentUser={currentUser}
+                canViewTeamData={canViewTeamData}
+                onEditStart={() => setIsEditing(true)}
+                onEditCancel={() => setIsEditing(false)}
+                onSave={saveEdit}
+                onApprove={approve}
+                onReject={reject}
+                onRemove={() => setDeleteConfirmOpen(true)}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete Record"
+        description="Are you sure you want to delete this record?"
+        confirmLabel="Delete"
+        variant="destructive"
+        icon={<Trash2 className="h-4 w-4" />}
+        onConfirm={() => {
+          setDeleteConfirmOpen(false);
+          void remove();
+        }}
+      />
+    </>
   );
 };

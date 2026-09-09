@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2, Play, Clock, Mail } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import api from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -39,6 +40,7 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [runResult, setRunResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ScheduledReport | null>(null);
 
   // Auto-clear run result after 5 seconds
   useEffect(() => {
@@ -92,6 +94,7 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scheduled-reports"] });
+      setPendingDelete(null);
     },
   });
 
@@ -140,193 +143,212 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
   };
 
   return (
-    <GlassCard className="p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold">Scheduled Reports</h3>
-          {reports.length > 0 && (
-            <span className="text-xs text-muted-foreground">{reports.length} scheduled</span>
-          )}
-        </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 gap-1 text-xs"
-          onClick={() => setShowForm(!showForm)}
-        >
-          <Plus className="h-3 w-3" />
-          New
-        </Button>
-      </div>
-
-      {showForm && (
-        <div className="mt-3 space-y-3 rounded-lg border p-3">
-          <div className="space-y-1">
-            <Label className="text-xs">Report Name</Label>
-            <Input
-              className="h-8 text-sm"
-              value={newReport.name}
-              onChange={(e) => setNewReport({ ...newReport, name: e.target.value })}
-              placeholder="Weekly OT Summary"
-            />
+    <>
+      <GlassCard className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Scheduled Reports</h3>
+            {reports.length > 0 && (
+              <span className="text-xs text-muted-foreground">{reports.length} scheduled</span>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 text-xs"
+            onClick={() => setShowForm(!showForm)}
+          >
+            <Plus className="h-3 w-3" />
+            New
+          </Button>
+        </div>
+
+        {showForm && (
+          <div className="mt-3 space-y-3 rounded-lg border p-3">
             <div className="space-y-1">
-              <Label className="text-xs">Schedule</Label>
-              <Select
-                value={newReport.schedule_type}
-                onValueChange={(v: "daily" | "weekly" | "monthly") =>
-                  setNewReport({ ...newReport, schedule_type: v })
-                }
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-xs">Report Name</Label>
+              <Input
+                className="h-8 text-sm"
+                value={newReport.name}
+                onChange={(e) => setNewReport({ ...newReport, name: e.target.value })}
+                placeholder="Weekly OT Summary"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Schedule</Label>
+                <Select
+                  value={newReport.schedule_type}
+                  onValueChange={(v: "daily" | "weekly" | "monthly") =>
+                    setNewReport({ ...newReport, schedule_type: v })
+                  }
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Format</Label>
+                <Select
+                  value={newReport.report_format}
+                  onValueChange={(v: "excel" | "csv") =>
+                    setNewReport({ ...newReport, report_format: v })
+                  }
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="excel">Excel</SelectItem>
+                    <SelectItem value="csv">CSV</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Format</Label>
-              <Select
-                value={newReport.report_format}
-                onValueChange={(v: "excel" | "csv") =>
-                  setNewReport({ ...newReport, report_format: v })
-                }
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="excel">Excel</SelectItem>
-                  <SelectItem value="csv">CSV</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-xs">Recipients (comma-separated emails)</Label>
+              <Input
+                className="h-8 text-sm"
+                value={newReport.recipients}
+                onChange={(e) => setNewReport({ ...newReport, recipients: e.target.value })}
+                placeholder="alice@company.com, bob@company.com"
+              />
             </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleCreate}
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? "Creating..." : "Create"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={() => setShowForm(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+            {createMutation.isError && (
+              <p className="text-xs text-destructive">
+                Failed to create report. Check permissions.
+              </p>
+            )}
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Recipients (comma-separated emails)</Label>
-            <Input
-              className="h-8 text-sm"
-              value={newReport.recipients}
-              onChange={(e) => setNewReport({ ...newReport, recipients: e.target.value })}
-              placeholder="alice@company.com, bob@company.com"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              className="h-7 text-xs"
-              onClick={handleCreate}
-              disabled={createMutation.isPending}
-            >
-              {createMutation.isPending ? "Creating..." : "Create"}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs"
-              onClick={() => setShowForm(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-          {createMutation.isError && (
-            <p className="text-xs text-destructive">Failed to create report. Check permissions.</p>
-          )}
-        </div>
-      )}
+        )}
 
-      {reports.length === 0 && !showForm ? (
-        <p className="mt-3 text-xs text-muted-foreground">
-          No scheduled reports. Create one to automate report delivery via email.
-        </p>
-      ) : (
-        <div className="mt-3 space-y-2">
-          {reports.map((report) => (
-            <div
-              key={report.id}
-              className="flex items-center justify-between rounded-lg border p-2.5"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-medium" title={report.name}>
-                    {report.name}
-                  </span>
-                  <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                    {report.schedule_type_display || report.schedule_type}
-                  </span>
-                  {!report.is_active && (
-                    <span className="shrink-0 text-xs text-muted-foreground">inactive</span>
-                  )}
-                </div>
-                <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                  <Mail className="h-3 w-3" />
-                  <span className="truncate">
-                    {report.recipients.length} recipient{report.recipients.length !== 1 ? "s" : ""}
-                  </span>
-                  {report.last_run_at && (
-                    <span className="truncate">
-                      · last sent {new Date(report.last_run_at).toLocaleDateString()}
+        {reports.length === 0 && !showForm ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            No scheduled reports. Create one to automate report delivery via email.
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {reports.map((report) => (
+              <div
+                key={report.id}
+                className="flex items-center justify-between rounded-lg border p-2.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-medium" title={report.name}>
+                      {report.name}
                     </span>
-                  )}
+                    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                      {report.schedule_type_display || report.schedule_type}
+                    </span>
+                    {!report.is_active && (
+                      <span className="shrink-0 text-xs text-muted-foreground">inactive</span>
+                    )}
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Mail className="h-3 w-3" />
+                    <span className="truncate">
+                      {report.recipients.length} recipient
+                      {report.recipients.length !== 1 ? "s" : ""}
+                    </span>
+                    {report.last_run_at && (
+                      <span className="truncate">
+                        · last sent {new Date(report.last_run_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Switch
+                    checked={report.is_active}
+                    onCheckedChange={() => toggleActiveMutation.mutate(report)}
+                    className="scale-75"
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => runNowMutation.mutate(report.id)}
+                    disabled={runNowMutation.isPending}
+                    title="Run now"
+                  >
+                    <Play className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0 text-destructive"
+                    onClick={() => setPendingDelete(report)}
+                    title="Delete"
+                    aria-label={`Delete scheduled report ${report.name}`}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <Switch
-                  checked={report.is_active}
-                  onCheckedChange={() => toggleActiveMutation.mutate(report)}
-                  className="scale-75"
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 w-7 p-0"
-                  onClick={() => runNowMutation.mutate(report.id)}
-                  disabled={runNowMutation.isPending}
-                  title="Run now"
-                >
-                  <Play className="h-3 w-3" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 w-7 p-0 text-destructive"
-                  onClick={() => {
-                    if (window.confirm(`Delete scheduled report "${report.name}"?`)) {
-                      deleteMutation.mutate(report.id);
-                    }
-                  }}
-                  title="Delete"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {runResult && (
-        <div
-          className={`mt-2 rounded px-2 py-1.5 text-xs ${
-            runResult.success
-              ? "bg-success/10 text-foreground"
-              : "bg-destructive/10 text-foreground"
-          }`}
-        >
-          {runResult.message}
-        </div>
-      )}
+        {runResult && (
+          <div
+            className={`mt-2 rounded px-2 py-1.5 text-xs ${
+              runResult.success
+                ? "bg-success/10 text-foreground"
+                : "bg-destructive/10 text-foreground"
+            }`}
+          >
+            {runResult.message}
+          </div>
+        )}
 
-      <div className="mt-3 border-t pt-2 text-xs text-muted-foreground">
-        Automated delivery requires a cron job:{" "}
-        <code className="rounded bg-muted px-1 py-0.5">python manage.py run_scheduled_reports</code>
-      </div>
-    </GlassCard>
+        <div className="mt-3 border-t pt-2 text-xs text-muted-foreground">
+          Automated delivery requires a cron job:{" "}
+          <code className="rounded bg-muted px-1 py-0.5">
+            python manage.py run_scheduled_reports
+          </code>
+        </div>
+      </GlassCard>
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+        title="Delete Scheduled Report"
+        description={pendingDelete ? `Delete scheduled report "${pendingDelete.name}"?` : undefined}
+        confirmLabel="Delete"
+        variant="destructive"
+        icon={<Trash2 className="h-4 w-4" />}
+        isConfirming={deleteMutation.isPending}
+        onConfirm={() => {
+          if (pendingDelete) deleteMutation.mutate(pendingDelete.id);
+        }}
+      />
+    </>
   );
 };

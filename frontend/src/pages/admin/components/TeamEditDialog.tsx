@@ -38,22 +38,29 @@ export const TeamEditDialog: React.FC<TeamEditDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       title={editingTeam ? `Edit ${editingTeam.name}` : "Edit Team Calendar"}
+      description="Rename the team or change its shared calendar group."
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
     >
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label
+            htmlFor="team-edit-name"
+            className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
             Team
           </Label>
-          <Input value={editingTeam?.name ?? ""} disabled />
+          <Input id="team-edit-name" value={editingTeam?.name ?? ""} disabled />
         </div>
         <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label
+            htmlFor="team-edit-group"
+            className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
             Calendar Group
           </Label>
           <Select value={formValue || "none"} onValueChange={onFormChange}>
-            <SelectTrigger className="h-10 px-3">
+            <SelectTrigger id="team-edit-group" className="h-10 px-3">
               <SelectValue placeholder="No shared group" />
             </SelectTrigger>
             <SelectContent>

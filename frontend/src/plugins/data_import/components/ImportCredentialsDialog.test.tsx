@@ -33,16 +33,18 @@ describe("ImportCredentialsDialog", () => {
     expect(screen.getByText("p1")).toBeInTheDocument();
   });
 
-  it("cannot be dismissed without confirmation", () => {
+  it("can be dismissed via the dialog close button (plan: allow ESC/close)", () => {
     const onOpenChange = vi.fn();
     render(
       <ImportCredentialsDialog open={true} onOpenChange={onOpenChange} credentials={credentials} />
     );
 
-    // The confirmation button is the only path to close. Before it is clicked
-    // the dialog has not signalled a close.
+    // The acknowledgement button remains the primary path, but the dialog
+    // close (X) must also work — the previous confirmed-only gate trapped
+    // keyboard users.
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    expect(onOpenChange).toHaveBeenCalled();
     expect(screen.getByText("I have saved these credentials")).toBeInTheDocument();
-    expect(onOpenChange).not.toHaveBeenCalled();
   });
 
   it("confirms and closes", () => {

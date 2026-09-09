@@ -55,25 +55,32 @@ export const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       title={editingName ? `Edit ${editingName}` : "Add Holiday"}
+      description="Holidays block leave booking and appear on team calendars."
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
     >
       <div className="space-y-3">
         <div className="space-y-1">
-          <Label>Name</Label>
-          <Input value={form.name} onChange={(e) => updateField("name", e.target.value)} />
+          <Label htmlFor="holiday-name">Name</Label>
+          <Input
+            id="holiday-name"
+            value={form.name}
+            onChange={(e) => updateField("name", e.target.value)}
+          />
         </div>
         <div className="space-y-1">
-          <Label>Date</Label>
+          <Label htmlFor="holiday-date">Date</Label>
           <Input
+            id="holiday-date"
             type="date"
             value={form.date}
             onChange={(e) => updateField("date", e.target.value)}
           />
         </div>
         <div className="space-y-1">
-          <Label>Country Code</Label>
+          <Label htmlFor="holiday-country">Country Code</Label>
           <Input
+            id="holiday-country"
             value={form.country_code}
             onChange={(e) => updateField("country_code", e.target.value.toUpperCase())}
             maxLength={2}
@@ -81,8 +88,9 @@ export const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
           />
         </div>
         <div className="space-y-1">
-          <Label>Description</Label>
+          <Label htmlFor="holiday-description">Description</Label>
           <Input
+            id="holiday-description"
             value={form.description}
             onChange={(e) => updateField("description", e.target.value)}
             placeholder="Optional details"
@@ -97,9 +105,9 @@ export const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
         />
         {!form.is_global && (
           <div className="space-y-1">
-            <Label>Workspace</Label>
+            <Label htmlFor="holiday-workspace">Workspace</Label>
             <Select value={form.calendar} onValueChange={(value) => updateField("calendar", value)}>
-              <SelectTrigger>
+              <SelectTrigger id="holiday-workspace">
                 <SelectValue placeholder="Select workspace" />
               </SelectTrigger>
               <SelectContent>

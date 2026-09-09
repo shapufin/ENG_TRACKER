@@ -29,6 +29,7 @@ export const ClientFormDialog: React.FC<ClientFormDialogProps> = ({
     open={open}
     onOpenChange={onOpenChange}
     title={editing ? "Edit Client" : "New Client"}
+    description="Clients group overtime and standby records for reporting."
     onSubmit={onSubmit}
     isSubmitting={isSubmitting}
   >

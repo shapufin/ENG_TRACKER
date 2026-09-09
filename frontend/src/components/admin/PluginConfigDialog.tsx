@@ -50,7 +50,7 @@ export const PluginConfigDialog: React.FC<PluginConfigDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden">
-        <DialogHeader>
+        <DialogHeader className="shrink-0">
           <DialogTitle>{plugin.verbose_name} Configuration</DialogTitle>
           <DialogDescription>
             Configure settings for {plugin.verbose_name} v{plugin.version}
@@ -62,7 +62,7 @@ export const PluginConfigDialog: React.FC<PluginConfigDialogProps> = ({
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto py-4 pr-1">
+          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto py-4 pr-1">
             <Tabs defaultValue="config" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="config">Settings</TabsTrigger>
@@ -93,7 +93,7 @@ export const PluginConfigDialog: React.FC<PluginConfigDialogProps> = ({
           </div>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

@@ -25,11 +25,15 @@ vi.mock("./TeamMultiSelect", () => ({
   ),
 }));
 
-// Mock Tabs to avoid radix pointer-event issues in jsdom. Renders all
-// tab content; the active tab is controlled by a local state that
-// responds to click on tab triggers.
+// Mock Tabs to avoid radix pointer-event issues in jsdom. The active tab
+// is shared via context so nested TabsList/TabsContent (inside the drawer's
+// scroll/footer layout) still respond to trigger clicks.
 vi.mock("@/components/ui/tabs", () => {
-  const { useState, Children, cloneElement } = React;
+  const { createContext, useContext, useState } = React;
+  const TabCtx = createContext<{ active: string; change: (v: string) => void }>({
+    active: "scopes",
+    change: () => {},
+  });
   return {
     Tabs: ({ value, onValueChange, children }: any) => {
       const [active, setActive] = useState(value || "scopes");
@@ -39,33 +43,36 @@ vi.mock("@/components/ui/tabs", () => {
       };
       return (
         <div data-testid="tabs" data-active={active}>
-          {Children.map(children, (child: any) =>
-            cloneElement(child, { _active: active, _change: change })
-          )}
+          <TabCtx.Provider value={{ active, change }}>{children}</TabCtx.Provider>
         </div>
       );
     },
-    TabsList: ({ children, _active, _change, ...rest }: any) => (
+    TabsList: ({ children, ...rest }: any) => (
       <div data-testid="tabs-list" role="tablist" {...rest}>
-        {Children.map(children, (c: any) => cloneElement(c, { _active, _change }))}
+        {children}
       </div>
     ),
-    TabsTrigger: ({ value, children, _active, _change, ...rest }: any) => (
-      <button
-        role="tab"
-        data-state={_active === value ? "active" : "inactive"}
-        onClick={() => _change?.(value)}
-        {...rest}
-      >
-        {children}
-      </button>
-    ),
-    TabsContent: ({ value, children, _active, _change, ...rest }: any) =>
-      _active === value ? (
+    TabsTrigger: ({ value, children, ...rest }: any) => {
+      const { active, change } = useContext(TabCtx);
+      return (
+        <button
+          role="tab"
+          data-state={active === value ? "active" : "inactive"}
+          onClick={() => change?.(value)}
+          {...rest}
+        >
+          {children}
+        </button>
+      );
+    },
+    TabsContent: ({ value, children, ...rest }: any) => {
+      const { active } = useContext(TabCtx);
+      return active === value ? (
         <div data-testid={`tab-content-${value}`} {...rest}>
           {children}
         </div>
-      ) : null,
+      ) : null;
+    },
   };
 });
 

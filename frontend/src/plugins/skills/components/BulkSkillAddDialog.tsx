@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -97,23 +98,23 @@ export const BulkSkillAddDialog: React.FC<BulkSkillAddDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Add skills to {category?.name ?? "category"}</DialogTitle>
-          <p className="text-sm text-muted-foreground">
+          <DialogDescription>
             Enter several catalog items at once. Name is auto-uppercased; code is generated
             automatically. Successful rows are saved individually.
-          </p>
+          </DialogDescription>
         </DialogHeader>
         {(validationError || errorMessage) && (
           <p
             role="alert"
-            className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+            className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
           >
             {validationError ?? errorMessage}
           </p>
         )}
-        <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
+        <div className="no-scrollbar min-h-0 flex-1 space-y-2 overflow-y-auto px-1 py-1">
           <div className="hidden grid-cols-[minmax(0,1fr)_44px] gap-2 px-1 text-xs font-medium text-muted-foreground sm:grid">
             <span>Name</span>
             <span />
@@ -162,7 +163,7 @@ export const BulkSkillAddDialog: React.FC<BulkSkillAddDialogProps> = ({
         <Button
           type="button"
           variant="outline"
-          className="min-h-11"
+          className="min-h-11 shrink-0"
           onClick={() => {
             const id = nextId.current;
             nextId.current += 1;
@@ -171,7 +172,7 @@ export const BulkSkillAddDialog: React.FC<BulkSkillAddDialogProps> = ({
         >
           <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> Add row
         </Button>
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t pt-4">
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>

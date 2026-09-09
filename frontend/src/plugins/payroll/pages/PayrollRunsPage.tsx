@@ -12,6 +12,7 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -110,11 +111,12 @@ export const PayrollRunsPage: React.FC = () => {
       </GlassCard>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle>New Payroll Run</DialogTitle>
+            <DialogDescription>Start a new payroll run for a processing period.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <Label htmlFor="year">Year</Label>
@@ -138,7 +140,7 @@ export const PayrollRunsPage: React.FC = () => {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t pt-4">
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
               Cancel
             </Button>

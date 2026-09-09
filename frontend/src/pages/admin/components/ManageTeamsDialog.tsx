@@ -80,15 +80,15 @@ export const ManageTeamsDialog: React.FC<ManageTeamsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl border-border bg-card">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden border-border">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Manage Teams in "{groupName}"</DialogTitle>
           <DialogDescription>
             Add or remove teams from this calendar group. Teams in the same group can view each
             other's calendar entries.
           </DialogDescription>
         </DialogHeader>
-        <div className="max-h-[400px] space-y-4 overflow-y-auto">
+        <div className="no-scrollbar max-h-[min(400px,50vh)] min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
           <div>
             <h4 className="mb-2 text-sm font-semibold">Teams in this group</h4>
             <div className="space-y-2">

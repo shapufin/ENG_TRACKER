@@ -22,6 +22,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -486,11 +487,12 @@ export const PayrollCalendarPage: React.FC = () => {
 
       {/* Add Holiday dialog */}
       <Dialog open={addHolidayOpen} onOpenChange={setAddHolidayOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-md">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Add Holiday</DialogTitle>
+            <DialogDescription>Add a holiday to the work calendar.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
             <div>
               <Label htmlFor="new-holiday-date">Date</Label>
               <Input
@@ -510,7 +512,7 @@ export const PayrollCalendarPage: React.FC = () => {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t pt-4">
             <Button
               variant="outline"
               onClick={() => setAddHolidayOpen(false)}
@@ -538,11 +540,12 @@ export const PayrollCalendarPage: React.FC = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-md">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Edit Holiday</DialogTitle>
+            <DialogDescription>Update the holiday name.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
             {editHoliday && (
               <p className="text-sm text-muted-foreground">Date: {editHoliday.date}</p>
             )}
@@ -555,7 +558,7 @@ export const PayrollCalendarPage: React.FC = () => {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t pt-4">
             <Button
               variant="outline"
               onClick={() => {

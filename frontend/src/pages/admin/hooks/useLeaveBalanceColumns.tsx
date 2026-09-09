@@ -1,11 +1,13 @@
 import { useMemo } from "react";
-import { createEditDeleteActionsColumn } from "@/components/ui/tableColumnHelpers";
+import { Button } from "@/components/ui/button";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 import type { LeaveBalance } from "@/types";
 import type { ColumnDef } from "@tanstack/react-table";
 
 export const useLeaveBalanceColumns = (
   onEdit: (b: LeaveBalance) => void,
-  onDelete: (b: LeaveBalance) => void
+  onDelete: (b: LeaveBalance) => void,
+  onView?: (b: LeaveBalance) => void
 ): ColumnDef<LeaveBalance>[] =>
   useMemo(
     () => [
@@ -33,7 +35,43 @@ export const useLeaveBalanceColumns = (
         cell: ({ row }) => (row.original.is_carry_over ? "Yes" : "No"),
       },
       { id: "expires_at", accessorKey: "expires_at", header: "Expires" },
-      createEditDeleteActionsColumn<LeaveBalance>(onEdit, onDelete),
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => (
+          <div className="flex gap-1">
+            {onView && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-11 w-11 p-0"
+                aria-label={`View ${row.original.id}`}
+                onClick={() => onView(row.original)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-11 w-11 p-0"
+              aria-label={`Edit ${row.original.id}`}
+              onClick={() => onEdit(row.original)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-11 w-11 p-0 text-destructive"
+              aria-label={`Delete ${row.original.id}`}
+              onClick={() => onDelete(row.original)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ),
+      },
     ],
-    [onEdit, onDelete]
+    [onEdit, onDelete, onView]
   );

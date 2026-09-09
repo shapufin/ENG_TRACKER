@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -64,25 +64,30 @@ const AssignmentSelect: React.FC<{
   value: AssignmentValue;
   leaders?: TeamLeader[];
   onChange: (value: AssignmentValue) => void;
-}> = ({ label, value, leaders, onChange }) => (
-  <div className="space-y-1.5">
-    <Label className="text-xs">{label}</Label>
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder={`Select ${label.toLowerCase()}...`} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="unchanged">Leave unchanged</SelectItem>
-        <SelectItem value="remove">Remove assignment</SelectItem>
-        {leaders?.map((leader) => (
-          <SelectItem key={leader.id} value={String(leader.id)}>
-            {leader.full_name || leader.username}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-);
+}> = ({ label, value, leaders, onChange }) => {
+  const triggerId = useId();
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs" htmlFor={triggerId}>
+        {label}
+      </Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={triggerId} className="w-full">
+          <SelectValue placeholder={`Select ${label.toLowerCase()}...`} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="unchanged">Leave unchanged</SelectItem>
+          <SelectItem value="remove">Remove assignment</SelectItem>
+          {leaders?.map((leader) => (
+            <SelectItem key={leader.id} value={String(leader.id)}>
+              {leader.full_name || leader.username}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
 
 const RoleToggle: React.FC<{
   id: string;
@@ -174,18 +179,20 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
-        <BulkDrawerHeader
-          count={selectedCount}
-          title="Bulk edit users"
-          subtitle={displayName}
-          onClearAndClose={() => {
-            resetForm();
-            onOpenChange(false);
-          }}
-        />
+      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden">
+        <div className="shrink-0">
+          <BulkDrawerHeader
+            count={selectedCount}
+            title="Bulk edit users"
+            subtitle={displayName}
+            onClearAndClose={() => {
+              resetForm();
+              onOpenChange(false);
+            }}
+          />
+        </div>
 
-        <div className="mt-4 space-y-4">
+        <div className="no-scrollbar mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto px-1">
           <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
             Changes apply to all {selectedCount} selected user{selectedCount === 1 ? "" : "s"}.
             Leave a field unchanged unless you intentionally want to update it.
@@ -299,24 +306,21 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
               </div>
             </SectionCard>
           </div>
+        </div>
 
-          <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-4 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isMutating}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleApply}
-              disabled={!hasChanges || selectedCount === 0 || isMutating}
-            >
-              {isMutating ? (
-                "Applying changes..."
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" /> Apply changes
-                </>
-              )}
-            </Button>
-          </div>
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border/60 pt-4 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isMutating}>
+            Cancel
+          </Button>
+          <Button onClick={handleApply} disabled={!hasChanges || selectedCount === 0 || isMutating}>
+            {isMutating ? (
+              "Applying changes..."
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" /> Apply changes
+              </>
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

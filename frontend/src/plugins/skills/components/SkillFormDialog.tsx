@@ -60,8 +60,8 @@ export const SkillFormDialog: React.FC<SkillFormDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-md flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{editing ? "Edit Skill" : "New Skill"}</DialogTitle>
           <DialogDescription>
             {editing
@@ -69,8 +69,8 @@ export const SkillFormDialog: React.FC<SkillFormDialogProps> = ({
               : "Add a new skill to the catalog. Assign it to a category so it appears in the team matrix."}
           </DialogDescription>
         </DialogHeader>
-        <FormErrorBanner message={errorMessage} />
-        <div className="space-y-5">
+        <div className="no-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto">
+          <FormErrorBanner message={errorMessage} />
           <div className="space-y-1.5">
             <Label htmlFor="skill-name">Name</Label>
             <Input
@@ -122,7 +122,7 @@ export const SkillFormDialog: React.FC<SkillFormDialogProps> = ({
             <Switch checked={isActive} onCheckedChange={setIsActive} aria-label="Skill active" />
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t pt-4">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>

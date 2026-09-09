@@ -47,8 +47,8 @@ export const SkillCategoryDialog: React.FC<SkillCategoryDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-md flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{editing ? "Edit Category" : "New Category"}</DialogTitle>
           <DialogDescription>
             {editing
@@ -56,8 +56,8 @@ export const SkillCategoryDialog: React.FC<SkillCategoryDialogProps> = ({
               : "Create a new skill category to group related skills. The code is auto-generated from the name."}
           </DialogDescription>
         </DialogHeader>
-        <FormErrorBanner message={errorMessage} />
-        <div className="space-y-5">
+        <div className="no-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto">
+          <FormErrorBanner message={errorMessage} />
           <div className="space-y-1.5">
             <Label htmlFor="cat-name">Name</Label>
             <Input
@@ -91,7 +91,7 @@ export const SkillCategoryDialog: React.FC<SkillCategoryDialogProps> = ({
             <Switch checked={isActive} onCheckedChange={setIsActive} aria-label="Category active" />
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t pt-4">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>

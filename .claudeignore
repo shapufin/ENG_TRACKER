@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+venv/
+__pycache__/
+.venv/
+
+# Database
+db.sqlite3
+*.sqlite3
+*.db
+
+# Build outputs
+frontend/dist/
+staticfiles/
+.pytest_cache/
+.coverage
+.ruff_cache/
+
+# Large audit artifacts (gitignored)
+design-fingerprints/
+design-audit/
+
+# Logs and data
+logs/
+*.log
+*.csv
+*.xlsx
+
+# Media uploads
+media/
+
+# Mockup / design assets (not source)
+Time Tracker UI Project/
+
+# Git and internal
+.git/
+.gitignore
+
+# Historical archives (loaded on-demand only)
+.devin/tracking/agents-archive-*.md
+
+# Claude/Devin internal
+.claude/
+.agents/
+.vscode/

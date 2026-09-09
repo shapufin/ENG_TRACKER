@@ -129,6 +129,7 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
       open={open}
       onOpenChange={handleOpenChange}
       title="Create User"
+      description="Create a standard account or a control-room-only user."
       onSubmit={handleSubmit}
       isSubmitting={submitting}
       submitLabel={userType === "cr" ? "Create & Grant CR Access" : undefined}
@@ -181,15 +182,17 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
       />
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label>First Name</Label>
+          <Label htmlFor="user-create-first-name">First Name</Label>
           <Input
+            id="user-create-first-name"
             value={form.first_name}
             onChange={(e) => updateField("first_name", e.target.value)}
           />
         </div>
         <div className="space-y-2">
-          <Label>Last Name</Label>
+          <Label htmlFor="user-create-last-name">Last Name</Label>
           <Input
+            id="user-create-last-name"
             value={form.last_name}
             onChange={(e) => updateField("last_name", e.target.value)}
           />
@@ -214,8 +217,8 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
           italianTLs={italianTLs}
         />
       ) : (
-        <div className="space-y-2">
-          <Label>Team Scopes</Label>
+        <div className="space-y-2" role="group" aria-labelledby="user-create-scopes-label">
+          <Label id="user-create-scopes-label">Team Scopes</Label>
           <TeamMultiSelect teams={teams} value={crTeamIds} onChange={setCrTeamIds} />
           <p className="text-xs text-muted-foreground">
             Empty scope means no visibility (not global). Admin/staff always have global access.

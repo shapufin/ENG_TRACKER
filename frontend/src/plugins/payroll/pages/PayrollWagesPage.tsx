@@ -10,15 +10,11 @@ import { Button } from "@/components/ui/button";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Trash2 } from "lucide-react";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { DataTable } from "@/components/ui/DataTable";
 import { payrollService } from "../services/payrollService";
@@ -276,107 +272,106 @@ export const PayrollWagesPage: React.FC = () => {
       </GlassCard>
 
       {canManagePayroll && (
-        <Dialog
+        <FormDialog
           open={formOpen}
           onOpenChange={(open) => {
             if (!open) closeForm();
           }}
+          title={editingId ? "Edit Wage Assignment" : "Assign Wage"}
+          description="Set the authoritative base monthly salary for payroll runs."
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveForm();
+          }}
+          isSubmitting={isSaving}
+          submitLabel={editingId ? "Update" : "Assign Wage"}
+          submitDisabled={!form.user || !form.gross_monthly_wage || invalidDateRange || invalidWage}
+          contentClassName="sm:max-w-md"
         >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingId ? "Edit Wage Assignment" : "Assign Wage"}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
+          <div>
+            <Label>Employee</Label>
+            <div className="mt-1 flex items-center gap-3 rounded-2xl border border-border bg-muted/30 px-3 py-2 text-sm">
+              <span
+                aria-hidden="true"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-bold text-primary-foreground"
+              >
+                {(formUser?.full_name ?? form.user)
+                  .split(" ")
+                  .map((w) => w[0])
+                  .join("")}
+              </span>
               <div>
-                <Label>Employee</Label>
-                <div className="mt-1 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-                  {formUser?.full_name ?? form.user}
-                  {formUser && (
-                    <span className="ml-2 text-muted-foreground">@{formUser.username}</span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="wage">Gross Monthly Wage (Lek)</Label>
-                <Input
-                  id="wage"
-                  type="number"
-                  value={form.gross_monthly_wage}
-                  onChange={(e) => setForm({ ...form, gross_monthly_wage: e.target.value })}
-                  placeholder="e.g. 100000"
-                />
-              </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="from">Start Date (DD/MM/YYYY, optional)</Label>
-                  <DatePicker
-                    id="from"
-                    value={form.effective_from}
-                    onChange={(value) => setForm({ ...form, effective_from: value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="to">Effective To (DD/MM/YYYY, optional)</Label>
-                  <DatePicker
-                    id="to"
-                    value={form.effective_to}
-                    onChange={(value) => setForm({ ...form, effective_to: value })}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="note">Note (optional)</Label>
-                <Input
-                  id="note"
-                  value={form.note}
-                  onChange={(e) => setForm({ ...form, note: e.target.value })}
-                />
+                <div className="text-xs font-bold">{formUser?.full_name ?? form.user}</div>
+                {formUser && (
+                  <div className="font-mono text-[10px] text-muted-foreground">
+                    @{formUser.username}
+                  </div>
+                )}
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={closeForm}>
-                Cancel
-              </Button>
-              <Button
-                onClick={saveForm}
-                disabled={
-                  isSaving ||
-                  !form.user ||
-                  !form.gross_monthly_wage ||
-                  invalidDateRange ||
-                  invalidWage
-                }
+          </div>
+          <div>
+            <Label htmlFor="wage">Gross Monthly Wage (Lek)</Label>
+            <div className="relative mt-1">
+              <Input
+                id="wage"
+                type="number"
+                value={form.gross_monthly_wage}
+                onChange={(e) => setForm({ ...form, gross_monthly_wage: e.target.value })}
+                placeholder="e.g. 100000"
+                className="pr-20"
+              />
+              <span
+                aria-hidden="true"
+                className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-primary"
               >
-                {isSaving ? "Saving..." : editingId ? "Update" : "Assign Wage"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                Lek / mo
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="from">Start Date (DD/MM/YYYY, optional)</Label>
+              <DatePicker
+                id="from"
+                value={form.effective_from}
+                onChange={(value) => setForm({ ...form, effective_from: value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="to">Effective To (DD/MM/YYYY, optional)</Label>
+              <DatePicker
+                id="to"
+                value={form.effective_to}
+                onChange={(value) => setForm({ ...form, effective_to: value })}
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="note">Note (optional)</Label>
+            <Input
+              id="note"
+              value={form.note}
+              onChange={(e) => setForm({ ...form, note: e.target.value })}
+            />
+          </div>
+        </FormDialog>
       )}
 
       {canManagePayroll && (
-        <Dialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Wage Assignment</DialogTitle>
-            </DialogHeader>
-            <p className="py-4 text-sm text-muted-foreground">
-              Are you sure you want to delete this wage assignment? This action cannot be undone.
-            </p>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteId(null)}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => deleteId && deleteMutation.mutate(deleteId)}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? "Deleting..." : "Delete"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ConfirmDialog
+          open={deleteId !== null}
+          onOpenChange={(open) => {
+            if (!open) setDeleteId(null);
+          }}
+          title="Delete Wage Assignment"
+          description="Are you sure you want to delete this wage assignment? This action cannot be undone."
+          confirmLabel="Delete"
+          variant="destructive"
+          icon={<Trash2 className="h-4 w-4" />}
+          isConfirming={deleteMutation.isPending}
+          onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
+        />
       )}
     </PageShell>
   );

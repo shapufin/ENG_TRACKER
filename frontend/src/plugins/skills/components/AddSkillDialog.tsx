@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -119,15 +120,15 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && handleClose()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Add skills to your profile</DialogTitle>
-          <p className="text-sm text-muted-foreground">
+          <DialogDescription>
             Select one or more skills, then set the same proficiency level for all selected skills.
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="grid min-h-0 gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="no-scrollbar grid min-h-0 flex-1 gap-4 overflow-y-auto px-1 py-1 sm:grid-cols-[minmax(0,1fr)_220px]">
           <div className="min-w-0 space-y-3">
             <div className="relative">
               <Label htmlFor="skill-search">Search skills</Label>
@@ -201,7 +202,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
             )}
             {!skillsLoading && !skillsError && availableSkills.length > 0 && (
               <div
-                className="max-h-64 overflow-y-auto rounded-lg border border-border"
+                className="no-scrollbar max-h-64 overflow-y-auto rounded-lg border border-border"
                 aria-label="Available skills"
               >
                 {visibleSkills.map((skill) => {
@@ -259,7 +260,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
                       Selected skill: <span className="font-medium">{selectedSkills[0].name}</span>
                     </p>
                   )}
-                  <div className="mt-2 max-h-32 space-y-1 overflow-y-auto">
+                  <div className="no-scrollbar mt-2 max-h-32 space-y-1 overflow-y-auto">
                     {selectedSkills.map((skill) => (
                       <div
                         key={skill.id}
@@ -309,7 +310,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
             </div>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t pt-4">
           <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>

@@ -1,7 +1,13 @@
 import React, { lazy, Suspense, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTicketKPIEvidence } from "../../pages/hooks/useTicketKPIEvidence";
@@ -113,25 +119,30 @@ export const TicketKPIEvidenceSection: React.FC<TicketKPIEvidenceSectionProps> =
       </Card>
 
       <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogTitle>Upload KPI Evidence</DialogTitle>
-          <DialogDescription>
-            Attach supporting documents, certificates, screenshots, or email threads for this month.
-          </DialogDescription>
-          <EvidenceUploadForm
-            month={month}
-            availableClients={availableClients}
-            selectedType={selectedType}
-            onTypeChange={setSelectedType}
-            description={description}
-            onDescriptionChange={setDescription}
-            file={file}
-            onFileAccepted={setFile}
-            selectedClientIds={selectedClientIds}
-            onClientToggle={handleClientToggle}
-            onSubmit={handleCreate}
-            isPending={createMutation.isPending}
-          />
+        <DialogContent className="flex max-h-[90vh] max-w-lg flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
+            <DialogTitle>Upload KPI Evidence</DialogTitle>
+            <DialogDescription>
+              Attach supporting documents, certificates, screenshots, or email threads for this
+              month.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-1 py-1">
+            <EvidenceUploadForm
+              month={month}
+              availableClients={availableClients}
+              selectedType={selectedType}
+              onTypeChange={setSelectedType}
+              description={description}
+              onDescriptionChange={setDescription}
+              file={file}
+              onFileAccepted={setFile}
+              selectedClientIds={selectedClientIds}
+              onClientToggle={handleClientToggle}
+              onSubmit={handleCreate}
+              isPending={createMutation.isPending}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 

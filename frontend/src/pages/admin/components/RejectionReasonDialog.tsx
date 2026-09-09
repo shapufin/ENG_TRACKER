@@ -8,6 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface RejectionReasonDialogProps {
   open: boolean;
@@ -36,19 +38,24 @@ export const RejectionReasonDialog: React.FC<RejectionReasonDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-md flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Reject Overtime Entry</DialogTitle>
           <DialogDescription>Please provide a reason for rejection</DialogDescription>
         </DialogHeader>
-        <textarea
-          placeholder="Enter rejection reason..."
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          rows={4}
-          className="mt-4 flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-        />
-        <DialogFooter>
+        <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-1 py-1">
+          <div className="space-y-2">
+            <Label htmlFor="rejection-reason">Rejection reason</Label>
+            <Textarea
+              id="rejection-reason"
+              placeholder="Enter rejection reason..."
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={4}
+            />
+          </div>
+        </div>
+        <DialogFooter className="shrink-0 border-t pt-4">
           <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>

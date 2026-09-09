@@ -163,12 +163,12 @@ export const SkillsTeamFilters: React.FC<SkillsTeamFiltersProps> = ({
 
       {isMobile && (
         <Dialog open={filtersOpen} onOpenChange={onFiltersOpenChange}>
-          <DialogContent className="max-w-[92vw]">
-            <DialogHeader>
+          <DialogContent className="flex max-h-[90vh] max-w-[92vw] flex-col overflow-hidden">
+            <DialogHeader className="shrink-0">
               <DialogTitle>Team filters</DialogTitle>
               <DialogDescription>Narrow the team view by proficiency level.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto">
               <div>
                 <Label htmlFor="team-mobile-min-level">Minimum level</Label>
                 <Select

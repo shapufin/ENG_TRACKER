@@ -13,6 +13,7 @@ import React, { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Shield, Power, AlertCircle } from "lucide-react";
 import { BulkDrawerHeader } from "@/components/ui/BulkDrawerHeader";
@@ -94,90 +95,108 @@ export const CRBulkCommandDrawer: React.FC<CRBulkCommandDrawerProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <BulkDrawerHeader
-          count={selectedCount}
-          title="CR Bulk Actions"
-          subtitle={displayName}
-          onClearAndClose={() => {
-            onClearSelection();
-            handleOpenChange(false);
-          }}
-        />
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
+        <div className="shrink-0">
+          <BulkDrawerHeader
+            count={selectedCount}
+            title="CR Bulk Actions"
+            subtitle={displayName}
+            onClearAndClose={() => {
+              onClearSelection();
+              handleOpenChange(false);
+            }}
+          />
+        </div>
 
-        {error && (
-          <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="mt-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="scopes" className="gap-2">
-              <Shield className="h-4 w-4" /> Team Scopes
-            </TabsTrigger>
-            <TabsTrigger value="access" className="gap-2">
-              <Power className="h-4 w-4" /> Access
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="scopes" className="mt-4 space-y-4">
-            <div className="space-y-2">
-              <Label>Replace Team Scopes</Label>
-              <TeamMultiSelect teams={teams} value={teamIds} onChange={setTeamIds} />
-              <p className="text-xs text-muted-foreground">
-                Replaces all team scopes for every selected CR user. Empty scope means no visibility
-                (not global). Admin/staff always have global access.
-              </p>
-            </div>
-            <Button onClick={handleApplyScopes} disabled={bulkMut.isPending || selectedCount === 0}>
-              {bulkMut.isPending ? "Applying..." : `Replace Scopes for ${selectedCount} Users`}
-            </Button>
-          </TabsContent>
-
-          <TabsContent value="access" className="mt-4 space-y-4">
-            <div className="space-y-2">
-              <Label>CR Access State</Label>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {(
-                  [
-                    { value: true, label: "Enable CR access" },
-                    { value: false, label: "Disable CR access" },
-                  ] as const
-                ).map((option) => {
-                  const selected = isActive === option.value;
-                  return (
-                    <button
-                      key={option.label}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setIsActive(selected ? null : option.value)}
-                      className={`rounded-lg border px-3 py-3 text-left text-sm transition-colors ${
-                        selected
-                          ? "border-primary bg-primary/10 text-foreground"
-                          : "border-border/60 bg-background/40 hover:bg-muted"
-                      }`}
-                    >
-                      <span className="font-medium">{option.label}</span>
-                      <span className="mt-1 block text-xs text-muted-foreground">
-                        Apply to every selected user
-                      </span>
-                    </button>
-                  );
-                })}
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as TabValue)}
+          className="mt-4 flex min-h-0 flex-1 flex-col"
+        >
+          <div className="shrink-0 px-1">
+            {error && (
+              <div className="mb-4 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{error}</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Toggles the is_active flag on every selected CR user's access record.
-              </p>
-            </div>
-            <Button
-              onClick={handleApplyAccess}
-              disabled={bulkMut.isPending || selectedCount === 0 || isActive === null}
-            >
-              {bulkMut.isPending ? "Applying..." : `Update Access for ${selectedCount} Users`}
-            </Button>
-          </TabsContent>
+            )}
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="scopes" className="gap-2">
+                <Shield className="h-4 w-4" /> Team Scopes
+              </TabsTrigger>
+              <TabsTrigger value="access" className="gap-2">
+                <Power className="h-4 w-4" /> Access
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 pt-4">
+            <TabsContent value="scopes" className="mt-0 space-y-4">
+              <div className="space-y-2" role="group" aria-labelledby="cr-scopes-label">
+                <Label id="cr-scopes-label">Replace Team Scopes</Label>
+                <TeamMultiSelect teams={teams} value={teamIds} onChange={setTeamIds} />
+                <p className="text-xs text-muted-foreground">
+                  Replaces all team scopes for every selected CR user. Empty scope means no
+                  visibility (not global). Admin/staff always have global access.
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="access" className="mt-0 space-y-4">
+              <div className="space-y-2" role="group" aria-labelledby="cr-access-label">
+                <Label id="cr-access-label">CR Access State</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(
+                    [
+                      { value: true, label: "Enable CR access" },
+                      { value: false, label: "Disable CR access" },
+                    ] as const
+                  ).map((option) => {
+                    const selected = isActive === option.value;
+                    return (
+                      <button
+                        key={option.label}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setIsActive(selected ? null : option.value)}
+                        className={`rounded-lg border px-3 py-3 text-left text-sm transition-colors ${
+                          selected
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border/60 bg-background/40 hover:bg-muted"
+                        }`}
+                      >
+                        <span className="font-medium">{option.label}</span>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          Apply to every selected user
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Toggles the is_active flag on every selected CR user's access record.
+                </p>
+              </div>
+            </TabsContent>
+          </div>
+
+          <DialogFooter className="shrink-0 border-t pt-4">
+            {activeTab === "scopes" ? (
+              <Button
+                onClick={handleApplyScopes}
+                disabled={bulkMut.isPending || selectedCount === 0}
+              >
+                {bulkMut.isPending ? "Applying..." : `Replace Scopes for ${selectedCount} Users`}
+              </Button>
+            ) : (
+              <Button
+                onClick={handleApplyAccess}
+                disabled={bulkMut.isPending || selectedCount === 0 || isActive === null}
+              >
+                {bulkMut.isPending ? "Applying..." : `Update Access for ${selectedCount} Users`}
+              </Button>
+            )}
+          </DialogFooter>
         </Tabs>
       </DialogContent>
     </Dialog>

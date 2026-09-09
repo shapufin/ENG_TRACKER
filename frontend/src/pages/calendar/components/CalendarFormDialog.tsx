@@ -55,6 +55,7 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       title={title}
+      description="Calendars group schedules; members share visibility settings."
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
     >

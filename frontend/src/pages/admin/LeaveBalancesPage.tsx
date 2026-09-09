@@ -14,6 +14,7 @@ import { usePermissions } from "@/context/PermissionContext";
 import { useLeaveBalanceForm } from "./hooks/useLeaveBalanceForm";
 import { useLeaveBalanceColumns } from "./hooks/useLeaveBalanceColumns";
 import { LeaveBalanceFormDialog } from "./components/LeaveBalanceFormDialog";
+import { LeaveBalanceAuditDialog } from "./components/LeaveBalanceAuditDialog";
 
 const LeaveBalancesContent: React.FC = () => {
   const {
@@ -31,6 +32,7 @@ const LeaveBalancesContent: React.FC = () => {
   } = useLeaveBalanceForm();
 
   const [confirmDelete, setConfirmDelete] = useState<LeaveBalance | null>(null);
+  const [auditBalance, setAuditBalance] = useState<LeaveBalance | null>(null);
 
   const { balances, users, isLoading, isError, createMutation, updateMutation, deleteMutation } =
     useLeaveBalances({
@@ -64,7 +66,7 @@ const LeaveBalancesContent: React.FC = () => {
     else createMutation.mutate(payload);
   };
 
-  const columns = useLeaveBalanceColumns(openEdit, setConfirmDelete);
+  const columns = useLeaveBalanceColumns(openEdit, setConfirmDelete, setAuditBalance);
 
   if (isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
   if (isError)
@@ -108,6 +110,7 @@ const LeaveBalancesContent: React.FC = () => {
         description={`Delete balance for ${confirmDelete?.user_name}?`}
         onConfirm={() => confirmDelete && deleteMutation.mutate(confirmDelete.id)}
       />
+      <LeaveBalanceAuditDialog balance={auditBalance} onClose={() => setAuditBalance(null)} />
     </PageShell>
   );
 };

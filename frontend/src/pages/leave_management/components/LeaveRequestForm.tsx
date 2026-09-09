@@ -2,13 +2,6 @@ import React from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/DatePicker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface LeaveFormData {
   request_type: "vacation" | "sick";
@@ -27,11 +20,13 @@ interface LeaveRequestFormProps {
   formData: LeaveFormData;
   formErrors: FormErrors;
   onChange: (data: LeaveFormData) => void;
+  /** Real remaining vacation days for the allowance banner; omit to hide it. */
+  remainingDays?: number;
 }
 
 const REQUEST_TYPE_OPTIONS = [
-  { value: "vacation" as const, label: "Vacation" },
-  { value: "sick" as const, label: "Sick Leave" },
+  { value: "vacation" as const, label: "Vacation", dotClass: "bg-emerald-500" },
+  { value: "sick" as const, label: "Sick Leave", dotClass: "bg-rose-500" },
 ];
 
 // fallow-ignore-next-line complexity
@@ -39,6 +34,7 @@ export const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
   formData,
   formErrors,
   onChange,
+  remainingDays,
 }) => {
   const updateField = <K extends keyof LeaveFormData>(key: K, value: LeaveFormData[K]) => {
     onChange({ ...formData, [key]: value });
@@ -46,36 +42,56 @@ export const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
 
   return (
     <div className="space-y-3">
+      {typeof remainingDays === "number" && (
+        <div
+          role="status"
+          aria-label={`Allowance remaining ${remainingDays} days`}
+          className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/10 p-3 text-xs"
+        >
+          <span className="text-muted-foreground">Allowance remaining</span>
+          <span className="font-mono font-bold text-foreground">{remainingDays} days</span>
+        </div>
+      )}
       <p className="text-xs text-muted-foreground">
         {formData.request_type === "sick" ? "Sick leave request" : "Vacation request"}
       </p>
       <div>
-        <Label htmlFor="leave-request-type" className="text-xs font-medium">
+        <span id="leave-request-type-label" className="text-xs font-medium">
           Request type
-        </Label>
-        <Select
-          value={formData.request_type}
-          onValueChange={(value) => updateField("request_type", value as "vacation" | "sick")}
+        </span>
+        <div
+          role="group"
+          aria-labelledby="leave-request-type-label"
+          aria-invalid={!!formErrors.request_type}
+          className={`mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2 ${
+            formErrors.request_type ? "rounded-xl ring-2 ring-destructive/40" : ""
+          }`}
         >
-          <SelectTrigger
-            id="leave-request-type"
-            className={`mt-1 h-9 ${formErrors.request_type ? "border-destructive" : ""}`}
-          >
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-          <SelectContent>
-            {REQUEST_TYPE_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
+          {REQUEST_TYPE_OPTIONS.map((option) => {
+            const selected = formData.request_type === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => updateField("request_type", option.value)}
+                className={`flex min-h-[44px] items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all ${
+                  selected
+                    ? "border-primary/60 bg-primary/10 text-foreground shadow-sm ring-2 ring-primary/20"
+                    : "border-border bg-surface-sunken text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span aria-hidden="true" className={`h-2 w-2 rounded-full ${option.dotClass}`} />
                 {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              </button>
+            );
+          })}
+        </div>
         {formErrors.request_type && (
           <p className="mt-1 text-xs text-destructive">{formErrors.request_type}</p>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label htmlFor="leave-start-date" className="text-xs font-medium">
             Start date

@@ -257,13 +257,13 @@ describe("SkillsTeamPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /alice Python L3/i }));
     // The rate dialog opens with the stepper showing 5 level buttons.
     expect(screen.getByText("Rate Skill")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "L1" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "L2" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "L3" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "L4" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "L5" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "L1 Foundational" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "L2 Developing" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "L3 Proficient" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "L4 Advanced" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "L5 Mastery" })).toBeInTheDocument();
     // Click L4 to rate — one click, no separate submit step.
-    fireEvent.click(screen.getByRole("button", { name: "L4" }));
+    fireEvent.click(screen.getByRole("button", { name: "L4 Advanced" }));
     await waitFor(() =>
       expect(rateMut.mutate).toHaveBeenCalledWith(
         // B1: id must be the user_skill_id (999), NOT the skill_id (10).
@@ -292,7 +292,7 @@ describe("SkillsTeamPage", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /alice Python L3/i }));
     // The current level button (L3) should be marked as pressed/active.
-    const l3Button = screen.getByRole("button", { name: "L3" });
+    const l3Button = screen.getByRole("button", { name: "L3 Proficient" });
     expect(l3Button.getAttribute("aria-pressed")).toBe("true");
   });
 
@@ -437,9 +437,9 @@ describe("SkillsTeamPage — mobile fallback", () => {
     fireEvent.click(screen.getByRole("button", { name: /rate.*alice.*python/i }));
     // The rate dialog opens with the stepper.
     expect(screen.getByText("Rate Skill")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "L4" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "L4 Advanced" })).toBeInTheDocument();
     // Click L4 to rate.
-    fireEvent.click(screen.getByRole("button", { name: "L4" }));
+    fireEvent.click(screen.getByRole("button", { name: "L4 Advanced" }));
     await waitFor(() =>
       expect(rateMut.mutate).toHaveBeenCalledWith(
         { id: 999, data: { level: 4 } },
@@ -704,7 +704,7 @@ describe("SkillsTeamPage — ARIA grid + keyboard nav", () => {
     fireEvent.keyDown(aliceCell, { key: "Enter" });
     // The dialog should show the 5 level buttons.
     expect(screen.getByText("Rate Skill")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "L4" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "L4 Advanced" })).toBeInTheDocument();
   });
 
   it("does not move focus past the last row on ArrowDown", () => {
@@ -801,7 +801,7 @@ describe("SkillsTeamPage — ARIA grid + keyboard nav", () => {
     fireEvent.keyDown(unratedCell, { key: "Enter" });
     // Rate dialog content (level buttons) should NOT appear — the Dialog
     // mock always renders the title, so assert on the conditional body.
-    expect(screen.queryByRole("button", { name: "L4" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "L4 Advanced" })).not.toBeInTheDocument();
   });
 
   it("keeps a current cell tabbable after search reduces the result set", () => {

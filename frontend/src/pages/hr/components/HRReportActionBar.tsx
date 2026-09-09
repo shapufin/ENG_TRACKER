@@ -116,12 +116,12 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
       </div>
 
       <Dialog open={exportDialogOpen} onOpenChange={onExportDialogOpenChange}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
             <div className="text-sm text-muted-foreground">
               Using current filter settings:
               <ul className="mt-2 list-inside list-disc space-y-1">
@@ -140,7 +140,7 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
               </ul>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t pt-4">
             <Button variant="outline" onClick={() => onExportDialogOpenChange(false)}>
               Cancel
             </Button>

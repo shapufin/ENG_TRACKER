@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -92,14 +93,18 @@ export const ProfileDialog: React.FC<ProfileDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto border-border bg-card">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden border-border">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{profile ? "Edit Profile" : "Create Profile"}</DialogTitle>
+          <DialogDescription>
+            Configure the export profile: fields, client scope, and value transforms.
+          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
           <div className="space-y-2">
-            <Label>Name</Label>
+            <Label htmlFor="profile-name">Name</Label>
             <Input
+              id="profile-name"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               placeholder="e.g. ServiceNow Default"
@@ -107,8 +112,9 @@ export const ProfileDialog: React.FC<ProfileDialogProps> = ({
             />
           </div>
           <div className="space-y-2">
-            <Label>Description</Label>
+            <Label htmlFor="profile-description">Description</Label>
             <Textarea
+              id="profile-description"
               value={formDesc}
               onChange={(e) => setFormDesc(e.target.value)}
               rows={2}
@@ -117,12 +123,12 @@ export const ProfileDialog: React.FC<ProfileDialogProps> = ({
           </div>
           <div className="flex gap-4">
             <div className="flex items-center gap-2">
-              <Switch checked={formActive} onCheckedChange={setFormActive} />
-              <Label>Active</Label>
+              <Switch id="profile-active" checked={formActive} onCheckedChange={setFormActive} />
+              <Label htmlFor="profile-active">Active</Label>
             </div>
             <div className="flex items-center gap-2">
-              <Switch checked={formGlobal} onCheckedChange={setFormGlobal} />
-              <Label>Global</Label>
+              <Switch id="profile-global" checked={formGlobal} onCheckedChange={setFormGlobal} />
+              <Label htmlFor="profile-global">Global</Label>
             </div>
           </div>
 
@@ -139,8 +145,8 @@ export const ProfileDialog: React.FC<ProfileDialogProps> = ({
             onAutoDetect={handleAutoDetect}
           />
 
-          <div className="space-y-2">
-            <Label>Field Mapping</Label>
+          <div className="space-y-2" role="group" aria-labelledby="profile-mapping-label">
+            <Label id="profile-mapping-label">Field Mapping</Label>
             <p className="text-xs text-muted-foreground">
               Map our fields to the column names in user exports.
             </p>
@@ -165,16 +171,28 @@ export const ProfileDialog: React.FC<ProfileDialogProps> = ({
 
           <div className="flex gap-4">
             <div className="flex items-center gap-2">
-              <Switch checked={computeRes} onCheckedChange={setComputeRes} />
-              <Label className="text-sm">Compute resolution time</Label>
+              <Switch
+                id="profile-compute-res"
+                checked={computeRes}
+                onCheckedChange={setComputeRes}
+              />
+              <Label htmlFor="profile-compute-res" className="text-sm">
+                Compute resolution time
+              </Label>
             </div>
             <div className="flex items-center gap-2">
-              <Switch checked={computeSla} onCheckedChange={setComputeSla} />
-              <Label className="text-sm">Compute SLA</Label>
+              <Switch
+                id="profile-compute-sla"
+                checked={computeSla}
+                onCheckedChange={setComputeSla}
+              />
+              <Label htmlFor="profile-compute-sla" className="text-sm">
+                Compute SLA
+              </Label>
             </div>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

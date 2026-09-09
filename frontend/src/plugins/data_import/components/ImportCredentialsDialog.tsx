@@ -60,9 +60,9 @@ export const ImportCredentialsDialog: React.FC<ImportCredentialsDialogProps> = (
   };
 
   return (
-    <Dialog open={open} onOpenChange={(value) => confirmed && onOpenChange(value)}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Imported User Credentials</DialogTitle>
           <DialogDescription>
             These passwords are shown once and are not stored anywhere in plaintext. Download the
@@ -70,9 +70,11 @@ export const ImportCredentialsDialog: React.FC<ImportCredentialsDialogProps> = (
           </DialogDescription>
         </DialogHeader>
 
-        <DataTable columns={columns} data={credentials} pageSize={10} />
+        <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-1 py-1">
+          <DataTable columns={columns} data={credentials} pageSize={10} />
+        </div>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-row">
+        <DialogFooter className="shrink-0 flex-col gap-2 border-t pt-4 sm:flex-row">
           <Button variant="outline" onClick={downloadCSV}>
             <Download className="mr-2 h-4 w-4" />
             Download CSV

@@ -103,8 +103,8 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             Manage Members
             {tech && (
@@ -118,13 +118,13 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="no-scrollbar grid min-h-0 flex-1 gap-4 overflow-y-auto px-1 py-1 md:grid-cols-2">
           {/* Left panel: current members */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-semibold">Members ({members.length})</h4>
             </div>
-            <div className="max-h-[400px] space-y-1 overflow-y-auto rounded-md border border-border p-2">
+            <div className="no-scrollbar max-h-[min(400px,50vh)] space-y-1 overflow-y-auto rounded-md border border-border p-2">
               {membersLoading ? (
                 <p className="p-4 text-center text-xs text-muted-foreground">Loading...</p>
               ) : members.length === 0 ? (
@@ -187,7 +187,7 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
                 </Button>
               )}
             </div>
-            <div className="max-h-[360px] space-y-1 overflow-y-auto rounded-md border border-border p-2">
+            <div className="no-scrollbar max-h-[min(360px,50vh)] space-y-1 overflow-y-auto rounded-md border border-border p-2">
               {candidatesLoading ? (
                 <div className="flex items-center justify-center gap-2 p-4 text-xs text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />

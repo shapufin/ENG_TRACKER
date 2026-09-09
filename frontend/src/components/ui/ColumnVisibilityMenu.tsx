@@ -68,7 +68,7 @@ export function ColumnVisibilityMenu<TData>({
           <DialogTitle>Toggle Columns</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-4">
-          <div className="max-h-[300px] space-y-2 overflow-y-auto">
+          <div className="no-scrollbar max-h-[300px] space-y-2 overflow-y-auto">
             {hideableColumns.map(({ id, label }) => (
               <div key={id} className="flex items-center space-x-2">
                 <Checkbox

@@ -32,29 +32,30 @@ export const GroupRenameDialog: React.FC<GroupRenameDialogProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-border bg-card">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden border-border">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Edit Calendar Group</DialogTitle>
           <DialogDescription>
             Rename the calendar group. This will update all teams with this group.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={onSubmit}>
-          <div className="space-y-4">
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
             <div>
-              <Label>Current Group Name</Label>
-              <Input value={editingGroup || ""} disabled />
+              <Label htmlFor="group-rename-current">Current Group Name</Label>
+              <Input id="group-rename-current" value={editingGroup || ""} disabled />
             </div>
             <div>
-              <Label>New Group Name</Label>
+              <Label htmlFor="group-rename-new">New Group Name</Label>
               <Input
+                id="group-rename-new"
                 value={newGroupName}
                 onChange={(e) => onNewGroupNameChange(e.target.value)}
                 placeholder="Enter new group name"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>

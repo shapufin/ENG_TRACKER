@@ -52,8 +52,8 @@ export function SidebarInstallButton({ collapsed }: SidebarInstallButtonProps) {
       </Button>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-[92vw] sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[90vh] max-w-[92vw] flex-col overflow-hidden sm:max-w-md">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Download className="h-5 w-5" />
               Install Engineering Tracker

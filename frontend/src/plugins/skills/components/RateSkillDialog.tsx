@@ -28,13 +28,13 @@ export const RateSkillDialog: React.FC<RateSkillDialogProps> = ({
   const canIncrement = !!target && target.currentLevel < 5;
   return (
     <Dialog open={!!target} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-sm border-border/70 bg-popover">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-sm flex-col overflow-hidden border-border/70 bg-popover">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Rate Skill</DialogTitle>
           <DialogDescription>Choose a proficiency level for this skill.</DialogDescription>
         </DialogHeader>
         {target && (
-          <div className="space-y-3">
+          <div className="no-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto">
             <div>
               <p className="text-sm font-medium">{target.username}</p>
               <p className="text-xs text-muted-foreground">{target.skillName}</p>
@@ -62,21 +62,45 @@ export const RateSkillDialog: React.FC<RateSkillDialogProps> = ({
               </Button>
             )}
             <div>
-              <p className="mb-1.5 text-xs font-medium text-muted-foreground">Select new level</p>
-              <div className="flex gap-1.5">
-                {PROFICIENCY_LEVELS.map((l) => (
-                  <button
-                    key={l.level}
-                    type="button"
-                    onClick={() => onSubmit(l.level)}
-                    disabled={isPending}
-                    aria-pressed={target.currentLevel === l.level}
-                    title={l.label}
-                    className={`inline-flex h-9 min-h-[44px] flex-1 items-center justify-center rounded border text-sm font-semibold transition-colors hover:opacity-80 ${levelColor(l.level)} ${target.currentLevel === l.level ? "ring-2 ring-ring ring-offset-1" : ""}`}
-                  >
-                    L{l.level}
-                  </button>
-                ))}
+              <span
+                id="rate-tier-label"
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
+              >
+                Select new level
+              </span>
+              <div role="group" aria-labelledby="rate-tier-label" className="space-y-2">
+                {PROFICIENCY_LEVELS.map((l) => {
+                  const selected = target.currentLevel === l.level;
+                  return (
+                    <button
+                      key={l.level}
+                      type="button"
+                      onClick={() => onSubmit(l.level)}
+                      disabled={isPending}
+                      aria-pressed={selected}
+                      aria-label={`L${l.level} ${l.label}`}
+                      className={`flex min-h-[44px] w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                        selected
+                          ? "border-primary/60 bg-card text-foreground shadow-sm ring-2 ring-primary/20"
+                          : "border-border bg-surface-sunken text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-xs font-bold ${levelColor(l.level)}`}
+                      >
+                        L{l.level}
+                      </span>
+                      <span className="text-xs font-semibold">{l.label}</span>
+                      {selected && (
+                        <span
+                          aria-hidden="true"
+                          className="ml-auto h-2 w-2 shrink-0 rounded-full bg-primary"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

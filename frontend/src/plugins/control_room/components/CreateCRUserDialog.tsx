@@ -107,6 +107,7 @@ export const CreateCRUserDialog: React.FC<CreateCRUserDialogProps> = ({
       open={open}
       onOpenChange={handleOpenChange}
       title="Create Control Room User"
+      description="Create the access record that gives a user control-room visibility."
       onSubmit={handleSubmit}
       isSubmitting={createMut.isPending}
       submitLabel="Create & Grant Access"

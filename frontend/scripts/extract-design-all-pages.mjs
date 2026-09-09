@@ -118,7 +118,11 @@ for (const [role, fixture] of Object.entries(ROLE_FIXTURES)) {
 
     const args = [
       "npx", "designlang", url,
-      "--cookie-file", `"${storage}"`,
+      // --storage-state applies the FULL Playwright storageState (cookies +
+      // localStorage). --cookie-file loads cookies only, which is useless for
+      // this SPA: auth lives in localStorage (access_token + user), so every
+      // page silently redirected to /login (the 2026-09-05 crawl bug).
+      "--storage-state", `"${storage}"`,
       "--out", `"${pageDir}"`,
       "--name", dirName,
       "--wait", "2500",
@@ -150,6 +154,14 @@ for (const [role, fixture] of Object.entries(ROLE_FIXTURES)) {
       } else {
         console.error(`  ✗ ${dirName}  (${route.path}) — ${err.message?.slice(0, 120)}`);
       }
+    }
+    // Self-heal known designlang v12.21.0 serialization bugs in this page's
+    // output (no-op when the package is patched; see designlang-sanitize.mjs).
+    try {
+      const { sanitizePageDir } = await import("./designlang-sanitize.mjs");
+      sanitizePageDir(pageDir);
+    } catch (e) {
+      console.error(`  ! sanitizer failed for ${dirName}: ${e.message?.slice(0, 100)}`);
     }
     // Extraction metadata: role + requested route + resolved route +
     // source HTML hash + out dir.

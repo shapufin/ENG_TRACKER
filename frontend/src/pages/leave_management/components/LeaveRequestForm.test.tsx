@@ -20,12 +20,11 @@ describe("LeaveRequestForm", () => {
     expect(onChange).toHaveBeenCalledWith({ ...baseForm, reason: "family reasons" });
   });
 
-  it("updates the request type via the select", () => {
+  it("updates the request type via the pills", () => {
     const onChange = vi.fn();
     render(<LeaveRequestForm formData={baseForm} formErrors={{}} onChange={onChange} />);
 
-    fireEvent.click(screen.getByRole("combobox"));
-    fireEvent.click(screen.getByRole("option", { name: "Sick Leave" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sick Leave" }));
 
     expect(onChange).toHaveBeenCalledWith({ ...baseForm, request_type: "sick" });
   });

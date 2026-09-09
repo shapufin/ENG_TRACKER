@@ -69,6 +69,7 @@ export const BulkControlRoomAccessDialog: React.FC<BulkControlRoomAccessDialogPr
       open={open}
       onOpenChange={handleOpenChange}
       title={`Bulk update ${selectedCount} access record${selectedCount === 1 ? "" : "s"}`}
+      description="Update team scopes or access state for every selected user."
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
       submitLabel="Apply changes"

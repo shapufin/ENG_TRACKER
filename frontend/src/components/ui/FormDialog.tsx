@@ -19,6 +19,8 @@ interface FormDialogProps {
   onSubmit: (e: React.FormEvent) => void;
   isSubmitting?: boolean;
   submitLabel?: string;
+  /** Extra submit disable rule (e.g. form validation). Affects only submit. */
+  submitDisabled?: boolean;
   /** Override the dialog max-width. Defaults to "sm:max-w-lg". */
   contentClassName?: string;
 }
@@ -32,6 +34,7 @@ export const FormDialog: React.FC<FormDialogProps> = ({
   onSubmit,
   isSubmitting = false,
   submitLabel = "Save",
+  submitDisabled = false,
   contentClassName,
 }) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
@@ -48,7 +51,9 @@ export const FormDialog: React.FC<FormDialogProps> = ({
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         {/* Scrollable body — keeps header + footer always visible */}
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">{children}</div>
+        <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
+          {children}
+        </div>
         <DialogFooter className="shrink-0 border-t pt-4">
           <Button
             type="button"
@@ -58,7 +63,7 @@ export const FormDialog: React.FC<FormDialogProps> = ({
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting || submitDisabled}>
             {isSubmitting ? "Saving..." : submitLabel}
           </Button>
         </DialogFooter>

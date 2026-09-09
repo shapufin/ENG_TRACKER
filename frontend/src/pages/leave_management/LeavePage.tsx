@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLeaveQueries } from "@/hooks/useLeaveQueries";
 import { useAuth } from "@/context/AuthContext";
-import { Plus, FileDown, Download } from "lucide-react";
+import { Plus, FileDown, Download, X } from "lucide-react";
 import type { LeaveRequest } from "@/types";
 import { usePermissions } from "@/context/PermissionContext";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { exportData } from "@/utils/exportUtils";
 import { useLeaveForm } from "./hooks/useLeaveForm";
+import { getRemainingDays } from "./hooks/leaveBalanceUtils";
 import { useLeaveColumns } from "./hooks/useLeaveColumns";
 import { LeaveStatsCards } from "./components/LeaveStatsCards";
 import { LeaveRequestForm } from "./components/LeaveRequestForm";
@@ -97,13 +98,15 @@ export const LeavePage: React.FC = () => {
 
   const pendingCount = requests.filter((r) => r.status === "pending").length;
   const approvedCount = requests.filter((r) => r.status === "approved").length;
+  const rejectingRequest = requests.find((r) => r.id === rejectingId) ?? null;
+  // DRF serializes DecimalFields as strings — the helper normalizes at the
+  // boundary so the banner always receives a real number.
+  const remainingDays = getRemainingDays(balances);
 
   const columns = useLeaveColumns(
     canApprove,
     openEdit,
-    (id) => {
-      if (confirm("Delete this request?")) deleteMutation.mutate(id);
-    },
+    (id) => deleteMutation.mutate(id),
     canDelete,
     (id) => approveMutation.mutate(id),
     handleRejectClick
@@ -181,6 +184,7 @@ export const LeavePage: React.FC = () => {
         <LeaveRequestForm
           formData={formData}
           formErrors={formErrors}
+          remainingDays={remainingDays}
           onChange={(data) => {
             setFormData(data);
             setFormErrors((prev) => ({
@@ -198,6 +202,16 @@ export const LeavePage: React.FC = () => {
         onOpenChange={setRejectOpen}
         title="Reject Request"
         description="Provide a reason for rejection:"
+        icon={<X className="h-4 w-4" />}
+        contextSlot={
+          rejectingRequest && (
+            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-foreground">
+              Rejecting <strong>{rejectingRequest.request_type}</strong> leave for{" "}
+              <strong>{rejectingRequest.user_name ?? "employee"}</strong> (
+              {rejectingRequest.start_date} → {rejectingRequest.end_date}).
+            </div>
+          )
+        }
         onConfirm={() =>
           rejectingId && rejectMutation.mutate({ id: rejectingId, reason: rejectReason })
         }

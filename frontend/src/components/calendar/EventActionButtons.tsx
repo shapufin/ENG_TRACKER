@@ -17,7 +17,7 @@ interface EventActionButtonsProps {
   onSave: (data: { start: string; end: string; reason: string }) => Promise<void>;
   onApprove: () => Promise<void>;
   onReject: (reason: string) => Promise<void>;
-  onRemove: () => Promise<void>;
+  onRemove: () => void;
 }
 
 export const EventActionButtons: React.FC<EventActionButtonsProps> = ({

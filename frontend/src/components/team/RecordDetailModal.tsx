@@ -59,6 +59,16 @@ interface DetailField {
   icon: React.ElementType;
 }
 
+// Free-text values (evidence notes, reasons, descriptions, ticket lists)
+// wrap instead of truncating so no content is hidden behind a tooltip.
+const LONG_TEXT_FIELD_LABELS = new Set([
+  "Evidence",
+  "Rejection Reason",
+  "Reason",
+  "Description",
+  "Ticket References",
+]);
+
 const formatTime = (time: string | null | undefined) => {
   if (!time) return "-";
   return time;
@@ -192,15 +202,15 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg border border-border bg-popover p-0 text-popover-foreground [&>button]:hidden">
+      <DialogContent className="flex max-h-[90vh] max-w-xl flex-col overflow-hidden border border-border bg-popover p-0 text-popover-foreground [&>button]:hidden">
         <DialogTitle className="sr-only">Record Details</DialogTitle>
         <DialogDescription className="sr-only">
           View details for {recordType} record for {userName}
         </DialogDescription>
 
-        <div className="p-5">
+        <div className="flex min-h-0 flex-1 flex-col p-5">
           {/* Header */}
-          <div className="mb-5 flex items-start justify-between">
+          <div className="mb-5 flex shrink-0 items-start justify-between">
             <div className="flex items-center gap-3">
               <div
                 className={cn(
@@ -214,7 +224,9 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
               </div>
 
               <div>
-                <h2 className="text-xl font-semibold tracking-tight text-white">{recordType}</h2>
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                  {recordType}
+                </h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">{userName}</p>
               </div>
             </div>
@@ -233,7 +245,8 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
               </div>
               <button
                 onClick={() => onOpenChange(false)}
-                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+                aria-label="Close"
+                className="flex h-11 w-11 items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
               >
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
@@ -242,9 +255,10 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
           </div>
 
           {/* Content */}
-          <div className="grid max-h-[60vh] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+          <div className="no-scrollbar grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
             {fields.map((field, index) => {
               const Icon = field.icon;
+              const isLongText = LONG_TEXT_FIELD_LABELS.has(field.label);
 
               return (
                 <div
@@ -275,7 +289,11 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
                         {field.label}
                       </p>
                       <p
-                        className="truncate text-sm font-medium text-foreground"
+                        className={
+                          isLongText
+                            ? "break-words text-sm font-medium text-foreground"
+                            : "truncate text-sm font-medium text-foreground"
+                        }
                         title={String(field.value ?? "-")}
                       >
                         {field.value ?? "-"}

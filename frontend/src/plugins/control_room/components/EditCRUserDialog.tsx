@@ -100,6 +100,7 @@ export const EditCRUserDialog: React.FC<EditCRUserDialogProps> = ({
       open={open}
       onOpenChange={handleOpenChange}
       title={username ? `Edit ${username}` : "Edit CR User"}
+      description="Adjust team scopes or access state for this control-room user."
       onSubmit={handleSubmit}
       isSubmitting={updateMut.isPending}
       submitLabel="Save Changes"

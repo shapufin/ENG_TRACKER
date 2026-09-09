@@ -67,6 +67,7 @@ export const GrantControlRoomAccessDialog: React.FC<GrantControlRoomAccessDialog
       open={open}
       onOpenChange={handleOpenChange}
       title="Grant Control Room access"
+      description="Give a user read-only control-room visibility within selected team scopes."
       onSubmit={handleSubmit}
       isSubmitting={createMutation.isPending}
       submitLabel="Grant access"

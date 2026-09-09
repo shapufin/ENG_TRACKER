@@ -1,10 +1,11 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { LeaveBalanceBadge } from "@/components/ui/LeaveBalanceBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Sun, Stethoscope, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { differenceInCalendarDays } from "date-fns";
@@ -22,6 +23,42 @@ interface LeaveRequestsTableProps {
   onDelete?: (id: number) => void;
   canDelete?: boolean;
 }
+
+const DeleteLeaveRequestButton = ({
+  id,
+  onDelete,
+}: {
+  id: number;
+  onDelete: (id: number) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-destructive"
+        title="Delete leave request"
+        aria-label="Delete leave request"
+        onClick={() => setOpen(true)}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Delete Leave Request"
+        description="Delete this leave request? Its balance will be restored."
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={() => {
+          setOpen(false);
+          onDelete(id);
+        }}
+      />
+    </>
+  );
+};
 
 export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
   requests,
@@ -114,20 +151,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
               }}
             />
             {canDelete && onDelete && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive"
-                title="Delete leave request"
-                aria-label="Delete leave request"
-                onClick={() => {
-                  if (confirm("Delete this leave request? Its balance will be restored.")) {
-                    onDelete(row.original.id);
-                  }
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <DeleteLeaveRequestButton id={row.original.id} onDelete={onDelete} />
             )}
           </div>
         ),
