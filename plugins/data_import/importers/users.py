@@ -14,18 +14,33 @@ from apps.users.services.user_creation import (
     generate_random_password,
     update_user_profile,
 )
-from .base import BaseImporter, ImportField, ImportRowResult
+from .base import (
+    UPDATE_EXISTING_OPTION,
+    BaseImporter,
+    ImportField,
+    ImportOption,
+    ImportRowResult,
+)
+from .authority import StaffOnlyAuthority
 from .registry import register
+
+PASSWORD_STRATEGY_CHOICES = [
+    ("generate", "Generate a random password per user"),
+    ("fixed", "Use a fixed default password for all users"),
+    ("column", "Use the mapped Password column"),
+]
 
 
 @register
-class UserImporter(BaseImporter):
+class UserImporter(StaffOnlyAuthority, BaseImporter):
     target_key = "users"
     display_name = "Users"
     description = (
         "Import or update users from CSV/Excel. Supports arbitrary column "
         "names and optional default/generated passwords."
     )
+    icon = "Users"
+    page_route = "/admin/users"
 
     def get_fields(self) -> List[ImportField]:
         return [
@@ -135,6 +150,72 @@ class UserImporter(BaseImporter):
     def get_dedupe_keys(self) -> List[str]:
         return ["username"]
 
+    def get_options(self) -> List[ImportOption]:
+        return [
+            UPDATE_EXISTING_OPTION,
+            ImportOption(
+                key="match_by_email",
+                label="Match by email if username not found",
+                option_type="bool",
+                default=False,
+                help_text="Useful when the export has different usernames.",
+            ),
+            ImportOption(
+                key="password_strategy",
+                label="Password strategy",
+                option_type="choice",
+                default="generate",
+                choices=PASSWORD_STRATEGY_CHOICES,
+            ),
+            ImportOption(
+                key="default_password",
+                label="Default password",
+                option_type="secret",
+                default="",
+                help_text="Applied to every new user.",
+                depends_on={"password_strategy": "fixed"},
+            ),
+            ImportOption(
+                key="overwrite_existing_password",
+                label="Overwrite existing passwords",
+                option_type="bool",
+                default=False,
+                help_text="Change existing users' passwords when updating.",
+            ),
+        ]
+
+    def get_sample_rows(self) -> List[Dict[str, Any]]:
+        return [
+            {
+                "username": "mrossi",
+                "email": "m.rossi@example.com",
+                "first_name": "Marco",
+                "last_name": "Rossi",
+                "team_code": "ENG",
+                "tech_codes": "INFRA,DB",
+                "is_hr": False,
+                "is_italian_tl": False,
+                "is_albanian_tl": False,
+                "phone": "+39 02 1234567",
+                "hire_date": "2024-01-15",
+                "is_active": True,
+            },
+            {
+                "username": "ahoxha",
+                "email": "a.hoxha@example.com",
+                "first_name": "Arben",
+                "last_name": "Hoxha",
+                "team_code": "ENG",
+                "tech_codes": "INFRA",
+                "is_hr": False,
+                "is_italian_tl": False,
+                "is_albanian_tl": True,
+                "phone": "+355 4 1234567",
+                "hire_date": "2024-03-01",
+                "is_active": True,
+            },
+        ]
+
     def _resolve_existing_user(self, mapped_row: Dict[str, Any], options: Dict[str, Any]) -> Optional[User]:
         """Find an existing user by username, or by email if allowed."""
         username = mapped_row.get("username")
@@ -242,7 +323,8 @@ class UserImporter(BaseImporter):
         mapped_row: Dict[str, Any],
         options: Dict[str, Any],
         *,
-        existing: Optional[Any] = None
+        existing: Optional[Any] = None,
+        context: Optional[Dict[str, Any]] = None,
     ) -> ImportRowResult:
         strategy_error = self._validate_password_strategy(options)
         if strategy_error:
@@ -251,7 +333,7 @@ class UserImporter(BaseImporter):
                 status="error",
                 errors=[strategy_error],
             )
-        return super().validate_row(mapped_row, options, existing=existing)
+        return super().validate_row(mapped_row, options, existing=existing, context=context)
 
     def commit_row(
         self,
@@ -259,7 +341,8 @@ class UserImporter(BaseImporter):
         options: Dict[str, Any],
         *,
         existing: Optional[Any] = None,
-        dry_run: bool = False
+        dry_run: bool = False,
+        context: Optional[Dict[str, Any]] = None,
     ) -> ImportRowResult:
         row_index = mapped_row.get("__row_index", 0)
         warnings: List[str] = []

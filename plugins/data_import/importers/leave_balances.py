@@ -9,17 +9,47 @@ from django.contrib.auth.models import User
 
 from apps.leave_management.models import LeaveBalance
 from .base import BaseImporter, ImportField, ImportRowResult
+from .authority import StaffOnlyAuthority
 from .registry import register
 
 
 @register
-class LeaveBalanceImporter(BaseImporter):
+class LeaveBalanceImporter(StaffOnlyAuthority, BaseImporter):
     target_key = "leave_balances"
     display_name = "Leave Balances"
     description = (
         "Import or update leave balances per user per year. Existing users must "
         "already exist; this importer does not create users."
     )
+    icon = "CalendarDays"
+    page_route = "/admin/leave-balances"
+
+    def get_sample_rows(self) -> List[Dict[str, Any]]:
+        leave_type = LeaveBalance.LEAVE_TYPE_CHOICES[0][0]
+        return [
+            {
+                "username": "mrossi",
+                "email": "m.rossi@example.com",
+                "leave_type": leave_type,
+                "year": 2026,
+                "total_days": "26",
+                "used_days": "4",
+                "pending_days": "0",
+                "is_carry_over": False,
+                "accrual_start_date": "2026-01-01",
+            },
+            {
+                "username": "ahoxha",
+                "email": "a.hoxha@example.com",
+                "leave_type": leave_type,
+                "year": 2026,
+                "total_days": "22",
+                "used_days": "0",
+                "pending_days": "2",
+                "is_carry_over": False,
+                "accrual_start_date": "2026-01-01",
+            },
+        ]
 
     def get_fields(self) -> List[ImportField]:
         return [
@@ -180,7 +210,8 @@ class LeaveBalanceImporter(BaseImporter):
         options: Dict[str, Any],
         *,
         existing: Optional[Any] = None,
-        dry_run: bool = False
+        dry_run: bool = False,
+        context: Optional[Dict[str, Any]] = None,
     ) -> ImportRowResult:
         row_index = mapped_row.get("__row_index", 0)
         warnings: List[str] = []

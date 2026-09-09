@@ -9,8 +9,18 @@ _REGISTRY: Dict[str, BaseImporter] = {}
 
 
 def register(importer_cls):
-    """Class decorator that registers a concrete importer class."""
+    """Class decorator that registers a concrete importer class.
+
+    Raises ValueError on a duplicate ``target_key`` so a copy-paste mistake
+    fails loudly at import time instead of silently shadowing a target.
+    """
     instance = importer_cls()
+    existing = _REGISTRY.get(instance.target_key)
+    if existing is not None and type(existing) is not importer_cls:
+        raise ValueError(
+            f"Duplicate importer target_key '{instance.target_key}': "
+            f"{type(existing).__name__} is already registered."
+        )
     _REGISTRY[instance.target_key] = instance
     return importer_cls
 
