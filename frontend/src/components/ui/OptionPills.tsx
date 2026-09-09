@@ -43,12 +43,16 @@ export function OptionPills<T extends string>({
   className,
 }: OptionPillsProps<T>) {
   const enabled = options.filter((option) => !option.disabled);
+  const buttonRefs = React.useRef(new Map<T, HTMLButtonElement>());
 
   const moveBy = (delta: number) => {
     if (enabled.length === 0) return;
     const current = enabled.findIndex((option) => option.value === value);
     const next = enabled[(current + delta + enabled.length) % enabled.length];
     onChange(next.value);
+    // Roving tabindex: DOM focus must follow the selection, or a keyboard
+    // user's focus stays on a now-untabbable (tabIndex=-1) button.
+    buttonRefs.current.get(next.value)?.focus();
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -73,6 +77,10 @@ export function OptionPills<T extends string>({
         return (
           <button
             key={option.value}
+            ref={(el) => {
+              if (el) buttonRefs.current.set(option.value, el);
+              else buttonRefs.current.delete(option.value);
+            }}
             type="button"
             role="radio"
             aria-checked={isSelected}

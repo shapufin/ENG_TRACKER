@@ -31,7 +31,7 @@ export const EmailThreadViewer: React.FC<EmailThreadViewerProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg" className="max-h-[80vh]">
+      <DialogContent size="lg" className="max-h-[80vh] sm:max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />

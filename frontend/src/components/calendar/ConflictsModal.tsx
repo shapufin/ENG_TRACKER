@@ -26,7 +26,12 @@ export const ConflictsModal: React.FC<ConflictsModalProps> = ({
   conflicts,
 }) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent size="lg" hideClose padded={false} className="pointer-events-auto max-h-[80vh]">
+    <DialogContent
+      size="lg"
+      hideClose
+      padded={false}
+      className="pointer-events-auto max-h-[80vh] sm:max-h-[80vh]"
+    >
       <DialogTitle className="sr-only">All Conflicts</DialogTitle>
       <DialogDescription className="sr-only">
         View all scheduling conflicts for the current month

@@ -91,6 +91,10 @@ calendar, or plugins, also read the linked domain file.
   for success/warning/danger/info/accent/neutral) — they carry the
   light/dark pair, so a `dark:` variant is a bug. Before claiming a modal
   change done: `node scripts/modal-audit.mjs` (exit 0).
+- **Checkboxes/bulk bars/count badges** — reuse `Checkbox`/`TriStateCheckbox`
+  as-is (transition + zoom-in glyph baked in) and the gradient
+  `AnimatedNumber` badge pattern from `BulkActionBar`/`BulkDrawerHeader` —
+  never a flat `bg-primary` circle or an unanimated bulk bar.
 - **UI/accessibility baseline** — prefer existing shared primitives
   (`GlassCard`, `StatCard`, `DataTable`, `EmptyState`, `ConfirmDialog`) and
   semantic theme tokens over ad hoc markup; no raw hex or slate/zinc/gray
