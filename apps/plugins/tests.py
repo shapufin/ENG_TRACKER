@@ -7,7 +7,7 @@ gathering and cross-reference detection (non-destructive paths only).
 """
 import io
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -187,6 +187,74 @@ class UninstallDBCleanupTests(TestCase):
         self.assertEqual(PluginPermission.objects.filter(plugin_name=self.plugin_name).count(), 0)
         # Plugin should be removed from the in-memory registry.
         self.assertNotIn(self.plugin_name, registry._plugins)
+
+
+class DropPluginTablesTests(TestCase):
+    """Tests for PluginTableManager.drop_plugin_tables table-name hardening.
+
+    Regression for the DROP TABLE f-string interpolation: table names must
+    be re-validated against a fresh introspection pass (and the plugin's own
+    prefix) before being used to build SQL, not just trusted from whatever
+    list the caller passed in."""
+
+    def test_drop_plugin_tables_only_drops_validated_tables(self):
+        from core.plugins.initializer import PluginTableManager
+
+        plugin_name = 'safedroptest'
+        legit_table = f'{plugin_name}_widget'
+
+        # `get_plugin_tables` returns a table that is NOT present in a fresh
+        # `get_existing_tables()` introspection - this must be filtered out
+        # before it ever reaches raw SQL.
+        with patch.object(
+            PluginTableManager, 'get_plugin_tables',
+            return_value=[legit_table, 'other_app_table'],
+        ), patch.object(
+            PluginTableManager, 'get_existing_tables',
+            return_value={legit_table},
+        ):
+            mock_cursor = MagicMock()
+            mock_cursor.__enter__.return_value = mock_cursor
+            with patch('core.plugins.initializer.connection') as mock_connection:
+                mock_connection.cursor.return_value = mock_cursor
+                mock_connection.vendor = 'sqlite'
+                mock_connection.ops.quote_name.side_effect = lambda t: f'"{t}"'
+
+                result = PluginTableManager.drop_plugin_tables(plugin_name)
+
+        self.assertTrue(result)
+        executed_sql = [call.args[0] for call in mock_cursor.execute.call_args_list]
+        self.assertEqual(len(executed_sql), 1)
+        self.assertIn(legit_table, executed_sql[0])
+        self.assertNotIn('other_app_table', ' '.join(executed_sql))
+
+    def test_drop_plugin_tables_happy_path_drops_all_valid_tables(self):
+        """Regression: hardening the validation must not break the normal
+        case where every table returned is a real, current plugin table."""
+        from core.plugins.initializer import PluginTableManager
+
+        plugin_name = 'safedroptest'
+        tables = [f'{plugin_name}_widget', f'{plugin_name}_gadget']
+
+        with patch.object(
+            PluginTableManager, 'get_plugin_tables', return_value=tables,
+        ), patch.object(
+            PluginTableManager, 'get_existing_tables', return_value=set(tables),
+        ):
+            mock_cursor = MagicMock()
+            mock_cursor.__enter__.return_value = mock_cursor
+            with patch('core.plugins.initializer.connection') as mock_connection:
+                mock_connection.cursor.return_value = mock_cursor
+                mock_connection.vendor = 'sqlite'
+                mock_connection.ops.quote_name.side_effect = lambda t: f'"{t}"'
+
+                result = PluginTableManager.drop_plugin_tables(plugin_name)
+
+        self.assertTrue(result)
+        executed_sql = [call.args[0] for call in mock_cursor.execute.call_args_list]
+        self.assertEqual(len(executed_sql), 2)
+        for table in tables:
+            self.assertTrue(any(table in sql for sql in executed_sql))
 
 
 class ActiveMetadataTests(APITestCase):
