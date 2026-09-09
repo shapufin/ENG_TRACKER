@@ -17,7 +17,7 @@ class AuditLogViewSet(PluginPermissionMixin, viewsets.ReadOnlyModelViewSet):
     Provides read-only access to audit trail data.
     """
     plugin_name = 'audit_log'
-    queryset = AuditLog.objects.all()
+    queryset = AuditLog.objects.select_related('user', 'content_type')
     serializer_class = AuditLogSerializer
     permission_classes = [permissions.IsAuthenticated]
     permission_action_map = {'export': 'export'}
@@ -156,7 +156,7 @@ class AuditLogFilterViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return filters for current user or public filters."""
-        return AuditLogFilter.objects.filter(
+        return AuditLogFilter.objects.select_related('user', 'target_user').filter(
             Q(user=self.request.user) | Q(is_public=True)
         )
 

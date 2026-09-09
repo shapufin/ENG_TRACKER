@@ -9,6 +9,7 @@ from importlib import reload
 from plugins.analytics.models import AnalyticsSnapshot, AnalyticsMetric, AnalyticsConfiguration
 from plugins.analytics.plugin import AnalyticsPlugin
 from plugins.analytics.reports import AnalyticsReportGenerator
+from plugins.analytics.viewsets import AnalyticsMetricViewSet
 from apps.overtime.models import OvertimeLog, Client as OvertimeClient
 from apps.leave_management.models import LeaveRequest
 from core.plugins.registry import plugin_registry
@@ -890,3 +891,48 @@ class ExportJobTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['status'], 'pending')
         self.assertEqual(response.data['format'], 'csv')
+
+
+class AnalyticsMetricQueryCountTests(TestCase):
+    """Regression: AnalyticsMetricViewSet.retrieve() must not N+1 on
+    user/team. AnalyticsMetricSerializer reads user.get_full_name and
+    team.name - without select_related, each field access is an extra
+    query."""
+
+    def setUp(self):
+        from rest_framework.test import APIRequestFactory
+        from apps.users.models.core import Team
+
+        self.admin = User.objects.create_superuser(
+            username='admin_metric_qc', email='admin_qc@example.com', password='password123'
+        )
+        self.metric_user = User.objects.create_user(
+            username='metric_user', password='password123'
+        )
+        self.team = Team.objects.create(name='QC Team', code='qc-team')
+        self.metric = AnalyticsMetric.objects.create(
+            metric_type='leave_approval_rate',
+            user=self.metric_user,
+            team=self.team,
+            value=42.0,
+            label='QC Metric',
+        )
+        self.factory = APIRequestFactory()
+
+    def test_retrieve_query_count_does_not_include_extra_lookups(self):
+        from rest_framework.test import force_authenticate
+
+        request = self.factory.get(f'/api/plugins/analytics/metrics/{self.metric.id}/')
+        force_authenticate(request, user=self.admin)
+
+        # Budget: 1 query for the metric row (joined to user + team via
+        # select_related). A regression to `.objects.all()` would add 2
+        # more queries (one for user, one for team).
+        with self.assertNumQueries(1):
+            response = AnalyticsMetricViewSet.as_view({'get': 'retrieve'})(
+                request, pk=self.metric.id
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['user_name'], self.metric_user.get_full_name() or '')
+        self.assertEqual(response.data['team_name'], self.team.name)

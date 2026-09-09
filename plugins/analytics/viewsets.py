@@ -156,7 +156,7 @@ class AnalyticsMetricViewSet(PluginPermissionMixin,
     # The export action requires the dedicated 'export' plugin permission
     # (not just 'view'); other reads fall back to 'view'.
     permission_action_map = {'download_report': 'export'}
-    queryset = AnalyticsMetric.objects.all()
+    queryset = AnalyticsMetric.objects.select_related('user', 'team')
     serializer_class = AnalyticsMetricSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = PageNumberPagination

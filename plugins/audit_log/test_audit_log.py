@@ -1,7 +1,10 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
+from rest_framework.test import APIRequestFactory, force_authenticate
+
 from plugins.audit_log.models import AuditLog, AuditLogFilter
 from plugins.audit_log.plugin import AuditLogPlugin
+from plugins.audit_log.viewsets import AuditLogViewSet
 
 
 class AuditLogPluginTestCase(TestCase):
@@ -85,3 +88,35 @@ class AuditLogFilterTestCase(TestCase):
         """Test filter string representation."""
         self.assertIn('testuser', str(self.filter))
         self.assertIn('My Filter', str(self.filter))
+
+
+class AuditLogQueryCountTests(TestCase):
+    """Regression: AuditLogViewSet.list() must not N+1 on user/content_type.
+
+    AuditLogSerializer reads user.get_full_name and content_type.model per
+    row - without select_related, query count grows linearly with the
+    number of logs returned."""
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username='admin', email='admin@example.com', password='testpass123'
+        )
+        self.factory = APIRequestFactory()
+        for i in range(8):
+            actor = User.objects.create_user(username=f'actor{i}', password='testpass123')
+            AuditLog.objects.create(
+                user=actor,
+                action='create',
+                description=f'Created record {i}',
+                status='success',
+            )
+
+    def test_list_query_count_does_not_grow_with_log_count(self):
+        request = self.factory.get('/api/plugins/audit_log/logs/')
+        force_authenticate(request, user=self.admin)
+
+        with self.assertNumQueries(2):
+            response = AuditLogViewSet.as_view({'get': 'list'})(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data['results']), 8)
