@@ -148,7 +148,7 @@ class AuditLogFilterViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     Allows users to save and manage filter presets.
     """
     plugin_name = 'audit_log'
-    queryset = AuditLogFilter.objects.all()
+    queryset = AuditLogFilter.objects.select_related('user', 'target_user')
     serializer_class = AuditLogFilterSerializer
     permission_classes = [permissions.IsAuthenticated]
     ordering_fields = ['created_at', 'name']
@@ -156,7 +156,7 @@ class AuditLogFilterViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return filters for current user or public filters."""
-        return AuditLogFilter.objects.select_related('user', 'target_user').filter(
+        return super().get_queryset().filter(
             Q(user=self.request.user) | Q(is_public=True)
         )
 

@@ -126,6 +126,13 @@ class PluginTableManager:
                 t for t in tables
                 if t in existing_tables and t.startswith(pattern)
             ]
+            skipped_tables = set(tables) - set(safe_tables)
+            if skipped_tables:
+                logger.warning(
+                    f"Skipped dropping tables for {plugin_name} that failed "
+                    f"re-validation (not in a fresh introspection pass or "
+                    f"missing the '{pattern}' prefix): {sorted(skipped_tables)}"
+                )
 
             with connection.cursor() as cursor:
                 for table in safe_tables:

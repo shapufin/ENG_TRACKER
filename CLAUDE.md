@@ -6,19 +6,13 @@ lock, and `PayrollRunEntry` invariants. Prefer TDD. Keep diffs minimal.
 
 ## Quick Start
 
-```bash
-# Backend (from repo root)
-python manage.py runserver
-
-# Frontend (from frontend/)
-npm run dev
-```
+`python manage.py runserver` (repo root) and `npm run dev` (from `frontend/`).
 
 ## Read Before Coding
 
-Match the user request to a context file in the router below and load it
-before writing code. If the task touches permissions, OT/standby/leave,
-calendar, or plugins, also read the linked domain file.
+Match the request to a router row below and load that file before writing
+code. Tasks touching permissions, OT/standby/leave, calendar or plugins also
+read the linked domain file.
 
 ## Task Router — Keyword → On-Demand Context
 
@@ -26,9 +20,11 @@ calendar, or plugins, also read the linked domain file.
 |---|---|---|
 | permission, role, auth, access, group, TL scope | `.devin/context/01-PERMISSIONS.md` | Most complex system; easy to break |
 | model, field, migration, queryset, schema | `.devin/context/02-DATA-MODELS.md` | Entity relationships before queries |
-| component, hook, page, context, React, frontend test | `.devin/context/03-FRONTEND-PATTERNS.md` | Composition + test conventions |
+| component, hook, page, context, React, CSS, visual, mobile, frontend test | `.devin/context/03-FRONTEND-PATTERNS.md` | Composition + test conventions |
 | screenshot, fingerprint, visual verify/diff, UI refactor verification | `.devin/context/12-VISUAL-VERIFICATION.md` | Fingerprint capture + diff tooling |
-| modal, dialog, form dialog, confirm | `.devin/context/03-FRONTEND-PATTERNS.md` §13 | Dialog contract + tone scale |
+| modal, dialog, form dialog, confirm, drawer | `.devin/context/03-FRONTEND-PATTERNS.md` §13 | Dialog contract + tone scale — then `node scripts/modal-audit.mjs` |
+| checkbox, bulk edit, bulk action bar, selection count | `.devin/context/03-FRONTEND-PATTERNS.md` §14 | Reuse the shared checkbox/badge/entrance treatment |
+| status color, tone, palette color, badge color | `.devin/context/03-FRONTEND-PATTERNS.md` §15 | tone.ts semantics; check the "not migrated" list first |
 | endpoint, serializer, ViewSet, API, URL, service | `.devin/context/04-API-PATTERNS.md` | DRF + service layer patterns |
 | add feature, new page, new endpoint, end-to-end | `.devin/context/05-COMMON-TASKS.md` | Step-by-step recipes |
 | overtime, standby, leave, balance, MonthlyLock, carryover | `.devin/context/06-DOMAIN-INVARIANTS.md` | Domain rules that must not break |
@@ -40,9 +36,9 @@ calendar, or plugins, also read the linked domain file.
 | import, CSV, Excel, bulk upload, data import, sample template, importer | `.devin/context/PLUGINS/06-data-import.md` | Importer contract + per-target authority |
 | calendar, workspace, workspace_users | `.devin/context/07-CALENDAR.md` | Calendar privacy + workspace rules |
 | chart, Recharts, analytics visualization | `.devin/context/08-ANALYTICS-VISUALIZATION.md` | Chart sizing + data-source rules |
-| plugin permission, render surface, resource access | `.devin/context/09-RESOURCE-ACCESS.md` + `.devin/context/10-PLUGIN-PERMISSIONS.md` | Group grants + plugin gates |
+| plugin permission, render surface, plugin slot, metadata, resource access, remove/disable a plugin | `.devin/context/09-RESOURCE-ACCESS.md` + `.devin/context/10-PLUGIN-PERMISSIONS.md` | Group grants, plugin gates, removal safety |
 | file location, where is, find file | `.devin/context/PROJECT_INDEX.md` | Directory inventory |
-| plan, create plan, megaplan, optimize plan | `.devin/context/11-PLAN-CREATION.md` | Senior plan protocol: zero-hallucination specs + self-correcting gates |
+| plan, create plan, megaplan, refactor plan, optimize plan, plan review | `.devin/context/11-PLAN-CREATION.md` | Senior plan protocol: zero-hallucination specs + self-correcting gates |
 | past bug, session history, what changed | `AGENTS.md` (recent) + `.devin/tracking/agents-archive-*.md` | Session logs |
 | production security, deploy, Docker, TLS, CORS, gunicorn | relevant production-security plan + `.devin/context/04-API-PATTERNS.md` | Deployment hardening rules |
 | cross-stack impact, blast radius, call graph, type hierarchy, find usages across Django↔React | `.devin/context/trace-mcp.md` (usage guidance) + trace-mcp MCP server (`get_change_impact`, `get_call_graph`, `find_usages`) | Precomputed graph — use instead of 10 grep/read calls |
@@ -52,9 +48,9 @@ calendar, or plugins, also read the linked domain file.
 - **Permissions** — multi-role users are normal. Pure-HR write block uses
   `is_hr_only()`. TL scope is `get_team_member_ids()`. Never ORM-filter
   removed `profile__is_team_leader` or `profile__team` columns.
-- **CR-scoped UI** — CR-only users/admins have no My Clients or notification
-  preferences in Settings, and the Organigrama sidebar injection is hidden.
-  Multi-role CR identities retain their higher-role behavior.
+- **CR-scoped UI** — CR-only users/admins get no My Clients, no notification
+  preferences in Settings, no Organigrama sidebar injection. Multi-role CR
+  identities keep their higher-role behavior.
 - **Business-day leave** — use `count_business_days` for validation,
   deduction, reports, insights, and exports. Field names are `request_type`
   and `reason`. There is no `LeaveType` model.
@@ -72,59 +68,70 @@ calendar, or plugins, also read the linked domain file.
 - **PayrollRunEntry guard** — `OvertimeLogViewSet`/`StandbyLogViewSet`
   `perform_destroy` return 400 if `PayrollRunEntry` references the record.
   Superuser override deletes of non-pending locked records are audit-logged.
-- **Skills Matrix** — read `.devin/context/PLUGINS/04-skills.md` before
-  touching the plugin. Preserve public `view` access with queryset/object
-  scoping, TL scope via `get_team_member_ids()`, and use matrix
-  `user_skill_id` (not `skill_id`) for rate mutations.
-- **Frontend plugin service URLs** — axios `baseURL` is
-  `http://127.0.0.1:8000/api`. Plugin services must use
-  `BASE = "/plugins/<name>"`, NOT `"/api/plugins/<name>"` (doubled
-  `api/` → 404). Tests mock the API layer and don't validate URL paths.
+- **Skills Matrix** — read `PLUGINS/04-skills.md` first. Keep public `view`
+  access with queryset/object scoping, TL scope via `get_team_member_ids()`,
+  and use matrix `user_skill_id` (not `skill_id`) for rate mutations.
+- **Frontend plugin service URLs** — axios `baseURL` already ends in `/api`,
+  so plugin services use `BASE = "/plugins/<name>"`, never
+  `"/api/plugins/<name>"` (doubled `api/` → 404). Tests mock the API layer and
+  do not catch this.
 - **React Query keys** — include every result-changing parameter (userId,
   workspaceScope, page_size, month/year filters). Never build a constant key
   with conditionals like `condition ? scope : "self"`.
-- **Dialog contract** — set width with `size` (sm 448 / md 512 / lg 672 /
-  xl 896); never pass `max-w-*`, `flex`/`overflow` or `p-0` to
-  `DialogContent` (use `padded={false}`, `hideClose`). The one scroll
-  region is `DialogBody`. `cn` is tailwind-merge: prefixed and unprefixed
-  classes are SEPARATE merge groups, so a callsite class does not always
-  win. Colors use tone tokens (`bg-tone-<t>-surface`, `text-tone-<t>-text`
-  for success/warning/danger/info/accent/neutral) — they carry the
-  light/dark pair, so a `dark:` variant is a bug. Before claiming a modal
-  change done: `node scripts/modal-audit.mjs` (exit 0).
-- **Checkboxes/bulk bars/count badges** — reuse `Checkbox`/`TriStateCheckbox`
-  as-is (transition + zoom-in glyph baked in) and the gradient
-  `AnimatedNumber` badge pattern from `BulkActionBar`/`BulkDrawerHeader` —
-  never a flat `bg-primary` circle or an unanimated bulk bar.
+- **Dialog contract** — width via `size` (sm 448 / md 512 / lg 672 / xl 896);
+  never pass `max-w-*`, `flex`/`overflow` or `p-0` to `DialogContent` (use
+  `padded={false}`, `hideClose`). One scroll region: `DialogBody`. `cn` is
+  tailwind-merge — prefixed and unprefixed classes are SEPARATE merge groups,
+  so a callsite class does not always win. Colors use tone tokens
+  (`bg-tone-<t>-surface`, `text-tone-<t>-text`) which carry the light/dark
+  pair, so `dark:` is a bug. Done = `node scripts/modal-audit.mjs` exit 0.
+- **Checkboxes/bulk bars/count badges** — reuse `Checkbox`/
+  `TriStateCheckbox` as-is and the gradient `AnimatedNumber` badge from
+  `BulkActionBar`/`BulkDrawerHeader` — never a flat `bg-primary` circle or an
+  unanimated bulk bar.
+- **Plugin removal safety** — core code and other plugins must NEVER
+  statically import a plugin's modules. Register the component in
+  `frontend/src/plugins/index.ts` and consume it via
+  `getPluginComponent(plugin, component)` behind a core-owned wrapper gated
+  on `usePlugins().activePlugins` (`PluginSlot`,
+  `components/admin/PluginImportButton`). `remove_plugin` detects
+  cross-plugin **Python** imports only and matches frontend files by
+  **filename**, so a stray TS import passes its dry run and breaks
+  `npm run build` on removal. Check before claiming removability:
+  `grep -rn "plugins/<name>" frontend/src | grep -v "^frontend/src/plugins/<name>/"`
+  — only `frontend/src/plugins/index.ts` may match.
+- **Plugin permission actions are fixed** — `view`/`manage`/`configure`/
+  `export` only; `validate_manifest` raises on anything else, so a
+  per-feature action can never be seeded and denies every non-staff user.
+  Scope inside the plugin's viewsets instead.
 - **Data import** — the importer class is the single source of truth for a
   target's fields, options, sample rows and authority. Never branch on
-  `target_key` in the frontend; never invent per-target plugin permission
-  actions (the platform allows only `view`/`manage`/`configure`/`export`).
-  Each importer's `check_authority` re-applies the authority its own admin
-  page requires, so the plugin `manage` grant does not unlock every target.
-  Upload size is checked before the file is parsed. Template downloads use
-  `file_format=`, not `format=` (DRF reserves it). Read
-  `.devin/context/PLUGINS/06-data-import.md` before adding a target.
-- **UI/accessibility baseline** — prefer existing shared primitives
-  (`GlassCard`, `StatCard`, `DataTable`, `EmptyState`, `ConfirmDialog`) and
-  semantic theme tokens over ad hoc markup; no raw hex or slate/zinc/gray
-  palette classes. New or changed controls need accessible labels, keyboard
-  behavior, responsive layout (320px+), and a light/dark visual check. See
-  `.devin/context/03-FRONTEND-PATTERNS.md` §10-11.
-- **Dependency/build files** — root `.gitignore`'s Python-venv block uses
-  anchored `/lib/` and `/lib64/` (NOT bare `lib/`/`lib64/`) — an
-  unanchored pattern there previously excluded `frontend/src/lib/` from
-  every commit. `Dockerfile`'s builder stage installs `requirements.txt`
-  and `requirements-production.txt` in a single `pip install` — never
-  split into two separate installs, or an unconstrained second install
-  can upgrade Django/DRF transitively and break the build.
-- **Removed plugins / dead code** — do not reference: `budget`,
+  `target_key` in the frontend. Each importer's `check_authority` re-applies
+  the authority its own admin page requires, so the plugin `manage` grant
+  does not unlock every target; the same scoping covers profiles and batch
+  history (`row_errors` quotes cell values). Upload size is checked before
+  the file is parsed. Template downloads use `file_format=`, not `format=`
+  (DRF reserves it). A blank cell means "leave this alone", booleans
+  included. A bookkeeping failure after commit must never turn a committed
+  import into a 400. Read `.devin/context/PLUGINS/06-data-import.md` before
+  adding a target.
+- **UI/accessibility baseline** — reuse shared primitives (`GlassCard`,
+  `StatCard`, `DataTable`, `EmptyState`, `ConfirmDialog`) and theme tokens; no
+  raw hex or slate/zinc/gray. New controls need accessible labels, keyboard
+  behavior, 320px+ layout, light/dark check. See `03-FRONTEND-PATTERNS.md`
+  §10-11.
+- **Dependency/build files** — `.gitignore`'s venv block must keep anchored
+  `/lib/` `/lib64/` (bare patterns once excluded `frontend/src/lib/` from every
+  commit). `Dockerfile` installs `requirements.txt` +
+  `requirements-production.txt` in ONE `pip install` — splitting lets an
+  unconstrained second install upgrade Django/DRF and break the build.
+- **Removed plugins / dead code** — never reference: `budget`,
   `email_notifications`, `export` plugins; `EmailTemplate`,
   `EmailNotificationRule`, `send_notification_email`,
   `trigger_notification_rule`, `send_upload_reminders`, `upload_reminder`;
   `UserViewSet.import_users`; `manual_export_check.py`;
-  `Skill.display_order` / `SkillCategory.display_order` (removed in
-  migration `0005`; ordering is A-Z by `name` only).
+  `Skill.display_order`/`SkillCategory.display_order` (gone in migration
+  `0005`; ordering is A-Z by `name`).
 
 ## Skill Triggers
 
@@ -137,58 +144,46 @@ calendar, or plugins, also read the linked domain file.
 
 ## Verification Commands
 
-Run focused checks while iterating. Run full suites exactly once after the
-implementation is complete.
-
-### Iteration — targeted only
+Targeted while iterating; the full pass exactly once, after implementation.
 
 ```bash
-# Backend
-python manage.py test apps.<app>.tests.<test_name>
-python manage.py check
-python -m ruff check apps core config plugins --output-format=concise
-
-# Frontend
-npx vitest run src/<path>
-npx tsc -b --noEmit
-npx eslint src/<path>
-npx prettier --check src/<path>
+# Iterating — narrow the path, never the whole suite
+python manage.py test apps.<app>.tests.<name>
+cd frontend && npx vitest run src/<path> && npx eslint src/<path>
 ```
-
-### Final verification — once before completion
 
 ```bash
-# Backend
-python manage.py test
-python manage.py makemigrations --check
+# Final pass — repo root, then frontend/
+python manage.py check && python manage.py test &&   python manage.py makemigrations --check &&   python -m ruff check apps core config plugins --output-format=concise
 
-# Frontend
-npx vitest run
-npm run build
-
-# Code health when the change affects structure
-npx fallow dead-code
-npx fallow dupes
+cd frontend && npx tsc -b --noEmit && npx eslint src &&   npx prettier --check "src/**/*.ts" "src/**/*.tsx" &&   npx vitest run && npm run build
+node scripts/modal-audit.mjs   # whenever a dialog changed
+npx fallow dead-code && npx fallow dupes   # structural changes
 ```
 
-## Claude Code Session Guidelines
+## Tooling Gotchas
 
-- **Targeted output**: use quiet/concise flags (`-q`,
-  `--output-format=concise`); inspect only relevant output ranges.
-- **Focused reads**: use targeted search and specific file ranges, not
-  whole-repository reads.
-- **Iterative testing**: focused tests while developing; full suite once
-  after implementation.
-- **Session boundary**: one feature/bug/PR per session; no stale context
-  carried forward.
+- **rtk filters `git` output** and under-reports: `status --porcelain | wc -l`
+  read 0 with files dirty; `push` said `Everything up-to-date` for an unpushed
+  commit. Confirm with `git ls-files -m`, `rev-parse`, `ls-remote`.
+- **`.devin/` is gitignored** — local knowledge only; anything the repo must
+  carry goes in `CLAUDE.md` or code comments.
+- **DRF reserves `format`** (renderer negotiation, 404s on unknown values).
+  Name file-type params `file_format`.
+- **Plugin URLs mount at import time** from enabled plugin rows — a disabled
+  plugin 404s, so backend tests call viewsets directly, not by URL.
+
+## Session Guidelines
+
+Quiet/concise flags and targeted reads; focused tests while developing and the
+full suite once at the end; one feature/bug/PR per session.
 
 ## Maintenance — Keep This File in Sync with `.devin/`
 
-`.devin/` is the authoritative context system; this overlay is a
-Claude-optimized lens. When a `.devin/` file changes, mirror only the
-delta: (1) update the router table row, (2) update the affected Hot
-Invariant. Do not copy full contents from `.devin/`. Keep under 200
-lines. `validate-state.ps1 -Event Manual` is the cross-tool validator.
+`.devin/` is authoritative; this overlay is a Claude-optimized lens. Mirror
+only the delta when a `.devin/` file changes: the router row and the affected
+Hot Invariant. Never copy full contents. Keep under 200 lines.
+`validate-state.ps1 -Event Manual` is the cross-tool validator.
 
 ## Workflow Sync Command
 
