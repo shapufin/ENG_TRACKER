@@ -99,7 +99,7 @@ yarn-error.log*
 .devin/
 .opencode/
 opencode.json
-
+.verdent/
 # Local AI assistant configs (tool-specific, not app code)
 .claude/
 .agents/
@@ -117,3 +117,12 @@ Time Tracker UI Project/
 
 # Skills lock file (local tool state)
 skills-lock.json
+
+# Scratch/session artifacts — never intended for commit
+db.sqlite3.bak*
+session_diff.patch
+time_tracker_export.json
+tmp-probe/
+frontend/tmp-btn-verify.mjs
+frontend/test-results/
+/migration/
