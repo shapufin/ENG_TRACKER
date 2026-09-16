@@ -49,6 +49,9 @@ COPY --from=builder /install /usr/local
 WORKDIR /app
 COPY --chown=appuser:appuser . /app
 
+# Make entrypoint script executable
+RUN chmod +x /app/docker/entrypoint.sh
+
 # Bake a build timestamp so cache keys auto-invalidate on rebuild without
 # requiring a manual CACHE_VERSION bump in .env (read by entrypoint.sh).
 RUN date +%s > /app/.build_id
