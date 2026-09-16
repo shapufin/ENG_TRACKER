@@ -46,8 +46,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
-          memory: 1G
+          cpus: '1.0'
+          memory: 2G
 
   redis:
     image: redis:7-slim
@@ -136,8 +136,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
-          memory: 1G
+          cpus: '1.0'
+          memory: 2G
 
   frontend:
     build:
@@ -173,7 +173,7 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 256M
+          memory: 512M
 
   # Cloudflare Tunnel — the current ingress path (see README.md -> Production
   # Deployment -> Ingress). Not started by plain `docker compose up`; needs
@@ -192,34 +192,7 @@ services:
   # frontend/docker/nginx.conf's `set_real_ip_from`/`real_ip_header` (see
   # that file's comment) to match Traefik's forwarded-header shape instead
   # of Cloudflare's.
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    profiles: ["tunnel"]
-    restart: unless-stopped
-    # NOT ${CLOUDFLARE_TUNNEL_TOKEN:?...}: Compose interpolates every
-    # service's environment/command during config parsing, before profile
-    # filtering decides what actually starts — a required (:?) variable on
-    # a profile-gated service can fail `docker compose up` even when that
-    # profile isn't requested, breaking the README's own documented
-    # no-token fallback path. Defaulting to empty instead means a deploy
-    # without --profile tunnel is unaffected either way; with the profile
-    # active but the token genuinely missing, this container simply fails
-    # to authenticate and restarts (visible in `docker compose logs
-    # cloudflared`), which is the right place for that failure to surface.
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
-    depends_on:
-      frontend:
-        condition: service_healthy
-    networks:
-      - frontend_net
-    security_opt:
-      - no-new-privileges:true
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 128M
-
+ 
   # P2-4: Nightly database backup service.
   # Runs pg_dump once and exits. Schedule via host cron or a cron sidecar:
   #   docker compose --profile backup run --rm db-backup
