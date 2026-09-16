@@ -108,7 +108,10 @@ services:
       EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-}
-      CACHE_VERSION: ${CACHE_VERSION:-1}
+      # Leave unset to auto-invalidate cache on every rebuild via the image's
+      # baked BUILD_ID (see Dockerfile/entrypoint.sh). Set CACHE_VERSION here
+      # only to force a manual bump without rebuilding.
+      CACHE_VERSION: ${CACHE_VERSION:-}
       # Optional: bootstraps the initial superuser on first start (see ensure_superuser command).
       # Safe to leave set — no-ops once the user exists.
       DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-}

@@ -49,6 +49,10 @@ COPY --from=builder /install /usr/local
 WORKDIR /app
 COPY --chown=appuser:appuser . /app
 
+# Bake a build timestamp so cache keys auto-invalidate on rebuild without
+# requiring a manual CACHE_VERSION bump in .env (read by entrypoint.sh).
+RUN date +%s > /app/.build_id
+
 # Create directories for static + media + logs owned by appuser
 RUN mkdir -p /app/staticfiles /app/media /app/logs \
     && chown -R appuser:appuser /app

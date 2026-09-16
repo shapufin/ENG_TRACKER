@@ -309,8 +309,12 @@ else:
         }
     }
 
-# Cache versioning - increment on deployment to invalidate all cache
-CACHE_VERSION = int(os.getenv('CACHE_VERSION', '1'))
+# Cache versioning - bumping it invalidates all cache. CACHE_VERSION env var
+# wins if set; otherwise falls back to BUILD_ID, a timestamp baked into the
+# image at `docker build` time, so a rebuild auto-invalidates cache while a
+# plain `docker compose down && up` (same image) keeps it warm.
+_cache_version = os.getenv('CACHE_VERSION') or os.getenv('BUILD_ID', '1')
+CACHE_VERSION = int(_cache_version)
 
 # Standardized cache timeout settings (in seconds)
 CACHE_TIMEOUT = {

@@ -50,6 +50,8 @@ print('[entrypoint] Redis never became ready', file=sys.stderr)
 sys.exit(1)
 "
 
+export BUILD_ID="${BUILD_ID:-$(cat /app/.build_id 2>/dev/null || echo 1)}"
+
 echo "[entrypoint] Running migrations..."
 python manage.py migrate --noinput
 
