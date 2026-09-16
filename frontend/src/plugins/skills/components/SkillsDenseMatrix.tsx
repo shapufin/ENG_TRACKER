@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
-import { levelColor, levelDot, levelLabel } from "../utils/proficiencyLevels";
+import { levelColor, levelDot } from "../utils/proficiencyLevels";
+import { useSkillLevelLabels, resolveLevelLabel } from "../hooks/useSkillsQueries";
 import { groupSkillsByCategory } from "../utils/skillMatrixSelectors";
 import { avgTone, categoryAccent } from "../utils/categoryAccents";
 import { useSkillsGridActivation } from "../hooks/useSkillsGridActivation";
@@ -61,6 +62,7 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
+  const { data: levelLabels } = useSkillLevelLabels();
 
   const categoryGroups = useMemo(() => groupSkillsByCategory(renderedCoverage), [renderedCoverage]);
 
@@ -262,7 +264,7 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
                           </div>
                         );
                       }
-                      const label = `${row.username} ${colData.skill_name}: L${skillData.level} — ${levelLabel(skillData.level)}`;
+                      const label = `${row.username} ${colData.skill_name}: L${skillData.level} — ${resolveLevelLabel(skillData.level, levelLabels)}`;
                       return (
                         <div
                           key={row.user_id}
@@ -296,7 +298,7 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
                             }}
                             className={`inline-flex w-full items-center justify-center gap-1.5 rounded-sm border px-1 text-xs font-semibold transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${CELL_HEIGHT} ${levelColor(skillData.level)}`}
                             aria-label={label}
-                            title={`${row.username} ${colData.skill_name}: L${skillData.level} — ${levelLabel(skillData.level)}`}
+                            title={`${row.username} ${colData.skill_name}: L${skillData.level} — ${resolveLevelLabel(skillData.level, levelLabels)}`}
                           >
                             <TickBar level={skillData.level} />
                             <span>L{skillData.level}</span>

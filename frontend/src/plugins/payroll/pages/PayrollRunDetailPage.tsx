@@ -100,6 +100,12 @@ export const PayrollRunDetailPage: React.FC = () => {
     onError: () => toast.error("Excel export failed"),
   });
 
+  const exportPdfMutation = useMutation({
+    mutationFn: () => payrollService.exportRunPdf(runId),
+    onSuccess: () => toast.success("PDF export downloaded"),
+    onError: () => toast.error("PDF export failed"),
+  });
+
   const payslipMutation = useMutation({
     mutationFn: (lineId: number) => payrollService.downloadPayslip(runId, lineId),
     onSuccess: () => toast.success("Payslip downloaded"),
@@ -138,9 +144,11 @@ export const PayrollRunDetailPage: React.FC = () => {
           onFinalize={() => finalizeMutation.mutate()}
           onDelete={() => deleteMutation.mutate()}
           onExport={() => exportMutation.mutate()}
+          onExportPdf={() => exportPdfMutation.mutate()}
           generateLoading={generateMutation.isPending}
           deleteLoading={deleteMutation.isPending}
           exportLoading={exportMutation.isPending}
+          exportPdfLoading={exportPdfMutation.isPending}
         />
       }
     >

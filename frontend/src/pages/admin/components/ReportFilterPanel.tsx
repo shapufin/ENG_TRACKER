@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { DatePicker } from "@/components/ui/DatePicker";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { Calendar, Users, Filter, FileBarChart } from "lucide-react";
 
 interface ReportFilterPanelProps {
@@ -46,11 +46,15 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
           <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
             <Calendar className="h-3 w-3" /> Date Range
           </Label>
-          <div className="flex flex-wrap items-center gap-2">
-            <DatePicker value={start} onChange={onStartChange} placeholder="DD/MM/YYYY" />
-            <span className="text-muted-foreground">to</span>
-            <DatePicker value={end} onChange={onEndChange} placeholder="DD/MM/YYYY" />
-          </div>
+          <DateRangePicker
+            from={start}
+            to={end}
+            onChange={({ from, to }) => {
+              onStartChange(from);
+              onEndChange(to);
+            }}
+            placeholder="Select date range"
+          />
         </div>
 
         <div className="min-w-[150px] space-y-2">

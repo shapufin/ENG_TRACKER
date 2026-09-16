@@ -201,6 +201,83 @@ class RegisteredImporterContractTests(TestCase):
                 self.assertTrue(set(importer.get_alias_suggestions()).issubset(field_keys))
 
 
+class RequiredScalarFieldValidationTests(TestCase):
+    """A blank required field on a CodeKeyedImporter target must surface a
+    clean row error, not a raw DB exception. The check must only apply when
+    creating a new record — an existing record's blank cell still means
+    "leave this alone", consistent with ``_build_field_values``."""
+
+    def test_blank_required_name_on_new_client_returns_clean_row_error(self):
+        from plugins.data_import.importers.clients import ClientImporter
+
+        result = ClientImporter().commit_row(
+            {"__row_index": 1, "code": "ACME", "name": ""}, {"update_existing": False}
+        )
+        self.assertEqual(result.status, "error")
+        self.assertEqual(result.errors, ["name is required."])
+
+    def test_blank_required_name_on_new_team_returns_clean_row_error(self):
+        from plugins.data_import.importers.teams import TeamImporter
+
+        result = TeamImporter().commit_row(
+            {"__row_index": 1, "code": "ENG", "name": None}, {"update_existing": False}
+        )
+        self.assertEqual(result.status, "error")
+        self.assertEqual(result.errors, ["name is required."])
+
+    def test_blank_required_name_on_new_tech_returns_clean_row_error(self):
+        from plugins.data_import.importers.techs import TechImporter
+
+        result = TechImporter().commit_row(
+            {"__row_index": 1, "code": "INFRA", "name": ""}, {"update_existing": False}
+        )
+        self.assertEqual(result.status, "error")
+        self.assertEqual(result.errors, ["name is required."])
+
+    def test_blank_required_name_on_new_skill_category_returns_clean_row_error(self):
+        from plugins.data_import.importers.skill_categories import SkillCategoryImporter
+
+        result = SkillCategoryImporter().commit_row(
+            {"__row_index": 1, "code": "CLOUD", "name": ""}, {"update_existing": False}
+        )
+        self.assertEqual(result.status, "error")
+        self.assertEqual(result.errors, ["name is required."])
+
+    def test_blank_required_name_on_a_new_record_does_not_hit_the_database(self):
+        """Regression guard: the check must run before ``model.objects.create``."""
+        from apps.overtime.models import Client
+        from plugins.data_import.importers.clients import ClientImporter
+
+        ClientImporter().commit_row(
+            {"__row_index": 1, "code": "ACME", "name": ""}, {"update_existing": False}
+        )
+        self.assertFalse(Client.objects.filter(code="ACME").exists())
+
+    def test_blank_required_name_on_update_is_left_alone_not_rejected(self):
+        """Updating an existing record with a blank required cell must keep the
+        existing value, matching the "blank = leave alone" invariant — it must
+        NOT be treated as a validation error."""
+        from apps.overtime.models import Client
+        from plugins.data_import.importers.clients import ClientImporter
+
+        Client.objects.create(code="ACME", name="Acme")
+        result = ClientImporter().commit_row(
+            {"__row_index": 1, "code": "ACME", "name": None}, {"update_existing": True}
+        )
+        self.assertEqual(result.status, "updated")
+        self.assertEqual(Client.objects.get(code="ACME").name, "Acme")
+
+    def test_non_blank_required_fields_still_create_successfully(self):
+        from apps.overtime.models import Client
+        from plugins.data_import.importers.clients import ClientImporter
+
+        result = ClientImporter().commit_row(
+            {"__row_index": 1, "code": "NEWCO", "name": "New Co"}, {"update_existing": False}
+        )
+        self.assertEqual(result.status, "created")
+        self.assertTrue(Client.objects.filter(code="NEWCO", name="New Co").exists())
+
+
 class UserImporterOptionTests(TestCase):
     """The password options moved from the frontend into the importer."""
 

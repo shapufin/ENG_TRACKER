@@ -83,6 +83,54 @@ class TechImporterTests(TestCase):
         self.assertEqual(result.status, "updated")
         self.assertEqual(Tech.objects.count(), 1)
 
+    def test_levels_column_creates_the_scale_in_order(self):
+        result = self.importer.commit_row(
+            row(code="INFRA", name="Infrastructure", levels="L1;L2;L3"), NO_UPDATE
+        )
+        self.assertEqual(result.status, "created")
+        tech = Tech.objects.get(code="INFRA")
+        self.assertEqual(
+            list(tech.levels.values_list("code", "rank")),
+            [("L1", 1), ("L2", 2), ("L3", 3)],
+        )
+
+    def test_levels_are_additive_and_never_delete(self):
+        """A cell listing fewer levels must not wipe the grades in use."""
+        self.importer.commit_row(
+            row(code="INFRA", name="Infrastructure", levels="L1;L2;L3"), NO_UPDATE
+        )
+        self.importer.commit_row(
+            row(code="INFRA", name="Infrastructure", levels="L1"), UPDATE
+        )
+        tech = Tech.objects.get(code="INFRA")
+        self.assertEqual(
+            set(tech.levels.values_list("code", flat=True)), {"L1", "L2", "L3"}
+        )
+
+    def test_a_new_level_appends_after_the_existing_scale(self):
+        self.importer.commit_row(
+            row(code="INFRA", name="Infrastructure", levels="L1;L2"), NO_UPDATE
+        )
+        self.importer.commit_row(
+            row(code="INFRA", name="Infrastructure", levels="L3"), UPDATE
+        )
+        tech = Tech.objects.get(code="INFRA")
+        self.assertEqual(tech.levels.get(code="L3").rank, 3)
+
+    def test_blank_levels_cell_leaves_the_scale_alone(self):
+        self.importer.commit_row(
+            row(code="INFRA", name="Infrastructure", levels="L1;L2"), NO_UPDATE
+        )
+        self.importer.commit_row(row(code="INFRA", name="Infrastructure", levels=""), UPDATE)
+        self.assertEqual(Tech.objects.get(code="INFRA").levels.count(), 2)
+
+    def test_dry_run_creates_no_levels(self):
+        Tech.objects.create(code="INFRA", name="Infrastructure")
+        self.importer.commit_row(
+            row(code="INFRA", name="Infrastructure", levels="L1"), UPDATE, dry_run=True
+        )
+        self.assertEqual(Tech.objects.get(code="INFRA").levels.count(), 0)
+
 
 class TeamImporterTests(TestCase):
     def setUp(self):

@@ -65,6 +65,14 @@ const allAdminNavItems: AdminNavItem[] = [
     roles: ["admin", "superuser", "hr"],
   },
   {
+    path: "/admin/skills/settings",
+    label: "Skills Settings",
+    icon: Settings2,
+    group: "People",
+    pluginName: "skills",
+    roles: ["admin", "superuser", "hr"],
+  },
+  {
     path: "/admin/resource-access",
     label: "Resource Access",
     icon: KeyRound,

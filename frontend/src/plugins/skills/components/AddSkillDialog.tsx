@@ -2,10 +2,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogBody,
   DialogDescription,
   DialogHeader,
   DialogTitle,
@@ -18,10 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { InfoCallout } from "@/components/ui/InfoCallout";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { Check, Loader2, Search } from "lucide-react";
-import { useSkills, useSkillCategories } from "../hooks/useSkillsQueries";
+import { Check, Loader2, Search, SearchX } from "lucide-react";
+import {
+  useSkills,
+  useSkillCategories,
+  useSkillLevelLabels,
+  resolveLevelLabel,
+} from "../hooks/useSkillsQueries";
 import { PROFICIENCY_LEVELS } from "../utils/proficiencyLevels";
+import { hoverLiftClass } from "@/lib/motion";
 
 interface AddSkillDialogProps {
   open: boolean;
@@ -48,6 +58,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const { data: categories = [] } = useSkillCategories(true);
+  const { data: levelLabels } = useSkillLevelLabels();
   const {
     data: skills = [],
     isLoading: skillsLoading,
@@ -120,7 +131,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && handleClose()}>
-      <DialogContent size="lg">
+      <DialogContent size="xl">
         <DialogHeader className="shrink-0">
           <DialogTitle>Add skills to your profile</DialogTitle>
           <DialogDescription>
@@ -128,7 +139,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="no-scrollbar grid min-h-0 flex-1 gap-4 overflow-y-auto px-1 py-1 sm:grid-cols-[minmax(0,1fr)_220px]">
+        <DialogBody className="grid gap-6 space-y-0 sm:grid-cols-2 sm:divide-x sm:divide-border">
           <div className="min-w-0 space-y-3">
             <div className="relative">
               <Label htmlFor="skill-search">Search skills</Label>
@@ -213,7 +224,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
                       type="button"
                       onClick={() => toggleSkill(skill.id)}
                       aria-pressed={selected}
-                      className={`flex min-h-[44px] w-full items-center justify-between gap-3 border-b border-border/70 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-accent ${selected ? "bg-primary/10" : ""}`}
+                      className={`flex min-h-[44px] w-full items-center justify-between gap-3 border-b border-border/70 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-accent ${hoverLiftClass} ${selected ? "bg-primary/10" : ""}`}
                     >
                       <span className="min-w-0">
                         <span className="block truncate font-medium" title={skill.name}>
@@ -240,13 +251,30 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
               </p>
             )}
             {!skillsLoading && !skillsError && availableSkills.length === 0 && (
-              <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                No skills available. Try a different search or category.
-              </p>
+              <EmptyState
+                icon={SearchX}
+                title="No skills available"
+                description="Try a different search or category."
+                action={
+                  search || categoryCode !== "all" ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSearch("");
+                        setCategoryCode("all");
+                      }}
+                    >
+                      Clear filters
+                    </Button>
+                  ) : undefined
+                }
+              />
             )}
           </div>
 
-          <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-3">
+          <div className="min-w-0 space-y-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Selected
@@ -292,7 +320,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
                 <SelectContent>
                   {PROFICIENCY_LEVELS.map((item) => (
                     <SelectItem key={item.level} value={String(item.level)}>
-                      {item.level} - {item.label}
+                      {item.level} - {resolveLevelLabel(item.level, levelLabels)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -300,16 +328,18 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
             </div>
             <div>
               <Label htmlFor="skill-notes">Notes (optional)</Label>
-              <Input
+              <Textarea
                 id="skill-notes"
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
                 placeholder="Add a note..."
-                className="mt-1"
+                rows={2}
+                className="mt-1 resize-none"
               />
             </div>
+            <InfoCallout label="The same level applies to every selected skill." />
           </div>
-        </div>
+        </DialogBody>
         <DialogFooter className="shrink-0 border-t pt-4">
           <Button variant="outline" onClick={handleClose}>
             Cancel

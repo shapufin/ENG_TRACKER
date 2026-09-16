@@ -26,6 +26,8 @@ export interface TreeNode {
   username?: string;
   full_name?: string;
   role_badge?: RoleBadge;
+  /** Active Tech assignments with the held grade, e.g. ["Infrastructure L3"]. */
+  tech_levels?: string[];
   name?: string;
   code?: string;
   children: TreeNode[];

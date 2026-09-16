@@ -25,7 +25,9 @@ const chartTooltipStyle = {
   borderRadius: "var(--radius)",
   color: "hsl(var(--popover-foreground))",
   fontSize: 12,
+  boxShadow: "0 4px 16px -4px hsl(var(--foreground) / 0.15)",
 };
+const axisTickStyle = { fontSize: 12, fill: "hsl(var(--muted-foreground))" };
 
 interface HoursChartWidgetProps {
   hoursData: { label: string; hours: number }[];
@@ -50,11 +52,26 @@ export const HoursChartWidget: React.FC<HoursChartWidgetProps> = ({ hoursData, i
     ) : (
       <div className="h-[280px] min-h-[220px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <BarChart data={hoursData} barSize={56}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis dataKey="label" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
-            <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
-            <Tooltip contentStyle={chartTooltipStyle} />
+          <BarChart data={hoursData} barSize={56} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={axisTickStyle}
+              tickLine={false}
+              axisLine={{ stroke: "hsl(var(--border))" }}
+            />
+            <YAxis
+              tick={axisTickStyle}
+              tickLine={false}
+              axisLine={false}
+              width={36}
+              tickFormatter={(value: number) => `${value}h`}
+            />
+            <Tooltip
+              cursor={{ fill: "hsl(var(--muted) / 0.4)" }}
+              contentStyle={chartTooltipStyle}
+              formatter={(value: any) => [`${Number(value).toFixed(1)}h`, "Hours"]}
+            />
             <Bar dataKey="hours" radius={[6, 6, 0, 0]}>
               {hoursData.map((_, i) => (
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />

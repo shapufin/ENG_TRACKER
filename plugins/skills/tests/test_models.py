@@ -8,6 +8,7 @@ from plugins.skills.models import (
     Skill,
     UserSkill,
     SkillRatingHistory,
+    SkillLevelLabels,
 )
 
 # Import signals module to ensure audit signal handlers are connected.
@@ -123,3 +124,25 @@ class SkillRatingHistoryTestCase(TestCase):
         self.assertEqual(hist.old_level, None)
         self.assertEqual(hist.new_level, 3)
         self.assertEqual(hist.source, 'self')
+
+
+class SkillLevelLabelsTestCase(TestCase):
+    def test_get_singleton_creates_defaults(self):
+        self.assertEqual(SkillLevelLabels.objects.count(), 0)
+        labels = SkillLevelLabels.get_singleton()
+        self.assertEqual(SkillLevelLabels.objects.count(), 1)
+        self.assertEqual(labels.pk, 1)
+        self.assertEqual(labels.level_1_label, 'Foundational')
+        self.assertEqual(labels.level_2_label, 'Developing')
+        self.assertEqual(labels.level_3_label, 'Proficient')
+        self.assertEqual(labels.level_4_label, 'Advanced')
+        self.assertEqual(labels.level_5_label, 'Mastery')
+
+    def test_get_singleton_returns_existing_row(self):
+        first = SkillLevelLabels.get_singleton()
+        first.level_1_label = 'Beginner'
+        first.save()
+        second = SkillLevelLabels.get_singleton()
+        self.assertEqual(second.pk, first.pk)
+        self.assertEqual(second.level_1_label, 'Beginner')
+        self.assertEqual(SkillLevelLabels.objects.count(), 1)

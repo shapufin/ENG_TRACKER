@@ -1,17 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ExportProfile } from "../../types/ticketKPI";
+import { OUR_FIELDS } from "../../constants/fields";
 
-export const OUR_FIELDS = [
-  { key: "ticket_id", label: "Ticket ID", required: true },
-  { key: "title", label: "Title", required: true },
-  { key: "status", label: "Status", required: true },
-  { key: "created_at", label: "Created At", required: true },
-  { key: "resolved_at", label: "Resolved At", required: false },
-  { key: "assignee", label: "Assignee", required: false },
-  { key: "requester", label: "Requester", required: false },
-  { key: "priority", label: "Priority", required: false },
-  { key: "category", label: "Category", required: false },
-];
+export { OUR_FIELDS };
 
 const DEFAULT_STATUS_TRANSFORMS: Record<string, string> = {
   new: "open",
@@ -60,6 +51,7 @@ export const useProfileDialogState = (open: boolean, profile: ExportProfile | nu
   const [assignedClientIds, setAssignedClientIds] = useState<number[]>([]);
   const [sampleFile, setSampleFile] = useState<File | null>(null);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
+  const [detectedColumns, setDetectedColumns] = useState<string[]>([]);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -99,6 +91,7 @@ export const useProfileDialogState = (open: boolean, profile: ExportProfile | nu
     }
     setSampleFile(null);
     setIsAutoDetecting(false);
+    setDetectedColumns([]);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [open, profile]);
 
@@ -140,6 +133,8 @@ export const useProfileDialogState = (open: boolean, profile: ExportProfile | nu
     setSampleFile,
     isAutoDetecting,
     setIsAutoDetecting,
+    detectedColumns,
+    setDetectedColumns,
     buildPayload,
   };
 };

@@ -23,7 +23,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onDateToChange,
 }) => {
   return (
-    <div className="grid gap-4 xl:grid-cols-[1fr_220px_180px_180px]">
+    <div className="grid gap-4 xl:grid-cols-[1fr_220px_260px]">
       <SearchInput value={searchQuery} onChange={onSearchChange} />
       <StatusFilterButton filterStatus={filterStatus} onStatusChange={onStatusChange} />
       <DateRangePickers

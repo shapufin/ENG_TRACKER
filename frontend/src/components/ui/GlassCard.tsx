@@ -1,6 +1,7 @@
 import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { fadeSlideUp, DURATION, EASE } from "@/lib/motion";
 
 interface GlassCardProps extends React.ComponentPropsWithoutRef<typeof motion.div> {
   isHoverLift?: boolean;
@@ -22,10 +23,11 @@ const GlassCardComponent = React.forwardRef<HTMLDivElement, GlassCardProps>(
     return (
       <motion.div
         ref={ref}
-        initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={shouldReduceMotion ? false : "hidden"}
+        animate="visible"
+        variants={fadeSlideUp}
         transition={
-          shouldReduceMotion ? { duration: 0 } : { duration: 0.25, delay, ease: "easeInOut" }
+          shouldReduceMotion ? { duration: 0 } : { duration: DURATION.base, delay, ease: EASE.inOut }
         }
         className={cn(
           "relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-glass backdrop-blur-xl",

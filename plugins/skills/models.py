@@ -172,3 +172,38 @@ class SkillRatingHistory(models.Model):
 
     def __str__(self):
         return f"{self.user_skill} {self.old_level}→{self.new_level} ({self.source})"
+
+
+class SkillLevelLabels(models.Model):
+    """Singleton: customizable display labels for proficiency levels 1-5.
+
+    Proficiency itself stays a fixed integer 1-5 on ``UserSkill.level`` —
+    only the display word next to each level number is configurable, so a
+    flat 5-field row is enough (no related level table needed).
+    """
+
+    level_1_label = models.CharField(max_length=40, default='Foundational')
+    level_2_label = models.CharField(max_length=40, default='Developing')
+    level_3_label = models.CharField(max_length=40, default='Proficient')
+    level_4_label = models.CharField(max_length=40, default='Advanced')
+    level_5_label = models.CharField(max_length=40, default='Mastery')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Skill Level Labels'
+        verbose_name_plural = 'Skill Level Labels'
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(pk=1),
+                name='skill_level_labels_singleton',
+            ),
+        ]
+
+    def __str__(self):
+        return 'Skill Level Labels'
+
+    @classmethod
+    def get_singleton(cls):
+        obj, _ = cls.objects.get_or_create(pk=1, defaults={})
+        return obj

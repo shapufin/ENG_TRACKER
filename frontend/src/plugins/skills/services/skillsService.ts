@@ -12,6 +12,7 @@ import type {
   SkillMatrixFilters,
   SkillListFilters,
   UserSkillFilters,
+  SkillLevelLabels,
 } from "../types/skills";
 
 const BASE = "/plugins/skills";
@@ -92,6 +93,7 @@ export const userSkillService = {
   list: async (filters?: UserSkillFilters): Promise<PaginatedResponse<UserSkill>> => {
     const params: Record<string, string> = {};
     if (filters) {
+      addDefinedParam(params, "user_id", filters.user_id);
       addDefinedParam(params, "skill_id", filters.skill_id);
       addDefinedParam(params, "category", filters.category);
       addDefinedParam(params, "min_level", filters.min_level);
@@ -179,6 +181,35 @@ export const skillExportService = {
       params,
       responseType: "blob",
     });
+    return resp.data;
+  },
+  /**
+   * Wide XLSX workbook: one row per person, one column per skill. Same scoping
+   * and filters as `export`, different shape — the long CSV stays available.
+   */
+  exportXlsx: async (category?: string, search?: string): Promise<Blob> => {
+    const params: Record<string, string> = {};
+    addDefinedParam(params, "category", category);
+    addDefinedParam(params, "search", search);
+    const resp = await api.get(`${BASE}/export/export-xlsx/`, {
+      params,
+      responseType: "blob",
+    });
+    return resp.data;
+  },
+};
+
+// ============================================================================
+// LEVEL LABELS
+// ============================================================================
+
+export const skillLevelLabelsService = {
+  get: async (): Promise<SkillLevelLabels> => {
+    const resp = await api.get(`${BASE}/level-labels/`);
+    return resp.data;
+  },
+  update: async (data: Partial<SkillLevelLabels>): Promise<SkillLevelLabels> => {
+    const resp = await api.patch(`${BASE}/level-labels/1/`, data);
     return resp.data;
   },
 };

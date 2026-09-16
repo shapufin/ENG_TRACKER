@@ -23,12 +23,12 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     <GlassCard delay={delay} className={cn("flex flex-col overflow-hidden", className)}>
       <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
         <div>
-          <h3 className="text-sm font-semibold">{title}</h3>
-          {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
+          <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+          {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
         </div>
         {action}
       </div>
-      <div className="min-h-[220px] flex-1 p-4">{children}</div>
+      <div className="min-h-[220px] flex-1 p-5">{children}</div>
     </GlassCard>
   );
 };

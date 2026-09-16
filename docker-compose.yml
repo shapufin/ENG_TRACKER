@@ -14,6 +14,10 @@
 # Optional:
 #   EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
 #   DB_SSL_MODE - PostgreSQL SSL mode (default: prefer)
+#
+# Cloudflare Tunnel (see README.md -> Production Deployment -> Ingress):
+#   CLOUDFLARE_TUNNEL_TOKEN - only required with `--profile tunnel`
+#     docker compose --profile tunnel up -d --build
 
 name: engineering-tracker
 
@@ -105,6 +109,11 @@ services:
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-}
       CACHE_VERSION: ${CACHE_VERSION:-1}
+      # Optional: bootstraps the initial superuser on first start (see ensure_superuser command).
+      # Safe to leave set — no-ops once the user exists.
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-}
     volumes:
       - media_files:/app/media
       - static_files:/app/staticfiles
@@ -137,8 +146,16 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    # Bound to localhost only: with the tunnel profile, cloudflared reaches
+    # this container over frontend_net by service name (http://frontend:8080),
+    # never through this published port. Publishing it to 0.0.0.0 would let
+    # anyone bypass Cloudflare's edge and hit the origin directly — the one
+    # thing a tunnel exists to prevent. Kept bound to 127.0.0.1 so `curl
+    # localhost:8080` still works for local health checks/debugging on the
+    # host. Once Traefik replaces the tunnel, this can go back to 0.0.0.0 (or
+    # be dropped entirely) since Traefik becomes the sole public entrypoint.
     ports:
-      - "${FRONTEND_PORT:-8080}:8080"
+      - "127.0.0.1:${FRONTEND_PORT:-8080}:8080"
     networks:
       - frontend_net
     security_opt:
@@ -154,6 +171,51 @@ services:
         limits:
           cpus: '1.0'
           memory: 256M
+
+  # Cloudflare Tunnel — the current ingress path (see README.md -> Production
+  # Deployment -> Ingress). Not started by plain `docker compose up`; needs
+  # `--profile tunnel` so a deploy without Cloudflare configured never blocks
+  # on a token that doesn't exist yet.
+  #
+  # Makes an OUTBOUND-only connection to Cloudflare's edge — no inbound port
+  # to publish or firewall. Create the tunnel once in the Cloudflare
+  # dashboard (Zero Trust -> Networks -> Tunnels), point its public hostname
+  # at origin service `http://frontend:8080`, and put the connector token it
+  # gives you in `.env` as CLOUDFLARE_TUNNEL_TOKEN.
+  #
+  # Switching to Traefik later: drop this service (and --profile tunnel),
+  # add Traefik as its own service on frontend_net with its usual
+  # `traefik.http.routers.*` labels on the `frontend` service, and update
+  # frontend/docker/nginx.conf's `set_real_ip_from`/`real_ip_header` (see
+  # that file's comment) to match Traefik's forwarded-header shape instead
+  # of Cloudflare's.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    # NOT ${CLOUDFLARE_TUNNEL_TOKEN:?...}: Compose interpolates every
+    # service's environment/command during config parsing, before profile
+    # filtering decides what actually starts — a required (:?) variable on
+    # a profile-gated service can fail `docker compose up` even when that
+    # profile isn't requested, breaking the README's own documented
+    # no-token fallback path. Defaulting to empty instead means a deploy
+    # without --profile tunnel is unaffected either way; with the profile
+    # active but the token genuinely missing, this container simply fails
+    # to authenticate and restarts (visible in `docker compose logs
+    # cloudflared`), which is the right place for that failure to surface.
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      frontend:
+        condition: service_healthy
+    networks:
+      - frontend_net
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
 
   # P2-4: Nightly database backup service.
   # Runs pg_dump once and exits. Schedule via host cron or a cron sidecar:
@@ -200,3 +262,10 @@ networks:
     internal: true
   frontend_net:
     driver: bridge
+    # Fixed subnet so nginx's set_real_ip_from (frontend/docker/nginx.conf)
+    # can trust exactly this network's members (frontend, backend,
+    # cloudflared) — not a Docker-assigned range that could shift on
+    # recreate, and not the whole private address space.
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

@@ -921,7 +921,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         'create': 'manage', 'update': 'manage', 'partial_update': 'manage',
         'destroy': 'manage', 'generate': 'manage', 'generate_line': 'manage',
         'finalize': 'manage', 'cancel': 'manage',
-        'export_excel': 'export', 'payslip': 'export',
+        'export_excel': 'export', 'export_pdf': 'export', 'payslip': 'export',
     }
 
     def get_queryset(self):
@@ -1260,6 +1260,33 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             return response
         except Exception as e:
             logger.error('Excel export failed: %s', e, exc_info=True)
+            return Response(
+                {'detail': 'Payroll export failed. Please try again.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @action(detail=True, methods=['get'])
+    def export_pdf(self, request, pk=None):
+        """Export the run as a single consolidated PDF: a summary cover page
+        followed by every employee's full payslip."""
+        run = self.get_object()
+        if run.status != 'finalized':
+            return Response(
+                {'detail': 'Payroll exports are available only for finalized runs.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+        from .services.export_service import generate_payroll_pdf
+        try:
+            data = generate_payroll_pdf(run)
+            response = FileResponse(data, content_type='application/pdf')
+            response['Content-Disposition'] = (
+                f'attachment; filename="payroll_{run.year}-{run.month:02d}.pdf"'
+            )
+            _log_audit(request.user, 'payroll_export_pdf',
+                        f'Exported payroll run {run.period_label} as PDF')
+            return response
+        except Exception as e:
+            logger.error('PDF export failed: %s', e, exc_info=True)
             return Response(
                 {'detail': 'Payroll export failed. Please try again.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

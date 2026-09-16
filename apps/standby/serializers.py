@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from apps.overtime.models import Client
 from .models import StandbyLog, StandbyPattern
+from apps.users.services.tech_assignments import format_assignments
 
 
 class StandbyPatternSerializer(serializers.ModelSerializer):
@@ -40,6 +41,7 @@ class StandbyLogSerializer(serializers.ModelSerializer):
         source='clients', many=True, read_only=True,
     )
     client_names = serializers.SerializerMethodField()
+    user_tech_levels = serializers.SerializerMethodField()
 
     class Meta:
         model = StandbyLog
@@ -47,6 +49,7 @@ class StandbyLogSerializer(serializers.ModelSerializer):
             'id',
             'user',
             'user_name',
+            'user_tech_levels',
             'pattern',
             'pattern_name',
             'client_ids',
@@ -93,6 +96,16 @@ class StandbyLogSerializer(serializers.ModelSerializer):
 
     def get_resolved_period_label(self, obj) -> str | None:
         return obj.resolved_settlement_period.strftime('%m/%Y') if obj.resolved_settlement_period else None
+
+    def get_user_tech_levels(self, obj) -> list:
+        """Tech + held level labels, so approvers see the submitter's grade.
+
+        Needs ``user__profile__tech_assignments__tech`` / ``__level`` prefetched
+        on the queryset (StandbyLogViewSet does this).
+        """
+        if not hasattr(obj.user, 'profile'):
+            return []
+        return format_assignments(obj.user.profile)
 
 
 def _calculate_hours_from_times(start_time, end_time):

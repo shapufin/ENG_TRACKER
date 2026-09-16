@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { RowSelectionState } from "@tanstack/react-table";
 import { ticketKPIService } from "../../services/ticketKPIService";
 import { toast } from "sonner";
 import type { TicketImportBatch } from "../../types/ticketKPI";
@@ -12,6 +13,13 @@ export const useTicketKPITeamManagement = (isTeamLeader: boolean) => {
   const qc = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [batchToDelete, setBatchToDelete] = useState<TicketImportBatch | null>(null);
+  // Keyed by batch id (DataTable's getRowId), not row index — the id is the
+  // only thing stable across sorting, search, and pagination.
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const selectedBatchIds = useMemo(
+    () => Object.keys(rowSelection).filter((id) => rowSelection[id]).map(Number),
+    [rowSelection]
+  );
 
   const { data: batches, isLoading } = useQuery({
     queryKey: ["ticket_kpi", "team_batches", selectedMonth || "all"],
@@ -30,6 +38,25 @@ export const useTicketKPITeamManagement = (isTeamLeader: boolean) => {
     },
     onError: () => {
       toast.error("Failed to delete upload.");
+    },
+  });
+
+  const bulkReviewMutation = useMutation({
+    mutationFn: (batchIds: number[]) => ticketKPIService.bulkReviewBatches(batchIds),
+    onSuccess: ({ data }) => {
+      qc.invalidateQueries({ queryKey: ["ticket_kpi", "team_batches"] });
+      setRowSelection({});
+      if (data.skipped.length === 0) {
+        toast.success(`Reviewed ${data.reviewed.length} upload(s).`);
+      } else {
+        toast.warning(
+          `Reviewed ${data.reviewed.length} upload(s); skipped ${data.skipped.length} ` +
+            `(${data.skipped[0].reason}${data.skipped.length > 1 ? "…" : ""}).`
+        );
+      }
+    },
+    onError: () => {
+      toast.error("Failed to review the selected uploads.");
     },
   });
 
@@ -54,5 +81,9 @@ export const useTicketKPITeamManagement = (isTeamLeader: boolean) => {
     stats,
     isLoading,
     deleteMutation,
+    rowSelection,
+    setRowSelection,
+    selectedBatchIds,
+    bulkReviewMutation,
   };
 };

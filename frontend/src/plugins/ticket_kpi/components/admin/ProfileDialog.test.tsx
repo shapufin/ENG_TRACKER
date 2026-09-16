@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ProfileDialog } from "./ProfileDialog";
 import { useProfileDialogState } from "./useProfileDialogState";
 import { ticketKPIService } from "@/plugins/ticket_kpi/services/ticketKPIService";
@@ -54,6 +54,8 @@ const baseState = {
   setSampleFile: vi.fn(),
   isAutoDetecting: false,
   setIsAutoDetecting: vi.fn(),
+  detectedColumns: [],
+  setDetectedColumns: vi.fn(),
   buildPayload: () => ({ name: "Test" }),
 };
 
@@ -114,6 +116,36 @@ describe("ProfileDialog", () => {
     );
     fireEvent.click(screen.getByText("Auto Detect"));
     await expect(vi.mocked(ticketKPIService.autoDetect)).toHaveBeenCalled();
+  });
+
+  it("captures detected_columns from the auto-detect response", async () => {
+    vi.mocked(ticketKPIService.autoDetect).mockResolvedValue({
+      data: {
+        suggested_mapping: { ticket_id: "Number" },
+        total_rows: 10,
+        detected_columns: ["Number", "State", "Priority"],
+      },
+    } as any);
+    const setDetectedColumns = vi.fn();
+    vi.mocked(useProfileDialogState).mockReturnValue({
+      ...baseState,
+      sampleFile: new File([], "x.csv"),
+      setDetectedColumns,
+    } as any);
+    render(
+      <ProfileDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        profile={null}
+        clients={[]}
+        onSave={vi.fn()}
+        isPending={false}
+      />
+    );
+    fireEvent.click(screen.getByText("Auto Detect"));
+    await waitFor(() =>
+      expect(setDetectedColumns).toHaveBeenCalledWith(["Number", "State", "Priority"])
+    );
   });
 
   it("handles auto-detect error", async () => {

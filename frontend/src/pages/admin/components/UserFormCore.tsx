@@ -11,6 +11,8 @@ interface UserFormCoreForm {
   phone: string;
   teams: number[];
   techs: number[];
+  /** Grade held per Tech, keyed by tech id. */
+  tech_levels?: Record<number, number | null>;
   albanian_tl: string;
   italian_tl: string;
   is_hr_user: boolean;
@@ -79,6 +81,10 @@ export const UserFormCore: React.FC<UserFormCoreProps> = ({
             techs={techsData}
             value={form.techs}
             onChange={(ids) => updateField("techs", ids)}
+            levelByTech={form.tech_levels ?? {}}
+            onLevelChange={(techId, levelId) =>
+              updateField("tech_levels", { ...(form.tech_levels ?? {}), [techId]: levelId })
+            }
             placeholder="No Tech"
           />
         </div>

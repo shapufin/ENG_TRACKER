@@ -1,5 +1,7 @@
 /** Proficiency level definitions (1-5 scale) — theme-safe tinted colors. */
 
+import type { SkillLevelLabels } from "../types/skills";
+
 export interface ProficiencyDefinition {
   level: number;
   label: string;
@@ -49,10 +51,36 @@ export const PROFICIENCY_LEVELS: readonly ProficiencyDefinition[] = [
   },
 ] as const;
 
-export const levelLabel = (level: number): string => {
+const LEVEL_LABEL_FIELDS = {
+  1: "level_1_label",
+  2: "level_2_label",
+  3: "level_3_label",
+  4: "level_4_label",
+  5: "level_5_label",
+} as const;
+
+/**
+ * Resolve a proficiency level's display label, preferring the admin-set custom
+ * name and falling back to the hardcoded default (fail-open — never renders
+ * blank while the labels are loading or if the fetch fails).
+ *
+ * Pure so it can be reused inside a `.map()` without a hook per iteration, and
+ * so non-React code (KPI computation) can honour the custom names too: fetch
+ * `labels` once via `useSkillLevelLabels()` and pass them in. Anything that
+ * renders a level name MUST go through here — a second hardcoded label map is
+ * how the My Skills picker and the seniority KPI kept showing the defaults
+ * after an admin renamed a level.
+ */
+export const resolveLevelLabel = (level: number, labels?: SkillLevelLabels): string => {
+  const field = LEVEL_LABEL_FIELDS[level as keyof typeof LEVEL_LABEL_FIELDS];
+  const custom = field && labels ? labels[field] : undefined;
+  if (custom && custom.trim()) return custom;
   const entry = PROFICIENCY_LEVELS.find((l) => l.level === level);
   return entry ? entry.label : `L${level}`;
 };
+
+/** Default label only — prefer `resolveLevelLabel` so custom names are honoured. */
+export const levelLabel = (level: number): string => resolveLevelLabel(level);
 
 export const levelColor = (level: number): string => {
   const entry = PROFICIENCY_LEVELS.find((l) => l.level === level);

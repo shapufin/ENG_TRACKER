@@ -1,17 +1,25 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import { useUsersPageBulk } from "./useUsersPageBulk";
-import { filterUsersByTL } from "./useUsersPageHelpers";
 import { usePlugins } from "@/context/PluginContext";
 import { usePermissions } from "@/context/PermissionContext";
 import api from "@/lib/api";
-import type { UserProfile } from "@/types";
+import type { TechAssignmentInput, UserProfile } from "@/types";
 import type { ControlRoomAccess } from "@/plugins/control_room/types";
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
 
 type TLFilter = "all" | "italian_tl" | "albanian_tl" | "no_tl";
 
 const MIN_PASSWORD_LENGTH = 6;
+
+/** Build the {tech, level} write shape the API expects from the form's
+ * separate id list and level map. Always explicit, so clearing a level in the
+ * form actually clears it server-side instead of being left alone. */
+const toTechAssignments = (
+  techIds: number[],
+  levels: Record<number, number | null> | undefined
+): TechAssignmentInput[] =>
+  techIds.map((techId) => ({ tech: techId, level: levels?.[techId] ?? null }));
 
 const emptyEditForm = {
   first_name: "",
@@ -20,6 +28,7 @@ const emptyEditForm = {
   phone: "",
   teams: [] as number[],
   techs: [] as number[],
+  tech_levels: {} as Record<number, number | null>,
   albanian_tl: "none",
   italian_tl: "none",
   is_hr_user: false,
@@ -38,6 +47,7 @@ const emptyCreateForm = {
   phone: "",
   teams: [] as number[],
   techs: [] as number[],
+  tech_levels: {} as Record<number, number | null>,
   albanian_tl: "none",
   italian_tl: "none",
   is_hr_user: false,
@@ -55,6 +65,9 @@ export const useUsersPage = () => {
   const [confirmDelete, setConfirmDelete] = useState<UserProfile | null>(null);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [tlFilter, setTlFilter] = useState<TLFilter>("all");
+  const [techIds, setTechIds] = useState<number[]>([]);
+  const [techLevelIds, setTechLevelIds] = useState<number[]>([]);
+  const [noTechOnly, setNoTechOnly] = useState(false);
   const [bulkCommandDrawerOpen, setBulkCommandDrawerOpen] = useState(false);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -66,8 +79,11 @@ export const useUsersPage = () => {
   const { isCRAdmin, isAdmin, isHR, isTeamLeader, isSuperuser } = usePermissions();
   const {
     profiles,
+    profilesCount,
     teams: teamsData,
     techs,
+    techFacets,
+    noTechCount,
     italianTLs,
     albanianTLs,
     stats,
@@ -79,6 +95,10 @@ export const useUsersPage = () => {
     resetMutation,
     deleteMutation,
   } = useUserManagement({
+    role: tlFilter,
+    techIds,
+    techLevelIds,
+    noTechOnly,
     onUpdateSuccess: () => {
       setFormOpen(false);
       setEditing(null);
@@ -97,10 +117,26 @@ export const useUsersPage = () => {
     onDeleteSuccess: () => setConfirmDelete(null),
   });
 
-  const filteredData = useMemo(
-    () => filterUsersByTL(profiles || [], tlFilter),
-    [profiles, tlFilter]
-  );
+  // Role tab + tech chips + "No tech" are all filtered server-side (see
+  // useUserManagement) — "No tech" is a distinct facet value, mutually
+  // exclusive with picking real tech chips (setTechIdsFiltered/
+  // setNoTechOnlyFiltered below enforce that on selection).
+  const filteredData = useMemo(() => profiles || [], [profiles]);
+
+  const setTechIdsFiltered = useCallback((ids: number[]) => {
+    setNoTechOnly(false);
+    setTechIds(ids);
+  }, []);
+
+  const setNoTechOnlyFiltered = useCallback((value: boolean) => {
+    if (value) {
+      // "No tech" is mutually exclusive with any tech selection, and a level
+      // filter is meaningless without one.
+      setTechIds([]);
+      setTechLevelIds([]);
+    }
+    setNoTechOnly(value);
+  }, []);
 
   // --- Control Room plugin-aware badge/filter (zero hard plugin import) ---
   // The core UsersPage does NOT import any plugin code. It checks the plugin
@@ -192,7 +228,7 @@ export const useUsersPage = () => {
         email: form.email,
         phone: form.phone,
         teams: form.teams,
-        techs: form.techs,
+        techs: toTechAssignments(form.techs, form.tech_levels),
         albanian_tl:
           form.albanian_tl && form.albanian_tl !== "none" ? Number(form.albanian_tl) : null,
         italian_tl: form.italian_tl && form.italian_tl !== "none" ? Number(form.italian_tl) : null,
@@ -222,6 +258,10 @@ export const useUsersPage = () => {
       phone: profile.phone || "",
       teams: profile.teams || [],
       techs: profile.techs || [],
+      // techs_detail carries the level per assignment; techs is only ids.
+      tech_levels: Object.fromEntries(
+        (profile.techs_detail || []).map((entry) => [entry.id, entry.level?.id ?? null])
+      ),
       albanian_tl: profile.albanian_tl ? String(profile.albanian_tl) : "none",
       italian_tl: profile.italian_tl ? String(profile.italian_tl) : "none",
       is_hr_user: profile.is_hr_user || roles.includes("hr"),
@@ -251,7 +291,7 @@ export const useUsersPage = () => {
       password: createForm.password,
       phone: createForm.phone,
       teams: createForm.teams,
-      techs: createForm.techs,
+      techs: toTechAssignments(createForm.techs, createForm.tech_levels),
       albanian_tl:
         createForm.albanian_tl && createForm.albanian_tl !== "none"
           ? Number(createForm.albanian_tl)
@@ -290,9 +330,12 @@ export const useUsersPage = () => {
     isError,
     error,
     profiles,
+    profilesCount,
     stats,
     teamsData,
     techs,
+    techFacets,
+    noTechCount,
     italianTLs,
     albanianTLs,
     formOpen,
@@ -309,6 +352,12 @@ export const useUsersPage = () => {
     handleRowSelectionChange,
     tlFilter,
     setTlFilter,
+    techIds,
+    setTechIds: setTechIdsFiltered,
+    techLevelIds,
+    setTechLevelIds,
+    noTechOnly,
+    setNoTechOnly: setNoTechOnlyFiltered,
     bulkCommandDrawerOpen,
     setBulkCommandDrawerOpen,
     bulkDeleteConfirmOpen,

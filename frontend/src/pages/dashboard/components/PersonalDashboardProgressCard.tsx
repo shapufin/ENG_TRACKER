@@ -26,11 +26,11 @@ export const PersonalDashboardProgressCard: React.FC<PersonalDashboardProgressCa
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-xl border border-border bg-muted/30 p-4">
           <p className="text-xs text-muted-foreground">Standby Hours</p>
-          <p className="text-lg font-semibold tabular-nums">{personalStandbyHours}h</p>
+          <p className="font-mono text-lg font-semibold tabular-nums">{personalStandbyHours}h</p>
         </div>
         <div className="rounded-xl border border-border bg-muted/30 p-4">
           <p className="text-xs text-muted-foreground">Pending Leave</p>
-          <p className="text-lg font-semibold tabular-nums">{pendingLeaveDays}d</p>
+          <p className="font-mono text-lg font-semibold tabular-nums">{pendingLeaveDays}d</p>
         </div>
       </div>
     </div>

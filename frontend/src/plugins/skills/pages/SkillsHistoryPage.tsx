@@ -6,6 +6,7 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import {
   Select,
   SelectContent,
@@ -180,29 +181,18 @@ export const SkillsHistoryPage: React.FC = () => {
           </div>
         </div>
         <div className="flex-1">
-          <Label htmlFor="history-date-from">From</Label>
-          <Input
-            id="history-date-from"
-            type="date"
-            value={dateFrom}
-            onChange={(e) => {
-              setDateFrom(e.target.value);
+          <Label htmlFor="history-date-range">Date range</Label>
+          <DateRangePicker
+            id="history-date-range"
+            from={dateFrom}
+            to={dateTo}
+            onChange={({ from, to }) => {
+              setDateFrom(from);
+              setDateTo(to);
               setPage(1);
             }}
-            className="mt-1 min-h-11 w-full sm:w-[160px]"
-          />
-        </div>
-        <div className="flex-1">
-          <Label htmlFor="history-date-to">To</Label>
-          <Input
-            id="history-date-to"
-            type="date"
-            value={dateTo}
-            onChange={(e) => {
-              setDateTo(e.target.value);
-              setPage(1);
-            }}
-            className="mt-1 min-h-11 w-full sm:w-[160px]"
+            placeholder="Filter by date"
+            className="mt-1 min-h-11 w-full sm:w-[220px]"
           />
         </div>
         <span className="text-sm text-muted-foreground" role="status">

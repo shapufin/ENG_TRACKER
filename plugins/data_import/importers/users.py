@@ -7,8 +7,9 @@ from typing import Any, Dict, List, Optional
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.db.models.functions import Lower
 
-from apps.users.models import Team, Tech
+from apps.users.models import Team, Tech, TechLevel
 from apps.users.services.user_creation import (
     create_user_with_profile,
     generate_random_password,
@@ -89,7 +90,9 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                 label="Tech Codes",
                 required=False,
                 field_type="string",
-                help_text="Comma-separated Tech codes (e.g. 'INFRA,DB'). Must match existing Tech.code values.",
+                help_text="Comma-separated Tech codes, optionally with a level "
+                          "(e.g. 'INFRA:L3,DB'). Must match existing Tech.code "
+                          "and that Tech's TechLevel.code values.",
             ),
             ImportField(
                 key="is_hr",
@@ -108,6 +111,24 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                 label="Is Albanian TL",
                 required=False,
                 field_type="bool",
+            ),
+            ImportField(
+                key="italian_tl_username",
+                label="Italian TL Username",
+                required=False,
+                field_type="string",
+                help_text="Username of an existing user who leads this person. "
+                          "The leader is not created. Blank leaves any existing "
+                          "link alone.",
+            ),
+            ImportField(
+                key="albanian_tl_username",
+                label="Albanian TL Username",
+                required=False,
+                field_type="string",
+                help_text="Username of an existing user who leads this person. "
+                          "The leader is not created. Blank leaves any existing "
+                          "link alone.",
             ),
             ImportField(
                 key="phone",
@@ -142,6 +163,8 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
             "is_hr": ["hr", "is_hr", "hr user", "is_hr_user"],
             "is_italian_tl": ["italian tl", "is_italian_tl", "italian team leader", "is_italian_tl_role"],
             "is_albanian_tl": ["albanian tl", "is_albanian_tl", "albanian team leader", "is_albanian_tl_role"],
+            "italian_tl_username": ["italian tl username", "italian_tl_username", "italian_tl", "italian tl user", "reports to italian tl"],
+            "albanian_tl_username": ["albanian tl username", "albanian_tl_username", "albanian_tl", "albanian tl user", "reports to albanian tl"],
             "phone": ["phone", "phone number", "telephone", "mobile"],
             "hire_date": ["hire date", "hire_date", "start date", "started", "date hired"],
             "is_active": ["active", "is_active", "enabled", "status"],
@@ -192,10 +215,12 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                 "first_name": "Marco",
                 "last_name": "Rossi",
                 "team_code": "ENG",
-                "tech_codes": "INFRA,DB",
+                "tech_codes": "INFRA:L3,DB",
                 "is_hr": False,
                 "is_italian_tl": False,
                 "is_albanian_tl": False,
+                "italian_tl_username": "gverdi",
+                "albanian_tl_username": "ahoxha",
                 "phone": "+39 02 1234567",
                 "hire_date": "2024-01-15",
                 "is_active": True,
@@ -210,6 +235,8 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                 "is_hr": False,
                 "is_italian_tl": False,
                 "is_albanian_tl": True,
+                "italian_tl_username": "gverdi",
+                "albanian_tl_username": "",
                 "phone": "+355 4 1234567",
                 "hire_date": "2024-03-01",
                 "is_active": True,
@@ -243,7 +270,11 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
             raise ValueError(f'Team with code "{team_code}" does not exist.')
 
     def _resolve_techs(self, mapped_row: Dict[str, Any]) -> Optional[list]:
-        """Resolve comma-separated tech codes to Tech IDs.
+        """Resolve comma-separated tech codes to Tech assignment entries.
+
+        Each entry may carry a level: ``INFRA:L3,DB`` assigns Infrastructure at
+        level L3 and Database ungraded. A bare code keeps its existing grade,
+        matching the plain-id semantics elsewhere.
 
         Returns None if no tech_codes column is present (so callers can
         distinguish "column absent" from "column empty"). Returns [] for
@@ -255,15 +286,155 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
         raw_str = str(raw).strip()
         if not raw_str:
             return []
-        codes = [c.strip().upper() for c in raw_str.split(",") if c.strip()]
-        if not codes:
+
+        pairs = []
+        for chunk in raw_str.split(","):
+            chunk = chunk.strip()
+            if not chunk:
+                continue
+            tech_code, _, level_code = chunk.partition(":")
+            pairs.append((tech_code.strip().upper(), level_code.strip().upper()))
+        if not pairs:
             return []
-        techs = list(Tech.objects.filter(code__in=codes))
-        found_codes = {t.code for t in techs}
-        missing = sorted(set(codes) - found_codes)
+
+        techs = {t.code: t for t in Tech.objects.filter(code__in=[c for c, _ in pairs])}
+        missing = sorted({code for code, _ in pairs} - set(techs))
         if missing:
             raise ValueError(f'Unknown Tech code(s): {", ".join(missing)}')
-        return [t.id for t in techs]
+
+        wanted_levels = {(code, level) for code, level in pairs if level}
+        levels = {}
+        if wanted_levels:
+            found = TechLevel.objects.filter(
+                tech__code__in=[code for code, _ in wanted_levels],
+                code__in=[level for _, level in wanted_levels],
+            ).select_related('tech')
+            levels = {(lvl.tech.code, lvl.code): lvl.id for lvl in found}
+            unknown = sorted(
+                f'{code}:{level}' for code, level in wanted_levels
+                if (code, level) not in levels
+            )
+            if unknown:
+                raise ValueError(f'Unknown Tech level(s): {", ".join(unknown)}')
+
+        return [
+            {'tech': techs[code].id, 'level': levels[(code, level)]}
+            if level
+            else techs[code].id
+            for code, level in pairs
+        ]
+
+    def prepare_batch(
+        self,
+        rows: List[Dict[str, Any]],
+        options: Dict[str, Any],
+        *,
+        dry_run: bool = False,
+    ) -> Dict[str, Any]:
+        """Record every username in the file so a forward TL reference resolves.
+
+        The TL chain is mutually referential in real data — every Italian TL
+        reports to the one Albanian TL, who in turn reports to an Italian TL — so
+        no row order satisfies it. A leader named in the same file is deferred to
+        ``finalize_batch``, the same way the teams importer defers
+        ``parent_team_code``.
+
+        Also resolves every TL username referenced anywhere in the file to a
+        User id in one query, cached in ``leader_ids`` — without this,
+        ``_resolve_tl_id`` issued its own ``User.objects.filter(...).first()``
+        per TL column per row (up to 2 extra queries per row).
+        """
+        file_usernames = {
+            str(row.get("username")).strip().lower()
+            for row in rows
+            if row.get("username") not in (None, "")
+        }
+        referenced_leaders = {
+            str(row.get(key)).strip().lower()
+            for row in rows
+            for key in ("italian_tl_username", "albanian_tl_username")
+            if row.get(key) not in (None, "")
+        }
+        leader_ids = dict(
+            User.objects.annotate(username_lower=Lower("username"))
+            .filter(username_lower__in=referenced_leaders)
+            .values_list("username_lower", "id")
+        ) if referenced_leaders else {}
+        return {
+            "file_usernames": file_usernames,
+            "leader_ids": leader_ids,
+            "deferred_tls": [],
+        }
+
+    def finalize_batch(
+        self,
+        context: Optional[Dict[str, Any]],
+        options: Dict[str, Any],
+        *,
+        dry_run: bool = False,
+    ) -> None:
+        """Apply TL links whose leader row came later in the file."""
+        if dry_run:
+            return None
+        for username, field, leader_username in (context or {}).get("deferred_tls", []):
+            user = User.objects.filter(username__iexact=username).first()
+            leader = User.objects.filter(username__iexact=leader_username).first()
+            if user is None or leader is None or user.pk == leader.pk:
+                continue
+            profile = user.profile
+            setattr(profile, field, leader.id)
+            profile.save(update_fields=[field])
+        return None
+
+    def _resolve_tl_id(
+        self,
+        mapped_row: Dict[str, Any],
+        key: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Optional[int]:
+        """Resolve a TL column to a User id, or None when nothing to apply now.
+
+        Blank means "leave this alone", the importer-wide rule, so an existing
+        link is never cleared by an empty cell. A leader that exists is linked
+        straight away; one that appears elsewhere in the same file is deferred to
+        ``finalize_batch``; one that is neither is a row error — this importer
+        does not create leaders, and inventing a user to satisfy a reference
+        would be worse than failing the row.
+
+        Raises ``ValueError`` so ``commit_row``'s existing handler turns it into
+        a clean row error.
+        """
+        raw = mapped_row.get(key)
+        username = str(raw).strip() if raw is not None else ''
+        if not username:
+            return None
+        own_username = str(mapped_row.get('username') or '').strip()
+        if username.lower() == own_username.lower():
+            raise ValueError(f"A user cannot lead themselves ('{username}').")
+        # Resolved once for the whole file in prepare_batch and cached in
+        # leader_ids — a dict lookup instead of a DB round trip for the
+        # common case. Falls back to a direct query when there is no cache
+        # (e.g. commit_row called standalone, without prepare_batch first)
+        # or the leader isn't in it for some other reason, so this stays
+        # correct even off the real batch-import path.
+        leader_ids = (context or {}).get("leader_ids")
+        if leader_ids is not None:
+            leader_id = leader_ids.get(username.lower())
+        else:
+            leader = User.objects.filter(username__iexact=username).first()
+            leader_id = leader.id if leader else None
+        if leader_id is not None:
+            return leader_id
+        if username.lower() in (context or {}).get("file_usernames", set()):
+            field = 'italian_tl_id' if key.startswith('italian') else 'albanian_tl_id'
+            (context or {}).setdefault("deferred_tls", []).append(
+                (own_username, field, username)
+            )
+            return None
+        raise ValueError(
+            f"No user with username '{username}' for {key.replace('_', ' ')}. "
+            f"Import or create the leader first."
+        )
 
     def _normalize_bool(self, value: Any) -> Optional[bool]:
         if value is None or value == "":
@@ -360,6 +531,12 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                 team = self._resolve_team(mapped_row)
 
             tech_ids = self._resolve_techs(mapped_row)
+            italian_tl_id = self._resolve_tl_id(
+                mapped_row, "italian_tl_username", context
+            )
+            albanian_tl_id = self._resolve_tl_id(
+                mapped_row, "albanian_tl_username", context
+            )
 
             if existing_user is not None:
                 if not update_existing:
@@ -375,10 +552,23 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                     if mapped_row.get(key) is not None:
                         update_kwargs[key] = mapped_row[key]
 
-                for key in ("is_hr", "is_italian_tl", "is_albanian_tl"):
+                # The column keys and ``update_user_profile``'s parameter names
+                # differ for the two role flags (``_role`` suffix). Passing the
+                # column key straight through raised a TypeError that surfaced as
+                # a generic "Unexpected error" row error.
+                for key, param in (
+                    ("is_hr", "is_hr"),
+                    ("is_italian_tl", "is_italian_tl_role"),
+                    ("is_albanian_tl", "is_albanian_tl_role"),
+                ):
                     val = self._normalize_bool(mapped_row.get(key))
                     if val is not None:
-                        update_kwargs[key] = val
+                        update_kwargs[param] = val
+
+                if italian_tl_id is not None:
+                    update_kwargs["italian_tl_id"] = italian_tl_id
+                if albanian_tl_id is not None:
+                    update_kwargs["albanian_tl_id"] = albanian_tl_id
 
                 is_active = self._normalize_bool(mapped_row.get("is_active"))
                 if is_active is not None:
@@ -437,6 +627,8 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                     "phone": mapped_row.get("phone", "") or "",
                     "team": team,
                     "techs": tech_ids if tech_ids is not None else None,
+                    "italian_tl_id": italian_tl_id,
+                    "albanian_tl_id": albanian_tl_id,
                     "is_hr": self._normalize_bool(mapped_row.get("is_hr")) or False,
                     "is_italian_tl_role": self._normalize_bool(mapped_row.get("is_italian_tl")) or False,
                     "is_albanian_tl_role": self._normalize_bool(mapped_row.get("is_albanian_tl")) or False,

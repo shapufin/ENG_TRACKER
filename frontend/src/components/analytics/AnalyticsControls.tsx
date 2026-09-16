@@ -1,6 +1,5 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -9,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Filter, Settings, ChevronDown, Download } from "lucide-react";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import type { Period } from "@/pages/analytics/hooks/useAnalyticsPage";
 
 interface AnalyticsControlsProps {
@@ -61,18 +61,11 @@ export const AnalyticsControls: React.FC<AnalyticsControlsProps> = ({
 
       {selectedPeriod === "custom" && (
         <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
-          <Input
-            type="date"
-            value={dateRange.from}
-            onChange={(e) => onDateRangeChange({ ...dateRange, from: e.target.value })}
-            className="h-8 w-36 text-xs"
-          />
-          <span className="text-muted-foreground">to</span>
-          <Input
-            type="date"
-            value={dateRange.to}
-            onChange={(e) => onDateRangeChange({ ...dateRange, to: e.target.value })}
-            className="h-8 w-36 text-xs"
+          <DateRangePicker
+            from={dateRange.from}
+            to={dateRange.to}
+            onChange={onDateRangeChange}
+            className="h-8 w-auto text-xs"
           />
         </div>
       )}

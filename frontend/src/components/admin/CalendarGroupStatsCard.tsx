@@ -16,20 +16,20 @@ export const CalendarGroupStatsCard: React.FC<CalendarGroupStatsCardProps> = ({
   icon: Icon,
 }) => {
   return (
-    <GlassCard isHoverLift={false} className="p-6">
+    <GlassCard isHoverLift={false} className="p-4">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">{title}</p>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
 
-          <div className="mt-3 flex items-end gap-3">
-            <h3 className="text-5xl font-bold tabular-nums">{value}</h3>
+          <div className="mt-1.5 flex items-end gap-2">
+            <h3 className="font-mono text-2xl font-bold tabular-nums">{value}</h3>
 
-            {subtitle && <p className="pb-1 text-sm text-muted-foreground">{subtitle}</p>}
+            {subtitle && <p className="pb-0.5 text-xs text-muted-foreground">{subtitle}</p>}
           </div>
         </div>
 
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-          <Icon className="h-6 w-6 text-primary" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <Icon className="h-4 w-4 text-primary" />
         </div>
       </div>
     </GlassCard>

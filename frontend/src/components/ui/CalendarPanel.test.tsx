@@ -32,4 +32,37 @@ describe("CalendarPanel", () => {
     render(<CalendarPanel value="invalid" onSelect={vi.fn()} />);
     expect(screen.getByText("Mo")).toBeInTheDocument();
   });
+
+  it("uses the controlled month prop instead of deriving from value", () => {
+    render(<CalendarPanel value="2024-06-15" month={new Date(2024, 7, 1)} onSelect={vi.fn()} />);
+    expect(screen.getByText("August 2024")).toBeInTheDocument();
+  });
+
+  it("calls onMonthChange instead of managing month internally when controlled", () => {
+    const onMonthChange = vi.fn();
+    render(
+      <CalendarPanel
+        value="2024-06-15"
+        month={new Date(2024, 5, 1)}
+        onMonthChange={onMonthChange}
+        onSelect={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getAllByRole("button")[1]);
+    expect(onMonthChange).toHaveBeenCalledWith(new Date(2024, 6, 1));
+    // Controlled: month prop didn't change, so the panel still shows June.
+    expect(screen.getByText("June 2024")).toBeInTheDocument();
+  });
+
+  it("tints days between value and rangeEnd", () => {
+    render(<CalendarPanel value="2024-06-10" rangeEnd="2024-06-14" onSelect={vi.fn()} />);
+    const day12 = screen.getByText("12");
+    expect(day12.className).toContain("bg-primary/10");
+  });
+
+  it("does not tint any day when rangeEnd is absent", () => {
+    render(<CalendarPanel value="2024-06-10" onSelect={vi.fn()} />);
+    const day12 = screen.getByText("12");
+    expect(day12.className).not.toContain("bg-primary/10");
+  });
 });

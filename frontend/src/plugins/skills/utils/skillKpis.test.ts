@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SkillCoverage } from "../types/skills";
+import type { SkillCoverage, SkillLevelLabels } from "../types/skills";
 import {
   computeCriticalGap,
   computeSeniorityIndex,
@@ -26,6 +26,21 @@ describe("computeSeniorityIndex", () => {
   it("maps the average to the nearest level label", () => {
     expect(computeSeniorityIndex([cov(1, "A", "Cat", 2, 3.4)])!.label).toBe("Proficient");
     expect(computeSeniorityIndex([cov(1, "A", "Cat", 2, 4.6)])!.label).toBe("Mastery");
+  });
+
+  it("honours admin-renamed level labels", () => {
+    // Renaming L3 in the Skills level settings must reach the KPI card too —
+    // it used to carry its own hardcoded label map.
+    const labels = {
+      level_1_label: "Basic",
+      level_2_label: "",
+      level_3_label: "Solid",
+      level_4_label: "",
+      level_5_label: "",
+    } as SkillLevelLabels;
+    expect(computeSeniorityIndex([cov(1, "A", "Cat", 2, 3.4)], labels)!.label).toBe("Solid");
+    // A blank custom name falls back to the default, never renders empty.
+    expect(computeSeniorityIndex([cov(1, "A", "Cat", 2, 4.6)], labels)!.label).toBe("Mastery");
   });
 
   it("returns null when nothing is rated", () => {

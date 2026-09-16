@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { parseISO } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { leaveService } from "@/services/leaveService";
 import type { LeaveRequest, LeaveBalance, User } from "@/types";
@@ -128,7 +129,28 @@ export const useCalendarPageData = (
     handleRangeMove,
     finalizeRangeSelection,
     handleSelectDate,
+    applyRangeSelection,
   } = useRangeSelection({ onRangeSelected: () => setDialogOpen(true) });
+
+  /** Opens the booking dialog without a pre-dragged grid range (header CTA). */
+  const openBookingDialog = useCallback(() => {
+    const today = new Date();
+    applyRangeSelection(today, today);
+  }, [applyRangeSelection]);
+
+  /** Lets the booking dialog's manual date inputs adjust the same selection
+   * the grid-drag path populates, so both entry points share one source of
+   * truth. */
+  const setDateRange = useCallback(
+    (start: string, end: string) => {
+      if (!start || !end) return;
+      const startDate = parseISO(start);
+      const endDate = parseISO(end);
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return;
+      applyRangeSelection(startDate, endDate, false);
+    },
+    [applyRangeSelection]
+  );
 
   const isLoading = eventsLoading || queriesLoading;
   const hasError = eventsError;
@@ -297,6 +319,8 @@ export const useCalendarPageData = (
     handleRangeMove,
     finalizeRangeSelection,
     handleSelectDate,
+    openBookingDialog,
+    setDateRange,
     currentBalance,
     teamBalances,
     memberRemainingDays,

@@ -107,7 +107,7 @@ class OvertimeLogViewSet(IdempotentCreateMixin, SuperuserPermissionMixin, HRRead
     idempotency_endpoint = 'overtime'
     allow_staff_global_view = False
     staff_global_view_actions = {'approve', 'reject', 'bulk_approve', 'bulk_reject', 'bulk_delete', 'export'}
-    queryset = OvertimeLog.objects.all().select_related('user', 'client', 'approved_by').prefetch_related('user__profile__team_memberships__team')
+    queryset = OvertimeLog.objects.all().select_related('user', 'client', 'approved_by').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level')
     serializer_class = OvertimeLogSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
@@ -218,27 +218,31 @@ class OvertimeLogViewSet(IdempotentCreateMixin, SuperuserPermissionMixin, HRRead
         Superuser deletes of non-pending records in a locked (past month or
         TL-closed approval period) are audit-logged for accountability.
         """
-        self._ensure_not_in_finalized_payroll(instance)
-        try:
-            from plugins.payroll.models import PayrollRunEntry
-        except ImportError:
-            PayrollRunEntry = None
-        if PayrollRunEntry is not None and PayrollRunEntry.objects.filter(
-            source_kind='overtime', source_id=instance.pk
-        ).exists():
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError(
-                'Cannot delete this overtime entry — it is referenced by a '
-                'payroll run. Remove it from the payroll run first.'
+        from django.db import transaction
+
+        with transaction.atomic():
+            locked = OvertimeLog.objects.select_for_update().get(pk=instance.pk)
+            self._ensure_not_in_finalized_payroll(locked)
+            try:
+                from plugins.payroll.models import PayrollRunEntry
+            except ImportError:
+                PayrollRunEntry = None
+            if PayrollRunEntry is not None and PayrollRunEntry.objects.filter(
+                source_kind='overtime', source_id=locked.pk
+            ).exists():
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(
+                    'Cannot delete this overtime entry — it is referenced by a '
+                    'payroll run. Remove it from the payroll run first.'
+                )
+            user = self.request.user
+            pk = locked.pk
+            record_date = getattr(locked, 'date', None)
+            was_locked_period = (
+                not self._is_pending(locked)
+                and (self._is_approval_period_locked(locked) or self._is_month_locked(locked))
             )
-        user = self.request.user
-        pk = instance.pk
-        record_date = getattr(instance, 'date', None)
-        was_locked_period = (
-            not self._is_pending(instance)
-            and (self._is_approval_period_locked(instance) or self._is_month_locked(instance))
-        )
-        instance.delete()
+            locked.delete()
         self.invalidate_related_cache()
         if was_locked_period and user.is_superuser:
             try:
@@ -438,7 +442,7 @@ class OvertimeLogViewSet(IdempotentCreateMixin, SuperuserPermissionMixin, HRRead
             )
 
         # workspace_ids is optional for team_logs; when omitted, all team members' entries are returned
-        queryset = OvertimeLog.objects.all().select_related('user', 'client', 'approved_by').prefetch_related('user__profile__team_memberships__team')
+        queryset = OvertimeLog.objects.all().select_related('user', 'client', 'approved_by').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level')
 
         queryset = self._filter_team_leader_queryset(queryset, user)
 
@@ -480,7 +484,7 @@ class OvertimeLogViewSet(IdempotentCreateMixin, SuperuserPermissionMixin, HRRead
 
         # workspace_ids is optional for team_pending; when omitted, all team members' pending entries are returned
         # Get base queryset
-        queryset = OvertimeLog.objects.all().select_related('user', 'client', 'approved_by').prefetch_related('user__profile__team_memberships__team').filter(status='pending')
+        queryset = OvertimeLog.objects.all().select_related('user', 'client', 'approved_by').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level').filter(status='pending')
 
         try:
             queryset = self._filter_team_leader_queryset(queryset, user)
@@ -549,7 +553,7 @@ class OvertimeLogViewSet(IdempotentCreateMixin, SuperuserPermissionMixin, HRRead
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        queryset = OvertimeLog.objects.all().select_related('user', 'client', 'approved_by').prefetch_related('user__profile__team_memberships__team')
+        queryset = OvertimeLog.objects.all().select_related('user', 'client', 'approved_by').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level')
 
         # Apply filters from query params (same as team_logs)
         status_filter = request.query_params.get('status')

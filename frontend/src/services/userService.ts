@@ -4,7 +4,10 @@ import type {
   UserProfile,
   Team,
   Tech,
+  TechLevel,
   TechMember,
+  TechAssignmentInput,
+  TechFacetsResponse,
   PaginatedResponse,
   UserStats,
   CalendarGroupStats,
@@ -80,8 +83,22 @@ export const userService = {
     return data;
   },
 
+  /** Admin Users list. Level filtering params (comma-joined, matching the
+   * backend's getlist-style parsing):
+   * - `tech`: tech ids
+   * - `tech_level`: level ids held in the selected techs
+   * - `min_tech_level_rank`: integer — "this level or more senior", matched
+   *   against the SAME assignment row as `tech` (viewsets._apply_tech_filters)
+   */
   async getProfiles(params?: Record<string, unknown>): Promise<PaginatedResponse<UserProfile>> {
     const { data } = await api.get<PaginatedResponse<UserProfile>>("/users/profiles/", { params });
+    return data;
+  },
+
+  /** Live per-tech profile counts for the Admin Users tech-filter chips,
+   * scoped by the same `role`/`no_tech`/`search` params as getProfiles. */
+  async getTechFacets(params?: Record<string, unknown>): Promise<TechFacetsResponse> {
+    const { data } = await api.get<TechFacetsResponse>("/users/profiles/tech_facets/", { params });
     return data;
   },
 
@@ -121,10 +138,49 @@ export const userService = {
     return data;
   },
 
-  async addTechMembers(techId: number, userIds: number[]): Promise<{ added: number }> {
-    const { data } = await api.post<{ added: number }>(`/users/techs/${techId}/add_users/`, {
-      user_ids: userIds,
-    });
+  /** Omit `level` to leave grades alone; pass one to grade every listed user.
+   * `added` counts new members; `regraded` counts existing ones whose level
+   * changed, so a pure re-grade does not look like nothing happened. */
+  async addTechMembers(
+    techId: number,
+    userIds: number[],
+    level?: number | null
+  ): Promise<{ added: number; regraded: number }> {
+    const { data } = await api.post<{ added: number; regraded: number }>(
+      `/users/techs/${techId}/add_users/`,
+      { user_ids: userIds, ...(level === undefined ? {} : { level }) }
+    );
+    return data;
+  },
+
+  async getTechLevels(params?: Record<string, unknown>): Promise<PaginatedResponse<TechLevel>> {
+    const { data } = await api.get<PaginatedResponse<TechLevel>>("/users/tech-levels/", { params });
+    return data;
+  },
+
+  async createTechLevel(
+    payload: Pick<TechLevel, "tech" | "name" | "code" | "rank"> &
+      Partial<Pick<TechLevel, "description" | "is_active">>
+  ): Promise<TechLevel> {
+    const { data } = await api.post<TechLevel>("/users/tech-levels/", payload);
+    return data;
+  },
+
+  async updateTechLevel(id: number, payload: Partial<Omit<TechLevel, "id">>): Promise<TechLevel> {
+    const { data } = await api.patch<TechLevel>(`/users/tech-levels/${id}/`, payload);
+    return data;
+  },
+
+  async deleteTechLevel(id: number): Promise<void> {
+    await api.delete(`/users/tech-levels/${id}/`);
+  },
+
+  /** Rewrites every rank for the Tech. `levelIds` must list them all. */
+  async reorderTechLevels(techId: number, levelIds: number[]): Promise<{ reordered: number }> {
+    const { data } = await api.post<{ reordered: number }>(
+      `/users/techs/${techId}/reorder_levels/`,
+      { level_ids: levelIds }
+    );
     return data;
   },
 
@@ -231,7 +287,7 @@ export const userService = {
   async bulkUpdateUsers(payload: {
     user_ids: number[];
     teams?: number[];
-    techs?: number[];
+    techs?: TechAssignmentInput[];
     italian_tl?: number | null;
     albanian_tl?: number | null;
     is_hr?: boolean;
@@ -262,7 +318,7 @@ export const userService = {
     last_name?: string;
     phone?: string;
     teams?: number[];
-    techs?: number[];
+    techs?: TechAssignmentInput[];
     albanian_tl?: number | null;
     italian_tl?: number | null;
     is_hr?: boolean;
@@ -283,7 +339,7 @@ export const userService = {
       last_name?: string;
       phone?: string;
       teams?: number[];
-      techs?: number[];
+      techs?: TechAssignmentInput[];
       albanian_tl?: number | null;
       italian_tl?: number | null;
       is_hr?: boolean;

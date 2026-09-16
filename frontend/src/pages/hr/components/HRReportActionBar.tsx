@@ -79,41 +79,39 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
           : "Approved Overtime and Standby records with per-Italian TL sheet separation.";
 
   return (
-    <GlassCard isHoverLift={false} className="p-3">
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => openExport("ot-standby", "approved")}
-          className="gap-2 border-primary/50 text-foreground hover:bg-primary/10"
-        >
-          <FileSpreadsheet className="h-4 w-4" /> Export OT & Standby
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => openExport("payroll", "approved")}
-          className="gap-2 border-accent-violet/50 text-foreground hover:bg-accent-violet/10"
-        >
-          <Wallet className="h-4 w-4" /> Export for Payroll
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => openExport("ot-standby", "pending")}
-          className="gap-2 border-warning/50 text-foreground hover:bg-warning/10"
-        >
-          <Clock className="h-4 w-4" /> Export Pending
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => openExport("leave", "approved")}
-          className="gap-2 border-success/50 text-foreground hover:bg-success/10"
-        >
-          <Calendar className="h-4 w-4" /> Export Leave
-        </Button>
-      </div>
+    <GlassCard isHoverLift={false} className="flex flex-col justify-center gap-1.5 p-3">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => openExport("ot-standby", "approved")}
+        className="w-full justify-start gap-2 border-primary/50 text-foreground hover:bg-primary/10"
+      >
+        <FileSpreadsheet className="h-4 w-4" /> Export OT & Standby
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => openExport("payroll", "approved")}
+        className="w-full justify-start gap-2 border-accent-violet/50 text-foreground hover:bg-accent-violet/10"
+      >
+        <Wallet className="h-4 w-4" /> Export for Payroll
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => openExport("ot-standby", "pending")}
+        className="w-full justify-start gap-2 border-warning/50 text-foreground hover:bg-warning/10"
+      >
+        <Clock className="h-4 w-4" /> Export Pending
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => openExport("leave", "approved")}
+        className="w-full justify-start gap-2 border-success/50 text-foreground hover:bg-success/10"
+      >
+        <Calendar className="h-4 w-4" /> Export Leave
+      </Button>
 
       <Dialog open={exportDialogOpen} onOpenChange={onExportDialogOpenChange}>
         <DialogContent>

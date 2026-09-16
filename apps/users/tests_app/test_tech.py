@@ -36,7 +36,11 @@ class TechModelAndAssignmentTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(list(response.data["techs"]), [{"id": infra.id, "name": "Infrastructure", "code": "INFRA"}])
+        # level is None: assigned via plain Tech ids, so no grade was given.
+        self.assertEqual(
+            list(response.data["techs"]),
+            [{"id": infra.id, "name": "Infrastructure", "code": "INFRA", "level": None}],
+        )
 
     def test_admin_user_create_rejects_unknown_tech_ids(self):
         admin = User.objects.create_superuser(

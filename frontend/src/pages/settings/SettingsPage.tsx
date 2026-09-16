@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { usePlugins } from "@/context/PluginContext";
 import { Badge } from "@/components/ui/badge";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { FormDialog } from "@/components/ui/FormDialog";
 import { LogOut, Lock, User, Users } from "lucide-react";
 import { toast } from "sonner";
 import { MyClientsSection } from "./components/MyClientsSection";
@@ -29,6 +29,7 @@ export const SettingsPage: React.FC = () => {
   const isCRScoped = isCRUser || isCROnlyAdmin;
   const notificationsActive = activePlugins.some((plugin) => plugin.name === "notifications");
   const navigate = useNavigate();
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current: "", new: "", confirm: "" });
 
   const handleLogout = () => {
@@ -48,6 +49,7 @@ export const SettingsPage: React.FC = () => {
     }
     toast.info("Password change not yet implemented on backend");
     setPasswordForm({ current: "", new: "", confirm: "" });
+    setPasswordOpen(false);
   };
 
   const getRoleBadges = (): string[] => {
@@ -65,128 +67,160 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <PageShell title="Settings" className="mx-auto max-w-2xl p-4">
-      {/* Profile Card */}
-      <GlassCard delay={0}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Profile
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <Label className="text-xs text-muted-foreground">Username</Label>
-              <p className="font-medium">{user?.username || "—"}</p>
+    <PageShell title="Settings">
+      {/* Single flat grid: paired cards are direct children so each row
+          stretches to the taller card (items-stretch) and bottoms stay
+          aligned no matter how long a card's copy runs. */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {/* Profile Card */}
+        <GlassCard delay={0}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label className="text-xs text-muted-foreground">Username</Label>
+                <p className="font-medium">{user?.username || "—"}</p>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Email</Label>
+                <p className="font-medium">{user?.email || "—"}</p>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">First Name</Label>
+                <p className="font-medium">{user?.first_name || "—"}</p>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Last Name</Label>
+                <p className="font-medium">{user?.last_name || "—"}</p>
+              </div>
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Email</Label>
-              <p className="font-medium">{user?.email || "—"}</p>
+            <div className="flex flex-wrap gap-2 pt-2">
+              {getRoleBadges().map((role) => (
+                <Badge key={role} variant="secondary">
+                  {role}
+                </Badge>
+              ))}
+              {getRoleBadges().length === 0 && <Badge variant="outline">User</Badge>}
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">First Name</Label>
-              <p className="font-medium">{user?.first_name || "—"}</p>
+            <div className="flex flex-wrap pt-1">
+              {/* Filled primary (not outline): matches the other card action
+                  buttons and stays clearly visible on first visit. */}
+              <Button onClick={() => setPasswordOpen(true)}>
+                <Lock className="mr-2 h-4 w-4" />
+                Change Password
+              </Button>
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Last Name</Label>
-              <p className="font-medium">{user?.last_name || "—"}</p>
+            {(user?.techs?.length ?? 0) > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Tech</Label>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {user!.techs!.map((tech) => (
+                    <Badge key={tech.id} variant="outline" title={tech.code}>
+                      {tech.name}
+                      {tech.level && (
+                        <span className="ml-1 font-semibold" title={tech.level.name}>
+                          {tech.level.code}
+                        </span>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </GlassCard>
+
+        {/* My Clients — self-assign which clients the user works for.
+            Hidden for CR-scoped identities: they only view standby for their
+            scoped teams and have no client-selection workflow. */}
+        {!isCRScoped && (
+          <MyClientsSection
+            assignedClientIds={user?.client_ids ?? []}
+            onAssignedChange={refreshUser}
+          />
+        )}
+
+        {/* CR User Scope — read-only team list managed by CR admin.
+            Shown only for CR users (non-admin with ControlRoomAccess),
+            not CR-only admins. CR admins manage scopes for others via
+            the access management page; they don't need a self-scope card. */}
+        {isCRUser && <CRScopeCard />}
+
+        {/* Row 2 pair: Notification Preferences | Client Assignment. For
+            TLs both cards sit side by side; for everyone else (no Client
+            Assignment card) Notification Preferences takes the full row so
+            no half-width hole is left. */}
+        {notificationsActive &&
+          !isCRScoped &&
+          (isTeamLeader ? (
+            <NotificationPreferencesSection />
+          ) : (
+            <div className="lg:col-span-2">
+              <NotificationPreferencesSection />
             </div>
+          ))}
+
+        {/* TL Client Assignment — TLs assign team members to clients (mockup
+            TL/settings.html). Paired with Notification Preferences above.
+            Hidden for CR-scoped identities (no client workflow) and non-TLs;
+            self-service MyClientsSection above is untouched
+            (last-write-wins). */}
+        {isTeamLeader && !isCRScoped && <ClientAssignmentSection />}
+      </div>
+
+      {/* Change Password — opens in a FormDialog (dialog contract: scroll
+          region, header/footer, labels wired via htmlFor/id). The backend
+          endpoint is not implemented yet; validation behavior is unchanged. */}
+      <FormDialog
+        open={passwordOpen}
+        onOpenChange={setPasswordOpen}
+        title="Change Password"
+        description="Choose a new password for your account."
+        onSubmit={handlePasswordChange}
+        submitLabel="Update Password"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="password-current">Current Password</Label>
+            <Input
+              id="password-current"
+              type="password"
+              autoComplete="current-password"
+              value={passwordForm.current}
+              onChange={(e) => setPasswordForm((f) => ({ ...f, current: e.target.value }))}
+              required
+            />
           </div>
-          <div className="flex flex-wrap gap-2 pt-2">
-            {getRoleBadges().map((role) => (
-              <Badge key={role} variant="secondary">
-                {role}
-              </Badge>
-            ))}
-            {getRoleBadges().length === 0 && <Badge variant="outline">User</Badge>}
+          <div className="space-y-2">
+            <Label htmlFor="password-new">New Password</Label>
+            <Input
+              id="password-new"
+              type="password"
+              autoComplete="new-password"
+              value={passwordForm.new}
+              onChange={(e) => setPasswordForm((f) => ({ ...f, new: e.target.value }))}
+              required
+            />
           </div>
-        </CardContent>
-      </GlassCard>
-
-      {/* Theme Card */}
-      <GlassCard delay={0.05}>
-        <CardHeader>
-          <CardTitle>Appearance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ThemeToggle />
-        </CardContent>
-      </GlassCard>
-
-      {/* CR User Scope — read-only team list managed by CR admin.
-          CR users don't self-assign clients (no overtime/KPI uploads),
-          so MyClientsSection is hidden for them. Their team scope is
-          assigned by a CR admin or full admin via the access management
-          page. See CONTEXT.md rule 11. */}
-      {/* CR User Scope — read-only team list managed by CR admin.
-          Shown only for CR users (non-admin with ControlRoomAccess),
-          not CR-only admins. CR admins manage scopes for others via
-          the access management page; they don't need a self-scope card. */}
-      {isCRUser && <CRScopeCard />}
-
-      {/* My Clients — self-assign which clients the user works for.
-          Hidden for CR-scoped identities: they only view standby for their
-          scoped teams and have no client-selection workflow. */}
-      {!isCRScoped && (
-        <MyClientsSection
-          assignedClientIds={user?.client_ids ?? []}
-          onAssignedChange={refreshUser}
-        />
-      )}
-
-      {/* TL Client Assignment — TLs assign team members to clients (mockup
-          TL/settings.html). Hidden for CR-scoped identities (no client
-          workflow) and non-TLs; self-service MyClientsSection above is
-          untouched (last-write-wins). */}
-      {isTeamLeader && !isCRScoped && <ClientAssignmentSection />}
-
-      {notificationsActive && !isCRScoped && <NotificationPreferencesSection />}
-
-      {/* Password Card */}
-      <GlassCard delay={0.1}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5" />
-            Change Password
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handlePasswordChange} className="space-y-3">
-            <div>
-              <Label htmlFor="password-current">Current Password</Label>
-              <Input
-                id="password-current"
-                type="password"
-                value={passwordForm.current}
-                onChange={(e) => setPasswordForm((f) => ({ ...f, current: e.target.value }))}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="password-new">New Password</Label>
-              <Input
-                id="password-new"
-                type="password"
-                value={passwordForm.new}
-                onChange={(e) => setPasswordForm((f) => ({ ...f, new: e.target.value }))}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="password-confirm">Confirm New Password</Label>
-              <Input
-                id="password-confirm"
-                type="password"
-                value={passwordForm.confirm}
-                onChange={(e) => setPasswordForm((f) => ({ ...f, confirm: e.target.value }))}
-                required
-              />
-            </div>
-            <Button type="submit">Update Password</Button>
-          </form>
-        </CardContent>
-      </GlassCard>
+          <div className="space-y-2">
+            <Label htmlFor="password-confirm">Confirm New Password</Label>
+            <Input
+              id="password-confirm"
+              type="password"
+              autoComplete="new-password"
+              value={passwordForm.confirm}
+              onChange={(e) => setPasswordForm((f) => ({ ...f, confirm: e.target.value }))}
+              required
+            />
+          </div>
+        </div>
+      </FormDialog>
 
       {/* Logout Card */}
       <GlassCard delay={0.15}>

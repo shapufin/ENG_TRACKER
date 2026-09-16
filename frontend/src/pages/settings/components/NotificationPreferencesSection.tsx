@@ -115,8 +115,11 @@ export const NotificationPreferencesSection: React.FC = () => {
                 key={preference.event_type}
                 className="flex flex-col gap-3 rounded-lg border border-border/70 p-3 sm:flex-row sm:items-center sm:justify-between"
               >
-                <span className="text-sm font-medium">{preference.label}</span>
-                <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
+                <span className="text-sm font-medium sm:flex-1">{preference.label}</span>
+                {/* Fixed-width switch block: well widths (and therefore the
+                    switch columns) stay identical on every row no matter how
+                    long the row label runs. */}
+                <div className="grid w-full gap-2 sm:w-[452px] sm:shrink-0 sm:grid-cols-2">
                   <SwitchField
                     id={`${preference.event_type}-in-app`}
                     label="In-app"

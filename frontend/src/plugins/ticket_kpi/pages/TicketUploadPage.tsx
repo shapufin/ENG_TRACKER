@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from "react";
+﻿import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/layout/PageShell";
 import { UploadForm } from "../components/UploadForm";
@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import type { UploadPreview } from "../types/ticketKPI";
 import type { Client } from "@/types";
+import { getLastUploadSelection, saveLastUploadSelection } from "../utils/lastUploadSelection";
 
 export const TicketUploadPage: React.FC = () => {
   const qc = useQueryClient();
@@ -21,6 +22,10 @@ export const TicketUploadPage: React.FC = () => {
   const [selectedClientIds, setSelectedClientIds] = useState<number[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [detectedColumns, setDetectedColumns] = useState<string[]>([]);
+  const [mappingOverrides, setMappingOverrides] = useState<Record<string, string>>({});
+  const [saveMappingOverrides, setSaveMappingOverrides] = useState(false);
+  const [isRemapping, setIsRemapping] = useState(false);
 
   const { data: profiles } = useQuery({
     queryKey: ["ticket_kpi", "profiles"],
@@ -43,9 +48,54 @@ export const TicketUploadPage: React.FC = () => {
     return (allClients ?? []).filter((c) => allowed.has(c.id));
   }, [allClients, user?.client_ids]);
 
+  const selectedProfile = useMemo(
+    () => profiles?.find((p) => p.id === selectedProfileId) ?? null,
+    [profiles, selectedProfileId]
+  );
+
+  // Persisting a mapping fix back onto the shared profile affects every
+  // future upload against it, so only the profile's creator or an admin may
+  // opt into "save this mapping" — matches the backend check in
+  // TicketUploadViewSet.import_batch.
+  const canSaveMapping = Boolean(
+    user && (user.is_staff || user.is_superuser || (selectedProfile && selectedProfile.created_by === user.id))
+  );
+
+  const currentMapping =
+    preview?.effective_field_mapping ?? selectedProfile?.field_mapping ?? mappingOverrides;
+
+  // Pre-fill from the last upload's profile + clients once both lists have
+  // loaded, so a monthly re-upload for the same client doesn't repeat the
+  // same two clicks every time. Runs once (guarded by the ref) — after that,
+  // the user's own choices must win, not a stale localStorage read racing a
+  // slow second query.
+  const appliedLastSelection = useRef(false);
+  useEffect(() => {
+    if (appliedLastSelection.current) return;
+    // Gate on the queries having settled, not on non-empty results — a user
+    // with zero assigned clients is a valid state, not "still loading".
+    if (!user?.id || !profiles || !allClients) return;
+    appliedLastSelection.current = true;
+    const last = getLastUploadSelection(
+      user.id,
+      new Set(profiles.map((p) => p.id)),
+      new Set(clients.map((c) => c.id))
+    );
+    if (!last) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- one-time hydration
+       from localStorage once the profile/client queries resolve; there is
+       no way to know this until those async results arrive. */
+    if (last.profileId !== null) setSelectedProfileId(last.profileId);
+    if (last.clientIds.length > 0) setSelectedClientIds(last.clientIds);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [user?.id, profiles, allClients, clients]);
+
   const handleFileAccepted = (f: File) => {
     setFile(f);
     setPreview(null);
+    setDetectedColumns([]);
+    setMappingOverrides({});
+    setSaveMappingOverrides(false);
   };
 
   const handleClientToggle = (clientId: number, checked: boolean) => {
@@ -56,11 +106,24 @@ export const TicketUploadPage: React.FC = () => {
 
   // fallow-ignore-next-line complexity
   const handleAnalyze = async () => {
-    if (!file || !month) return;
+    if (!file) return;
     setIsAnalyzing(true);
     try {
       const { data } = await ticketKPIService.analyzeFile(file);
       toast.success(`Analyzed ${data.total_rows} rows`);
+      setDetectedColumns(data.detected_columns || []);
+
+      // The file's own dates usually say what month this is — no need to
+      // make the user pick it before they can even see what's in the file.
+      // An explicit choice already made is never overridden.
+      const suggestedMonth = data.suggested_month?.slice(0, 7);
+      const resolvedMonth = month || suggestedMonth || "";
+      if (!resolvedMonth) {
+        toast.error("Could not detect the month from the file. Please select one.");
+        setIsAnalyzing(false);
+        return;
+      }
+      if (!month) setMonth(resolvedMonth);
 
       const profileId = selectedProfileId ?? data.suggested_profile?.id ?? null;
       if (!profileId) {
@@ -70,7 +133,7 @@ export const TicketUploadPage: React.FC = () => {
       }
       setSelectedProfileId(profileId);
 
-      const monthDate = `${month}-01`;
+      const monthDate = `${resolvedMonth}-01`;
       const previewRes = await ticketKPIService.previewUpload(file, profileId, monthDate);
       setPreview(previewRes.data);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,6 +141,28 @@ export const TicketUploadPage: React.FC = () => {
       toast.error(err.response?.data?.error || "Analyze failed");
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleRemapPreview = async (mapping: Record<string, string>) => {
+    if (!file || !month || !selectedProfileId) return;
+    setIsRemapping(true);
+    try {
+      const monthDate = `${month}-01`;
+      const previewRes = await ticketKPIService.previewUpload(
+        file,
+        selectedProfileId,
+        monthDate,
+        mapping
+      );
+      setPreview(previewRes.data);
+      setMappingOverrides(mapping);
+      toast.success("Mapping updated");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Could not re-preview with this mapping");
+    } finally {
+      setIsRemapping(false);
     }
   };
 
@@ -92,13 +177,24 @@ export const TicketUploadPage: React.FC = () => {
         selectedProfileId,
         monthDate,
         override,
-        selectedClientIds
+        selectedClientIds,
+        mappingOverrides,
+        saveMappingOverrides
       );
       toast.success(`Imported ${data.record_count} tickets for ${data.month}`);
+      if (user?.id) {
+        saveLastUploadSelection(user.id, {
+          profileId: selectedProfileId,
+          clientIds: selectedClientIds,
+        });
+      }
       setFile(null);
       setPreview(null);
       setSelectedProfileId(null);
       setMonth("");
+      setDetectedColumns([]);
+      setMappingOverrides({});
+      setSaveMappingOverrides(false);
       qc.invalidateQueries({ queryKey: ["ticket_kpi", "my_batches"] });
       qc.invalidateQueries({ queryKey: ["ticket_kpi", "dashboard"] });
       qc.invalidateQueries({ queryKey: ["ticket_kpi", "team_summary"] });
@@ -141,7 +237,18 @@ export const TicketUploadPage: React.FC = () => {
         />
 
         {preview && (
-          <UploadPreviewPanel preview={preview} onImport={handleImport} isImporting={isImporting} />
+          <UploadPreviewPanel
+            preview={preview}
+            onImport={handleImport}
+            isImporting={isImporting}
+            detectedColumns={detectedColumns}
+            currentMapping={currentMapping}
+            onRemap={handleRemapPreview}
+            isRemapping={isRemapping}
+            canSaveMapping={canSaveMapping}
+            saveMappingOverrides={saveMappingOverrides}
+            onSaveMappingOverridesChange={setSaveMappingOverrides}
+          />
         )}
       </div>
     </PageShell>

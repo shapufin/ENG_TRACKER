@@ -48,8 +48,19 @@ def read_tabular_file(file_bytes: bytes, filename: str = '') -> pd.DataFrame:
 
 
 def normalize_columns(df_columns: List[str]) -> Dict[str, str]:
-    """Return a lowercase/stripped lookup map from original column names."""
-    return {c.lower().strip(): c for c in df_columns}
+    """Return a lowercase/stripped lookup map from original column names.
+
+    Strips a trailing "*" (the required-column marker downloadable templates
+    append to a field's label, e.g. "Name *") so a filled-in template still
+    auto-detects against the plain alias list ("name") on re-upload.
+    """
+    lookup: Dict[str, str] = {}
+    for c in df_columns:
+        key = c.lower().strip()
+        if key.endswith('*'):
+            key = key[:-1].strip()
+        lookup[key] = c
+    return lookup
 
 
 def suggest_mapping(

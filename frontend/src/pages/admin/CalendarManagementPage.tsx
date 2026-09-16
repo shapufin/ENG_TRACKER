@@ -1,6 +1,7 @@
 import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoadingCard } from "@/components/ui/LoadingCard";
+import { PageShell } from "@/components/layout/PageShell";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -92,38 +93,30 @@ export const CalendarManagementPage: React.FC = () => {
     );
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="space-y-6">
-        <div className="flex flex-col gap-5 border-b border-line-subtle pb-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-              Calendar Administration
-            </p>
-            <h1 className="mt-2 text-2xl font-black tracking-tight">Team Calendar Groups</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Assign calendar groups to teams so they can view each other's leave, overtime, and
-              standby entries
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            className="h-12 rounded-2xl border-border bg-muted/50"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["admin"] })}
-          >
-            <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-        </div>
-
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-6">
+    <PageShell
+      category="Calendar Administration"
+      title="Team Calendar Groups"
+      subtitle="Assign calendar groups to teams so they can view each other's leave, overtime, and standby entries"
+      actions={
+        <Button
+          variant="outline"
+          className="h-9 rounded-xl border-border bg-muted/50"
+          onClick={() => queryClient.invalidateQueries({ queryKey: ["admin"] })}
+        >
+          <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
+        </Button>
+      }
+    >
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
           <TabsList className="bg-card">
             <TabsTrigger value="team-groups">Team Calendar Groups</TabsTrigger>
             <TabsTrigger value="workspaces">Calendar Workspaces</TabsTrigger>
             <TabsTrigger value="holidays">Holidays</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="team-groups" className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.6fr_0.8fr]">
+          <TabsContent value="team-groups" className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.6fr_0.8fr]">
               <CalendarGroupInfoCard
                 icon={Share2}
                 trackingLabel="How calendar sharing works"
@@ -147,7 +140,7 @@ export const CalendarManagementPage: React.FC = () => {
             </div>
 
             {groupStats && (
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <CalendarGroupStatsCard
                   title="Active Calendar Groups"
                   value={groupStats.active_groups}
@@ -169,9 +162,11 @@ export const CalendarManagementPage: React.FC = () => {
             )}
 
             {(calendarGroups?.length ?? 0) > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-semibold">Shared Calendar Groups</h2>
-                <div className="grid gap-4">
+              <div className="space-y-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Shared Calendar Groups
+                </h2>
+                <div className="grid gap-3">
                   {calendarGroups?.map((group) => (
                     <CalendarGroupCard
                       key={group.calendar_group}
@@ -193,26 +188,26 @@ export const CalendarManagementPage: React.FC = () => {
               </div>
             )}
 
-            <GlassCard isHoverLift={false} className="p-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <GlassCard isHoverLift={false} className="p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="text-sm font-medium">
                   {selectedTeams.size} team{selectedTeams.size === 1 ? "" : "s"} selected
                 </div>
-                <div className="flex flex-1 flex-wrap items-center gap-3">
+                <div className="flex flex-1 flex-wrap items-center gap-2">
                   <Input
                     value={bulkGroup}
                     onChange={(e) => setBulkGroup(e.target.value)}
                     placeholder="Enter group name (e.g., msc-siae-shared)"
-                    className="h-12 w-full max-w-[280px] rounded-2xl border-border bg-muted/50"
+                    className="h-9 w-full max-w-[280px] rounded-xl border-border bg-muted/50"
                   />
                   <Button
                     onClick={handleBulkApplyIntent}
                     disabled={!bulkGroup.trim() || selectedTeams.size === 0}
-                    className="h-12 rounded-2xl bg-primary hover:bg-primary/80"
+                    className="h-9 rounded-xl bg-primary hover:bg-primary/80"
                   >
                     <Plus className="mr-2 h-4 w-4" /> Apply to selected
                   </Button>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     Teams in the same group can view each other's entries.
                   </div>
                 </div>
@@ -229,14 +224,14 @@ export const CalendarManagementPage: React.FC = () => {
             />
           </TabsContent>
 
-          <TabsContent value="workspaces" className="space-y-6">
-            <GlassCard isHoverLift={false} className="p-6">
-              <h2 className="text-2xl font-semibold">Calendar Workspaces</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
+          <TabsContent value="workspaces" className="space-y-4">
+            <GlassCard isHoverLift={false} className="p-5">
+              <h2 className="text-lg font-semibold">Calendar Workspaces</h2>
+              <p className="mt-1.5 text-sm text-muted-foreground">
                 Advanced calendar workspaces with fine-grained permissions. For simple team sharing,
                 use the Team Calendar Groups tab.
               </p>
-              <div className="mt-4">
+              <div className="mt-3">
                 <Badge variant="outline" className="border-primary/30 text-primary">
                   Coming Soon
                 </Badge>
@@ -244,14 +239,14 @@ export const CalendarManagementPage: React.FC = () => {
             </GlassCard>
           </TabsContent>
 
-          <TabsContent value="holidays" className="space-y-6">
-            <GlassCard isHoverLift={false} className="p-6">
+          <TabsContent value="holidays" className="space-y-4">
+            <GlassCard isHoverLift={false} className="p-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase text-muted-foreground">
                     Holiday Catalog
                   </p>
-                  <h3 className="text-xl font-semibold">Global & Workspace Holidays</h3>
+                  <h3 className="text-lg font-semibold">Global & Workspace Holidays</h3>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <PluginImportButton
@@ -378,7 +373,6 @@ export const CalendarManagementPage: React.FC = () => {
           onUpdateTeam={(id, payload) => updateTeamMutation.mutate({ id, payload })}
           isPending={updateTeamMutation.isPending}
         />
-      </div>
-    </div>
+    </PageShell>
   );
 };

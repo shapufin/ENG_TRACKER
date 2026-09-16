@@ -76,6 +76,7 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
         onSetViewMode={onSetViewMode}
         onToggleFullscreen={data.handleToggleFullscreen}
         onClearWorkspaceSelection={data.handleClearWorkspaceSelection}
+        onRequestTimeOff={data.openBookingDialog}
       />
 
       {isMobile && (

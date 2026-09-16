@@ -3,6 +3,11 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { SkillsTeamFilters } from "./SkillsTeamFilters";
 import type { SkillCategory, SkillCoverage } from "../types/skills";
 
+vi.mock("@tanstack/react-query", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-query")>();
+  return { ...actual, useQuery: () => ({ data: undefined }) };
+});
+
 // Mock Dialog to render content inline (always open) for testability.
 vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children }: any) => <div>{children}</div>,
@@ -103,5 +108,13 @@ describe("SkillsTeamFilters", () => {
     // Mobile reset is a full-width button.
     const resetButtons = screen.getAllByRole("button", { name: "Reset filters" });
     expect(resetButtons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows the proficiency legend inline on desktop and inside the mobile dialog", () => {
+    const { rerender } = render(<SkillsTeamFilters {...baseProps} />);
+    expect(screen.getByRole("list", { name: "Proficiency level color legend" })).toBeInTheDocument();
+
+    rerender(<SkillsTeamFilters {...baseProps} isMobile filtersOpen />);
+    expect(screen.getByRole("list", { name: "Proficiency level color legend" })).toBeInTheDocument();
   });
 });

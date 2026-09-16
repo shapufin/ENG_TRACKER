@@ -101,9 +101,14 @@ export const UploadForm: React.FC<UploadFormProps> = ({
         clients={clients}
       />
 
-      <Button onClick={onAnalyze} disabled={!file || !month || isAnalyzing} className="w-full">
+      <Button onClick={onAnalyze} disabled={!file || isAnalyzing} className="w-full">
         {isAnalyzing ? "Analyzing..." : "Analyze & Preview"}
       </Button>
+      <p className="text-xs text-muted-foreground">
+        {month
+          ? null
+          : "No month selected yet — Analyze first, it usually finds one in the file."}
+      </p>
     </CardContent>
   </Card>
 );

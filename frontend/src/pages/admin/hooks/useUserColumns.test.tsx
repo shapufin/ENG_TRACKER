@@ -84,8 +84,8 @@ describe("useUserColumns", () => {
             original: profile({
               techs: [1, 2],
               techs_detail: [
-                { id: 1, name: "Infrastructure", code: "INFRA", is_active: true },
-                { id: 2, name: "Database", code: "DB", is_active: true },
+                { id: 1, name: "Infrastructure", code: "INFRA", level: null },
+                { id: 2, name: "Database", code: "DB", level: null },
               ],
             }),
           },
@@ -95,6 +95,35 @@ describe("useUserColumns", () => {
 
     expect(screen.getByText("Infrastructure")).toBeInTheDocument();
     expect(screen.getByText("Database")).toBeInTheDocument();
+  });
+
+  it("renders the held level code alongside the Tech name", () => {
+    const { result } = renderHook(() => useUserColumns(vi.fn(), vi.fn(), vi.fn()));
+    const column = result.current.find((item) => item.id === "techs");
+    const cell = column?.cell as (context: { row: { original: UserProfile } }) => React.ReactNode;
+
+    render(
+      <>
+        {cell({
+          row: {
+            original: profile({
+              techs: [1],
+              techs_detail: [
+                {
+                  id: 1,
+                  name: "Infrastructure",
+                  code: "INFRA",
+                  level: { id: 5, name: "Level 3", code: "L3", rank: 3 },
+                },
+              ],
+            }),
+          },
+        })}
+      </>
+    );
+
+    expect(screen.getByText("Infrastructure")).toBeInTheDocument();
+    expect(screen.getByText("L3")).toBeInTheDocument();
   });
 
   it("renders em-dash when user has no Tech assignments", () => {

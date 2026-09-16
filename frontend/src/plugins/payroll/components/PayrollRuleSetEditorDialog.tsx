@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { FormDialog } from "@/components/ui/FormDialog";
+import { ModalSection } from "@/components/ui/ModalSection";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import {
   Select,
   SelectContent,
@@ -388,112 +390,122 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
       )}
       {form && (
         <>
-          <section className="space-y-4 rounded-lg border border-border/70 p-4">
+          <ModalSection
+            title="Calculation identity"
+            description="Name and version this calculation so it's easy to find later."
+            columns={2}
+          >
+            {(
+              [
+                ["name", "Calculation name", "Example: Albania 2026 payroll"],
+                ["code", "Short Code (unique ID)", "Unique identifier for this calculation"],
+                ["version", "Version", "Example: 2.0"],
+                ["source", "Rules source", "Example: Official guidance 2026"],
+              ] as const
+            ).map(([field, label, placeholder]) => (
+              <div key={field}>
+                <Label htmlFor={`rule-${field}`}>{label}</Label>
+                <Input
+                  id={`rule-${field}`}
+                  value={form[field]}
+                  placeholder={placeholder}
+                  onChange={(event) => updateParent(field, event.target.value)}
+                />
+              </div>
+            ))}
+          </ModalSection>
+
+          <ModalSection
+            title="When this applies"
+            description="The date range this calculation is used for payroll runs."
+            columns={1}
+          >
             <div>
-              <h3 className="font-semibold">Calculation Name & Version</h3>
-              <p className="text-sm text-muted-foreground">
-                Name this calculation so another administrator can recognize it later.
+              <Label htmlFor="rule-effective-range">Effective dates</Label>
+              <div className="mt-1">
+                <DateRangePicker
+                  id="rule-effective-range"
+                  ariaLabel="Effective dates"
+                  from={form.effective_from}
+                  to={form.effective_to ?? ""}
+                  onChange={({ from, to }) => {
+                    updateParent("effective_from", from);
+                    updateParent("effective_to", to || null);
+                  }}
+                />
+              </div>
+            </div>
+          </ModalSection>
+
+          <ModalSection title="Classification" columns={2}>
+            <div>
+              <Label htmlFor="rule-tax-profile">Tax profile</Label>
+              <Select
+                value={form.tax_profile}
+                onValueChange={(value) => updateParent("tax_profile", value)}
+              >
+                <SelectTrigger id="rule-tax-profile">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TAX_PROFILE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Which income-tax rule set to apply for this calculation.
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {(
-                [
-                  ["name", "Calculation name", "Example: Albania 2026 payroll"],
-                  ["code", "Short Code (unique ID)", "Unique identifier for this calculation"],
-                  ["version", "Version", "Example: 2.0"],
-                  ["source", "Rules source", "Example: Official guidance 2026"],
-                ] as const
-              ).map(([field, label, placeholder]) => (
-                <div key={field}>
-                  <Label htmlFor={`rule-${field}`}>{label}</Label>
-                  <Input
-                    id={`rule-${field}`}
-                    value={form[field]}
-                    placeholder={placeholder}
-                    onChange={(event) => updateParent(field, event.target.value)}
-                  />
-                </div>
-              ))}
-              <div>
-                <Label htmlFor="rule-effective-from">Effective from</Label>
-                <Input
-                  id="rule-effective-from"
-                  type="date"
-                  value={form.effective_from}
-                  onChange={(event) => updateParent("effective_from", event.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="rule-effective-to">Effective to (optional)</Label>
-                <Input
-                  id="rule-effective-to"
-                  type="date"
-                  value={form.effective_to ?? ""}
-                  onChange={(event) => updateParent("effective_to", event.target.value || null)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="rule-tax-profile">Tax profile</Label>
-                <Select
-                  value={form.tax_profile}
-                  onValueChange={(value) => updateParent("tax_profile", value)}
-                >
-                  <SelectTrigger id="rule-tax-profile">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TAX_PROFILE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="rule-country">Country</Label>
-                <Select
-                  value={form.country}
-                  onValueChange={(value) => updateParent("country", value)}
-                >
-                  <SelectTrigger id="rule-country">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COUNTRY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="rule-validation-status">Validation status</Label>
-                <Select
-                  value={form.validation_status}
-                  onValueChange={(value) => updateParent("validation_status", value)}
-                >
-                  <SelectTrigger id="rule-validation-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VALIDATION_STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <label className="flex items-center gap-2 pt-6 text-sm">
-                <Checkbox
-                  checked={form.is_active}
-                  onCheckedChange={(checked) => updateParent("is_active", checked === true)}
-                />
-                Set as active for new payroll runs
-              </label>
+            <div>
+              <Label htmlFor="rule-country">Country</Label>
+              <Select value={form.country} onValueChange={(value) => updateParent("country", value)}>
+                <SelectTrigger id="rule-country">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+            <div>
+              <Label htmlFor="rule-validation-status">Validation status</Label>
+              <Select
+                value={form.validation_status}
+                onValueChange={(value) => updateParent("validation_status", value)}
+              >
+                <SelectTrigger id="rule-validation-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VALIDATION_STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                How trustworthy these numbers are — mark "Official" once confirmed against a
+                government source.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 pt-6 text-sm">
+              <Checkbox
+                checked={form.is_active}
+                onCheckedChange={(checked) => updateParent("is_active", checked === true)}
+              />
+              Set as active for new payroll runs
+            </label>
+          </ModalSection>
+
+          <ModalSection title="Notes" columns={1}>
             <div>
               <Label htmlFor="rule-notes">Internal Notes</Label>
               <Textarea
@@ -503,16 +515,14 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
                 placeholder="Explain the source or assumptions behind these values."
               />
             </div>
-          </section>
+          </ModalSection>
 
-          <section className="space-y-4 rounded-lg border border-border/70 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-semibold">Income Tax Brackets</h3>
-                <p className="text-sm text-muted-foreground">
-                  Enter income limits in Lek. Tax rates are percentages, for example 13 means 13%.
-                </p>
-              </div>
+          <ModalSection
+            title="Income tax brackets"
+            description="Enter income limits in Lek. Tax rates are percentages, for example 13 means 13%."
+            columns={1}
+          >
+            <div className="flex justify-end">
               <Button
                 type="button"
                 variant="outline"
@@ -614,16 +624,14 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
               The last bracket should have no upper limit. Brackets must start at Lek 0 and have no
               gaps.
             </p>
-          </section>
+          </ModalSection>
 
-          <section className="space-y-4 rounded-lg border border-border/70 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-semibold">Social Security & Health Insurance</h3>
-                <p className="text-sm text-muted-foreground">
-                  Use percentages. A cap or floor limits the monthly income base, not the rate.
-                </p>
-              </div>
+          <ModalSection
+            title="Social Security & Health Insurance"
+            description="Use percentages. A cap or floor limits the monthly income base, not the rate."
+            columns={1}
+          >
+            <div className="flex justify-end">
               <Button
                 type="button"
                 variant="outline"
@@ -762,17 +770,14 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
                 </div>
               </div>
             ))}
-          </section>
+          </ModalSection>
 
-          <section className="space-y-4 rounded-lg border border-border/70 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-semibold">Overtime Pay Categories</h3>
-                <p className="text-sm text-muted-foreground">
-                  125% means 1.25 times the normal hourly wage. Night hours are whole hours from 0
-                  to 23.
-                </p>
-              </div>
+          <ModalSection
+            title="Overtime Pay Categories"
+            description="125% means 1.25 times the normal hourly wage. Night hours are whole hours from 0 to 23."
+            columns={1}
+          >
+            <div className="flex justify-end">
               <Button
                 type="button"
                 variant="outline"
@@ -950,7 +955,7 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
                 </div>
               </div>
             ))}
-          </section>
+          </ModalSection>
         </>
       )}
     </FormDialog>

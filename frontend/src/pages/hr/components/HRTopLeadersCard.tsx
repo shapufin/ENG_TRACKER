@@ -1,6 +1,7 @@
 import React from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { hoverLiftClass } from "@/lib/motion";
 
 interface LeaderItem {
   id: number;
@@ -30,7 +31,10 @@ export const HRTopLeadersCard: React.FC<HRTopLeadersCardProps> = ({ leaders }) =
     <CardContent>
       <div className="space-y-3">
         {leaders.slice(0, 5).map((l) => (
-          <div key={l.id} className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
+          <div
+            key={l.id}
+            className={`flex items-center justify-between rounded-lg bg-muted/50 p-3 ${hoverLiftClass}`}
+          >
             <div className="flex items-center gap-3">
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${rankClass(l.rank)}`}

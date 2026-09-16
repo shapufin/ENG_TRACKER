@@ -137,6 +137,72 @@ class BlankBooleanCellTests(TestCase):
         self.assertTrue(Client.objects.get(code="NEW").is_active)
 
 
+class PublicHolidayBlankBooleanCellTests(TestCase):
+    """A blank ``is_global`` cell must leave an existing holiday's scope
+    alone on update — it must not silently fall back to the create-time
+    default, which would flip a workspace-scoped holiday to global or
+    vice versa."""
+
+    def _import_and_update(self, existing_is_global, cell_value):
+        from apps.dashboard.models.calendar import PublicHoliday
+        from plugins.data_import.importers.public_holidays import PublicHolidayImporter
+
+        holiday = PublicHoliday.objects.create(
+            name="New Year's Day",
+            date="2026-01-01",
+            calendar=None,
+            country_code="IT",
+            is_global=existing_is_global,
+        )
+        PublicHolidayImporter().commit_row(
+            {
+                "__row_index": 1,
+                "name": "New Year's Day",
+                "date": "2026-01-01",
+                "country_code": "IT",
+                "workspace_name": "",
+                "is_global": cell_value,
+            },
+            {"update_existing": True},
+        )
+        holiday.refresh_from_db()
+        return holiday
+
+    def test_blank_is_global_cell_does_not_change_an_existing_global_holiday(self):
+        holiday = self._import_and_update(existing_is_global=True, cell_value=None)
+        self.assertTrue(holiday.is_global)
+
+    def test_blank_is_global_cell_does_not_change_an_existing_non_global_holiday(self):
+        holiday = self._import_and_update(existing_is_global=False, cell_value=None)
+        self.assertFalse(holiday.is_global)
+
+    def test_explicit_false_is_global_still_updates(self):
+        holiday = self._import_and_update(existing_is_global=True, cell_value=False)
+        self.assertFalse(holiday.is_global)
+
+    def test_explicit_true_is_global_still_updates(self):
+        holiday = self._import_and_update(existing_is_global=False, cell_value=True)
+        self.assertTrue(holiday.is_global)
+
+    def test_blank_is_global_on_a_new_holiday_still_defaults_from_workspace_presence(self):
+        from apps.dashboard.models.calendar import PublicHoliday
+        from plugins.data_import.importers.public_holidays import PublicHolidayImporter
+
+        PublicHolidayImporter().commit_row(
+            {
+                "__row_index": 1,
+                "name": "Republic Day",
+                "date": "2026-06-02",
+                "country_code": "IT",
+                "workspace_name": "",
+                "is_global": None,
+            },
+            {"update_existing": False},
+        )
+        holiday = PublicHoliday.objects.get(name="Republic Day")
+        self.assertTrue(holiday.is_global)
+
+
 class ProfileAndHistoryAuthorityTests(TestCase):
     """Profiles and batch history carry their target's authority."""
 
@@ -171,7 +237,7 @@ class ProfileAndHistoryAuthorityTests(TestCase):
         )
 
     def test_profiles_of_an_inaccessible_target_are_hidden(self):
-        names = {p["name"] for p in self._profiles(self.user).data["results"]}
+        names = {p["name"] for p in self._profiles(self.user).data}
         self.assertEqual(names, {"Skill map"})
 
     def test_history_of_an_inaccessible_target_is_hidden(self):
@@ -182,7 +248,7 @@ class ProfileAndHistoryAuthorityTests(TestCase):
         staff = User.objects.create_user(
             username="staff", email="staff@example.com", password="pw", is_staff=True
         )
-        self.assertEqual(len(self._profiles(staff).data["results"]), 2)
+        self.assertEqual(len(self._profiles(staff).data), 2)
         self.assertEqual(len(self._batches(staff).data), 2)
 
     def test_creating_a_profile_for_an_inaccessible_target_is_forbidden(self):

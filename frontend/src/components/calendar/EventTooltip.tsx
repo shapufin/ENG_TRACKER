@@ -1,5 +1,5 @@
 import React from "react";
-import { Calendar, Clock, User, MessageSquare } from "lucide-react";
+import { Calendar, Clock, Cpu, User, MessageSquare, Briefcase } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import type { CalendarEvent } from "./types";
 import { cn } from "@/lib/utils";
@@ -95,6 +95,18 @@ export const EventTooltip: React.FC<EventTooltipProps> = ({
                   <User className="h-3.5 w-3.5" />
                   <span className="font-medium">{event.userName}</span>
                 </button>
+              )}
+              {(event.userTechLevels?.length ?? 0) > 0 && (
+                <div className="flex items-center gap-2">
+                  <Cpu className="h-3.5 w-3.5" />
+                  <span>{event.userTechLevels!.join(" · ")}</span>
+                </div>
+              )}
+              {event.clientNames && event.clientNames.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Briefcase className="h-3.5 w-3.5" />
+                  <span>{event.clientNames.join(", ")}</span>
+                </div>
               )}
               {event.description && (
                 <div className="flex gap-2 rounded-lg border border-line-subtle bg-surface-sunken p-2">

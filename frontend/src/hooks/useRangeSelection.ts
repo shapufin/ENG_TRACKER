@@ -15,7 +15,7 @@ interface UseRangeSelectionReturn {
   handleRangeMove: (date: Date) => void;
   finalizeRangeSelection: (date?: Date) => void;
   handleSelectDate: (date: Date) => void;
-  applyRangeSelection: (start: Date, end: Date) => void;
+  applyRangeSelection: (start: Date, end: Date, notify?: boolean) => void;
 }
 
 export const useRangeSelection = (options?: UseRangeSelectionOptions): UseRangeSelectionReturn => {

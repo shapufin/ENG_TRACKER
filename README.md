@@ -218,29 +218,95 @@ PostgreSQL, and Redis. The deployment hardening plan lives at
 
 ### Quick deploy (Docker Compose)
 
+One command builds, migrates (the backend entrypoint runs
+`python manage.py migrate --noinput` automatically before starting gunicorn —
+see `docker/entrypoint.sh`), and starts every service:
+
+Optionally set `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_EMAIL`, and
+`DJANGO_SUPERUSER_PASSWORD` in `.env` to auto-create the first superuser on
+that same first start (`ensure_superuser` management command, run from the
+entrypoint right after migrations). No-op if unset, and safe to leave set
+permanently — it skips once the user already exists.
+
 ```bash
 # 1. Copy the env template and fill in real values
 cp .env.example .env
 #    Required: SECRET_KEY, ALLOWED_HOSTS, FRONTEND_URL, DB_PASSWORD,
 #              REDIS_PASSWORD (see .env.example for notes)
+#    Also required if using the Cloudflare Tunnel ingress below:
+#              CLOUDFLARE_TUNNEL_TOKEN
 
-# 2. Build and start all services
-docker compose up -d --build
+# 2. Build and start every service, including the tunnel
+docker compose --profile tunnel up -d --build
 
-# 3. Verify health
+# 3. Verify health (from the host — the frontend port is bound to
+#    127.0.0.1 only, see "Ingress" below)
 curl -f http://localhost:8080/api/health/ready/   # frontend -> backend
 ```
 
+Redeploying after a code change is the same command — `up -d --build` only
+rebuilds and restarts what changed, and migrations run again automatically
+(a no-op if there's nothing new to apply).
+
+Without `--profile tunnel` (e.g. while `cloudflared` isn't configured yet),
+drop that flag — everything else still comes up:
+
+```bash
+docker compose up -d --build
+```
+
+### Ingress: Cloudflare Tunnel now, Traefik planned later
+
+**Current setup — Cloudflare Tunnel.** The `cloudflared` service
+(`docker-compose.yml`, `tunnel` profile) makes an **outbound-only**
+connection to Cloudflare's edge — there is no inbound port to open or
+firewall. The frontend container's published port is bound to
+`127.0.0.1:8080` specifically so nothing on the public internet can bypass
+Cloudflare and hit the origin directly; `cloudflared` reaches it over the
+internal `frontend_net` docker network by service name
+(`http://frontend:8080`), never through that published port.
+
+Setup (one-time, in the Cloudflare dashboard — Zero Trust → Networks →
+Tunnels):
+1. Create a tunnel, name it whatever you like.
+2. Add a public hostname pointing at origin service `http://frontend:8080`.
+3. Copy the connector token it gives you into `.env` as
+   `CLOUDFLARE_TUNNEL_TOKEN`.
+4. `docker compose --profile tunnel up -d --build`.
+
+Cloudflare terminates TLS at its edge and always sets
+`X-Forwarded-Proto: https` and `CF-Connecting-IP` on what it forwards through
+the tunnel — `frontend/docker/nginx.conf` trusts and forwards both (see that
+file's comments) so Django sees the real client IP and scheme with no
+`NUM_PROXIES` change needed.
+
+**Later — Traefik.** When Traefik replaces the tunnel as the public
+entrypoint: drop the `cloudflared` service (and `--profile tunnel`), add
+Traefik as its own service on `frontend_net` with the usual
+`traefik.http.routers.*` labels on the `frontend` service, and update
+`nginx.conf`'s `set_real_ip_from`/`real_ip_header` to match Traefik's
+forwarded-header shape (`X-Forwarded-For`, not Cloudflare's
+`CF-Connecting-IP`) and its network/CIDR instead of `cloudflared`'s. The
+published port can go back to `0.0.0.0` (or be dropped) once Traefik is the
+sole public entrypoint.
+
+Either way, an upstream proxy **must** sit in front — see below.
+
 ### TLS / HTTPS — required
 
-This repo does **not** terminate TLS. An upstream proxy (Cloudflare, AWS
-ALB, nginx-with-certs, or Caddy) **must** sit in front of the frontend
-container and:
+This repo does **not** terminate TLS anywhere in the stack — `nginx.conf` has
+no `ssl` listener. Whatever sits in front (Cloudflare Tunnel today, an AWS
+ALB, nginx-with-certs, Caddy, or Traefik later) **must**:
 
-1. Terminate TLS on port 443 with a valid certificate.
-2. Forward traffic to the frontend container's published port (default 8080).
+1. Terminate TLS with a valid certificate.
+2. Reach the frontend container — via Cloudflare Tunnel's internal
+   `http://frontend:8080` (current setup, above), or by forwarding to the
+   published port if using an external proxy instead.
 3. Send `X-Forwarded-Proto: https` so Django detects HTTPS behind the proxy
    (`SECURE_PROXY_SSL_HEADER` is configured in `settings_production.py`).
+   `nginx.conf` forwards this header through unchanged rather than
+   substituting its own scheme — it has none to substitute correctly, since
+   it never terminates TLS itself.
 
 Without this, `SECURE_SSL_REDIRECT=True` either loops or JWTs/credentials
 traverse the network in cleartext, and secure cookies fail. HSTS is set by

@@ -22,10 +22,11 @@ import {
   useCreateUserSkill,
   useUpdateUserSkill,
   useDeleteUserSkill,
+  useSkillLevelLabels,
 } from "../hooks/useSkillsQueries";
 import { ProficiencyBadge } from "../components/ProficiencyBadge";
 import { AddSkillDialog } from "../components/AddSkillDialog";
-import { PROFICIENCY_LEVELS, levelDot, levelLabel } from "../utils/proficiencyLevels";
+import { PROFICIENCY_LEVELS, levelDot, resolveLevelLabel } from "../utils/proficiencyLevels";
 import type { UserSkill } from "../types/skills";
 
 /** 5-dot level indicator (filled dots = rating level). */
@@ -49,10 +50,13 @@ export const MySkillsPage: React.FC = () => {
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const { data, isLoading, error, refetch } = useUserSkills();
+  const { data, isLoading, error, refetch } = useUserSkills(
+    user?.id ? { user_id: user.id } : undefined
+  );
   const createMutation = useCreateUserSkill();
   const updateMutation = useUpdateUserSkill();
   const deleteMutation = useDeleteUserSkill();
+  const { data: levelLabels } = useSkillLevelLabels();
   const [removeTarget, setRemoveTarget] = useState<UserSkill | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -285,13 +289,13 @@ export const MySkillsPage: React.FC = () => {
                           >
                             <SelectTrigger className="min-h-11 w-auto min-w-[145px]">
                               <SelectValue>
-                                L{us.level} - {levelLabel(us.level)}
+                                L{us.level} - {resolveLevelLabel(us.level, levelLabels)}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               {PROFICIENCY_LEVELS.map((l) => (
                                 <SelectItem key={l.level} value={String(l.level)}>
-                                  {l.level} - {l.label}
+                                  {l.level} - {resolveLevelLabel(l.level, levelLabels)}
                                 </SelectItem>
                               ))}
                             </SelectContent>

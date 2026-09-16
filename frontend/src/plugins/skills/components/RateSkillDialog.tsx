@@ -8,7 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PROFICIENCY_LEVELS, levelColor, levelLabel } from "../utils/proficiencyLevels";
+import { PROFICIENCY_LEVELS, levelColor } from "../utils/proficiencyLevels";
+import { useSkillLevelLabels, resolveLevelLabel } from "../hooks/useSkillsQueries";
 import type { SkillRateTarget } from "./SkillsMemberList";
 
 interface RateSkillDialogProps {
@@ -26,6 +27,7 @@ export const RateSkillDialog: React.FC<RateSkillDialogProps> = ({
   onClose,
 }) => {
   const canIncrement = !!target && target.currentLevel < 5;
+  const { data: levelLabels } = useSkillLevelLabels();
   return (
     <Dialog open={!!target} onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="sm" className="border-border/70">
@@ -43,7 +45,7 @@ export const RateSkillDialog: React.FC<RateSkillDialogProps> = ({
                 <span
                   className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-semibold ${levelColor(target.currentLevel)}`}
                 >
-                  L{target.currentLevel} — {levelLabel(target.currentLevel)}
+                  L{target.currentLevel} — {resolveLevelLabel(target.currentLevel, levelLabels)}
                 </span>
               </p>
             </div>
@@ -71,6 +73,7 @@ export const RateSkillDialog: React.FC<RateSkillDialogProps> = ({
               <div role="group" aria-labelledby="rate-tier-label" className="space-y-2">
                 {PROFICIENCY_LEVELS.map((l) => {
                   const selected = target.currentLevel === l.level;
+                  const label = resolveLevelLabel(l.level, levelLabels);
                   return (
                     <button
                       key={l.level}
@@ -78,7 +81,7 @@ export const RateSkillDialog: React.FC<RateSkillDialogProps> = ({
                       onClick={() => onSubmit(l.level)}
                       disabled={isPending}
                       aria-pressed={selected}
-                      aria-label={`L${l.level} ${l.label}`}
+                      aria-label={`L${l.level} ${label}`}
                       className={`flex min-h-[44px] w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${
                         selected
                           ? "border-primary/60 bg-card text-foreground shadow-sm ring-2 ring-primary/20"
@@ -91,7 +94,7 @@ export const RateSkillDialog: React.FC<RateSkillDialogProps> = ({
                       >
                         L{l.level}
                       </span>
-                      <span className="text-xs font-semibold">{l.label}</span>
+                      <span className="text-xs font-semibold">{label}</span>
                       {selected && (
                         <span
                           aria-hidden="true"

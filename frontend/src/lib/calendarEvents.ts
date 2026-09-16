@@ -54,9 +54,15 @@ export const buildCalendarEvents = (
         status: log.status as CalendarEvent["status"],
         userId: log.user,
         userName: resolveUserName(userLookup, log.user, log.user_name),
+        // Standby only: a shift is where the on-call grade matters. Leave
+        // events deliberately carry no tech level.
+        userTechLevels: log.user_tech_levels,
         hours: log.hours,
         description: log.description,
-        compactLabel: `Standby (${log.hours}h)`,
+        clientNames: log.client_names,
+        compactLabel: log.client_names?.length
+          ? `Standby (${log.hours}h) · ${log.client_names.join(", ")}`
+          : `Standby (${log.hours}h)`,
       });
     });
   }

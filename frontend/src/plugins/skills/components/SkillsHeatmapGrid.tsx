@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
-import { levelHeat, levelLabel } from "../utils/proficiencyLevels";
+import { levelHeat } from "../utils/proficiencyLevels";
+import { useSkillLevelLabels, resolveLevelLabel } from "../hooks/useSkillsQueries";
 import { groupSkillsByCategory } from "../utils/skillMatrixSelectors";
 import { avgTone, categoryAccent } from "../utils/categoryAccents";
 import { useSkillsGridActivation } from "../hooks/useSkillsGridActivation";
@@ -43,6 +44,7 @@ export const SkillsHeatmapGrid: React.FC<SkillsHeatmapGridProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
+  const { data: levelLabels } = useSkillLevelLabels();
 
   const categoryGroups = useMemo(() => groupSkillsByCategory(renderedCoverage), [renderedCoverage]);
 
@@ -280,7 +282,7 @@ export const SkillsHeatmapGrid: React.FC<SkillsHeatmapGridProps> = ({
                             }}
                             className={`inline-flex w-full items-center justify-center rounded-sm border border-transparent transition-all hover:z-10 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${CELL_HEIGHT} ${levelHeat(skillData.level)}`}
                             aria-label={label}
-                            title={`${row.username} ${colData.skill_name}: L${skillData.level} — ${levelLabel(skillData.level)}`}
+                            title={`${row.username} ${colData.skill_name}: L${skillData.level} — ${resolveLevelLabel(skillData.level, levelLabels)}`}
                           />
                         </div>
                       );

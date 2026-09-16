@@ -4,6 +4,7 @@ import type { PaginatedResponse } from "@/types";
 import type {
   ExportProfile,
   TicketImportBatch,
+  BulkReviewResult,
   UploadPreview,
   AnalyzeResponse,
   MonthlyKPI,
@@ -109,11 +110,19 @@ export const ticketKPIService = {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
-  previewUpload: (file: File, profileId: number, month: string) => {
+  previewUpload: (
+    file: File,
+    profileId: number,
+    month: string,
+    fieldMappingOverrides?: Record<string, string>
+  ) => {
     const form = new FormData();
     form.append("file", file);
     form.append("profile_id", String(profileId));
     form.append("month", month);
+    if (fieldMappingOverrides && Object.keys(fieldMappingOverrides).length > 0) {
+      form.append("field_mapping_overrides", JSON.stringify(fieldMappingOverrides));
+    }
     return api.post<UploadPreview>("/plugins/ticket_kpi/upload/preview/", form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -123,7 +132,9 @@ export const ticketKPIService = {
     profileId: number,
     month: string,
     override: boolean,
-    clientIds?: number[]
+    clientIds?: number[],
+    fieldMappingOverrides?: Record<string, string>,
+    saveMappingOverrides?: boolean
   ) => {
     const form = new FormData();
     form.append("file", file);
@@ -132,6 +143,12 @@ export const ticketKPIService = {
     form.append("override", String(override));
     if (clientIds && clientIds.length > 0) {
       form.append("client_ids", clientIds.join(","));
+    }
+    if (fieldMappingOverrides && Object.keys(fieldMappingOverrides).length > 0) {
+      form.append("field_mapping_overrides", JSON.stringify(fieldMappingOverrides));
+      if (saveMappingOverrides) {
+        form.append("save_mapping_overrides", "true");
+      }
     }
     return api.post<{
       batch_id: number;
@@ -158,6 +175,14 @@ export const ticketKPIService = {
   deleteBatch: (id: number) => api.delete(`/plugins/ticket_kpi/upload/${id}/delete_batch/`),
   deleteTeamBatch: (id: number) =>
     api.delete(`/plugins/ticket_kpi/upload/${id}/delete_team_batch/`),
+  reviewBatch: (id: number) =>
+    api.post<{ message: string; reviewed_at: string; reviewed_by: string }>(
+      `/plugins/ticket_kpi/upload/${id}/review_batch/`
+    ),
+  bulkReviewBatches: (batchIds: number[]) =>
+    api.post<BulkReviewResult>("/plugins/ticket_kpi/upload/bulk_review_batches/", {
+      batch_ids: batchIds,
+    }),
 
   // Dashboard
   getMonthlySummary: (month: string, userId?: number, compareMonth?: string) =>

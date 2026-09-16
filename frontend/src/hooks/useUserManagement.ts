@@ -9,6 +9,12 @@ interface UseUserManagementOptions {
   onCreateSuccess?: () => void;
   onResetSuccess?: () => void;
   onDeleteSuccess?: () => void;
+  /** Server-side role tab + tech chip selection. Must be included in every
+   * result-changing React Query key so filtered results/counts never go stale. */
+  role?: string;
+  techIds?: number[];
+  techLevelIds?: number[];
+  noTechOnly?: boolean;
 }
 
 /**
@@ -19,6 +25,15 @@ interface UseUserManagementOptions {
  */
 export const useUserManagement = (options?: UseUserManagementOptions) => {
   const qc = useQueryClient();
+  const role = options?.role && options.role !== "all" ? options.role : undefined;
+  const techIds = options?.techIds ?? [];
+  const techLevelIds = options?.techLevelIds ?? [];
+  const noTechOnly = options?.noTechOnly ?? false;
+  // Comma-joined, not a bare array: axios serializes array params as
+  // `tech[]=1`, which doesn't match DRF's `getlist('tech')` on the backend.
+  const techParam = !noTechOnly && techIds.length > 0 ? techIds.join(",") : undefined;
+  const techLevelParam =
+    !noTechOnly && techLevelIds.length > 0 ? techLevelIds.join(",") : undefined;
 
   const {
     data: profiles,
@@ -26,10 +41,24 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
     isError: isProfilesError,
     error: profilesError,
   } = useQuery({
-    queryKey: ["admin", "profiles"],
-    queryFn: () => userService.getProfiles(),
+    queryKey: ["admin", "profiles", { role, techIds, techLevelIds, noTechOnly }],
+    queryFn: () =>
+      userService.getProfiles({
+        role,
+        tech: techParam,
+        tech_level: techLevelParam,
+        no_tech: noTechOnly || undefined,
+      }),
     refetchOnMount: true,
     staleTime: 300000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: techFacets } = useQuery({
+    queryKey: ["admin", "profiles", "tech-facets", { role }],
+    queryFn: () => userService.getTechFacets({ role }),
+    refetchOnMount: true,
+    staleTime: 60000,
     refetchOnWindowFocus: false,
   });
 
@@ -42,7 +71,7 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
   });
 
   const { data: techs } = useQuery({
-    queryKey: ["admin", "techs"],
+    queryKey: ["admin", "techs", "active"],
     queryFn: () => userService.getTechs({ is_active: true }),
     refetchOnMount: true,
     staleTime: 300000,
@@ -126,8 +155,11 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
 
   return {
     profiles: profiles?.results ?? [],
+    profilesCount: profiles?.count ?? 0,
     teams: teams?.results ?? [],
     techs: techs?.results ?? [],
+    techFacets: techFacets?.techs ?? [],
+    noTechCount: techFacets?.no_tech_count ?? 0,
     italianTLs,
     albanianTLs,
     stats,

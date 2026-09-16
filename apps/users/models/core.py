@@ -5,11 +5,12 @@ This module contains models for user management, teams, and user profiles.
 """
 
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from core.models.abstract import BaseModel
+from core.models.abstract import BaseModel, TimeStampedModel
 
 
 class Tech(BaseModel):
@@ -39,6 +40,130 @@ class Tech(BaseModel):
         if self.code:
             self.code = self.code.upper()
         super().save(*args, **kwargs)
+
+
+class TechLevel(TimeStampedModel):
+    """An ordered grade within one Tech (Infrastructure L1/L2/L3).
+
+    The scale is per-Tech and admin-managed from the GUI, so adding a grade
+    never needs a migration. ``rank`` is a real integer rather than a display
+    order so "L2 and above" is an indexed comparison, not client-side sorting.
+
+    ``TimeStampedModel``, not ``BaseModel``: soft delete is wrong here for the
+    same reason it is wrong on ``UserTech``. FK reads do not filter
+    ``is_deleted``, so a soft-deleted level would stay referenced by every
+    ``UserTech`` row and keep reading as somebody's current grade. Hard delete
+    plus ``on_delete=SET_NULL`` already gives the correct "retire a grade,
+    keep the assignment" behaviour.
+    """
+    tech = models.ForeignKey(
+        Tech,
+        on_delete=models.CASCADE,
+        related_name='levels',
+    )
+    name = models.CharField(max_length=50)
+    code = models.CharField(max_length=20)
+    rank = models.PositiveSmallIntegerField(
+        help_text='Order within the Tech; higher means more senior.'
+    )
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        db_table = 'tech_levels'
+        ordering = ['tech', 'rank']
+        constraints = [
+            models.UniqueConstraint(fields=['tech', 'code'], name='tech_level_code_unique'),
+            models.UniqueConstraint(fields=['tech', 'name'], name='tech_level_name_unique'),
+            models.UniqueConstraint(fields=['tech', 'rank'], name='tech_level_rank_unique'),
+        ]
+        indexes = [
+            models.Index(fields=['tech', 'rank']),
+            models.Index(fields=['is_active']),
+        ]
+
+    def __str__(self):
+        return f"{self.tech.code} {self.code}"
+
+    def save(self, *args, **kwargs):
+        """Normalize code to uppercase, mirroring Tech.save."""
+        if self.code:
+            self.code = self.code.upper()
+        super().save(*args, **kwargs)
+
+
+class UserTech(models.Model):
+    """Through model for ``UserProfile.techs``, carrying the held level.
+
+    Deliberately a plain ``models.Model`` rather than ``BaseModel``: this is an
+    M2M join row, and Django's M2M descriptors do not filter on
+    ``is_deleted``, so a soft-deleted row would keep joining and the
+    assignment would look live. Hard delete is the only correct semantic here.
+
+    ``db_table`` and the ``userprofile_id`` column deliberately match the table
+    Django auto-created for the original plain M2M, so adopting this through
+    model is a state-only migration that leaves existing rows untouched.
+    """
+    user_profile = models.ForeignKey(
+        'UserProfile',
+        on_delete=models.CASCADE,
+        db_column='userprofile_id',
+        related_name='tech_assignments',
+    )
+    tech = models.ForeignKey(
+        Tech,
+        on_delete=models.CASCADE,
+        related_name='assignments',
+    )
+    level = models.ForeignKey(
+        TechLevel,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='assignments',
+        help_text='Grade held in this Tech. Null means assigned but ungraded.',
+    )
+    assigned_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Null for rows created before levels existed.',
+    )
+    assigned_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='tech_assignments_made',
+    )
+
+    class Meta:
+        db_table = 'user_profiles_techs'
+        # unique_together, not UniqueConstraint: this must mirror the index
+        # Django auto-created for the original plain M2M
+        # (user_profiles_techs_userprofile_id_tech_id_fd827bba_uniq) so that
+        # adopting the through model needs no DDL and no index rename.
+        unique_together = [('user_profile', 'tech')]
+        indexes = [
+            models.Index(fields=['tech', 'level']),
+            models.Index(fields=['level']),
+        ]
+
+    def __str__(self):
+        grade = self.level.code if self.level_id else 'ungraded'
+        return f"{self.user_profile_id} - {self.tech.code} ({grade})"
+
+    def clean(self):
+        """A level may only grade an assignment to its own Tech.
+
+        Not expressible as a DB constraint without denormalizing ``tech_id``
+        onto TechLevel, so it is enforced here and in the serializer.
+        """
+        super().clean()
+        if self.level_id and self.level.tech_id != self.tech_id:
+            raise ValidationError(
+                {'level': f"Level '{self.level.code}' belongs to "
+                          f"{self.level.tech.code}, not {self.tech.code}."}
+            )
 
 
 class Team(BaseModel):
@@ -262,6 +387,7 @@ class UserProfile(BaseModel):
     )
     techs = models.ManyToManyField(
         Tech,
+        through='UserTech',
         blank=True,
         related_name='users',
     )

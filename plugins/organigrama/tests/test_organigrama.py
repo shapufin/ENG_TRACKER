@@ -16,7 +16,10 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from apps.users.models.core import Tech
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
+
+from apps.users.models.core import Tech, TechLevel, UserTech
 from plugins.organigrama.viewsets import OrganigramaViewSet
 
 
@@ -685,3 +688,75 @@ class RoleBadgeTestCase(OrganigramaTreeTestCase):
         self.albanian_tl.profile.is_albanian_tl_role = False
         self.albanian_tl.profile.role_codes = ["albanian_tl"]
         self.assertEqual(role_badge(self.albanian_tl.profile), "albanian_tl")
+
+
+class TestSubtreeTechLevelQueryBudget(TestCase):
+    """The subtree endpoint must not read tech levels one person at a time.
+
+    ``_person_node`` puts ``tech_levels`` on every person node, so each of the
+    viewset's own child querysets needs the ``tech_assignments`` prefetch. The
+    tree builder's querysets already have it; the viewset's lazy-load ones are
+    a separate code path and were missed.
+
+    Counted as growth across two member counts rather than as an absolute
+    number: a prefetch over a single row renders as ``WHERE id = 1``, so only
+    growth distinguishes a prefetch from a per-row read.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_user(
+            username="qb_admin", password="test123", is_staff=True, is_superuser=True
+        )
+        cls.tech = Tech.objects.create(name="QB Infra", code="QB_INFRA")
+        cls.level = TechLevel.objects.create(
+            tech=cls.tech, name="L3", code="L3", rank=3
+        )
+        cls.albanian_tl = User.objects.create_user(username="qb_al_tl", password="t")
+        cls.albanian_tl.profile.is_albanian_tl_role = True
+        cls.albanian_tl.profile.save(update_fields=["is_albanian_tl_role"])
+
+    def _add_members(self, count, offset=0):
+        for i in range(count):
+            user = User.objects.create_user(username=f"qb_emp{offset + i}", password="t")
+            user.profile.albanian_tl = self.albanian_tl
+            user.profile.save(update_fields=["albanian_tl"])
+            UserTech.objects.create(
+                user_profile=user.profile, tech=self.tech, level=self.level
+            )
+
+    def _subtree_queries(self, params):
+        from urllib.parse import urlencode
+
+        factory = APIRequestFactory()
+        request = factory.get(
+            f"/api/plugins/organigrama/subtree/?{urlencode(params)}"
+        )
+        force_authenticate(request, user=self.admin)
+        with CaptureQueriesContext(connection) as ctx:
+            resp = OrganigramaViewSet.as_view()(request)
+            self.assertEqual(resp.status_code, 200)
+        return len(
+            [
+                q
+                for q in ctx.captured_queries
+                if "user_profiles_techs" in q["sql"] or "tech_levels" in q["sql"]
+            ]
+        )
+
+    def _assert_flat(self, params):
+        self._add_members(3)
+        few = self._subtree_queries({**params, "page_size": 100})
+        self._add_members(12, offset=100)
+        many = self._subtree_queries({**params, "page_size": 100})
+        self.assertEqual(
+            few,
+            many,
+            f"Tech queries grew {few} -> {many} as members went 3 -> 15",
+        )
+
+    def test_person_children_does_not_read_levels_per_row(self):
+        self._assert_flat({"node_id": self.albanian_tl.id, "node_type": "person"})
+
+    def test_tech_children_does_not_read_levels_per_row(self):
+        self._assert_flat({"node_id": self.tech.id, "node_type": "tech"})

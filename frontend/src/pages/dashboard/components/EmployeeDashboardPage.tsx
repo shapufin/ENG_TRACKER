@@ -30,7 +30,15 @@ export const EmployeeDashboardPage: React.FC<EmployeeDashboardPageProps> = ({
 }) => (
   <PageShell
     title="Dashboard"
-    subtitle={`Welcome back, ${user?.first_name || user?.username || "Employee"}`}
+    subtitle={[
+      `Welcome back, ${user?.first_name || user?.username || "Employee"}`,
+      // Tech + held level, so people see the grade the rest of the app filters on.
+      (user?.techs ?? [])
+        .map((tech) => (tech.level ? `${tech.name} ${tech.level.code}` : tech.name))
+        .join(" · "),
+    ]
+      .filter(Boolean)
+      .join(" — ")}
     actions={
       <DashboardPageHeader
         availableDashboards={availableDashboards}

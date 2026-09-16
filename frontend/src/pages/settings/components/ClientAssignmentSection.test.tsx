@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { ClientAssignmentSection } from "./ClientAssignmentSection";
 import * as useClientAssignment from "../hooks/useClientAssignment";
 
@@ -19,7 +19,7 @@ const members = [
 const baseHook = {
   members,
   clients: clients as any,
-  effective: { 1: null, 2: 1, 3: undefined },
+  effective: { 1: [], 2: [1], 3: [1, 2] },
   setDraft: vi.fn(),
   saveAll: vi.fn(),
   isSaving: false,
@@ -43,9 +43,18 @@ describe("ClientAssignmentSection", () => {
     expect(screen.getByRole("combobox", { name: "Client for Cara C" })).toBeInTheDocument();
   });
 
-  it("shows the Multiple placeholder when a member has several clients", () => {
+  it("shows every assigned client for a member with several clients", () => {
     render(<ClientAssignmentSection />);
-    expect(screen.getByText("Multiple — pick to replace")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Client for Cara C" })).toHaveTextContent(
+      "2 clients"
+    );
+  });
+
+  it("lets a TL select multiple clients for one member", () => {
+    render(<ClientAssignmentSection />);
+    fireEvent.click(screen.getByRole("combobox", { name: "Client for bob" }));
+    fireEvent.click(screen.getByRole("option", { name: /MSC/ }));
+    expect(baseHook.setDraft).toHaveBeenCalledWith(2, [1, 2]);
   });
 
   it("disables Save Changes when pristine and enables it when dirty", () => {

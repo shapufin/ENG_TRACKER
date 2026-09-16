@@ -37,7 +37,15 @@ export const StatsWidgets: React.FC<StatsWidgetsProps> = ({
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {isWidgetActive("total-users") && (
-        <StatCard label="Total Users" value={totalUsers} icon={Users} glow="primary" delay={0} />
+        <StatCard
+          label="Total Users"
+          value={totalUsers}
+          icon={Users}
+          glow="primary"
+          iconColorClass="text-primary"
+          iconWellClass="bg-primary/10"
+          delay={0}
+        />
       )}
       {isWidgetActive("total-teams") && (
         <StatCard
@@ -46,6 +54,7 @@ export const StatsWidgets: React.FC<StatsWidgetsProps> = ({
           icon={Building2}
           glow="success"
           iconColorClass="text-success"
+          iconWellClass="bg-success/10"
           delay={0.05}
         />
       )}
@@ -56,6 +65,7 @@ export const StatsWidgets: React.FC<StatsWidgetsProps> = ({
           icon={AlertCircle}
           glow="warning"
           iconColorClass="text-warning"
+          iconWellClass="bg-warning/10"
           delay={0.1}
           trend={totalPending === 0 ? "No pending items" : `${totalPending} pending`}
         />
@@ -66,6 +76,8 @@ export const StatsWidgets: React.FC<StatsWidgetsProps> = ({
           value={<AnimatedNumber value={overtimeHours} suffix="h" />}
           icon={Clock}
           glow="primary"
+          iconColorClass="text-accent-violet"
+          iconWellClass="bg-accent-violet/10"
           delay={0.15}
           trend={`${overtimeHours}h this month`}
         />

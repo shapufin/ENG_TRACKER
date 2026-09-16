@@ -14,11 +14,11 @@ interface ApprovalStatusWidgetProps {
 }
 
 const StatusSkeleton: React.FC = () => (
-  <div className="flex flex-col gap-6 p-4">
+  <div className="flex flex-col gap-7">
     <div className="flex justify-center">
       <div className="h-40 w-40 animate-pulse rounded-full bg-muted/40" />
     </div>
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       {Array.from({ length: 3 }).map((_, i) => (
         <div key={i} className="h-12 animate-pulse rounded-xl bg-muted/40" />
       ))}
@@ -55,11 +55,11 @@ export const ApprovalStatusWidget: React.FC<ApprovalStatusWidgetProps> = ({
 
   return (
     <ChartCard title="Approval Status" description="All request types" delay={0.25}>
-      <div className="flex flex-col gap-6 p-4">
+      <div className="flex flex-col gap-7">
         <div className="flex justify-center">
           <CircularProgress percentage={approvedPct} label="Approved" />
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <StatusRow label="Approved" value={approved} color="bg-emerald-600" />
           <StatusRow label="Pending" value={pending} color="bg-amber-600" />
           <StatusRow label="Rejected" value={rejected} color="bg-red-600" />

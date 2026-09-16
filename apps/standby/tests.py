@@ -2,7 +2,7 @@
 Tests for standby app.
 """
 
-from datetime import time, date
+from datetime import time, date, timedelta
 from uuid import uuid4
 from unittest.mock import MagicMock, patch
 
@@ -176,6 +176,56 @@ class StandbyLogViewSetTests(TestCase):
         self.client.force_authenticate(user=self.staff_user)
         response = self.client.get('/api/standby/logs/team_pending/')
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+    def test_calendar_fetch_not_capped_to_current_month_or_page(self):
+        """The calendar workspace fetch must reach every month and exceed the
+        default 50-row page once the client sends ignore_date_filter + page_size.
+
+        The calendar page previously fetched /standby/logs/ with only
+        workspace_ids + calendar=true, so the backend's current-month default
+        and the 50-row default page silently hid most standby records.
+        """
+        workspace = self._create_workspace()
+        workspace.allowed_users.add(self.user)
+        today = date.today()
+        last_month_day = today.replace(day=1) - timedelta(days=1)
+        StandbyLog.objects.create(
+            user=self.user,
+            date=last_month_day,
+            hours=8.0,
+            description='Past month standby',
+            pattern=self.pattern,
+            status='approved',
+        )
+        for _ in range(55):
+            StandbyLog.objects.create(
+                user=self.user,
+                date=today,
+                hours=8.0,
+                description='This month standby',
+                pattern=self.pattern,
+                status='approved',
+            )
+
+        base_params = {'workspace_ids': str(workspace.id), 'calendar': 'true'}
+        self.client.force_authenticate(user=self.user)
+
+        # Without ignore_date_filter the backend keeps its current-month default.
+        response = self.client.get('/api/standby/logs/', base_params)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data['count'], 55)
+        self.assertEqual(len(response.data['results']), 50)  # default page cap
+
+        # With ignore_date_filter + page_size the calendar gets everything.
+        response = self.client.get(
+            '/api/standby/logs/',
+            {**base_params, 'ignore_date_filter': 'true', 'page_size': 10000},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data['count'], 56)
+        self.assertEqual(len(response.data['results']), 56)
+        descriptions = {item['description'] for item in response.data['results']}
+        self.assertIn('Past month standby', descriptions)
 
     def test_team_pending_months_groups_by_month(self):
         """team_pending_months returns months with pending counts, sorted ascending."""

@@ -11,10 +11,12 @@ import { Link, useLocation } from "react-router-dom";
 import { Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import { usePermissions } from "@/context/PermissionContext";
+import { LAYOUT_ID, useMotionTransition } from "@/lib/motion";
 
 const ControlRoomAdminSidebarItem: React.FC = () => {
   const location = useLocation();
   const { isAdmin, isSuperuser, isCRAdmin } = usePermissions();
+  const activeBarTransition = useMotionTransition({ type: "spring", stiffness: 400, damping: 30 });
   const isActive =
     location.pathname.startsWith("/admin/control-room") ||
     location.pathname.startsWith("/control-room/access");
@@ -34,9 +36,9 @@ const ControlRoomAdminSidebarItem: React.FC = () => {
       >
         {isActive && (
           <motion.div
-            layoutId="admin-plugin-sidebar-active"
+            layoutId={LAYOUT_ID.adminPluginSidebarActive}
             className="absolute inset-y-1 left-0 w-[3px] rounded-full bg-primary"
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            transition={activeBarTransition}
           />
         )}
         <Shield className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : ""}`} />

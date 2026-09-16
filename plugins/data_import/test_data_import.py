@@ -8,7 +8,9 @@ from decimal import Decimal
 
 import pandas as pd
 from django.contrib.auth.models import User
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient, APIRequestFactory
 
 from apps.leave_management.models import LeaveBalance
@@ -203,6 +205,53 @@ class UserImporterTests(TestCase):
         self.assertIn(tech1, user.profile.techs.all())
         self.assertIn(tech2, user.profile.techs.all())
 
+    def test_create_user_with_tech_code_and_level(self):
+        from apps.users.models import Tech, TechLevel, UserTech
+        infra = Tech.objects.create(name="Infrastructure", code="INFRA")
+        db = Tech.objects.create(name="Database", code="DB")
+        l3 = TechLevel.objects.create(tech=infra, name="L3", code="L3", rank=3)
+        row = {
+            "__row_index": 1,
+            "username": "leveluser",
+            "email": "leveluser@example.com",
+            "tech_codes": "INFRA:L3,DB",
+        }
+        result = self.importer.commit_row(row, {"password_strategy": "generate"})
+        self.assertEqual(result.status, "created")
+        profile = User.objects.get(username="leveluser").profile
+        self.assertEqual(
+            UserTech.objects.get(user_profile=profile, tech=infra).level_id, l3.id
+        )
+        # A bare code stays ungraded.
+        self.assertIsNone(UserTech.objects.get(user_profile=profile, tech=db).level)
+
+    def test_unknown_tech_level_is_a_row_error(self):
+        from apps.users.models import Tech
+        Tech.objects.create(name="Infrastructure", code="INFRA")
+        row = {
+            "__row_index": 1,
+            "username": "badlevel",
+            "email": "badlevel@example.com",
+            "tech_codes": "INFRA:L9",
+        }
+        result = self.importer.commit_row(row, {"password_strategy": "generate"})
+        self.assertEqual(result.status, "error")
+        self.assertIn("INFRA:L9", str(result.errors))
+
+    def test_level_from_another_tech_is_a_row_error(self):
+        from apps.users.models import Tech, TechLevel
+        Tech.objects.create(name="Infrastructure", code="INFRA")
+        db = Tech.objects.create(name="Database", code="DB")
+        TechLevel.objects.create(tech=db, name="Junior", code="JR", rank=1)
+        row = {
+            "__row_index": 1,
+            "username": "crosslevel",
+            "email": "crosslevel@example.com",
+            "tech_codes": "INFRA:JR",
+        }
+        result = self.importer.commit_row(row, {"password_strategy": "generate"})
+        self.assertEqual(result.status, "error")
+
     def test_create_user_with_single_tech_code(self):
         from apps.users.models import Tech
         tech = Tech.objects.create(name="Backup", code="BACKUP")
@@ -284,6 +333,207 @@ class UserImporterTests(TestCase):
         self.assertEqual(result.status, "created")
         user = User.objects.get(username="lowertech")
         self.assertIn(tech, user.profile.techs.all())
+
+    # --- TL chain (italian_tl_username / albanian_tl_username) ---------------
+
+    def _make_leader(self, username):
+        return User.objects.create_user(
+            username=username, email=f"{username}@example.com", password="password"
+        )
+
+    def test_create_user_links_the_tl_chain_by_username(self):
+        italian = self._make_leader("it.leader")
+        albanian = self._make_leader("al.leader")
+        row = {
+            "__row_index": 1,
+            "username": "chained",
+            "email": "chained@example.com",
+            "italian_tl_username": "it.leader",
+            "albanian_tl_username": "al.leader",
+        }
+        result = self.importer.commit_row(row, {"password_strategy": "generate"})
+        self.assertEqual(result.status, "created")
+        profile = User.objects.get(username="chained").profile
+        self.assertEqual(profile.italian_tl_id, italian.id)
+        self.assertEqual(profile.albanian_tl_id, albanian.id)
+
+    def test_update_user_links_the_tl_chain_by_username(self):
+        italian = self._make_leader("it.leader2")
+        user = User.objects.create_user(
+            username="existing.chain", email="ec@example.com", password="password"
+        )
+        row = {
+            "__row_index": 1,
+            "username": "existing.chain",
+            "email": "ec@example.com",
+            "italian_tl_username": "it.leader2",
+        }
+        result = self.importer.commit_row(
+            row, {"password_strategy": "generate", "update_existing": True}
+        )
+        self.assertEqual(result.status, "updated")
+        user.profile.refresh_from_db()
+        self.assertEqual(user.profile.italian_tl_id, italian.id)
+
+    def test_a_tl_appearing_later_in_the_file_is_linked_by_finalize_batch(self):
+        """Mutual references make single-pass ordering impossible.
+
+        Real data: every Italian TL reports to the one Albanian TL, and that
+        Albanian TL reports to an Italian TL. No row order satisfies both, so a
+        leader named in the same file is deferred, exactly as the teams importer
+        defers ``parent_team_code``.
+        """
+        rows = [
+            {
+                "__row_index": 1,
+                "username": "it.boss",
+                "email": "it.boss@example.com",
+                "albanian_tl_username": "al.boss",
+            },
+            {
+                "__row_index": 2,
+                "username": "al.boss",
+                "email": "al.boss@example.com",
+                "italian_tl_username": "it.boss",
+            },
+        ]
+        options = {"password_strategy": "generate"}
+        context = self.importer.prepare_batch(rows, options)
+        for row in rows:
+            result = self.importer.commit_row(row, options, context=context)
+            self.assertEqual(result.status, "created", result.errors)
+        self.importer.finalize_batch(context, options)
+
+        italian = User.objects.get(username="it.boss")
+        albanian = User.objects.get(username="al.boss")
+        self.assertEqual(italian.profile.albanian_tl_id, albanian.id)
+        self.assertEqual(albanian.profile.italian_tl_id, italian.id)
+
+    def test_tl_username_lookups_are_batched_not_per_row(self):
+        """_resolve_tl_id used to run its own User query per TL column per
+        row (up to 2 extra queries per row). prepare_batch now resolves
+        every referenced leader once into context["leader_ids"], so a row
+        whose leaders are already cached costs zero extra User queries in
+        commit_row. Verified directly: no query in the single-row commit
+        below filters auth_user by username at all — the only DB write is
+        the new user's own creation."""
+        self._make_leader("it.leader3")
+        self._make_leader("al.leader3")
+        row = {
+            "__row_index": 1,
+            "username": "batchuser",
+            "email": "batchuser@example.com",
+            "italian_tl_username": "it.leader3",
+            "albanian_tl_username": "al.leader3",
+        }
+        options = {"password_strategy": "generate"}
+        context = self.importer.prepare_batch([row], options)
+
+        with CaptureQueriesContext(connection) as ctx:
+            result = self.importer.commit_row(row, options, context=context)
+        self.assertEqual(result.status, "created", result.errors)
+
+        # "batchuser" (the row's own username) legitimately gets queried, by
+        # _resolve_existing_user and the create-user uniqueness check — only
+        # a query for one of the *leader* usernames would mean the cache
+        # was bypassed.
+        leader_lookups = [
+            q for q in ctx.captured_queries
+            if 'it.leader3' in q['sql'] or 'al.leader3' in q['sql']
+        ]
+        self.assertEqual(
+            leader_lookups, [],
+            "commit_row queried auth_user for a leader username — leader_ids cache was not used",
+        )
+
+    def test_a_tl_not_in_the_file_and_not_in_the_db_is_still_an_error(self):
+        rows = [{
+            "__row_index": 1,
+            "username": "lonely",
+            "email": "lonely@example.com",
+            "italian_tl_username": "ghost.leader",
+        }]
+        options = {"password_strategy": "generate"}
+        context = self.importer.prepare_batch(rows, options)
+        result = self.importer.commit_row(rows[0], options, context=context)
+        self.assertEqual(result.status, "error")
+        self.assertIn("ghost.leader", result.errors[0])
+
+    def test_tl_username_must_exist(self):
+        row = {
+            "__row_index": 1,
+            "username": "orphan",
+            "email": "orphan@example.com",
+            "italian_tl_username": "nobody.here",
+        }
+        result = self.importer.commit_row(row, {"password_strategy": "generate"})
+        self.assertEqual(result.status, "error")
+        self.assertIn("nobody.here", result.errors[0])
+        self.assertFalse(User.objects.filter(username="orphan").exists())
+
+    def test_a_blank_tl_username_leaves_an_existing_link_alone(self):
+        """Blank means "leave this alone" for every optional field."""
+        italian = self._make_leader("it.leader3")
+        user = User.objects.create_user(
+            username="keep.chain", email="kc@example.com", password="password"
+        )
+        user.profile.italian_tl = italian
+        user.profile.save(update_fields=["italian_tl"])
+        row = {
+            "__row_index": 1,
+            "username": "keep.chain",
+            "email": "kc@example.com",
+            "italian_tl_username": "",
+            "first_name": "Kept",
+        }
+        result = self.importer.commit_row(
+            row, {"password_strategy": "generate", "update_existing": True}
+        )
+        self.assertEqual(result.status, "updated")
+        user.profile.refresh_from_db()
+        self.assertEqual(user.profile.italian_tl_id, italian.id)
+
+    def test_a_user_cannot_lead_themselves(self):
+        user = User.objects.create_user(
+            username="loop.user", email="lu@example.com", password="password"
+        )
+        row = {
+            "__row_index": 1,
+            "username": "loop.user",
+            "email": "lu@example.com",
+            "albanian_tl_username": "loop.user",
+        }
+        result = self.importer.commit_row(
+            row, {"password_strategy": "generate", "update_existing": True}
+        )
+        self.assertEqual(result.status, "error")
+        self.assertIn("themselves", result.errors[0])
+        user.profile.refresh_from_db()
+        self.assertIsNone(user.profile.albanian_tl_id)
+
+    def test_update_applies_the_tl_role_flags(self):
+        """Regression: the update path passed ``is_italian_tl`` straight through
+        to ``update_user_profile``, whose parameter is ``is_italian_tl_role``, so
+        setting the flag on an existing user raised a TypeError that surfaced as
+        a generic "Unexpected error" row error.
+        """
+        user = User.objects.create_user(
+            username="flagged", email="flagged@example.com", password="password"
+        )
+        row = {
+            "__row_index": 1,
+            "username": "flagged",
+            "email": "flagged@example.com",
+            "is_italian_tl": True,
+            "is_hr": True,
+        }
+        result = self.importer.commit_row(
+            row, {"password_strategy": "generate", "update_existing": True}
+        )
+        self.assertEqual(result.status, "updated", result.errors)
+        user.profile.refresh_from_db()
+        self.assertTrue(user.profile.is_italian_tl_role)
+        self.assertTrue(user.profile.is_hr_user)
 
 
 class LeaveBalanceImporterTests(TestCase):
@@ -656,6 +906,16 @@ class SharedTabularFileTests(TestCase):
         )
         self.assertEqual(mapping["username"], "USER NAME")
         self.assertEqual(mapping["email"], "E-MAIL")
+
+    def test_suggest_mapping_ignores_a_required_column_marker_suffix(self):
+        """A downloaded template's "Name *" header must still auto-detect
+        against the plain "name" alias when the user re-uploads it."""
+        from core.utils.tabular_file import suggest_mapping
+        mapping = suggest_mapping(
+            ["Code *", "Name *", "Description"],
+            {"code": ["code"], "name": ["name"], "description": ["description"]},
+        )
+        self.assertEqual(mapping, {"code": "Code *", "name": "Name *", "description": "Description"})
 
 
 class UserImporterIsolationTests(TestCase):

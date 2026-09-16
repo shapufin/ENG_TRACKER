@@ -96,6 +96,8 @@ export interface ControlRoomRosterRow {
   user_name: string;
   username: string;
   team_names: string[];
+  /** Active Techs with the grade held, pre-formatted (e.g. "Infrastructure L3"). */
+  tech_levels?: string[];
   hours: number;
   start_time: string | null;
   end_time: string | null;

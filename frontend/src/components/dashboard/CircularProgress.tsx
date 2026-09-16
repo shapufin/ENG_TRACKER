@@ -19,7 +19,7 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="relative" style={{ width: size, height: size }}>
+      <div className="relative drop-shadow-sm" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90 transform">
           <circle
             cx={size / 2}
@@ -44,7 +44,7 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <div className="text-3xl font-bold">{percentage}%</div>
+            <div className="font-mono text-3xl font-bold tabular-nums">{percentage}%</div>
             <div className="text-sm text-muted-foreground">{label}</div>
           </div>
         </div>

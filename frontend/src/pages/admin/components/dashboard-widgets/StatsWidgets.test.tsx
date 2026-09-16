@@ -52,4 +52,19 @@ describe("StatsWidgets", () => {
     expect(container.querySelector(".bg-gradient-to-br")).toBeNull();
     expect(container.querySelectorAll(".tabular-nums").length).toBeGreaterThanOrEqual(4);
   });
+
+  it("wraps each stat icon in a tinted well (StatCard's h-10/w-10 well wrapper)", () => {
+    const { container } = render(
+      <StatsWidgets
+        isWidgetActive={() => true}
+        totalUsers={10}
+        totalTeams={5}
+        totalPending={3}
+        overtimeSummary={{ total_hours: 20 }}
+      />
+    );
+    // Bare (well-less) icons render at h-8/w-8 with no wrapper div — the
+    // h-10/w-10 rounded-xl wrapper only appears when iconWellClass is set.
+    expect(container.querySelectorAll(".h-10.w-10.rounded-xl").length).toBe(4);
+  });
 });

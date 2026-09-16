@@ -79,9 +79,16 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
   }, [candidatesData, memberIds]);
 
   const addMutation = useMutation({
-    mutationFn: (userIds: number[]) => userService.addTechMembers(tech!.id, userIds),
+    mutationFn: ({ userIds, level }: { userIds: number[]; level?: number | null }) =>
+      userService.addTechMembers(tech!.id, userIds, level),
     onSuccess: (data) => {
-      toast.success(data.added > 0 ? `Added ${data.added} user(s)` : "User already a member");
+      toast.success(
+        data.added > 0
+          ? `Added ${data.added} user(s)`
+          : data.regraded > 0
+            ? `Updated level for ${data.regraded} user(s)`
+            : "User already a member"
+      );
       queryClient.invalidateQueries({ queryKey: ["admin", "techs", tech!.id, "members"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "profiles"] });
     },
@@ -98,8 +105,14 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
     onError: () => toast.error("Failed to remove user(s)"),
   });
 
-  const handleAdd = (userId: number) => addMutation.mutate([userId]);
+  // Adding without a level leaves the grade unset; the level dropdown on each
+  // member row is what grades (or re-grades) them afterwards.
+  const handleAdd = (userId: number) => addMutation.mutate({ userIds: [userId] });
   const handleRemove = (userId: number) => removeMutation.mutate([userId]);
+  const handleSetLevel = (userId: number, level: number | null) =>
+    addMutation.mutate({ userIds: [userId], level });
+
+  const activeLevels = (tech?.levels ?? []).filter((level) => level.is_active);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -148,6 +161,28 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
                         @{m.username}
                       </p>
                     </div>
+                    <div className="flex shrink-0 items-center">
+                    {activeLevels.length > 0 && (
+                      <select
+                        value={m.level?.id ?? ""}
+                        onChange={(event) =>
+                          handleSetLevel(
+                            m.id,
+                            event.target.value === "" ? null : Number(event.target.value)
+                          )
+                        }
+                        disabled={addMutation.isPending}
+                        aria-label={`Level for ${m.username} in ${tech?.name}`}
+                        className="mr-2 h-7 rounded-md border border-input bg-background px-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                      >
+                        <option value="">No level</option>
+                        {activeLevels.map((level) => (
+                          <option key={level.id} value={level.id}>
+                            {level.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"
@@ -158,6 +193,7 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
                     >
                       <UserMinus className="h-4 w-4" />
                     </Button>
+                    </div>
                   </div>
                 ))
               )}

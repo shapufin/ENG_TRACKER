@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { SkillsHistoryPage } from "./SkillsHistoryPage";
@@ -96,6 +96,18 @@ beforeEach(() => {
   useHistoryMock.mockReturnValue({ data: { results: [], count: 0 }, isLoading: false });
   useSkillsMock.mockReturnValue({ data: [] });
   useUsersSearchMock.mockReturnValue({ data: undefined, isFetching: false });
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    }
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe("SkillsHistoryPage", () => {
@@ -411,14 +423,23 @@ describe("SkillsHistoryPage", () => {
     expect(screen.getByText(/Unknown user/)).toBeInTheDocument();
   });
 
-  it("passes dateFrom and dateTo to useHistory when date inputs change", () => {
+  it("passes dateFrom and dateTo to useHistory when a custom date range is applied", () => {
     render(
       <MemoryRouter>
         <SkillsHistoryPage />
       </MemoryRouter>
     );
-    fireEvent.change(screen.getByLabelText(/from/i), { target: { value: "2026-01-01" } });
-    fireEvent.change(screen.getByLabelText(/to/i), { target: { value: "2026-08-31" } });
+    fireEvent.click(screen.getByRole("button", { name: /open date range/i }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Custom Range" }));
+
+    const startInput = screen.getByLabelText("Start date");
+    fireEvent.change(startInput, { target: { value: "01/01/2026" } });
+    fireEvent.blur(startInput);
+    const endInput = screen.getByLabelText("End date");
+    fireEvent.change(endInput, { target: { value: "31/08/2026" } });
+    fireEvent.blur(endInput);
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(useHistoryMock).toHaveBeenLastCalledWith(
       undefined,
       undefined,
@@ -434,7 +455,8 @@ describe("SkillsHistoryPage", () => {
         <SkillsHistoryPage />
       </MemoryRouter>
     );
-    fireEvent.change(screen.getByLabelText(/from/i), { target: { value: "2026-01-01" } });
+    fireEvent.click(screen.getByRole("button", { name: /open date range/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Today" }));
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(useHistoryMock).toHaveBeenLastCalledWith(undefined, undefined, 1, undefined, undefined);
   });

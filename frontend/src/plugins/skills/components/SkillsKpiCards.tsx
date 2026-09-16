@@ -15,6 +15,7 @@ import {
   type VerificationKpi,
 } from "../utils/skillKpis";
 import { avgTone, categoryAccent } from "../utils/categoryAccents";
+import { useSkillLevelLabels } from "../hooks/useSkillsQueries";
 import { toneTextClass } from "@/components/ui/tone";
 
 interface SkillsKpiCardsProps {
@@ -80,7 +81,7 @@ const DomainCard: React.FC<{
 const GapCard: React.FC<{ kpi: GapKpi | null }> = ({ kpi }) =>
   kpi ? (
     <StatCard
-      label="Critical Gap"
+      label="Critical Talent Bottleneck"
       icon={AlertTriangle}
       value={
         <span className="truncate font-mono text-xl" title={kpi.skillName}>
@@ -103,7 +104,7 @@ const GapCard: React.FC<{ kpi: GapKpi | null }> = ({ kpi }) =>
 const VerificationCard: React.FC<{ kpi: VerificationKpi | null }> = ({ kpi }) =>
   kpi ? (
     <StatCard
-      label="Verification Rate"
+      label="Verification Progress"
       icon={ShieldCheck}
       value={<span className="font-mono">{`${kpi.pct}%`}</span>}
       valueColorClass={toneTextClass.success}
@@ -117,7 +118,8 @@ const VerificationCard: React.FC<{ kpi: VerificationKpi | null }> = ({ kpi }) =>
   ) : null;
 
 export const SkillsKpiCards: React.FC<SkillsKpiCardsProps> = ({ coverage, gaps, memberCount }) => {
-  const seniority = computeSeniorityIndex(coverage);
+  const { data: levelLabels } = useSkillLevelLabels();
+  const seniority = computeSeniorityIndex(coverage, levelLabels);
   const domain = computeStrongestDomain(coverage);
   const gap = computeCriticalGap(gaps, memberCount);
   const verification = computeVerificationRate(coverage, memberCount);

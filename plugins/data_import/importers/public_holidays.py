@@ -84,6 +84,14 @@ class PublicHolidayImporter(StaffOnlyAuthority, BaseImporter):
             return value
         return str(value).lower().strip() in ("true", "1", "yes", "y")
 
+    def _parse_bool_optional(self, value: Any) -> Optional[bool]:
+        """Blank cell -> None ("leave this alone"), used on update only."""
+        if value is None or value == "":
+            return None
+        if isinstance(value, bool):
+            return value
+        return str(value).lower().strip() in ("true", "1", "yes", "y")
+
     def _normalize_country(self, value: Any) -> str:
         code = str(value or "").strip().upper()
         if code and len(code) != 2:
@@ -138,7 +146,9 @@ class PublicHolidayImporter(StaffOnlyAuthority, BaseImporter):
                     )
                 if not dry_run:
                     holiday.name = name
-                    holiday.is_global = is_global
+                    is_global_update = self._parse_bool_optional(mapped_row.get("is_global"))
+                    if is_global_update is not None:
+                        holiday.is_global = is_global_update
                     if description is not None:
                         holiday.description = description
                     holiday.save()

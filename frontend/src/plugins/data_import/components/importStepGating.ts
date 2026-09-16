@@ -6,7 +6,7 @@ import type { ImportStep, ImportTarget, WizardState } from "../types/dataImport"
 
 type GatingState = Pick<
   WizardState,
-  "targetKey" | "file" | "isAnalyzing" | "fieldMapping" | "defaultValues"
+  "targetKey" | "file" | "isAnalyzing" | "fieldMapping" | "defaultValues" | "previewResult"
 >;
 
 /** True when the step's gating requirements are satisfied. */
@@ -23,5 +23,6 @@ export const stepCanAdvance = (
       (f) => state.fieldMapping[f.key] || state.defaultValues[f.key] !== undefined
     );
   }
+  if (step === "preview") return !!state.previewResult;
   return false;
 };

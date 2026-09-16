@@ -3,10 +3,12 @@
 Uses APIRequestFactory + force_authenticate + direct view dispatch (matches
 the ticket_kpi test pattern) to avoid depending on plugin URL mounting.
 """
+import io
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 from django.contrib.auth.models import User
+from openpyxl import load_workbook
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.permissions.services.role_service import assign_role
@@ -22,6 +24,7 @@ from plugins.skills.viewsets import (
     SkillGapReportViewSet,
     SkillExportViewSet,
     SkillRatingHistoryViewSet,
+    SkillLevelLabelsViewSet,
 )
 
 # Import signals module to ensure audit signal handlers are connected.
@@ -149,6 +152,25 @@ class UserSkillViewSetTest(ViewSetTestCase, TestCase):
         results = resp.data.get('results', resp.data)
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]['user'], self.employee.id)
+
+    def test_hr_can_scope_list_to_own_skills_via_user_id(self):
+        """MySkillsPage relies on ?user_id=<self> to see only own ratings —
+        without it, HR/TL/admin (broad visible_user_ids) get every visible
+        user's ratings mixed together, breaking the self-service page and
+        making AddSkillDialog think every catalog skill is already added.
+        """
+        UserSkill.objects.create(
+            user=self.hr, skill=self.skill1, level=3, last_updated_by=self.hr,
+        )
+        UserSkill.objects.create(
+            user=self.employee, skill=self.skill1, level=4,
+            last_updated_by=self.employee,
+        )
+        resp = self._list(UserSkillViewSet, self.hr, params={'user_id': self.hr.id})
+        self.assertEqual(resp.status_code, 200)
+        results = resp.data.get('results', resp.data)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['user'], self.hr.id)
 
     def test_employee_can_create_own_skill(self):
         resp = self._create(UserSkillViewSet, self.employee, {
@@ -646,6 +668,28 @@ class ExportTest(ViewSetTestCase, TestCase):
         self.assertIn('alice', content)
         self.assertIn('Python', content)
 
+    def test_xlsx_export(self):
+        UserSkill.objects.create(
+            user=self.employee, skill=self.skill1, level=3,
+            last_updated_by=self.employee,
+        )
+        resp = self._action_list(SkillExportViewSet, self.tl, 'export_xlsx')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            resp['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        self.assertIn('skills_matrix.xlsx', resp['Content-Disposition'])
+
+    def test_xlsx_export_is_team_scoped(self):
+        """A TL's workbook covers their team, not the whole company."""
+        outsider = User.objects.create_user(username='outsider', password='x')
+        resp = self._action_list(SkillExportViewSet, self.tl, 'export_xlsx')
+        ws = load_workbook(io.BytesIO(resp.content))['Skill matrix']
+        usernames = {r[2] for r in ws.iter_rows(min_row=3, values_only=True)}
+        self.assertIn(self.employee.username, usernames)
+        self.assertNotIn(outsider.username, usernames)
+
 
 class HistoryTest(ViewSetTestCase, TestCase):
     def test_employee_can_see_own_history(self):
@@ -736,3 +780,40 @@ class HistoryTest(ViewSetTestCase, TestCase):
         )
         resp = self._list(SkillRatingHistoryViewSet, self.employee, params={'date_from': 'not-a-date'})
         self.assertEqual(resp.status_code, 200)
+
+
+class SkillLevelLabelsViewSetTest(ViewSetTestCase, TestCase):
+    def test_get_returns_default_labels(self):
+        resp = self._list(SkillLevelLabelsViewSet, self.employee)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['level_1_label'], 'Foundational')
+        self.assertEqual(resp.data['level_5_label'], 'Mastery')
+
+    def test_unauthenticated_get_is_rejected(self):
+        request = self.factory.get('/api/plugins/skills/level-labels/')
+        view = SkillLevelLabelsViewSet.as_view({'get': 'list'})
+        resp = view(request)
+        self.assertEqual(resp.status_code, 401)
+
+    def test_hr_can_update_labels(self):
+        resp = self._update(
+            SkillLevelLabelsViewSet, self.hr, 1,
+            {'level_1_label': 'Rookie', 'level_5_label': 'Legend'},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['level_1_label'], 'Rookie')
+        self.assertEqual(resp.data['level_5_label'], 'Legend')
+
+        # Persisted — a fresh GET reflects the update.
+        resp2 = self._list(SkillLevelLabelsViewSet, self.employee)
+        self.assertEqual(resp2.data['level_1_label'], 'Rookie')
+
+    def test_non_hr_cannot_update_labels(self):
+        resp = self._update(
+            SkillLevelLabelsViewSet, self.employee, 1, {'level_1_label': 'Nope'},
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_delete_is_not_allowed(self):
+        resp = self._delete(SkillLevelLabelsViewSet, self.hr, 1)
+        self.assertEqual(resp.status_code, 405)

@@ -29,7 +29,7 @@ export const ValueTransformPanel: React.FC<ValueTransformPanelProps> = ({
   onTransformChange,
 }) => {
   const choiceFields = useMemo(
-    () => fields.filter((f) => f.field_type === "choice" && f.choices && f.choices.length > 0),
+    () => fields.filter((f) => f.choices && f.choices.length > 0),
     [fields]
   );
 

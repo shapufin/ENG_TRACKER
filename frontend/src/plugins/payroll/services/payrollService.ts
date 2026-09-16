@@ -306,6 +306,13 @@ export const payrollService = {
     downloadBlobResponse(response.data, `payroll_run_${id}.xlsx`);
   },
 
+  async exportRunPdf(id: number): Promise<void> {
+    const response = await api.get(`${BASE}/runs/${id}/export_pdf/`, {
+      responseType: "blob",
+    });
+    downloadBlobResponse(response.data, `payroll_run_${id}.pdf`);
+  },
+
   async downloadPayslip(runId: number, lineId: number): Promise<void> {
     const response = await api.get(`${BASE}/runs/${runId}/payslip/`, {
       params: { line_id: lineId },

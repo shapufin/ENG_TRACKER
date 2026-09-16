@@ -3,6 +3,11 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { SkillsDenseMatrix } from "./SkillsDenseMatrix";
 import type { SkillCoverage, TeamMatrixRow } from "../types/skills";
 
+vi.mock("@tanstack/react-query", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-query")>();
+  return { ...actual, useQuery: () => ({ data: undefined }) };
+});
+
 vi.stubGlobal(
   "ResizeObserver",
   class {

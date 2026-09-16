@@ -3,15 +3,16 @@ import { Badge } from "@/components/ui/badge";
 import { LeaveBalanceBadge } from "@/components/ui/LeaveBalanceBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Sun, Stethoscope, Trash2 } from "lucide-react";
+import { Sun, Stethoscope, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { differenceInCalendarDays } from "date-fns";
 import { ApprovalActionsColumn } from "@/components/admin/ApprovalActionsColumn";
 import { DescriptionColumn } from "@/components/admin/DescriptionColumn";
-import { StatusBadge } from "@/components/admin/StatusBadge";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UserCell } from "@/components/admin/UserCell";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { LeaveRequest } from "@/types";
@@ -56,6 +57,52 @@ const DeleteLeaveRequestButton = ({
           onDelete(id);
         }}
       />
+    </>
+  );
+};
+
+const RejectLeaveRequestAction = ({
+  status,
+  onApprove,
+  onReject,
+}: {
+  status: string;
+  onApprove: () => void;
+  onReject: (reason: string) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  return (
+    <>
+      <ApprovalActionsColumn
+        status={status}
+        onApprove={onApprove}
+        onReject={() => {
+          setReason("");
+          setOpen(true);
+        }}
+      />
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Reject Request"
+        description="Provide a reason for rejection:"
+        icon={<X className="h-4 w-4" />}
+        onConfirm={() => {
+          setOpen(false);
+          onReject(reason);
+        }}
+        confirmLabel="Reject"
+        variant="destructive"
+      >
+        <div className="pt-2">
+          <Input
+            placeholder="Rejection reason"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </div>
+      </ConfirmDialog>
     </>
   );
 };
@@ -142,13 +189,10 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         header: "Actions",
         cell: ({ row }) => (
           <div className="flex items-center gap-1">
-            <ApprovalActionsColumn
+            <RejectLeaveRequestAction
               status={row.original.status}
               onApprove={() => onApprove(row.original.id)}
-              onReject={() => {
-                const reason = prompt("Enter rejection reason:") || "";
-                if (reason) onReject(row.original.id, reason);
-              }}
+              onReject={(reason) => onReject(row.original.id, reason)}
             />
             {canDelete && onDelete && (
               <DeleteLeaveRequestButton id={row.original.id} onDelete={onDelete} />

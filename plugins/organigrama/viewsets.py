@@ -63,6 +63,14 @@ from .services.tree_builder import build_scoped_tree, _person_node, role_badge
 
 logger = logging.getLogger(__name__)
 
+# ``_person_node`` puts the held Tech grade on every person node, so each
+# queryset feeding it needs the assignment rows prefetched. Without this the
+# lazy-load subtree endpoint reads one row per child.
+_TECH_LEVEL_PREFETCH = ("tech_assignments__tech", "tech_assignments__level")
+_TECH_LEVEL_PREFETCH_VIA_USER = tuple(
+    f"profile__{path}" for path in _TECH_LEVEL_PREFETCH
+)
+
 VALID_NODE_TYPES = {"person", "tech"}
 
 
@@ -191,6 +199,7 @@ class OrganigramaViewSet(PluginPermissionMixin, APIView):
             albanian_tls = list(
                 User.objects.filter(profile__italian_tl=node_user, is_active=True)
                 .select_related("profile", "profile__italian_tl")
+                .prefetch_related(*_TECH_LEVEL_PREFETCH_VIA_USER)
                 .distinct()
                 .order_by("username")
             )
@@ -204,6 +213,7 @@ class OrganigramaViewSet(PluginPermissionMixin, APIView):
                 UserProfile.objects.filter(user_id__in=managed_ids, user__is_active=True)
                 .exclude(user=node_user)
                 .select_related("user", "albanian_tl", "italian_tl")
+                .prefetch_related(*_TECH_LEVEL_PREFETCH)
                 .distinct()
                 .order_by("user__username")
             )
@@ -221,6 +231,7 @@ class OrganigramaViewSet(PluginPermissionMixin, APIView):
         profiles = list(
             UserProfile.objects.filter(techs=tech, user__is_active=True)
             .select_related("user", "albanian_tl", "italian_tl")
+            .prefetch_related(*_TECH_LEVEL_PREFETCH)
             .order_by("user__username")
         )
         member_user_ids = {profile.user_id for profile in profiles}

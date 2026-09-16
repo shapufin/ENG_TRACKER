@@ -1,7 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ProficiencyBadge } from "./ProficiencyBadge";
 import { PROFICIENCY_LEVELS, levelLabel } from "../utils/proficiencyLevels";
+
+vi.mock("@tanstack/react-query", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-query")>();
+  return { ...actual, useQuery: () => ({ data: undefined }) };
+});
 
 describe("ProficiencyBadge", () => {
   it("renders all 5 levels with the correct numeric value", () => {

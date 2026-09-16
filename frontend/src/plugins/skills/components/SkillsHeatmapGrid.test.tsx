@@ -3,6 +3,11 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { SkillsHeatmapGrid } from "./SkillsHeatmapGrid";
 import type { SkillCoverage, TeamMatrixRow } from "../types/skills";
 
+vi.mock("@tanstack/react-query", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-query")>();
+  return { ...actual, useQuery: () => ({ data: undefined }) };
+});
+
 vi.stubGlobal(
   "ResizeObserver",
   class {

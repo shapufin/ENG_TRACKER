@@ -14,9 +14,6 @@ vi.mock("@/context/AuthContext", () => ({ useAuth: vi.fn() }));
 vi.mock("@/context/PermissionContext", () => ({ usePermissions: vi.fn() }));
 vi.mock("@/context/PluginContext", () => ({ usePlugins: vi.fn() }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => navigate }));
-vi.mock("@/components/ui/ThemeToggle", () => ({
-  ThemeToggle: () => <div data-testid="theme-toggle" />,
-}));
 vi.mock("./components/MyClientsSection", () => ({
   MyClientsSection: () => <div data-testid="my-clients" />,
 }));
@@ -84,10 +81,16 @@ describe("SettingsPage", () => {
   const getPasswordInputs = () =>
     document.querySelectorAll('input[type="password"]') as NodeListOf<HTMLInputElement>;
 
+  // Password change lives in a FormDialog opened from the Profile card.
+  const openPasswordDialog = () => {
+    fireEvent.click(screen.getByRole("button", { name: "Change Password" }));
+  };
+
   it("validates password change", () => {
     vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
     render(<SettingsPage />);
+    openPasswordDialog();
     const inputs = getPasswordInputs();
     fireEvent.change(inputs[0], { target: { value: "old" } });
     fireEvent.change(inputs[1], { target: { value: "new1" } });
@@ -100,6 +103,7 @@ describe("SettingsPage", () => {
     vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
     render(<SettingsPage />);
+    openPasswordDialog();
     const inputs = getPasswordInputs();
     fireEvent.change(inputs[0], { target: { value: "old" } });
     fireEvent.change(inputs[1], { target: { value: "short" } });
@@ -112,6 +116,7 @@ describe("SettingsPage", () => {
     vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
     render(<SettingsPage />);
+    openPasswordDialog();
     const inputs = getPasswordInputs();
     fireEvent.change(inputs[0], { target: { value: "oldpass" } });
     fireEvent.change(inputs[1], { target: { value: "newpassword" } });
@@ -135,6 +140,7 @@ describe("SettingsPage", () => {
     vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
     render(<SettingsPage />);
+    openPasswordDialog();
     expect(screen.getByLabelText("Current Password")).toBe(getPasswordInputs()[0]);
     expect(screen.getByLabelText("New Password")).toBe(getPasswordInputs()[1]);
     expect(screen.getByLabelText("Confirm New Password")).toBe(getPasswordInputs()[2]);

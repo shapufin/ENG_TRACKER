@@ -130,6 +130,11 @@ const DayColumn: React.FC<{ day: DayData }> = ({ day }) => (
               </span>
             </div>
             <TeamChipList teamNames={row.team_names} className="mt-1" />
+            {(row.tech_levels?.length ?? 0) > 0 && (
+              <p className="mt-1 truncate text-micro text-muted-foreground">
+                {row.tech_levels!.join(" · ")}
+              </p>
+            )}
             <div className="mt-1.5 text-xs tabular-nums text-muted-foreground">
               {formatTime(row.start_time)} – {formatTime(row.end_time)}
             </div>

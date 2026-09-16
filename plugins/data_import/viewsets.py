@@ -157,7 +157,10 @@ def _build_mapped_rows(
             val = row.get(their_column)
             parsed = _parse_value(val, field.field_type)
             field_transforms = transforms.get(our_field)
-            if field_transforms is not None and field.field_type == 'choice' and parsed is not None:
+            # Transforms are not limited to choice fields: reference fields
+            # like client_code use them to remap unknown raw codes to
+            # existing ones.
+            if field_transforms is not None and parsed is not None:
                 parsed = field_transforms.get(str(parsed).strip(), str(parsed).strip())
             mapped_row[our_field] = parsed
 
@@ -167,7 +170,7 @@ def _build_mapped_rows(
                 field = fields_by_key.get(our_field)
                 parsed = _parse_value(default_value, field.field_type if field else 'string')
                 field_transforms = transforms.get(our_field)
-                if field_transforms is not None and field and field.field_type == 'choice' and parsed is not None:
+                if field_transforms is not None and field and parsed is not None:
                     parsed = field_transforms.get(str(parsed).strip(), str(parsed).strip())
                 mapped_row[our_field] = parsed
 
@@ -177,11 +180,18 @@ def _build_mapped_rows(
 
 
 def _template_frame(importer) -> pd.DataFrame:
-    """Build the template DataFrame: field labels as headers, sample rows as data."""
+    """Build the template DataFrame: field labels as headers, sample rows as data.
+
+    A required field's header carries a trailing " *" so the downloaded file
+    itself shows which columns are mandatory, not just the in-app mapping UI.
+    ``normalize_columns`` strips that suffix again on re-upload so auto-detect
+    still matches the plain alias list.
+    """
     fields = importer.get_fields()
-    columns = [f.label for f in fields]
+    header = {f.key: f"{f.label} *" if f.required else f.label for f in fields}
+    columns = [header[f.key] for f in fields]
     rows = [
-        {f.label: row.get(f.key, "") for f in fields}
+        {header[f.key]: row.get(f.key, "") for f in fields}
         for row in importer.get_sample_rows()
     ]
     return pd.DataFrame(rows, columns=columns)
@@ -299,6 +309,9 @@ class ImportProfileViewSet(ImporterAccessMixin, PluginPermissionMixin, viewsets.
     """
     queryset = ImportProfile.objects.filter(is_active=True)
     serializer_class = ImportProfileSerializer
+    # The frontend contract for this list is a bare array (ImportProfile[]),
+    # not a paginated envelope — profiles are a small dropdown list.
+    pagination_class = None
     plugin_name = 'data_import'
     permission_classes = [permissions.IsAuthenticated]
     permission_action_map = {'list': 'view'}
@@ -426,6 +439,7 @@ class DataImportViewSet(ImporterAccessMixin, PluginPermissionMixin, viewsets.Gen
             'summary': summary,
             'rows': results,
             'total_rows': len(rows),
+            'payroll': context.get('payroll_result'),
         }
 
     @action(detail=False, methods=['post'])
@@ -563,6 +577,7 @@ class DataImportViewSet(ImporterAccessMixin, PluginPermissionMixin, viewsets.Gen
                 'summary': summary,
                 'row_errors': row_errors,
                 'credentials': credentials,
+                'payroll': context.get('payroll_result'),
             }, status=status.HTTP_200_OK)
 
         except ValueError as e:

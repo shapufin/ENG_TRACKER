@@ -10,6 +10,17 @@ const useSkillCategoriesMock = vi.fn();
 vi.mock("../hooks/useSkillsQueries", () => ({
   useSkills: (...args: unknown[]) => useSkillsMock(...args),
   useSkillCategories: (...args: unknown[]) => useSkillCategoriesMock(...args),
+  useSkillLevelLabels: () => ({ data: undefined }),
+  resolveLevelLabel: (level: number) => {
+    const defaults: Record<number, string> = {
+      1: "Foundational",
+      2: "Developing",
+      3: "Proficient",
+      4: "Advanced",
+      5: "Mastery",
+    };
+    return defaults[level] ?? `L${level}`;
+  },
 }));
 
 const categories: SkillCategory[] = [

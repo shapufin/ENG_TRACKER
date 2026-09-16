@@ -1,8 +1,8 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, Calendar } from "lucide-react";
-import { CalendarPopover } from "./CalendarPopover";
+import { Search, Filter } from "lucide-react";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
 
 interface SearchInputProps {
   value: string;
@@ -72,18 +72,14 @@ export const DateRangePickers: React.FC<DateRangePickersProps> = ({
   dateTo,
   onDateToChange,
 }) => (
-  <>
-    <CalendarPopover value={dateFrom} onChange={onDateFromChange}>
-      <Button variant="outline" className="h-12 w-full justify-start">
-        <Calendar className="mr-2 h-4 w-4" />
-        {dateFrom || "Start Date"}
-      </Button>
-    </CalendarPopover>
-    <CalendarPopover value={dateTo} onChange={onDateToChange}>
-      <Button variant="outline" className="h-12 w-full justify-start">
-        <Calendar className="mr-2 h-4 w-4" />
-        {dateTo || "End Date"}
-      </Button>
-    </CalendarPopover>
-  </>
+  <DateRangePicker
+    from={dateFrom}
+    to={dateTo}
+    onChange={({ from, to }) => {
+      onDateFromChange(from);
+      onDateToChange(to);
+    }}
+    className="h-12"
+    placeholder="Select date range"
+  />
 );

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { AnalyticsControls } from "./AnalyticsControls";
 
@@ -18,6 +18,21 @@ const baseProps = {
 };
 
 describe("AnalyticsControls", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      }
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("renders period buttons", () => {
     render(<AnalyticsControls {...baseProps} />);
     expect(screen.getByText("month")).toBeInTheDocument();
@@ -30,20 +45,20 @@ describe("AnalyticsControls", () => {
     expect(baseProps.onPeriodChange).toHaveBeenCalledWith("year");
   });
 
-  it("shows date inputs for custom period", () => {
+  it("shows the date range picker for custom period", () => {
     render(<AnalyticsControls {...baseProps} selectedPeriod="custom" />);
-    expect(screen.getAllByDisplayValue("2024-01-01").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /open date range/i })).toBeInTheDocument();
   });
 
-  it("does not show date inputs for non-custom period", () => {
+  it("does not show the date range picker for non-custom period", () => {
     render(<AnalyticsControls {...baseProps} />);
-    expect(screen.queryAllByDisplayValue("2024-01-01").length).toBe(0);
+    expect(screen.queryByRole("button", { name: /open date range/i })).not.toBeInTheDocument();
   });
 
-  it("calls onDateRangeChange when date changes", () => {
+  it("calls onDateRangeChange when applying the 'Today' quick range", () => {
     render(<AnalyticsControls {...baseProps} selectedPeriod="custom" />);
-    const fromInput = screen.getAllByDisplayValue("2024-01-01")[0];
-    fireEvent.change(fromInput, { target: { value: "2024-02-01" } });
+    fireEvent.click(screen.getByRole("button", { name: /open date range/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Today" }));
     expect(baseProps.onDateRangeChange).toHaveBeenCalled();
   });
 

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -36,7 +37,7 @@ export const TicketKPITestMappingTab: React.FC<TicketKPITestMappingTabProps> = (
   const [isDragging, setIsDragging] = useState(false);
 
   return (
-    <Card>
+    <GlassCard isHoverLift={false}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <TestTube className="h-5 w-5 text-primary" /> Test Mapping
@@ -76,6 +77,6 @@ export const TicketKPITestMappingTab: React.FC<TicketKPITestMappingTabProps> = (
 
         {testResult && <TestMappingResult result={testResult} />}
       </CardContent>
-    </Card>
+    </GlassCard>
   );
 };

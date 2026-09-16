@@ -87,7 +87,10 @@ describe("PayrollRuleSetEditorDialog", () => {
       />
     );
 
-    expect(screen.getByText("Income Tax Brackets")).toBeInTheDocument();
+    expect(screen.getByText("Calculation identity")).toBeInTheDocument();
+    expect(screen.getByText("When this applies")).toBeInTheDocument();
+    expect(screen.getByText("Classification")).toBeInTheDocument();
+    expect(screen.getByText("Income tax brackets")).toBeInTheDocument();
     expect(screen.getByText("Social Security & Health Insurance")).toBeInTheDocument();
     expect(screen.getByDisplayValue("13")).toBeInTheDocument();
     expect(screen.getByDisplayValue("9.5")).toBeInTheDocument();
@@ -118,7 +121,9 @@ describe("PayrollRuleSetEditorDialog", () => {
 
     expect(screen.getByLabelText("Short Code (unique ID)")).toHaveValue("");
     expect(screen.getByLabelText("Version")).toHaveValue("");
-    expect(screen.getByLabelText("Effective from")).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Effective dates" })).toHaveTextContent(
+      "Select date range"
+    );
     fireEvent.click(screen.getByRole("button", { name: "Create version" }));
     expect(
       screen.getByText("Name, code, version, and effective date are required.")

@@ -1,6 +1,7 @@
 import React from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Label } from "@/components/ui/label";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -22,6 +23,8 @@ interface CalendarFormDialogProps {
   title: string;
   requestType: LeaveRequest["request_type"];
   onRequestTypeChange: (value: LeaveRequest["request_type"]) => void;
+  selectedDates: { start: string; end: string } | null;
+  onDateRangeChange: (start: string, end: string) => void;
   reason: string;
   onReasonChange: (value: string) => void;
   carryOverAndBalance: CarryOverData;
@@ -42,6 +45,8 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
   title,
   requestType,
   onRequestTypeChange,
+  selectedDates,
+  onDateRangeChange,
   reason,
   onReasonChange,
   carryOverAndBalance,
@@ -77,6 +82,19 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div>
+          <Label htmlFor="calendar-request-dates" className="text-xs font-medium">
+            Event dates
+          </Label>
+          <DateRangePicker
+            id="calendar-request-dates"
+            from={selectedDates?.start ?? ""}
+            to={selectedDates?.end ?? ""}
+            onChange={({ from, to }) => onDateRangeChange(from, to)}
+            placeholder="Select dates"
+            className="mt-1"
+          />
         </div>
         {requestType === "vacation" ? (
           <p className="text-xs text-muted-foreground">

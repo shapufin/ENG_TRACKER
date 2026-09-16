@@ -10,10 +10,13 @@ interface InsightsData {
 
 interface HRInsightsCardProps {
   insightsData: InsightsData;
+  /** Export action mini-card, rendered as the 4th grid slot (mockup: export
+   * buttons merge into the insight-cards row instead of a separate bar). */
+  actionBar?: React.ReactNode;
 }
 
-export const HRInsightsCard: React.FC<HRInsightsCardProps> = ({ insightsData }) => (
-  <div className="grid gap-4 md:grid-cols-3">
+export const HRInsightsCard: React.FC<HRInsightsCardProps> = ({ insightsData, actionBar }) => (
+  <div className="grid gap-4 md:grid-cols-4">
     <StatCard
       label="Overtime Increase"
       value={`${insightsData.overtime_increase}%`}
@@ -41,5 +44,6 @@ export const HRInsightsCard: React.FC<HRInsightsCardProps> = ({ insightsData }) 
       iconColorClass="text-warning"
       valueColorClass="text-warning"
     />
+    {actionBar}
   </div>
 );

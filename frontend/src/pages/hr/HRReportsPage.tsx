@@ -163,24 +163,6 @@ export const HRReportsPage: React.FC = () => {
           onGenerate={onGenerate}
         />
 
-        <HRReportActionBar
-          exportDialogOpen={exportDialogOpen}
-          onExportDialogOpenChange={setExportDialogOpen}
-          exportType={exportType}
-          onExportTypeChange={setExportType}
-          exportStatus={exportStatus}
-          onExportStatusChange={setExportStatus}
-          exportLoading={exportLoading}
-          onExport={() => downloadDetailedExport(exportType, exportStatus)}
-          start={start}
-          end={end}
-          selectedItalianTL={selectedItalianTL}
-          selectedAlbanianTL={selectedAlbanianTL}
-          selectedWorkspace={selectedWorkspace}
-          italianTLs={italianTLs}
-          albanianTLs={albanianTLs}
-        />
-
         <HRReportResults
           hasGenerated={hasGenerated}
           isLoading={isLoading}
@@ -189,8 +171,28 @@ export const HRReportsPage: React.FC = () => {
           trendData={trendData}
           detailedData={detailedData}
           leaveList={leaveList}
+          teams={teams}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
+          actionBar={
+            <HRReportActionBar
+              exportDialogOpen={exportDialogOpen}
+              onExportDialogOpenChange={setExportDialogOpen}
+              exportType={exportType}
+              onExportTypeChange={setExportType}
+              exportStatus={exportStatus}
+              onExportStatusChange={setExportStatus}
+              exportLoading={exportLoading}
+              onExport={() => downloadDetailedExport(exportType, exportStatus)}
+              start={start}
+              end={end}
+              selectedItalianTL={selectedItalianTL}
+              selectedAlbanianTL={selectedAlbanianTL}
+              selectedWorkspace={selectedWorkspace}
+              italianTLs={italianTLs}
+              albanianTLs={albanianTLs}
+            />
+          }
         />
       </div>
     </PageShell>

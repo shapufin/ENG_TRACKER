@@ -15,6 +15,7 @@ const useMatrixMock = vi.fn();
 const useCoverageMock = vi.fn();
 const useGapReportMock = vi.fn();
 const useExportMatrixMock = vi.fn();
+const useExportMatrixXlsxMock = vi.fn();
 const useRateUserSkillMock = vi.fn();
 const useSkillCategoriesMock = vi.fn();
 const useIsMobileMock = vi.fn();
@@ -64,8 +65,30 @@ vi.mock("../hooks/useSkillsQueries", () => ({
   // Capture args so we can assert on topN wiring.
   useGapReport: (...args: unknown[]) => useGapReportMock(...args),
   useExportMatrix: () => useExportMatrixMock(),
+  useExportMatrixXlsx: () => useExportMatrixXlsxMock(),
   useRateUserSkill: () => useRateUserSkillMock(),
   useSkillCategories: () => useSkillCategoriesMock(),
+  useSkillLevelLabels: () => ({ data: undefined }),
+  useLevelLabel: (level: number) => {
+    const defaults: Record<number, string> = {
+      1: "Foundational",
+      2: "Developing",
+      3: "Proficient",
+      4: "Advanced",
+      5: "Mastery",
+    };
+    return defaults[level] ?? `L${level}`;
+  },
+  resolveLevelLabel: (level: number) => {
+    const defaults: Record<number, string> = {
+      1: "Foundational",
+      2: "Developing",
+      3: "Proficient",
+      4: "Advanced",
+      5: "Mastery",
+    };
+    return defaults[level] ?? `L${level}`;
+  },
 }));
 
 vi.mock("@/hooks/useIsMobile", () => ({
@@ -152,6 +175,7 @@ beforeEach(() => {
   useCoverageMock.mockReturnValue({ data: coverage });
   useGapReportMock.mockReturnValue({ data: [] });
   useExportMatrixMock.mockReturnValue(mutationMock());
+  useExportMatrixXlsxMock.mockReturnValue(mutationMock());
   useRateUserSkillMock.mockReturnValue(mutationMock());
   useIsMobileMock.mockReturnValue(false);
 });
@@ -313,6 +337,24 @@ describe("SkillsTeamPage", () => {
     );
     fireEvent.click(screen.getByText("Export CSV"));
     await waitFor(() => expect(exportMut.mutate).toHaveBeenCalled());
+  });
+
+  it("triggers the XLSX export separately, carrying the active filters", async () => {
+    const xlsxMut = mutationMock();
+    useExportMatrixXlsxMock.mockReturnValue(xlsxMut);
+    render(
+      <MemoryRouter>
+        <SkillsTeamPage />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByText("Export XLSX"));
+    await waitFor(() => expect(xlsxMut.mutate).toHaveBeenCalled());
+    // The CSV export must not fire too — they are two separate downloads.
+    expect(useExportMatrixMock().mutate).not.toHaveBeenCalled();
+    expect(xlsxMut.mutate.mock.calls[0][0]).toEqual({
+      category: undefined,
+      search: undefined,
+    });
   });
 
   it("renders coverage in skill sub-headers alongside KPI cards", () => {

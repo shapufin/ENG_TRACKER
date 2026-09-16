@@ -6,6 +6,17 @@ import { AddSkillDialog } from "./AddSkillDialog";
 vi.mock("../hooks/useSkillsQueries", () => ({
   useSkillCategories: () => ({ data: [] }),
   useSkills: () => ({ data: [], isLoading: false, error: null }),
+  useSkillLevelLabels: () => ({ data: undefined }),
+  resolveLevelLabel: (level: number) => {
+    const defaults: Record<number, string> = {
+      1: "Foundational",
+      2: "Developing",
+      3: "Proficient",
+      4: "Advanced",
+      5: "Mastery",
+    };
+    return defaults[level] ?? `L${level}`;
+  },
 }));
 
 const renderDialog = () => {

@@ -198,7 +198,14 @@ class TemplateDownloadTests(TestCase):
         self.assertEqual(response["Content-Type"], "text/csv")
         self.assertIn("clients_import_template.csv", response["Content-Disposition"])
         header = self._content(response).decode("utf-8-sig").splitlines()[0]
-        self.assertEqual(header.strip(), "Code,Name,Description,Active")
+        self.assertEqual(header.strip(), "Code *,Name *,Description,Active")
+
+    def test_csv_template_marks_required_columns_with_an_asterisk(self):
+        """Code and Name are required for clients; Description/Active are not."""
+        response = self._template("clients", "csv")
+        header = self._content(response).decode("utf-8-sig").splitlines()[0]
+        columns = header.strip().split(",")
+        self.assertEqual(columns, ["Code *", "Name *", "Description", "Active"])
 
     def test_csv_template_includes_the_sample_rows(self):
         response = self._template("clients", "csv")
@@ -212,7 +219,7 @@ class TemplateDownloadTests(TestCase):
         self.assertIn("spreadsheetml", response["Content-Type"])
         self.assertIn("clients_import_template.xlsx", response["Content-Disposition"])
         frame = pd.read_excel(io.BytesIO(self._content(response)))
-        self.assertEqual(list(frame.columns), ["Code", "Name", "Description", "Active"])
+        self.assertEqual(list(frame.columns), ["Code *", "Name *", "Description", "Active"])
         self.assertEqual(len(frame), 2)
 
     def test_csv_is_the_default_format(self):
@@ -264,13 +271,26 @@ class ProfileVisibilityTests(TestCase):
             {"target_key": "clients"},
         )
 
+    def test_list_returns_a_bare_array_for_the_frontend_contract(self):
+        """The frontend hook expects ImportProfile[], not a paginated envelope.
+
+        Regression: the DRF default PageNumberPagination wrapped the list in
+        {count, next, previous, results}, and ImportProfileBar crashed with
+        "profiles.filter is not a function" at the mapping step.
+        """
+        ImportProfile.objects.create(name="Live", target_key="clients")
+        response = self._list()
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.data, list)
+        self.assertEqual([p["name"] for p in response.data], ["Live"])
+
     def test_soft_deleted_profiles_are_not_listed(self):
         ImportProfile.objects.create(name="Live", target_key="clients")
         ImportProfile.objects.create(name="Gone", target_key="clients", is_active=False)
 
         response = self._list()
         self.assertEqual(response.status_code, 200)
-        self.assertEqual({p["name"] for p in response.data["results"]}, {"Live"})
+        self.assertEqual({p["name"] for p in response.data}, {"Live"})
 
     def test_destroy_soft_deletes_and_removes_it_from_the_list(self):
         profile = ImportProfile.objects.create(name="Temp", target_key="clients")
@@ -284,4 +304,4 @@ class ProfileVisibilityTests(TestCase):
         self.assertEqual(response.status_code, 204)
         profile.refresh_from_db()
         self.assertFalse(profile.is_active)
-        self.assertEqual(self._list().data["results"], [])
+        self.assertEqual(self._list().data, [])

@@ -12,6 +12,10 @@ interface TechMultiSelectProps {
   techs: Tech[];
   value: number[];
   onChange: (techIds: number[]) => void;
+  /** Level held per Tech, keyed by tech id. Omit to hide the level pickers
+   * entirely (callers that only care about membership). */
+  levelByTech?: Record<number, number | null>;
+  onLevelChange?: (techId: number, levelId: number | null) => void;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -20,6 +24,8 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
   techs,
   value,
   onChange,
+  levelByTech,
+  onLevelChange,
   placeholder = "Select Tech...",
   disabled = false,
 }) => {
@@ -43,8 +49,17 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
     [activeTechs, value]
   );
 
+  const showLevels = Boolean(levelByTech && onLevelChange);
+
   const toggle = (id: number) => {
-    onChange(value.includes(id) ? value.filter((item) => item !== id) : [...value, id]);
+    if (value.includes(id)) {
+      onChange(value.filter((item) => item !== id));
+      // Drop the grade with the assignment, so re-adding the tech never
+      // resurrects a level the user thought they had removed.
+      onLevelChange?.(id, null);
+    } else {
+      onChange([...value, id]);
+    }
   };
 
   return (
@@ -127,6 +142,41 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
           </div>
         </PopoverContent>
       </Popover>
+      {showLevels && selected.length > 0 && (
+        <div className="space-y-1.5">
+          {selected.map((tech) => {
+            const levels = (tech.levels ?? []).filter((level) => level.is_active);
+            if (levels.length === 0) return null;
+            const selectId = `tech-level-${tech.id}`;
+            return (
+              <div key={tech.id} className="flex items-center gap-2">
+                <label htmlFor={selectId} className="w-32 shrink-0 truncate text-xs">
+                  {tech.name}
+                </label>
+                <select
+                  id={selectId}
+                  disabled={disabled}
+                  value={levelByTech?.[tech.id] ?? ""}
+                  onChange={(event) =>
+                    onLevelChange?.(
+                      tech.id,
+                      event.target.value === "" ? null : Number(event.target.value)
+                    )
+                  }
+                  className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                >
+                  <option value="">No level</option>
+                  {levels.map((level) => (
+                    <option key={level.id} value={level.id}>
+                      {level.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {(selected.length > 0 || inactiveSelected.length > 0) && (
         <div className="flex flex-wrap items-center gap-1.5">
           {selected.map((tech) => (

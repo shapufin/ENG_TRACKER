@@ -35,6 +35,15 @@ vi.mock("@/components/layout/PageShell", () => ({
   ),
 }));
 
+// Admin-renamed labels must reach the individual page's level picker too.
+const levelLabelsMock = vi.hoisted(() => ({
+  level_1_label: "Basic",
+  level_2_label: "",
+  level_3_label: "",
+  level_4_label: "Expert",
+  level_5_label: "",
+}));
+
 vi.mock("../hooks/useSkillsQueries", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../hooks/useSkillsQueries")>();
   return {
@@ -42,6 +51,7 @@ vi.mock("../hooks/useSkillsQueries", async (importOriginal) => {
     useUserSkills: () => useUserSkillsMock(),
     useUpdateUserSkill: () => useUpdateUserSkillMock(),
     useDeleteUserSkill: () => useDeleteUserSkillMock(),
+    useSkillLevelLabels: () => ({ data: levelLabelsMock }),
   };
 });
 
@@ -175,6 +185,23 @@ describe("MySkillsPage", () => {
     );
     expect(screen.getByText("Python")).toBeInTheDocument();
     expect(screen.getByTestId("badge-4")).toBeInTheDocument();
+  });
+
+  it("shows admin-renamed level names in the level picker", () => {
+    useUserSkillsMock.mockReturnValue({
+      data: { results: [makeUserSkill({ skill_name: "Python", level: 4 })] },
+      isLoading: false,
+    });
+    render(
+      <Wrapper>
+        <MySkillsPage />
+      </Wrapper>
+    );
+    // Trigger shows the held level's custom name...
+    expect(screen.getByText(/L4 - Expert/)).toBeInTheDocument();
+    // ...and so does the option list, with defaults kept where unset.
+    expect(screen.getByText("1 - Basic")).toBeInTheDocument();
+    expect(screen.getByText("3 - Proficient")).toBeInTheDocument();
   });
 
   it("groups skills under category headers", () => {

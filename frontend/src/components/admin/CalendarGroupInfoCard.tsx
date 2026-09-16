@@ -22,26 +22,26 @@ export const CalendarGroupInfoCard: React.FC<CalendarGroupInfoCardProps> = ({
   gradient = false,
 }) => {
   return (
-    <GlassCard isHoverLift={false} glow={gradient ? "primary" : "none"} className="p-7">
-      <div className="flex gap-5">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-          <Icon className="h-8 w-8 text-primary" />
+    <GlassCard isHoverLift={false} glow={gradient ? "primary" : "none"} className="p-5">
+      <div className="flex gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+          <Icon className="h-5 w-5 text-primary" />
         </div>
 
         <div className="flex-1">
-          <p className="mb-2 text-xs uppercase tracking-[0.25em] text-muted-foreground">
+          <p className="mb-1 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
             {trackingLabel}
           </p>
 
-          <h2 className="text-3xl font-semibold leading-tight">{title}</h2>
+          <h2 className="text-lg font-semibold leading-tight">{title}</h2>
 
-          <p className="mt-4 max-w-3xl text-base leading-7 text-muted-foreground">{description}</p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{description}</p>
 
           {exampleTitle && exampleText && (
-            <div className="mt-6 rounded-2xl border border-primary/20 bg-primary/5 p-5">
-              <p className="mb-2 text-sm font-semibold text-foreground">{exampleTitle}</p>
+            <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <p className="mb-1 text-xs font-semibold text-foreground">{exampleTitle}</p>
 
-              <p className="text-sm leading-7 text-foreground/80">{exampleText}</p>
+              <p className="text-xs leading-6 text-foreground/80">{exampleText}</p>
             </div>
           )}
         </div>

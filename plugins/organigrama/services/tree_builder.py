@@ -22,6 +22,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 
 from apps.users.models.core import Tech, UserProfile
+from apps.users.services.tech_assignments import format_assignments
 
 logger = logging.getLogger(__name__)
 
@@ -55,13 +56,19 @@ _role_badge = role_badge
 
 
 def _person_node(user: User, profile: UserProfile) -> Dict[str, Any]:
-    """Build a person node."""
+    """Build a person node.
+
+    ``tech_levels`` are display strings ("Infrastructure L3") read from the
+    ``tech_assignments`` prefetch — callers MUST prefetch
+    ``profile__tech_assignments__tech`` / ``__level`` or this is an N+1.
+    """
     return {
         "type": "person",
         "id": user.id,
         "username": user.username,
         "full_name": user.get_full_name() or user.username,
         "role_badge": role_badge(profile),
+        "tech_levels": format_assignments(profile),
         "children": [],
     }
 
@@ -82,6 +89,9 @@ def _get_italian_tls() -> List[User]:
     return list(
         User.objects.filter(profile__is_italian_tl_role=True, is_active=True)
         .select_related("profile")
+        .prefetch_related(
+            "profile__tech_assignments__tech", "profile__tech_assignments__level"
+        )
         .distinct()
         .order_by("username")
     )
@@ -92,6 +102,9 @@ def _get_albanian_tls_for_italian(italian_tl: User) -> List[User]:
     return list(
         User.objects.filter(profile__italian_tl=italian_tl, is_active=True)
         .select_related("profile", "profile__italian_tl")
+        .prefetch_related(
+            "profile__tech_assignments__tech", "profile__tech_assignments__level"
+        )
         .distinct()
         .order_by("username")
     )
@@ -134,6 +147,9 @@ def _batch_get_albanian_tls(
             profile__italian_tl_id__in=italian_ids, is_active=True
         )
         .select_related("profile", "profile__italian_tl")
+        .prefetch_related(
+            "profile__tech_assignments__tech", "profile__tech_assignments__level"
+        )
         .distinct()
         .order_by("username")
     )
@@ -170,7 +186,9 @@ def _batch_get_employees(
         )
         .exclude(user_id__in=al_ids)
         .select_related("user", "albanian_tl", "italian_tl")
-        .prefetch_related("teams", "techs")
+        .prefetch_related(
+            "teams", "techs", "tech_assignments__tech", "tech_assignments__level"
+        )
         .distinct()
         .order_by("user__username")
     )
@@ -337,7 +355,9 @@ def build_subtree(user: User) -> Dict[str, Any]:
                     user_id__in=all_emp_ids, user__is_active=True
                 )
                 .select_related("user", "albanian_tl", "italian_tl")
-                .prefetch_related("techs")
+                .prefetch_related(
+                    "techs", "tech_assignments__tech", "tech_assignments__level"
+                )
                 .distinct()
                 .order_by("user__username")
             )
@@ -373,7 +393,7 @@ def build_subtree(user: User) -> Dict[str, Any]:
             )
             .exclude(user=user)
             .select_related("user", "albanian_tl", "italian_tl")
-            .prefetch_related("techs")
+            .prefetch_related("techs", "tech_assignments__tech", "tech_assignments__level")
             .distinct()
             .order_by("user__username")
         )
@@ -416,7 +436,7 @@ def _build_chain_tech_siblings(
             techs__id__in=employee_tech_ids,
         )
         .select_related("user", "albanian_tl", "italian_tl")
-        .prefetch_related("techs")
+        .prefetch_related("techs", "tech_assignments__tech", "tech_assignments__level")
         .distinct()
         .order_by("user__username")
     )

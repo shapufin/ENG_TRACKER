@@ -16,9 +16,11 @@ interface PayrollRunActionsProps {
   onFinalize: () => void;
   onDelete: () => void;
   onExport: () => void;
+  onExportPdf: () => void;
   generateLoading: boolean;
   deleteLoading: boolean;
   exportLoading: boolean;
+  exportPdfLoading: boolean;
   closureStatus?: ClosureStatus;
 }
 
@@ -31,9 +33,11 @@ export const PayrollRunActions: React.FC<PayrollRunActionsProps> = ({
   onFinalize,
   onDelete,
   onExport,
+  onExportPdf,
   generateLoading,
   deleteLoading,
   exportLoading,
+  exportPdfLoading,
   closureStatus,
 }) => {
   const navigate = useNavigate();
@@ -93,6 +97,16 @@ export const PayrollRunActions: React.FC<PayrollRunActionsProps> = ({
             title="Export all employees as Excel (finalized runs only)"
           >
             {exportLoading ? "Exporting..." : "Export Excel"}
+          </Button>
+        )}
+        {canExport && (
+          <Button
+            variant="outline"
+            onClick={onExportPdf}
+            disabled={exportPdfLoading || lineCount === 0}
+            title="Export a consolidated PDF: summary + every employee's payslip (finalized runs only)"
+          >
+            {exportPdfLoading ? "Exporting..." : "Export PDF"}
           </Button>
         )}
       </div>

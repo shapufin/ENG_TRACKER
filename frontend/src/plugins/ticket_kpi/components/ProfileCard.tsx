@@ -1,5 +1,6 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2 } from "lucide-react";
@@ -22,7 +23,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   const clientNameById = new Map(clients.map((c) => [c.id, c.name]));
 
   return (
-    <Card>
+    <GlassCard>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
@@ -64,6 +65,6 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
           </Button>
         </div>
       </CardContent>
-    </Card>
+    </GlassCard>
   );
 };

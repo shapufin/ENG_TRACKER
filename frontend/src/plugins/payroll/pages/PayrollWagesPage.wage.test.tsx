@@ -95,10 +95,9 @@ describe("PayrollWagesPage assign dialog (mockup AssignWage pattern)", () => {
     expect(dialog.getByText("Lek / mo")).toBeInTheDocument();
   });
 
-  it("keeps effective dates and note fields", async () => {
+  it("keeps a unified effective-period range picker and a note field", async () => {
     const dialog = await openAssignForm();
-    expect(dialog.getByLabelText(/start date/i)).toBeInTheDocument();
-    expect(dialog.getByLabelText(/effective to/i)).toBeInTheDocument();
+    expect(dialog.getByRole("button", { name: "Effective period" })).toBeInTheDocument();
     expect(dialog.getByLabelText(/note/i)).toBeInTheDocument();
   });
 });

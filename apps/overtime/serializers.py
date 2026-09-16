@@ -4,6 +4,7 @@ Overtime app serializers.
 
 from rest_framework import serializers
 from .models import Client, OvertimeLog
+from apps.users.services.tech_assignments import format_assignments
 from .models.core import clean_ticket_references
 
 
@@ -34,12 +35,13 @@ class OvertimeLogSerializer(serializers.ModelSerializer):
     hours = serializers.SerializerMethodField()  # Round hours for display
     team_id = serializers.SerializerMethodField()
     team_name = serializers.SerializerMethodField()
-    
+    user_tech_levels = serializers.SerializerMethodField()
+
     class Meta:
         model = OvertimeLog
         fields = [
             'id', 'user', 'user_name', 'user_full_name',
-            'team_id', 'team_name',
+            'team_id', 'team_name', 'user_tech_levels',
             'client', 'client_name', 'client_code',
             'date', 'submitted_at', 'requested_processing_period',
             'resolved_settlement_period', 'approval_period_close',
@@ -92,6 +94,16 @@ class OvertimeLogSerializer(serializers.ModelSerializer):
         if hasattr(obj.user, 'profile') and obj.user.profile.get_primary_team():
             return obj.user.profile.get_primary_team().name
         return None
+
+    def get_user_tech_levels(self, obj) -> list:
+        """Tech + held level labels, so approvers see the submitter's grade.
+
+        Needs ``user__profile__tech_assignments__tech`` / ``__level`` prefetched
+        on the queryset (OvertimeLogViewSet does this).
+        """
+        if not hasattr(obj.user, 'profile'):
+            return []
+        return format_assignments(obj.user.profile)
 
 
 class OvertimeLogCreateSerializer(serializers.ModelSerializer):

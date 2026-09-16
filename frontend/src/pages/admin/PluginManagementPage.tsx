@@ -1,6 +1,7 @@
 import React from "react";
 import { RefreshCcw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageShell } from "@/components/layout/PageShell";
 import { usePluginManagement } from "@/hooks/usePluginManagement";
 import { PluginManagementGrid } from "@/components/admin/PluginManagementGrid";
 import { PluginConfigDialog } from "@/components/admin/PluginConfigDialog";
@@ -29,14 +30,10 @@ export const PluginManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line-subtle pb-3">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight">Plugin Management</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            Manage and extend application functionality through plugins.
-          </p>
-        </div>
+    <PageShell
+      title="Plugin Management"
+      subtitle="Manage and extend application functionality through plugins."
+      actions={
         <Button
           onClick={handleDiscover}
           disabled={isDiscovering || isLoading}
@@ -49,8 +46,8 @@ export const PluginManagementPage: React.FC = () => {
           )}
           Discover Plugins
         </Button>
-      </div>
-
+      }
+    >
       <PluginManagementGrid
         plugins={plugins}
         isLoading={isLoading}
@@ -67,6 +64,6 @@ export const PluginManagementPage: React.FC = () => {
         onOpenChange={setConfigDialogOpen}
         onConfigSaved={() => fetchPlugins()}
       />
-    </div>
+    </PageShell>
   );
 };

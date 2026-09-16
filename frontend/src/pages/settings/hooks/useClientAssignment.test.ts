@@ -38,35 +38,42 @@ const setup = (members: any[]) => {
 beforeEach(() => vi.clearAllMocks());
 
 describe("useClientAssignment", () => {
-  it("maps 0/1/N assigned clients to None/single/Multiple drafts", async () => {
+  it("maps each member's assigned clients to their full id list", async () => {
     const { result } = setup([
       profile(1, "alice", []),
       profile(2, "bob", [1]),
       profile(3, "cara", [1, 2]),
     ]);
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.effective[1]).toBeNull();
-    expect(result.current.effective[2]).toBe(1);
-    expect(result.current.effective[3]).toBeUndefined();
+    expect(result.current.effective[1]).toEqual([]);
+    expect(result.current.effective[2]).toEqual([1]);
+    expect(result.current.effective[3]).toEqual([1, 2]);
     expect(result.current.isDirty).toBe(false);
   });
 
-  it("saves only dirty rows with single-id-or-empty payloads", async () => {
+  it("saves only dirty rows with the full multi-select payload", async () => {
     const { result } = setup([profile(1, "alice", []), profile(2, "bob", [1])]);
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    act(() => result.current.setDraft(1, 2));
+    act(() => result.current.setDraft(1, [1, 2]));
     expect(result.current.isDirty).toBe(true);
     await act(async () => result.current.saveAll());
     expect(userService.assignMemberClients).toHaveBeenCalledTimes(1);
-    expect(userService.assignMemberClients).toHaveBeenCalledWith(1, [2]);
+    expect(userService.assignMemberClients).toHaveBeenCalledWith(1, [1, 2]);
   });
 
-  it("sends empty list when a row is cleared to None", async () => {
+  it("sends empty list when a row is cleared to none", async () => {
     const { result } = setup([profile(2, "bob", [1])]);
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    act(() => result.current.setDraft(2, null));
+    act(() => result.current.setDraft(2, []));
     await act(async () => result.current.saveAll());
     expect(userService.assignMemberClients).toHaveBeenCalledWith(2, []);
+  });
+
+  it("is not dirty when a draft matches the initial set regardless of order", async () => {
+    const { result } = setup([profile(3, "cara", [1, 2])]);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    act(() => result.current.setDraft(3, [2, 1]));
+    expect(result.current.isDirty).toBe(false);
   });
 
   it("does not call the API when pristine", async () => {
@@ -80,7 +87,7 @@ describe("useClientAssignment", () => {
     const { result, qc } = setup([profile(1, "alice", [])]);
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     const spy = vi.spyOn(qc, "invalidateQueries");
-    act(() => result.current.setDraft(1, 1));
+    act(() => result.current.setDraft(1, [1]));
     await act(async () => result.current.saveAll());
     expect(spy).toHaveBeenCalledWith({ queryKey: ["team", "members"] });
     expect(spy).toHaveBeenCalledWith({ queryKey: ["overtime", "clients"] });

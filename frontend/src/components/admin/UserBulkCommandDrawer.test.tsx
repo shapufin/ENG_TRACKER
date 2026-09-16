@@ -61,7 +61,7 @@ describe("UserBulkCommandDrawer", () => {
   it("submits a multi-team replacement payload", () => {
     renderDrawer();
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Apply team changes" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Teams" }));
     fireEvent.click(screen.getByRole("button", { name: "Choose teams" }));
     fireEvent.click(screen.getByRole("button", { name: "Apply changes" }));
 

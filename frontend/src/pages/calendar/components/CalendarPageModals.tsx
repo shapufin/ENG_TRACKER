@@ -26,6 +26,8 @@ export const CalendarPageModals: React.FC<CalendarPageModalsProps> = ({
       title={`${data.requestType === "sick" ? "New Sick Leave" : "New Vacation"}${data.selectedDates ? ` (${data.selectedDates.start} to ${data.selectedDates.end})` : ""}`}
       requestType={data.requestType}
       onRequestTypeChange={data.setRequestType}
+      selectedDates={data.selectedDates}
+      onDateRangeChange={data.setDateRange}
       reason={data.reason}
       onReasonChange={data.setReason}
       carryOverAndBalance={data.carryOverAndBalance}

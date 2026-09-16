@@ -18,7 +18,15 @@ from .models import NormalizedTicket, TicketImportBatch, MonthlyKPI
 # Maximum number of distinct values for a field to be considered categorical
 # and included in field_breakdowns. Fields with more distinct values (e.g.
 # free-text fields) are excluded to keep breakdown payloads bounded.
-FIELD_BREAKDOWN_MAX_DISTINCT = 50
+#
+# field_breakdowns now also feeds the ticket-list filter dropdowns
+# (viewsets.py's ``tickets`` action reads it instead of scanning every
+# ticket) — a field exceeding this cap doesn't just lose its KPI-card
+# breakdown, its filter dropdown goes empty too. 200 is generous for any
+# realistic single-month, single-org set of standard fields (status,
+# priority, category, assignee, requester) while still bounding payload
+# size against a genuinely free-text dynamic column.
+FIELD_BREAKDOWN_MAX_DISTINCT = 200
 
 
 def _build_field_breakdowns(tickets) -> Dict[str, Dict[str, int]]:
@@ -29,8 +37,10 @@ def _build_field_breakdowns(tickets) -> Dict[str, Dict[str, int]]:
     field_values = {}
 
     for ticket in tickets:
-        # Standard fields
-        for field in ['status', 'priority', 'category', 'assignee']:
+        # Standard fields — 'requester' included so the ticket-list filter
+        # dropdown (viewsets.py's ``tickets`` action) can read it from here
+        # instead of scanning every ticket.
+        for field in ['status', 'priority', 'category', 'assignee', 'requester']:
             val = getattr(ticket, field, None)
             if val:
                 if field not in field_values:

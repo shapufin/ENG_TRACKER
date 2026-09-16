@@ -4,7 +4,8 @@ import { PageShell } from "@/components/layout/PageShell";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/button";
-import { ShieldAlert } from "lucide-react";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
+import { ShieldAlert, CheckCircle2 } from "lucide-react";
 import { useTicketKPITeamManagement } from "./hooks/useTicketKPITeamManagement";
 import { TicketKPITeamControls } from "../components/TicketKPITeamControls";
 import { TicketKPITeamStats } from "../components/TicketKPITeamStats";
@@ -22,6 +23,10 @@ export const TicketKPITeamManagementPage: React.FC = () => {
     stats,
     isLoading,
     deleteMutation,
+    rowSelection,
+    setRowSelection,
+    selectedBatchIds,
+    bulkReviewMutation,
   } = useTicketKPITeamManagement(isTeamLeader);
 
   if (!isTeamLeader) {
@@ -55,7 +60,26 @@ export const TicketKPITeamManagementPage: React.FC = () => {
           uniqueUsers={stats.uniqueUsers}
           uniqueMonths={stats.uniqueMonths}
         />
-        <TicketKPITeamBatchesTable rows={rows} isLoading={isLoading} onDelete={setBatchToDelete} />
+        <BulkActionBar
+          selectedCount={selectedBatchIds.length}
+          onClear={() => setRowSelection({})}
+          entityName="uploads"
+          actions={[
+            {
+              label: bulkReviewMutation.isPending ? "Reviewing..." : "Review Selected",
+              icon: CheckCircle2,
+              onClick: () => bulkReviewMutation.mutate(selectedBatchIds),
+              disabled: bulkReviewMutation.isPending,
+            },
+          ]}
+        />
+        <TicketKPITeamBatchesTable
+          rows={rows}
+          isLoading={isLoading}
+          onDelete={setBatchToDelete}
+          rowSelection={rowSelection}
+          onRowSelectionChange={setRowSelection}
+        />
       </div>
 
       <ConfirmDialog

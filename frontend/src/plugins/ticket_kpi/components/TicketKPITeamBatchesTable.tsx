@@ -1,28 +1,38 @@
 import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { Eye, Trash2 } from "lucide-react";
+import { Eye, Trash2, CheckCircle2 } from "lucide-react";
 import { formatMonthLabel } from "@/lib/monthOptions";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, OnChangeFn, RowSelectionState } from "@tanstack/react-table";
 import type { BatchRow } from "../pages/hooks/useTicketKPITeamManagement";
 
 interface TicketKPITeamBatchesTableProps {
   rows: BatchRow[];
   isLoading: boolean;
   onDelete: (batch: BatchRow) => void;
+  rowSelection: RowSelectionState;
+  onRowSelectionChange: OnChangeFn<RowSelectionState>;
 }
 
 export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps> = ({
   rows,
   isLoading,
   onDelete,
+  rowSelection,
+  onRowSelectionChange,
 }) => {
   const navigate = useNavigate();
 
+  // No manual "select" column here: DataTable renders its own select-all
+  // header checkbox and per-row checkbox whenever enableRowSelection is
+  // true (see DataTable.tsx) — a second column defining the same thing
+  // rendered two checkboxes per row. See ControlRoomAccessPage.tsx for the
+  // same enableRowSelection-only pattern.
   const columns = useMemo<ColumnDef<BatchRow>[]>(
     () => [
       {
@@ -51,6 +61,19 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
           row.original.created_at
             ? formatDateDDMMYYYY(row.original.created_at.slice(0, 10))
             : "N/A",
+      },
+      {
+        id: "reviewed",
+        header: "Reviewed",
+        cell: ({ row }) =>
+          row.original.is_reviewed ? (
+            <Badge variant="secondary" className="gap-1">
+              <CheckCircle2 className="h-3 w-3" />
+              {row.original.reviewed_by_username || "Yes"}
+            </Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">Not reviewed</span>
+          ),
       },
       {
         id: "actions",
@@ -115,6 +138,10 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
           searchPlaceholder="Search team member..."
           pageSize={10}
           emptyMessage={isLoading ? "Loading..." : "No team uploads found."}
+          getRowId={(row) => String(row.id)}
+          enableRowSelection
+          rowSelection={rowSelection}
+          onRowSelectionChange={onRowSelectionChange}
         />
       </CardContent>
     </Card>

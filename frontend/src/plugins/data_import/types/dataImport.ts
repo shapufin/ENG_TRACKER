@@ -138,6 +138,8 @@ export interface WizardState {
   previewResult: PreviewResult | null;
   commitResult: CommitResult | null;
   analyzeError: string | null;
+  /** Upload progress percent (0-100) for the running analyze/preview/commit; null when idle. */
+  uploadProgress: number | null;
   isAnalyzing: boolean;
   isPreviewing: boolean;
   isCommitting: boolean;

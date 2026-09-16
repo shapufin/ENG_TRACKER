@@ -46,6 +46,10 @@ class CodeKeyedImporter(BaseImporter):
         code = str(value or "").strip()
         return code.upper() if self.uppercase_code else code
 
+    @staticmethod
+    def _is_blank(value: Any) -> bool:
+        return value is None or (isinstance(value, str) and not value.strip())
+
     def _parse_bool(self, value: Any) -> Optional[bool]:
         """Return the boolean, or None when the cell carries no value."""
         if value is None or value == "":
@@ -116,6 +120,25 @@ class CodeKeyedImporter(BaseImporter):
                 return ImportRowResult(
                     row_index=row_index,
                     status="updated" if not dry_run else "valid",
+                )
+
+            required_keys = {
+                f.key
+                for f in self.get_fields()
+                if f.required
+                and f.key != self.code_key
+                and f.key in (*self.scalar_fields, *self.bool_fields)
+            }
+            missing = sorted(
+                key
+                for key in required_keys
+                if key not in values or self._is_blank(values[key])
+            )
+            if missing:
+                return ImportRowResult(
+                    row_index=row_index,
+                    status="error",
+                    errors=[f"{key} is required." for key in missing],
                 )
 
             error = self.validate_new(values)

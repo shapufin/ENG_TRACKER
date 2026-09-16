@@ -140,7 +140,7 @@ class ReportTemplateViewSet(viewsets.ModelViewSet):
 
 
 class GeneratedReportViewSet(TeamLeaderFilterMixin, viewsets.ModelViewSet):
-    queryset = GeneratedReport.objects.all()
+    queryset = GeneratedReport.objects.select_related('generated_by', 'template')
     serializer_class = GeneratedReportSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status', 'template']

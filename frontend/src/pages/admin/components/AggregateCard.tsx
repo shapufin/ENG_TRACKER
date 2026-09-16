@@ -59,13 +59,13 @@ export const AggregateCard: React.FC<AggregateCardProps> = ({
       <CardContent className="p-6">
         <div className="grid grid-cols-2 gap-8">
           <div className="space-y-1">
-            <p className="text-3xl font-bold tabular-nums tracking-tighter">
+            <p className="font-mono text-3xl font-bold tabular-nums tracking-tighter">
               <AnimatedNumber value={total_hours} />
             </p>
             <p className="text-xs font-medium uppercase text-muted-foreground">{totalLabel}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-3xl font-bold tabular-nums tracking-tighter text-success">
+            <p className="font-mono text-3xl font-bold tabular-nums tracking-tighter text-success">
               <AnimatedNumber value={approved_hours} />
             </p>
             <p className="text-xs font-medium uppercase text-muted-foreground">{approvedLabel}</p>

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { useCreateSkill, useUpdateSkill } from "./useSkillsQueries";
+import { useQuery } from "@tanstack/react-query";
+import { useCreateSkill, useUpdateSkill, useLevelLabel } from "./useSkillsQueries";
 
 const invalidateQueries = vi.fn();
 
@@ -27,6 +28,7 @@ vi.mock("../services/skillsService", () => ({
   gapReportService: {},
   historyService: {},
   skillExportService: {},
+  skillLevelLabelsService: { get: vi.fn(), update: vi.fn() },
 }));
 
 beforeEach(() => invalidateQueries.mockClear());
@@ -56,5 +58,27 @@ describe("catalog mutation invalidation", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["skills", "matrix"] });
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["skills", "coverage"] });
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["skills", "gaps"] });
+  });
+});
+
+describe("useLevelLabel", () => {
+  it("returns the custom label when loaded", () => {
+    vi.mocked(useQuery).mockReturnValue({ data: { level_3_label: "Rockstar" } } as never);
+    expect(useLevelLabel(3)).toBe("Rockstar");
+  });
+
+  it("falls back to the hardcoded default while the fetch is pending", () => {
+    vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
+    expect(useLevelLabel(3)).toBe("Proficient");
+  });
+
+  it("falls back to the hardcoded default when the custom label is blank", () => {
+    vi.mocked(useQuery).mockReturnValue({ data: { level_3_label: "" } } as never);
+    expect(useLevelLabel(3)).toBe("Proficient");
+  });
+
+  it("falls back to L{n} for an out-of-range level with no custom data", () => {
+    vi.mocked(useQuery).mockReturnValue({ data: undefined } as never);
+    expect(useLevelLabel(9)).toBe("L9");
   });
 });

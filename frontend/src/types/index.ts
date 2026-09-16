@@ -8,15 +8,76 @@ export interface Tech {
   code: string;
   description?: string;
   is_active: boolean;
+  /** The Tech's own ordered grade scale, rank-ascending. */
+  levels?: TechLevel[];
   created_at?: string;
   updated_at?: string;
 }
+
+/** One grade within a Tech's scale (Infrastructure L1/L2/L3). */
+export interface TechLevel {
+  id: number;
+  tech: number;
+  tech_code?: string;
+  name: string;
+  code: string;
+  /** Order within the Tech; higher means more senior. */
+  rank: number;
+  description?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** The level part of an assignment, as returned nested on a user's techs. */
+export interface TechLevelSummary {
+  id: number;
+  name: string;
+  code: string;
+  rank: number;
+}
+
+/** A Tech a user is assigned to, plus the grade they hold in it. */
+export interface UserTechAssignment {
+  id: number;
+  name: string;
+  code: string;
+  /** Null when assigned but ungraded, or when the level was deactivated. */
+  level: TechLevelSummary | null;
+}
+
+/** Write shape for a Tech assignment. A bare number keeps any level already
+ * held; an object applies the given level (null clears it). */
+export type TechAssignmentInput = number | { tech: number; level: number | null };
 
 export interface TechMember {
   id: number;
   username: string;
   email: string;
   full_name: string;
+  level: TechLevelSummary | null;
+}
+
+export interface TechLevelFacet {
+  id: number;
+  name: string;
+  code: string;
+  rank: number;
+  count: number;
+}
+
+export interface TechFacet {
+  id: number;
+  name: string;
+  code: string;
+  count: number;
+  levels: TechLevelFacet[];
+  no_level_count: number;
+}
+
+export interface TechFacetsResponse {
+  techs: TechFacet[];
+  no_tech_count: number;
 }
 
 export interface Team {
@@ -109,9 +170,11 @@ export interface UserProfile {
   teams: number[];
   /** Full team objects (read-only). */
   teams_detail?: Team[];
-  /** Independent technology assignments. */
+  /** Independent technology assignments. Reads back as bare Tech ids; writes
+   * accept either bare ids or {tech, level} pairs (see TechAssignmentInput). */
   techs: number[];
-  techs_detail?: Tech[];
+  /** Read-only: each assigned Tech with the grade held in it. */
+  techs_detail?: UserTechAssignment[];
   clients?: number[];
   clients_detail?: Client[];
   albanian_tl: number | null;
@@ -148,6 +211,8 @@ export interface OvertimeLog {
   user: number;
   user_name?: string;
   user_full_name?: string;
+  /** Tech + held level labels, e.g. ["Infrastructure L3"]. */
+  user_tech_levels?: string[];
   team_id?: number | null;
   team_name?: string;
   client: number;
@@ -184,6 +249,8 @@ export interface StandbyLog {
   user: number;
   user_name?: string;
   user_full_name?: string;
+  /** Tech + held level labels, e.g. ["Infrastructure L3"]. */
+  user_tech_levels?: string[];
   team_id?: number | null;
   team_name?: string;
   pattern: number | null;

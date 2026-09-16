@@ -10,6 +10,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 interface HoursLog {
   id: number;
   user_name?: string;
+  user_tech_levels?: string[];
   date: string;
   hours: number;
   description?: string | null;

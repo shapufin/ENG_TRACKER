@@ -6,6 +6,10 @@
  */
 import React from "react";
 import { ErrorCard } from "@/components/ui/ErrorCard";
+import { Progress } from "@/components/ui/progress";
+import { DataTable } from "@/components/ui/DataTable";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ImportTarget, ImportStep, PreviewResult, CommitResult } from "../types/dataImport";
 import type { useDataImportWizard } from "../pages/hooks/useDataImportWizard";
 import type { useImportProfiles } from "../pages/hooks/useImportProfiles";
@@ -17,6 +21,7 @@ import { ImportProfileBar } from "./ImportProfileBar";
 import { ImportSummaryCards } from "./ImportSummaryCards";
 import { ImportPreviewTable } from "./ImportPreviewTable";
 import { ValueTransformPanel } from "./ValueTransformPanel";
+import { rowErrorColumns } from "./rowErrors";
 
 type Wizard = ReturnType<typeof useDataImportWizard>;
 
@@ -38,9 +43,22 @@ export const ImportWizardBody: React.FC<ImportWizardBodyProps> = ({
   profiles,
   onSaveProfile,
 }) => {
+  const isWorking = state.isAnalyzing || state.isPreviewing || state.isCommitting;
+  const progressBar = isWorking ? (
+    <div className="space-y-1" role="status" aria-live="polite">
+      <Progress value={state.uploadProgress ?? 0} aria-label="Import upload progress" />
+      <p className="text-xs text-muted-foreground">
+        {state.uploadProgress !== null && state.uploadProgress < 100
+          ? `Uploading file… ${state.uploadProgress}%`
+          : "Processing on the server…"}
+      </p>
+    </div>
+  ) : null;
+
   if (step === "upload") {
     return (
       <div className="space-y-4">
+        {progressBar}
         <ImportFileDropzone file={state.file} onFileAccepted={wizard.setFile} />
         {state.analyzeError && <ErrorCard title="Analysis failed" message={state.analyzeError} />}
       </div>
@@ -50,6 +68,7 @@ export const ImportWizardBody: React.FC<ImportWizardBodyProps> = ({
   if (step === "map") {
     return (
       <div className="space-y-4">
+        {progressBar}
         {profiles && onSaveProfile && (
           <ImportProfileBar
             profiles={profiles}
@@ -66,7 +85,7 @@ export const ImportWizardBody: React.FC<ImportWizardBodyProps> = ({
           onFieldMappingChange={wizard.setFieldMapping}
           onDefaultValueChange={wizard.setDefaultValue}
         />
-        {target.fields.some((f) => f.field_type === "choice") && (
+        {target.fields.some((f) => f.choices && f.choices.length > 0) && (
           <ValueTransformPanel
             fields={target.fields}
             fieldMapping={state.fieldMapping}
@@ -91,6 +110,7 @@ export const ImportWizardBody: React.FC<ImportWizardBodyProps> = ({
     const preview: PreviewResult = state.previewResult;
     return (
       <div className="space-y-4">
+        {progressBar}
         <ImportSummaryCards summary={preview.summary} mode="preview" />
         <ImportPreviewTable rows={preview.rows} />
       </div>
@@ -103,10 +123,19 @@ export const ImportWizardBody: React.FC<ImportWizardBodyProps> = ({
       <div className="space-y-4">
         <ImportSummaryCards summary={commit.summary} mode="commit" />
         {commit.row_errors.length > 0 && (
-          <ErrorCard
-            title="Import errors"
-            message={`${commit.row_errors.length} row(s) could not be imported.`}
-          />
+          <GlassCard isHoverLift={false}>
+            <CardHeader>
+              <CardTitle>{commit.row_errors.length} row(s) could not be imported</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                columns={rowErrorColumns}
+                data={commit.row_errors}
+                pageSize={5}
+                emptyMessage="No row errors."
+              />
+            </CardContent>
+          </GlassCard>
         )}
       </div>
     );

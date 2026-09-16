@@ -3,13 +3,7 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ClientMultiSelect } from "./ClientMultiSelect";
 import { Building2, Save, Users } from "lucide-react";
 import { useClientAssignment } from "../hooks/useClientAssignment";
 import type { UserProfile } from "@/types";
@@ -23,9 +17,9 @@ const displayName = (m: UserProfile): string => {
  * TL Client Assignment card (Settings page).
  *
  * Mockup: `Time Tracker UI Project/TL/settings.html` Client Assignment
- * table — one client dropdown per team member + Save Changes. Saving
- * replaces the member's client set (single-select UI); members with
- * several self-assigned clients show a replace placeholder.
+ * table — one client picker per team member + Save Changes. Multi-select
+ * (a member can work for several clients, same as their own My Clients
+ * picker); saving replaces the member's full client set.
  */
 export const ClientAssignmentSection: React.FC = () => {
   const { members, clients, effective, setDraft, saveAll, isSaving, isDirty, isLoading } =
@@ -64,7 +58,7 @@ export const ClientAssignmentSection: React.FC = () => {
               <tbody className="divide-y divide-border/50">
                 {members.map((m) => {
                   const name = displayName(m);
-                  const draft = effective[m.user.id];
+                  const draft = effective[m.user.id] ?? [];
                   return (
                     <tr key={m.user.id}>
                       <td className="py-2 pr-2">
@@ -74,30 +68,12 @@ export const ClientAssignmentSection: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-2">
-                        <Select
-                          value={draft === undefined ? "" : draft === null ? "none" : String(draft)}
-                          onValueChange={(v) =>
-                            setDraft(m.user.id, v === "none" ? null : Number(v))
-                          }
-                        >
-                          <SelectTrigger aria-label={`Client for ${name}`} className="bg-input-bg">
-                            <SelectValue
-                              placeholder={
-                                draft === undefined
-                                  ? "Multiple — pick to replace"
-                                  : "Select client…"
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {clients.map((c) => (
-                              <SelectItem key={c.id} value={String(c.id)}>
-                                {c.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <ClientMultiSelect
+                          clients={clients}
+                          value={draft}
+                          onChange={(ids) => setDraft(m.user.id, ids)}
+                          triggerLabel={`Client for ${name}`}
+                        />
                       </td>
                     </tr>
                   );

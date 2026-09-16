@@ -53,7 +53,13 @@ const allSectionItems: NavItem[] = [
     icon: () => <span>icon</span>,
     section: "skills-kpi",
   },
-  { path: "/settings", label: "Settings", icon: () => <span>icon</span>, section: "system" },
+  {
+    path: "/settings",
+    label: "Settings",
+    icon: () => <span>icon</span>,
+    section: "system",
+    pinToEnd: true,
+  },
 ];
 
 describe("SidebarNav", () => {
@@ -93,9 +99,20 @@ describe("SidebarNav", () => {
     mockGetInjected([]);
     render(<SidebarNav items={allSectionItems} collapsed={false} onItemClick={onItemClick} />);
     const labels = screen
-      .getAllByText(/^(Core Ops|Leadership|Skills & KPI|System)$/)
+      .getAllByText(/^(Core Ops|Leadership|Skills & KPI|System|Plugins)$/)
       .map((el) => el.textContent);
-    expect(labels).toEqual(["Core Ops", "Leadership", "Skills & KPI", "System"]);
+    // Settings is pinned to the end (pinToEnd), so its "System" group is
+    // empty here and no System label renders for this fixture.
+    expect(labels).toEqual(["Core Ops", "Leadership", "Skills & KPI"]);
+  });
+
+  it("renders pinned items last, after section groups", () => {
+    mockGetInjected([]);
+    render(<SidebarNav items={allSectionItems} collapsed={false} onItemClick={onItemClick} />);
+    const links = screen.getAllByRole("menuitem");
+    expect(links[links.length - 1].textContent).toContain("Settings");
+    // Pinned item is separated by a divider, not inside a labeled group.
+    expect(screen.queryByText("System")).not.toBeInTheDocument();
   });
 
   it("omits section labels for sections with no visible items", () => {

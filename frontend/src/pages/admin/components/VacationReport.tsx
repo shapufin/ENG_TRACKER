@@ -44,7 +44,7 @@ export const VacationReport: React.FC<VacationReportProps> = ({
           <CardContent className="p-6">
             <div className="grid grid-cols-2 gap-8">
               <div className="space-y-1">
-                <p className="text-4xl font-bold tabular-nums tracking-tighter">
+                <p className="font-mono text-4xl font-bold tabular-nums tracking-tighter">
                   <AnimatedNumber value={summaryData?.leave?.total_days || 0} />
                   <span className="ml-1 text-lg text-muted-foreground">Days</span>
                 </p>
@@ -53,7 +53,7 @@ export const VacationReport: React.FC<VacationReportProps> = ({
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="text-4xl font-bold tabular-nums tracking-tighter text-emerald-700 dark:text-emerald-400">
+                <p className="font-mono text-4xl font-bold tabular-nums tracking-tighter text-emerald-700 dark:text-emerald-400">
                   <AnimatedNumber value={summaryData?.leave?.approved_days || 0} />
                   <span className="ml-1 text-lg text-muted-foreground">Days</span>
                 </p>
@@ -70,7 +70,7 @@ export const VacationReport: React.FC<VacationReportProps> = ({
             <div>
               <p className="mb-1 text-sm font-medium text-muted-foreground">Queue Status</p>
               <div className="flex items-center gap-2">
-                <span className="text-3xl font-bold tabular-nums text-amber-700 dark:text-amber-400">
+                <span className="font-mono text-3xl font-bold tabular-nums text-amber-700 dark:text-amber-400">
                   {summaryData?.leave?.pending_count || 0}
                 </span>
                 <span className="text-sm font-medium text-amber-700 dark:text-amber-400">

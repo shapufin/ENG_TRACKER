@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { SkillsKpiCards } from "./SkillsKpiCards";
 import type { SkillCoverage } from "../types/skills";
+
+// The seniority card reads the admin-set level names. Mocked rather than
+// wrapped in a QueryClientProvider: these tests cover the KPI arithmetic, and
+// the label plumbing is covered in skillKpis.test.ts.
+vi.mock("../hooks/useSkillsQueries", () => ({
+  useSkillLevelLabels: () => ({ data: { level_3_label: "Solid" } }),
+}));
 
 const cov = (
   skill_id: number,
@@ -24,8 +31,8 @@ describe("SkillsKpiCards", () => {
     render(<SkillsKpiCards coverage={coverage} gaps={gaps} memberCount={19} />);
     expect(screen.getByText("Team Seniority Index")).toBeInTheDocument();
     expect(screen.getByText("Strongest Domain")).toBeInTheDocument();
-    expect(screen.getByText("Critical Gap")).toBeInTheDocument();
-    expect(screen.getByText("Verification Rate")).toBeInTheDocument();
+    expect(screen.getByText("Critical Talent Bottleneck")).toBeInTheDocument();
+    expect(screen.getByText("Verification Progress")).toBeInTheDocument();
     // Seniority: weighted mean of (2.8*19 + 4.2*19 + 3.9*18) / 56 = 3.6
     expect(screen.getByText("L3.6")).toBeInTheDocument();
     // Strongest domain: Infra (4.2) beats Backend ((2.8+3.9)/2 = 3.4)
@@ -45,7 +52,7 @@ describe("SkillsKpiCards", () => {
   it("omits the critical gap card when the gap report is empty", () => {
     render(<SkillsKpiCards coverage={coverage} gaps={[]} memberCount={19} />);
     expect(screen.getByText("Team Seniority Index")).toBeInTheDocument();
-    expect(screen.queryByText("Critical Gap")).not.toBeInTheDocument();
+    expect(screen.queryByText("Critical Talent Bottleneck")).not.toBeInTheDocument();
   });
 
   it("omits the seniority card when nothing is rated", () => {

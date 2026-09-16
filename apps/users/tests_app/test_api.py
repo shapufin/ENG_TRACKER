@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 from apps.overtime.models import Client
-from apps.users.models import Team
+from apps.users.models import Team, Tech
 
 User = get_user_model()
 
@@ -99,6 +99,140 @@ class TestUserAPI(APITestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.get('/api/users/')
         self.assertEqual(response.status_code, 200)
+
+
+class TestUserTechAndRoleFacets(APITestCase):
+    """Admin Users tech-facet filtering: ?tech=<id> filters the list,
+    ?role=<tab> mirrors the UserFilterTabs values, and tech_facets/ returns
+    live per-tech counts scoped by role+search but not by other tech picks."""
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username='facet-admin', password='testpass123', email='facet-admin@example.com'
+        )
+        self.k8s = Tech.objects.create(name='Kubernetes', code='K8S')
+        self.django_tech = Tech.objects.create(name='Django', code='DJANGO')
+
+        self.tl_user = User.objects.create_user(username='facet-tl', password='testpass123')
+        self.tl_user.profile.is_italian_tl_role = True
+        self.tl_user.profile.save()
+        self.tl_user.profile.techs.add(self.k8s)
+
+        self.django_user = User.objects.create_user(username='facet-django', password='testpass123')
+        self.django_user.profile.techs.add(self.django_tech)
+
+        self.no_tech_user = User.objects.create_user(username='facet-none', password='testpass123')
+
+        self.client.force_authenticate(user=self.admin)
+
+    def _usernames(self, response):
+        return {p['user']['username'] for p in response.data['results']}
+
+    def test_tech_filter_returns_only_matching_users(self):
+        response = self.client.get('/api/users/profiles/', {'tech': self.k8s.id})
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertIn('facet-tl', usernames)
+        self.assertNotIn('facet-django', usernames)
+        self.assertNotIn('facet-none', usernames)
+
+    def test_tech_filter_accepts_comma_joined_ids(self):
+        # The frontend sends `tech=1,2` (not repeated `tech=1&tech=2`),
+        # since axios serializes array params as `tech[]=1` by default,
+        # which DRF's `getlist('tech')` wouldn't pick up.
+        response = self.client.get(
+            '/api/users/profiles/', {'tech': f'{self.k8s.id},{self.django_tech.id}'}
+        )
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertIn('facet-tl', usernames)
+        self.assertIn('facet-django', usernames)
+        self.assertNotIn('facet-none', usernames)
+
+    def test_role_filter_no_tl_excludes_team_leaders(self):
+        response = self.client.get('/api/users/profiles/', {'role': 'no_tl'})
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertNotIn('facet-tl', usernames)
+        self.assertIn('facet-django', usernames)
+
+    def test_role_filter_italian_tl_matches_only_team_leaders(self):
+        response = self.client.get('/api/users/profiles/', {'role': 'italian_tl'})
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertIn('facet-tl', usernames)
+        self.assertNotIn('facet-django', usernames)
+
+    def test_tech_and_role_filters_combine(self):
+        response = self.client.get(
+            '/api/users/profiles/', {'role': 'italian_tl', 'tech': self.k8s.id}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self._usernames(response), {'facet-tl'})
+
+    def test_tech_facets_returns_per_tech_counts_and_no_tech_count(self):
+        response = self.client.get('/api/users/profiles/tech_facets/')
+        self.assertEqual(response.status_code, 200)
+        counts = {f['id']: f['count'] for f in response.data['techs']}
+        self.assertEqual(counts[self.k8s.id], 1)
+        self.assertEqual(counts[self.django_tech.id], 1)
+        self.assertGreaterEqual(response.data['no_tech_count'], 2)  # no_tech_user + admin
+
+    def test_tech_facets_scoped_by_role_but_not_by_other_tech_selection(self):
+        # role=italian_tl should scope the facet counts down...
+        scoped = self.client.get('/api/users/profiles/tech_facets/', {'role': 'italian_tl'})
+        scoped_counts = {f['id']: f['count'] for f in scoped.data['techs']}
+        self.assertEqual(scoped_counts[self.k8s.id], 1)
+        self.assertEqual(scoped_counts[self.django_tech.id], 0)
+
+        # ...but selecting a tech chip itself must not zero out sibling counts.
+        with_tech_selected = self.client.get(
+            '/api/users/profiles/tech_facets/', {'tech': self.k8s.id}
+        )
+        sibling_counts = {f['id']: f['count'] for f in with_tech_selected.data['techs']}
+        self.assertEqual(sibling_counts[self.django_tech.id], 1)
+
+    def test_tech_facets_requires_auth(self):
+        self.client.force_authenticate(user=None)
+        response = self.client.get('/api/users/profiles/tech_facets/')
+        self.assertEqual(response.status_code, 401)
+
+    def test_no_tech_filter_returns_only_users_without_techs(self):
+        # Server-side "No tech" match: must not depend on client-side
+        # pagination truncation to find every no-tech profile.
+        response = self.client.get('/api/users/profiles/', {'no_tech': 'true'})
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertIn('facet-none', usernames)
+        self.assertIn('facet-admin', usernames)
+        self.assertNotIn('facet-tl', usernames)
+        self.assertNotIn('facet-django', usernames)
+
+    def test_no_tech_filter_combines_with_role(self):
+        response = self.client.get(
+            '/api/users/profiles/', {'no_tech': 'true', 'role': 'italian_tl'}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self._usernames(response), set())
+
+    def test_tech_and_no_tech_params_together_prefer_no_tech(self):
+        # Mutually exclusive facet values — no_tech wins if both are sent,
+        # matching the frontend's own mutual-exclusion on selection.
+        response = self.client.get(
+            '/api/users/profiles/', {'no_tech': 'true', 'tech': self.k8s.id}
+        )
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertIn('facet-none', usernames)
+        self.assertNotIn('facet-tl', usernames)
+
+    def test_profiles_list_page_size_covers_realistic_org_size(self):
+        for i in range(60):
+            User.objects.create_user(username=f'facet-bulk-{i}', password='testpass123')
+        response = self.client.get('/api/users/profiles/')
+        self.assertEqual(response.status_code, 200)
+        self.assertGreaterEqual(response.data['count'], 63)
+        self.assertGreaterEqual(len(response.data['results']), 63)
 
 
 class TestBulkUpdateUsers(APITestCase):
@@ -359,15 +493,15 @@ class TestAssignMemberClients(APITestCase):
         )
         self.assertEqual(response.status_code, 401)
 
-    def test_rejects_two_ids(self):
+    def test_tl_assigns_multiple_clients(self):
         self.client.force_authenticate(user=self.tl)
         response = self.client.post(
             self.url(self.member.id),
             {'client_ids': [self.active_a.id, self.active_b.id]},
             format='json',
         )
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.assigned(self.member), set())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.assigned(self.member), {self.active_a.id, self.active_b.id})
 
     def test_rejects_inactive_and_unknown(self):
         self.client.force_authenticate(user=self.tl)

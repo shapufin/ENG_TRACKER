@@ -1,5 +1,6 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
+import { toneTextClass } from "@/components/ui/tone";
 import type { DetailedUserReport } from "@/services/reportService";
 import { HRTableShell } from "./HRTableShell";
 
@@ -26,15 +27,15 @@ const HRPersonnelRow: React.FC<{ user: DetailedUserReport }> = ({ user: u }) => 
     </td>
     <td className="px-6 py-4 text-right font-mono">
       <span className="font-bold">{u.overtime?.total_hours ?? 0}</span>
-      <span className="text-muted-foreground">/{u.overtime?.approved_hours ?? 0}</span>
+      <span className={toneTextClass.success}>/{u.overtime?.approved_hours ?? 0}</span>
     </td>
     <td className="px-6 py-4 text-right font-mono">
       <span className="font-bold">{u.standby?.total_hours ?? 0}</span>
-      <span className="text-muted-foreground">/{u.standby?.approved_hours ?? 0}</span>
+      <span className={toneTextClass.success}>/{u.standby?.approved_hours ?? 0}</span>
     </td>
     <td className="px-6 py-4 text-right font-mono">
       <span className="font-bold">{u.leave?.total_days ?? 0}</span>
-      <span className="text-muted-foreground">/{u.leave?.approved_days ?? 0}</span>
+      <span className={toneTextClass.success}>/{u.leave?.approved_days ?? 0}</span>
     </td>
     <td className="px-6 py-4 text-right font-mono">{u.leave_balance ?? 0}</td>
   </tr>

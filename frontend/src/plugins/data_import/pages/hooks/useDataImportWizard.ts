@@ -25,6 +25,7 @@ const buildInitialState = (initialTargetKey?: string): WizardState => ({
   previewResult: null,
   commitResult: null,
   analyzeError: null,
+  uploadProgress: null,
   isAnalyzing: false,
   isPreviewing: false,
   isCommitting: false,
@@ -80,13 +81,18 @@ export function useDataImportWizard(initialTargetKey?: string) {
     [update]
   );
 
+  const onUploadProgress = useCallback(
+    (percent: number) => update((prev) => ({ ...prev, uploadProgress: percent })),
+    [update]
+  );
+
   const analyze = useCallback(async () => {
     const { file, targetKey } = stateRef.current;
     if (!file || !targetKey) return;
 
-    update((prev) => ({ ...prev, isAnalyzing: true, analyzeError: null }));
+    update((prev) => ({ ...prev, isAnalyzing: true, analyzeError: null, uploadProgress: 0 }));
     try {
-      const result = await dataImportService.analyze(file, targetKey);
+      const result = await dataImportService.analyze(file, targetKey, onUploadProgress);
       update((prev) => ({
         ...prev,
         detectedColumns: result.detected_columns,
@@ -96,13 +102,14 @@ export function useDataImportWizard(initialTargetKey?: string) {
         ),
         step: "map",
         isAnalyzing: false,
+        uploadProgress: null,
       }));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to analyze file";
-      update((prev) => ({ ...prev, isAnalyzing: false, analyzeError: message }));
+      update((prev) => ({ ...prev, isAnalyzing: false, analyzeError: message, uploadProgress: null }));
       toast.error(message);
     }
-  }, [update]);
+  }, [update, onUploadProgress]);
 
   const setFieldMapping = useCallback(
     (fieldKey: string, column: string | null) => {
@@ -175,34 +182,36 @@ export function useDataImportWizard(initialTargetKey?: string) {
     const { file, targetKey, fieldMapping, defaultValues, options } = stateRef.current;
     if (!file || !targetKey) return;
 
-    update((prev) => ({ ...prev, isPreviewing: true, previewResult: null }));
+    update((prev) => ({ ...prev, isPreviewing: true, previewResult: null, uploadProgress: 0 }));
     try {
       const result = await dataImportService.preview(
         file,
         targetKey,
         fieldMapping,
         defaultValues,
-        options
+        options,
+        onUploadProgress
       );
       update((prev) => ({
         ...prev,
         previewResult: result,
         step: "preview",
         isPreviewing: false,
+        uploadProgress: null,
       }));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to preview import";
-      update((prev) => ({ ...prev, isPreviewing: false }));
+      update((prev) => ({ ...prev, isPreviewing: false, uploadProgress: null }));
       toast.error(message);
     }
-  }, [update]);
+  }, [update, onUploadProgress]);
 
   const commit = useCallback(
     async (saveProfile?: { name: string }): Promise<CommitResult | undefined> => {
       const { file, targetKey, fieldMapping, defaultValues, options } = stateRef.current;
       if (!file || !targetKey) return;
 
-      update((prev) => ({ ...prev, isCommitting: true, commitResult: null }));
+      update((prev) => ({ ...prev, isCommitting: true, commitResult: null, uploadProgress: 0 }));
       try {
         const result = await dataImportService.commit(
           file,
@@ -210,13 +219,15 @@ export function useDataImportWizard(initialTargetKey?: string) {
           fieldMapping,
           defaultValues,
           options,
-          saveProfile
+          saveProfile,
+          onUploadProgress
         );
         update((prev) => ({
           ...prev,
           commitResult: result,
           step: "result",
           isCommitting: false,
+          uploadProgress: null,
         }));
         toast.success(
           `Import complete: ${result.summary.created} created, ${result.summary.updated} updated, ${result.summary.error} errors`
@@ -224,11 +235,11 @@ export function useDataImportWizard(initialTargetKey?: string) {
         return result;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to commit import";
-        update((prev) => ({ ...prev, isCommitting: false }));
+        update((prev) => ({ ...prev, isCommitting: false, uploadProgress: null }));
         toast.error(message);
       }
     },
-    [update]
+    [update, onUploadProgress]
   );
 
   const reset = useCallback(() => {

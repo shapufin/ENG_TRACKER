@@ -10,6 +10,7 @@ from .viewsets import (
     SkillGapReportViewSet,
     SkillExportViewSet,
     SkillRatingHistoryViewSet,
+    SkillLevelLabelsViewSet,
 )
 
 router = DefaultRouter()
@@ -20,6 +21,7 @@ router.register(r'matrix', SkillMatrixViewSet, basename='skill-matrix')
 router.register(r'gap-report', SkillGapReportViewSet, basename='skill-gap')
 router.register(r'export', SkillExportViewSet, basename='skill-export')
 router.register(r'history', SkillRatingHistoryViewSet, basename='skill-history')
+router.register(r'level-labels', SkillLevelLabelsViewSet, basename='skill-level-labels')
 
 urlpatterns = [
     path('', include(router.urls)),

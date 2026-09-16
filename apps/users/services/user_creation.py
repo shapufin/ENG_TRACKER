@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
 from apps.users.models import Team, TeamMembership, UserProfile
+from apps.users.services.tech_assignments import set_tech_assignments
 
 
 def _username_is_valid(username: str) -> Optional[str]:
@@ -108,7 +109,7 @@ def create_user_with_profile(
     if teams:
         profile.teams.set(teams)
     if techs:
-        profile.techs.set(techs)
+        set_tech_assignments(profile, techs)
     if team:
         _assign_team_to_profile(profile, team)
 
@@ -194,7 +195,7 @@ def update_user_profile(
     if teams is not None:
         profile.teams.set(teams)
     if techs is not None:
-        profile.techs.set(techs)
+        set_tech_assignments(profile, techs)
     if team is not None:
         _assign_team_to_profile(profile, team)
 

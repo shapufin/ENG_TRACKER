@@ -9,7 +9,9 @@ import pandas as pd
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -517,6 +519,73 @@ class TicketKPIViewSetTests(TestCase):
         response = view(request, pk=batch_id)
         self.assertEqual(response.status_code, 200)
 
+    def test_tl_can_bulk_review_team_batches(self):
+        """A TL reviewing several team members' uploads at once, one call."""
+        response1 = self._upload(self.member)
+        response2 = self._upload_as(self.other)
+        batch_ids = [response1.data['batch_id'], response2.data['batch_id']]
+
+        request = self.factory.post(
+            '/upload/bulk_review_batches/', {'batch_ids': batch_ids}, format='json'
+        )
+        force_authenticate(request, self.tl)
+        view = TicketUploadViewSet.as_view({'post': 'bulk_review_batches'})
+        response = view(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['reviewed'], batch_ids)
+        self.assertEqual(response.data['skipped'], [])
+        for batch_id in batch_ids:
+            batch = TicketImportBatch.objects.get(pk=batch_id)
+            self.assertEqual(batch.reviewed_by, self.tl)
+            self.assertIsNotNone(batch.reviewed_at)
+
+    def test_bulk_review_skips_batches_outside_the_tls_team_with_a_reason(self):
+        """A batch a TL cannot review is reported as skipped, not silently
+        dropped and not allowed to fail the whole request."""
+        outsider = User.objects.create_user(username='bulk_outsider', password='testpass123')
+        self._upload_as(outsider)
+        in_team_response = self._upload(self.member)
+        outsider_batch_id = TicketImportBatch.objects.get(user=outsider).id
+        in_team_batch_id = in_team_response.data['batch_id']
+
+        request = self.factory.post(
+            '/upload/bulk_review_batches/',
+            {'batch_ids': [in_team_batch_id, outsider_batch_id]},
+            format='json',
+        )
+        force_authenticate(request, self.tl)
+        view = TicketUploadViewSet.as_view({'post': 'bulk_review_batches'})
+        response = view(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['reviewed'], [in_team_batch_id])
+        self.assertEqual(len(response.data['skipped']), 1)
+        self.assertEqual(response.data['skipped'][0]['batch_id'], outsider_batch_id)
+        self.assertFalse(
+            TicketImportBatch.objects.get(pk=outsider_batch_id).reviewed_by
+        )
+
+    def test_bulk_review_rejects_empty_or_non_list_batch_ids(self):
+        request = self.factory.post(
+            '/upload/bulk_review_batches/', {'batch_ids': []}, format='json'
+        )
+        force_authenticate(request, self.tl)
+        view = TicketUploadViewSet.as_view({'post': 'bulk_review_batches'})
+        response = view(request)
+        self.assertEqual(response.status_code, 400)
+
+    def test_bulk_review_unknown_batch_id_is_skipped_not_500(self):
+        request = self.factory.post(
+            '/upload/bulk_review_batches/', {'batch_ids': [999999]}, format='json'
+        )
+        force_authenticate(request, self.tl)
+        view = TicketUploadViewSet.as_view({'post': 'bulk_review_batches'})
+        response = view(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['reviewed'], [])
+        self.assertEqual(len(response.data['skipped']), 1)
+
     def test_tl_can_view_team_summary(self):
         self._upload(self.member)
         request = self.factory.get('/dashboard/team_summary/', {'month': '2026-03-01'})
@@ -537,6 +606,34 @@ class TicketKPIViewSetTests(TestCase):
         self.assertEqual(response.status_code, 200)
         results = response.data.get('results', response.data)
         self.assertEqual(len(results), 1)
+
+    def test_team_batches_reviewed_by_query_count_is_flat_in_reviewed_count(self):
+        """The Reviewed column reads reviewed_by.username per row — without
+        select_related('reviewed_by') that is one extra User query per
+        reviewed batch. Counted as growth across two reviewed-batch counts,
+        since a bulk read over a single row still renders one query."""
+        def review(batch_id):
+            review_request = self.factory.post(f'/upload/{batch_id}/review_batch/')
+            force_authenticate(review_request, self.tl)
+            TicketUploadViewSet.as_view({'post': 'review_batch'})(review_request, pk=batch_id)
+
+        request = self.factory.get('/upload/team_batches/')
+        force_authenticate(request, self.tl)
+        view = TicketUploadViewSet.as_view({'get': 'team_batches'})
+
+        response1 = self._upload(self.member)
+        with CaptureQueriesContext(connection) as unreviewed:
+            view(request)
+        review(response1.data['batch_id'])
+        with CaptureQueriesContext(connection) as one_reviewed:
+            view(request)
+
+        self.assertEqual(
+            len(unreviewed.captured_queries),
+            len(one_reviewed.captured_queries),
+            f"queries grew {len(unreviewed.captured_queries)} -> "
+            f"{len(one_reviewed.captured_queries)} as reviewed batches went 0 -> 1",
+        )
 
     def test_user_can_export_own_report(self):
         self._upload(self.member)
@@ -740,6 +837,88 @@ class TicketKPIViewSetTests(TestCase):
         view = TicketKPIDashboardViewSet.as_view({'get': 'tickets'})
         response = view(request)
         self.assertEqual(response.status_code, 400)
+
+    def test_tickets_filter_options_do_not_scan_every_ticket(self):
+        """available_fields/filter_options must come from the pre-computed
+        MonthlyKPI, not a full scan of every ticket in the month — that scan
+        used to run on every page view, unfiltered and unpaginated, decoding
+        raw_data for every row, before any filter or pagination was applied.
+
+        A per-row Python scan still costs exactly one SQL query no matter how
+        many tickets it touches, so query *count* cannot tell it apart from a
+        cheap read — this asserts directly that no query against
+        NormalizedTicket lacks a LIMIT (the count() query is exempted, it has
+        no LIMIT by nature but also does no per-row work).
+        """
+        batch = TicketImportBatch.objects.create(
+            user=self.member, month=date(2026, 3, 1), profile=self.profile,
+            raw_file=SimpleUploadedFile('t.csv', b'x'),
+        )
+        NormalizedTicket.objects.bulk_create([
+            NormalizedTicket(
+                batch=batch, ticket_id=f'INC{i}', status='closed',
+                category='Network', priority='high', assignee='alice',
+                requester='bob', created_at=timezone.now() - timedelta(days=i),
+                raw_data={'Number': f'INC{i}', 'Custom Field': f'v{i % 3}'},
+            )
+            for i in range(60)
+        ])
+        compute_monthly_kpi(self.member, date(2026, 3, 1))
+
+        request = self.factory.get(
+            '/dashboard/tickets/',
+            {'month': '2026-03-01', 'user_id': self.member.id, 'page_size': 5},
+        )
+        force_authenticate(request, self.tl)
+        view = TicketKPIDashboardViewSet.as_view({'get': 'tickets'})
+        with CaptureQueriesContext(connection) as ctx:
+            response = view(request)
+        self.assertEqual(response.status_code, 200)
+
+        unbounded = [
+            q for q in ctx.captured_queries
+            if 'ticket_kpi_normalizedticket' in q['sql'].lower()
+            and 'limit' not in q['sql'].lower()
+            and 'count(' not in q['sql'].lower()
+        ]
+        self.assertEqual(
+            unbounded, [],
+            f"found an unpaginated NormalizedTicket read: {unbounded}",
+        )
+        # Still correct, not just cheap.
+        self.assertIn('Network', response.data['filter_options']['category'])
+        self.assertIn('bob', response.data['filter_options']['requester'])
+        self.assertIn('Custom Field', response.data['available_fields'])
+
+    def test_tickets_filter_options_survive_a_busy_month(self):
+        """field_breakdowns (the source filter_options now reads from) caps
+        at FIELD_BREAKDOWN_MAX_DISTINCT distinct values per field — a real
+        gap found in review: a support desk with more distinct requesters
+        than the cap would see that field's dropdown go silently empty.
+        80 distinct requesters is a plausible single month for a busy desk
+        and must stay comfortably under the cap."""
+        batch = TicketImportBatch.objects.create(
+            user=self.member, month=date(2026, 3, 1), profile=self.profile,
+            raw_file=SimpleUploadedFile('t.csv', b'x'),
+        )
+        NormalizedTicket.objects.bulk_create([
+            NormalizedTicket(
+                batch=batch, ticket_id=f'INC{i}', status='closed',
+                requester=f'requester{i}', created_at=timezone.now() - timedelta(days=i),
+            )
+            for i in range(80)
+        ])
+        compute_monthly_kpi(self.member, date(2026, 3, 1))
+
+        request = self.factory.get(
+            '/dashboard/tickets/',
+            {'month': '2026-03-01', 'user_id': self.member.id, 'page_size': 5},
+        )
+        force_authenticate(request, self.tl)
+        view = TicketKPIDashboardViewSet.as_view({'get': 'tickets'})
+        response = view(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data['filter_options']['requester']), 80)
 
     # ----- M2: invalid int params should return 400, not 500 -----
 
@@ -1345,6 +1524,31 @@ class EndToEndUploadFlowTests(TestCase):
         self.assertIn('suggested_profile', response.data)
         self.assertEqual(response.data['suggested_profile']['id'], self.profile.id)
 
+    def test_analyze_suggests_the_month_from_detected_dates(self):
+        """analyze() should read the month off the file's own dates, so the
+        user does not have to already know it before they can even see what
+        is in the file — every ticket in the fixture falls in March 2026."""
+        response = self._analyze(self.member)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data.get('suggested_month'), '2026-03-01')
+
+    def test_analyze_suggests_the_majority_month_when_dates_span_two_months(self):
+        content = (
+            "Number,Short description,State,Opened\n"
+            "INC900,Late Feb ticket,Resolved,2026-02-28 23:00\n"
+            "INC901,March ticket A,Resolved,2026-03-01 08:00\n"
+            "INC902,March ticket B,Resolved,2026-03-15 08:00\n"
+        ).encode('utf-8')
+        response = self._analyze(self.member, file_content=content)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data.get('suggested_month'), '2026-03-01')
+
+    def test_analyze_omits_suggested_month_when_no_date_column_is_detected(self):
+        content = "Ref,Note\nINC1,hello\n".encode('utf-8')
+        response = self._analyze(self.member, file_content=content)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('suggested_month', response.data)
+
     def test_analyze_xlsx_detects_columns(self):
         """Step 1: Analyze works with XLSX files too."""
         xlsx_content = self._make_xlsx()
@@ -1373,6 +1577,142 @@ class EndToEndUploadFlowTests(TestCase):
         # 'Resolved' and 'Closed' both transform to 'closed', 'In Progress' to 'open'
         self.assertIn('closed', response.data['status_breakdown'])
         self.assertFalse(response.data['has_existing_upload'])
+
+    def test_preview_with_field_mapping_override_fixes_a_renamed_column(self):
+        """The status column was renamed in the export; the profile's mapping
+        still points at the old name ('State'), so status goes undetected.
+        An override fixes the preview without touching the saved profile."""
+        import json
+
+        content = (
+            "Number,Short description,Status2,Opened\n"
+            "INC900,Renamed status column,Resolved,2026-03-01 08:00\n"
+        ).encode('utf-8')
+        file_obj = SimpleUploadedFile('tickets.csv', content, content_type='text/csv')
+        request = self.factory.post(
+            '/upload/preview/',
+            {
+                'file': file_obj,
+                'profile_id': self.profile.id,
+                'month': '2026-03-01',
+                'field_mapping_overrides': json.dumps({'status': 'Status2'}),
+            },
+            format='multipart',
+        )
+        force_authenticate(request, self.member)
+        view = TicketUploadViewSet.as_view({'post': 'preview'})
+        response = view(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('missing_status', response.data['issues'])
+        self.assertEqual(response.data['effective_field_mapping']['status'], 'Status2')
+        # The rest of the profile's own mapping is untouched.
+        self.assertEqual(response.data['effective_field_mapping']['ticket_id'], 'Number')
+        self.assertEqual(self.profile.field_mapping.get('status'), 'State')  # not persisted
+
+    def test_preview_rejects_malformed_field_mapping_overrides(self):
+        file_obj = SimpleUploadedFile('tickets.csv', self.csv_content, content_type='text/csv')
+        request = self.factory.post(
+            '/upload/preview/',
+            {
+                'file': file_obj,
+                'profile_id': self.profile.id,
+                'month': '2026-03-01',
+                'field_mapping_overrides': 'not json',
+            },
+            format='multipart',
+        )
+        force_authenticate(request, self.member)
+        view = TicketUploadViewSet.as_view({'post': 'preview'})
+        response = view(request)
+        self.assertEqual(response.status_code, 400)
+
+    def test_import_with_override_and_save_persists_onto_the_profile(self):
+        """The creator can permanently fix the profile's mapping from the
+        upload screen — no need to go to the admin profile page."""
+        import json
+
+        content = (
+            "Number,Short description,Status2,Opened\n"
+            "INC901,Renamed status column,Resolved,2026-03-01 08:00\n"
+        ).encode('utf-8')
+        file_obj = SimpleUploadedFile('tickets.csv', content, content_type='text/csv')
+        request = self.factory.post(
+            '/upload/import_batch/',
+            {
+                'file': file_obj,
+                'profile_id': self.profile.id,
+                'month': '2026-03-01',
+                'field_mapping_overrides': json.dumps({'status': 'Status2'}),
+                'save_mapping_overrides': 'true',
+            },
+            format='multipart',
+        )
+        force_authenticate(request, self.admin)
+        view = TicketUploadViewSet.as_view({'post': 'import_batch'})
+        response = view(request)
+        self.assertEqual(response.status_code, 201, response.data)
+
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.field_mapping['status'], 'Status2')
+        ticket = NormalizedTicket.objects.get(ticket_id='INC901')
+        self.assertEqual(ticket.status, 'closed')  # value_transforms still applied
+
+    def test_import_save_mapping_overrides_denied_for_non_creator_non_admin(self):
+        """A regular uploader can fix the mapping for their own import, but
+        cannot silently rewrite a shared profile everyone else uploads
+        against — that needs the creator or an admin."""
+        import json
+
+        content = (
+            "Number,Short description,Status2,Opened\n"
+            "INC902,x,Resolved,2026-03-01 08:00\n"
+        ).encode('utf-8')
+        file_obj = SimpleUploadedFile('tickets.csv', content, content_type='text/csv')
+        request = self.factory.post(
+            '/upload/import_batch/',
+            {
+                'file': file_obj,
+                'profile_id': self.profile.id,
+                'month': '2026-03-01',
+                'field_mapping_overrides': json.dumps({'status': 'Status2'}),
+                'save_mapping_overrides': 'true',
+            },
+            format='multipart',
+        )
+        force_authenticate(request, self.member)
+        view = TicketUploadViewSet.as_view({'post': 'import_batch'})
+        response = view(request)
+        self.assertEqual(response.status_code, 403)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.field_mapping.get('status'), 'State')  # unchanged
+        self.assertFalse(TicketImportBatch.objects.filter(user=self.member).exists())
+
+    def test_import_with_ephemeral_override_does_not_touch_the_profile(self):
+        """Without save_mapping_overrides, the fix applies to this import only."""
+        import json
+
+        content = (
+            "Number,Short description,Status2,Opened\n"
+            "INC903,x,Resolved,2026-03-01 08:00\n"
+        ).encode('utf-8')
+        file_obj = SimpleUploadedFile('tickets.csv', content, content_type='text/csv')
+        request = self.factory.post(
+            '/upload/import_batch/',
+            {
+                'file': file_obj,
+                'profile_id': self.profile.id,
+                'month': '2026-03-01',
+                'field_mapping_overrides': json.dumps({'status': 'Status2'}),
+            },
+            format='multipart',
+        )
+        force_authenticate(request, self.member)
+        view = TicketUploadViewSet.as_view({'post': 'import_batch'})
+        response = view(request)
+        self.assertEqual(response.status_code, 201, response.data)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.field_mapping.get('status'), 'State')
+        self.assertEqual(NormalizedTicket.objects.get(ticket_id='INC903').status, 'closed')
 
     def test_preview_invalid_profile_returns_404(self):
         """Step 2: Invalid profile_id returns 404."""

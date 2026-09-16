@@ -53,5 +53,8 @@ sys.exit(1)
 echo "[entrypoint] Running migrations..."
 python manage.py migrate --noinput
 
+echo "[entrypoint] Ensuring superuser..."
+python manage.py ensure_superuser
+
 echo "[entrypoint] Starting server..."
 exec "$@"

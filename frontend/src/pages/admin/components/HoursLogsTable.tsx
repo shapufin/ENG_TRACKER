@@ -16,6 +16,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 interface HoursLog {
   id: number;
   user_name?: string;
+  user_tech_levels?: string[];
   date: string;
   hours: number;
   description?: string | null;
@@ -77,7 +78,9 @@ export const HoursLogsTable = <T extends HoursLog>({
         id: "user_name",
         accessorKey: "user_name",
         header: "User",
-        cell: ({ row }) => <UserCell name={row.original.user_name} />,
+        cell: ({ row }) => (
+          <UserCell name={row.original.user_name} techLevels={row.original.user_tech_levels} />
+        ),
       },
       {
         id: "date",

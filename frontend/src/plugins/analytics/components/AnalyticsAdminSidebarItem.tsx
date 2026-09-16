@@ -12,11 +12,13 @@ import { BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { usePermissions } from "@/context/PermissionContext";
+import { LAYOUT_ID, useMotionTransition } from "@/lib/motion";
 
 const AnalyticsAdminSidebarItem: React.FC = () => {
   const location = useLocation();
   const { canView } = usePluginPermissions();
   const { isAdmin, isSuperuser, isHR, isTeamLeader, isCRAdmin } = usePermissions();
+  const activeBarTransition = useMotionTransition({ type: "spring", stiffness: 400, damping: 30 });
   const isActive = location.pathname.startsWith("/admin/analytics");
 
   // CR-only admins are scoped to /admin/users and /admin/control-room/* only.
@@ -36,9 +38,9 @@ const AnalyticsAdminSidebarItem: React.FC = () => {
       >
         {isActive && (
           <motion.div
-            layoutId="admin-plugin-sidebar-active"
+            layoutId={LAYOUT_ID.adminPluginSidebarActive}
             className="absolute inset-y-1 left-0 w-[3px] rounded-full bg-primary"
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            transition={activeBarTransition}
           />
         )}
         <BarChart3 className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : ""}`} />

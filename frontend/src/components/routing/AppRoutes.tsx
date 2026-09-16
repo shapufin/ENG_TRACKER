@@ -8,18 +8,44 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AdminShell } from "@/components/layout/AdminShell";
 import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/dashboard/DashboardPage";
-import { OvertimePage } from "@/pages/overtime/OvertimePage";
-import { StandbyPage } from "@/pages/standby/StandbyPage";
-import { LeavePage } from "@/pages/leave_management/LeavePage";
+const OvertimePage = React.lazy(() =>
+  import("@/pages/overtime/OvertimePage").then((m) => ({ default: m.OvertimePage }))
+);
+const StandbyPage = React.lazy(() =>
+  import("@/pages/standby/StandbyPage").then((m) => ({ default: m.StandbyPage }))
+);
+const LeavePage = React.lazy(() =>
+  import("@/pages/leave_management/LeavePage").then((m) => ({ default: m.LeavePage }))
+);
 const CalendarPage = React.lazy(() => import("@/pages/calendar/CalendarPage"));
-import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
-import { UsersPage } from "@/pages/admin/UsersPage";
-import { TeamsPage } from "@/pages/admin/TeamsPage";
-import { TechsPage } from "@/pages/admin/TechsPage";
-import { ClientsPage } from "@/pages/admin/ClientsPage";
-import { ResourceAccessPage } from "@/pages/admin/ResourceAccessPage";
-import { ResourceAccessGroupPage } from "@/pages/admin/ResourceAccessGroupPage";
-import { CalendarManagementPage } from "@/pages/admin/CalendarManagementPage";
+const AdminDashboardPage = React.lazy(() =>
+  import("@/pages/admin/AdminDashboardPage").then((m) => ({ default: m.AdminDashboardPage }))
+);
+const UsersPage = React.lazy(() =>
+  import("@/pages/admin/UsersPage").then((m) => ({ default: m.UsersPage }))
+);
+const TeamsPage = React.lazy(() =>
+  import("@/pages/admin/TeamsPage").then((m) => ({ default: m.TeamsPage }))
+);
+const TechsPage = React.lazy(() =>
+  import("@/pages/admin/TechsPage").then((m) => ({ default: m.TechsPage }))
+);
+const ClientsPage = React.lazy(() =>
+  import("@/pages/admin/ClientsPage").then((m) => ({ default: m.ClientsPage }))
+);
+const ResourceAccessPage = React.lazy(() =>
+  import("@/pages/admin/ResourceAccessPage").then((m) => ({ default: m.ResourceAccessPage }))
+);
+const ResourceAccessGroupPage = React.lazy(() =>
+  import("@/pages/admin/ResourceAccessGroupPage").then((m) => ({
+    default: m.ResourceAccessGroupPage,
+  }))
+);
+const CalendarManagementPage = React.lazy(() =>
+  import("@/pages/admin/CalendarManagementPage").then((m) => ({
+    default: m.CalendarManagementPage,
+  }))
+);
 const ReportsPage = React.lazy(() =>
   import("@/pages/admin/ReportsPage").then((m) => ({ default: m.ReportsPage }))
 );
@@ -31,18 +57,26 @@ const LeaveRequestsPage = React.lazy(() =>
 const HRReportsPage = React.lazy(() =>
   import("@/pages/hr/HRReportsPage").then((m) => ({ default: m.HRReportsPage }))
 );
-import { LeaveBalancesPage } from "@/pages/admin/LeaveBalancesPage";
-import { GlobalSettingsPage } from "@/pages/admin/GlobalSettingsPage";
-import { SettingsPage } from "@/pages/settings/SettingsPage";
+const LeaveBalancesPage = React.lazy(() =>
+  import("@/pages/admin/LeaveBalancesPage").then((m) => ({ default: m.LeaveBalancesPage }))
+);
+const GlobalSettingsPage = React.lazy(() =>
+  import("@/pages/admin/GlobalSettingsPage").then((m) => ({ default: m.GlobalSettingsPage }))
+);
+const SettingsPage = React.lazy(() =>
+  import("@/pages/settings/SettingsPage").then((m) => ({ default: m.SettingsPage }))
+);
 const TeamManagementPage = React.lazy(() => import("@/pages/team/TeamManagementPage"));
-import TLApprovalDashboard from "@/pages/team/TLApprovalDashboard";
+const TLApprovalDashboard = React.lazy(() => import("@/pages/team/TLApprovalDashboard"));
 import { HRRoute } from "@/components/auth/HRRoute";
 import { TLRoute } from "@/components/auth/TLRoute";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { usePlugins } from "@/context/PluginContext";
 import { getPluginComponent } from "@/plugins";
-import { PluginManagementPage } from "@/pages/admin/PluginManagementPage";
+const PluginManagementPage = React.lazy(() =>
+  import("@/pages/admin/PluginManagementPage").then((m) => ({ default: m.PluginManagementPage }))
+);
 
 const withErrorBoundary = (element: React.ReactNode) => <ErrorBoundary>{element}</ErrorBoundary>;
 
@@ -96,9 +130,9 @@ export const AppRoutes: React.FC = () => {
               element: <CRUserGuard />,
               children: [
                 { path: "/dashboard", element: withErrorBoundary(<DashboardPage />) },
-                { path: "/overtime", element: withErrorBoundary(<OvertimePage />) },
-                { path: "/standby", element: withErrorBoundary(<StandbyPage />) },
-                { path: "/leave-management", element: withErrorBoundary(<LeavePage />) },
+                { path: "/overtime", element: withSuspense(<OvertimePage />) },
+                { path: "/standby", element: withSuspense(<StandbyPage />) },
+                { path: "/leave-management", element: withSuspense(<LeavePage />) },
                 { path: "/calendar", element: withSuspense(<CalendarPage />) },
                 { path: "/team", element: withSuspense(<TeamManagementPage />) },
                 {
@@ -106,7 +140,7 @@ export const AppRoutes: React.FC = () => {
                   children: [
                     {
                       path: "/team/approvals",
-                      element: withErrorBoundary(<TLApprovalDashboard />),
+                      element: withSuspense(<TLApprovalDashboard />),
                     },
                   ],
                 },
@@ -116,7 +150,7 @@ export const AppRoutes: React.FC = () => {
                 },
               ],
             },
-            { path: "/settings", element: withErrorBoundary(<SettingsPage />) },
+            { path: "/settings", element: withSuspense(<SettingsPage />) },
             ...appPluginRoutes,
           ],
         },
@@ -126,36 +160,36 @@ export const AppRoutes: React.FC = () => {
             {
               element: <AdminShell />,
               children: [
-                { path: "/admin", element: withErrorBoundary(<AdminDashboardPage />) },
-                { path: "/admin/users", element: withErrorBoundary(<UsersPage />) },
-                { path: "/admin/teams", element: withErrorBoundary(<TeamsPage />) },
-                { path: "/admin/techs", element: withErrorBoundary(<TechsPage />) },
-                { path: "/admin/clients", element: withErrorBoundary(<ClientsPage />) },
+                { path: "/admin", element: withSuspense(<AdminDashboardPage />) },
+                { path: "/admin/users", element: withSuspense(<UsersPage />) },
+                { path: "/admin/teams", element: withSuspense(<TeamsPage />) },
+                { path: "/admin/techs", element: withSuspense(<TechsPage />) },
+                { path: "/admin/clients", element: withSuspense(<ClientsPage />) },
                 {
                   path: "/admin/resource-access",
-                  element: withErrorBoundary(<ResourceAccessPage />),
+                  element: withSuspense(<ResourceAccessPage />),
                 },
                 {
                   path: "/admin/resource-access/groups/:groupId",
-                  element: withErrorBoundary(<ResourceAccessGroupPage />),
+                  element: withSuspense(<ResourceAccessGroupPage />),
                 },
                 { path: "/admin/reports", element: withSuspense(<ReportsPage />) },
                 {
                   path: "/admin/calendars",
-                  element: withErrorBoundary(<CalendarManagementPage />),
+                  element: withSuspense(<CalendarManagementPage />),
                 },
                 {
                   path: "/admin/leave-balances",
-                  element: withErrorBoundary(<LeaveBalancesPage />),
+                  element: withSuspense(<LeaveBalancesPage />),
                 },
                 {
                   path: "/admin/global-settings",
-                  element: withErrorBoundary(<GlobalSettingsPage />),
+                  element: withSuspense(<GlobalSettingsPage />),
                 },
                 { path: "/admin/overtime-logs", element: withSuspense(<OvertimeLogsPage />) },
                 { path: "/admin/standby-logs", element: withSuspense(<StandbyLogsPage />) },
                 { path: "/admin/leave-requests", element: withSuspense(<LeaveRequestsPage />) },
-                { path: "/admin/plugins", element: withErrorBoundary(<PluginManagementPage />) },
+                { path: "/admin/plugins", element: withSuspense(<PluginManagementPage />) },
                 ...adminPluginRoutes,
               ],
             },

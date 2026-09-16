@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { PROFICIENCY_LEVELS } from "../utils/proficiencyLevels";
 import { SkillsGapSummary } from "./SkillsGapSummary";
+import { SkillsLevelLegend } from "./SkillsLevelLegend";
 import type { SkillCategory, SkillCoverage } from "../types/skills";
 
 interface SkillsTeamFiltersProps {
@@ -72,11 +73,14 @@ export const SkillsTeamFilters: React.FC<SkillsTeamFiltersProps> = ({
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Filters
           </h2>
-          {isActive && (
-            <Button type="button" variant="ghost" size="sm" onClick={onReset}>
-              <Filter className="mr-2 h-4 w-4" aria-hidden="true" /> Reset filters
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {!isMobile && <SkillsLevelLegend />}
+            {isActive && (
+              <Button type="button" variant="ghost" size="sm" onClick={onReset}>
+                <Filter className="mr-2 h-4 w-4" aria-hidden="true" /> Reset filters
+              </Button>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1.5fr)_repeat(3,minmax(140px,1fr))]">
           <div>
@@ -169,6 +173,7 @@ export const SkillsTeamFilters: React.FC<SkillsTeamFiltersProps> = ({
               <DialogDescription>Narrow the team view by proficiency level.</DialogDescription>
             </DialogHeader>
             <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto">
+              <SkillsLevelLegend className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" />
               <div>
                 <Label htmlFor="team-mobile-min-level">Minimum level</Label>
                 <Select

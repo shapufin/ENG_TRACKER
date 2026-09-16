@@ -12,6 +12,7 @@ import { useMobileSidebarFocus } from "./useMobileSidebarFocus";
 import { SidebarSectionLabel } from "./SidebarSectionLabel";
 import { SidebarNavLink } from "./SidebarNavLink";
 import type { AdminNavItem } from "./hooks/useAdminNavItems";
+import { useMotionTransition } from "@/lib/motion";
 
 interface AdminSidebarProps {
   items: AdminNavItem[];
@@ -82,6 +83,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     closeButtonRef,
     triggerRef: mobileMenuButtonRef ?? internalTriggerRef,
   });
+  const collapseTransition = useMotionTransition({ type: "spring", stiffness: 350, damping: 30 });
 
   return (
     <motion.aside
@@ -89,7 +91,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       id="admin-mobile-sidebar"
       initial={false}
       animate={{ width: collapsed ? 76 : 264 }}
-      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+      transition={collapseTransition}
       className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border/60 bg-surface-sunken backdrop-blur-xl md:static ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
     >
       <div

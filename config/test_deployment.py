@@ -63,6 +63,48 @@ class HealthEndpointTests(TestCase):
             self.assertEqual(response.status_code, 301)
 
 
+class ProxyForwardedProtoTests(TestCase):
+    """Verify the SECURE_PROXY_SSL_HEADER contract nginx must honour.
+
+    nginx never terminates TLS itself (no ``ssl`` listener in
+    ``frontend/docker/nginx.conf``) — it must forward whatever
+    ``X-Forwarded-Proto`` it received from the layer in front of it
+    (Cloudflare Tunnel, or any TLS-terminating proxy per the README),
+    never substitute its own ``$scheme`` (always "http"). This test locks
+    down the Django-side half of that contract: it does not run nginx, but
+    it proves what nginx's forwarded header must say to avoid a redirect
+    loop on every request behind Cloudflare Tunnel or a TLS-terminating
+    proxy — a plain-HTTP request straight to Django without the header
+    still correctly redirects (fails closed), and a request carrying
+    ``X-Forwarded-Proto: https`` does not.
+    """
+
+    def test_request_with_forwarded_proto_https_is_not_redirected(self):
+        with override_settings(
+            SECURE_SSL_REDIRECT=True,
+            SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+            # Health endpoints are exempt by default (P0-7) — force the
+            # redirect check to actually run here, so a pass proves the
+            # header did its job rather than the exemption doing it instead.
+            SECURE_REDIRECT_EXEMPT=[],
+        ):
+            response = self.client.get(
+                "/api/health/ready/",
+                secure=False,
+                HTTP_X_FORWARDED_PROTO="https",
+            )
+            self.assertNotEqual(response.status_code, 301)
+
+    def test_request_without_forwarded_proto_still_redirects(self):
+        with override_settings(
+            SECURE_SSL_REDIRECT=True,
+            SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+            SECURE_REDIRECT_EXEMPT=[],
+        ):
+            response = self.client.get("/api/health/ready/", secure=False)
+            self.assertEqual(response.status_code, 301)
+
+
 class ThrottleConfigurationTests(TestCase):
     """Verify the throttle scope rates are configured in base settings."""
 

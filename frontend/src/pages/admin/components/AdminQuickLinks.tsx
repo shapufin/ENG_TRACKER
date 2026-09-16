@@ -78,14 +78,17 @@ export const AdminQuickLinks: React.FC<AdminQuickLinksProps> = ({ isWidgetActive
   const navigate = useNavigate();
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    // Auto-fit (rather than a fixed 2/3-column breakpoint) so a 7-item set
+    // never strands a lone orphan card at tablet widths — each row reflows
+    // to fill the available width instead of leaving a dangling gap.
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
       {LINKS.filter((item) => isWidgetActive(item.id)).map((item) => (
         <GlassCard
           key={item.to}
           delay={0.3}
           isHoverLift
           glow={item.color}
-          className="cursor-pointer"
+          className="group cursor-pointer active:scale-[0.98]"
           onClick={() => navigate(item.to)}
         >
           <div className="flex items-center gap-3 p-5">
@@ -96,7 +99,7 @@ export const AdminQuickLinks: React.FC<AdminQuickLinksProps> = ({ isWidgetActive
               <h3 className="text-sm font-semibold">{item.title}</h3>
               <p className="text-xs text-muted-foreground">{item.desc}</p>
             </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
           </div>
         </GlassCard>
       ))}

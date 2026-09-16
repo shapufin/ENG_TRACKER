@@ -7,8 +7,10 @@ from .core import (
     ApprovalPeriodClose,
     ApprovalPeriodCloseMember,
     Tech,
+    TechLevel,
     Team,
     UserProfile,
+    UserTech,
     TeamMembership,
 )
 
@@ -17,7 +19,9 @@ __all__ = [
     'ApprovalPeriodClose',
     'ApprovalPeriodCloseMember',
     'Tech',
+    'TechLevel',
     'Team',
     'UserProfile',
+    'UserTech',
     'TeamMembership',
 ]

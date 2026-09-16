@@ -41,23 +41,25 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Teams</p>
-            <p className="text-2xl font-semibold tabular-nums">{teamCount > 0 ? teamCount : "–"}</p>
+            <p className="font-mono text-2xl font-semibold tabular-nums">
+              {teamCount > 0 ? teamCount : "–"}
+            </p>
           </div>
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Vacation Left</p>
-            <p className="text-2xl font-semibold tabular-nums text-success">
+            <p className="font-mono text-2xl font-semibold tabular-nums text-success">
               {vacationDaysLeft.toFixed(1)}
             </p>
           </div>
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Overtime (Mo)</p>
-            <p className="text-2xl font-semibold tabular-nums text-warning">
+            <p className="font-mono text-2xl font-semibold tabular-nums text-warning">
               {overtimeHours.toFixed(2)}
             </p>
           </div>
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Standby (Mo)</p>
-            <p className="text-2xl font-semibold tabular-nums text-destructive">
+            <p className="font-mono text-2xl font-semibold tabular-nums text-destructive">
               {standbyHours.toFixed(2)}
             </p>
           </div>

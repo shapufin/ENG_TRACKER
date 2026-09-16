@@ -27,8 +27,8 @@ const tech: Tech = {
 };
 
 const members: TechMember[] = [
-  { id: 10, username: "alice", email: "alice@example.com", full_name: "Alice Smith" },
-  { id: 11, username: "bob", email: "bob@example.com", full_name: "Bob Jones" },
+  { id: 10, username: "alice", email: "alice@example.com", full_name: "Alice Smith", level: null },
+  { id: 11, username: "bob", email: "bob@example.com", full_name: "Bob Jones", level: null },
 ];
 
 const candidateUsers: User[] = [
@@ -119,7 +119,8 @@ describe("TechMembersDialog", () => {
     fireEvent.click(addButton);
 
     await waitFor(() => {
-      expect(userService.addTechMembers).toHaveBeenCalledWith(1, [12]);
+      // undefined level: adding a member never assigns a grade on its own.
+      expect(userService.addTechMembers).toHaveBeenCalledWith(1, [12], undefined);
     });
   });
 

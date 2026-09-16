@@ -6,6 +6,7 @@ from .models import (
     Skill,
     UserSkill,
     SkillRatingHistory,
+    SkillLevelLabels,
 )
 
 
@@ -212,3 +213,12 @@ class SkillCoverageSerializer(serializers.Serializer):
     category_name = serializers.CharField()
     team_count = serializers.IntegerField()
     avg_level = serializers.FloatField()
+
+
+class SkillLevelLabelsSerializer(serializers.ModelSerializer):
+    """Singleton: admin-editable display labels for proficiency levels 1-5."""
+
+    class Meta:
+        model = SkillLevelLabels
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']

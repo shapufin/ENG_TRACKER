@@ -9,6 +9,8 @@ from datetime import date
 
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from .permissions import IsAdminOrReadOnly
@@ -19,14 +21,22 @@ from django.db.utils import OperationalError
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Tech, Team, UserProfile
+from .models import Tech, TechLevel, Team, UserProfile, UserTech
 from .serializers import (
     UserSerializer,
     UserProfileSerializer,
     TechSerializer,
+    TechLevelSerializer,
     TeamSerializer,
     TeamHierarchySerializer,
     ApprovalPeriodSerializer,
+)
+from .services.tech_assignments import (
+    TechAssignmentError,
+    apply_tech_assignments,
+    normalize_tech_payload,
+    set_tech_assignments,
+    validate_tech_assignments,
 )
 from core.mixins.permissions import (
     SuperuserPermissionMixin,
@@ -48,7 +58,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
     
     Provides read access to all users, write access restricted to admin.
     """
-    queryset = User.objects.all().select_related('profile').prefetch_related('profile__teams', 'profile__techs', 'profile__team_memberships__team', 'profile__clients', 'italian_team_members', 'albanian_team_members', 'led_teams', 'user_roles__role', 'control_room_access').order_by('username')
+    queryset = User.objects.all().select_related('profile').prefetch_related('profile__teams', 'profile__techs', 'profile__tech_assignments__tech', 'profile__tech_assignments__level', 'profile__team_memberships__team', 'profile__clients', 'italian_team_members', 'albanian_team_members', 'led_teams', 'user_roles__role', 'control_room_access').order_by('username')
     serializer_class = UserSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['username', 'email', 'first_name', 'last_name']
@@ -177,7 +187,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated()])
     def assign_member_clients(self, request, pk=None):
-        """TL/admin assign: set a team member's clients (single-select UI).
+        """TL/admin assign: set a team member's full client set (multi-select).
 
         Plan: plan-tl-client-assignment-2026-09-04 §5.1. Never use
         self.get_object() here — the TL queryset is self-only
@@ -223,11 +233,6 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         except (TypeError, ValueError):
             return Response(
                 {'error': 'client_ids must contain only integers'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if len(client_ids) > 1:
-            return Response(
-                {'error': 'client_ids must contain at most one client'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -480,36 +485,17 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             team_ids = None
 
         if 'techs' in data:
-            techs = data['techs']
-            if not isinstance(techs, list):
-                return Response(
-                    {'error': 'techs must be an array of Tech IDs'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            # Accepts plain ids or {tech, level} objects — see
+            # services.tech_assignments.normalize_tech_payload. The inactive-Tech
+            # rule is per user (it depends on what each already holds), so it is
+            # applied inside the loop below, not here.
             try:
-                tech_ids = [int(tech_id) for tech_id in techs]
-            except (TypeError, ValueError):
-                return Response(
-                    {'error': 'techs must contain only integers'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            if len(set(tech_ids)) != len(tech_ids):
-                return Response(
-                    {'error': 'techs must not contain duplicates'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            existing_tech_ids = set(
-                Tech.objects.filter(id__in=tech_ids, is_active=True)
-                .values_list('id', flat=True)
-            )
-            invalid_tech_ids = sorted(set(tech_ids) - existing_tech_ids)
-            if invalid_tech_ids:
-                return Response(
-                    {'error': f'Unknown or inactive Tech IDs: {invalid_tech_ids}'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                tech_entries = normalize_tech_payload(data['techs'])
+                validate_tech_assignments(tech_entries, check_inactive=False)
+            except TechAssignmentError as exc:
+                return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            tech_ids = None
+            tech_entries = None
 
         for field in ('is_hr', 'is_italian_tl_role', 'is_albanian_tl_role'):
             if field in data and not isinstance(data[field], bool):
@@ -559,11 +545,33 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            # One query for every target's current Techs, so the per-user
+            # inactive-Tech check below costs nothing extra.
+            assigned_by_profile = {}
+            if tech_entries is not None:
+                for row in UserTech.objects.filter(
+                    user_profile__in=profiles
+                ).values_list('user_profile_id', 'tech_id'):
+                    assigned_by_profile.setdefault(row[0], set()).add(row[1])
+
             for profile in profiles:
                 if team_ids is not None:
                     profile.teams.set(team_ids)
-                if tech_ids is not None:
-                    profile.techs.set(tech_ids)
+                if tech_entries is not None:
+                    try:
+                        validate_tech_assignments(
+                            tech_entries,
+                            profile=profile,
+                            already_assigned_ids=assigned_by_profile.get(profile.id, set()),
+                        )
+                    except TechAssignmentError as exc:
+                        return Response(
+                            {'error': f'{profile.user.username}: {exc}'},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    apply_tech_assignments(
+                        profile, tech_entries, assigned_by=request.user
+                    )
                 if 'italian_tl' in leader_ids:
                     profile.italian_tl_id = leader_ids['italian_tl']
                 if 'albanian_tl' in leader_ids:
@@ -661,18 +669,15 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         if missing:
             return Response({'error': f'Missing required fields: {", ".join(missing)}'}, status=status.HTTP_400_BAD_REQUEST)
 
-        tech_ids = data.get('techs')
-        if tech_ids is not None:
-            if not isinstance(tech_ids, list):
-                return Response({'error': 'techs must be an array of Tech IDs'}, status=status.HTTP_400_BAD_REQUEST)
+        if data.get('techs') is not None:
             try:
-                tech_ids = [int(tech_id) for tech_id in tech_ids]
-            except (TypeError, ValueError):
-                return Response({'error': 'techs must contain only integers'}, status=status.HTTP_400_BAD_REQUEST)
-            existing_tech_ids = set(Tech.objects.filter(id__in=tech_ids, is_active=True).values_list('id', flat=True))
-            invalid_tech_ids = sorted(set(tech_ids) - existing_tech_ids)
-            if invalid_tech_ids:
-                return Response({'error': f'Unknown or inactive Tech IDs: {invalid_tech_ids}'}, status=status.HTTP_400_BAD_REQUEST)
+                # A brand-new user has no existing assignments, so inactive
+                # Techs are rejected outright.
+                validate_tech_assignments(
+                    normalize_tech_payload(data['techs']), for_new_user=True
+                )
+            except TechAssignmentError as exc:
+                return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = create_user_with_profile(
@@ -719,24 +724,12 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         if 'teams' in data:
             profile.teams.set(data['teams'])
         if 'techs' in data:
-            tech_ids = data['techs']
-            if not isinstance(tech_ids, list):
-                return Response({'error': 'techs must be an array of Tech IDs'}, status=status.HTTP_400_BAD_REQUEST)
+            # Passing the profile keeps the pre-existing rule: an inactive Tech
+            # is allowed only when this user already has it assigned.
             try:
-                tech_ids = [int(tech_id) for tech_id in tech_ids]
-            except (TypeError, ValueError):
-                return Response({'error': 'techs must contain only integers'}, status=status.HTTP_400_BAD_REQUEST)
-            # Match serializer validate_techs: active Techs are always allowed;
-            # inactive Techs are allowed only if already assigned to this user.
-            existing_active_ids = set(
-                Tech.objects.filter(id__in=tech_ids, is_active=True).values_list('id', flat=True)
-            )
-            already_assigned_ids = set(profile.techs.values_list('id', flat=True))
-            valid_ids = existing_active_ids | {tid for tid in tech_ids if tid in already_assigned_ids}
-            invalid_tech_ids = sorted(set(tech_ids) - valid_ids)
-            if invalid_tech_ids:
-                return Response({'error': f'Unknown or inactive Tech IDs: {invalid_tech_ids}'}, status=status.HTTP_400_BAD_REQUEST)
-            profile.techs.set(tech_ids)
+                set_tech_assignments(profile, data['techs'], assigned_by=request.user)
+            except TechAssignmentError as exc:
+                return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         if 'team' in data:
             # Backward compatibility: if single team provided, set as only team
             if data['team']:
@@ -938,6 +931,17 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         })
 
 
+class UserProfilePagination(PageNumberPagination):
+    """The Admin Users table has no pager UI — it renders whatever the list
+    endpoint returns as the full result set. The default site-wide page size
+    (50) silently truncated any org above that, with the truncation
+    invisible to the user. 200 comfortably covers realistic org headcount;
+    `page_size` stays overridable for callers that do want to page."""
+    page_size = 200
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
+
+
 class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.ModelViewSet):
     """
     ViewSet for UserProfile model.
@@ -945,11 +949,170 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
     Provides CRUD operations for user profiles.
     Write operations restricted to admin users.
     """
-    queryset = UserProfile.objects.all().select_related('user').prefetch_related('teams', 'techs', 'team_memberships__team', 'user__user_groups__group', 'user__italian_team_members', 'user__albanian_team_members', 'user__led_teams').order_by('-id')
+    # teams__team_leader__profile__tech_assignments: teams_detail nests
+    # TeamSerializer, whose team_leader is a UserSerializer — and its get_techs
+    # reaches leader.profile. Without this the leader's Tech read is one query
+    # per team-with-a-leader on every page.
+    queryset = UserProfile.objects.all().select_related('user').prefetch_related('teams', 'techs', 'tech_assignments__tech', 'tech_assignments__level', 'teams__team_leader__profile__tech_assignments__tech', 'teams__team_leader__profile__tech_assignments__level', 'team_memberships__team', 'user__user_groups__group', 'user__italian_team_members', 'user__albanian_team_members', 'user__led_teams').order_by('-id')
     serializer_class = UserProfileSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['user__username', 'user__email']
     filterset_fields = ['albanian_tl', 'italian_tl', 'is_hr_user']
+    pagination_class = UserProfilePagination
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        queryset = self._apply_role_filter(queryset, self.request.query_params.get('role'))
+        # tech_facets counts each tech (and no-tech) against this same
+        # queryset, so the `tech`/`no_tech` params there select what to
+        # count, not which profiles to keep — applying them here would
+        # zero out every sibling count.
+        if self.action != 'tech_facets':
+            if self.request.query_params.get('no_tech', '').lower() == 'true':
+                queryset = queryset.filter(techs__isnull=True)
+            else:
+                queryset = self._apply_tech_filters(queryset)
+        return queryset
+
+    def _apply_tech_filters(self, queryset):
+        """Filter by Tech and by the level held in it.
+
+        Tech, level and minimum rank are combined inside ONE
+        ``tech_assignments`` lookup so they all have to match the same
+        assignment row. Split across separate ``.filter()`` calls, an
+        Infrastructure L3 who is also a Database junior would wrongly answer
+        "Database at rank >= 2".
+        """
+        conditions = Q()
+        tech_ids = self._id_list_param('tech')
+        if tech_ids:
+            conditions &= Q(tech_assignments__tech_id__in=tech_ids)
+        level_ids = self._id_list_param('tech_level')
+        if level_ids:
+            conditions &= Q(tech_assignments__level_id__in=level_ids)
+        min_rank = self.request.query_params.get('min_tech_level_rank')
+        if min_rank:
+            # Never silently drop it: an ignored filter returns the full list,
+            # which reads as "nothing was excluded" and hides the mistake.
+            try:
+                parsed_rank = int(min_rank)
+            except (TypeError, ValueError):
+                raise DRFValidationError(
+                    {'min_tech_level_rank': 'Must be a positive integer.'}
+                )
+            if parsed_rank < 1:
+                raise DRFValidationError(
+                    {'min_tech_level_rank': 'Must be a positive integer.'}
+                )
+            conditions &= Q(tech_assignments__level__rank__gte=parsed_rank)
+        if not conditions:
+            return queryset
+        return queryset.filter(conditions).distinct()
+
+    def _id_list_param(self, key):
+        """Accept both repeated (`?tech=1&tech=2`) and comma-joined
+        (`?tech=1,2`) forms — the frontend sends the latter since axios'
+        default array serialization (`tech[]=1`) doesn't match DRF's
+        `getlist('tech')` key."""
+        ids = []
+        for value in self.request.query_params.getlist(key):
+            ids.extend(part for part in value.split(',') if part)
+        return ids
+
+    def _tech_ids_param(self):
+        """Back-compat alias — callers outside this class still use it."""
+        return self._id_list_param('tech')
+
+    def _apply_role_filter(self, queryset, role):
+        """Server-side equivalent of the Admin Users role tabs (UserFilterTabs)."""
+        if role == 'italian_tl':
+            return queryset.filter(
+                Q(is_italian_tl_role=True)
+                | Q(role_codes__icontains='italian_tl')
+                | Q(user__italian_team_members__isnull=False)
+            ).distinct()
+        if role == 'albanian_tl':
+            return queryset.filter(
+                Q(is_albanian_tl_role=True)
+                | Q(role_codes__icontains='albanian_tl')
+                | Q(user__albanian_team_members__isnull=False)
+            ).distinct()
+        if role == 'no_tl':
+            return queryset.filter(
+                Q(is_italian_tl_role=False)
+                & Q(is_albanian_tl_role=False)
+                & ~Q(role_codes__icontains='italian_tl')
+                & ~Q(role_codes__icontains='albanian_tl')
+                & Q(italian_tl__isnull=True)
+                & Q(albanian_tl__isnull=True)
+            )
+        return queryset
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])
+    def tech_facets(self, request):
+        """Live per-tech profile counts for the Admin Users tech-filter chips.
+
+        Scoped by the currently active role tab and search term (same as the
+        main list), but NOT by other selected tech chips — a faceted-search
+        selection on one tech must not zero out the sibling counts.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        profile_ids = list(queryset.values_list('id', flat=True))
+        tech_counts = (
+            Tech.objects.filter(is_active=True)
+            .annotate(profile_count=Count('users', filter=Q(users__id__in=profile_ids), distinct=True))
+            .values('id', 'name', 'code', 'profile_count')
+        )
+        levels_by_tech, ungraded_by_tech = self._level_facets(profile_ids)
+        facets = [
+            {
+                'id': row['id'],
+                'name': row['name'],
+                'code': row['code'],
+                'count': row['profile_count'],
+                'levels': levels_by_tech.get(row['id'], []),
+                'no_level_count': ungraded_by_tech.get(row['id'], 0),
+            }
+            for row in tech_counts
+        ]
+        no_tech_count = queryset.filter(techs__isnull=True).distinct().count()
+        return Response({'techs': facets, 'no_tech_count': no_tech_count})
+
+    def _level_facets(self, profile_ids):
+        """Per-level counts plus an ungraded count, keyed by tech id.
+
+        Two aggregate queries for the whole chip grid, not one per level.
+        Every active level is returned even at zero so a chip never vanishes
+        mid-filter.
+        """
+        level_counts = (
+            TechLevel.objects.filter(is_active=True, tech__is_active=True)
+            .annotate(profile_count=Count(
+                'assignments',
+                filter=Q(assignments__user_profile_id__in=profile_ids),
+                distinct=True,
+            ))
+            .order_by('tech_id', 'rank')
+            .values('id', 'tech_id', 'name', 'code', 'rank', 'profile_count')
+        )
+        levels_by_tech = {}
+        for row in level_counts:
+            levels_by_tech.setdefault(row['tech_id'], []).append({
+                'id': row['id'],
+                'name': row['name'],
+                'code': row['code'],
+                'rank': row['rank'],
+                'count': row['profile_count'],
+            })
+
+        ungraded = (
+            UserTech.objects
+            .filter(user_profile_id__in=profile_ids, level__isnull=True)
+            .values('tech_id')
+            .annotate(total=Count('id'))
+        )
+        ungraded_by_tech = {row['tech_id']: row['total'] for row in ungraded}
+        return levels_by_tech, ungraded_by_tech
 
     def get_permissions(self):
         # Already handled by SuperuserPermissionMixin for superusers
@@ -1075,11 +1238,12 @@ class TechViewSet(viewsets.ModelViewSet):
 
     Custom actions:
     - GET    /techs/:id/users/         — list users assigned to this tech.
-    - POST   /techs/:id/add_users/     — add users (user_ids) to this tech.
+    - POST   /techs/:id/add_users/     — add users (user_ids, optional level).
     - POST   /techs/:id/remove_users/  — remove users (user_ids) from this tech.
+    - POST   /techs/:id/reorder_levels/ — rewrite the level ranks in one go.
     """
 
-    queryset = Tech.objects.all().order_by('name')
+    queryset = Tech.objects.all().prefetch_related('levels').order_by('name')
     serializer_class = TechSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['name', 'code', 'description']
@@ -1087,13 +1251,61 @@ class TechViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy',
-                           'add_users', 'remove_users']:
+                           'add_users', 'remove_users', 'reorder_levels']:
             return [IsAdminUser()]
         return [IsAuthenticated()]
 
+    @action(detail=True, methods=['post'], url_path='reorder_levels')
+    def reorder_levels(self, request, pk=None):
+        """Rewrite every level rank for this Tech from the given order.
+
+        One transaction, and the full list is required: a partial list would
+        leave the omitted levels holding stale ranks. Ranks are written to a
+        temporary high offset first because ``(tech, rank)`` is unique and the
+        old and new orderings overlap mid-update.
+        """
+        tech = self.get_object()
+        level_ids = request.data.get('level_ids', [])
+        if not isinstance(level_ids, list):
+            return Response(
+                {'detail': 'level_ids must be a list of integers.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            level_ids = [int(lid) for lid in level_ids]
+        except (TypeError, ValueError):
+            return Response(
+                {'detail': 'level_ids must contain only integers.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(set(level_ids)) != len(level_ids):
+            return Response(
+                {'detail': 'level_ids must not contain duplicates.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        owned_ids = set(tech.levels.values_list('id', flat=True))
+        if set(level_ids) != owned_ids:
+            return Response(
+                {'detail': 'level_ids must list every level of this Tech exactly once.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Offset from the highest existing RANK, not the highest level id: ids
+        # and ranks are unrelated, and an id-derived offset can land on a rank
+        # that is still in use and trip tech_level_rank_unique mid-reorder.
+        highest_rank = tech.levels.aggregate(top=models.Max('rank'))['top'] or 0
+        offset = highest_rank + 1
+        with transaction.atomic():
+            for index, level_id in enumerate(level_ids):
+                TechLevel.objects.filter(id=level_id).update(rank=offset + index)
+            for index, level_id in enumerate(level_ids, start=1):
+                TechLevel.objects.filter(id=level_id).update(rank=index)
+        return Response({'reordered': len(level_ids)})
+
     @action(detail=True, methods=['get'], url_path='users')
     def list_users(self, request, pk=None):
-        """List users assigned to this tech (paginated, lightweight)."""
+        """List users assigned to this tech with the level each holds."""
         tech = self.get_object()
         members = (
             User.objects
@@ -1102,31 +1314,52 @@ class TechViewSet(viewsets.ModelViewSet):
             .order_by('username')
         )
         page = self.paginate_queryset(members)
-        if page is not None:
-            data = [
-                {
-                    'id': u.id,
-                    'username': u.username,
-                    'email': u.email,
-                    'full_name': u.get_full_name() or u.username,
-                }
-                for u in page
-            ]
-            return self.get_paginated_response(data)
+        rows = page if page is not None else members
+        levels = self._member_levels(tech, rows)
         data = [
             {
                 'id': u.id,
                 'username': u.username,
                 'email': u.email,
                 'full_name': u.get_full_name() or u.username,
+                'level': levels.get(u.id),
             }
-            for u in members
+            for u in rows
         ]
+        if page is not None:
+            return self.get_paginated_response(data)
         return Response({'results': data, 'count': len(data)})
+
+    @staticmethod
+    def _member_levels(tech, users):
+        """Map user id to their level payload in this tech — one query."""
+        assignments = (
+            UserTech.objects
+            .filter(tech=tech, user_profile__user__in=[u.id for u in users])
+            .select_related('level', 'user_profile')
+        )
+        return {
+            assignment.user_profile.user_id: (
+                {
+                    'id': assignment.level.id,
+                    'name': assignment.level.name,
+                    'code': assignment.level.code,
+                    'rank': assignment.level.rank,
+                }
+                if assignment.level_id and assignment.level.is_active
+                else None
+            )
+            for assignment in assignments
+        }
 
     @action(detail=True, methods=['post'], url_path='add_users')
     def add_users(self, request, pk=None):
-        """Add users to this tech. Idempotent — skips existing members."""
+        """Add users to this tech, optionally at a level.
+
+        Idempotent on membership. When a ``level`` is supplied it is applied to
+        every listed user, including ones already in the tech — that is how the
+        members dialog re-grades an existing member.
+        """
         tech = self.get_object()
         user_ids = request.data.get('user_ids', [])
         if not isinstance(user_ids, list):
@@ -1141,25 +1374,61 @@ class TechViewSet(viewsets.ModelViewSet):
                 {'detail': 'user_ids must contain only integers.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        raw_level = request.data.get('level')
+        level = None
+        if raw_level is not None:
+            try:
+                level = TechLevel.objects.select_related('tech').get(id=int(raw_level))
+            except (TypeError, ValueError):
+                return Response(
+                    {'detail': 'level must be an integer id.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            except TechLevel.DoesNotExist:
+                return Response(
+                    {'detail': f'Unknown Tech level id: {raw_level}'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if level.tech_id != tech.id:
+                return Response(
+                    {'detail': f"Level '{level.code}' belongs to {level.tech.code}, "
+                               f'not {tech.code}.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         existing = set(
             User.objects
             .filter(profile__techs=tech, id__in=user_ids)
             .values_list('id', flat=True)
         )
         new_ids = [uid for uid in user_ids if uid not in existing]
-        if not new_ids:
-            return Response({'added': 0})
-        users = User.objects.filter(id__in=new_ids)
+        users = User.objects.filter(id__in=user_ids).select_related('profile')
         found_ids = set(users.values_list('id', flat=True))
-        missing = set(new_ids) - found_ids
+        missing = set(user_ids) - found_ids
         if missing:
             return Response(
                 {'detail': f'Unknown user IDs: {sorted(missing)}'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        for user in users:
-            user.profile.techs.add(tech)
-        return Response({'added': len(new_ids)})
+
+        now = timezone.now()
+        regraded = 0
+        with transaction.atomic():
+            for user in users:
+                # assigned_at/assigned_by are stamped on every write, matching
+                # apply_tech_assignments — the field must not mean two things.
+                defaults = {'assigned_at': now, 'assigned_by': request.user}
+                if level is not None:
+                    defaults['level'] = level
+                assignment, created = UserTech.objects.update_or_create(
+                    user_profile=user.profile, tech=tech, defaults=defaults,
+                )
+                if not created and level is not None:
+                    regraded += 1
+        # 'added' counts new members only; a re-grade is a different outcome and
+        # reporting it as 0 work done would be misleading.
+        return Response({'added': len(new_ids), 'regraded': regraded})
 
     @action(detail=True, methods=['post'], url_path='remove_users')
     def remove_users(self, request, pk=None):
@@ -1178,16 +1447,35 @@ class TechViewSet(viewsets.ModelViewSet):
                 {'detail': 'user_ids must contain only integers.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        # Bulk-remove via the M2M through model (single DELETE instead of N).
+        # Bulk-remove via the through model (single DELETE instead of N).
         profile_ids = list(
             UserProfile.objects.filter(techs=tech, user_id__in=user_ids)
             .values_list('id', flat=True)
         )
         if profile_ids:
-            UserProfile.techs.through.objects.filter(
-                tech=tech, userprofile_id__in=profile_ids
+            UserTech.objects.filter(
+                tech=tech, user_profile_id__in=profile_ids
             ).delete()
         return Response({'removed': len(profile_ids)})
+
+
+class TechLevelViewSet(viewsets.ModelViewSet):
+    """CRUD for the per-Tech level scale (Infrastructure L1/L2/L3).
+
+    Reads are open to any authenticated user because level chips and badges
+    render across the app; writes are admin-only, matching TechViewSet.
+    """
+
+    queryset = TechLevel.objects.all().select_related('tech').order_by('tech__name', 'rank')
+    serializer_class = TechLevelSerializer
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['name', 'code', 'description']
+    filterset_fields = ['tech', 'is_active']
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
 
 
 class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):

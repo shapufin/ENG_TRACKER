@@ -5,11 +5,8 @@ import { userService } from "@/services/userService";
 import { handleApiError } from "@/lib/error-handler";
 import type { Client, UserProfile } from "@/types";
 
-/** Draft per member: client id, null = None, undefined = multiple (replace on pick). */
-type ClientDraft = number | null | undefined;
-
-const draftFrom = (ids: number[] | undefined): ClientDraft =>
-  !ids || ids.length === 0 ? null : ids.length === 1 ? ids[0] : undefined;
+const sameIds = (a: number[], b: number[]): boolean =>
+  a.length === b.length && [...a].sort().every((v, i) => v === [...b].sort()[i]);
 
 /**
  * Team-leader client assignment state (Settings → Client Assignment card).
@@ -17,7 +14,9 @@ const draftFrom = (ids: number[] | undefined): ClientDraft =>
  * Members and active clients reuse the existing team/settings queries —
  * no new query keys. Saving writes dirty rows only through the TL-scoped
  * endpoint, then refreshes the team roster and the overtime form scope.
- * Self-service My Clients is untouched (last-write-wins).
+ * Each member's client set is multi-select (mirrors the self-service My
+ * Clients picker) so a user with several clients shows all of them checked,
+ * not a "multiple" placeholder.
  */
 export const useClientAssignment = () => {
   const qc = useQueryClient();
@@ -32,28 +31,23 @@ export const useClientAssignment = () => {
   });
 
   const initial = useMemo(() => {
-    const map: Record<number, ClientDraft> = {};
+    const map: Record<number, number[]> = {};
     for (const m of members as UserProfile[]) {
-      map[m.user.id] = draftFrom(m.clients);
+      map[m.user.id] = m.clients ?? [];
     }
     return map;
   }, [members]);
 
-  const [drafts, setDrafts] = useState<Record<number, ClientDraft>>({});
+  const [drafts, setDrafts] = useState<Record<number, number[]>>({});
   const effective = useMemo(() => ({ ...initial, ...drafts }), [initial, drafts]);
 
-  const setDraft = useCallback((userId: number, value: number | null) => {
-    setDrafts((prev) => ({ ...prev, [userId]: value }));
+  const setDraft = useCallback((userId: number, ids: number[]) => {
+    setDrafts((prev) => ({ ...prev, [userId]: ids }));
   }, []);
 
   const isDirty = useMemo(
-    () =>
-      Object.keys(effective).some((key) => {
-        const id = Number(key);
-        const v = effective[id];
-        return v !== undefined && v !== initial[id];
-      }),
-    [effective, initial]
+    () => Object.keys(drafts).some((key) => !sameIds(drafts[Number(key)], initial[Number(key)] ?? [])),
+    [drafts, initial]
   );
 
   const saveMutation = useMutation({
@@ -68,18 +62,12 @@ export const useClientAssignment = () => {
   });
 
   const saveAll = useCallback(() => {
-    const rows = Object.keys(effective)
+    const rows = Object.keys(drafts)
       .map(Number)
-      .filter((id) => {
-        const v = effective[id];
-        return v !== undefined && v !== initial[id];
-      })
-      .map((id) => {
-        const v = effective[id];
-        return { userId: id, ids: v === null || v === undefined ? [] : [v] };
-      });
+      .filter((id) => !sameIds(drafts[id], initial[id] ?? []))
+      .map((id) => ({ userId: id, ids: drafts[id] }));
     saveMutation.mutate(rows);
-  }, [effective, initial, saveMutation]);
+  }, [drafts, initial, saveMutation]);
 
   return {
     members: members as UserProfile[],

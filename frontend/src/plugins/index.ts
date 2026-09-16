@@ -152,7 +152,20 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
         default: m.SkillsHistoryPage,
       }))
     ),
+    SkillsLevelSettingsPage: lazy(() =>
+      import("./skills/pages/SkillsLevelSettingsPage").then((m) => ({
+        default: m.SkillsLevelSettingsPage,
+      }))
+    ),
     SkillsSidebarItem: lazy(() => import("./skills/components/SkillsSidebarItem")),
+  },
+  site_backup: {
+    BackupRestorePage: lazy(() =>
+      import("./site_backup/pages/BackupRestorePage").then((m) => ({
+        default: m.BackupRestorePage,
+      }))
+    ),
+    BackupSidebarItem: lazy(() => import("./site_backup/components/BackupSidebarItem")),
   },
 };
 

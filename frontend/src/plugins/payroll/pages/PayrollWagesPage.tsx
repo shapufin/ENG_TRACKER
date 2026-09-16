@@ -10,27 +10,18 @@ import { Button } from "@/components/ui/button";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { FormDialog } from "@/components/ui/FormDialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Trash2 } from "lucide-react";
-import { DatePicker } from "@/components/ui/DatePicker";
 import { DataTable } from "@/components/ui/DataTable";
 import { payrollService } from "../services/payrollService";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { handleApiError } from "@/lib/error-handler";
 import { toLocalISODate } from "@/lib/date-format-utils";
 import { toast } from "sonner";
+import { AssignWageDialog, type AssignWageForm } from "../components/AssignWageDialog";
 import type { EligibleUser, WageAssignment } from "../types";
 
-interface WageForm {
-  user: string;
-  gross_monthly_wage: string;
-  effective_from: string;
-  effective_to: string;
-  note: string;
-}
+type WageForm = AssignWageForm;
 
 interface EmployeeWageRow extends EligibleUser {
   wage: WageAssignment | null;
@@ -272,90 +263,22 @@ export const PayrollWagesPage: React.FC = () => {
       </GlassCard>
 
       {canManagePayroll && (
-        <FormDialog
+        <AssignWageDialog
           open={formOpen}
           onOpenChange={(open) => {
             if (!open) closeForm();
           }}
-          title={editingId ? "Edit Wage Assignment" : "Assign Wage"}
-          description="Set the authoritative base monthly salary for payroll runs."
+          mode={editingId ? "edit" : "create"}
+          form={form}
+          onFormChange={setForm}
+          formUser={formUser}
           onSubmit={(e) => {
             e.preventDefault();
             saveForm();
           }}
           isSubmitting={isSaving}
-          submitLabel={editingId ? "Update" : "Assign Wage"}
           submitDisabled={!form.user || !form.gross_monthly_wage || invalidDateRange || invalidWage}
-          size="sm"
-        >
-          <div>
-            <Label>Employee</Label>
-            <div className="mt-1 flex items-center gap-3 rounded-2xl border border-border bg-muted/30 px-3 py-2 text-sm">
-              <span
-                aria-hidden="true"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-bold text-primary-foreground"
-              >
-                {(formUser?.full_name ?? form.user)
-                  .split(" ")
-                  .map((w) => w[0])
-                  .join("")}
-              </span>
-              <div>
-                <div className="text-xs font-bold">{formUser?.full_name ?? form.user}</div>
-                {formUser && (
-                  <div className="font-mono text-[10px] text-muted-foreground">
-                    @{formUser.username}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="wage">Gross Monthly Wage (Lek)</Label>
-            <div className="relative mt-1">
-              <Input
-                id="wage"
-                type="number"
-                value={form.gross_monthly_wage}
-                onChange={(e) => setForm({ ...form, gross_monthly_wage: e.target.value })}
-                placeholder="e.g. 100000"
-                className="pr-20"
-              />
-              <span
-                aria-hidden="true"
-                className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-primary"
-              >
-                Lek / mo
-              </span>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="from">Start Date (DD/MM/YYYY, optional)</Label>
-              <DatePicker
-                id="from"
-                value={form.effective_from}
-                onChange={(value) => setForm({ ...form, effective_from: value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="to">Effective To (DD/MM/YYYY, optional)</Label>
-              <DatePicker
-                id="to"
-                value={form.effective_to}
-                onChange={(value) => setForm({ ...form, effective_to: value })}
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="note">Note (optional)</Label>
-            <Input
-              id="note"
-              value={form.note}
-              onChange={(e) => setForm({ ...form, note: e.target.value })}
-            />
-          </div>
-        </FormDialog>
+        />
       )}
 
       {canManagePayroll && (

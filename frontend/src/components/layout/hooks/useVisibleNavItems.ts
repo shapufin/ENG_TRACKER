@@ -42,6 +42,10 @@ export interface NavItem {
    * dashboard sidebar item is injected separately via PluginSlot and
    * is unaffected by this flag. */
   crUserVisible?: boolean;
+  /** Rendered at the very bottom of the nav, after section groups AND
+   * plugin-injected items, separated by a divider (footer-convention item,
+   * e.g. Settings). Excluded from its section's label/group flow. */
+  pinToEnd?: boolean;
 }
 
 const allNavItems: NavItem[] = [
@@ -113,7 +117,14 @@ const allNavItems: NavItem[] = [
     section: "skills-kpi",
     roles: ["team_leader"],
   },
-  { path: "/settings", label: "Settings", icon: Settings, section: "system", crUserVisible: true },
+  {
+    path: "/settings",
+    label: "Settings",
+    icon: Settings,
+    section: "system",
+    crUserVisible: true,
+    pinToEnd: true,
+  },
 ];
 
 export const useVisibleNavItems = (

@@ -60,7 +60,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({ da
           <p className="text-sm text-muted-foreground">
             {data?.previous_month.month_name ?? "Prev"} daily avg
           </p>
-          <div className="mt-1 text-2xl font-semibold tabular-nums">
+          <div className="mt-1 font-mono text-2xl font-semibold tabular-nums">
             {data?.previous_month.daily_average ?? 0}
           </div>
         </div>
@@ -68,7 +68,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({ da
           <p className="text-sm text-muted-foreground">
             {data?.current_month.month_name ?? "Curr"} daily avg
           </p>
-          <div className="mt-1 text-2xl font-semibold tabular-nums text-primary">
+          <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-primary">
             {data?.current_month.daily_average ?? 0}
           </div>
         </div>

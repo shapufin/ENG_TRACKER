@@ -33,7 +33,13 @@ describe("ticket KPI upload dates", () => {
   it("renders batch Uploaded dates as DD/MM/YYYY, not locale M/D/YYYY", () => {
     render(
       <MemoryRouter>
-        <TicketKPITeamBatchesTable rows={[ROW]} isLoading={false} onDelete={vi.fn()} />
+        <TicketKPITeamBatchesTable
+          rows={[ROW]}
+          isLoading={false}
+          onDelete={vi.fn()}
+          rowSelection={{}}
+          onRowSelectionChange={vi.fn()}
+        />
       </MemoryRouter>
     );
     expect(screen.getByText("29/06/2026")).toBeInTheDocument();

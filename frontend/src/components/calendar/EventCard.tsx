@@ -3,7 +3,7 @@ import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "./types";
 import { getInitials } from "./initials";
-import { calendarEventTypeStyles, calendarEventStatusStyles } from "./calendarStyles";
+import { calendarEventTypeStyles } from "./calendarStyles";
 
 interface EventCardProps extends HTMLAttributes<HTMLDivElement> {
   event: CalendarEvent;
@@ -12,11 +12,9 @@ interface EventCardProps extends HTMLAttributes<HTMLDivElement> {
 
 export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
   ({ event, className, onActivate, onKeyDown, ...props }, ref) => {
-    // Holidays always use sky blue, others use status-based colors.
-    const styles =
-      event.type === "holiday"
-        ? calendarEventTypeStyles.holiday
-        : calendarEventStatusStyles[event.status];
+    // Colors follow the event type so the MonthGrid matches the sidebar
+    // legend, WeekView, and ListView (all derive from calendarStyles.ts).
+    const styles = calendarEventTypeStyles[event.type];
     const initials = getInitials(event.userName ?? event.title);
 
     return (
@@ -45,7 +43,7 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
         className={cn(
           "w-full rounded-lg border px-1.5 py-1 text-left text-[10px] leading-tight transition focus-visible:ring-1 focus-visible:ring-ring/30",
           styles.surface,
-          "hover:border-foreground/30 dark:hover:border-foreground/40",
+          "hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-md dark:hover:border-foreground/40",
           className
         )}
       >
@@ -58,6 +56,13 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
           >
             {initials}
           </span>
+          {event.status === "pending" && (
+            <span
+              className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500 dark:bg-orange-400"
+              title="Pending approval"
+              aria-hidden
+            />
+          )}
         </div>
         <p
           className={cn("mt-0.5 truncate text-[9.5px]", styles.meta)}

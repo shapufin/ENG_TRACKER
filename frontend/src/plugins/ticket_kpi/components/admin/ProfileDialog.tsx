@@ -64,6 +64,8 @@ export const ProfileDialog: React.FC<ProfileDialogProps> = ({
     setSampleFile,
     isAutoDetecting,
     setIsAutoDetecting,
+    detectedColumns,
+    setDetectedColumns,
     buildPayload,
   } = useProfileDialogState(open, profile);
 
@@ -72,6 +74,7 @@ export const ProfileDialog: React.FC<ProfileDialogProps> = ({
     setIsAutoDetecting(true);
     try {
       const { data } = await ticketKPIService.autoDetect(sampleFile);
+      setDetectedColumns(data.detected_columns || []);
       if (data.suggested_mapping && Object.keys(data.suggested_mapping).length > 0) {
         setFieldMapping((prev) => ({ ...prev, ...data.suggested_mapping }));
         toast.success(
@@ -154,6 +157,7 @@ export const ProfileDialog: React.FC<ProfileDialogProps> = ({
               fields={OUR_FIELDS}
               mapping={fieldMapping}
               onChange={setFieldMapping}
+              detectedColumns={detectedColumns}
             />
           </div>
 

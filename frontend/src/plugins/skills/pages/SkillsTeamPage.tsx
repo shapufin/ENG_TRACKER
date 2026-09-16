@@ -13,6 +13,7 @@ import {
   useCoverage,
   useGapReport,
   useExportMatrix,
+  useExportMatrixXlsx,
   useSkillCategories,
   useRateUserSkill,
 } from "../hooks/useSkillsQueries";
@@ -22,7 +23,6 @@ import type { SkillsViewMode } from "../types/skills";
 import { SkillsTeamToolbar } from "../components/SkillsTeamToolbar";
 import { SkillsScaleHint } from "../components/SkillsScaleHint";
 import { SkillsKpiCards } from "../components/SkillsKpiCards";
-import { SkillsLevelLegend } from "../components/SkillsLevelLegend";
 import { SkillsMemberList } from "../components/SkillsMemberList";
 import { RateSkillDialog } from "../components/RateSkillDialog";
 import { SkillsPagination } from "../components/SkillsPagination";
@@ -88,6 +88,7 @@ export const SkillsTeamPage: React.FC = () => {
     5
   );
   const exportMutation = useExportMatrix();
+  const exportXlsxMutation = useExportMatrixXlsx();
   const rateMutation = useRateUserSkill();
 
   const reconciledVisibleSkillIds = React.useMemo(() => {
@@ -115,8 +116,14 @@ export const SkillsTeamPage: React.FC = () => {
   const totalGridRows = matrixData?.count ? matrixData.count + 2 : 2;
   const firstBodyRowIndex = (page - 1) * PAGE_SIZE + 3;
 
-  const handleExport = () => {
-    exportMutation.mutate(
+  // Both exports carry the page's own category + search filters, so the file
+  // matches what is on screen. CSV is the long one-row-per-rating format; XLSX
+  // is the wide person-by-skill workbook.
+  const downloadExport = (
+    mutation: typeof exportMutation,
+    filename: string
+  ) => {
+    mutation.mutate(
       {
         category: categoryCode !== "all" ? categoryCode : undefined,
         search: search || undefined,
@@ -126,7 +133,7 @@ export const SkillsTeamPage: React.FC = () => {
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = "skills_matrix.csv";
+          a.download = filename;
           a.click();
           URL.revokeObjectURL(url);
           toast.success("Export downloaded");
@@ -134,6 +141,14 @@ export const SkillsTeamPage: React.FC = () => {
         onError: () => toast.error("Export failed"),
       }
     );
+  };
+
+  const handleExport = () => {
+    downloadExport(exportMutation, "skills_matrix.csv");
+  };
+
+  const handleExportXlsx = () => {
+    downloadExport(exportXlsxMutation, "skills_matrix.xlsx");
   };
 
   const resetFilters = () => {
@@ -208,6 +223,14 @@ export const SkillsTeamPage: React.FC = () => {
           >
             <Download className="mr-1 h-4 w-4" /> Export CSV
           </Button>
+          <Button
+            onClick={handleExportXlsx}
+            size="sm"
+            variant="outline"
+            disabled={exportXlsxMutation.isPending}
+          >
+            <Download className="mr-1 h-4 w-4" /> Export XLSX
+          </Button>
         </div>
       }
     >
@@ -256,10 +279,6 @@ export const SkillsTeamPage: React.FC = () => {
         filtersOpen={filtersOpen}
         onFiltersOpenChange={setFiltersOpen}
       />
-
-      <div className="pt-1">
-        <SkillsLevelLegend />
-      </div>
 
       {/* Matrix workspace panel — mobile card list or desktop 2D sticky grid */}
       {isLoading && (

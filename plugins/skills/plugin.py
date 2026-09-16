@@ -76,6 +76,11 @@ class SkillsPlugin(BasePlugin):
                     "component": "SkillsCatalogPage",
                     "layout": "admin",
                 },
+                {
+                    "path": "/admin/skills/settings",
+                    "component": "SkillsLevelSettingsPage",
+                    "layout": "admin",
+                },
             ],
             "injection_slots": [
                 {

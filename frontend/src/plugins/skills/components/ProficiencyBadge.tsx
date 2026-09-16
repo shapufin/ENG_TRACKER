@@ -1,7 +1,8 @@
 /** Proficiency badge showing a 1-5 level with color, dot swatch, and optional label. */
 import React from "react";
 import { cn } from "@/lib/utils";
-import { levelColor, levelDot, levelLabel } from "../utils/proficiencyLevels";
+import { levelColor, levelDot } from "../utils/proficiencyLevels";
+import { useLevelLabel } from "../hooks/useSkillsQueries";
 
 interface ProficiencyBadgeProps {
   level: number;
@@ -19,6 +20,7 @@ export const ProficiencyBadge: React.FC<ProficiencyBadgeProps> = ({
   const colorClass = levelColor(level);
   const dotClass = levelDot(level);
   const sizeClass = size === "sm" ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-xs";
+  const label = useLevelLabel(level);
 
   return (
     <span
@@ -28,12 +30,12 @@ export const ProficiencyBadge: React.FC<ProficiencyBadgeProps> = ({
         sizeClass,
         className
       )}
-      title={levelLabel(level)}
-      aria-label={`Proficiency level ${level}: ${levelLabel(level)}`}
+      title={label}
+      aria-label={`Proficiency level ${level}: ${label}`}
     >
       <span className={cn("h-2 w-2 shrink-0 rounded-full", dotClass)} aria-hidden="true" />
       {level}
-      {showLabel && <span>{levelLabel(level)}</span>}
+      {showLabel && <span>{label}</span>}
     </span>
   );
 };

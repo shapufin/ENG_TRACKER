@@ -1,3 +1,5 @@
+import type { UserTechAssignment } from "./index";
+
 export interface TeamSummary {
   id: number;
   name: string;
@@ -24,7 +26,9 @@ export interface User {
   hire_date?: string | null;
   team?: TeamSummary | null;
   teams?: TeamSummary[];
-  techs?: Array<{ id: number; name: string; code: string }>;
+  /** Same shape as UserSerializer.techs, so login and /me/ agree. The JWT's
+   * own claim is flatter (level_code) but is never read as the user object. */
+  techs?: UserTechAssignment[];
   client_ids?: number[];
 }
 

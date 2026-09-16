@@ -15,7 +15,9 @@ export const PersonalDashboardPendingCard: React.FC<PersonalDashboardPendingCard
   <GlassCard isHoverLift={false} className="p-6">
     <div className="mb-4">
       <p className="text-sm text-muted-foreground">My Pending Items</p>
-      <h3 className="text-lg font-semibold tabular-nums">{personalPendingItems.length}/4</h3>
+      <h3 className="font-mono text-lg font-semibold tabular-nums">
+        {personalPendingItems.length}/4
+      </h3>
     </div>
     {personalPendingItems.length === 0 ? (
       <EmptyState icon={ClipboardCheck} title="You're all caught up!" className="p-6" />

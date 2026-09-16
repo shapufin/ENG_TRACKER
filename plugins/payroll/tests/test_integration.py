@@ -503,3 +503,31 @@ class PayrollViewSetTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp['Content-Type'],
                          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    def test_export_pdf(self):
+        rule_set = PayrollRuleSet.objects.get(code='AL_2026_BOSHTI_REFERENCE')
+        run = PayrollRun.objects.create(
+            year=2026, month=10, status='draft', rule_set=rule_set,
+            created_by=self.admin,
+        )
+        generate_draft_run(run, [self.employee])
+        finalize_run(run, self.admin)
+        request = self.factory.get(f'/api/plugins/payroll/runs/{run.id}/export_pdf/')
+        force_authenticate(request, user=self.admin)
+        view = PayrollRunViewSet.as_view({'get': 'export_pdf'})
+        resp = view(request, pk=run.id)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+
+    def test_export_pdf_rejects_draft_run(self):
+        rule_set = PayrollRuleSet.objects.get(code='AL_2026_BOSHTI_REFERENCE')
+        run = PayrollRun.objects.create(
+            year=2026, month=11, status='draft', rule_set=rule_set,
+            created_by=self.admin,
+        )
+        generate_draft_run(run, [self.employee])
+        request = self.factory.get(f'/api/plugins/payroll/runs/{run.id}/export_pdf/')
+        force_authenticate(request, user=self.admin)
+        view = PayrollRunViewSet.as_view({'get': 'export_pdf'})
+        resp = view(request, pk=run.id)
+        self.assertEqual(resp.status_code, 409)

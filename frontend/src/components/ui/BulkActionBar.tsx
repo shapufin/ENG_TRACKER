@@ -4,6 +4,7 @@ import { GlassCard } from "./GlassCard";
 import { Button } from "./button";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { X } from "lucide-react";
+import { bulkBarEnter, DURATION, useMotionTransition } from "@/lib/motion";
 
 interface BulkAction {
   label: string;
@@ -26,14 +27,16 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
   actions,
   entityName = "items",
 }) => {
+  const transition = useMotionTransition({ duration: DURATION.base });
   return (
     <AnimatePresence>
       {selectedCount > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: -10, height: 0 }}
-          animate={{ opacity: 1, y: 0, height: "auto" }}
-          exit={{ opacity: 0, y: -10, height: 0 }}
-          transition={{ duration: 0.2 }}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          variants={bulkBarEnter}
+          transition={transition}
         >
           <GlassCard
             isHoverLift={false}

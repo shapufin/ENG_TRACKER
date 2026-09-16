@@ -143,6 +143,31 @@ class ColumnMapper:
         """
         return suggest_mapping(df_columns, self.KNOWN_ALIASES)
 
+    def suggest_month(self, df: pd.DataFrame, created_at_column: Optional[str]) -> Optional[str]:
+        """Guess the upload's target month from its own dates.
+
+        The upload form otherwise requires the user to type the month before
+        they can even see what is in the file — a manual step that is both
+        unnecessary (the file already says) and a source of "picked the wrong
+        month" mistakes. Returns the most common ``YYYY-MM-01`` across every
+        parseable ``created_at`` value, or ``None`` if no such column was
+        detected or nothing in it parses as a date.
+        """
+        if not created_at_column or created_at_column not in df.columns:
+            return None
+        months: Dict[str, int] = {}
+        for raw in df[created_at_column]:
+            if pd.isna(raw):
+                continue
+            parsed = self._parse_datetime(raw)
+            if parsed is None:
+                continue
+            key = parsed.strftime('%Y-%m-01')
+            months[key] = months.get(key, 0) + 1
+        if not months:
+            return None
+        return max(months.items(), key=lambda item: item[1])[0]
+
     def read_file(self, file_bytes: bytes, filename: str = '') -> pd.DataFrame:
         """
         Read CSV or Excel file into a DataFrame.

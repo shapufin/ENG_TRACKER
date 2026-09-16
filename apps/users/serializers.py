@@ -9,11 +9,47 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.models import User
 from apps.overtime.serializers import ClientSerializer
 from core.mixins.permissions import is_cr_admin
-from .models import Tech, Team, UserProfile, TeamMembership
+from .models import Tech, TechLevel, Team, UserProfile, TeamMembership
+from .services.tech_assignments import (
+    TechAssignmentError,
+    apply_tech_assignments,
+    normalize_tech_payload,
+    serialize_assignments,
+    validate_tech_assignments,
+)
 
 
 class ApprovalPeriodSerializer(serializers.Serializer):
     period = serializers.DateField(required=False)
+
+
+def _token_techs(profile):
+    """Tech claims for the JWT itself.
+
+    Deliberately flatter than ``serialize_assignments``: a ``level_code``
+    string instead of a nested level object, because this payload is attached
+    to the token sent on every single request. Response bodies use
+    ``serialize_assignments`` instead.
+    """
+    assignments = (
+        profile.tech_assignments
+        .filter(tech__is_active=True)
+        .select_related('tech', 'level')
+        .order_by('tech__name')
+    )
+    return [
+        {
+            'id': assignment.tech.id,
+            'name': assignment.tech.name,
+            'code': assignment.tech.code,
+            'level_code': (
+                assignment.level.code
+                if assignment.level_id and assignment.level.is_active
+                else None
+            ),
+        }
+        for assignment in assignments
+    ]
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -59,10 +95,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 {'id': t.id, 'name': t.name, 'code': t.code, 'calendar_group': t.calendar_group}
                 for t in profile.teams.all()
             ]
-            token['techs'] = [
-                {'id': t.id, 'name': t.name, 'code': t.code}
-                for t in profile.techs.filter(is_active=True).order_by('name')
-            ]
+            # level_code only, not a nested object: the token rides every
+            # request, so keep it to one short string per tech.
+            token['techs'] = _token_techs(profile)
             token['client_ids'] = list(profile.clients.values_list('id', flat=True))
 
         # Database role codes are the future capability authority.
@@ -129,10 +164,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 {'id': t.id, 'name': t.name, 'code': t.code, 'calendar_group': t.calendar_group}
                 for t in profile.teams.all()
             ]
-            data['user']['techs'] = [
-                {'id': t.id, 'name': t.name, 'code': t.code}
-                for t in profile.techs.filter(is_active=True).order_by('name')
-            ]
+            # The response BODY uses the same nested shape as UserSerializer,
+            # not the token's flat level_code. AuthContext hydrates from this on
+            # login and from /users/users/me/ on reload — if the two disagreed,
+            # the tech level would appear and vanish across a page refresh.
+            data['user']['techs'] = serialize_assignments(profile)
             data['user']['client_ids'] = list(profile.clients.values_list('id', flat=True))
 
         data['user']['roles'] = sorted(
@@ -280,14 +316,9 @@ class UserSerializer(serializers.ModelSerializer):
         return []
 
     def get_techs(self, obj) -> list:
-        """Get active Tech assignments for the user."""
+        """Get active Tech assignments, each with the level held in it."""
         if hasattr(obj, 'profile'):
-            profile = obj.profile
-            techs = [tech for tech in profile.techs.all() if tech.is_active]
-            return [
-                {'id': tech.id, 'name': tech.name, 'code': tech.code}
-                for tech in sorted(techs, key=lambda tech: tech.name)
-            ]
+            return serialize_assignments(obj.profile)
         return []
 
     def get_client_ids(self, obj) -> list:
@@ -305,12 +336,35 @@ class UserSerializer(serializers.ModelSerializer):
         return []
 
 
+class TechLevelSerializer(serializers.ModelSerializer):
+    """Serializer for one grade within a Tech's ordered scale."""
+
+    tech_code = serializers.CharField(source='tech.code', read_only=True)
+
+    class Meta:
+        model = TechLevel
+        fields = [
+            'id', 'tech', 'tech_code', 'name', 'code', 'rank',
+            'description', 'is_active', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_code(self, value):
+        """Match Tech.code semantics — the model upper-cases on save."""
+        return value.upper() if value else value
+
+
 class TechSerializer(serializers.ModelSerializer):
     """Serializer for the independent user technology catalog."""
 
+    levels = TechLevelSerializer(many=True, read_only=True)
+
     class Meta:
         model = Tech
-        fields = ['id', 'name', 'code', 'description', 'is_active', 'created_at', 'updated_at']
+        fields = [
+            'id', 'name', 'code', 'description', 'is_active', 'levels',
+            'created_at', 'updated_at',
+        ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
@@ -366,6 +420,28 @@ class TeamSerializer(serializers.ModelSerializer):
         return obj.members.count()
 
 
+class TechAssignmentField(serializers.Field):
+    """Writable ``techs`` field accepting both payload shapes.
+
+    ``[1, 2]`` (legacy, level left alone) and
+    ``[{"tech": 1, "level": 3}]`` (level-aware). Parsing and validation live in
+    ``services.tech_assignments`` so the bulk and member-dialog endpoints apply
+    exactly the same rules.
+
+    Reads back as a plain id list. Callers wanting levels use ``techs_detail``.
+    """
+
+    def to_representation(self, value):
+        return [tech.id for tech in value.all()]
+
+    def to_internal_value(self, data):
+        try:
+            entries = normalize_tech_payload(data)
+            return validate_tech_assignments(entries, profile=self.parent.instance)
+        except TechAssignmentError as exc:
+            raise serializers.ValidationError(str(exc))
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     """
     Serializer for UserProfile model.
@@ -383,40 +459,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
         allow_null=True
     )
     teams_detail = TeamSerializer(source='teams', many=True, read_only=True)
-    techs = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Tech.objects.all(),
-        required=False,
-    )
-    techs_detail = TechSerializer(source='techs', many=True, read_only=True)
+    techs = TechAssignmentField(required=False)
+    techs_detail = serializers.SerializerMethodField()
 
-    def validate_techs(self, techs):
-        """Allow inactive Techs only if already assigned to this user.
-
-        Active Techs are always allowed. Inactive Techs are allowed only
-        if the user already has them assigned (so editing a user with
-        inactive Techs doesn't fail). New inactive Tech assignments must
-        go through the Tech member management dialog.
-        """
-        if not techs:
-            return techs
-        inactive = [t for t in techs if not t.is_active]
-        if not inactive:
-            return techs
-        if self.instance:
-            existing_ids = set(self.instance.techs.values_list('id', flat=True))
-            for t in inactive:
-                if t.id not in existing_ids:
-                    raise serializers.ValidationError(
-                        f"Cannot assign inactive Tech '{t.name}'. "
-                        f"Use the Tech member management dialog instead."
-                    )
-        else:
-            raise serializers.ValidationError(
-                "Cannot assign inactive Techs to new users. "
-                "Use the Tech member management dialog after creation."
-            )
-        return techs
+    def get_techs_detail(self, obj) -> list:
+        """Assigned Techs with the level held in each (Users-page badges)."""
+        return serialize_assignments(obj)
     clients = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=ClientSerializer.Meta.model.objects.all(),
@@ -442,6 +490,39 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def to_representation(self, instance):
+        """Point ``user.profile`` back at the profile we already have.
+
+        ``select_related('user')`` populates the forward side only; the reverse
+        OneToOne stays cold, so the nested ``UserSerializer.get_techs`` call to
+        ``obj.profile`` would refetch the profile — without its
+        ``tech_assignments`` prefetch — once per row. Seeding the reverse cache
+        keeps Tech reads flat as the list grows.
+        """
+        instance.user.profile = instance
+        return super().to_representation(instance)
+
+    def create(self, validated_data):
+        """``techs`` is a through-model M2M now, so ModelSerializer cannot
+        assign it — hand the normalized entries to the service instead."""
+        entries = validated_data.pop('techs', None)
+        profile = super().create(validated_data)
+        if entries is not None:
+            apply_tech_assignments(profile, entries, assigned_by=self._request_user())
+        return profile
+
+    def update(self, instance, validated_data):
+        entries = validated_data.pop('techs', None)
+        profile = super().update(instance, validated_data)
+        if entries is not None:
+            apply_tech_assignments(profile, entries, assigned_by=self._request_user())
+        return profile
+
+    def _request_user(self):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        return user if getattr(user, 'is_authenticated', False) else None
 
     def get_team(self, obj) -> dict | None:
         """Safely get primary team info for backward compatibility."""

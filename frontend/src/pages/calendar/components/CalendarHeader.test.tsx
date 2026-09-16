@@ -22,6 +22,7 @@ const baseProps = {
   onSetViewMode: vi.fn(),
   onToggleFullscreen: vi.fn(),
   onClearWorkspaceSelection: vi.fn(),
+  onRequestTimeOff: vi.fn(),
 };
 
 describe("CalendarHeader", () => {

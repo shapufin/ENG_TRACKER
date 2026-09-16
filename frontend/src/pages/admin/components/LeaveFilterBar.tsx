@@ -48,7 +48,7 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
   onDateToChange,
 }) => {
   return (
-    <div className="grid gap-4 xl:grid-cols-[1fr_160px_160px_180px_180px_180px]">
+    <div className="grid gap-4 xl:grid-cols-[1fr_160px_160px_180px_260px]">
       <SearchInput value={searchQuery} onChange={onSearchChange} />
       <StatusFilterButton filterStatus={filterStatus} onStatusChange={onStatusChange} />
       <Button

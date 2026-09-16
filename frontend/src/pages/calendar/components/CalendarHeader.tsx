@@ -4,7 +4,15 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { WorkspaceSelector } from "@/components/calendar/WorkspaceSelector";
-import { ChevronLeft, ChevronRight, Download, Maximize2, Minimize2, RotateCcw } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Maximize2,
+  Minimize2,
+  Plus,
+  RotateCcw,
+} from "lucide-react";
 import { exportToCSV, exportToICal } from "@/lib/calendar-export";
 import type { CalendarEvent } from "@/components/calendar/types";
 
@@ -20,6 +28,7 @@ interface CalendarHeaderProps {
   onSetViewMode: (mode: "month" | "week" | "list") => void;
   onToggleFullscreen: () => void;
   onClearWorkspaceSelection: () => void;
+  onRequestTimeOff: () => void;
 }
 
 const VIEW_MODES = [
@@ -45,6 +54,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onSetViewMode,
   onToggleFullscreen,
   onClearWorkspaceSelection,
+  onRequestTimeOff,
 }) => (
   <header className="px-2 pt-1.5" aria-label="Calendar controls">
     <GlassCard isHoverLift={false} className="flex flex-col gap-3 border-b-0 p-3">
@@ -87,6 +97,16 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="gradient"
+            className="h-11 rounded-xl px-3.5 md:h-9"
+            onClick={onRequestTimeOff}
+          >
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
+            Request Time Off
+          </Button>
+
           <div
             className="flex rounded-xl border border-border/60 bg-muted/40 p-0.5"
             role="group"

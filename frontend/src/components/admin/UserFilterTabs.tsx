@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Users2, Crown, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LAYOUT_ID, useMotionTransition } from "@/lib/motion";
 
 type TLFilter = "all" | "italian_tl" | "albanian_tl" | "no_tl";
 
@@ -11,6 +12,7 @@ interface UserFilterTabsProps {
 }
 
 export const UserFilterTabs: React.FC<UserFilterTabsProps> = ({ filter, onFilterChange }) => {
+  const transition = useMotionTransition({ type: "spring", bounce: 0.2, duration: 0.6 });
   const filters = [
     { key: "all" as TLFilter, label: "All", icon: Users2 },
     { key: "italian_tl" as TLFilter, label: "Italian TL", icon: Crown },
@@ -37,9 +39,9 @@ export const UserFilterTabs: React.FC<UserFilterTabsProps> = ({ filter, onFilter
             >
               {isActive && (
                 <motion.div
-                  layoutId="user-filter-tab"
+                  layoutId={LAYOUT_ID.userFilterTab}
                   className="absolute inset-0 rounded-md bg-primary"
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  transition={transition}
                 />
               )}
               <span className="relative z-10 flex items-center gap-1.5">

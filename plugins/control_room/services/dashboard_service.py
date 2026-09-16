@@ -22,6 +22,7 @@ from django.db.models import Q, Sum, Count
 
 from apps.standby.models.core import StandbyLog
 from apps.users.models.core import Team, TeamMembership
+from apps.users.services.tech_assignments import format_assignments
 
 from plugins.control_room.services.scope_service import (
     get_allowed_team_ids, get_allowed_user_ids, can_access_dashboard,
@@ -309,7 +310,9 @@ def build_roster(user: User, date_from: str, date_to: str,
 
     total = queryset.count()
     queryset = queryset.prefetch_related(
-        'user__profile__team_memberships__team'
+        'user__profile__team_memberships__team',
+        'user__profile__tech_assignments__tech',
+        'user__profile__tech_assignments__level',
     ).order_by('-date', '-id')
     start = (page - 1) * page_size
 
@@ -321,6 +324,8 @@ def build_roster(user: User, date_from: str, date_to: str,
             for membership in log.user.profile.team_memberships.all()
             if membership.team
         ]
+        # Reads the prefetch above — never queries per row.
+        techs = format_assignments(log.user.profile)
         is_overnight = (
             log.start_time is not None
             and log.end_time is not None
@@ -333,6 +338,7 @@ def build_roster(user: User, date_from: str, date_to: str,
             'user_name': log.user.get_full_name() or log.user.username,
             'username': log.user.username,
             'team_names': teams,
+            'tech_levels': techs,
             'hours': float(log.hours),
             'start_time': log.start_time.isoformat() if log.start_time else None,
             'end_time': log.end_time.isoformat() if log.end_time else None,

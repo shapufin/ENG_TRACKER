@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { PageShell } from "@/components/layout/PageShell";
 import {
   useOrganigramaTree,
   useOrganigramaVisibleCharts,
@@ -116,13 +117,11 @@ export const OrganigramaPage: React.FC = () => {
         : "";
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4 border-b border-line-subtle pb-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight">{headerLabel}</h1>
-          {headerSubtitle && <p className="text-sm text-muted-foreground">{headerSubtitle}</p>}
-        </div>
-        {sources.length > 1 && (
+    <PageShell
+      title={headerLabel}
+      subtitle={headerSubtitle || undefined}
+      actions={
+        sources.length > 1 ? (
           <Select
             value={selectedId === "live" ? "live" : selectedId.toString()}
             onValueChange={(value) => {
@@ -145,9 +144,10 @@ export const OrganigramaPage: React.FC = () => {
               ))}
             </SelectContent>
           </Select>
-        )}
-      </div>
+        ) : undefined
+      }
+    >
       {renderContent()}
-    </div>
+    </PageShell>
   );
 };

@@ -10,6 +10,8 @@ Endpoints:
 
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
+import json
 import logging
 import mimetypes
 
@@ -23,7 +25,7 @@ from django.utils import timezone
 from rest_framework import viewsets, status, permissions, serializers
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.http import FileResponse
 
@@ -121,6 +123,34 @@ def _error_response(message: str, status_code: int, detail: str | None = None) -
     if detail:
         payload['detail'] = detail
     return Response(payload, status=status_code)
+
+
+def _apply_mapping_overrides(base_mapping: dict, raw_overrides) -> tuple:
+    """Merge ``field_mapping_overrides`` onto a profile's saved mapping.
+
+    ``raw_overrides`` arrives as a JSON string (multipart form field) or may
+    be absent. Returns ``(effective_mapping, error_response)`` — exactly one
+    is non-empty/None. An override always wins over the saved mapping for
+    that field; fields not mentioned keep the profile's own value.
+    """
+    if not raw_overrides:
+        return dict(base_mapping), None
+    try:
+        overrides = json.loads(raw_overrides) if isinstance(raw_overrides, str) else raw_overrides
+    except (TypeError, ValueError):
+        return None, _error_response(
+            'field_mapping_overrides must be a JSON object.', status.HTTP_400_BAD_REQUEST
+        )
+    if not isinstance(overrides, dict) or any(
+        not isinstance(k, str) or not isinstance(v, str) for k, v in overrides.items()
+    ):
+        return None, _error_response(
+            'field_mapping_overrides must be a JSON object of string field -> string column.',
+            status.HTTP_400_BAD_REQUEST,
+        )
+    merged = dict(base_mapping)
+    merged.update(overrides)
+    return merged, None
 
 
 # ============================================================================
@@ -269,7 +299,10 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
     serializer_class = TicketImportBatchSerializer
     permission_classes = [permissions.IsAuthenticated]
     plugin_name = 'ticket_kpi'
-    parser_classes = [MultiPartParser, FormParser]
+    # analyze/preview/import_batch carry a file (multipart); bulk_review_batches
+    # carries only a list of IDs and is plain JSON — both parsers are always
+    # registered, DRF picks the one matching the request's Content-Type.
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     # Throttle file-parsing endpoints to prevent resource exhaustion.
     throttle_scope = 'upload'
     permission_action_map = {
@@ -330,6 +363,10 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
                 'total_rows': len(df),
             }
 
+            suggested_month = mapper.suggest_month(df, detected.get('created_at'))
+            if suggested_month:
+                response_data['suggested_month'] = suggested_month
+
             if best_profile:
                 response_data['suggested_profile'] = {
                     'id': best_profile.id,
@@ -351,6 +388,14 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
     def preview(self, request):
         """
         Step 2: Preview normalized data before committing.
+
+        Optional ``field_mapping_overrides`` (JSON object, ``our_field ->
+        their_column``) lets the user fix a wrong or missing column mapping
+        right here — the auto-detected or profile mapping got a column wrong,
+        or a "missing_status"-type issue showed up — without re-uploading.
+        The override applies only to this preview call; it is not saved
+        unless the caller also imports with ``save_mapping_overrides=true``
+        (see ``import_batch``).
         """
         file_obj = request.FILES.get('file')
         profile_id = request.data.get('profile_id')
@@ -373,6 +418,12 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        effective_mapping, override_error = _apply_mapping_overrides(
+            profile.field_mapping, request.data.get('field_mapping_overrides')
+        )
+        if override_error:
+            return override_error
+
         try:
             validate_upload(file_obj, "ticket_import")
             mapper = ColumnMapper(profile=profile)
@@ -385,7 +436,7 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
             )
             records, errors = mapper.apply_mapping(
                 df,
-                profile.field_mapping,
+                effective_mapping,
                 profile.value_transforms,
                 compute_resolution=profile.compute_resolution_time,
                 compute_sla=profile.compute_sla
@@ -407,6 +458,7 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
             preview['errors'] = errors[:MAX_PREVIEW_ERRORS]
             preview['has_existing_upload'] = existing is not None
             preview['existing_record_count'] = existing.record_count if existing else 0
+            preview['effective_field_mapping'] = effective_mapping
 
             return Response(preview, status=status.HTTP_200_OK)
 
@@ -470,6 +522,27 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
         if err:
             return err
 
+        effective_mapping, override_error = _apply_mapping_overrides(
+            profile.field_mapping, request.data.get('field_mapping_overrides')
+        )
+        if override_error:
+            return override_error
+
+        # Persisting the fix back onto the shared profile is a configure-level
+        # change (it affects every future upload against this profile, not
+        # just this one), so it needs the same ownership check
+        # ExportProfileViewSet.perform_update uses — the creator or an admin.
+        # Ephemeral (unsaved) overrides need no such check: they affect only
+        # this one import.
+        save_mapping_overrides = str(request.data.get('save_mapping_overrides', '')).lower() == 'true'
+        if save_mapping_overrides:
+            is_admin_user = request.user.is_staff or request.user.is_superuser
+            if not is_admin_user and profile.created_by_id != request.user.id:
+                return _error_response(
+                    'Only the profile creator or an admin can save a mapping change.',
+                    status.HTTP_403_FORBIDDEN,
+                )
+
         # Validate profile-to-client assignment
         profile_client_ids = set(profile.assigned_clients.values_list('id', flat=True))
         if profile_client_ids:
@@ -518,7 +591,7 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
             )
             records, errors = mapper.apply_mapping(
                 df,
-                profile.field_mapping,
+                effective_mapping,
                 profile.value_transforms,
                 compute_resolution=profile.compute_resolution_time,
                 compute_sla=profile.compute_sla
@@ -593,7 +666,21 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
 
                 # Recompute monthly KPI now that the parsed tickets exist (the post_save
                 # signal fires before bulk_create, so it cannot see the tickets yet).
+                #
+                # This duplicates the signal's own transaction.on_commit recompute in
+                # a real request (both run before the response is returned, since
+                # on_commit fires when this atomic block exits) — deliberately kept
+                # rather than removed: Django's TestCase never runs on_commit callbacks
+                # (the test's own outer transaction rolls back instead of committing),
+                # so several existing tests rely on this explicit call for the KPI to
+                # be readable synchronously right after import. Worth revisiting with a
+                # capped-frequency guard if profiling ever shows this matters at
+                # production import volume; not worth the test churn today.
                 compute_monthly_kpi(batch.user, batch.month)
+
+                if save_mapping_overrides:
+                    profile.field_mapping = effective_mapping
+                    profile.save(update_fields=['field_mapping', 'updated_at'])
         except IntegrityError:
             # Concurrent upload won the race despite select_for_update fallback
             return Response(
@@ -686,7 +773,7 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
         queryset = TicketImportBatch.objects.filter(
             user__in=team_members,
             is_overridden=False
-        ).select_related('profile', 'user').order_by('-month', 'user__username')
+        ).select_related('profile', 'user', 'reviewed_by').order_by('-month', 'user__username')
 
         if month_str:
             month, err = _parse_month_param(month_str)
@@ -745,16 +832,9 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        is_admin = request.user.is_staff or request.user.is_superuser
-        if not is_admin and not _is_tl_for_user(request.user, batch.user):
-            return Response(
-                {'error': 'Only administrators or the user\'s team leader can review uploads'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        batch.reviewed_by = request.user
-        batch.reviewed_at = timezone.now()
-        batch.save(update_fields=['reviewed_by', 'reviewed_at'])
+        reason = _review_batch_or_reason(batch, request.user, timezone.now())
+        if reason:
+            return Response({'error': reason}, status=status.HTTP_403_FORBIDDEN)
 
         logger.info(
             "User %s reviewed batch %d (user=%s, month=%s)",
@@ -768,6 +848,50 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
                 'reviewed_by': request.user.username,
             },
             status=status.HTTP_200_OK
+        )
+
+    @action(detail=False, methods=['post'])
+    def bulk_review_batches(self, request):
+        """Review several batches in one call (TL/Admin).
+
+        Each batch is checked against the same permission rule as
+        ``review_batch`` — one batch outside the caller's team, or already
+        gone, is reported in ``skipped`` with a reason rather than failing
+        the whole request, so a TL reviewing 8 team members' March uploads
+        does not lose the other 7 because one was deleted meanwhile.
+        """
+        batch_ids = request.data.get('batch_ids')
+        if not isinstance(batch_ids, list) or not batch_ids:
+            return Response(
+                {'error': 'batch_ids must be a non-empty list of batch IDs.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        batches = {
+            b.id: b for b in
+            TicketImportBatch.objects.filter(pk__in=batch_ids).select_related('user')
+        }
+
+        reviewed = []
+        skipped = []
+        now = timezone.now()
+        for batch_id in batch_ids:
+            batch = batches.get(batch_id)
+            if batch is None:
+                skipped.append({'batch_id': batch_id, 'reason': 'Batch not found.'})
+                continue
+            reason = _review_batch_or_reason(batch, request.user, now)
+            if reason:
+                skipped.append({'batch_id': batch_id, 'reason': reason})
+                continue
+            reviewed.append(batch_id)
+
+        logger.info(
+            "User %s bulk-reviewed %d batch(es), skipped %d",
+            request.user.username, len(reviewed), len(skipped),
+        )
+        return Response(
+            {'reviewed': reviewed, 'skipped': skipped}, status=status.HTTP_200_OK
         )
 
 
@@ -1229,36 +1353,41 @@ class TicketKPIDashboardViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
             **time_filter,
         ).order_by('-created_at', '-id')
 
-        # ---- Dynamic field discovery + filter options (from unfiltered set) ----
+        # ---- Dynamic field discovery + filter options ----
+        # Read from the pre-computed MonthlyKPI.field_breakdowns instead of
+        # scanning every ticket in the month: that scan used to run on every
+        # page view, unfiltered and unpaginated, decoding raw_data for every
+        # row before any filter or pagination was applied. field_breakdowns
+        # is a {field: {value: count}} dict per KPI row, already computed by
+        # compute_monthly_kpi and covering both standard fields and every
+        # dynamic raw_data field — its keys ARE the distinct-value list this
+        # needed, at the cost of at most 12 small rows instead of every
+        # ticket. See ``analytics._build_field_breakdowns``.
         standard_fields = [
             'ticket_id', 'title', 'status', 'created_at', 'resolved_at',
             'assignee', 'requester', 'priority', 'category',
             'time_to_resolution_hours', 'sla_breached',
         ]
         standard_set = set(standard_fields)
-        extra_fields: set = set()
-        # Collect distinct values for every filterable field (standard + dynamic)
-        field_values: dict = {}
-        for t in base_qs.only('status', 'priority', 'category', 'assignee', 'requester', 'raw_data'):
-            for fname in ('status', 'priority', 'category', 'assignee', 'requester'):
-                val = getattr(t, fname, None)
-                if val:
-                    field_values.setdefault(fname, set()).add(str(val))
-            if t.raw_data:
-                for key, val in t.raw_data.items():
-                    if key not in standard_set:
-                        extra_fields.add(key)
-                        # Only collect string-like values for filter dropdowns
-                        if val is not None and not isinstance(val, (dict, list)):
-                            field_values.setdefault(key, set()).add(str(val))
+        # MonthlyKPI.month mirrors TicketImportBatch.month, so the same
+        # month/year window keys apply with the ``batch__`` prefix dropped.
+        kpi_time_filter = {k[len('batch__'):]: v for k, v in time_filter.items()}
+        kpi_qs = MonthlyKPI.objects.filter(
+            user=target_user, **kpi_time_filter
+        ).only('field_breakdowns')
 
+        field_values: dict = {}
+        for kpi in kpi_qs:
+            for field_name, counts in (kpi.field_breakdowns or {}).items():
+                field_values.setdefault(field_name, set()).update(counts.keys())
+
+        extra_fields = {name for name in field_values if name not in standard_set}
         available_fields = standard_fields + sorted(extra_fields)
-        # Build filter_options: standard fields + dynamic fields, all with distinct values
-        filter_options = {}
+        filter_options = {
+            fname: sorted(values) for fname, values in field_values.items()
+        }
         for fname in ('status', 'priority', 'category', 'assignee', 'requester'):
-            filter_options[fname] = sorted(field_values.get(fname, set()))
-        for fname in sorted(extra_fields):
-            filter_options[fname] = sorted(field_values.get(fname, set()))
+            filter_options.setdefault(fname, [])
 
         # ---- Apply filters ----
         qs = base_qs
@@ -1392,6 +1521,23 @@ def _is_tl_for_user(tl_user, target_user):
     ).filter(
         Q(italian_tl=tl_user) | Q(albanian_tl=tl_user) | Q(teams__team_leader=tl_user)
     ).exists()
+
+
+def _review_batch_or_reason(batch, user, reviewed_at) -> Optional[str]:
+    """Stamp ``batch`` reviewed by ``user``, or return a reason it can't be.
+
+    Shared by ``review_batch`` and ``bulk_review_batches`` so the permission
+    rule and the save can't drift between the single and bulk paths. Returns
+    ``None`` on success (batch is already saved); a non-empty string means
+    the caller lacks permission and nothing was written.
+    """
+    is_admin = user.is_staff or user.is_superuser
+    if not is_admin and not _is_tl_for_user(user, batch.user):
+        return "Only administrators or the user's team leader can review this upload."
+    batch.reviewed_by = user
+    batch.reviewed_at = reviewed_at
+    batch.save(update_fields=['reviewed_by', 'reviewed_at'])
+    return None
 
 
 def _check_cross_user_access(request, target_user_id):

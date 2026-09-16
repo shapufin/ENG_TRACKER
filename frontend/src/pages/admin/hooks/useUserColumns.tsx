@@ -205,6 +205,11 @@ export const useUserColumns = (
                     className="border-violet-500/30 bg-violet-500/10 text-[10px] font-normal text-violet-400 hover:bg-violet-500/20"
                   >
                     {t.name}
+                    {t.level && (
+                      <span className="ml-1 font-semibold" title={`${t.name} — ${t.level.name}`}>
+                        {t.level.code}
+                      </span>
+                    )}
                   </Badge>
                 ))}
               </div>

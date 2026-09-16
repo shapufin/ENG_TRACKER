@@ -95,6 +95,7 @@ function layoutTree(
       node.type === "person" ? node.full_name || node.username || "Unknown" : node.name || "Tech";
     const subtitle = node.type === "tech" ? node.code : undefined;
     const roleBadge = node.type === "person" ? node.role_badge : undefined;
+    const techLevels = node.type === "person" ? node.tech_levels : undefined;
     const highlighted = q.length > 0 && nodeMatches(node, q);
 
     nodes.push({
@@ -106,6 +107,7 @@ function layoutTree(
         label,
         subtitle,
         roleBadge,
+        techLevels,
         hasChildren,
         collapsed: isCollapsed,
         highlighted,

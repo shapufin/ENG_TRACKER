@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { Plus } from "lucide-react";
 import { ProfileCard } from "../../components/ProfileCard";
 import type { ExportProfile } from "../../types/ticketKPI";
@@ -30,11 +31,11 @@ export const TicketKPIProfilesTab: React.FC<TicketKPIProfilesTabProps> = ({
     </div>
 
     {!profiles || profiles.length === 0 ? (
-      <Card>
+      <GlassCard isHoverLift={false}>
         <CardContent className="py-8 text-center text-muted-foreground">
           No profiles yet.
         </CardContent>
-      </Card>
+      </GlassCard>
     ) : (
       <div className="grid gap-4 md:grid-cols-2">
         {profiles.map((p) => (

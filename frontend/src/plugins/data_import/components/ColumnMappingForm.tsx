@@ -48,7 +48,7 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
             onDefaultValueChange(field.key, v === "true" ? true : v === "false" ? false : undefined)
           }
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="No default" />
           </SelectTrigger>
           <SelectContent>
@@ -66,7 +66,7 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
         onChange={(e) =>
           onDefaultValueChange(field.key, e.target.value === "" ? undefined : e.target.value)
         }
-        className="w-[180px]"
+        className="w-full"
       />
     );
   };
@@ -83,7 +83,7 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
             {missingRequired.map((k) => fields.find((f) => f.key === k)?.label).join(", ")}
           </p>
         )}
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {fields
             .filter((field) => field.key !== "password")
             .map((field) => {
@@ -92,7 +92,7 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
               return (
                 <div
                   key={field.key}
-                  className={`grid items-start gap-4 rounded-lg border p-4 sm:grid-cols-[1fr_1fr_auto] ${
+                  className={`space-y-2 rounded-lg border p-4 ${
                     field.required && isSkipped && !defaultValues[field.key]
                       ? "border-destructive/50"
                       : ""
@@ -107,27 +107,29 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
                       <p className="text-xs text-muted-foreground">{field.help_text}</p>
                     )}
                   </div>
-                  <Select
-                    value={mappedValue}
-                    onValueChange={(value) =>
-                      onFieldMappingChange(field.key, value === SKIP_VALUE ? null : value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a column" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={SKIP_VALUE}>— Skip / leave empty —</SelectItem>
-                      {detectedColumns.map((col) => (
-                        <SelectItem key={col} value={col}>
-                          {col}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex flex-col gap-1">
-                    <Label className="text-xs text-muted-foreground">Default value</Label>
-                    {renderDefaultInput(field)}
+                  <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-[2fr_1fr]">
+                    <Select
+                      value={mappedValue}
+                      onValueChange={(value) =>
+                        onFieldMappingChange(field.key, value === SKIP_VALUE ? null : value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a column" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={SKIP_VALUE}>— Skip / leave empty —</SelectItem>
+                        {detectedColumns.map((col) => (
+                          <SelectItem key={col} value={col}>
+                            {col}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-xs text-muted-foreground">Default value</Label>
+                      {renderDefaultInput(field)}
+                    </div>
                   </div>
                 </div>
               );

@@ -1,5 +1,6 @@
 import api from "@/lib/api";
 import { downloadBlobResponse } from "@/lib/download";
+import type { AxiosProgressEvent } from "axios";
 import type {
   TemplateFormat,
   AnalyzeResult,
@@ -12,6 +13,22 @@ import type {
 } from "../types/dataImport";
 
 const BASE = "/plugins/data_import";
+
+/** Upload/processing can far outlast the global 10s axios default. */
+const IMPORT_TIMEOUT_MS = 120_000;
+
+type UploadProgressHandler = (percent: number) => void;
+
+/** Shared config for the heavy multipart endpoints: longer timeout + upload progress. */
+const uploadConfig = (onProgress?: UploadProgressHandler) => ({
+  headers: { "Content-Type": "multipart/form-data" },
+  timeout: IMPORT_TIMEOUT_MS,
+  onUploadProgress: (event: AxiosProgressEvent) => {
+    if (onProgress && event.total) {
+      onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+    }
+  },
+});
 
 export const dataImportService = {
   async getTargets(): Promise<{ targets: ImportTarget[] }> {
@@ -33,13 +50,11 @@ export const dataImportService = {
     downloadBlobResponse(data, `${targetKey}_import_template.${fileFormat}`);
   },
 
-  async analyze(file: File, targetKey: string): Promise<AnalyzeResult> {
+  async analyze(file: File, targetKey: string, onUploadProgress?: UploadProgressHandler): Promise<AnalyzeResult> {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("target_key", targetKey);
-    const { data } = await api.post(`${BASE}/import/analyze/`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const { data } = await api.post(`${BASE}/import/analyze/`, formData, uploadConfig(onUploadProgress));
     return data;
   },
 
@@ -48,7 +63,8 @@ export const dataImportService = {
     targetKey: string,
     fieldMapping: Record<string, string | null>,
     defaultValues: Record<string, unknown>,
-    options: ImportOptions
+    options: ImportOptions,
+    onUploadProgress?: UploadProgressHandler
   ): Promise<PreviewResult> {
     const formData = new FormData();
     formData.append("file", file);
@@ -56,9 +72,7 @@ export const dataImportService = {
     formData.append("field_mapping", JSON.stringify(stripNulls(fieldMapping)));
     formData.append("default_values", JSON.stringify(defaultValues));
     formData.append("options", JSON.stringify(options));
-    const { data } = await api.post(`${BASE}/import/preview/`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const { data } = await api.post(`${BASE}/import/preview/`, formData, uploadConfig(onUploadProgress));
     return data;
   },
 
@@ -68,7 +82,8 @@ export const dataImportService = {
     fieldMapping: Record<string, string | null>,
     defaultValues: Record<string, unknown>,
     options: ImportOptions,
-    saveProfile?: { name: string }
+    saveProfile?: { name: string },
+    onUploadProgress?: UploadProgressHandler
   ): Promise<CommitResult> {
     const formData = new FormData();
     formData.append("file", file);
@@ -80,9 +95,7 @@ export const dataImportService = {
       formData.append("save_profile", "true");
       formData.append("profile_name", saveProfile.name);
     }
-    const { data } = await api.post(`${BASE}/import/commit/`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const { data } = await api.post(`${BASE}/import/commit/`, formData, uploadConfig(onUploadProgress));
     return data;
   },
 

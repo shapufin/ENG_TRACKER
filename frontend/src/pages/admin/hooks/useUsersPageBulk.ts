@@ -4,13 +4,13 @@ import { userService } from "@/services/userService";
 import { useBulkOperations } from "@/hooks/useBulkOperations";
 import { handleApiError } from "@/lib/error-handler";
 import { toast } from "sonner";
-import type { UserProfile } from "@/types";
+import type { TechAssignmentInput, UserProfile } from "@/types";
 import type { RowSelectionState } from "@tanstack/react-table";
 
 export interface BulkUserUpdatePayload {
   user_ids: number[];
   teams?: number[];
-  techs?: number[];
+  techs?: TechAssignmentInput[];
   italian_tl?: number | null;
   albanian_tl?: number | null;
   is_hr?: boolean;

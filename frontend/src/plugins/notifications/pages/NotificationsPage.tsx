@@ -5,6 +5,7 @@ import { CardContent, CardHeader } from "@/components/ui/card";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/input";
+import { PageShell } from "@/components/layout/PageShell";
 import { useNotificationsPage } from "./hooks/useNotificationsPage";
 import { NotificationItem } from "../components/NotificationItem";
 
@@ -20,26 +21,20 @@ export const NotificationsPage: React.FC = () => {
   } = useNotificationsPage();
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 border-b border-line-subtle pb-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight">Notifications</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            Stay updated with your latest activities and requests.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleMarkAllRead}
-            disabled={notifications.every((n) => n.is_read)}
-          >
-            <Check className="mr-2 h-4 w-4" /> Mark all read
-          </Button>
-        </div>
-      </div>
-
+    <PageShell
+      title="Notifications"
+      subtitle="Stay updated with your latest activities and requests."
+      actions={
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleMarkAllRead}
+          disabled={notifications.every((n) => n.is_read)}
+        >
+          <Check className="mr-2 h-4 w-4" /> Mark all read
+        </Button>
+      }
+    >
       <GlassCard isHoverLift={false}>
         <CardHeader className="pb-3">
           <div className="relative">
@@ -72,6 +67,6 @@ export const NotificationsPage: React.FC = () => {
           </div>
         </CardContent>
       </GlassCard>
-    </div>
+    </PageShell>
   );
 };

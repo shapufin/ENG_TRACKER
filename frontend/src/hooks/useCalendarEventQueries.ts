@@ -25,7 +25,16 @@ export const useCalendarEventQueries = ({
     error: sbError,
   } = useQuery({
     queryKey: ["standby", "calendar", workspaceScope],
-    queryFn: () => standbyService.getLogs({ workspace_ids: workspaceScope, calendar: true }),
+    // ignore_date_filter: the backend defaults to the current month, which
+    // would hide standby from every other month. page_size=10000 lifts the
+    // default 50-row page cap (LargeResultsPagination max).
+    queryFn: () =>
+      standbyService.getLogs({
+        workspace_ids: workspaceScope,
+        calendar: true,
+        ignore_date_filter: "true",
+        page_size: 10000,
+      }),
     enabled: hasWorkspaceSelection && canFetchCalendarData && showStandby,
     staleTime: 0,
     gcTime: 10 * 60 * 1000,
@@ -37,7 +46,8 @@ export const useCalendarEventQueries = ({
     error: leaveError,
   } = useQuery({
     queryKey: ["vacations", "calendar", workspaceScope],
-    queryFn: () => leaveService.getRequests({ workspace_ids: workspaceScope, calendar: true }),
+    queryFn: () =>
+      leaveService.getRequests({ workspace_ids: workspaceScope, calendar: true, page_size: 10000 }),
     enabled: hasWorkspaceSelection,
     staleTime: 0,
     gcTime: 10 * 60 * 1000,

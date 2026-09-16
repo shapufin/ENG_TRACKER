@@ -8,6 +8,7 @@ import { SidebarNav } from "./SidebarNav";
 import { SidebarUserProfile } from "./SidebarUserProfile";
 import { SidebarInstallButton } from "./SidebarInstallButton";
 import { SidebarCollapsedContext } from "./SidebarContext";
+import { useMotionTransition } from "@/lib/motion";
 import { useMobileSidebarFocus } from "./useMobileSidebarFocus";
 import type { NavItem } from "./hooks/useVisibleNavItems";
 
@@ -55,6 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     closeButtonRef,
     triggerRef: mobileMenuButtonRef ?? internalTriggerRef,
   });
+  const collapseTransition = useMotionTransition({ type: "spring", stiffness: 350, damping: 30 });
 
   return (
     <motion.aside
@@ -62,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id="app-mobile-sidebar"
       initial={false}
       animate={{ width: collapsed ? 76 : 264 }}
-      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+      transition={collapseTransition}
       className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border/60 bg-surface-sunken backdrop-blur-xl md:static ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
     >
       <div

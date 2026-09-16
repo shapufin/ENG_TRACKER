@@ -396,3 +396,45 @@ class LeaveRequestViewSetTests(TestCase):
             self.assertGreater(carry.pending_days, initial_carry_pending, "carry-over should be used before March 31")
             self.assertEqual(self.balance.pending_days, initial_balance_pending, "current year should be untouched")
 
+    def test_calendar_fetch_honors_page_size(self):
+        """Calendar workspace fetches with page_size must return the full set
+        instead of the global 50-row default page (LargeResultsPagination)."""
+        self.client.force_authenticate(user=self.staff_user)
+        teammate = User.objects.create_user(username='lv-page', password='testpass')
+        self.workspace.allowed_users.add(teammate)
+        LeaveBalance.objects.create(
+            user=teammate,
+            leave_type='vacation',
+            year=timezone.now().year,
+            total_days=self.settings.default_yearly_leave_days,
+        )
+        d = self.business_day
+        for i in range(55):
+            while d.weekday() >= 5:
+                d += timedelta(days=1)
+            LeaveRequest.objects.create(
+                user=teammate,
+                start_date=d,
+                end_date=d,
+                request_type='vacation',
+                reason=f'Page test {i}',
+                status='approved',
+            )
+            d += timedelta(days=1)
+
+        base_params = {'workspace_ids': str(self.workspace.id), 'calendar': 'true'}
+
+        # Without page_size the global default caps the page at 50 rows.
+        response = self.client.get('/api/leave-management/requests/', base_params)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(len(response.data['results']), 50)
+
+        # The calendar sends page_size=10000 and must receive everything.
+        response = self.client.get(
+            '/api/leave-management/requests/',
+            {**base_params, 'page_size': 10000},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data['count'], 55)
+        self.assertEqual(len(response.data['results']), 55)
+

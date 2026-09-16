@@ -10,6 +10,7 @@ export interface ExportProfile {
   compute_sla: boolean;
   is_global: boolean;
   assigned_client_ids?: number[];
+  created_by?: number;
   created_by_username?: string;
   created_at: string;
   updated_at: string;
@@ -57,7 +58,16 @@ export interface TicketImportBatch {
   is_overridden: boolean;
   overridden_by?: number;
   overridden_at?: string;
+  reviewed_by?: number | null;
+  reviewed_by_username?: string | null;
+  reviewed_at?: string | null;
+  is_reviewed?: boolean;
   created_at: string;
+}
+
+export interface BulkReviewResult {
+  reviewed: number[];
+  skipped: { batch_id: number; reason: string }[];
 }
 
 export interface MonthlyKPI {
@@ -113,6 +123,9 @@ export interface UploadPreview {
   has_existing_upload?: boolean;
   existing_record_count?: number;
   profile_id?: number;
+  /** The field_mapping actually used to build this preview — the profile's
+   *  saved mapping merged with any field_mapping_overrides sent for this call. */
+  effective_field_mapping?: Record<string, string>;
 }
 
 export interface AnalyzeResponse {
@@ -124,6 +137,8 @@ export interface AnalyzeResponse {
     name: string;
     match_score: number;
   };
+  /** YYYY-MM-01, the majority month across the file's own detected dates. */
+  suggested_month?: string;
 }
 
 export type EvidenceType = "document" | "certificate" | "email_thread" | "screenshot" | "other";

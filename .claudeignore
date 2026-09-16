@@ -1,8 +1,24 @@
 # Dependencies
 node_modules/
-venv/
-__pycache__/
+dist/
+build/
+.next/
+coverage/
 .venv/
+venv/
+env/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+staticfiles/
+media/
+
+# Generated / frontend bundles
+frontend/dist/
+static/bundles/
+*.min.js
+*.min.css
 
 # Database
 db.sqlite3
@@ -20,14 +36,22 @@ staticfiles/
 design-fingerprints/
 design-audit/
 
-# Logs and data
-logs/
+# Logs & dumps
 *.log
-*.csv
-*.xlsx
+*.sql
+*.sqlite3
+db.sqlite3
+*.dump
+*.har
 
-# Media uploads
-media/
+
+# IDE / OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.claude/
+.agents/
 
 # Mockup / design assets (not source)
 Time Tracker UI Project/
@@ -39,7 +63,14 @@ Time Tracker UI Project/
 # Historical archives (loaded on-demand only)
 .devin/tracking/agents-archive-*.md
 
-# Claude/Devin internal
-.claude/
-.agents/
-.vscode/
+
+# Large binaries
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.woff
+*.woff2
+*.pdf
+*.zip

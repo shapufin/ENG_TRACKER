@@ -8,9 +8,16 @@ import {
   gapReportService,
   historyService,
   skillExportService,
+  skillLevelLabelsService,
 } from "../services/skillsService";
 import { userService } from "@/services/userService";
-import type { SkillMatrixFilters, SkillListFilters, UserSkillFilters } from "../types/skills";
+import { resolveLevelLabel } from "../utils/proficiencyLevels";
+import type {
+  SkillMatrixFilters,
+  SkillListFilters,
+  UserSkillFilters,
+  SkillLevelLabels,
+} from "../types/skills";
 
 const CATALOG_QUERY_KEYS = [
   ["skills", "skills"],
@@ -190,6 +197,13 @@ export const useExportMatrix = () =>
       skillExportService.export(category, search),
   });
 
+/** Wide XLSX workbook — see `skillExportService.exportXlsx`. */
+export const useExportMatrixXlsx = () =>
+  useMutation({
+    mutationFn: ({ category, search }: { category?: string; search?: string }) =>
+      skillExportService.exportXlsx(category, search),
+  });
+
 // ============================================================================
 // HISTORY
 // ============================================================================
@@ -206,6 +220,35 @@ export const useHistory = (
     queryFn: () => historyService.list(userId, skillId, page, dateFrom, dateTo),
     staleTime: 15_000,
   });
+
+// ============================================================================
+// LEVEL LABELS
+// ============================================================================
+
+export const useSkillLevelLabels = () =>
+  useQuery({
+    queryKey: ["skills", "level-labels"],
+    queryFn: () => skillLevelLabelsService.get(),
+    staleTime: 5 * 60_000,
+  });
+
+export const useUpdateSkillLevelLabels = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<SkillLevelLabels>) => skillLevelLabelsService.update(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["skills", "level-labels"] }),
+  });
+};
+
+// Re-exported from utils so non-React callers (KPI computation) can resolve
+// labels without importing the query layer. Import sites keep working.
+export { resolveLevelLabel };
+
+/** Single-level convenience hook — see `resolveLevelLabel` for the fallback rule. */
+export const useLevelLabel = (level: number): string => {
+  const { data } = useSkillLevelLabels();
+  return resolveLevelLabel(level, data);
+};
 
 /**
  * Search users by username/email for the history page filter.

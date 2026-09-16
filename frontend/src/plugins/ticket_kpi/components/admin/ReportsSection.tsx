@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/ui/DataTable";
@@ -83,7 +84,7 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ year, onYearChan
 
   return (
     <div className="space-y-4">
-      <Card>
+      <GlassCard isHoverLift={false}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <BarChart3 className="h-5 w-5 text-primary" /> Yearly KPI Report
@@ -128,7 +129,7 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ year, onYearChan
             </div>
           </div>
         </CardContent>
-      </Card>
+      </GlassCard>
 
       {reportLoading && (
         <div className="space-y-4" aria-busy="true">
@@ -178,7 +179,7 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ year, onYearChan
             gradientId="reportTrendGrad"
           />
 
-          <Card>
+          <GlassCard isHoverLift={false}>
             <CardHeader>
               <CardTitle>Per-User Summary</CardTitle>
             </CardHeader>
@@ -192,7 +193,7 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ year, onYearChan
                 emptyMessage="No user data for this year."
               />
             </CardContent>
-          </Card>
+          </GlassCard>
         </div>
       )}
     </div>

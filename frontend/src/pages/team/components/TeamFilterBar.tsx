@@ -9,8 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { DatePicker } from "@/components/ui/DatePicker";
-import { useAutoMonthEndHandlers } from "@/lib/useAutoMonthEnd";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { Search, Filter, Users, Calendar } from "lucide-react";
 
 interface TeamFilterBarProps {
@@ -50,13 +49,6 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
   onMemberGroupModeChange,
   availableTeams,
 }) => {
-  const { handleFromChange, handleToChange } = useAutoMonthEndHandlers(
-    dateFrom,
-    dateTo,
-    onDateFromChange,
-    onDateToChange
-  );
-
   return (
     <GlassCard isHoverLift={false} className="space-y-4 p-4">
       <div className="flex flex-wrap items-center gap-4">
@@ -110,13 +102,17 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
         )}
         <div className="flex flex-wrap items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
-          <DatePicker
-            id="team-date-from"
-            value={dateFrom}
-            onChange={handleFromChange}
-            placeholder="From"
+          <DateRangePicker
+            id="team-date-range"
+            from={dateFrom}
+            to={dateTo}
+            onChange={({ from, to }) => {
+              onDateFromChange(from);
+              onDateToChange(to);
+            }}
+            placeholder="Filter by date"
+            className="w-auto min-w-[220px]"
           />
-          <DatePicker id="team-date-to" value={dateTo} onChange={handleToChange} placeholder="To" />
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">

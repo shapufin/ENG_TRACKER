@@ -98,8 +98,20 @@ export interface SkillListFilters {
 }
 
 export interface UserSkillFilters {
+  user_id?: number;
   skill_id?: number;
   category?: string;
   min_level?: number;
   max_level?: number;
+}
+
+export interface SkillLevelLabels {
+  id: number;
+  level_1_label: string;
+  level_2_label: string;
+  level_3_label: string;
+  level_4_label: string;
+  level_5_label: string;
+  created_at: string;
+  updated_at: string;
 }

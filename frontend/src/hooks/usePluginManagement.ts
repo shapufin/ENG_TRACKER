@@ -9,6 +9,7 @@ const ADMIN_ROUTE_MAP: Record<string, string> = {
   organigrama: "/admin/organigrama",
   payroll: "/admin/payroll/runs",
   skills: "/admin/skills/catalog",
+  site_backup: "/admin/backup-restore",
 };
 
 export interface UsePluginManagementReturn {

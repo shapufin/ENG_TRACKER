@@ -1,8 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useMotionTransition } from "@/lib/motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSidebarCollapsed } from "./SidebarContext";
+import { LAYOUT_ID } from "@/lib/motion";
 
 interface SidebarNavLinkProps {
   to: string;
@@ -45,6 +47,7 @@ export const SidebarNavLink: React.FC<SidebarNavLinkProps> = ({
 }) => {
   const contextCollapsed = useSidebarCollapsed();
   const collapsed = collapsedProp ?? contextCollapsed;
+  const activeBarTransition = useMotionTransition({ type: "spring", stiffness: 400, damping: 30 });
 
   const className = `group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
     isActive
@@ -56,9 +59,9 @@ export const SidebarNavLink: React.FC<SidebarNavLinkProps> = ({
     <>
       {isActive && !collapsed && (
         <motion.div
-          layoutId="sidebar-active"
+          layoutId={LAYOUT_ID.sidebarActive}
           className="absolute inset-y-1 left-0 w-[3px] rounded-full bg-primary"
-          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          transition={activeBarTransition}
         />
       )}
       <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : ""}`} />

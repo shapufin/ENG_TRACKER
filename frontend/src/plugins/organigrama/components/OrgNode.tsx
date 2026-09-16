@@ -10,6 +10,8 @@ export interface OrgNodeData extends Record<string, unknown> {
   label: string;
   subtitle?: string;
   roleBadge?: RoleBadge;
+  /** Held Tech grades, e.g. ["Infrastructure L3"] — badges under the name. */
+  techLevels?: string[];
   hasChildren?: boolean;
   collapsed?: boolean;
   loading?: boolean;
@@ -51,7 +53,7 @@ export const OrgNode: React.FC<NodeProps> = ({ data }) => {
       )}
       role="treeitem"
       aria-expanded={hasChildren ? !collapsed : undefined}
-      aria-label={`${nodeData.label}${nodeData.roleBadge ? `, ${ROLE_BADGE_LABELS[nodeData.roleBadge]}` : ""}${nodeData.subtitle ? `, ${nodeData.subtitle}` : ""}`}
+      aria-label={`${nodeData.label}${nodeData.roleBadge ? `, ${ROLE_BADGE_LABELS[nodeData.roleBadge]}` : ""}${nodeData.techLevels?.length ? `, ${nodeData.techLevels.join(", ")}` : ""}${nodeData.subtitle ? `, ${nodeData.subtitle}` : ""}`}
       tabIndex={0}
     >
       <Handle type="target" position={Position.Top} className="opacity-0" />
@@ -73,6 +75,19 @@ export const OrgNode: React.FC<NodeProps> = ({ data }) => {
         </div>
         {nodeData.subtitle && (
           <span className="text-xs text-muted-foreground">{nodeData.subtitle}</span>
+        )}
+        {nodeData.techLevels && nodeData.techLevels.length > 0 && (
+          <div className="flex max-w-[180px] flex-wrap justify-center gap-1">
+            {nodeData.techLevels.map((level) => (
+              <span
+                key={level}
+                className="rounded-full bg-secondary px-2 py-0.5 text-micro font-medium text-secondary-foreground"
+                title={`Tech grade: ${level}`}
+              >
+                {level}
+              </span>
+            ))}
+          </div>
         )}
         {nodeData.roleBadge && (
           <span

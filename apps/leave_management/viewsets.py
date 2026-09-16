@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.db import transaction
 from django.db.models import Prefetch, Count
 from django.db.models.functions import TruncMonth
+from core.pagination import LargeResultsPagination
 from core.mixins.permissions import (
     SuperuserPermissionMixin,
     PersonalOnlyFilterMixin,
@@ -262,6 +263,9 @@ class LeaveRequestViewSet(SuperuserPermissionMixin, HRReadOnlyMixin, TeamLeaderF
     """ViewSet for LeaveRequest model."""
     allow_staff_global_view = False
     staff_global_view_actions = {'approve', 'reject', 'bulk_approve', 'bulk_reject', 'bulk_delete', 'team_logs', 'team_pending'}
+    # Honors ?page_size= (up to 10000) so calendar workspace queries can fetch
+    # the full dataset instead of being capped at the global 50-row page.
+    pagination_class = LargeResultsPagination
     queryset = LeaveRequest.objects.all().select_related('user', 'approved_by').prefetch_related('user__profile__team_memberships__team')
     serializer_class = LeaveRequestSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]

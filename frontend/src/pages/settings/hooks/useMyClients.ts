@@ -38,6 +38,8 @@ export const useMyClients = ({ assignedClientIds, onAssignedChange }: UseMyClien
       await onAssignedChange();
       // Forms read from the scoped getClients() — invalidate so they re-fetch.
       await qc.invalidateQueries({ queryKey: ["overtime", "clients"] });
+      // Keep the TL's Client Assignment table (Settings) in sync with self-service changes.
+      await qc.invalidateQueries({ queryKey: ["team", "members"] });
     },
     onError: handleApiError,
   });

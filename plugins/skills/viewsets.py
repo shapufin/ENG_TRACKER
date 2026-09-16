@@ -21,6 +21,7 @@ from .models import (
     Skill,
     UserSkill,
     SkillRatingHistory,
+    SkillLevelLabels,
 )
 from .serializers import (
     SkillCategorySerializer,
@@ -31,6 +32,7 @@ from .serializers import (
     SkillRatingHistorySerializer,
     TeamMatrixRowSerializer,
     SkillCoverageSerializer,
+    SkillLevelLabelsSerializer,
 )
 from .services.team_query import (
     visible_user_ids,
@@ -44,7 +46,7 @@ from .services.matrix import (
     build_coverage_stats,
 )
 from .services.gap_report import build_gap_report
-from .services.export import export_matrix_csv
+from .services.export import export_matrix_csv, export_matrix_xlsx
 
 
 def _parse_top_n(request):
@@ -185,10 +187,13 @@ class UserSkillViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         qs = qs.filter(user_id__in=visible)
 
         params = self.request.query_params
+        user_id = params.get('user_id')
         skill_id = params.get('skill_id')
         category = params.get('category')
         min_level = params.get('min_level')
         max_level = params.get('max_level')
+        if user_id:
+            qs = qs.filter(user_id=user_id)
         if skill_id:
             qs = qs.filter(skill_id=skill_id)
         if category:
@@ -375,6 +380,19 @@ class SkillExportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
         search = request.query_params.get('search')
         return export_matrix_csv(visible, category_code, search=search)
 
+    @action(detail=False, methods=['get'], url_path='export-xlsx')
+    def export_xlsx(self, request):
+        """Download the team skill matrix as a wide XLSX workbook.
+
+        Same scoping and filters as ``export``, different shape: one row per
+        person, one column per skill. Both stay available — the CSV is the long
+        format some scripts already consume.
+        """
+        visible = visible_user_ids(request.user)
+        category_code = request.query_params.get('category')
+        search = request.query_params.get('search')
+        return export_matrix_xlsx(visible, category_code, search=search)
+
 
 # ============================================================================
 # HISTORY: audit log
@@ -416,3 +434,36 @@ class SkillRatingHistoryViewSet(PluginPermissionMixin, viewsets.ReadOnlyModelVie
             except (ValueError, TypeError):
                 pass
         return qs
+
+
+# ============================================================================
+# LEVEL LABELS: singleton configuration for proficiency level display names
+# ============================================================================
+
+class SkillLevelLabelsViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+    """Singleton configuration. Only one row (pk=1)."""
+    plugin_name = 'skills'
+    queryset = SkillLevelLabels.objects.all()
+    serializer_class = SkillLevelLabelsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
+    permission_action_map = {
+        'list': 'view', 'retrieve': 'view',
+        'create': 'configure', 'update': 'configure', 'partial_update': 'configure',
+        'destroy': 'configure',
+    }
+
+    def list(self, request, *args, **kwargs):
+        """Return the singleton labels as an object, not a collection."""
+        instance = SkillLevelLabels.get_singleton()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    def get_object(self):
+        return SkillLevelLabels.get_singleton()
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {'detail': 'Skill level labels cannot be deleted.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )

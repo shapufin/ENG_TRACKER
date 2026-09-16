@@ -1,6 +1,7 @@
 /** Pure selectors computing Team page KPI card values from fetched data. */
 
-import type { SkillCoverage } from "../types/skills";
+import type { SkillCoverage, SkillLevelLabels } from "../types/skills";
+import { resolveLevelLabel } from "./proficiencyLevels";
 
 export interface SeniorityKpi {
   /** Weighted mean level across rated skills, 1 decimal (e.g. 3.4). */
@@ -31,25 +32,25 @@ export interface VerificationKpi {
 
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 
-const LEVEL_LABELS: Record<number, string> = {
-  1: "Foundational",
-  2: "Developing",
-  3: "Proficient",
-  4: "Advanced",
-  5: "Mastery",
-};
+const nearestLevelLabel = (avg: number, labels?: SkillLevelLabels): string =>
+  resolveLevelLabel(Math.min(5, Math.max(1, Math.round(avg))), labels);
 
-const nearestLevelLabel = (avg: number): string =>
-  LEVEL_LABELS[Math.min(5, Math.max(1, Math.round(avg)))] ?? `L${round1(avg)}`;
-
-/** Weighted mean of per-skill avg_level over skills with at least one rating. */
-export const computeSeniorityIndex = (coverage: SkillCoverage[]): SeniorityKpi | null => {
+/**
+ * Weighted mean of per-skill avg_level over skills with at least one rating.
+ *
+ * ``labels`` carries the admin-renamed level names; omit it and the card falls
+ * back to the built-in defaults.
+ */
+export const computeSeniorityIndex = (
+  coverage: SkillCoverage[],
+  labels?: SkillLevelLabels
+): SeniorityKpi | null => {
   const rated = coverage.filter((c) => c.team_count > 0);
   if (rated.length === 0) return null;
   const totalRatings = rated.reduce((sum, c) => sum + c.team_count, 0);
   const weighted = rated.reduce((sum, c) => sum + c.avg_level * c.team_count, 0);
   const avg = round1(weighted / totalRatings);
-  return { avg, label: nearestLevelLabel(avg), pct: Math.round((avg / 5) * 100) };
+  return { avg, label: nearestLevelLabel(avg, labels), pct: Math.round((avg / 5) * 100) };
 };
 
 /** Category with the highest mean avg_level (ties broken A-Z by name). */

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Plus, Power, Trash2, Users, Wrench } from "lucide-react";
+import { ChevronDown, ChevronRight, Pencil, Plus, Power, Trash2, Users, Wrench } from "lucide-react";
+import { LoadingCard } from "@/components/ui/LoadingCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TechMembersDialog } from "@/components/admin/TechMembersDialog";
+import { TechLevelEditor } from "@/components/admin/TechLevelEditor";
 import { userService } from "@/services/userService";
 import type { Tech } from "@/types";
 import { toast } from "sonner";
@@ -21,8 +23,13 @@ export const TechsPage: React.FC = () => {
   const [editing, setEditing] = useState<Tech | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Tech | null>(null);
   const [membersTarget, setMembersTarget] = useState<Tech | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const { data, isLoading } = useQuery({
-    queryKey: ["admin", "techs"],
+    // "all": this page needs inactive techs too (the level editor and the
+    // status toggle act on them). useUserManagement caches active-only techs
+    // under ["admin", "techs", "active"] — sharing one key made the two
+    // fetches overwrite each other's cache.
+    queryKey: ["admin", "techs", "all"],
     queryFn: () => userService.getTechs(),
   });
   const create = useMutation({
@@ -122,12 +129,7 @@ export const TechsPage: React.FC = () => {
         </div>
       </GlassCard>
       <div className="space-y-2">
-        {isLoading && (
-          <div className="flex items-center justify-center gap-2 p-8 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading Techs...
-          </div>
-        )}
+        {isLoading && <LoadingCard title="Loading Techs..." rows={4} className="min-h-[200px]" />}
         {!isLoading && (data?.results ?? []).length === 0 && (
           <GlassCard isHoverLift={false}>
             <EmptyState
@@ -138,11 +140,22 @@ export const TechsPage: React.FC = () => {
           </GlassCard>
         )}
         {(data?.results ?? []).map((tech) => (
-          <div
-            key={tech.id}
-            className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
-          >
+          <div key={tech.id} className="rounded-lg border border-border bg-card p-3">
+            <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-expanded={expandedId === tech.id}
+                aria-label={`${expandedId === tech.id ? "Hide" : "Show"} levels for ${tech.name}`}
+                onClick={() => setExpandedId(expandedId === tech.id ? null : tech.id)}
+              >
+                {expandedId === tech.id ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </Button>
               <div>
                 <div className="font-medium">
                   {tech.name}
@@ -152,7 +165,14 @@ export const TechsPage: React.FC = () => {
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">{tech.code}</p>
+                <p className="text-xs text-muted-foreground">
+                  {tech.code}
+                  {(tech.levels?.length ?? 0) > 0 && (
+                    <span className="ml-2">
+                      {tech.levels!.length} level{tech.levels!.length === 1 ? "" : "s"}
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -197,6 +217,8 @@ export const TechsPage: React.FC = () => {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
+            </div>
+            {expandedId === tech.id && <TechLevelEditor tech={tech} />}
           </div>
         ))}
       </div>

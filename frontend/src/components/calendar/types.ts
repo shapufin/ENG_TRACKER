@@ -10,9 +10,12 @@ export interface CalendarEvent {
   status: CalendarEventStatus;
   userId?: number;
   userName?: string;
+  /** Tech + held level labels, e.g. ["Infrastructure L3"]. */
+  userTechLevels?: string[];
   hours?: number;
   days?: number;
   description?: string;
+  clientNames?: string[];
   compactLabel: string;
   leaveBalance?: {
     total_days: number;
