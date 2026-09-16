@@ -29,16 +29,16 @@ COPY docker/nginx.conf /etc/nginx/conf.d/app.conf
 # Copy built assets
 COPY --from=builder /build/dist /usr/share/nginx/html
 
-# Install wget for the healthcheck (the alpine-slim variant does not
-# include it). Without this the healthcheck exits 127 and Docker marks
-# the container permanently unhealthy (P0-7 addendum). Alpine uses apk,
-# not apt-get.
+# Install wget for the healthcheck & configure main nginx.conf for non-root (1001:1001)
 RUN apk add --no-cache wget && \
-    mkdir -p /var/cache/nginx /var/log/nginx /var/run && \
-    chown -R 101:101 /var/cache/nginx /var/log/nginx /var/run /usr/share/nginx/html /etc/nginx/conf.d
+    sed -i 's|^user |#user |g' /etc/nginx/nginx.conf && \
+    sed -i 's|/var/run/nginx.pid|/tmp/nginx.pid|g' /etc/nginx/nginx.conf && \
+    sed -i 's|/run/nginx.pid|/tmp/nginx.pid|g' /etc/nginx/nginx.conf && \
+    mkdir -p /var/cache/nginx /var/log/nginx /tmp && \
+    chown -R 1001:1001 /var/cache/nginx /var/log/nginx /tmp /usr/share/nginx/html /etc/nginx/conf.d
 
 # Run as non-root (nginx unprivileged user)
-USER 101:101
+USER 1001:1001
 
 EXPOSE 8080
 
