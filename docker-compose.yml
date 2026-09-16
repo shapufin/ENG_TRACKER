@@ -23,7 +23,7 @@ name: engineering-tracker
 
 services:
   db:
-    image: postgres:16-slim
+    image: postgres:16
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-engtracker}
@@ -202,7 +202,7 @@ services:
   # engtracker_YYYY-MM-DD_HHMMSS.dump (custom-format pg_dump -Fc).
   # Copy offsite to an encrypted location (see README.md → Database → Backups).
   db-backup:
-    image: postgres:16-slim
+    image: postgres:16
     profiles: ["backup"]  # not started by `docker compose up`
     depends_on:
       db:
