@@ -23,19 +23,11 @@ sys.exit(1)
 echo "[entrypoint] Waiting for redis..."
 python -c "
 import socket, time, sys, os
+from urllib.parse import urlparse
 url = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
-# Parse redis://host:port/db
-host = 'redis'
-port = 6379
-if '://' in url:
-    rest = url.split('://', 1)[1]
-    if '/' in rest:
-        rest = rest.split('/', 1)[0]
-    if ':' in rest:
-        host, port_s = rest.rsplit(':', 1)
-        port = int(port_s)
-    else:
-        host = rest
+parsed = urlparse(url)
+host = parsed.hostname or 'redis'
+port = parsed.port or 6379
 for attempt in range(60):
     try:
         s = socket.create_connection((host, port), timeout=2)
