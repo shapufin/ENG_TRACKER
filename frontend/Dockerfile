@@ -33,7 +33,9 @@ COPY --from=builder /build/dist /usr/share/nginx/html
 # include it). Without this the healthcheck exits 127 and Docker marks
 # the container permanently unhealthy (P0-7 addendum). Alpine uses apk,
 # not apt-get.
-RUN apk add --no-cache wget
+RUN apk add --no-cache wget && \
+    mkdir -p /var/cache/nginx /var/log/nginx /var/run && \
+    chown -R 101:101 /var/cache/nginx /var/log/nginx /var/run /usr/share/nginx/html /etc/nginx/conf.d
 
 # Run as non-root (nginx unprivileged user)
 USER 101:101
