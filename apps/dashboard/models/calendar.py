@@ -101,7 +101,28 @@ class CalendarWorkspace(BaseModel):
                 calendar_groups = [cg for cg in profile.teams.values_list('calendar_group', flat=True) if cg]
                 if calendar_groups:
                     q_accessible |= Q(team__calendar_group__in=calendar_groups)
-        
+
+            # TL access: workspaces for teams their managed members belong
+            # to, without needing explicit allowed_users sharing. Uses the
+            # same get_team_member_ids() source as my_teams_workspaces below
+            # — that action listed these workspaces in the picker already,
+            # but this queryset (used by get_queryset/workspace_users/
+            # list_for_reports) never granted access to them, so selecting
+            # one 404'd instead of returning its members.
+            from core.mixins.permissions import has_team_leader_role
+            if has_team_leader_role(user):
+                from apps.users.models import UserProfile
+
+                member_ids = profile.get_team_member_ids()
+                if member_ids:
+                    member_team_ids = set(
+                        UserProfile.objects.filter(user_id__in=member_ids)
+                        .exclude(teams__isnull=True)
+                        .values_list('teams', flat=True)
+                    )
+                    if member_team_ids:
+                        q_accessible |= Q(team__in=member_team_ids)
+
         return cls.objects.filter(q_accessible).distinct()
 
     def get_users_for_workspace(self):

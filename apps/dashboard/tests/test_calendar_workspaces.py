@@ -139,6 +139,17 @@ class CalendarWorkspaceVisibilityTests(TestCase):
         self.assertIn(self.workspace.id, ids)
         self.assertIn(other_workspace.id, ids)
 
+        # Regression: my_teams_workspaces lists other_workspace, but
+        # workspace_users gated access via get_accessible_for_user(), which
+        # has no TL-managed-team logic at all — so selecting the workspace
+        # the picker just offered 403'd instead of returning its members.
+        users_response = self.client.get(
+            f'/api/dashboard/calendar-workspaces/{other_workspace.id}/workspace_users/'
+        )
+        self.assertEqual(users_response.status_code, status.HTTP_200_OK, users_response.data)
+        member_ids = self._extract_ids(users_response)
+        self.assertIn(other_member.id, member_ids)
+
 
 class PublicHolidayUniquenessTests(TestCase):
     def test_global_holidays_are_unique_per_date_and_country(self):
