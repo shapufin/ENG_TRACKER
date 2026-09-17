@@ -4,14 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, KeyRound, Trash2, Shield } from "lucide-react";
 import type { UserProfile } from "@/types";
-import type { ControlRoomAccess } from "@/plugins/control_room/types";
+import type { CRAccessRecord } from "./useUsersPage";
 import type { ColumnDef } from "@tanstack/react-table";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 
 interface UseUserColumnsOptions {
   crActive?: boolean;
   crAccessUserIds?: Set<number>;
-  crAccessByUserId?: Map<number, ControlRoomAccess>;
+  crAccessByUserId?: Map<number, CRAccessRecord>;
   showCRScopeTeams?: boolean;
 }
 
@@ -65,7 +65,7 @@ const renderCRScopeTeamsCell = ({
   accessByUserId,
 }: {
   profile: UserProfile;
-  accessByUserId: Map<number, ControlRoomAccess>;
+  accessByUserId: Map<number, CRAccessRecord>;
 }) => {
   const scopes = accessByUserId.get(profile.user?.id)?.team_scopes ?? [];
   if (scopes.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
@@ -108,7 +108,7 @@ export const useUserColumns = (
   const {
     crActive = false,
     crAccessUserIds = new Set<number>(),
-    crAccessByUserId = new Map<number, ControlRoomAccess>(),
+    crAccessByUserId = new Map<number, CRAccessRecord>(),
     showCRScopeTeams = false,
   } = options;
   const navigate = useNavigate();

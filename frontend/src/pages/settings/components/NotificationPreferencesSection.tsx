@@ -4,8 +4,19 @@ import { toast } from "sonner";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { SwitchField } from "@/components/common/forms/SwitchField";
-import { notificationService, type NotificationPreference } from "@/plugins/notifications/service";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+
+/** Local mirror of the notifications plugin's NotificationPreference shape,
+ * so core never needs a type-only import of the plugin's own type (which
+ * would still break `tsc` on `remove_plugin notifications`). */
+interface NotificationPreference {
+  event_type: string;
+  label: string;
+  in_app_enabled: boolean;
+  push_enabled: boolean;
+  available: boolean;
+  updated_at?: string;
+}
 
 export const NotificationPreferencesSection: React.FC = () => {
   const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
@@ -22,11 +33,13 @@ export const NotificationPreferencesSection: React.FC = () => {
   const [updating, setUpdating] = useState<string | null>(null);
 
   useEffect(() => {
-    notificationService
-      .getPreferences()
-      .then(setPreferences)
-      .catch(() => toast.error("Could not load notification preferences"))
-      .finally(() => setIsLoading(false));
+    import("@/plugins/notifications/service").then(({ notificationService }) =>
+      notificationService
+        .getPreferences()
+        .then(setPreferences)
+        .catch(() => toast.error("Could not load notification preferences"))
+        .finally(() => setIsLoading(false))
+    );
   }, []);
 
   const update = async (
@@ -56,6 +69,7 @@ export const NotificationPreferencesSection: React.FC = () => {
     );
 
     try {
+      const { notificationService } = await import("@/plugins/notifications/service");
       const saved = await notificationService.updatePreference(preference.event_type, {
         in_app_enabled: channel === "in_app_enabled" ? value : preference.in_app_enabled,
         push_enabled: channel === "push_enabled" ? value : preference.push_enabled,

@@ -90,6 +90,30 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
     ControlRoomAdminSidebarItem: lazy(
       () => import("./control_room/components/ControlRoomAdminSidebarItem")
     ),
+    // Consumed by core admin/settings pages through the Plugin* wrapper
+    // components in frontend/src/components/admin and
+    // frontend/src/pages/settings/components, never imported directly, so
+    // removing the plugin cannot break their build.
+    CRBulkCommandDrawer: lazy(() =>
+      import("./control_room/components/CRBulkCommandDrawer").then((m) => ({
+        default: m.CRBulkCommandDrawer,
+      }))
+    ),
+    CreateCRUserDialog: lazy(() =>
+      import("./control_room/components/CreateCRUserDialog").then((m) => ({
+        default: m.CreateCRUserDialog,
+      }))
+    ),
+    EditCRUserDialog: lazy(() =>
+      import("./control_room/components/EditCRUserDialog").then((m) => ({
+        default: m.EditCRUserDialog,
+      }))
+    ),
+    CRScopeCard: lazy(() =>
+      import("./control_room/components/CRScopeCard").then((m) => ({
+        default: m.CRScopeCard,
+      }))
+    ),
   },
   payroll: {
     PayrollRunsPage: lazy(() =>

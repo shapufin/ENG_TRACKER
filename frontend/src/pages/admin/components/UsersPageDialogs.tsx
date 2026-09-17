@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserEditFormDialog } from "./UserEditFormDialog";
 import { UserCreateFormDialog } from "./UserCreateFormDialog";
-import { CreateCRUserDialog } from "@/plugins/control_room/components/CreateCRUserDialog";
-import { EditCRUserDialog } from "@/plugins/control_room/components/EditCRUserDialog";
+import { PluginCreateCRUserDialog, PluginEditCRUserDialog } from "@/components/admin/PluginCRUserDialogs";
 import type { useUsersPage } from "../hooks/useUsersPage";
 import type { Team } from "@/types";
 
@@ -29,7 +28,7 @@ export const UsersPageDialogs: React.FC<UsersPageDialogsProps> = ({ state }) => 
     <>
       {/* Edit dialog: CR admin sees simplified form, full admin sees standard form */}
       {isCROnlyAdmin ? (
-        <EditCRUserDialog
+        <PluginEditCRUserDialog
           key={crEditAccess?.id ?? "none"}
           open={state.formOpen}
           onOpenChange={state.setFormOpen}
@@ -57,7 +56,7 @@ export const UsersPageDialogs: React.FC<UsersPageDialogsProps> = ({ state }) => 
 
       {/* Create dialog: CR admin sees CR-only form, full admin sees standard form */}
       {isCROnlyAdmin ? (
-        <CreateCRUserDialog
+        <PluginCreateCRUserDialog
           open={state.createOpen}
           onOpenChange={state.setCreateOpen}
           teams={teams}

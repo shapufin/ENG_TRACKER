@@ -11,15 +11,12 @@ import { usePermissions } from "@/context/PermissionContext";
 import { usePlugins } from "@/context/PluginContext";
 import { Badge } from "@/components/ui/badge";
 import { FormDialog } from "@/components/ui/FormDialog";
-import { LogOut, Lock, User, Users } from "lucide-react";
+import { LogOut, Lock, User } from "lucide-react";
 import { toast } from "sonner";
 import { MyClientsSection } from "./components/MyClientsSection";
 import { ClientAssignmentSection } from "./components/ClientAssignmentSection";
 import { NotificationPreferencesSection } from "./components/NotificationPreferencesSection";
-// Plugin boundary exception: CR user scope display. See CONTEXT.md
-// "Plugin Boundary — Accepted Exception" section. If the control_room
-// plugin is removed, drop this import and the CRScopeCard render branch.
-import { useControlRoomMe } from "@/plugins/control_room/hooks/useControlRoomAccess";
+import { PluginCRScopeCard } from "./components/PluginCRScopeCard";
 
 export const SettingsPage: React.FC = () => {
   const { user, logout, refreshUser } = useAuth();
@@ -149,7 +146,7 @@ export const SettingsPage: React.FC = () => {
             Shown only for CR users (non-admin with ControlRoomAccess),
             not CR-only admins. CR admins manage scopes for others via
             the access management page; they don't need a self-scope card. */}
-        {isCRUser && <CRScopeCard />}
+        {isCRUser && <PluginCRScopeCard />}
 
         {/* Row 2 pair: Notification Preferences | Client Assignment. For
             TLs both cards sit side by side; for everyone else (no Client
@@ -232,53 +229,5 @@ export const SettingsPage: React.FC = () => {
         </CardContent>
       </GlassCard>
     </PageShell>
-  );
-};
-
-/** Read-only display of a CR user's assigned team scopes.
- * Team scopes are managed by CR admins / full admins via the access
- * management page — CR users cannot self-assign teams. */
-const CRScopeCard: React.FC = () => {
-  const { data, isLoading, isError } = useControlRoomMe();
-  const teams = data?.access?.team_scopes ?? [];
-
-  return (
-    <GlassCard delay={0.07}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Control Room Scope
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          Your Control Room team scope is managed by an administrator. It determines which teams'
-          standby coverage you can see on the Control Room dashboard.
-        </p>
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading teams…</p>
-        ) : isError ? (
-          <p className="text-sm text-destructive">
-            Could not load your team scope. Please try again later.
-          </p>
-        ) : teams.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No teams assigned. Contact your administrator to get team scope assigned.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {teams.map((t) => (
-              <Badge key={t.id} variant="secondary" className="gap-1.5">
-                <Users className="h-3 w-3" />
-                {t.team_name}
-                {t.team_code && (
-                  <span className="text-xs text-muted-foreground">({t.team_code})</span>
-                )}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </GlassCard>
   );
 };

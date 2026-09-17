@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +9,6 @@ import { InfoCallout } from "@/components/ui/InfoCallout";
 import { FormInputField } from "./userFormFields";
 import { UserFormCore } from "./UserFormCore";
 import { TeamMultiSelect } from "@/components/admin/TeamMultiSelect";
-import { useCreateCRUser } from "@/plugins/control_room/hooks/useControlRoomAccess";
 import { AlertCircle } from "lucide-react";
 import type { Tech, Team } from "@/types";
 
@@ -67,7 +67,8 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
   const [userType, setUserType] = useState<UserType>("standard");
   const [crTeamIds, setCrTeamIds] = useState<number[]>([]);
   const [crError, setCrError] = useState<string>("");
-  const createCRUserMut = useCreateCRUser();
+  const [crSubmitting, setCrSubmitting] = useState(false);
+  const queryClient = useQueryClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateField = (key: string, value: any) => {
@@ -90,30 +91,43 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
     onOpenChange(next);
   };
 
-  const handleCRSubmit = (e: React.FormEvent) => {
+  // Dynamic import (not the plugin's React Query hook, which must be called
+  // unconditionally at top level and so can't be resolved lazily): keeps the
+  // control_room plugin's module out of this core component's static
+  // import graph so `remove_plugin control_room` can't break the build.
+  const handleCRSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    createCRUserMut.mutate(
-      {
+    setCrSubmitting(true);
+    setCrError("");
+    try {
+      const { controlRoomService } = await import(
+        "@/plugins/control_room/services/controlRoomService"
+      );
+      await controlRoomService.createCRUser({
         username: form.username.trim(),
         email: form.email.trim(),
         password: form.password,
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
         team_ids: crTeamIds,
-      },
-      {
-        onSuccess: () => {
-          onFormChange({ ...form, username: "", email: "", password: "" });
-          resetCRState();
-          onOpenChange(false);
-        },
-        onError: (err: unknown) => {
-          const anyErr = err as { response?: { data?: { error?: string } } };
-          const msg = anyErr?.response?.data?.error;
-          setCrError(msg || "Failed to create Control Room user.");
-        },
-      }
-    );
+      });
+      // Mirrors ACCESS_KEY/ME_KEY in plugins/control_room/hooks/useControlRoomAccess.ts.
+      // Duplicated (not imported) on purpose — importing those constants would
+      // reintroduce the static plugin dependency this dynamic import avoids.
+      // Keep in sync if those keys ever change.
+      void queryClient.invalidateQueries({ queryKey: ["control-room", "access"] });
+      void queryClient.invalidateQueries({ queryKey: ["control-room", "me"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin", "profiles"] });
+      onFormChange({ ...form, username: "", email: "", password: "" });
+      resetCRState();
+      onOpenChange(false);
+    } catch (err: unknown) {
+      const anyErr = err as { response?: { data?: { error?: string } } };
+      const msg = anyErr?.response?.data?.error;
+      setCrError(msg || "Failed to create Control Room user.");
+    } finally {
+      setCrSubmitting(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -125,7 +139,7 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
   };
 
   const teams = (teamsData || []) as unknown as Team[];
-  const submitting = userType === "cr" ? createCRUserMut.isPending : isSubmitting;
+  const submitting = userType === "cr" ? crSubmitting : isSubmitting;
 
   return (
     <FormDialog

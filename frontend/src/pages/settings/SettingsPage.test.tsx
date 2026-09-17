@@ -148,7 +148,14 @@ describe("SettingsPage", () => {
 
   // CR user settings — MyClientsSection hidden, CR Scope card shown,
   // "CR User" badge displayed. See CONTEXT.md rule 11.
+  // CRScopeCard is rendered through the control_room plugin registry
+  // (PluginCRScopeCard), so it only mounts once activePlugins includes
+  // "control_room", and it resolves via React.lazy/Suspense — assertions
+  // on its content must await.
   it("CR user: hides My Clients section and shows CR User badge", async () => {
+    vi.mocked(usePlugins.usePlugins).mockReturnValue({
+      activePlugins: [{ name: "notifications" }, { name: "control_room" }],
+    } as any);
     const { useControlRoomMe } = await import("@/plugins/control_room/hooks/useControlRoomAccess");
     vi.mocked(useControlRoomMe).mockReturnValue({
       data: {
@@ -206,12 +213,15 @@ describe("SettingsPage", () => {
     // My Clients and notification settings are NOT rendered
     expect(screen.queryByTestId("my-clients")).not.toBeInTheDocument();
     expect(screen.queryByTestId("notification-preferences")).not.toBeInTheDocument();
-    // Control Room Scope card is shown with the team name
-    expect(screen.getByText("Control Room Scope")).toBeInTheDocument();
+    // Control Room Scope card is shown with the team name (lazy-loaded)
+    expect(await screen.findByText("Control Room Scope")).toBeInTheDocument();
     expect(screen.getByText("MSC_TEAM")).toBeInTheDocument();
   });
 
   it("CR user with no teams shows empty-state message", async () => {
+    vi.mocked(usePlugins.usePlugins).mockReturnValue({
+      activePlugins: [{ name: "notifications" }, { name: "control_room" }],
+    } as any);
     const { useControlRoomMe } = await import("@/plugins/control_room/hooks/useControlRoomAccess");
     vi.mocked(useControlRoomMe).mockReturnValue({
       data: {
@@ -251,10 +261,13 @@ describe("SettingsPage", () => {
     vi.mocked(usePermissions.usePermissions).mockReturnValue({ isCRUser: true } as any);
 
     render(<SettingsPage />);
-    expect(screen.getByText(/No teams assigned/i)).toBeInTheDocument();
+    expect(await screen.findByText(/No teams assigned/i)).toBeInTheDocument();
   });
 
   it("CR user: API error shows error message, not 'No teams assigned'", async () => {
+    vi.mocked(usePlugins.usePlugins).mockReturnValue({
+      activePlugins: [{ name: "notifications" }, { name: "control_room" }],
+    } as any);
     const { useControlRoomMe } = await import("@/plugins/control_room/hooks/useControlRoomAccess");
     vi.mocked(useControlRoomMe).mockReturnValue({
       data: undefined,
@@ -270,7 +283,7 @@ describe("SettingsPage", () => {
     vi.mocked(usePermissions.usePermissions).mockReturnValue({ isCRUser: true } as any);
 
     render(<SettingsPage />);
-    expect(screen.getByText(/Could not load your team scope/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Could not load your team scope/i)).toBeInTheDocument();
     expect(screen.queryByText(/No teams assigned/i)).not.toBeInTheDocument();
   });
 

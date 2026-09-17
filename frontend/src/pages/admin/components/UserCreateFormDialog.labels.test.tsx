@@ -3,10 +3,6 @@ import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UserCreateFormDialog } from "./UserCreateFormDialog";
 
-vi.mock("@/plugins/control_room/hooks/useControlRoomAccess", () => ({
-  useCreateCRUser: () => ({ mutate: vi.fn(), isPending: false }),
-}));
-
 vi.stubGlobal(
   "ResizeObserver",
   class {

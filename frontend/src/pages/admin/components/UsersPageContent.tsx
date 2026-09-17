@@ -5,7 +5,7 @@ import { TeamFacetFilter } from "@/components/admin/TeamFacetFilter";
 import { UserBulkCommandDrawer } from "@/components/admin/UserBulkCommandDrawer";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import { cn } from "@/lib/utils";
-import { CRBulkCommandDrawer } from "@/plugins/control_room/components/CRBulkCommandDrawer";
+import { PluginCRBulkCommandDrawer } from "@/components/admin/PluginCRUserDialogs";
 import { UserStatsCards } from "./UserStatsCards";
 import { UsersPageBulkBar } from "./UsersPageBulkBar";
 import { UsersPageTable } from "./UsersPageTable";
@@ -48,7 +48,7 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
           onBulkActions={() => state.setBulkCommandDrawerOpen(true)}
         />
 
-        <CRBulkCommandDrawer
+        <PluginCRBulkCommandDrawer
           open={state.bulkCommandDrawerOpen}
           onOpenChange={state.setBulkCommandDrawerOpen}
           selectedUserIds={selectedUserIds}

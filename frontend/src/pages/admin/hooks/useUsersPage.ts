@@ -5,10 +5,25 @@ import { usePlugins } from "@/context/PluginContext";
 import { usePermissions } from "@/context/PermissionContext";
 import api from "@/lib/api";
 import type { TechAssignmentInput, UserProfile } from "@/types";
-import type { ControlRoomAccess } from "@/plugins/control_room/types";
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
 
 type TLFilter = "all" | "italian_tl" | "albanian_tl" | "no_tl";
+
+/** Local mirror of the control_room plugin's ControlRoomAccess fields
+ * actually consumed here and downstream (useUserColumns, PluginCRUserDialogs),
+ * so core never needs a type-only import of the plugin's own type (which
+ * would still break `tsc` on `remove_plugin control_room`). */
+export interface CRAccessRecord {
+  id: number;
+  user: number;
+  is_active: boolean;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  team_ids: number[];
+  team_scopes: { id: number; team_name: string }[];
+}
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -151,7 +166,7 @@ export const useUsersPage = () => {
   const isCROnlyAdmin = isCRAdmin && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
   const [crOnly, setCrOnly] = useState(false);
   const [crAccessUserIds, setCrAccessUserIds] = useState<Set<number>>(new Set());
-  const [crAccessByUserId, setCrAccessByUserId] = useState<Map<number, ControlRoomAccess>>(
+  const [crAccessByUserId, setCrAccessByUserId] = useState<Map<number, CRAccessRecord>>(
     new Map()
   );
 
@@ -170,7 +185,7 @@ export const useUsersPage = () => {
       })
       .then((res) => {
         if (cancelled) return;
-        const records: ControlRoomAccess[] = Array.isArray(res.data) ? res.data : [];
+        const records: CRAccessRecord[] = Array.isArray(res.data) ? res.data : [];
         const activeIdSet = new Set(records.filter((a) => a.is_active).map((a) => a.user));
         const idMap = new Map(records.map((a) => [a.user, a]));
         setCrAccessUserIds(activeIdSet);
