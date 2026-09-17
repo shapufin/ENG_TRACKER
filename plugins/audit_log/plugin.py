@@ -45,7 +45,7 @@ class AuditLogPlugin(BasePlugin):
             ],
             "injection_slots": [
                 {
-                    "slot": "admin-sidebar-nav",
+                    "slot": "admin-sidebar-nav-system",
                     "component": "AuditLogSidebarItem",
                 }
             ]

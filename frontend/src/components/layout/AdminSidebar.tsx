@@ -55,6 +55,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const location = useLocation();
   const { getInjectedComponents } = usePlugins();
   const hasAdminPluginNav = getInjectedComponents("admin-sidebar-nav").length > 0;
+  const hasAdminPluginNavSystem = getInjectedComponents("admin-sidebar-nav-system").length > 0;
 
   const isActive = (item: AdminNavItem) =>
     item.exact
@@ -137,7 +138,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           {ADMIN_NAV_GROUPS.map((group) => {
             const groupItems = items.filter((item) => item.group === group);
             const isExtensions = group === "Extensions";
-            const groupHasItems = groupItems.length > 0 || (isExtensions && hasAdminPluginNav);
+            const isSystem = group === "System";
+            const groupHasItems =
+              groupItems.length > 0 ||
+              (isExtensions && hasAdminPluginNav) ||
+              (isSystem && hasAdminPluginNavSystem);
             if (!groupHasItems) return null;
 
             return (
@@ -145,6 +150,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 {!collapsed && <SidebarSectionLabel label={group} />}
                 {groupItems.map(renderItem)}
                 {isExtensions && <PluginSlot slot="admin-sidebar-nav" />}
+                {isSystem && <PluginSlot slot="admin-sidebar-nav-system" />}
               </React.Fragment>
             );
           })}

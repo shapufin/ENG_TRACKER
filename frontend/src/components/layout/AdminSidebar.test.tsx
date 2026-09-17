@@ -6,8 +6,11 @@ import { usePlugins } from "@/context/PluginContext";
 import type { AdminNavItem } from "./hooks/useAdminNavItems";
 
 vi.mock("@/components/plugins/PluginSlot", () => ({
-  PluginSlot: ({ slot }: { slot: string }) =>
-    slot === "admin-sidebar-nav" ? <li>Plugin navigation</li> : null,
+  PluginSlot: ({ slot }: { slot: string }) => {
+    if (slot === "admin-sidebar-nav") return <li>Plugin navigation</li>;
+    if (slot === "admin-sidebar-nav-system") return <li>System plugin navigation</li>;
+    return null;
+  },
 }));
 vi.mock("@/components/ui/ThemeToggle", () => ({
   ThemeToggle: () => <div>Theme toggle</div>,
@@ -75,6 +78,16 @@ describe("AdminSidebar", () => {
 
     expect(screen.queryByText("Extensions")).not.toBeInTheDocument();
     expect(screen.queryByText("Plugin navigation")).not.toBeInTheDocument();
+  });
+
+  it("renders system plugin nav items under the System section", () => {
+    mockGetInjected(["admin-sidebar-nav-system"]);
+    renderSidebar();
+
+    expect(screen.getByText("System")).toBeInTheDocument();
+    expect(screen.getByText("System plugin navigation")).toBeInTheDocument();
+    // Extensions stays absent — the two slots are independent.
+    expect(screen.queryByText("Extensions")).not.toBeInTheDocument();
   });
 
   it("renders the gradient logo tile and Enterprise subtitle when expanded", () => {
