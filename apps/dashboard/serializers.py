@@ -78,3 +78,20 @@ class PublicHolidaySerializer(serializers.ModelSerializer):
     class Meta:
         model = PublicHoliday
         fields = ['id', 'name', 'date', 'country_code', 'is_global', 'description', 'calendar', 'calendar_name']
+
+
+class SiteBrandingSerializer(serializers.ModelSerializer):
+    """Serializer for SiteBranding singleton."""
+    logo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SiteBranding
+        fields = ['id', 'site_name', 'logo', 'logo_url']
+
+    def get_logo_url(self, obj):
+        if obj.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo.url)
+            return obj.logo.url
+        return None

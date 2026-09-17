@@ -13,7 +13,7 @@ from django.db import models, transaction
 from core.mixins.cache import CacheInvalidationMixin
 from core.mixins.permissions import IsHR, has_hr_role, has_team_leader_role
 from django.db.models import Q, Count
-from .models import DashboardWidget, UserDashboardPreference
+from .models import DashboardWidget, UserDashboardPreference, SiteBranding
 from .models.calendar import CalendarWorkspace, UserCalendarPreference, PublicHoliday
 from .serializers import (
     DashboardWidgetSerializer,
@@ -21,6 +21,7 @@ from .serializers import (
     CalendarWorkspaceSerializer,
     UserCalendarPreferenceSerializer,
     PublicHolidaySerializer,
+    SiteBrandingSerializer,
     WorkspaceUserSerializer,
 )
 
@@ -838,4 +839,50 @@ class PublicHolidayViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         self._ensure_admin()
         instance.delete()
+        self.invalidate_related_cache
+
+
+class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
+    """ViewSet for SiteBranding singleton - used for global settings like site name and logo."""
+    queryset = SiteBranding.objects.all()
+    serializer_class = SiteBrandingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Only return the singleton instance
+        return SiteBranding.objects.all()[:1]
+
+    def _ensure_admin(self):
+        user = self.request.user
+        if not (user.is_staff or user.is_superuser):
+            raise PermissionDenied("Only staff users can modify site branding.")
+
+    def perform_create(self, serializer):
+        self._ensure_admin()
+        # Ensure only one instance exists
+        if SiteBranding.objects.exists():
+            # Update existing instead of creating new
+            existing = SiteBranding.objects.first()
+            serializer.update(existing, serializer.validated_data)
+        else:
+            serializer.save()
         self.invalidate_related_cache()
+
+    def perform_update(self, serializer):
+        self._ensure_admin()
+        serializer.save()
+        self.invalidate_related_cache()
+
+    def perform_destroy(self, instance):
+        # Prevent deletion of the singleton
+        raise PermissionDenied("Cannot delete the site branding singleton.")
+
+    @action(detail=False, methods=['get'])
+    def current(self, request):
+        """Get the current site branding settings."""
+        branding = SiteBranding.objects.first()
+        if not branding:
+            # Create default branding if none exists
+            branding = SiteBranding.objects.create()
+        serializer = self.get_serializer(branding)
+        return Response(serializer.data)()
