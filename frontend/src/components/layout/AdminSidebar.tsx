@@ -1,12 +1,11 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { PluginSlot } from "@/components/plugins/PluginSlot";
 import { usePlugins } from "@/context/PluginContext";
-import { dashboardService } from "@/services/dashboardService";
+import { useSiteBranding } from "@/hooks/useSiteBranding";
 import { ChevronLeft, ChevronRight, LogOut, Shield, X } from "lucide-react";
 import { SidebarUserProfile } from "./SidebarUserProfile";
 import { SidebarInstallButton } from "./SidebarInstallButton";
@@ -58,11 +57,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const { getInjectedComponents } = usePlugins();
   const hasAdminPluginNav = getInjectedComponents("admin-sidebar-nav").length > 0;
   const hasAdminPluginNavSystem = getInjectedComponents("admin-sidebar-nav-system").length > 0;
-  const { data: branding } = useQuery({
-    queryKey: ["admin", "site-branding"],
-    queryFn: () => dashboardService.getBranding(),
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: branding } = useSiteBranding();
 
   const isActive = (item: AdminNavItem) =>
     item.exact

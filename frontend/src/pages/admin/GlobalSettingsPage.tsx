@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { leaveService } from "@/services/leaveService";
 import { dashboardService } from "@/services/dashboardService";
+import { useSiteBranding, SITE_BRANDING_QUERY_KEY } from "@/hooks/useSiteBranding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,7 +97,7 @@ const SiteBrandingForm: React.FC<{ branding: SiteBranding }> = ({ branding }) =>
   const update = useMutation({
     mutationFn: () => dashboardService.updateBranding(branding.id, siteName, logo),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "site-branding"] });
+      queryClient.invalidateQueries({ queryKey: SITE_BRANDING_QUERY_KEY });
       setLogo(null);
       toast.success("Branding updated");
     },
@@ -147,10 +148,7 @@ export const GlobalSettingsPage: React.FC = () => {
     queryKey: ["admin", "global-settings"],
     queryFn: () => leaveService.getSettings(),
   });
-  const { data: branding, isLoading: brandingLoading } = useQuery({
-    queryKey: ["admin", "site-branding"],
-    queryFn: () => dashboardService.getBranding(),
-  });
+  const { data: branding, isLoading: brandingLoading } = useSiteBranding();
 
   if (isLoading) return <LoadingCard rows={3} className="min-h-[300px]" />;
   if (!data)
@@ -176,7 +174,7 @@ export const GlobalSettingsPage: React.FC = () => {
           {!brandingLoading && !branding && (
             <ErrorCard
               title="Failed to load branding"
-              onRetry={() => queryClient.invalidateQueries({ queryKey: ["admin", "site-branding"] })}
+              onRetry={() => queryClient.invalidateQueries({ queryKey: SITE_BRANDING_QUERY_KEY })}
             />
           )}
           {branding && <SiteBrandingForm key={branding.id} branding={branding} />}

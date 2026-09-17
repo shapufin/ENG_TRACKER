@@ -10,6 +10,7 @@ import { SidebarInstallButton } from "./SidebarInstallButton";
 import { SidebarCollapsedContext } from "./SidebarContext";
 import { useMotionTransition } from "@/lib/motion";
 import { useMobileSidebarFocus } from "./useMobileSidebarFocus";
+import { useSiteBranding } from "@/hooks/useSiteBranding";
 import type { NavItem } from "./hooks/useVisibleNavItems";
 
 interface SidebarProps {
@@ -46,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   badgeMap,
   onLogout,
 }) => {
+  const { data: branding } = useSiteBranding();
   const sidebarRef = React.useRef<HTMLElement>(null);
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   const internalTriggerRef = React.useRef<HTMLButtonElement>(null);
@@ -73,12 +75,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div
           className={`flex items-center gap-2.5 text-lg font-bold ${collapsed ? "justify-center" : ""}`}
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-info text-white shadow-md shadow-primary/30">
-            <Clock className="h-5 w-5" />
-          </div>
+          {branding?.logo_url ? (
+            <img
+              src={branding.logo_url}
+              alt=""
+              className="h-8 w-8 rounded-xl object-contain shadow-md shadow-primary/30"
+            />
+          ) : (
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-info text-white shadow-md shadow-primary/30">
+              <Clock className="h-5 w-5" />
+            </div>
+          )}
           {!collapsed && (
             <div className="leading-tight">
-              <span className="md:inline">Time Tracker</span>
+              <span className="md:inline">{branding?.site_name || "Time Tracker"}</span>
               {roleSubtitle && (
                 <div className="font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
                   {roleSubtitle}

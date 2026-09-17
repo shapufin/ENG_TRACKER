@@ -16,11 +16,14 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from rest_framework.test import APIRequestFactory, force_authenticate
 
+from unittest.mock import patch
+
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
-from apps.users.models.core import Tech, TechLevel, UserTech
+from apps.users.models.core import Tech, TechLevel, UserProfile, UserTech
 from plugins.organigrama.viewsets import OrganigramaViewSet
+from plugins.organigrama.services import tree_builder
 
 
 class OrganigramaTreeTestCase(TestCase):
@@ -293,16 +296,17 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         self.assertIn("emp2", all_usernames)
         self.assertNotIn("standalone", all_usernames)
 
-    def test_albanian_tl_subtree_nests_employees_under_their_own_italian_tl(self):
+    def test_albanian_tl_subtree_splits_into_one_root_per_italian_tl(self):
         """One Albanian TL can be shared across teams that each have a
-        different Italian TL. The Albanian TL's own subtree must nest each
-        employee under THEIR team's Italian TL, not dump everyone flat under
-        the Albanian TL grouped only by Tech.
+        different Italian TL. The Albanian TL must never be the tree's
+        root above an Italian TL — even in their own "my org chart" view.
+        Each Italian TL they report to becomes its own root, with the
+        Albanian TL nested under it, showing only that team's employees.
 
         Regression: emp1/emp2 (from setUpTestData) have no italian_tl FK of
         their own, so this adds a second team under the same Albanian TL —
-        emp1 keeps italian_tl unset (falls back to direct child), emp2 gets
-        its own italian_tl distinct from cls.italian_tl.
+        emp1 keeps italian_tl unset (falls back to the AL TL's own manager,
+        cls.italian_tl), emp2 gets its own italian_tl distinct from that.
         """
         second_italian_tl = User.objects.create_user(
             username="it_tl_team2", password="test123",
@@ -318,24 +322,77 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.data
         roots = data["roots"]
+
+        # No root is the Albanian TL — every root is an Italian TL.
+        root_usernames = {r.get("username") for r in roots}
+        self.assertNotIn("al_tl", root_usernames)
+        self.assertIn("it_tl", root_usernames)
+        self.assertIn("it_tl_team2", root_usernames)
+        for r in roots:
+            self.assertEqual(r.get("role_badge"), "italian_tl")
+
+        own_it_root = next(r for r in roots if r.get("username") == "it_tl")
+        own_al_branch = next(c for c in own_it_root["children"] if c.get("username") == "al_tl")
+        own_usernames = self._collect_usernames(own_al_branch["children"])
+        self.assertIn("emp1", own_usernames)
+        self.assertNotIn("emp2", own_usernames)
+
+        team2_it_root = next(r for r in roots if r.get("username") == "it_tl_team2")
+        team2_al_branch = next(
+            c for c in team2_it_root["children"] if c.get("username") == "al_tl"
+        )
+        team2_usernames = self._collect_usernames(team2_al_branch["children"])
+        self.assertIn("emp2", team2_usernames)
+        self.assertNotIn("emp1", team2_usernames)
+
+    def test_albanian_tl_subtree_survives_stale_italian_tl_fk(self):
+        """A UserProfile.italian_tl_id that no longer resolves to a User row
+        (e.g. left over from a partial site-restore) must not crash the
+        subtree endpoint with KeyError. The affected employee falls into
+        the Albanian-TL-led unresolved fallback group instead.
+        """
+        self.emp2.profile.italian_tl = self.italian_tl2
+        self.emp2.profile.save(update_fields=["italian_tl"])
+
+        real_fetch = tree_builder._fetch_italian_tls_by_id
+
+        def fetch_dropping_second_tl(italian_tl_ids):
+            resolved = real_fetch(italian_tl_ids)
+            resolved.pop(self.italian_tl2.id, None)
+            return resolved
+
+        with patch.object(
+            tree_builder, "_fetch_italian_tls_by_id", side_effect=fetch_dropping_second_tl
+        ):
+            resp = self._get_tree(self.albanian_tl)
+
+        self.assertEqual(resp.status_code, 200)
+        roots = resp.data["roots"]
+
+        all_usernames = self._collect_usernames(roots)
+        self.assertIn("emp1", all_usernames)
+        self.assertIn("emp2", all_usernames)
+
+    def test_albanian_tl_subtree_unresolved_fallback_when_no_manager(self):
+        """An Albanian TL with no manager (own italian_tl is None) whose
+        employees also have no italian_tl FK must fall back to the
+        Albanian TL as root for that leftover group, instead of dropping
+        them from the tree.
+        """
+        self.albanian_tl.profile.italian_tl = None
+        self.albanian_tl.profile.save(update_fields=["italian_tl"])
+
+        resp = self._get_tree(self.albanian_tl)
+        self.assertEqual(resp.status_code, 200)
+        roots = resp.data["roots"]
+
+        root_usernames = {r.get("username") for r in roots}
+        self.assertIn("al_tl", root_usernames)
+
         al_root = next(r for r in roots if r.get("username") == "al_tl")
-
-        it_team2_node = next(
-            (c for c in al_root["children"] if c.get("username") == "it_tl_team2"),
-            None,
-        )
-        self.assertIsNotNone(
-            it_team2_node,
-            "emp2's own Italian TL must appear as a nested node under the Albanian TL",
-        )
-        it_team2_usernames = self._collect_usernames(it_team2_node["children"])
-        self.assertIn("emp2", it_team2_usernames)
-
-        # emp2 must NOT also appear as a flat direct child of the Albanian TL.
-        direct_usernames = {
-            c.get("username") for c in al_root["children"] if c.get("type") == "person"
-        }
-        self.assertNotIn("emp2", direct_usernames)
+        fallback_usernames = self._collect_usernames(al_root.get("children", []))
+        self.assertIn("emp1", fallback_usernames)
+        self.assertIn("emp2", fallback_usernames)
 
     def test_employee_with_italian_tl_fk_is_not_misidentified_as_albanian_tl(self):
         """A regular employee can have their own italian_tl FK set (each

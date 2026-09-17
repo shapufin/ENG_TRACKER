@@ -5,12 +5,22 @@ Builds a people-centric org tree from two sources:
 1. People hierarchy (primary): UserProfile.italian_tl + albanian_tl FKs.
 2. Technology classification (secondary): UserProfile.techs.
 
-Tree structure:
+Tree structure (build_full_tree — the admin/HR company-wide view):
   Italian TL (root, type=person)
   └── Albanian TL (type=person)
+      ├── Italian TL node (nested, only if an employee's own italian_tl
+      │   FK differs from the Albanian TL's own manager above)
+      │   └── Employee (type=person)
       ├── Tech node (type=tech, if assignments exist)
       │   └── Employee (type=person)
       └── Employee (type=person, direct child if no Tech assignment)
+
+build_subtree()'s Albanian-TL case (a logged-in Albanian TL viewing their
+own chart) does NOT match the shape above: an Albanian TL can cover
+several teams that each have a different Italian TL, and must never be
+the tree's root above one, so it produces one root PER distinct Italian
+TL instead — each `Italian TL -> Albanian TL (repeated per branch) ->
+that branch's employees only`.
 
 Scoping reuses UserProfile.get_team_member_ids() for TL scope, matching
 the overtime/standby/analytics permission model.
@@ -360,26 +370,25 @@ def _attach_employees_by_italian_tl(
     al_node: Dict[str, Any],
     al_user: User,
     employees: List[UserProfile],
-    already_shown_it_id: int = None,
-    italian_tls_by_id: Dict[int, User] = None,
+    already_shown_it_id: int,
+    italian_tls_by_id: Dict[int, User],
 ) -> int:
     """Nest an Albanian TL's employees under their own Italian TL.
 
-    One Albanian TL can be shared across teams that each have a DIFFERENT
-    Italian TL (Italian TL is senior — confirmed org model). Employees whose
-    own ``italian_tl`` FK differs from ``already_shown_it_id`` (an ancestor
-    node already representing that Italian TL one level up, or None if
-    there isn't one — e.g. the Albanian TL is the tree root) get a nested
-    person-node for their own Italian TL. Employees with no ``italian_tl``
-    FK, or whose FK matches ``already_shown_it_id``, attach directly
-    (grouped by Tech) — this is both the common case and avoids a redundant
-    duplicate node for an Italian TL already visible one level up.
+    Used by build_full_tree(), inside its per-(Italian TL, Albanian TL)
+    loop. One Albanian TL can be shared across teams that each have a
+    DIFFERENT Italian TL (Italian TL is senior — confirmed org model).
+    Employees whose own ``italian_tl`` FK differs from
+    ``already_shown_it_id`` (the Italian TL already shown one level up —
+    the Albanian TL's own manager, in this caller) get a nested person-node
+    for their own Italian TL. Employees with no ``italian_tl`` FK, or whose
+    FK matches ``already_shown_it_id``, attach directly (grouped by Tech) —
+    this is both the common case and avoids a redundant duplicate node for
+    an Italian TL already visible one level up.
 
-    ``italian_tls_by_id``: pass a pre-batched map when calling this in a loop
-    over many Albanian TLs (e.g. build_full_tree) to avoid one query per
-    Albanian TL — each call would otherwise re-fetch the Italian TL(s) it
-    needs individually. Callers with only one Albanian TL (build_subtree)
-    can omit it; it's fetched on demand.
+    ``italian_tls_by_id``: a map pre-batched across every Albanian TL in the
+    caller's loop, so this function never issues its own query — see
+    build_full_tree()'s "Query 4" for why.
     """
     total_nodes = 0
     by_italian: Dict[int, List[UserProfile]] = {}
@@ -394,8 +403,6 @@ def _attach_employees_by_italian_tl(
         by_italian.setdefault(it_tl_id, []).append(emp_profile)
 
     if italian_tl_ids:
-        if italian_tls_by_id is None:
-            italian_tls_by_id = _fetch_italian_tls_by_id(italian_tl_ids)
         for it_id in sorted(by_italian, key=lambda i: italian_tls_by_id[i].username):
             it_tl_user = italian_tls_by_id[it_id]
             it_tl_node = _person_node(it_tl_user, it_tl_user.profile)
@@ -484,9 +491,13 @@ def build_subtree(user: User) -> Dict[str, Any]:
     elif profile.is_albanian_tl:
         # Albanian TL: visible set = own managed users (employees + team members).
         # One Albanian TL can be shared across teams that each have a
-        # DIFFERENT Italian TL (Italian TL is senior — confirmed org model),
-        # so employees must nest under their own italian_tl FK first, not be
-        # dumped flat under the Albanian TL grouped only by Tech.
+        # DIFFERENT Italian TL (Italian TL is senior — confirmed org model).
+        # The Albanian TL must never appear as the tree's root above an
+        # Italian TL — including here, in their OWN "my org chart" view.
+        # Each Italian TL they report to (their own manager, or a
+        # different one via a team whose employees report elsewhere)
+        # becomes its own root, with the Albanian TL nested under it,
+        # showing only that team's employees.
         visible_ids = profile.get_team_member_ids()
         employees = list(
             UserProfile.objects.filter(
@@ -499,12 +510,52 @@ def build_subtree(user: User) -> Dict[str, Any]:
             .order_by("user__username")
         )
 
-        al_node = _person_node(user, profile)
-        total_nodes += 1
-        total_nodes += _attach_employees_by_italian_tl(
-            al_node, user, employees, already_shown_it_id=None
-        )
-        roots.append(al_node)
+        own_it_tl_id = profile.italian_tl_id
+        by_italian: Dict[int, List[UserProfile]] = {}
+        unresolved: List[UserProfile] = []
+        for emp_profile in employees:
+            it_tl_id = emp_profile.italian_tl_id or own_it_tl_id
+            if it_tl_id is None or it_tl_id == user.id:
+                unresolved.append(emp_profile)
+                continue
+            by_italian.setdefault(it_tl_id, []).append(emp_profile)
+
+        it_ids = set(by_italian.keys())
+        if own_it_tl_id is not None:
+            # Show the Albanian TL's own reporting line even when none of
+            # their employees happen to sit under it.
+            it_ids.add(own_it_tl_id)
+            by_italian.setdefault(own_it_tl_id, [])
+
+        italian_tls_by_id = _fetch_italian_tls_by_id(it_ids)
+        for it_id in sorted(
+            (i for i in it_ids if i in italian_tls_by_id),
+            key=lambda i: italian_tls_by_id[i].username,
+        ):
+            it_tl_user = italian_tls_by_id[it_id]
+            it_node = _person_node(it_tl_user, it_tl_user.profile)
+            total_nodes += 1
+            al_branch = _person_node(user, profile)
+            total_nodes += 1
+            total_nodes += _attach_members(al_branch, by_italian[it_id])
+            it_node["children"].append(al_branch)
+            roots.append(it_node)
+
+        # An italian_tl id that couldn't be resolved (stale FK / deleted
+        # user) has no row to key a root on — fold its employees into the
+        # unresolved group below instead of raising KeyError.
+        for it_id in it_ids:
+            if it_id not in italian_tls_by_id:
+                unresolved.extend(by_italian.get(it_id, []))
+
+        if unresolved:
+            # No Italian TL resolvable anywhere (the Albanian TL has no
+            # manager either) — fall back to the Albanian TL as root for
+            # this leftover group rather than dropping them from the tree.
+            al_node = _person_node(user, profile)
+            total_nodes += 1
+            total_nodes += _attach_members(al_node, unresolved)
+            roots.append(al_node)
 
     return {"roots": roots, "scope": "subtree", "total_nodes": total_nodes}
 
