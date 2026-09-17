@@ -40,7 +40,13 @@ def delete_pattern_safe(pattern: str) -> None:
     c = get_cache()
     delete_pattern = getattr(c, 'delete_pattern', None)
     if callable(delete_pattern):
-        delete_pattern(pattern)
+        try:
+            delete_pattern(pattern)
+        except Exception as e:
+            # Cache invalidation is a side effect of a create/update whose DB
+            # write already committed — a Redis blip here must not turn an
+            # otherwise-successful request into a 500 for the caller.
+            logger.error(f"delete_pattern_safe failed for pattern {pattern!r}: {e}")
         return
     # LocMemCache fallback: iterate the underlying dict and delete matches.
     # Django's ``make_key`` adds a backend prefix (e.g. ``:1:``) to every
