@@ -386,6 +386,10 @@ def build_subtree(user: User) -> Dict[str, Any]:
 
     elif profile.is_albanian_tl:
         # Albanian TL: visible set = own managed users (employees + team members).
+        # One Albanian TL can be shared across teams that each have a
+        # DIFFERENT Italian TL (Italian TL is senior — confirmed org model),
+        # so employees must nest under their own italian_tl FK first, not be
+        # dumped flat under the Albanian TL grouped only by Tech.
         visible_ids = profile.get_team_member_ids()
         employees = list(
             UserProfile.objects.filter(
@@ -400,7 +404,37 @@ def build_subtree(user: User) -> Dict[str, Any]:
 
         al_node = _person_node(user, profile)
         total_nodes += 1
-        total_nodes += _attach_members(al_node, employees)
+
+        by_italian: Dict[int, List[UserProfile]] = {}
+        direct: List[UserProfile] = []
+        italian_tl_ids: Set[int] = set()
+        for emp_profile in employees:
+            it_tl_id = emp_profile.italian_tl_id
+            if it_tl_id is None or it_tl_id == user.id:
+                direct.append(emp_profile)
+                continue
+            italian_tl_ids.add(it_tl_id)
+            by_italian.setdefault(it_tl_id, []).append(emp_profile)
+
+        # Batched, not per-employee's .italian_tl — that lacks the
+        # tech_assignments prefetch _person_node's format_assignments needs.
+        italian_tls_by_id: Dict[int, User] = {
+            u.id: u
+            for u in User.objects.filter(id__in=italian_tl_ids)
+            .select_related("profile")
+            .prefetch_related(
+                "profile__tech_assignments__tech", "profile__tech_assignments__level"
+            )
+        }
+
+        for it_id in sorted(by_italian, key=lambda i: italian_tls_by_id[i].username):
+            it_tl_user = italian_tls_by_id[it_id]
+            it_tl_node = _person_node(it_tl_user, it_tl_user.profile)
+            total_nodes += 1
+            total_nodes += _attach_members(it_tl_node, by_italian[it_id])
+            al_node["children"].append(it_tl_node)
+
+        total_nodes += _attach_members(al_node, direct)
         roots.append(al_node)
 
     return {"roots": roots, "scope": "subtree", "total_nodes": total_nodes}

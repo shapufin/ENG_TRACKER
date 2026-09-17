@@ -293,6 +293,50 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         self.assertIn("emp2", all_usernames)
         self.assertNotIn("standalone", all_usernames)
 
+    def test_albanian_tl_subtree_nests_employees_under_their_own_italian_tl(self):
+        """One Albanian TL can be shared across teams that each have a
+        different Italian TL. The Albanian TL's own subtree must nest each
+        employee under THEIR team's Italian TL, not dump everyone flat under
+        the Albanian TL grouped only by Tech.
+
+        Regression: emp1/emp2 (from setUpTestData) have no italian_tl FK of
+        their own, so this adds a second team under the same Albanian TL —
+        emp1 keeps italian_tl unset (falls back to direct child), emp2 gets
+        its own italian_tl distinct from cls.italian_tl.
+        """
+        second_italian_tl = User.objects.create_user(
+            username="it_tl_team2", password="test123",
+            first_name="Italian", last_name="TeamTwo",
+        )
+        second_italian_tl.profile.is_italian_tl_role = True
+        second_italian_tl.profile.save(update_fields=["is_italian_tl_role"])
+
+        self.emp2.profile.italian_tl = second_italian_tl
+        self.emp2.profile.save(update_fields=["italian_tl"])
+
+        resp = self._get_tree(self.albanian_tl)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.data
+        roots = data["roots"]
+        al_root = next(r for r in roots if r.get("username") == "al_tl")
+
+        it_team2_node = next(
+            (c for c in al_root["children"] if c.get("username") == "it_tl_team2"),
+            None,
+        )
+        self.assertIsNotNone(
+            it_team2_node,
+            "emp2's own Italian TL must appear as a nested node under the Albanian TL",
+        )
+        it_team2_usernames = self._collect_usernames(it_team2_node["children"])
+        self.assertIn("emp2", it_team2_usernames)
+
+        # emp2 must NOT also appear as a flat direct child of the Albanian TL.
+        direct_usernames = {
+            c.get("username") for c in al_root["children"] if c.get("type") == "person"
+        }
+        self.assertNotIn("emp2", direct_usernames)
+
     def test_italian_tl_sees_subtree(self):
         resp = self._get_tree(self.italian_tl)
         self.assertEqual(resp.status_code, 200)
