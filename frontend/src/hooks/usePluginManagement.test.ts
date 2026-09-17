@@ -32,7 +32,7 @@ vi.mock("@/services/pluginService", () => ({
   },
 }));
 
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }));
 
 describe("usePluginManagement", () => {
   it("fetches plugins on mount", async () => {
@@ -49,6 +49,21 @@ describe("usePluginManagement", () => {
     await waitFor(() => expect(result.current.plugins.length).toBe(1));
     await act(async () => result.current.handleToggle(1));
     expect(pluginService.togglePlugin).toHaveBeenCalledWith(1);
+  });
+
+  it("warns that a backend restart is required after toggling", async () => {
+    // Plugin URL registration only happens at backend process boot, so the
+    // toggle alone doesn't make a newly-enabled plugin's API reachable.
+    const { toast } = await import("sonner");
+    vi.mocked(pluginService.getPlugins).mockResolvedValue([plugin({ is_enabled: false })]);
+    vi.mocked(pluginService.togglePlugin).mockResolvedValue({ is_enabled: true } as any);
+    const { result } = renderHook(() => usePluginManagement());
+    await waitFor(() => expect(result.current.plugins.length).toBe(1));
+    await act(async () => result.current.handleToggle(1));
+    expect(toast.warning).toHaveBeenCalledWith(
+      expect.stringContaining("Restart the backend"),
+      expect.anything()
+    );
   });
 
   it("handles initialize success", async () => {

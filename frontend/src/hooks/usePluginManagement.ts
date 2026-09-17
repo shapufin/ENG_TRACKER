@@ -58,6 +58,14 @@ export const usePluginManagement = (): UsePluginManagementReturn => {
           prev.map((p) => (p.id === id ? { ...p, is_enabled: result.is_enabled } : p))
         );
         toast.success(`Plugin ${result.is_enabled ? "enabled" : "disabled"}`);
+        // Plugin URL registration only happens once at backend process boot
+        // (apps/plugins/urls.py runs at import time) — toggling the DB flag
+        // here does not re-register routes. Without a restart, an enabled
+        // plugin's API 404s even though the UI already shows it active.
+        toast.warning(
+          "Restart the backend for this to take full effect (docker compose restart backend).",
+          { duration: 10000 }
+        );
         await refreshActivePlugins();
       } catch {
         toast.error("Failed to toggle plugin");
