@@ -438,3 +438,21 @@ class LeaveRequestViewSetTests(TestCase):
         self.assertEqual(response.data['count'], 55)
         self.assertEqual(len(response.data['results']), 55)
 
+
+class GlobalSettingsViewSetTests(TestCase):
+    """GlobalSettings singleton must be reachable via list() on a DB where
+    no leave request has ever been submitted — nothing else creates the
+    pk=1 row, and the frontend only ever calls list(), never retrieve()."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(username='testuser', password='testpass')
+        self.client.force_authenticate(self.user)
+
+    def test_list_on_empty_db_returns_singleton(self):
+        self.assertEqual(GlobalSettings.objects.count(), 0)
+        response = self.client.get('/api/leave-management/settings/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(len(response.data['results']), 1)
+

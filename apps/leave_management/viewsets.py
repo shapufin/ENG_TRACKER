@@ -258,6 +258,13 @@ class GlobalSettingsViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         obj, _ = GlobalSettings.objects.get_or_create(pk=1)
         return obj
 
+    def list(self, request, *args, **kwargs):
+        # The frontend only ever calls list(), never retrieve() — ensure the
+        # singleton exists here too, or a DB with no leave requests yet
+        # (nothing else creates pk=1) returns an empty page forever.
+        GlobalSettings.objects.get_or_create(pk=1)
+        return super().list(request, *args, **kwargs)
+
 
 class LeaveRequestViewSet(SuperuserPermissionMixin, HRReadOnlyMixin, TeamLeaderFilterMixin, BulkActionMixin, viewsets.ModelViewSet):
     """ViewSet for LeaveRequest model."""
