@@ -95,6 +95,11 @@ yarn-error.log*
 # VAPID keys (Web Push)
 .vapid_keys.json
 
+# Private/public key files
+*.pem
+private_key.pem
+public_key.pem
+
 # Local AI assistant workflows (Devin/opencode) — local dev only, never push
 .devin/
 .opencode/
