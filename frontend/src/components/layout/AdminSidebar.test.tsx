@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AdminSidebar } from "./AdminSidebar";
@@ -135,6 +135,24 @@ describe("AdminSidebar", () => {
     const img = document.querySelector('img[src="/media/branding/logo.png"]');
     expect(img).toBeTruthy();
     expect(document.querySelector(".bg-gradient-to-tr")).toBeNull();
+  });
+
+  it("falls back to the gradient tile when the branding logo fails to load", async () => {
+    vi.mocked(dashboardService.getBranding).mockResolvedValue({
+      id: 1, site_name: "Acme Tracker", logo: "branding/logo.png", logo_url: "/media/branding/logo.png",
+    });
+    mockGetInjected([]);
+    renderSidebar();
+
+    const img = await waitFor(() => {
+      const el = document.querySelector('img[src="/media/branding/logo.png"]');
+      expect(el).toBeTruthy();
+      return el as HTMLImageElement;
+    });
+    fireEvent.error(img);
+
+    await waitFor(() => expect(document.querySelector(".bg-gradient-to-tr")).toBeTruthy());
+    expect(document.querySelector('img[src="/media/branding/logo.png"]')).toBeNull();
   });
 
   it("hides section labels and the Enterprise subtitle when collapsed", () => {

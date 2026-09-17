@@ -148,6 +148,33 @@ describe("Sidebar", () => {
     await waitFor(() => expect(document.title).toBe("Acme Tracker"));
   });
 
+  it("falls back to the gradient tile when the branding logo fails to load", async () => {
+    vi.mocked(dashboardService.getBranding).mockResolvedValue({
+      id: 1, site_name: "Acme Tracker", logo: "branding/logo.png", logo_url: "/media/branding/logo.png",
+    });
+    renderWithQuery(
+      <Sidebar
+        items={items}
+        collapsed={false}
+        mobileOpen={false}
+        onToggleCollapse={vi.fn()}
+        onCloseMobile={vi.fn()}
+        user={user}
+        onLogout={vi.fn()}
+      />
+    );
+
+    const img = await waitFor(() => {
+      const el = document.querySelector('img[src="/media/branding/logo.png"]');
+      expect(el).toBeTruthy();
+      return el as HTMLImageElement;
+    });
+    fireEvent.error(img);
+
+    await waitFor(() => expect(document.querySelector(".bg-gradient-to-tr")).toBeTruthy());
+    expect(document.querySelector('img[src="/media/branding/logo.png"]')).toBeNull();
+  });
+
   it("renders the role subtitle when expanded and hides it when collapsed", () => {
     renderWithQuery(
       <Sidebar

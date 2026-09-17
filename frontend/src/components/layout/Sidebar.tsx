@@ -48,6 +48,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
 }) => {
   const { data: branding } = useSiteBranding();
+  const [logoFailed, setLogoFailed] = React.useState(false);
+  React.useEffect(() => setLogoFailed(false), [branding?.logo_url]);
   const sidebarRef = React.useRef<HTMLElement>(null);
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   const internalTriggerRef = React.useRef<HTMLButtonElement>(null);
@@ -75,11 +77,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div
           className={`flex items-center gap-2.5 text-lg font-bold ${collapsed ? "justify-center" : ""}`}
         >
-          {branding?.logo_url ? (
+          {branding?.logo_url && !logoFailed ? (
             <img
               src={branding.logo_url}
               alt=""
               className="h-8 w-8 rounded-xl object-contain shadow-md shadow-primary/30"
+              onError={() => setLogoFailed(true)}
             />
           ) : (
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-info text-white shadow-md shadow-primary/30">

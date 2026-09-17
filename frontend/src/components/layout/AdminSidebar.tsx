@@ -58,6 +58,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const hasAdminPluginNav = getInjectedComponents("admin-sidebar-nav").length > 0;
   const hasAdminPluginNavSystem = getInjectedComponents("admin-sidebar-nav-system").length > 0;
   const { data: branding } = useSiteBranding();
+  const [logoFailed, setLogoFailed] = React.useState(false);
+  React.useEffect(() => setLogoFailed(false), [branding?.logo_url]);
 
   const isActive = (item: AdminNavItem) =>
     item.exact
@@ -103,11 +105,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <div
           className={`flex items-center gap-2.5 text-lg font-bold ${collapsed ? "justify-center" : ""}`}
         >
-          {branding?.logo_url ? (
+          {branding?.logo_url && !logoFailed ? (
             <img
               src={branding.logo_url}
               alt=""
               className="h-8 w-8 shrink-0 rounded-xl object-contain shadow-md shadow-primary/30"
+              onError={() => setLogoFailed(true)}
             />
           ) : (
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-info text-white shadow-md shadow-primary/30">
