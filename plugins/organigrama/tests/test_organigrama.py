@@ -345,6 +345,58 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         self.assertIn("emp2", team2_usernames)
         self.assertNotIn("emp1", team2_usernames)
 
+    def test_albanian_tl_subtree_hides_italian_tl_with_no_employees(self):
+        """An Italian TL the Albanian TL merely reports to, with nobody
+        currently assigned under that specific line, must not show as a
+        disconnected, childless root — only Italian TLs with actual
+        employees under this Albanian TL appear.
+        """
+        empty_it_tl = User.objects.create_user(
+            username="it_tl_empty", password="test123",
+            first_name="Italian", last_name="Empty",
+        )
+        empty_it_tl.profile.is_italian_tl_role = True
+        empty_it_tl.profile.save(update_fields=["is_italian_tl_role"])
+
+        # Give the Albanian TL an empty manager line...
+        self.albanian_tl.profile.italian_tl = empty_it_tl
+        self.albanian_tl.profile.save(update_fields=["italian_tl"])
+        # ...while emp1/emp2 both resolve to a DIFFERENT Italian TL, so
+        # empty_it_tl ends up with zero employees.
+        self.emp1.profile.italian_tl = self.italian_tl
+        self.emp1.profile.save(update_fields=["italian_tl"])
+        self.emp2.profile.italian_tl = self.italian_tl
+        self.emp2.profile.save(update_fields=["italian_tl"])
+
+        resp = self._get_tree(self.albanian_tl)
+        self.assertEqual(resp.status_code, 200)
+        roots = resp.data["roots"]
+        root_usernames = {r.get("username") for r in roots}
+
+        self.assertNotIn(
+            "it_tl_empty", root_usernames,
+            "an Italian TL with no employees under this Albanian TL must not appear",
+        )
+        self.assertIn("it_tl", root_usernames)
+
+    def test_albanian_tl_subtree_falls_back_to_self_when_no_employees_anywhere(self):
+        """An Albanian TL with zero employees still sees their own node
+        rather than an empty tree.
+        """
+        lonely_al = User.objects.create_user(
+            username="lonely_al", password="test123",
+            first_name="Lonely", last_name="AlTl",
+        )
+        lonely_al.profile.is_albanian_tl_role = True
+        lonely_al.profile.italian_tl = self.italian_tl
+        lonely_al.profile.save(update_fields=["is_albanian_tl_role", "italian_tl"])
+
+        resp = self._get_tree(lonely_al)
+        self.assertEqual(resp.status_code, 200)
+        roots = resp.data["roots"]
+        self.assertEqual(len(roots), 1)
+        self.assertEqual(roots[0]["username"], "lonely_al")
+
     def test_albanian_tl_subtree_survives_stale_italian_tl_fk(self):
         """A UserProfile.italian_tl_id that no longer resolves to a User row
         (e.g. left over from a partial site-restore) must not crash the

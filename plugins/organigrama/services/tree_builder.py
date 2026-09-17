@@ -520,13 +520,11 @@ def build_subtree(user: User) -> Dict[str, Any]:
                 continue
             by_italian.setdefault(it_tl_id, []).append(emp_profile)
 
+        # Only Italian TLs with actual employees under this Albanian TL
+        # become roots — an Italian TL the Albanian TL merely reports to,
+        # with nobody currently assigned under that specific line, would
+        # otherwise show as a disconnected, childless box.
         it_ids = set(by_italian.keys())
-        if own_it_tl_id is not None:
-            # Show the Albanian TL's own reporting line even when none of
-            # their employees happen to sit under it.
-            it_ids.add(own_it_tl_id)
-            by_italian.setdefault(own_it_tl_id, [])
-
         italian_tls_by_id = _fetch_italian_tls_by_id(it_ids)
         for it_id in sorted(
             (i for i in it_ids if i in italian_tls_by_id),
@@ -548,10 +546,11 @@ def build_subtree(user: User) -> Dict[str, Any]:
             if it_id not in italian_tls_by_id:
                 unresolved.extend(by_italian.get(it_id, []))
 
-        if unresolved:
+        if unresolved or not roots:
             # No Italian TL resolvable anywhere (the Albanian TL has no
-            # manager either) — fall back to the Albanian TL as root for
-            # this leftover group rather than dropping them from the tree.
+            # manager either), or the Albanian TL currently has no
+            # employees under any Italian TL at all — fall back to the
+            # Albanian TL as root rather than showing an empty tree.
             al_node = _person_node(user, profile)
             total_nodes += 1
             total_nodes += _attach_members(al_node, unresolved)
