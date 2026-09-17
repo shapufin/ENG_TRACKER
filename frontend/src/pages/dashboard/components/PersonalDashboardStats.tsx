@@ -34,7 +34,7 @@ export const PersonalDashboardStats: React.FC<PersonalDashboardStatsProps> = ({
       delay={0.05}
     />
     <StatCard
-      label="Leave Balance"
+      label="Vacation Balance"
       value={<AnimatedNumber value={approvedLeaveDays} suffix="d" />}
       icon={Plane}
       glow="warning"
