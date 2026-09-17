@@ -29,7 +29,6 @@ export const DashboardPage: React.FC = () => {
     overtimeData: dashboardData.overtimeData,
     standbyData: dashboardData.standbyData,
     leaveData: dashboardData.leaveData,
-    personalOvertimeHours: dashboardData.personalOvertimeHours,
     approvedLeaveDays: dashboardData.approvedLeaveDays,
     recentActivity: dashboardData.recentActivity,
   });
@@ -69,9 +68,8 @@ export const DashboardPage: React.FC = () => {
           leaveData: dashboardData.leaveData,
           personalOvertimeHours: dashboardData.personalOvertimeHours,
           personalStandbyHours: dashboardData.personalStandbyHours,
-          approvedLeaveDays: dashboardData.approvedLeaveDays,
+          vacationBalanceDays: dashboardData.vacationBalanceDays,
           pendingLeaveDays: dashboardData.pendingLeaveDays,
-          overtimeProgress: personalItems.overtimeGoalProgress,
           leaveProgress: personalItems.leaveGoalProgress,
           upcomingLeaves: personalItems.upcomingLeaves,
           personalPendingItems: personalItems.personalPendingItems,

@@ -885,4 +885,4 @@ class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
             # Create default branding if none exists
             branding = SiteBranding.objects.create()
         serializer = self.get_serializer(branding)
-        return Response(serializer.data)()
+        return Response(serializer.data)

@@ -15,7 +15,7 @@ vi.mock("@/services/standbyService", () => ({
   standbyService: { getLogs: vi.fn(), getSummary: vi.fn() },
 }));
 vi.mock("@/services/leaveService", () => ({
-  leaveService: { getRequests: vi.fn() },
+  leaveService: { getRequests: vi.fn(), getUserBalanceSummary: vi.fn() },
 }));
 vi.mock("@/services/dashboardService", () => ({
   dashboardService: { getHRStats: vi.fn() },
@@ -43,6 +43,7 @@ describe("useDashboardData", () => {
     vi.mocked(leaveService.getRequests).mockResolvedValue({
       count: 0, next: null, previous: null, results: [],
     } as never);
+    vi.mocked(leaveService.getUserBalanceSummary).mockResolvedValue({} as never);
     vi.mocked(dashboardService.getHRStats).mockResolvedValue({} as never);
 
     const queryClient = new QueryClient();
@@ -58,5 +59,45 @@ describe("useDashboardData", () => {
     );
 
     await waitFor(() => expect(result.current.personalStandbyHours).toBe(42));
+  });
+
+  it("vacationBalanceDays reflects the real remaining balance, not a page-capped sum of approved requests", async () => {
+    vi.mocked(overtimeService.getLogs).mockResolvedValue({
+      count: 0, next: null, previous: null, results: [],
+    } as never);
+    vi.mocked(overtimeService.getSummary).mockResolvedValue({
+      total_hours: 0, total_entries: 0, approved_hours: 0, pending_hours: 0, rejected_hours: 0,
+    });
+    vi.mocked(standbyService.getLogs).mockResolvedValue({
+      count: 0, next: null, previous: null, results: [],
+    } as never);
+    vi.mocked(standbyService.getSummary).mockResolvedValue({
+      total_hours: 0, total_entries: 0, approved_hours: 0, pending_hours: 0, rejected_hours: 0,
+    });
+    vi.mocked(leaveService.getRequests).mockResolvedValue({
+      count: 0, next: null, previous: null, results: [],
+    } as never);
+    vi.mocked(leaveService.getUserBalanceSummary).mockResolvedValue({
+      user_id: 1, username: "u", full_name: "U", year: 2026,
+      vacation: {
+        carry_over: null, current_year: null,
+        total_available: 17, total_used: 3, total_pending: 0,
+      },
+    } as never);
+    vi.mocked(dashboardService.getHRStats).mockResolvedValue({} as never);
+
+    const queryClient = new QueryClient();
+    const { result } = renderHook(
+      () =>
+        useDashboardData({
+          userId: 1,
+          isAdmin: false,
+          isHR: false,
+          selectedDashboard: "employee",
+        }),
+      { wrapper: createWrapper(queryClient) }
+    );
+
+    await waitFor(() => expect(result.current.vacationBalanceDays).toBe(17));
   });
 });

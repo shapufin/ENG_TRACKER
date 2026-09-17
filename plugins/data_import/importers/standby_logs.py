@@ -254,7 +254,7 @@ class StandbyLogImporter(StaffOnlyAuthority, BaseImporter):
                     if clients:
                         existing_log.clients.set(clients)
                 else:
-                    existing_log = StandbyLog.objects.create(
+                    existing_log = StandbyLog(
                         user=user, date=work_date,
                         hours=hours if hours is not None else Decimal("1"),
                         start_time=start_time, end_time=end_time,
@@ -263,8 +263,15 @@ class StandbyLogImporter(StaffOnlyAuthority, BaseImporter):
                         status="approved", approved_by=context.get("actor"),
                         approved_at=timezone.now(),
                     )
+                    # One row-per-day notification per imported user would bloat
+                    # the notification bar for a bulk (e.g. week-long) import —
+                    # suppress the per-row signal and bundle in finalize_batch.
+                    existing_log._skip_notifications = True
+                    existing_log.save()
                     if clients:
                         existing_log.clients.set(clients)
+                    context.setdefault("standby_created_dates", {}).setdefault(user.id, []).append(work_date)
+                    context.setdefault("standby_created_users", {})[user.id] = user
 
             if dry_run:
                 return ImportRowResult(row_index=row_index, status="valid")
@@ -278,6 +285,9 @@ class StandbyLogImporter(StaffOnlyAuthority, BaseImporter):
     def finalize_batch(
         self, context: Dict[str, Any], options: Dict[str, Any], *, dry_run: bool = False
     ) -> None:
+        if not dry_run:
+            self._notify_created_users(context)
+
         if not options.get(GENERATE_DRAFT_PAYROLL_OPTION_KEY):
             return
         periods_users = context.get("payroll_periods_users") or {}
@@ -286,3 +296,32 @@ class StandbyLogImporter(StaffOnlyAuthority, BaseImporter):
         context["payroll_result"] = generate_draft_runs_for_periods(
             periods_users, context.get("actor"), dry_run=dry_run,
         )
+
+    def _notify_created_users(self, context: Dict[str, Any]) -> None:
+        """One bundled range notification per user instead of one per row."""
+        created_dates = context.get("standby_created_dates") or {}
+        created_users = context.get("standby_created_users") or {}
+        if not created_dates:
+            return
+
+        from plugins.notifications.signals import _create_notification
+        from plugins.notifications.types.own import StandbySubmittedNotification
+
+        event_type = StandbySubmittedNotification.event_type
+        for user_id, dates in created_dates.items():
+            user = created_users.get(user_id)
+            if not user:
+                continue
+            start, end = min(dates), max(dates)
+            message = (
+                f'Your standby logs for {start} to {end} have been submitted.'
+                if start != end else
+                f'Your standby log for {start} has been submitted.'
+            )
+            _create_notification(
+                user=user,
+                title='New Standby Logs' if start != end else 'New Standby Log',
+                message=message,
+                event_type=event_type,
+                notification_type='info',
+            )

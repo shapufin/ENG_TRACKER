@@ -16,6 +16,7 @@ vi.mock("@/hooks/useDashboardData", () => ({
     personalOvertimeHours: 0,
     personalStandbyHours: 0,
     approvedLeaveDays: 0,
+    vacationBalanceDays: 0,
     pendingLeaveDays: 0,
     hrStats: null,
     monthlyData: null,
@@ -30,7 +31,6 @@ vi.mock("@/context/PermissionContext", () => ({ usePermissions: vi.fn() }));
 vi.mock("./hooks/useDashboardSelection", () => ({ useDashboardSelection: vi.fn() }));
 vi.mock("./hooks/usePersonalDashboardItems", () => ({
   usePersonalDashboardItems: () => ({
-    overtimeGoalProgress: 0,
     leaveGoalProgress: 0,
     upcomingLeaves: [],
     personalPendingItems: [],

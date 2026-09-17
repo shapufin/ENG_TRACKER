@@ -1,14 +1,12 @@
 import { useMemo } from "react";
 import type { OvertimeLog, StandbyLog, LeaveRequest } from "@/types";
 
-const PERSONAL_OVERTIME_TARGET = 40;
 const PERSONAL_LEAVE_TARGET = 20;
 
 interface DashboardData {
   overtimeData?: { results?: OvertimeLog[] };
   standbyData?: { results?: StandbyLog[] };
   leaveData?: { results?: LeaveRequest[] };
-  personalOvertimeHours: number;
   approvedLeaveDays: number;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   recentActivity: any[];
@@ -18,11 +16,9 @@ export const usePersonalDashboardItems = ({
   overtimeData,
   standbyData,
   leaveData,
-  personalOvertimeHours,
   approvedLeaveDays,
   recentActivity,
 }: DashboardData) => {
-  const overtimeGoalProgress = (personalOvertimeHours / PERSONAL_OVERTIME_TARGET) * 100;
   const leaveGoalProgress = (approvedLeaveDays / PERSONAL_LEAVE_TARGET) * 100;
 
   const personalTimelineItems = useMemo(() => recentActivity.slice(0, 5), [recentActivity]);
@@ -75,7 +71,6 @@ export const usePersonalDashboardItems = ({
   }, [overtimeData, standbyData, leaveData]);
 
   return {
-    overtimeGoalProgress,
     leaveGoalProgress,
     personalTimelineItems,
     upcomingLeaves,

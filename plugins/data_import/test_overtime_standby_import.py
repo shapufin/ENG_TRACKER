@@ -280,6 +280,55 @@ class StandbyLogImporterTests(TestCase):
         self.assertEqual(StandbyLog.objects.count(), 1)
 
 
+class StandbyLogImporterNotificationBundlingTests(TestCase):
+    """A week's worth of imported standby rows for one user must produce a
+    single range notification, not one per day (notification bar bloat)."""
+
+    def setUp(self):
+        self.importer = StandbyLogImporter()
+        self.actor = make_actor()
+        self.user = User.objects.create_user(username="mrossi", email="m.rossi@example.com")
+
+    def _ctx(self):
+        return {"actor": self.actor}
+
+    def test_week_of_rows_bundles_into_one_notification(self):
+        from plugins.notifications.models import Notification
+
+        context = self._ctx()
+        for day in range(5, 12):  # Mon–Sun, 2026-01-05..2026-01-11
+            result = self.importer.commit_row(
+                row(day, username="mrossi", date=date(2026, 1, day), hours=Decimal("12")),
+                NO_UPDATE, context=context,
+            )
+            self.assertEqual(result.status, "created")
+
+        self.assertEqual(StandbyLog.objects.filter(user=self.user).count(), 7)
+        self.assertEqual(
+            Notification.objects.filter(user=self.user, title__icontains="Standby").count(), 0,
+            "per-row notifications must be suppressed during import",
+        )
+
+        self.importer.finalize_batch(context, NO_UPDATE, dry_run=False)
+
+        notifications = Notification.objects.filter(user=self.user, title__icontains="Standby")
+        self.assertEqual(notifications.count(), 1)
+        message = notifications.first().message
+        self.assertIn("2026-01-05", message)
+        self.assertIn("2026-01-11", message)
+
+    def test_dry_run_does_not_create_notification(self):
+        context = self._ctx()
+        self.importer.commit_row(
+            row(username="mrossi", date=date(2026, 1, 5), hours=Decimal("12")),
+            NO_UPDATE, context=context, dry_run=True,
+        )
+        self.importer.finalize_batch(context, NO_UPDATE, dry_run=True)
+
+        from plugins.notifications.models import Notification
+        self.assertEqual(Notification.objects.filter(user=self.user).count(), 0)
+
+
 class PayrollDraftGenerationTests(TestCase):
     """Exercises the optional `generate_draft_payroll` finalize_batch hook."""
 

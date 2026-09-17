@@ -8,14 +8,14 @@ interface PersonalDashboardStatsProps {
   user: User | null;
   personalOvertimeHours: number;
   personalStandbyHours: number;
-  approvedLeaveDays: number;
+  vacationBalanceDays: number;
 }
 
 export const PersonalDashboardStats: React.FC<PersonalDashboardStatsProps> = ({
   user,
   personalOvertimeHours,
   personalStandbyHours,
-  approvedLeaveDays,
+  vacationBalanceDays,
 }) => (
   <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
     <StatCard
@@ -34,11 +34,12 @@ export const PersonalDashboardStats: React.FC<PersonalDashboardStatsProps> = ({
       delay={0.05}
     />
     <StatCard
-      label="Vacation Balance"
-      value={<AnimatedNumber value={approvedLeaveDays} suffix="d" />}
+      label="Vacation Days Remaining"
+      value={<AnimatedNumber value={vacationBalanceDays} suffix="d" />}
       icon={Plane}
       glow="warning"
       iconColorClass="text-warning"
+      trend="See Calendar for booked days"
       delay={0.1}
     />
     <StatCard

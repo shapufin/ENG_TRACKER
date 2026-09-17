@@ -83,6 +83,19 @@ export const useDashboardData = ({
     enabled: !!userId,
   });
 
+  // The "Vacation Balance" tile must show the user's actual remaining
+  // balance (total_available), not a sum of approved requests from the
+  // capped dashboardPageSize page above — same undercount class of bug
+  // already fixed for overtime/standby.
+  const { data: leaveBalanceSummary } = useQuery({
+    queryKey: ["leaves", userId ?? "anonymous", "balance-summary"],
+    queryFn: () => leaveService.getUserBalanceSummary(),
+    refetchOnMount: true,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+    enabled: !!userId,
+  });
+
   const overtimeResults = overtimeData?.results ?? [];
   const standbyResults = standbyData?.results ?? [];
   const leaveResults = leaveData?.results ?? [];
@@ -104,5 +117,6 @@ export const useDashboardData = ({
     ...calculations,
     personalOvertimeHours: overtimeSummary?.total_hours ?? calculations.personalOvertimeHours,
     personalStandbyHours: standbySummary?.total_hours ?? calculations.personalStandbyHours,
+    vacationBalanceDays: leaveBalanceSummary?.vacation?.total_available ?? calculations.approvedLeaveDays,
   };
 };

@@ -16,9 +16,8 @@ interface PersonalDashboardViewProps {
   leaveData: any;
   personalOvertimeHours: number;
   personalStandbyHours: number;
-  approvedLeaveDays: number;
+  vacationBalanceDays: number;
   pendingLeaveDays: number;
-  overtimeProgress: number;
   leaveProgress: number;
   upcomingLeaves: LeaveRequest[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,9 +30,8 @@ export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
   user,
   personalOvertimeHours,
   personalStandbyHours,
-  approvedLeaveDays,
+  vacationBalanceDays,
   pendingLeaveDays,
-  overtimeProgress,
   leaveProgress,
   upcomingLeaves,
   personalPendingItems,
@@ -44,13 +42,13 @@ export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
       user={user}
       personalOvertimeHours={personalOvertimeHours}
       personalStandbyHours={personalStandbyHours}
-      approvedLeaveDays={approvedLeaveDays}
+      vacationBalanceDays={vacationBalanceDays}
     />
 
     <div className="grid gap-6 lg:grid-cols-2">
       <PersonalDashboardLeavesCard upcomingLeaves={upcomingLeaves} />
       <PersonalDashboardProgressCard
-        overtimeProgress={overtimeProgress}
+        personalOvertimeHours={personalOvertimeHours}
         leaveProgress={leaveProgress}
         personalStandbyHours={personalStandbyHours}
         pendingLeaveDays={pendingLeaveDays}

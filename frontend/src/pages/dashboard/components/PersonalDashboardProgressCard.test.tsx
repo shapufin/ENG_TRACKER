@@ -10,7 +10,7 @@ describe("PersonalDashboardProgressCard", () => {
   it("uses a shared GlassCard surface and tabular numeric summaries", () => {
     const { container } = render(
       <PersonalDashboardProgressCard
-        overtimeProgress={40}
+        personalOvertimeHours={12}
         leaveProgress={20}
         personalStandbyHours={2.5}
         pendingLeaveDays={1}

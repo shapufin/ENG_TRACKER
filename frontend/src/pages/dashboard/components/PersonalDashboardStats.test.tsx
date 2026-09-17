@@ -9,7 +9,7 @@ describe("PersonalDashboardStats", () => {
         user={{ username: "alice" } as never}
         personalOvertimeHours={4.5}
         personalStandbyHours={2}
-        approvedLeaveDays={3}
+        vacationBalanceDays={3}
       />
     );
 

@@ -3,14 +3,14 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { ProgressRing } from "@/components/dashboard/ProgressRing";
 
 interface PersonalDashboardProgressCardProps {
-  overtimeProgress: number;
+  personalOvertimeHours: number;
   leaveProgress: number;
   personalStandbyHours: number;
   pendingLeaveDays: number;
 }
 
 export const PersonalDashboardProgressCard: React.FC<PersonalDashboardProgressCardProps> = ({
-  overtimeProgress,
+  personalOvertimeHours,
   leaveProgress,
   personalStandbyHours,
   pendingLeaveDays,
@@ -18,12 +18,18 @@ export const PersonalDashboardProgressCard: React.FC<PersonalDashboardProgressCa
   <GlassCard isHoverLift={false} className="p-6">
     <div className="mb-4">
       <p className="text-sm text-muted-foreground">My Progress</p>
-      <h3 className="text-lg font-semibold">Hours & leave goal</h3>
+      <h3 className="text-lg font-semibold">Leave goal & hours</h3>
     </div>
     <div className="space-y-4">
-      <ProgressRing value={overtimeProgress} label="Overtime" />
+      {/* Overtime has no target to work toward — it's logged as needed, not
+          budgeted against a quota — so it gets a plain hours tile below,
+          not a goal ring. Leave has a real annual entitlement, so it keeps one. */}
       <ProgressRing value={leaveProgress} label="Leave Used" colorClass="text-warning" />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
+        <div className="rounded-xl border border-border bg-muted/30 p-4">
+          <p className="text-xs text-muted-foreground">Overtime Hours</p>
+          <p className="font-mono text-lg font-semibold tabular-nums">{personalOvertimeHours}h</p>
+        </div>
         <div className="rounded-xl border border-border bg-muted/30 p-4">
           <p className="text-xs text-muted-foreground">Standby Hours</p>
           <p className="font-mono text-lg font-semibold tabular-nums">{personalStandbyHours}h</p>
