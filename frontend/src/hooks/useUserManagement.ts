@@ -15,6 +15,7 @@ interface UseUserManagementOptions {
   techIds?: number[];
   techLevelIds?: number[];
   noTechOnly?: boolean;
+  teamIds?: number[];
 }
 
 /**
@@ -29,11 +30,13 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
   const techIds = options?.techIds ?? [];
   const techLevelIds = options?.techLevelIds ?? [];
   const noTechOnly = options?.noTechOnly ?? false;
+  const teamIds = options?.teamIds ?? [];
   // Comma-joined, not a bare array: axios serializes array params as
   // `tech[]=1`, which doesn't match DRF's `getlist('tech')` on the backend.
   const techParam = !noTechOnly && techIds.length > 0 ? techIds.join(",") : undefined;
   const techLevelParam =
     !noTechOnly && techLevelIds.length > 0 ? techLevelIds.join(",") : undefined;
+  const teamParam = teamIds.length > 0 ? teamIds.join(",") : undefined;
 
   const {
     data: profiles,
@@ -41,22 +44,25 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
     isError: isProfilesError,
     error: profilesError,
   } = useQuery({
-    queryKey: ["admin", "profiles", { role, techIds, techLevelIds, noTechOnly }],
+    queryKey: ["admin", "profiles", { role, techIds, techLevelIds, noTechOnly, teamIds }],
     queryFn: () =>
       userService.getProfiles({
         role,
         tech: techParam,
         tech_level: techLevelParam,
         no_tech: noTechOnly || undefined,
+        team: teamParam,
       }),
     refetchOnMount: true,
     staleTime: 300000,
     refetchOnWindowFocus: false,
   });
 
+  // Team narrows the facet counts too (see get_queryset), so it must be in
+  // this query key — otherwise switching teams would serve stale counts.
   const { data: techFacets } = useQuery({
-    queryKey: ["admin", "profiles", "tech-facets", { role }],
-    queryFn: () => userService.getTechFacets({ role }),
+    queryKey: ["admin", "profiles", "tech-facets", { role, teamIds }],
+    queryFn: () => userService.getTechFacets({ role, team: teamParam }),
     refetchOnMount: true,
     staleTime: 60000,
     refetchOnWindowFocus: false,

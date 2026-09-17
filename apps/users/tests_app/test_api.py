@@ -123,6 +123,9 @@ class TestUserTechAndRoleFacets(APITestCase):
 
         self.no_tech_user = User.objects.create_user(username='facet-none', password='testpass123')
 
+        self.infra_team = Team.objects.create(name='Infrastructure', code='INFRA')
+        self.tl_user.profile.teams.add(self.infra_team)
+
         self.client.force_authenticate(user=self.admin)
 
     def _usernames(self, response):
@@ -166,6 +169,23 @@ class TestUserTechAndRoleFacets(APITestCase):
     def test_tech_and_role_filters_combine(self):
         response = self.client.get(
             '/api/users/profiles/', {'role': 'italian_tl', 'tech': self.k8s.id}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self._usernames(response), {'facet-tl'})
+
+    def test_team_filter_returns_only_matching_users(self):
+        response = self.client.get('/api/users/profiles/', {'team': self.infra_team.id})
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertIn('facet-tl', usernames)
+        self.assertNotIn('facet-django', usernames)
+        self.assertNotIn('facet-none', usernames)
+
+    def test_team_and_tech_filters_combine(self):
+        # Team narrows down further than tech alone — django_user has the
+        # Django tech but is not on the Infrastructure team.
+        response = self.client.get(
+            '/api/users/profiles/', {'tech': self.k8s.id, 'team': self.infra_team.id}
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self._usernames(response), {'facet-tl'})

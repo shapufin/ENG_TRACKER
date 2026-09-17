@@ -963,6 +963,12 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
     def get_queryset(self):
         queryset = super().get_queryset()
         queryset = self._apply_role_filter(queryset, self.request.query_params.get('role'))
+        # Team is orthogonal to the tech facet counts (unlike tech/no_tech
+        # below), so it narrows the queryset even during tech_facets — picking
+        # Infrastructure should scope the per-tech counts to that team too.
+        team_ids = self._id_list_param('team')
+        if team_ids:
+            queryset = queryset.filter(teams__id__in=team_ids).distinct()
         # tech_facets counts each tech (and no-tech) against this same
         # queryset, so the `tech`/`no_tech` params there select what to
         # count, not which profiles to keep — applying them here would

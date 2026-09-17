@@ -1,6 +1,7 @@
 import React from "react";
 import { UserFilterTabs } from "@/components/admin/UserFilterTabs";
 import { TechFacetFilter } from "@/components/admin/TechFacetFilter";
+import { TeamFacetFilter } from "@/components/admin/TeamFacetFilter";
 import { UserBulkCommandDrawer } from "@/components/admin/UserBulkCommandDrawer";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import { cn } from "@/lib/utils";
@@ -79,8 +80,14 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
         .map((level) => level.code);
       return levels.length > 0 ? `${f.name} (${levels.join(", ")})` : f.name;
     });
+  const activeTeamLabels = teams
+    .filter((t) => state.teamIds.includes(t.id))
+    .map((t) => t.name);
   const hasActiveFilters =
-    state.tlFilter !== "all" || activeTechLabels.length > 0 || state.noTechOnly;
+    state.tlFilter !== "all" ||
+    activeTechLabels.length > 0 ||
+    state.noTechOnly ||
+    activeTeamLabels.length > 0;
   // profilesCount is the server-side total for the active role/tech filters
   // (accurate even past the page cap); once CR-only narrows the page
   // client-side, fall back to the actually-displayed row count.
@@ -109,6 +116,12 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
           onTechIdsChange={state.setTechIds}
           onLevelIdsChange={state.setTechLevelIds}
           onNoTechOnlyChange={state.setNoTechOnly}
+        />
+
+        <TeamFacetFilter
+          teams={teams}
+          selectedTeamIds={state.teamIds}
+          onTeamIdsChange={state.setTeamIds}
         />
 
         {hasActiveFilters && (
@@ -145,6 +158,17 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
                 tech: {label}
               </span>
             ))}
+            {activeTeamLabels.map((label) => (
+              <span
+                key={label}
+                className={cn(
+                  "rounded-md border px-2 py-0.5 font-mono font-semibold",
+                  toneSurfaceClass.info
+                )}
+              >
+                team: {label}
+              </span>
+            ))}
             <button
               type="button"
               className="text-muted-foreground underline hover:text-destructive"
@@ -153,6 +177,7 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
                 state.setTechIds([]);
                 state.setTechLevelIds([]);
                 state.setNoTechOnly(false);
+                state.setTeamIds([]);
               }}
             >
               Clear all

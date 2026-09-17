@@ -68,6 +68,7 @@ export const useUsersPage = () => {
   const [techIds, setTechIds] = useState<number[]>([]);
   const [techLevelIds, setTechLevelIds] = useState<number[]>([]);
   const [noTechOnly, setNoTechOnly] = useState(false);
+  const [teamIds, setTeamIds] = useState<number[]>([]);
   const [bulkCommandDrawerOpen, setBulkCommandDrawerOpen] = useState(false);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -99,6 +100,7 @@ export const useUsersPage = () => {
     techIds,
     techLevelIds,
     noTechOnly,
+    teamIds,
     onUpdateSuccess: () => {
       setFormOpen(false);
       setEditing(null);
@@ -358,6 +360,8 @@ export const useUsersPage = () => {
     setTechLevelIds,
     noTechOnly,
     setNoTechOnly: setNoTechOnlyFiltered,
+    teamIds,
+    setTeamIds,
     bulkCommandDrawerOpen,
     setBulkCommandDrawerOpen,
     bulkDeleteConfirmOpen,
