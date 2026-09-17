@@ -1,6 +1,6 @@
 import api from "@/lib/api";
 import { downloadBlobResponse, paginatedFetchAll } from "@/lib/download";
-import type { StandbyLog, PaginatedResponse, PendingMonthEntry } from "@/types";
+import type { StandbyLog, PaginatedResponse, PendingMonthEntry, StandbySummary } from "@/types";
 import { bulkApproveEntities, rejectEntity } from "./bulkActionHelpers";
 import { requestWithOfflineQueue } from "@/lib/offline/offlineQueue";
 
@@ -16,6 +16,14 @@ export const standbyService = {
     ignore_date_filter?: string;
   }): Promise<PaginatedResponse<StandbyLog>> {
     const { data } = await api.get<PaginatedResponse<StandbyLog>>("/standby/logs/", { params });
+    return data;
+  },
+
+  /** Server-side aggregate over the caller's own standby logs (unpaginated —
+   * unlike getLogs(), never truncated by page_size). See apps/standby/
+   * viewsets.py StandbyLogViewSet.summary. */
+  async getSummary(): Promise<StandbySummary> {
+    const { data } = await api.get<StandbySummary>("/standby/logs/summary/");
     return data;
   },
 

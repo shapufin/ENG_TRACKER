@@ -353,6 +353,14 @@ export interface OvertimeSummary {
   rejected_hours: number;
 }
 
+export interface StandbySummary {
+  total_hours: number;
+  total_entries: number;
+  approved_hours: number;
+  pending_hours: number;
+  rejected_hours: number;
+}
+
 export interface DashboardStats {
   total_users: number;
   total_overtime_hours: number;

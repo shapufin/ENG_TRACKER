@@ -50,6 +50,30 @@ export const useDashboardData = ({
     enabled: !!userId,
   });
 
+  // Dedicated aggregate queries for the "total hours" dashboard tiles: the
+  // logs queries above are capped at dashboardPageSize (5 for a personal
+  // dashboard) for the recent-activity list/chart, so summing their
+  // .results silently undercounts anyone with more entries than that page
+  // size. These hit the same server-side Sum('hours') the logs pages use,
+  // unpaginated.
+  const { data: overtimeSummary } = useQuery({
+    queryKey: ["overtime", userId ?? "anonymous", "summary"],
+    queryFn: () => overtimeService.getSummary(),
+    refetchOnMount: true,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+    enabled: !!userId,
+  });
+
+  const { data: standbySummary } = useQuery({
+    queryKey: ["standby", userId ?? "anonymous", "summary"],
+    queryFn: () => standbyService.getSummary(),
+    refetchOnMount: true,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+    enabled: !!userId,
+  });
+
   const { data: leaveData, isLoading: leaveLoading } = useQuery({
     queryKey: ["leaves", userId ?? "anonymous", "dashboard", selectedDashboard],
     queryFn: () => leaveService.getRequests({ page_size: dashboardPageSize }),
@@ -78,5 +102,7 @@ export const useDashboardData = ({
     standbyLoading,
     leaveLoading,
     ...calculations,
+    personalOvertimeHours: overtimeSummary?.total_hours ?? calculations.personalOvertimeHours,
+    personalStandbyHours: standbySummary?.total_hours ?? calculations.personalStandbyHours,
   };
 };
