@@ -4,7 +4,7 @@ Dashboard app serializers.
 
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from .models import DashboardWidget, UserDashboardPreference
+from .models import DashboardWidget, UserDashboardPreference, SiteBranding
 from .models.calendar import CalendarWorkspace, UserCalendarPreference, PublicHoliday
 
 User = get_user_model()

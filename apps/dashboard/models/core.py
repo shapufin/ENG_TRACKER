@@ -153,3 +153,26 @@ class DashboardWidgetAssignment(BaseModel):
     
     def __str__(self):
         return f"{self.widget.name} on {self.preference}"
+
+
+class SiteBranding(BaseModel):
+    """Site-wide branding singleton — name + logo shown in the sidebar/header.
+
+    Plain FileField, not ImageField: ImageField requires Pillow, which this
+    project doesn't otherwise depend on. Validation of "is this really an
+    image" is left to the frontend file picker's accept filter.
+    """
+    site_name = models.CharField(max_length=100, default='Engineering Tracker')
+    logo = models.FileField(upload_to='branding/', blank=True, null=True)
+
+    class Meta:
+        db_table = 'dashboard_site_branding'
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(pk=1),
+                name='dashboard_site_branding_singleton',
+            ),
+        ]
+
+    def __str__(self):
+        return self.site_name
