@@ -110,7 +110,7 @@ if not _frontend_url:
 CORS_ALLOWED_ORIGINS = [_frontend_url]
 # JWT-only SPA: credentials (cookies) are not needed for cross-origin
 # requests. The SPA uses the Authorization header, not cookies (P2-12).
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = False
 # CSRF trusted origins — derived from FRONTEND_URL for session-auth
 # routes (e.g. Django admin) (P1-4).
 CSRF_TRUSTED_ORIGINS = [_frontend_url]
