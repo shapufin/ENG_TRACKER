@@ -304,6 +304,27 @@ class ClientVisibilityTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 0)
 
+    def test_staff_create_client_via_api(self):
+        """POST must succeed end-to-end, including perform_create's cache
+        invalidation hook — ClientViewSet previously called
+        self.invalidate_related_cache() without inheriting the mixin that
+        defines it, so every real create/update 500'd despite the DB write
+        already having committed (only ORM-direct tests existed, which
+        bypass the viewset entirely and never caught this)."""
+        self.api_client.force_authenticate(user=self.staff)
+        response = self.api_client.post(
+            '/api/overtime/clients/', {'name': 'New Client', 'code': 'NEW001'}
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertTrue(Client.objects.filter(code='NEW001').exists())
+
+    def test_staff_update_client_via_api(self):
+        self.api_client.force_authenticate(user=self.staff)
+        response = self.api_client.patch(
+            f'/api/overtime/clients/{self.assigned.id}/', {'name': 'Renamed'}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
 
 class OvertimeMonthlyLockTests(TestCase):
     """Test the MonthlyLockMixin on OvertimeLogViewSet.

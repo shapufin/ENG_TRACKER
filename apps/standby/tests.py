@@ -954,3 +954,39 @@ class StandbyPayrollGuardTests(TestCase):
         )
         self.assertEqual(r.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(StandbyLog.objects.filter(id=self.log.id).exists())
+
+
+class StandbyPatternViewSetTests(TestCase):
+    """StandbyPatternViewSet previously called self.invalidate_related_cache()
+    without inheriting CacheInvalidationMixin, so every real create/update/
+    destroy 500'd despite the DB write already committing — every prior test
+    used StandbyPattern.objects.create() directly and never caught it."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(username='sp_user', password='testpass', is_staff=True)
+        self.client.force_authenticate(user=self.user)
+
+    def test_create_pattern_via_api(self):
+        response = self.client.post('/api/standby/patterns/', {
+            'user': self.user.id,
+            'name': 'Weekly Standby',
+            'recurrence_type': 'weekly',
+            'day_of_week': 0,
+            'start_time': '18:00:00',
+            'end_time': '08:00:00',
+            'valid_from': '2026-01-01',
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertTrue(StandbyPattern.objects.filter(name='Weekly Standby').exists())
+
+    def test_update_pattern_via_api(self):
+        pattern = StandbyPattern.objects.create(
+            user=self.user, name='Old Name', recurrence_type='weekly',
+            day_of_week=1, start_time='18:00:00', end_time='08:00:00',
+            valid_from='2026-01-01',
+        )
+        response = self.client.patch(
+            f'/api/standby/patterns/{pattern.id}/', {'name': 'New Name'}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)

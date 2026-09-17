@@ -10,6 +10,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
 from core.pagination import LargeResultsPagination
+from core.mixins.cache import CacheInvalidationMixin
 from core.mixins.permissions import (
     SuperuserPermissionMixin,
     PersonalOnlyFilterMixin,
@@ -35,7 +36,7 @@ from .serializers import (
 )
 
 
-class ClientViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
+class ClientViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.ModelViewSet):
     """
     ViewSet for Client model.
 
