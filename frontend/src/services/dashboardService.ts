@@ -12,6 +12,7 @@ import type {
   TopPendingUser,
   QueueHighlight,
   MonthlyComparisonData,
+  SiteBranding,
 } from "@/types";
 
 export const dashboardService = {
@@ -164,5 +165,23 @@ export const dashboardService = {
 
   async resetDashboardLayout(dashboardType: string = "admin"): Promise<void> {
     await api.delete("/dashboard/preferences/", { params: { dashboard_type: dashboardType } });
+  },
+
+  // Site Branding — `current` action auto-creates the singleton on first
+  // read (mirrors the GlobalSettings fix: a plain list() on an empty DB
+  // never creates the row, so this endpoint is used instead).
+  async getBranding(): Promise<SiteBranding> {
+    const { data } = await api.get<SiteBranding>("/dashboard/branding/current/");
+    return data;
+  },
+
+  async updateBranding(id: number, siteName: string, logo?: File | null): Promise<SiteBranding> {
+    const formData = new FormData();
+    formData.append("site_name", siteName);
+    if (logo) formData.append("logo", logo);
+    const { data } = await api.patch<SiteBranding>(`/dashboard/branding/${id}/`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data;
   },
 };

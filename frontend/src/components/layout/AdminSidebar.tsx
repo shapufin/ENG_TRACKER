@@ -1,10 +1,12 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { PluginSlot } from "@/components/plugins/PluginSlot";
 import { usePlugins } from "@/context/PluginContext";
+import { dashboardService } from "@/services/dashboardService";
 import { ChevronLeft, ChevronRight, LogOut, Shield, X } from "lucide-react";
 import { SidebarUserProfile } from "./SidebarUserProfile";
 import { SidebarInstallButton } from "./SidebarInstallButton";
@@ -56,6 +58,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const { getInjectedComponents } = usePlugins();
   const hasAdminPluginNav = getInjectedComponents("admin-sidebar-nav").length > 0;
   const hasAdminPluginNavSystem = getInjectedComponents("admin-sidebar-nav-system").length > 0;
+  const { data: branding } = useQuery({
+    queryKey: ["admin", "site-branding"],
+    queryFn: () => dashboardService.getBranding(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const isActive = (item: AdminNavItem) =>
     item.exact
@@ -101,12 +108,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <div
           className={`flex items-center gap-2.5 text-lg font-bold ${collapsed ? "justify-center" : ""}`}
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-info text-white shadow-md shadow-primary/30">
-            <Shield className="h-5 w-5" />
-          </div>
+          {branding?.logo_url ? (
+            <img
+              src={branding.logo_url}
+              alt=""
+              className="h-8 w-8 shrink-0 rounded-xl object-contain shadow-md shadow-primary/30"
+            />
+          ) : (
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-info text-white shadow-md shadow-primary/30">
+              <Shield className="h-5 w-5" />
+            </div>
+          )}
           {!collapsed && (
             <div className="leading-tight">
-              <span className="md:inline">Admin Panel</span>
+              <span className="md:inline">{branding?.site_name || "Admin Panel"}</span>
               <div className="font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
                 Enterprise
               </div>

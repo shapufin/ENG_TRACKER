@@ -1,8 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import React from "react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AdminSidebar } from "./AdminSidebar";
 import { usePlugins } from "@/context/PluginContext";
+import { dashboardService } from "@/services/dashboardService";
 import type { AdminNavItem } from "./hooks/useAdminNavItems";
 
 vi.mock("@/components/plugins/PluginSlot", () => ({
@@ -21,6 +24,9 @@ vi.mock("./SidebarUserProfile", () => ({
 vi.mock("@/context/PluginContext", () => ({
   usePlugins: vi.fn(() => ({ getInjectedComponents: () => [] })),
 }));
+vi.mock("@/services/dashboardService", () => ({
+  dashboardService: { getBranding: vi.fn() },
+}));
 
 const mockGetInjected = (slots: string[]) => {
   vi.mocked(usePlugins).mockReturnValue({
@@ -35,8 +41,13 @@ const items: AdminNavItem[] = [
   { path: "/admin/data-import", label: "Data Import", icon: () => null, group: "Tools" },
 ];
 
+const renderWithQuery = (ui: React.ReactElement) => {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+};
+
 const renderSidebar = () =>
-  render(
+  renderWithQuery(
     <MemoryRouter initialEntries={["/admin/users"]}>
       <AdminSidebar
         items={items}
@@ -50,6 +61,10 @@ const renderSidebar = () =>
   );
 
 describe("AdminSidebar", () => {
+  beforeEach(() => {
+    vi.mocked(dashboardService.getBranding).mockReset().mockRejectedValue(new Error("not mocked"));
+  });
+
   it("renders static section labels with flat items (no flyout buttons)", () => {
     mockGetInjected(["admin-sidebar-nav"]);
     renderSidebar();
@@ -101,9 +116,30 @@ describe("AdminSidebar", () => {
     expect(screen.getByText("Enterprise")).toBeInTheDocument();
   });
 
+  it("falls back to the gradient tile and 'Admin Panel' while branding is loading/errored", () => {
+    mockGetInjected([]);
+    renderSidebar();
+
+    expect(screen.getByText("Admin Panel")).toBeInTheDocument();
+    expect(document.querySelector(".bg-gradient-to-tr")).toBeTruthy();
+  });
+
+  it("renders the site name and logo once branding resolves", async () => {
+    vi.mocked(dashboardService.getBranding).mockResolvedValue({
+      id: 1, site_name: "Acme Tracker", logo: "branding/logo.png", logo_url: "/media/branding/logo.png",
+    });
+    mockGetInjected([]);
+    renderSidebar();
+
+    await waitFor(() => expect(screen.getByText("Acme Tracker")).toBeInTheDocument());
+    const img = document.querySelector('img[src="/media/branding/logo.png"]');
+    expect(img).toBeTruthy();
+    expect(document.querySelector(".bg-gradient-to-tr")).toBeNull();
+  });
+
   it("hides section labels and the Enterprise subtitle when collapsed", () => {
     mockGetInjected(["admin-sidebar-nav"]);
-    render(
+    renderWithQuery(
       <MemoryRouter initialEntries={["/admin/users"]}>
         <AdminSidebar
           items={items}
@@ -121,7 +157,7 @@ describe("AdminSidebar", () => {
   });
 
   it("stacks header vertically when collapsed (prevents button overflow)", () => {
-    render(
+    renderWithQuery(
       <MemoryRouter initialEntries={["/admin/users"]}>
         <AdminSidebar
           items={items}
@@ -142,7 +178,7 @@ describe("AdminSidebar", () => {
 
   it("role subtitle uses text-foreground, not text-primary (browser probe: 3.41:1 dark FAIL)", () => {
     mockGetInjected(["admin-sidebar-nav"]);
-    render(
+    renderWithQuery(
       <MemoryRouter initialEntries={["/admin/users"]}>
         <AdminSidebar
           items={items}

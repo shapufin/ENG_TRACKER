@@ -408,6 +408,13 @@ export interface PublicHoliday {
   calendar_name?: string;
 }
 
+export interface SiteBranding {
+  id: number;
+  site_name: string;
+  logo: string | null;
+  logo_url: string | null;
+}
+
 export interface TeamDashboardStats {
   pending_team_overtime: number;
   pending_team_standby: number;

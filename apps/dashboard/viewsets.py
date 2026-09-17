@@ -848,10 +848,6 @@ class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
     serializer_class = SiteBrandingSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        # Only return the singleton instance
-        return SiteBranding.objects.all()[:1]
-
     def _ensure_admin(self):
         user = self.request.user
         if not (user.is_staff or user.is_superuser):

@@ -346,11 +346,24 @@ class LeaveRequestViewSet(SuperuserPermissionMixin, HRReadOnlyMixin, TeamLeaderF
         elif self.action in {'bulk_approve', 'bulk_reject', 'bulk_delete'}:
             queryset = self.queryset
         else:
-            # If workspace_ids provided (e.g. from calendar), use mixin logic to show others.
+            user = self.request.user
             if self.request.query_params.get('workspace_ids'):
+                # If workspace_ids provided (e.g. from calendar), use mixin logic to show others.
+                queryset = super().get_queryset()
+            elif user.is_superuser or user.is_staff or (
+                hasattr(user, 'profile') and user.profile.is_hr
+            ):
                 queryset = super().get_queryset()
             else:
-                queryset = super().get_queryset()
+                # Personal dashboard's default list must be self-only, even
+                # for TLs — team-wide views go through the dedicated
+                # team_logs/team_pending actions, which already scope
+                # explicitly. Without this, TeamLeaderFilterMixin's default
+                # get_queryset() (via super()) returns every managed team
+                # member's rows too, leaking them into what's supposed to be
+                # a personal-only view (matches overtime/standby's
+                # PersonalOnlyFilterMixin behavior for their main list).
+                queryset = self.queryset.filter(user=user)
 
         current_year = timezone.now().year
         balances_prefetch = Prefetch(

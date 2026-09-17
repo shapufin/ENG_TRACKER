@@ -318,6 +318,49 @@ class LeaveRequestViewSetTests(TestCase):
         response = self.client.get('/api/leave-management/requests/team_logs/', {'workspace_ids': str(self.workspace.id)})
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
 
+    def test_team_leader_default_list_shows_only_own_requests(self):
+        """A TL's plain list (personal dashboard) must not include team rows.
+
+        Team-wide visibility belongs to team_logs/team_pending — the default
+        list is what the personal dashboard calls and must stay self-only,
+        matching overtime/standby's PersonalOnlyFilterMixin behavior.
+        """
+        tl_user = User.objects.create_user(username='lv-tl', password='testpass')
+        member = User.objects.create_user(username='lv-member', password='testpass')
+        team = Team.objects.create(name='Leave TL Team', code=f'LV{uuid4().hex[:8]}', team_leader=tl_user)
+        TeamMembership.objects.create(user_profile=member.profile, team=team)
+
+        member_balance = LeaveBalance.objects.create(
+            user=member, leave_type='vacation', year=timezone.now().year,
+            total_days=self.settings.default_yearly_leave_days,
+        )
+        LeaveRequest.objects.create(
+            user=member, start_date=self.business_day, end_date=self.business_day,
+            request_type='vacation', reason='Member leave', status='pending',
+            balance=member_balance,
+        )
+        tl_balance = LeaveBalance.objects.create(
+            user=tl_user, leave_type='vacation', year=timezone.now().year,
+            total_days=self.settings.default_yearly_leave_days,
+        )
+        LeaveRequest.objects.create(
+            user=tl_user, start_date=self.business_day, end_date=self.business_day,
+            request_type='vacation', reason='TL own leave', status='pending',
+            balance=tl_balance,
+        )
+
+        self.client.force_authenticate(user=tl_user)
+
+        response = self.client.get('/api/leave-management/requests/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        results = response.data.get('results', response.data)
+        returned_users = {r['user'] for r in results}
+        self.assertEqual(returned_users, {tl_user.id})
+
+        # Team-wide view is unaffected — team_pending still shows the member.
+        response = self.client.get('/api/leave-management/requests/team_pending/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
     def test_regular_team_member_is_forbidden_from_leave_team_logs(self):
         """Regular team members must not access leave team endpoints."""
         teammate = User.objects.create_user(username='lv-teammate', password='testpass')

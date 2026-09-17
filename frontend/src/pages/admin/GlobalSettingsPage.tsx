@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { leaveService } from "@/services/leaveService";
+import { dashboardService } from "@/services/dashboardService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,8 +10,9 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { handleApiError } from "@/lib/error-handler";
-import { Save } from "lucide-react";
+import { Save, Upload } from "lucide-react";
 import { toast } from "sonner";
+import type { SiteBranding } from "@/types";
 
 type GlobalSettings = Awaited<ReturnType<typeof leaveService.getSettings>>;
 
@@ -86,11 +88,68 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
   );
 };
 
+const SiteBrandingForm: React.FC<{ branding: SiteBranding }> = ({ branding }) => {
+  const queryClient = useQueryClient();
+  const [siteName, setSiteName] = useState(branding.site_name);
+  const [logo, setLogo] = useState<File | null>(null);
+
+  const update = useMutation({
+    mutationFn: () => dashboardService.updateBranding(branding.id, siteName, logo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "site-branding"] });
+      setLogo(null);
+      toast.success("Branding updated");
+    },
+    onError: (err: unknown) => handleApiError(err),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    update.mutate();
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="branding-site-name">Site Name</Label>
+        <Input
+          id="branding-site-name"
+          value={siteName}
+          onChange={(e) => setSiteName(e.target.value)}
+          required
+        />
+        <p className="text-xs text-muted-foreground">Shown in the sidebar and header.</p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="branding-logo">Logo</Label>
+        {branding.logo_url && !logo && (
+          <img src={branding.logo_url} alt="Current logo" className="h-10 w-10 rounded object-contain" />
+        )}
+        <Input
+          id="branding-logo"
+          type="file"
+          accept="image/png,image/jpeg,image/svg+xml,image/webp"
+          onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
+        />
+        <p className="text-xs text-muted-foreground">PNG, JPG, SVG or WebP. Leave empty to keep the current logo.</p>
+      </div>
+      <Button type="submit" disabled={update.isPending}>
+        <Upload className="mr-2 h-4 w-4" />
+        {update.isPending ? "Saving..." : "Save Branding"}
+      </Button>
+    </form>
+  );
+};
+
 export const GlobalSettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "global-settings"],
     queryFn: () => leaveService.getSettings(),
+  });
+  const { data: branding, isLoading: brandingLoading } = useQuery({
+    queryKey: ["admin", "site-branding"],
+    queryFn: () => dashboardService.getBranding(),
   });
 
   if (isLoading) return <LoadingCard rows={3} className="min-h-[300px]" />;
@@ -106,9 +165,23 @@ export const GlobalSettingsPage: React.FC = () => {
 
   return (
     <PageShell title="Global Vacation Settings" subtitle="Configure default vacation policies.">
-      <GlassCard delay={0} className="max-w-md p-6">
-        <GlobalSettingsForm key={settingsKey} settings={data} />
-      </GlassCard>
+      <div className="flex flex-col gap-6">
+        <GlassCard delay={0} className="max-w-md p-6">
+          <GlobalSettingsForm key={settingsKey} settings={data} />
+        </GlassCard>
+
+        <GlassCard delay={0.05} className="max-w-md p-6">
+          <h2 className="mb-4 text-lg font-semibold">Site Branding</h2>
+          {brandingLoading && <LoadingCard rows={2} />}
+          {!brandingLoading && !branding && (
+            <ErrorCard
+              title="Failed to load branding"
+              onRetry={() => queryClient.invalidateQueries({ queryKey: ["admin", "site-branding"] })}
+            />
+          )}
+          {branding && <SiteBrandingForm key={branding.id} branding={branding} />}
+        </GlassCard>
+      </div>
     </PageShell>
   );
 };

@@ -337,6 +337,88 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         }
         self.assertNotIn("emp2", direct_usernames)
 
+    def test_employee_with_italian_tl_fk_is_not_misidentified_as_albanian_tl(self):
+        """A regular employee can have their own italian_tl FK set (each
+        team has its own Italian TL — a data pattern this session
+        introduced) without an Albanian TL role. They must not be promoted
+        into the tree as if they were an Albanian TL reporting to that
+        Italian TL — that requires is_albanian_tl_role, not just the FK.
+        """
+        # emp1 has no Albanian TL role — only an italian_tl FK, same as any
+        # regular employee under the new per-team Italian TL data pattern.
+        self.emp1.profile.italian_tl = self.italian_tl
+        self.emp1.profile.save(update_fields=["italian_tl"])
+
+        resp = self._get_tree(self.admin)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.data
+        it_root = next(r for r in data["roots"] if r.get("username") == "it_tl")
+
+        al_peer_usernames = {
+            c.get("username") for c in it_root["children"] if c.get("type") == "person"
+        }
+        self.assertNotIn(
+            "emp1", al_peer_usernames,
+            "emp1 must not appear as an Albanian-TL-level peer under the Italian TL",
+        )
+        al_node = next(c for c in it_root["children"] if c.get("username") == "al_tl")
+        self.assertEqual(al_node["role_badge"], "albanian_tl")
+
+    def test_admin_full_tree_nests_employees_under_their_own_italian_tl(self):
+        """Same regression as the Albanian-TL subtree, but for the full
+        company tree (admin/HR view). An Albanian TL shared across teams
+        with different Italian TLs must not have every employee flattened
+        under them — employees whose own italian_tl differs from the
+        Albanian TL's own manager must nest under a second Italian TL node.
+        """
+        second_italian_tl = User.objects.create_user(
+            username="it_tl_team2", password="test123",
+            first_name="Italian", last_name="TeamTwo",
+        )
+        second_italian_tl.profile.is_italian_tl_role = True
+        second_italian_tl.profile.save(update_fields=["is_italian_tl_role"])
+
+        self.emp2.profile.italian_tl = second_italian_tl
+        self.emp2.profile.save(update_fields=["italian_tl"])
+
+        resp = self._get_tree(self.admin)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.data
+        roots = data["roots"]
+
+        it_root = next(r for r in roots if r.get("username") == "it_tl")
+        al_node = next(c for c in it_root["children"] if c.get("username") == "al_tl")
+
+        it_team2_node = next(
+            (c for c in al_node["children"] if c.get("username") == "it_tl_team2"),
+            None,
+        )
+        self.assertIsNotNone(
+            it_team2_node,
+            "emp2's own Italian TL must appear nested under the Albanian TL, "
+            "not just in the Albanian TL's own subtree view",
+        )
+        it_team2_usernames = self._collect_usernames(it_team2_node["children"])
+        self.assertIn("emp2", it_team2_usernames)
+
+        # emp2 must NOT also appear as a flat/tech direct descendant of the
+        # Albanian TL outside the nested it_tl_team2 node.
+        direct_usernames = self._collect_usernames(al_node["children"])
+        direct_usernames.discard("it_tl_team2")
+        self.assertNotIn("emp2", direct_usernames - it_team2_usernames)
+
+        # The common case (emp1, same Italian TL as the Albanian TL's own
+        # manager) must still attach directly — no redundant duplicate
+        # it_tl node for the already-shown Italian TL.
+        duplicate_it_tl_nodes = [
+            c for c in al_node["children"] if c.get("username") == "it_tl"
+        ]
+        self.assertEqual(
+            duplicate_it_tl_nodes, [],
+            "must not create a redundant nested node for the Italian TL "
+            "already represented one level up",
+        )
+
     def test_italian_tl_sees_subtree(self):
         resp = self._get_tree(self.italian_tl)
         self.assertEqual(resp.status_code, 200)
