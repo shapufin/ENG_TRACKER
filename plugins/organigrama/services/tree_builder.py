@@ -94,10 +94,24 @@ def _tech_node(tech: Tech) -> Dict[str, Any]:
     }
 
 
+def _has_role_q(role_code: str) -> Q:
+    """Match UserProfile.is_italian_tl/is_albanian_tl's role check as a
+    queryable Q: the legacy boolean flag, OR an active grant through the
+    Role/UserRole system (the authoritative source — role_codes on the
+    profile is only a denormalized cache of it, see
+    apps/permissions/services/role_service.py). Checking the boolean flag
+    alone misses anyone whose role only comes from Role/UserRole.
+    """
+    flag_field = f"profile__is_{role_code}_role"
+    return Q(**{flag_field: True}) | Q(
+        user_roles__role__code=role_code, user_roles__is_active=True
+    )
+
+
 def _get_italian_tls() -> List[User]:
     """Get all active Italian TLs (role-flagged)."""
     return list(
-        User.objects.filter(profile__is_italian_tl_role=True, is_active=True)
+        User.objects.filter(_has_role_q("italian_tl"), is_active=True)
         .select_related("profile")
         .prefetch_related(
             "profile__tech_assignments__tech", "profile__tech_assignments__level"
@@ -110,7 +124,7 @@ def _get_italian_tls() -> List[User]:
 def _get_albanian_tls_for_italian(italian_tl: User) -> List[User]:
     """Get active Albanian TLs reporting to a specific Italian TL.
 
-    Must filter on ``is_albanian_tl_role``, not just ``italian_tl`` being
+    Must filter on the Albanian TL role, not just ``italian_tl`` being
     set — regular employees can have their own ``italian_tl`` FK too (each
     team has its own Italian TL), and without this filter an employee with
     no Albanian TL role would be misidentified as one and wrongly promoted
@@ -119,8 +133,8 @@ def _get_albanian_tls_for_italian(italian_tl: User) -> List[User]:
     """
     return list(
         User.objects.filter(
+            _has_role_q("albanian_tl"),
             profile__italian_tl=italian_tl,
-            profile__is_albanian_tl_role=True,
             is_active=True,
         )
         .select_related("profile", "profile__italian_tl")
@@ -161,7 +175,7 @@ def _batch_get_albanian_tls(
 
     Returns a mapping of {italian_tl_id: [albanian_tl_users]}.
 
-    Must filter on ``is_albanian_tl_role``, not just ``italian_tl`` being
+    Must filter on the Albanian TL role, not just ``italian_tl`` being
     set — see ``_get_albanian_tls_for_italian`` for why: regular employees
     can have their own ``italian_tl`` FK too, and without this filter one
     would be misidentified as an Albanian TL and wrongly promoted into the
@@ -172,8 +186,8 @@ def _batch_get_albanian_tls(
     italian_ids = [it.id for it in italian_tls]
     albanian_tls = list(
         User.objects.filter(
+            _has_role_q("albanian_tl"),
             profile__italian_tl_id__in=italian_ids,
-            profile__is_albanian_tl_role=True,
             is_active=True,
         )
         .select_related("profile", "profile__italian_tl")
@@ -433,9 +447,9 @@ def build_subtree(user: User) -> Dict[str, Any]:
         visible_ids = profile.get_team_member_ids()
         albanian_tls = list(
             User.objects.filter(
+                _has_role_q("albanian_tl"),
                 id__in=visible_ids,
                 is_active=True,
-                profile__is_albanian_tl_role=True,
             )
             .select_related("profile", "profile__italian_tl")
             .distinct()

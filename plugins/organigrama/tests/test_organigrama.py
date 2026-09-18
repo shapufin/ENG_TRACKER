@@ -22,6 +22,7 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
 from apps.users.models.core import Tech, TechLevel, UserProfile, UserTech
+from apps.permissions.models import Role, UserRole
 from plugins.organigrama.viewsets import OrganigramaViewSet
 from plugins.organigrama.services import tree_builder
 
@@ -472,6 +473,54 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         )
         al_node = next(c for c in it_root["children"] if c.get("username") == "al_tl")
         self.assertEqual(al_node["role_badge"], "albanian_tl")
+
+    def test_albanian_tl_via_role_system_shows_up_without_legacy_flag(self):
+        """UserRole/Role is the authoritative source of a TL role — the
+        profile's is_italian_tl_role/is_albanian_tl_role boolean is only a
+        legacy flag. A TL whose role comes solely from an active UserRole
+        grant (no boolean flag set) must still be found and nested under
+        their Italian TL — this is the actual production pattern, not just
+        a boundary case.
+        """
+        role_based_it_tl = User.objects.create_user(
+            username="it_tl_role_based", password="test123",
+        )
+        role_based_al_tl = User.objects.create_user(
+            username="al_tl_role_based", password="test123",
+        )
+        role_based_al_tl.profile.italian_tl = role_based_it_tl
+        role_based_al_tl.profile.save(update_fields=["italian_tl"])
+        role_based_emp = User.objects.create_user(
+            username="emp_role_based", password="test123",
+        )
+        role_based_emp.profile.albanian_tl = role_based_al_tl
+        role_based_emp.profile.save(update_fields=["albanian_tl"])
+
+        italian_tl_role = Role.objects.get_or_create(
+            code="italian_tl", defaults={"name": "Italian TL"}
+        )[0]
+        albanian_tl_role = Role.objects.get_or_create(
+            code="albanian_tl", defaults={"name": "Albanian TL"}
+        )[0]
+        UserRole.objects.create(user=role_based_it_tl, role=italian_tl_role, is_active=True)
+        UserRole.objects.create(user=role_based_al_tl, role=albanian_tl_role, is_active=True)
+
+        resp = self._get_tree(self.admin)
+        self.assertEqual(resp.status_code, 200)
+        roots = resp.data["roots"]
+
+        it_root = next(
+            (r for r in roots if r.get("username") == "it_tl_role_based"), None
+        )
+        self.assertIsNotNone(it_root, "role-based Italian TL must appear as a root")
+        al_node = next(
+            (c for c in it_root["children"] if c.get("username") == "al_tl_role_based"),
+            None,
+        )
+        self.assertIsNotNone(
+            al_node, "role-based Albanian TL must appear under their Italian TL"
+        )
+        self.assertIn("emp_role_based", self._collect_usernames(al_node["children"]))
 
     def test_admin_full_tree_nests_employees_under_their_own_italian_tl(self):
         """Same regression as the Albanian-TL subtree, but for the full
