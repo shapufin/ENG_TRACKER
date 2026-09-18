@@ -3,13 +3,14 @@
  * Engineering Tracker Service Worker
  *
  * Strategy:
- * - App shell (HTML, JS, CSS): cache-first, fall back to network, then offline page
+ * - App shell (HTML): network-first, fall back to cache, then offline page
+ * - App shell (JS, CSS): cache-first (hashed filenames, safe to cache-first)
  * - API GET requests: network-only (authenticated data must never be cached)
  * - API POST/PUT/DELETE: never cache (mutations must reach the server)
  * - Static assets (icons, fonts): cache-first with long TTL
  */
 
-const CACHE_VERSION = "engtracker-v3";
+const CACHE_VERSION = "engtracker-v4";
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
@@ -82,8 +83,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // App shell: cache-first, fall back to network, fall back to offline
-  event.respondWith(cacheFirstShell(request));
+  // App shell navigation: network-first so deploys are reflected immediately,
+  // fall back to cache only when offline.
+  if (request.mode === "navigate") {
+    event.respondWith(networkFirstShell(request));
+    return;
+  }
+
+  // App shell JS/CSS: cache-first (Vite hashes these filenames, so a new
+  // deploy is always a new URL — safe to cache-first).
+  event.respondWith(cacheFirstStatic(request));
 });
 
 async function cacheFirstStatic(request) {
@@ -101,22 +110,19 @@ async function cacheFirstStatic(request) {
   }
 }
 
-async function cacheFirstShell(request) {
-  const cached = await caches.match(request);
-  if (cached) return cached;
+async function networkFirstShell(request) {
   try {
     const response = await fetch(request);
-    if (response.ok && request.mode === "navigate") {
+    if (response.ok) {
       const cache = await caches.open(APP_SHELL_CACHE);
       cache.put(request, response.clone());
     }
     return response;
   } catch (err) {
-    // Offline: return cached index.html for navigation requests
-    if (request.mode === "navigate") {
-      const fallback = await caches.match("/index.html");
-      if (fallback) return fallback;
-    }
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    const fallback = await caches.match("/index.html");
+    if (fallback) return fallback;
     return new Response("Offline", { status: 503, statusText: "Offline" });
   }
 }
