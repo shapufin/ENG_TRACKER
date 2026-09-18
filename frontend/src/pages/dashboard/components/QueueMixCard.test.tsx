@@ -1,5 +1,7 @@
+import type React from "react";
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { QueueMixCard } from "./QueueMixCard";
 
 const segments = [
@@ -8,9 +10,16 @@ const segments = [
   { label: "Leave", value: 7, percentage: 70, accent: "bg-emerald-500" },
 ];
 
+const renderCard = (props: Partial<React.ComponentProps<typeof QueueMixCard>> = {}) =>
+  render(
+    <MemoryRouter>
+      <QueueMixCard pendingTotal={10} pendingStandby={1} queueSegments={segments} {...props} />
+    </MemoryRouter>
+  );
+
 describe("QueueMixCard", () => {
   it("renders total and segments", () => {
-    render(<QueueMixCard pendingTotal={10} pendingStandby={1} queueSegments={segments} />);
+    renderCard();
     expect(screen.getByText("Queue Mix")).toBeInTheDocument();
     expect(screen.getByText("10 pending")).toBeInTheDocument();
     expect(screen.getByText("10")).toBeInTheDocument();
@@ -20,10 +29,18 @@ describe("QueueMixCard", () => {
 
   it("renders full circle when no standby", () => {
     const { container } = render(
-      <QueueMixCard pendingTotal={5} pendingStandby={0} queueSegments={segments} />
+      <MemoryRouter>
+        <QueueMixCard pendingTotal={5} pendingStandby={0} queueSegments={segments} />
+      </MemoryRouter>
     );
     const circle = container.querySelector('[style*="conic-gradient"]');
     expect(circle).toBeInTheDocument();
     expect(circle?.getAttribute("style")).toContain("360deg");
+  });
+
+  it("renders the compliance note and a Batch Assign link", () => {
+    renderCard();
+    expect(screen.getByText("Compliant with Work Regulations 2024")).toBeInTheDocument();
+    expect(screen.getByText("Batch Assign")).toBeInTheDocument();
   });
 });

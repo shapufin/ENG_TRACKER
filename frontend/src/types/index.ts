@@ -423,6 +423,7 @@ export interface TeamDashboardStats {
   approved_count?: number;
   rejected_count?: number;
   total_count?: number;
+  active_operator_count?: number;
 }
 
 export interface PendingTrendData {
@@ -443,9 +444,13 @@ export interface QueueHighlight {
   date: string;
   details: string;
   status: Status;
+  tag?: string | null;
+  hours?: number | null;
+  days?: number | null;
 }
 
 export interface MonthlyComparisonData {
+  granularity?: "week" | "month";
   current_month: {
     month: number;
     year: number;

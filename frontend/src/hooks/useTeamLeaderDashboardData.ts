@@ -5,6 +5,7 @@ interface UseTeamLeaderDashboardDataProps {
   userId?: number;
   teamId?: number;
   shouldQueryTeamData: boolean;
+  comparisonGranularity?: "week" | "month";
 }
 
 /**
@@ -17,6 +18,7 @@ export const useTeamLeaderDashboardData = ({
   userId,
   teamId,
   shouldQueryTeamData,
+  comparisonGranularity = "month",
 }: UseTeamLeaderDashboardDataProps) => {
   const teamKeySuffix = [userId ?? "anonymous", teamId ?? "no-team"] as const;
 
@@ -30,8 +32,8 @@ export const useTeamLeaderDashboardData = ({
   });
 
   const { data: monthlyComparison } = useQuery({
-    queryKey: ["dashboard", "monthly_comparison", ...teamKeySuffix],
-    queryFn: () => dashboardService.getMonthlyComparison(teamId),
+    queryKey: ["dashboard", "monthly_comparison", ...teamKeySuffix, comparisonGranularity],
+    queryFn: () => dashboardService.getMonthlyComparison(teamId, comparisonGranularity),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -57,7 +59,7 @@ export const useTeamLeaderDashboardData = ({
     isError: isQueueHighlightsError,
   } = useQuery({
     queryKey: ["dashboard", "queue_highlights", ...teamKeySuffix],
-    queryFn: () => dashboardService.getQueueHighlights(teamId, 4),
+    queryFn: () => dashboardService.getQueueHighlights(teamId, 20),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,

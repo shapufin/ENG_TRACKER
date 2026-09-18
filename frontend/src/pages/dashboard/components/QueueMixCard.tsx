@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/badge";
 const COLOR_VIOLET = "hsl(var(--chart-5))";
@@ -15,13 +16,16 @@ interface QueueMixCardProps {
   pendingTotal: number;
   pendingStandby: number;
   queueSegments: QueueSegment[];
+  complianceNote?: string;
 }
 
 export const QueueMixCard: React.FC<QueueMixCardProps> = ({
   pendingTotal,
   pendingStandby,
   queueSegments,
+  complianceNote = "Compliant with Work Regulations 2024",
 }) => {
+  const navigate = useNavigate();
   return (
     <GlassCard>
       <div className="flex flex-row items-start justify-between p-6 pb-0">
@@ -75,6 +79,17 @@ export const QueueMixCard: React.FC<QueueMixCardProps> = ({
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-4 flex items-center justify-between border-t border-line-subtle pt-3">
+          <p className="text-sm text-muted-foreground">{complianceNote}</p>
+          <button
+            type="button"
+            onClick={() => navigate("/team/approvals")}
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Batch Assign
+          </button>
         </div>
       </div>
     </GlassCard>

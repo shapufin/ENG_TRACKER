@@ -13,6 +13,7 @@ interface TeamLeaderDashboardHeaderProps {
   isHR: boolean;
   isAdmin: boolean;
   isSuperuser: boolean;
+  pendingApprovalCount?: number;
 }
 
 export const TeamLeaderDashboardHeader: React.FC<TeamLeaderDashboardHeaderProps> = ({
@@ -23,6 +24,7 @@ export const TeamLeaderDashboardHeader: React.FC<TeamLeaderDashboardHeaderProps>
   isHR,
   isAdmin,
   isSuperuser,
+  pendingApprovalCount,
 }) => {
   const navigate = useNavigate();
 
@@ -52,7 +54,14 @@ export const TeamLeaderDashboardHeader: React.FC<TeamLeaderDashboardHeaderProps>
         >
           Team Workspace
         </Badge>
-        <Button onClick={() => navigate("/team/approvals")}>Open Approval Queue</Button>
+        <Button onClick={() => navigate("/team/approvals")}>
+          Open Approval Queue
+          {!!pendingApprovalCount && (
+            <Badge className="ml-2 rounded-full bg-background/20 px-2 text-primary-foreground hover:bg-background/20">
+              {pendingApprovalCount}
+            </Badge>
+          )}
+        </Button>
       </div>
     </div>
   );

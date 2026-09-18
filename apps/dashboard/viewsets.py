@@ -157,6 +157,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         Query param: team_id (optional)
         Returns: pending_team_overtime, pending_team_standby, pending_team_leaves, team_size, approved_count, rejected_count, total_count
         """
+        from django.utils import timezone
         from apps.overtime.models import OvertimeLog
         from apps.standby.models import StandbyLog
         from apps.leave_management.models import LeaveRequest
@@ -172,6 +173,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
                 'approved_count': 0,
                 'rejected_count': 0,
                 'total_count': 0,
+                'active_operator_count': 0,
             })
         if error == 'team_not_found':
             return Response({'error': 'Team not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -202,6 +204,20 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         rejected_count = ot_stats['rejected'] + sb_stats['rejected'] + lv_stats['rejected']
         total_count = pending_overtime + pending_standby + pending_leaves + approved_count + rejected_count
 
+        today = timezone.now().date()
+        on_leave_ids = set(LeaveRequest.objects.filter(
+            user_id__in=team_member_ids,
+            status='approved',
+            start_date__lte=today,
+            end_date__gte=today,
+        ).values_list('user_id', flat=True))
+        on_standby_ids = set(StandbyLog.objects.filter(
+            user_id__in=team_member_ids,
+            status='approved',
+            date=today,
+        ).values_list('user_id', flat=True))
+        active_operator_count = len(set(team_member_ids) - on_leave_ids - on_standby_ids)
+
         return Response({
             'pending_team_overtime': pending_overtime,
             'pending_team_standby': pending_standby,
@@ -210,6 +226,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
             'approved_count': approved_count,
             'rejected_count': rejected_count,
             'total_count': total_count,
+            'active_operator_count': active_operator_count,
         })
 
     @action(detail=False, methods=['get'])
@@ -284,7 +301,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         Get month-over-month comparison data for pending approvals.
         Returns current month and previous month totals with percentage change.
         """
-        from datetime import date as date_cls
+        from datetime import date as date_cls, timedelta
         from django.utils import timezone
         from apps.overtime.models import OvertimeLog
         from apps.standby.models import StandbyLog
@@ -298,46 +315,30 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         if error == 'team_not_found':
             return Response({'error': 'Team not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        granularity = request.query_params.get('granularity', 'month')
         today = timezone.now().date()
-        current_month = today.month
-        current_year = today.year
 
-        # Calculate previous month
-        if current_month == 1:
-            prev_month = 12
-            prev_year = current_year - 1
-        else:
-            prev_month = current_month - 1
-            prev_year = current_year
-
-        # Get days in each month for normalization
-        prev_month_days = monthrange(prev_year, prev_month)[1]
-        days_elapsed_current = today.day
-
-        # Helper to get monthly counts
-        def get_monthly_counts(year, month, member_ids):
+        # Helper to get counts for an arbitrary inclusive date range
+        def get_counts_for_range(start, end, member_ids):
             overtime_count = OvertimeLog.objects.filter(
                 user_id__in=member_ids,
                 status='pending',
-                date__year=year,
-                date__month=month
+                date__gte=start,
+                date__lte=end,
             ).count()
 
             standby_count = StandbyLog.objects.filter(
                 user_id__in=member_ids,
                 status='pending',
-                date__year=year,
-                date__month=month
+                date__gte=start,
+                date__lte=end,
             ).count()
 
-            # Count leave requests that overlap with this month
-            month_start = date_cls(year, month, 1)
-            month_end = date_cls(year, month, monthrange(year, month)[1])
             leave_count = LeaveRequest.objects.filter(
                 user_id__in=member_ids,
                 status='pending',
-                start_date__lte=month_end,
-                end_date__gte=month_start,
+                start_date__lte=end,
+                end_date__gte=start,
             ).count()
 
             return {
@@ -347,11 +348,44 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
                 'total': overtime_count + standby_count + leave_count
             }
 
-        # Get current month data
-        current_data = get_monthly_counts(current_year, current_month, team_member_ids)
+        if granularity == 'week':
+            current_start = today - timedelta(days=today.weekday())
+            current_end = current_start + timedelta(days=6)
+            prev_start = current_start - timedelta(days=7)
+            prev_end = current_start - timedelta(days=1)
+            days_elapsed_current = today.weekday() + 1
+            prev_period_days = 7
+            current_label = f"Week of {current_start.strftime('%d %b')}"
+            prev_label = f"Week of {prev_start.strftime('%d %b')}"
+            current_period = {
+                'month': current_start.month, 'year': current_start.year,
+                'start': current_start.isoformat(), 'end': current_end.isoformat(),
+            }
+            prev_period = {
+                'month': prev_start.month, 'year': prev_start.year,
+                'start': prev_start.isoformat(), 'end': prev_end.isoformat(),
+            }
+        else:
+            current_month = today.month
+            current_year = today.year
+            if current_month == 1:
+                prev_month, prev_year = 12, current_year - 1
+            else:
+                prev_month, prev_year = current_month - 1, current_year
 
-        # Get previous month data
-        prev_data = get_monthly_counts(prev_year, prev_month, team_member_ids)
+            current_start = date_cls(current_year, current_month, 1)
+            current_end = date_cls(current_year, current_month, monthrange(current_year, current_month)[1])
+            prev_start = date_cls(prev_year, prev_month, 1)
+            prev_end = date_cls(prev_year, prev_month, monthrange(prev_year, prev_month)[1])
+            days_elapsed_current = today.day
+            prev_period_days = monthrange(prev_year, prev_month)[1]
+            current_label = today.strftime('%b')
+            prev_label = prev_start.strftime('%b')
+            current_period = {'month': current_month, 'year': current_year}
+            prev_period = {'month': prev_month, 'year': prev_year}
+
+        current_data = get_counts_for_range(current_start, current_end, team_member_ids)
+        prev_data = get_counts_for_range(prev_start, prev_end, team_member_ids)
 
         # Calculate percentage change
         if prev_data['total'] > 0:
@@ -361,20 +395,19 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Normalize to daily averages for fair comparison
         current_daily_avg = current_data['total'] / days_elapsed_current if days_elapsed_current > 0 else 0
-        prev_daily_avg = prev_data['total'] / prev_month_days if prev_month_days > 0 else 0
+        prev_daily_avg = prev_data['total'] / prev_period_days if prev_period_days > 0 else 0
 
         return Response({
+            'granularity': granularity,
             'current_month': {
-                'month': current_month,
-                'year': current_year,
-                'month_name': today.strftime('%b'),
+                **current_period,
+                'month_name': current_label,
                 'data': current_data,
                 'daily_average': round(current_daily_avg, 2)
             },
             'previous_month': {
-                'month': prev_month,
-                'year': prev_year,
-                'month_name': date_cls(prev_year, prev_month, 1).strftime('%b'),
+                **prev_period,
+                'month_name': prev_label,
                 'data': prev_data,
                 'daily_average': round(prev_daily_avg, 2)
             },
@@ -450,6 +483,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
 
         team, team_member_ids, error = self._get_team_and_members(request)
         limit = int(request.query_params.get('limit', 4))
+        scope = request.query_params.get('scope') or 'all'
 
         if error == 'no_profile' or error == 'no_team':
             return Response([])
@@ -461,46 +495,58 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         highlights = []
 
         # Overtime
-        for item in OvertimeLog.objects.select_related('user').filter(
-            user_id__in=team_member_ids,
-            status='pending'
-        ).order_by('-date')[:limit]:
-            highlights.append({
-                'id': item.id,
-                'type': 'overtime',
-                'user_name': f"{item.user.first_name} {item.user.last_name}",
-                'date': item.date.isoformat(),
-                'details': f"{item.hours}h - {item.description or 'No description'}",
-                'status': item.status
-            })
+        if scope in ('all', 'overtime'):
+            for item in OvertimeLog.objects.select_related('user').filter(
+                user_id__in=team_member_ids,
+                status='pending'
+            ).order_by('-date')[:limit]:
+                highlights.append({
+                    'id': item.id,
+                    'type': 'overtime',
+                    'user_name': f"{item.user.first_name} {item.user.last_name}",
+                    'date': item.date.isoformat(),
+                    'details': f"{item.hours}h - {item.description or 'No description'}",
+                    'status': item.status,
+                    'tag': 'OT',
+                    'hours': float(item.hours),
+                    'days': None,
+                })
 
         # Standby
-        for item in StandbyLog.objects.select_related('user').filter(
-            user_id__in=team_member_ids,
-            status='pending'
-        ).order_by('-date')[:limit]:
-            highlights.append({
-                'id': item.id,
-                'type': 'standby',
-                'user_name': f"{item.user.first_name} {item.user.last_name}",
-                'date': item.date.isoformat(),
-                'details': f"{item.hours}h - {item.description or 'No description'}",
-                'status': item.status
-            })
+        if scope in ('all', 'standby'):
+            for item in StandbyLog.objects.select_related('user').filter(
+                user_id__in=team_member_ids,
+                status='pending'
+            ).order_by('-date')[:limit]:
+                highlights.append({
+                    'id': item.id,
+                    'type': 'standby',
+                    'user_name': f"{item.user.first_name} {item.user.last_name}",
+                    'date': item.date.isoformat(),
+                    'details': f"{item.hours}h - {item.description or 'No description'}",
+                    'status': item.status,
+                    'tag': 'Standby',
+                    'hours': float(item.hours),
+                    'days': None,
+                })
 
         # Leave
-        for item in LeaveRequest.objects.select_related('user').filter(
-            user_id__in=team_member_ids,
-            status='pending'
-        ).order_by('-start_date')[:limit]:
-            highlights.append({
-                'id': item.id,
-                'type': 'leave',
-                'user_name': f"{item.user.first_name} {item.user.last_name}",
-                'date': item.start_date.isoformat(),
-                'details': f"{item.days_requested}d {item.request_type} - {item.reason or 'No reason'}",
-                'status': item.status
-            })
+        if scope in ('all', 'leave'):
+            for item in LeaveRequest.objects.select_related('user').filter(
+                user_id__in=team_member_ids,
+                status='pending'
+            ).order_by('-start_date')[:limit]:
+                highlights.append({
+                    'id': item.id,
+                    'type': 'leave',
+                    'user_name': f"{item.user.first_name} {item.user.last_name}",
+                    'date': item.start_date.isoformat(),
+                    'details': f"{item.days_requested}d {item.request_type} - {item.reason or 'No reason'}",
+                    'status': item.status,
+                    'tag': item.request_type.upper(),
+                    'hours': None,
+                    'days': item.days_requested,
+                })
 
         # Sort by date descending and limit
         highlights.sort(key=lambda x: x['date'], reverse=True)

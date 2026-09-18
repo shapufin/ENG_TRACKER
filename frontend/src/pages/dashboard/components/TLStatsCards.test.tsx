@@ -17,9 +17,13 @@ describe("TLStatsCards modernization", () => {
 
   it("renders the five stat labels", () => {
     const { getByText } = renderCards();
-    ["Pending Approvals", "Pending OT", "Pending SB", "Pending VAC", "Approved"].forEach((label) =>
-      expect(getByText(label)).toBeInTheDocument()
-    );
+    [
+      "Pending Approvals",
+      "Pending Standby",
+      "Pending Leave",
+      "Pending Overtime",
+      "Approved MTD",
+    ].forEach((label) => expect(getByText(label)).toBeInTheDocument());
   });
 
   it("renders values with tabular-nums", () => {
@@ -38,9 +42,9 @@ describe("TLStatsCards modernization", () => {
     const { container } = renderCards();
     const fills = container.querySelectorAll('[data-testid="stat-card-progress-fill"]');
     expect(fills).toHaveLength(5);
-    expect((fills[1] as HTMLElement).style.width).toBe("50%"); // pendingOvertime / pendingTotal
-    expect((fills[2] as HTMLElement).style.width).toBe("25%"); // pendingStandby / pendingTotal
-    expect((fills[3] as HTMLElement).style.width).toBe("25%"); // pendingLeave / pendingTotal
+    expect((fills[1] as HTMLElement).style.width).toBe("25%"); // pendingStandby / pendingTotal
+    expect((fills[2] as HTMLElement).style.width).toBe("25%"); // pendingLeave / pendingTotal
+    expect((fills[3] as HTMLElement).style.width).toBe("50%"); // pendingOvertime / pendingTotal
     expect((fills[4] as HTMLElement).style.width).toBe("64%"); // approvedCount / (approvedCount + pendingTotal)
   });
 
@@ -52,9 +56,9 @@ describe("TLStatsCards modernization", () => {
     expect(wells).toHaveLength(5);
     const classes = wells.map((w) => w.className);
     expect(classes[0]).toContain("bg-accent-red/10");
-    expect(classes[1]).toContain("bg-accent-orange/10");
-    expect(classes[2]).toContain("bg-accent-yellow/10");
-    expect(classes[3]).toContain("bg-accent-violet/10");
+    expect(classes[1]).toContain("bg-accent-yellow/10");
+    expect(classes[2]).toContain("bg-accent-violet/10");
+    expect(classes[3]).toContain("bg-accent-orange/10");
     expect(classes[4]).toContain("bg-accent-emerald/10");
   });
 });

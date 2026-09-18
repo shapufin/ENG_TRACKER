@@ -40,4 +40,27 @@ describe("TeamLeaderDashboardHeader mockup fidelity", () => {
     expect(pill.className).toContain("text-foreground");
     expect(pill.className).not.toMatch(/(^|\s)text-primary(\s|$)/);
   });
+
+  it("does not render a count badge when pendingApprovalCount is omitted or zero", () => {
+    renderHeader();
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
+  });
+
+  it("renders a pending count badge on the approval queue button", () => {
+    render(
+      <MemoryRouter>
+        <TeamLeaderDashboardHeader
+          availableDashboards={["team_leader"]}
+          selectedDashboard="team_leader"
+          onDashboardChange={vi.fn()}
+          isTeamLeader
+          isHR={false}
+          isAdmin={false}
+          isSuperuser={false}
+          pendingApprovalCount={10}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("10")).toBeInTheDocument();
+  });
 });

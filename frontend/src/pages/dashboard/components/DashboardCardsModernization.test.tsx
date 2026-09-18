@@ -1,6 +1,7 @@
 import React from "react";
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { TopBottlenecksCard } from "./TopBottlenecksCard";
 import { QueueMixCard } from "./QueueMixCard";
 import { MonthlyComparisonCard } from "./MonthlyComparisonCard";
@@ -12,7 +13,8 @@ const queueSegments = [
   { label: "Vacation", value: 2, percentage: 50, accent: "bg-accent-violet" },
 ];
 
-const markupOf = (ui: React.ReactElement) => render(ui).container.innerHTML;
+const markupOf = (ui: React.ReactElement) =>
+  render(<MemoryRouter>{ui}</MemoryRouter>).container.innerHTML;
 
 describe("dashboard card modernization", () => {
   it("does not use inline glass imitations (bare Card with bg-card/50 backdrop-blur)", () => {

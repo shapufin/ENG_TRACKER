@@ -24,4 +24,17 @@ describe("MonthlyComparisonCard", () => {
     expect(screen.getByText("Monthly Comparison")).toBeInTheDocument();
     expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(2);
   });
+
+  it("does not render a granularity toggle when onGranularityChange is omitted", () => {
+    render(<MonthlyComparisonCard />);
+    expect(screen.queryByText("Weeks")).not.toBeInTheDocument();
+  });
+
+  it("renders a granularity toggle and calls the callback", () => {
+    const onGranularityChange = vi.fn();
+    render(<MonthlyComparisonCard granularity="month" onGranularityChange={onGranularityChange} />);
+    expect(screen.getByText("Weeks")).toBeInTheDocument();
+    screen.getByText("Weeks").click();
+    expect(onGranularityChange).toHaveBeenCalledWith("week");
+  });
 });

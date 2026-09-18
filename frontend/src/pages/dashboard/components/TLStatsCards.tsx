@@ -37,18 +37,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
         progressColorClass="bg-tone-danger-text"
       />
       <StatCard
-        label="Pending OT"
-        value={pendingOvertime}
-        icon={Clock}
-        glow="warning"
-        iconColorClass="text-accent-orange"
-        iconWellClass="bg-accent-orange/10"
-        trend="Overtime requests"
-        progressPercent={otPercent}
-        progressColorClass="bg-tone-warning-text"
-      />
-      <StatCard
-        label="Pending SB"
+        label="Pending Standby"
         value={pendingStandby}
         icon={Shield}
         glow="warning"
@@ -59,7 +48,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
         iconWellClass="bg-accent-yellow/10"
       />
       <StatCard
-        label="Pending VAC"
+        label="Pending Leave"
         value={pendingLeave}
         icon={Plane}
         glow="primary"
@@ -70,7 +59,18 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
         iconWellClass="bg-accent-violet/10"
       />
       <StatCard
-        label="Approved"
+        label="Pending Overtime"
+        value={pendingOvertime}
+        icon={Clock}
+        glow="warning"
+        iconColorClass="text-accent-orange"
+        iconWellClass="bg-accent-orange/10"
+        trend="Overtime requests"
+        progressPercent={otPercent}
+        progressColorClass="bg-tone-warning-text"
+      />
+      <StatCard
+        label="Approved MTD"
         value={approvedCount}
         icon={CheckCircle}
         glow="success"

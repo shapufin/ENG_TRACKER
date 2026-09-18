@@ -5,6 +5,8 @@ import { TrendIndicator } from "./TrendIndicator";
 
 interface MonthlyComparisonCardProps {
   data?: MonthlyComparisonData;
+  granularity?: "week" | "month";
+  onGranularityChange?: (granularity: "week" | "month") => void;
 }
 
 const BarChart: React.FC<{
@@ -38,11 +40,39 @@ const BarChart: React.FC<{
   );
 };
 
-export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({ data }) => (
+export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
+  data,
+  granularity = "month",
+  onGranularityChange,
+}) => (
   <GlassCard>
-    <div className="p-6 pb-0">
-      <h3 className="text-xl font-semibold">Monthly Comparison</h3>
-      <p className="text-muted-foreground">Current vs previous month pending approvals</p>
+    <div className="flex items-start justify-between gap-3 p-6 pb-0">
+      <div>
+        <h3 className="text-xl font-semibold">Monthly Comparison</h3>
+        <p className="text-muted-foreground">Current vs previous month pending approvals</p>
+      </div>
+      {onGranularityChange && (
+        <div className="flex shrink-0 items-center gap-1 rounded-full border border-border/60 p-1">
+          <button
+            type="button"
+            onClick={() => onGranularityChange("month")}
+            className={`rounded-full px-3 py-1 text-sm ${
+              granularity === "month" ? "bg-primary/10 text-foreground" : "text-muted-foreground"
+            }`}
+          >
+            Months
+          </button>
+          <button
+            type="button"
+            onClick={() => onGranularityChange("week")}
+            className={`rounded-full px-3 py-1 text-sm ${
+              granularity === "week" ? "bg-primary/10 text-foreground" : "text-muted-foreground"
+            }`}
+          >
+            Weeks
+          </button>
+        </div>
+      )}
     </div>
     <div className="space-y-4 p-6">
       <TrendIndicator

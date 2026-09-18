@@ -51,7 +51,49 @@ describe("useTeamLeaderDashboardUI", () => {
         date: "2024-06-01",
         details: "",
         status: "pending",
+        tag: null,
+        hours: null,
+        days: null,
       },
     ]);
+  });
+
+  const mixedHighlights = [
+    { id: 1, type: "overtime", user_name: "A", date: "2024-06-03", details: "", status: "pending" },
+    { id: 2, type: "standby", user_name: "B", date: "2024-06-01", details: "", status: "pending" },
+    { id: 3, type: "leave", user_name: "C", date: "2024-06-02", details: "", status: "pending" },
+    { id: 4, type: "leave", user_name: "D", date: "2024-06-05", details: "", status: "approved" },
+  ];
+
+  it("computes highlightTypeCounts from pending items only", () => {
+    const { result } = renderHook(() =>
+      useTeamLeaderDashboardUI({ teamStats: null, queueHighlights: mixedHighlights } as any)
+    );
+    expect(result.current.highlightTypeCounts).toEqual({
+      all: 3,
+      overtime: 1,
+      standby: 1,
+      leave: 1,
+    });
+  });
+
+  it("filters and sorts highlights by type and date", () => {
+    const { result } = renderHook(() =>
+      useTeamLeaderDashboardUI({ teamStats: null, queueHighlights: mixedHighlights } as any, {
+        highlightFilter: "all",
+        highlightSort: "recent",
+      })
+    );
+    expect(result.current.filteredSortedHighlights.map((h) => h.id)).toEqual([4, 1, 3, 2]);
+  });
+
+  it("filters highlights down to a single type", () => {
+    const { result } = renderHook(() =>
+      useTeamLeaderDashboardUI({ teamStats: null, queueHighlights: mixedHighlights } as any, {
+        highlightFilter: "leave",
+        highlightSort: "oldest",
+      })
+    );
+    expect(result.current.filteredSortedHighlights.map((h) => h.id)).toEqual([3, 4]);
   });
 });

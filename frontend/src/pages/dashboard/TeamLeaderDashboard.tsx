@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { useTeamLeaderDashboardData } from "@/hooks/useTeamLeaderDashboardData";
@@ -9,7 +10,29 @@ import { QueueMixCard } from "./components/QueueMixCard";
 import { MonthlyComparisonCard } from "./components/MonthlyComparisonCard";
 import { QueueHighlightsSection } from "./components/QueueHighlightsSection";
 import { TeamLeaderDashboardHeader } from "./components/TeamLeaderDashboardHeader";
-import { useTeamLeaderDashboardUI } from "./hooks/useTeamLeaderDashboardUI";
+import {
+  useTeamLeaderDashboardUI,
+  type HighlightFilter,
+  type HighlightSort,
+} from "./hooks/useTeamLeaderDashboardUI";
+import { useQueueBatchApprove } from "./hooks/useQueueBatchApprove";
+import { overtimeService } from "@/services/overtimeService";
+import { standbyService } from "@/services/standbyService";
+import { leaveService } from "@/services/leaveService";
+
+const APPROVE_SERVICE_BY_TYPE: Record<string, { approve: (id: number) => Promise<unknown> }> = {
+  overtime: overtimeService,
+  standby: standbyService,
+  leave: leaveService,
+};
+const REJECT_SERVICE_BY_TYPE: Record<
+  string,
+  { reject: (id: number, rejectionReason: string) => Promise<unknown> }
+> = {
+  overtime: overtimeService,
+  standby: standbyService,
+  leave: leaveService,
+};
 
 interface TeamLeaderDashboardProps {
   selectedDashboard?: DashboardType;
@@ -26,6 +49,10 @@ const TeamLeaderDashboard: React.FC<TeamLeaderDashboardProps> = ({
   const teamId = user?.teams?.[0]?.id;
   const shouldQueryTeamData = !isLoading && !!userId && isTeamLeader;
 
+  const [comparisonGranularity, setComparisonGranularity] = useState<"week" | "month">("month");
+  const [highlightFilter, setHighlightFilter] = useState<HighlightFilter>("all");
+  const [highlightSort, setHighlightSort] = useState<HighlightSort>("recent");
+
   const handleDashboardChange = (dashboard: DashboardType) => {
     if (onDashboardChange) onDashboardChange(dashboard);
     try {
@@ -35,9 +62,28 @@ const TeamLeaderDashboard: React.FC<TeamLeaderDashboardProps> = ({
     }
   };
 
-  const dashboardData = useTeamLeaderDashboardData({ userId, teamId, shouldQueryTeamData });
-  const { pendingCounts, queueSegments, uiQueueHighlights } =
-    useTeamLeaderDashboardUI(dashboardData);
+  const dashboardData = useTeamLeaderDashboardData({
+    userId,
+    teamId,
+    shouldQueryTeamData,
+    comparisonGranularity,
+  });
+  const { pendingCounts, queueSegments, highlightTypeCounts, filteredSortedHighlights } =
+    useTeamLeaderDashboardUI(dashboardData, { highlightFilter, highlightSort });
+
+  const { batchApprove, isBatchApproving } = useQueueBatchApprove({
+    highlights: filteredSortedHighlights,
+  });
+
+  const queryClient = useQueryClient();
+  const handleApproveOne = async (id: number, type: string) => {
+    await APPROVE_SERVICE_BY_TYPE[type]?.approve(id);
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+  };
+  const handleRejectOne = async (id: number, type: string) => {
+    await REJECT_SERVICE_BY_TYPE[type]?.reject(id, "");
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+  };
 
   return (
     <PageShell
@@ -53,6 +99,7 @@ const TeamLeaderDashboard: React.FC<TeamLeaderDashboardProps> = ({
           isHR={isHR}
           isAdmin={isAdmin}
           isSuperuser={isSuperuser}
+          pendingApprovalCount={pendingCounts.total}
         />
 
         <TLStatsCards
@@ -69,13 +116,26 @@ const TeamLeaderDashboard: React.FC<TeamLeaderDashboardProps> = ({
             pendingStandby={pendingCounts.standby}
             queueSegments={queueSegments}
           />
-          <MonthlyComparisonCard data={dashboardData.monthlyComparison} />
+          <MonthlyComparisonCard
+            data={dashboardData.monthlyComparison}
+            granularity={comparisonGranularity}
+            onGranularityChange={setComparisonGranularity}
+          />
         </div>
 
         <QueueHighlightsSection
-          highlights={uiQueueHighlights}
+          highlights={filteredSortedHighlights}
           isLoading={dashboardData.isQueueHighlightsLoading}
           isError={dashboardData.isQueueHighlightsError}
+          typeCounts={highlightTypeCounts}
+          filter={highlightFilter}
+          onFilterChange={setHighlightFilter}
+          sort={highlightSort}
+          onSortChange={setHighlightSort}
+          onBatchApprove={batchApprove}
+          isBatchApproving={isBatchApproving}
+          onApproveOne={handleApproveOne}
+          onRejectOne={handleRejectOne}
         />
       </div>
     </PageShell>

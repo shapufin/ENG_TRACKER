@@ -49,19 +49,28 @@ export const dashboardService = {
     return data;
   },
 
-  async getQueueHighlights(teamId?: number, limit?: number): Promise<QueueHighlight[]> {
+  async getQueueHighlights(
+    teamId?: number,
+    limit?: number,
+    scope?: "overtime" | "standby" | "leave"
+  ): Promise<QueueHighlight[]> {
     const params: Record<string, string | number> = {};
     if (teamId) params.team_id = teamId;
     if (limit) params.limit = limit;
+    if (scope) params.scope = scope;
     const { data } = await api.get<QueueHighlight[]>("/dashboard/widgets/queue_highlights/", {
       params,
     });
     return data;
   },
 
-  async getMonthlyComparison(teamId?: number): Promise<MonthlyComparisonData> {
+  async getMonthlyComparison(
+    teamId?: number,
+    granularity?: "week" | "month"
+  ): Promise<MonthlyComparisonData> {
     const params: Record<string, string | number> = {};
     if (teamId) params.team_id = teamId;
+    if (granularity) params.granularity = granularity;
     const { data } = await api.get<MonthlyComparisonData>(
       "/dashboard/widgets/monthly_comparison/",
       { params }

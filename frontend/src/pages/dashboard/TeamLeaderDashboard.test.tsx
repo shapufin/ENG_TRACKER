@@ -1,8 +1,19 @@
+import type React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import TeamLeaderDashboard from "./TeamLeaderDashboard";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
+
+const renderDashboard = (props?: React.ComponentProps<typeof TeamLeaderDashboard>) => {
+  const queryClient = new QueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <TeamLeaderDashboard {...props} />
+    </QueryClientProvider>
+  );
+};
 
 vi.mock("@/context/AuthContext", () => ({ useAuth: vi.fn() }));
 vi.mock("@/context/PermissionContext", () => ({ usePermissions: vi.fn() }));
@@ -22,7 +33,12 @@ vi.mock("./hooks/useTeamLeaderDashboardUI", () => ({
     queueSegments: [],
     uiTopPendingUsers: [],
     uiQueueHighlights: [],
+    highlightTypeCounts: { all: 0, overtime: 0, standby: 0, leave: 0 },
+    filteredSortedHighlights: [],
   }),
+}));
+vi.mock("./hooks/useQueueBatchApprove", () => ({
+  useQueueBatchApprove: () => ({ batchApprove: vi.fn(), isBatchApproving: false }),
 }));
 vi.mock("@/components/layout/PageShell", () => ({
   PageShell: ({ children, title, subtitle }: any) => (
@@ -67,7 +83,7 @@ describe("TeamLeaderDashboard", () => {
       isLoading: false,
     } as any);
     vi.mocked(usePermissions).mockReturnValue(basePermissions as any);
-    render(<TeamLeaderDashboard />);
+    renderDashboard();
     expect(screen.getByText("Team Leader Dashboard")).toBeInTheDocument();
     expect(screen.getByText(/Alpha Team/)).toBeInTheDocument();
     expect(screen.getByText(/5 members/)).toBeInTheDocument();
@@ -79,7 +95,7 @@ describe("TeamLeaderDashboard", () => {
       isLoading: false,
     } as any);
     vi.mocked(usePermissions).mockReturnValue(basePermissions as any);
-    render(<TeamLeaderDashboard />);
+    renderDashboard();
     expect(screen.getByText(/your team/)).toBeInTheDocument();
   });
 
@@ -90,7 +106,7 @@ describe("TeamLeaderDashboard", () => {
       isLoading: false,
     } as any);
     vi.mocked(usePermissions).mockReturnValue(basePermissions as any);
-    render(<TeamLeaderDashboard onDashboardChange={onDashboardChange} />);
+    renderDashboard({ onDashboardChange });
     // The header component is mocked indirectly; verify the page shell renders
     expect(screen.getByTestId("page-shell")).toBeInTheDocument();
   });
@@ -102,7 +118,7 @@ describe("TeamLeaderDashboard", () => {
       isLoading: false,
     } as any);
     vi.mocked(usePermissions).mockReturnValue(basePermissions as any);
-    render(<TeamLeaderDashboard onDashboardChange={vi.fn()} />);
+    renderDashboard({ onDashboardChange: vi.fn() });
     // We can't easily trigger the header's onDashboardChange without mocking it,
     // but we verify the component renders without crashing.
     expect(screen.getByText("Team Leader Dashboard")).toBeInTheDocument();
@@ -115,7 +131,7 @@ describe("TeamLeaderDashboard", () => {
       isLoading: false,
     } as any);
     vi.mocked(usePermissions).mockReturnValue(basePermissions as any);
-    render(<TeamLeaderDashboard selectedDashboard="team_leader" />);
+    renderDashboard({ selectedDashboard: "team_leader" });
     expect(screen.getByText("Team Leader Dashboard")).toBeInTheDocument();
   });
 
@@ -125,7 +141,7 @@ describe("TeamLeaderDashboard", () => {
       isLoading: true,
     } as any);
     vi.mocked(usePermissions).mockReturnValue(basePermissions as any);
-    render(<TeamLeaderDashboard />);
+    renderDashboard();
     expect(screen.getByText("Team Leader Dashboard")).toBeInTheDocument();
   });
 });
