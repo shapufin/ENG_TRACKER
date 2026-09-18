@@ -20,6 +20,7 @@ vi.mock("@/context/PermissionContext", () => ({ usePermissions: vi.fn() }));
 vi.mock("@/hooks/useTeamLeaderDashboardData", () => ({
   useTeamLeaderDashboardData: () => ({
     teamStats: { team_size: 5, approved_count: 10 },
+    pendingTrend: [],
     monthlyComparison: [],
     isTopPendingUsersLoading: false,
     isTopPendingUsersError: false,
@@ -60,6 +61,9 @@ vi.mock("./components/QueueMixCard", () => ({
 }));
 vi.mock("./components/MonthlyComparisonCard", () => ({
   MonthlyComparisonCard: () => <div data-testid="monthly-comp">Monthly</div>,
+}));
+vi.mock("./components/PendingTrendCard", () => ({
+  PendingTrendCard: () => <div data-testid="pending-trend">Trend</div>,
 }));
 vi.mock("./components/TopBottlenecksCard", () => ({
   TopBottlenecksCard: () => <div data-testid="top-bottlenecks">Bottlenecks</div>,

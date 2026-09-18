@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RoleSwitcher, RoleBadges } from "@/components/dashboard/RoleSwitcher";
 import type { DashboardType } from "@/context/permission-context-base";
 
@@ -48,12 +49,17 @@ export const TeamLeaderDashboardHeader: React.FC<TeamLeaderDashboardHeaderProps>
           isAdmin={isAdmin}
           isSuperuser={isSuperuser}
         />
-        <Badge
-          className="h-9 cursor-pointer rounded-full border border-primary/20 bg-primary/10 px-4 text-foreground hover:bg-primary/10"
-          onClick={() => navigate("/team")}
+        <Tabs
+          value="leader"
+          onValueChange={(value) => {
+            if (value === "workspace") navigate("/team");
+          }}
         >
-          Team Workspace
-        </Badge>
+          <TabsList>
+            <TabsTrigger value="leader">Team Leader</TabsTrigger>
+            <TabsTrigger value="workspace">Team Workspace</TabsTrigger>
+          </TabsList>
+        </Tabs>
         <Button onClick={() => navigate("/team/approvals")}>
           Open Approval Queue
           {!!pendingApprovalCount && (

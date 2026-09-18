@@ -3,6 +3,12 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { TeamLeaderDashboardHeader } from "./TeamLeaderDashboardHeader";
 
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 const renderHeader = () =>
   render(
     <MemoryRouter>
@@ -33,13 +39,16 @@ describe("TeamLeaderDashboardHeader mockup fidelity", () => {
     expect(headerRow?.className).toContain("border-line-subtle");
   });
 
-  it("Team Workspace pill uses text-foreground, not text-primary (browser probe: 3.32:1 dark FAIL)", () => {
+  it("renders Team Leader / Team Workspace as a segmented control, not a raw text-primary pill", () => {
     renderHeader();
 
-    const pill = screen.getByText("Team Workspace");
-    expect(pill.className).toContain("text-foreground");
-    expect(pill.className).not.toMatch(/(^|\s)text-primary(\s|$)/);
+    const workspaceTab = screen.getByRole("tab", { name: "Team Workspace" });
+    const leaderTab = screen.getByRole("tab", { name: "Team Leader" });
+    expect(workspaceTab.className).not.toMatch(/(^|\s)text-primary(\s|$)/);
+    expect(leaderTab.getAttribute("data-state")).toBe("active");
+    expect(workspaceTab.getAttribute("data-state")).toBe("inactive");
   });
+
 
   it("does not render a count badge when pendingApprovalCount is omitted or zero", () => {
     renderHeader();

@@ -31,6 +31,15 @@ export const useTeamLeaderDashboardData = ({
     enabled: shouldQueryTeamData,
   });
 
+  const { data: pendingTrend } = useQuery({
+    queryKey: ["dashboard", "pending_trend", ...teamKeySuffix],
+    queryFn: () => dashboardService.getPendingTrend(teamId),
+    refetchOnMount: true,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+    enabled: shouldQueryTeamData,
+  });
+
   const { data: monthlyComparison } = useQuery({
     queryKey: ["dashboard", "monthly_comparison", ...teamKeySuffix, comparisonGranularity],
     queryFn: () => dashboardService.getMonthlyComparison(teamId, comparisonGranularity),
@@ -68,6 +77,7 @@ export const useTeamLeaderDashboardData = ({
 
   return {
     teamStats,
+    pendingTrend,
     monthlyComparison,
     topPendingUsers,
     isTopPendingUsersLoading,

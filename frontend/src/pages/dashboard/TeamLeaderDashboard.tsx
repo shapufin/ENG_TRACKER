@@ -9,6 +9,7 @@ import { TLStatsCards } from "./components/TLStatsCards";
 import { QueueMixCard } from "./components/QueueMixCard";
 import { MonthlyComparisonCard } from "./components/MonthlyComparisonCard";
 import { QueueHighlightsSection } from "./components/QueueHighlightsSection";
+import { PendingTrendCard } from "./components/PendingTrendCard";
 import { TeamLeaderDashboardHeader } from "./components/TeamLeaderDashboardHeader";
 import {
   useTeamLeaderDashboardUI,
@@ -122,6 +123,8 @@ const TeamLeaderDashboard: React.FC<TeamLeaderDashboardProps> = ({
             onGranularityChange={setComparisonGranularity}
           />
         </div>
+
+        <PendingTrendCard data={dashboardData.pendingTrend} />
 
         <QueueHighlightsSection
           highlights={filteredSortedHighlights}
