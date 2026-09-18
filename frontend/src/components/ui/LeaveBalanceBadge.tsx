@@ -12,8 +12,8 @@ export const LeaveBalanceBadge: React.FC<LeaveBalanceBadgeProps> = ({ balance })
     className={cn(
       "font-mono font-bold",
       (balance || 0) < 5
-        ? "border-red-200 bg-red-50 text-red-700"
-        : "border-green-200 bg-green-50 text-green-700"
+        ? "border-tone-danger-border bg-tone-danger-surface text-tone-danger-text"
+        : "border-tone-success-border bg-tone-success-surface text-tone-success-text"
     )}
   >
     {balance ?? 0}d

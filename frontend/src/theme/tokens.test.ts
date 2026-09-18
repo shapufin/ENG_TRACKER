@@ -24,33 +24,33 @@ const darkBlock = css.slice(
 describe("theme tokens (Obsidian-Slate remap)", () => {
   it("uses the mockup dark surface ramp", () => {
     expect(darkBlock).toContain("--card: 221 38% 8%");
-    expect(darkBlock).toContain("--popover: 221 37% 9%");
-    expect(darkBlock).toContain("--card-raised: 221 33% 11%");
-    expect(darkBlock).toContain("--surface-sunken: 221 40% 6.5%");
-    expect(darkBlock).toContain("--secondary: 221 33% 15%");
-    expect(darkBlock).toContain("--muted: 221 33% 14%");
+    expect(darkBlock).toContain("--popover: 221 37% 9.5%");
+    expect(darkBlock).toContain("--card-raised: 221 33% 11.5%");
+    expect(darkBlock).toContain("--surface-sunken: 221 40% 5.5%");
+    expect(darkBlock).toContain("--secondary: 221 33% 15.5%");
+    expect(darkBlock).toContain("--muted: 221 33% 14.5%");
   });
 
   it("keeps the already-exact canvas/border/primary values", () => {
     expect(darkBlock).toContain("--background: 223 33% 4%");
-    expect(darkBlock).toContain("--border: 219 30% 17%");
-    expect(darkBlock).toContain("--line-subtle: 220 31% 13%");
+    expect(darkBlock).toContain("--border: 219 28% 19%");
+    expect(darkBlock).toContain("--line-subtle: 220 28% 15%");
     expect(darkBlock).toContain("--primary: 262 83% 58%");
   });
 
   it("keeps dark primary-foreground light enough for WCAG AA on primary", () => {
     // Regression guard: near-black foreground on the violet primary measured
     // 3.41:1 (fails AA 4.5:1) — the foreground must be light (≥ 4.5:1).
-    expect(darkBlock).toContain("--primary-foreground: 210 40% 98%");
+    expect(darkBlock).toContain("--primary-foreground: 0 0% 100%");
     expect(darkBlock).not.toContain("--primary-foreground: 220 20% 6%");
   });
 
   it("defines the new input/focus tokens in both modes", () => {
     expect(darkBlock).toContain("--input-bg: 220 40% 6%");
-    expect(darkBlock).toContain("--border-focus: 219 29% 25%");
+    expect(darkBlock).toContain("--border-focus: 219 45% 34%");
     expect(darkBlock).toContain("--focus: 217 91% 60%");
     expect(lightBlock).toContain("--input-bg: 0 0% 100%");
-    expect(lightBlock).toContain("--border-focus: 215 16% 75%");
+    expect(lightBlock).toContain("--border-focus: 221 70% 65%");
     expect(lightBlock).toContain("--focus: 221 83% 53%");
   });
 
@@ -63,17 +63,28 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
   });
 
   it("preserves the WCAG-pinned values", () => {
-    expect(css).toContain("--muted-foreground: 220 9% 43%");
-    expect(css).toContain("--destructive: 0 84% 48%");
+    expect(darkBlock).toContain("--muted-foreground: 220 10% 63%");
+    expect(lightBlock).toContain("--destructive: 0 84% 48%");
   });
 
-  it("defines the surface radius scale and overlay in both modes", () => {
+  it("defines the surface radius scale in both modes", () => {
     for (const block of [lightBlock, darkBlock]) {
       expect(block).toContain("--radius-control: 0.75rem");
       expect(block).toContain("--radius-surface: 1rem");
       expect(block).toContain("--radius-dialog: 1.5rem");
-      expect(block).toContain("--overlay: 0 0% 0% / 0.75");
     }
+  });
+
+  it("defines the overlay token in both modes", () => {
+    expect(lightBlock).toContain("--overlay: 222 47% 11% / 0.60");
+    expect(darkBlock).toContain("--overlay: 0 0% 0% / 0.68");
+  });
+
+  it("defines the dark status ramp per the sharper-contrast refinement", () => {
+    expect(darkBlock).toContain("--success: 158 64% 52%");
+    expect(darkBlock).toContain("--warning: 43 96% 56%");
+    expect(darkBlock).toContain("--destructive: 0 78% 52%");
+    expect(darkBlock).toContain("--info: 213 94% 68%");
   });
 
   it("keeps --radius unchanged (drives rounded-lg/md/sm app-wide)", () => {

@@ -16,6 +16,7 @@ export default {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
+        "primary-hover": "hsl(var(--primary-hover))",
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
@@ -43,6 +44,7 @@ export default {
         "card-raised": "hsl(var(--card-raised))",
         "surface-sunken": "hsl(var(--surface-sunken))",
         "line-subtle": "hsl(var(--line-subtle))",
+        "table-hover": "hsl(var(--table-hover))",
         "input-bg": "hsl(var(--input-bg))",
         "border-focus": "hsl(var(--border-focus))",
         focus: "hsl(var(--focus))",
@@ -72,6 +74,7 @@ export default {
         "accent-orange": "hsl(var(--accent-orange))",
         "accent-yellow": "hsl(var(--accent-yellow))",
         "accent-violet": "hsl(var(--accent-violet))",
+        "accent-violet-hover": "hsl(var(--accent-violet-hover))",
         "accent-emerald": "hsl(var(--accent-emerald))",
         "glass-border": "hsl(var(--glass-border))",
         overlay: "hsl(var(--overlay))",

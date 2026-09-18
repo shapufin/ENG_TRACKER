@@ -22,7 +22,7 @@ describe("SidebarNavLink badge", () => {
     );
     const badge = screen.getByLabelText("3 pending approvals");
     expect(badge).toHaveTextContent("3");
-    expect(badge.className).toContain("bg-amber-500/15");
+    expect(badge.className).toContain("bg-tone-warning-surface");
   });
 
   it("renders no badge when the count is 0 or absent", () => {

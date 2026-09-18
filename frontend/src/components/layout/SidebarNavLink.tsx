@@ -70,7 +70,7 @@ export const SidebarNavLink: React.FC<SidebarNavLinkProps> = ({
         <span
           role="status"
           aria-label={`${badge} pending approvals`}
-          className="ml-auto rounded-full border border-amber-500/30 bg-amber-500/15 px-1.5 font-mono text-[10px] font-bold text-amber-700 dark:text-amber-400"
+          className="ml-auto rounded-full border border-tone-warning-border bg-tone-warning-surface px-1.5 font-mono text-[10px] font-bold text-tone-warning-text"
         >
           {badge}
         </span>

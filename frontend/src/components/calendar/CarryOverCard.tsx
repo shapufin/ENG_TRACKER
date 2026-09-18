@@ -48,7 +48,7 @@ export const CarryOverCard: React.FC<CarryOverCardProps> = ({
         <div className="mb-2 flex items-center justify-between text-xs">
           <span className="text-muted-foreground">Used</span>
 
-          <span className="font-medium text-foreground dark:text-white">
+          <span className="font-medium text-foreground">
             {carryOverDetail.usedDays ?? 0}d
           </span>
         </div>

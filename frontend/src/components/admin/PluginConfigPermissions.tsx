@@ -147,14 +147,14 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
 
   return (
     <div className="space-y-5 pt-4">
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/60 dark:bg-blue-950/30">
+      <div className="rounded-lg border border-tone-info-border bg-tone-info-surface p-4">
         <div className="flex gap-3">
-          <Shield className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+          <Shield className="h-5 w-5 shrink-0 text-tone-info-text" />
           <div className="space-y-1">
-            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+            <p className="text-sm font-medium text-tone-info-text">
               Who can use this plugin?
             </p>
-            <p className="text-xs leading-relaxed text-blue-700 dark:text-blue-300">
+            <p className="text-xs leading-relaxed text-tone-info-text">
               Select access by functional user category. Admins and superusers always have full
               access and are managed by the application admin role, not by this matrix.
             </p>
@@ -163,11 +163,11 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
       </div>
 
       {isAdminOnly && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/60 dark:bg-amber-950/30">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-          <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+        <div className="flex items-start gap-2 rounded-lg border border-tone-warning-border bg-tone-warning-surface p-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-tone-warning-text" />
+          <p className="text-xs leading-relaxed text-tone-warning-text">
             This plugin is admin-only — all its pages are under{" "}
-            <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/40">/admin/*</code> and
+            <code className="rounded bg-tone-warning-surface px-1">/admin/*</code> and
             protected by the admin route guard. Granting access to Employee, Team Leader, HR, or
             Control Room Admin roles below has no effect; those users cannot reach the plugin pages
             regardless of this permission.
@@ -278,7 +278,7 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
                 Grant plugin actions to resource-access groups. Create groups and assign users on
                 the Resource Access page. Only superusers can modify group grants.
                 {!isSuperuser && (
-                  <span className="ml-1 font-medium text-amber-600 dark:text-amber-400">
+                  <span className="ml-1 font-medium text-tone-warning-text">
                     (Read-only — superuser required to edit.)
                   </span>
                 )}

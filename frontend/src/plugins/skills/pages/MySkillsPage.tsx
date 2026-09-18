@@ -262,7 +262,7 @@ export const MySkillsPage: React.FC = () => {
                     return (
                       <div
                         key={us.id}
-                        className="grid gap-3 bg-card p-4 transition-colors duration-150 hover:bg-muted/30 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                        className="grid gap-3 bg-card p-4 transition-colors duration-150 hover:bg-table-hover sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           <ProficiencyBadge level={us.level} showLabel />

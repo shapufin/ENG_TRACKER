@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/badge";
+import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import type { DraftPayload, OrgChart, ValidationResult } from "../types";
 
 interface MutationState {
@@ -117,10 +118,10 @@ export const OrganigramaPublishStatusCard: React.FC<OrganigramaPublishStatusCard
       </Button>
       {validation && (
         <div
-          className={`rounded-lg border p-3 text-sm ${validation.is_valid ? "border-green-600 bg-green-50" : "border-destructive bg-destructive/5"}`}
+          className={`rounded-lg border p-3 text-sm ${validation.is_valid ? toneSurfaceClass.success : "border-destructive bg-destructive/5"}`}
         >
           {validation.is_valid ? (
-            <p className="flex items-center gap-2 text-green-700">
+            <p className={`flex items-center gap-2 ${toneTextClass.success}`}>
               <Check className="h-4 w-4" /> Draft is valid and can be published.
             </p>
           ) : (

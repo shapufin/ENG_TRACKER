@@ -42,7 +42,7 @@ const VacationBalanceCard: React.FC<{
           Vacation balance
         </p>
         <div className="flex items-end gap-1">
-          <h3 className="text-xl font-semibold text-foreground dark:text-white">
+          <h3 className="text-xl font-semibold text-foreground">
             {formatDays(remainingDays)}d
           </h3>
           <span className={`text-[11px] ${toneTextClass.success}`}>remaining</span>
@@ -82,7 +82,7 @@ const CarryOverCard: React.FC<{
         <span>from {year}</span>
       </div>
       <div className="mt-2 flex items-end gap-2">
-        <h3 className="text-xl font-semibold text-foreground dark:text-white">
+        <h3 className="text-xl font-semibold text-foreground">
           {formatDays(availableDays)}d
         </h3>
         <p className={`text-[11px] ${toneTextClass.success}`}>available</p>

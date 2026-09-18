@@ -1,6 +1,7 @@
 import React from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { toneSurfaceClass } from "@/components/ui/tone";
 import {
   Calendar,
   Clock,
@@ -160,13 +161,13 @@ const getLeaveFields = (record: LeaveRequest): DetailField[] => [
 const getStatusStyles = (status: string) => {
   switch (status) {
     case "approved":
-      return "bg-emerald-500/10 text-emerald-300 border-emerald-500/20 shadow-emerald-500/10";
+      return toneSurfaceClass.success;
     case "rejected":
-      return "bg-red-500/10 text-red-300 border-red-500/20 shadow-red-500/10";
+      return toneSurfaceClass.danger;
     case "cancelled":
       return "bg-muted/30 text-muted-foreground border-muted-foreground/20 shadow-muted-foreground/10";
     default:
-      return "bg-yellow-500/10 text-yellow-300 border-yellow-500/20 shadow-yellow-500/10";
+      return toneSurfaceClass.warning;
   }
 };
 
@@ -215,12 +216,12 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
               <div
                 className={cn(
                   "flex h-12 w-12 items-center justify-center rounded-xl",
-                  "border border-violet-500/20",
-                  "bg-violet-500/10 backdrop-blur-xl",
+                  "border border-accent-violet/20",
+                  "bg-accent-violet/10 backdrop-blur-xl",
                   "shadow-[0_0_15px_rgba(139,92,246,0.25)]"
                 )}
               >
-                {React.createElement(recordIcon, { className: "h-6 w-6 text-violet-300" })}
+                {React.createElement(recordIcon, { className: "h-6 w-6 text-accent-violet" })}
               </div>
 
               <div>
@@ -265,23 +266,23 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
                   key={index}
                   className={cn(
                     "group relative overflow-hidden rounded-xl",
-                    "border border-white/10",
-                    "bg-white/[0.025]",
+                    "border border-border",
+                    "bg-muted/40",
                     "transition-all duration-300",
-                    "hover:border-violet-500/20 hover:bg-white/[0.04]"
+                    "hover:border-accent-violet/30 hover:bg-accent"
                   )}
                 >
                   <div className="flex items-center gap-3 p-3">
                     <div
                       className={cn(
                         "flex h-8 w-8 items-center justify-center rounded-lg",
-                        "border border-violet-500/10",
-                        "bg-violet-500/10",
+                        "border border-accent-violet/10",
+                        "bg-accent-violet/10",
                         "transition-all duration-300",
-                        "group-hover:scale-105 group-hover:bg-violet-500/15"
+                        "group-hover:scale-105 group-hover:bg-accent-violet/15"
                       )}
                     >
-                      <Icon className="h-4 w-4 text-violet-300" />
+                      <Icon className="h-4 w-4 text-accent-violet" />
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -302,7 +303,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
                   </div>
 
                   <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                    <div className="absolute inset-y-0 left-0 w-[1.5px] bg-violet-400" />
+                    <div className="absolute inset-y-0 left-0 w-[1.5px] bg-accent-violet" />
                   </div>
                 </div>
               );

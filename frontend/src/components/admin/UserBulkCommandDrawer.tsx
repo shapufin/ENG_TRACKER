@@ -146,8 +146,8 @@ const AssignmentSelect: React.FC<{
 
 const ROLE_STATE_STYLES: Record<"unchanged" | "on" | "off", string> = {
   unchanged: "border-border/60 bg-muted text-muted-foreground",
-  on: "border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  off: "border-rose-500/30 bg-rose-500/15 text-rose-700 dark:text-rose-300",
+  on: "border-tone-success-border bg-tone-success-surface text-tone-success-text",
+  off: "border-tone-danger-border bg-tone-danger-surface text-tone-danger-text",
 };
 
 const RoleToggle: React.FC<{

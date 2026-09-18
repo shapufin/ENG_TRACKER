@@ -22,7 +22,7 @@ const palette = [
   "bg-blue-500/20 text-blue-500",
   "bg-emerald-500/20 text-emerald-600",
   "bg-primary/20 text-primary",
-  "bg-amber-500/20 text-amber-600",
+  "bg-amber-500/20 text-amber-600 dark:text-amber-400",
   "bg-rose-500/20 text-rose-500",
   "bg-cyan-500/20 text-cyan-600",
 ];

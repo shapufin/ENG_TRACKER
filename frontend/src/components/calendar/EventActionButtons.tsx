@@ -85,7 +85,7 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
             variant="outline"
             onClick={onRemove}
             disabled={isSubmitting}
-            className="flex items-center gap-1 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/20"
+            className="flex items-center gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 className="h-3 w-3" /> {isSubmitting ? "Deleting..." : "Delete"}
           </Button>

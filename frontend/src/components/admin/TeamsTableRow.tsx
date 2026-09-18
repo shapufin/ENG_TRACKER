@@ -27,7 +27,7 @@ export const TeamsTableRow: React.FC<TeamsTableRowProps> = ({
   onSelect,
   onEdit,
 }) => (
-  <div className="grid grid-cols-[80px_2fr_1.5fr_1.5fr_1fr_1fr_120px] items-center gap-4 px-6 py-5 transition-all hover:bg-muted/30">
+  <div className="grid grid-cols-[80px_2fr_1.5fr_1.5fr_1fr_1fr_120px] items-center gap-4 px-6 py-5 transition-all hover:bg-table-hover">
     <div>
       <Checkbox
         checked={isSelected}

@@ -167,7 +167,7 @@ export function ResourceAccessMemberDialog({
                     type="button"
                     role="option"
                     aria-selected={false}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/40 focus:bg-muted/40 focus:outline-none"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-table-hover focus:bg-table-hover focus:outline-none"
                     onClick={() => setSelected(candidate)}
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">

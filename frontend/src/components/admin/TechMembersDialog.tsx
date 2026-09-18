@@ -268,7 +268,7 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 w-7 p-0 text-emerald-600 hover:bg-emerald-600/10"
+                      className="h-7 w-7 p-0 text-tone-success-text hover:bg-tone-success-surface"
                       onClick={() => handleAdd(u.id)}
                       disabled={addMutation.isPending}
                       aria-label={`Add ${u.username} to ${tech?.name}`}

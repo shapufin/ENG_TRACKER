@@ -77,7 +77,7 @@ const ChartRow: React.FC<{
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 hover:bg-muted/40">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 hover:bg-table-hover">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate font-medium" title={chart.name}>

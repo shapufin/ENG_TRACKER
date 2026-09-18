@@ -124,7 +124,7 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
         getRowClassName={(team: TeamNode) =>
           hoveredPath.has(team.id)
             ? "bg-muted/60 cursor-pointer"
-            : "hover:bg-muted/30 cursor-pointer"
+            : "hover:bg-table-hover cursor-pointer"
         }
         onRowMouseEnter={(team: TeamNode) => onRowMouseEnter(team)}
         onRowMouseLeave={onRowMouseLeave}

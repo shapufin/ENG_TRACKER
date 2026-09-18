@@ -63,7 +63,7 @@ const BuilderEdgeBase: React.FC<BuilderEdgeComponentProps> = ({
               fontSize: 10,
               fontWeight: 500,
               color: config.labelColor ?? config.stroke,
-              background: "var(--background, #fff)",
+              background: "hsl(var(--popover))",
               padding: "1px 4px",
               borderRadius: 3,
               border: "1px solid currentColor",

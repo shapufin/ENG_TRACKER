@@ -291,7 +291,7 @@ export function ResourceAccessPage() {
                 {groupList.map((group) => (
                   <tr
                     key={group.id}
-                    className={`border-b border-border/40 transition-colors last:border-0 hover:bg-muted/30 ${
+                    className={`border-b border-border/40 transition-colors last:border-0 hover:bg-table-hover ${
                       selectedGroupIds.has(group.id) ? "ring-1 ring-primary/20" : ""
                     }`}
                   >

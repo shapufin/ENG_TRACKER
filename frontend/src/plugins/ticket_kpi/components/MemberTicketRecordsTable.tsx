@@ -68,11 +68,11 @@ const formatDateTime = (value: string | null): string => {
 };
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
-  closed: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
-  open: "bg-blue-500/15 text-blue-600 border-blue-500/30",
-  approved: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
-  rejected: "bg-rose-500/15 text-rose-600 border-rose-500/30",
-  cancelled: "bg-muted-foreground/15 text-muted-foreground border-muted-foreground/30",
+  closed: "bg-tone-success-surface text-tone-success-text border-tone-success-border",
+  open: "bg-tone-info-surface text-tone-info-text border-tone-info-border",
+  approved: "bg-tone-success-surface text-tone-success-text border-tone-success-border",
+  rejected: "bg-tone-danger-surface text-tone-danger-text border-tone-danger-border",
+  cancelled: "bg-tone-neutral-surface text-tone-neutral-text border-tone-neutral-border",
 };
 
 const renderStatusCell = (row: TicketRecord): React.ReactNode => {
@@ -90,11 +90,11 @@ const renderStatusCell = (row: TicketRecord): React.ReactNode => {
 const renderSlaCell = (row: TicketRecord): React.ReactNode => {
   if (row.sla_breached === null || row.sla_breached === undefined) return "—";
   return row.sla_breached ? (
-    <Badge variant="outline" className="border-rose-500/30 bg-rose-500/15 text-rose-600">
+    <Badge variant="outline" className="border-tone-danger-border bg-tone-danger-surface text-tone-danger-text">
       Breached
     </Badge>
   ) : (
-    <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/15 text-emerald-600">
+    <Badge variant="outline" className="border-tone-success-border bg-tone-success-surface text-tone-success-text">
       OK
     </Badge>
   );

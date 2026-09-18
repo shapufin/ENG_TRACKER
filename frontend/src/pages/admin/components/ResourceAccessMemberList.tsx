@@ -93,7 +93,7 @@ export function ResourceAccessMemberList({
             {members.map((membership) => (
               <tr
                 key={membership.id}
-                className="border-b border-border/40 transition-colors last:border-0 hover:bg-muted/30"
+                className="border-b border-border/40 transition-colors last:border-0 hover:bg-table-hover"
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">

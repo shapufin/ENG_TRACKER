@@ -24,7 +24,7 @@ export const ListViewRow: React.FC<ListViewRowProps> = ({
   const name = user?.full_name || event.userName || "Unknown User";
 
   return (
-    <tr className="border-b border-border/50 transition-colors hover:bg-muted/40">
+    <tr className="border-b border-border/50 transition-colors hover:bg-table-hover">
       {/* DATE */}
       <td className="px-5 py-4">
         <div className="flex items-start gap-3">

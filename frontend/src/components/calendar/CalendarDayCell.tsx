@@ -112,7 +112,7 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
           {format(date, "d")}
         </span>
         {today && (
-          <span className="hidden rounded border border-info/20 bg-info/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-blue-700 dark:text-blue-400 sm:inline">
+          <span className="hidden rounded border border-info/20 bg-info/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-info sm:inline">
             Today
           </span>
         )}

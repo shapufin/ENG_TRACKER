@@ -40,7 +40,7 @@ export const WeekViewUserRow: React.FC<WeekViewUserRowProps> = ({
       <button
         type="button"
         onClick={() => onUserClick?.(user.id)}
-        className="flex items-center gap-3 border-r border-border/60 px-4 py-3 text-left transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
+        className="flex items-center gap-3 border-r border-border/60 px-4 py-3 text-left transition hover:bg-table-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
       >
         <UserAvatar name={userName} email={user.email} colorSeed={user.id} />
         <div className="min-w-0">
@@ -113,7 +113,7 @@ export const WeekViewUserRow: React.FC<WeekViewUserRowProps> = ({
               onRangeDragEnd(day);
             }}
             className={cn(
-              "min-h-[92px] border-r border-border/60 p-2 transition last:border-r-0 hover:bg-muted/40",
+              "min-h-[92px] border-r border-border/60 p-2 transition last:border-r-0 hover:bg-table-hover",
               isRangeStart || isRangeEnd
                 ? "bg-primary/15 ring-2 ring-inset ring-primary/60"
                 : isInRange && "bg-primary/10"

@@ -8,12 +8,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default: "bg-primary text-primary-foreground hover:bg-primary-hover",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        outline:
+          "border border-input bg-background hover:bg-accent hover:border-border-focus hover:text-accent-foreground",
+        secondary:
+          "border border-border bg-secondary text-secondary-foreground hover:bg-accent hover:border-border-focus",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-primary underline-offset-4 hover:text-primary-hover hover:underline",
         /** Opt-in hero CTA. Use once per surface — page header or modal submit. */
         gradient:
           "bg-gradient-to-r from-accent-violet to-primary text-primary-foreground shadow-lg shadow-accent-violet/25 hover:brightness-110",

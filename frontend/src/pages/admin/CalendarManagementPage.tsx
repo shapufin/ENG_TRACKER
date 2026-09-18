@@ -203,7 +203,7 @@ export const CalendarManagementPage: React.FC = () => {
                   <Button
                     onClick={handleBulkApplyIntent}
                     disabled={!bulkGroup.trim() || selectedTeams.size === 0}
-                    className="h-9 rounded-xl bg-primary hover:bg-primary/80"
+                    className="h-9 rounded-xl bg-primary hover:bg-primary-hover"
                   >
                     <Plus className="mr-2 h-4 w-4" /> Apply to selected
                   </Button>

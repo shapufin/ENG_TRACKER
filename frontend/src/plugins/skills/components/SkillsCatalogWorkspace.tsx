@@ -340,7 +340,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
                     <tr
                       key={skill.id}
                       className={`transition-colors duration-150 ${
-                        selectedIds.has(skill.id) ? "bg-primary/5" : "hover:bg-muted/30"
+                        selectedIds.has(skill.id) ? "bg-primary/5" : "hover:bg-table-hover"
                       }`}
                     >
                       <td className="px-3 py-3 text-center">

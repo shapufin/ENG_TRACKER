@@ -1,5 +1,6 @@
 import React from "react";
 import { X } from "lucide-react";
+import { toneSurfaceClass } from "@/components/ui/tone";
 import type { CalendarEvent } from "./types";
 
 interface EventModalHeaderProps {
@@ -18,10 +19,10 @@ export const EventModalHeader: React.FC<EventModalHeaderProps> = ({ event, onClo
         <div
           className={`rounded-full px-2 py-1 text-xs font-medium ${
             event.status === "approved"
-              ? "bg-emerald-500/15 text-emerald-300"
+              ? toneSurfaceClass.success
               : event.status === "rejected"
-                ? "bg-rose-500/15 text-rose-300"
-                : "bg-amber-500/15 text-amber-300"
+                ? toneSurfaceClass.danger
+                : toneSurfaceClass.warning
           }`}
         >
           {event.status}

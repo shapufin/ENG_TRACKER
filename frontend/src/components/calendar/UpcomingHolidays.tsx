@@ -1,5 +1,6 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
+import { toneSurfaceClass } from "@/components/ui/tone";
 import { CalendarDays, Info } from "lucide-react";
 import { format } from "date-fns";
 import type { PublicHoliday } from "@/types";
@@ -38,14 +39,14 @@ export const UpcomingHolidays: React.FC<UpcomingHolidaysProps> = ({ holidays }) 
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground dark:text-white">
+                  <p className="text-sm font-medium text-foreground">
                     {holiday.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {format(new Date(holiday.date), "d MMM, yyyy")}
                   </p>
                 </div>
-                <Badge variant="secondary" className="bg-sky-500/15 text-xs text-sky-300">
+                <Badge variant="secondary" className={`text-xs ${toneSurfaceClass.info}`}>
                   {holiday.is_global ? "Global" : "Workspace"}
                 </Badge>
               </div>
