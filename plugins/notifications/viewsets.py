@@ -1,8 +1,14 @@
 from rest_framework import viewsets, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Notification, NotificationPreference, PushSubscription
+from .models import (
+    Notification,
+    NotificationEventTypeConfig,
+    NotificationPreference,
+    PushSubscription,
+)
 from .vapid_utils import get_public_key
+from .types.base import get_all_types
 
 
 OWN_EVENT_TYPES = {
@@ -22,14 +28,26 @@ class NotificationSerializer(serializers.ModelSerializer):
 class NotificationPreferenceSerializer(serializers.ModelSerializer):
     label = serializers.CharField(source='get_event_type_display', read_only=True)
     available = serializers.SerializerMethodField()
+    globally_enabled = serializers.SerializerMethodField()
 
     class Meta:
         model = NotificationPreference
-        fields = ['event_type', 'label', 'in_app_enabled', 'push_enabled', 'available', 'updated_at']
-        read_only_fields = ['label', 'available', 'updated_at']
+        fields = [
+            'event_type', 'label', 'in_app_enabled', 'push_enabled',
+            'available', 'globally_enabled', 'updated_at',
+        ]
+        read_only_fields = ['label', 'available', 'globally_enabled', 'updated_at']
 
     def get_available(self, obj):
         return self.context.get('available_event_types', set()).__contains__(obj.event_type)
+
+    def get_globally_enabled(self, obj):
+        # Additive read-only flag: the global admin switch. Missing rows mean
+        # enabled, matching the missing-row fallback in signals.py.
+        config = NotificationEventTypeConfig.objects.filter(
+            event_type=obj.event_type
+        ).first()
+        return config.is_enabled if config else True
 
 
 class PushSubscriptionSerializer(serializers.ModelSerializer):
@@ -125,6 +143,69 @@ class NotificationViewSet(viewsets.ModelViewSet):
             context={'available_event_types': available},
         )
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get', 'patch'], url_path='event-configs')
+    def event_configs(self, request):
+        """Global per-event-type on/off switches (custom admin GUI).
+
+        Superuser-only: this controls delivery for every user, unlike the
+        self-service `preferences` action. Missing config rows are created
+        enabled on read, so event types registered in code show up here.
+        """
+        if not request.user.is_superuser:
+            return Response(
+                {'error': 'Superuser permission required.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if request.method == 'PATCH':
+            event_type = request.data.get('event_type')
+            is_enabled = request.data.get('is_enabled')
+            if event_type not in get_all_types():
+                return Response(
+                    {'error': 'Unknown event_type.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not isinstance(is_enabled, bool):
+                return Response(
+                    {'error': 'is_enabled must be a boolean.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            NotificationEventTypeConfig.objects.update_or_create(
+                event_type=event_type,
+                defaults={'is_enabled': is_enabled},
+            )
+
+        # Ensure every registered event type has a config row (enabled
+        # default), mirroring the Django admin changelist behaviour.
+        existing = set(
+            NotificationEventTypeConfig.objects.values_list(
+                'event_type', flat=True
+            )
+        )
+        missing = [
+            NotificationEventTypeConfig(event_type=event_type)
+            for event_type in get_all_types()
+            if event_type not in existing
+        ]
+        if missing:
+            NotificationEventTypeConfig.objects.bulk_create(missing)
+
+        enabled_by_type = dict(
+            NotificationEventTypeConfig.objects.values_list(
+                'event_type', 'is_enabled'
+            )
+        )
+        rows = [
+            {
+                'event_type': event_type,
+                'label': notification_type.label,
+                'description': notification_type.description,
+                'is_enabled': enabled_by_type.get(event_type, True),
+            }
+            for event_type, notification_type in sorted(get_all_types().items())
+        ]
+        return Response(rows)
 
     @action(detail=False, methods=['get'], url_path='vapid-public-key')
     def vapid_public_key(self, request):

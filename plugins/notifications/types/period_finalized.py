@@ -14,6 +14,11 @@ def _next_period(period):
 class PeriodFinalizedNotification(NotificationType):
     event_type = 'team_period_finalized'
     label = 'My team period finalized'
+    description = (
+        'Sent to team members when their TL finalizes the monthly '
+        'overtime/standby approval period, telling them which payroll '
+        'period their future submissions land in.'
+    )
     # Viewset categorizes this as 'own' because every user can subscribe
     # to their own period-finalized notice (it's delivered to individual
     # members, not to TLs).

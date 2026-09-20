@@ -157,6 +157,21 @@ def update_user_profile(
     ``cr_admin`` role is created (idempotent). When False, any existing
         active ``cr_admin`` ``UserRole`` rows are deactivated.
     """
+    if is_italian_tl_role is not None or is_albanian_tl_role is not None:
+        from apps.permissions.services.role_service import (
+            TeamLeaderRevokeBlockedError,
+            find_blocked_tl_revocations,
+        )
+
+        new_state = {}
+        if is_italian_tl_role is not None:
+            new_state['italian_tl'] = bool(is_italian_tl_role)
+        if is_albanian_tl_role is not None:
+            new_state['albanian_tl'] = bool(is_albanian_tl_role)
+        blocked = find_blocked_tl_revocations(user, new_state)
+        if blocked:
+            raise TeamLeaderRevokeBlockedError(blocked)
+
     if first_name is not None:
         user.first_name = first_name
     if last_name is not None:

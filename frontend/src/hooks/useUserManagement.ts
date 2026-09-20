@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userService } from "@/services/userService";
-import { handleApiError } from "@/lib/error-handler";
+import { handleApiError, getBlockedRevocations } from "@/lib/error-handler";
 import { toast } from "sonner";
-import type { ApiError } from "@/types";
+import type { ApiError, BlockedRevocation } from "@/types";
 
 interface UseUserManagementOptions {
   onUpdateSuccess?: () => void;
@@ -108,22 +109,42 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
     refetchOnWindowFocus: false,
   });
 
+  type UpdateVariables = {
+    id: number;
+    payload: Parameters<typeof userService.updateUser>[1];
+  };
+  const [updateBlockedRevocations, setUpdateBlockedRevocations] = useState<
+    BlockedRevocation[] | null
+  >(null);
+  const [pendingUpdate, setPendingUpdate] = useState<UpdateVariables | null>(null);
+
   const updateMutation = useMutation({
-    mutationFn: ({
-      id,
-      payload,
-    }: {
-      id: number;
-      payload: Parameters<typeof userService.updateUser>[1];
-    }) => userService.updateUser(id, payload),
+    mutationFn: ({ id, payload }: UpdateVariables) => userService.updateUser(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin"] });
       toast.success("Updated");
+      setUpdateBlockedRevocations(null);
+      setPendingUpdate(null);
       options?.onUpdateSuccess?.();
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onError: (err: any) => handleApiError(err),
+    onError: (err: unknown, variables) => {
+      const blocked = getBlockedRevocations(err);
+      if (blocked) {
+        setUpdateBlockedRevocations(blocked);
+        setPendingUpdate(variables);
+        return;
+      }
+      handleApiError(err);
+    },
   });
+
+  const retryBlockedUpdate = () => {
+    if (pendingUpdate) updateMutation.mutate(pendingUpdate);
+  };
+  const closeUpdateBlockedDialog = () => {
+    setUpdateBlockedRevocations(null);
+    setPendingUpdate(null);
+  };
 
   const createMutation = useMutation({
     mutationFn: (payload: Parameters<typeof userService.createUser>[0]) =>
@@ -173,6 +194,9 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
     isError: isProfilesError,
     error: profilesError,
     updateMutation,
+    updateBlockedRevocations,
+    retryBlockedUpdate,
+    closeUpdateBlockedDialog,
     createMutation,
     resetMutation,
     deleteMutation,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { handleApiError } from "./error-handler";
+import { handleApiError, getBlockedRevocations } from "./error-handler";
 import { ERROR_CODES, ERROR_MESSAGES } from "./error-messages";
 
 const toastError = vi.fn();
@@ -156,5 +156,41 @@ describe("handleApiError", () => {
   it("handles non-Error thrown value (string)", () => {
     handleApiError("just a string" as any);
     expect(toast.error).toHaveBeenCalled();
+  });
+});
+
+describe("getBlockedRevocations", () => {
+  it("extracts blocked_revocations from a 400 response", () => {
+    const error = {
+      response: {
+        status: 400,
+        data: {
+          error: "Cannot revoke...",
+          blocked_revocations: [
+            {
+              user_id: 1,
+              username: "tl_bob",
+              role: "italian_tl",
+              dependents: [{ profile_id: 5, user_id: 2, username: "alice" }],
+            },
+          ],
+        },
+      },
+    };
+    expect(getBlockedRevocations(error)).toEqual(error.response.data.blocked_revocations);
+  });
+
+  it("returns null when the response has no blocked_revocations", () => {
+    const error = { response: { status: 400, data: { error: "some other error" } } };
+    expect(getBlockedRevocations(error)).toBeNull();
+  });
+
+  it("returns null for a non-axios error", () => {
+    expect(getBlockedRevocations(new Error("boom"))).toBeNull();
+  });
+
+  it("returns null when blocked_revocations is not an array", () => {
+    const error = { response: { status: 400, data: { blocked_revocations: "oops" } } };
+    expect(getBlockedRevocations(error)).toBeNull();
   });
 });

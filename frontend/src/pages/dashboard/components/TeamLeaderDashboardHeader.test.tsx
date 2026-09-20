@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { TeamLeaderDashboardHeader } from "./TeamLeaderDashboardHeader";
 
@@ -9,46 +9,73 @@ vi.mock("react-router-dom", async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-const renderHeader = () =>
+const renderHeader = (props = {}) =>
   render(
     <MemoryRouter>
       <TeamLeaderDashboardHeader
-        availableDashboards={["team_leader"]}
+        availableDashboards={["team_leader", "employee"]}
         selectedDashboard="team_leader"
         onDashboardChange={vi.fn()}
         isTeamLeader
         isHR={false}
         isAdmin={false}
         isSuperuser={false}
+        {...props}
       />
     </MemoryRouter>
   );
 
 describe("TeamLeaderDashboardHeader mockup fidelity", () => {
-  it("uses the mockup page-header treatment (font-black title, bottom border)", () => {
+  it("renders controls only (PageShell owns the title — no duplicate h1)", () => {
     renderHeader();
 
-    const title = screen.getByRole("heading", { level: 1, name: "Approval Dashboard" });
-    expect(title.className).toContain("text-2xl");
-    expect(title.className).toContain("font-black");
-    expect(title.className).not.toContain("sm:text-3xl");
-
-    const headerRow = title.closest(".border-b");
-    expect(headerRow).toBeTruthy();
-    expect(headerRow?.className).toContain("pb-3");
-    expect(headerRow?.className).toContain("border-line-subtle");
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Open Approval Queue/ })).toBeInTheDocument();
   });
 
-  it("renders Team Leader / Team Workspace as a segmented control, not a raw text-primary pill", () => {
+  it("renders one segment per available dashboard plus Team Workspace", () => {
     renderHeader();
 
-    const workspaceTab = screen.getByRole("tab", { name: "Team Workspace" });
-    const leaderTab = screen.getByRole("tab", { name: "Team Leader" });
-    expect(workspaceTab.className).not.toMatch(/(^|\s)text-primary(\s|$)/);
-    expect(leaderTab.getAttribute("data-state")).toBe("active");
-    expect(workspaceTab.getAttribute("data-state")).toBe("inactive");
+    expect(screen.getByRole("tab", { name: "Team Leader" })).toHaveAttribute(
+      "data-state",
+      "active"
+    );
+    expect(screen.getByRole("tab", { name: "Personal" })).toHaveAttribute("data-state", "inactive");
+    expect(screen.getByRole("tab", { name: "Team Workspace" })).toBeInTheDocument();
   });
 
+  it("switches dashboard when a segment is selected", () => {
+    const onDashboardChange = vi.fn();
+    renderHeader({ onDashboardChange });
+
+    // Radix Tabs activates on mousedown, not click.
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Personal" }));
+    expect(onDashboardChange).toHaveBeenCalledWith("employee");
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("navigates to the team workspace when its segment is selected", () => {
+    renderHeader();
+
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Team Workspace" }));
+    expect(mockNavigate).toHaveBeenCalledWith("/team");
+  });
+
+  it("renders all four dashboard segments for multi-role users", () => {
+    renderHeader({ availableDashboards: ["admin", "hr", "team_leader", "employee"] });
+
+    for (const name of ["Admin", "HR", "Team Leader", "Personal", "Team Workspace"]) {
+      expect(screen.getByRole("tab", { name })).toBeInTheDocument();
+    }
+  });
+
+  it("keeps the workspace segment for single-dashboard users", () => {
+    renderHeader({ availableDashboards: ["team_leader"], selectedDashboard: "team_leader" });
+
+    expect(screen.getByRole("tab", { name: "Team Leader" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Team Workspace" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Personal" })).not.toBeInTheDocument();
+  });
 
   it("does not render a count badge when pendingApprovalCount is omitted or zero", () => {
     renderHeader();
@@ -56,20 +83,7 @@ describe("TeamLeaderDashboardHeader mockup fidelity", () => {
   });
 
   it("renders a pending count badge on the approval queue button", () => {
-    render(
-      <MemoryRouter>
-        <TeamLeaderDashboardHeader
-          availableDashboards={["team_leader"]}
-          selectedDashboard="team_leader"
-          onDashboardChange={vi.fn()}
-          isTeamLeader
-          isHR={false}
-          isAdmin={false}
-          isSuperuser={false}
-          pendingApprovalCount={10}
-        />
-      </MemoryRouter>
-    );
+    renderHeader({ pendingApprovalCount: 10 });
     expect(screen.getByText("10")).toBeInTheDocument();
   });
 });

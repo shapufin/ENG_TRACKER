@@ -7,7 +7,7 @@ from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from apps.users.models import Team
 
-from .models import Notification, NotificationPreference
+from .models import Notification, NotificationEventTypeConfig, NotificationPreference
 from .push_service import send_push_notification
 # Importing types triggers __init_subclass__ registration of all types.
 from .types import own, period_finalized, team  # noqa: F401
@@ -18,6 +18,15 @@ User = get_user_model()
 # ============================================================================
 # Shared helpers
 # ============================================================================
+
+def _event_globally_enabled(event_type):
+    """Global admin switch. Missing rows mean enabled, so event types added
+    in code keep working without a config row until an admin disables them."""
+    config = NotificationEventTypeConfig.objects.filter(
+        event_type=event_type
+    ).first()
+    return config.is_enabled if config else True
+
 
 def _preference_enabled(user, event_type, channel):
     preference = NotificationPreference.objects.filter(
@@ -52,6 +61,9 @@ def _create_notification(
     dedupe_key=None,
 ):
     """Deliver an event according to the recipient's saved preferences."""
+    if not _event_globally_enabled(event_type):
+        return None
+
     notification = None
 
     if _preference_enabled(user, event_type, 'in_app'):

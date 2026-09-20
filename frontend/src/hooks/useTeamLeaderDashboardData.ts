@@ -21,12 +21,15 @@ export const useTeamLeaderDashboardData = ({
   comparisonGranularity = "month",
 }: UseTeamLeaderDashboardDataProps) => {
   const teamKeySuffix = [userId ?? "anonymous", teamId ?? "no-team"] as const;
+  // Slow-moving aggregates stay fresh for 30s to avoid a refetch storm on
+  // every mount/tab switch; the approval queue itself stays realtime.
+  const AGGREGATE_STALE_TIME = 30_000;
 
   const { data: teamStats } = useQuery({
     queryKey: ["dashboard", "team", ...teamKeySuffix],
     queryFn: () => dashboardService.getTeamStats(teamId),
     refetchOnMount: true,
-    staleTime: 0,
+    staleTime: AGGREGATE_STALE_TIME,
     refetchOnWindowFocus: false,
     enabled: shouldQueryTeamData,
   });
@@ -35,7 +38,7 @@ export const useTeamLeaderDashboardData = ({
     queryKey: ["dashboard", "pending_trend", ...teamKeySuffix],
     queryFn: () => dashboardService.getPendingTrend(teamId),
     refetchOnMount: true,
-    staleTime: 0,
+    staleTime: AGGREGATE_STALE_TIME,
     refetchOnWindowFocus: false,
     enabled: shouldQueryTeamData,
   });
@@ -44,20 +47,7 @@ export const useTeamLeaderDashboardData = ({
     queryKey: ["dashboard", "monthly_comparison", ...teamKeySuffix, comparisonGranularity],
     queryFn: () => dashboardService.getMonthlyComparison(teamId, comparisonGranularity),
     refetchOnMount: true,
-    staleTime: 0,
-    refetchOnWindowFocus: false,
-    enabled: shouldQueryTeamData,
-  });
-
-  const {
-    data: topPendingUsers,
-    isLoading: isTopPendingUsersLoading,
-    isError: isTopPendingUsersError,
-  } = useQuery({
-    queryKey: ["dashboard", "top_pending_users", ...teamKeySuffix],
-    queryFn: () => dashboardService.getTopPendingUsers(teamId, 5),
-    refetchOnMount: true,
-    staleTime: 0,
+    staleTime: AGGREGATE_STALE_TIME,
     refetchOnWindowFocus: false,
     enabled: shouldQueryTeamData,
   });
@@ -79,12 +69,9 @@ export const useTeamLeaderDashboardData = ({
     teamStats,
     pendingTrend,
     monthlyComparison,
-    topPendingUsers,
-    isTopPendingUsersLoading,
-    isTopPendingUsersError,
     queueHighlights,
     isQueueHighlightsLoading,
     isQueueHighlightsError,
-    isLoading: isTopPendingUsersLoading || isQueueHighlightsLoading,
+    isLoading: isQueueHighlightsLoading,
   };
 };

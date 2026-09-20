@@ -67,6 +67,21 @@ function detectStandalone(): boolean {
   );
 }
 
+/** Reject with a clear message instead of hanging forever. `serviceWorker.ready`
+ * never resolves when no worker is registered — the dev server unregisters all
+ * workers, so push can only ever work against a production build. */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+}
+
+const SW_READY_TIMEOUT_MS = 8000;
+const SW_NOT_READY_MESSAGE =
+  "Notification service is not available. Push requires the production build " +
+  "(the dev server disables the service worker) served over HTTPS or localhost.";
+
 export function usePushNotifications(): PushNotificationsState {
   const [permission, setPermission] = useState<PushPermission>("default");
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -130,6 +145,11 @@ export function usePushNotifications(): PushNotificationsState {
     setError(null);
 
     try {
+      if (!window.isSecureContext) {
+        setError("Push notifications require a secure (HTTPS) connection.");
+        return false;
+      }
+
       const currentPermission =
         permission === "granted" ? "granted" : await Notification.requestPermission();
       if (currentPermission !== "granted") {
@@ -147,7 +167,11 @@ export function usePushNotifications(): PushNotificationsState {
       const publicKey = data.public_key;
 
       // Subscribe via service worker
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await withTimeout(
+        navigator.serviceWorker.ready,
+        SW_READY_TIMEOUT_MS,
+        SW_NOT_READY_MESSAGE
+      );
       const subscription = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
@@ -178,7 +202,11 @@ export function usePushNotifications(): PushNotificationsState {
     if (!isSupported) return false;
 
     try {
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await withTimeout(
+        navigator.serviceWorker.ready,
+        SW_READY_TIMEOUT_MS,
+        SW_NOT_READY_MESSAGE
+      );
       const subscription = await reg.pushManager.getSubscription();
       if (!subscription) {
         setIsSubscribed(false);

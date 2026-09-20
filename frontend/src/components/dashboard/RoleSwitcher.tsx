@@ -6,9 +6,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Shield, Users, Briefcase, User } from "lucide-react";
 import type { DashboardType } from "@/context/permission-context-base";
+import { toneSurfaceClass, type Tone } from "@/components/ui/tone";
+import { cn } from "@/lib/utils";
 
 interface DashboardOption {
   id: DashboardType;
@@ -112,20 +113,20 @@ export const RoleBadges: React.FC<RoleBadgesProps> = ({
   isAdmin,
   isSuperuser,
 }) => {
-  const roles: { label: string; variant: "default" | "secondary" | "destructive" }[] = [];
+  const roles: { label: string; tone: Tone }[] = [];
 
   if (isSuperuser) {
-    roles.push({ label: "Superuser", variant: "destructive" });
+    roles.push({ label: "Superuser", tone: "danger" });
   } else if (isAdmin) {
-    roles.push({ label: "Admin", variant: "destructive" });
+    roles.push({ label: "Admin", tone: "danger" });
   }
 
   if (isHR) {
-    roles.push({ label: "HR", variant: "secondary" });
+    roles.push({ label: "HR", tone: "neutral" });
   }
 
   if (isTeamLeader) {
-    roles.push({ label: "Team Leader", variant: "default" });
+    roles.push({ label: "Team Leader", tone: "accent" });
   }
 
   if (roles.length === 0) {
@@ -133,11 +134,17 @@ export const RoleBadges: React.FC<RoleBadgesProps> = ({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" aria-label="Your roles">
       {roles.map((role) => (
-        <Badge key={role.label} variant={role.variant} className="text-xs">
+        <span
+          key={role.label}
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-xs font-medium",
+            toneSurfaceClass[role.tone]
+          )}
+        >
           {role.label}
-        </Badge>
+        </span>
       ))}
     </div>
   );

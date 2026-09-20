@@ -18,4 +18,21 @@ describe("PersonalDashboardStats", () => {
     expect(container.querySelector(".bg-gradient-to-br")).toBeNull();
     expect(container.querySelector('[class*="bg-card/50"]')).toBeNull();
   });
+
+  it("renders footer strips with real tracked values", () => {
+    const { container } = render(
+      <PersonalDashboardStats
+        user={{ username: "alice" } as never}
+        personalOvertimeHours={4.5}
+        personalStandbyHours={2}
+        vacationBalanceDays={3}
+      />
+    );
+
+    const footers = container.querySelectorAll('[data-testid="stat-card-footer"]');
+    expect(footers).toHaveLength(3);
+    expect(screen.getByText("4.5h tracked")).toBeInTheDocument();
+    expect(screen.getByText("2h tracked")).toBeInTheDocument();
+    expect(screen.getByText("3d left")).toBeInTheDocument();
+  });
 });

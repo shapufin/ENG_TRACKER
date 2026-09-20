@@ -82,6 +82,7 @@ describe("usePushNotifications", () => {
   });
 
   it("subscribe calls API and returns true on success", async () => {
+    vi.stubGlobal("isSecureContext", true);
     vi.stubGlobal("Notification", { permission: "granted" });
     vi.stubGlobal("PushManager", {});
     const mockSubscribe = vi.fn().mockResolvedValue({
@@ -121,6 +122,7 @@ describe("usePushNotifications", () => {
   });
 
   it("exposes isSubscribing loading state during subscribe", async () => {
+    vi.stubGlobal("isSecureContext", true);
     vi.stubGlobal("Notification", { permission: "granted" });
     vi.stubGlobal("PushManager", {});
     let resolveSubscribe: (value: unknown) => void = () => {};
@@ -167,6 +169,7 @@ describe("usePushNotifications", () => {
   });
 
   it("sets error state when subscribe fails", async () => {
+    vi.stubGlobal("isSecureContext", true);
     vi.stubGlobal("Notification", { permission: "granted" });
     vi.stubGlobal("PushManager", {});
     const mockSubscribe = vi.fn().mockRejectedValue(new Error("SW error"));
@@ -200,6 +203,7 @@ describe("usePushNotifications", () => {
   });
 
   it("clears error on successful subscribe after failure", async () => {
+    vi.stubGlobal("isSecureContext", true);
     vi.stubGlobal("Notification", { permission: "granted" });
     vi.stubGlobal("PushManager", {});
     const mockSubscribe = vi
@@ -242,6 +246,7 @@ describe("usePushNotifications", () => {
   });
 
   it("exposes denied permission state for browser-settings recovery", async () => {
+    vi.stubGlobal("isSecureContext", true);
     vi.stubGlobal("Notification", {
       permission: "denied",
       requestPermission: vi.fn().mockResolvedValue("denied"),

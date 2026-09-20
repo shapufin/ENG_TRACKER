@@ -107,6 +107,21 @@ export const userService = {
     return data;
   },
 
+  /** HR/admin: set or clear which TL an existing employee reports to.
+   * Narrowly scoped — only writes the employee's own italian_tl/albanian_tl
+   * FK, never role flags. `teamLeaderUserId: null` clears the assignment. */
+  async setTeamLeader(
+    profileId: number,
+    role: "italian_tl" | "albanian_tl",
+    teamLeaderUserId: number | null
+  ): Promise<UserProfile> {
+    const { data } = await api.post<UserProfile>(
+      `/users/profiles/${profileId}/set_team_leader/`,
+      { role, team_leader_user_id: teamLeaderUserId }
+    );
+    return data;
+  },
+
   async getTeams(params?: Record<string, unknown>): Promise<PaginatedResponse<Team>> {
     const { data } = await api.get<PaginatedResponse<Team>>("/users/teams/", { params });
     return data;
@@ -298,15 +313,6 @@ export const userService = {
       "/users/users/bulk_update/",
       payload
     );
-    return data;
-  },
-
-  async bulkUpdateTlRoles(payload: {
-    user_ids: number[];
-    is_italian_tl_role?: boolean;
-    is_albanian_tl_role?: boolean;
-  }): Promise<{ detail: string; updated_count: number }> {
-    const { data } = await api.post("/users/users/bulk_update_tl_roles/", payload);
     return data;
   },
 

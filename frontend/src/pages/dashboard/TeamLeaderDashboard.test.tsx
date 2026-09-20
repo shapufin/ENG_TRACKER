@@ -22,8 +22,6 @@ vi.mock("@/hooks/useTeamLeaderDashboardData", () => ({
     teamStats: { team_size: 5, approved_count: 10 },
     pendingTrend: [],
     monthlyComparison: [],
-    isTopPendingUsersLoading: false,
-    isTopPendingUsersError: false,
     isQueueHighlightsLoading: false,
     isQueueHighlightsError: false,
   }),
@@ -32,7 +30,6 @@ vi.mock("./hooks/useTeamLeaderDashboardUI", () => ({
   useTeamLeaderDashboardUI: () => ({
     pendingCounts: { total: 3, overtime: 1, standby: 1, leave: 1 },
     queueSegments: [],
-    uiTopPendingUsers: [],
     uiQueueHighlights: [],
     highlightTypeCounts: { all: 0, overtime: 0, standby: 0, leave: 0 },
     filteredSortedHighlights: [],

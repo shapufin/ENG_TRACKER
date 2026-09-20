@@ -43,6 +43,7 @@ from core.mixins.permissions import (
     StaffFilterMixin,
     HRReadOnlyMixin,
     IsCRAdminOrStaff,
+    IsHR,
     is_cr_admin,
     is_hr_only,
     has_hr_role,
@@ -361,50 +362,6 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         return Response({'detail': 'Password reset successfully.'}, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['post'], permission_classes=[IsAdminUser()])
-    def bulk_update_tl_roles(self, request):
-        """
-        Admin bulk updates TL role boolean flags for multiple users.
-        Payload: {user_ids: number[], is_italian_tl_role?: boolean, is_albanian_tl_role?: boolean}
-        """
-        data = request.data
-        user_ids = data.get('user_ids', [])
-        is_italian_tl_role = data.get('is_italian_tl_role')
-        is_albanian_tl_role = data.get('is_albanian_tl_role')
-
-        if not user_ids or not isinstance(user_ids, list):
-            return Response({'error': 'user_ids array is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-        from apps.permissions.services.role_service import assign_role, revoke_role
-        profiles = UserProfile.objects.filter(user_id__in=user_ids).select_related('user')
-        updated_count = 0
-
-        for profile in profiles:
-            updated = False
-            if is_italian_tl_role is not None:
-                profile.is_italian_tl_role = bool(is_italian_tl_role)
-                updated = True
-            if is_albanian_tl_role is not None:
-                profile.is_albanian_tl_role = bool(is_albanian_tl_role)
-                updated = True
-            
-            if updated:
-                profile.save()
-                if is_italian_tl_role is not None:
-                    (assign_role if is_italian_tl_role else revoke_role)(
-                        profile.user, 'italian_tl'
-                    )
-                if is_albanian_tl_role is not None:
-                    (assign_role if is_albanian_tl_role else revoke_role)(
-                        profile.user, 'albanian_tl'
-                    )
-                updated_count += 1
-
-        return Response({
-            'detail': f'Successfully updated TL roles for {updated_count} users.',
-            'updated_count': updated_count
-        }, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=['post'], permission_classes=[IsAdminUser()])
     def bulk_update(self, request):
         """Apply selected core user-management fields atomically.
 
@@ -532,6 +489,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 )
 
         from .services.user_creation import _sync_legacy_roles
+        from apps.permissions.services.role_service import find_blocked_tl_revocations_bulk
 
         with transaction.atomic():
             profiles = list(
@@ -542,6 +500,43 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             if missing_ids:
                 return Response(
                     {'error': f'Unknown user IDs: {missing_ids}'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Block revoking a TL role (True -> False) while another
+            # profile's italian_tl/albanian_tl FK still points at this
+            # user — that FK is how is_team_leader is actually computed
+            # (apps.users.models.core.UserProfile), so leaving it dangling
+            # would keep the revoked user functioning as TL for whoever
+            # still points at them. Reject the whole request (matches this
+            # endpoint's existing all-or-nothing validation style) rather
+            # than partially applying it.
+            new_state = {}
+            if data.get('is_italian_tl_role') is False:
+                new_state['italian_tl'] = False
+            if data.get('is_albanian_tl_role') is False:
+                new_state['albanian_tl'] = False
+            blocked_revocations = (
+                find_blocked_tl_revocations_bulk(
+                    [profile.user for profile in profiles], new_state
+                )
+                if new_state
+                else []
+            )
+            if blocked_revocations:
+                summary = '; '.join(
+                    f"{b['username']} ({b['role']}): still assigned to "
+                    f"{', '.join(d['username'] for d in b['dependents'])}"
+                    for b in blocked_revocations
+                )
+                return Response(
+                    {
+                        'error': (
+                            'Cannot revoke TL role while other users are still '
+                            'assigned to them: ' + summary
+                        ),
+                        'blocked_revocations': blocked_revocations,
+                    },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -709,8 +704,54 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         Payload: any of {email, first_name, last_name, phone, team, albanian_tl, italian_tl, is_hr, is_italian_tl_role, is_albanian_tl_role, is_cr_admin}
         """
         from .services.user_creation import _set_cr_admin_role, _sync_legacy_roles, _sync_roles
+        from apps.permissions.services.role_service import find_blocked_tl_revocations
         user = self.get_object()
         data = request.data
+
+        # Block revoking a TL role (True -> False) while another profile's
+        # italian_tl/albanian_tl FK still points at this user — see
+        # find_blocked_tl_revocations for the full rationale. Must cover
+        # BOTH ways this endpoint can revoke: the legacy is_italian_tl_role/
+        # is_albanian_tl_role booleans, and the newer `roles` array (the
+        # actual live edit-user form sends both together, with `roles`
+        # taking priority — see _sync_roles below). A role_code omitted
+        # from new_state is "not touched by this request" and is never
+        # checked.
+        profile_for_check = getattr(user, 'profile', None)
+        if 'roles' in data:
+            requested_roles = set(data['roles'] or [])
+            new_state = {
+                'italian_tl': 'italian_tl' in requested_roles,
+                'albanian_tl': 'albanian_tl' in requested_roles,
+            }
+        else:
+            new_state = {}
+            if 'is_italian_tl_role' in data:
+                new_state['italian_tl'] = bool(data['is_italian_tl_role'])
+            if 'is_albanian_tl_role' in data:
+                new_state['albanian_tl'] = bool(data['is_albanian_tl_role'])
+        blocked_revocations = (
+            find_blocked_tl_revocations(user, new_state)
+            if profile_for_check and new_state
+            else []
+        )
+        if blocked_revocations:
+            summary = '; '.join(
+                f"{b['role']}: still assigned to "
+                f"{', '.join(d['username'] for d in b['dependents'])}"
+                for b in blocked_revocations
+            )
+            return Response(
+                {
+                    'error': (
+                        'Cannot revoke TL role while other users are still '
+                        'assigned to them: ' + summary
+                    ),
+                    'blocked_revocations': blocked_revocations,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         if 'email' in data:
             user.email = data['email']
         if 'first_name' in data:
@@ -1120,12 +1161,60 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
         ungraded_by_tech = {row['tech_id']: row['total'] for row in ungraded}
         return levels_by_tech, ungraded_by_tech
 
+    @action(detail=True, methods=['post'], url_path='set_team_leader')
+    def set_team_leader(self, request, pk=None):
+        """HR/admin: set or clear which TL an existing employee reports to.
+
+        Payload: {role: 'italian_tl'|'albanian_tl', team_leader_user_id: int|null}.
+        Writes only the employee's own italian_tl/albanian_tl FK — never
+        touches is_italian_tl_role/is_albanian_tl_role (that's a TL's own
+        role grant/revoke, handled by bulk_update/update_user, including the
+        dependents cascade block there). Narrowly scoped on purpose: HR gets
+        exactly this one capability, not full user-management write access.
+        """
+        profile = self.get_object()
+        role = request.data.get('role')
+        if role not in ('italian_tl', 'albanian_tl'):
+            return Response(
+                {'error': "role must be 'italian_tl' or 'albanian_tl'"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        raw_leader_id = request.data.get('team_leader_user_id')
+        if raw_leader_id in (None, ''):
+            setattr(profile, f'{role}_id', None)
+            profile.save(update_fields=[f'{role}_id'])
+            return Response(UserProfileSerializer(profile).data)
+
+        try:
+            leader_id = int(raw_leader_id)
+        except (TypeError, ValueError):
+            return Response(
+                {'error': 'team_leader_user_id must be an integer or null'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        leader_profile = UserProfile.objects.filter(user_id=leader_id).select_related('user').first()
+        is_valid_tl = leader_profile is not None and (
+            leader_profile.is_italian_tl if role == 'italian_tl' else leader_profile.is_albanian_tl
+        )
+        if not is_valid_tl:
+            return Response(
+                {'error': f'User {leader_id} is not currently an active {role} team leader'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        setattr(profile, f'{role}_id', leader_id)
+        profile.save(update_fields=[f'{role}_id'])
+        return Response(UserProfileSerializer(profile).data)
+
     def get_permissions(self):
         # Already handled by SuperuserPermissionMixin for superusers
         if self.action == 'destroy':
             return [IsAdminUser()]
         if self.action in ['create', 'update', 'partial_update']:
             return [IsAdminOrReadOnly()]
+        if self.action == 'set_team_leader':
+            return [IsHR()]
         return [IsAuthenticated()]
 
     def filter_for_regular_user(self, queryset, user):

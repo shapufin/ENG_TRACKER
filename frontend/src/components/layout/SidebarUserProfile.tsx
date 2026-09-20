@@ -1,5 +1,6 @@
 import React from "react";
 import { User } from "lucide-react";
+import { getUserDisplayName } from "@/components/calendar/initials";
 
 interface SidebarUserProfileProps {
   user?: {
@@ -13,11 +14,7 @@ interface SidebarUserProfileProps {
 }
 
 export const SidebarUserProfile: React.FC<SidebarUserProfileProps> = ({ user, collapsed }) => {
-  const displayName =
-    user?.full_name ||
-    [user?.first_name, user?.last_name].filter(Boolean).join(" ") ||
-    user?.username ||
-    "Guest";
+  const displayName = getUserDisplayName(user);
   return (
     <div className={`flex items-center gap-3 ${collapsed ? "md:justify-center" : ""}`}>
       <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">

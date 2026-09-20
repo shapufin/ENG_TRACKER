@@ -10,10 +10,21 @@ from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from apps.leave_management.models import LeaveRequest
 from apps.users.models import Team, TeamMembership
-from plugins.notifications.models import Notification, NotificationPreference, PushSubscription
+from plugins.notifications.models import (
+    Notification,
+    NotificationEventTypeConfig,
+    NotificationPreference,
+    PushSubscription,
+)
 from plugins.notifications.viewsets import NotificationViewSet
 
 User = get_user_model()
+
+
+def enable_all_events():
+    """Re-enable every seeded event type — migrations disable own_* by
+    default, so tests exercising own_* delivery must opt back in."""
+    NotificationEventTypeConfig.objects.update(is_enabled=True)
 
 
 class NotificationPluginLifecycleTest(TestCase):
@@ -197,7 +208,7 @@ class PushSubscriptionAPITest(TestCase):
             'vapid_public_key': 'get',
         })
 
-    def _request(self, method, action, data=None):
+    def _request(self, method, action, data=None, _user=None):
         url = f'/api/plugins/notifications/notifications/{action}/'
         if method == 'get':
             request = self.factory.get(url)
@@ -205,7 +216,7 @@ class PushSubscriptionAPITest(TestCase):
             request = self.factory.patch(url, data or {}, format='json')
         else:
             request = self.factory.post(url, data or {}, format='json')
-        force_authenticate(request, user=self.user)
+        force_authenticate(request, user=_user or self.user)
         view = NotificationViewSet.as_view({method: action})
         return view(request)
 
@@ -254,6 +265,54 @@ class PushSubscriptionAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         sub = PushSubscription.objects.first()
         self.assertFalse(sub.is_active)
+
+    def test_event_configs_requires_superuser(self):
+        response = self._request('get', 'event_configs')
+        self.assertEqual(response.status_code, 403)
+
+    def test_event_configs_lists_seeded_events(self):
+        superuser = User.objects.create_superuser(
+            username="admin", email="admin@test.com", password="adminpass123"
+        )
+        response = self._request('get', 'event_configs', _user=superuser)
+        self.assertEqual(response.status_code, 200)
+        by_type = {row['event_type']: row for row in response.data}
+        self.assertEqual(len(response.data), 10)
+        self.assertFalse(by_type['own_leave_submitted']['is_enabled'])
+        self.assertTrue(by_type['team_action_required']['is_enabled'])
+        self.assertEqual(
+            by_type['own_leave_submitted']['label'], 'My leave submitted'
+        )
+        self.assertIn('submit a leave request', by_type['own_leave_submitted']['description'])
+
+    def test_event_configs_patch_toggles_event(self):
+        superuser = User.objects.create_superuser(
+            username="admin", email="admin@test.com", password="adminpass123"
+        )
+        response = self._request('patch', 'event_configs', {
+            'event_type': 'own_leave_submitted',
+            'is_enabled': True,
+        }, _user=superuser)
+        self.assertEqual(response.status_code, 200)
+        config = NotificationEventTypeConfig.objects.get(
+            event_type='own_leave_submitted'
+        )
+        self.assertTrue(config.is_enabled)
+
+    def test_event_configs_patch_rejects_invalid(self):
+        superuser = User.objects.create_superuser(
+            username="admin", email="admin@test.com", password="adminpass123"
+        )
+        response = self._request('patch', 'event_configs', {
+            'event_type': 'no_such_event',
+            'is_enabled': True,
+        }, _user=superuser)
+        self.assertEqual(response.status_code, 400)
+        response = self._request('patch', 'event_configs', {
+            'event_type': 'own_leave_submitted',
+            'is_enabled': 'yes',
+        }, _user=superuser)
+        self.assertEqual(response.status_code, 400)
 
     def test_list_subscriptions(self):
         PushSubscription.objects.create(
@@ -311,6 +370,7 @@ class OvertimeSignalTest(TestCase):
         self.user = User.objects.create_user(
             username="testuser", email="test@test.com", password="testpass123"
         )
+        enable_all_events()
 
     @patch('plugins.notifications.signals.send_push_notification')
     def test_overtime_creation_notifies_led_team_leader(self, mock_push):
@@ -397,6 +457,7 @@ class StandbySignalTest(TestCase):
         self.user = User.objects.create_user(
             username="testuser", email="test@test.com", password="testpass123"
         )
+        enable_all_events()
 
     @patch('plugins.notifications.signals.send_push_notification')
     def test_standby_creation_creates_notification(self, mock_push):
@@ -420,6 +481,7 @@ class LeaveSignalPushTest(TestCase):
         self.user = User.objects.create_user(
             username="testuser", email="test@test.com", password="testpass123"
         )
+        enable_all_events()
 
     @patch('plugins.notifications.signals.send_push_notification')
     def test_leave_creation_triggers_push(self, mock_push):

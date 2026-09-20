@@ -535,6 +535,37 @@ class UserImporterTests(TestCase):
         self.assertTrue(user.profile.is_italian_tl_role)
         self.assertTrue(user.profile.is_hr_user)
 
+    def test_revoking_tl_role_via_import_blocked_while_dependent_fk_remains(self):
+        """Regression: importing a row that flips is_italian_tl off for an
+        existing TL must not silently leave a dependent's italian_tl FK
+        dangling — this is the same cascade-block bulk_update/update_user
+        enforce, applied to the CSV import path too."""
+        tl = User.objects.create_user(
+            username="import.tl", email="import.tl@example.com", password="password"
+        )
+        tl.profile.is_italian_tl_role = True
+        tl.profile.save()
+        dependent = User.objects.create_user(
+            username="import.dep", email="import.dep@example.com", password="password"
+        )
+        dependent.profile.italian_tl = tl
+        dependent.profile.save()
+
+        row = {
+            "__row_index": 1,
+            "username": "import.tl",
+            "email": "import.tl@example.com",
+            "is_italian_tl": False,
+        }
+        result = self.importer.commit_row(
+            row, {"password_strategy": "generate", "update_existing": True}
+        )
+
+        self.assertEqual(result.status, "error")
+        self.assertIn("still assigned", result.errors[0])
+        tl.profile.refresh_from_db()
+        self.assertTrue(tl.profile.is_italian_tl_role)
+
 
 class LeaveBalanceImporterTests(TestCase):
     def setUp(self):

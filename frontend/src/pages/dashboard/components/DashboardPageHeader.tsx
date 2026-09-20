@@ -2,7 +2,8 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { RoleSwitcher, RoleBadges } from "@/components/dashboard/RoleSwitcher";
+import { DashboardSwitcher } from "@/components/dashboard/DashboardSwitcher";
+import { RoleBadges } from "@/components/dashboard/RoleSwitcher";
 import type { DashboardType } from "@/context/permission-context-base";
 
 interface DashboardPageHeaderProps {
@@ -30,10 +31,11 @@ export const DashboardPageHeader: React.FC<DashboardPageHeaderProps> = ({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <RoleSwitcher
+      <DashboardSwitcher
         availableDashboards={availableDashboards}
-        currentDashboard={currentDashboard}
+        selectedDashboard={currentDashboard}
         onDashboardChange={onDashboardChange}
+        showWorkspaceTab={isTeamLeader}
       />
       <RoleBadges
         isTeamLeader={isTeamLeader}

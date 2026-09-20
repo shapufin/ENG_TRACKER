@@ -1,6 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { QueueHighlightsSection } from "./QueueHighlightsSection";
+
+// DataTable (TanStack) needs ResizeObserver, which jsdom lacks.
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+);
 
 const highlights = [
   {
@@ -45,8 +56,39 @@ const baseProps = {
 };
 
 describe("QueueHighlightsSection", () => {
+  const renderSection = (props = {}) =>
+    render(
+      <MemoryRouter>
+        <QueueHighlightsSection {...baseProps} {...props} />
+      </MemoryRouter>
+    );
+
+  it("renders the title, action badge, and subtitle", () => {
+    renderSection();
+    expect(screen.getByText("Queue Highlights")).toBeInTheDocument();
+    expect(screen.getByText("Action Required")).toBeInTheDocument();
+    expect(
+      screen.getByText("Review and resolve time-sensitive operational items")
+    ).toBeInTheDocument();
+  });
+
+  it("marks the active filter chip with aria-pressed", () => {
+    renderSection();
+    expect(screen.getByText("All (2)").closest("button")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Leave (1)").closest("button")).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+  });
+
+  it("renders hours and days effort values", () => {
+    renderSection();
+    expect(screen.getByText("4.00h")).toBeInTheDocument();
+    expect(screen.getByText("1d")).toBeInTheDocument();
+  });
+
   it("renders filter chips with counts", () => {
-    render(<QueueHighlightsSection {...baseProps} />);
+    renderSection();
     expect(screen.getByText("All (2)")).toBeInTheDocument();
     expect(screen.getByText("Standby (0)")).toBeInTheDocument();
     expect(screen.getByText("Leave (1)")).toBeInTheDocument();
@@ -55,13 +97,13 @@ describe("QueueHighlightsSection", () => {
 
   it("calls onFilterChange when a chip is clicked", () => {
     const onFilterChange = vi.fn();
-    render(<QueueHighlightsSection {...baseProps} onFilterChange={onFilterChange} />);
+    renderSection({ onFilterChange });
     screen.getByText("Leave (1)").click();
     expect(onFilterChange).toHaveBeenCalledWith("leave");
   });
 
   it("renders a tag pill per highlight", () => {
-    render(<QueueHighlightsSection {...baseProps} />);
+    renderSection();
     expect(screen.getByText("OT")).toBeInTheDocument();
     expect(screen.getByText("VACATION")).toBeInTheDocument();
   });
@@ -69,9 +111,7 @@ describe("QueueHighlightsSection", () => {
   it("calls onApproveOne/onRejectOne for a specific item", () => {
     const onApproveOne = vi.fn();
     const onRejectOne = vi.fn();
-    render(
-      <QueueHighlightsSection {...baseProps} onApproveOne={onApproveOne} onRejectOne={onRejectOne} />
-    );
+    renderSection({ onApproveOne, onRejectOne });
     const approveButtons = screen.getAllByText("Approve");
     approveButtons[0].click();
     expect(onApproveOne).toHaveBeenCalledWith(1, "overtime");
@@ -84,18 +124,83 @@ describe("QueueHighlightsSection", () => {
   it("calls onBatchApprove and disables the button while approving", () => {
     const onBatchApprove = vi.fn();
     const { rerender } = render(
-      <QueueHighlightsSection {...baseProps} onBatchApprove={onBatchApprove} />
+      <MemoryRouter>
+        <QueueHighlightsSection {...baseProps} onBatchApprove={onBatchApprove} />
+      </MemoryRouter>
     );
-    const button = screen.getByText("Batch Approve");
-    button.click();
+    screen.getByRole("button", { name: "Batch Approve" }).click();
     expect(onBatchApprove).toHaveBeenCalled();
 
-    rerender(<QueueHighlightsSection {...baseProps} isBatchApproving />);
-    expect(screen.getByText("Batch Approve").closest("button")).toBeDisabled();
+    rerender(
+      <MemoryRouter>
+        <QueueHighlightsSection {...baseProps} isBatchApproving />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole("button", { name: "Approving…" })).toBeDisabled();
   });
 
   it("disables Batch Approve when there are no visible highlights", () => {
-    render(<QueueHighlightsSection {...baseProps} highlights={[]} />);
-    expect(screen.getByText("Batch Approve").closest("button")).toBeDisabled();
+    renderSection({ highlights: [] });
+    expect(screen.getByRole("button", { name: "Batch Approve" })).toBeDisabled();
+  });
+
+  it("disables the per-item button while that item is approving", () => {
+    renderSection({ approvingIds: new Set(["overtime-1"]) });
+    const buttons = screen.getAllByRole("button", { name: "Approving…" });
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toBeDisabled();
+  });
+
+  it("locks both buttons while either mutation is pending for the row", () => {
+    renderSection({ rejectingId: "overtime-1" });
+    expect(screen.getByRole("button", { name: "Rejecting…" })).toBeDisabled();
+    // Approve on the same row must also lock — no double decisions.
+    const approveButtons = screen.getAllByRole("button", { name: "Approve" });
+    const rowApprove = approveButtons.find((btn) =>
+      (btn as HTMLElement).closest("tr")?.textContent?.includes("Alice Smith")
+    );
+    expect(rowApprove).toBeDisabled();
+  });
+
+  it("tracks multiple concurrently-approving items independently, without disabling others", () => {
+    renderSection({ approvingIds: new Set(["overtime-1", "leave-2"]) });
+    const buttons = screen.getAllByRole("button", { name: "Approving…" });
+    expect(buttons).toHaveLength(2);
+  });
+
+  it("renders table headers for employee, type, duration, date, details, status, actions", () => {
+    renderSection();
+    for (const header of [
+      "Employee",
+      "Type",
+      "Duration",
+      "Requested",
+      "Details",
+      "Status",
+      "Actions",
+    ]) {
+      expect(screen.getByText(header)).toBeInTheDocument();
+    }
+  });
+
+  it("paginates at five rows per page", () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({
+      id: 10 + i,
+      type: "overtime",
+      userName: `User ${i}`,
+      date: "2024-06-01",
+      details: `${i}h - work`,
+      status: "pending",
+      tag: "OT",
+      hours: i,
+      days: null,
+    }));
+    renderSection({ highlights: many });
+    expect(screen.getByText("User 0")).toBeInTheDocument();
+    expect(screen.queryByText("User 5")).not.toBeInTheDocument();
+    expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(screen.getByText("User 5")).toBeInTheDocument();
+    expect(screen.queryByText("User 0")).not.toBeInTheDocument();
   });
 });

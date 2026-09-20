@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { ERROR_CODES, ERROR_MESSAGES } from "./error-messages";
+import type { BlockedRevocation } from "@/types";
 
 type ApiErrorResponse = {
   response?: {
@@ -179,6 +180,15 @@ const extractBackendMessage = (response: ApiErrorResponse["response"]): string =
     .filter(([, v]) => v)
     .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`);
   return fieldErrors.join("; ");
+};
+
+/** Extracts the structured TL-revoke-blocked payload from a bulk_update/
+ * update_user 400 response, or null when the error is unrelated — lets a
+ * caller open the reassign-dependents modal instead of a plain toast. */
+export const getBlockedRevocations = (error: unknown): BlockedRevocation[] | null => {
+  const response = extractResponse(error);
+  const revocations = response?.data?.blocked_revocations;
+  return Array.isArray(revocations) ? (revocations as BlockedRevocation[]) : null;
 };
 
 export const handleApiError = (error: unknown): string => {

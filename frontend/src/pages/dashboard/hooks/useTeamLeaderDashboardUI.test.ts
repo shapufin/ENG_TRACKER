@@ -25,11 +25,10 @@ describe("useTeamLeaderDashboardUI", () => {
     expect(result.current.queueSegments[2].percentage).toBe(70);
   });
 
-  it("maps top pending users and queue highlights", () => {
+  it("maps queue highlights with tag/hours/days defaults", () => {
     const { result } = renderHook(() =>
       useTeamLeaderDashboardUI({
         teamStats: null,
-        topPendingUsers: [{ user_id: 1, user_name: "Alice", pending_count: 3 }],
         queueHighlights: [
           {
             id: 1,
@@ -42,7 +41,6 @@ describe("useTeamLeaderDashboardUI", () => {
         ],
       } as any)
     );
-    expect(result.current.uiTopPendingUsers).toEqual([{ userId: 1, userName: "Alice", count: 3 }]);
     expect(result.current.uiQueueHighlights).toEqual([
       {
         id: 1,

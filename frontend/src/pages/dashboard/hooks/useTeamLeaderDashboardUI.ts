@@ -56,15 +56,6 @@ export const useTeamLeaderDashboardUI = (
     [pendingCounts]
   );
 
-  const uiTopPendingUsers = useMemo(() => {
-    if (!dashboardData.topPendingUsers) return [];
-    return dashboardData.topPendingUsers.map((u) => ({
-      userId: u.user_id,
-      userName: u.user_name,
-      count: u.pending_count,
-    }));
-  }, [dashboardData.topPendingUsers]);
-
   const uiQueueHighlights = useMemo(() => {
     if (!dashboardData.queueHighlights) return [];
     return dashboardData.queueHighlights.map((item) => ({
@@ -104,7 +95,6 @@ export const useTeamLeaderDashboardUI = (
   return {
     pendingCounts,
     queueSegments,
-    uiTopPendingUsers,
     uiQueueHighlights,
     highlightTypeCounts,
     filteredSortedHighlights,

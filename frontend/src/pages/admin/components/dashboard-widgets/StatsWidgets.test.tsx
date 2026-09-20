@@ -67,4 +67,22 @@ describe("StatsWidgets", () => {
     // h-10/w-10 rounded-xl wrapper only appears when iconWellClass is set.
     expect(container.querySelectorAll(".h-10.w-10.rounded-xl").length).toBe(4);
   });
+
+  it("renders footer strips with real widget values", () => {
+    const { container } = render(
+      <StatsWidgets
+        isWidgetActive={() => true}
+        totalUsers={10}
+        totalTeams={5}
+        totalPending={3}
+        overtimeSummary={{ total_hours: 20 }}
+      />
+    );
+    const footers = container.querySelectorAll('[data-testid="stat-card-footer"]');
+    expect(footers.length).toBe(4);
+    expect(screen.getByText("10 registered")).toBeInTheDocument();
+    expect(screen.getByText("5 teams")).toBeInTheDocument();
+    expect(screen.getByText("3 awaiting")).toBeInTheDocument();
+    expect(screen.getByText("20h logged")).toBeInTheDocument();
+  });
 });

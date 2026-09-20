@@ -24,6 +24,14 @@ export const PersonalDashboardStats: React.FC<PersonalDashboardStatsProps> = ({
       icon={Clock}
       glow="primary"
       delay={0}
+      footer={
+        <>
+          <span className="font-medium tabular-nums text-muted-foreground">
+            {personalOvertimeHours}h tracked
+          </span>
+          <span className="text-muted-foreground">This period</span>
+        </>
+      }
     />
     <StatCard
       label="Standby Hours"
@@ -32,6 +40,14 @@ export const PersonalDashboardStats: React.FC<PersonalDashboardStatsProps> = ({
       glow="success"
       iconColorClass="text-success"
       delay={0.05}
+      footer={
+        <>
+          <span className="font-medium tabular-nums text-muted-foreground">
+            {personalStandbyHours}h tracked
+          </span>
+          <span className="text-muted-foreground">This period</span>
+        </>
+      }
     />
     <StatCard
       label="Vacation Days Remaining"
@@ -41,6 +57,14 @@ export const PersonalDashboardStats: React.FC<PersonalDashboardStatsProps> = ({
       iconColorClass="text-warning"
       trend="See Calendar for booked days"
       delay={0.1}
+      footer={
+        <>
+          <span className="font-medium tabular-nums text-muted-foreground">
+            {vacationBalanceDays}d left
+          </span>
+          <span className="text-muted-foreground">See Calendar</span>
+        </>
+      }
     />
     <StatCard
       label="System Status"

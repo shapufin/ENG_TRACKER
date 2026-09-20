@@ -1,3 +1,16 @@
+interface DisplayNameUser {
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
+  username?: string;
+}
+
+export const getUserDisplayName = (user?: DisplayNameUser | null, fallback = "Guest") =>
+  user?.full_name ||
+  [user?.first_name, user?.last_name].filter(Boolean).join(" ") ||
+  user?.username ||
+  fallback;
+
 export const getInitials = (value?: string) => {
   if (!value) return "--";
   const normalized = value.replace(/\s+/g, " ").trim();

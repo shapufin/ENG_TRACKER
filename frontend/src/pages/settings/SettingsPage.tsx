@@ -15,7 +15,7 @@ import { LogOut, Lock, User } from "lucide-react";
 import { toast } from "sonner";
 import { MyClientsSection } from "./components/MyClientsSection";
 import { ClientAssignmentSection } from "./components/ClientAssignmentSection";
-import { NotificationPreferencesSection } from "./components/NotificationPreferencesSection";
+import { PushNotificationSection } from "./components/PushNotificationSection";
 import { PluginCRScopeCard } from "./components/PluginCRScopeCard";
 
 export const SettingsPage: React.FC = () => {
@@ -148,17 +148,19 @@ export const SettingsPage: React.FC = () => {
             the access management page; they don't need a self-scope card. */}
         {isCRUser && <PluginCRScopeCard />}
 
-        {/* Row 2 pair: Notification Preferences | Client Assignment. For
-            TLs both cards sit side by side; for everyone else (no Client
-            Assignment card) Notification Preferences takes the full row so
-            no half-width hole is left. */}
+        {/* Row 2 pair: Push Notifications | Client Assignment. For TLs
+            both cards sit side by side; for everyone else (no Client
+            Assignment card) Push Notifications takes the full row so no
+            half-width hole is left. Which notification events exist is
+            managed globally by admins in the Django admin; users only
+            control push on this device. */}
         {notificationsActive &&
           !isCRScoped &&
           (isTeamLeader ? (
-            <NotificationPreferencesSection />
+            <PushNotificationSection />
           ) : (
             <div className="lg:col-span-2">
-              <NotificationPreferencesSection />
+              <PushNotificationSection />
             </div>
           ))}
 

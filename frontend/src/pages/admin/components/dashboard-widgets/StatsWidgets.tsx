@@ -45,6 +45,14 @@ export const StatsWidgets: React.FC<StatsWidgetsProps> = ({
           iconColorClass="text-primary"
           iconWellClass="bg-primary/10"
           delay={0}
+          footer={
+            <>
+              <span className="font-medium tabular-nums text-muted-foreground">
+                {totalUsers} registered
+              </span>
+              <span className="text-muted-foreground">All roles</span>
+            </>
+          }
         />
       )}
       {isWidgetActive("total-teams") && (
@@ -56,6 +64,14 @@ export const StatsWidgets: React.FC<StatsWidgetsProps> = ({
           iconColorClass="text-success"
           iconWellClass="bg-success/10"
           delay={0.05}
+          footer={
+            <>
+              <span className="font-medium tabular-nums text-muted-foreground">
+                {totalTeams} teams
+              </span>
+              <span className="text-muted-foreground">Active now</span>
+            </>
+          }
         />
       )}
       {isWidgetActive("pending-approvals") && (
@@ -68,6 +84,14 @@ export const StatsWidgets: React.FC<StatsWidgetsProps> = ({
           iconWellClass="bg-warning/10"
           delay={0.1}
           trend={totalPending === 0 ? "No pending items" : `${totalPending} pending`}
+          footer={
+            <>
+              <span className="font-medium tabular-nums text-muted-foreground">
+                {totalPending} awaiting
+              </span>
+              <span className="text-muted-foreground">Needs decision</span>
+            </>
+          }
         />
       )}
       {isWidgetActive("overtime-hours") && (
@@ -80,6 +104,14 @@ export const StatsWidgets: React.FC<StatsWidgetsProps> = ({
           iconWellClass="bg-accent-violet/10"
           delay={0.15}
           trend={`${overtimeHours}h this month`}
+          footer={
+            <>
+              <span className="font-medium tabular-nums text-muted-foreground">
+                {overtimeHours}h logged
+              </span>
+              <span className="text-muted-foreground">This month</span>
+            </>
+          }
         />
       )}
     </div>

@@ -39,7 +39,13 @@ class AuditLogViewSet(PluginPermissionMixin, viewsets.ReadOnlyModelViewSet):
         action_filter = self.request.query_params.get('action')
         if action_filter:
             queryset = queryset.filter(action=action_filter)
-        
+
+        # Filter by target model (frontend's Model dropdown sends the
+        # ContentType.model value, e.g. "overtimelog").
+        model_name = self.request.query_params.get('model_name')
+        if model_name:
+            queryset = queryset.filter(content_type__model=model_name)
+
         # Filter by date range if provided
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')

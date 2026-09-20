@@ -23,17 +23,17 @@ const BarChart: React.FC<{
     <div className="flex items-end justify-center gap-8 py-4">
       <div className="flex flex-col items-center gap-2">
         <div className="w-24 rounded-t-xl bg-muted/30" style={{ height: `${prevHeight}px` }} />
-        <span className="text-base font-semibold">{previous}</span>
+        <span className="text-base font-semibold tabular-nums">{previous}</span>
         <span className="text-muted-foreground">{previousLabel}</span>
       </div>
       <div className="flex flex-col items-center gap-2">
         <div
-          className="relative flex items-end overflow-hidden rounded-t-2xl bg-primary/20"
-          style={{ height: `${currHeight}px`, width: "96px" }}
+          className="relative flex w-24 items-end overflow-hidden rounded-t-2xl bg-primary/20"
+          style={{ height: `${currHeight}px` }}
         >
           <div className="h-full w-full rounded-t-2xl bg-gradient-to-t from-primary to-primary/60 shadow-[0_0_40px_hsl(var(--primary)/0.45)]" />
         </div>
-        <span className="text-base font-semibold">{current}</span>
+        <span className="text-base font-semibold tabular-nums">{current}</span>
         <span className="text-muted-foreground">{currentLabel}</span>
       </div>
     </div>

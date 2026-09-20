@@ -52,7 +52,13 @@ class NotificationPlugin(BasePlugin):
             ],
             "injection_slots": [
                 {
-                    "slot": "sidebar",
+                    "slot": "header-desktop",
+                    "component": "NotificationBell"
+                },
+                {
+                    # header-desktop is md+ only — without this, mobile users
+                    # lose the bell entirely (it used to live in the sidebar).
+                    "slot": "header-mobile",
                     "component": "NotificationBell"
                 }
             ]

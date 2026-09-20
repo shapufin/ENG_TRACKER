@@ -9,6 +9,7 @@ import io
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from django.apps import apps as django_apps
 from django.core.management import call_command
 from django.test import TestCase
 from django.contrib.auth.models import User
@@ -48,6 +49,66 @@ class PluginDiscoveryTests(TestCase):
             self.assertNotIn('removed_plugin', registry.get_all_plugins())
         finally:
             registry._plugins = original_plugins
+
+
+class PluginsAppReadyGatingTests(TestCase):
+    """PluginsConfig.ready() must not reconnect a disabled plugin's signals.
+
+    Regression for the 2026-09-20 bug: apps/plugins/apps.py called
+    plugin.ready() on every *discovered* plugin at Django startup, ignoring
+    the DB is_enabled flag. That silently reconnected a disabled plugin's
+    signal handlers (e.g. ticket_kpi's post_save receivers) on every server
+    restart, contradicting the documented disable-safety invariant.
+    """
+
+    def test_ready_only_called_for_enabled_plugins(self):
+        Plugin.objects.create(
+            name="enabled_fake_plugin",
+            verbose_name="Enabled Fake",
+            description="",
+            version="1.0.0",
+            is_enabled=True,
+        )
+        Plugin.objects.create(
+            name="disabled_fake_plugin",
+            verbose_name="Disabled Fake",
+            description="",
+            version="1.0.0",
+            is_enabled=False,
+        )
+
+        enabled_plugin = MagicMock()
+        disabled_plugin = MagicMock()
+
+        from core.plugins.registry import plugin_registry
+        plugin_registry._plugins["enabled_fake_plugin"] = enabled_plugin
+        plugin_registry._plugins["disabled_fake_plugin"] = disabled_plugin
+        try:
+            # discover_plugins is mocked so it doesn't overwrite the fake
+            # plugins just registered above; get_active_plugins runs for
+            # real, so the DB is_enabled rows created above actually drive
+            # which plugin gets ready() called.
+            with patch("core.plugins.registry.plugin_registry.discover_plugins"):
+                app_config = django_apps.get_app_config("plugins")
+                app_config.ready()
+
+            enabled_plugin.ready.assert_called_once()
+            disabled_plugin.ready.assert_not_called()
+        finally:
+            plugin_registry._plugins.pop("enabled_fake_plugin", None)
+            plugin_registry._plugins.pop("disabled_fake_plugin", None)
+
+    def test_ready_skips_gracefully_when_plugin_table_missing(self):
+        from django.db.utils import OperationalError
+
+        with patch("core.plugins.registry.plugin_registry.discover_plugins"), \
+                patch(
+                    "core.plugins.registry.plugin_registry.get_active_plugins",
+                    side_effect=OperationalError("no such table: apps_plugins_plugin"),
+                ):
+            app_config = django_apps.get_app_config("plugins")
+            # Must not raise - a missing table means "not ready yet", not a crash.
+            app_config.ready()
 
 
 class UninstallDBCleanupTests(TestCase):

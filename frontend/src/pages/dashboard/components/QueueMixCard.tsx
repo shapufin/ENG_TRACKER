@@ -1,9 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/badge";
-const COLOR_VIOLET = "hsl(var(--chart-5))";
-const COLOR_YELLOW = "hsl(var(--chart-3))";
+const SEGMENT_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-3))", "hsl(var(--chart-2))"];
 
 interface QueueSegment {
   label: string;
@@ -14,18 +13,40 @@ interface QueueSegment {
 
 interface QueueMixCardProps {
   pendingTotal: number;
-  pendingStandby: number;
   queueSegments: QueueSegment[];
   complianceNote?: string;
 }
 
 export const QueueMixCard: React.FC<QueueMixCardProps> = ({
   pendingTotal,
-  pendingStandby,
   queueSegments,
   complianceNote = "Compliant with Work Regulations 2024",
 }) => {
   const navigate = useNavigate();
+  const donutBackground = useMemo(() => {
+    const visibleSegments = queueSegments.filter((segment) => segment.value > 0);
+    const segmentTotal = visibleSegments.reduce((sum, segment) => sum + segment.value, 0);
+    const denominator = Math.max(pendingTotal, segmentTotal, 1);
+    if (pendingTotal <= 0 && segmentTotal <= 0) return "hsl(var(--muted))";
+    if (visibleSegments.length === 0) return "hsl(var(--muted))";
+    const stops = visibleSegments.map((segment, index) => {
+      const startValue = visibleSegments
+        .slice(0, index)
+        .reduce((sum, prior) => sum + prior.value, 0);
+      const start = Math.min(360, (startValue / denominator) * 360);
+      const end = Math.min(360, ((startValue + segment.value) / denominator) * 360);
+      const color = SEGMENT_COLORS[index % SEGMENT_COLORS.length];
+      return `${color} ${start}deg ${end}deg`;
+    });
+    return `conic-gradient(${stops.join(", ")})`;
+  }, [pendingTotal, queueSegments]);
+  const donutLabel = useMemo(() => {
+    if (pendingTotal <= 0) return "No pending requests";
+    return queueSegments
+      .filter((segment) => segment.value > 0)
+      .map((segment) => `${segment.label}: ${segment.value}`)
+      .join(", ");
+  }, [pendingTotal, queueSegments]);
   return (
     <GlassCard>
       <div className="flex flex-row items-start justify-between p-6 pb-0">
@@ -39,17 +60,14 @@ export const QueueMixCard: React.FC<QueueMixCardProps> = ({
       </div>
       <div className="p-6">
         <div className="flex items-center justify-center py-4">
-          <div className="relative flex h-56 w-56 items-center justify-center rounded-full">
+          <div
+            className="relative flex h-56 w-56 items-center justify-center rounded-full"
+            role="img"
+            aria-label={`Pending queue distribution. ${donutLabel}.`}
+          >
             <div
               className="absolute inset-0 rounded-full blur-[1px]"
-              style={{
-                background: `conic-gradient(
-                  ${pendingStandby > 0 ? COLOR_YELLOW : COLOR_VIOLET} 0deg,
-                  ${pendingStandby > 0 ? COLOR_YELLOW : COLOR_VIOLET} ${pendingStandby > 0 ? (pendingStandby / pendingTotal) * 360 : 360}deg,
-                  ${COLOR_VIOLET} ${pendingStandby > 0 ? (pendingStandby / pendingTotal) * 360 : 0}deg,
-                  ${COLOR_VIOLET} 360deg
-                )`,
-              }}
+              style={{ background: donutBackground }}
             />
             <div className="absolute inset-[18px] rounded-full bg-background" />
             <div className="relative text-center">

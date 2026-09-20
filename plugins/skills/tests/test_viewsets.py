@@ -377,6 +377,7 @@ class UserSkillViewSetTest(ViewSetTestCase, TestCase):
         self.assertEqual(resp.status_code, 400)
 
 
+
 class SkillViewSetTest(ViewSetTestCase, TestCase):
     def test_employee_can_list_skills(self):
         resp = self._list(SkillViewSet, self.employee)

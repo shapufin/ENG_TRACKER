@@ -27,6 +27,8 @@ export interface StatCardProps {
   progressPercent?: number;
   /** Tailwind bg-* class for the progress fill. Defaults to bg-primary. */
   progressColorClass?: string;
+  /** Optional bottom strip (mockup KPI footer: left/right pair). Omit = card unchanged. */
+  footer?: React.ReactNode;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -43,6 +45,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   trend,
   progressPercent,
   progressColorClass = "bg-primary",
+  footer,
 }) => (
   <GlassCard delay={delay} glow={glow}>
     <div className="p-4">
@@ -89,6 +92,14 @@ export const StatCard: React.FC<StatCardProps> = ({
             className={cn("h-full rounded-full", progressColorClass)}
             style={{ width: `${Math.round(Math.min(100, Math.max(0, progressPercent)))}%` }}
           />
+        </div>
+      )}
+      {footer && (
+        <div
+          data-testid="stat-card-footer"
+          className="mt-2.5 flex items-center justify-between gap-2 border-t border-line-subtle pt-2 text-[11px]"
+        >
+          {footer}
         </div>
       )}
     </div>

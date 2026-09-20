@@ -13,7 +13,7 @@ const segments = [
 const renderCard = (props: Partial<React.ComponentProps<typeof QueueMixCard>> = {}) =>
   render(
     <MemoryRouter>
-      <QueueMixCard pendingTotal={10} pendingStandby={1} queueSegments={segments} {...props} />
+      <QueueMixCard pendingTotal={10} queueSegments={segments} {...props} />
     </MemoryRouter>
   );
 
@@ -27,15 +27,29 @@ describe("QueueMixCard", () => {
     expect(screen.getByText("7 (70%)")).toBeInTheDocument();
   });
 
-  it("renders full circle when no standby", () => {
-    const { container } = render(
-      <MemoryRouter>
-        <QueueMixCard pendingTotal={5} pendingStandby={0} queueSegments={segments} />
-      </MemoryRouter>
-    );
+  it("renders all three segments in the donut gradient", () => {
+    const { container } = renderCard();
     const circle = container.querySelector('[style*="conic-gradient"]');
     expect(circle).toBeInTheDocument();
-    expect(circle?.getAttribute("style")).toContain("360deg");
+    const style = circle?.getAttribute("style") ?? "";
+    expect(style).toContain("hsl(var(--chart-1))");
+    expect(style).toContain("hsl(var(--chart-3))");
+    expect(style).toContain("hsl(var(--chart-2))");
+  });
+
+  it("renders a muted circle when the queue is empty", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <QueueMixCard pendingTotal={0} queueSegments={[]} />
+      </MemoryRouter>
+    );
+    const circle = container.querySelector('[role="img"] > div');
+    expect(circle).toBeInTheDocument();
+    expect(circle?.getAttribute("style")).toContain("hsl(var(--muted))");
+    expect(container.querySelector('[role="img"]')).toHaveAttribute(
+      "aria-label",
+      expect.stringContaining("No pending requests")
+    );
   });
 
   it("renders the compliance note and a Batch Assign link", () => {

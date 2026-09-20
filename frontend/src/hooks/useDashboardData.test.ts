@@ -28,20 +28,36 @@ describe("useDashboardData", () => {
     // total of 42h (more standby entries exist than the page shows), the
     // dashboard tile must show the server aggregate, not the page sum.
     vi.mocked(overtimeService.getLogs).mockResolvedValue({
-      count: 0, next: null, previous: null, results: [],
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
     } as never);
     vi.mocked(overtimeService.getSummary).mockResolvedValue({
-      total_hours: 0, total_entries: 0, approved_hours: 0, pending_hours: 0, rejected_hours: 0,
+      total_hours: 0,
+      total_entries: 0,
+      approved_hours: 0,
+      pending_hours: 0,
+      rejected_hours: 0,
     });
     vi.mocked(standbyService.getLogs).mockResolvedValue({
-      count: 20, next: null, previous: null,
+      count: 20,
+      next: null,
+      previous: null,
       results: [{ hours: 1 }, { hours: 1 }, { hours: 1 }, { hours: 1 }, { hours: 1 }],
     } as never);
     vi.mocked(standbyService.getSummary).mockResolvedValue({
-      total_hours: 42, total_entries: 20, approved_hours: 42, pending_hours: 0, rejected_hours: 0,
+      total_hours: 42,
+      total_entries: 20,
+      approved_hours: 42,
+      pending_hours: 0,
+      rejected_hours: 0,
     });
     vi.mocked(leaveService.getRequests).mockResolvedValue({
-      count: 0, next: null, previous: null, results: [],
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
     } as never);
     vi.mocked(leaveService.getUserBalanceSummary).mockResolvedValue({} as never);
     vi.mocked(dashboardService.getHRStats).mockResolvedValue({} as never);
@@ -63,25 +79,48 @@ describe("useDashboardData", () => {
 
   it("vacationBalanceDays reflects the real remaining balance, not a page-capped sum of approved requests", async () => {
     vi.mocked(overtimeService.getLogs).mockResolvedValue({
-      count: 0, next: null, previous: null, results: [],
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
     } as never);
     vi.mocked(overtimeService.getSummary).mockResolvedValue({
-      total_hours: 0, total_entries: 0, approved_hours: 0, pending_hours: 0, rejected_hours: 0,
+      total_hours: 0,
+      total_entries: 0,
+      approved_hours: 0,
+      pending_hours: 0,
+      rejected_hours: 0,
     });
     vi.mocked(standbyService.getLogs).mockResolvedValue({
-      count: 0, next: null, previous: null, results: [],
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
     } as never);
     vi.mocked(standbyService.getSummary).mockResolvedValue({
-      total_hours: 0, total_entries: 0, approved_hours: 0, pending_hours: 0, rejected_hours: 0,
+      total_hours: 0,
+      total_entries: 0,
+      approved_hours: 0,
+      pending_hours: 0,
+      rejected_hours: 0,
     });
     vi.mocked(leaveService.getRequests).mockResolvedValue({
-      count: 0, next: null, previous: null, results: [],
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
     } as never);
     vi.mocked(leaveService.getUserBalanceSummary).mockResolvedValue({
-      user_id: 1, username: "u", full_name: "U", year: 2026,
+      user_id: 1,
+      username: "u",
+      full_name: "U",
+      year: 2026,
       vacation: {
-        carry_over: null, current_year: null,
-        total_available: 17, total_used: 3, total_pending: 0,
+        carry_over: null,
+        current_year: null,
+        total_available: 17,
+        total_used: 3,
+        total_pending: 0,
       },
     } as never);
     vi.mocked(dashboardService.getHRStats).mockResolvedValue({} as never);
@@ -99,5 +138,127 @@ describe("useDashboardData", () => {
     );
 
     await waitFor(() => expect(result.current.vacationBalanceDays).toBe(17));
+  });
+
+  it("weekOvertimeLogs/weekStandbyLogs come from a dedicated date-ranged query, not the page_size-capped recent list", async () => {
+    // The "recent activity" list is capped at page_size 5 and would silently
+    // undercount a week with more logs than that. The weekly hours chart
+    // must read from a separate, larger date-ranged fetch instead.
+    vi.mocked(overtimeService.getLogs).mockImplementation(
+      (params) =>
+        Promise.resolve(
+          params?.page_size === 100
+            ? {
+                count: 6,
+                next: null,
+                previous: null,
+                results: Array.from({ length: 6 }, (_, i) => ({
+                  date: "2026-09-14",
+                  hours: i + 1,
+                })),
+              }
+            : { count: 6, next: null, previous: null, results: [{ date: "2026-09-14", hours: 1 }] }
+        ) as never
+    );
+    vi.mocked(overtimeService.getSummary).mockResolvedValue({
+      total_hours: 21,
+      total_entries: 6,
+      approved_hours: 21,
+      pending_hours: 0,
+      rejected_hours: 0,
+    });
+    vi.mocked(standbyService.getLogs).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(standbyService.getSummary).mockResolvedValue({
+      total_hours: 0,
+      total_entries: 0,
+      approved_hours: 0,
+      pending_hours: 0,
+      rejected_hours: 0,
+    });
+    vi.mocked(leaveService.getRequests).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(leaveService.getUserBalanceSummary).mockResolvedValue({} as never);
+    vi.mocked(dashboardService.getHRStats).mockResolvedValue({} as never);
+
+    const queryClient = new QueryClient();
+    const { result } = renderHook(
+      () =>
+        useDashboardData({
+          userId: 1,
+          isAdmin: false,
+          isHR: false,
+          selectedDashboard: "employee",
+        }),
+      { wrapper: createWrapper(queryClient) }
+    );
+
+    await waitFor(() => expect(result.current.weekOvertimeLogs).toHaveLength(6));
+  });
+
+  it("does not fire the weekly date-ranged queries on non-personal dashboards", async () => {
+    vi.mocked(overtimeService.getLogs).mockClear();
+    vi.mocked(standbyService.getLogs).mockClear();
+    vi.mocked(overtimeService.getLogs).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(overtimeService.getSummary).mockResolvedValue({
+      total_hours: 0,
+      total_entries: 0,
+      approved_hours: 0,
+      pending_hours: 0,
+      rejected_hours: 0,
+    });
+    vi.mocked(standbyService.getLogs).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(standbyService.getSummary).mockResolvedValue({
+      total_hours: 0,
+      total_entries: 0,
+      approved_hours: 0,
+      pending_hours: 0,
+      rejected_hours: 0,
+    });
+    vi.mocked(leaveService.getRequests).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(leaveService.getUserBalanceSummary).mockResolvedValue({} as never);
+    vi.mocked(dashboardService.getHRStats).mockResolvedValue({} as never);
+
+    const queryClient = new QueryClient();
+    renderHook(
+      () =>
+        useDashboardData({
+          userId: 1,
+          isAdmin: false,
+          isHR: true,
+          selectedDashboard: "hr",
+        }),
+      { wrapper: createWrapper(queryClient) }
+    );
+
+    // Let any would-be queries settle, then assert the weekly fetch never ran.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const weeklyCalls = vi
+      .mocked(overtimeService.getLogs)
+      .mock.calls.filter((args) => (args[0] as { page_size?: number })?.page_size === 100);
+    expect(weeklyCalls).toHaveLength(0);
   });
 });

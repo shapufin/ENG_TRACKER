@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.contrib.auth.models import User
 from rest_framework.test import APIRequestFactory, force_authenticate
@@ -120,3 +121,38 @@ class AuditLogQueryCountTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data['results']), 8)
+
+
+class AuditLogModelFilterTests(TestCase):
+    """The frontend Model dropdown sends ?model_name=<contenttype model>;
+    the viewset must actually apply it (was previously ignored)."""
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username='admin2', email='admin2@example.com', password='testpass123'
+        )
+        self.factory = APIRequestFactory()
+        overtime_ct = ContentType.objects.get(app_label='overtime', model='overtimelog')
+        standby_ct = ContentType.objects.get(app_label='standby', model='standbylog')
+        AuditLog.objects.create(
+            user=self.admin, action='create', description='OT log',
+            content_type=overtime_ct, object_id=1, status='success',
+        )
+        AuditLog.objects.create(
+            user=self.admin, action='create', description='SB log',
+            content_type=standby_ct, object_id=1, status='success',
+        )
+
+    def test_model_name_filter_scopes_results(self):
+        request = self.factory.get('/api/plugins/audit_log/logs/?model_name=overtimelog')
+        force_authenticate(request, user=self.admin)
+        response = AuditLogViewSet.as_view({'get': 'list'})(request)
+        self.assertEqual(response.status_code, 200)
+        descriptions = [row['description'] for row in response.data['results']]
+        self.assertEqual(descriptions, ['OT log'])
+
+    def test_no_model_name_returns_all(self):
+        request = self.factory.get('/api/plugins/audit_log/logs/')
+        force_authenticate(request, user=self.admin)
+        response = AuditLogViewSet.as_view({'get': 'list'})(request)
+        self.assertEqual(len(response.data['results']), 2)

@@ -76,4 +76,32 @@ describe("StatCard", () => {
     expect(svg).not.toBeNull();
     expect(svg?.parentElement?.className).not.toContain("rounded-xl");
   });
+
+  it("renders no footer when the footer prop is omitted", () => {
+    const { container } = render(<StatCard label="Active users" value={7} icon={Clock} />);
+
+    expect(container.querySelector('[data-testid="stat-card-footer"]')).not.toBeInTheDocument();
+  });
+
+  it("renders the footer strip when footer content is provided", () => {
+    const { container } = render(
+      <StatCard
+        label="Pending OT"
+        value={2}
+        icon={Clock}
+        footer={
+          <>
+            <span className="text-muted-foreground">70% queue mix</span>
+            <span className="text-muted-foreground">On-call shifts</span>
+          </>
+        }
+      />
+    );
+
+    const footerEl = container.querySelector('[data-testid="stat-card-footer"]');
+    expect(footerEl).toBeInTheDocument();
+    expect(footerEl?.className).toContain("border-t");
+    expect(footerEl?.textContent).toContain("70% queue mix");
+    expect(footerEl?.textContent).toContain("On-call shifts");
+  });
 });

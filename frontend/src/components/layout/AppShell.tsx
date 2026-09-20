@@ -6,8 +6,11 @@ import { useLogout } from "@/hooks/useLogout";
 import { PluginSlot } from "@/components/plugins/PluginSlot";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import { TeamContextPill } from "./TeamContextPill";
 import { MobileOverlay } from "./MobileOverlay";
 import { MainContentTransition } from "./MainContentTransition";
+import { HeaderSearch } from "./HeaderSearch";
+import { HeaderProfileMenu } from "./HeaderProfileMenu";
 import { useVisibleNavItems } from "./hooks/useVisibleNavItems";
 import { usePendingApprovalCount } from "@/hooks/usePendingApprovalCount";
 
@@ -83,9 +86,16 @@ export const AppShell = React.memo(() => {
             <PluginSlot slot="header-mobile" />
           </div>
         </div>
-        <div className="hidden border-b border-border/60 bg-card/10 px-8 py-3 backdrop-blur-sm md:flex md:items-center md:justify-end">
+        <div className="hidden border-b border-border/60 bg-card/10 px-8 py-3 backdrop-blur-sm md:flex md:items-center md:justify-between md:gap-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <TeamContextPill />
+          </div>
+          <div className="flex flex-1 items-center justify-center px-4">
+            <HeaderSearch items={visibleItems} />
+          </div>
           <div className="flex items-center gap-2">
             <PluginSlot slot="header-desktop" />
+            <HeaderProfileMenu user={user} roleSubtitle={roleSubtitle} onLogout={handleLogout} />
           </div>
         </div>
         <MainContentTransition pathname={location.pathname} className="h-full">

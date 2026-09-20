@@ -18,6 +18,9 @@ interface ConfirmDialogProps {
   description?: string;
   onConfirm: () => void;
   isConfirming?: boolean;
+  /** Disable the confirm button independent of isConfirming, e.g. while a
+   * required field (like a rejection reason) is empty. */
+  confirmDisabled?: boolean;
   confirmLabel?: string;
   variant?: "default" | "destructive" | "success";
   /** Mockup ConfirmAction pattern: icon rendered in a tinted well next to the title. */
@@ -40,6 +43,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   description,
   onConfirm,
   isConfirming = false,
+  confirmDisabled = false,
   confirmLabel = "Confirm",
   variant = "default",
   icon,
@@ -80,7 +84,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           type="button"
           variant={variant === "success" ? "default" : variant}
           onClick={onConfirm}
-          disabled={isConfirming}
+          disabled={isConfirming || confirmDisabled}
         >
           {isConfirming ? "Processing..." : confirmLabel}
         </Button>

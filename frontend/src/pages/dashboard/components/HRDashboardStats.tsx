@@ -23,6 +23,14 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         trend="+12%"
         progressPercent={Math.min(100, Math.round((avgOvertime / 4) * 100))}
         progressColorClass="bg-primary"
+        footer={
+          <>
+            <span className="font-medium tabular-nums text-muted-foreground">
+              {avgOvertime.toFixed(1)}h average
+            </span>
+            <span className="text-muted-foreground">Company-wide</span>
+          </>
+        }
       />
       <StatCard
         label="Active Teams"
@@ -33,6 +41,14 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         trend="Stable"
         progressPercent={activeTeams > 0 ? 100 : 0}
         progressColorClass="bg-success"
+        footer={
+          <>
+            <span className="font-medium tabular-nums text-muted-foreground">
+              {activeTeams} teams
+            </span>
+            <span className="text-muted-foreground">Active now</span>
+          </>
+        }
       />
       <StatCard
         label="Total Requests"
@@ -47,6 +63,16 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
             : 0
         }
         progressColorClass="bg-warning"
+        footer={
+          <>
+            <span className="font-medium tabular-nums text-muted-foreground">
+              {hrStats?.pending_overtime ?? 0} overtime
+            </span>
+            <span className="tabular-nums text-muted-foreground">
+              {hrStats?.pending_standby ?? 0} standby
+            </span>
+          </>
+        }
       />
       <StatCard
         label="Workforce"
@@ -57,6 +83,14 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         trend="+2"
         progressPercent={workforce > 0 ? 100 : 0}
         progressColorClass="bg-success"
+        footer={
+          <>
+            <span className="font-medium tabular-nums text-muted-foreground">
+              {workforce} users
+            </span>
+            <span className="text-muted-foreground">Total headcount</span>
+          </>
+        }
       />
     </div>
   );

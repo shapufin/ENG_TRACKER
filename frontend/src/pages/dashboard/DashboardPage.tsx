@@ -74,6 +74,8 @@ export const DashboardPage: React.FC = () => {
           upcomingLeaves: personalItems.upcomingLeaves,
           personalPendingItems: personalItems.personalPendingItems,
           personalTimelineItems: personalItems.personalTimelineItems,
+          weekOvertimeLogs: dashboardData.weekOvertimeLogs,
+          weekStandbyLogs: dashboardData.weekStandbyLogs,
         }}
       />
     );

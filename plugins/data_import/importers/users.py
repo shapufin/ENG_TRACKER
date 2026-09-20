@@ -9,6 +9,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db.models.functions import Lower
 
+from apps.permissions.services.role_service import TeamLeaderRevokeBlockedError
 from apps.users.models import Team, Tech, TechLevel
 from apps.users.services.user_creation import (
     create_user_with_profile,
@@ -581,7 +582,14 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                     update_kwargs["techs"] = tech_ids
 
                 if not dry_run:
-                    update_user_profile(existing_user, **update_kwargs)
+                    try:
+                        update_user_profile(existing_user, **update_kwargs)
+                    except TeamLeaderRevokeBlockedError as exc:
+                        return ImportRowResult(
+                            row_index=row_index,
+                            status="error",
+                            errors=[str(exc)],
+                        )
 
                     # Password overwrite is handled separately because it must
                     # set user.password directly, not the profile.

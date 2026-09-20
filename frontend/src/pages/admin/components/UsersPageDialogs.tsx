@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { UserEditFormDialog } from "./UserEditFormDialog";
 import { UserCreateFormDialog } from "./UserCreateFormDialog";
 import { PluginCreateCRUserDialog, PluginEditCRUserDialog } from "@/components/admin/PluginCRUserDialogs";
+import { TlRevokeBlockedDialog } from "@/components/admin/TlRevokeBlockedDialog";
 import type { useUsersPage } from "../hooks/useUsersPage";
 import type { Team } from "@/types";
 
@@ -120,6 +121,18 @@ export const UsersPageDialogs: React.FC<UsersPageDialogsProps> = ({ state }) => 
         }
         isConfirming={state.deleteMutation.isPending}
         variant="destructive"
+      />
+
+      <TlRevokeBlockedDialog
+        open={Boolean(state.blockedRevocations)}
+        onOpenChange={(open) => {
+          if (!open) state.closeBlockedDialog();
+        }}
+        blockedRevocations={state.blockedRevocations ?? []}
+        italianTLs={state.italianTLs || []}
+        albanianTLs={state.albanianTLs || []}
+        onRetry={state.retryBlocked}
+        retrying={state.blockedRetrying}
       />
     </>
   );

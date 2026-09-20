@@ -43,6 +43,7 @@ export const usePersonalDashboardItems = ({
           amount: `${r.hours}h`,
           date: r.date,
           status: "pending",
+          detailsPath: "/overtime",
         })
       );
     (standbyData?.results ?? [])
@@ -54,6 +55,7 @@ export const usePersonalDashboardItems = ({
           amount: `${r.hours}h`,
           date: r.date,
           status: "pending",
+          detailsPath: "/standby",
         })
       );
     (leaveData?.results ?? [])
@@ -65,6 +67,7 @@ export const usePersonalDashboardItems = ({
           amount: `${r.days_requested}d`,
           date: r.start_date,
           status: "pending",
+          detailsPath: "/leave-management",
         })
       );
     return items.slice(0, 4);

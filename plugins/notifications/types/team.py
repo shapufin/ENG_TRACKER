@@ -11,6 +11,10 @@ from .base import NotificationType
 class TeamActionRequiredNotification(NotificationType):
     event_type = 'team_action_required'
     label = 'Team submissions needing action'
+    description = (
+        'Sent to team leaders and HR when a team member submits a leave '
+        'request, overtime log, or standby log that needs their approval.'
+    )
     category = 'team'
     notification_type = 'warning'
     link = '/team/approvals'
@@ -45,6 +49,11 @@ class TeamActionRequiredNotification(NotificationType):
 class TeamLeaveDeletedNotification(NotificationType):
     event_type = 'team_leave_deleted'
     label = 'Team leave requests deleted'
+    description = (
+        'Sent to team leaders and HR when a team member deletes one of '
+        'their leave requests, so approvers know why it vanished from '
+        'their approval queue.'
+    )
     category = 'team'
     notification_type = 'warning'
     link = '/team/approvals'

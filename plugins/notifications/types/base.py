@@ -25,6 +25,9 @@ class NotificationType:
 
     event_type: str = ''
     label: str = ''
+    # Admin-facing explanation of exactly who gets this notification and
+    # when. Shown in the Django admin and the custom admin GUI.
+    description: str = ''
     category: str = 'own'  # 'own' or 'team' — used by viewset drift test
     link: Optional[str] = None
     notification_type: str = 'info'  # default; override or define as method

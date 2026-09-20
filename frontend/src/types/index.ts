@@ -590,3 +590,20 @@ export interface ApiError {
   };
   message: string;
 }
+
+/** A user who still has the blocked TL as their italian_tl/albanian_tl —
+ * must be reassigned or cleared before that TL role can be revoked. */
+export interface TlDependent {
+  profile_id: number;
+  user_id: number;
+  username: string;
+}
+
+/** One TL revoke that bulk_update/update_user rejected because dependents
+ * still point at them. See apps/users/viewsets.py's blocked_revocations. */
+export interface BlockedRevocation {
+  user_id: number;
+  username: string;
+  role: "italian_tl" | "albanian_tl";
+  dependents: TlDependent[];
+}

@@ -1,6 +1,9 @@
-import React from "react";
-import { GlassCard } from "@/components/ui/GlassCard";
+import React, { useMemo } from "react";
+import { Link } from "react-router-dom";
+import type { ColumnDef } from "@tanstack/react-table";
+import { DashboardSectionShell } from "@/components/dashboard/DashboardSectionShell";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toneSurfaceClass, type Tone } from "@/components/ui/tone";
@@ -40,6 +43,8 @@ interface QueueHighlightsSectionProps {
   isBatchApproving: boolean;
   onApproveOne: (id: number, type: string) => void;
   onRejectOne: (id: number, type: string) => void;
+  approvingIds?: Set<string>;
+  rejectingId?: string | null;
 }
 
 const TAG_TONE: Record<string, Tone> = {
@@ -68,17 +73,157 @@ export const QueueHighlightsSection: React.FC<QueueHighlightsSectionProps> = ({
   isBatchApproving,
   onApproveOne,
   onRejectOne,
-}) => {
+  approvingIds,
+  rejectingId = null,
+}: QueueHighlightsSectionProps) => {
+  const columns = useMemo<ColumnDef<QueueHighlight, unknown>[]>(
+    () => [
+      {
+        accessorKey: "userName",
+        header: "Employee",
+        enableSorting: false,
+        cell: (info) => {
+          const item = info.row.original;
+          return (
+            <div className="flex min-w-0 items-center gap-3">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-primary/10 text-xs text-primary">
+                  {item.userName
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="truncate font-medium">{item.userName}</p>
+                {item.tag && (
+                  <span
+                    className={cn(
+                      "mt-0.5 inline-block rounded-full border px-2 py-px text-[11px] font-medium",
+                      toneSurfaceClass[TAG_TONE[item.type] ?? "neutral"]
+                    )}
+                  >
+                    {item.tag}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "type",
+        header: "Type",
+        enableSorting: false,
+        cell: (info) => {
+          const type = info.getValue<string>();
+          return <span className="capitalize">{type}</span>;
+        },
+      },
+      {
+        accessorKey: "hours",
+        header: "Duration",
+        enableSorting: false,
+        cell: (info) => {
+          const item = info.row.original;
+          if (item.hours != null)
+            return <span className="font-mono tabular-nums">{item.hours.toFixed(2)}h</span>;
+          if (item.days != null)
+            return <span className="font-mono tabular-nums">{item.days}d</span>;
+          return <span className="text-muted-foreground">—</span>;
+        },
+      },
+      {
+        accessorKey: "date",
+        header: "Requested",
+        enableSorting: false,
+        cell: (info) => (
+          <span className="whitespace-nowrap text-muted-foreground">
+            {format(parseISO(info.getValue<string>()), "dd MMM, yyyy")}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "details",
+        header: "Details",
+        enableSorting: false,
+        cell: (info) => (
+          <span
+            className="block max-w-64 truncate text-muted-foreground"
+            title={info.getValue<string>()}
+          >
+            {info.getValue<string>()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        enableSorting: false,
+        cell: (info) => <StatusBadge variant={info.getValue<string>() as StatusVariant} />,
+      },
+      {
+        id: "actions",
+        header: () => <span className="block text-right">Actions</span>,
+        enableSorting: false,
+        cell: (info) => {
+          const item = info.row.original;
+          const key = `${item.type}-${item.id}`;
+          if (item.status !== "pending") return null;
+          // Either pending mutation locks both buttons: approving while a
+          // reject is in flight (or vice versa) would double-decide the row.
+          const isBusy = (approvingIds?.has(key) ?? false) || rejectingId === key;
+          const isRejecting = rejectingId === key;
+          return (
+            <div className="flex items-center justify-end gap-2">
+              <Link
+                to={`/team/approvals?highlight=${item.id}&type=${item.type}`}
+                className="whitespace-nowrap text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+              >
+                Details & Audit
+              </Link>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isBusy}
+                onClick={() => onRejectOne(item.id, item.type)}
+              >
+                {isRejecting ? "Rejecting…" : "Reject"}
+              </Button>
+              <Button size="sm" disabled={isBusy} onClick={() => onApproveOne(item.id, item.type)}>
+                {!isRejecting && approvingIds?.has(key) ? "Approving…" : "Approve"}
+              </Button>
+            </div>
+          );
+        },
+      },
+    ],
+    [approvingIds, rejectingId, onApproveOne, onRejectOne]
+  );
+
   return (
-    <GlassCard className="border border-border/60 bg-background/50">
-      <div className="flex flex-wrap items-center justify-between gap-3 p-5">
-        <h3 className="text-lg font-semibold">Queue highlights</h3>
-        <div className="flex flex-wrap items-center gap-2">
+    <DashboardSectionShell
+      title="Queue Highlights"
+      subtitle="Review and resolve time-sensitive operational items"
+      badge={
+        <span
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-xs font-semibold",
+            toneSurfaceClass.danger
+          )}
+        >
+          Action Required
+        </span>
+      }
+      controls={
+        <>
           {FILTER_CHIPS.map((chip) => (
             <button
               key={chip.key}
               type="button"
               onClick={() => onFilterChange(chip.key)}
+              aria-pressed={filter === chip.key}
               className={cn(
                 "rounded-full px-3 py-1 text-xs font-medium",
                 filter === chip.key
@@ -92,7 +237,7 @@ export const QueueHighlightsSection: React.FC<QueueHighlightsSectionProps> = ({
           <select
             value={sort}
             onChange={(e) => onSortChange(e.target.value as HighlightSort)}
-            className="h-8 rounded-md border border-input bg-input-bg px-2 text-xs"
+            className="h-8 rounded-full border border-border/60 bg-input-bg px-3 text-xs font-medium text-muted-foreground"
             aria-label="Sort queue highlights"
           >
             <option value="recent">Sort: Most recent</option>
@@ -103,100 +248,29 @@ export const QueueHighlightsSection: React.FC<QueueHighlightsSectionProps> = ({
             onClick={onBatchApprove}
             disabled={isBatchApproving || highlights.length === 0}
           >
-            Batch Approve
+            {isBatchApproving ? "Approving…" : "Batch Approve"}
           </Button>
+        </>
+      }
+      bodyClassName="block"
+    >
+      {isLoading ? (
+        <div className="flex animate-pulse items-center gap-3 p-2" aria-label="Loading highlights">
+          <div className="h-8 w-8 rounded-full bg-muted" />
+          <div className="h-4 w-40 rounded bg-muted" />
+          <div className="h-4 w-24 rounded bg-muted" />
         </div>
-      </div>
-      <div className="grid gap-4 p-5 pt-0 md:grid-cols-2">
-        {isLoading && (
-          <>
-            {[1, 2].map((i) => (
-              <div
-                key={i}
-                className="flex animate-pulse items-center justify-between rounded-2xl border border-border/60 bg-background/60 p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-muted" />
-                  <div className="space-y-2">
-                    <div className="h-4 w-24 rounded bg-muted" />
-                    <div className="h-3 w-32 rounded bg-muted" />
-                  </div>
-                </div>
-                <div className="h-6 w-16 rounded-full bg-muted" />
-              </div>
-            ))}
-          </>
-        )}
-        {isError && (
-          <p className="col-span-full text-sm text-destructive">Failed to load highlights.</p>
-        )}
-        {highlights.map((item) => (
-          <div
-            key={`${item.type}-${item.id}`}
-            className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-background/60 p-4 transition hover:border-primary/30"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {item.userName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">{item.userName}</p>
-                    {item.tag && (
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-xs",
-                          toneSurfaceClass[TAG_TONE[item.type] ?? "neutral"]
-                        )}
-                      >
-                        {item.tag}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {item.type.charAt(0).toUpperCase() + item.type.slice(1)} •{" "}
-                    {format(parseISO(item.date), "dd MMM")}
-                  </p>
-                  <p className="text-sm text-muted-foreground/60">{item.details}</p>
-                </div>
-              </div>
-              <StatusBadge variant={item.status as StatusVariant} />
-            </div>
-            {item.status === "pending" && (
-              <div className="flex items-center justify-between border-t border-border/60 pt-3">
-                <a
-                  href={`/team/approvals?highlight=${item.id}&type=${item.type}`}
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
-                >
-                  Details & Audit
-                </a>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onRejectOne(item.id, item.type)}
-                  >
-                    Reject
-                  </Button>
-                  <Button size="sm" onClick={() => onApproveOne(item.id, item.type)}>
-                    Approve
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-        {!isLoading && !isError && highlights.length === 0 && (
-          <p className="text-sm text-muted-foreground">No pending approvals detected.</p>
-        )}
-      </div>
-    </GlassCard>
+      ) : isError ? (
+        <p className="text-sm text-destructive">Failed to load highlights.</p>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={highlights}
+          pageSize={5}
+          getRowId={(row) => `${row.type}-${row.id}`}
+          emptyMessage="No pending approvals detected."
+        />
+      )}
+    </DashboardSectionShell>
   );
 };

@@ -1,6 +1,6 @@
 import React from "react";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
-import type { LeaveRequest, User } from "@/types";
+import type { LeaveRequest, OvertimeLog, StandbyLog, User } from "@/types";
 import { PersonalDashboardStats } from "./components/PersonalDashboardStats";
 import { PersonalDashboardLeavesCard } from "./components/PersonalDashboardLeavesCard";
 import { PersonalDashboardProgressCard } from "./components/PersonalDashboardProgressCard";
@@ -24,6 +24,8 @@ interface PersonalDashboardViewProps {
   personalPendingItems: any[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   personalTimelineItems: any[];
+  weekOvertimeLogs?: Pick<OvertimeLog, "date" | "hours">[];
+  weekStandbyLogs?: Pick<StandbyLog, "date" | "hours">[];
 }
 
 export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
@@ -36,6 +38,8 @@ export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
   upcomingLeaves,
   personalPendingItems,
   personalTimelineItems,
+  weekOvertimeLogs,
+  weekStandbyLogs,
 }) => (
   <div className="flex flex-col gap-8">
     <PersonalDashboardStats
@@ -52,6 +56,8 @@ export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
         leaveProgress={leaveProgress}
         personalStandbyHours={personalStandbyHours}
         pendingLeaveDays={pendingLeaveDays}
+        weekOvertimeLogs={weekOvertimeLogs}
+        weekStandbyLogs={weekStandbyLogs}
       />
     </div>
 

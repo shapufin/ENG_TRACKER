@@ -67,4 +67,22 @@ describe("HRDashboardStats", () => {
     expect(fills[2].style.width).toBe("0%");
     expect(fills[3].style.width).toBe("0%");
   });
+
+  it("renders footer strips with real hrStats values", () => {
+    const hrStats = {
+      avg_overtime_hours: 5.5,
+      active_teams_count: 3,
+      pending_overtime: 2,
+      pending_standby: 1,
+      total_users: 10,
+    };
+    const { container } = render(<HRDashboardStats hrStats={hrStats} />);
+    const footers = container.querySelectorAll('[data-testid="stat-card-footer"]');
+    expect(footers.length).toBe(4);
+    expect(screen.getByText("5.5h average")).toBeInTheDocument();
+    expect(screen.getByText("3 teams")).toBeInTheDocument();
+    expect(screen.getByText("2 overtime")).toBeInTheDocument();
+    expect(screen.getByText("1 standby")).toBeInTheDocument();
+    expect(screen.getByText("10 users")).toBeInTheDocument();
+  });
 });

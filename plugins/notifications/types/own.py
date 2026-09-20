@@ -10,6 +10,11 @@ from .base import NotificationType
 class LeaveSubmittedNotification(NotificationType):
     event_type = 'own_leave_submitted'
     label = 'My leave submitted'
+    description = (
+        'Sent to you right after you submit a leave request. Off by '
+        'default: you know you submitted it, and your TL/HR are notified '
+        'separately.'
+    )
     notification_type = 'info'
 
     def recipients(self, context):
@@ -26,6 +31,10 @@ class LeaveSubmittedNotification(NotificationType):
 class LeaveUpdatedNotification(NotificationType):
     event_type = 'own_leave_updated'
     label = 'My leave approved or rejected'
+    description = (
+        'Sent to you when a team leader approves or rejects your leave '
+        'request, so you learn the decision without checking the app.'
+    )
 
     def recipients(self, context):
         return [context['instance'].user]
@@ -44,6 +53,10 @@ class LeaveUpdatedNotification(NotificationType):
 class LeaveEditedNotification(NotificationType):
     event_type = 'own_leave_edited'
     label = 'My leave edited'
+    description = (
+        'Sent to you when one of your leave requests is edited (dates or '
+        'type changed) without a status change.'
+    )
     notification_type = 'info'
 
     def recipients(self, context):
@@ -62,6 +75,11 @@ class LeaveEditedNotification(NotificationType):
 class OvertimeSubmittedNotification(NotificationType):
     event_type = 'own_overtime_submitted'
     label = 'My overtime submitted'
+    description = (
+        'Sent to you right after you submit an overtime log. Off by '
+        'default: you know you submitted it, and your TL/HR are notified '
+        'separately.'
+    )
     notification_type = 'info'
 
     def recipients(self, context):
@@ -78,6 +96,10 @@ class OvertimeSubmittedNotification(NotificationType):
 class OvertimeUpdatedNotification(NotificationType):
     event_type = 'own_overtime_updated'
     label = 'My overtime approved or rejected'
+    description = (
+        'Sent to you when a team leader approves or rejects your overtime '
+        'log, so you learn the decision without checking the app.'
+    )
 
     def recipients(self, context):
         return [context['instance'].user]
@@ -96,6 +118,11 @@ class OvertimeUpdatedNotification(NotificationType):
 class StandbySubmittedNotification(NotificationType):
     event_type = 'own_standby_submitted'
     label = 'My standby submitted'
+    description = (
+        'Sent to you right after you submit a standby log. Off by '
+        'default: you know you submitted it, and your TL/HR are notified '
+        'separately.'
+    )
     notification_type = 'info'
 
     def recipients(self, context):
@@ -112,6 +139,10 @@ class StandbySubmittedNotification(NotificationType):
 class StandbyUpdatedNotification(NotificationType):
     event_type = 'own_standby_updated'
     label = 'My standby approved or rejected'
+    description = (
+        'Sent to you when a team leader approves or rejects your standby '
+        'log, so you learn the decision without checking the app.'
+    )
 
     def recipients(self, context):
         return [context['instance'].user]

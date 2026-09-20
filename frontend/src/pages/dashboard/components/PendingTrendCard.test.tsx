@@ -16,8 +16,9 @@ describe("PendingTrendCard", () => {
     expect(screen.getByText(/last 14 days/)).toBeInTheDocument();
   });
 
-  it("renders without data", () => {
+  it("renders an empty state instead of an empty chart", () => {
     render(<PendingTrendCard />);
     expect(screen.getByText("Pending Trend")).toBeInTheDocument();
+    expect(screen.getByText("No pending trend data for the last 14 days.")).toBeInTheDocument();
   });
 });

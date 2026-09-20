@@ -343,6 +343,234 @@ class TestBulkUpdateUsers(APITestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    def test_revoking_italian_tl_role_blocked_while_dependent_fk_remains(self):
+        """Regression: turning off is_italian_tl_role while another user's
+        profile still has italian_tl=this user must be blocked (400), not
+        silently applied — otherwise the revoked user keeps functioning as
+        TL for that dependent via the dangling FK."""
+        self.first.profile.is_italian_tl_role = True
+        self.first.profile.save()
+        self.second.profile.italian_tl = self.first
+        self.second.profile.save()
+
+        response = self.client.post(
+            '/api/users/users/bulk_update/',
+            {'user_ids': [self.first.id], 'is_italian_tl_role': False},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('bulk-second', response.data['error'])
+        self.first.profile.refresh_from_db()
+        self.assertTrue(self.first.profile.is_italian_tl_role)
+
+    def test_revoke_block_response_includes_structured_dependents(self):
+        """The frontend cascade-block modal needs structured data (not just
+        a formatted error string) to list dependents and let the admin
+        reassign/clear them inline."""
+        self.first.profile.is_italian_tl_role = True
+        self.first.profile.save()
+        self.second.profile.italian_tl = self.first
+        self.second.profile.save()
+
+        response = self.client.post(
+            '/api/users/users/bulk_update/',
+            {'user_ids': [self.first.id], 'is_italian_tl_role': False},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        blocked = response.data['blocked_revocations']
+        self.assertEqual(len(blocked), 1)
+        self.assertEqual(blocked[0]['user_id'], self.first.id)
+        self.assertEqual(blocked[0]['username'], 'bulk-first')
+        self.assertEqual(blocked[0]['role'], 'italian_tl')
+        self.assertEqual(
+            [d['user_id'] for d in blocked[0]['dependents']], [self.second.id]
+        )
+        self.assertEqual(
+            [d['username'] for d in blocked[0]['dependents']], ['bulk-second']
+        )
+        self.assertEqual(
+            [d['profile_id'] for d in blocked[0]['dependents']],
+            [self.second.profile.id],
+        )
+
+    def test_revoking_albanian_tl_role_blocked_while_dependent_fk_remains(self):
+        self.first.profile.is_albanian_tl_role = True
+        self.first.profile.save()
+        self.second.profile.albanian_tl = self.first
+        self.second.profile.save()
+
+        response = self.client.post(
+            '/api/users/users/bulk_update/',
+            {'user_ids': [self.first.id], 'is_albanian_tl_role': False},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.first.profile.refresh_from_db()
+        self.assertTrue(self.first.profile.is_albanian_tl_role)
+
+    def test_revoking_tl_role_succeeds_once_no_dependents_remain(self):
+        self.first.profile.is_italian_tl_role = True
+        self.first.profile.save()
+        # second's FK points elsewhere, not at first — no dependent.
+
+        response = self.client.post(
+            '/api/users/users/bulk_update/',
+            {'user_ids': [self.first.id], 'is_italian_tl_role': False},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.first.profile.refresh_from_db()
+        self.assertFalse(self.first.profile.is_italian_tl_role)
+
+    def test_turning_tl_role_on_is_never_blocked(self):
+        """Only revoke (True->False) is dangerous; assigning (False->True)
+        must never be blocked by dependent checks."""
+        self.second.profile.italian_tl = self.first
+        self.second.profile.save()
+
+        response = self.client.post(
+            '/api/users/users/bulk_update/',
+            {'user_ids': [self.first.id], 'is_italian_tl_role': True},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.first.profile.refresh_from_db()
+        self.assertTrue(self.first.profile.is_italian_tl_role)
+
+
+class TestUpdateUserTlRevokeCascadeBlock(APITestCase):
+    """update_user must apply the same TL-revoke dependent block as
+    bulk_update — both mutate is_italian_tl_role/is_albanian_tl_role and
+    both must not leave a dangling FK behind a revoked TL."""
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username='update-admin', password='testpass123', email='admin@example.com'
+        )
+        self.tl = User.objects.create_user(username='update-tl', password='testpass123')
+        self.dependent = User.objects.create_user(username='update-dep', password='testpass123')
+        self.client.force_authenticate(user=self.admin)
+
+    def test_revoking_italian_tl_role_blocked_while_dependent_fk_remains(self):
+        self.tl.profile.is_italian_tl_role = True
+        self.tl.profile.save()
+        self.dependent.profile.italian_tl = self.tl
+        self.dependent.profile.save()
+
+        response = self.client.patch(
+            f'/api/users/users/{self.tl.id}/update_user/',
+            {'is_italian_tl_role': False},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.tl.profile.refresh_from_db()
+        self.assertTrue(self.tl.profile.is_italian_tl_role)
+
+    def test_revoke_block_response_includes_structured_dependents(self):
+        self.tl.profile.is_italian_tl_role = True
+        self.tl.profile.save()
+        self.dependent.profile.italian_tl = self.tl
+        self.dependent.profile.save()
+
+        response = self.client.patch(
+            f'/api/users/users/{self.tl.id}/update_user/',
+            {'is_italian_tl_role': False},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        blocked = response.data['blocked_revocations']
+        self.assertEqual(len(blocked), 1)
+        self.assertEqual(blocked[0]['user_id'], self.tl.id)
+        self.assertEqual(blocked[0]['username'], 'update-tl')
+        self.assertEqual(blocked[0]['role'], 'italian_tl')
+        self.assertEqual(
+            [d['user_id'] for d in blocked[0]['dependents']], [self.dependent.id]
+        )
+        self.assertEqual(
+            [d['profile_id'] for d in blocked[0]['dependents']],
+            [self.dependent.profile.id],
+        )
+
+    def test_revoking_tl_role_succeeds_once_no_dependents_remain(self):
+        self.tl.profile.is_italian_tl_role = True
+        self.tl.profile.save()
+
+        response = self.client.patch(
+            f'/api/users/users/{self.tl.id}/update_user/',
+            {'is_italian_tl_role': False},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.tl.profile.refresh_from_db()
+        self.assertFalse(self.tl.profile.is_italian_tl_role)
+
+    def test_revoking_via_roles_array_blocked_while_dependent_fk_remains(self):
+        """The real edit-user form (frontend/src/pages/admin/hooks/
+        useUsersPage.ts) sends `roles` alongside the legacy booleans on
+        every save — `roles` drives the actual outcome via _sync_roles, so
+        the block must key off it too, not just the legacy flags."""
+        self.tl.profile.is_italian_tl_role = True
+        self.tl.profile.role_codes = ['italian_tl']
+        self.tl.profile.save()
+        self.dependent.profile.italian_tl = self.tl
+        self.dependent.profile.save()
+
+        response = self.client.patch(
+            f'/api/users/users/{self.tl.id}/update_user/',
+            # Mirrors the real payload shape: legacy flag stays True (form
+            # doesn't necessarily flip it) while `roles` no longer lists it.
+            {'is_italian_tl_role': True, 'roles': []},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.tl.profile.refresh_from_db()
+        self.assertTrue(self.tl.profile.is_italian_tl_role)
+
+    def test_revoking_via_roles_array_succeeds_once_no_dependents_remain(self):
+        self.tl.profile.is_italian_tl_role = True
+        self.tl.profile.role_codes = ['italian_tl']
+        self.tl.profile.save()
+
+        response = self.client.patch(
+            f'/api/users/users/{self.tl.id}/update_user/',
+            {'is_italian_tl_role': False, 'roles': []},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.tl.profile.refresh_from_db()
+        self.assertFalse(self.tl.profile.is_italian_tl_role)
+
+    def test_blocked_even_when_role_granted_via_role_codes_not_legacy_flag(self):
+        """Regression: a TL role granted via assign_role() directly (e.g.
+        apps/users/management/commands/seed_e2e_data.py) sets role_codes but
+        leaves is_italian_tl_role False. A PATCH with roles=[] must still be
+        blocked while a dependent exists — the block can't rely on the
+        legacy flag alone."""
+        self.tl.profile.role_codes = ['italian_tl']
+        self.tl.profile.save()
+        self.dependent.profile.italian_tl = self.tl
+        self.dependent.profile.save()
+
+        response = self.client.patch(
+            f'/api/users/users/{self.tl.id}/update_user/',
+            {'roles': []},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('blocked_revocations', response.data)
+
 
 class TestAssignClients(APITestCase):
     """Self-assignment of clients from the Settings page."""
@@ -630,3 +858,116 @@ class TestTeamCalendarGroupAdminOnly(APITestCase):
         self.assertEqual(response.status_code, 200)
         team.refresh_from_db()
         self.assertEqual(team.calendar_group, 'grp2')
+
+
+class TestSetTeamLeaderHRAssignment(APITestCase):
+    """HR's narrow TL-assignment action on UserProfileViewSet: set/clear
+    which TL an EXISTING employee reports to. Distinct from the TL-role
+    revoke cascade block (TestBulkUpdateUsers/TestUpdateUserTlRevokeCascadeBlock)
+    — this writes the employee's own italian_tl/albanian_tl FK, it does not
+    touch anyone's is_italian_tl_role/is_albanian_tl_role flag."""
+
+    def setUp(self):
+        self.hr = User.objects.create_user(username='setup-hr', password='testpass123')
+        self.hr.profile.is_hr_user = True
+        self.hr.profile.save()
+
+        self.employee = User.objects.create_user(username='setup-emp', password='testpass123')
+
+        self.tl = User.objects.create_user(username='setup-tl', password='testpass123')
+        self.tl.profile.is_italian_tl_role = True
+        self.tl.profile.save()
+
+        self.non_tl = User.objects.create_user(username='setup-nontl', password='testpass123')
+
+        self.plain_employee = User.objects.create_user(
+            username='setup-plain', password='testpass123'
+        )
+
+    def _url(self, profile_id):
+        return f'/api/users/profiles/{profile_id}/set_team_leader/'
+
+    def test_hr_can_assign_italian_tl(self):
+        self.client.force_authenticate(user=self.hr)
+        response = self.client.post(
+            self._url(self.employee.profile.id),
+            {'role': 'italian_tl', 'team_leader_user_id': self.tl.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.employee.profile.refresh_from_db()
+        self.assertEqual(self.employee.profile.italian_tl_id, self.tl.id)
+
+    def test_hr_can_clear_italian_tl(self):
+        self.employee.profile.italian_tl = self.tl
+        self.employee.profile.save()
+
+        self.client.force_authenticate(user=self.hr)
+        response = self.client.post(
+            self._url(self.employee.profile.id),
+            {'role': 'italian_tl', 'team_leader_user_id': None},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.employee.profile.refresh_from_db()
+        self.assertIsNone(self.employee.profile.italian_tl_id)
+
+    def test_rejects_non_tl_user_as_assignment_target(self):
+        self.client.force_authenticate(user=self.hr)
+        response = self.client.post(
+            self._url(self.employee.profile.id),
+            {'role': 'italian_tl', 'team_leader_user_id': self.non_tl.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.employee.profile.refresh_from_db()
+        self.assertIsNone(self.employee.profile.italian_tl_id)
+
+    def test_rejects_invalid_role(self):
+        self.client.force_authenticate(user=self.hr)
+        response = self.client.post(
+            self._url(self.employee.profile.id),
+            {'role': 'hr', 'team_leader_user_id': self.tl.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_rejects_unknown_team_leader_user_id(self):
+        self.client.force_authenticate(user=self.hr)
+        response = self.client.post(
+            self._url(self.employee.profile.id),
+            {'role': 'italian_tl', 'team_leader_user_id': 999999},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_plain_employee_forbidden(self):
+        self.client.force_authenticate(user=self.plain_employee)
+        response = self.client.post(
+            self._url(self.employee.profile.id),
+            {'role': 'italian_tl', 'team_leader_user_id': self.tl.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 403)
+        self.employee.profile.refresh_from_db()
+        self.assertIsNone(self.employee.profile.italian_tl_id)
+
+    def test_anonymous_forbidden(self):
+        response = self.client.post(
+            self._url(self.employee.profile.id),
+            {'role': 'italian_tl', 'team_leader_user_id': self.tl.id},
+            format='json',
+        )
+        self.assertIn(response.status_code, (401, 403))
+
+    def test_admin_can_assign(self):
+        admin = User.objects.create_superuser(
+            username='setup-admin', password='testpass123', email='setup-admin@example.com'
+        )
+        self.client.force_authenticate(user=admin)
+        response = self.client.post(
+            self._url(self.employee.profile.id),
+            {'role': 'albanian_tl', 'team_leader_user_id': None},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200)

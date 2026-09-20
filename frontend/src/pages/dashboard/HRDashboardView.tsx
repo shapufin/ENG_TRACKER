@@ -3,6 +3,7 @@ import { HRDashboardStats } from "./components/HRDashboardStats";
 import { HRDashboardCharts } from "./components/HRDashboardCharts";
 import { HRRecentTable } from "./components/HRRecentTable";
 import { HRDashboardPendingLeave } from "./components/HRDashboardPendingLeave";
+import { HRQuickLinks } from "./components/HRQuickLinks";
 
 interface HRDashboardViewProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,6 +40,8 @@ export const HRDashboardView: React.FC<HRDashboardViewProps> = ({
       <HRRecentTable title="Recent Overtime" data={recentOvertimeTable} />
       <HRRecentTable title="Recent Standby" data={recentStandbyTable} />
     </div>
+
+    <HRQuickLinks />
 
     <HRDashboardPendingLeave leaveData={leaveData} />
   </div>

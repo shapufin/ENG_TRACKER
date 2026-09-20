@@ -106,6 +106,43 @@ export const useDashboardData = ({
     hrStats
   );
 
+  // Dedicated date-ranged query for the personal dashboard's weekly hours
+  // chart: overtimeData/standbyData above are capped at dashboardPageSize
+  // (5 for a personal dashboard) for the recent-activity list, which
+  // silently undercounts a week with more than 5 logs — same undercount
+  // class the overtimeSummary/standbySummary queries above already fix for
+  // the "total hours" tiles.
+  const toLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const today = toLocalDateString(new Date());
+  const weekStart = toLocalDateString(new Date(new Date().setDate(new Date().getDate() - 6)));
+
+  const { data: weeklyOvertimeData } = useQuery({
+    queryKey: ["overtime", userId ?? "anonymous", "weekly", weekStart],
+    queryFn: () =>
+      overtimeService.getLogs({ date_from: weekStart, date_to: today, page_size: 100 }),
+    refetchOnMount: true,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+    // Personal-dashboard weekly chart only — HR/Admin/TL mounts must not pay
+    // for data no other view consumes.
+    enabled: !!userId && selectedDashboard === "employee",
+  });
+
+  const { data: weeklyStandbyData } = useQuery({
+    queryKey: ["standby", userId ?? "anonymous", "weekly", weekStart],
+    queryFn: () => standbyService.getLogs({ date_from: weekStart, date_to: today, page_size: 100 }),
+    refetchOnMount: true,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+    // Personal-dashboard weekly chart only — see above.
+    enabled: !!userId && selectedDashboard === "employee",
+  });
+
   return {
     hrStats,
     overtimeData,
@@ -117,6 +154,9 @@ export const useDashboardData = ({
     ...calculations,
     personalOvertimeHours: overtimeSummary?.total_hours ?? calculations.personalOvertimeHours,
     personalStandbyHours: standbySummary?.total_hours ?? calculations.personalStandbyHours,
-    vacationBalanceDays: leaveBalanceSummary?.vacation?.total_available ?? calculations.approvedLeaveDays,
+    vacationBalanceDays:
+      leaveBalanceSummary?.vacation?.total_available ?? calculations.approvedLeaveDays,
+    weekOvertimeLogs: weeklyOvertimeData?.results ?? [],
+    weekStandbyLogs: weeklyStandbyData?.results ?? [],
   };
 };

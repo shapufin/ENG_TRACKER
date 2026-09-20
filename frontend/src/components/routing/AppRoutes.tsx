@@ -57,11 +57,19 @@ const LeaveRequestsPage = React.lazy(() =>
 const HRReportsPage = React.lazy(() =>
   import("@/pages/hr/HRReportsPage").then((m) => ({ default: m.HRReportsPage }))
 );
+const HRTeamLeaderAssignmentPage = React.lazy(
+  () => import("@/pages/hr/HRTeamLeaderAssignmentPage")
+);
 const LeaveBalancesPage = React.lazy(() =>
   import("@/pages/admin/LeaveBalancesPage").then((m) => ({ default: m.LeaveBalancesPage }))
 );
 const GlobalSettingsPage = React.lazy(() =>
   import("@/pages/admin/GlobalSettingsPage").then((m) => ({ default: m.GlobalSettingsPage }))
+);
+const NotificationEventsPage = React.lazy(() =>
+  import("@/pages/admin/NotificationEventsPage").then((m) => ({
+    default: m.NotificationEventsPage,
+  }))
 );
 const SettingsPage = React.lazy(() =>
   import("@/pages/settings/SettingsPage").then((m) => ({ default: m.SettingsPage }))
@@ -146,7 +154,13 @@ export const AppRoutes: React.FC = () => {
                 },
                 {
                   element: <HRRoute />,
-                  children: [{ path: "/hr/reports", element: withSuspense(<HRReportsPage />) }],
+                  children: [
+                    { path: "/hr/reports", element: withSuspense(<HRReportsPage />) },
+                    {
+                      path: "/hr/team-leaders",
+                      element: withSuspense(<HRTeamLeaderAssignmentPage />),
+                    },
+                  ],
                 },
               ],
             },
@@ -185,6 +199,10 @@ export const AppRoutes: React.FC = () => {
                 {
                   path: "/admin/global-settings",
                   element: withSuspense(<GlobalSettingsPage />),
+                },
+                {
+                  path: "/admin/notification-events",
+                  element: withSuspense(<NotificationEventsPage />),
                 },
                 { path: "/admin/overtime-logs", element: withSuspense(<OvertimeLogsPage />) },
                 { path: "/admin/standby-logs", element: withSuspense(<StandbyLogsPage />) },

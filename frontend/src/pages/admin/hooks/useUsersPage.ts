@@ -107,6 +107,9 @@ export const useUsersPage = () => {
     isError,
     error,
     updateMutation,
+    updateBlockedRevocations,
+    retryBlockedUpdate,
+    closeUpdateBlockedDialog,
     createMutation: userCreateMutation,
     resetMutation,
     deleteMutation,
@@ -224,6 +227,9 @@ export const useUsersPage = () => {
     bulkUpdateMutation,
     handleBulkUpdate,
     handleBulkDelete,
+    bulkBlockedRevocations,
+    retryBlockedBulkUpdate,
+    closeBulkBlockedDialog,
   } = useUsersPageBulk({
     filteredData: crFilteredData,
     rowSelection,
@@ -342,6 +348,23 @@ export const useUsersPage = () => {
       resetMutation.mutate({ id: resetUserId, password: resetValue });
   };
 
+  // The edit-dialog save and the bulk-drawer save are independent mutations
+  // triggered from separate UI regions, so both CAN end up blocked at once.
+  // updateBlockedRevocations wins the display priority, but closing/
+  // cancelling must clear BOTH underlying states — otherwise Cancel only
+  // dismisses the shown one and the dialog can reappear immediately,
+  // showing the other block's dependents with stale resolved-state from
+  // whichever was being worked on before.
+  const blockedRevocations = updateBlockedRevocations ?? bulkBlockedRevocations;
+  const retryBlocked = updateBlockedRevocations ? retryBlockedUpdate : retryBlockedBulkUpdate;
+  const closeBlockedDialog = () => {
+    closeUpdateBlockedDialog();
+    closeBulkBlockedDialog();
+  };
+  const blockedRetrying = updateBlockedRevocations
+    ? updateMutation.isPending
+    : bulkUpdateMutation.isPending;
+
   return {
     isLoading,
     isError,
@@ -415,5 +438,9 @@ export const useUsersPage = () => {
     handleCreate,
     openReset,
     handleReset,
+    blockedRevocations,
+    retryBlocked,
+    closeBlockedDialog,
+    blockedRetrying,
   };
 };
