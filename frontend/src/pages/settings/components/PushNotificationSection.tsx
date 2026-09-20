@@ -4,12 +4,19 @@ import { toast } from "sonner";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { SwitchField } from "@/components/common/forms/SwitchField";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
+import type { PushNotificationsState } from "@/hooks/usePushNotifications";
+
+interface PushNotificationSectionProps {
+  /** Shared with `NotificationPreferencesSection` below this card so both
+   * read from a single `usePushNotifications()` call per page load instead
+   * of each running its own service-worker-ready check. */
+  pushState: PushNotificationsState;
+}
 
 /** Single per-device push toggle. Which notification *events* exist is
  * controlled globally by admins (Django admin → Notification event type
  * configs); users only decide whether this device receives push. */
-export const PushNotificationSection: React.FC = () => {
+export const PushNotificationSection: React.FC<PushNotificationSectionProps> = ({ pushState }) => {
   const {
     isSupported,
     isSubscribed,
@@ -19,7 +26,7 @@ export const PushNotificationSection: React.FC = () => {
     pushAvailability,
     subscribe,
     unsubscribe,
-  } = usePushNotifications();
+  } = pushState;
   const [updating, setUpdating] = useState(false);
 
   const handleToggle = async (value: boolean) => {

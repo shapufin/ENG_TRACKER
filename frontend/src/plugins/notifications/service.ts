@@ -18,6 +18,7 @@ export interface NotificationPreference {
   in_app_enabled: boolean;
   push_enabled: boolean;
   available: boolean;
+  globally_enabled: boolean;
   updated_at?: string;
 }
 
@@ -58,9 +59,12 @@ export const notificationService = {
 
   updatePreference: async (
     eventType: string,
-    changes: Pick<NotificationPreference, "in_app_enabled" | "push_enabled">
-  ): Promise<NotificationPreference> => {
-    const response = await api.patch<NotificationPreference>(
+    changes: Partial<Pick<NotificationPreference, "in_app_enabled" | "push_enabled">>
+  ): Promise<NotificationPreference[]> => {
+    // The backend's PATCH /preferences/ responds with the full, current
+    // list of the user's preference rows (same shape as GET), not just the
+    // one that changed.
+    const response = await api.patch<NotificationPreference[]>(
       "/plugins/notifications/notifications/preferences/",
       { event_type: eventType, ...changes }
     );

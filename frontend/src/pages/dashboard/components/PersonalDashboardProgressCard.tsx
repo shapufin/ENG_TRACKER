@@ -40,8 +40,7 @@ const sumHours = (logs: Pick<OvertimeLog, "date" | "hours">[]) =>
  */
 const formatHours = (value: number | string) => {
   const num = Number(value);
-  if (!Number.isFinite(num)) return "0";
-  return String(Math.round(num * 100) / 100);
+  return String(Number.isFinite(num) ? round2(num) : 0);
 };
 
 const MetricTile: React.FC<{

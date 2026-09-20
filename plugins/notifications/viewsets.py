@@ -19,6 +19,13 @@ OWN_EVENT_TYPES = {
 TEAM_EVENT_TYPES = {'team_action_required', 'team_leave_deleted'}
 
 
+def _event_type_enabled_map():
+    """event_type -> is_enabled for every existing NotificationEventTypeConfig
+    row, in one query. Missing event types are absent from the dict; callers
+    fall back to their own missing-row default."""
+    return dict(NotificationEventTypeConfig.objects.values_list('event_type', 'is_enabled'))
+
+
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
@@ -43,11 +50,10 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
 
     def get_globally_enabled(self, obj):
         # Additive read-only flag: the global admin switch. Missing rows mean
-        # enabled, matching the missing-row fallback in signals.py.
-        config = NotificationEventTypeConfig.objects.filter(
-            event_type=obj.event_type
-        ).first()
-        return config.is_enabled if config else True
+        # enabled, matching the missing-row fallback in signals.py. Reads
+        # from a context dict (one query for all rows) instead of querying
+        # per row.
+        return self.context.get('globally_enabled_by_type', {}).get(obj.event_type, True)
 
 
 class PushSubscriptionSerializer(serializers.ModelSerializer):
@@ -137,10 +143,14 @@ class NotificationViewSet(viewsets.ModelViewSet):
                     user=request.user,
                     event_type=event_type,
                 ))
+        globally_enabled_by_type = _event_type_enabled_map()
         serializer = NotificationPreferenceSerializer(
             rows,
             many=True,
-            context={'available_event_types': available},
+            context={
+                'available_event_types': available,
+                'globally_enabled_by_type': globally_enabled_by_type,
+            },
         )
         return Response(serializer.data)
 
@@ -191,11 +201,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         if missing:
             NotificationEventTypeConfig.objects.bulk_create(missing)
 
-        enabled_by_type = dict(
-            NotificationEventTypeConfig.objects.values_list(
-                'event_type', 'is_enabled'
-            )
-        )
+        enabled_by_type = _event_type_enabled_map()
         rows = [
             {
                 'event_type': event_type,
