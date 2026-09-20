@@ -41,13 +41,16 @@ export const buildWeeklyHoursChartData = (
     return { day: WEEKDAY_LABELS[date.getDay()], overtime: 0, standby: 0 };
   });
 
+  // Standby log hours arrive as Decimal strings ("2.00") while overtime
+  // log hours arrive as ints — coerce both so += sums instead of
+  // concatenating ("02.00", which also poisons the hasWeeklyData check).
   overtimeLogs.forEach((log) => {
     const index = dateKeyToIndex.get(log.date);
-    if (index !== undefined) points[index].overtime += log.hours;
+    if (index !== undefined) points[index].overtime += Number(log.hours) || 0;
   });
   standbyLogs.forEach((log) => {
     const index = dateKeyToIndex.get(log.date);
-    if (index !== undefined) points[index].standby += log.hours;
+    if (index !== undefined) points[index].standby += Number(log.hours) || 0;
   });
 
   return points;

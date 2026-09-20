@@ -49,4 +49,18 @@ describe("buildWeeklyHoursChartData", () => {
     );
     expect(points[1].overtime).toBe(5);
   });
+
+  it("coerces Decimal-string standby hours instead of concatenating them", () => {
+    // Standby serializer emits DecimalField strings; 0 + "2.00" must be 2,
+    // not "02.00" (which also breaks the chart's has-data check downstream).
+    const points = buildWeeklyHoursChartData(
+      [],
+      [
+        { date: "2026-09-14", hours: "2.00" as unknown as number },
+        { date: "2026-09-14", hours: "3.50" as unknown as number },
+      ],
+      now
+    );
+    expect(points[1].standby).toBe(5.5);
+  });
 });

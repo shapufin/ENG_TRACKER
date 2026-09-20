@@ -32,7 +32,17 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 const sumHours = (logs: Pick<OvertimeLog, "date" | "hours">[]) =>
-  round2(logs.reduce((total, log) => total + log.hours, 0));
+  round2(logs.reduce((total, log) => total + Number(log.hours), 0));
+
+/**
+ * Summary aggregates arrive as Decimal strings ("0.00") while log entries
+ * arrive as ints — coerce and trim so tiles never render "0.00h".
+ */
+const formatHours = (value: number | string) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return "0";
+  return String(Math.round(num * 100) / 100);
+};
 
 const MetricTile: React.FC<{
   label: string;
@@ -44,7 +54,7 @@ const MetricTile: React.FC<{
   <div className="flex flex-col justify-between rounded-xl border border-border bg-card p-3.5 transition-colors hover:border-border-focus/60">
     <div>
       <div className="flex items-start justify-between gap-2">
-        <span className="text-micro-lg font-bold uppercase tracking-wider text-muted-foreground">
+        <span className="text-micro-lg font-bold uppercase leading-tight tracking-wider text-muted-foreground">
           {label}
         </span>
         <IconWell tone={tone} size="sm">
@@ -59,7 +69,7 @@ const MetricTile: React.FC<{
 
 const MagnitudeBar: React.FC<{ percent: number; caption: string }> = ({ percent, caption }) => (
   <div>
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-input-bg">
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-line-subtle">
       <div
         data-testid="metric-tile-progress-fill"
         className="h-full rounded-full bg-primary"
@@ -133,8 +143,10 @@ export const PersonalDashboardProgressCard: React.FC<PersonalDashboardProgressCa
   // totals — there's no shared target across overtime and standby to measure
   // a "% of goal" against, so this is a relative-magnitude bar, not a
   // completion bar. (Pending leave is days, not hours, so it gets a status
-  // pill instead of a bar.)
-  const maxTileValue = Math.max(personalOvertimeHours, personalStandbyHours, 1);
+  // pill instead of a bar.) Coerced once: summaries arrive as Decimal strings.
+  const overtimeHours = Number(personalOvertimeHours) || 0;
+  const standbyHours = Number(personalStandbyHours) || 0;
+  const maxTileValue = Math.max(overtimeHours, standbyHours, 1);
 
   const allowanceTotal =
     leaveUsedDays !== undefined && leaveAvailableDays !== undefined
@@ -223,24 +235,24 @@ export const PersonalDashboardProgressCard: React.FC<PersonalDashboardProgressCa
               tile treatment as standby, not a completion bar. */}
           <MetricTile
             label="Overtime Hours"
-            value={`${personalOvertimeHours}h`}
+            value={`${formatHours(overtimeHours)}h`}
             icon={<Clock className="h-4 w-4" />}
             tone="warning"
             footer={
               <MagnitudeBar
-                percent={(personalOvertimeHours / maxTileValue) * 100}
+                percent={(overtimeHours / maxTileValue) * 100}
                 caption={`${weekOvertimeSum}h ${weekLabel}`}
               />
             }
           />
           <MetricTile
             label="Standby Hours"
-            value={`${personalStandbyHours}h`}
+            value={`${formatHours(standbyHours)}h`}
             icon={<Activity className="h-4 w-4" />}
             tone="info"
             footer={
               <MagnitudeBar
-                percent={(personalStandbyHours / maxTileValue) * 100}
+                percent={(standbyHours / maxTileValue) * 100}
                 caption={`${weekStandbySum}h ${weekLabel}`}
               />
             }

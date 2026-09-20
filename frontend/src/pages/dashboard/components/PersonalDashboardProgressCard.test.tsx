@@ -119,6 +119,17 @@ describe("PersonalDashboardProgressCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("coerces Decimal-string summaries so tiles never render 0.00h", () => {
+    renderCard({
+      personalOvertimeHours: "0.00" as unknown as number,
+      personalStandbyHours: 2.5,
+    });
+
+    expect(screen.getByText("0h")).toBeInTheDocument();
+    expect(screen.getByText("2.5h")).toBeInTheDocument();
+    expect(screen.queryByText("0.00h")).toBeNull();
+  });
+
   it("renders a weekly overtime/standby bar chart from the passed logs", () => {
     const { container } = renderCard({
       weekOvertimeLogs: [{ date: "2026-09-14", hours: 2 }],

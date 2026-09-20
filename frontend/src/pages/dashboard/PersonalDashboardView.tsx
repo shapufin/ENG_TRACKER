@@ -61,26 +61,28 @@ export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
       vacationBalanceDays={vacationBalanceDays}
     />
 
-    <div className="grid gap-6 lg:grid-cols-2">
-      <PersonalDashboardLeavesCard upcomingLeaves={upcomingLeaves} />
-      <PersonalDashboardProgressCard
-        personalOvertimeHours={personalOvertimeHours}
-        leaveProgress={leaveProgress}
-        personalStandbyHours={personalStandbyHours}
-        pendingLeaveDays={pendingLeaveDays}
-        weekOvertimeLogs={weekOvertimeLogs}
-        weekStandbyLogs={weekStandbyLogs}
-        weekReferenceDate={weekReferenceDate}
-        leaveUsedDays={leaveUsedDays}
-        leaveAvailableDays={leaveAvailableDays}
-        weekOffset={weekOffset}
-        onWeekOffsetChange={onWeekOffsetChange}
-      />
-    </div>
+    {/* Hero widget first at full width: the gauge + 3-tile row needs the
+        room — at half width the tiles crush to ~100px and labels collide
+        with their icon wells. */}
+    <PersonalDashboardProgressCard
+      personalOvertimeHours={personalOvertimeHours}
+      leaveProgress={leaveProgress}
+      personalStandbyHours={personalStandbyHours}
+      pendingLeaveDays={pendingLeaveDays}
+      weekOvertimeLogs={weekOvertimeLogs}
+      weekStandbyLogs={weekStandbyLogs}
+      weekReferenceDate={weekReferenceDate}
+      leaveUsedDays={leaveUsedDays}
+      leaveAvailableDays={leaveAvailableDays}
+      weekOffset={weekOffset}
+      onWeekOffsetChange={onWeekOffsetChange}
+    />
 
     <div className="grid gap-6 lg:grid-cols-2">
+      <PersonalDashboardLeavesCard upcomingLeaves={upcomingLeaves} />
       <PersonalDashboardPendingCard personalPendingItems={personalPendingItems} />
-      <ActivityTimeline items={personalTimelineItems} delay={0.18} />
     </div>
+
+    <ActivityTimeline items={personalTimelineItems} delay={0.18} />
   </div>
 );
