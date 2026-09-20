@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 interface DataTableActionsProps<T> {
   item: T;
   onEdit: (item: T) => void;
-  onDelete: (item: T) => void;
+  onDelete?: (item: T) => void;
 }
 
 export const DataTableActions = <T,>({ item, onEdit, onDelete }: DataTableActionsProps<T>) => (
@@ -13,13 +13,15 @@ export const DataTableActions = <T,>({ item, onEdit, onDelete }: DataTableAction
     <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => onEdit(item)}>
       <Pencil className="h-4 w-4" />
     </Button>
-    <Button
-      size="sm"
-      variant="ghost"
-      className="h-8 w-8 p-0 text-destructive"
-      onClick={() => onDelete(item)}
-    >
-      <Trash2 className="h-4 w-4" />
-    </Button>
+    {onDelete && (
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0 text-destructive"
+        onClick={() => onDelete(item)}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    )}
   </div>
 );

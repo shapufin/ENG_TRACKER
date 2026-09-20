@@ -237,3 +237,91 @@ class TeamCalendarSignalPrivacyTests(TestCase):
         if isinstance(payload, dict):
             payload = payload.get('results', [])
         return [item['id'] for item in payload]
+
+
+class PublicHolidayHRPermissionTests(TestCase):
+    """HR must be able to manage holidays through /hr/calendars, reusing the
+    same PublicHolidayViewSet as /admin/calendars (Part D: HR-native pages
+    instead of routing HR through the admin panel)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.hr_user = User.objects.create_user(username='hr-cal', password='testpass')
+        self.hr_user.profile.is_hr_user = True
+        self.hr_user.profile.save()
+        self.plain_user = User.objects.create_user(username='plain-cal', password='testpass')
+
+    def test_hr_can_create_holiday(self):
+        self.client.force_authenticate(self.hr_user)
+        response = self.client.post('/api/dashboard/holidays/', {
+            'name': 'HR Holiday',
+            'date': '2026-01-01',
+            'is_global': True,
+            'country_code': 'IT',
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+
+    def test_hr_can_update_holiday(self):
+        holiday = PublicHoliday.objects.create(name='Original', date='2026-02-01', is_global=True)
+        self.client.force_authenticate(self.hr_user)
+        response = self.client.patch(f'/api/dashboard/holidays/{holiday.id}/', {'name': 'Updated'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+    def test_non_hr_non_staff_cannot_create_holiday(self):
+        self.client.force_authenticate(self.plain_user)
+        response = self.client.post('/api/dashboard/holidays/', {
+            'name': 'Blocked Holiday',
+            'date': '2026-01-01',
+            'is_global': True,
+            'country_code': 'IT',
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_hr_cannot_create_holiday_on_workspace_they_cannot_access(self):
+        """Non-staff HR's write authority must not exceed what
+        CalendarWorkspace.get_accessible_for_user shows them — otherwise a
+        crafted request can scope a holiday to a private workspace the HR
+        user has no visibility into."""
+        team = Team.objects.create(name='Private Team', code='PRIV')
+        private_ws = CalendarWorkspace.objects.create(
+            name='Private Workspace', code='private-ws', team=team, is_public=False,
+        )
+        self.client.force_authenticate(self.hr_user)
+        response = self.client.post('/api/dashboard/holidays/', {
+            'name': 'Sneaky Holiday',
+            'date': '2026-01-01',
+            'is_global': False,
+            'country_code': 'IT',
+            'calendar': private_ws.id,
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
+
+    def test_hr_can_create_holiday_on_workspace_they_can_access(self):
+        public_ws = CalendarWorkspace.objects.create(
+            name='Public Workspace', code='public-ws', is_public=True,
+        )
+        self.client.force_authenticate(self.hr_user)
+        response = self.client.post('/api/dashboard/holidays/', {
+            'name': 'Visible Holiday',
+            'date': '2026-01-01',
+            'is_global': False,
+            'country_code': 'IT',
+            'calendar': public_ws.id,
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+
+    def test_staff_can_create_holiday_on_any_workspace(self):
+        team = Team.objects.create(name='Private Team 2', code='PRIV2')
+        private_ws = CalendarWorkspace.objects.create(
+            name='Private Workspace 2', code='private-ws-2', team=team, is_public=False,
+        )
+        staff = User.objects.create_user(username='staff-cal', password='x', is_staff=True)
+        self.client.force_authenticate(staff)
+        response = self.client.post('/api/dashboard/holidays/', {
+            'name': 'Staff Holiday',
+            'date': '2026-01-01',
+            'is_global': False,
+            'country_code': 'IT',
+            'calendar': private_ws.id,
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)

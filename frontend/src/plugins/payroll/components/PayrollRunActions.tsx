@@ -2,12 +2,12 @@
  * PayrollRunActions — action buttons + finalize confirmation dialog.
  */
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { ClosureStatus } from "../types";
 
 interface PayrollRunActionsProps {
+  onBack: () => void;
   isDraft: boolean;
   lineCount: number;
   canManage: boolean;
@@ -25,6 +25,7 @@ interface PayrollRunActionsProps {
 }
 
 export const PayrollRunActions: React.FC<PayrollRunActionsProps> = ({
+  onBack,
   isDraft,
   lineCount,
   canManage,
@@ -40,7 +41,6 @@ export const PayrollRunActions: React.FC<PayrollRunActionsProps> = ({
   exportPdfLoading,
   closureStatus,
 }) => {
-  const navigate = useNavigate();
   const [confirmFinalize, setConfirmFinalize] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const closureBlocksFinalize =
@@ -53,7 +53,7 @@ export const PayrollRunActions: React.FC<PayrollRunActionsProps> = ({
   return (
     <>
       <div className="flex items-center gap-2">
-        <Button variant="outline" onClick={() => navigate("/admin/payroll/runs")}>
+        <Button variant="outline" onClick={onBack}>
           Back
         </Button>
         {isDraft && canManage && (

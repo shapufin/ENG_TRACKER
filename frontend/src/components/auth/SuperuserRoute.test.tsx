@@ -61,7 +61,7 @@ describe("SuperuserRoute", () => {
     expect(screen.getByText("Protected")).toBeInTheDocument();
   });
 
-  it("allows hr", () => {
+  it("redirects hr (admin panel is admin/superuser only)", () => {
     vi.mocked(usePermissions).mockReturnValue({
       isSuperuser: false,
       isAdmin: false,
@@ -69,7 +69,7 @@ describe("SuperuserRoute", () => {
     } as any);
     vi.mocked(useAuth).mockReturnValue({ isLoading: false } as any);
     renderWithRoute();
-    expect(screen.getByText("Protected")).toBeInTheDocument();
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
   });
 
   it("redirects CR-only admin to the unified Control Room app shell", () => {

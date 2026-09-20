@@ -1634,13 +1634,37 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         ]
         return Response(data)
 
+    def _reject_calendar_group_write_from_hr(self, serializer):
+        # calendar_group sharing is deliberately admin-only
+        # (bulk_update_calendar_group/rename_calendar_group/clear_calendar_group
+        # stay IsAdminUser-gated) — a plain HR grantee must not reach the
+        # same effect one team at a time through create/update.
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return
+        if 'calendar_group' in serializer.validated_data:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only admin users can change a team\'s calendar group.')
+
+    def perform_create(self, serializer):
+        self._reject_calendar_group_write_from_hr(serializer)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        self._reject_calendar_group_write_from_hr(serializer)
+        serializer.save()
+
     def get_permissions(self):
-        # Already handled by SuperuserPermissionMixin for superusers
-        if self.action in [
-            'create', 'update', 'partial_update', 'destroy',
-            'bulk_update_calendar_group', 'rename_calendar_group',
+        # Already handled by SuperuserPermissionMixin for superusers.
+        # HR gets create/update (needed for the HR-native /hr/teams page);
+        # destroy and the bulk cross-team calendar-group actions stay
+        # admin/superuser-only (IsHR already admits is_staff/is_superuser).
+        if self.action in ('create', 'update', 'partial_update'):
+            return [IsHR()]
+        if self.action in (
+            'destroy', 'bulk_update_calendar_group', 'rename_calendar_group',
             'clear_calendar_group',
-        ]:
+        ):
             return [IsAdminUser()]
         return [IsAuthenticated()]
     

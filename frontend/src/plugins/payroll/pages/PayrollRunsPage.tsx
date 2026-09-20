@@ -2,7 +2,7 @@
  * PayrollRunsPage — list and manage monthly payroll runs.
  */
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -33,6 +33,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export const PayrollRunsPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { canManage } = usePluginPermissions();
   const canManagePayroll = canManage("payroll");
@@ -56,7 +57,7 @@ export const PayrollRunsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["payroll-runs"] });
       setCreateOpen(false);
       toast.success("Payroll run created");
-      navigate(`/admin/payroll/runs/${run.id}`);
+      navigate(`${location.pathname}/${run.id}`);
     },
     onError: (error) => handleApiError(error),
   });
@@ -81,7 +82,7 @@ export const PayrollRunsPage: React.FC = () => {
               <div
                 key={run.id}
                 className="flex cursor-pointer items-center justify-between rounded-lg border border-border/50 p-4 transition-colors hover:bg-accent/50"
-                onClick={() => navigate(`/admin/payroll/runs/${run.id}`)}
+                onClick={() => navigate(`${location.pathname}/${run.id}`)}
               >
                 <div className="flex items-center gap-4">
                   <div>

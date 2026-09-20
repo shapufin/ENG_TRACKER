@@ -7,9 +7,17 @@ import { PayrollRunDetailPage } from "./PayrollRunDetailPage";
 import * as payrollService from "../services/payrollService";
 import * as usePluginPermissions from "@/hooks/usePluginPermissions";
 
+const mockNavigate = vi.fn();
+let mockPathname = "/admin/payroll/runs/1";
+
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
-  return { ...actual, useParams: () => ({ id: "1" }) };
+  return {
+    ...actual,
+    useParams: () => ({ id: "1" }),
+    useNavigate: () => mockNavigate,
+    useLocation: () => ({ pathname: mockPathname }),
+  };
 });
 
 vi.mock("@/hooks/usePluginPermissions", () => ({
@@ -107,6 +115,7 @@ const mockLines = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockPathname = "/admin/payroll/runs/1";
   vi.mocked(usePluginPermissions.usePluginPermissions).mockReturnValue({
     canManage: () => true,
     canView: () => true,
@@ -313,5 +322,55 @@ describe("PayrollRunDetailPage", () => {
     await waitFor(() => {
       expect(screen.queryByText("Export Excel")).not.toBeInTheDocument();
     });
+  });
+
+  it("Back navigates to the admin runs list, not the router root", async () => {
+    mockPathname = "/admin/payroll/runs/1";
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(mockNavigate).toHaveBeenCalledWith("/admin/payroll/runs");
+  });
+
+  it("Back navigates to the HR runs list when mounted under /hr", async () => {
+    mockPathname = "/hr/payroll/runs/1";
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(mockNavigate).toHaveBeenCalledWith("/hr/payroll/runs");
+  });
+
+  it("deleting a draft run navigates to the runs list, not the router root", async () => {
+    mockPathname = "/admin/payroll/runs/1";
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines);
+    vi.spyOn(payrollService.payrollService, "deleteRun").mockResolvedValue(undefined as any);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Delete draft" })).toBeInTheDocument()
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Delete draft" }));
+    const confirmButton = await screen.findByRole("button", { name: "Confirm" });
+    fireEvent.click(confirmButton);
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/admin/payroll/runs"));
   });
 });

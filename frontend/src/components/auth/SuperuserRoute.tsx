@@ -13,5 +13,5 @@ export const SuperuserRoute: React.FC = () => {
     return <Navigate to="/control-room/dashboard" replace />;
   }
 
-  return isSuperuser || isAdmin || isHR ? <Outlet /> : <Navigate to="/dashboard" replace />;
+  return isSuperuser || isAdmin ? <Outlet /> : <Navigate to="/dashboard" replace />;
 };

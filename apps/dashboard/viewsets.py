@@ -869,23 +869,40 @@ class PublicHolidayViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
 
     def _ensure_admin(self):
         user = self.request.user
-        if not (user.is_staff or user.is_superuser):
-            raise PermissionDenied("Only staff users can modify holidays.")
+        if not (user.is_staff or user.is_superuser or has_hr_role(user)):
+            raise PermissionDenied("Only staff or HR users can modify holidays.")
+
+    def _ensure_calendar_accessible(self, calendar):
+        # Non-staff HR's write authority must not exceed what
+        # CalendarWorkspace.get_accessible_for_user shows them in the
+        # workspace picker — otherwise a crafted request can scope a
+        # holiday to a private workspace they have no visibility into.
+        user = self.request.user
+        if user.is_staff or user.is_superuser or calendar is None:
+            return
+        from apps.dashboard.models.calendar import CalendarWorkspace
+        if not CalendarWorkspace.get_accessible_for_user(user).filter(id=calendar.id).exists():
+            raise PermissionDenied("You do not have access to this calendar workspace.")
 
     def perform_create(self, serializer):
         self._ensure_admin()
+        self._ensure_calendar_accessible(serializer.validated_data.get('calendar'))
         serializer.save()
         self.invalidate_related_cache()
 
     def perform_update(self, serializer):
         self._ensure_admin()
+        self._ensure_calendar_accessible(
+            serializer.validated_data.get('calendar', serializer.instance.calendar)
+        )
         serializer.save()
         self.invalidate_related_cache()
 
     def perform_destroy(self, instance):
         self._ensure_admin()
+        self._ensure_calendar_accessible(instance.calendar)
         instance.delete()
-        self.invalidate_related_cache
+        self.invalidate_related_cache()
 
 
 class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):

@@ -151,10 +151,10 @@ describe("PayrollRunsPage", () => {
     });
   });
 
-  it("navigates to run detail on row click", async () => {
+  it("navigates to run detail on row click, relative to the current route (admin)", async () => {
     vi.spyOn(payrollService.payrollService, "getRuns").mockResolvedValue([mockRun]);
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={["/admin/payroll/runs"]}>
         <PayrollRunsPage />
       </MemoryRouter>,
       { wrapper }
@@ -164,5 +164,20 @@ describe("PayrollRunsPage", () => {
     });
     fireEvent.click(screen.getByText("2026-07"));
     expect(mockNavigate).toHaveBeenCalledWith("/admin/payroll/runs/1");
+  });
+
+  it("navigates to run detail relative to the HR route when mounted under /hr", async () => {
+    vi.spyOn(payrollService.payrollService, "getRuns").mockResolvedValue([mockRun]);
+    render(
+      <MemoryRouter initialEntries={["/hr/payroll/runs"]}>
+        <PayrollRunsPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    await waitFor(() => {
+      expect(screen.getByText("2026-07")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("2026-07"));
+    expect(mockNavigate).toHaveBeenCalledWith("/hr/payroll/runs/1");
   });
 });

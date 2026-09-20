@@ -6,19 +6,19 @@ import { DashboardSectionShell } from "@/components/dashboard/DashboardSectionSh
 const LINKS = [
   {
     label: "Export Payroll",
-    to: "/admin/payroll/runs",
+    to: "/hr/payroll/runs",
     icon: Download,
     iconClass: "bg-tone-success-surface text-tone-success-text",
   },
   {
     label: "Company Holidays",
-    to: "/admin/calendars",
+    to: "/hr/calendars",
     icon: CalendarDays,
     iconClass: "bg-tone-warning-surface text-tone-warning-text",
   },
   {
     label: "Department Settings",
-    to: "/admin/teams",
+    to: "/hr/teams",
     icon: Building2,
     iconClass: "bg-tone-accent-surface text-tone-accent-text",
   },

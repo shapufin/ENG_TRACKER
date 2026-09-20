@@ -13,7 +13,7 @@ interface TeamDataTableProps {
   expanded: Set<number>;
   onToggleExpand: (id: number) => void;
   onEdit: (team: TeamNode) => void;
-  onDelete: (team: TeamNode) => void;
+  onDelete?: (team: TeamNode) => void;
   hoveredPath: Set<number>;
   onRowMouseEnter: (team: TeamNode) => void;
   onRowMouseLeave: () => void;

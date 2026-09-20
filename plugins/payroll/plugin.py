@@ -77,6 +77,19 @@ class PayrollPlugin(BasePlugin):
                     "component": "PayrollSettingsPage",
                     "layout": "admin",
                 },
+                # HR-native equivalents (Part D: HR reaches payroll runs
+                # without routing through the admin panel). Reuses the same
+                # components as the admin routes above.
+                {
+                    "path": "/hr/payroll/runs",
+                    "component": "PayrollRunsPage",
+                    "layout": "hr",
+                },
+                {
+                    "path": "/hr/payroll/runs/:id",
+                    "component": "PayrollRunDetailPage",
+                    "layout": "hr",
+                },
             ],
         })
         return metadata

@@ -3,7 +3,7 @@
  * Orchestrator: fetches data and delegates rendering to sub-components.
  */
 import React from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/layout/PageShell";
 import { LoadingCard } from "@/components/ui/LoadingCard";
@@ -27,6 +27,14 @@ const STATUS_COLORS: Record<string, string> = {
 export const PayrollRunDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Route is a flat, path-contributing leaf under pathless layout routes
+  // (ProtectedRoute/AppShell/HRRoute or SuperuserRoute/AdminShell), so
+  // relative navigate("..") has no path-contributing ancestor to resolve
+  // against and would land on "/" instead of the runs list. Derive the
+  // list path from the current URL instead — works under both
+  // /admin/payroll/runs/:id and /hr/payroll/runs/:id.
+  const runsListPath = location.pathname.slice(0, location.pathname.lastIndexOf("/"));
   const queryClient = useQueryClient();
   const { canManage, canExport } = usePluginPermissions();
   const canManagePayroll = canManage("payroll");
@@ -89,7 +97,7 @@ export const PayrollRunDetailPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll-runs"] });
       toast.success("Draft payroll run deleted");
-      navigate("/admin/payroll/runs");
+      navigate(runsListPath);
     },
     onError: (error) => handleApiError(error),
   });
@@ -135,6 +143,7 @@ export const PayrollRunDetailPage: React.FC = () => {
       subtitle={`Rule set: ${run.rule_set_name}`}
       actions={
         <PayrollRunActions
+          onBack={() => navigate(runsListPath)}
           isDraft={isDraft}
           lineCount={run.line_count}
           canManage={canManagePayroll}

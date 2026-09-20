@@ -13,15 +13,15 @@ describe("HRQuickLinks", () => {
 
     expect(screen.getByRole("link", { name: /Export Payroll/ })).toHaveAttribute(
       "href",
-      "/admin/payroll/runs"
+      "/hr/payroll/runs"
     );
     expect(screen.getByRole("link", { name: /Company Holidays/ })).toHaveAttribute(
       "href",
-      "/admin/calendars"
+      "/hr/calendars"
     );
     expect(screen.getByRole("link", { name: /Department Settings/ })).toHaveAttribute(
       "href",
-      "/admin/teams"
+      "/hr/teams"
     );
     expect(screen.getByRole("link", { name: /Team Leader Assignment/ })).toHaveAttribute(
       "href",

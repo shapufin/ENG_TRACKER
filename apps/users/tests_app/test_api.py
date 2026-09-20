@@ -860,6 +860,90 @@ class TestTeamCalendarGroupAdminOnly(APITestCase):
         self.assertEqual(team.calendar_group, 'grp2')
 
 
+class TestTeamCreateUpdateHRAllowed(APITestCase):
+    """HR gets create/update on Team for the HR-native /hr/teams page
+    (Part D: full admin isolation), but not destroy or the cross-team
+    calendar-group bulk actions (those stay admin-only, see
+    TestTeamCalendarGroupAdminOnly)."""
+
+    def setUp(self):
+        self.hr = User.objects.create_user(username='team-hr', password='testpass123')
+        self.hr.profile.is_hr_user = True
+        self.hr.profile.save()
+        self.employee = User.objects.create_user(username='team-emp', password='testpass123')
+        self.team = Team.objects.create(name='HR Team', code='HRT')
+
+    def test_hr_can_create_team(self):
+        self.client.force_authenticate(user=self.hr)
+        response = self.client.post(
+            '/api/users/teams/',
+            {'name': 'New Team', 'code': 'NEW'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+
+    def test_hr_can_update_team(self):
+        self.client.force_authenticate(user=self.hr)
+        response = self.client.patch(
+            f'/api/users/teams/{self.team.id}/',
+            {'name': 'Renamed Team'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+
+    def test_hr_cannot_set_calendar_group_via_update(self):
+        """calendar_group sharing is deliberately admin-only
+        (bulk_update_calendar_group/rename_calendar_group/clear_calendar_group
+        stay IsAdminUser) — HR must not reach the same effect one team at a
+        time through the plain update endpoint."""
+        self.client.force_authenticate(user=self.hr)
+        response = self.client.patch(
+            f'/api/users/teams/{self.team.id}/',
+            {'calendar_group': 'hr-snuck-in'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 403, response.data)
+        self.team.refresh_from_db()
+        self.assertNotEqual(self.team.calendar_group, 'hr-snuck-in')
+
+    def test_hr_cannot_set_calendar_group_via_create(self):
+        self.client.force_authenticate(user=self.hr)
+        response = self.client.post(
+            '/api/users/teams/',
+            {'name': 'New Team', 'code': 'NEW2', 'calendar_group': 'hr-snuck-in'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 403, response.data)
+
+    def test_admin_can_still_set_calendar_group_via_update(self):
+        admin = User.objects.create_superuser(
+            username='team-admin', password='testpass123', email='admin2@example.com'
+        )
+        self.client.force_authenticate(user=admin)
+        response = self.client.patch(
+            f'/api/users/teams/{self.team.id}/',
+            {'calendar_group': 'admin-set'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.team.refresh_from_db()
+        self.assertEqual(self.team.calendar_group, 'admin-set')
+
+    def test_hr_cannot_delete_team(self):
+        self.client.force_authenticate(user=self.hr)
+        response = self.client.delete(f'/api/users/teams/{self.team.id}/')
+        self.assertEqual(response.status_code, 403)
+
+    def test_plain_employee_cannot_create_team(self):
+        self.client.force_authenticate(user=self.employee)
+        response = self.client.post(
+            '/api/users/teams/',
+            {'name': 'Blocked Team', 'code': 'BLK'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 403)
+
+
 class TestSetTeamLeaderHRAssignment(APITestCase):
     """HR's narrow TL-assignment action on UserProfileViewSet: set/clear
     which TL an EXISTING employee reports to. Distinct from the TL-role

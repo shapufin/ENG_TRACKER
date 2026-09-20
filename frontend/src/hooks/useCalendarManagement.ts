@@ -6,6 +6,10 @@ import { toast } from "sonner";
 import type { Team } from "@/types";
 
 interface UseCalendarManagementOptions {
+  /** Set false to skip the teams/calendar-group queries and mutations a
+   * holidays-only caller (e.g. the HR-native Company Holidays page) never
+   * renders. Defaults to true. */
+  includeTeams?: boolean;
   onHolidaySuccess?: () => void;
   onHolidayDeleteSuccess?: () => void;
   onGroupRenameSuccess?: () => void;
@@ -22,20 +26,24 @@ interface UseCalendarManagementOptions {
  */
 export const useCalendarManagement = (options?: UseCalendarManagementOptions) => {
   const qc = useQueryClient();
+  const includeTeams = options?.includeTeams ?? true;
 
   const { data: teamsData, isLoading: teamsLoading } = useQuery({
     queryKey: ["admin", "teams"],
     queryFn: () => userService.getTeams({ page_size: 1000 }),
+    enabled: includeTeams,
   });
 
   const { data: calendarGroups } = useQuery({
     queryKey: ["admin", "calendar-groups"],
     queryFn: () => userService.getCalendarGroups(),
+    enabled: includeTeams,
   });
 
   const { data: groupStats } = useQuery({
     queryKey: ["admin", "calendar-group-stats"],
     queryFn: () => userService.getCalendarGroupStats(),
+    enabled: includeTeams,
   });
 
   const { data: holidaysData, isLoading: holidaysLoading } = useQuery({

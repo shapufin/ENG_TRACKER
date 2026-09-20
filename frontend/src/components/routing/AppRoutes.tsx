@@ -60,6 +60,8 @@ const HRReportsPage = React.lazy(() =>
 const HRTeamLeaderAssignmentPage = React.lazy(
   () => import("@/pages/hr/HRTeamLeaderAssignmentPage")
 );
+const HRCalendarsPage = React.lazy(() => import("@/pages/hr/HRCalendarsPage"));
+const HRTeamsPage = React.lazy(() => import("@/pages/hr/HRTeamsPage"));
 const LeaveBalancesPage = React.lazy(() =>
   import("@/pages/admin/LeaveBalancesPage").then((m) => ({ default: m.LeaveBalancesPage }))
 );
@@ -94,7 +96,7 @@ const withSuspense = (element: React.ReactNode) => (
   </ErrorBoundary>
 );
 
-const usePluginRouteObjects = (layout: "app" | "admin") => {
+const usePluginRouteObjects = (layout: "app" | "admin" | "hr") => {
   const { activePlugins } = usePlugins();
   return activePlugins.flatMap((plugin) =>
     plugin.routes
@@ -115,6 +117,7 @@ export const AppRoutes: React.FC = () => {
   const { isLoading: pluginsLoading } = usePlugins();
   const appPluginRoutes = usePluginRouteObjects("app");
   const adminPluginRoutes = usePluginRouteObjects("admin");
+  const hrPluginRoutes = usePluginRouteObjects("hr");
 
   // While plugin routes are loading, use a catch-all that shows a loader
   // instead of redirecting to /dashboard. Without this, a hard refresh on a
@@ -160,6 +163,15 @@ export const AppRoutes: React.FC = () => {
                       path: "/hr/team-leaders",
                       element: withSuspense(<HRTeamLeaderAssignmentPage />),
                     },
+                    {
+                      path: "/hr/calendars",
+                      element: withSuspense(<HRCalendarsPage />),
+                    },
+                    {
+                      path: "/hr/teams",
+                      element: withSuspense(<HRTeamsPage />),
+                    },
+                    ...hrPluginRoutes,
                   ],
                 },
               ],
