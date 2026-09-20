@@ -8,7 +8,7 @@ interface ProgressRingProps {
 }
 
 export const ProgressRing: React.FC<ProgressRingProps> = ({ value, label, colorClass }) => (
-  <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/60 p-3">
+  <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3">
     <div className="relative h-12 w-12">
       <svg className="h-full w-full" viewBox="0 0 36 36">
         <path

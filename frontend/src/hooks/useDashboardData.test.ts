@@ -261,4 +261,87 @@ describe("useDashboardData", () => {
       .mock.calls.filter((args) => (args[0] as { page_size?: number })?.page_size === 100);
     expect(weeklyCalls).toHaveLength(0);
   });
+
+  it("shifts the weekly window back a full week per weekOffset with real ranges", async () => {
+    vi.mocked(overtimeService.getLogs).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(overtimeService.getSummary).mockResolvedValue({
+      total_hours: 0,
+      total_entries: 0,
+      approved_hours: 0,
+      pending_hours: 0,
+      rejected_hours: 0,
+    });
+    vi.mocked(standbyService.getLogs).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(standbyService.getSummary).mockResolvedValue({
+      total_hours: 0,
+      total_entries: 0,
+      approved_hours: 0,
+      pending_hours: 0,
+      rejected_hours: 0,
+    });
+    vi.mocked(leaveService.getRequests).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(leaveService.getUserBalanceSummary).mockResolvedValue({
+      user_id: 1,
+      username: "u",
+      full_name: "U",
+      year: 2026,
+      vacation: {
+        carry_over: null,
+        current_year: null,
+        total_available: 9,
+        total_used: 11,
+        total_pending: 0,
+      },
+    } as never);
+    vi.mocked(dashboardService.getHRStats).mockResolvedValue({} as never);
+
+    const queryClient = new QueryClient();
+    const { result } = renderHook(
+      () =>
+        useDashboardData({
+          userId: 1,
+          isAdmin: false,
+          isHR: false,
+          selectedDashboard: "employee",
+          weekOffset: 1,
+        }),
+      { wrapper: createWrapper(queryClient) }
+    );
+
+    await waitFor(() => expect(result.current.weekReferenceDate).toBeDefined());
+    // The balance summary resolves on its own query — wait for it too.
+    await waitFor(() => expect(result.current.leaveUsedDays).toBe(11));
+    // Local-date formatting, mirroring the hook (UTC slicing would flake
+    // across midnight in non-UTC timezones).
+    const toLocalISO = (date: Date) =>
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const end = new Date();
+    end.setDate(end.getDate() - 7);
+    const start = new Date(end);
+    start.setDate(start.getDate() - 6);
+    const weeklyCall = vi
+      .mocked(overtimeService.getLogs)
+      .mock.calls.find((args) => (args[0] as { page_size?: number })?.page_size === 100);
+    expect(weeklyCall?.[0]).toMatchObject({
+      date_from: toLocalISO(start),
+      date_to: toLocalISO(end),
+    });
+    expect(result.current.weekReferenceDate).toBe(toLocalISO(end));
+    expect(result.current.leaveAvailableDays).toBe(9);
+  });
 });

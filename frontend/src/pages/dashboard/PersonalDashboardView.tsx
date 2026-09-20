@@ -26,6 +26,13 @@ interface PersonalDashboardViewProps {
   personalTimelineItems: any[];
   weekOvertimeLogs?: Pick<OvertimeLog, "date" | "hours">[];
   weekStandbyLogs?: Pick<StandbyLog, "date" | "hours">[];
+  /** ISO end date of the selected rolling week window (chart buckets from it). */
+  weekReferenceDate?: string;
+  leaveUsedDays?: number;
+  leaveAvailableDays?: number;
+  /** 0 = this week, 1 = last week. Selector hidden when handler is absent. */
+  weekOffset?: 0 | 1;
+  onWeekOffsetChange?: (offset: 0 | 1) => void;
 }
 
 export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
@@ -40,6 +47,11 @@ export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
   personalTimelineItems,
   weekOvertimeLogs,
   weekStandbyLogs,
+  weekReferenceDate,
+  leaveUsedDays,
+  leaveAvailableDays,
+  weekOffset,
+  onWeekOffsetChange,
 }) => (
   <div className="flex flex-col gap-8">
     <PersonalDashboardStats
@@ -58,6 +70,11 @@ export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
         pendingLeaveDays={pendingLeaveDays}
         weekOvertimeLogs={weekOvertimeLogs}
         weekStandbyLogs={weekStandbyLogs}
+        weekReferenceDate={weekReferenceDate}
+        leaveUsedDays={leaveUsedDays}
+        leaveAvailableDays={leaveAvailableDays}
+        weekOffset={weekOffset}
+        onWeekOffsetChange={onWeekOffsetChange}
       />
     </div>
 

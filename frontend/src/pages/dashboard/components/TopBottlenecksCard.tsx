@@ -37,7 +37,7 @@ export const TopBottlenecksCard: React.FC<TopBottlenecksCardProps> = ({
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="flex animate-pulse items-center justify-between rounded-2xl border border-border/30 bg-muted/30 p-4"
+                className="flex animate-pulse items-center justify-between rounded-2xl border border-border/30 bg-card p-4"
               >
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-full bg-muted/50" />
@@ -55,7 +55,7 @@ export const TopBottlenecksCard: React.FC<TopBottlenecksCardProps> = ({
         {users.map((userEntry) => (
           <div
             key={userEntry.userId}
-            className="flex items-center justify-between rounded-2xl border border-border/30 bg-muted/30 p-4 transition-all hover:border-border/60"
+            className="flex items-center justify-between rounded-2xl border border-border/30 bg-card p-4 transition-all hover:border-border/60"
           >
             <div className="flex items-center gap-4">
               <Avatar className="h-12 w-12 border border-primary/20">

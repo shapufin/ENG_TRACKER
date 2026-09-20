@@ -25,7 +25,7 @@ export const HRDashboardPendingLeave: React.FC<HRDashboardPendingLeaveProps> = (
       {pending.map((r: any) => (
         <div
           key={r.id}
-          className="group flex items-center justify-between rounded-2xl border border-border/70 bg-muted/30 p-5 transition-all hover:bg-muted/50"
+          className="group flex items-center justify-between rounded-2xl border border-border/70 bg-card p-5 transition-all hover:bg-muted/50"
         >
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">

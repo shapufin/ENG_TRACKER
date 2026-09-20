@@ -11,6 +11,8 @@ interface UseDashboardDataOptions {
   isAdmin: boolean;
   isHR: boolean;
   selectedDashboard: DashboardType;
+  /** Rolling 7-day windows back from today: 0 = this week, 1 = last week. */
+  weekOffset?: number;
 }
 
 // fallow-ignore-next-line complexity
@@ -19,6 +21,7 @@ export const useDashboardData = ({
   isAdmin,
   isHR,
   selectedDashboard,
+  weekOffset = 0,
 }: UseDashboardDataOptions) => {
   const isPrivilegedDashboard = selectedDashboard === "hr" || selectedDashboard === "admin";
   const dashboardPageSize = isPrivilegedDashboard ? 50 : 5;
@@ -118,13 +121,18 @@ export const useDashboardData = ({
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
-  const today = toLocalDateString(new Date());
-  const weekStart = toLocalDateString(new Date(new Date().setDate(new Date().getDate() - 6)));
+  // Rolling window end shifts back a full week per offset so the personal
+  // dashboard's This Week / Last Week selector re-queries real ranges.
+  const windowEnd = new Date(new Date().setDate(new Date().getDate() - 7 * weekOffset));
+  const weekStart = toLocalDateString(
+    new Date(new Date(windowEnd).setDate(windowEnd.getDate() - 6))
+  );
+  const weekEnd = toLocalDateString(windowEnd);
 
   const { data: weeklyOvertimeData } = useQuery({
     queryKey: ["overtime", userId ?? "anonymous", "weekly", weekStart],
     queryFn: () =>
-      overtimeService.getLogs({ date_from: weekStart, date_to: today, page_size: 100 }),
+      overtimeService.getLogs({ date_from: weekStart, date_to: weekEnd, page_size: 100 }),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -135,7 +143,7 @@ export const useDashboardData = ({
 
   const { data: weeklyStandbyData } = useQuery({
     queryKey: ["standby", userId ?? "anonymous", "weekly", weekStart],
-    queryFn: () => standbyService.getLogs({ date_from: weekStart, date_to: today, page_size: 100 }),
+    queryFn: () => standbyService.getLogs({ date_from: weekStart, date_to: weekEnd, page_size: 100 }),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -156,7 +164,11 @@ export const useDashboardData = ({
     personalStandbyHours: standbySummary?.total_hours ?? calculations.personalStandbyHours,
     vacationBalanceDays:
       leaveBalanceSummary?.vacation?.total_available ?? calculations.approvedLeaveDays,
+    leaveUsedDays: leaveBalanceSummary?.vacation?.total_used ?? 0,
+    leaveAvailableDays: leaveBalanceSummary?.vacation?.total_available ?? 0,
     weekOvertimeLogs: weeklyOvertimeData?.results ?? [],
     weekStandbyLogs: weeklyStandbyData?.results ?? [],
+    /** ISO end date of the selected rolling window; the chart buckets from it. */
+    weekReferenceDate: weekEnd,
   };
 };

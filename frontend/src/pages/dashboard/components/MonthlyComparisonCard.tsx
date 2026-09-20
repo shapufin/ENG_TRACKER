@@ -86,7 +86,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
         previousLabel={data?.previous_month.month_name}
       />
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-border/30 bg-muted/30 p-4">
+        <div className="rounded-xl border border-border/30 bg-card p-4">
           <p className="text-sm text-muted-foreground">
             {data?.previous_month.month_name ?? "Prev"} daily avg
           </p>

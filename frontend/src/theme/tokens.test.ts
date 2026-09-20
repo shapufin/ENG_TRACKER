@@ -64,7 +64,35 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
 
   it("preserves the WCAG-pinned values", () => {
     expect(darkBlock).toContain("--muted-foreground: 220 10% 63%");
-    expect(lightBlock).toContain("--destructive: 0 84% 48%");
+    // White on #DC2626 measures 4.83:1 (AA). Previous pin 0 84% 48% was
+    // replaced by the white-theme accent refinement (2026-09-20).
+    expect(lightBlock).toContain("--destructive: 0 72% 51%");
+  });
+
+  it("matches the white-theme accent palette (2026-09-20 refinement)", () => {
+    // Primary CTA #2563EB: white text measures 5.17:1 (AA).
+    expect(lightBlock).toContain("--primary: 221 83% 53%");
+    expect(lightBlock).toContain("--primary-hover: 224 76% 48%");
+    // Solid info is sky-700 #0369A1 (5.93:1), NOT sky-600 #0284C7 (4.10:1,
+    // fails AA for the white-text today badge). Tinted info surfaces still
+    // use the sky-600 family with dark sky text.
+    expect(lightBlock).toContain("--info: 201 96% 32%");
+    expect(lightBlock).toContain("--tone-info-text: 201 90% 27%");
+    // Crisp slate dividers #E2E8F0. --line-subtle is deliberately a step
+    // darker (≈#E7E9EE, not #F1F5F9): the same token draws hairlines on
+    // white cards AND on the 96%-tinted app background (PageShell header),
+    // where #F1F5F9 vanishes. Track backgrounds on sunken surfaces read as
+    // a groove either way; divider function wins over track framing.
+    expect(lightBlock).toContain("--border: 214 32% 91%");
+    expect(lightBlock).toContain("--line-subtle: 220 18% 92%");
+  });
+
+  it("keeps tone-danger in the red family (2026-09-20 refinement)", () => {
+    // Previous text 347 77% 41% was rose; red-700 0 74% 42% matches the new
+    // destructive base. Info surface opacity 0.12 (not the usual 0.15)
+    // blends sky-600 to ≈ sky-50 #F0F9FF over white — the mockup banner bg.
+    expect(lightBlock).toContain("--tone-danger-text: 0 74% 42%");
+    expect(lightBlock).toContain("--tone-info-surface: 199 98% 39% / 0.12");
   });
 
   it("defines the surface radius scale in both modes", () => {
@@ -89,5 +117,57 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
 
   it("keeps --radius unchanged (drives rounded-lg/md/sm app-wide)", () => {
     expect(lightBlock).toContain("--radius: 0.625rem");
+  });
+
+  it("proves the AA claims by computing contrast (not just pinning strings)", () => {
+    const toRgb = (
+      h: number,
+      s: number,
+      l: number,
+    ): [number, number, number] => {
+      const hh = h / 360;
+      const ss = s / 100;
+      const ll = l / 100;
+      const c = (1 - Math.abs(2 * ll - 1)) * ss;
+      const x = c * (1 - Math.abs((((hh * 360) / 60) % 2) - 1));
+      const m = ll - c / 2;
+      const sector = Math.floor(hh * 6);
+      const [r, g, b] =
+        sector === 0
+          ? [c, x, 0]
+          : sector === 1
+            ? [x, c, 0]
+            : sector === 2
+              ? [0, c, x]
+              : sector === 3
+                ? [0, x, c]
+                : sector === 4
+                  ? [x, 0, c]
+                  : [c, 0, x];
+      return [r + m, g + m, b + m];
+    };
+    const lin = (v: number) =>
+      v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    const luminance = (h: number, s: number, l: number) => {
+      const [r, g, b] = toRgb(h, s, l).map(lin);
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const ratio = (l1: number, l2: number) =>
+      (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    const white = luminance(0, 0, 100);
+    // Solid-button pairs: white text on primary / destructive / info.
+    expect(ratio(white, luminance(221, 83, 53))).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(white, luminance(0, 72, 51))).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(white, luminance(201, 96, 32))).toBeGreaterThanOrEqual(4.5);
+    // Tinted info surface: 12% sky-600 over a white card, dark sky text.
+    const [sr, sg, sb] = toRgb(199, 98, 39);
+    const surface = [0.12 * sr + 0.88, 0.12 * sg + 0.88, 0.12 * sb + 0.88].map(
+      lin,
+    );
+    const surfaceLum =
+      0.2126 * surface[0] + 0.7152 * surface[1] + 0.0722 * surface[2];
+    expect(ratio(luminance(201, 90, 27), surfaceLum)).toBeGreaterThanOrEqual(
+      4.5,
+    );
   });
 });

@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useAuth } from "@/context/AuthContext";
@@ -23,7 +23,18 @@ export const DashboardPage: React.FC = () => {
     availableDashboards
   );
 
-  const dashboardData = useDashboardData({ userId, isAdmin, isHR, selectedDashboard });
+  // Rolling week window for the personal dashboard's weekly widget
+  // (0 = this week, 1 = last week). Lives here so the data hook re-queries
+  // real date ranges instead of the widget filtering client-side.
+  const [weekOffset, setWeekOffset] = useState<0 | 1>(0);
+
+  const dashboardData = useDashboardData({
+    userId,
+    isAdmin,
+    isHR,
+    selectedDashboard,
+    weekOffset,
+  });
 
   const personalItems = usePersonalDashboardItems({
     overtimeData: dashboardData.overtimeData,
@@ -76,6 +87,11 @@ export const DashboardPage: React.FC = () => {
           personalTimelineItems: personalItems.personalTimelineItems,
           weekOvertimeLogs: dashboardData.weekOvertimeLogs,
           weekStandbyLogs: dashboardData.weekStandbyLogs,
+          weekReferenceDate: dashboardData.weekReferenceDate,
+          leaveUsedDays: dashboardData.leaveUsedDays,
+          leaveAvailableDays: dashboardData.leaveAvailableDays,
+          weekOffset,
+          onWeekOffsetChange: setWeekOffset,
         }}
       />
     );
