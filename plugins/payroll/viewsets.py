@@ -78,8 +78,18 @@ User = get_user_model()
 
 
 def _allowed_payroll_user_ids(user):
-    """Return the salary-data scope for a future non-admin permission grant."""
+    """Return the salary-data scope: unrestricted (like staff) for anyone
+    holding the payroll plugin's 'manage' grant — e.g. HR, who is meant to
+    have full payroll access, not just their own led team. A plain
+    team-leader identity with no elevated grant stays scoped to self + team.
+    """
     if user.is_staff or user.is_superuser:
+        return None
+    from apps.plugins.models import PluginPermission
+    manage_perm = PluginPermission.objects.filter(
+        plugin_name='payroll', action='manage'
+    ).first()
+    if manage_perm and manage_perm.has_access(user):
         return None
     allowed = {user.id}
     profile = getattr(user, 'profile', None)

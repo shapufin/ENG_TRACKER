@@ -27,6 +27,10 @@ describe("HRQuickLinks", () => {
       "href",
       "/hr/team-leaders"
     );
+    expect(screen.getByRole("link", { name: /Assign Wages/ })).toHaveAttribute(
+      "href",
+      "/hr/payroll/wages"
+    );
   });
 
   it("does not offer Add Employee — HR has no create-user permission", () => {

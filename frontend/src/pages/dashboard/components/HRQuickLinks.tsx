@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Download, CalendarDays, Building2, Users } from "lucide-react";
+import { Download, CalendarDays, Building2, Users, Wallet } from "lucide-react";
 import { DashboardSectionShell } from "@/components/dashboard/DashboardSectionShell";
 
 const LINKS = [
@@ -27,6 +27,12 @@ const LINKS = [
     to: "/hr/team-leaders",
     icon: Users,
     iconClass: "bg-primary/10 text-primary",
+  },
+  {
+    label: "Assign Wages",
+    to: "/hr/payroll/wages",
+    icon: Wallet,
+    iconClass: "bg-tone-success-surface text-tone-success-text",
   },
 ];
 

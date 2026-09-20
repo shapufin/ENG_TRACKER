@@ -12,6 +12,8 @@ import {
   Settings,
   Ticket,
   Users,
+  Building2,
+  Wallet,
 } from "lucide-react";
 
 export type NavSection = "core" | "leadership" | "skills-kpi" | "system";
@@ -85,6 +87,41 @@ const allNavItems: NavItem[] = [
     path: "/hr/reports",
     label: "HR Reports",
     icon: Briefcase,
+    section: "leadership",
+    roles: ["hr"],
+  },
+  {
+    path: "/hr/team-leaders",
+    label: "Team Leader Assignment",
+    icon: Users,
+    section: "leadership",
+    roles: ["hr"],
+  },
+  {
+    path: "/hr/teams",
+    label: "Department Settings",
+    icon: Building2,
+    section: "leadership",
+    roles: ["hr"],
+  },
+  {
+    path: "/hr/calendars",
+    label: "Company Holidays",
+    icon: CalendarDays,
+    section: "leadership",
+    roles: ["hr"],
+  },
+  {
+    path: "/hr/payroll/wages",
+    label: "Wage Assignment",
+    icon: Wallet,
+    section: "leadership",
+    roles: ["hr"],
+  },
+  {
+    path: "/hr/payroll/runs",
+    label: "Payroll",
+    icon: Wallet,
     section: "leadership",
     roles: ["hr"],
   },

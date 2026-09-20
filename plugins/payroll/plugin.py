@@ -38,14 +38,18 @@ class PayrollPlugin(BasePlugin):
         return ["view", "manage", "configure", "export"]
 
     def get_permission_manifest(self):
-        # Admin-only initially. Future roles can be granted through the
-        # permission UI without changing this manifest.
+        # HR reaches payroll runs/wages without routing through the admin
+        # panel (Part D) — view/manage/export are granted to the hr role so
+        # the grant is codified here and survives `seed_plugin_permissions
+        # --reset` instead of depending on a one-off runtime grant.
+        # `configure` (rule sets, work calendar, global settings) stays
+        # admin-only.
         return {
             **super().get_permission_manifest(),
-            "view": {"roles": [], "public": False},
-            "manage": {"roles": [], "public": False},
+            "view": {"roles": ["hr"], "public": False},
+            "manage": {"roles": ["hr"], "public": False},
             "configure": {"roles": [], "public": False},
-            "export": {"roles": [], "public": False},
+            "export": {"roles": ["hr"], "public": False},
         }
 
     def get_frontend_metadata(self):
@@ -88,6 +92,11 @@ class PayrollPlugin(BasePlugin):
                 {
                     "path": "/hr/payroll/runs/:id",
                     "component": "PayrollRunDetailPage",
+                    "layout": "hr",
+                },
+                {
+                    "path": "/hr/payroll/wages",
+                    "component": "PayrollWagesPage",
                     "layout": "hr",
                 },
             ],

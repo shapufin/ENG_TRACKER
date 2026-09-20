@@ -7,7 +7,7 @@ const labels = (result: ReturnType<typeof useVisibleNavItems>) => result.map((it
 describe("useVisibleNavItems", () => {
   it("returns all items for a superuser", () => {
     const { result } = renderHook(() => useVisibleNavItems(false, false, false, false, true));
-    expect(result.current).toHaveLength(14);
+    expect(result.current).toHaveLength(19);
   });
 
   it("returns only public items for an employee", () => {
@@ -33,6 +33,11 @@ describe("useVisibleNavItems", () => {
     const { result } = renderHook(() => useVisibleNavItems(false, true, false, false, false));
     const visible = labels(result.current);
     expect(visible).toContain("HR Reports");
+    expect(visible).toContain("Team Leader Assignment");
+    expect(visible).toContain("Department Settings");
+    expect(visible).toContain("Company Holidays");
+    expect(visible).toContain("Wage Assignment");
+    expect(visible).toContain("Payroll");
     expect(visible).not.toContain("Pending Approvals");
   });
 
@@ -100,7 +105,7 @@ describe("useVisibleNavItems", () => {
 
   it("superuser sees all items regardless of other role flags", () => {
     const { result } = renderHook(() => useVisibleNavItems(false, false, false, false, true));
-    expect(result.current).toHaveLength(14);
+    expect(result.current).toHaveLength(19);
   });
 
   it("admin + HR combo sees both admin and HR items", () => {
@@ -253,6 +258,11 @@ describe("useVisibleNavItems", () => {
       "Pending Approvals": "leadership",
       "Team Overview": "leadership",
       "HR Reports": "leadership",
+      "Team Leader Assignment": "leadership",
+      "Department Settings": "leadership",
+      "Company Holidays": "leadership",
+      "Wage Assignment": "leadership",
+      Payroll: "leadership",
       Plugins: "system",
       Admin: "system",
       "Ticket KPI": "skills-kpi",

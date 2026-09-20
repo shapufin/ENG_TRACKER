@@ -531,3 +531,64 @@ class PayrollViewSetTests(TestCase):
         view = PayrollRunViewSet.as_view({'get': 'export_pdf'})
         resp = view(request, pk=run.id)
         self.assertEqual(resp.status_code, 409)
+
+
+class PayrollHRScopeTests(TestCase):
+    """HR holds the payroll plugin's 'manage' grant and is meant to have full
+    payroll access (not just their own led team). Regression: generating a
+    run with no explicit user_ids used to scope HR to self+team with no
+    wage-assignment pre-filter (unlike the staff/superuser path), so any
+    wageless team member crashed WageAssignment.resolve_for_month and the
+    whole run creation 400'd."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.permissions.models import Role
+        from apps.permissions.services.role_service import assign_role
+        from apps.plugins.models import PluginPermission
+
+        cls.hr_user = User.objects.create_user(username='hr_payroll', password='pass')
+        cls.hr_user.profile.is_hr_user = True
+        cls.hr_user.profile.save()
+        hr_role, _ = Role.objects.get_or_create(code='hr', defaults={'name': 'HR'})
+        assign_role(cls.hr_user, 'hr')
+
+        cls.waged_employee = User.objects.create_user(username='waged_emp', password='pass')
+        WageAssignment.objects.create(
+            user=cls.waged_employee,
+            gross_monthly_wage=Decimal('100000'),
+            effective_from=date(2026, 1, 1),
+            is_active=True,
+        )
+        cls.wageless_employee = User.objects.create_user(username='wageless_emp', password='pass')
+
+        for action in ('view', 'manage', 'export'):
+            perm, _ = PluginPermission.objects.get_or_create(
+                plugin_name='payroll', action=action,
+            )
+            perm.allowed_roles.add(hr_role)
+
+        from django.core.management import call_command
+        call_command('seed_payroll_rules', verbosity=0)
+
+    def setUp(self):
+        self.factory = APIRequestFactory()
+
+    def test_hr_can_generate_payroll_run_with_a_wageless_user_in_scope(self):
+        """The wageless employee must be silently excluded (matching the
+        existing staff/superuser wage-filter behavior), not crash the run."""
+        request = self.factory.post('/api/plugins/payroll/runs/', {
+            'year': 2026, 'month': 3,
+        }, format='json')
+        force_authenticate(request, user=self.hr_user)
+        response = PayrollRunViewSet.as_view({'post': 'create'})(request)
+
+        self.assertEqual(response.status_code, 201, response.data)
+        response.render()
+        self.assertEqual(response.data['line_count'], 1)
+        run = PayrollRun.objects.get(year=2026, month=3)
+        included_user_ids = set(
+            run.lines.values_list('wage_assignment__user_id', flat=True)
+        )
+        self.assertIn(self.waged_employee.id, included_user_ids)
+        self.assertNotIn(self.wageless_employee.id, included_user_ids)
