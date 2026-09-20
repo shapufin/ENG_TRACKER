@@ -53,7 +53,7 @@ export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
   retrying = false,
 }) => {
   const [resolved, setResolved] = useState<Set<string>>(new Set());
-  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [savingKeys, setSavingKeys] = useState<Set<string>>(new Set());
 
   const totalDependents = useMemo(
     () => blockedRevocations.reduce((sum, b) => sum + b.dependents.length, 0),
@@ -67,14 +67,28 @@ export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
     teamLeaderUserId: number | null
   ) => {
     const key = dependentKey(role, profileId);
-    setSavingKey(key);
-    userService
+    setSavingKeys((prev) => new Set(prev).add(key));
+    return userService
       .setTeamLeader(profileId, role, teamLeaderUserId)
       .then(() => {
         setResolved((prev) => new Set(prev).add(key));
       })
       .catch((error) => handleApiError(error))
-      .finally(() => setSavingKey(null));
+      .finally(() =>
+        setSavingKeys((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        })
+      );
+  };
+
+  const handleBulkChange = (
+    role: BlockedRevocation["role"],
+    profileIds: number[],
+    teamLeaderUserId: number | null
+  ) => {
+    profileIds.forEach((profileId) => handleChange(role, profileId, teamLeaderUserId));
   };
 
   return (
@@ -88,45 +102,68 @@ export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-5">
-          {blockedRevocations.map((blocked) => (
-            <div key={`${blocked.user_id}-${blocked.role}`} className="space-y-2">
-              <p className="text-sm font-medium">
-                {blocked.username} — {roleLabel[blocked.role]}
-              </p>
-              <div className="space-y-2">
-                {blocked.dependents.map((dependent) => {
-                  const key = dependentKey(blocked.role, dependent.profile_id);
-                  const isResolved = resolved.has(key);
-                  return (
-                    <div
-                      key={dependent.profile_id}
-                      className="flex items-center gap-3 rounded-lg border border-border p-2"
-                    >
-                      <span className="w-32 shrink-0 truncate text-sm">
-                        {dependent.username}
-                      </span>
-                      <div className="flex-1">
-                        <TeamLeaderSelect
-                          ariaLabel={`Reassign ${roleLabel[blocked.role]} for ${dependent.username}`}
-                          value={null}
-                          options={blocked.role === "italian_tl" ? italianTLs : albanianTLs}
-                          disabled={savingKey === key || isResolved}
-                          onChange={(teamLeaderUserId) =>
-                            handleChange(blocked.role, dependent.profile_id, teamLeaderUserId)
-                          }
-                        />
-                      </div>
-                      {isResolved && (
-                        <span className="shrink-0 text-xs font-medium text-tone-success-text">
-                          Resolved
+          {blockedRevocations.map((blocked) => {
+            const groupOptions = blocked.role === "italian_tl" ? italianTLs : albanianTLs;
+            const groupSaving = blocked.dependents.some((dependent) =>
+              savingKeys.has(dependentKey(blocked.role, dependent.profile_id))
+            );
+            return (
+              <div key={`${blocked.user_id}-${blocked.role}`} className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium">
+                    {blocked.username} — {roleLabel[blocked.role]}
+                  </p>
+                  <div className="w-48">
+                    <TeamLeaderSelect
+                      ariaLabel={`Bulk reassign ${roleLabel[blocked.role]} for ${blocked.username}`}
+                      value={null}
+                      options={groupOptions}
+                      disabled={groupSaving}
+                      onChange={(teamLeaderUserId) =>
+                        handleBulkChange(
+                          blocked.role,
+                          blocked.dependents.map((dependent) => dependent.profile_id),
+                          teamLeaderUserId
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {blocked.dependents.map((dependent) => {
+                    const key = dependentKey(blocked.role, dependent.profile_id);
+                    const isResolved = resolved.has(key);
+                    return (
+                      <div
+                        key={dependent.profile_id}
+                        className="flex items-center gap-3 rounded-lg border border-border p-2"
+                      >
+                        <span className="w-32 shrink-0 truncate text-sm">
+                          {dependent.username}
                         </span>
-                      )}
-                    </div>
-                  );
-                })}
+                        <div className="flex-1">
+                          <TeamLeaderSelect
+                            ariaLabel={`Reassign ${roleLabel[blocked.role]} for ${dependent.username}`}
+                            value={null}
+                            options={groupOptions}
+                            disabled={savingKeys.has(key) || isResolved}
+                            onChange={(teamLeaderUserId) =>
+                              handleChange(blocked.role, dependent.profile_id, teamLeaderUserId)
+                            }
+                          />
+                        </div>
+                        {isResolved && (
+                          <span className="shrink-0 text-xs font-medium text-tone-success-text">
+                            Resolved
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

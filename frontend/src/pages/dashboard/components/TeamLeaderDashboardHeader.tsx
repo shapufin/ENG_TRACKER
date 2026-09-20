@@ -37,12 +37,16 @@ export const TeamLeaderDashboardHeader: React.FC<TeamLeaderDashboardHeaderProps>
         onDashboardChange={onDashboardChange}
         showWorkspaceTab
       />
-      <RoleBadges
-        isTeamLeader={isTeamLeader}
-        isHR={isHR}
-        isAdmin={isAdmin}
-        isSuperuser={isSuperuser}
-      />
+      {/* The switcher already communicates HR/TL/Admin placement — badges
+          only add signal for superuser, which has no switcher segment. */}
+      {isSuperuser && (
+        <RoleBadges
+          isTeamLeader={isTeamLeader}
+          isHR={isHR}
+          isAdmin={isAdmin}
+          isSuperuser={isSuperuser}
+        />
+      )}
       <Button onClick={() => navigate("/team/approvals")}>
         Open Approval Queue
         {!!pendingApprovalCount && (

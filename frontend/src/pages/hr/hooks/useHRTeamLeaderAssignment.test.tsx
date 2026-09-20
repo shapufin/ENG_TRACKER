@@ -90,8 +90,26 @@ describe("useHRTeamLeaderAssignment", () => {
       result.current.setTeamLeader({ profileId: 1, role: "italian_tl", teamLeaderUserId: 5 });
     });
 
-    await waitFor(() =>
-      expect(userService.setTeamLeader).toHaveBeenCalledWith(1, "italian_tl", 5)
-    );
+    await waitFor(() => expect(userService.setTeamLeader).toHaveBeenCalledWith(1, "italian_tl", 5));
+  });
+
+  it("bulk set fires one service call per profile but exactly one success toast", async () => {
+    const { toast } = await import("sonner");
+    vi.mocked(userService.setTeamLeader).mockClear();
+    vi.mocked(toast.success).mockClear();
+    vi.mocked(userService.setTeamLeader).mockResolvedValue({} as any);
+    const { result } = renderHook(() => useHRTeamLeaderAssignment(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.setTeamLeaderBulkAsync([
+        { profileId: 1, role: "italian_tl", teamLeaderUserId: 5 },
+        { profileId: 2, role: "italian_tl", teamLeaderUserId: 5 },
+      ]);
+    });
+
+    expect(userService.setTeamLeader).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(toast.success)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith("Italian TL updated for 2 users");
   });
 });

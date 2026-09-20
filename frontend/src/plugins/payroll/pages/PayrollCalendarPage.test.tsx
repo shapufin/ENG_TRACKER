@@ -102,6 +102,15 @@ const changeMonth = (month: number) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // DataTable observes its scroll container; JSDOM has no ResizeObserver.
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    }
+  );
   vi.mocked(usePluginPermissions.usePluginPermissions).mockReturnValue({
     canManage: () => false,
     canView: () => true,

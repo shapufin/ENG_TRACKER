@@ -37,12 +37,16 @@ export const DashboardPageHeader: React.FC<DashboardPageHeaderProps> = ({
         onDashboardChange={onDashboardChange}
         showWorkspaceTab={isTeamLeader}
       />
-      <RoleBadges
-        isTeamLeader={isTeamLeader}
-        isHR={isHR}
-        isAdmin={isAdmin}
-        isSuperuser={isSuperuser}
-      />
+      {/* The switcher already communicates HR/TL/Admin placement — badges
+          only add signal for superuser, which has no switcher segment. */}
+      {isSuperuser && (
+        <RoleBadges
+          isTeamLeader={isTeamLeader}
+          isHR={isHR}
+          isAdmin={isAdmin}
+          isSuperuser={isSuperuser}
+        />
+      )}
       {showSettings && (
         <Button variant="outline" size="icon" onClick={() => navigate("/settings")}>
           <Settings className="h-4 w-4" />

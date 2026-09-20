@@ -1,5 +1,7 @@
 import React from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { BarChart3 } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -29,55 +31,61 @@ export const HRDashboardCharts: React.FC<HRDashboardChartsProps> = ({
           <h3 className="text-lg font-semibold text-foreground">Overtime Distribution</h3>
           <p className="text-sm text-muted-foreground">Daily average hours across all teams</p>
         </div>
-        <div className="h-2 w-24 overflow-hidden rounded-full bg-primary/20">
-          <div className="h-full w-2/3 bg-primary" />
+      </div>
+      {(monthlyData ?? []).length === 0 ? (
+        <EmptyState
+          icon={BarChart3}
+          title="No overtime data for this period."
+          description="Distribution appears once overtime is logged."
+          className="m-6"
+        />
+      ) : (
+        <div className="h-[350px] p-6">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={monthlyData}>
+              <defs>
+                <linearGradient id="colorOvertime" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis
+                dataKey="day"
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                dy={10}
+              />
+              <YAxis
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                dx={-10}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "12px",
+                  color: "hsl(var(--card-foreground))",
+                  boxShadow: "0 10px 15px -3px rgba(0,0,0,0.5)",
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="overtime"
+                stroke="hsl(var(--primary))"
+                fillOpacity={1}
+                fill="url(#colorOvertime)"
+                strokeWidth={3}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-      </div>
-      <div className="h-[350px] p-6">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={monthlyData}>
-            <defs>
-              <linearGradient id="colorOvertime" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-            <XAxis
-              dataKey="day"
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={11}
-              tickLine={false}
-              axisLine={false}
-              dy={10}
-            />
-            <YAxis
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={11}
-              tickLine={false}
-              axisLine={false}
-              dx={-10}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "12px",
-                color: "hsl(var(--card-foreground))",
-                boxShadow: "0 10px 15px -3px rgba(0,0,0,0.5)",
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="overtime"
-              stroke="hsl(var(--primary))"
-              fillOpacity={1}
-              fill="url(#colorOvertime)"
-              strokeWidth={3}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+      )}
     </GlassCard>
 
     <GlassCard className="border-border/70 bg-card">

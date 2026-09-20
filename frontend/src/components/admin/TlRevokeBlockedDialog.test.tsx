@@ -91,7 +91,7 @@ describe("TlRevokeBlockedDialog", () => {
     const retryButton = screen.getByRole("button", { name: "Retry" });
     expect(retryButton).toBeDisabled();
 
-    fireEvent.click(screen.getAllByRole("option", { name: "Dave TL" })[0]);
+    fireEvent.click(screen.getAllByRole("option", { name: "Dave TL" })[1]);
     await waitFor(() => expect(userService.setTeamLeader).toHaveBeenCalledTimes(1));
     expect(retryButton).toBeDisabled();
   });
@@ -111,10 +111,10 @@ describe("TlRevokeBlockedDialog", () => {
     );
 
     const options = screen.getAllByRole("option", { name: "Dave TL" });
-    fireEvent.click(options[0]);
+    fireEvent.click(options[1]);
     await waitFor(() => expect(userService.setTeamLeader).toHaveBeenCalledWith(10, "italian_tl", 5));
 
-    fireEvent.click(screen.getAllByRole("option", { name: "No TL" })[1]);
+    fireEvent.click(screen.getAllByRole("option", { name: "No TL" })[2]);
     await waitFor(() => expect(userService.setTeamLeader).toHaveBeenCalledWith(11, "italian_tl", null));
 
     const retryButton = screen.getByRole("button", { name: "Retry" });
@@ -135,9 +135,33 @@ describe("TlRevokeBlockedDialog", () => {
         onRetry={vi.fn()}
       />
     );
-    fireEvent.click(screen.getAllByRole("option", { name: "Dave TL" })[0]);
+    fireEvent.click(screen.getAllByRole("option", { name: "Dave TL" })[1]);
     await waitFor(() => expect(handleApiError).toHaveBeenCalled());
     expect(screen.getByRole("button", { name: "Retry" })).toBeDisabled();
+  });
+
+  it("bulk-applies the picked TL to every dependent in that group at once", async () => {
+    vi.mocked(userService.setTeamLeader).mockResolvedValue({} as any);
+    const onRetry = vi.fn();
+    render(
+      <TlRevokeBlockedDialog
+        open
+        onOpenChange={vi.fn()}
+        blockedRevocations={blockedRevocations}
+        italianTLs={italianTLs}
+        albanianTLs={albanianTLs}
+        onRetry={onRetry}
+      />
+    );
+
+    fireEvent.click(screen.getAllByRole("option", { name: "Dave TL" })[0]);
+
+    await waitFor(() => expect(userService.setTeamLeader).toHaveBeenCalledTimes(2));
+    expect(userService.setTeamLeader).toHaveBeenCalledWith(10, "italian_tl", 5);
+    expect(userService.setTeamLeader).toHaveBeenCalledWith(11, "italian_tl", 5);
+
+    const retryButton = screen.getByRole("button", { name: "Retry" });
+    await waitFor(() => expect(retryButton).not.toBeDisabled());
   });
 
   it("does not render when closed", () => {

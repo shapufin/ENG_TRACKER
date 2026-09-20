@@ -19,6 +19,8 @@ interface BulkActionBarProps {
   onClear: () => void;
   actions: BulkAction[];
   entityName?: string;
+  /** Optional custom controls (e.g. a select) rendered before the action buttons. */
+  children?: React.ReactNode;
 }
 
 export const BulkActionBar: React.FC<BulkActionBarProps> = ({
@@ -26,6 +28,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
   onClear,
   actions,
   entityName = "items",
+  children,
 }) => {
   const transition = useMotionTransition({ duration: DURATION.base });
   return (
@@ -59,6 +62,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
                 </span>
               </div>
               <div className="flex items-center gap-2">
+                {children}
                 {actions.map((action, idx) => (
                   <Button
                     key={idx}

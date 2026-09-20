@@ -77,6 +77,39 @@ export const useHRTeamLeaderAssignment = () => {
     onError: (err) => handleApiError(err),
   });
 
+  interface BulkSetTeamLeaderItem {
+    profileId: number;
+    role: "italian_tl" | "albanian_tl";
+    teamLeaderUserId: number | null;
+  }
+
+  // Bulk variant with exactly ONE toast + ONE invalidation for the whole
+  // batch. Reusing setTeamLeaderMutation per row would fan out N toasts and
+  // N refetch invalidations (one per selected profile).
+  const setTeamLeaderBulkMutation = useMutation({
+    mutationFn: async (items: BulkSetTeamLeaderItem[]) => {
+      const results = await Promise.allSettled(
+        items.map((item) =>
+          userService.setTeamLeader(item.profileId, item.role, item.teamLeaderUserId)
+        )
+      );
+      return {
+        total: items.length,
+        failed: results.filter((r) => r.status === "rejected").length,
+      };
+    },
+    onSuccess: ({ total, failed }, variables) => {
+      const roleLabel = variables[0]?.role === "italian_tl" ? "Italian TL" : "Albanian TL";
+      if (failed === 0) {
+        toast.success(`${roleLabel} updated for ${total} users`);
+      } else {
+        toast.error(`${roleLabel} updated for ${total - failed} of ${total}; ${failed} failed`);
+      }
+      qc.invalidateQueries({ queryKey: ["hr", "team-leader-assignment"] });
+    },
+    onError: (err) => handleApiError(err),
+  });
+
   const setNoTechOnlyFiltered = (value: boolean) => {
     if (value) {
       setTechIds([]);
@@ -106,6 +139,9 @@ export const useHRTeamLeaderAssignment = () => {
     italianTLs: italianTLs ?? [],
     albanianTLs: albanianTLs ?? [],
     setTeamLeader: setTeamLeaderMutation.mutate,
+    setTeamLeaderAsync: setTeamLeaderMutation.mutateAsync,
     isSaving: setTeamLeaderMutation.isPending,
+    setTeamLeaderBulkAsync: setTeamLeaderBulkMutation.mutateAsync,
+    isBulkSaving: setTeamLeaderBulkMutation.isPending,
   };
 };

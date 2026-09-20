@@ -94,4 +94,29 @@ describe("TeamLeaderSelect", () => {
     );
     expect(screen.getByRole("combobox", { name: "Italian TL for alice" })).toBeInTheDocument();
   });
+
+  it("shows an inactive fallback instead of a blank when the assignee left the options", () => {
+    render(
+      <TeamLeaderSelect
+        ariaLabel="Italian TL for alice"
+        value={9}
+        currentName="Former TL"
+        options={options}
+        onChange={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("option", { name: "Former TL (inactive)" })).toBeInTheDocument();
+  });
+
+  it("falls back to an id label when the assignee name is unknown", () => {
+    render(
+      <TeamLeaderSelect
+        ariaLabel="Italian TL for alice"
+        value={9}
+        options={options}
+        onChange={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("option", { name: "Former TL (#9) (inactive)" })).toBeInTheDocument();
+  });
 });

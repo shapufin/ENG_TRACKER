@@ -1,14 +1,16 @@
 /**
  * PayrollRunsPage — list and manage monthly payroll runs.
  */
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
+import { DataTable } from "@/components/ui/DataTable";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +22,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { payrollService } from "../services/payrollService";
+import type { PayrollRun } from "../types";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { handleApiError } from "@/lib/error-handler";
 import { toast } from "sonner";
@@ -62,6 +66,46 @@ export const PayrollRunsPage: React.FC = () => {
     onError: (error) => handleApiError(error),
   });
 
+  const columns = useMemo<ColumnDef<PayrollRun>[]>(
+    () => [
+      {
+        id: "period",
+        header: "Period",
+        cell: ({ row }) => (
+          <span className="text-base font-semibold">
+            {row.original.year}-{String(row.original.month).padStart(2, "0")}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <Badge className={cn(STATUS_COLORS[row.original.status] ?? "", "capitalize")}>
+            {row.original.status}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "line_count",
+        header: "Employees",
+      },
+      {
+        id: "net",
+        header: "Net",
+        cell: ({ row }) =>
+          row.original.totals?.total_net
+            ? `${Number(row.original.totals.total_net).toLocaleString()} Lek`
+            : "—",
+      },
+      {
+        accessorKey: "rule_set_name",
+        header: "Rule Set",
+      },
+    ],
+    []
+  );
+
   if (isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
   if (error) return <ErrorCard title="Failed to load payroll runs" onRetry={refetch} />;
 
@@ -76,39 +120,13 @@ export const PayrollRunsPage: React.FC = () => {
       }
     >
       <GlassCard className="p-6">
-        {runs && runs.length > 0 ? (
-          <div className="space-y-3">
-            {runs.map((run) => (
-              <div
-                key={run.id}
-                className="flex cursor-pointer items-center justify-between rounded-lg border border-border/50 p-4 transition-colors hover:bg-accent/50"
-                onClick={() => navigate(`${location.pathname}/${run.id}`)}
-              >
-                <div className="flex items-center gap-4">
-                  <div>
-                    <span className="text-lg font-semibold">
-                      {run.year}-{String(run.month).padStart(2, "0")}
-                    </span>
-                    <Badge className={`ml-3 ${STATUS_COLORS[run.status] ?? ""}`}>
-                      {run.status}
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {run.line_count} employees
-                    {run.totals?.total_net && (
-                      <> · Net: {Number(run.totals.total_net).toLocaleString()} Lek</>
-                    )}
-                  </div>
-                </div>
-                <div className="text-sm text-muted-foreground">{run.rule_set_name}</div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="py-8 text-center text-muted-foreground">
-            No payroll runs yet. Create one to get started.
-          </p>
-        )}
+        <DataTable
+          columns={columns}
+          data={runs ?? []}
+          getRowId={(row) => String(row.id)}
+          onRowClick={(run) => navigate(`${location.pathname}/${run.id}`)}
+          emptyMessage="No payroll runs yet. Create one to get started."
+        />
       </GlassCard>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

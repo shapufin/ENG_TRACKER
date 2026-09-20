@@ -1,5 +1,5 @@
 import React from "react";
-import { format, isToday, isWeekend } from "date-fns";
+import { format, isToday } from "date-fns";
 import { cn } from "@/lib/utils";
 import { EventTooltip } from "./EventTooltip";
 import type { CalendarEvent } from "./types";
@@ -80,19 +80,15 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
       onTouchStart={handlePointerDown}
       onTouchEnd={handlePointerUp}
       className={cn(
-        "group relative flex h-full min-h-[100px] flex-col gap-1 rounded-xl border border-line-subtle bg-surface-sunken p-2 text-foreground transition duration-200 focus-visible:ring-1 focus-visible:ring-ring/60 xl:min-h-[110px] 2xl:min-h-[130px]",
+        "group relative flex h-full min-h-[100px] flex-col gap-1 rounded-xl border border-line-subtle bg-card p-2 text-foreground transition duration-200 focus-visible:ring-1 focus-visible:ring-ring/60 xl:min-h-[110px] 2xl:min-h-[130px]",
         isPlainCell && "hover:border-border hover:bg-card-raised",
-        !isCurrentMonth && "bg-surface-sunken/50 text-muted-foreground/60",
+        !isCurrentMonth && "bg-surface-sunken text-muted-foreground/60",
         today && "calendar-today-glow border-info/40",
         isSelected && "border-primary/80 bg-primary/15 dark:bg-primary/[0.12]",
         isRangeStart && "ring-2 ring-inset ring-primary/70 dark:ring-primary/50",
         isRangeEnd && "ring-2 ring-inset ring-primary/70 dark:ring-primary/50",
         isInRange &&
           "border-primary/30 bg-primary/10 dark:border-primary/20 dark:bg-primary/[0.06]",
-        isPlainCell &&
-          isCurrentMonth &&
-          isWeekend(date) &&
-          "bg-surface-sunken/70 text-muted-foreground/80",
         isRangeSelecting && "cursor-crosshair"
       )}
     >

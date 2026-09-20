@@ -94,6 +94,21 @@ and serves framework-aware cross-stack queries.
 - Reject invalid uploads and malformed input closed by default.
 - Stop and ask before changing authentication, authorization, migrations, or production configuration.
 
+## Concurrent Workers (2026-09-20)
+
+Multiple agents share this tree and push to `main` frequently. To avoid
+destroying each other's uncommitted work:
+
+- Announce workstream + file list before starting; one worker per overlap
+  zone at a time (`plugins/payroll/*`, `plugins/skills/*`, dashboard
+  components).
+- Stage only paths you authored (`git add <paths>`), never bare `git add -A`
+  without a `git status` review.
+- Never `git checkout --`, `git stash`, or `git clean` paths you didn't author.
+- Never reformat files outside your change (run Prettier on touched files only).
+- Verify `git status` before and after any git operation; if another worker's
+  files disappear, stop and report instead of re-applying blindly.
+
 ## Completion
 
 - Summarize the implementation.

@@ -100,7 +100,7 @@ describe("CalendarDayCell", () => {
     expect(screen.queryByText("+ Book")).not.toBeInTheDocument();
   });
 
-  it("weekend current-month plain cell is dimmed", () => {
+  it("weekend current-month plain cell uses the same clean background as weekdays, not a dimmed gray shade", () => {
     render(
       <CalendarDayCell
         date={new Date(2024, 5, 15)}
@@ -109,7 +109,9 @@ describe("CalendarDayCell", () => {
         onSelect={vi.fn()}
       />
     );
-    expect(screen.getByRole("gridcell").className).toContain("bg-surface-sunken/70");
+    const className = screen.getByRole("gridcell").className;
+    expect(className).toContain("bg-card");
+    expect(className).not.toContain("surface-sunken");
   });
 
   it("prev-month cell uses sunken dim styling", () => {

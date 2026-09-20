@@ -214,6 +214,7 @@ export const DataTable = function DataTable<TData>({
           className={cn(
             "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60",
             isSelected && "bg-primary/10",
+            onRowClick && "cursor-pointer",
             getRowClassName ? getRowClassName(row.original) : "hover:bg-table-hover"
           )}
           tabIndex={onRowClick ? 0 : undefined}

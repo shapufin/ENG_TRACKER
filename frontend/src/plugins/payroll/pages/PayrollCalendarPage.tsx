@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ModalSection } from "@/components/ui/ModalSection";
+import { DataTable } from "@/components/ui/DataTable";
+import type { ColumnDef } from "@tanstack/react-table";
 import { payrollService } from "../services/payrollService";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { handleApiError } from "@/lib/error-handler";
@@ -265,6 +267,31 @@ export const PayrollCalendarPage: React.FC = () => {
     });
   };
 
+  const holidayColumns = useMemo<ColumnDef<PayrollWorkday>[]>(() => {
+    const columns: ColumnDef<PayrollWorkday>[] = [
+      { accessorKey: "date", header: "Date" },
+      { accessorKey: "holiday_name", header: "Holiday Name" },
+    ];
+    if (canConfigurePayroll) {
+      columns.push({
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="inline-flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => openEditHoliday(row.original)}>
+              Edit
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setDeleteHoliday(row.original)}>
+              Remove
+            </Button>
+          </div>
+        ),
+      });
+    }
+    return columns;
+  }, [canConfigurePayroll]);
+
   if (isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
   if (error) return <ErrorCard title="Failed to load work calendars" onRetry={refetch} />;
 
@@ -430,47 +457,12 @@ export const PayrollCalendarPage: React.FC = () => {
                 )}
               </div>
               {monthHolidays.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left text-muted-foreground">
-                        <th className="py-2 pr-4 font-medium">Date</th>
-                        <th className="py-2 pr-4 font-medium">Holiday Name</th>
-                        {canConfigurePayroll && (
-                          <th className="py-2 text-right font-medium">Actions</th>
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {monthHolidays.map((w) => (
-                        <tr key={w.id} className="border-b last:border-0">
-                          <td className="py-2 pr-4">{w.date}</td>
-                          <td className="py-2 pr-4">{w.holiday_name}</td>
-                          {canConfigurePayroll && (
-                            <td className="py-2 text-right">
-                              <div className="inline-flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openEditHoliday(w)}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => setDeleteHoliday(w)}
-                                >
-                                  Remove
-                                </Button>
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable
+                  columns={holidayColumns}
+                  data={monthHolidays}
+                  getRowId={(row) => String(row.id)}
+                  emptyMessage="No holidays this month."
+                />
               ) : (
                 <p className="py-6 text-center text-muted-foreground">No holidays this month.</p>
               )}

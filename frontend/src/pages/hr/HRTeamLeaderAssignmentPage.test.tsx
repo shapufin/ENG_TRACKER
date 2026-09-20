@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { HRTeamLeaderAssignmentPage } from "./HRTeamLeaderAssignmentPage";
 import type { UserProfile } from "@/types";
@@ -69,6 +69,8 @@ const defaultHookReturn = {
   italianTLs: [{ id: 20, full_name: "Bob TL" }],
   albanianTLs: [{ id: 30, full_name: "Carol TL" }],
   setTeamLeader: vi.fn(),
+  setTeamLeaderAsync: vi.fn().mockResolvedValue({}),
+  setTeamLeaderBulkAsync: vi.fn().mockResolvedValue({ failed: 0, total: 0 }),
   isSaving: false,
 };
 
@@ -143,5 +145,50 @@ describe("HRTeamLeaderAssignmentPage", () => {
       role: "albanian_tl",
       teamLeaderUserId: null,
     });
+  });
+
+  it("shows a bulk action bar once a row is selected, and hides it when cleared", () => {
+    render(
+      <MemoryRouter>
+        <HRTeamLeaderAssignmentPage />
+      </MemoryRouter>
+    );
+    expect(screen.queryByLabelText("1 selected")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Select row"));
+    expect(screen.getByLabelText("1 selected")).toBeInTheDocument();
+  });
+
+  it("bulk-applies the chosen Italian TL to every selected profile in ONE call", async () => {
+    const setTeamLeaderBulkAsync = vi.fn().mockResolvedValue({ failed: 0, total: 2 });
+    const setTeamLeaderAsync = vi.fn();
+    useHRTeamLeaderAssignmentMock.mockReturnValue({
+      ...defaultHookReturn,
+      profiles: [
+        makeProfile({ id: 1, user: { id: 10, username: "alice" } as UserProfile["user"] }),
+        makeProfile({ id: 2, user: { id: 11, username: "zara" } as UserProfile["user"] }),
+      ],
+      setTeamLeaderAsync,
+      setTeamLeaderBulkAsync,
+    });
+    render(
+      <MemoryRouter>
+        <HRTeamLeaderAssignmentPage />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByLabelText("Select all rows on this page"));
+    expect(screen.getByLabelText("2 selected")).toBeInTheDocument();
+
+    const bulkItalianCombobox = screen.getByRole("combobox", { name: "Bulk set Italian TL" });
+    const bulkItalianContainer = bulkItalianCombobox.closest("div") as HTMLElement;
+    fireEvent.click(within(bulkItalianContainer).getByRole("option", { name: "Bob TL" }));
+
+    // One batched call (one toast + one invalidation in the hook), and the
+    // per-row mutation is never fanned out.
+    await waitFor(() => expect(setTeamLeaderBulkAsync).toHaveBeenCalledTimes(1));
+    expect(setTeamLeaderBulkAsync).toHaveBeenCalledWith([
+      { profileId: 1, role: "italian_tl", teamLeaderUserId: 20 },
+      { profileId: 2, role: "italian_tl", teamLeaderUserId: 20 },
+    ]);
+    expect(setTeamLeaderAsync).not.toHaveBeenCalled();
   });
 });

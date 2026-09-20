@@ -3,8 +3,9 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingCard } from "@/components/ui/LoadingCard";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, CalendarDays } from "lucide-react";
 import type { PublicHoliday } from "@/types";
 
 interface HolidayRow {
@@ -35,9 +36,11 @@ export const HolidayTable: React.FC<HolidayTableProps> = ({
 
   if (holidays.length === 0) {
     return (
-      <GlassCard isHoverLift={false} className="p-6 text-center text-sm text-muted-foreground">
-        No holidays defined yet.
-      </GlassCard>
+      <EmptyState
+        icon={CalendarDays}
+        title="No holidays defined yet."
+        description="Add the first company holiday to get started."
+      />
     );
   }
 

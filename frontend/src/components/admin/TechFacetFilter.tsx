@@ -66,60 +66,61 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
 
   return (
     <div className="space-y-2 border-t border-border/70 pt-2">
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="mr-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        Tech filter
-      </span>
-      <button
-        type="button"
-        onClick={() => {
-          onTechIdsChange([]);
-          onNoTechOnlyChange(false);
-        }}
-        className={cn(
-          "rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors",
-          isAllActive
-            ? // Accent token, not text-primary: #7c3bed on the dark chip
-              // surface measures 3.32:1 — below AA for 11px text.
-              toneSurfaceClass.accent
-            : "border-border bg-background text-muted-foreground hover:border-primary/30"
-        )}
-      >
-        All tech
-      </button>
-      {facets.map((facet) => {
-        const isActive = selectedTechIds.includes(facet.id);
-        return (
-          <button
-            key={facet.id}
-            type="button"
-            onClick={() => toggleTech(facet.id)}
-            aria-pressed={isActive}
-            className={cn(
-              "rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors",
-              isActive
-                ? toneSurfaceClass.info
-                : "border-border bg-background text-foreground/80 hover:border-primary/30"
-            )}
-          >
-            {facet.name} <span className="ml-1 font-mono text-muted-foreground">{facet.count}</span>
-          </button>
-        );
-      })}
-      <button
-        type="button"
-        onClick={() => onNoTechOnlyChange(!noTechOnly)}
-        aria-pressed={noTechOnly}
-        className={cn(
-          "rounded-lg border border-dashed px-3 py-1.5 text-[11px] font-semibold transition-colors",
-          noTechOnly
-            ? toneSurfaceClass.accent
-            : "border-border text-muted-foreground hover:border-primary/30"
-        )}
-      >
-        · No tech <span className="ml-1 font-mono">{noTechCount}</span>
-      </button>
-    </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          Tech filter
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            onTechIdsChange([]);
+            onNoTechOnlyChange(false);
+          }}
+          className={cn(
+            "rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors",
+            isAllActive
+              ? // Accent token, not text-primary: #7c3bed on the dark chip
+                // surface measures 3.32:1 — below AA for 11px text.
+                toneSurfaceClass.accent
+              : "border-border bg-background text-muted-foreground hover:border-primary/30"
+          )}
+        >
+          All tech
+        </button>
+        {facets.map((facet) => {
+          const isActive = selectedTechIds.includes(facet.id);
+          return (
+            <button
+              key={facet.id}
+              type="button"
+              onClick={() => toggleTech(facet.id)}
+              aria-pressed={isActive}
+              className={cn(
+                "rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors",
+                isActive
+                  ? toneSurfaceClass.info
+                  : "border-border bg-background text-foreground/80 hover:border-primary/30"
+              )}
+            >
+              {facet.name}{" "}
+              <span className="ml-1 font-mono text-muted-foreground">{facet.count}</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => onNoTechOnlyChange(!noTechOnly)}
+          aria-pressed={noTechOnly}
+          className={cn(
+            "rounded-lg border border-dashed px-3 py-1.5 text-[11px] font-semibold transition-colors",
+            noTechOnly
+              ? toneSurfaceClass.accent
+              : "border-border text-muted-foreground hover:border-primary/30"
+          )}
+        >
+          No tech <span className="ml-1 font-mono">{noTechCount}</span>
+        </button>
+      </div>
       {levelRows.map((facet) => (
         <div key={facet.id} className="flex flex-wrap items-center gap-2 pl-1">
           <span className="mr-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
