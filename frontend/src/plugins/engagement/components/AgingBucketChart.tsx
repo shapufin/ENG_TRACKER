@@ -1,5 +1,14 @@
 import React, { useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import { ChartCard } from "@/components/dashboard/ChartCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { BarChart3 } from "lucide-react";
@@ -14,20 +23,28 @@ const REQUEST_TYPES = ["leave", "overtime", "standby"] as const;
 
 export const AgingBucketChart: React.FC<AgingBucketChartProps> = ({ rows }) => {
   const data = useMemo(() => {
-    const totals: Record<string, number> = { "<4h": 0, "4-24h": 0, "1-3d": 0, ">3d": 0 };
+    const totals: Record<
+      (typeof BUCKET_ORDER)[number],
+      Record<(typeof REQUEST_TYPES)[number], number>
+    > = {
+      "<4h": { leave: 0, overtime: 0, standby: 0 },
+      "4-24h": { leave: 0, overtime: 0, standby: 0 },
+      "1-3d": { leave: 0, overtime: 0, standby: 0 },
+      ">3d": { leave: 0, overtime: 0, standby: 0 },
+    };
     for (const row of rows) {
       for (const type of REQUEST_TYPES) {
         const aging = row.metrics[type]?.aging;
         if (!aging) continue;
         for (const bucket of BUCKET_ORDER) {
-          totals[bucket] += aging[bucket] ?? 0;
+          totals[bucket][type] += aging[bucket] ?? 0;
         }
       }
     }
-    return BUCKET_ORDER.map((bucket) => ({ bucket, count: totals[bucket] }));
+    return BUCKET_ORDER.map((bucket) => ({ bucket, ...totals[bucket] }));
   }, [rows]);
 
-  const hasData = data.some((d) => d.count > 0);
+  const hasData = data.some((d) => d.leave + d.overtime + d.standby > 0);
 
   return (
     <ChartCard title="Approval Aging" description="Decided requests by time-to-approve">
@@ -38,7 +55,7 @@ export const AgingBucketChart: React.FC<AgingBucketChartProps> = ({ rows }) => {
           description="Aging buckets appear once requests have been approved or rejected."
         />
       ) : (
-        <div className="h-[350px]">
+        <div className="h-[280px] sm:h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -60,9 +77,17 @@ export const AgingBucketChart: React.FC<AgingBucketChartProps> = ({ rows }) => {
                   borderRadius: "8px",
                 }}
               />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="leave" name="Leave" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
               <Bar
-                dataKey="count"
-                name="Requests"
+                dataKey="overtime"
+                name="Overtime"
+                fill="hsl(var(--chart-2))"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                dataKey="standby"
+                name="Standby"
                 fill="hsl(var(--chart-3))"
                 radius={[4, 4, 0, 0]}
               />

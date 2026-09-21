@@ -89,6 +89,7 @@ describe("EngagementMetricsPage", () => {
       teamBreakdown: [],
       isLoading: true,
       isError: false,
+      refetch: vi.fn(),
     });
 
     render(<EngagementMetricsPage />);
@@ -102,10 +103,26 @@ describe("EngagementMetricsPage", () => {
       teamBreakdown: [],
       isLoading: false,
       isError: false,
+      refetch: vi.fn(),
     });
 
     render(<EngagementMetricsPage />);
     expect(screen.getByText("No engagement data yet")).toBeInTheDocument();
+  });
+
+  it("renders error state with retry", () => {
+    const refetch = vi.fn();
+    vi.mocked(useEngagementMetrics.useEngagementMetrics).mockReturnValue({
+      summary: undefined,
+      trend: [],
+      teamBreakdown: [],
+      isLoading: false,
+      isError: true,
+      refetch,
+    });
+
+    render(<EngagementMetricsPage />);
+    expect(screen.getByText("Couldn't load engagement metrics")).toBeInTheDocument();
   });
 
   it("renders summary cards, chart regions, and team breakdown table", () => {
@@ -115,6 +132,7 @@ describe("EngagementMetricsPage", () => {
       teamBreakdown: baseTeamBreakdown,
       isLoading: false,
       isError: false,
+      refetch: vi.fn(),
     });
 
     render(<EngagementMetricsPage />);
@@ -123,6 +141,8 @@ describe("EngagementMetricsPage", () => {
     expect(screen.getByText("Team Size")).toBeInTheDocument();
     expect(screen.getByText("Engagement Trend")).toBeInTheDocument();
     expect(screen.getByText("Approval Aging")).toBeInTheDocument();
+    expect(screen.getByText("Score breakdown")).toBeInTheDocument();
+    expect(screen.getByText("Engagement by team")).toBeInTheDocument();
     expect(screen.getByText("Team A")).toBeInTheDocument();
     expect(screen.getByText("Jane Leader")).toBeInTheDocument();
   });

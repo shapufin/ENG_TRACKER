@@ -7,10 +7,10 @@ import { usePermissions } from "@/context/PermissionContext";
 
 const EngagementSidebarLink: React.FC = () => {
   const location = useLocation();
-  const { isTeamLeader } = usePermissions();
+  const { isTeamLeader, isAdmin } = usePermissions();
   const isActive = location.pathname === "/engagement/metrics";
 
-  if (!isTeamLeader) return null;
+  if (!isTeamLeader && !isAdmin) return null;
 
   return (
     <SidebarNavLink

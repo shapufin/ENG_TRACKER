@@ -15,7 +15,7 @@ vi.mock("@/components/layout/SidebarNavLink", () => ({
 
 describe("EngagementSidebarLink", () => {
   it("is hidden for a non-TL employee", () => {
-    usePermissions.mockReturnValue({ isTeamLeader: false });
+    usePermissions.mockReturnValue({ isTeamLeader: false, isAdmin: false });
 
     render(
       <MemoryRouter>
@@ -27,7 +27,19 @@ describe("EngagementSidebarLink", () => {
   });
 
   it("is visible for a team leader", () => {
-    usePermissions.mockReturnValue({ isTeamLeader: true });
+    usePermissions.mockReturnValue({ isTeamLeader: true, isAdmin: false });
+
+    render(
+      <MemoryRouter>
+        <EngagementSidebarLink />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText("My Engagement")).toBeInTheDocument();
+  });
+
+  it("is visible for staff admins (backend staff bypass)", () => {
+    usePermissions.mockReturnValue({ isTeamLeader: false, isAdmin: true });
 
     render(
       <MemoryRouter>

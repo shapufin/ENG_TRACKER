@@ -35,5 +35,10 @@ export const useEngagementMetrics = (month?: string) => {
     teamBreakdown: teamBreakdownQuery.data ?? [],
     isLoading: summaryQuery.isLoading || trendQuery.isLoading || teamBreakdownQuery.isLoading,
     isError: summaryQuery.isError || trendQuery.isError || teamBreakdownQuery.isError,
+    refetch: () => {
+      summaryQuery.refetch();
+      trendQuery.refetch();
+      teamBreakdownQuery.refetch();
+    },
   };
 };

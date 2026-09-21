@@ -1,29 +1,31 @@
 import React from "react";
 import { Gauge, Users, UserCheck, CheckCircle2, RotateCcw } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
+import { toneTextClass } from "@/components/ui/tone";
 import type { EngagementSummary } from "../types/engagement";
 
 interface SummaryCardsProps {
   summary: EngagementSummary;
 }
 
-const scoreColor = (score: number | null) => {
-  if (score === null) return "text-muted-foreground";
-  if (score >= 80) return "text-success";
-  if (score >= 50) return "text-warning";
-  return "text-destructive";
+const scoreTone = (score: number | null) => {
+  if (score === null) return undefined;
+  if (score >= 80) return toneTextClass.success;
+  if (score >= 50) return toneTextClass.warning;
+  return toneTextClass.danger;
 };
 
 export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary }) => (
-  <div className="flex flex-wrap gap-4">
+  <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
     <StatCard
       label="Engagement Score"
       value={summary.engagement_score !== null ? summary.engagement_score.toFixed(0) : "—"}
       icon={Gauge}
-      valueColorClass={scoreColor(summary.engagement_score)}
+      valueColorClass={scoreTone(summary.engagement_score)}
       statusDotLabel={summary.is_stale ? "Data is stale" : undefined}
-      statusDotClassName={summary.is_stale ? "bg-warning" : undefined}
-      trend={summary.is_stale ? "Stale — awaiting recompute" : `${summary.team_count} team(s)`}
+      statusDotClassName={summary.is_stale ? "bg-[hsl(var(--tone-warning-text))]" : undefined}
+      trend={summary.is_stale ? "Stale — recomputed monthly" : `${summary.team_count} team(s)`}
+      progressPercent={summary.engagement_score ?? undefined}
     />
     <StatCard label="Team Size" value={summary.team_size} icon={Users} />
     <StatCard

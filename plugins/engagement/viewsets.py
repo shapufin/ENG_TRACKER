@@ -71,11 +71,24 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
         team_size = sum(r.team_size for r in rows)
         active_submitters = sum(r.active_submitters for r in rows)
         resubmission_count = sum(r.resubmission_count for r in rows)
-        scored = [r.engagement_score for r in rows if r.engagement_score is not None]
-        engagement_score = round(sum(scored) / len(scored), 2) if scored else None
-        rates = [r.approval_rate_pct for r in rows if r.approval_rate_pct is not None]
-        approval_rate_pct = round(sum(rates) / len(rates), 2) if rates else None
-        computed_at = min((r.computed_at for r in rows if r.computed_at), default=None)
+        total_decided = sum(
+            sum(m.get('decided', 0) for m in r.metrics.values()) for r in rows
+        )
+        total_approved = sum(
+            sum(m.get('approved', 0) for m in r.metrics.values()) for r in rows
+        )
+        approval_rate_pct = (
+            round((total_approved / total_decided) * 100, 2) if total_decided else None
+        )
+        scored = [(r.engagement_score, r.team_size) for r in rows if r.engagement_score is not None]
+        if scored:
+            weight_sum = sum(w for _, w in scored) or len(scored)
+            engagement_score = round(
+                sum(s * (w or 1) for s, w in scored) / weight_sum, 2
+            )
+        else:
+            engagement_score = None
+        computed_at = max((r.computed_at for r in rows if r.computed_at), default=None)
 
         return Response({
             'month': rows[0].month.isoformat(),
@@ -103,20 +116,31 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
         by_month = {}
         for row in qs:
-            bucket = by_month.setdefault(row.month, {'scores': [], 'ttas': []})
+            bucket = by_month.setdefault(row.month, {'scores': [], 'tta_weighted': [], 'tta_weight': []})
             if row.engagement_score is not None:
-                bucket['scores'].append(row.engagement_score)
+                bucket['scores'].append((row.engagement_score, row.team_size or 1))
             for type_metrics in row.metrics.values():
                 if type_metrics.get('avg_tta_hours') is not None:
-                    bucket['ttas'].append(type_metrics['avg_tta_hours'])
+                    weight = type_metrics.get('decided', 0) or 1
+                    bucket['tta_weighted'].append(type_metrics['avg_tta_hours'] * weight)
+                    bucket['tta_weight'].append(weight)
 
         results = []
         for month in sorted(by_month):
             bucket = by_month[month]
+            if bucket['scores']:
+                w_sum = sum(w for _, w in bucket['scores'])
+                score = round(sum(s * w for s, w in bucket['scores']) / w_sum, 2)
+            else:
+                score = None
+            if bucket['tta_weight']:
+                avg_tta = round(sum(bucket['tta_weighted']) / sum(bucket['tta_weight']), 2)
+            else:
+                avg_tta = None
             results.append({
                 'month': month.isoformat(),
-                'engagement_score': round(sum(bucket['scores']) / len(bucket['scores']), 2) if bucket['scores'] else None,
-                'avg_tta_hours': round(sum(bucket['ttas']) / len(bucket['ttas']), 2) if bucket['ttas'] else None,
+                'engagement_score': score,
+                'avg_tta_hours': avg_tta,
             })
         return Response(results)
 
@@ -143,7 +167,7 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
         if not latest:
             return Response({'has_data': False, 'is_stale': False, 'computed_at': None})
         rows = list(qs.filter(month=latest))
-        computed_at = min((r.computed_at for r in rows if r.computed_at), default=None)
+        computed_at = max((r.computed_at for r in rows if r.computed_at), default=None)
         return Response({
             'has_data': True,
             'month': latest.isoformat(),

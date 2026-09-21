@@ -1,12 +1,18 @@
 import React from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { toneSurfaceClass } from "@/components/ui/tone";
 import { Users2 } from "lucide-react";
 import type { EngagementTeamBreakdownRow } from "../types/engagement";
 
 interface TeamBreakdownTableProps {
   rows: EngagementTeamBreakdownRow[];
 }
+
+const pendingOver48h = (row: EngagementTeamBreakdownRow): number =>
+  (row.metrics.leave?.pending_over_48h ?? 0) +
+  (row.metrics.overtime?.pending_over_48h ?? 0) +
+  (row.metrics.standby?.pending_over_48h ?? 0);
 
 export const TeamBreakdownTable: React.FC<TeamBreakdownTableProps> = ({ rows }) => {
   if (rows.length === 0) {
@@ -22,9 +28,13 @@ export const TeamBreakdownTable: React.FC<TeamBreakdownTableProps> = ({ rows }) 
   }
 
   return (
-    <GlassCard className="overflow-hidden">
+    <GlassCard className="overflow-hidden" delay={0}>
+      <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+        <h3 className="text-sm font-semibold tracking-tight">Engagement by team</h3>
+        <p className="text-xs text-muted-foreground">{rows.length} team(s)</p>
+      </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] text-sm">
+        <table className="w-full min-w-[720px] text-sm">
           <caption className="sr-only">Engagement metrics by team</caption>
           <thead>
             <tr className="border-b border-border/60 text-left text-xs text-muted-foreground">
@@ -42,6 +52,9 @@ export const TeamBreakdownTable: React.FC<TeamBreakdownTableProps> = ({ rows }) 
               </th>
               <th scope="col" className="px-4 py-3 font-medium">
                 Approval Rate
+              </th>
+              <th scope="col" className="px-4 py-3 font-medium">
+                Pending &gt;48h
               </th>
               <th scope="col" className="px-4 py-3 font-medium">
                 Resubmissions
@@ -63,16 +76,31 @@ export const TeamBreakdownTable: React.FC<TeamBreakdownTableProps> = ({ rows }) 
                 <td className="px-4 py-3 tabular-nums">
                   {row.approval_rate_pct !== null ? `${row.approval_rate_pct.toFixed(0)}%` : "—"}
                 </td>
+                <td className="px-4 py-3 tabular-nums">{pendingOver48h(row)}</td>
                 <td className="px-4 py-3 tabular-nums">{row.resubmission_count}</td>
                 <td className="px-4 py-3">
                   {row.is_stale ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 px-2 py-0.5 text-xs text-warning">
-                      <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
+                    <span
+                      role="status"
+                      aria-label="Stale snapshot"
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${toneSurfaceClass.warning}`}
+                    >
+                      <span
+                        className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--tone-warning-text))]"
+                        aria-hidden="true"
+                      />
                       Stale
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2 py-0.5 text-xs text-success">
-                      <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+                    <span
+                      role="status"
+                      aria-label="Fresh snapshot"
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${toneSurfaceClass.success}`}
+                    >
+                      <span
+                        className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--tone-success-text))]"
+                        aria-hidden="true"
+                      />
                       Fresh
                     </span>
                   )}
