@@ -20,8 +20,8 @@ vi.mock("./components/MyClientsSection", () => ({
 vi.mock("./components/ClientAssignmentSection", () => ({
   ClientAssignmentSection: () => <div data-testid="client-assignment" />,
 }));
-vi.mock("./components/PushNotificationSection", () => ({
-  PushNotificationSection: () => <div data-testid="push-notifications" />,
+vi.mock("./components/NotificationPreferencesSection", () => ({
+  NotificationPreferencesSection: () => <div data-testid="notification-preferences" />,
 }));
 vi.mock("@/plugins/control_room/hooks/useControlRoomAccess", () => ({
   useControlRoomMe: vi.fn(),
@@ -54,7 +54,7 @@ describe("SettingsPage", () => {
 
     render(<SettingsPage />);
 
-    expect(screen.queryByText("Push Notifications")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("notification-preferences")).not.toBeInTheDocument();
   });
 
   it("renders profile and badges", () => {
@@ -210,9 +210,9 @@ describe("SettingsPage", () => {
     expect(screen.getByText("CR User")).toBeInTheDocument();
     // CR Admin badge is NOT shown (they are not a CR admin)
     expect(screen.queryByText("CR Admin")).not.toBeInTheDocument();
-    // My Clients and push notification settings are NOT rendered
+    // My Clients and notification preferences are NOT rendered
     expect(screen.queryByTestId("my-clients")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("push-notifications")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("notification-preferences")).not.toBeInTheDocument();
     // Control Room Scope card is shown with the team name (lazy-loaded)
     expect(await screen.findByText("Control Room Scope")).toBeInTheDocument();
     expect(screen.getByText("MSC_TEAM")).toBeInTheDocument();
@@ -296,7 +296,7 @@ describe("SettingsPage", () => {
     expect(screen.queryByText("CR User")).not.toBeInTheDocument();
   });
 
-  it("CR admin: hides My Clients, push notifications, and CR Scope card", () => {
+  it("CR admin: hides My Clients, notification preferences, and CR Scope card", () => {
     vi.mocked(useAuth.useAuth).mockReturnValue({
       user: { username: "cr-admin", is_cr_admin: true },
       logout,
@@ -314,7 +314,7 @@ describe("SettingsPage", () => {
     render(<SettingsPage />);
 
     expect(screen.queryByTestId("my-clients")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("push-notifications")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("notification-preferences")).not.toBeInTheDocument();
     // CR Scope card is for CR users only, not CR admins
     expect(screen.queryByText("Control Room Scope")).not.toBeInTheDocument();
     // CR Admin badge is shown (not "Admin" — they are not staff)

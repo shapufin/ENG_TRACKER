@@ -21,20 +21,18 @@ const preferences = [
     in_app_enabled: true,
     push_enabled: true,
     available: true,
-    globally_enabled: true,
   },
 ];
 
 describe("NotificationPreferencesSection", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders role-filtered preferences and independent channels", async () => {
+  it("renders role-filtered preferences", async () => {
     vi.mocked(notificationService.getPreferences).mockResolvedValue(preferences);
-    render(<NotificationPreferencesSection isSubscribed isSubscribing={false} />);
+    render(<NotificationPreferencesSection />);
 
     expect(await screen.findByText("My leave approved or rejected")).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: /in-app notifications/i })).toBeChecked();
-    expect(screen.getByRole("switch", { name: /push notifications/i })).toBeChecked();
   });
 
   it("optimistically updates, then reconciles with the server's full preference list", async () => {
@@ -42,22 +40,22 @@ describe("NotificationPreferencesSection", () => {
     // Backend PATCH /preferences/ responds with the full current list, not
     // just the changed row.
     vi.mocked(notificationService.updatePreference).mockResolvedValue([
-      { ...preferences[0], push_enabled: false },
+      { ...preferences[0], in_app_enabled: false },
     ]);
-    render(<NotificationPreferencesSection isSubscribed isSubscribing={false} />);
+    render(<NotificationPreferencesSection />);
 
-    const push = await screen.findByRole("switch", { name: /push notifications/i });
-    fireEvent.click(push);
+    const inApp = await screen.findByRole("switch", { name: /in-app notifications/i });
+    fireEvent.click(inApp);
 
     await waitFor(() =>
       expect(notificationService.updatePreference).toHaveBeenCalledWith("own_leave_updated", {
-        push_enabled: false,
+        in_app_enabled: false,
       })
     );
-    await waitFor(() => expect(push).not.toBeChecked());
+    await waitFor(() => expect(inApp).not.toBeChecked());
   });
 
-  it("rolls back only the toggled channel when persistence fails, leaving other rows untouched", async () => {
+  it("rolls back only the toggled row when persistence fails, leaving other rows untouched", async () => {
     vi.mocked(notificationService.getPreferences).mockResolvedValue([
       ...preferences,
       {
@@ -66,11 +64,10 @@ describe("NotificationPreferencesSection", () => {
         in_app_enabled: true,
         push_enabled: true,
         available: true,
-        globally_enabled: true,
       },
     ]);
     vi.mocked(notificationService.updatePreference).mockRejectedValue(new Error("offline"));
-    render(<NotificationPreferencesSection isSubscribed isSubscribing={false} />);
+    render(<NotificationPreferencesSection />);
 
     const inApp = await screen.findByRole("switch", {
       name: "My leave approved or rejected: in-app notifications",
@@ -78,28 +75,9 @@ describe("NotificationPreferencesSection", () => {
     fireEvent.click(inApp);
 
     await waitFor(() => expect(inApp).toBeChecked());
-    // The other row's switches were never touched and stay checked.
+    // The other row's switch was never touched and stays checked.
     expect(
       screen.getByRole("switch", { name: "My overtime submitted: in-app notifications" })
     ).toBeChecked();
-  });
-
-  it("disables the push switch while the device isn't subscribed, without a blocking click handler", async () => {
-    vi.mocked(notificationService.getPreferences).mockResolvedValue([
-      { ...preferences[0], push_enabled: false },
-    ]);
-    render(<NotificationPreferencesSection isSubscribed={false} isSubscribing={false} />);
-
-    const push = await screen.findByRole("switch", { name: /push notifications/i });
-    expect(push).toBeDisabled();
-  });
-
-  it("shows an admin-disabled note when a category is globally disabled", async () => {
-    vi.mocked(notificationService.getPreferences).mockResolvedValue([
-      { ...preferences[0], globally_enabled: false },
-    ]);
-    render(<NotificationPreferencesSection isSubscribed isSubscribing={false} />);
-
-    expect(await screen.findByText(/Disabled by admin/)).toBeInTheDocument();
   });
 });

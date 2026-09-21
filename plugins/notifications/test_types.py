@@ -7,7 +7,6 @@ from django.contrib.auth import get_user_model
 
 from plugins.notifications.models import (
     Notification,
-    NotificationEventTypeConfig,
     NotificationPreference,
 )
 from plugins.notifications.types.base import (
@@ -520,36 +519,6 @@ class DispatchBehaviorTest(TestCase):
             Notification.objects.filter(user=self.user).exists()
         )
 
-    @patch('plugins.notifications.signals.send_push_notification')
-    def test_globally_disabled_event_delivers_nothing(self, mock_push):
-        """The admin global switch wins over per-user preferences."""
-        NotificationEventTypeConfig.objects.update_or_create(
-            event_type='own_leave_submitted', defaults={'is_enabled': False}
-        )
-        class FakeLeave:
-            user = self.user
-            start_date = datetime.date(2026, 8, 11)
-        LeaveSubmittedNotification().dispatch({'instance': FakeLeave()})
-        self.assertFalse(
-            Notification.objects.filter(user=self.user).exists()
-        )
-        mock_push.assert_not_called()
-
-    @patch('plugins.notifications.signals.send_push_notification')
-    def test_missing_config_row_defaults_to_enabled(self, mock_push):
-        """Event types without a config row keep working (enabled fallback)."""
-        NotificationEventTypeConfig.objects.filter(
-            event_type='own_leave_updated'
-        ).delete()
-        class FakeLeave:
-            user = self.user
-            start_date = datetime.date(2026, 8, 11)
-            status = 'approved'
-        LeaveUpdatedNotification().dispatch({'instance': FakeLeave()})
-        self.assertTrue(
-            Notification.objects.filter(user=self.user).exists()
-        )
-
     def test_dispatch_with_dedupe_key_is_idempotent(self):
         from apps.users.models import (
             ApprovalPeriodBoundary, ApprovalPeriodClose, ApprovalPeriodCloseMember,
@@ -638,8 +607,6 @@ class LeaveEditedSignalTest(TestCase):
         self.user = User.objects.create_user(
             username='le', email='le@test.com', password='testpass123'
         )
-        from .test_push import enable_all_events
-        enable_all_events()
 
     @patch('plugins.notifications.signals.send_push_notification')
     def test_field_edit_without_status_change_fires_edited_notification(self, mock_push):

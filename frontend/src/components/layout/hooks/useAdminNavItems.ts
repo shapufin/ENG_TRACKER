@@ -7,7 +7,6 @@ import {
   Briefcase,
   KeyRound,
   BarChart3,
-  Bell,
   CalendarDays,
   Clock,
   Moon,
@@ -186,14 +185,6 @@ const allAdminNavItems: AdminNavItem[] = [
     icon: Globe,
     group: "System",
     fullAdminOnly: true,
-  },
-  {
-    path: "/admin/notification-events",
-    label: "Notification Events",
-    icon: Bell,
-    group: "System",
-    fullAdminOnly: true,
-    pluginName: "notifications",
   },
 ];
 

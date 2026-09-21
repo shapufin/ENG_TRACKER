@@ -6,24 +6,10 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { SwitchField } from "@/components/common/forms/SwitchField";
 import { notificationService, type NotificationPreference } from "@/plugins/notifications/service";
 
-interface NotificationPreferencesSectionProps {
-  /** Read from the single `usePushNotifications()` call in `SettingsPage`
-   * (shared with `PushNotificationSection` above) instead of running a
-   * second service-worker-ready check on every page load. */
-  isSubscribed: boolean;
-  isSubscribing: boolean;
-}
-
-/** Per-event-type in-app/push preference grid. Device-level push
- * subscription (browser permission + service worker) is owned by
- * `PushNotificationSection` above this card — enabling a category's push
- * channel here only flips the per-user preference row; the push switch is
- * disabled (not just blocked on click) until the device itself is
- * subscribed there. */
-export const NotificationPreferencesSection: React.FC<NotificationPreferencesSectionProps> = ({
-  isSubscribed,
-  isSubscribing,
-}) => {
+/** Per-event-type in-app notification toggle. Push delivery has no
+ * device-subscribe UI right now, so only the in-app channel is editable
+ * here; `push_enabled` stays whatever it was last set to on the backend. */
+export const NotificationPreferencesSection: React.FC = () => {
   const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingKeys, setUpdatingKeys] = useState<Set<string>>(new Set());
@@ -36,35 +22,33 @@ export const NotificationPreferencesSection: React.FC<NotificationPreferencesSec
       .finally(() => setIsLoading(false));
   }, []);
 
-  const update = async (
-    eventType: string,
-    channel: "in_app_enabled" | "push_enabled",
-    value: boolean,
-    previousValue: boolean
-  ) => {
-    const key = `${eventType}:${channel}`;
-    setUpdatingKeys((prev) => new Set(prev).add(key));
+  const update = async (eventType: string, value: boolean, previousValue: boolean) => {
+    setUpdatingKeys((prev) => new Set(prev).add(eventType));
     setPreferences((current) =>
-      current.map((item) => (item.event_type === eventType ? { ...item, [channel]: value } : item))
+      current.map((item) =>
+        item.event_type === eventType ? { ...item, in_app_enabled: value } : item
+      )
     );
 
     try {
       // The response is the user's full, current preference list (server
       // truth after this change) — use it directly rather than merging by
       // event_type into a partial/singular shape.
-      const saved = await notificationService.updatePreference(eventType, { [channel]: value });
+      const saved = await notificationService.updatePreference(eventType, {
+        in_app_enabled: value,
+      });
       setPreferences(saved);
     } catch {
       setPreferences((current) =>
         current.map((item) =>
-          item.event_type === eventType ? { ...item, [channel]: previousValue } : item
+          item.event_type === eventType ? { ...item, in_app_enabled: previousValue } : item
         )
       );
       toast.error("Could not save notification preference");
     } finally {
       setUpdatingKeys((prev) => {
         const next = new Set(prev);
-        next.delete(key);
+        next.delete(eventType);
         return next;
       });
     }
@@ -88,54 +72,25 @@ export const NotificationPreferencesSection: React.FC<NotificationPreferencesSec
           <p className="text-sm text-muted-foreground">No notification preferences available.</p>
         ) : (
           <div className="space-y-3">
-            {preferences.map((preference) => {
-              const inAppKey = `${preference.event_type}:in_app_enabled`;
-              const pushKey = `${preference.event_type}:push_enabled`;
-              const pushDisabled = !isSubscribed || isSubscribing || updatingKeys.has(pushKey);
-              return (
-                <div
-                  key={preference.event_type}
-                  className="flex flex-col gap-3 rounded-lg border border-border/70 p-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <span className="text-sm font-medium">{preference.label}</span>
-                    {!preference.globally_enabled && (
-                      <p className="text-xs text-warning">
-                        Disabled by admin — your setting won't take effect until re-enabled.
-                      </p>
-                    )}
-                  </div>
-                  <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
-                    <SwitchField
-                      id={`${preference.event_type}-in-app`}
-                      label="In-app"
-                      description="Show in the notification center."
-                      checked={preference.in_app_enabled}
-                      disabled={updatingKeys.has(inAppKey)}
-                      onCheckedChange={(value) =>
-                        update(preference.event_type, "in_app_enabled", value, preference.in_app_enabled)
-                      }
-                      ariaLabel={`${preference.label}: in-app notifications`}
-                    />
-                    <SwitchField
-                      id={`${preference.event_type}-push`}
-                      label="Push"
-                      description={
-                        isSubscribed
-                          ? "Send to this device."
-                          : "Enable “Push on this device” above first."
-                      }
-                      checked={preference.push_enabled}
-                      disabled={pushDisabled}
-                      onCheckedChange={(value) =>
-                        update(preference.event_type, "push_enabled", value, preference.push_enabled)
-                      }
-                      ariaLabel={`${preference.label}: push notifications`}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+            {preferences.map((preference) => (
+              <div
+                key={preference.event_type}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border/70 p-3"
+              >
+                <span className="text-sm font-medium">{preference.label}</span>
+                <SwitchField
+                  id={`${preference.event_type}-in-app`}
+                  label="In-app"
+                  description="Show in the notification center."
+                  checked={preference.in_app_enabled}
+                  disabled={updatingKeys.has(preference.event_type)}
+                  onCheckedChange={(value) =>
+                    update(preference.event_type, value, preference.in_app_enabled)
+                  }
+                  ariaLabel={`${preference.label}: in-app notifications`}
+                />
+              </div>
+            ))}
           </div>
         )}
       </CardContent>

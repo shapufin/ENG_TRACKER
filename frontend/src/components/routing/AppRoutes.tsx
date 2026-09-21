@@ -68,11 +68,6 @@ const LeaveBalancesPage = React.lazy(() =>
 const GlobalSettingsPage = React.lazy(() =>
   import("@/pages/admin/GlobalSettingsPage").then((m) => ({ default: m.GlobalSettingsPage }))
 );
-const NotificationEventsPage = React.lazy(() =>
-  import("@/pages/admin/NotificationEventsPage").then((m) => ({
-    default: m.NotificationEventsPage,
-  }))
-);
 const SettingsPage = React.lazy(() =>
   import("@/pages/settings/SettingsPage").then((m) => ({ default: m.SettingsPage }))
 );
@@ -211,10 +206,6 @@ export const AppRoutes: React.FC = () => {
                 {
                   path: "/admin/global-settings",
                   element: withSuspense(<GlobalSettingsPage />),
-                },
-                {
-                  path: "/admin/notification-events",
-                  element: withSuspense(<NotificationEventsPage />),
                 },
                 { path: "/admin/overtime-logs", element: withSuspense(<OvertimeLogsPage />) },
                 { path: "/admin/standby-logs", element: withSuspense(<StandbyLogsPage />) },

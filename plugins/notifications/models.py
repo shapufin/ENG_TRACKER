@@ -150,22 +150,3 @@ class NotificationPreference(models.Model):
 
     def __str__(self):
         return f"{self.user.email}: {self.event_type}"
-
-
-class NotificationEventTypeConfig(models.Model):
-    """Global on/off switch per notification event type, managed in Django admin.
-
-    Missing rows intentionally mean enabled, so event types added in code
-    keep working without a migration until an admin disables them.
-    """
-
-    event_type = models.CharField(max_length=40, unique=True)
-    is_enabled = models.BooleanField(default=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        app_label = 'notifications'
-        ordering = ['event_type']
-
-    def __str__(self):
-        return f"{self.event_type}: {'enabled' if self.is_enabled else 'disabled'}"

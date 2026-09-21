@@ -18,15 +18,7 @@ export interface NotificationPreference {
   in_app_enabled: boolean;
   push_enabled: boolean;
   available: boolean;
-  globally_enabled: boolean;
   updated_at?: string;
-}
-
-export interface NotificationEventConfig {
-  event_type: string;
-  label: string;
-  description: string;
-  is_enabled: boolean;
 }
 
 export const notificationService = {
@@ -67,24 +59,6 @@ export const notificationService = {
     const response = await api.patch<NotificationPreference[]>(
       "/plugins/notifications/notifications/preferences/",
       { event_type: eventType, ...changes }
-    );
-    return response.data;
-  },
-
-  getEventConfigs: async (): Promise<NotificationEventConfig[]> => {
-    const response = await api.get<NotificationEventConfig[]>(
-      "/plugins/notifications/notifications/event-configs/"
-    );
-    return response.data;
-  },
-
-  updateEventConfig: async (
-    eventType: string,
-    isEnabled: boolean
-  ): Promise<NotificationEventConfig[]> => {
-    const response = await api.patch<NotificationEventConfig[]>(
-      "/plugins/notifications/notifications/event-configs/",
-      { event_type: eventType, is_enabled: isEnabled }
     );
     return response.data;
   },

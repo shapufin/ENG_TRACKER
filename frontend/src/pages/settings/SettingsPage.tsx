@@ -15,36 +15,8 @@ import { LogOut, Lock, User } from "lucide-react";
 import { toast } from "sonner";
 import { MyClientsSection } from "./components/MyClientsSection";
 import { ClientAssignmentSection } from "./components/ClientAssignmentSection";
-import { PushNotificationSection } from "./components/PushNotificationSection";
 import { NotificationPreferencesSection } from "./components/NotificationPreferencesSection";
 import { PluginCRScopeCard } from "./components/PluginCRScopeCard";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
-
-/** Owns the single `usePushNotifications()` call shared by both cards, so
- * the service-worker-ready/getSubscription() check runs once per page load
- * instead of once per card — and only mounts (so only runs) when the
- * notifications plugin is active and the viewer isn't CR-scoped, matching
- * the visibility rule both cards were already gated on. */
-const NotificationSettingsGroup: React.FC<{ isTeamLeader: boolean }> = ({ isTeamLeader }) => {
-  const pushState = usePushNotifications();
-  return (
-    <>
-      {isTeamLeader ? (
-        <PushNotificationSection pushState={pushState} />
-      ) : (
-        <div className="lg:col-span-2">
-          <PushNotificationSection pushState={pushState} />
-        </div>
-      )}
-      <div className="lg:col-span-2">
-        <NotificationPreferencesSection
-          isSubscribed={pushState.isSubscribed}
-          isSubscribing={pushState.isSubscribing}
-        />
-      </div>
-    </>
-  );
-};
 
 export const SettingsPage: React.FC = () => {
   const { user, logout, refreshUser } = useAuth();
@@ -176,16 +148,11 @@ export const SettingsPage: React.FC = () => {
             the access management page; they don't need a self-scope card. */}
         {isCRUser && <PluginCRScopeCard />}
 
-        {/* Row 2 pair: Push Notifications | Client Assignment. For TLs
-            both cards sit side by side; for everyone else (no Client
-            Assignment card) Push Notifications takes the full row so no
-            half-width hole is left. Which notification event types exist
-            at all is a global admin switch (Django admin / notification
-            event configs); Push Notifications is the per-device on/off;
-            Notification Preferences below is the per-category, per-channel
-            self-service control. */}
+        {/* Notification Preferences — per-category in-app toggle, full width. */}
         {notificationsActive && !isCRScoped && (
-          <NotificationSettingsGroup isTeamLeader={isTeamLeader} />
+          <div className="lg:col-span-2">
+            <NotificationPreferencesSection />
+          </div>
         )}
 
         {/* TL Client Assignment — TLs assign team members to clients (mockup
