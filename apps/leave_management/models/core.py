@@ -256,6 +256,7 @@ class LeaveRequest(BaseModel):
     )
     approved_at = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     # Related balance record
     balance = models.ForeignKey(
@@ -283,7 +284,11 @@ class LeaveRequest(BaseModel):
     
     def save(self, *args, **kwargs):
         self.clean()
+        is_new = self._state.adding
         super().save(*args, **kwargs)
+        if is_new and self.submitted_at is None:
+            self.submitted_at = self.created_at
+            super().save(update_fields=['submitted_at'])
 
 
 @receiver(post_save, sender='users.UserProfile')

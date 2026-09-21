@@ -481,6 +481,39 @@ class LeaveRequestViewSetTests(TestCase):
         self.assertEqual(response.data['count'], 55)
         self.assertEqual(len(response.data['results']), 55)
 
+    def test_leave_submitted_at_backfill(self):
+        """Pre-existing rows get submitted_at == created_at via the data migration."""
+        leave = LeaveRequest.objects.create(
+            user=self.user,
+            start_date=self.business_day,
+            end_date=self.business_day,
+            request_type='vacation',
+            reason='Backfill check',
+        )
+        leave.refresh_from_db()
+        self.assertIsNotNone(leave.submitted_at)
+        self.assertEqual(leave.submitted_at, leave.created_at)
+
+    def test_submitted_at_cannot_be_spoofed_on_create(self):
+        """A client-supplied submitted_at must be ignored, not persisted."""
+        self.client.force_authenticate(user=self.user)
+        spoofed = '2000-01-01T00:00:00Z'
+        response = self.client.post(
+            '/api/leave-management/requests/',
+            {
+                'start_date': self.business_day.isoformat(),
+                'end_date': self.business_day.isoformat(),
+                'request_type': 'vacation',
+                'reason': 'Spoof attempt',
+                'submitted_at': spoofed,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        leave = LeaveRequest.objects.get(pk=response.data['id'])
+        self.assertNotEqual(leave.submitted_at.isoformat(), '2000-01-01T00:00:00+00:00')
+        self.assertEqual(leave.submitted_at, leave.created_at)
+
 
 class GlobalSettingsViewSetTests(TestCase):
     """GlobalSettings singleton must be reachable via list() on a DB where

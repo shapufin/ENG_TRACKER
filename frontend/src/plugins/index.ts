@@ -191,6 +191,14 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
     ),
     BackupSidebarItem: lazy(() => import("./site_backup/components/BackupSidebarItem")),
   },
+  engagement: {
+    EngagementMetricsPage: lazy(() =>
+      import("./engagement/pages/EngagementMetricsPage").then((m) => ({
+        default: m.EngagementMetricsPage,
+      }))
+    ),
+    EngagementSidebarLink: lazy(() => import("./engagement/components/EngagementSidebarLink")),
+  },
 };
 
 export const getPluginComponent = (pluginName: string, componentName: string) => {

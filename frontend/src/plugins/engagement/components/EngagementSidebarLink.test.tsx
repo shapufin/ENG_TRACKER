@@ -1,0 +1,40 @@
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import EngagementSidebarLink from "./EngagementSidebarLink";
+
+const usePermissions = vi.fn();
+
+vi.mock("@/context/PermissionContext", () => ({
+  usePermissions: () => usePermissions(),
+}));
+
+vi.mock("@/components/layout/SidebarNavLink", () => ({
+  SidebarNavLink: ({ label }: { label: string }) => <span>{label}</span>,
+}));
+
+describe("EngagementSidebarLink", () => {
+  it("is hidden for a non-TL employee", () => {
+    usePermissions.mockReturnValue({ isTeamLeader: false });
+
+    render(
+      <MemoryRouter>
+        <EngagementSidebarLink />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText("My Engagement")).not.toBeInTheDocument();
+  });
+
+  it("is visible for a team leader", () => {
+    usePermissions.mockReturnValue({ isTeamLeader: true });
+
+    render(
+      <MemoryRouter>
+        <EngagementSidebarLink />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText("My Engagement")).toBeInTheDocument();
+  });
+});

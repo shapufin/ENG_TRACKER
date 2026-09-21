@@ -1,6 +1,7 @@
 from typing import List, Dict, Any
 from django.utils import timezone
 from django.db.models import Sum, Avg, F, ExpressionWrapper, fields
+from django.db.models.functions import Coalesce
 from datetime import timedelta
 from .providers import AnalyticsProvider, analytics_registry
 from apps.leave_management.models import LeaveRequest
@@ -75,7 +76,7 @@ class CoreAnalyticsProvider(AnalyticsProvider):
             approved_at__isnull=False
         ).annotate(
             approval_duration=ExpressionWrapper(
-                F('approved_at') - F('created_at'),
+                F('approved_at') - Coalesce(F('submitted_at'), F('created_at')),
                 output_field=fields.DurationField()
             )
         )
