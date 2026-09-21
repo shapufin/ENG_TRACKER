@@ -3,8 +3,8 @@ import type { CalendarEvent } from "./types";
 export const calendarSurface =
   "rounded-2xl border border-border/70 bg-card/95 text-card-foreground backdrop-blur-xl";
 
-export const calendarGridHeader = "border-b border-line-subtle bg-surface-sunken";
-export const calendarRowDivider = "border-line-subtle";
+export const calendarGridHeader = "border-b border-border/60 bg-card";
+export const calendarRowDivider = "border-border/50";
 
 type CalendarTone = {
   surface: string;

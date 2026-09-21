@@ -3,7 +3,7 @@ import { format, isSameMonth } from "date-fns";
 import { CalendarDayCell } from "./CalendarDayCell";
 import { useMonthGrid } from "./hooks/useMonthGrid";
 import type { CalendarEvent } from "./types";
-import { calendarGridHeader, calendarRowDivider, calendarSurface } from "./calendarStyles";
+import { calendarGridHeader } from "./calendarStyles";
 
 interface MonthGridProps {
   currentMonth: Date;
@@ -36,7 +36,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
   onRangeDragEnd,
   isRangeSelecting,
 }) => {
-  const { monthStart, displayRows, weekDays, getWeekNumber, getDayEvents } = useMonthGrid({
+  const { monthStart, displayRows, weekDays, getDayEvents } = useMonthGrid({
     currentMonth,
     events,
     viewMode,
@@ -48,14 +48,11 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
 
   return (
     <div
-      className={`min-w-0 overflow-hidden md:min-w-[720px] ${calendarSurface}`}
+      className="min-w-0 overflow-hidden rounded-xl border border-border/60 bg-card md:min-w-[720px]"
       role="grid"
       aria-label={format(currentMonth, "MMMM yyyy")}
     >
-      <div className={`grid grid-cols-8 ${calendarGridHeader}`} role="row">
-        <div className="py-2.5 text-center font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
-          Wk
-        </div>
+      <div className={`grid grid-cols-7 ${calendarGridHeader}`} role="row">
         {weekDays.map((wd) => (
           <div
             key={wd}
@@ -69,12 +66,9 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
       {displayRows.map((week, weekIdx) => (
         <div
           key={weekIdx}
-          className={`grid grid-cols-8 border-b ${calendarRowDivider} bg-card last:border-b-0`}
+          className="grid grid-cols-7 gap-px border-b border-border/50 bg-border/50 last:border-b-0"
           role="row"
         >
-          <div className="bg-surface-sunken py-3 text-center text-[11px] font-medium text-muted-foreground">
-            {getWeekNumber(week)}
-          </div>
           {week.map((date, dayIdx) => {
             const dayKey = format(date, "yyyy-MM-dd");
             const dayEvents = getDayEvents(date);

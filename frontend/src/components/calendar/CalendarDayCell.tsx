@@ -80,15 +80,15 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
       onTouchStart={handlePointerDown}
       onTouchEnd={handlePointerUp}
       className={cn(
-        "group relative flex h-full min-h-[100px] flex-col gap-1 rounded-xl border border-line-subtle bg-card p-2 text-foreground transition duration-200 focus-visible:ring-1 focus-visible:ring-ring/60 xl:min-h-[110px] 2xl:min-h-[130px]",
-        isPlainCell && "hover:border-border hover:bg-card-raised",
-        !isCurrentMonth && "bg-surface-sunken text-muted-foreground/60",
-        today && "calendar-today-glow border-info/40",
-        isSelected && "border-primary/80 bg-primary/15 dark:bg-primary/[0.12]",
+        "group relative flex h-full min-h-[100px] flex-col gap-1 bg-card p-2 text-foreground transition duration-200 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring/60 xl:min-h-[110px] 2xl:min-h-[130px]",
+        isPlainCell && "hover:bg-card-raised",
+        !isCurrentMonth && "bg-card text-muted-foreground/60",
+        today && "calendar-today-glow border border-info/40",
+        isSelected && "border border-primary/80 bg-primary/15 dark:bg-primary/[0.12]",
         isRangeStart && "ring-2 ring-inset ring-primary/70 dark:ring-primary/50",
         isRangeEnd && "ring-2 ring-inset ring-primary/70 dark:ring-primary/50",
         isInRange &&
-          "border-primary/30 bg-primary/10 dark:border-primary/20 dark:bg-primary/[0.06]",
+          "border border-primary/30 bg-primary/10 dark:border-primary/20 dark:bg-primary/[0.06]",
         isRangeSelecting && "cursor-crosshair"
       )}
     >

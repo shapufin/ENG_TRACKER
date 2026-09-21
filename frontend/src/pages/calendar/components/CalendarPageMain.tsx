@@ -21,8 +21,7 @@ export const CalendarPageMain: React.FC<CalendarPageMainProps> = ({ data }) => {
     <div
       className={`relative flex min-h-0 flex-[1_0_auto] flex-col overflow-hidden ${calendarSurface}`}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-foreground/[0.03] to-transparent" />
-      <div className="relative flex-1 overflow-hidden px-4 pb-3.5 pt-5">
+      <div className="relative flex-1 overflow-hidden p-2 sm:p-3">
         <div className="h-full overflow-x-auto overflow-y-auto pr-1">
           <TooltipProvider delayDuration={0}>
             {data.viewMode === "month" && (
