@@ -1,44 +1,39 @@
 import React from "react";
-import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+import { toneTextClass } from "@/components/ui/tone";
 
-interface StatCardProps {
-  icon: React.ReactNode;
+interface MiniStatCardProps {
   label: string;
   value: string;
   suffix: string;
   sub: string;
-  progress: number;
-  color: string;
+  tone: "success" | "warning" | "danger";
 }
 
-export const StatCard: React.FC<StatCardProps> = ({
-  icon,
-  label,
-  value,
-  suffix,
-  sub,
-  progress,
-  color,
-}) => {
+const toneMap = {
+  success: toneTextClass.success,
+  warning: toneTextClass.warning,
+  danger: toneTextClass.danger,
+} as const;
+
+/**
+ * Compact balance stat for the vacation modal: label-first hierarchy, trimmed
+ * value, no per-card progress bar (the summary band owns the single bar).
+ */
+export const StatCard: React.FC<MiniStatCardProps> = ({ label, value, suffix, sub, tone }) => {
   return (
-    <div className="rounded-3xl border border-line-subtle bg-surface-sunken p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="rounded-2xl bg-card-raised p-2">{icon}</div>
-        <div className="text-right">
-          <div className="flex items-end gap-1">
-            <span className="font-mono text-4xl font-bold tabular-nums">{value}</span>
-            <span className="mb-1 text-lg text-muted-foreground">{suffix}</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
-        </div>
+    <div className="rounded-2xl border border-line-subtle bg-card p-4">
+      <div className="flex items-center gap-1.5">
+        <span className={cn("inline-flex", toneMap[tone])} aria-hidden="true">
+          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+        </span>
+        <span className="truncate text-xs font-medium text-muted-foreground">{label}</span>
       </div>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">{label}</span>
-          <span className="tabular-nums text-muted-foreground">{Math.round(progress)}%</span>
-        </div>
-        <Progress value={progress} className="h-2 bg-line-subtle" indicatorClassName={color} />
+      <div className="mt-2 flex items-baseline gap-1">
+        <span className="font-mono text-2xl font-bold tabular-nums text-foreground">{value}</span>
+        <span className="text-xs text-muted-foreground">{suffix}</span>
       </div>
+      <p className="mt-1 font-mono text-micro-lg tabular-nums text-muted-foreground">{sub}</p>
     </div>
   );
 };

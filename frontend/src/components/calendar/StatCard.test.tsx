@@ -3,46 +3,30 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { StatCard } from "./StatCard";
 
-// Design-system contract: metric numerals use the mono/tabular treatment
-// (JetBrains Mono + tabular-nums) like the shared ui/StatCard, so multi-card
-// rows align vertically in both themes.
+// Design contract: mini stat is label-first — the value keeps the mono/tabular
+// treatment but the card owns no progress bar (the summary band does).
 describe("calendar StatCard", () => {
   it("renders the value with font-mono tabular-nums numerals", () => {
-    render(
-      <StatCard
-        icon={<span data-testid="icon" />}
-        label="Leave Used"
-        value="12.5"
-        suffix="days"
-        sub="of 22 total"
-        progress={57}
-        color="bg-primary"
-      />
-    );
+    render(<StatCard label="Leave Used" value="12" suffix="d" sub="57% of 22 d" tone="danger" />);
 
-    const value = screen.getByText("12.5");
+    const value = screen.getByText("12");
     expect(value.className).toContain("font-mono");
     expect(value.className).toContain("tabular-nums");
-
-    const percent = screen.getByText("57%");
-    expect(percent.className).toContain("tabular-nums");
   });
 
-  it("keeps the Obsidian-Slate surface tokens", () => {
-    render(
-      <StatCard
-        icon={<span data-testid="icon" />}
-        label="Leave Used"
-        value="12.5"
-        suffix="days"
-        sub="of 22 total"
-        progress={57}
-        color="bg-primary"
-      />
+  it("renders label, suffix and sub copy", () => {
+    render(<StatCard label="Leave Used" value="12" suffix="d" sub="57% of 22 d" tone="danger" />);
+
+    expect(screen.getByText("Leave Used")).toBeInTheDocument();
+    expect(screen.getByText("d")).toBeInTheDocument();
+    expect(screen.getByText("57% of 22 d")).toBeInTheDocument();
+  });
+
+  it("owns no progress bar", () => {
+    const { container } = render(
+      <StatCard label="Leave Used" value="12" suffix="d" sub="57% of 22 d" tone="danger" />
     );
 
-    const card = screen.getByText("12.5").closest("div.rounded-3xl") as HTMLElement;
-    expect(card.className).toContain("bg-surface-sunken");
-    expect(card.className).toContain("border-line-subtle");
+    expect(container.querySelector('[role="progressbar"]')).toBeNull();
   });
 });

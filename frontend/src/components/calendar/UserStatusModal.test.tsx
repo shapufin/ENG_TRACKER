@@ -22,7 +22,6 @@ vi.mock("./hooks/useUserStatusData", () => ({
 }));
 
 vi.mock("./CarryOverCard", () => ({ CarryOverCard: () => <div data-testid="carry-over" /> }));
-vi.mock("./CurrentYearCard", () => ({ CurrentYearCard: () => <div data-testid="current-year" /> }));
 vi.mock("./UpcomingHolidays", () => ({ UpcomingHolidays: () => <div data-testid="holidays" /> }));
 vi.mock("./UserAvatar", () => ({ UserAvatar: () => <div data-testid="avatar" /> }));
 
@@ -61,7 +60,7 @@ describe("UserStatusModal responsive grids", () => {
     expect(grid!.className).not.toMatch(/(^|\s)grid-cols-3(\s|$)/);
   });
 
-  it("two-card row collapses on mobile and is 2-up from sm up", () => {
+  it("carry-over renders full-width (no two-card row) without the removed current-year card", () => {
     render(
       <UserStatusModal
         open
@@ -75,6 +74,14 @@ describe("UserStatusModal responsive grids", () => {
     const grids = [...document.querySelectorAll("div.grid")].filter((g) =>
       g.className.includes("sm:grid-cols-2")
     );
-    expect(grids.length).toBeGreaterThan(0);
+    expect(grids.length).toBe(0);
+  });
+
+  it("renders carry-over and holidays sections without the removed current-year card", () => {
+    renderModal();
+
+    expect(document.querySelector('[data-testid="carry-over"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="holidays"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="current-year"]')).toBeNull();
   });
 });

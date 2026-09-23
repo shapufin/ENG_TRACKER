@@ -96,7 +96,7 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
 
       <div
         className={cn(
-          "grid flex-1 gap-2.5 overflow-hidden transition-all duration-300 ease-out",
+          "grid flex-1 gap-3 overflow-hidden transition-all duration-300 ease-out",
           data.isSidebarCollapsed
             ? "xl:grid-cols-[110px_minmax(0,1fr)]"
             : "xl:grid-cols-[200px_minmax(0,1fr)]"

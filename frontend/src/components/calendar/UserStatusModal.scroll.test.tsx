@@ -22,7 +22,6 @@ vi.mock("./hooks/useUserStatusData", () => ({
 }));
 
 vi.mock("./CarryOverCard", () => ({ CarryOverCard: () => <div data-testid="carry-over" /> }));
-vi.mock("./CurrentYearCard", () => ({ CurrentYearCard: () => <div data-testid="current-year" /> }));
 vi.mock("./UpcomingHolidays", () => ({ UpcomingHolidays: () => <div data-testid="holidays" /> }));
 vi.mock("./UserAvatar", () => ({ UserAvatar: () => <div data-testid="avatar" /> }));
 

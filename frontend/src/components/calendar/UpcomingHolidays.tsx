@@ -1,6 +1,6 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { toneSurfaceClass } from "@/components/ui/tone";
+import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import { CalendarDays, Info } from "lucide-react";
 import { format } from "date-fns";
 import type { PublicHoliday } from "@/types";
@@ -17,36 +17,33 @@ interface UpcomingHolidaysProps {
  */
 export const UpcomingHolidays: React.FC<UpcomingHolidaysProps> = ({ holidays }) => {
   return (
-    <div className="mt-5 rounded-3xl border border-line-subtle bg-surface-sunken p-4">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="mt-3 rounded-2xl border border-line-subtle bg-card p-4">
+      <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="rounded-xl bg-indigo-500/10 p-2">
-            <CalendarDays className="h-4 w-4 text-indigo-400" />
+          <div className={`rounded-lg p-1.5 ${toneSurfaceClass.info}`}>
+            <CalendarDays className={`h-4 w-4 ${toneTextClass.info}`} />
           </div>
 
-          <h4 className="text-lg font-semibold">Upcoming holidays</h4>
+          <h4 className="text-sm font-semibold">Upcoming holidays</h4>
         </div>
 
-        <span className="text-xs text-muted-foreground">{holidays.length} scheduled</span>
+        <span className="font-mono text-micro-lg tabular-nums text-muted-foreground">
+          {holidays.length} scheduled
+        </span>
       </div>
 
       {holidays.length > 0 ? (
-        <div className="space-y-2">
+        <div className="divide-y divide-border/50">
           {holidays.map((holiday) => (
-            <div
-              key={holiday.id}
-              className="rounded-2xl border border-line-subtle bg-surface-sunken p-2"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {holiday.name}
-                  </p>
+            <div key={holiday.id} className="py-2 first:pt-1 last:pb-0">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{holiday.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {format(new Date(holiday.date), "d MMM, yyyy")}
                   </p>
                 </div>
-                <Badge variant="secondary" className={`text-xs ${toneSurfaceClass.info}`}>
+                <Badge variant="secondary" className={`shrink-0 text-xs ${toneSurfaceClass.info}`}>
                   {holiday.is_global ? "Global" : "Workspace"}
                 </Badge>
               </div>
@@ -54,7 +51,7 @@ export const UpcomingHolidays: React.FC<UpcomingHolidaysProps> = ({ holidays }) 
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-line-subtle bg-surface-sunken p-3">
+        <div className="rounded-xl border border-dashed border-line-subtle p-3">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Info className="h-4 w-4" />
 
