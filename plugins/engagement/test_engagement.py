@@ -12,6 +12,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
+from apps.leave_management.models.core import LeaveRequest
 from apps.overtime.models.core import OvertimeLog, Client
 from apps.permissions.models import Role, UserRole
 from apps.users.models.core import Team, TeamMembership, UserProfile
@@ -40,7 +41,8 @@ def _make_client():
     return Client.objects.create(name='Acme', code='ACME')
 
 
-def _make_overtime(user, day, submitted_at, hours=4, status='pending', approved_at=None, client=None):
+def _make_overtime(user, day, submitted_at, hours=4, status='pending', approved_at=None, client=None,
+                    approved_by=None):
     log = OvertimeLog.objects.create(
         user=user,
         client=client,
@@ -48,6 +50,7 @@ def _make_overtime(user, day, submitted_at, hours=4, status='pending', approved_
         hours=hours,
         status=status,
         approved_at=approved_at,
+        approved_by=approved_by,
     )
     OvertimeLog.objects.filter(pk=log.pk).update(submitted_at=submitted_at)
     log.refresh_from_db()
@@ -165,6 +168,78 @@ class EngagementServiceTests(TestCase):
         _make_overtime(self.member, self.month, timezone.now(), status='pending', client=self.client_obj)
         self.assertTrue(is_stale(snapshot))
 
+    def test_decisions_during_leave_counted_only_inside_leaders_own_leave(self):
+        LeaveRequest.objects.create(
+            user=self.leader,
+            request_type='vacation',
+            start_date=self.month,
+            end_date=self.month_start.date(),
+            status='approved',
+        )
+        # Decided by the leader while the leader is on leave -> counts.
+        _make_overtime(
+            self.member, self.month, self.month_start, status='approved',
+            approved_at=self.month_start + timedelta(hours=1), client=self.client_obj,
+            approved_by=self.leader,
+        )
+        # Decided by the leader well after the leave window -> does not count.
+        _make_overtime(
+            self.member, self.month, self.month_start, status='approved',
+            approved_at=self.month_start + timedelta(days=20), client=self.client_obj,
+            approved_by=self.leader,
+        )
+
+        snapshot = compute_tl_metric(self.leader, self.team, self.month)
+        self.assertEqual(snapshot.decisions_during_leave, 1)
+
+    def test_decisions_during_leave_not_double_counted_across_month_boundary(self):
+        from calendar import monthrange
+
+        last_day = self.month.replace(day=monthrange(self.month.year, self.month.month)[1])
+        next_month_first = last_day + timedelta(days=1)
+
+        # Leave spans the month boundary: last day of this month through
+        # first day of next month.
+        LeaveRequest.objects.create(
+            user=self.leader,
+            request_type='vacation',
+            start_date=last_day,
+            end_date=next_month_first,
+            status='approved',
+        )
+
+        decided_this_month = timezone.make_aware(
+            timezone.datetime(last_day.year, last_day.month, last_day.day, 10)
+        )
+        decided_next_month = timezone.make_aware(
+            timezone.datetime(next_month_first.year, next_month_first.month, next_month_first.day, 10)
+        )
+        _make_overtime(
+            self.member, self.month, decided_this_month, status='approved',
+            approved_at=decided_this_month, client=self.client_obj, approved_by=self.leader,
+        )
+        _make_overtime(
+            self.member, self.month, decided_next_month, status='approved',
+            approved_at=decided_next_month, client=self.client_obj, approved_by=self.leader,
+        )
+
+        this_month_snapshot = compute_tl_metric(self.leader, self.team, self.month)
+        next_month_snapshot = compute_tl_metric(self.leader, self.team, next_month_first)
+
+        # Each month's snapshot only credits the decision made during its
+        # own slice of the leave — not both, and not neither.
+        self.assertEqual(this_month_snapshot.decisions_during_leave, 1)
+        self.assertEqual(next_month_snapshot.decisions_during_leave, 1)
+
+    def test_decisions_during_leave_zero_without_leave(self):
+        _make_overtime(
+            self.member, self.month, self.month_start, status='approved',
+            approved_at=self.month_start + timedelta(hours=1), client=self.client_obj,
+            approved_by=self.leader,
+        )
+        snapshot = compute_tl_metric(self.leader, self.team, self.month)
+        self.assertEqual(snapshot.decisions_during_leave, 0)
+
     def test_recompute_command_idempotent(self):
         _make_overtime(
             self.member, self.month, self.month_start, status='approved',
@@ -236,3 +311,27 @@ class EngagementAPITests(TestCase):
 
         resp = self._call('trend', self.leader)
         self.assertEqual(resp.status_code, 200)
+
+    def test_export_requires_tl_and_month(self):
+        resp = self._call('export', self.employee, month=self.month.isoformat())
+        self.assertEqual(resp.status_code, 403)
+
+        resp = self._call('export', self.leader)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_export_month_scope_returns_workbook(self):
+        resp = self._call('export', self.leader, month=self.month.isoformat(), scope='month')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            resp['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        self.assertIn('attachment', resp['Content-Disposition'])
+
+    def test_export_year_scope_returns_workbook(self):
+        resp = self._call('export', self.leader, month=self.month.isoformat(), scope='year')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            resp['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )

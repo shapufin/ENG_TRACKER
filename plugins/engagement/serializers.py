@@ -14,7 +14,7 @@ class TLApprovalMetricSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'leader', 'leader_name', 'team', 'team_name', 'month',
             'metrics', 'team_size', 'active_submitters', 'approval_rate_pct',
-            'resubmission_count', 'engagement_score',
+            'resubmission_count', 'engagement_score', 'decisions_during_leave',
             'score_speed', 'score_approval_rate', 'score_activity', 'score_consistency',
             'computed_at', 'is_stale',
         ]

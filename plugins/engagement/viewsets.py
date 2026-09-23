@@ -6,18 +6,21 @@ request time). `view` access is TL-only via the plugin permission manifest;
 row-level scoping additionally restricts non-staff users to their own
 (leader=request.user) rows.
 """
+import io
 from datetime import date
 
 from dateutil.relativedelta import relativedelta
+from django.http import HttpResponse
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.mixins.permissions import PluginPermissionMixin
 
+from .excel_export import build_workbook
 from .models import TLApprovalMetric
 from .serializers import TLApprovalMetricSerializer
-from .services import is_stale
+from .services import is_stale, weighted_avg_tta_hours, weighted_mean
 
 
 def _parse_month(raw):
@@ -64,6 +67,12 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
                 'approval_rate_pct': None,
                 'resubmission_count': 0,
                 'engagement_score': None,
+                'avg_tta_hours': None,
+                'score_speed': None,
+                'score_approval_rate': None,
+                'score_activity': None,
+                'score_consistency': None,
+                'decisions_during_leave': 0,
                 'is_stale': False,
                 'computed_at': None,
             })
@@ -71,6 +80,7 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
         team_size = sum(r.team_size for r in rows)
         active_submitters = sum(r.active_submitters for r in rows)
         resubmission_count = sum(r.resubmission_count for r in rows)
+        decisions_during_leave = sum(r.decisions_during_leave for r in rows)
         total_decided = sum(
             sum(m.get('decided', 0) for m in r.metrics.values()) for r in rows
         )
@@ -80,14 +90,17 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
         approval_rate_pct = (
             round((total_approved / total_decided) * 100, 2) if total_decided else None
         )
-        scored = [(r.engagement_score, r.team_size) for r in rows if r.engagement_score is not None]
-        if scored:
-            weight_sum = sum(w for _, w in scored) or len(scored)
-            engagement_score = round(
-                sum(s * (w or 1) for s, w in scored) / weight_sum, 2
-            )
-        else:
-            engagement_score = None
+
+        avg_tta_hours = weighted_avg_tta_hours(rows)
+
+        def _field_weighted_mean(field):
+            return weighted_mean((getattr(r, field), r.team_size) for r in rows)
+
+        engagement_score = _field_weighted_mean('engagement_score')
+        score_speed = _field_weighted_mean('score_speed')
+        score_approval_rate = _field_weighted_mean('score_approval_rate')
+        score_activity = _field_weighted_mean('score_activity')
+        score_consistency = _field_weighted_mean('score_consistency')
         computed_at = max((r.computed_at for r in rows if r.computed_at), default=None)
 
         return Response({
@@ -98,6 +111,12 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
             'approval_rate_pct': approval_rate_pct,
             'resubmission_count': resubmission_count,
             'engagement_score': engagement_score,
+            'avg_tta_hours': avg_tta_hours,
+            'score_speed': score_speed,
+            'score_approval_rate': score_approval_rate,
+            'score_activity': score_activity,
+            'score_consistency': score_consistency,
+            'decisions_during_leave': decisions_during_leave,
             'is_stale': any(is_stale(r) for r in rows),
             'computed_at': computed_at.isoformat() if computed_at else None,
         })
@@ -116,31 +135,20 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
         by_month = {}
         for row in qs:
-            bucket = by_month.setdefault(row.month, {'scores': [], 'tta_weighted': [], 'tta_weight': []})
-            if row.engagement_score is not None:
-                bucket['scores'].append((row.engagement_score, row.team_size or 1))
-            for type_metrics in row.metrics.values():
-                if type_metrics.get('avg_tta_hours') is not None:
-                    weight = type_metrics.get('decided', 0) or 1
-                    bucket['tta_weighted'].append(type_metrics['avg_tta_hours'] * weight)
-                    bucket['tta_weight'].append(weight)
+            bucket = by_month.setdefault(row.month, {'rows': [], 'decisions_during_leave': 0})
+            bucket['rows'].append(row)
+            bucket['decisions_during_leave'] += row.decisions_during_leave
 
         results = []
         for month in sorted(by_month):
             bucket = by_month[month]
-            if bucket['scores']:
-                w_sum = sum(w for _, w in bucket['scores'])
-                score = round(sum(s * w for s, w in bucket['scores']) / w_sum, 2)
-            else:
-                score = None
-            if bucket['tta_weight']:
-                avg_tta = round(sum(bucket['tta_weighted']) / sum(bucket['tta_weight']), 2)
-            else:
-                avg_tta = None
             results.append({
                 'month': month.isoformat(),
-                'engagement_score': score,
-                'avg_tta_hours': avg_tta,
+                'engagement_score': weighted_mean(
+                    (r.engagement_score, r.team_size or 1) for r in bucket['rows']
+                ),
+                'avg_tta_hours': weighted_avg_tta_hours(bucket['rows']),
+                'decisions_during_leave': bucket['decisions_during_leave'],
             })
         return Response(results)
 
@@ -174,3 +182,43 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
             'is_stale': any(is_stale(r) for r in rows),
             'computed_at': computed_at.isoformat() if computed_at else None,
         })
+
+    @action(detail=False, methods=['get'])
+    def export(self, request):
+        """Download the KPI-evidence workbook. ?month=YYYY-MM-DD&scope=month|year."""
+        try:
+            month = _parse_month(request.query_params.get('month'))
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        if not month:
+            return Response({'error': 'month is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        scope = request.query_params.get('scope', 'month')
+        if scope not in ('month', 'year'):
+            return Response({'error': 'scope must be "month" or "year"'}, status=status.HTTP_400_BAD_REQUEST)
+
+        base_qs = self._base_queryset(request)
+
+        if scope == 'year':
+            target_rows = list(base_qs.filter(month__year=month.year))
+            trend_rows = target_rows
+            period_label = str(month.year)
+        else:
+            target_rows = list(base_qs.filter(month=month))
+            window_start = month - relativedelta(months=5)
+            trend_rows = list(base_qs.filter(month__gte=window_start, month__lte=month))
+            period_label = month.strftime('%B %Y')
+
+        workbook = build_workbook(target_rows, trend_rows, scope, period_label)
+        buffer = io.BytesIO()
+        workbook.save(buffer)
+        buffer.seek(0)
+
+        filename_period = str(month.year) if scope == 'year' else month.strftime('%Y-%m')
+        filename = f'engagement_{scope}_{request.user.username}_{filename_period}.xlsx'
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response

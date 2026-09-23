@@ -42,6 +42,32 @@ def month_bounds(month):
     )
 
 
+def weighted_mean(pairs):
+    """Weighted mean of an iterable of (value, weight) pairs, rounded to 2dp.
+
+    None values are dropped before averaging; a zero/None weight falls back
+    to 1 so a single unweighted value still contributes. Returns None for an
+    empty or all-None input. Shared by the `summary`/`trend` API actions and
+    the Excel export builder so the composite-score and avg-TTA math can't
+    drift between the three call sites.
+    """
+    scored = [(v, w) for v, w in pairs if v is not None]
+    if not scored:
+        return None
+    weight_sum = sum(w for _, w in scored) or len(scored)
+    return round(sum(v * (w or 1) for v, w in scored) / weight_sum, 2)
+
+
+def weighted_avg_tta_hours(rows):
+    """Average `avg_tta_hours` across every type's metrics in `rows`, weighted by decided count."""
+    pairs = []
+    for row in rows:
+        for type_metrics in row.metrics.values():
+            if type_metrics.get('avg_tta_hours') is not None:
+                pairs.append((type_metrics['avg_tta_hours'], type_metrics.get('decided', 0) or 1))
+    return weighted_mean(pairs)
+
+
 def percentile(sorted_values, p):
     """Nearest-rank percentile, matching plugins.ticket_kpi.analytics."""
     n = len(sorted_values)
@@ -217,6 +243,56 @@ def compute_engagement_score(type_metrics, all_tta_hours, team_size, active_subm
     }
 
 
+def _decisions_during_leave(leader, member_ids, month_start, month_end):
+    """Count team-member requests this leader decided while on their own approved leave.
+
+    Leave periods are clipped to this snapshot's own month before matching
+    decisions, so a leave spanning a month boundary is credited to each
+    month only for the slice of the leave that actually falls in it —
+    otherwise both months' snapshots would independently match the same
+    decisions from the shared, un-clipped leave range and double-count them.
+    The decided-items query is also bounded to the clipped leave window
+    instead of scanning the leader's full decision history on every
+    monthly recompute.
+    """
+    if not member_ids:
+        return 0
+
+    month_start_date = month_start.date()
+    month_end_date = month_end.date()  # exclusive (first day of next month)
+
+    leave_periods = list(
+        LeaveRequest.objects.filter(user=leader, status='approved')
+        .filter(start_date__lt=month_end_date, end_date__gte=month_start_date)
+        .values_list('start_date', 'end_date')
+    )
+    if not leave_periods:
+        return 0
+
+    clipped_periods = [
+        (max(start, month_start_date), min(end, month_end_date - timedelta(days=1)))
+        for start, end in leave_periods
+    ]
+    decided_start = min(start for start, _ in clipped_periods)
+    decided_end = max(end for _, end in clipped_periods)
+
+    counted = set()
+    for type_key in REQUEST_TYPES:
+        model = _TYPE_CONFIG[type_key]['model']
+        decided = model.objects.filter(
+            user_id__in=member_ids,
+            approved_by=leader,
+            status__in=('approved', 'rejected'),
+            approved_at__date__gte=decided_start,
+            approved_at__date__lte=decided_end,
+        ).values_list('id', 'approved_at')
+        for obj_id, approved_at in decided:
+            decided_date = approved_at.date()
+            if any(start <= decided_date <= end for start, end in clipped_periods):
+                counted.add((type_key, obj_id))
+    return len(counted)
+
+
 def compute_tl_metric(leader, team, month):
     """Compute (or refresh) one (leader, team, month) snapshot. Idempotent."""
     month_start, month_end = month_bounds(month)
@@ -250,6 +326,7 @@ def compute_tl_metric(leader, team, month):
     engagement_score, sub_scores = compute_engagement_score(
         metrics, all_tta_hours, team_size, active_submitters
     )
+    decisions_during_leave = _decisions_during_leave(leader, member_ids, month_start, month_end)
 
     snapshot, _ = TLApprovalMetric.objects.update_or_create(
         leader=leader,
@@ -262,6 +339,7 @@ def compute_tl_metric(leader, team, month):
             'approval_rate_pct': approval_rate_pct,
             'resubmission_count': total_resubmissions,
             'engagement_score': engagement_score,
+            'decisions_during_leave': decisions_during_leave,
             'computed_at': timezone.now(),
             **sub_scores,
         },

@@ -5,6 +5,8 @@ interface PageShellProps {
   title: string;
   subtitle?: string;
   category?: string;
+  /** Optional badge rendered inline next to the title (e.g. a status pill). */
+  titleBadge?: React.ReactNode;
   actions?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
@@ -14,6 +16,7 @@ const PageShellComponent: React.FC<PageShellProps> = ({
   title,
   subtitle,
   category,
+  titleBadge,
   actions,
   children,
   className,
@@ -25,7 +28,10 @@ const PageShellComponent: React.FC<PageShellProps> = ({
           {category && (
             <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">{category}</p>
           )}
-          <h1 className="text-2xl font-black tracking-tight">{title}</h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-2xl font-black tracking-tight">{title}</h1>
+            {titleBadge}
+          </div>
           {subtitle && (
             <p className="mt-2 text-sm text-muted-foreground sm:text-base">{subtitle}</p>
           )}

@@ -46,8 +46,28 @@ export const AgingBucketChart: React.FC<AgingBucketChartProps> = ({ rows }) => {
 
   const hasData = data.some((d) => d.leave + d.overtime + d.standby > 0);
 
+  const dominant = useMemo(() => {
+    if (!hasData) return null;
+    const total = data.reduce((sum, d) => sum + d.leave + d.overtime + d.standby, 0);
+    const best = data.reduce((max, d) =>
+      d.leave + d.overtime + d.standby > max.leave + max.overtime + max.standby ? d : max
+    );
+    const count = best.leave + best.overtime + best.standby;
+    return { bucket: best.bucket, pct: total ? Math.round((count / total) * 1000) / 10 : 0 };
+  }, [data, hasData]);
+
   return (
-    <ChartCard title="Approval Aging" description="Decided requests by time-to-approve">
+    <ChartCard
+      title="Approval Aging"
+      description="Decided requests by time-to-approve"
+      action={
+        dominant ? (
+          <span className="rounded-full bg-tone-success-surface px-2.5 py-0.5 text-xs font-semibold text-tone-success-text">
+            {dominant.pct}% in {dominant.bucket}
+          </span>
+        ) : undefined
+      }
+    >
       {!hasData ? (
         <EmptyState
           icon={BarChart3}

@@ -34,6 +34,7 @@ export const useEngagementMetrics = (month?: string) => {
     trend: trendQuery.data ?? [],
     teamBreakdown: teamBreakdownQuery.data ?? [],
     isLoading: summaryQuery.isLoading || trendQuery.isLoading || teamBreakdownQuery.isLoading,
+    isFetching: summaryQuery.isFetching || trendQuery.isFetching || teamBreakdownQuery.isFetching,
     isError: summaryQuery.isError || trendQuery.isError || teamBreakdownQuery.isError,
     refetch: () => {
       summaryQuery.refetch();

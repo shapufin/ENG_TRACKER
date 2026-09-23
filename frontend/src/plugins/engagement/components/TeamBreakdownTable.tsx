@@ -2,7 +2,7 @@ import React from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { toneSurfaceClass } from "@/components/ui/tone";
-import { Users2 } from "lucide-react";
+import { HeartHandshake, Users2 } from "lucide-react";
 import type { EngagementTeamBreakdownRow } from "../types/engagement";
 
 interface TeamBreakdownTableProps {
@@ -79,31 +79,42 @@ export const TeamBreakdownTable: React.FC<TeamBreakdownTableProps> = ({ rows }) 
                 <td className="px-4 py-3 tabular-nums">{pendingOver48h(row)}</td>
                 <td className="px-4 py-3 tabular-nums">{row.resubmission_count}</td>
                 <td className="px-4 py-3">
-                  {row.is_stale ? (
-                    <span
-                      role="status"
-                      aria-label="Stale snapshot"
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${toneSurfaceClass.warning}`}
-                    >
+                  <div className="flex items-center gap-1.5">
+                    {row.is_stale ? (
                       <span
-                        className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--tone-warning-text))]"
-                        aria-hidden="true"
-                      />
-                      Stale
-                    </span>
-                  ) : (
-                    <span
-                      role="status"
-                      aria-label="Fresh snapshot"
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${toneSurfaceClass.success}`}
-                    >
+                        role="status"
+                        aria-label="Stale snapshot"
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${toneSurfaceClass.warning}`}
+                      >
+                        <span
+                          className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--tone-warning-text))]"
+                          aria-hidden="true"
+                        />
+                        Stale
+                      </span>
+                    ) : (
                       <span
-                        className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--tone-success-text))]"
-                        aria-hidden="true"
-                      />
-                      Fresh
-                    </span>
-                  )}
+                        role="status"
+                        aria-label="Fresh snapshot"
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${toneSurfaceClass.success}`}
+                      >
+                        <span
+                          className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--tone-success-text))]"
+                          aria-hidden="true"
+                        />
+                        Fresh
+                      </span>
+                    )}
+                    {row.decisions_during_leave > 0 && (
+                      <span
+                        title={`Approved ${row.decisions_during_leave} request(s) while on leave`}
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${toneSurfaceClass.success}`}
+                      >
+                        <HeartHandshake className="h-3 w-3" aria-hidden="true" />
+                        {row.decisions_during_leave}
+                      </span>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

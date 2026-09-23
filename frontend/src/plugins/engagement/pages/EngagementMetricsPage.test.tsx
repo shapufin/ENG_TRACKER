@@ -15,11 +15,19 @@ const baseSummary = {
   approval_rate_pct: 90,
   resubmission_count: 1,
   engagement_score: 78,
+  avg_tta_hours: 6,
+  score_speed: 90,
+  score_approval_rate: 90,
+  score_activity: 60,
+  score_consistency: 80,
+  decisions_during_leave: 0,
   is_stale: false,
   computed_at: "2026-09-20T00:00:00Z",
 };
 
-const baseTrend = [{ month: "2026-09", engagement_score: 78, avg_tta_hours: 6 }];
+const baseTrend = [
+  { month: "2026-09", engagement_score: 78, avg_tta_hours: 6, decisions_during_leave: 0 },
+];
 
 const baseTeamBreakdown = [
   {
@@ -76,6 +84,7 @@ const baseTeamBreakdown = [
     score_approval_rate: 90,
     score_activity: 60,
     score_consistency: 80,
+    decisions_during_leave: 0,
     computed_at: "2026-09-20T00:00:00Z",
     is_stale: false,
   },
@@ -88,6 +97,7 @@ describe("EngagementMetricsPage", () => {
       trend: [],
       teamBreakdown: [],
       isLoading: true,
+      isFetching: true,
       isError: false,
       refetch: vi.fn(),
     });
@@ -102,6 +112,7 @@ describe("EngagementMetricsPage", () => {
       trend: [],
       teamBreakdown: [],
       isLoading: false,
+      isFetching: false,
       isError: false,
       refetch: vi.fn(),
     });
@@ -117,6 +128,7 @@ describe("EngagementMetricsPage", () => {
       trend: [],
       teamBreakdown: [],
       isLoading: false,
+      isFetching: false,
       isError: true,
       refetch,
     });
@@ -131,6 +143,7 @@ describe("EngagementMetricsPage", () => {
       trend: baseTrend,
       teamBreakdown: baseTeamBreakdown,
       isLoading: false,
+      isFetching: false,
       isError: false,
       refetch: vi.fn(),
     });

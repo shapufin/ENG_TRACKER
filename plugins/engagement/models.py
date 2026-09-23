@@ -36,6 +36,10 @@ class TLApprovalMetric(BaseModel):
     active_submitters = models.PositiveIntegerField(default=0)
     approval_rate_pct = models.FloatField(null=True, blank=True)
     resubmission_count = models.PositiveIntegerField(default=0)
+    decisions_during_leave = models.PositiveIntegerField(
+        default=0,
+        help_text='Team-member requests this leader decided while on their own approved leave.',
+    )
 
     engagement_score = models.FloatField(null=True, blank=True)
     score_speed = models.FloatField(null=True, blank=True)
