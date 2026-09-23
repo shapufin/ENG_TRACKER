@@ -6,7 +6,6 @@ request time). `view` access is TL-only via the plugin permission manifest;
 row-level scoping additionally restricts non-staff users to their own
 (leader=request.user) rows.
 """
-import io
 from datetime import date
 
 from dateutil.relativedelta import relativedelta
@@ -17,7 +16,7 @@ from rest_framework.response import Response
 
 from core.mixins.permissions import PluginPermissionMixin
 
-from .excel_export import build_workbook
+from .excel_export import build_workbook_bytes
 from .models import TLApprovalMetric
 from .serializers import TLApprovalMetricSerializer
 from .services import is_stale, weighted_avg_tta_hours, weighted_mean
@@ -209,15 +208,12 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
             trend_rows = list(base_qs.filter(month__gte=window_start, month__lte=month))
             period_label = month.strftime('%B %Y')
 
-        workbook = build_workbook(target_rows, trend_rows, scope, period_label)
-        buffer = io.BytesIO()
-        workbook.save(buffer)
-        buffer.seek(0)
+        workbook_bytes = build_workbook_bytes(target_rows, trend_rows, scope, period_label)
 
         filename_period = str(month.year) if scope == 'year' else month.strftime('%Y-%m')
         filename = f'engagement_{scope}_{request.user.username}_{filename_period}.xlsx'
         response = HttpResponse(
-            buffer.getvalue(),
+            workbook_bytes,
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
         response['Content-Disposition'] = f'attachment; filename="{filename}"'

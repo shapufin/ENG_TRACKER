@@ -22,6 +22,13 @@ REQUEST_TYPES = ('leave', 'overtime', 'standby')
 RESUBMISSION_WINDOW_DAYS = 30
 PENDING_STALE_HOURS = 48
 
+# Per-type speed targets: leave needs a fast answer, but overtime/standby
+# usually require checking timesheets/logs against another system first, so
+# deciding within a week still counts as fully "good" instead of being
+# graded on the same same-day scale as leave.
+SPEED_TARGET_HOURS = {'leave': 4, 'overtime': 24 * 7, 'standby': 24 * 7}
+SPEED_MAX_HOURS = {'leave': 72, 'overtime': 24 * 14, 'standby': 24 * 14}
+
 _TYPE_CONFIG = {
     'leave': {'model': LeaveRequest, 'date_field': 'start_date'},
     'overtime': {'model': OvertimeLog, 'date_field': 'date'},
@@ -201,17 +208,31 @@ def compute_type_metrics(type_key, member_ids, month_start, month_end):
     }, tta_hours
 
 
+def _type_speed_score(type_key, p90_hours):
+    """0-100 speed score for one request type, against that type's own target/ceiling."""
+    if p90_hours is None:
+        return None
+    # Fall back to leave's stricter same-day target for any future request
+    # type that hasn't been given its own entry yet.
+    target = SPEED_TARGET_HOURS.get(type_key, SPEED_TARGET_HOURS['leave'])
+    ceiling = SPEED_MAX_HOURS.get(type_key, SPEED_MAX_HOURS['leave'])
+    if p90_hours <= target:
+        return 100.0
+    if p90_hours >= ceiling:
+        return 0.0
+    return 100 - ((p90_hours - target) / (ceiling - target)) * 100
+
+
 def compute_engagement_score(type_metrics, all_tta_hours, team_size, active_submitters):
     """0-100 composite: speed 40% + approval rate 20% + activity 20% + consistency 20%."""
     total_decided = sum(m['decided'] for m in type_metrics.values())
     total_approved = sum(m['approved'] for m in type_metrics.values())
 
-    p90_values = [m['p90_tta_hours'] for m in type_metrics.values() if m['p90_tta_hours'] is not None]
-    if p90_values:
-        worst_p90 = max(p90_values)
-        speed_score = max(0.0, min(100.0, 100 - ((worst_p90 - 4) / (72 - 4)) * 100)) if worst_p90 > 4 else 100.0
-    else:
-        speed_score = None
+    speed_score = weighted_mean(
+        (_type_speed_score(type_key, m['p90_tta_hours']), m['decided'])
+        for type_key, m in type_metrics.items()
+        if m['p90_tta_hours'] is not None
+    )
 
     approval_score = round((total_approved / total_decided) * 100, 2) if total_decided else None
     activity_score = round((active_submitters / team_size) * 100, 2) if team_size else None

@@ -60,6 +60,22 @@ def _make_overtime(user, day, submitted_at, hours=4, status='pending', approved_
 class EngagementServiceTests(TestCase):
     """Unit tests for the pure compute helpers."""
 
+    def test_speed_score_gives_overtime_standby_a_week_long_target(self):
+        from plugins.engagement.services import compute_engagement_score
+
+        type_metrics = {
+            'leave': {'decided': 1, 'approved': 1, 'p90_tta_hours': 5 * 24},
+            'overtime': {'decided': 1, 'approved': 1, 'p90_tta_hours': 5 * 24},
+            'standby': {'decided': 0, 'approved': 0, 'p90_tta_hours': None},
+        }
+        _, sub_scores = compute_engagement_score(
+            type_metrics, [5 * 24, 5 * 24], team_size=2, active_submitters=2,
+        )
+        # Leave decided in 5 days is past its 72h ceiling -> 0.
+        # Overtime decided in 5 days is still inside its 7-day target -> 100.
+        # score_speed is the decided-weighted mean of the two: (0 + 100) / 2.
+        self.assertEqual(sub_scores['score_speed'], 50.0)
+
     def test_median_p90_known_values(self):
         values = sorted([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         self.assertEqual(percentile(values, 0.50), 6)

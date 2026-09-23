@@ -1,6 +1,7 @@
 import React from "react";
 import {
-  LineChart,
+  ComposedChart,
+  Area,
   Line,
   XAxis,
   YAxis,
@@ -65,19 +66,27 @@ export const TTATrendChart: React.FC<TTATrendChartProps> = ({ data }) => (
     ) : (
       <div className="h-[280px] sm:h-[350px]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="engagementScoreFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.38} />
+                <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} strokeDasharray="0" stroke="hsl(var(--border))" opacity={0.5} />
             <XAxis
               dataKey="month"
               tickFormatter={formatMonthTick}
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
               axisLine={{ stroke: "hsl(var(--border))" }}
+              tickLine={false}
             />
             <YAxis
               yAxisId="score"
               domain={[0, 100]}
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-              axisLine={{ stroke: "hsl(var(--border))" }}
+              axisLine={false}
+              tickLine={false}
               label={{ value: "Score", angle: -90, position: "insideLeft", fontSize: 11 }}
             />
             <YAxis
@@ -85,7 +94,8 @@ export const TTATrendChart: React.FC<TTATrendChartProps> = ({ data }) => (
               orientation="right"
               domain={[0, "auto"]}
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-              axisLine={{ stroke: "hsl(var(--border))" }}
+              axisLine={false}
+              tickLine={false}
               label={{ value: "Hours", angle: 90, position: "insideRight", fontSize: 11 }}
             />
             <Tooltip
@@ -114,14 +124,16 @@ export const TTATrendChart: React.FC<TTATrendChartProps> = ({ data }) => (
               wrapperStyle={{ fontSize: 12, color: "hsl(var(--foreground))" }}
               iconType="line"
             />
-            <Line
+            <Area
               yAxisId="score"
               type="monotone"
               dataKey="engagement_score"
               name="Engagement Score"
               stroke="hsl(var(--chart-1))"
-              strokeWidth={2}
+              strokeWidth={3}
+              fill="url(#engagementScoreFill)"
               dot={renderScoreDot}
+              activeDot={{ r: 7, stroke: "hsl(var(--chart-1))", strokeWidth: 2, fill: "white" }}
               connectNulls
             />
             <Line
@@ -130,11 +142,13 @@ export const TTATrendChart: React.FC<TTATrendChartProps> = ({ data }) => (
               dataKey="avg_tta_hours"
               name="Avg TTA (hours)"
               stroke="hsl(var(--chart-2))"
-              strokeWidth={2}
-              dot={{ r: 3 }}
+              strokeWidth={2.5}
+              strokeDasharray="6 3"
+              dot={{ r: 3, fill: "white", stroke: "hsl(var(--chart-2))", strokeWidth: 2 }}
+              activeDot={{ r: 6 }}
               connectNulls
             />
-          </LineChart>
+          </ComposedChart>
         </ResponsiveContainer>
         <table className="sr-only">
           <caption>Engagement trend data</caption>

@@ -1,56 +1,35 @@
 """
 Excel workbook builder for TL engagement KPI exports.
 
-Self-contained within this plugin: only openpyxl + this plugin's own
-`services` module are used (no cross-plugin imports — see the "Plugin
-removal safety" invariant). The weighted-mean math is shared with the
-`summary`/`trend` API actions via `services.weighted_mean` /
-`weighted_avg_tta_hours` so the workbook can't silently drift from what the
-UI shows. Produces the year-end KPI evidence file a team leader downloads
-from the engagement page: a styled summary, a score/TTA trend chart, an
-aging bar chart, and a per-team-month breakdown with conditional score
-coloring.
+Built on xlsxwriter (not openpyxl) specifically for its native chart
+styling, data-bar conditional formatting, and gradient fills — the export
+is year-end KPI evidence a team leader hands to a reviewer, so it needs to
+look like a real report, not a raw data dump. Self-contained within this
+plugin: only xlsxwriter + this plugin's own `services` module are used (no
+cross-plugin imports — see the "Plugin removal safety" invariant). The
+weighted-mean math is shared with the `summary`/`trend` API actions via
+`services.weighted_mean` / `weighted_avg_tta_hours` so the workbook can't
+silently drift from what the UI shows.
+
+Sheets: Summary (styled KPI panel + score data bar), Trend (dual-axis
+line chart), Approval Aging (styled column chart). No per-team breakdown
+table — a TL's own export is implicitly scoped to their own team(s)
+already, so a repeat listing of "team / leader" adds nothing.
 """
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.chart import BarChart, LineChart, Reference
-from openpyxl.utils import get_column_letter
+import io
+
+import xlsxwriter
 
 from .services import AGING_BUCKETS, REQUEST_TYPES, weighted_avg_tta_hours, weighted_mean
 
-HEADER_FILL = PatternFill(start_color="1D4ED8", end_color="1D4ED8", fill_type="solid")
-HEADER_FONT = Font(bold=True, color="FFFFFF")
-TITLE_FONT = Font(bold=True, size=14, color="0F172A")
-SCORE_GOOD_FILL = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-SCORE_WARN_FILL = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
-SCORE_BAD_FILL = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-THIN_SIDE = Side(style="thin", color="E2E8F0")
-THIN_BORDER = Border(left=THIN_SIDE, right=THIN_SIDE, top=THIN_SIDE, bottom=THIN_SIDE)
-TYPE_COLORS = {"leave": "1D4ED8", "overtime": "059669", "standby": "F59E0B"}
-
-
-def _score_fill(score):
-    if score is None:
-        return None
-    if score >= 80:
-        return SCORE_GOOD_FILL
-    if score >= 50:
-        return SCORE_WARN_FILL
-    return SCORE_BAD_FILL
-
-
-def _style_header_row(ws, row=1, last_col=2):
-    for col in range(1, last_col + 1):
-        cell = ws.cell(row=row, column=col)
-        cell.fill = HEADER_FILL
-        cell.font = HEADER_FONT
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-        cell.border = THIN_BORDER
-
-
-def _autofit(ws, widths):
-    for idx, width in enumerate(widths, start=1):
-        ws.column_dimensions[get_column_letter(idx)].width = width
+PRIMARY = "#1D4ED8"
+SUCCESS = "#059669"
+WARNING = "#F59E0B"
+DANGER = "#DC2626"
+INK = "#0F172A"
+MUTED = "#475569"
+CANVAS = "#F8FAFC"
+TYPE_COLORS = {"leave": PRIMARY, "overtime": SUCCESS, "standby": WARNING}
 
 
 def _aggregate(rows):
@@ -104,189 +83,256 @@ def _group_by_month(rows):
     return results
 
 
-def _build_summary_sheet(ws, target_rows, scope, period_label):
-    ws.title = "Summary"
-    ws["A1"] = "TL Engagement Report"
-    ws["A1"].font = TITLE_FONT
-    ws["A2"] = f"Scope: {'Full year' if scope == 'year' else 'Month'} — {period_label}"
-    ws["A2"].font = Font(color="475569")
+class _Formats:
+    """Cell formats, built once per workbook against its own format cache."""
+
+    def __init__(self, wb):
+        self.title = wb.add_format({
+            "bold": True, "font_size": 20, "font_color": "white", "bg_color": PRIMARY,
+            "valign": "vcenter", "indent": 1,
+        })
+        self.subtitle = wb.add_format({
+            "italic": True, "font_size": 11, "font_color": "white", "bg_color": PRIMARY,
+            "valign": "vcenter", "indent": 1,
+        })
+        self.section = wb.add_format({
+            "bold": True, "font_size": 12, "font_color": INK, "bottom": 2, "bottom_color": PRIMARY,
+        })
+        self.header = wb.add_format({
+            "bold": True, "font_color": "white", "bg_color": INK, "align": "center",
+            "valign": "vcenter", "border": 1, "border_color": "#E2E8F0",
+        })
+        self.label = wb.add_format({"font_color": MUTED, "border": 1, "border_color": "#E2E8F0"})
+        self.value = wb.add_format({
+            "font_color": INK, "bold": True, "align": "center", "border": 1,
+            "border_color": "#E2E8F0",
+        })
+        self.value_pct = wb.add_format({
+            "font_color": INK, "bold": True, "align": "center", "border": 1,
+            "border_color": "#E2E8F0", "num_format": '0.0"%"',
+        })
+        self.value_hours = wb.add_format({
+            "font_color": INK, "bold": True, "align": "center", "border": 1,
+            "border_color": "#E2E8F0", "num_format": '0.0"h"',
+        })
+        self.note = wb.add_format({
+            "italic": True, "font_color": SUCCESS, "bg_color": "#ECFDF5", "border": 1,
+            "border_color": "#A7F3D0", "text_wrap": True, "valign": "vcenter",
+        })
+        self.empty = wb.add_format({"italic": True, "font_color": MUTED})
+        self.cell = wb.add_format({"border": 1, "border_color": "#E2E8F0"})
+        self.cell_center = wb.add_format({"border": 1, "border_color": "#E2E8F0", "align": "center"})
+
+        # Score-bucket fills, built once and reused by every score row
+        # instead of a fresh add_format() call per cell.
+        self.score_good = wb.add_format({
+            "bold": True, "align": "center", "font_color": "white", "bg_color": SUCCESS,
+            "border": 1, "border_color": "#E2E8F0",
+        })
+        self.score_warn = wb.add_format({
+            "bold": True, "align": "center", "font_color": "white", "bg_color": WARNING,
+            "border": 1, "border_color": "#E2E8F0",
+        })
+        self.score_bad = wb.add_format({
+            "bold": True, "align": "center", "font_color": "white", "bg_color": DANGER,
+            "border": 1, "border_color": "#E2E8F0",
+        })
+
+    def score_fill(self, value):
+        if value is None:
+            return None
+        if value >= 80:
+            return self.score_good
+        if value >= 50:
+            return self.score_warn
+        return self.score_bad
+
+
+def _build_summary_sheet(wb, fmt, target_rows, scope, period_label):
+    ws = wb.add_worksheet("Summary")
+    ws.hide_gridlines(2)
+    ws.set_column("A:A", 34)
+    ws.set_column("B:B", 18)
+
+    ws.merge_range("A1:B1", "TL Engagement Report", fmt.title)
+    ws.set_row(0, 30)
+    scope_label = "Full year" if scope == "year" else "Month"
+    ws.merge_range("A2:B2", f"Scope: {scope_label} — {period_label}", fmt.subtitle)
+    ws.set_row(1, 20)
 
     if not target_rows:
-        ws["A4"] = "No engagement snapshots have been computed yet for this scope."
-        ws["A4"].font = Font(italic=True, color="475569")
-        _autofit(ws, [50])
+        ws.write("A4", "No engagement snapshots have been computed yet for this scope.", fmt.empty)
         return
 
     agg = _aggregate(target_rows) or {}
     rows_data = [
-        ("Engagement Score", agg.get("engagement_score")),
-        ("Team size" if scope == "month" else "Team-months", agg.get("team_size")),
-        ("Active submitters", agg.get("active_submitters")),
-        ("Approval rate (%)", agg.get("approval_rate_pct")),
-        ("Avg time-to-approve (hours)", agg.get("avg_tta_hours")),
-        ("Resubmissions", agg.get("resubmission_count")),
-        ("Decisions made while TL on leave", agg.get("decisions_during_leave")),
-        ("Speed score", agg.get("score_speed")),
-        ("Approval-rate score", agg.get("score_approval_rate")),
-        ("Activity score", agg.get("score_activity")),
-        ("Consistency score", agg.get("score_consistency")),
+        ("Engagement Score", agg.get("engagement_score"), "score"),
+        ("Team size" if scope == "month" else "Team-months", agg.get("team_size"), "int"),
+        ("Active submitters", agg.get("active_submitters"), "int"),
+        ("Approval rate", agg.get("approval_rate_pct"), "pct"),
+        ("Avg time-to-approve", agg.get("avg_tta_hours"), "hours"),
+        ("Resubmissions", agg.get("resubmission_count"), "int"),
+        ("Decisions made while TL on leave", agg.get("decisions_during_leave"), "int"),
+        ("Speed score", agg.get("score_speed"), "score100"),
+        ("Approval-rate score", agg.get("score_approval_rate"), "score100"),
+        ("Activity score", agg.get("score_activity"), "score100"),
+        ("Consistency score", agg.get("score_consistency"), "score100"),
     ]
 
-    header_row = 4
-    ws.cell(row=header_row, column=1, value="Metric")
-    ws.cell(row=header_row, column=2, value="Value")
-    _style_header_row(ws, row=header_row, last_col=2)
+    header_row = 3
+    ws.write(header_row, 0, "Metric", fmt.header)
+    ws.write(header_row, 1, "Value", fmt.header)
 
     r = header_row + 1
-    for label, value in rows_data:
-        ws.cell(row=r, column=1, value=label).border = THIN_BORDER
-        cell = ws.cell(row=r, column=2, value=value)
-        cell.border = THIN_BORDER
-        cell.alignment = Alignment(horizontal="center")
-        if label == "Engagement Score":
-            fill = _score_fill(value)
-            if fill:
-                cell.fill = fill
+    score_rows = []
+    for label, value, kind in rows_data:
+        ws.write(r, 0, label, fmt.label)
+        if kind == "pct":
+            ws.write(r, 1, value, fmt.value_pct) if value is not None else ws.write(r, 1, "—", fmt.value)
+        elif kind == "hours":
+            ws.write(r, 1, value, fmt.value_hours) if value is not None else ws.write(r, 1, "—", fmt.value)
+        elif kind in ("score", "score100"):
+            ws.write(r, 1, value if value is not None else "—", fmt.score_fill(value) or fmt.value)
+            score_rows.append(r)
+        else:
+            ws.write(r, 1, value if value is not None else "—", fmt.value)
         r += 1
+
+    # Data-bar conditional formatting on every score row (composite +
+    # the 4 sub-scores) — a real gradient fill Excel renders natively,
+    # layered on top of the bucket color already written above.
+    for score_row in score_rows:
+        ws.conditional_format(score_row, 1, score_row, 1, {
+            "type": "data_bar",
+            "bar_color": PRIMARY,
+            "min_type": "num", "min_value": 0,
+            "max_type": "num", "max_value": 100,
+        })
 
     if agg.get("decisions_during_leave"):
         r += 1
-        ws.cell(row=r, column=1, value="Dedication note").font = Font(bold=True, color="059669")
-        r += 1
-        ws.cell(row=r, column=1, value=(
-            f"This leader made {agg['decisions_during_leave']} approval decision(s) for their "
-            "team while on their own approved leave, evidence of above-and-beyond engagement."
-        ))
-        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
-        ws.cell(row=r, column=1).alignment = Alignment(wrap_text=True)
-
-    _autofit(ws, [34, 16])
+        note = (
+            f"Dedication: this leader made {agg['decisions_during_leave']} approval decision(s) "
+            "for their team while on their own approved leave — evidence of above-and-beyond engagement."
+        )
+        ws.merge_range(r, 0, r, 1, note, fmt.note)
+        ws.set_row(r, 34)
 
 
-def _build_trend_sheet(ws, trend_rows):
-    ws.title = "Trend"
+def _build_trend_sheet(wb, fmt, trend_rows):
+    ws = wb.add_worksheet("Trend")
+    ws.hide_gridlines(2)
     monthly = _group_by_month(trend_rows)
 
-    ws.cell(row=1, column=1, value="Month")
-    ws.cell(row=1, column=2, value="Engagement Score")
-    ws.cell(row=1, column=3, value="Avg TTA (hours)")
-    ws.cell(row=1, column=4, value="Decisions during leave")
-    _style_header_row(ws, row=1, last_col=4)
+    headers = ["Month", "Engagement Score", "Avg TTA (hours)", "Decisions during leave"]
+    for col, label in enumerate(headers):
+        ws.write(0, col, label, fmt.header)
+    ws.set_column(0, 0, 14)
+    ws.set_column(1, 3, 18)
 
-    for idx, point in enumerate(monthly, start=2):
-        ws.cell(row=idx, column=1, value=point["month"].strftime("%b %Y"))
-        ws.cell(row=idx, column=2, value=point["engagement_score"])
-        ws.cell(row=idx, column=3, value=point["avg_tta_hours"])
-        ws.cell(row=idx, column=4, value=point["decisions_during_leave"])
-    _autofit(ws, [14, 18, 16, 20])
+    for idx, point in enumerate(monthly, start=1):
+        ws.write(idx, 0, point["month"].strftime("%b %Y"), fmt.cell_center)
+        ws.write(idx, 1, point["engagement_score"] if point["engagement_score"] is not None else "—", fmt.cell_center)
+        ws.write(idx, 2, point["avg_tta_hours"] if point["avg_tta_hours"] is not None else "—", fmt.cell_center)
+        ws.write(idx, 3, point["decisions_during_leave"], fmt.cell_center)
 
     if len(monthly) < 2:
         return
 
-    last_row = len(monthly) + 1
-    score_chart = LineChart()
-    score_chart.title = "Engagement Score"
-    score_chart.y_axis.title = "Score (0-100)"
-    score_chart.x_axis.title = "Month"
-    score_data = Reference(ws, min_col=2, min_row=1, max_row=last_row)
-    cats = Reference(ws, min_col=1, min_row=2, max_row=last_row)
-    score_chart.add_data(score_data, titles_from_data=True)
-    score_chart.set_categories(cats)
-    score_chart.series[0].graphicalProperties.line.solidFill = "1D4ED8"
+    last_row = len(monthly)
+    score_chart = wb.add_chart({"type": "line"})
+    score_chart.add_series({
+        "name": "Engagement Score",
+        "categories": ["Trend", 1, 0, last_row, 0],
+        "values": ["Trend", 1, 1, last_row, 1],
+        "line": {"color": PRIMARY, "width": 2.75},
+        "marker": {"type": "circle", "size": 6, "fill": {"color": "white"}, "border": {"color": PRIMARY}},
+        "smooth": True,
+    })
+    score_chart.set_y_axis({"name": "Score (0-100)", "min": 0, "max": 100})
+    score_chart.set_x_axis({"name": "Month"})
 
-    tta_chart = LineChart()
-    tta_data = Reference(ws, min_col=3, min_row=1, max_row=last_row)
-    tta_chart.add_data(tta_data, titles_from_data=True)
-    tta_chart.series[0].graphicalProperties.line.solidFill = "059669"
-    tta_chart.y_axis.axId = 200
-    tta_chart.y_axis.title = "Avg TTA (hours)"
-    tta_chart.y_axis.crosses = "max"
+    tta_chart = wb.add_chart({"type": "line"})
+    tta_chart.add_series({
+        "name": "Avg TTA (hours)",
+        "categories": ["Trend", 1, 0, last_row, 0],
+        "values": ["Trend", 1, 2, last_row, 2],
+        "line": {"color": SUCCESS, "width": 2.25, "dash_type": "dash"},
+        "marker": {"type": "diamond", "size": 6, "fill": {"color": "white"}, "border": {"color": SUCCESS}},
+        "y2_axis": True,
+        "smooth": True,
+    })
+    tta_chart.set_y2_axis({"name": "Avg TTA (hours)"})
 
-    # openpyxl's documented secondary-axis recipe: both charts share one
-    # x-axis id, and both y-axes cross that shared axis — rather than the
-    # earlier attempt of pointing the secondary y-axis's crossAx straight at
-    # the primary y-axis, which isn't the pattern Excel expects.
-    score_chart.y_axis.crossAx = 500
-    tta_chart.y_axis.crossAx = 500
-    score_chart.x_axis.axId = 500
-    tta_chart.x_axis.axId = 500
-
-    score_chart += tta_chart
-    ws.add_chart(score_chart, "F2")
+    score_chart.combine(tta_chart)
+    score_chart.set_title({"name": "Engagement Trend"})
+    score_chart.set_size({"width": 760, "height": 380})
+    score_chart.set_style(11)
+    score_chart.set_legend({"position": "bottom"})
+    score_chart.set_plotarea({"fill": {"color": CANVAS}})
+    ws.insert_chart("F1", score_chart)
 
 
-def _build_aging_sheet(ws, target_rows):
-    ws.title = "Approval Aging"
+def _build_aging_sheet(wb, fmt, target_rows):
+    ws = wb.add_worksheet("Approval Aging")
+    ws.hide_gridlines(2)
     totals = {bucket: {t: 0 for t in REQUEST_TYPES} for bucket in AGING_BUCKETS}
     for row in target_rows:
         for type_key, type_metrics in row.metrics.items():
             for bucket in AGING_BUCKETS:
                 totals[bucket][type_key] += type_metrics.get("aging", {}).get(bucket, 0)
 
-    ws.cell(row=1, column=1, value="Aging bucket")
-    for col, type_key in enumerate(REQUEST_TYPES, start=2):
-        ws.cell(row=1, column=col, value=type_key.capitalize())
-    _style_header_row(ws, row=1, last_col=1 + len(REQUEST_TYPES))
+    ws.write(0, 0, "Aging bucket", fmt.header)
+    for col, type_key in enumerate(REQUEST_TYPES, start=1):
+        ws.write(0, col, type_key.capitalize(), fmt.header)
+    ws.set_column(0, 0, 14)
+    ws.set_column(1, len(REQUEST_TYPES), 12)
 
-    for idx, bucket in enumerate(AGING_BUCKETS, start=2):
-        ws.cell(row=idx, column=1, value=bucket)
-        for col, type_key in enumerate(REQUEST_TYPES, start=2):
-            ws.cell(row=idx, column=col, value=totals[bucket][type_key])
-    _autofit(ws, [14, 12, 12, 12])
+    for idx, bucket in enumerate(AGING_BUCKETS, start=1):
+        ws.write(idx, 0, bucket, fmt.cell_center)
+        for col, type_key in enumerate(REQUEST_TYPES, start=1):
+            ws.write(idx, col, totals[bucket][type_key], fmt.cell_center)
 
-    last_row = len(AGING_BUCKETS) + 1
-    chart = BarChart()
-    chart.type = "col"
-    chart.grouping = "clustered"
-    chart.title = "Decided requests by aging bucket"
-    data = Reference(ws, min_col=2, max_col=1 + len(REQUEST_TYPES), min_row=1, max_row=last_row)
-    cats = Reference(ws, min_col=1, min_row=2, max_row=last_row)
-    chart.add_data(data, titles_from_data=True)
-    chart.set_categories(cats)
-    for series, type_key in zip(chart.series, REQUEST_TYPES):
-        series.graphicalProperties.solidFill = TYPE_COLORS[type_key]
-    ws.add_chart(chart, "F2")
-
-
-def _build_team_breakdown_sheet(ws, target_rows):
-    ws.title = "Team Breakdown"
-    headers = [
-        "Team", "Leader", "Month", "Team size", "Engagement score", "Approval rate (%)",
-        "Resubmissions", "Decisions during leave",
-    ]
-    for col, label in enumerate(headers, start=1):
-        ws.cell(row=1, column=col, value=label)
-    _style_header_row(ws, row=1, last_col=len(headers))
-
-    for idx, row in enumerate(sorted(target_rows, key=lambda r: (r.month, r.team.name)), start=2):
-        ws.cell(row=idx, column=1, value=row.team.name)
-        ws.cell(row=idx, column=2, value=row.leader.get_full_name() or row.leader.username)
-        ws.cell(row=idx, column=3, value=row.month.strftime("%b %Y"))
-        ws.cell(row=idx, column=4, value=row.team_size)
-        score_cell = ws.cell(row=idx, column=5, value=row.engagement_score)
-        fill = _score_fill(row.engagement_score)
-        if fill:
-            score_cell.fill = fill
-        ws.cell(row=idx, column=6, value=row.approval_rate_pct)
-        ws.cell(row=idx, column=7, value=row.resubmission_count)
-        ws.cell(row=idx, column=8, value=row.decisions_during_leave)
-        for col in range(1, len(headers) + 1):
-            ws.cell(row=idx, column=col).border = THIN_BORDER
-    _autofit(ws, [20, 20, 12, 10, 14, 16, 14, 18])
+    last_row = len(AGING_BUCKETS)
+    chart = wb.add_chart({"type": "column"})
+    for col, type_key in enumerate(REQUEST_TYPES, start=1):
+        chart.add_series({
+            "name": type_key.capitalize(),
+            "categories": ["Approval Aging", 1, 0, last_row, 0],
+            "values": ["Approval Aging", 1, col, last_row, col],
+            "fill": {"color": TYPE_COLORS[type_key]},
+            "gap": 40,
+            "data_labels": {"value": True},
+        })
+    chart.set_title({"name": "Decided requests by time-to-approve"})
+    chart.set_x_axis({"name": "Aging bucket"})
+    chart.set_y_axis({"name": "Requests"})
+    chart.set_size({"width": 760, "height": 380})
+    chart.set_style(37)
+    chart.set_legend({"position": "bottom"})
+    chart.set_plotarea({"fill": {"color": CANVAS}})
+    ws.insert_chart("F1", chart)
 
 
-def build_workbook(target_rows, trend_rows, scope, period_label):
-    """Build the full engagement KPI workbook.
+def build_workbook_bytes(target_rows, trend_rows, scope, period_label):
+    """Build the engagement KPI workbook and return it as raw .xlsx bytes.
 
     ``target_rows``: the exact rows in the requested export scope (one
-    month's rows, or a full year's rows) — used for Summary/Aging/Team
-    Breakdown.
+    month's rows, or a full year's rows) — used for Summary/Aging.
     ``trend_rows``: the (possibly wider) window used only for the Trend
     sheet's chart, e.g. 6 trailing months for a single-month export.
     """
-    wb = Workbook()
-    _build_summary_sheet(wb.active, target_rows, scope, period_label)
-    _build_trend_sheet(wb.create_sheet("Trend"), trend_rows)
-    _build_aging_sheet(wb.create_sheet("Approval Aging"), target_rows)
-    _build_team_breakdown_sheet(wb.create_sheet("Team Breakdown"), target_rows)
-    return wb
+    buffer = io.BytesIO()
+    wb = xlsxwriter.Workbook(buffer, {"in_memory": True})
+    wb.set_properties({
+        "title": f"TL Engagement Report — {period_label}",
+        "subject": "TL Engagement Metrics",
+        "author": "Engineering Tracker",
+        "comments": "Generated from live TLApprovalMetric snapshots.",
+    })
+    fmt = _Formats(wb)
+    _build_summary_sheet(wb, fmt, target_rows, scope, period_label)
+    _build_trend_sheet(wb, fmt, trend_rows)
+    _build_aging_sheet(wb, fmt, target_rows)
+    wb.close()
+    return buffer.getvalue()

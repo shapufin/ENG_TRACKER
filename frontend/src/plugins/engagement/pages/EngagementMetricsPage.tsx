@@ -254,10 +254,6 @@ export const EngagementMetricsPage: React.FC = () => {
             value={pendingTotal}
           />
         )}
-        <InfoCallout
-          tone="info"
-          label="Score = 40% approval speed + 20% approval rate + 20% team activity + 20% consistency. Speed rewards deciding within 4h; activity tracks the share of your team submitting leave/overtime/standby requests."
-        />
         <TTATrendChart data={trend} />
         <div className="grid gap-6 md:grid-cols-2">
           <AgingBucketChart rows={teamBreakdown} />
