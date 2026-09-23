@@ -29,7 +29,16 @@ const baseSummary = {
 };
 
 const baseTrend = [
-  { month: "2026-09", engagement_score: 78, avg_tta_hours: 6, decisions_during_leave: 0 },
+  {
+    month: "2026-09",
+    engagement_score: 78,
+    avg_tta_hours: 6,
+    decisions_during_leave: 0,
+    score_speed: 90,
+    score_approval_rate: 90,
+    score_activity: 60,
+    score_consistency: 80,
+  },
 ];
 
 const baseTeamBreakdown = [

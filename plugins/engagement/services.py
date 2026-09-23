@@ -58,11 +58,15 @@ def weighted_mean(pairs):
     the Excel export builder so the composite-score and avg-TTA math can't
     drift between the three call sites.
     """
-    scored = [(v, w) for v, w in pairs if v is not None]
+    # Normalize a zero/None weight to 1 before it touches either the
+    # numerator or the denominator — doing this only in the numerator let a
+    # zero-weight row's value inflate the result (full weight in the sum,
+    # zero weight in the divisor).
+    scored = [(v, w or 1) for v, w in pairs if v is not None]
     if not scored:
         return None
-    weight_sum = sum(w for _, w in scored) or len(scored)
-    return round(sum(v * (w or 1) for v, w in scored) / weight_sum, 2)
+    weight_sum = sum(w for _, w in scored)
+    return round(sum(v * w for v, w in scored) / weight_sum, 2)
 
 
 def weighted_avg_tta_hours(rows):

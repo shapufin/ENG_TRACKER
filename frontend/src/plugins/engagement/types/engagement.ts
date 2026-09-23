@@ -41,6 +41,10 @@ export interface EngagementTrendPoint {
   engagement_score: number | null;
   avg_tta_hours: number | null;
   decisions_during_leave: number;
+  score_speed: number | null;
+  score_approval_rate: number | null;
+  score_activity: number | null;
+  score_consistency: number | null;
 }
 
 export interface EngagementTeamBreakdownRow {

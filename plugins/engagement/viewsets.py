@@ -138,16 +138,21 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
             bucket['rows'].append(row)
             bucket['decisions_during_leave'] += row.decisions_during_leave
 
+        def _bucket_weighted_mean(rows, field):
+            return weighted_mean((getattr(r, field), r.team_size) for r in rows)
+
         results = []
         for month in sorted(by_month):
             bucket = by_month[month]
             results.append({
                 'month': month.isoformat(),
-                'engagement_score': weighted_mean(
-                    (r.engagement_score, r.team_size or 1) for r in bucket['rows']
-                ),
+                'engagement_score': _bucket_weighted_mean(bucket['rows'], 'engagement_score'),
                 'avg_tta_hours': weighted_avg_tta_hours(bucket['rows']),
                 'decisions_during_leave': bucket['decisions_during_leave'],
+                'score_speed': _bucket_weighted_mean(bucket['rows'], 'score_speed'),
+                'score_approval_rate': _bucket_weighted_mean(bucket['rows'], 'score_approval_rate'),
+                'score_activity': _bucket_weighted_mean(bucket['rows'], 'score_activity'),
+                'score_consistency': _bucket_weighted_mean(bucket['rows'], 'score_consistency'),
             })
         return Response(results)
 

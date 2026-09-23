@@ -18,7 +18,7 @@ from apps.permissions.models import Role, UserRole
 from apps.users.models.core import Team, TeamMembership, UserProfile
 
 from plugins.engagement.models import TLApprovalMetric
-from plugins.engagement.services import compute_tl_metric, percentile, is_stale
+from plugins.engagement.services import compute_tl_metric, percentile, is_stale, weighted_mean
 from plugins.engagement.viewsets import TLEngagementMetricsViewSet
 
 
@@ -75,6 +75,15 @@ class EngagementServiceTests(TestCase):
         # Overtime decided in 5 days is still inside its 7-day target -> 100.
         # score_speed is the decided-weighted mean of the two: (0 + 100) / 2.
         self.assertEqual(sub_scores['score_speed'], 50.0)
+
+    def test_weighted_mean_zero_weight_row_does_not_inflate_result(self):
+        # A team_size=0 row alongside a team_size=10 row must not skew the
+        # mean toward the zero-weight row's value — its weight normalizes to
+        # 1 in BOTH the numerator and the denominator, not just the former.
+        result = weighted_mean([(100, 0), (0, 10)])
+        # Correct: (100*1 + 0*10) / (1 + 10) = 100/11 ~= 9.09
+        # Buggy (pre-fix): (100*1 + 0*10) / (0 + 10) = 100/10 = 10.0
+        self.assertAlmostEqual(result, 9.09, places=2)
 
     def test_median_p90_known_values(self):
         values = sorted([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
@@ -327,6 +336,16 @@ class EngagementAPITests(TestCase):
 
         resp = self._call('trend', self.leader)
         self.assertEqual(resp.status_code, 200)
+
+    def test_trend_includes_sub_scores(self):
+        resp = self._call('trend', self.leader)
+        self.assertEqual(resp.status_code, 200)
+        point = next(p for p in resp.data if p['month'] == self.month.isoformat())
+        row = TLApprovalMetric.objects.get(leader=self.leader, team=self.team, month=self.month)
+        self.assertEqual(point['score_speed'], row.score_speed)
+        self.assertEqual(point['score_approval_rate'], row.score_approval_rate)
+        self.assertEqual(point['score_activity'], row.score_activity)
+        self.assertEqual(point['score_consistency'], row.score_consistency)
 
     def test_export_requires_tl_and_month(self):
         resp = self._call('export', self.employee, month=self.month.isoformat())

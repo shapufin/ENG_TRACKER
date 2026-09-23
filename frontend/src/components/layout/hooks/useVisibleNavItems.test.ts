@@ -244,8 +244,10 @@ describe("useVisibleNavItems", () => {
   });
 
   // Nav section model — every item carries the section used by SidebarNav
-  // to render the static group labels (Core Ops / Leadership / Skills & KPI /
-  // System). Grouping is derived from the SAME role filter as visibility.
+  // to render the static group labels (Core Ops / Leadership / HR / Skills &
+  // KPI / System). Grouping is derived from the SAME role filter as
+  // visibility. Leadership vs HR are split so a dual-role (TL+HR) user gets
+  // two clearly separated groups instead of one long mixed list.
   it("assigns the exact section per item for a superuser", () => {
     const { result } = renderHook(() => useVisibleNavItems(false, false, false, false, true));
     const byLabel = Object.fromEntries(result.current.map((item) => [item.label, item.section]));
@@ -257,12 +259,12 @@ describe("useVisibleNavItems", () => {
       Calendar: "core",
       "Pending Approvals": "leadership",
       "Team Overview": "leadership",
-      "HR Reports": "leadership",
-      "Team Leader Assignment": "leadership",
-      "Department Settings": "leadership",
-      "Company Holidays": "leadership",
-      "Wage Assignment": "leadership",
-      Payroll: "leadership",
+      "HR Reports": "hr",
+      "Team Leader Assignment": "hr",
+      "Department Settings": "hr",
+      "Company Holidays": "hr",
+      "Wage Assignment": "hr",
+      Payroll: "hr",
       Plugins: "system",
       Admin: "system",
       "Ticket KPI": "skills-kpi",

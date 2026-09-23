@@ -13,19 +13,12 @@ import {
 import { ChartCard } from "@/components/dashboard/ChartCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TrendingUp } from "lucide-react";
+import { formatMonthTick } from "@/lib/monthOptions";
 import type { EngagementTrendPoint } from "../types/engagement";
 
 interface TTATrendChartProps {
   data: EngagementTrendPoint[];
 }
-
-const formatMonthTick = (value: string): string => {
-  const parts = value.split("-");
-  if (parts.length < 2) return value;
-  const date = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
-};
 
 /** Marks months where the leader kept approving requests while on their own
  * leave with a filled amber dot instead of the default outline dot. */

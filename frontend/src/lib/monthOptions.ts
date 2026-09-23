@@ -38,3 +38,15 @@ export const formatMonthLabel = (value: string): string => {
   const fallback = new Date(value);
   return fallback.toLocaleDateString(undefined, { year: "numeric", month: "long" });
 };
+
+/**
+ * Format a "YYYY-MM" or "YYYY-MM-DD" string as a short chart-axis tick
+ * (e.g. "Sep 26"). Falls back to the raw value if it doesn't parse.
+ */
+export const formatMonthTick = (value: string): string => {
+  const parts = value.split("-");
+  if (parts.length < 2) return value;
+  const date = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
+};

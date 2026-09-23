@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/PageShell";
+import { ChartCard } from "@/components/dashboard/ChartCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { InfoCallout } from "@/components/ui/InfoCallout";
@@ -12,6 +13,8 @@ import { SummaryCards } from "../components/SummaryCards";
 import { ScoreBreakdownCard } from "../components/ScoreBreakdownCard";
 import { TTATrendChart } from "../components/TTATrendChart";
 import { AgingBucketChart } from "../components/AgingBucketChart";
+import { ScoreCompositionTrendChart } from "../components/ScoreCompositionTrendChart";
+import { RequestVolumeChart } from "../components/RequestVolumeChart";
 import { TeamBreakdownTable } from "../components/TeamBreakdownTable";
 import { useEngagementMetrics } from "./hooks/useEngagementMetrics";
 import { engagementService } from "../services/engagementService";
@@ -267,6 +270,12 @@ export const EngagementMetricsPage: React.FC = () => {
         <div className="grid gap-6 md:grid-cols-2">
           <AgingBucketChart rows={teamBreakdown} />
           <ScoreBreakdownCard summary={summary} />
+          <ChartCard title="Score Composition Trend" description="Which component is moving, and since when">
+            <ScoreCompositionTrendChart data={trend} />
+          </ChartCard>
+          <ChartCard title="Request Volume" description="Approved, rejected, and pending, by type">
+            <RequestVolumeChart rows={teamBreakdown} />
+          </ChartCard>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative max-w-xs flex-1">

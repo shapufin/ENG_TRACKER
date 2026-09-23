@@ -27,13 +27,19 @@ import {
 } from "@/components/visualization/chart";
 import { ChartSection } from "@/components/visualization/ChartSection";
 import { captureChartsToPdf } from "@/components/visualization/pdfExport";
+import { ScoreCompositionTrendChart } from "../components/ScoreCompositionTrendChart";
+import { RequestVolumeChart } from "../components/RequestVolumeChart";
+import { TeamComparisonChart } from "../components/TeamComparisonChart";
 import { staggerContainer } from "@/lib/motion";
+import { formatMonthTick } from "@/lib/monthOptions";
 import {
   ArrowLeft,
   ArrowUpRight,
   ArrowDownRight,
   Download,
   Gauge,
+  HeartHandshake,
+  RotateCcw,
   TriangleAlert,
 } from "lucide-react";
 import { useEngagementMetrics } from "./hooks/useEngagementMetrics";
@@ -51,14 +57,6 @@ const agingConfig: ChartConfig = {
 
 const BUCKET_ORDER = ["<4h", "4-24h", "1-3d", ">3d"] as const;
 const REQUEST_TYPES = ["leave", "overtime", "standby"] as const;
-
-const formatMonthTick = (value: string): string => {
-  const parts = value.split("-");
-  if (parts.length < 2) return value;
-  const date = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
-};
 
 /** Same 80/50 thresholds SummaryCards/EngagementMetricsPage use — kept in sync. */
 const scoreTone = (score: number | null): "success" | "warning" | "danger" => {
@@ -264,6 +262,23 @@ export const EngagementVisualizationPage: React.FC = () => {
                     </span>
                   )}
                 </div>
+                {(summary.resubmission_count > 0 || summary.decisions_during_leave > 0) && (
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                    {summary.resubmission_count > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                        <RotateCcw className="h-3 w-3" aria-hidden="true" />
+                        {summary.resubmission_count} resubmission
+                        {summary.resubmission_count === 1 ? "" : "s"}
+                      </span>
+                    )}
+                    {summary.decisions_during_leave > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-tone-success-surface px-2.5 py-0.5 text-[11px] font-medium text-tone-success-text">
+                        <HeartHandshake className="h-3 w-3" aria-hidden="true" />
+                        {summary.decisions_during_leave} decided while on leave
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div
@@ -399,6 +414,32 @@ export const EngagementVisualizationPage: React.FC = () => {
             </BarChart>
           </ChartContainer>
         </ChartSection>
+
+        <ChartSection
+          id="viz-score-composition"
+          title="Score Composition Trend"
+          description="Which component is driving the score, and since when"
+        >
+          <ScoreCompositionTrendChart data={trend} />
+        </ChartSection>
+
+        <ChartSection
+          id="viz-volume"
+          title="Request Volume"
+          description="Approved, rejected, and pending, by request type"
+        >
+          <RequestVolumeChart rows={teamBreakdown} />
+        </ChartSection>
+
+        {teamBreakdown.length > 1 && (
+          <ChartSection
+            id="viz-team-comparison"
+            title="Team Comparison"
+            description="Engagement score by team"
+          >
+            <TeamComparisonChart rows={teamBreakdown} />
+          </ChartSection>
+        )}
       </motion.div>
     </PageShell>
   );

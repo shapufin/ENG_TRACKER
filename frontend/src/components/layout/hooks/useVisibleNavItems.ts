@@ -16,13 +16,14 @@ import {
   Wallet,
 } from "lucide-react";
 
-export type NavSection = "core" | "leadership" | "skills-kpi" | "system";
+export type NavSection = "core" | "leadership" | "hr" | "skills-kpi" | "system";
 
-export const NAV_SECTION_ORDER: NavSection[] = ["core", "leadership", "skills-kpi", "system"];
+export const NAV_SECTION_ORDER: NavSection[] = ["core", "leadership", "hr", "skills-kpi", "system"];
 
 export const NAV_SECTION_LABELS: Record<NavSection, string> = {
   core: "Core Ops",
   leadership: "Leadership",
+  hr: "HR",
   "skills-kpi": "Skills & KPI",
   system: "System",
 };
@@ -87,42 +88,42 @@ const allNavItems: NavItem[] = [
     path: "/hr/reports",
     label: "HR Reports",
     icon: Briefcase,
-    section: "leadership",
+    section: "hr",
     roles: ["hr"],
   },
   {
     path: "/hr/team-leaders",
     label: "Team Leader Assignment",
     icon: Users,
-    section: "leadership",
+    section: "hr",
     roles: ["hr"],
   },
   {
     path: "/hr/teams",
     label: "Department Settings",
     icon: Building2,
-    section: "leadership",
+    section: "hr",
     roles: ["hr"],
   },
   {
     path: "/hr/calendars",
     label: "Company Holidays",
     icon: CalendarDays,
-    section: "leadership",
+    section: "hr",
     roles: ["hr"],
   },
   {
     path: "/hr/payroll/wages",
     label: "Wage Assignment",
     icon: Wallet,
-    section: "leadership",
+    section: "hr",
     roles: ["hr"],
   },
   {
     path: "/hr/payroll/runs",
     label: "Payroll",
     icon: Wallet,
-    section: "leadership",
+    section: "hr",
     roles: ["hr"],
   },
   { path: "/admin/plugins", label: "Plugins", icon: Puzzle, section: "system", roles: ["admin"] },
