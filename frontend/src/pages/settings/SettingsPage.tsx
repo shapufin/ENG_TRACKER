@@ -25,6 +25,7 @@ export const SettingsPage: React.FC = () => {
   const isCROnlyAdmin = isCRAdmin && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
   const isCRScoped = isCRUser || isCROnlyAdmin;
   const notificationsActive = activePlugins.some((plugin) => plugin.name === "notifications");
+  const showAssignment = isTeamLeader && !isCRScoped;
   const navigate = useNavigate();
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current: "", new: "", confirm: "" });
@@ -148,9 +149,11 @@ export const SettingsPage: React.FC = () => {
             the access management page; they don't need a self-scope card. */}
         {isCRUser && <PluginCRScopeCard />}
 
-        {/* Notification Preferences — per-category in-app toggle, full width. */}
+        {/* Notification Preferences — per-category in-app toggles. Paired
+            side-by-side with Client Assignment below; spans full width only
+            when the assignment card is hidden (non-TL). */}
         {notificationsActive && !isCRScoped && (
-          <div className="lg:col-span-2">
+          <div className={showAssignment ? undefined : "lg:col-span-2"}>
             <NotificationPreferencesSection />
           </div>
         )}
@@ -160,7 +163,7 @@ export const SettingsPage: React.FC = () => {
             Hidden for CR-scoped identities (no client workflow) and non-TLs;
             self-service MyClientsSection above is untouched
             (last-write-wins). */}
-        {isTeamLeader && !isCRScoped && <ClientAssignmentSection />}
+        {showAssignment && <ClientAssignmentSection />}
       </div>
 
       {/* Change Password — opens in a FormDialog (dialog contract: scroll
