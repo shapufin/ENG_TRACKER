@@ -57,123 +57,124 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onRequestTimeOff,
 }) => (
   <header className="px-2 pt-1.5" aria-label="Calendar controls">
-    <GlassCard isHoverLift={false} className="flex flex-col gap-3 border-b-0 p-3">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <WorkspaceSelector className="w-full max-w-xs sm:w-auto" />
-          <div className="flex items-center gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              className={iconButtonClass}
-              onClick={onPrevMonth}
-              aria-label="Previous month"
-              title="Previous month"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className={actionButtonClass}
-              onClick={onToday}
-              title="Jump to today"
-            >
-              Today
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className={iconButtonClass}
-              onClick={onNextMonth}
-              aria-label="Next month"
-              title="Next month"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <h1 className="w-full text-xl font-semibold tracking-tight sm:w-auto sm:text-2xl">
-            {format(currentMonth, "MMMM yyyy")}
-          </h1>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
+    <GlassCard
+      isHoverLift={false}
+      className="flex flex-col gap-2.5 border-b-0 p-3 xl:flex-row xl:items-center xl:justify-between"
+    >
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <WorkspaceSelector className="w-full max-w-xs shrink-0 sm:w-auto sm:max-w-none" />
+        <div className="flex shrink-0 items-center gap-1">
           <Button
-            size="sm"
-            variant="gradient"
-            className="h-11 rounded-xl px-3.5 md:h-9"
-            onClick={onRequestTimeOff}
-          >
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Request Time Off
-          </Button>
-
-          <div
-            className="flex rounded-xl border border-border/60 bg-muted/40 p-0.5"
-            role="group"
-            aria-label="Calendar view"
-          >
-            {VIEW_MODES.map((view) => (
-              <button
-                key={view.value}
-                type="button"
-                aria-pressed={viewMode === view.value}
-                onClick={() => onSetViewMode(view.value)}
-                className={cn(
-                  "rounded-lg px-3 py-2 text-xs font-medium transition md:py-1.5",
-                  viewMode === view.value
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {view.label}
-              </button>
-            ))}
-          </div>
-
-          <Button
-            size="sm"
+            size="icon"
             variant="ghost"
-            className={actionButtonClass}
-            onClick={() => exportToCSV(events, `calendar-${format(new Date(), "yyyy-MM-dd")}`)}
-            aria-label="Export calendar as CSV"
-            title="Export CSV"
+            className={iconButtonClass}
+            onClick={onPrevMonth}
+            aria-label="Previous month"
+            title="Previous month"
           >
-            <Download className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">CSV</span>
+            <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button
-            size="sm"
-            variant="ghost"
+            variant="outline"
             className={actionButtonClass}
-            onClick={() => exportToICal(events, `calendar-${format(new Date(), "yyyy-MM-dd")}`)}
-            aria-label="Export calendar as iCal"
-            title="Export iCal"
+            onClick={onToday}
+            title="Jump to today"
           >
-            <Download className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">iCal</span>
+            Today
           </Button>
           <Button
             size="icon"
             variant="ghost"
             className={iconButtonClass}
-            onClick={onToggleFullscreen}
-            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-            title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            onClick={onNextMonth}
+            aria-label="Next month"
+            title="Next month"
           >
-            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className={iconButtonClass}
-            onClick={onClearWorkspaceSelection}
-            disabled={!selectedWorkspaceIds.length}
-            aria-label="Clear workspace selection"
-            title="Clear workspace selection"
-          >
-            <RotateCcw className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
+        <h1 className="w-full shrink-0 text-lg font-semibold tracking-tight sm:w-auto xl:text-xl">
+          {format(currentMonth, "MMMM yyyy")}
+        </h1>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          variant="default"
+          className="h-9 rounded-xl px-3.5 text-[13px]"
+          onClick={onRequestTimeOff}
+        >
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          Request Time Off
+        </Button>
+
+        <div
+          className="flex rounded-xl border border-border/60 bg-muted/40 p-0.5"
+          role="group"
+          aria-label="Calendar view"
+        >
+          {VIEW_MODES.map((view) => (
+            <button
+              key={view.value}
+              type="button"
+              aria-pressed={viewMode === view.value}
+              onClick={() => onSetViewMode(view.value)}
+              className={cn(
+                "rounded-lg px-3 py-2 text-xs font-medium transition md:py-1.5",
+                viewMode === view.value
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {view.label}
+            </button>
+          ))}
+        </div>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          className={actionButtonClass}
+          onClick={() => exportToCSV(events, `calendar-${format(new Date(), "yyyy-MM-dd")}`)}
+          aria-label="Export calendar as CSV"
+          title="Export CSV"
+        >
+          <Download className="h-4 w-4 2xl:mr-2" />
+          <span className="hidden 2xl:inline">CSV</span>
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className={actionButtonClass}
+          onClick={() => exportToICal(events, `calendar-${format(new Date(), "yyyy-MM-dd")}`)}
+          aria-label="Export calendar as iCal"
+          title="Export iCal"
+        >
+          <Download className="h-4 w-4 2xl:mr-2" />
+          <span className="hidden 2xl:inline">iCal</span>
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className={iconButtonClass}
+          onClick={onToggleFullscreen}
+          aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+          title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+        >
+          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className={iconButtonClass}
+          onClick={onClearWorkspaceSelection}
+          disabled={!selectedWorkspaceIds.length}
+          aria-label="Clear workspace selection"
+          title="Clear workspace selection"
+        >
+          <RotateCcw className="h-4 w-4" />
+        </Button>
       </div>
     </GlassCard>
   </header>

@@ -61,4 +61,18 @@ describe("CalendarHeader", () => {
     expect(prevButton.className).toContain("md:h-9");
     expect(prevButton.className).toContain("md:w-9");
   });
+
+  it("shows export text labels only at 2xl so the strip holds one line on laptops", () => {
+    render(<CalendarHeader {...baseProps} />);
+
+    const csvButton = screen.getByRole("button", { name: "Export calendar as CSV" });
+    const csvLabel = csvButton.querySelector("span");
+    expect(csvLabel?.className).toContain("hidden");
+    expect(csvLabel?.className).toContain("2xl:inline");
+
+    const icalButton = screen.getByRole("button", { name: "Export calendar as iCal" });
+    const icalLabel = icalButton.querySelector("span");
+    expect(icalLabel?.className).toContain("hidden");
+    expect(icalLabel?.className).toContain("2xl:inline");
+  });
 });

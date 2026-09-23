@@ -33,7 +33,7 @@ export const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
   const selectedWorkspace = workspaces.find((w) => selectedIds.includes(w.id));
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+    <div className={cn("flex min-w-0 flex-nowrap items-center gap-2", className)}>
       <Select
         value={selectedIds.length === 1 ? selectedIds[0]?.toString() || "" : "multi"}
         onValueChange={(val) => {
@@ -41,7 +41,7 @@ export const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
           if (!isNaN(id)) onChange(id);
         }}
       >
-        <SelectTrigger className="h-9 w-[220px] border-border/60 bg-background/50 backdrop-blur-sm">
+        <SelectTrigger className="h-9 min-w-0 flex-1 border-border/60 bg-background/50 backdrop-blur-sm sm:w-[220px] sm:flex-none">
           <div className="flex items-center gap-2 truncate">
             <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
             <SelectValue placeholder="Select workspace">

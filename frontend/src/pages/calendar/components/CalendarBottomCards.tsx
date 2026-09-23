@@ -42,9 +42,7 @@ const VacationBalanceCard: React.FC<{
           Vacation balance
         </p>
         <div className="flex items-end gap-1">
-          <h3 className="text-xl font-semibold text-foreground">
-            {formatDays(remainingDays)}d
-          </h3>
+          <h3 className="text-xl font-semibold text-foreground">{formatDays(remainingDays)}d</h3>
           <span className={`text-[11px] ${toneTextClass.success}`}>remaining</span>
         </div>
       </div>
@@ -82,9 +80,7 @@ const CarryOverCard: React.FC<{
         <span>from {year}</span>
       </div>
       <div className="mt-2 flex items-end gap-2">
-        <h3 className="text-xl font-semibold text-foreground">
-          {formatDays(availableDays)}d
-        </h3>
+        <h3 className="text-xl font-semibold text-foreground">{formatDays(availableDays)}d</h3>
         <p className={`text-[11px] ${toneTextClass.success}`}>available</p>
       </div>
       <div className="mt-2 h-1 overflow-hidden rounded-full bg-tone-success-surface">
@@ -109,7 +105,13 @@ const ConflictsCard: React.FC<{
       <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
         Upcoming conflicts
       </p>
-      <div className={`rounded-full px-2 py-0.5 text-[9px] ${toneSurfaceClass.danger}`}>
+      <div
+        role="status"
+        aria-label={`${conflictEntries.length} upcoming conflicts`}
+        className={`rounded-full px-2 py-0.5 text-[9px] ${
+          conflictEntries.length > 0 ? toneSurfaceClass.danger : toneSurfaceClass.neutral
+        }`}
+      >
         {conflictEntries.length}
       </div>
     </div>
