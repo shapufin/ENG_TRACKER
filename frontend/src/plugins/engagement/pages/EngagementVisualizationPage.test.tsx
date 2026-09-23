@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { EngagementMetricsPage } from "./EngagementMetricsPage";
+import { EngagementVisualizationPage } from "./EngagementVisualizationPage";
 import * as useEngagementMetrics from "./hooks/useEngagementMetrics";
-
-const renderPage = () => render(<EngagementMetricsPage />, { wrapper: MemoryRouter });
 
 vi.mock("./hooks/useEngagementMetrics", () => ({
   useEngagementMetrics: vi.fn(),
 }));
+
+const renderPage = () => render(<EngagementVisualizationPage />, { wrapper: MemoryRouter });
 
 const baseSummary = {
   month: "2026-09-01",
@@ -93,22 +93,7 @@ const baseTeamBreakdown = [
   },
 ];
 
-describe("EngagementMetricsPage", () => {
-  it("renders loading state", () => {
-    vi.mocked(useEngagementMetrics.useEngagementMetrics).mockReturnValue({
-      summary: undefined,
-      trend: [],
-      teamBreakdown: [],
-      isLoading: true,
-      isFetching: true,
-      isError: false,
-      refetch: vi.fn(),
-    });
-
-    renderPage();
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
-  });
-
+describe("EngagementVisualizationPage", () => {
   it("renders empty state when there are no teams", () => {
     vi.mocked(useEngagementMetrics.useEngagementMetrics).mockReturnValue({
       summary: { ...baseSummary, team_count: 0 },
@@ -125,7 +110,6 @@ describe("EngagementMetricsPage", () => {
   });
 
   it("renders error state with retry", () => {
-    const refetch = vi.fn();
     vi.mocked(useEngagementMetrics.useEngagementMetrics).mockReturnValue({
       summary: undefined,
       trend: [],
@@ -133,14 +117,14 @@ describe("EngagementMetricsPage", () => {
       isLoading: false,
       isFetching: false,
       isError: true,
-      refetch,
+      refetch: vi.fn(),
     });
 
     renderPage();
-    expect(screen.getByText("Couldn't load engagement metrics")).toBeInTheDocument();
+    expect(screen.getByText("Couldn't load visualization data")).toBeInTheDocument();
   });
 
-  it("renders summary cards, chart regions, and team breakdown table", () => {
+  it("renders all chart sections and an export control", () => {
     vi.mocked(useEngagementMetrics.useEngagementMetrics).mockReturnValue({
       summary: baseSummary,
       trend: baseTrend,
@@ -153,13 +137,10 @@ describe("EngagementMetricsPage", () => {
 
     renderPage();
 
-    expect(screen.getByText("Engagement Score")).toBeInTheDocument();
-    expect(screen.getByText("Team Size")).toBeInTheDocument();
+    expect(screen.getByText("Composite Engagement Score")).toBeInTheDocument();
     expect(screen.getByText("Engagement Trend")).toBeInTheDocument();
     expect(screen.getByText("Approval Aging")).toBeInTheDocument();
-    expect(screen.getByText("Score breakdown")).toBeInTheDocument();
-    expect(screen.getByText("Engagement by team")).toBeInTheDocument();
-    expect(screen.getByText("Team A")).toBeInTheDocument();
-    expect(screen.getByText("Jane Leader")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /export pdf/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /back to metrics/i })).toBeInTheDocument();
   });
 });

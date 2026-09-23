@@ -48,6 +48,11 @@ class EngagementPlugin(BasePlugin):
                     "component": "EngagementMetricsPage",
                     "layout": "app",
                 },
+                {
+                    "path": "/engagement/visualize",
+                    "component": "EngagementVisualizationPage",
+                    "layout": "app",
+                },
             ],
             "injection_slots": [
                 {

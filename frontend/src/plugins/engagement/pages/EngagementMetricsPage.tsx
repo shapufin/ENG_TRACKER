@@ -6,7 +6,8 @@ import { InfoCallout } from "@/components/ui/InfoCallout";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import { downloadBlobResponse } from "@/lib/download";
-import { Gauge, RefreshCw, Search, TriangleAlert, Upload } from "lucide-react";
+import { Gauge, LineChart, RefreshCw, Search, TriangleAlert, Upload } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { SummaryCards } from "../components/SummaryCards";
 import { ScoreBreakdownCard } from "../components/ScoreBreakdownCard";
 import { TTATrendChart } from "../components/TTATrendChart";
@@ -59,7 +60,8 @@ const parseFilenameFromDisposition = (
 };
 
 export const EngagementMetricsPage: React.FC = () => {
-  const [month, setMonth] = useState<string | undefined>(undefined);
+  const [searchParams] = useSearchParams();
+  const [month, setMonth] = useState<string | undefined>(searchParams.get("month") ?? undefined);
   const [teamFilter, setTeamFilter] = useState("");
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -200,6 +202,13 @@ export const EngagementMetricsPage: React.FC = () => {
               aria-hidden="true"
             />
           </button>
+          <Link
+            to={month ? `/engagement/visualize?month=${month}` : "/engagement/visualize"}
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <LineChart className="h-4 w-4" aria-hidden="true" />
+            Visualize
+          </Link>
           <Popover>
             <PopoverTrigger asChild>
               <button

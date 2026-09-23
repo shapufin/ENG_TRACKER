@@ -7,10 +7,25 @@ interface GlassCardProps extends React.ComponentPropsWithoutRef<typeof motion.di
   isHoverLift?: boolean;
   glow?: "primary" | "success" | "warning" | "destructive" | "none";
   delay?: number;
+  /** Skip this card's own mount fade/slide — use when a parent already
+   * orchestrates entrance (e.g. a `staggerContainer`/`staggerItem` gallery),
+   * so the two animations don't stack into a double-fade. */
+  animateOnMount?: boolean;
 }
 
 const GlassCardComponent = React.forwardRef<HTMLDivElement, GlassCardProps>(
-  ({ children, className, isHoverLift = true, glow = "none", delay = 0, ...props }, ref) => {
+  (
+    {
+      children,
+      className,
+      isHoverLift = true,
+      glow = "none",
+      delay = 0,
+      animateOnMount = true,
+      ...props
+    },
+    ref
+  ) => {
     const shouldReduceMotion = useReducedMotion();
     const glowMap = {
       primary: "before:bg-primary/10",
@@ -23,11 +38,13 @@ const GlassCardComponent = React.forwardRef<HTMLDivElement, GlassCardProps>(
     return (
       <motion.div
         ref={ref}
-        initial={shouldReduceMotion ? false : "hidden"}
-        animate="visible"
-        variants={fadeSlideUp}
+        initial={!animateOnMount || shouldReduceMotion ? false : "hidden"}
+        animate={animateOnMount ? "visible" : undefined}
+        variants={animateOnMount ? fadeSlideUp : undefined}
         transition={
-          shouldReduceMotion ? { duration: 0 } : { duration: DURATION.base, delay, ease: EASE.inOut }
+          !animateOnMount || shouldReduceMotion
+            ? { duration: 0 }
+            : { duration: DURATION.base, delay, ease: EASE.inOut }
         }
         className={cn(
           "relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-glass backdrop-blur-xl",

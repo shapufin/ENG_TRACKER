@@ -198,6 +198,11 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
       }))
     ),
     EngagementSidebarLink: lazy(() => import("./engagement/components/EngagementSidebarLink")),
+    EngagementVisualizationPage: lazy(() =>
+      import("./engagement/pages/EngagementVisualizationPage").then((m) => ({
+        default: m.EngagementVisualizationPage,
+      }))
+    ),
   },
 };
 
