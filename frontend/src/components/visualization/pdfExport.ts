@@ -16,9 +16,7 @@ export async function captureChartsToPdf(
   container: HTMLElement,
   { title, filename }: CaptureToPdfOptions
 ): Promise<void> {
-  const sections = Array.from(
-    container.querySelectorAll<HTMLElement>("[data-chart-section]")
-  );
+  const sections = Array.from(container.querySelectorAll<HTMLElement>("[data-chart-section]"));
   if (sections.length === 0) return;
 
   const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
@@ -29,8 +27,13 @@ export async function captureChartsToPdf(
   const maxWidth = pageWidth - margin * 2;
   const maxHeight = pageHeight - margin * 2 - headerSpace;
 
+  let rendered = 0;
   for (let i = 0; i < sections.length; i++) {
     const canvas = await html2canvas(sections[i], { scale: 2, backgroundColor: null });
+
+    // Zero-area sections (hidden/collapsed) would produce Infinity/NaN
+    // dimensions below — skip them instead of throwing inside addImage.
+    if (canvas.width === 0 || canvas.height === 0) continue;
 
     // Scale by a single factor for both dimensions so the aspect ratio is
     // preserved — clamping height alone would stretch/squish the image
@@ -40,12 +43,16 @@ export async function captureChartsToPdf(
     const drawHeight = canvas.height * scale;
     const x = margin + (maxWidth - drawWidth) / 2;
 
-    if (i > 0) pdf.addPage();
+    if (rendered > 0) pdf.addPage();
     pdf.setFontSize(9);
     pdf.setTextColor(120);
     pdf.text(title, margin, margin - 12);
     pdf.addImage(canvas.toDataURL("image/png"), "PNG", x, margin, drawWidth, drawHeight);
+    rendered++;
   }
+
+  // Nothing renderable (all sections zero-area) — don't download a blank PDF.
+  if (rendered === 0) return;
 
   pdf.save(filename);
 }

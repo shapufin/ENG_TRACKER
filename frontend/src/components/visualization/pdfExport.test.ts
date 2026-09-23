@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import html2canvas from "html2canvas-pro";
 import { captureChartsToPdf } from "./pdfExport";
 
 const addImage = vi.fn();
@@ -58,5 +59,34 @@ describe("captureChartsToPdf", () => {
     const [, , , , drawWidth, drawHeight] = addImage.mock.calls[0];
     // source aspect ratio: 1200 / 3000 = 0.4
     expect(drawWidth / drawHeight).toBeCloseTo(1200 / 3000, 5);
+  });
+
+  it("skips zero-area sections and saves nothing when none render", async () => {
+    const mockedCapture = vi.mocked(html2canvas);
+    mockedCapture.mockResolvedValueOnce({
+      width: 0,
+      height: 0,
+      toDataURL: () => "",
+    } as unknown as HTMLCanvasElement);
+
+    const imagesBefore = addImage.mock.calls.length;
+    const pagesBefore = addPage.mock.calls.length;
+    const savesBefore = save.mock.calls.length;
+
+    // First section renders 0x0 (skipped), the other two render normally.
+    await captureChartsToPdf(makeContainer(3), { title: "t", filename: "f.pdf" });
+
+    expect(addImage.mock.calls.length - imagesBefore).toBe(2);
+    expect(addPage.mock.calls.length - pagesBefore).toBe(1);
+    expect(save.mock.calls.length - savesBefore).toBe(1);
+
+    mockedCapture.mockResolvedValueOnce({
+      width: 0,
+      height: 0,
+      toDataURL: () => "",
+    } as unknown as HTMLCanvasElement);
+    const savesBefore2 = save.mock.calls.length;
+    await captureChartsToPdf(makeContainer(1), { title: "t", filename: "f.pdf" });
+    expect(save.mock.calls.length - savesBefore2).toBe(0);
   });
 });

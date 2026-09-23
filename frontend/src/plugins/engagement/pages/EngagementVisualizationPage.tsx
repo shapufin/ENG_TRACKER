@@ -15,6 +15,7 @@ import {
 import { PageShell } from "@/components/layout/PageShell";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
+import { InfoCallout } from "@/components/ui/InfoCallout";
 import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import {
   ChartContainer,
@@ -27,7 +28,14 @@ import {
 import { ChartSection } from "@/components/visualization/ChartSection";
 import { captureChartsToPdf } from "@/components/visualization/pdfExport";
 import { staggerContainer } from "@/lib/motion";
-import { ArrowLeft, ArrowUpRight, ArrowDownRight, Download, Gauge } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  ArrowDownRight,
+  Download,
+  Gauge,
+  TriangleAlert,
+} from "lucide-react";
 import { useEngagementMetrics } from "./hooks/useEngagementMetrics";
 
 const trendConfig: ChartConfig = {
@@ -71,8 +79,10 @@ const TONE_VAR_NAME: Record<"success" | "warning" | "danger", string> = {
 export const EngagementVisualizationPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const month = searchParams.get("month") ?? undefined;
-  const { summary, trend, teamBreakdown, isLoading, isError, refetch } = useEngagementMetrics(month);
+  const { summary, trend, teamBreakdown, isLoading, isError, refetch } =
+    useEngagementMetrics(month);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
 
   const scoreDelta = useMemo(() => {
@@ -86,12 +96,15 @@ export const EngagementVisualizationPage: React.FC = () => {
   const handleExportPdf = async () => {
     if (!galleryRef.current) return;
     setIsExporting(true);
+    setExportError(null);
     try {
       const period = summary?.month ?? "latest";
       await captureChartsToPdf(galleryRef.current, {
         title: `TL Engagement — Visual Report (${period})`,
         filename: `engagement_visual_${period}.pdf`,
       });
+    } catch {
+      setExportError("Couldn't generate the PDF. Check your connection and try again.");
     } finally {
       setIsExporting(false);
     }
@@ -178,15 +191,22 @@ export const EngagementVisualizationPage: React.FC = () => {
         initial="hidden"
         animate="visible"
         variants={staggerContainer}
-        className="grid gap-6 lg:grid-cols-2"
+        className="grid gap-6"
       >
+        {exportError && (
+          <InfoCallout
+            tone="danger"
+            label={exportError}
+            icon={<TriangleAlert className="h-4 w-4" aria-hidden="true" />}
+          />
+        )}
         {/* Hero score — big gradient number is the headline, the ring is a
          * decorative accent, and a faint sparkline of the score trend gives
          * the card depth instead of a flat fill. */}
-        <ChartSection id="viz-score" title="" className="lg:col-span-2">
+        <ChartSection id="viz-score">
           <div className="relative -m-5 overflow-hidden rounded-xl p-5">
             {trend.length > 1 && (
-              <div className="pointer-events-none absolute inset-0 opacity-40">
+              <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden="true">
                 <ChartContainer config={trendConfig} className="aspect-auto h-full w-full">
                   <AreaChart data={trend} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                     <defs>
@@ -215,7 +235,7 @@ export const EngagementVisualizationPage: React.FC = () => {
                 </p>
                 <div className="mt-2 flex items-baseline justify-center gap-2 sm:justify-start">
                   <span
-                    className="bg-gradient-to-br from-[hsl(var(--chart-1))] to-[hsl(var(--chart-2))] bg-clip-text font-mono text-6xl font-black tracking-tight text-transparent tabular-nums sm:text-7xl"
+                    className="bg-gradient-to-br from-[hsl(var(--chart-1))] to-[hsl(var(--chart-2))] bg-clip-text font-mono text-6xl font-black tabular-nums tracking-tight text-transparent sm:text-7xl"
                     style={{ filter: `drop-shadow(0 0 24px ${ringGlow})` }}
                   >
                     {score !== null ? Math.round(score) : "—"}
@@ -249,7 +269,11 @@ export const EngagementVisualizationPage: React.FC = () => {
               <div
                 className="relative flex h-32 w-32 shrink-0 items-center justify-center rounded-full"
                 role="img"
-                aria-label={`Engagement score ring, ${ringPercent} of 100`}
+                aria-label={
+                  score === null
+                    ? "Engagement score ring, no data"
+                    : `Engagement score ring, ${ringPercent} of 100`
+                }
               >
                 <div
                   className="absolute inset-0 rounded-full transition-[background] duration-700"
@@ -259,7 +283,11 @@ export const EngagementVisualizationPage: React.FC = () => {
                   }}
                 />
                 <div className="absolute inset-[10px] rounded-full bg-card" />
-                <Gauge className="relative h-7 w-7" style={{ color: ringColor }} aria-hidden="true" />
+                <Gauge
+                  className="relative h-7 w-7"
+                  style={{ color: ringColor }}
+                  aria-hidden="true"
+                />
               </div>
             </div>
           </div>
@@ -269,7 +297,6 @@ export const EngagementVisualizationPage: React.FC = () => {
           id="viz-trend"
           title="Engagement Trend"
           description="Score and approval speed over time"
-          className="lg:col-span-2"
         >
           <ChartContainer
             config={trendConfig}
@@ -291,7 +318,9 @@ export const EngagementVisualizationPage: React.FC = () => {
               />
               <YAxis yAxisId="score" domain={[0, 100]} tickLine={false} axisLine={false} />
               <YAxis yAxisId="hours" orientation="right" tickLine={false} axisLine={false} />
-              <ChartTooltip content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />} />
+              <ChartTooltip
+                content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />}
+              />
               <ChartLegend content={<ChartLegendContent />} />
               <Area
                 yAxisId="score"
@@ -311,7 +340,12 @@ export const EngagementVisualizationPage: React.FC = () => {
                 stroke="var(--color-avg_tta_hours)"
                 strokeWidth={2.5}
                 strokeDasharray="6 3"
-                dot={{ r: 3, fill: "hsl(var(--card))", stroke: "var(--color-avg_tta_hours)", strokeWidth: 2 }}
+                dot={{
+                  r: 3,
+                  fill: "hsl(var(--card))",
+                  stroke: "var(--color-avg_tta_hours)",
+                  strokeWidth: 2,
+                }}
                 connectNulls
               />
             </ComposedChart>
@@ -322,7 +356,6 @@ export const EngagementVisualizationPage: React.FC = () => {
           id="viz-aging"
           title="Approval Aging"
           description="Decided requests by time-to-approve, by request type"
-          className="lg:col-span-2"
         >
           <ChartContainer config={agingConfig} className="max-h-[320px] w-full">
             <BarChart data={agingData} barGap={4} barCategoryGap="24%">
@@ -345,9 +378,24 @@ export const EngagementVisualizationPage: React.FC = () => {
               <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
               <ChartTooltip content={<ChartTooltipContent />} />
               <ChartLegend content={<ChartLegendContent />} />
-              <Bar dataKey="leave" fill="url(#vizAgingLeave)" radius={[8, 8, 2, 2]} maxBarSize={48} />
-              <Bar dataKey="overtime" fill="url(#vizAgingOvertime)" radius={[8, 8, 2, 2]} maxBarSize={48} />
-              <Bar dataKey="standby" fill="url(#vizAgingStandby)" radius={[8, 8, 2, 2]} maxBarSize={48} />
+              <Bar
+                dataKey="leave"
+                fill="url(#vizAgingLeave)"
+                radius={[8, 8, 2, 2]}
+                maxBarSize={48}
+              />
+              <Bar
+                dataKey="overtime"
+                fill="url(#vizAgingOvertime)"
+                radius={[8, 8, 2, 2]}
+                maxBarSize={48}
+              />
+              <Bar
+                dataKey="standby"
+                fill="url(#vizAgingStandby)"
+                radius={[8, 8, 2, 2]}
+                maxBarSize={48}
+              />
             </BarChart>
           </ChartContainer>
         </ChartSection>
