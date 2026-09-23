@@ -150,3 +150,30 @@ class NotificationPreference(models.Model):
 
     def __str__(self):
         return f"{self.user.email}: {self.event_type}"
+
+
+class NotificationEventTypeConfig(models.Model):
+    """Global kill-switch per event category, edited in Django admin.
+
+    Missing row means enabled — same default-open convention as the
+    per-user ``NotificationPreference`` rows. When an event type is
+    disabled here it disappears from the preferences endpoint (so user
+    frontends stop showing it) and no notifications are emitted for it.
+    """
+
+    event_type = models.CharField(
+        max_length=40, choices=NotificationPreference.EVENT_TYPES, unique=True
+    )
+    is_enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'notifications'
+
+    def __str__(self):
+        return f"{self.event_type}: {'on' if self.is_enabled else 'off'}"
+
+    @classmethod
+    def is_type_enabled(cls, event_type: str) -> bool:
+        row = cls.objects.filter(event_type=event_type).only('is_enabled').first()
+        return row.is_enabled if row is not None else True

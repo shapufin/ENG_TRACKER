@@ -7,7 +7,7 @@ from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from apps.users.models import Team
 
-from .models import Notification, NotificationPreference
+from .models import Notification, NotificationEventTypeConfig, NotificationPreference
 from .push_service import send_push_notification
 # Importing types triggers __init_subclass__ registration of all types.
 from .types import own, period_finalized, team  # noqa: F401
@@ -53,6 +53,11 @@ def _create_notification(
 ):
     """Deliver an event according to the recipient's saved preferences."""
     notification = None
+
+    # Admin kill-switch wins over per-user rows: a globally disabled type
+    # emits nothing, even for users who never toggled it off themselves.
+    if not NotificationEventTypeConfig.is_type_enabled(event_type):
+        return None
 
     if _preference_enabled(user, event_type, 'in_app'):
         defaults = {

@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import (
     Notification,
+    NotificationEventTypeConfig,
     NotificationPreference,
     PushSubscription,
 )
@@ -83,7 +84,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
         available = set(OWN_EVENT_TYPES)
         if is_team_recipient:
             available.update(TEAM_EVENT_TYPES)
-        return available
+        # Admin kill-switch: globally disabled types vanish from the
+        # preferences list (and PATCH) so user frontends stop showing them.
+        return {t for t in available if NotificationEventTypeConfig.is_type_enabled(t)}
 
     @action(detail=False, methods=['get', 'patch'])
     def preferences(self, request):

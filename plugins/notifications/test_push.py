@@ -12,6 +12,7 @@ from apps.leave_management.models import LeaveRequest
 from apps.users.models import Team, TeamMembership
 from plugins.notifications.models import (
     Notification,
+    NotificationEventTypeConfig,
     NotificationPreference,
     PushSubscription,
 )
@@ -306,6 +307,43 @@ class PushSubscriptionAPITest(TestCase):
             'in_app_enabled': False,
         })
         self.assertEqual(response.status_code, 400)
+
+    def test_globally_disabled_type_hidden_from_preferences(self):
+        NotificationEventTypeConfig.objects.update_or_create(
+            event_type='own_leave_updated', defaults={'is_enabled': False}
+        )
+        response = self._request('get', 'preferences')
+        self.assertEqual(response.status_code, 200)
+        event_types = [item['event_type'] for item in response.data]
+        self.assertNotIn('own_leave_updated', event_types)
+        # Other types for the role are unaffected.
+        self.assertIn('own_leave_submitted', event_types)
+
+    def test_globally_disabled_type_rejects_preference_update(self):
+        NotificationEventTypeConfig.objects.update_or_create(
+            event_type='own_leave_updated', defaults={'is_enabled': False}
+        )
+        response = self._request('patch', 'preferences', {
+            'event_type': 'own_leave_updated',
+            'in_app_enabled': False,
+        })
+        self.assertEqual(response.status_code, 400)
+
+    def test_globally_disabled_type_emits_nothing(self):
+        from plugins.notifications.signals import _create_notification
+        NotificationEventTypeConfig.objects.update_or_create(
+            event_type='own_leave_updated', defaults={'is_enabled': False}
+        )
+        result = _create_notification(
+            self.user,
+            title='t',
+            message='m',
+            event_type='own_leave_updated',
+        )
+        self.assertIsNone(result)
+        self.assertFalse(
+            Notification.objects.filter(user=self.user).exists()
+        )
 
 
 class OvertimeSignalTest(TestCase):
