@@ -41,14 +41,19 @@ const formatMonthLabel = (month: string | null): string => {
 };
 
 /** Same 80/50 thresholds SummaryCards uses for score coloring — kept in sync. */
-const statusForScore = (score: number | null): { label: string; tone: "success" | "warning" | "danger" } => {
+const statusForScore = (
+  score: number | null
+): { label: string; tone: "success" | "warning" | "danger" } => {
   if (score === null) return { label: "No data", tone: "warning" };
   if (score >= 80) return { label: "Healthy · Above Benchmark", tone: "success" };
   if (score >= 50) return { label: "Watch", tone: "warning" };
   return { label: "At Risk", tone: "danger" };
 };
 
-const parseFilenameFromDisposition = (disposition: string | undefined, fallback: string): string => {
+const parseFilenameFromDisposition = (
+  disposition: string | undefined,
+  fallback: string
+): string => {
   const match = disposition?.match(/filename="?([^"]+)"?/);
   return match?.[1] ?? fallback;
 };
@@ -96,7 +101,8 @@ export const EngagementMetricsPage: React.FC = () => {
     const query = teamFilter.trim().toLowerCase();
     if (!query) return teamBreakdown;
     return teamBreakdown.filter(
-      (r) => r.team_name.toLowerCase().includes(query) || r.leader_name.toLowerCase().includes(query)
+      (r) =>
+        r.team_name.toLowerCase().includes(query) || r.leader_name.toLowerCase().includes(query)
     );
   }, [teamBreakdown, teamFilter]);
 
@@ -189,7 +195,10 @@ export const EngagementMetricsPage: React.FC = () => {
             onClick={() => refetch()}
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-foreground"
           >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} aria-hidden="true" />
+            <RefreshCw
+              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
           </button>
           <Popover>
             <PopoverTrigger asChild>
@@ -255,8 +264,11 @@ export const EngagementMetricsPage: React.FC = () => {
           <ScoreBreakdownCard summary={summary} />
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <div className="relative max-w-xs flex-1">
+            <Search
+              className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
             <input
               type="text"
               value={teamFilter}

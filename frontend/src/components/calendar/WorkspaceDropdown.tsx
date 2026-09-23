@@ -41,7 +41,7 @@ export const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
           if (!isNaN(id)) onChange(id);
         }}
       >
-        <SelectTrigger className="h-9 min-w-0 flex-1 border-border/60 bg-background/50 backdrop-blur-sm sm:w-[220px] sm:flex-none">
+        <SelectTrigger className="h-9 min-w-0 flex-1 border-border/60 bg-background/50 backdrop-blur-sm sm:w-[180px] sm:flex-none">
           <div className="flex items-center gap-2 truncate">
             <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
             <SelectValue placeholder="Select workspace">

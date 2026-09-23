@@ -75,4 +75,13 @@ describe("CalendarHeader", () => {
     expect(icalLabel?.className).toContain("hidden");
     expect(icalLabel?.className).toContain("2xl:inline");
   });
+
+  it("forces the designed two-row split below 1440px via a hidden break element", () => {
+    const { container } = render(<CalendarHeader {...baseProps} />);
+
+    const breaker = container.querySelector('[aria-hidden="true"].basis-full');
+    expect(breaker).not.toBeNull();
+    expect(breaker?.className).toContain("min-[1440px]:hidden");
+    expect(breaker?.className).toContain("sm:block");
+  });
 });

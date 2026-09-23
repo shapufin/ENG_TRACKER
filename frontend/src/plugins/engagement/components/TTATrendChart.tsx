@@ -47,7 +47,9 @@ const renderScoreDot = (props: {
       stroke="hsl(var(--chart-1))"
       strokeWidth={2}
     >
-      {dedicated && <title>Approved {payload?.decisions_during_leave} request(s) while on leave</title>}
+      {dedicated && (
+        <title>Approved {payload?.decisions_during_leave} request(s) while on leave</title>
+      )}
     </circle>
   );
 };
@@ -99,7 +101,8 @@ export const TTATrendChart: React.FC<TTATrendChartProps> = ({ data }) => (
                   return [`${value.toFixed(1)} h`, name];
                 }
                 if (name === "Engagement Score") {
-                  const decisions = (item?.payload as EngagementTrendPoint | undefined)?.decisions_during_leave;
+                  const decisions = (item?.payload as EngagementTrendPoint | undefined)
+                    ?.decisions_during_leave;
                   if (decisions) {
                     return [`${value} (approved ${decisions} while on leave)`, name];
                   }

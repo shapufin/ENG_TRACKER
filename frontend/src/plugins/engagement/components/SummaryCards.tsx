@@ -50,7 +50,9 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, scoreDelta 
       label="Approval Rate"
       value={summary.approval_rate_pct !== null ? `${summary.approval_rate_pct.toFixed(0)}%` : "—"}
       icon={CheckCircle2}
-      trend={summary.avg_tta_hours !== null ? `${summary.avg_tta_hours.toFixed(2)}h avg` : undefined}
+      trend={
+        summary.avg_tta_hours !== null ? `${summary.avg_tta_hours.toFixed(2)}h avg` : undefined
+      }
     />
     {summary.decisions_during_leave > 0 ? (
       <StatCard

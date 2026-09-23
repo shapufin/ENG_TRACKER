@@ -107,6 +107,8 @@ export const TeamBreakdownTable: React.FC<TeamBreakdownTableProps> = ({ rows }) 
                     )}
                     {row.decisions_during_leave > 0 && (
                       <span
+                        role="status"
+                        aria-label={`Approved ${row.decisions_during_leave} request(s) while on leave`}
                         title={`Approved ${row.decisions_during_leave} request(s) while on leave`}
                         className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${toneSurfaceClass.success}`}
                       >
