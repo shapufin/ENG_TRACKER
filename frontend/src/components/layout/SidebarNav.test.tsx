@@ -26,10 +26,25 @@ vi.mock("@/context/PluginContext", () => ({
   usePlugins: vi.fn(() => ({ getInjectedComponents: () => [] })),
 }));
 
+vi.mock("@/plugins", () => ({
+  getPluginComponent: (plugin: string, component: string) =>
+    plugin === "onboarding" && component === "OnboardingSidebarLink"
+      ? () => <span>Onboarding Link</span>
+      : null,
+}));
+
 const mockGetInjected = (slots: string[]) => {
   vi.mocked(usePlugins).mockReturnValue({
     getInjectedComponents: (slot: string) =>
       slots.includes(slot) ? [{ pluginName: "p", componentName: "C" }] : [],
+  } as never);
+};
+
+const mockGetInjectedEntries = (
+  entries: { pluginName: string; componentName: string; section?: string }[]
+) => {
+  vi.mocked(usePlugins).mockReturnValue({
+    getInjectedComponents: () => entries,
   } as never);
 };
 
@@ -146,5 +161,30 @@ describe("SidebarNav", () => {
     mockGetInjected([]);
     render(<SidebarNav items={items} collapsed={false} onItemClick={onItemClick} />);
     expect(screen.queryByText("Plugins")).not.toBeInTheDocument();
+  });
+
+  it("renders a section-scoped plugin nav item inside its matching section, not the generic Plugins bucket", async () => {
+    mockGetInjectedEntries([
+      { pluginName: "onboarding", componentName: "OnboardingSidebarLink", section: "leadership" },
+    ]);
+    render(<SidebarNav items={allSectionItems} collapsed={false} onItemClick={onItemClick} />);
+    const leadershipLabel = screen.getByText("Leadership");
+    const link = await screen.findByText("Onboarding Link");
+    expect(
+      leadershipLabel.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(screen.queryByText("Plugins")).not.toBeInTheDocument();
+  });
+
+  it("still renders a section whose only content is a plugin-injected item (no static items visible)", async () => {
+    mockGetInjectedEntries([
+      { pluginName: "onboarding", componentName: "OnboardingSidebarLink", section: "leadership" },
+    ]);
+    const coreOnly: NavItem[] = [
+      { path: "/dashboard", label: "Dashboard", icon: () => <span>icon</span>, section: "core" },
+    ];
+    render(<SidebarNav items={coreOnly} collapsed={false} onItemClick={onItemClick} />);
+    expect(screen.getByText("Leadership")).toBeInTheDocument();
+    expect(await screen.findByText("Onboarding Link")).toBeInTheDocument();
   });
 });

@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 import { usePermissions } from "@/context/PermissionContext";
-import { Users, Clock, Calendar as CalendarIcon } from "lucide-react";
+import { Users, Clock, Calendar as CalendarIcon, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { OvertimeLog, StandbyLog, LeaveRequest } from "@/types";
 import { RecordDetailModal } from "@/components/team/RecordDetailModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +20,7 @@ import { useTeamColumns } from "./hooks/useTeamColumns";
 import { useTeamBulkActions } from "./hooks/useTeamBulkActions";
 import { TeamOverviewCard } from "./components/TeamOverviewCard";
 import { TeamFilterBar } from "./components/TeamFilterBar";
+import { TeamExportDialog } from "./components/TeamExportDialog";
 import { TeamGroupedTables } from "./components/TeamGroupedTables";
 import { handleRejectConfirm } from "./teamManagementHelpers";
 
@@ -59,6 +61,7 @@ const TeamManagementPage: React.FC = () => {
     type: "overtime" | "standby" | "leave";
   } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
 
   const {
     confirmAction,
@@ -136,6 +139,12 @@ const TeamManagementPage: React.FC = () => {
           overtimeHours={overtimeHours}
           standbyHours={standbyHours}
         />
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+            <Download className="mr-2 h-4 w-4" /> Export
+          </Button>
+        </div>
+
         <TeamFilterBar
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
@@ -151,6 +160,8 @@ const TeamManagementPage: React.FC = () => {
           onMemberGroupModeChange={setMemberGroupMode}
           availableTeams={availableTeams}
         />
+
+        <TeamExportDialog open={exportOpen} onOpenChange={setExportOpen} />
 
         <AnimatePresence>
           {selectedItems.size > 0 && (

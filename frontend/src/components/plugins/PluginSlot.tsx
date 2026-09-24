@@ -4,12 +4,18 @@ import { getPluginComponent } from "@/plugins";
 
 interface PluginSlotProps {
   slot: string;
+  /** Restrict to items declaring this nav section, or (when omitted) only
+   * items with no declared section — so a section-scoped consumer and the
+   * generic fallback bucket never double-render the same item. */
+  section?: string;
   fallback?: React.ReactNode;
 }
 
-export const PluginSlot: React.FC<PluginSlotProps> = ({ slot, fallback = null }) => {
+export const PluginSlot: React.FC<PluginSlotProps> = ({ slot, section, fallback = null }) => {
   const { getInjectedComponents } = usePlugins();
-  const injected = getInjectedComponents(slot);
+  const injected = getInjectedComponents(slot).filter((item) =>
+    section ? item.section === section : !item.section
+  );
 
   if (injected.length === 0) {
     return null;

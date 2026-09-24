@@ -1,6 +1,7 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
 import { usePlugins } from "@/context/PluginContext";
+import { PluginSlot } from "@/components/plugins/PluginSlot";
 import { SidebarNavLink } from "./SidebarNavLink";
 import { SidebarSectionLabel } from "./SidebarSectionLabel";
 import { NAV_SECTION_LABELS, NAV_SECTION_ORDER } from "./hooks/useVisibleNavItems";
@@ -23,8 +24,11 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   badgeMap,
 }) => {
   const location = useLocation();
-  const { getInjectedComponents } = usePlugins();
-  const hasPluginNav = getInjectedComponents("sidebar-nav").length > 0;
+  const injectedSidebarNav = usePlugins().getInjectedComponents("sidebar-nav");
+  // Only items with no declared `section` fall into the generic "Plugins"
+  // bucket — section-scoped items render inline under their own section
+  // group below instead (see the `groups.map` loop).
+  const hasPluginNav = injectedSidebarNav.some((item) => !item.section);
 
   // Pinned items (e.g. Settings) render after section groups AND
   // plugin-injected items so they are always the last entries in the nav,
@@ -35,7 +39,12 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   const groups = NAV_SECTION_ORDER.map((section) => ({
     section,
     items: flowItems.filter((item) => item.section === section),
-  })).filter((group) => group.items.length > 0);
+    // A section can be worth rendering purely for a plugin-injected item —
+    // e.g. an employee with no static "leadership" items (Team Overview is
+    // team_leader-only) but with Onboarding access, which declares
+    // section: "leadership" on its own gating.
+    hasInjectedItems: injectedSidebarNav.some((item) => item.section === section),
+  })).filter((group) => group.items.length > 0 || group.hasInjectedItems);
 
   const renderItem = (item: NavItem) => {
     const isActive = item.exact
@@ -62,6 +71,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
           <React.Fragment key={section}>
             {!collapsed && <SidebarSectionLabel label={NAV_SECTION_LABELS[section]} />}
             {items.map(renderItem)}
+            <PluginSlot slot="sidebar-nav" section={section} />
           </React.Fragment>
         ))}
         {hasPluginNav && !collapsed && <SidebarSectionLabel label="Plugins" />}

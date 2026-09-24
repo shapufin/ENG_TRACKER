@@ -316,6 +316,14 @@ else:
 _cache_version = os.getenv('CACHE_VERSION') or os.getenv('BUILD_ID', '1')
 CACHE_VERSION = int(_cache_version)
 
+# OnlyOffice Document Server — in-browser Office document editing (onboarding
+# plugin). Empty by default: the frontend Edit button only renders when
+# ONLYOFFICE_DOCUMENT_SERVER_URL is set, so dev/test environments without the
+# document server running are unaffected. JWT_SECRET must match the
+# `JWT_SECRET` env var given to the onlyoffice/documentserver container.
+ONLYOFFICE_DOCUMENT_SERVER_URL = os.getenv('ONLYOFFICE_DOCUMENT_SERVER_URL', '')
+ONLYOFFICE_JWT_SECRET = os.getenv('ONLYOFFICE_JWT_SECRET', '')
+
 # Standardized cache timeout settings (in seconds)
 CACHE_TIMEOUT = {
     'REAL_TIME': 0,           # No cache

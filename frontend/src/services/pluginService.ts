@@ -15,7 +15,13 @@ export interface PluginMetadata {
   injection_slots: {
     slot: string;
     component: string;
+    /** Optional static nav section (see NavSection in useVisibleNavItems.ts)
+     * this item should group under instead of the generic "Plugins" bucket. */
+    section?: string;
   }[];
+  /** Optional plugin-level feature flags/config, read by that plugin's own
+   * frontend code (e.g. onboarding's `office_editor_enabled`). */
+  settings?: Record<string, unknown>;
 }
 
 export interface PluginRecord {

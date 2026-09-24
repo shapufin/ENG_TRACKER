@@ -198,10 +198,22 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
       }))
     ),
     EngagementSidebarLink: lazy(() => import("./engagement/components/EngagementSidebarLink")),
+    EngagementAdminSidebarItem: lazy(() =>
+      import("./engagement/components/EngagementAdminSidebarItem")
+    ),
     EngagementVisualizationPage: lazy(() =>
       import("./engagement/pages/EngagementVisualizationPage").then((m) => ({
         default: m.EngagementVisualizationPage,
       }))
+    ),
+  },
+  onboarding: {
+    OnboardingPage: lazy(() =>
+      import("./onboarding/pages/OnboardingPage").then((m) => ({ default: m.OnboardingPage }))
+    ),
+    OnboardingSidebarLink: lazy(() => import("./onboarding/components/OnboardingSidebarLink")),
+    DocumentEditorPage: lazy(() =>
+      import("./onboarding/pages/DocumentEditorPage").then((m) => ({ default: m.DocumentEditorPage }))
     ),
   },
 };

@@ -6,7 +6,9 @@ import { fetchActivePlugins } from "./pluginContextHelpers";
 interface PluginContextType {
   activePlugins: PluginMetadata[];
   isLoading: boolean;
-  getInjectedComponents: (slot: string) => { pluginName: string; componentName: string }[];
+  getInjectedComponents: (
+    slot: string
+  ) => { pluginName: string; componentName: string; section?: string }[];
   refreshActivePlugins: () => Promise<void>;
 }
 
@@ -54,13 +56,14 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const getInjectedComponents = useCallback(
     (slot: string) => {
-      const components: { pluginName: string; componentName: string }[] = [];
+      const components: { pluginName: string; componentName: string; section?: string }[] = [];
       activePlugins.forEach((plugin) => {
         plugin.injection_slots.forEach((injection) => {
           if (injection.slot === slot) {
             components.push({
               pluginName: plugin.name,
               componentName: injection.component,
+              section: injection.section,
             });
           }
         });

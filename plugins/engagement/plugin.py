@@ -53,11 +53,20 @@ class EngagementPlugin(BasePlugin):
                     "component": "EngagementVisualizationPage",
                     "layout": "app",
                 },
+                {
+                    "path": "/admin/engagement",
+                    "component": "EngagementMetricsPage",
+                    "layout": "admin",
+                },
             ],
             "injection_slots": [
                 {
                     "slot": "sidebar-nav",
                     "component": "EngagementSidebarLink",
+                },
+                {
+                    "slot": "admin-sidebar-nav",
+                    "component": "EngagementAdminSidebarItem",
                 },
             ],
         })
