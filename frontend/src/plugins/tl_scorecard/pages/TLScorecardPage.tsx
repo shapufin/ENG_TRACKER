@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Award,
   CalendarClock,
   CheckCircle2,
   ClipboardList,
@@ -10,7 +11,9 @@ import {
   Hourglass,
   PhoneCall,
   Plus,
+  ShieldAlert,
   TriangleAlert,
+  UserMinus,
   UserX,
   Users,
   UsersRound,
@@ -23,10 +26,13 @@ import { InfoCallout } from "@/components/ui/InfoCallout";
 import { StatCard } from "@/components/ui/StatCard";
 import { toneTextClass } from "@/components/ui/tone";
 import { engagementService } from "@/plugins/engagement/services/engagementService";
+import { EscalationsPanel } from "../components/EscalationsPanel";
+import { FlagAbsenceDialog } from "../components/FlagAbsenceDialog";
 import { FlagIdleDialog } from "../components/FlagIdleDialog";
 import { KpiCoveragePanel } from "../components/KpiCoveragePanel";
 import { LogMeetingDialog } from "../components/LogMeetingDialog";
 import { LogReviewDeliveryDialog } from "../components/LogReviewDeliveryDialog";
+import { NominatePromotionDialog } from "../components/NominatePromotionDialog";
 import { tlScorecardService } from "../services/tlScorecardService";
 
 const LoadingState: React.FC = () => (
@@ -52,6 +58,8 @@ export const TLScorecardPage: React.FC = () => {
   const [meetingDialogOpen, setMeetingDialogOpen] = useState(false);
   const [idleDialogOpen, setIdleDialogOpen] = useState(false);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [absenceDialogOpen, setAbsenceDialogOpen] = useState(false);
+  const [promotionDialogOpen, setPromotionDialogOpen] = useState(false);
 
   const invalidateScorecard = () => queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "scorecard"] });
   const createMeetingMutation = useMutation({
@@ -64,6 +72,14 @@ export const TLScorecardPage: React.FC = () => {
   });
   const createReviewDeliveryMutation = useMutation({
     mutationFn: tlScorecardService.createReviewDelivery,
+    onSuccess: invalidateScorecard,
+  });
+  const createAbsenceMutation = useMutation({
+    mutationFn: tlScorecardService.createAbsence,
+    onSuccess: invalidateScorecard,
+  });
+  const createPromotionFlagMutation = useMutation({
+    mutationFn: tlScorecardService.createPromotionFlag,
     onSuccess: invalidateScorecard,
   });
 
@@ -83,6 +99,10 @@ export const TLScorecardPage: React.FC = () => {
     queryKey: ["tl-scorecard", "engagement-survey-average"],
     queryFn: async () => (await tlScorecardService.getEngagementSurveyTeamAverage()).data,
   });
+  const escalationsQuery = useQuery({
+    queryKey: ["tl-scorecard", "escalations"],
+    queryFn: async () => (await tlScorecardService.getEscalations()).data,
+  });
 
   if (scorecardQuery.isLoading) return <LoadingState />;
 
@@ -98,8 +118,10 @@ export const TLScorecardPage: React.FC = () => {
     );
   }
 
-  const { leave, overtime, team_size, month, meetings, idle, review_deliveries_ytd, seniority } =
-    scorecardQuery.data;
+  const {
+    leave, overtime, team_size, month, meetings, idle, review_deliveries_ytd, seniority,
+    absences, pip, promotion,
+  } = scorecardQuery.data;
   const monthLabel = new Date(`${month}T00:00:00`).toLocaleDateString(undefined, {
     month: "long",
     year: "numeric",
@@ -251,6 +273,55 @@ export const TLScorecardPage: React.FC = () => {
           </div>
         </section>
 
+        <section>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-muted-foreground">Governance & Risk</h2>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setAbsenceDialogOpen(true)}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> Flag absence
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setPromotionDialogOpen(true)}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> Nominate promotion
+              </Button>
+            </div>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard
+              label="Absences unaddressed >5 days"
+              value={absences.breached_5_day_sla}
+              icon={UserMinus}
+              valueColorClass={absences.breached_5_day_sla === 0 ? toneTextClass.success : toneTextClass.danger}
+              trend={`${absences.open_count} open total`}
+            />
+            <StatCard
+              label="PIPs pending HR approval"
+              value={pip.pending_approval_count}
+              icon={ShieldAlert}
+              valueColorClass={pip.pending_approval_count === 0 ? toneTextClass.success : toneTextClass.warning}
+              trend={`${pip.active_count} active`}
+            />
+            <StatCard
+              label="Promotion ratio"
+              value={promotion.promoted_pct !== null ? `${promotion.promoted_pct}%` : "—"}
+              icon={Award}
+              trend={`Target: ${promotion.target_pct}%/year · ${promotion.promoted_count} promoted`}
+              progressPercent={promotion.promoted_pct ?? undefined}
+            />
+            <StatCard
+              label="Escalation risks"
+              value={escalationsQuery.data?.length ?? scorecardQuery.data.escalation_count}
+              icon={ShieldAlert}
+              valueColorClass={
+                (escalationsQuery.data?.length ?? scorecardQuery.data.escalation_count) === 0
+                  ? toneTextClass.success
+                  : toneTextClass.danger
+              }
+              trend="Target: 0"
+            />
+          </div>
+          {escalationsQuery.data && <div className="mt-4"><EscalationsPanel candidates={escalationsQuery.data} /></div>}
+        </section>
+
         {coverageQuery.data && <KpiCoveragePanel entries={coverageQuery.data} />}
       </div>
 
@@ -273,6 +344,20 @@ export const TLScorecardPage: React.FC = () => {
         onOpenChange={setReviewDialogOpen}
         onCreate={async (data) => {
           await createReviewDeliveryMutation.mutateAsync(data);
+        }}
+      />
+      <FlagAbsenceDialog
+        open={absenceDialogOpen}
+        onOpenChange={setAbsenceDialogOpen}
+        onCreate={async (data) => {
+          await createAbsenceMutation.mutateAsync(data);
+        }}
+      />
+      <NominatePromotionDialog
+        open={promotionDialogOpen}
+        onOpenChange={setPromotionDialogOpen}
+        onCreate={async (data) => {
+          await createPromotionFlagMutation.mutateAsync(data);
         }}
       />
     </PageShell>

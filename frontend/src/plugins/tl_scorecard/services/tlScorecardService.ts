@@ -1,5 +1,10 @@
 import api from "@/lib/api";
-import type { EngagementSurveyTeamAverage, KpiCoverageEntry, Scorecard } from "../types/tlScorecard";
+import type {
+  EngagementSurveyTeamAverage,
+  EscalationCandidate,
+  KpiCoverageEntry,
+  Scorecard,
+} from "../types/tlScorecard";
 
 const BASE = "/plugins/tl_scorecard";
 
@@ -34,4 +39,12 @@ export const tlScorecardService = {
 
   createReviewDelivery: (data: { period: string; recipient: string; delivered_on: string }) =>
     api.post(`${BASE}/review-deliveries/`, data),
+
+  getEscalations: () => api.get<EscalationCandidate[]>(`${BASE}/escalations/`),
+
+  createAbsence: (data: { employee: number; absence_date: string; reason: string; notes: string }) =>
+    api.post(`${BASE}/absences/`, data),
+
+  createPromotionFlag: (data: { employee: number; nominated_on: string; notes: string }) =>
+    api.post(`${BASE}/promotion-flags/`, data),
 };

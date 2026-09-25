@@ -8,6 +8,7 @@ from datetime import date
 from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.db.models import Avg, Count
+from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
@@ -15,18 +16,36 @@ from rest_framework.response import Response
 
 from core.mixins.permissions import PluginPermissionMixin
 
-from .models import EngagementSurveyResponse, IdleFlag, IdleStatusUpdate, Meeting, MeetingAttendee, ReviewDelivery
+from .models import (
+    Absence,
+    EngagementSurveyResponse,
+    EPRCycle,
+    EPRGoal,
+    IdleFlag,
+    IdleStatusUpdate,
+    Meeting,
+    MeetingAttendee,
+    PIPRecord,
+    PromotionFlag,
+    ReviewDelivery,
+)
 from .serializers import (
+    AbsenceSerializer,
     EngagementSurveyResponseSerializer,
+    EPRCycleSerializer,
+    EPRGoalSerializer,
+    EscalationCandidateSerializer,
     IdleFlagSerializer,
     IdleStatusUpdateSerializer,
     KpiCoverageEntrySerializer,
     MeetingAttendeeSerializer,
     MeetingSerializer,
+    PIPRecordSerializer,
+    PromotionFlagSerializer,
     ReviewDeliverySerializer,
     ScorecardSerializer,
 )
-from .services import KPI_COVERAGE, build_scorecard
+from .services import KPI_COVERAGE, build_scorecard, escalation_candidates
 
 
 def _parse_month(raw):
@@ -76,6 +95,11 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
     @action(detail=False, methods=['get'], url_path='kpi-coverage', url_name='kpi-coverage')
     def kpi_coverage(self, request):
         return Response(KpiCoverageEntrySerializer(KPI_COVERAGE, many=True).data)
+
+    @action(detail=False, methods=['get'])
+    def escalations(self, request):
+        """Computed candidates, not a log — see services.escalation_candidates."""
+        return Response(EscalationCandidateSerializer(escalation_candidates(request.user), many=True).data)
 
 
 class MeetingViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
@@ -225,3 +249,136 @@ class EngagementSurveyResponseViewSet(PluginPermissionMixin, viewsets.ModelViewS
             'average_score': round(agg['average_score'], 1) if agg['average_score'] is not None else None,
             'response_count': agg['response_count'],
         })
+
+
+class AbsenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+    plugin_name = 'tl_scorecard'
+    serializer_class = AbsenceSerializer
+
+    def get_queryset(self):
+        qs = Absence.objects.select_related('employee', 'flagged_by')
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            return qs
+        return qs.filter(flagged_by=self.request.user)
+
+    def perform_create(self, serializer):
+        employee = serializer.validated_data['employee']
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            if employee.id not in self.request.user.profile.get_team_member_ids():
+                raise ValidationError({'employee': 'You can only flag your own team members.'})
+        serializer.save(flagged_by=self.request.user)
+
+
+class PIPRecordViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+    """Approval is deliberately staff-only (`approve` action) — this
+    plugin's role manifest has no HR bucket, and "prior HR approval" is
+    the one KPI requirement that must not be self-granted by the TL who
+    created the record."""
+    plugin_name = 'tl_scorecard'
+    serializer_class = PIPRecordSerializer
+    permission_action_map = {'approve': 'manage'}
+
+    def get_queryset(self):
+        qs = PIPRecord.objects.select_related('employee', 'tl', 'approved_by')
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            return qs
+        return qs.filter(tl=self.request.user)
+
+    def perform_create(self, serializer):
+        employee = serializer.validated_data['employee']
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            if employee.id not in self.request.user.profile.get_team_member_ids():
+                raise ValidationError({'employee': 'You can only open a PIP for your own team members.'})
+        serializer.save(tl=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        if not (request.user.is_staff or request.user.is_superuser):
+            raise PermissionDenied('Only staff/HR can approve a PIP.')
+        pip = self.get_object()
+        pip.approved_by = request.user
+        pip.approved_at = timezone.now()
+        pip.save(update_fields=['approved_by', 'approved_at'])
+        return Response(PIPRecordSerializer(pip).data)
+
+
+class PromotionFlagViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+    plugin_name = 'tl_scorecard'
+    serializer_class = PromotionFlagSerializer
+    permission_action_map = {'decide': 'manage'}
+
+    def get_queryset(self):
+        qs = PromotionFlag.objects.select_related('employee', 'nominated_by')
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            return qs
+        return qs.filter(nominated_by=self.request.user)
+
+    def perform_create(self, serializer):
+        employee = serializer.validated_data['employee']
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            if employee.id not in self.request.user.profile.get_team_member_ids():
+                raise ValidationError({'employee': 'You can only nominate your own team members.'})
+        serializer.save(nominated_by=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def decide(self, request, pk=None):
+        flag = self.get_object()
+        decided_status = request.data.get('status')
+        if decided_status not in ('promoted', 'declined'):
+            raise ValidationError({'status': 'Must be "promoted" or "declined".'})
+        flag.status = decided_status
+        flag.decided_on = date.today()
+        flag.save(update_fields=['status', 'decided_on'])
+        return Response(PromotionFlagSerializer(flag).data)
+
+
+class EPRCycleViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+    plugin_name = 'tl_scorecard'
+    serializer_class = EPRCycleSerializer
+
+    def get_queryset(self):
+        qs = EPRCycle.objects.select_related('user').prefetch_related('goals')
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            return qs
+        team_member_ids = self.request.user.profile.get_team_member_ids()
+        return qs.filter(user_id__in=team_member_ids)
+
+    def perform_create(self, serializer):
+        target_user = serializer.validated_data['user']
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            if target_user.id not in self.request.user.profile.get_team_member_ids():
+                raise ValidationError({'user': 'You can only open an EPR cycle for your own team members.'})
+        try:
+            serializer.save()
+        except IntegrityError:
+            raise ValidationError({'year': 'An EPR cycle for this user and year already exists.'})
+
+    def perform_update(self, serializer):
+        # ≥5 goals required before Goal Setting can be marked complete —
+        # enforced here, not in the model, so it stays a pure data holder.
+        instance = serializer.instance
+        new_goal_setting = serializer.validated_data.get('goal_setting_completed_at')
+        if new_goal_setting and not instance.goal_setting_completed_at and instance.goals.count() < 5:
+            raise ValidationError({
+                'goal_setting_completed_at': 'At least 5 goals are required before this stage can be marked complete.',
+            })
+        serializer.save()
+
+
+class EPRGoalViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+    plugin_name = 'tl_scorecard'
+    serializer_class = EPRGoalSerializer
+
+    def get_queryset(self):
+        qs = EPRGoal.objects.select_related('cycle', 'cycle__user')
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            return qs
+        team_member_ids = self.request.user.profile.get_team_member_ids()
+        return qs.filter(cycle__user_id__in=team_member_ids)
+
+    def perform_create(self, serializer):
+        cycle = serializer.validated_data['cycle']
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            if cycle.user_id not in self.request.user.profile.get_team_member_ids():
+                raise ValidationError({'cycle': 'You can only add goals for your own team members.'})
+        serializer.save()

@@ -177,3 +177,128 @@ class EngagementSurveyResponse(BaseModel):
 
     def __str__(self):
         return f'{self.respondent} — {self.period}: {self.score}/10'
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 — see the approved plan. Design principle carried through all four
+# models below: the human judgment call (something happened, someone
+# decided) still needs one small manual entry — that can't be invented from
+# data that doesn't exist — but everything downstream (SLA timers, due
+# dates, lateness, ratios) is computed automatically in services.py, never
+# typed in. Escalations get NO new model at all: they're computed live from
+# these plus Phase 1/2 data (see services.py's escalation_candidates()).
+# ---------------------------------------------------------------------------
+
+class Absence(BaseModel, DocumentedEventMixin):
+    """Unplanned/unjustified absence (gap-audit finding #5) — distinct from
+    LeaveRequest, which is pre-approved by definition. The 5-working-day
+    "addressed within" SLA is computed in services.py from flagged_on vs
+    addressed_on, not stored as a duration."""
+    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='absences')
+    flagged_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='absences_flagged')
+    absence_date = models.DateField()
+    reason = models.CharField(max_length=255, blank=True)
+    addressed_on = models.DateField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'tl_scorecard_absences'
+        ordering = ['-absence_date']
+        indexes = [models.Index(fields=['employee', 'absence_date'])]
+
+    def __str__(self):
+        return f'Absence: {self.employee} — {self.absence_date}'
+
+
+class PIPRecord(BaseModel, DocumentedEventMixin):
+    """Performance Improvement Plan (gap-audit finding — "PIPs executed
+    only with prior HR approval, evidence-based"). `approved_by`/
+    `approved_at` are the entire approval model per decision — no
+    multi-step workflow. "Pending too long" is computed in services.py from
+    created_at vs approved_at, not stored."""
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pip_records')
+    tl = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pip_records_managed')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    start_date = models.DateField()
+    approved_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name='pip_records_approved',
+        help_text='Set by an HR user when the PIP is approved. Null = pending approval.',
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'tl_scorecard_pip_records'
+        ordering = ['-start_date']
+        indexes = [models.Index(fields=['employee', 'status'])]
+
+    def __str__(self):
+        return f'PIP: {self.employee} ({self.status})'
+
+
+class PromotionFlag(BaseModel):
+    """High-potential/promotion nomination (gap-audit finding — "identify
+    high-potential members for internal promotion, target 3%/year"). The
+    nomination itself is a judgment call; the 3% ratio is computed in
+    services.py from team_size vs promoted-count, never typed in."""
+    STATUS_CHOICES = [
+        ('nominated', 'Nominated'),
+        ('promoted', 'Promoted'),
+        ('declined', 'Declined'),
+    ]
+
+    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='promotion_flags')
+    nominated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='promotion_flags_raised')
+    nominated_on = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='nominated')
+    decided_on = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        db_table = 'tl_scorecard_promotion_flags'
+        ordering = ['-nominated_on']
+
+    def __str__(self):
+        return f'Promotion flag: {self.employee} ({self.status})'
+
+
+class EPRCycle(BaseModel):
+    """One EPR cycle per (user, year) — 3 fixed stages. Due dates are NOT
+    stored: services.py computes them from the year (Q1/Q3/Q4-end) so a TL
+    never types a due date, and the schedule can be tuned in one place.
+    `goals` (child EPRGoal) must reach 5 before goal_setting_completed_at
+    can be set — enforced in the viewset, not here (keeps the model a pure
+    data holder, matching this plugin's other models)."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='epr_cycles')
+    year = models.PositiveIntegerField()
+    goal_setting_completed_at = models.DateTimeField(null=True, blank=True)
+    mid_year_completed_at = models.DateTimeField(null=True, blank=True)
+    final_review_completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'tl_scorecard_epr_cycles'
+        ordering = ['-year']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'year'], name='unique_epr_cycle_per_user_year'),
+        ]
+
+    def __str__(self):
+        return f'EPR {self.year}: {self.user}'
+
+
+class EPRGoal(BaseModel):
+    """A single goal within an EPRCycle. Deliberately just a short
+    description — the actual review conversation/content lives wherever it
+    already happens (Workday); this only tracks that ≥5 goals exist and
+    when the cycle's stages were completed, for the KPI."""
+    cycle = models.ForeignKey(EPRCycle, on_delete=models.CASCADE, related_name='goals')
+    description = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'tl_scorecard_epr_goals'
+        ordering = ['id']

@@ -14,7 +14,7 @@ from datetime import date, timedelta
 from apps.leave_management.models import LeaveRequest, count_business_days
 from apps.overtime.models.core import OvertimeLog
 
-from .models import IdleFlag, Meeting, ReviewDelivery
+from .models import Absence, EPRCycle, IdleFlag, Meeting, PIPRecord, PromotionFlag, ReviewDelivery
 
 # Every KPI from both TL job-description sheets, with its current coverage
 # status. A plain data structure (not a model) — it only changes when a
@@ -98,13 +98,17 @@ KPI_COVERAGE = [
     },
     {
         "kpi": "Unjustified absences addressed within 5 working days",
-        "sheet": 2, "status": "planned", "phase": 3,
-        "note": "Needs a new Absence model, distinct from LeaveRequest (which is pre-approved by definition).",
+        "sheet": 2, "status": "measured", "phase": 3,
+        "note": "Absence model — flagged manually, 5-working-day SLA computed automatically.",
     },
     {
         "kpi": "0 escalations from administrative delays/communication failures",
-        "sheet": 1, "status": "planned", "phase": 3,
-        "note": "Needs an escalation/incident log.",
+        "sheet": 1, "status": "measured", "phase": 3,
+        "note": (
+            "No manual escalation log — computed live from breaches already tracked: "
+            "stale leave decisions, idle flags open >4 weeks with no update, PIPs pending "
+            "approval >14 days, absences unaddressed >5 working days."
+        ),
     },
     {
         "kpi": "HR Albania formal communications correctly routed/documented",
@@ -113,13 +117,16 @@ KPI_COVERAGE = [
     },
     {
         "kpi": "100% timely EPR completion (3 stages, ≥5 goals/member)",
-        "sheet": 2, "status": "planned", "phase": 3,
-        "note": "Large domain, own plan.",
+        "sheet": 2, "status": "measured", "phase": 3,
+        "note": (
+            "EPRCycle+EPRGoal — due dates computed from the year (Q1/Q3/Q4-end), never typed; "
+            "≥5-goal rule enforced before Goal Setting can be marked complete."
+        ),
     },
     {
         "kpi": "PIPs executed only with prior HR approval, evidence-based",
-        "sheet": 2, "status": "planned", "phase": 3,
-        "note": "HR-approval-gated workflow, own plan.",
+        "sheet": 2, "status": "measured", "phase": 3,
+        "note": "PIPRecord.approved_by/approved_at — pending-too-long computed automatically, not typed.",
     },
     {
         "kpi": "100% onboarding sign-offs before start date",
@@ -128,8 +135,8 @@ KPI_COVERAGE = [
     },
     {
         "kpi": "High-potential members identified for promotion (3%/year)",
-        "sheet": 1, "status": "planned", "phase": 3,
-        "note": "Needs a promotion/high-potential event model, own plan.",
+        "sheet": 1, "status": "measured", "phase": 3,
+        "note": "PromotionFlag — nomination is manual, the 3%-of-team ratio is computed automatically.",
     },
     {
         "kpi": "34% female headcount (Group diversity target)",
@@ -271,6 +278,131 @@ def seniority_ratio(team_member_ids) -> dict:
     return counts
 
 
+# Phase 3's "not typed in" due-date schedule for EPR — tune once, here,
+# rather than a TL typing a due date on every cycle.
+EPR_STAGE_DUE_MONTH_DAY = {
+    'goal_setting': (3, 31),
+    'mid_year': (9, 30),
+    'final_review': (12, 31),
+}
+
+ESCALATION_LEAVE_SLA_DAYS = 2
+ESCALATION_IDLE_STALE_WEEKS = 4
+ESCALATION_PIP_PENDING_DAYS = 14
+ESCALATION_ABSENCE_SLA_DAYS = 5
+
+PROMOTION_TARGET_PCT = 3.0
+
+
+def absence_metrics(team_member_ids) -> dict:
+    """Unaddressed count + 5-working-day SLA breach count (gap-audit
+    finding #5). `addressed_on is None` means still open."""
+    absences = Absence.objects.filter(employee_id__in=team_member_ids)
+    today = date.today()
+    open_absences = [a for a in absences if a.addressed_on is None]
+    breached = sum(
+        1 for a in open_absences
+        if count_business_days(a.absence_date, today) - 1 > ESCALATION_ABSENCE_SLA_DAYS
+    )
+    return {'open_count': len(open_absences), 'breached_5_day_sla': breached}
+
+
+def pip_metrics(leader) -> dict:
+    """Pending-HR-approval count for a TL's PIPs — "too long" is computed
+    from created_at, never typed."""
+    pips = PIPRecord.objects.filter(tl=leader)
+    pending = pips.filter(approved_at__isnull=True)
+    return {'active_count': pips.filter(status='active').count(), 'pending_approval_count': pending.count()}
+
+
+def promotion_ratio(team_member_ids, year: int) -> dict:
+    """3%/year high-potential target (gap-audit finding). Nomination is
+    manual; this ratio is fully automatic."""
+    team_size = len(team_member_ids)
+    promoted = PromotionFlag.objects.filter(
+        employee_id__in=team_member_ids, status='promoted', decided_on__year=year,
+    ).count()
+    pct = round((promoted / team_size) * 100, 1) if team_size else None
+    return {'promoted_count': promoted, 'team_size': team_size, 'promoted_pct': pct, 'target_pct': PROMOTION_TARGET_PCT}
+
+
+def epr_stage_due_date(year: int, stage: str) -> date:
+    month, day = EPR_STAGE_DUE_MONTH_DAY[stage]
+    return date(year, month, day)
+
+
+def epr_metrics(team_member_ids, year: int) -> dict:
+    """Per-stage on-time completion for a TL's team this year. Due dates
+    come from epr_stage_due_date(), never from a typed-in field."""
+    cycles = list(EPRCycle.objects.filter(user_id__in=team_member_ids, year=year).prefetch_related('goals'))
+    total = len(team_member_ids)
+    stages = {}
+    for stage in EPR_STAGE_DUE_MONTH_DAY:
+        field = f'{stage}_completed_at'
+        due = epr_stage_due_date(year, stage)
+        on_time = sum(
+            1 for c in cycles
+            if getattr(c, field) and getattr(c, field).date() <= due
+        )
+        stages[stage] = {
+            'due_date': due.isoformat(),
+            'completed_on_time': on_time,
+            'team_size': total,
+            'pct_on_time': round((on_time / total) * 100, 1) if total else None,
+        }
+    goals_met = sum(1 for c in cycles if c.goals.count() >= 5)
+    return {'stages': stages, 'cycles_with_5plus_goals': goals_met, 'cycles_started': len(cycles)}
+
+
+def escalation_candidates(leader) -> list[dict]:
+    """Computed, not logged — surfaces anything that would become an
+    escalation if left unhandled, from data already tracked elsewhere.
+    Directly answers "0 escalations from administrative delays" without a
+    single new manual entry."""
+    team_member_ids = leader.profile.get_team_member_ids()
+    today = date.today()
+    candidates = []
+
+    for r in LeaveRequest.objects.filter(user_id__in=team_member_ids, status='pending'):
+        elapsed = count_business_days(r.submitted_at.date(), today) - 1 if r.submitted_at else 0
+        if elapsed > ESCALATION_LEAVE_SLA_DAYS:
+            candidates.append({
+                'kind': 'leave_pending', 'subject_id': r.user_id, 'subject_name': str(r.user),
+                'detail': f'Leave request pending {elapsed} business days (SLA: {ESCALATION_LEAVE_SLA_DAYS}).',
+                'since': r.submitted_at.date(),
+            })
+
+    stale_cutoff = today - timedelta(weeks=ESCALATION_IDLE_STALE_WEEKS)
+    for flag in IdleFlag.objects.filter(flagged_by=leader, status='open').prefetch_related('status_updates'):
+        latest_update = max((u.week_of for u in flag.status_updates.all()), default=None)
+        last_activity = latest_update or flag.flagged_on
+        if last_activity < stale_cutoff:
+            candidates.append({
+                'kind': 'idle_flag_stale', 'subject_id': flag.employee_id, 'subject_name': str(flag.employee),
+                'detail': f'Idle flag open with no status update since {last_activity}.',
+                'since': last_activity,
+            })
+
+    pip_cutoff = today - timedelta(days=ESCALATION_PIP_PENDING_DAYS)
+    for pip in PIPRecord.objects.filter(tl=leader, approved_at__isnull=True, created_at__date__lt=pip_cutoff):
+        candidates.append({
+            'kind': 'pip_pending_approval', 'subject_id': pip.employee_id, 'subject_name': str(pip.employee),
+            'detail': f'PIP still pending HR approval since {pip.created_at.date()}.',
+            'since': pip.created_at.date(),
+        })
+
+    for a in Absence.objects.filter(flagged_by=leader, addressed_on__isnull=True):
+        elapsed = count_business_days(a.absence_date, today) - 1
+        if elapsed > ESCALATION_ABSENCE_SLA_DAYS:
+            candidates.append({
+                'kind': 'absence_unaddressed', 'subject_id': a.employee_id, 'subject_name': str(a.employee),
+                'detail': f'Absence on {a.absence_date} unaddressed for {elapsed} business days.',
+                'since': a.absence_date,
+            })
+
+    return candidates
+
+
 def build_scorecard(user, month: date) -> dict:
     """Full scorecard for one TL (`user`) for `month`."""
     team_member_ids = user.profile.get_team_member_ids()
@@ -284,4 +416,8 @@ def build_scorecard(user, month: date) -> dict:
         'idle': idle_metrics(user),
         'review_deliveries_ytd': review_delivery_count(user, month.year),
         'seniority': seniority_ratio(team_member_ids),
+        'absences': absence_metrics(team_member_ids),
+        'pip': pip_metrics(user),
+        'promotion': promotion_ratio(team_member_ids, month.year),
+        'escalation_count': len(escalation_candidates(user)),
     }

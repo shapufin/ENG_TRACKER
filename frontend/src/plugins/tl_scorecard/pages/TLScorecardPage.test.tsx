@@ -12,6 +12,7 @@ vi.mock("../services/tlScorecardService", () => ({
     getScorecard: vi.fn(),
     getKpiCoverage: vi.fn(),
     getEngagementSurveyTeamAverage: vi.fn(),
+    getEscalations: vi.fn(),
   },
 }));
 
@@ -46,6 +47,10 @@ const SCORECARD: Scorecard = {
   idle: { open_count: 1, resolved_count: 2 },
   review_deliveries_ytd: 5,
   seniority: { junior: 1, mid: 2, senior: 1, unset: 0 },
+  absences: { open_count: 1, breached_5_day_sla: 0 },
+  pip: { active_count: 1, pending_approval_count: 0 },
+  promotion: { promoted_count: 0, team_size: 4, promoted_pct: 0, target_pct: 3 },
+  escalation_count: 0,
 };
 
 const COVERAGE: KpiCoverageEntry[] = [
@@ -62,6 +67,7 @@ const mockDefaults = () => {
   (engagementService.getSummary as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: { engagement_score: 82 },
   });
+  (tlScorecardService.getEscalations as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
 };
 
 const renderPage = () => {
@@ -118,6 +124,32 @@ describe("TLScorecardPage", () => {
     expect(screen.getByText("3")).toBeInTheDocument(); // TL-Italy syncs
     expect(screen.getByText("1/1")).toBeInTheDocument(); // team meetings with HRBP
     expect(screen.getByText("5")).toBeInTheDocument(); // review deliveries YTD
+  });
+
+  it("renders governance metrics and an empty escalations state when nothing is breached", async () => {
+    mockDefaults();
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("Nothing needs escalating")).toBeInTheDocument());
+    expect(screen.getByText("Promotion ratio")).toBeInTheDocument();
+  });
+
+  it("renders escalation candidates when breaches exist", async () => {
+    mockDefaults();
+    (tlScorecardService.getEscalations as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: [
+        {
+          kind: "leave_pending", subject_id: 5, subject_name: "Jane Doe",
+          detail: "Leave request pending 5 business days.", since: "2026-09-01",
+        },
+      ],
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("Jane Doe")).toBeInTheDocument());
+    expect(screen.getByText("Leave request pending 5 business days.")).toBeInTheDocument();
   });
 
   it("renders the KPI coverage panel with every entry's status", async () => {
