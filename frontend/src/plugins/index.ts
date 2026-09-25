@@ -216,6 +216,12 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
       import("./onboarding/pages/DocumentEditorPage").then((m) => ({ default: m.DocumentEditorPage }))
     ),
   },
+  tl_scorecard: {
+    TLScorecardPage: lazy(() =>
+      import("./tl_scorecard/pages/TLScorecardPage").then((m) => ({ default: m.TLScorecardPage }))
+    ),
+    TLScorecardSidebarLink: lazy(() => import("./tl_scorecard/components/TLScorecardSidebarLink")),
+  },
 };
 
 export const getPluginComponent = (pluginName: string, componentName: string) => {
