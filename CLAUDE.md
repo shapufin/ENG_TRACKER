@@ -9,6 +9,7 @@ lock, and `PayrollRunEntry` invariants. Prefer TDD. Keep diffs minimal.
 - Do not bypass security checks, migrations, hooks, or tests.
 - Never commit or push unless explicitly requested.
 - Do not scan unrelated documentation, generated files, logs, node_modules, venv, or .git.
+- Load the routed context file (Task Router below) before coding and check its invariants — do not reapply fixes already documented as complete.
 - Use TDD for implementation and bug fixes (write/update targeted test -> fail -> implement -> pass).
 
 ## Minimal Code & YAGNI Execution Ladder
@@ -38,10 +39,10 @@ Before writing or modifying any code, follow this mandatory 7-step ladder:
 
 | Keywords | Load | Why |
 |---|---|---|
-| permission, role, auth, access, group, TL scope | `.devin/context/01-PERMISSIONS.md` | Most complex system; easy to break |
+| permission, role, auth, access, group, TL scope | `.devin/context/01-PERMISSIONS.md` (and, for resource groups, `.devin/context/09-RESOURCE-ACCESS.md`) | Most complex system; easy to break |
 | model, field, migration, queryset, schema | `.devin/context/02-DATA-MODELS.md` | Entity relationships before queries |
 | component, hook, page, context, React, CSS, visual, mobile, frontend test | `.devin/context/03-FRONTEND-PATTERNS.md` | Composition + test conventions |
-| screenshot, fingerprint, visual verify/diff, UI refactor verification | `.devin/context/12-VISUAL-VERIFICATION.md` | Fingerprint capture + diff tooling |
+| screenshot, fingerprint, visual verify/diff, UI refactor verification, design audit capture | `.devin/context/12-VISUAL-VERIFICATION.md` | Fingerprint capture + diff tooling |
 | modal, dialog, form dialog, confirm, drawer | `.devin/context/03-FRONTEND-PATTERNS.md` §13 | Dialog contract + tone scale — then `node scripts/modal-audit.mjs` |
 | checkbox, bulk edit, bulk action bar, selection count | `.devin/context/03-FRONTEND-PATTERNS.md` §14 | Reuse the shared checkbox/badge/entrance treatment |
 | animation, motion, transition, hover effect, reduced motion | `.devin/context/03-FRONTEND-PATTERNS.md` §10 | `lib/motion.ts` tokens + reduced-motion gate requirement |
@@ -53,11 +54,11 @@ Before writing or modifying any code, follow this mandatory 7-step ladder:
 | control room, CR, standby projection | `.devin/context/PLUGINS/02-control-room.md` | CR scoping rules |
 | ticket, KPI, evidence upload | `.devin/context/PLUGINS/03-ticket-kpi.md` | Ticket KPI invariants |
 | skills, proficiency, matrix, gap report, skill rating | `.devin/context/PLUGINS/04-skills.md` | Skills plugin invariants |
-| organigrama, org chart, Tech grouping | `.devin/context/PLUGINS/05-organigrama.md` | Live chart + builder invariants |
+| organigrama, org chart, tree, Tech grouping | `.devin/context/PLUGINS/05-organigrama.md` | Live chart + builder invariants |
 | import, CSV, Excel, bulk upload, data import, sample template, importer | `.devin/context/PLUGINS/06-data-import.md` | Importer contract + per-target authority |
 | backup, restore, site backup | `.devin/context/PLUGINS/07-backup-restore.md` | Backup/restore invariants: PK-based fixture, dependent closure, superuser-only |
 | calendar, workspace, workspace_users | `.devin/context/07-CALENDAR.md` | Calendar privacy + workspace rules |
-| chart, Recharts, analytics visualization | `.devin/context/08-ANALYTICS-VISUALIZATION.md` | Chart sizing + data-source rules |
+| chart, Recharts, analytics, visualization, dashboard chart | `.devin/context/08-ANALYTICS-VISUALIZATION.md` | Chart sizing + data-source rules |
 | plugin permission, render surface, plugin slot, metadata, resource access, remove/disable a plugin | `.devin/context/09-RESOURCE-ACCESS.md` + `.devin/context/10-PLUGIN-PERMISSIONS.md` | Group grants, plugin gates, removal safety |
 | file location, where is, find file | `.devin/context/PROJECT_INDEX.md` | Directory inventory |
 | plan, create plan, megaplan, refactor plan, optimize plan, plan review | `.devin/context/11-PLAN-CREATION.md` | Senior plan protocol: zero-hallucination specs + self-correcting gates |
