@@ -189,6 +189,20 @@ class AbsenceAPITests(TestCase):
         resp = AbsenceViewSet.as_view({'post': 'create'})(request)
         self.assertEqual(resp.status_code, 400)
 
+    def test_cannot_reassign_absence_to_non_team_member_via_update(self):
+        outsider = _make_user('outsider_abs_update')
+        absence = Absence.objects.create(
+            employee=self.member, flagged_by=self.leader, absence_date=date.today(),
+        )
+        request = self.factory.patch(f'/api/plugins/tl_scorecard/absences/{absence.id}/', {
+            'employee': outsider.id,
+        })
+        force_authenticate(request, user=self.leader)
+        resp = AbsenceViewSet.as_view({'patch': 'partial_update'})(request, pk=absence.id)
+        self.assertEqual(resp.status_code, 400)
+        absence.refresh_from_db()
+        self.assertEqual(absence.employee_id, self.member.id)
+
 
 class PIPRecordAPITests(TestCase):
     def setUp(self):
@@ -214,6 +228,22 @@ class PIPRecordAPITests(TestCase):
         force_authenticate(approve_request, user=self.leader)
         approve_resp = PIPRecordViewSet.as_view({'post': 'approve'})(approve_request, pk=pip_id)
         self.assertEqual(approve_resp.status_code, 403)
+
+    def test_cannot_reassign_pip_to_non_team_member_via_update(self):
+        outsider = _make_user('outsider_pip_update')
+        request = self.factory.post('/api/plugins/tl_scorecard/pip-records/', {
+            'employee': self.member.id, 'start_date': str(date.today()), 'status': 'active',
+        })
+        force_authenticate(request, user=self.leader)
+        pip_id = PIPRecordViewSet.as_view({'post': 'create'})(request).data['id']
+
+        update_request = self.factory.patch(f'/api/plugins/tl_scorecard/pip-records/{pip_id}/', {
+            'employee': outsider.id,
+        })
+        force_authenticate(update_request, user=self.leader)
+        resp = PIPRecordViewSet.as_view({'patch': 'partial_update'})(update_request, pk=pip_id)
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(PIPRecord.objects.get(pk=pip_id).employee_id, self.member.id)
 
     def test_staff_can_approve_a_pip(self):
         request = self.factory.post('/api/plugins/tl_scorecard/pip-records/', {
@@ -272,6 +302,44 @@ class PromotionFlagAPITests(TestCase):
         resp = PromotionFlagViewSet.as_view({'post': 'decide'})(decide_request, pk=flag_id)
         self.assertEqual(resp.status_code, 400)
 
+    def test_decide_rejects_an_already_decided_flag(self):
+        create_request = self.factory.post('/api/plugins/tl_scorecard/promotion-flags/', {
+            'employee': self.member.id, 'nominated_on': str(date.today()),
+        })
+        force_authenticate(create_request, user=self.leader)
+        flag_id = PromotionFlagViewSet.as_view({'post': 'create'})(create_request).data['id']
+
+        first_request = self.factory.post(
+            f'/api/plugins/tl_scorecard/promotion-flags/{flag_id}/decide/', {'status': 'declined'},
+        )
+        force_authenticate(first_request, user=self.leader)
+        first_resp = PromotionFlagViewSet.as_view({'post': 'decide'})(first_request, pk=flag_id)
+        self.assertEqual(first_resp.status_code, 200, first_resp.data)
+
+        second_request = self.factory.post(
+            f'/api/plugins/tl_scorecard/promotion-flags/{flag_id}/decide/', {'status': 'promoted'},
+        )
+        force_authenticate(second_request, user=self.leader)
+        second_resp = PromotionFlagViewSet.as_view({'post': 'decide'})(second_request, pk=flag_id)
+        self.assertEqual(second_resp.status_code, 400)
+        self.assertEqual(PromotionFlag.objects.get(pk=flag_id).status, 'declined')
+
+    def test_cannot_reassign_promotion_flag_to_non_team_member_via_update(self):
+        outsider = _make_user('outsider_promo_update')
+        create_request = self.factory.post('/api/plugins/tl_scorecard/promotion-flags/', {
+            'employee': self.member.id, 'nominated_on': str(date.today()),
+        })
+        force_authenticate(create_request, user=self.leader)
+        flag_id = PromotionFlagViewSet.as_view({'post': 'create'})(create_request).data['id']
+
+        update_request = self.factory.patch(f'/api/plugins/tl_scorecard/promotion-flags/{flag_id}/', {
+            'employee': outsider.id,
+        })
+        force_authenticate(update_request, user=self.leader)
+        resp = PromotionFlagViewSet.as_view({'patch': 'partial_update'})(update_request, pk=flag_id)
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(PromotionFlag.objects.get(pk=flag_id).employee_id, self.member.id)
+
 
 class EPRCycleAPITests(TestCase):
     def setUp(self):
@@ -321,6 +389,36 @@ class EPRCycleAPITests(TestCase):
         self._create_cycle()
         resp = self._create_cycle()
         self.assertEqual(resp.status_code, 400)
+
+    def test_cannot_reassign_cycle_to_non_team_member_via_update(self):
+        outsider = _make_user('outsider_epr_update')
+        cycle_id = self._create_cycle().data['id']
+        request = self.factory.patch(f'/api/plugins/tl_scorecard/epr-cycles/{cycle_id}/', {
+            'user': outsider.id,
+        })
+        force_authenticate(request, user=self.leader)
+        resp = EPRCycleViewSet.as_view({'patch': 'partial_update'})(request, pk=cycle_id)
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(EPRCycle.objects.get(pk=cycle_id).user_id, self.member.id)
+
+    def test_cannot_reassign_goal_to_cycle_outside_team_via_update(self):
+        outsider = _make_user('outsider_epr_goal_update')
+        outsider_cycle = EPRCycle.objects.create(user=outsider, year=2026)
+        cycle_id = self._create_cycle().data['id']
+
+        goal_request = self.factory.post('/api/plugins/tl_scorecard/epr-goals/', {
+            'cycle': cycle_id, 'description': 'Goal 0',
+        })
+        force_authenticate(goal_request, user=self.leader)
+        goal_id = EPRGoalViewSet.as_view({'post': 'create'})(goal_request).data['id']
+
+        update_request = self.factory.patch(f'/api/plugins/tl_scorecard/epr-goals/{goal_id}/', {
+            'cycle': outsider_cycle.id,
+        })
+        force_authenticate(update_request, user=self.leader)
+        resp = EPRGoalViewSet.as_view({'patch': 'partial_update'})(update_request, pk=goal_id)
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(EPRGoal.objects.get(pk=goal_id).cycle_id, cycle_id)
 
 
 class ScorecardIncludesPhase3Metrics(TestCase):

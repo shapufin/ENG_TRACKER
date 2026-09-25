@@ -116,6 +116,20 @@ class MeetingAttendeeAPITests(TestCase):
         resp = self._create(self.other_leader, {'meeting': self.meeting.id, 'user': self.hrbp.id, 'role': 'hrbp'})
         self.assertEqual(resp.status_code, 403)
 
+    def test_cannot_reassign_attendee_to_a_meeting_you_do_not_organize_via_update(self):
+        other_meeting = Meeting.objects.create(
+            meeting_type='team_meeting', organizer=self.other_leader, team=self.team, occurred_on='2026-09-11',
+        )
+        create_resp = self._create(self.leader, {'meeting': self.meeting.id, 'user': self.hrbp.id, 'role': 'hrbp'})
+        attendee_id = create_resp.data['id']
+
+        request = self.factory.patch(f'/api/plugins/tl_scorecard/meeting-attendees/{attendee_id}/', {
+            'meeting': other_meeting.id,
+        })
+        force_authenticate(request, user=self.leader)
+        resp = MeetingAttendeeViewSet.as_view({'patch': 'partial_update'})(request, pk=attendee_id)
+        self.assertEqual(resp.status_code, 403)
+
 
 class IdleFlagAPITests(TestCase):
     def setUp(self):
@@ -174,6 +188,38 @@ class IdleFlagAPITests(TestCase):
         self._update_status(self.leader, {'flag': flag.id, 'week_of': '2026-09-08', 'status_note': 'first'})
         resp = self._update_status(self.leader, {'flag': flag.id, 'week_of': '2026-09-08', 'status_note': 'second'})
         self.assertEqual(resp.status_code, 400)
+
+    def test_cannot_reassign_idle_flag_to_non_team_member_via_update(self):
+        outsider = _make_user('outsider_idle_update')
+        flag = IdleFlag.objects.create(employee=self.employee, flagged_by=self.leader, flagged_on='2026-09-10')
+        request = self.factory.patch(f'/api/plugins/tl_scorecard/idle-flags/{flag.id}/', {
+            'employee': outsider.id,
+        })
+        force_authenticate(request, user=self.leader)
+        resp = IdleFlagViewSet.as_view({'patch': 'partial_update'})(request, pk=flag.id)
+        self.assertEqual(resp.status_code, 400)
+        flag.refresh_from_db()
+        self.assertEqual(flag.employee_id, self.employee.id)
+
+    def test_cannot_reassign_status_update_to_a_flag_you_do_not_own_via_update(self):
+        own_flag = IdleFlag.objects.create(employee=self.employee, flagged_by=self.leader, flagged_on='2026-09-10')
+        other_employee = _make_user('other_employee_idle')
+        other_employee.profile.albanian_tl = self.other_leader
+        other_employee.profile.save()
+        other_flag = IdleFlag.objects.create(
+            employee=other_employee, flagged_by=self.other_leader, flagged_on='2026-09-10',
+        )
+        create_resp = self._update_status(self.leader, {
+            'flag': own_flag.id, 'week_of': '2026-09-08', 'status_note': 'still idle',
+        })
+        status_update_id = create_resp.data['id']
+
+        request = self.factory.patch(f'/api/plugins/tl_scorecard/idle-status-updates/{status_update_id}/', {
+            'flag': other_flag.id,
+        })
+        force_authenticate(request, user=self.leader)
+        resp = IdleStatusUpdateViewSet.as_view({'patch': 'partial_update'})(request, pk=status_update_id)
+        self.assertEqual(resp.status_code, 403)
 
 
 class ReviewDeliveryAPITests(TestCase):

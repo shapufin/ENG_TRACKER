@@ -143,6 +143,12 @@ class MeetingAttendeeViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             raise PermissionDenied("You can only manage attendees on meetings you organize.")
         serializer.save()
 
+    def perform_update(self, serializer):
+        meeting = serializer.validated_data.get('meeting')
+        if meeting and not (self.request.user.is_staff or self.request.user.is_superuser) and meeting.organizer_id != self.request.user.id:
+            raise PermissionDenied("You can only manage attendees on meetings you organize.")
+        serializer.save()
+
 
 class IdleFlagViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'tl_scorecard'
@@ -161,6 +167,13 @@ class IdleFlagViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             if employee.id not in team_member_ids:
                 raise ValidationError({'employee': 'You can only flag your own team members as idle.'})
         serializer.save(flagged_by=self.request.user, recorded_by=self.request.user)
+
+    def perform_update(self, serializer):
+        employee = serializer.validated_data.get('employee')
+        if employee and not (self.request.user.is_staff or self.request.user.is_superuser):
+            if employee.id not in self.request.user.profile.get_team_member_ids():
+                raise ValidationError({'employee': 'You can only flag your own team members as idle.'})
+        serializer.save()
 
 
 class IdleStatusUpdateViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
@@ -183,6 +196,15 @@ class IdleStatusUpdateViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         # for (flag, week_of) too — same reason as EngagementSurveyResponseViewSet.
         try:
             serializer.save(recorded_by=self.request.user)
+        except IntegrityError:
+            raise ValidationError({'week_of': 'A status update already exists for this flag and week.'})
+
+    def perform_update(self, serializer):
+        flag = serializer.validated_data.get('flag')
+        if flag and not (self.request.user.is_staff or self.request.user.is_superuser) and flag.flagged_by_id != self.request.user.id:
+            raise PermissionDenied("You can only log status updates on idle flags you raised.")
+        try:
+            serializer.save()
         except IntegrityError:
             raise ValidationError({'week_of': 'A status update already exists for this flag and week.'})
 
@@ -268,6 +290,13 @@ class AbsenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                 raise ValidationError({'employee': 'You can only flag your own team members.'})
         serializer.save(flagged_by=self.request.user)
 
+    def perform_update(self, serializer):
+        employee = serializer.validated_data.get('employee')
+        if employee and not (self.request.user.is_staff or self.request.user.is_superuser):
+            if employee.id not in self.request.user.profile.get_team_member_ids():
+                raise ValidationError({'employee': 'You can only flag your own team members.'})
+        serializer.save()
+
 
 class PIPRecordViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     """Approval is deliberately staff-only (`approve` action) — this
@@ -290,6 +319,13 @@ class PIPRecordViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             if employee.id not in self.request.user.profile.get_team_member_ids():
                 raise ValidationError({'employee': 'You can only open a PIP for your own team members.'})
         serializer.save(tl=self.request.user)
+
+    def perform_update(self, serializer):
+        employee = serializer.validated_data.get('employee')
+        if employee and not (self.request.user.is_staff or self.request.user.is_superuser):
+            if employee.id not in self.request.user.profile.get_team_member_ids():
+                raise ValidationError({'employee': 'You can only open a PIP for your own team members.'})
+        serializer.save()
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -320,9 +356,18 @@ class PromotionFlagViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                 raise ValidationError({'employee': 'You can only nominate your own team members.'})
         serializer.save(nominated_by=self.request.user)
 
+    def perform_update(self, serializer):
+        employee = serializer.validated_data.get('employee')
+        if employee and not (self.request.user.is_staff or self.request.user.is_superuser):
+            if employee.id not in self.request.user.profile.get_team_member_ids():
+                raise ValidationError({'employee': 'You can only nominate your own team members.'})
+        serializer.save()
+
     @action(detail=True, methods=['post'])
     def decide(self, request, pk=None):
         flag = self.get_object()
+        if flag.status != 'nominated':
+            raise ValidationError({'status': 'This flag has already been decided.'})
         decided_status = request.data.get('status')
         if decided_status not in ('promoted', 'declined'):
             raise ValidationError({'status': 'Must be "promoted" or "declined".'})
@@ -362,6 +407,10 @@ class EPRCycleViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             raise ValidationError({
                 'goal_setting_completed_at': 'At least 5 goals are required before this stage can be marked complete.',
             })
+        target_user = serializer.validated_data.get('user')
+        if target_user and not (self.request.user.is_staff or self.request.user.is_superuser):
+            if target_user.id not in self.request.user.profile.get_team_member_ids():
+                raise ValidationError({'user': 'You can only manage an EPR cycle for your own team members.'})
         serializer.save()
 
 
@@ -379,6 +428,13 @@ class EPRGoalViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         cycle = serializer.validated_data['cycle']
         if not (self.request.user.is_staff or self.request.user.is_superuser):
+            if cycle.user_id not in self.request.user.profile.get_team_member_ids():
+                raise ValidationError({'cycle': 'You can only add goals for your own team members.'})
+        serializer.save()
+
+    def perform_update(self, serializer):
+        cycle = serializer.validated_data.get('cycle')
+        if cycle and not (self.request.user.is_staff or self.request.user.is_superuser):
             if cycle.user_id not in self.request.user.profile.get_team_member_ids():
                 raise ValidationError({'cycle': 'You can only add goals for your own team members.'})
         serializer.save()
