@@ -12,7 +12,16 @@ from apps.overtime.models.core import Client, OvertimeLog
 from apps.permissions.models import Role, UserRole
 from apps.users.models.core import UserProfile
 
-from .services import build_scorecard, leave_sla_metrics, ot_turnaround_metrics
+from .models import IdleFlag, Meeting, MeetingAttendee, ReviewDelivery
+from .services import (
+    build_scorecard,
+    idle_metrics,
+    leave_sla_metrics,
+    meeting_compliance_metrics,
+    ot_turnaround_metrics,
+    review_delivery_count,
+    seniority_ratio,
+)
 from .viewsets import TLScorecardViewSet
 
 
@@ -100,6 +109,65 @@ class TLScorecardServiceTests(TestCase):
         self.assertEqual(data['team_size'], 1)
         self.assertIn('leave', data)
         self.assertIn('overtime', data)
+        self.assertIn('meetings', data)
+        self.assertIn('idle', data)
+        self.assertIn('seniority', data)
+
+    def test_one_on_one_compliance_counts_only_current_team_members(self):
+        Meeting.objects.create(
+            meeting_type='one_on_one', organizer=self.leader, counterparty=self.member,
+            occurred_on=self.month.date(),
+        )
+        outsider = _make_user('outsider_meeting')
+        Meeting.objects.create(
+            meeting_type='one_on_one', organizer=self.leader, counterparty=outsider,
+            occurred_on=self.month.date(),
+        )
+        result = meeting_compliance_metrics(self.leader, {self.member.id}, self.month_start)
+        self.assertEqual(result['one_on_one_compliance_pct'], 100.0)
+
+    def test_tl_sync_count_and_team_meeting_governance(self):
+        Meeting.objects.create(
+            meeting_type='tl_sync', organizer=self.leader, counterparty=_make_user('italy_lead'),
+            occurred_on=self.month.date(),
+        )
+        team_meeting = Meeting.objects.create(
+            meeting_type='team_meeting', organizer=self.leader, occurred_on=self.month.date(),
+            notes_published_at=self.month + timedelta(hours=2),
+        )
+        MeetingAttendee.objects.create(meeting=team_meeting, user=_make_user('hrbp_x'), role='hrbp')
+
+        result = meeting_compliance_metrics(self.leader, {self.member.id}, self.month_start)
+        self.assertEqual(result['tl_sync_count'], 1)
+        self.assertEqual(result['team_meetings_held'], 1)
+        self.assertEqual(result['team_meetings_with_hrbp'], 1)
+        self.assertEqual(result['team_meeting_notes_within_24h'], 1)
+
+    def test_idle_metrics_counts_by_status(self):
+        IdleFlag.objects.create(employee=self.member, flagged_by=self.leader, flagged_on=self.month.date(), status='open')
+        IdleFlag.objects.create(
+            employee=self.member, flagged_by=self.leader, flagged_on=self.month.date(), status='resolved',
+        )
+        result = idle_metrics(self.leader)
+        self.assertEqual(result['open_count'], 1)
+        self.assertEqual(result['resolved_count'], 1)
+
+    def test_review_delivery_count_scoped_to_year(self):
+        ReviewDelivery.objects.create(
+            leader=self.leader, period='2026-01', recipient='Ops', delivered_on='2026-01-15',
+        )
+        ReviewDelivery.objects.create(
+            leader=self.leader, period='2025-12', recipient='Ops', delivered_on='2025-12-15',
+        )
+        self.assertEqual(review_delivery_count(self.leader, 2026), 1)
+
+    def test_seniority_ratio_counts_unset_members(self):
+        result = seniority_ratio({self.member.id})
+        self.assertEqual(result, {'junior': 0, 'mid': 0, 'senior': 0, 'unset': 1})
+        self.member.profile.seniority_level = 'senior'
+        self.member.profile.save()
+        result = seniority_ratio({self.member.id})
+        self.assertEqual(result, {'junior': 0, 'mid': 0, 'senior': 1, 'unset': 0})
 
 
 class TLScorecardAPITests(TestCase):

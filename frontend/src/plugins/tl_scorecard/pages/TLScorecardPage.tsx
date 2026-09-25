@@ -4,11 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import {
   CalendarClock,
   CheckCircle2,
+  ClipboardList,
   Gauge,
-  GraduationCap,
+  Handshake,
   Hourglass,
+  PhoneCall,
   TriangleAlert,
+  UserX,
   Users,
+  UsersRound,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { ErrorCard } from "@/components/ui/ErrorCard";
@@ -51,6 +55,10 @@ export const TLScorecardPage: React.FC = () => {
     queryKey: ["tl-scorecard", "engagement-summary"],
     queryFn: async () => (await engagementService.getSummary()).data,
   });
+  const surveyQuery = useQuery({
+    queryKey: ["tl-scorecard", "engagement-survey-average"],
+    queryFn: async () => (await tlScorecardService.getEngagementSurveyTeamAverage()).data,
+  });
 
   if (scorecardQuery.isLoading) return <LoadingState />;
 
@@ -66,7 +74,8 @@ export const TLScorecardPage: React.FC = () => {
     );
   }
 
-  const { leave, overtime, team_size, month } = scorecardQuery.data;
+  const { leave, overtime, team_size, month, meetings, idle, review_deliveries_ytd, seniority } =
+    scorecardQuery.data;
   const monthLabel = new Date(`${month}T00:00:00`).toLocaleDateString(undefined, {
     month: "long",
     year: "numeric",
@@ -115,12 +124,21 @@ export const TLScorecardPage: React.FC = () => {
                 </div>
                 <Gauge className="h-8 w-8 text-primary/40" aria-hidden="true" />
               </div>
-              <InfoCallout
-                tone="warning"
-                className="mt-3"
-                label="Sentiment KPI (≥8.5/10) not yet measurable — planned"
-                icon={<TriangleAlert className="h-4 w-4" aria-hidden="true" />}
-              />
+              {surveyQuery.data?.average_score != null ? (
+                <InfoCallout
+                  tone={surveyQuery.data.average_score >= 8.5 ? "success" : "warning"}
+                  className="mt-3"
+                  label={`Sentiment score (pulse survey) · ${surveyQuery.data.response_count} response(s)`}
+                  value={`${surveyQuery.data.average_score.toFixed(1)}/10`}
+                />
+              ) : (
+                <InfoCallout
+                  tone="warning"
+                  className="mt-3"
+                  label="No pulse-survey responses yet this period"
+                  icon={<TriangleAlert className="h-4 w-4" aria-hidden="true" />}
+                />
+              )}
               <Link
                 to="/engagement/metrics"
                 className="mt-3 inline-block text-xs font-medium text-primary hover:underline"
@@ -132,17 +150,65 @@ export const TLScorecardPage: React.FC = () => {
             <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Skills Matrix</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Certification tracking and junior/senior ratio are planned — Phase 2.
+                  <p className="text-xs text-muted-foreground">Junior / mid / senior ratio</p>
+                  <p className="mt-1 font-mono text-lg font-bold tabular-nums">
+                    {seniority.junior} / {seniority.mid} / {seniority.senior}
+                    {seniority.unset > 0 && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        ({seniority.unset} unset)
+                      </span>
+                    )}
                   </p>
                 </div>
-                <GraduationCap className="h-8 w-8 text-primary/40" aria-hidden="true" />
+                <UsersRound className="h-8 w-8 text-primary/40" aria-hidden="true" />
               </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Certification achievement is tracked on the Skills Matrix but not yet aggregated here.
+              </p>
               <Link to="/skills" className="mt-3 inline-block text-xs font-medium text-primary hover:underline">
                 View Skills Matrix →
               </Link>
             </GlassCard>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold text-muted-foreground">Communication</h2>
+          <div className="mt-2 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard
+              label="1-on-1 compliance"
+              value={meetings.one_on_one_compliance_pct !== null ? `${meetings.one_on_one_compliance_pct}%` : "—"}
+              icon={Handshake}
+              valueColorClass={slaTone(meetings.one_on_one_compliance_pct)}
+              trend="Target: 100%"
+              progressPercent={meetings.one_on_one_compliance_pct ?? undefined}
+            />
+            <StatCard
+              label="TL-Italy syncs"
+              value={meetings.tl_sync_count}
+              icon={PhoneCall}
+              trend="This month · target ≥45/year"
+            />
+            <StatCard
+              label="Team meetings with HRBP"
+              value={`${meetings.team_meetings_with_hrbp}/${meetings.team_meetings_held}`}
+              icon={UsersRound}
+              trend={`${meetings.team_meeting_notes_within_24h} notes sent within 24h`}
+            />
+            <StatCard label="Management reviews (YTD)" value={review_deliveries_ytd} icon={ClipboardList} trend="Target: ≥12/year" />
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold text-muted-foreground">Idle Management</h2>
+          <div className="mt-2 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard
+              label="Open idle flags"
+              value={idle.open_count}
+              icon={UserX}
+              valueColorClass={idle.open_count === 0 ? toneTextClass.success : toneTextClass.warning}
+            />
+            <StatCard label="Resolved idle flags" value={idle.resolved_count} icon={CheckCircle2} />
           </div>
         </section>
 

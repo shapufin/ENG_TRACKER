@@ -1,5 +1,5 @@
 import api from "@/lib/api";
-import type { KpiCoverageEntry, Scorecard } from "../types/tlScorecard";
+import type { EngagementSurveyTeamAverage, KpiCoverageEntry, Scorecard } from "../types/tlScorecard";
 
 const BASE = "/plugins/tl_scorecard";
 
@@ -11,4 +11,13 @@ export const tlScorecardService = {
   },
 
   getKpiCoverage: () => api.get<KpiCoverageEntry[]>(`${BASE}/kpi-coverage/`),
+
+  getEngagementSurveyTeamAverage: (period?: string) => {
+    const params: Record<string, string> = {};
+    if (period) params.period = period;
+    return api.get<EngagementSurveyTeamAverage>(`${BASE}/engagement-survey-responses/team-average/`, { params });
+  },
+
+  submitEngagementSurveyResponse: (data: { period: string; score: number }) =>
+    api.post(`${BASE}/engagement-survey-responses/`, data),
 };

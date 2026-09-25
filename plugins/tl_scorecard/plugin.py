@@ -34,12 +34,18 @@ class TlScorecardPlugin(BasePlugin):
         return urlpatterns
 
     def get_permission_actions(self):
-        return ["view"]
+        return ["view", "manage", "configure"]
 
     def get_permission_manifest(self):
         return {
             **super().get_permission_manifest(),
             "view": {"roles": ["italian_tl", "albanian_tl"], "public": False},
+            "manage": {"roles": ["italian_tl", "albanian_tl"], "public": False},
+            # Reserved for engagement-survey submission only (see
+            # EngagementSurveyResponseViewSet's docstring) — every
+            # authenticated employee submits their own sentiment score,
+            # not just TLs. 'view'/'manage' stay TL-only.
+            "configure": {"roles": [], "public": True},
         }
 
     def get_frontend_metadata(self):

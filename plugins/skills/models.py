@@ -54,6 +54,10 @@ class Skill(models.Model):
     code = models.CharField(max_length=80, unique=True)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    is_certifiable = models.BooleanField(
+        default=False,
+        help_text='Whether reaching mastery on this skill counts as a certification (TL KPI tracking).',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -92,6 +96,10 @@ class UserSkill(models.Model):
         help_text="Proficiency level (1=Foundational, 5=Mastery).",
     )
     notes = models.TextField(blank=True)
+    certified_on = models.DateField(
+        null=True, blank=True,
+        help_text='Set when this rating represents an achieved certification (TL KPI tracking).',
+    )
     last_updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

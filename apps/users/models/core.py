@@ -427,6 +427,15 @@ class UserProfile(BaseModel):
         help_text='Italian Team Leader assigned to this user'
     )
     is_hr_user = models.BooleanField(default=False)
+    SENIORITY_CHOICES = [
+        ('junior', 'Junior'),
+        ('mid', 'Mid'),
+        ('senior', 'Senior'),
+    ]
+    seniority_level = models.CharField(
+        max_length=10, choices=SENIORITY_CHOICES, null=True, blank=True,
+        help_text='Used for the junior/senior workforce-ratio KPI.',
+    )
     is_italian_tl_role = models.BooleanField(
         default=False,
         db_index=True,

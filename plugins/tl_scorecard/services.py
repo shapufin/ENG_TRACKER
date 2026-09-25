@@ -1,6 +1,7 @@
 """
-Phase 1 computation layer for the TL Scorecard plugin — pure functions over
-existing `apps/*` data. No models of its own; nothing here writes to the DB.
+Computation layer for the TL Scorecard plugin — pure read functions over
+`apps/*` data (Phase 1) and this plugin's own Phase 2 models (Meeting,
+IdleFlag, ReviewDelivery). Nothing here writes to the DB.
 
 Deliberately never imports `plugins.engagement` or `plugins.skills` — see
 the plugin-isolation architecture rule in the approved plan. Anything from
@@ -8,10 +9,12 @@ those plugins is composed in the frontend against their own existing APIs.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 from apps.leave_management.models import LeaveRequest, count_business_days
 from apps.overtime.models.core import OvertimeLog
+
+from .models import IdleFlag, Meeting, ReviewDelivery
 
 # Every KPI from both TL job-description sheets, with its current coverage
 # status. A plain data structure (not a model) — it only changes when a
@@ -36,47 +39,52 @@ KPI_COVERAGE = [
     },
     {
         "kpi": "Engagement score ≥ 8.5/10",
-        "sheet": 1, "status": "approximate", "phase": 1,
+        "sheet": 1, "status": "measured", "phase": 2,
         "note": (
-            "The existing engagement plugin score measures TL approval-request "
-            "speed/consistency, not employee sentiment. Shown for reference, "
-            "labeled accordingly. The real sentiment/pulse-survey score is Phase 2."
+            "Two numbers now exist: the engagement plugin's approval-behavior score "
+            "(speed/consistency, not sentiment — shown as a labeled proxy) and the new "
+            "EngagementSurveyResponse pulse score, aggregated team-wide via "
+            "team-average/ so individual responses stay anonymous to the TL."
         ),
     },
     {
         "kpi": "Certification achievement via Skills Matrix",
-        "sheet": 1, "status": "planned", "phase": 2,
-        "note": "Skills Matrix has no certification field yet — small addition to the skills plugin, Phase 2.",
+        "sheet": 1, "status": "approximate", "phase": 2,
+        "note": (
+            "Skill.is_certifiable + UserSkill.certified_on now exist on the skills plugin, "
+            "but no aggregate count is exposed through its API yet — fields are there, "
+            "the number on this page isn't. Small follow-up to the skills plugin, not tl_scorecard."
+        ),
     },
     {
         "kpi": "Balanced junior/senior workforce ratio",
-        "sheet": 1, "status": "planned", "phase": 2,
-        "note": "Needs a seniority field on UserProfile (apps/users, a core app) — Phase 2.",
+        "sheet": 1, "status": "measured", "phase": 2,
+        "note": "UserProfile.seniority_level (apps/users, a core app) — populated manually, ratio computed live.",
     },
     {
         "kpi": "1-on-1 compliance (≥1/member/month)",
-        "sheet": 1, "status": "planned", "phase": 2,
-        "note": "Needs a Meeting model.",
+        "sheet": 1, "status": "measured", "phase": 2,
+        "note": "Meeting(meeting_type=one_on_one) — % of team members with ≥1 logged this month.",
     },
     {
         "kpi": "≥45 documented Technical Lead syncs",
-        "sheet": 1, "status": "planned", "phase": 2,
-        "note": "Same Meeting model, meeting_type=tl_sync.",
+        "sheet": 1, "status": "measured", "phase": 2,
+        "note": "Meeting(meeting_type=tl_sync) — cumulative count over the requested date range.",
     },
     {
         "kpi": "Monthly team meetings with HRBP, notes within 24h",
-        "sheet": 2, "status": "planned", "phase": 2,
-        "note": "Same Meeting model, meeting_type=team_meeting, attendee roles.",
+        "sheet": 2, "status": "measured", "phase": 2,
+        "note": "Meeting(meeting_type=team_meeting) + MeetingAttendee(role=hrbp) + notes_published_at SLA check.",
     },
     {
         "kpi": "Idle risks flagged with weekly status reporting",
-        "sheet": 2, "status": "planned", "phase": 2,
-        "note": "Needs an IdleFlag model plus a recurring weekly-status child log.",
+        "sheet": 2, "status": "measured", "phase": 2,
+        "note": "IdleFlag + IdleStatusUpdate — open/resolved counts and weekly-log presence.",
     },
     {
         "kpi": "≥12 monthly management reviews to Ops/GM",
-        "sheet": 2, "status": "planned", "phase": 2,
-        "note": "Needs a lightweight ReviewDelivery event log.",
+        "sheet": 2, "status": "measured", "phase": 2,
+        "note": "ReviewDelivery — cumulative count over the requested date range.",
     },
     {
         "kpi": "Zero unauthorized overtime",
@@ -195,8 +203,74 @@ def ot_turnaround_metrics(team_member_ids, month: date) -> dict:
     }
 
 
+def meeting_compliance_metrics(leader, team_member_ids, month: date) -> dict:
+    """1-on-1 compliance %, TL-sync count, and team-meeting governance —
+    all three KPIs the Meeting model covers (gap-audit findings #12/#13)."""
+    month_start, month_end = _month_bounds(month)
+
+    one_on_ones = Meeting.objects.filter(
+        organizer=leader, meeting_type='one_on_one', occurred_on__gte=month_start, occurred_on__lt=month_end,
+    )
+    members_with_one_on_one = set(one_on_ones.values_list('counterparty_id', flat=True))
+    compliant_members = len(members_with_one_on_one & set(team_member_ids))
+    one_on_one_pct = (
+        round((compliant_members / len(team_member_ids)) * 100, 1) if team_member_ids else None
+    )
+
+    tl_sync_count = Meeting.objects.filter(
+        organizer=leader, meeting_type='tl_sync', occurred_on__gte=month_start, occurred_on__lt=month_end,
+    ).count()
+
+    team_meetings = list(Meeting.objects.filter(
+        organizer=leader, meeting_type='team_meeting', occurred_on__gte=month_start, occurred_on__lt=month_end,
+    ).prefetch_related('attendees'))
+    held_with_hrbp = sum(1 for m in team_meetings if m.attendees.filter(role='hrbp').exists())
+    notes_within_24h = sum(
+        1 for m in team_meetings
+        if m.notes_published_at and (m.notes_published_at - m.created_at) <= timedelta(hours=24)
+    )
+
+    return {
+        'one_on_one_compliance_pct': one_on_one_pct,
+        'tl_sync_count': tl_sync_count,
+        'team_meetings_held': len(team_meetings),
+        'team_meetings_with_hrbp': held_with_hrbp,
+        'team_meeting_notes_within_24h': notes_within_24h,
+    }
+
+
+def idle_metrics(leader) -> dict:
+    """Open/resolved idle-flag counts (gap-audit finding #9). Not
+    month-scoped — an idle flag can stay open across month boundaries, so
+    "currently open" is more useful than "opened this month"."""
+    flags = IdleFlag.objects.filter(flagged_by=leader)
+    return {
+        'open_count': flags.filter(status='open').count(),
+        'resolved_count': flags.filter(status='resolved').count(),
+    }
+
+
+def review_delivery_count(leader, year: int) -> int:
+    """Cumulative management-review deliveries for the year (gap-audit
+    finding #6 — "≥12 monthly reviews" is a running annual count, not a
+    single month's number)."""
+    return ReviewDelivery.objects.filter(leader=leader, delivered_on__year=year).count()
+
+
+def seniority_ratio(team_member_ids) -> dict:
+    """Junior/senior workforce ratio (gap-audit finding #1). Lazily
+    imports UserProfile — apps.users is a core app, not a plugin, so this
+    doesn't violate the plugin-isolation rule."""
+    from apps.users.models.core import UserProfile
+
+    counts = {'junior': 0, 'mid': 0, 'senior': 0, 'unset': 0}
+    for level in UserProfile.objects.filter(user_id__in=team_member_ids).values_list('seniority_level', flat=True):
+        counts[level or 'unset'] += 1
+    return counts
+
+
 def build_scorecard(user, month: date) -> dict:
-    """Full Phase 1 scorecard for one TL (`user`) for `month`."""
+    """Full scorecard for one TL (`user`) for `month`."""
     team_member_ids = user.profile.get_team_member_ids()
     month = reporting_period(month)
     return {
@@ -204,4 +278,8 @@ def build_scorecard(user, month: date) -> dict:
         'team_size': len(team_member_ids),
         'leave': leave_sla_metrics(team_member_ids, month),
         'overtime': ot_turnaround_metrics(team_member_ids, month),
+        'meetings': meeting_compliance_metrics(user, team_member_ids, month),
+        'idle': idle_metrics(user),
+        'review_deliveries_ytd': review_delivery_count(user, month.year),
+        'seniority': seniority_ratio(team_member_ids),
     }
