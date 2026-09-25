@@ -45,3 +45,23 @@ class ControlRoomAuthority:
         if permission_service.has_permission(user, "control_room", "manage"):
             return None
         return "Importing Control Room access requires the Control Room manage permission."
+
+
+class PayrollAuthority:
+    """Payroll wages, gated by the payroll plugin's ``manage`` grant."""
+
+    def check_authority(self, user) -> Optional[str]:
+        try:
+            import plugins.payroll.models  # noqa: F401
+        except ImportError:
+            return f"Importing {self.display_name} requires the Payroll plugin."
+        if user and (user.is_staff or user.is_superuser):
+            return None
+        from apps.plugins.models import PluginPermission
+
+        permission = PluginPermission.objects.filter(
+            plugin_name="payroll", action="manage"
+        ).first()
+        if permission is not None and permission.has_access(user):
+            return None
+        return f"Importing {self.display_name} requires the Payroll manage permission."

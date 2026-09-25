@@ -7,7 +7,7 @@ interface ImportPreviewTableProps {
   rows: PreviewRow[];
 }
 
-const EXCLUDED_PREVIEW_KEYS = ["__row_index"];
+const EXCLUDED_PREVIEW_KEYS = ["__row_index", "__parse_errors"];
 
 function formatPreviewValue(value: unknown): string {
   if (value === null || value === undefined) return "—";

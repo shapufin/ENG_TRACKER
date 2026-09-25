@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, CalendarDays } from "lucide-react";
+import { Banknote, Users, CalendarDays } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ImportTarget } from "../types/dataImport";
@@ -7,6 +7,7 @@ import type { ImportTarget } from "../types/dataImport";
 const targetIcons: Record<string, React.ReactNode> = {
   users: <Users className="h-6 w-6" />,
   leave_balances: <CalendarDays className="h-6 w-6" />,
+  wages: <Banknote className="h-6 w-6" />,
 };
 
 interface TargetPickerProps {

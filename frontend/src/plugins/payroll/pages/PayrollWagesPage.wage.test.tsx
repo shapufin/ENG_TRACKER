@@ -11,6 +11,12 @@ vi.mock("@/hooks/usePluginPermissions", () => ({
   usePluginPermissions: vi.fn(),
 }));
 
+// PluginImportButton reads the active-plugin list; with data_import inactive
+// it renders nothing (the path taken when the plugin is disabled or removed).
+vi.mock("@/context/PluginContext", () => ({
+  usePlugins: () => ({ activePlugins: [], isLoading: false }),
+}));
+
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));

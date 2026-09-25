@@ -17,6 +17,7 @@ from . import (
     techs,
     user_skills,
     users,
+    wages,
 )
 
 __all__ = [
@@ -33,4 +34,5 @@ __all__ = [
     "techs",
     "user_skills",
     "users",
+    "wages",
 ]

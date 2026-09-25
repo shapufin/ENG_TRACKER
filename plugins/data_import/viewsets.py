@@ -133,6 +133,15 @@ def _parse_value(value: Any, field_type: str) -> Any:
     return str(value).strip() if value is not None else None
 
 
+def _cell_present(value: Any) -> bool:
+    """True when a raw cell holds a value, as opposed to blank/NaN/whitespace."""
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    return not bool(pd.isna(value))
+
+
 def _build_mapped_rows(
     df: pd.DataFrame,
     field_mapping: Dict[str, str],
@@ -140,7 +149,13 @@ def _build_mapped_rows(
     importer,
     value_transforms: Dict[str, Dict[str, str]] | None = None,
 ) -> List[Dict[str, Any]]:
-    """Build a list of mapped row dicts from a DataFrame and a field mapping."""
+    """Build a list of mapped row dicts from a DataFrame and a field mapping.
+
+    A cell whose content exists but cannot be parsed for the field type is
+    recorded under ``__parse_errors`` instead of being silently flattened to
+    ``None``, which importers that treat ``None`` as "leave the existing value
+    alone" would otherwise report as a successful no-op update.
+    """
     df_columns = list(df.columns)
     resolved_mapping = resolve_mapping(field_mapping, df_columns)
     fields_by_key = {f.key: f for f in importer.get_fields()}
@@ -149,6 +164,7 @@ def _build_mapped_rows(
     rows = []
     for idx, row in df.iterrows():
         mapped_row: Dict[str, Any] = {'__row_index': int(idx) + 1}
+        parse_errors: List[str] = []
 
         for our_field, their_column in resolved_mapping.items():
             field = fields_by_key.get(our_field)
@@ -163,6 +179,8 @@ def _build_mapped_rows(
             if field_transforms is not None and parsed is not None:
                 parsed = field_transforms.get(str(parsed).strip(), str(parsed).strip())
             mapped_row[our_field] = parsed
+            if parsed is None and _cell_present(val):
+                parse_errors.append(our_field)
 
         # Apply default values for any field not present in the mapping
         for our_field, default_value in default_values.items():
@@ -173,6 +191,11 @@ def _build_mapped_rows(
                 if field_transforms is not None and field and parsed is not None:
                     parsed = field_transforms.get(str(parsed).strip(), str(parsed).strip())
                 mapped_row[our_field] = parsed
+                if parsed is None and _cell_present(default_value):
+                    parse_errors.append(our_field)
+
+        if parse_errors:
+            mapped_row['__parse_errors'] = parse_errors
 
         rows.append(mapped_row)
 

@@ -35,7 +35,15 @@ class DataImportPlugin(BasePlugin):
         return ["view", "manage"]
 
     def get_permission_manifest(self):
-        return super().get_permission_manifest()
+        # HR imports wages from the shared wages page (mounted at both
+        # /admin/payroll/wages and /hr/payroll/wages). The grant covers the
+        # *tool*: every target still re-applies its own authority in
+        # ``check_authority``, so HR only reaches targets it already manages.
+        return {
+            **super().get_permission_manifest(),
+            "view": {"roles": ["hr"], "public": False},
+            "manage": {"roles": ["hr"], "public": False},
+        }
 
     def get_frontend_metadata(self):
         metadata = super().get_frontend_metadata()

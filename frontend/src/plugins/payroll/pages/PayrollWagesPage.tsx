@@ -11,12 +11,14 @@ import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { Trash2 } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
+import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { payrollService } from "../services/payrollService";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { handleApiError } from "@/lib/error-handler";
 import { toLocalISODate } from "@/lib/date-format-utils";
+import { exportData } from "@/utils/exportUtils";
 import { toast } from "sonner";
 import { AssignWageDialog, type AssignWageForm } from "../components/AssignWageDialog";
 import type { EligibleUser, WageAssignment } from "../types";
@@ -65,6 +67,22 @@ export const PayrollWagesPage: React.FC = () => {
       })),
     [eligibleUsersQuery.data, wagesQuery.data]
   );
+
+  const missingWageRows = useMemo(() => rows.filter((row) => !row.wage), [rows]);
+
+  const downloadMissingWagesCsv = () => {
+    exportData(missingWageRows, "wages_missing", "csv", {
+      headers: [
+        "username",
+        "full_name",
+        "gross_monthly_wage",
+        "effective_from",
+        "effective_to",
+        "note",
+      ],
+      rowMapper: (row) => [row.username, row.full_name, "", todayISO(), "", ""],
+    });
+  };
 
   const invalidDateRange = Boolean(
     form.effective_to && form.effective_from && form.effective_to < form.effective_from
@@ -251,6 +269,25 @@ export const PayrollWagesPage: React.FC = () => {
     <PageShell
       title="Wage Assignments"
       subtitle="Review every employee and team leader, then assign wages directly from the table"
+      actions={
+        <>
+          {canManagePayroll && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={downloadMissingWagesCsv}
+              disabled={missingWageRows.length === 0}
+            >
+              <Download className="mr-1 h-4 w-4" />
+              Download CSV
+            </Button>
+          )}
+          <PluginImportButton
+            targetKey="wages"
+            invalidateKeys={[["payroll-wages"], ["payroll-eligible-users"]]}
+          />
+        </>
+      }
     >
       <GlassCard className="p-6">
         <DataTable

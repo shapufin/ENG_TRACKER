@@ -6,9 +6,20 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PayrollWagesPage } from "./PayrollWagesPage";
 import * as payrollService from "../services/payrollService";
 import * as usePluginPermissions from "@/hooks/usePluginPermissions";
+import { exportData } from "@/utils/exportUtils";
 
 vi.mock("@/hooks/usePluginPermissions", () => ({
   usePluginPermissions: vi.fn(),
+}));
+
+// PluginImportButton reads the active-plugin list; with data_import inactive
+// it renders nothing (the path taken when the plugin is disabled or removed).
+vi.mock("@/context/PluginContext", () => ({
+  usePlugins: () => ({ activePlugins: [], isLoading: false }),
+}));
+
+vi.mock("@/utils/exportUtils", () => ({
+  exportData: vi.fn(),
 }));
 
 vi.mock("sonner", () => ({
@@ -168,6 +179,63 @@ describe("PayrollWagesPage", () => {
     expect(screen.getByDisplayValue("100000")).toBeInTheDocument();
   });
 
+  it("offers a CSV of employees missing a wage", async () => {
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("Alice Smith")).toBeInTheDocument());
+    const button = screen.getByRole("button", { name: "Download CSV" });
+    expect(button).toBeEnabled();
+
+    fireEvent.click(button);
+
+    expect(exportData).toHaveBeenCalledTimes(1);
+    type ExportCall = [
+      Array<{ username: string; full_name: string }>,
+      string,
+      "csv",
+      {
+        headers: string[];
+        rowMapper: (item: { username: string; full_name: string }) => string[];
+      },
+    ];
+    const [data, filename, format, config] = vi.mocked(exportData).mock
+      .calls[0] as unknown as ExportCall;
+
+    expect(filename).toBe("wages_missing");
+    expect(format).toBe("csv");
+    expect(config.headers).toEqual([
+      "username",
+      "full_name",
+      "gross_monthly_wage",
+      "effective_from",
+      "effective_to",
+      "note",
+    ]);
+    expect(data).toHaveLength(1);
+    expect(data[0].username).toBe("asmith");
+
+    const mapped = config.rowMapper(data[0]);
+    expect(mapped[0]).toBe("asmith");
+    expect(mapped[1]).toBe("Alice Smith");
+    expect(mapped[2]).toBe("");
+    expect(mapped[3]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(mapped[4]).toBe("");
+    expect(mapped[5]).toBe("");
+  });
+
+  it("disables the CSV download when every employee has a wage", async () => {
+    vi.spyOn(payrollService.payrollService, "getWages").mockResolvedValue([
+      mockWage,
+      { ...mockWage, id: 2, user: 3, user_name: "asmith" },
+    ]);
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("Alice Smith")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Download CSV" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Download CSV" }));
+    expect(exportData).not.toHaveBeenCalled();
+  });
+
   it("hides management actions when permission is denied", async () => {
     vi.mocked(usePluginPermissions.usePluginPermissions).mockReturnValue({
       canManage: () => false,
@@ -184,5 +252,6 @@ describe("PayrollWagesPage", () => {
     await waitFor(() => expect(screen.getByText("Alice Smith")).toBeInTheDocument());
     expect(screen.queryByText("Assign Wage")).not.toBeInTheDocument();
     expect(screen.queryByText("Edit")).not.toBeInTheDocument();
+    expect(screen.queryByText("Download CSV")).not.toBeInTheDocument();
   });
 });

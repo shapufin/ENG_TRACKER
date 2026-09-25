@@ -128,6 +128,7 @@ class RegisteredImporterContractTests(TestCase):
             "skills",
             "user_skills",
             "control_room_access",
+            "wages",
         }
         self.assertTrue(expected.issubset(keys), f"missing: {expected - keys}")
 
