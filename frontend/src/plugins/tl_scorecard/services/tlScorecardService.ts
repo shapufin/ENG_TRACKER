@@ -1,8 +1,12 @@
 import api from "@/lib/api";
+import { normalizeList } from "@/lib/api-utils";
+import type { PaginatedResponse } from "@/types";
 import type {
   EngagementSurveyTeamAverage,
+  EPRCycle,
   EscalationCandidate,
   KpiCoverageEntry,
+  PIPRecord,
   Scorecard,
 } from "../types/tlScorecard";
 
@@ -47,4 +51,28 @@ export const tlScorecardService = {
 
   createPromotionFlag: (data: { employee: number; nominated_on: string; notes: string }) =>
     api.post(`${BASE}/promotion-flags/`, data),
+
+  async listPIPRecords(): Promise<PIPRecord[]> {
+    const { data } = await api.get<PIPRecord[] | PaginatedResponse<PIPRecord>>(`${BASE}/pip-records/`);
+    return normalizeList(data);
+  },
+
+  createPIPRecord: (data: { employee: number; start_date: string; notes: string }) =>
+    api.post<PIPRecord>(`${BASE}/pip-records/`, { ...data, status: "active" }),
+
+  approvePIPRecord: (id: number) => api.post<PIPRecord>(`${BASE}/pip-records/${id}/approve/`),
+
+  async listEPRCycles(): Promise<EPRCycle[]> {
+    const { data } = await api.get<EPRCycle[] | PaginatedResponse<EPRCycle>>(`${BASE}/epr-cycles/`);
+    return normalizeList(data);
+  },
+
+  createEPRCycle: (data: { user: number; year: number }) =>
+    api.post<EPRCycle>(`${BASE}/epr-cycles/`, data),
+
+  createEPRGoal: (data: { cycle: number; description: string }) =>
+    api.post(`${BASE}/epr-goals/`, data),
+
+  completeEPRStage: (cycleId: number, field: "goal_setting_completed_at" | "mid_year_completed_at" | "final_review_completed_at") =>
+    api.patch<EPRCycle>(`${BASE}/epr-cycles/${cycleId}/`, { [field]: new Date().toISOString() }),
 };

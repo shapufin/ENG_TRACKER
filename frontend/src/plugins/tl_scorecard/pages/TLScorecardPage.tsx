@@ -25,7 +25,9 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { InfoCallout } from "@/components/ui/InfoCallout";
 import { StatCard } from "@/components/ui/StatCard";
 import { toneTextClass } from "@/components/ui/tone";
+import { usePermissions } from "@/context/PermissionContext";
 import { engagementService } from "@/plugins/engagement/services/engagementService";
+import { EPRSection } from "../components/EPRSection";
 import { EscalationsPanel } from "../components/EscalationsPanel";
 import { FlagAbsenceDialog } from "../components/FlagAbsenceDialog";
 import { FlagIdleDialog } from "../components/FlagIdleDialog";
@@ -33,7 +35,11 @@ import { KpiCoveragePanel } from "../components/KpiCoveragePanel";
 import { LogMeetingDialog } from "../components/LogMeetingDialog";
 import { LogReviewDeliveryDialog } from "../components/LogReviewDeliveryDialog";
 import { NominatePromotionDialog } from "../components/NominatePromotionDialog";
+import { OpenPIPDialog } from "../components/OpenPIPDialog";
+import { PIPListPanel } from "../components/PIPListPanel";
+import { StartEPRCycleDialog } from "../components/StartEPRCycleDialog";
 import { tlScorecardService } from "../services/tlScorecardService";
+import type { EPRStage } from "../types/tlScorecard";
 
 const LoadingState: React.FC = () => (
   <PageShell title="TL Scorecard">
@@ -55,13 +61,18 @@ const slaTone = (pct: number | null) => {
 
 export const TLScorecardPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const { isAdmin } = usePermissions();
   const [meetingDialogOpen, setMeetingDialogOpen] = useState(false);
   const [idleDialogOpen, setIdleDialogOpen] = useState(false);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [absenceDialogOpen, setAbsenceDialogOpen] = useState(false);
   const [promotionDialogOpen, setPromotionDialogOpen] = useState(false);
+  const [pipDialogOpen, setPipDialogOpen] = useState(false);
+  const [eprDialogOpen, setEprDialogOpen] = useState(false);
 
   const invalidateScorecard = () => queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "scorecard"] });
+  const invalidatePips = () => queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "pip-records"] });
+  const invalidateEprCycles = () => queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "epr-cycles"] });
   const createMeetingMutation = useMutation({
     mutationFn: tlScorecardService.createMeeting,
     onSuccess: invalidateScorecard,
@@ -81,6 +92,33 @@ export const TLScorecardPage: React.FC = () => {
   const createPromotionFlagMutation = useMutation({
     mutationFn: tlScorecardService.createPromotionFlag,
     onSuccess: invalidateScorecard,
+  });
+  const createPIPMutation = useMutation({
+    mutationFn: tlScorecardService.createPIPRecord,
+    onSuccess: () => {
+      invalidateScorecard();
+      invalidatePips();
+    },
+  });
+  const approvePIPMutation = useMutation({
+    mutationFn: tlScorecardService.approvePIPRecord,
+    onSuccess: () => {
+      invalidateScorecard();
+      invalidatePips();
+    },
+  });
+  const createEPRCycleMutation = useMutation({
+    mutationFn: tlScorecardService.createEPRCycle,
+    onSuccess: invalidateEprCycles,
+  });
+  const addEPRGoalMutation = useMutation({
+    mutationFn: tlScorecardService.createEPRGoal,
+    onSuccess: invalidateEprCycles,
+  });
+  const completeEPRStageMutation = useMutation({
+    mutationFn: ({ cycleId, stage }: { cycleId: number; stage: EPRStage }) =>
+      tlScorecardService.completeEPRStage(cycleId, `${stage}_completed_at`),
+    onSuccess: invalidateEprCycles,
   });
 
   const scorecardQuery = useQuery({
@@ -102,6 +140,14 @@ export const TLScorecardPage: React.FC = () => {
   const escalationsQuery = useQuery({
     queryKey: ["tl-scorecard", "escalations"],
     queryFn: async () => (await tlScorecardService.getEscalations()).data,
+  });
+  const pipRecordsQuery = useQuery({
+    queryKey: ["tl-scorecard", "pip-records"],
+    queryFn: () => tlScorecardService.listPIPRecords(),
+  });
+  const eprCyclesQuery = useQuery({
+    queryKey: ["tl-scorecard", "epr-cycles"],
+    queryFn: () => tlScorecardService.listEPRCycles(),
   });
 
   if (scorecardQuery.isLoading) return <LoadingState />;
@@ -283,6 +329,12 @@ export const TLScorecardPage: React.FC = () => {
               <Button variant="outline" size="sm" onClick={() => setPromotionDialogOpen(true)}>
                 <Plus className="mr-1.5 h-3.5 w-3.5" /> Nominate promotion
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setPipDialogOpen(true)}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> Open PIP
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setEprDialogOpen(true)}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> Start EPR cycle
+              </Button>
             </div>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -320,6 +372,27 @@ export const TLScorecardPage: React.FC = () => {
             />
           </div>
           {escalationsQuery.data && <div className="mt-4"><EscalationsPanel candidates={escalationsQuery.data} /></div>}
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {pipRecordsQuery.data && (
+              <PIPListPanel
+                records={pipRecordsQuery.data}
+                canApprove={isAdmin}
+                isApproving={approvePIPMutation.isPending}
+                onApprove={(id) => approvePIPMutation.mutate(id)}
+              />
+            )}
+            {eprCyclesQuery.data && (
+              <EPRSection
+                cycles={eprCyclesQuery.data}
+                onAddGoal={async (cycleId, description) => {
+                  await addEPRGoalMutation.mutateAsync({ cycle: cycleId, description });
+                }}
+                onCompleteStage={async (cycleId, stage) => {
+                  await completeEPRStageMutation.mutateAsync({ cycleId, stage });
+                }}
+              />
+            )}
+          </div>
         </section>
 
         {coverageQuery.data && <KpiCoveragePanel entries={coverageQuery.data} />}
@@ -358,6 +431,20 @@ export const TLScorecardPage: React.FC = () => {
         onOpenChange={setPromotionDialogOpen}
         onCreate={async (data) => {
           await createPromotionFlagMutation.mutateAsync(data);
+        }}
+      />
+      <OpenPIPDialog
+        open={pipDialogOpen}
+        onOpenChange={setPipDialogOpen}
+        onCreate={async (data) => {
+          await createPIPMutation.mutateAsync(data);
+        }}
+      />
+      <StartEPRCycleDialog
+        open={eprDialogOpen}
+        onOpenChange={setEprDialogOpen}
+        onCreate={async (data) => {
+          await createEPRCycleMutation.mutateAsync(data);
         }}
       />
     </PageShell>

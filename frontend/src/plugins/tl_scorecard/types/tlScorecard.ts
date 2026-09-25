@@ -75,6 +75,40 @@ export interface EngagementSurveyTeamAverage {
   response_count: number;
 }
 
+export interface PIPRecord {
+  id: number;
+  employee: number;
+  employee_name: string | null;
+  tl: number;
+  tl_name: string | null;
+  status: "draft" | "active" | "completed" | "cancelled";
+  start_date: string;
+  approved_by: number | null;
+  approved_by_name: string | null;
+  approved_at: string | null;
+  notes: string;
+}
+
+export interface EPRGoal {
+  id: number;
+  cycle: number;
+  description: string;
+}
+
+export interface EPRCycle {
+  id: number;
+  user: number;
+  user_name: string | null;
+  year: number;
+  goal_setting_completed_at: string | null;
+  mid_year_completed_at: string | null;
+  final_review_completed_at: string | null;
+  goals: EPRGoal[];
+  goal_count: number;
+}
+
+export type EPRStage = "goal_setting" | "mid_year" | "final_review";
+
 export type KpiStatus = "measured" | "approximate" | "planned" | "blocked" | "excluded";
 
 export interface KpiCoverageEntry {

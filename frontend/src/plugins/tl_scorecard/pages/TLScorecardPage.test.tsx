@@ -13,6 +13,8 @@ vi.mock("../services/tlScorecardService", () => ({
     getKpiCoverage: vi.fn(),
     getEngagementSurveyTeamAverage: vi.fn(),
     getEscalations: vi.fn(),
+    listPIPRecords: vi.fn(),
+    listEPRCycles: vi.fn(),
   },
 }));
 
@@ -24,6 +26,10 @@ vi.mock("@/plugins/engagement/services/engagementService", () => ({
 
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({ user: { id: 1, username: "leader", teams: [] } }),
+}));
+
+vi.mock("@/context/PermissionContext", () => ({
+  usePermissions: () => ({ isAdmin: false }),
 }));
 
 vi.mock("@/services/userService", () => ({
@@ -68,6 +74,8 @@ const mockDefaults = () => {
     data: { engagement_score: 82 },
   });
   (tlScorecardService.getEscalations as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+  (tlScorecardService.listPIPRecords as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+  (tlScorecardService.listEPRCycles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 };
 
 const renderPage = () => {
