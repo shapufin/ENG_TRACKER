@@ -2,6 +2,7 @@ import api from "@/lib/api";
 import { normalizeList } from "@/lib/api-utils";
 import type { PaginatedResponse } from "@/types";
 import type {
+  ApprovalEngagementScore,
   EngagementSurveyTeamAverage,
   EPRCycle,
   EscalationCandidate,
@@ -20,6 +21,13 @@ export const tlScorecardService = {
   },
 
   getKpiCoverage: () => api.get<KpiCoverageEntry[]>(`${BASE}/kpi-coverage/`),
+
+  getTrend: (months = 6) => api.get<Scorecard[]>(`${BASE}/trend/`, { params: { months } }),
+
+  // Hits the engagement plugin's own public REST endpoint directly rather
+  // than importing its service module — see ApprovalEngagementScore's
+  // comment in types/tlScorecard.ts for why.
+  getApprovalEngagementScore: () => api.get<ApprovalEngagementScore>("/plugins/engagement/metrics/summary/"),
 
   getEngagementSurveyTeamAverage: (period?: string) => {
     const params: Record<string, string> = {};
@@ -75,4 +83,10 @@ export const tlScorecardService = {
 
   completeEPRStage: (cycleId: number, field: "goal_setting_completed_at" | "mid_year_completed_at" | "final_review_completed_at") =>
     api.patch<EPRCycle>(`${BASE}/epr-cycles/${cycleId}/`, { [field]: new Date().toISOString() }),
+
+  exportWorkbook: (month?: string) => {
+    const params: Record<string, string> = {};
+    if (month) params.month = month;
+    return api.get<Blob>(`${BASE}/export/`, { params, responseType: "blob" });
+  },
 };

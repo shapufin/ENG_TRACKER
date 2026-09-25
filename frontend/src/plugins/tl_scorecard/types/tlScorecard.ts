@@ -75,6 +75,14 @@ export interface EngagementSurveyTeamAverage {
   response_count: number;
 }
 
+// Minimal local shape of the engagement plugin's summary response — only the
+// field this plugin actually reads. Kept local (not imported from
+// plugins/engagement) so this plugin's build never depends on engagement's
+// frontend files existing — see the "Plugin removal safety" invariant.
+export interface ApprovalEngagementScore {
+  engagement_score: number | null;
+}
+
 export interface PIPRecord {
   id: number;
   employee: number;

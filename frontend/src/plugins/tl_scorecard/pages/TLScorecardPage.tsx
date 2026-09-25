@@ -6,9 +6,11 @@ import {
   CalendarClock,
   CheckCircle2,
   ClipboardList,
+  Download,
   Gauge,
   Handshake,
   Hourglass,
+  LineChart,
   PhoneCall,
   Plus,
   ShieldAlert,
@@ -26,7 +28,7 @@ import { InfoCallout } from "@/components/ui/InfoCallout";
 import { StatCard } from "@/components/ui/StatCard";
 import { toneTextClass } from "@/components/ui/tone";
 import { usePermissions } from "@/context/PermissionContext";
-import { engagementService } from "@/plugins/engagement/services/engagementService";
+import { downloadBlobResponse } from "@/lib/download";
 import { EPRSection } from "../components/EPRSection";
 import { EscalationsPanel } from "../components/EscalationsPanel";
 import { FlagAbsenceDialog } from "../components/FlagAbsenceDialog";
@@ -69,6 +71,7 @@ export const TLScorecardPage: React.FC = () => {
   const [promotionDialogOpen, setPromotionDialogOpen] = useState(false);
   const [pipDialogOpen, setPipDialogOpen] = useState(false);
   const [eprDialogOpen, setEprDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const invalidateScorecard = () => queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "scorecard"] });
   const invalidatePips = () => queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "pip-records"] });
@@ -121,6 +124,16 @@ export const TLScorecardPage: React.FC = () => {
     onSuccess: invalidateEprCycles,
   });
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const response = await tlScorecardService.exportWorkbook();
+      downloadBlobResponse(response.data, `tl-scorecard-${new Date().toISOString().slice(0, 7)}.xlsx`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const scorecardQuery = useQuery({
     queryKey: ["tl-scorecard", "scorecard"],
     queryFn: async () => (await tlScorecardService.getScorecard()).data,
@@ -131,7 +144,7 @@ export const TLScorecardPage: React.FC = () => {
   });
   const engagementQuery = useQuery({
     queryKey: ["tl-scorecard", "engagement-summary"],
-    queryFn: async () => (await engagementService.getSummary()).data,
+    queryFn: async () => (await tlScorecardService.getApprovalEngagementScore()).data,
   });
   const surveyQuery = useQuery({
     queryKey: ["tl-scorecard", "engagement-survey-average"],
@@ -174,7 +187,24 @@ export const TLScorecardPage: React.FC = () => {
   });
 
   return (
-    <PageShell title="TL Scorecard" subtitle={`${monthLabel} · ${team_size} team member(s)`}>
+    <PageShell
+      title="TL Scorecard"
+      subtitle={`${monthLabel} · ${team_size} team member(s)`}
+      actions={
+        <>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/tl-scorecard/visualize">
+              <LineChart className="mr-2 h-4 w-4" />
+              Visualize
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
+            <Download className="mr-2 h-4 w-4" />
+            {isExporting ? "Exporting…" : "Export Report"}
+          </Button>
+        </>
+      }
+    >
       <div className="space-y-6">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard

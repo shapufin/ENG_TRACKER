@@ -354,6 +354,23 @@ def epr_metrics(team_member_ids, year: int) -> dict:
     return {'stages': stages, 'cycles_with_5plus_goals': goals_met, 'cycles_started': len(cycles)}
 
 
+def scorecard_trend(user, months: int, end_month: date) -> list[dict]:
+    """Last `months` calendar months of `build_scorecard`, oldest first —
+    reuses the existing per-month function as-is, no new metric logic and
+    no snapshot model (same "computed live" approach as the rest of this
+    plugin)."""
+    end = reporting_period(end_month)
+    points = []
+    cursor = end
+    for _ in range(months):
+        points.append(build_scorecard(user, cursor))
+        if cursor.month == 1:
+            cursor = cursor.replace(year=cursor.year - 1, month=12)
+        else:
+            cursor = cursor.replace(month=cursor.month - 1)
+    return list(reversed(points))
+
+
 def escalation_candidates(leader) -> list[dict]:
     """Computed, not logged — surfaces anything that would become an
     escalation if left unhandled, from data already tracked elsewhere.
@@ -401,6 +418,45 @@ def escalation_candidates(leader) -> list[dict]:
             })
 
     return candidates
+
+
+def governance_records(leader, team_member_ids, year: int) -> dict:
+    """Row-level detail (not just counts) for the export workbook's
+    Governance sheet — open PIPs, open absences, pending promotion flags,
+    and in-progress EPR cycles for this TL's team. Reuses the same
+    querysets as pip_metrics/absence_metrics/promotion_ratio/epr_metrics,
+    just without collapsing them to counts."""
+    open_pips = [
+        {'employee': str(p.employee), 'status': p.status, 'start_date': p.start_date.isoformat(),
+         'approved': p.approved_at is not None}
+        for p in PIPRecord.objects.filter(tl=leader).exclude(status__in=('completed', 'cancelled'))
+        .select_related('employee')
+    ]
+    open_absences = [
+        {'employee': str(a.employee), 'absence_date': a.absence_date.isoformat(), 'reason': a.reason}
+        for a in Absence.objects.filter(flagged_by=leader, addressed_on__isnull=True).select_related('employee')
+    ]
+    pending_promotions = [
+        {'employee': str(p.employee), 'nominated_on': p.nominated_on.isoformat()}
+        for p in PromotionFlag.objects.filter(nominated_by=leader, status='nominated').select_related('employee')
+    ]
+    in_progress_cycles = [
+        {
+            'employee': str(c.user), 'year': c.year,
+            'goal_setting_done': c.goal_setting_completed_at is not None,
+            'mid_year_done': c.mid_year_completed_at is not None,
+            'final_review_done': c.final_review_completed_at is not None,
+            'goal_count': len(c.goals.all()),
+        }
+        for c in EPRCycle.objects.filter(user_id__in=team_member_ids, year=year)
+        .select_related('user').prefetch_related('goals')
+    ]
+    return {
+        'open_pips': open_pips,
+        'open_absences': open_absences,
+        'pending_promotions': pending_promotions,
+        'epr_cycles': in_progress_cycles,
+    }
 
 
 def build_scorecard(user, month: date) -> dict:

@@ -8,6 +8,7 @@ from datetime import date
 from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.db.models import Avg, Count
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -15,6 +16,8 @@ from rest_framework.exceptions import NotFound, PermissionDenied, ValidationErro
 from rest_framework.response import Response
 
 from core.mixins.permissions import PluginPermissionMixin
+
+from .excel_export import build_workbook_bytes
 
 from .models import (
     Absence,
@@ -45,7 +48,7 @@ from .serializers import (
     ReviewDeliverySerializer,
     ScorecardSerializer,
 )
-from .services import KPI_COVERAGE, build_scorecard, escalation_candidates
+from .services import KPI_COVERAGE, build_scorecard, escalation_candidates, governance_records, scorecard_trend
 
 
 def _parse_month(raw):
@@ -92,6 +95,30 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         data = build_scorecard(leader, month or date.today())
         return Response(ScorecardSerializer(data).data)
 
+    @action(detail=False, methods=['get'])
+    def trend(self, request):
+        """Last N months of scorecard metrics, oldest first. ?months=6 (default), ?leader_id= like `scorecard`."""
+        months_raw = request.query_params.get('months', '6')
+        try:
+            months = int(months_raw)
+        except ValueError:
+            return Response({'error': 'months must be an integer'}, status=status.HTTP_400_BAD_REQUEST)
+        if not (1 <= months <= 24):
+            return Response({'error': 'months must be between 1 and 24'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            month = _parse_month(request.query_params.get('month'))
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        leader = self._resolve_leader(request)
+        if not hasattr(leader, 'profile'):
+            return Response({'error': 'This user has no profile to resolve a team from.'},
+                             status=status.HTTP_400_BAD_REQUEST)
+
+        points = scorecard_trend(leader, months, month or date.today())
+        return Response(ScorecardSerializer(points, many=True).data)
+
     @action(detail=False, methods=['get'], url_path='kpi-coverage', url_name='kpi-coverage')
     def kpi_coverage(self, request):
         return Response(KpiCoverageEntrySerializer(KPI_COVERAGE, many=True).data)
@@ -100,6 +127,35 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
     def escalations(self, request):
         """Computed candidates, not a log — see services.escalation_candidates."""
         return Response(EscalationCandidateSerializer(escalation_candidates(request.user), many=True).data)
+
+    @action(detail=False, methods=['get'])
+    def export(self, request):
+        """Download the evidence workbook. ?month=YYYY-MM-DD."""
+        try:
+            month = _parse_month(request.query_params.get('month'))
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        leader = self._resolve_leader(request)
+        if not hasattr(leader, 'profile'):
+            return Response({'error': 'This user has no profile to resolve a team from.'},
+                             status=status.HTTP_400_BAD_REQUEST)
+
+        month = month or date.today()
+        scorecard = build_scorecard(leader, month)
+        team_member_ids = leader.profile.get_team_member_ids()
+        governance = governance_records(leader, team_member_ids, month.year)
+        period_label = date.fromisoformat(scorecard['month']).strftime('%B %Y')
+
+        workbook_bytes = build_workbook_bytes(scorecard, KPI_COVERAGE, governance, period_label)
+
+        filename = f'tl_scorecard_{leader.username}_{scorecard["month"][:7]}.xlsx'
+        response = HttpResponse(
+            workbook_bytes,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
 
 
 class MeetingViewSet(PluginPermissionMixin, viewsets.ModelViewSet):

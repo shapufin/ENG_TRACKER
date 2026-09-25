@@ -220,6 +220,11 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
     TLScorecardPage: lazy(() =>
       import("./tl_scorecard/pages/TLScorecardPage").then((m) => ({ default: m.TLScorecardPage }))
     ),
+    TLScorecardVisualizationPage: lazy(() =>
+      import("./tl_scorecard/pages/TLScorecardVisualizationPage").then((m) => ({
+        default: m.TLScorecardVisualizationPage,
+      }))
+    ),
     TLScorecardSidebarLink: lazy(() => import("./tl_scorecard/components/TLScorecardSidebarLink")),
   },
 };

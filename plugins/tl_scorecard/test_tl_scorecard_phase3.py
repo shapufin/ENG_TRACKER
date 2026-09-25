@@ -421,6 +421,65 @@ class EPRCycleAPITests(TestCase):
         self.assertEqual(EPRGoal.objects.get(pk=goal_id).cycle_id, cycle_id)
 
 
+class ScorecardTrendTests(TestCase):
+    def test_trend_returns_requested_number_of_months_oldest_first(self):
+        factory = APIRequestFactory()
+        call_command('seed_plugin_permissions')
+        leader = _make_user('leader_trend')
+        _assign_tl_role(leader)
+
+        request = factory.get('/api/plugins/tl_scorecard/trend/', {'months': '3', 'month': '2026-09-01'})
+        force_authenticate(request, user=leader)
+        resp = TLScorecardViewSet.as_view({'get': 'trend'})(request)
+
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(len(resp.data), 3)
+        self.assertEqual(
+            [point['month'] for point in resp.data],
+            ['2026-07-01', '2026-08-01', '2026-09-01'],
+        )
+
+    def test_trend_rejects_out_of_range_months(self):
+        factory = APIRequestFactory()
+        call_command('seed_plugin_permissions')
+        leader = _make_user('leader_trend_range')
+        _assign_tl_role(leader)
+
+        request = factory.get('/api/plugins/tl_scorecard/trend/', {'months': '99'})
+        force_authenticate(request, user=leader)
+        resp = TLScorecardViewSet.as_view({'get': 'trend'})(request)
+        self.assertEqual(resp.status_code, 400)
+
+
+class ScorecardExportTests(TestCase):
+    def test_export_returns_an_xlsx_workbook(self):
+        factory = APIRequestFactory()
+        call_command('seed_plugin_permissions')
+        leader = _make_user('leader_export')
+        _assign_tl_role(leader)
+        member = _make_user('member_export')
+        member.profile.italian_tl = leader
+        member.profile.save()
+        PIPRecord.objects.create(employee=member, tl=leader, start_date=date.today())
+        Absence.objects.create(employee=member, flagged_by=leader, absence_date=date.today())
+        PromotionFlag.objects.create(employee=member, nominated_by=leader, nominated_on=date.today())
+        EPRCycle.objects.create(user=member, year=date.today().year)
+
+        request = factory.get('/api/plugins/tl_scorecard/export/')
+        force_authenticate(request, user=leader)
+        resp = TLScorecardViewSet.as_view({'get': 'export'})(request)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            resp['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        self.assertIn('attachment; filename="tl_scorecard_leader_export_', resp['Content-Disposition'])
+        self.assertGreater(len(resp.content), 0)
+        # A real .xlsx is a zip archive — starts with the PK local-file-header magic bytes.
+        self.assertEqual(resp.content[:2], b'PK')
+
+
 class ScorecardIncludesPhase3Metrics(TestCase):
     def test_scorecard_endpoint_serializes_phase3_sections(self):
         factory = APIRequestFactory()

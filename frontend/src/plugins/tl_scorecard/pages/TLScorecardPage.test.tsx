@@ -1,27 +1,27 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
 import { TLScorecardPage } from "./TLScorecardPage";
 import { tlScorecardService } from "../services/tlScorecardService";
-import { engagementService } from "@/plugins/engagement/services/engagementService";
+import { downloadBlobResponse } from "@/lib/download";
 import type { KpiCoverageEntry, Scorecard } from "../types/tlScorecard";
 
 vi.mock("../services/tlScorecardService", () => ({
   tlScorecardService: {
     getScorecard: vi.fn(),
     getKpiCoverage: vi.fn(),
+    getApprovalEngagementScore: vi.fn(),
     getEngagementSurveyTeamAverage: vi.fn(),
     getEscalations: vi.fn(),
     listPIPRecords: vi.fn(),
     listEPRCycles: vi.fn(),
+    exportWorkbook: vi.fn(),
   },
 }));
 
-vi.mock("@/plugins/engagement/services/engagementService", () => ({
-  engagementService: {
-    getSummary: vi.fn(),
-  },
+vi.mock("@/lib/download", () => ({
+  downloadBlobResponse: vi.fn(),
 }));
 
 vi.mock("@/hooks/useAuth", () => ({
@@ -70,12 +70,15 @@ const mockDefaults = () => {
   (tlScorecardService.getEngagementSurveyTeamAverage as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: { period: "2026-09", average_score: null, response_count: 0 },
   });
-  (engagementService.getSummary as ReturnType<typeof vi.fn>).mockResolvedValue({
+  (tlScorecardService.getApprovalEngagementScore as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: { engagement_score: 82 },
   });
   (tlScorecardService.getEscalations as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
   (tlScorecardService.listPIPRecords as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (tlScorecardService.listEPRCycles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+  (tlScorecardService.exportWorkbook as ReturnType<typeof vi.fn>).mockResolvedValue({
+    data: new Blob(["fake xlsx"]),
+  });
 };
 
 const renderPage = () => {
@@ -180,5 +183,16 @@ describe("TLScorecardPage", () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText("Couldn't load your scorecard")).toBeInTheDocument());
+  });
+
+  it("downloads the evidence workbook when Export Report is clicked", async () => {
+    mockDefaults();
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("Export Report")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Export Report"));
+
+    await waitFor(() => expect(tlScorecardService.exportWorkbook).toHaveBeenCalledTimes(1));
+    expect(downloadBlobResponse).toHaveBeenCalledTimes(1);
   });
 });

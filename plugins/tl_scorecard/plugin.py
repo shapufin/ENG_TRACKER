@@ -57,6 +57,11 @@ class TlScorecardPlugin(BasePlugin):
                     "component": "TLScorecardPage",
                     "layout": "app",
                 },
+                {
+                    "path": "/tl-scorecard/visualize",
+                    "component": "TLScorecardVisualizationPage",
+                    "layout": "app",
+                },
             ],
             "injection_slots": [
                 {
