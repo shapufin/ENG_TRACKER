@@ -21,6 +21,16 @@ vi.mock("@/plugins/engagement/services/engagementService", () => ({
   },
 }));
 
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({ user: { id: 1, username: "leader", teams: [] } }),
+}));
+
+vi.mock("@/services/userService", () => ({
+  userService: {
+    getMyTeamMembers: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 const SCORECARD: Scorecard = {
   month: "2026-09-01",
   team_size: 4,

@@ -20,4 +20,18 @@ export const tlScorecardService = {
 
   submitEngagementSurveyResponse: (data: { period: string; score: number }) =>
     api.post(`${BASE}/engagement-survey-responses/`, data),
+
+  createMeeting: (data: {
+    meeting_type: string;
+    counterparty: number | null;
+    team: number | null;
+    occurred_on: string;
+    notes: string;
+  }) => api.post(`${BASE}/meetings/`, data),
+
+  createIdleFlag: (data: { employee: number; flagged_on: string; productivity_task: string; notes: string }) =>
+    api.post(`${BASE}/idle-flags/`, data),
+
+  createReviewDelivery: (data: { period: string; recipient: string; delivered_on: string }) =>
+    api.post(`${BASE}/review-deliveries/`, data),
 };

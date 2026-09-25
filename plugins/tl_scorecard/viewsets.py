@@ -131,6 +131,11 @@ class IdleFlagViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         return qs.filter(flagged_by=self.request.user)
 
     def perform_create(self, serializer):
+        employee = serializer.validated_data['employee']
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            team_member_ids = self.request.user.profile.get_team_member_ids()
+            if employee.id not in team_member_ids:
+                raise ValidationError({'employee': 'You can only flag your own team members as idle.'})
         serializer.save(flagged_by=self.request.user, recorded_by=self.request.user)
 
 

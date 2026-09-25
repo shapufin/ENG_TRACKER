@@ -224,7 +224,9 @@ def meeting_compliance_metrics(leader, team_member_ids, month: date) -> dict:
     team_meetings = list(Meeting.objects.filter(
         organizer=leader, meeting_type='team_meeting', occurred_on__gte=month_start, occurred_on__lt=month_end,
     ).prefetch_related('attendees'))
-    held_with_hrbp = sum(1 for m in team_meetings if m.attendees.filter(role='hrbp').exists())
+    # `.attendees.all()`, not `.filter(...)` — the latter bypasses the
+    # prefetch_related cache above and re-queries per meeting (N+1).
+    held_with_hrbp = sum(1 for m in team_meetings if any(a.role == 'hrbp' for a in m.attendees.all()))
     notes_within_24h = sum(
         1 for m in team_meetings
         if m.notes_published_at and (m.notes_published_at - m.created_at) <= timedelta(hours=24)

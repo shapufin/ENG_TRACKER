@@ -124,6 +124,8 @@ class IdleFlagAPITests(TestCase):
         self.leader = _make_user('leader_idle')
         _assign_tl_role(self.leader, 'albanian_tl')
         self.employee = _make_user('employee_idle')
+        self.employee.profile.albanian_tl = self.leader
+        self.employee.profile.save()
         self.other_leader = _make_user('leader_idle2')
         _assign_tl_role(self.other_leader, 'albanian_tl')
 
@@ -144,6 +146,14 @@ class IdleFlagAPITests(TestCase):
         self.assertEqual(resp.status_code, 201, resp.data)
         flag = IdleFlag.objects.get(pk=resp.data['id'])
         self.assertEqual(flag.flagged_by, self.leader)
+
+    def test_cannot_flag_a_non_team_member_as_idle(self):
+        outsider = _make_user('outsider_idle')
+        resp = self._create(self.leader, {
+            'employee': outsider.id, 'flagged_on': '2026-09-10', 'status': 'open',
+        })
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('employee', resp.data)
 
     def test_weekly_status_update_rejected_for_non_owner(self):
         flag = IdleFlag.objects.create(employee=self.employee, flagged_by=self.leader, flagged_on='2026-09-10')

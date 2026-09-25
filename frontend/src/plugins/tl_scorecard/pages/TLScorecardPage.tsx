@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarClock,
   CheckCircle2,
@@ -9,19 +9,24 @@ import {
   Handshake,
   Hourglass,
   PhoneCall,
+  Plus,
   TriangleAlert,
   UserX,
   Users,
   UsersRound,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
+import { Button } from "@/components/ui/button";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { InfoCallout } from "@/components/ui/InfoCallout";
 import { StatCard } from "@/components/ui/StatCard";
 import { toneTextClass } from "@/components/ui/tone";
 import { engagementService } from "@/plugins/engagement/services/engagementService";
+import { FlagIdleDialog } from "../components/FlagIdleDialog";
 import { KpiCoveragePanel } from "../components/KpiCoveragePanel";
+import { LogMeetingDialog } from "../components/LogMeetingDialog";
+import { LogReviewDeliveryDialog } from "../components/LogReviewDeliveryDialog";
 import { tlScorecardService } from "../services/tlScorecardService";
 
 const LoadingState: React.FC = () => (
@@ -43,6 +48,25 @@ const slaTone = (pct: number | null) => {
 };
 
 export const TLScorecardPage: React.FC = () => {
+  const queryClient = useQueryClient();
+  const [meetingDialogOpen, setMeetingDialogOpen] = useState(false);
+  const [idleDialogOpen, setIdleDialogOpen] = useState(false);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+
+  const invalidateScorecard = () => queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "scorecard"] });
+  const createMeetingMutation = useMutation({
+    mutationFn: tlScorecardService.createMeeting,
+    onSuccess: invalidateScorecard,
+  });
+  const createIdleFlagMutation = useMutation({
+    mutationFn: tlScorecardService.createIdleFlag,
+    onSuccess: invalidateScorecard,
+  });
+  const createReviewDeliveryMutation = useMutation({
+    mutationFn: tlScorecardService.createReviewDelivery,
+    onSuccess: invalidateScorecard,
+  });
+
   const scorecardQuery = useQuery({
     queryKey: ["tl-scorecard", "scorecard"],
     queryFn: async () => (await tlScorecardService.getScorecard()).data,
@@ -173,7 +197,17 @@ export const TLScorecardPage: React.FC = () => {
         </section>
 
         <section>
-          <h2 className="text-sm font-semibold text-muted-foreground">Communication</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-muted-foreground">Communication</h2>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setMeetingDialogOpen(true)}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> Log meeting
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setReviewDialogOpen(true)}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> Log review
+              </Button>
+            </div>
+          </div>
           <div className="mt-2 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
               label="1-on-1 compliance"
@@ -200,7 +234,12 @@ export const TLScorecardPage: React.FC = () => {
         </section>
 
         <section>
-          <h2 className="text-sm font-semibold text-muted-foreground">Idle Management</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-muted-foreground">Idle Management</h2>
+            <Button variant="outline" size="sm" onClick={() => setIdleDialogOpen(true)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" /> Flag idle risk
+            </Button>
+          </div>
           <div className="mt-2 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
               label="Open idle flags"
@@ -214,6 +253,28 @@ export const TLScorecardPage: React.FC = () => {
 
         {coverageQuery.data && <KpiCoveragePanel entries={coverageQuery.data} />}
       </div>
+
+      <LogMeetingDialog
+        open={meetingDialogOpen}
+        onOpenChange={setMeetingDialogOpen}
+        onCreate={async (data) => {
+          await createMeetingMutation.mutateAsync(data);
+        }}
+      />
+      <FlagIdleDialog
+        open={idleDialogOpen}
+        onOpenChange={setIdleDialogOpen}
+        onCreate={async (data) => {
+          await createIdleFlagMutation.mutateAsync(data);
+        }}
+      />
+      <LogReviewDeliveryDialog
+        open={reviewDialogOpen}
+        onOpenChange={setReviewDialogOpen}
+        onCreate={async (data) => {
+          await createReviewDeliveryMutation.mutateAsync(data);
+        }}
+      />
     </PageShell>
   );
 };
