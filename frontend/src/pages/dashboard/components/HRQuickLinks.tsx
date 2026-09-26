@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Download, CalendarDays, Building2, Users, Wallet } from "lucide-react";
+import { Download, CalendarDays, Users, Wallet } from "lucide-react";
 import { DashboardSectionShell } from "@/components/dashboard/DashboardSectionShell";
 
 const LINKS = [
@@ -15,12 +15,6 @@ const LINKS = [
     to: "/hr/calendars",
     icon: CalendarDays,
     iconClass: "bg-tone-warning-surface text-tone-warning-text",
-  },
-  {
-    label: "Department Settings",
-    to: "/hr/teams",
-    icon: Building2,
-    iconClass: "bg-tone-accent-surface text-tone-accent-text",
   },
   {
     label: "Team Leader Assignment",

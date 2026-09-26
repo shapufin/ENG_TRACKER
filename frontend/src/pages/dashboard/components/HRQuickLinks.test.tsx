@@ -19,10 +19,6 @@ describe("HRQuickLinks", () => {
       "href",
       "/hr/calendars"
     );
-    expect(screen.getByRole("link", { name: /Department Settings/ })).toHaveAttribute(
-      "href",
-      "/hr/teams"
-    );
     expect(screen.getByRole("link", { name: /Team Leader Assignment/ })).toHaveAttribute(
       "href",
       "/hr/team-leaders"
@@ -33,7 +29,7 @@ describe("HRQuickLinks", () => {
     );
   });
 
-  it("does not offer Add Employee — HR has no create-user permission", () => {
+  it("does not offer Add Employee or Department Settings — HR has neither permission", () => {
     render(
       <MemoryRouter>
         <HRQuickLinks />
@@ -42,5 +38,6 @@ describe("HRQuickLinks", () => {
 
     expect(screen.queryByRole("link", { name: /Add Employee/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/Add Employee/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Department Settings/ })).not.toBeInTheDocument();
   });
 });

@@ -860,11 +860,12 @@ class TestTeamCalendarGroupAdminOnly(APITestCase):
         self.assertEqual(team.calendar_group, 'grp2')
 
 
-class TestTeamCreateUpdateHRAllowed(APITestCase):
-    """HR gets create/update on Team for the HR-native /hr/teams page
-    (Part D: full admin isolation), but not destroy or the cross-team
-    calendar-group bulk actions (those stay admin-only, see
-    TestTeamCalendarGroupAdminOnly)."""
+class TestTeamCreateUpdateAdminOnly(APITestCase):
+    """Team writes are admin-only: the HR-native /hr/teams page and its IsHR
+    grant on create/update/partial_update were removed. HR keeps read access
+    (HR Reports uses teams/list_for_reports) but can no longer write; destroy
+    and the cross-team calendar-group bulk actions stay admin-only, see
+    TestTeamCalendarGroupAdminOnly."""
 
     def setUp(self):
         self.hr = User.objects.create_user(username='team-hr', password='testpass123')
@@ -873,29 +874,32 @@ class TestTeamCreateUpdateHRAllowed(APITestCase):
         self.employee = User.objects.create_user(username='team-emp', password='testpass123')
         self.team = Team.objects.create(name='HR Team', code='HRT')
 
-    def test_hr_can_create_team(self):
+    def test_hr_can_still_list_teams(self):
+        """Read stays IsAuthenticated - HR Reports and holidays depend on it."""
+        self.client.force_authenticate(user=self.hr)
+        response = self.client.get('/api/users/teams/')
+        self.assertEqual(response.status_code, 200, response.data)
+
+    def test_hr_cannot_create_team(self):
         self.client.force_authenticate(user=self.hr)
         response = self.client.post(
             '/api/users/teams/',
             {'name': 'New Team', 'code': 'NEW'},
             format='json',
         )
-        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual(response.status_code, 403, response.data)
 
-    def test_hr_can_update_team(self):
+    def test_hr_cannot_update_team(self):
         self.client.force_authenticate(user=self.hr)
         response = self.client.patch(
             f'/api/users/teams/{self.team.id}/',
             {'name': 'Renamed Team'},
             format='json',
         )
-        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.status_code, 403, response.data)
 
     def test_hr_cannot_set_calendar_group_via_update(self):
-        """calendar_group sharing is deliberately admin-only
-        (bulk_update_calendar_group/rename_calendar_group/clear_calendar_group
-        stay IsAdminUser) — HR must not reach the same effect one team at a
-        time through the plain update endpoint."""
+        """HR is refused before the serializer: no create/update grant at all."""
         self.client.force_authenticate(user=self.hr)
         response = self.client.patch(
             f'/api/users/teams/{self.team.id}/',

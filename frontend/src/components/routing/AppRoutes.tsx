@@ -61,7 +61,6 @@ const HRTeamLeaderAssignmentPage = React.lazy(
   () => import("@/pages/hr/HRTeamLeaderAssignmentPage")
 );
 const HRCalendarsPage = React.lazy(() => import("@/pages/hr/HRCalendarsPage"));
-const HRTeamsPage = React.lazy(() => import("@/pages/hr/HRTeamsPage"));
 const LeaveBalancesPage = React.lazy(() =>
   import("@/pages/admin/LeaveBalancesPage").then((m) => ({ default: m.LeaveBalancesPage }))
 );
@@ -161,10 +160,6 @@ export const AppRoutes: React.FC = () => {
                     {
                       path: "/hr/calendars",
                       element: withSuspense(<HRCalendarsPage />),
-                    },
-                    {
-                      path: "/hr/teams",
-                      element: withSuspense(<HRTeamsPage />),
                     },
                     ...hrPluginRoutes,
                   ],

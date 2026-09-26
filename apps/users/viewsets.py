@@ -1656,13 +1656,13 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
 
     def get_permissions(self):
         # Already handled by SuperuserPermissionMixin for superusers.
-        # HR gets create/update (needed for the HR-native /hr/teams page);
-        # destroy and the bulk cross-team calendar-group actions stay
-        # admin/superuser-only (IsHR already admits is_staff/is_superuser).
-        if self.action in ('create', 'update', 'partial_update'):
-            return [IsHR()]
+        # Team writes are admin-only: the HR-native /hr/teams page and its
+        # IsHR grant were removed (destroy and the bulk cross-team
+        # calendar-group actions were already admin-only). Read stays
+        # IsAuthenticated - HR Reports uses list_for_reports.
         if self.action in (
-            'destroy', 'bulk_update_calendar_group', 'rename_calendar_group',
+            'create', 'update', 'partial_update', 'destroy',
+            'bulk_update_calendar_group', 'rename_calendar_group',
             'clear_calendar_group',
         ):
             return [IsAdminUser()]

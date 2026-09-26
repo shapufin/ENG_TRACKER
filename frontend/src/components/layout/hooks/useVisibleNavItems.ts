@@ -12,7 +12,6 @@ import {
   Settings,
   Ticket,
   Users,
-  Building2,
   Wallet,
 } from "lucide-react";
 
@@ -95,13 +94,6 @@ const allNavItems: NavItem[] = [
     path: "/hr/team-leaders",
     label: "Team Leader Assignment",
     icon: Users,
-    section: "hr",
-    roles: ["hr"],
-  },
-  {
-    path: "/hr/teams",
-    label: "Department Settings",
-    icon: Building2,
     section: "hr",
     roles: ["hr"],
   },
