@@ -350,7 +350,7 @@ def epr_metrics(team_member_ids, year: int) -> dict:
             'team_size': total,
             'pct_on_time': round((on_time / total) * 100, 1) if total else None,
         }
-    goals_met = sum(1 for c in cycles if c.goals.count() >= 5)
+    goals_met = sum(1 for c in cycles if len(c.goals.all()) >= 5)
     return {'stages': stages, 'cycles_with_5plus_goals': goals_met, 'cycles_started': len(cycles)}
 
 

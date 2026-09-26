@@ -269,6 +269,7 @@ class PromotionFlagAPITests(TestCase):
         self.member = _make_user('member_promo_api')
         self.member.profile.italian_tl = self.leader
         self.member.profile.save()
+        self.staff = _make_user('staff_promo_api', is_staff=True)
 
     def test_decide_sets_status_and_decided_on(self):
         create_request = self.factory.post('/api/plugins/tl_scorecard/promotion-flags/', {
@@ -282,11 +283,26 @@ class PromotionFlagAPITests(TestCase):
         decide_request = self.factory.post(
             f'/api/plugins/tl_scorecard/promotion-flags/{flag_id}/decide/', {'status': 'promoted'},
         )
-        force_authenticate(decide_request, user=self.leader)
+        force_authenticate(decide_request, user=self.staff)
         decide_resp = PromotionFlagViewSet.as_view({'post': 'decide'})(decide_request, pk=flag_id)
         self.assertEqual(decide_resp.status_code, 200, decide_resp.data)
         self.assertEqual(decide_resp.data['status'], 'promoted')
         self.assertIsNotNone(decide_resp.data['decided_on'])
+
+    def test_tl_cannot_self_approve_own_promotion_nomination(self):
+        create_request = self.factory.post('/api/plugins/tl_scorecard/promotion-flags/', {
+            'employee': self.member.id, 'nominated_on': str(date.today()),
+        })
+        force_authenticate(create_request, user=self.leader)
+        flag_id = PromotionFlagViewSet.as_view({'post': 'create'})(create_request).data['id']
+
+        decide_request = self.factory.post(
+            f'/api/plugins/tl_scorecard/promotion-flags/{flag_id}/decide/', {'status': 'promoted'},
+        )
+        force_authenticate(decide_request, user=self.leader)
+        resp = PromotionFlagViewSet.as_view({'post': 'decide'})(decide_request, pk=flag_id)
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(PromotionFlag.objects.get(pk=flag_id).status, 'nominated')
 
     def test_decide_rejects_invalid_status(self):
         create_request = self.factory.post('/api/plugins/tl_scorecard/promotion-flags/', {
@@ -298,7 +314,7 @@ class PromotionFlagAPITests(TestCase):
         decide_request = self.factory.post(
             f'/api/plugins/tl_scorecard/promotion-flags/{flag_id}/decide/', {'status': 'maybe'},
         )
-        force_authenticate(decide_request, user=self.leader)
+        force_authenticate(decide_request, user=self.staff)
         resp = PromotionFlagViewSet.as_view({'post': 'decide'})(decide_request, pk=flag_id)
         self.assertEqual(resp.status_code, 400)
 
@@ -312,14 +328,14 @@ class PromotionFlagAPITests(TestCase):
         first_request = self.factory.post(
             f'/api/plugins/tl_scorecard/promotion-flags/{flag_id}/decide/', {'status': 'declined'},
         )
-        force_authenticate(first_request, user=self.leader)
+        force_authenticate(first_request, user=self.staff)
         first_resp = PromotionFlagViewSet.as_view({'post': 'decide'})(first_request, pk=flag_id)
         self.assertEqual(first_resp.status_code, 200, first_resp.data)
 
         second_request = self.factory.post(
             f'/api/plugins/tl_scorecard/promotion-flags/{flag_id}/decide/', {'status': 'promoted'},
         )
-        force_authenticate(second_request, user=self.leader)
+        force_authenticate(second_request, user=self.staff)
         second_resp = PromotionFlagViewSet.as_view({'post': 'decide'})(second_request, pk=flag_id)
         self.assertEqual(second_resp.status_code, 400)
         self.assertEqual(PromotionFlag.objects.get(pk=flag_id).status, 'declined')

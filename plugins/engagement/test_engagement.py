@@ -347,6 +347,22 @@ class EngagementAPITests(TestCase):
         self.assertEqual(point['score_activity'], row.score_activity)
         self.assertEqual(point['score_consistency'], row.score_consistency)
 
+    def test_summary_auto_recomputes_a_stale_snapshot(self):
+        """No management command needed — a read should always reflect the
+        latest data, since nothing in this repo schedules recompute_tl_metrics."""
+        stale_cutoff = timezone.now() - timedelta(days=1)
+        TLApprovalMetric.objects.filter(leader=self.leader, team=self.team, month=self.month).update(
+            computed_at=stale_cutoff
+        )
+        _make_overtime(self.member, self.month, timezone.now(), status='pending', client=self.client_obj)
+
+        resp = self._call('summary', self.leader, month=self.month.isoformat())
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.data['is_stale'])
+
+        refreshed = TLApprovalMetric.objects.get(leader=self.leader, team=self.team, month=self.month)
+        self.assertGreater(refreshed.computed_at, stale_cutoff)
+
     def test_export_requires_tl_and_month(self):
         resp = self._call('export', self.employee, month=self.month.isoformat())
         self.assertEqual(resp.status_code, 403)

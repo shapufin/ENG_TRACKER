@@ -421,6 +421,8 @@ class PromotionFlagViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def decide(self, request, pk=None):
+        if not (request.user.is_staff or request.user.is_superuser):
+            raise PermissionDenied('Only staff/HR can approve a promotion.')
         flag = self.get_object()
         if flag.status != 'nominated':
             raise ValidationError({'status': 'This flag has already been decided.'})
@@ -459,7 +461,7 @@ class EPRCycleViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         # enforced here, not in the model, so it stays a pure data holder.
         instance = serializer.instance
         new_goal_setting = serializer.validated_data.get('goal_setting_completed_at')
-        if new_goal_setting and not instance.goal_setting_completed_at and instance.goals.count() < 5:
+        if new_goal_setting and not instance.goal_setting_completed_at and len(instance.goals.all()) < 5:
             raise ValidationError({
                 'goal_setting_completed_at': 'At least 5 goals are required before this stage can be marked complete.',
             })

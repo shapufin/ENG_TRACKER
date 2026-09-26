@@ -226,6 +226,9 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
       }))
     ),
     TLScorecardSidebarLink: lazy(() => import("./tl_scorecard/components/TLScorecardSidebarLink")),
+    TLScorecardAdminSidebarItem: lazy(
+      () => import("./tl_scorecard/components/TLScorecardAdminSidebarItem")
+    ),
   },
 };
 

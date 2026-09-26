@@ -27,3 +27,13 @@ export const toneTextClass: Record<Tone, string> = {
   accent: "text-tone-accent-text",
   neutral: "text-tone-neutral-text",
 };
+
+/** Bordered, transparent-background button with a tinted hover, for outline-variant action buttons. */
+export const toneOutlineClass: Record<Tone, string> = {
+  success: "border-tone-success-border bg-transparent text-tone-success-text hover:bg-tone-success-surface",
+  warning: "border-tone-warning-border bg-transparent text-tone-warning-text hover:bg-tone-warning-surface",
+  danger: "border-tone-danger-border bg-transparent text-tone-danger-text hover:bg-tone-danger-surface",
+  info: "border-tone-info-border bg-transparent text-tone-info-text hover:bg-tone-info-surface",
+  accent: "border-tone-accent-border bg-transparent text-tone-accent-text hover:bg-tone-accent-surface",
+  neutral: "border-tone-neutral-border bg-transparent text-tone-neutral-text hover:bg-tone-neutral-surface",
+};

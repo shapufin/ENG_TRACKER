@@ -19,7 +19,7 @@ from core.mixins.permissions import PluginPermissionMixin
 from .excel_export import build_workbook_bytes
 from .models import TLApprovalMetric
 from .serializers import TLApprovalMetricSerializer
-from .services import is_stale, weighted_avg_tta_hours, weighted_mean
+from .services import aggregate_rows, compute_tl_metric, is_stale, weighted_avg_tta_hours, weighted_mean
 
 
 def _parse_month(raw):
@@ -42,6 +42,14 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
             qs = qs.filter(leader=request.user)
         return qs
 
+    def _ensure_fresh(self, rows):
+        """Recompute any stale snapshot in place before serving it, so every
+        read reflects current data at click-time — no scheduled job needed."""
+        return [
+            compute_tl_metric(row.leader, row.team, row.month) if is_stale(row) else row
+            for row in rows
+        ]
+
     @action(detail=False, methods=['get'])
     def summary(self, request):
         try:
@@ -56,7 +64,7 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
             latest = qs.order_by('-month').values_list('month', flat=True).first()
             qs = qs.filter(month=latest) if latest else qs.none()
 
-        rows = list(qs)
+        rows = self._ensure_fresh(list(qs))
         if not rows:
             return Response({
                 'month': month.isoformat() if month else None,
@@ -76,46 +84,23 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
                 'computed_at': None,
             })
 
-        team_size = sum(r.team_size for r in rows)
-        active_submitters = sum(r.active_submitters for r in rows)
-        resubmission_count = sum(r.resubmission_count for r in rows)
-        decisions_during_leave = sum(r.decisions_during_leave for r in rows)
-        total_decided = sum(
-            sum(m.get('decided', 0) for m in r.metrics.values()) for r in rows
-        )
-        total_approved = sum(
-            sum(m.get('approved', 0) for m in r.metrics.values()) for r in rows
-        )
-        approval_rate_pct = (
-            round((total_approved / total_decided) * 100, 2) if total_decided else None
-        )
-
-        avg_tta_hours = weighted_avg_tta_hours(rows)
-
-        def _field_weighted_mean(field):
-            return weighted_mean((getattr(r, field), r.team_size) for r in rows)
-
-        engagement_score = _field_weighted_mean('engagement_score')
-        score_speed = _field_weighted_mean('score_speed')
-        score_approval_rate = _field_weighted_mean('score_approval_rate')
-        score_activity = _field_weighted_mean('score_activity')
-        score_consistency = _field_weighted_mean('score_consistency')
-        computed_at = max((r.computed_at for r in rows if r.computed_at), default=None)
+        agg = aggregate_rows(rows)
+        computed_at = agg['computed_at']
 
         return Response({
             'month': rows[0].month.isoformat(),
             'team_count': len(rows),
-            'team_size': team_size,
-            'active_submitters': active_submitters,
-            'approval_rate_pct': approval_rate_pct,
-            'resubmission_count': resubmission_count,
-            'engagement_score': engagement_score,
-            'avg_tta_hours': avg_tta_hours,
-            'score_speed': score_speed,
-            'score_approval_rate': score_approval_rate,
-            'score_activity': score_activity,
-            'score_consistency': score_consistency,
-            'decisions_during_leave': decisions_during_leave,
+            'team_size': agg['team_size'],
+            'active_submitters': agg['active_submitters'],
+            'approval_rate_pct': agg['approval_rate_pct'],
+            'resubmission_count': agg['resubmission_count'],
+            'engagement_score': agg['engagement_score'],
+            'avg_tta_hours': agg['avg_tta_hours'],
+            'score_speed': agg['score_speed'],
+            'score_approval_rate': agg['score_approval_rate'],
+            'score_activity': agg['score_activity'],
+            'score_consistency': agg['score_consistency'],
+            'decisions_during_leave': agg['decisions_during_leave'],
             'is_stale': any(is_stale(r) for r in rows),
             'computed_at': computed_at.isoformat() if computed_at else None,
         })
@@ -133,7 +118,7 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
         qs = self._base_queryset(request).filter(month__gte=earliest)
 
         by_month = {}
-        for row in qs:
+        for row in self._ensure_fresh(list(qs)):
             bucket = by_month.setdefault(row.month, {'rows': [], 'decisions_during_leave': 0})
             bucket['rows'].append(row)
             bucket['decisions_during_leave'] += row.decisions_during_leave
@@ -170,7 +155,8 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
             latest = qs.order_by('-month').values_list('month', flat=True).first()
             qs = qs.filter(month=latest) if latest else qs.none()
 
-        return Response(TLApprovalMetricSerializer(qs, many=True).data)
+        rows = self._ensure_fresh(list(qs))
+        return Response(TLApprovalMetricSerializer(rows, many=True).data)
 
     @action(detail=False, methods=['get'])
     def status(self, request):
@@ -178,7 +164,7 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
         latest = qs.order_by('-month').values_list('month', flat=True).first()
         if not latest:
             return Response({'has_data': False, 'is_stale': False, 'computed_at': None})
-        rows = list(qs.filter(month=latest))
+        rows = self._ensure_fresh(list(qs.filter(month=latest)))
         computed_at = max((r.computed_at for r in rows if r.computed_at), default=None)
         return Response({
             'has_data': True,
@@ -204,13 +190,13 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
         base_qs = self._base_queryset(request)
 
         if scope == 'year':
-            target_rows = list(base_qs.filter(month__year=month.year))
+            target_rows = self._ensure_fresh(list(base_qs.filter(month__year=month.year)))
             trend_rows = target_rows
             period_label = str(month.year)
         else:
-            target_rows = list(base_qs.filter(month=month))
+            target_rows = self._ensure_fresh(list(base_qs.filter(month=month)))
             window_start = month - relativedelta(months=5)
-            trend_rows = list(base_qs.filter(month__gte=window_start, month__lte=month))
+            trend_rows = self._ensure_fresh(list(base_qs.filter(month__gte=window_start, month__lte=month)))
             period_label = month.strftime('%B %Y')
 
         workbook_bytes = build_workbook_bytes(target_rows, trend_rows, scope, period_label)

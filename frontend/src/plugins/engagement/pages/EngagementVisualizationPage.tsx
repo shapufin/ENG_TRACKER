@@ -27,6 +27,7 @@ import {
 } from "@/components/visualization/chart";
 import { ChartSection } from "@/components/visualization/ChartSection";
 import { captureChartsToPdf } from "@/components/visualization/pdfExport";
+import { useAuth } from "@/hooks/useAuth";
 import { ScoreCompositionTrendChart } from "../components/ScoreCompositionTrendChart";
 import { RequestVolumeChart } from "../components/RequestVolumeChart";
 import { TeamComparisonChart } from "../components/TeamComparisonChart";
@@ -82,6 +83,7 @@ export const EngagementVisualizationPage: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   const scoreDelta = useMemo(() => {
     const scored = trend.filter((t) => t.engagement_score !== null);
@@ -100,6 +102,8 @@ export const EngagementVisualizationPage: React.FC = () => {
       await captureChartsToPdf(galleryRef.current, {
         title: `TL Engagement — Visual Report (${period})`,
         filename: `engagement_visual_${period}.pdf`,
+        generatedBy: user?.full_name,
+        periodLabel: period,
       });
     } catch {
       setExportError("Couldn't generate the PDF. Check your connection and try again.");

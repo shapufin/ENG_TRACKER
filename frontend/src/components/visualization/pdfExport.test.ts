@@ -61,6 +61,21 @@ describe("captureChartsToPdf", () => {
     expect(drawWidth / drawHeight).toBeCloseTo(1200 / 3000, 5);
   });
 
+  it("prints a provenance footer with generatedBy and periodLabel", async () => {
+    text.mockClear();
+    await captureChartsToPdf(makeContainer(1), {
+      title: "Report",
+      filename: "report.pdf",
+      generatedBy: "Enri Demnushi",
+      periodLabel: "March 2026",
+    });
+
+    const footerCall = text.mock.calls.find(([textArg]) => String(textArg).includes("Generated"));
+    expect(footerCall).toBeDefined();
+    expect(footerCall![0]).toContain("by Enri Demnushi");
+    expect(footerCall![0]).toContain("Data as of March 2026");
+  });
+
   it("skips zero-area sections and saves nothing when none render", async () => {
     const mockedCapture = vi.mocked(html2canvas);
     mockedCapture.mockResolvedValueOnce({

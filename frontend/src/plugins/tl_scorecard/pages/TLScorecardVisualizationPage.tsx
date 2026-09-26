@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Area, AreaChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ArrowLeft, Download, LineChart as LineChartIcon, TriangleAlert } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { InfoCallout } from "@/components/ui/InfoCallout";
@@ -16,6 +17,7 @@ import {
 } from "@/components/visualization/chart";
 import { ChartSection } from "@/components/visualization/ChartSection";
 import { captureChartsToPdf } from "@/components/visualization/pdfExport";
+import { useAuth } from "@/hooks/useAuth";
 import { staggerContainer } from "@/lib/motion";
 import { formatMonthTick } from "@/lib/monthOptions";
 import { tlScorecardService } from "../services/tlScorecardService";
@@ -40,15 +42,22 @@ export const TLScorecardVisualizationPage: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   const handleExportPdf = async () => {
     if (!galleryRef.current) return;
     setIsExporting(true);
     setExportError(null);
     try {
+      const points = trendQuery.data ?? [];
+      const periodLabel = points.length
+        ? `${formatMonthTick(points[0].month)} – ${formatMonthTick(points[points.length - 1].month)}`
+        : undefined;
       await captureChartsToPdf(galleryRef.current, {
         title: "TL Scorecard — Visual Report",
         filename: "tl-scorecard-visual.pdf",
+        generatedBy: user?.full_name,
+        periodLabel,
       });
     } catch {
       setExportError("Couldn't generate the PDF. Check your connection and try again.");
@@ -100,22 +109,16 @@ export const TLScorecardVisualizationPage: React.FC = () => {
       subtitle="Trend charts across the last 6 months, for review and evidence"
       actions={
         <>
-          <Link
-            to="/tl-scorecard"
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Back to scorecard
-          </Link>
-          <button
-            type="button"
-            disabled={isExporting}
-            onClick={handleExportPdf}
-            className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_0_24px_-6px_hsl(var(--primary))] transition-colors hover:bg-primary/90 disabled:opacity-60"
-          >
-            <Download className="h-4 w-4" aria-hidden="true" />
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/tl-scorecard">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to scorecard
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={isExporting}>
+            <Download className="mr-2 h-4 w-4" />
             {isExporting ? "Exporting…" : "Export PDF"}
-          </button>
+          </Button>
         </>
       }
     >

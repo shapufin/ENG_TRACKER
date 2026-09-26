@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FileSpreadsheet, Calendar, Clock, Wallet } from "lucide-react";
+import { toneOutlineClass } from "@/components/ui/tone";
 import type { TeamLeaderOption } from "@/hooks/useHRReportManagement";
 
 interface HRReportActionBarProps {
@@ -64,10 +65,10 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
     exportType === "leave"
       ? "Export Leave"
       : exportType === "payroll"
-        ? "Export for Payroll (by Processing Period)"
+        ? "Export by Payroll Period"
         : exportStatus === "pending"
-          ? "Export Pending OT & Standby"
-          : "Export OT & Standby";
+          ? "Export Pending (by Work Date)"
+          : "Export by Work Date";
 
   const dialogDescription =
     exportType === "leave"
@@ -86,29 +87,29 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
         onClick={() => openExport("ot-standby", "approved")}
         className="w-full justify-start gap-2 border-primary/50 text-foreground hover:bg-primary/10"
       >
-        <FileSpreadsheet className="h-4 w-4" /> Export OT & Standby
+        <FileSpreadsheet className="h-4 w-4" /> Export by Work Date
       </Button>
       <Button
         variant="outline"
         size="sm"
         onClick={() => openExport("payroll", "approved")}
-        className="w-full justify-start gap-2 border-accent-violet/50 text-foreground hover:bg-accent-violet/10"
+        className={`w-full justify-start gap-2 ${toneOutlineClass.accent}`}
       >
-        <Wallet className="h-4 w-4" /> Export for Payroll
+        <Wallet className="h-4 w-4" /> Export by Payroll Period
       </Button>
       <Button
         variant="outline"
         size="sm"
         onClick={() => openExport("ot-standby", "pending")}
-        className="w-full justify-start gap-2 border-warning/50 text-foreground hover:bg-warning/10"
+        className={`w-full justify-start gap-2 ${toneOutlineClass.warning}`}
       >
-        <Clock className="h-4 w-4" /> Export Pending
+        <Clock className="h-4 w-4" /> Export Pending (by Work Date)
       </Button>
       <Button
         variant="outline"
         size="sm"
         onClick={() => openExport("leave", "approved")}
-        className="w-full justify-start gap-2 border-success/50 text-foreground hover:bg-success/10"
+        className={`w-full justify-start gap-2 ${toneOutlineClass.success}`}
       >
         <Calendar className="h-4 w-4" /> Export Leave
       </Button>

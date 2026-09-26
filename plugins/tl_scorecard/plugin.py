@@ -62,12 +62,21 @@ class TlScorecardPlugin(BasePlugin):
                     "component": "TLScorecardVisualizationPage",
                     "layout": "app",
                 },
+                {
+                    "path": "/admin/tl-scorecard",
+                    "component": "TLScorecardPage",
+                    "layout": "admin",
+                },
             ],
             "injection_slots": [
                 {
                     "slot": "sidebar-nav",
                     "component": "TLScorecardSidebarLink",
                     "section": "leadership",
+                },
+                {
+                    "slot": "admin-sidebar-nav",
+                    "component": "TLScorecardAdminSidebarItem",
                 },
             ],
         })

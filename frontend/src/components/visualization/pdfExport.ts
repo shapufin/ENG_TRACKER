@@ -4,6 +4,10 @@ import html2canvas from "html2canvas-pro";
 interface CaptureToPdfOptions {
   title: string;
   filename: string;
+  /** Display name of the user generating this evidence export. */
+  generatedBy?: string;
+  /** Human-readable label for the data's as-of period (e.g. "March 2026"). */
+  periodLabel?: string;
 }
 
 /** Captures every `[data-chart-section]` node inside `container`, in DOM
@@ -14,7 +18,7 @@ interface CaptureToPdfOptions {
  * CSS colors aren't parsed by the unmaintained original. */
 export async function captureChartsToPdf(
   container: HTMLElement,
-  { title, filename }: CaptureToPdfOptions
+  { title, filename, generatedBy, periodLabel }: CaptureToPdfOptions
 ): Promise<void> {
   const sections = Array.from(container.querySelectorAll<HTMLElement>("[data-chart-section]"));
   if (sections.length === 0) return;
@@ -23,9 +27,14 @@ export async function captureChartsToPdf(
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 32;
-  const headerSpace = 20;
+  const headerSpace = 32;
   const maxWidth = pageWidth - margin * 2;
   const maxHeight = pageHeight - margin * 2 - headerSpace;
+
+  const provenanceParts = [`Generated ${new Date().toLocaleString()}`];
+  if (generatedBy) provenanceParts.push(`by ${generatedBy}`);
+  if (periodLabel) provenanceParts.push(`Data as of ${periodLabel}`);
+  const provenanceLine = provenanceParts.join(" · ");
 
   let rendered = 0;
   for (let i = 0; i < sections.length; i++) {
@@ -46,7 +55,9 @@ export async function captureChartsToPdf(
     if (rendered > 0) pdf.addPage();
     pdf.setFontSize(9);
     pdf.setTextColor(120);
-    pdf.text(title, margin, margin - 12);
+    pdf.text(title, margin, margin - 20);
+    pdf.setFontSize(7);
+    pdf.text(provenanceLine, margin, margin - 8);
     pdf.addImage(canvas.toDataURL("image/png"), "PNG", x, margin, drawWidth, drawHeight);
     rendered++;
   }

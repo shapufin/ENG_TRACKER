@@ -19,6 +19,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { PageShell } from "@/components/layout/PageShell";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { StatCard } from "@/components/ui/StatCard";
+import { toneSurfaceClass } from "@/components/ui/tone";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { extractApiErrorMessage } from "@/lib/apiFormError";
 import { EditCRUserDialog } from "../components/EditCRUserDialog";
@@ -34,7 +35,7 @@ type AccessTableRow = ControlRoomAccess & { search_text: string };
 const ScopeCell: React.FC<{ access: ControlRoomAccess }> = ({ access }) => {
   if (access.team_scopes.length === 0) {
     return (
-      <Badge variant="outline" className="border-warning/50 text-foreground">
+      <Badge variant="outline" className={toneSurfaceClass.warning}>
         No visibility
       </Badge>
     );

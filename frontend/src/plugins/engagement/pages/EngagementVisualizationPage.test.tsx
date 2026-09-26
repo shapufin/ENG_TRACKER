@@ -8,6 +8,10 @@ vi.mock("./hooks/useEngagementMetrics", () => ({
   useEngagementMetrics: vi.fn(),
 }));
 
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({ user: { id: 1, username: "leader", full_name: "Leader One" } }),
+}));
+
 const renderPage = () => render(<EngagementVisualizationPage />, { wrapper: MemoryRouter });
 
 const baseSummary = {

@@ -8,6 +8,7 @@ stored snapshot plus a freshness check.
 from calendar import monthrange
 from datetime import timedelta
 
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from apps.leave_management.models import LeaveRequest
@@ -117,28 +118,40 @@ def leader_team_pairs():
 
 def _resubmission_count(model, date_field, member_ids, month_start, month_end):
     """Count rejections that were resubmitted (same user/date) within the window."""
-    rejected = model.objects.filter(
+    rejected = list(model.objects.filter(
         user_id__in=member_ids,
         status='rejected',
         submitted_at__gte=month_start,
         submitted_at__lt=month_end,
-    ).values('user_id', date_field, 'submitted_at')
+    ).values('user_id', date_field, 'submitted_at'))
+
+    if not rejected:
+        return 0
+
+    # Fetch every candidate resubmission once, instead of one .exists() query
+    # per rejected record — then match in Python against each record's own
+    # window (rejections in this batch can have different submitted_at
+    # times, so the per-row window boundary still has to be checked here).
+    earliest_submitted = min(r['submitted_at'] for r in rejected)
+    latest_window_end = max(r['submitted_at'] for r in rejected) + timedelta(days=RESUBMISSION_WINDOW_DAYS)
+    candidates = model.objects.filter(
+        user_id__in={r['user_id'] for r in rejected},
+        submitted_at__gt=earliest_submitted,
+        submitted_at__lte=latest_window_end,
+    ).exclude(status='rejected').values('user_id', date_field, 'submitted_at')
+
+    candidates_by_key = {}
+    for c in candidates:
+        candidates_by_key.setdefault((c['user_id'], c[date_field]), []).append(c['submitted_at'])
 
     count = 0
     counted_keys = set()
     for rej in rejected:
-        record_date = rej[date_field]
-        key = (rej['user_id'], record_date)
+        key = (rej['user_id'], rej[date_field])
         if key in counted_keys:
             continue
         window_end = rej['submitted_at'] + timedelta(days=RESUBMISSION_WINDOW_DAYS)
-        resubmitted = model.objects.filter(
-            user_id=rej['user_id'],
-            **{date_field: record_date},
-            submitted_at__gt=rej['submitted_at'],
-            submitted_at__lte=window_end,
-        ).exclude(status='rejected').exists()
-        if resubmitted:
+        if any(rej['submitted_at'] < t <= window_end for t in candidates_by_key.get(key, [])):
             count += 1
             counted_keys.add(key)
     return count
@@ -169,9 +182,14 @@ def compute_type_metrics(type_key, member_ids, month_start, month_end):
         )
         submitted = base.count()
         decided_qs = base.filter(status__in=('approved', 'rejected'), approved_at__isnull=False)
-        decided = decided_qs.count()
-        approved = decided_qs.filter(status='approved').count()
-        rejected = decided_qs.filter(status='rejected').count()
+        counts = decided_qs.aggregate(
+            decided=Count('id'),
+            approved=Count('id', filter=Q(status='approved')),
+            rejected=Count('id', filter=Q(status='rejected')),
+        )
+        decided = counts['decided']
+        approved = counts['approved']
+        rejected = counts['rejected']
 
     aging = {bucket: 0 for bucket in AGING_BUCKETS}
     tta_hours = []
@@ -370,6 +388,38 @@ def compute_tl_metric(leader, team, month):
         },
     )
     return snapshot
+
+
+def aggregate_rows(rows):
+    """Aggregate a set of `TLApprovalMetric` rows (e.g. one leader's teams for
+    a month) into one summary dict. Shared by the `summary` API action and
+    the Excel export so the two can never silently disagree."""
+    if not rows:
+        return None
+
+    team_size = sum(r.team_size for r in rows)
+    active_submitters = sum(r.active_submitters for r in rows)
+    resubmission_count = sum(r.resubmission_count for r in rows)
+    decisions_during_leave = sum(r.decisions_during_leave for r in rows)
+
+    total_decided = sum(sum(m.get('decided', 0) for m in r.metrics.values()) for r in rows)
+    total_approved = sum(sum(m.get('approved', 0) for m in r.metrics.values()) for r in rows)
+    approval_rate_pct = round((total_approved / total_decided) * 100, 2) if total_decided else None
+
+    return {
+        'team_size': team_size,
+        'active_submitters': active_submitters,
+        'approval_rate_pct': approval_rate_pct,
+        'resubmission_count': resubmission_count,
+        'decisions_during_leave': decisions_during_leave,
+        'avg_tta_hours': weighted_avg_tta_hours(rows),
+        'engagement_score': weighted_mean((r.engagement_score, r.team_size) for r in rows),
+        'score_speed': weighted_mean((r.score_speed, r.team_size) for r in rows),
+        'score_approval_rate': weighted_mean((r.score_approval_rate, r.team_size) for r in rows),
+        'score_activity': weighted_mean((r.score_activity, r.team_size) for r in rows),
+        'score_consistency': weighted_mean((r.score_consistency, r.team_size) for r in rows),
+        'computed_at': max((r.computed_at for r in rows if r.computed_at), default=None),
+    }
 
 
 def is_stale(snapshot):

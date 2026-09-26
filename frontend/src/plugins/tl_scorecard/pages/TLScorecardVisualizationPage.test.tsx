@@ -12,6 +12,10 @@ vi.mock("../services/tlScorecardService", () => ({
   },
 }));
 
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({ user: { id: 1, username: "leader", full_name: "Leader One" } }),
+}));
+
 const point = (month: string, teamSize: number): Scorecard => ({
   month,
   team_size: teamSize,

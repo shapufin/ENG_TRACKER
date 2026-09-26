@@ -7,9 +7,9 @@ is year-end KPI evidence a team leader hands to a reviewer, so it needs to
 look like a real report, not a raw data dump. Self-contained within this
 plugin: only xlsxwriter + this plugin's own `services` module are used (no
 cross-plugin imports — see the "Plugin removal safety" invariant). The
-weighted-mean math is shared with the `summary`/`trend` API actions via
-`services.weighted_mean` / `weighted_avg_tta_hours` so the workbook can't
-silently drift from what the UI shows.
+aggregation math is shared with the `summary` API action via
+`services.aggregate_rows` so the workbook can't silently drift from what
+the UI shows.
 
 Sheets: Summary (styled KPI panel + score data bar), Trend (dual-axis
 line chart), Approval Aging (styled column chart). No per-team breakdown
@@ -20,7 +20,7 @@ import io
 
 import xlsxwriter
 
-from .services import AGING_BUCKETS, REQUEST_TYPES, weighted_avg_tta_hours, weighted_mean
+from .services import AGING_BUCKETS, REQUEST_TYPES, aggregate_rows, weighted_avg_tta_hours, weighted_mean
 
 PRIMARY = "#1D4ED8"
 SUCCESS = "#059669"
@@ -30,36 +30,6 @@ INK = "#0F172A"
 MUTED = "#475569"
 CANVAS = "#F8FAFC"
 TYPE_COLORS = {"leave": PRIMARY, "overtime": SUCCESS, "standby": WARNING}
-
-
-def _aggregate(rows):
-    """Same weighting rules as the `summary` API action (shared via `services`)."""
-    if not rows:
-        return None
-
-    team_size = sum(r.team_size for r in rows)
-    active_submitters = sum(r.active_submitters for r in rows)
-    resubmission_count = sum(r.resubmission_count for r in rows)
-    decisions_during_leave = sum(r.decisions_during_leave for r in rows)
-
-    total_decided = sum(sum(m.get("decided", 0) for m in r.metrics.values()) for r in rows)
-    total_approved = sum(sum(m.get("approved", 0) for m in r.metrics.values()) for r in rows)
-    approval_rate_pct = round((total_approved / total_decided) * 100, 2) if total_decided else None
-
-    return {
-        "team_size": team_size,
-        "active_submitters": active_submitters,
-        "approval_rate_pct": approval_rate_pct,
-        "resubmission_count": resubmission_count,
-        "decisions_during_leave": decisions_during_leave,
-        "avg_tta_hours": weighted_avg_tta_hours(rows),
-        "engagement_score": weighted_mean((r.engagement_score, r.team_size) for r in rows),
-        "score_speed": weighted_mean((r.score_speed, r.team_size) for r in rows),
-        "score_approval_rate": weighted_mean((r.score_approval_rate, r.team_size) for r in rows),
-        "score_activity": weighted_mean((r.score_activity, r.team_size) for r in rows),
-        "score_consistency": weighted_mean((r.score_consistency, r.team_size) for r in rows),
-        "computed_at": max((r.computed_at for r in rows if r.computed_at), default=None),
-    }
 
 
 def _group_by_month(rows):
@@ -164,7 +134,7 @@ def _build_summary_sheet(wb, fmt, target_rows, scope, period_label):
         ws.write("A4", "No engagement snapshots have been computed yet for this scope.", fmt.empty)
         return
 
-    agg = _aggregate(target_rows) or {}
+    agg = aggregate_rows(target_rows) or {}
     rows_data = [
         ("Engagement Score", agg.get("engagement_score"), "score"),
         ("Team size" if scope == "month" else "Team-months", agg.get("team_size"), "int"),

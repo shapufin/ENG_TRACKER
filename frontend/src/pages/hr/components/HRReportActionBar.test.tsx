@@ -23,10 +23,10 @@ const baseProps = {
 describe("HRReportActionBar", () => {
   it("renders all export buttons", () => {
     render(<HRReportActionBar {...baseProps} />);
-    expect(screen.getByText("Export OT & Standby")).toBeInTheDocument();
-    expect(screen.getByText("Export Pending")).toBeInTheDocument();
+    expect(screen.getByText("Export by Work Date")).toBeInTheDocument();
+    expect(screen.getByText("Export Pending (by Work Date)")).toBeInTheDocument();
     expect(screen.getByText("Export Leave")).toBeInTheDocument();
-    expect(screen.getByText("Export for Payroll")).toBeInTheDocument();
+    expect(screen.getByText("Export by Payroll Period")).toBeInTheDocument();
   });
 
   it("opens export dialog and exports", () => {
@@ -51,7 +51,7 @@ describe("HRReportActionBar", () => {
       />
     );
     expect(
-      screen.getByRole("heading", { name: "Export Pending OT & Standby" })
+      screen.getByRole("heading", { name: "Export Pending (by Work Date)" })
     ).toBeInTheDocument();
     expect(screen.getByText(/Pending only/)).toBeInTheDocument();
   });
@@ -110,7 +110,7 @@ describe("HRReportActionBar", () => {
         onExportDialogOpenChange={onExportDialogOpenChange}
       />
     );
-    fireEvent.click(screen.getByText("Export OT & Standby"));
+    fireEvent.click(screen.getByText("Export by Work Date"));
     expect(onExportTypeChange).toHaveBeenCalledWith("ot-standby");
     expect(onExportStatusChange).toHaveBeenCalledWith("approved");
     expect(onExportDialogOpenChange).toHaveBeenCalledWith(true);
@@ -128,7 +128,7 @@ describe("HRReportActionBar", () => {
         onExportDialogOpenChange={onExportDialogOpenChange}
       />
     );
-    fireEvent.click(screen.getByText("Export Pending"));
+    fireEvent.click(screen.getByText("Export Pending (by Work Date)"));
     expect(onExportTypeChange).toHaveBeenCalledWith("ot-standby");
     expect(onExportStatusChange).toHaveBeenCalledWith("pending");
     expect(onExportDialogOpenChange).toHaveBeenCalledWith(true);
@@ -152,7 +152,7 @@ describe("HRReportActionBar", () => {
     expect(onExportDialogOpenChange).toHaveBeenCalledWith(true);
   });
 
-  it("triggers Export for Payroll dialog with processing-period mode", () => {
+  it("triggers Export by Payroll Period dialog with processing-period mode", () => {
     const onExportTypeChange = vi.fn();
     const onExportStatusChange = vi.fn();
     const onExportDialogOpenChange = vi.fn();
@@ -164,7 +164,7 @@ describe("HRReportActionBar", () => {
         onExportDialogOpenChange={onExportDialogOpenChange}
       />
     );
-    fireEvent.click(screen.getByText("Export for Payroll"));
+    fireEvent.click(screen.getByText("Export by Payroll Period"));
     expect(onExportTypeChange).toHaveBeenCalledWith("payroll");
     expect(onExportStatusChange).toHaveBeenCalledWith("approved");
     expect(onExportDialogOpenChange).toHaveBeenCalledWith(true);
@@ -173,7 +173,7 @@ describe("HRReportActionBar", () => {
   it("shows payroll export dialog with processing-period description", () => {
     render(<HRReportActionBar {...baseProps} exportDialogOpen={true} exportType="payroll" />);
     expect(
-      screen.getByRole("heading", { name: "Export for Payroll (by Processing Period)" })
+      screen.getByRole("heading", { name: "Export by Payroll Period" })
     ).toBeInTheDocument();
     expect(screen.getByText(/carryover-aware/i)).toBeInTheDocument();
   });
