@@ -16,8 +16,14 @@ describe("EngagementAdminSidebarItem (admin sidebar)", () => {
     expect(screen.queryByText("Engagement")).not.toBeInTheDocument();
   });
 
-  it("renders link to /admin/engagement for a team leader", () => {
+  it("hides for a plain team leader (would be a dead link — /admin/* is staff-only)", () => {
     usePermissions.mockReturnValue({ isTeamLeader: true, isAdmin: false });
+    render(<EngagementAdminSidebarItem />, { wrapper: MemoryRouter });
+    expect(screen.queryByText("Engagement")).not.toBeInTheDocument();
+  });
+
+  it("renders link to /admin/engagement for an admin", () => {
+    usePermissions.mockReturnValue({ isTeamLeader: false, isAdmin: true });
     render(
       <MemoryRouter initialEntries={["/admin/engagement"]}>
         <EngagementAdminSidebarItem />
@@ -25,11 +31,5 @@ describe("EngagementAdminSidebarItem (admin sidebar)", () => {
     );
     const link = screen.getByRole("menuitem", { name: "Engagement" });
     expect(link).toHaveAttribute("href", "/admin/engagement");
-  });
-
-  it("renders for an admin even without the team-leader role", () => {
-    usePermissions.mockReturnValue({ isTeamLeader: false, isAdmin: true });
-    render(<EngagementAdminSidebarItem />, { wrapper: MemoryRouter });
-    expect(screen.getByText("Engagement")).toBeInTheDocument();
   });
 });

@@ -5,6 +5,11 @@
  * opening Engagement from the Extensions flyout. Mirrors
  * AnalyticsAdminSidebarItem/ControlRoomAdminSidebarItem (admin-layout
  * layoutId shared across the group so the active bar animates as one).
+ *
+ * Gated on isAdmin only, not isTeamLeader || isAdmin: /admin/* is wrapped by
+ * SuperuserRoute (isSuperuser || isAdmin only), so a plain TL who could see
+ * this link would get redirected to /dashboard on click — a dead link. Same
+ * fix already applied to TLScorecardAdminSidebarItem.
  */
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -15,11 +20,11 @@ import { LAYOUT_ID, useMotionTransition } from "@/lib/motion";
 
 const EngagementAdminSidebarItem: React.FC = () => {
   const location = useLocation();
-  const { isTeamLeader, isAdmin } = usePermissions();
+  const { isAdmin } = usePermissions();
   const activeBarTransition = useMotionTransition({ type: "spring", stiffness: 400, damping: 30 });
   const isActive = location.pathname.startsWith("/admin/engagement");
 
-  if (!isTeamLeader && !isAdmin) return null;
+  if (!isAdmin) return null;
 
   return (
     <li>
