@@ -22,8 +22,15 @@ export const usePluginPermissions = () => {
   } = useQuery({
     queryKey: ["plugin-permissions", user?.id ?? null],
     queryFn: () => pluginService.getUserPermissions(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: isAuthenticated, // Only fetch when authenticated
+    // Same exception as PluginContext.tsx's active-metadata query: this
+    // drives PluginWidgetProvider's dashboard widget picker, so a plugin
+    // permission grant/revoke on the backend should show up on refocus
+    // rather than needing a hard reload. refetchOnWindowFocus only refetches
+    // stale queries, so staleTime must stay 0 (was 5 minutes) — otherwise a
+    // refocus within that window would still serve the stale permission set.
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const hasPermission = (pluginName: string, action: string): boolean => {

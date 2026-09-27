@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { PluginProvider, usePlugins } from "./PluginContext";
 import { pluginService } from "@/services/pluginService";
 import { useAuth } from "@/context/AuthContext";
@@ -17,13 +18,18 @@ const basePlugin = {
   injection_slots: [],
 };
 
+// A fresh QueryClient per render keeps each test's cache isolated (same
+// convention as usePendingApprovalCount.test.tsx).
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <PluginProvider>{children}</PluginProvider>
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <PluginProvider>{children}</PluginProvider>
+  </QueryClientProvider>
 );
 
 describe("PluginProvider refreshActivePlugins", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    focusManager.setFocused(undefined);
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       user: { id: 1 },
@@ -110,6 +116,25 @@ describe("PluginProvider refreshActivePlugins", () => {
     await act(async () => {
       await result.current.refreshActivePlugins();
     });
+    await waitFor(() => expect(result.current.activePlugins.length).toBe(2));
+  });
+
+  it("refetches on window focus, so a backend restart heals without a manual page reload", async () => {
+    vi.mocked(pluginService.getActiveMetadata).mockResolvedValue([basePlugin as any]);
+    const { result } = renderHook(() => usePlugins(), { wrapper });
+    await waitFor(() => expect(result.current.activePlugins.length).toBe(1));
+
+    // Simulate: dev server restarted with a newly-enabled plugin while the
+    // tab sat in the background, then the user switches back to it.
+    vi.mocked(pluginService.getActiveMetadata).mockResolvedValue([
+      basePlugin,
+      { ...basePlugin, id: 2, name: "second" },
+    ] as any);
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+
     await waitFor(() => expect(result.current.activePlugins.length).toBe(2));
   });
 
