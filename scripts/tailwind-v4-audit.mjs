@@ -73,6 +73,16 @@ const PATTERNS = [
     note: "still valid in v4 but outline-hidden is the new accessible-focus-safe alias; audit for real a11y intent",
   },
   {
+    id: "bracket-css-var-arbitrary-value",
+    severity: "break",
+    // e.g. w-[--radix-popover-trigger-width] — v4 no longer wraps a bare
+    // `--custom-property` arbitrary value in `var()`, so this compiles to
+    // an invalid CSS declaration (`width: --my-var;`) instead of the old
+    // implicit var() wrapping. Use w-(--my-var) instead.
+    regex: /\[--[a-zA-Z0-9_-]+\]/g,
+    note: "v4 no longer auto-wraps a bare --custom-property arbitrary value in var(); use the (--var) syntax instead or it compiles to invalid CSS",
+  },
+  {
     id: "raw-palette-color",
     severity: "check",
     // bg-emerald-500, text-rose-700, border-sky-300, ring-amber-400, from-/to-/via- gradients, with optional /opacity

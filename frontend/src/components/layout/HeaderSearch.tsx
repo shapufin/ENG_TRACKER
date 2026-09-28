@@ -49,12 +49,12 @@ export const HeaderSearch: React.FC<HeaderSearchProps> = ({ items }) => {
                 setOpen(false);
               }
             }}
-            className="h-9 w-full rounded-full border border-border bg-muted/50 pl-9 pr-3 text-sm outline-none transition-colors focus:border-border-focus focus:bg-card"
+            className="h-9 w-full rounded-full border border-border bg-muted/50 pl-9 pr-3 text-sm outline-hidden transition-colors focus:border-border-focus focus:bg-card"
           />
         </div>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[--radix-popover-trigger-width] p-1"
+        className="w-(--radix-popover-trigger-width) p-1"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
