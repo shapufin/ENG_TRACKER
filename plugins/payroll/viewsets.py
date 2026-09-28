@@ -1175,11 +1175,27 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                     new_values={'run_id': run.id})
         return Response(PayrollRunSerializer(run).data)
 
+    def _scoped_lines(self, run):
+        """Payroll lines in ``run`` visible to the current request's user.
+
+        A payroll run is company-wide (every team's lines in one run), but
+        ``get_queryset()`` only scopes *which runs* a plain team leader can
+        reach (any run containing at least one of their own team's lines) —
+        it does not scope *which lines within that run*. Re-apply the same
+        ``_allowed_payroll_user_ids`` scope here so a TL can't see/download
+        another team's salary data just because they share a run.
+        """
+        lines = run.lines.all().select_related('user', 'user__profile')
+        allowed_ids = _allowed_payroll_user_ids(self.request.user)
+        if allowed_ids is not None:
+            lines = lines.filter(user_id__in=allowed_ids)
+        return lines
+
     @action(detail=True, methods=['get'])
     def lines(self, request, pk=None):
-        """List payroll lines for a run."""
+        """List payroll lines for a run, scoped to what this user may see."""
         run = self.get_object()
-        lines = run.lines.all().select_related('user', 'user__profile').order_by('user__username')
+        lines = self._scoped_lines(run).order_by('user__username')
         serializer = PayrollLineSerializer(lines, many=True)
         return Response(serializer.data)
 
@@ -1246,10 +1262,22 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             'rule_set_code': result.rule_set_code,
         })
 
+    def _ensure_unrestricted(self):
+        """Whole-run exports build one file covering every team's lines and
+        cannot be filtered down (`export_service` takes the whole run) — so
+        unlike `lines()`/`payslip()`, a scoped team leader can't use these
+        at all, only staff/superuser/payroll-'manage'-grant holders."""
+        if _allowed_payroll_user_ids(self.request.user) is not None:
+            raise PermissionDenied(
+                'Whole-run exports are limited to unrestricted payroll access. '
+                'Use the payslip endpoint for an individual employee.'
+            )
+
     @action(detail=True, methods=['get'])
     def export_excel(self, request, pk=None):
         """Export the run as an Excel file."""
         run = self.get_object()
+        self._ensure_unrestricted()
         if run.status != 'finalized':
             return Response(
                 {'detail': 'Payroll exports are available only for finalized runs.'},
@@ -1280,6 +1308,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         """Export the run as a single consolidated PDF: a summary cover page
         followed by every employee's full payslip."""
         run = self.get_object()
+        self._ensure_unrestricted()
         if run.status != 'finalized':
             return Response(
                 {'detail': 'Payroll exports are available only for finalized runs.'},
@@ -1318,7 +1347,9 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         if not line_id:
             return Response({'detail': 'line_id query parameter is required.'},
                             status=status.HTTP_400_BAD_REQUEST)
-        line = run.lines.filter(id=line_id).first()
+        # Scoped to what this user may see — not just anything in the run
+        # (a run spans every team; see `_scoped_lines`).
+        line = self._scoped_lines(run).filter(id=line_id).first()
         if not line:
             return Response({'detail': 'Payroll line not found in this run.'},
                             status=status.HTTP_404_NOT_FOUND)
