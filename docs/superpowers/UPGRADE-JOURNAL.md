@@ -195,3 +195,96 @@ production settings module and full production dependency set load and pass
   open and untouched by this phase (notifications `__init__.py`/test-
   discovery gap, missing `sync_plugins` command, brittle
   `psycopg2-binary==2.9.10` pin).
+
+## Phase 3: Tailwind CSS — 2026-09-28
+
+- Version: `tailwindcss==3.4.17` -> `4.3.3`. Also added
+  `@tailwindcss/postcss@4.3.3` and `tw-animate-css@1.4.0`; removed
+  `tailwindcss-animate@1.0.7` and `autoprefixer@10.5.2` (v4 prefixes
+  internally). `tailwind.config.js` kept as a JS file, loaded via v4's
+  `@config` compatibility directive rather than rewritten into native
+  `@theme` CSS — deliberate scope decision, not deferred by oversight
+  (see spec: `docs/superpowers/specs/2026-09-28-tailwind-4-upgrade-design.md`).
+- Spec-audited usage surface (`scripts/tailwind-v4-audit.mjs`, committed,
+  re-runnable) across 1205 `frontend/src` files before starting: 32
+  `bg-gradient-to-*` hits, 1 `flex-shrink` hit (both breaking, renamed),
+  plus visual-risk buckets (bare `border`/`ring`/`shadow-sm`, raw palette
+  colors) sized in the spec.
+- **Two plan defects found and corrected mid-implementation** (both by an
+  implementer escalating instead of guessing, then a controller ruling):
+  1. `tailwind.config.js`'s `plugins: [require("tailwindcss-animate")]`
+     line threw `MODULE_NOT_FOUND` once the removed package was gone —
+     the plan's "leave `tailwind.config.js` untouched" instruction hadn't
+     accounted for its own Task 2 removing a package that line
+     references. Fixed to `plugins: []` (the replacement needs no JS
+     plugin registration) — a narrow required removal, not the `@theme`
+     rewrite the plan scopes out.
+  2. The plan's own specified CSS import order (`@import "tailwindcss";
+     @config ...; @import "tw-animate-css";`) was backwards per
+     Tailwind's official docs — `@config` must come AFTER every
+     `@import`, not between them. Verified against
+     tailwindcss.com/docs/functions-and-directives before ruling (the
+     "don't do this" example in Tailwind's own docs is exactly this
+     ordering). The fix's first attempt was still incomplete — the
+     implementer caught that pre-existing font `@import`s also needed to
+     move above `@config`, not just the two new ones — before it converged
+     to zero PostCSS warnings.
+- Mechanical renames (`bg-gradient-to-*` -> `bg-linear-to-*`,
+  `flex-shrink` -> `shrink`): 33 hits across 26 files, audit-script-driven
+  and audit-script-verified (0/0 after).
+- **Visual regression triage** (the two full `visual-verify.mjs`
+  capture/verify runs the spec budgets): 350/492 fingerprints reported
+  diffs, but triage found zero real Tailwind-caused regressions —
+  - 876/876 `STYLE CHANGED` hits involved an `oklab()`/`oklch()` value:
+    this is v4's `color-mix(in oklab, ...)`-based opacity utilities
+    (e.g. `bg-primary/10`) changing how the browser *serializes* the
+    computed color, not the rendered color itself. Pre-accepted per spec.
+  - 662 `MISSING COMPONENT` hits (mostly `button["Notifications"]`)
+    traced to `NotificationBell.tsx`'s plugin-slot gating on an async,
+    `staleTime: 0` permission query — the exact flakiness class
+    CLAUDE.md's own Hot Invariants already document ("a stale value here
+    looks exactly like a missing sidebar link/widget, not a backend
+    bug"). Confirmed live: logging into the real dev app showed the
+    plugin-injected `AuditLogSidebarItem` genuinely absent on a fresh
+    page load with zero Tailwind changes in play.
+  - 213 `BOUNDS CHANGED` hits, dominated by a uniform 112px sidebar shift
+    — far too large to be a border/ring default-width change (1-3px);
+    traced to the same async plugin-sidebar-injection timing class.
+  - Both full `visual-verify` runs combined (~832 page loads) exhausted
+    the DRF per-user `1000/hour` throttle, which blocked further live
+    interactive dialog/popover/select testing later in the phase (see
+    Task 8 below) — a real cost of the tooling's own request volume, not
+    a defect in the app.
+  - **Process mistake**: a small targeted re-check
+    (`--paths=dashboard`) run to test a hypothesis overwrote
+    `diff-report.txt` in place before its full context had been read.
+    Lesson recorded for future phases: copy the report to a separate file
+    immediately after any full `verify` run.
+- No real border/ring/shadow regressions were found, so no fix commits
+  were needed for those categories.
+- `tailwindcss-animate` -> `tw-animate-css` swap (8 consuming files —
+  `dialog.tsx`, `popover.tsx`, `select.tsx`, `tooltip.tsx`, `checkbox.tsx`,
+  `TriStateCheckbox.tsx`, and 2 analytics filter components): verified by
+  extracting every animate-related class name the components use
+  (`animate-in`/`-out`, `fade-in-0`/`-out-0`, `zoom-in-95`/`-out-95`,
+  `slide-in-from-*`/`slide-out-to-*`) and confirming each pattern exists
+  in `tw-animate-css@1.4.0`'s actual shipped CSS via direct file read —
+  not just trusting the package's "v4-compatible replacement" description.
+  `npm run build` succeeded with this swap wired in.
+- Verification: `node scripts/tailwind-v4-audit.mjs` — 0 breaking hits.
+  `node scripts/modal-audit.mjs` — 1 pre-existing failure
+  (`textarea.tsx`'s raw `<textarea>`, confirmed via `git log`/`git diff`
+  against `main` to predate this phase entirely, untouched by it — not
+  fixed, out of scope). `npm run build` — clean, exit 0. Full
+  `npx vitest run` — 2474 passed / 2 failed / 2476 total, matching the
+  pre-upgrade baseline's totals exactly; the one *stable* failure
+  (`PersonalDashboardProgressCard`) is identical to baseline, and the
+  2nd slot's failure differed between runs (`AnimatedNumber`'s
+  reduced-motion spring test, confirmed flaky by passing cleanly in
+  isolation) — parallel-execution timing noise, not a regression. Net-new
+  regressions: zero.
+- Residual items carried forward: the same three Phase 1/2 items
+  (notifications `__init__.py`, missing `sync_plugins`, brittle
+  `psycopg2-binary` pin) plus two new, both explicitly out of scope for
+  this phase: native `@theme` CSS migration of `tailwind.config.js`, and
+  `textarea.tsx`'s pre-existing raw-`<textarea>` modal-audit finding.
