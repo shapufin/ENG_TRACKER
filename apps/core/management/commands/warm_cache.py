@@ -19,7 +19,7 @@ class Command(BaseCommand):
         
         try:
             # Warm role cache
-            roles = Role.objects.all().prefetch_related('permissions')
+            roles = Role.objects.all().select_related('deleted_by').prefetch_related('permissions')
             role_count = 0
             for role in roles:
                 cache_key = CacheKey.role(role.id)
