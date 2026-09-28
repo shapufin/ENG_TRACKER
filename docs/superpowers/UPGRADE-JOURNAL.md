@@ -162,3 +162,36 @@ worktree for the next phase.
 **Production deployment check: now fully verified locally** (see above) — the
 production settings module and full production dependency set load and pass
 `check --deploy` cleanly under Django 6.1.1, zero Django-6-related issues.
+
+## Phase 2: reportlab — 2026-09-28
+
+- Version: `reportlab==4.5.1` -> `reportlab==5.0.1`.
+- Usage surface confirmed narrow before touching anything:
+  `plugins/analytics/reports.py` (a minimal `canvas.Canvas` stub PDF, no
+  tables/images) and `plugins/payroll/services/export_service.py` (the real
+  usage — `platypus` `SimpleDocTemplate`/`Table`/`TableStyle`/`Paragraph`/
+  `Spacer`/`PageBreak`, `lib.colors`/`units`/`pagesizes`/`styles`, all
+  building PDFs from in-memory `BytesIO`/local data, never a remote image
+  URL). No other file in the repo imports `reportlab`.
+- The only breaking change between 4.x and 5.0 is a security-hardening
+  default flip: `rl_config.trustedHosts = None` now means "trust no host"
+  for *remote* image fetching (previously meant "trust everything").
+  Neither file fetches images from a URL, so this had zero effect here —
+  confirmed, not assumed, by grepping both files for `Image(` /
+  `ImageReader` (no hits) before starting.
+- No code changes required. Bump-only upgrade.
+- Verification: `plugins.payroll.tests.test_additional.PayrollAdditionalRegressionTests`
+  (13 tests, all 5 PDF-specific ones included) — pass. Full
+  `plugins.payroll` + `plugins.analytics` suites (169 tests) — pass. A
+  standalone `SimpleDocTemplate`/`Table`/`Paragraph` smoke build via
+  `manage.py shell` produced a valid `%PDF`-prefixed document. Full test
+  suite: 1770 passed / 1 known pre-existing failure
+  (`config.test_deployment...test_cors_credentials_disabled_in_production`,
+  documented in Phase 1 above as pre-existing on Django 5.2.17 too and
+  unrelated to any upgrade in this series — confirmed again here it also
+  fails identically on unmodified `main`, isolated to a test-only assertion
+  bug, not reportlab). `manage.py check` — clean.
+- Residual items: none new. Same three follow-up items as Phase 1 remain
+  open and untouched by this phase (notifications `__init__.py`/test-
+  discovery gap, missing `sync_plugins` command, brittle
+  `psycopg2-binary==2.9.10` pin).
