@@ -6,6 +6,12 @@ from decimal import Decimal
 
 from rest_framework import viewsets, filters, status, permissions
 from core.mixins.cache import CacheInvalidationMixin
+from core.utils.cache import (
+    build_query_fingerprint,
+    get_cached_response_data,
+    set_cached_response_data,
+)
+from apps.core.cache_constants import CacheKey, CacheTTL
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, PermissionDenied
@@ -242,7 +248,7 @@ class LeaveBalanceViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, HRRe
         return summary
 
 
-class GlobalSettingsViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
+class GlobalSettingsViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.ModelViewSet):
     """ViewSet for GlobalSettings singleton. Admin write, all authenticated read."""
     queryset = GlobalSettings.objects.all()
     serializer_class = GlobalSettingsSerializer
@@ -259,11 +265,31 @@ class GlobalSettingsViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         return obj
 
     def list(self, request, *args, **kwargs):
+        # Read on nearly every business-day/leave validation path (per
+        # CLAUDE.md invariant) — cache it, invalidated below on every write.
+        # Checked before the get_or_create query below so a cache hit costs
+        # zero DB queries, not one.
+        cache_key = CacheKey.dashboard_reference(
+            'global_settings', build_query_fingerprint(request)
+        )
+        cached = get_cached_response_data(cache_key)
+        if cached is not None:
+            return Response(cached)
         # The frontend only ever calls list(), never retrieve() — ensure the
         # singleton exists here too, or a DB with no leave requests yet
         # (nothing else creates pk=1) returns an empty page forever.
         GlobalSettings.objects.get_or_create(pk=1)
-        return super().list(request, *args, **kwargs)
+        response = super().list(request, *args, **kwargs)
+        set_cached_response_data(cache_key, response.data, CacheTTL.LONG)
+        return response
+
+    def perform_update(self, serializer):
+        serializer.save()
+        self.invalidate_related_cache()
+
+    def perform_create(self, serializer):
+        serializer.save()
+        self.invalidate_related_cache()
 
 
 class LeaveRequestViewSet(SuperuserPermissionMixin, HRReadOnlyMixin, TeamLeaderFilterMixin, BulkActionMixin, viewsets.ModelViewSet):

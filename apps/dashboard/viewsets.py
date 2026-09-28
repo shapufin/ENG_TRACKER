@@ -12,6 +12,12 @@ from django.contrib.auth import get_user_model
 from django.db import models, transaction
 from core.mixins.cache import CacheInvalidationMixin
 from core.mixins.permissions import IsHR, has_hr_role, has_team_leader_role
+from core.utils.cache import (
+    build_query_fingerprint,
+    get_cached_response_data,
+    set_cached_response_data,
+)
+from apps.core.cache_constants import CacheKey, CacheTTL
 from django.db.models import Q, Count
 from .models import DashboardWidget, UserDashboardPreference, SiteBranding
 from .models.calendar import CalendarWorkspace, UserCalendarPreference, PublicHoliday
@@ -33,6 +39,22 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = DashboardWidgetSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['widget_type']
+
+    def list(self, request, *args, **kwargs):
+        # Widget definitions load on every dashboard page view but are only
+        # ever edited via Django admin (this ViewSet is read-only — no API
+        # write path exists to hook an invalidation call into), so a plain
+        # TTL is the whole invalidation strategy here, same as any other
+        # admin-managed, rarely-changing reference table.
+        cache_key = CacheKey.dashboard_reference(
+            'widgets', build_query_fingerprint(request)
+        )
+        cached = get_cached_response_data(cache_key)
+        if cached is not None:
+            return Response(cached)
+        response = super().list(request, *args, **kwargs)
+        set_cached_response_data(cache_key, response.data, CacheTTL.LONG)
+        return response
 
     def _get_team_and_members(self, request):
         """
@@ -866,6 +888,21 @@ class PublicHolidayViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
         if calendar_id:
             queryset = queryset.filter(calendar_id=calendar_id)
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        # Read-heavy, write-rare reference data (holidays don't vary per
+        # user — only by the ?calendar/?country_code/etc. filters already
+        # in the fingerprint). Invalidated on every write via the existing
+        # CacheInvalidationMixin hooks below, no new invalidation path.
+        cache_key = CacheKey.dashboard_reference(
+            'holidays', build_query_fingerprint(request)
+        )
+        cached = get_cached_response_data(cache_key)
+        if cached is not None:
+            return Response(cached)
+        response = super().list(request, *args, **kwargs)
+        set_cached_response_data(cache_key, response.data, CacheTTL.LONG)
+        return response
 
     def _ensure_admin(self):
         user = self.request.user

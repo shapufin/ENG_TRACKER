@@ -133,3 +133,37 @@ def get_cached_permission(user_id, module, action, team_code=None):
     except Exception as e:
         logger.warning(f"Failed to get permission cache: {str(e)}")
         return None
+
+
+def build_query_fingerprint(request) -> str:
+    """Deterministic cache-key suffix from a request's query params.
+
+    Sorted so ``?a=1&b=2`` and ``?b=2&a=1`` hit the same cache entry.
+    Uses ``.lists()`` (not ``.items()``) so a repeated key (``?a=1&a=2``)
+    keeps every value instead of silently collapsing to the last one —
+    ``.items()`` would let two requests with different repeated-value sets
+    collide on the same fingerprint.
+    """
+    parts = [
+        f"{key}={','.join(values)}"
+        for key, values in sorted(request.query_params.lists())
+    ]
+    return "&".join(parts)
+
+
+def get_cached_response_data(cache_key):
+    """Return a cached serialized list/retrieve response payload, or None on
+    a miss or cache error (falls through to a real query either way)."""
+    try:
+        return get_cache().get(cache_key)
+    except Exception as e:
+        logger.warning(f"Failed to get response cache for {cache_key!r}: {str(e)}")
+        return None
+
+
+def set_cached_response_data(cache_key, data, timeout=None):
+    """Cache a serialized response payload with a standardized TTL."""
+    try:
+        get_cache().set(cache_key, data, timeout or CacheTTL.LONG)
+    except Exception as e:
+        logger.warning(f"Failed to set response cache for {cache_key!r}: {str(e)}")

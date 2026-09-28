@@ -60,6 +60,21 @@ class CacheKey:
         version = getattr(settings, 'CACHE_VERSION', 1)
         return f"v{version}:dashboard:{user_id}:{dashboard_type}"
 
+    @staticmethod
+    def dashboard_reference(list_name: str, fingerprint: str = '') -> str:
+        """Generate a cache key for a shared (non-user-scoped) reference list.
+
+        Same ``v{version}:dashboard:`` prefix as ``dashboard()`` so
+        ``CachePattern.dashboard_all()`` invalidates these too — reuses the
+        existing dashboard cache namespace/invalidation instead of adding a
+        second one. ``fingerprint`` should be a deterministic encoding of the
+        request's filter query params (see
+        ``core.utils.cache.build_query_fingerprint``) so different filter
+        combinations don't collide.
+        """
+        version = getattr(settings, 'CACHE_VERSION', 1)
+        return f"v{version}:dashboard:ref:{list_name}:{fingerprint}"
+
 
 class CachePattern:
     """Cache key patterns for bulk invalidation."""
