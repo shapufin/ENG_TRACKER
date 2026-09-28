@@ -34,7 +34,12 @@ const ROLE_BADGE_LABELS: Record<RoleBadge, string> = {
   employee: "Employee",
 };
 
-export const OrgNode: React.FC<NodeProps> = ({ data }) => {
+// React Flow re-invokes every node component whenever the parent's `nodes`
+// array is recreated (e.g. on search/toolbar state changes in
+// OrgChartPage), not just when a given node's own data changes — memoizing
+// is React Flow's own documented pattern for custom node types, and this
+// component is a pure function of `data` with no internal state.
+export const OrgNode: React.FC<NodeProps> = React.memo(function OrgNode({ data }) {
   const nodeData = data as unknown as OrgNodeData;
   const isTech = nodeData.nodeType === "tech";
   const hasChildren = nodeData.hasChildren;
@@ -105,4 +110,4 @@ export const OrgNode: React.FC<NodeProps> = ({ data }) => {
       <Handle type="source" position={Position.Bottom} className="opacity-0" />
     </div>
   );
-};
+});
