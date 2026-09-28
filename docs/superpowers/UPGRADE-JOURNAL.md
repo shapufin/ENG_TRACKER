@@ -343,7 +343,20 @@ production settings module and full production dependency set load and pass
   reduced-motion spring test, confirmed flaky by passing cleanly in
   isolation) — parallel-execution timing noise, not a regression. Net-new
   regressions: zero.
-- Final whole-branch review, round 2 (scoped to the fix diff): see below.
+- Final whole-branch review, round 2 (scoped to the fix diff, commits
+  `79a4f5c`/`7d4ac6a`/`d9e17f9`): **APPROVED**. Independently re-verified
+  all 6 checks (both files use the corrected `w-(--var)` syntax and
+  nothing else changed; the audit script's new pattern plus all 4
+  existing breaking patterns report 0/0; `button.tsx`'s `cursor-pointer`
+  addition is clean; spot-checked the `outline-hidden` rename across
+  essentially all 32 files with no stray edits; `npm run build` clean;
+  the journal-correction commit is an honest correction, not backfilled
+  praise). No further findings. Branch merged to `main` as commit
+  `00a50a1` (`git merge --no-ff`) and pushed to `origin/main`. Full
+  `npx vitest run` re-confirmed on merged `main` (not just the worktree):
+  2474 passed / 2 failed / 2476 total, same two known pre-existing
+  failures as the worktree run and the Phase 1/2 baseline — zero net-new
+  regressions from the merge itself.
 - Residual items carried forward: the same three Phase 1/2 items
   (notifications `__init__.py`, missing `sync_plugins`, brittle
   `psycopg2-binary` pin) plus three new, all explicitly out of scope for

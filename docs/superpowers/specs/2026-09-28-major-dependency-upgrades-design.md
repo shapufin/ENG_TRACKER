@@ -104,7 +104,7 @@ Phase 1 (Django) first and Phase 4 before Phase 5/6.
 2. Read the dependency's official upgrade/deprecation guide for the
    exact version jump (via Context7 for current docs, not training
    data — these are 2026-era releases).
-3. Read the current Upgrade Journal (`.devin/context/13-UPGRADE-
+3. Read the current Upgrade Journal (`docs/superpowers/UPGRADE-
    JOURNAL.md`) for anything a prior phase already learned that's
    relevant.
 4. Bump the version in `requirements.txt` / `package.json`.
@@ -244,11 +244,17 @@ how Tailwind's phase should be scoped).
 
 Two mechanisms, different lifetimes:
 
-1. **`.devin/context/13-UPGRADE-JOURNAL.md`** (git-tracked, in-repo,
+1. **`docs/superpowers/UPGRADE-JOURNAL.md`** (git-tracked, in-repo,
    team-visible): one section per completed phase. Added to
    CLAUDE.md's Task Router, keyed on "upgrade, major version,
-   dependency bump", so any future session (mine or a teammate's)
-   reads it before starting a subsequent phase.
+   dependency bump", so any future session (mine, a teammate's, or a
+   different AI tool's) reads it before starting a subsequent phase.
+   (Originally planned for `.devin/context/13-UPGRADE-JOURNAL.md`, but
+   that whole directory turned out to be entirely gitignored — local-only,
+   never shared — so the journal was moved here during Phase 1, before
+   any entry was written. This is the single source of truth for
+   per-phase completion status; this spec document itself is static and
+   does not track live status.)
 2. **Claude's own persistent project memory** (this assistant's
    cross-session memory, not repo-tracked): tracks current phase,
    what's done, what's next, any active pin-and-defer — so if this
