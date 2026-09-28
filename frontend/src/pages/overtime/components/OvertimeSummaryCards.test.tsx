@@ -30,8 +30,8 @@ describe("OvertimeSummaryCards", () => {
     expect(container.querySelectorAll(".tabular-nums").length).toBeGreaterThanOrEqual(5);
 
     // The older dashboard/StatCard variant rendered icons inside
-    // bg-gradient-to-br boxes — the shared ui/StatCard does not.
-    expect(container.querySelector(".bg-gradient-to-br")).toBeNull();
+    // bg-linear-to-br boxes — the shared ui/StatCard does not.
+    expect(container.querySelector(".bg-linear-to-br")).toBeNull();
   });
 
   it("renders nothing when summary is missing", () => {

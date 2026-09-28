@@ -15,7 +15,7 @@ describe("PersonalDashboardStats", () => {
 
     expect(screen.getByText("Overtime Hours")).toBeInTheDocument();
     expect(container.querySelectorAll(".tabular-nums").length).toBeGreaterThanOrEqual(3);
-    expect(container.querySelector(".bg-gradient-to-br")).toBeNull();
+    expect(container.querySelector(".bg-linear-to-br")).toBeNull();
     expect(container.querySelector('[class*="bg-card/50"]')).toBeNull();
   });
 

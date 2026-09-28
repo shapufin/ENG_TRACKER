@@ -21,7 +21,7 @@ export const BulkDrawerHeader: React.FC<BulkDrawerHeaderProps> = ({
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-3">
         <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent-violet to-primary font-mono text-sm font-bold text-primary-foreground shadow-lg shadow-accent-violet/25"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-accent-violet to-primary font-mono text-sm font-bold text-primary-foreground shadow-lg shadow-accent-violet/25"
           aria-label={`${count} selected`}
         >
           <span aria-hidden="true">

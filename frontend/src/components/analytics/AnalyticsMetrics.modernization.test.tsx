@@ -25,8 +25,8 @@ describe("AnalyticsMetrics modernization", () => {
     const { container } = render(
       <AnalyticsMetrics metrics={metrics} isLoading={false} error={null} />
     );
-    // dashboard/StatCard uses bg-gradient-to-br on icon boxes; ui/StatCard does not
-    expect(container.querySelectorAll(".bg-gradient-to-br").length).toBe(0);
+    // dashboard/StatCard uses bg-linear-to-br on icon boxes; ui/StatCard does not
+    expect(container.querySelectorAll(".bg-linear-to-br").length).toBe(0);
   });
 
   it("renders tabular-nums values", () => {

@@ -240,7 +240,7 @@ export const EngagementVisualizationPage: React.FC = () => {
                 </p>
                 <div className="mt-2 flex items-baseline justify-center gap-2 sm:justify-start">
                   <span
-                    className="bg-gradient-to-br from-[hsl(var(--chart-1))] to-[hsl(var(--chart-2))] bg-clip-text font-mono text-6xl font-black tabular-nums tracking-tight text-transparent sm:text-7xl"
+                    className="bg-linear-to-br from-[hsl(var(--chart-1))] to-[hsl(var(--chart-2))] bg-clip-text font-mono text-6xl font-black tabular-nums tracking-tight text-transparent sm:text-7xl"
                     style={{ filter: `drop-shadow(0 0 24px ${ringGlow})` }}
                   >
                     {score !== null ? Math.round(score) : "—"}

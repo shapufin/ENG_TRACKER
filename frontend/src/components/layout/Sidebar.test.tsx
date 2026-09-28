@@ -120,7 +120,7 @@ describe("Sidebar", () => {
         onLogout={vi.fn()}
       />
     );
-    const tile = document.querySelector(".bg-gradient-to-tr");
+    const tile = document.querySelector(".bg-linear-to-tr");
     expect(tile).toBeTruthy();
     expect(tile?.className).toContain("from-primary");
     expect(tile?.className).toContain("to-info");
@@ -171,7 +171,7 @@ describe("Sidebar", () => {
     });
     fireEvent.error(img);
 
-    await waitFor(() => expect(document.querySelector(".bg-gradient-to-tr")).toBeTruthy());
+    await waitFor(() => expect(document.querySelector(".bg-linear-to-tr")).toBeTruthy());
     expect(document.querySelector('img[src="/media/branding/logo.png"]')).toBeNull();
   });
 

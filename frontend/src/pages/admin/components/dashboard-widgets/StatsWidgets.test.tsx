@@ -49,7 +49,7 @@ describe("StatsWidgets", () => {
         overtimeSummary={{ total_hours: 20 }}
       />
     );
-    expect(container.querySelector(".bg-gradient-to-br")).toBeNull();
+    expect(container.querySelector(".bg-linear-to-br")).toBeNull();
     expect(container.querySelectorAll(".tabular-nums").length).toBeGreaterThanOrEqual(4);
   });
 

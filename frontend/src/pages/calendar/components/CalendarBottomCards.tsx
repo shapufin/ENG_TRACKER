@@ -141,7 +141,7 @@ export const CalendarBottomCards: React.FC<CalendarBottomCardsProps> = ({
   formatDays,
   onViewAllConflicts,
 }) => (
-  <div className="grid flex-shrink-0 gap-2 md:grid-cols-3">
+  <div className="grid shrink-0 gap-2 md:grid-cols-3">
     <VacationBalanceCard
       remainingDays={vacationSummary?.remainingDays ?? 0}
       totalDays={vacationSummary?.totalDays ?? 0}

@@ -18,7 +18,7 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:text-primary-hover hover:underline",
         /** Opt-in hero CTA. Use once per surface — page header or modal submit. */
         gradient:
-          "bg-gradient-to-r from-accent-violet to-primary text-primary-foreground shadow-lg shadow-accent-violet/25 hover:brightness-110",
+          "bg-linear-to-r from-accent-violet to-primary text-primary-foreground shadow-lg shadow-accent-violet/25 hover:brightness-110",
       },
       size: {
         default: "h-10 px-4 py-2",

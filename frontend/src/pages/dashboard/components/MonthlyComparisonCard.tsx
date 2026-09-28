@@ -31,7 +31,7 @@ const BarChart: React.FC<{
           className="relative flex w-24 items-end overflow-hidden rounded-t-2xl bg-primary/20"
           style={{ height: `${currHeight}px` }}
         >
-          <div className="h-full w-full rounded-t-2xl bg-gradient-to-t from-primary to-primary/60 shadow-[0_0_40px_hsl(var(--primary)/0.45)]" />
+          <div className="h-full w-full rounded-t-2xl bg-linear-to-t from-primary to-primary/60 shadow-[0_0_40px_hsl(var(--primary)/0.45)]" />
         </div>
         <span className="text-base font-semibold tabular-nums">{current}</span>
         <span className="text-muted-foreground">{currentLabel}</span>

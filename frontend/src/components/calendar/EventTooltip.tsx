@@ -45,7 +45,7 @@ export const EventTooltip: React.FC<EventTooltipProps> = ({
         align="center"
         className="w-72 border border-line-subtle bg-popover/95 p-0 text-popover-foreground backdrop-blur-xl"
       >
-        <div className="relative overflow-hidden rounded-xl border border-line-subtle bg-gradient-to-br from-muted/50 to-transparent p-3">
+        <div className="relative overflow-hidden rounded-xl border border-line-subtle bg-linear-to-br from-muted/50 to-transparent p-3">
           <div
             className={cn(
               "pointer-events-none absolute inset-0 opacity-60",

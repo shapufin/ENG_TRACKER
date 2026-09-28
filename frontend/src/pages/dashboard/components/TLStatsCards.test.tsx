@@ -88,7 +88,7 @@ describe("TLStatsCards modernization", () => {
 
   it("does not use raw gradient overlays or inline glass imitations", () => {
     const { container } = renderCards();
-    expect(container.innerHTML).not.toContain("bg-gradient-to-br");
+    expect(container.innerHTML).not.toContain("bg-linear-to-br");
     expect(container.innerHTML).not.toContain("bg-card/50");
     expect(container.innerHTML).not.toContain("text-muted-foreground/60");
   });
