@@ -22,7 +22,7 @@ describe("PersonalDashboardProgressCard", () => {
     const { container } = renderCard();
 
     expect(screen.getByText("My Progress & Weekly Allocation Overview")).toBeInTheDocument();
-    expect(container.querySelector(".bg-gradient-to-br")).toBeNull();
+    expect(container.querySelector(".bg-linear-to-br")).toBeNull();
     expect(container.querySelectorAll(".tabular-nums").length).toBeGreaterThanOrEqual(2);
     // Regression: inner tiles/well must sit on the card surface, not a grey
     // wash (bg-muted/30, bg-background/60) that reads as a bug on white cards.

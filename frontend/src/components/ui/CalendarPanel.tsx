@@ -130,7 +130,7 @@ export const CalendarPanel: React.FC<CalendarPanelProps> = ({
               className={cn(
                 "h-8 w-8 rounded-sm p-0 text-xs",
                 "flex items-center justify-center",
-                "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
                 selected
                   ? "bg-primary text-primary-foreground hover:bg-primary-hover"
                   : inRange

@@ -212,7 +212,7 @@ export const DataTable = function DataTable<TData>({
           key={row.id}
           data-state={isSelected ? "selected" : undefined}
           className={cn(
-            "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60",
+            "transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60",
             isSelected && "bg-primary/10",
             onRowClick && "cursor-pointer",
             getRowClassName ? getRowClassName(row.original) : "hover:bg-table-hover"
@@ -327,10 +327,10 @@ export const DataTable = function DataTable<TData>({
       {/* Scroll wrapper with shadow indicators */}
       <div className="relative">
         {showLeftShadow && (
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 rounded-l-md bg-gradient-to-r from-card to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 rounded-l-md bg-linear-to-r from-card to-transparent" />
         )}
         {showRightShadow && (
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 rounded-r-md bg-gradient-to-l from-card to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 rounded-r-md bg-linear-to-l from-card to-transparent" />
         )}
         <div
           ref={scrollRef}

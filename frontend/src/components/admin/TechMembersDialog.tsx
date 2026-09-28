@@ -173,7 +173,7 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
                         }
                         disabled={addMutation.isPending}
                         aria-label={`Level for ${m.username} in ${tech?.name}`}
-                        className="mr-2 h-7 rounded-md border border-input bg-background px-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                        className="mr-2 h-7 rounded-md border border-input bg-background px-1.5 text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                       >
                         <option value="">No level</option>
                         {activeLevels.map((level) => (

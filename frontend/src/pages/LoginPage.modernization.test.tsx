@@ -16,7 +16,7 @@ vi.mock("framer-motion", () => ({
 describe("LoginPage modernization", () => {
   it("uses semantic background tokens instead of a raw gradient", () => {
     const { container } = render(<LoginPage />);
-    expect(container.querySelector(".bg-gradient-to-br")).toBeNull();
+    expect(container.querySelector(".bg-linear-to-br")).toBeNull();
     expect(container.querySelector(".bg-background")).toBeInTheDocument();
   });
 });

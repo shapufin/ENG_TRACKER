@@ -126,7 +126,7 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
                       }
                     }}
                     className={cn(
-                      "flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
                       checked && "bg-primary/5"
                     )}
                   >
@@ -163,7 +163,7 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
                       event.target.value === "" ? null : Number(event.target.value)
                     )
                   }
-                  className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                  className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                 >
                   <option value="">No level</option>
                   {levels.map((level) => (

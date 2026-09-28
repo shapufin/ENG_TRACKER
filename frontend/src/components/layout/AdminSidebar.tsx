@@ -113,7 +113,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               onError={() => setLogoFailed(true)}
             />
           ) : (
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-info text-white shadow-md shadow-primary/30">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-tr from-primary to-info text-white shadow-md shadow-primary/30">
               <Shield className="h-5 w-5" />
             </div>
           )}

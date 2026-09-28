@@ -48,7 +48,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-2 bg-primary/5 px-4 py-3">
               <div className="flex items-center gap-3">
                 <div
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-accent-violet to-primary text-xs font-bold text-primary-foreground shadow-sm shadow-accent-violet/25"
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-linear-to-br from-accent-violet to-primary text-xs font-bold text-primary-foreground shadow-sm shadow-accent-violet/25"
                   aria-label={`${selectedCount} selected`}
                 >
                   <span aria-hidden="true">

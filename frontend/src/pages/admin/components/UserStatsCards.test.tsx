@@ -23,7 +23,7 @@ describe("UserStatsCards", () => {
     // Converged on the shared ui/StatCard: values use tabular-nums and the
     // old gradient + bg-black/30 icon-box surface is gone.
     expect(container.querySelectorAll(".tabular-nums").length).toBeGreaterThanOrEqual(5);
-    expect(container.querySelector(".bg-gradient-to-br")).toBeNull();
+    expect(container.querySelector(".bg-linear-to-br")).toBeNull();
     expect(container.querySelector('[class*="bg-black"]')).toBeNull();
   });
 });

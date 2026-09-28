@@ -36,7 +36,7 @@ export const UsersPageBulkBar: React.FC<UsersPageBulkBarProps> = ({
           >
             <div className="flex items-center gap-3">
               <div
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent-violet to-primary text-sm font-bold text-primary-foreground shadow-lg shadow-accent-violet/25"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-accent-violet to-primary text-sm font-bold text-primary-foreground shadow-lg shadow-accent-violet/25"
                 aria-label={`${selectedCount} users selected`}
               >
                 <span aria-hidden="true">

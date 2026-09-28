@@ -195,3 +195,164 @@ production settings module and full production dependency set load and pass
   open and untouched by this phase (notifications `__init__.py`/test-
   discovery gap, missing `sync_plugins` command, brittle
   `psycopg2-binary==2.9.10` pin).
+
+## Phase 3: Tailwind CSS — 2026-09-28
+
+- Version: `tailwindcss==3.4.17` -> `4.3.3`. Also added
+  `@tailwindcss/postcss@4.3.3` and `tw-animate-css@1.4.0`; removed
+  `tailwindcss-animate@1.0.7` and `autoprefixer@10.5.2` (v4 prefixes
+  internally). `tailwind.config.js` kept as a JS file, loaded via v4's
+  `@config` compatibility directive rather than rewritten into native
+  `@theme` CSS — deliberate scope decision, not deferred by oversight
+  (see spec: `docs/superpowers/specs/2026-09-28-tailwind-4-upgrade-design.md`).
+- Spec-audited usage surface (`scripts/tailwind-v4-audit.mjs`, committed,
+  re-runnable) across 1205 `frontend/src` files before starting: 32
+  `bg-gradient-to-*` hits, 1 `flex-shrink` hit (both breaking, renamed),
+  plus visual-risk buckets (bare `border`/`ring`/`shadow-sm`, raw palette
+  colors) sized in the spec.
+- **Two plan defects found and corrected mid-implementation** (both by an
+  implementer escalating instead of guessing, then a controller ruling):
+  1. `tailwind.config.js`'s `plugins: [require("tailwindcss-animate")]`
+     line threw `MODULE_NOT_FOUND` once the removed package was gone —
+     the plan's "leave `tailwind.config.js` untouched" instruction hadn't
+     accounted for its own Task 2 removing a package that line
+     references. Fixed to `plugins: []` (the replacement needs no JS
+     plugin registration) — a narrow required removal, not the `@theme`
+     rewrite the plan scopes out.
+  2. The plan's own specified CSS import order (`@import "tailwindcss";
+     @config ...; @import "tw-animate-css";`) was backwards per
+     Tailwind's official docs — `@config` must come AFTER every
+     `@import`, not between them. Verified against
+     tailwindcss.com/docs/functions-and-directives before ruling (the
+     "don't do this" example in Tailwind's own docs is exactly this
+     ordering). The fix's first attempt was still incomplete — the
+     implementer caught that pre-existing font `@import`s also needed to
+     move above `@config`, not just the two new ones — before it converged
+     to zero PostCSS warnings.
+- Mechanical renames (`bg-gradient-to-*` -> `bg-linear-to-*`,
+  `flex-shrink` -> `shrink`): 33 hits across 26 files, audit-script-driven
+  and audit-script-verified (0/0 after).
+- **Visual regression triage** (the two full `visual-verify.mjs`
+  capture/verify runs the spec budgets): 350/492 fingerprints reported
+  diffs, but triage found zero real Tailwind-caused regressions —
+  - 876/876 `STYLE CHANGED` hits involved an `oklab()`/`oklch()` value,
+    but this bucket is actually TWO different things, not one — the
+    original version of this entry conflated them:
+    - The `/opacity`-utility-driven hits actually inspected (e.g. the
+      nav-item `bg-primary/10` background) are v4's
+      `color-mix(in oklab, ...)`-based opacity utilities changing how
+      the browser *serializes* the computed color, not the rendered
+      color itself. Notation-only.
+    - The much larger raw-palette-class bucket (615 hits, pre-sized in
+      the spec's own audit table) is a genuinely different mechanism:
+      Tailwind v4's default color palette itself moved from RGB/HSL to
+      OKLCH, which IS a real (if subtle) rendered-color change, not
+      just notation. This was always the spec's separately pre-accepted
+      "raw-palette-color... check" bucket — still pre-accepted, but for
+      a different reason than the opacity-utility hits, and the two
+      should not have been described as one uniform "notation change."
+  - 662 `MISSING COMPONENT` hits (mostly `button["Notifications"]`)
+    traced to `NotificationBell.tsx`'s plugin-slot gating on an async,
+    `staleTime: 0` permission query. Live-confirmed the underlying async
+    component absence is real (the plugin-injected `AuditLogSidebarItem`
+    was genuinely missing on a fresh page load with zero Tailwind
+    changes in play) — but the FINAL whole-branch review made a fair
+    correction to the mechanism: 264 identical misses of the same
+    component across an entire capture run is systematic, not what
+    random flakiness looks like. The better-supported explanation,
+    given the 429s directly observed in this same session's live
+    browser check: the two full `visual-verify` runs' own request
+    volume (~832 page loads) exhausted the DRF per-user `1000/hour`
+    throttle mid-run, degrading (not randomly flaking) plugin-metadata
+    and permission fetches for a real stretch of the capture. Either way
+    the conclusion holds (not Tailwind-caused), but the mechanism is a
+    genuine lesson for future phases: **`visual-verify`'s own request
+    volume can push the app under test into a degraded state
+    mid-capture** — a higher test-only DRF throttle, or spacing the two
+    full runs further apart, would give cleaner signal next time.
+  - 213 `BOUNDS CHANGED` hits, dominated by a uniform 112px sidebar
+    shift on `Global Settings`/`Audit Logs` menu items — far too large
+    to be a border/ring default-width change (1-3px). The original
+    entry's explanation here was internally inconsistent (flagged by
+    the final review): `Audit Logs` was itself one of the *shifted*
+    items, so it cannot also be the *missing* element that caused its
+    own shift. The full diff-report text needed to properly re-derive
+    root cause was lost to the process mistake below before this was
+    caught. Left genuinely unresolved — most likely the same
+    throttle-degradation mechanism as the bucket above (a plugin
+    sidebar item rendering in a different loading state between the two
+    captures), but this is not independently confirmed the way the
+    Notifications trace was.
+  - **Process mistake**: a small targeted re-check
+    (`--paths=dashboard`) run to test a hypothesis overwrote
+    `diff-report.txt` in place before its full context had been read —
+    this is also why Bucket 3 above couldn't be fully re-derived.
+    Lesson recorded for future phases: copy the report to a separate
+    file immediately after any full `verify` run.
+- No real border/ring/shadow regressions were found (Buckets 1-3 above),
+  so no fix commits were needed for those categories. The final
+  whole-branch review DID find one real, unrelated bug the visual-diff
+  process structurally could not have caught (see below) — fingerprints
+  are captured on pages at rest, not on an open popover, so a popover
+  sizing bug was invisible to this entire verification strategy.
+- **Final whole-branch review (opus) found one real bug and two
+  worthwhile non-blocking fixes**, independent of the visual-diff
+  process above:
+  - **Bug**: `w-[--radix-popover-trigger-width]` (`HeaderSearch.tsx`,
+    `MyClientsSection.tsx`) compiled to invalid CSS under v4 — v4 no
+    longer auto-wraps a bare `--custom-property` arbitrary value in
+    `var()`, so this produced `width: --radix-popover-trigger-width;`
+    (rejected by the browser) instead of the intended trigger-matched
+    width, and tailwind-merge silently dropped `popover.tsx`'s `w-72`
+    fallback because it still saw a (broken) width utility present.
+    Fixed to v4's `w-(--radix-popover-trigger-width)` syntax; added a
+    `bracket-css-var-arbitrary-value` pattern to
+    `scripts/tailwind-v4-audit.mjs` so future phases catch this
+    automatically. Neither the audit script (didn't have the pattern
+    yet) nor `visual-verify` could have caught this.
+  - **Taken**: v4's Preflight sets `button { cursor: default }`
+    (previously an implicit pointer in v3) — the shared `Button`
+    primitive had no `cursor-pointer`, so every button app-wide lost its
+    hover cursor. Fixed in the one shared primitive. `outline-none` (32
+    files) renamed to `outline-hidden` — v4's `outline-none` no longer
+    shows in Windows High Contrast Mode; `outline-hidden` restores the
+    old behavior, identical in normal rendering.
+  - **Explicitly not taken, ruled pre-accepted**: `backdrop-blur-sm`
+    (4px->8px default, 14 uses) and `drop-shadow-sm` (1 use) size
+    changes — the same class of intentional-default visual drift as the
+    already-pre-accepted `shadow-sm` change. Fixing these while leaving
+    `shadow-sm` itself unfixed would be an arbitrary inconsistency.
+- `tailwindcss-animate` -> `tw-animate-css` swap (8 consuming files —
+  `dialog.tsx`, `popover.tsx`, `select.tsx`, `tooltip.tsx`, `checkbox.tsx`,
+  `TriStateCheckbox.tsx`, and 2 analytics filter components): verified by
+  extracting every animate-related class name the components use
+  (`animate-in`/`-out`, `fade-in-0`/`-out-0`, `zoom-in-95`/`-out-95`,
+  `slide-in-from-*`/`slide-out-to-*`) and confirming each pattern exists
+  in `tw-animate-css@1.4.0`'s actual shipped CSS via direct file read —
+  not just trusting the package's "v4-compatible replacement" description.
+  `npm run build` succeeded with this swap wired in.
+- Verification: `node scripts/tailwind-v4-audit.mjs` — 0 breaking hits.
+  `node scripts/modal-audit.mjs` — 1 pre-existing failure
+  (`textarea.tsx`'s raw `<textarea>`, confirmed via `git log`/`git diff`
+  against `main` to predate this phase entirely, untouched by it — not
+  fixed, out of scope). `npm run build` — clean, exit 0. Full
+  `npx vitest run` — 2474 passed / 2 failed / 2476 total, matching the
+  pre-upgrade baseline's totals exactly; the one *stable* failure
+  (`PersonalDashboardProgressCard`) is identical to baseline, and the
+  2nd slot's failure differed between runs (`AnimatedNumber`'s
+  reduced-motion spring test, confirmed flaky by passing cleanly in
+  isolation) — parallel-execution timing noise, not a regression. Net-new
+  regressions: zero.
+- Final whole-branch review, round 2 (scoped to the fix diff): see below.
+- Residual items carried forward: the same three Phase 1/2 items
+  (notifications `__init__.py`, missing `sync_plugins`, brittle
+  `psycopg2-binary` pin) plus three new, all explicitly out of scope for
+  this phase (not overlooked): native `@theme` CSS migration of
+  `tailwind.config.js`; `textarea.tsx`'s pre-existing raw-`<textarea>`
+  modal-audit finding; and the 8 `tw-animate-css`-consuming
+  dialog/popover/select/tooltip components were verified statically
+  (their exact class-name vocabulary confirmed present in the installed
+  package's shipped CSS) but never live click-tested end-to-end in this
+  phase — the DRF throttle exhaustion from the two full `visual-verify`
+  runs blocked that check for the rest of this session. Worth a follow-up
+  manual pass once a fresh throttle window is available.

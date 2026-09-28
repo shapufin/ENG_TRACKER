@@ -133,7 +133,7 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
             }
           }}
           className={cn(
-            "flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
             DEPTH_PADDING[Math.min(depth, DEPTH_PADDING.length - 1)],
             checked && "bg-primary/5"
           )}
@@ -223,7 +223,7 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
                       }
                     }}
                     className={cn(
-                      "flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
                       checked && "bg-primary/5"
                     )}
                   >

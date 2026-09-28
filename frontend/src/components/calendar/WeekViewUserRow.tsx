@@ -40,7 +40,7 @@ export const WeekViewUserRow: React.FC<WeekViewUserRowProps> = ({
       <button
         type="button"
         onClick={() => onUserClick?.(user.id)}
-        className="flex items-center gap-3 border-r border-border/60 px-4 py-3 text-left transition hover:bg-table-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
+        className="flex items-center gap-3 border-r border-border/60 px-4 py-3 text-left transition hover:bg-table-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
       >
         <UserAvatar name={userName} email={user.email} colorSeed={user.id} />
         <div className="min-w-0">

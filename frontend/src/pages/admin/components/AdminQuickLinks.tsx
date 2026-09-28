@@ -92,7 +92,7 @@ export const AdminQuickLinks: React.FC<AdminQuickLinksProps> = ({ isWidgetActive
           onClick={() => navigate(item.to)}
         >
           <div className="flex items-center gap-3 p-5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-transparent">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-transparent">
               <item.icon className="h-5 w-5 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
