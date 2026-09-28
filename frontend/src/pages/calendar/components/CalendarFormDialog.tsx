@@ -110,7 +110,7 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
         <div>
           <Label className="text-xs font-medium">Reason / Notes</Label>
           <Textarea
-            className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
             rows={3}
             value={reason}
             onChange={(e) => onReasonChange(e.target.value)}

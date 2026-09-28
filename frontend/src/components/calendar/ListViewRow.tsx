@@ -49,7 +49,7 @@ export const ListViewRow: React.FC<ListViewRowProps> = ({
         <button
           type="button"
           onClick={() => event.userId && onUserClick?.(event.userId)}
-          className="flex items-center gap-3 rounded-lg text-left transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+          className="flex items-center gap-3 rounded-lg text-left transition hover:opacity-80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/60"
         >
           <UserAvatar name={name} email={user?.email} colorSeed={event.userId} />
           <div className="text-left">

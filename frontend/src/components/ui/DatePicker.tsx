@@ -109,7 +109,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
               "cursor-pointer border-none bg-transparent",
               "text-muted-foreground hover:text-foreground",
               "pointer-events-auto z-10",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
               disabled && "cursor-not-allowed opacity-50"
             )}
             disabled={disabled}

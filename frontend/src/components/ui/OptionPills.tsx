@@ -89,7 +89,7 @@ export function OptionPills<T extends string>({
             onClick={() => onChange(option.value)}
             className={cn(
               "flex min-h-11 flex-col items-center justify-center gap-1 rounded-xl border p-3 text-xs font-bold transition-colors duration-150",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               "disabled:pointer-events-none disabled:opacity-50",
               isSelected
                 ? toneSurfaceClass[option.tone ?? "accent"]

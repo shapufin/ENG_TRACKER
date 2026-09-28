@@ -35,7 +35,7 @@ const UserRow: React.FC<{
       <button
         type="button"
         onClick={() => onToggleUser(user.id)}
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left transition hover:bg-background/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+        className="flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left transition hover:bg-background/40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/60"
         aria-pressed={isVisible}
         aria-label={`${isVisible ? "Hide" : "Show"} ${name}`}
       >
@@ -64,7 +64,7 @@ const UserRow: React.FC<{
         <button
           type="button"
           onClick={() => onShowUserModal(user.id)}
-          className="rounded-md p-1 text-muted-foreground transition hover:bg-background/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+          className="rounded-md p-1 text-muted-foreground transition hover:bg-background/60 hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/60"
           aria-label={`View ${name}`}
         >
           <Eye className="h-3.5 w-3.5" />
