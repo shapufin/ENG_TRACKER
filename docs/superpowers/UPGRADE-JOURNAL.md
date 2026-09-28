@@ -17,12 +17,31 @@ worktree for the next phase.
   (verified empirically: schema generation + 291 filter tests, zero changes).
 - Deprecation/breaking changes hit in this codebase:
   - `apps/core/management/commands/warm_cache.py:22` — zero-argument
-    `select_related()` (deprecated in 6.1, implicitly selects all forward
-    FK/O2O including nullable ones) was eager-loading `Role`'s inherited
-    `deleted_by` FK (from `SoftDeleteModel`). Fixed to
-    `select_related('deleted_by')`, explicit. (First fix attempt incorrectly
-    removed the call entirely on a wrong claim that `Role` had no forward FK
-    — caught by task review, corrected.)
+    `select_related()` is deprecated in 6.1. Django's zero-arg
+    `select_related()` follows only **non-nullable** forward FK/O2O fields
+    (confirmed empirically: bare `select_related()` produces zero JOINs
+    here). `Role`'s only forward FK, `deleted_by` (inherited from
+    `SoftDeleteModel`), is `null=True` — so the original call was a genuine
+    no-op, eager-loading nothing. Fixed by removing the call entirely
+    (`Role.objects.all().prefetch_related('permissions')`), which resolves
+    the deprecation with zero behavior change.
+    **Correction, recorded here for the record:** an earlier draft of this
+    fix instead added `select_related('deleted_by')`, on an incorrect claim
+    (originating from a task review that was itself wrong, and accepted
+    without independent verification at the time) that the bare call had
+    been eager-loading `deleted_by`. That "fix" actually introduced a new
+    `LEFT OUTER JOIN` to `auth_user` that never existed before — a real,
+    if harmless in practice, behavior change beyond the deprecation fix's
+    scope (harmless only because `apps.core` is not in `INSTALLED_APPS`,
+    so this command is not currently reachable). Caught by the final
+    whole-branch review and independently confirmed via
+    `Role.objects.select_related().query` vs
+    `Role.objects.select_related('deleted_by').query` before merge. Lesson
+    for future phases: verify a reviewer's *technical* claim (not just its
+    presence) against Django's actual behavior when a fix changes generated
+    SQL, especially for a "deprecated API" fix — the deprecation and the
+    query-shape claim are separate facts, and getting the second one wrong
+    is easy to do under a "just silence the warning" framing.
   - `plugins/notifications/test_push.py:53` — `django.dispatch.Signal.receivers`
     entries changed shape from a 3-tuple `(lookup_key, receiver, is_async)` to
     a 4-tuple `(lookup_key, receiver, sender_ref, is_async)` (undocumented
@@ -50,12 +69,21 @@ worktree for the next phase.
   - **`manage.py test` (no args) does not discover `plugins.notifications`
     tests at all** — confirmed by grep on full-suite output: the module never
     appears, even though it runs and fails when targeted explicitly
-    (`manage.py test plugins.notifications`). This means CI's own backend job
-    (`python manage.py test -v 1` in `.github/workflows/ci.yml`) has never
-    exercised this plugin's tests either — the second pre-existing failure
-    above has silently never failed CI. This is a test-discovery
-    configuration gap, not a Django-6 issue, and is worth its own
-    investigation/fix as a separate task — not scoped into any upgrade phase.
+    (`manage.py test plugins.notifications`). **Root cause identified (found
+    by the final whole-branch review, confirmed):** `plugins/notifications/`
+    has no `__init__.py` — every sibling plugin does (verified:
+    `plugins/analytics/__init__.py` exists, `plugins/notifications/__init__.py`
+    does not). Django's default test discovery skips it as a result, along
+    with `test_types.py` and `test_viewsets.py` in the same directory. This
+    means CI's own backend job (`python manage.py test -v 1` in
+    `.github/workflows/ci.yml`) has never exercised any of this plugin's
+    tests either — both the `Signal.receivers` fix (Task 7, this phase) and
+    the pre-existing `LeaveSignalPushTest` failure above have silently never
+    run in CI. Not a Django-6 issue, but adding the missing `__init__.py` as
+    a standalone fix will immediately turn CI red on the known
+    `LeaveSignalPushTest` failure — so that fix and the `LeaveSignalPushTest`
+    bug fix belong in the same follow-up task, not scoped into any upgrade
+    phase.
   - **Local dev DB needs a manual plugin-registry sync that nothing in the
     normal setup path calls.** `manage.py ensure_plugins` only creates/applies
     each plugin's own Django app tables — it never populates the `Plugin`
