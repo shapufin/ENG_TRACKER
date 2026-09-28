@@ -16,7 +16,6 @@ import {
   type ChartConfig,
 } from "@/components/visualization/chart";
 import { ChartSection } from "@/components/visualization/ChartSection";
-import { captureChartsToPdf } from "@/components/visualization/pdfExport";
 import { useAuth } from "@/hooks/useAuth";
 import { staggerContainer } from "@/lib/motion";
 import { formatMonthTick } from "@/lib/monthOptions";
@@ -49,6 +48,10 @@ export const TLScorecardVisualizationPage: React.FC = () => {
     setIsExporting(true);
     setExportError(null);
     try {
+      // Dynamic import: html2canvas + jspdf (via pdfExport) are a ~660KB
+      // chunk (2026-09-27 audit) — only fetched when the user actually
+      // exports, not on every visit to this page.
+      const { captureChartsToPdf } = await import("@/components/visualization/pdfExport");
       const points = trendQuery.data ?? [];
       const periodLabel = points.length
         ? `${formatMonthTick(points[0].month)} – ${formatMonthTick(points[points.length - 1].month)}`

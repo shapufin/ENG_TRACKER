@@ -26,7 +26,6 @@ import {
   type ChartConfig,
 } from "@/components/visualization/chart";
 import { ChartSection } from "@/components/visualization/ChartSection";
-import { captureChartsToPdf } from "@/components/visualization/pdfExport";
 import { useAuth } from "@/hooks/useAuth";
 import { ScoreCompositionTrendChart } from "../components/ScoreCompositionTrendChart";
 import { RequestVolumeChart } from "../components/RequestVolumeChart";
@@ -98,6 +97,10 @@ export const EngagementVisualizationPage: React.FC = () => {
     setIsExporting(true);
     setExportError(null);
     try {
+      // Dynamic import: html2canvas + jspdf (via pdfExport) are a ~660KB
+      // chunk (2026-09-27 audit) — only fetched when the user actually
+      // exports, not on every visit to this page.
+      const { captureChartsToPdf } = await import("@/components/visualization/pdfExport");
       const period = summary?.month ?? "latest";
       await captureChartsToPdf(galleryRef.current, {
         title: `TL Engagement — Visual Report (${period})`,
