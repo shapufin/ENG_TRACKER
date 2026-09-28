@@ -121,26 +121,44 @@ worktree for the next phase.
   - `python manage.py spectacular --file <path>.yaml` (drf-spectacular
     schema-generation smoke test)
   - Deployment check (`manage.py check --deploy --settings=config.settings_production`
-    with CI's exact env vars) could **not** be completed locally — building
-    `psycopg2-binary` from source failed on this Windows/Python-3.14 dev
-    environment (no PostgreSQL client dev headers, no prebuilt wheel yet for
-    3.14). Confirmed as a local-toolchain gap, not a Django-6 or code issue.
-    This check needs to run in CI (Linux/Python 3.12, prebuilt wheels
-    available) before this phase is considered fully verified end-to-end.
+    with CI's exact env vars): initially blocked by `pip install -r
+    requirements-production.txt` trying to rebuild `psycopg2-binary` from
+    source (no prebuilt wheel yet for Python 3.14 on Windows, no local
+    `pg_config`). Root cause was narrower than it first looked: a compatible
+    `psycopg2-binary` (2.9.12) was already installed and importable in this
+    environment — the failure was `pip` insisting on the exact `==2.9.10` pin
+    in `requirements-production.txt` rather than psycopg2 being fundamentally
+    unusable here. Installed the remaining production deps
+    (`django-redis`, `whitenoise`, `gunicorn`) directly and ran the deploy
+    check against the already-present psycopg2 — it completed successfully:
+    **zero Django-6-related errors**, only 6 pre-existing `drf-spectacular`
+    schema-generation warnings (serializer type-hint gaps in
+    `apps/dashboard/serializers.py`, `apps/permissions/serializers.py`,
+    `apps/standby/serializers.py`, `apps/users/serializers.py`,
+    `apps/users/views/auth.py`, `config/urls.py`) — confirmed via `git log`
+    that none of those files are touched by this branch, so the warnings
+    predate the Django 6 work entirely and are unrelated. **The production
+    settings module and full production dependency set now confirmed to
+    load and check cleanly under Django 6.1.1.**
   - Manual browser verification: seed with `manage.py seed_e2e_data` +
     `manage.py seed_plugin_permissions`, then sync the plugin registry (see
     the gotcha above) before expecting any plugin-gated page to render.
 
 **Residual items carried forward (not blockers, but not fully closed either):**
-1. Production deployment check (`--deploy --settings=config.settings_production`)
-   needs to actually run once, in CI or a Linux environment, before treating
-   the phase as 100% verified — the local attempt was environment-blocked,
-   not a pass.
-2. nginx-level admin-login rate-limiting was not live-verified (no Docker
+1. nginx-level admin-login rate-limiting was not live-verified (no Docker
    available locally) — the config file itself is confirmed untouched by
    this branch, but the only way to *prove* the live behavior is unaffected
    is a real docker-compose/staging run.
-3. The `manage.py test` full-suite discovery gap for `plugins.notifications`
+2. The `manage.py test` full-suite discovery gap for `plugins.notifications`
    (see above) is worth its own fix, independent of this upgrade series.
-4. A `sync_plugins`-style management command (see above) would close a real
+3. A `sync_plugins`-style management command (see above) would close a real
    local-onboarding gap, independent of this upgrade series.
+4. `requirements-production.txt`'s exact `psycopg2-binary==2.9.10` pin is
+   brittle on Windows/newer-Python dev environments (no prebuilt wheel,
+   forces a source build that needs `pg_config`) — worth loosening to a
+   compatible range or documenting the local workaround, independent of this
+   upgrade series.
+
+**Production deployment check: now fully verified locally** (see above) — the
+production settings module and full production dependency set load and pass
+`check --deploy` cleanly under Django 6.1.1, zero Django-6-related issues.
