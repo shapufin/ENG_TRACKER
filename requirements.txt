@@ -1,25 +1,25 @@
-asgiref==3.11.1
+asgiref==3.12.1
 attrs==26.1.0
-crispy-bootstrap5==2026.3
+crispy-bootstrap5==2026.9
 Django==5.2.17
 django-cors-headers==4.9.0
-django-crispy-forms==2.6
+django-crispy-forms==2.7
 django-extensions==4.1
 django-filter==26.1
-djangorestframework==3.17.2
+djangorestframework==3.18.1
 djangorestframework_simplejwt==5.5.1
-drf-spectacular==0.29.0
-extract-msg==0.55.0
+drf-spectacular==0.30.0
+extract-msg==0.56.1
 et_xmlfile==2.0.0
 inflection==0.5.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
-numpy==2.4.4
+numpy==2.5.3
 openpyxl==3.1.5
 reportlab==4.5.1
-pandas==3.0.2
+pandas==3.0.6
 XlsxWriter==3.2.9
-PyJWT==2.13.0
+PyJWT==2.15.0
 python-dateutil==2.9.0.post0
 PyYAML==6.0.3
 referencing==0.37.0
@@ -30,5 +30,5 @@ tzdata==2026.2
 uritemplate==4.2.0
 
 # Web Push notifications
-pywebpush==2.3.0
+pywebpush==2.5.0
 py-vapid==1.9.4
