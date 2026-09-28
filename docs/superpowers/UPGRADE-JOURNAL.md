@@ -369,3 +369,98 @@ production settings module and full production dependency set load and pass
   phase — the DRF throttle exhaustion from the two full `visual-verify`
   runs blocked that check for the rest of this session. Worth a follow-up
   manual pass once a fresh throttle window is available.
+
+## Phase 4: TypeScript — 2026-09-28
+
+- Version: `typescript==6.0.3` -> `7.0.2`, but not as a plain bump — see
+  below. Spec: `docs/superpowers/specs/2026-09-28-typescript-7-upgrade-design.md`.
+
+**The blocker this phase exists to solve:** TypeScript 7.0 (Microsoft's
+Go-ported "Project Corsa" native compiler, GA July 2026) ships with no
+programmatic/compiler API until 7.1. Verified directly against the npm
+registry, not assumed from blog posts: `typescript-eslint@8.71.0` (latest
+stable) declares `peerDependencies.typescript: '>=4.8.4 <6.1.0'` — zero
+TS7 support in any published version. A plain version bump breaks
+`npm run lint` outright. Presented to the user as a genuine fork in the
+road (defer the phase / two-compiler workaround / stay on 6.x); user
+chose the two-compiler workaround.
+
+**Architecture (two-compiler alias):** `frontend/package.json`'s
+`"typescript"` devDependency is now `"npm:@typescript/typescript6@^6.0.2"`
+(Microsoft's official TS6-API-compatible shim — re-exports a real
+`typescript@^6` under the hood, resolved to `6.0.3` in practice). A new
+entry, `"typescript-native": "npm:typescript@7.0.2"`, installs the real
+TS7 package. **No build script changes were needed**: the shim's own
+binary is named `tsc6`, not `tsc`, so the real TS7 package is the only
+one that installs `node_modules/.bin/tsc` — the existing
+`"build": "tsc -b && vite build"` script automatically runs on TS7.
+Verified this is a real, load-bearing check, not just theory: both the
+Task 2 implementer AND its independent task reviewer separately ran
+`node_modules/.bin/tsc --version` (never `npx tsc --version`, which
+produces garbled output in this environment for reasons not
+investigated) and confirmed `7.0.2`; the plain `typescript` package on
+disk resolves to `6.0.3` (the shim's own dependency), confirmed via
+`require('typescript/package.json').version`.
+
+**Real breaking change found, config-level only:** TypeScript 7 removed
+the `baseUrl` compiler option entirely (`TS5102`, hard error — this
+codebase's `tsconfig.json` had `"baseUrl": "."`). This was actually
+found before any code type-checking could even happen, since `tsc`
+can't get past option parsing with an unrecognized option present —
+a mid-implementation ruling reordered the plan's Task 3
+(fix type errors) to run after this fix rather than before, since the
+plan's task numbering couldn't have anticipated which specific option
+would block first. Fixed by removing `baseUrl`; the existing
+`"paths": {"@/*": ["./src/*"]}` mapping continues to resolve correctly
+on its own (verified twice, independently, by the implementer and its
+reviewer, each with their own throwaway probe file: a deliberately
+type-mismatched import through the `@/` alias correctly triggered a real
+`TS2322` error both before and after the `baseUrl` removal — proving the
+alias genuinely still resolves and type-checks, not just that `tsc`
+didn't crash).
+
+Also removed the pre-existing `"ignoreDeprecations": "6.0"` flag —
+empirically confirmed via a before/after `tsc -b` comparison (identical
+output either way) that it was already dead weight, not something worth
+keeping "just in case."
+
+**Zero real code type errors found.** After the `baseUrl` fix, `tsc -b`
+was immediately clean across the entire `frontend/src` tree — TypeScript
+7's breaking changes are almost entirely compiler-implementation and
+config-level (Go rewrite, removed deprecated options), not new
+type-checking rules, so a codebase already on modern explicit compiler
+options (`target: es2023`, `moduleResolution: bundler`, no legacy
+`amd`/`umd`/`es5`/`node10` settings) saw no real type-error fallout. All
+three tsconfig files were audited for other TS7-deprecated-to-error
+options; none found beyond `baseUrl`.
+
+**ESLint verified unaffected** at every step: baseline (pre-alias) was
+4 problems (2 `react-hooks/set-state-in-effect` errors in
+`AdminSidebar.tsx`/`Sidebar.tsx`, 2 React Compiler warnings in
+`useSkillsGridVirtualizer.ts`, all pre-existing and unrelated to
+TypeScript version) — re-confirmed byte-identical after the alias swap
+and again after the tsconfig fixes.
+
+Verification: `tsc --version` -> `7.0.2` (final confirmation).
+`npm run build` — clean, exit 0, unmodified script. Full
+`npx vitest run` — 2475 passed / 1 failed / 2476 total, matching the
+cross-phase baseline exactly (the one stable
+`PersonalDashboardProgressCard` failure; the flaky 2nd slot landed clean
+this run, consistent with the pattern documented in Phase 3). One
+logging quirk noted: a backgrounded vitest run's redirected log came
+back truncated (8 lines, no summary) despite the harness reporting exit
+0 — re-ran in the foreground for reliable output rather than trusting
+the truncated log.
+
+**Residual item, tracked explicitly (this workaround is temporary):**
+remove the two-compiler alias once `typescript-eslint` ships real
+TypeScript 7 support. Check `npm view typescript-eslint peerDependencies`
+at that time — do not assume a specific future version number now
+(current community speculation points at a 7.1-compatible release,
+unconfirmed). When that lands: point `"typescript"` straight at `7.x`,
+drop `@typescript/typescript6` and the `typescript-native` alias entry.
+Other residual items carried forward unchanged from Phases 1-3
+(notifications `__init__.py`, missing `sync_plugins`, brittle
+`psycopg2-binary` pin, native `@theme` CSS migration, `textarea.tsx`
+modal-audit finding, the 8 `tw-animate-css` components' pending live
+click-test).
