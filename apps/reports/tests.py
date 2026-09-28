@@ -2,11 +2,12 @@
 
 from datetime import date
 import io
+from unittest.mock import patch
 
 import openpyxl
 from django.contrib.auth.models import User
 from django.http import StreamingHttpResponse
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.db import connection
 from rest_framework.test import APIClient
@@ -17,6 +18,7 @@ from apps.overtime.models import Client, OvertimeLog
 from apps.users.models import Team, TeamMembership
 from apps.reports.models.core import AuditLog
 from apps.reports.services.export_service import export_service
+from apps.reports.viewsets import CanViewReports
 
 
 def _streaming_body(response) -> str:
@@ -28,6 +30,41 @@ def _streaming_body(response) -> str:
     if isinstance(response, StreamingHttpResponse):
         return b"".join(response.streaming_content).decode("utf-8")
     return response.content.decode("utf-8")
+
+
+class CanViewReportsPermissionTests(TestCase):
+    """The control_room lookup must fail closed, never silently grant access.
+
+    A plain user (no staff/HR/TL/cr_admin role) falls through to the
+    control_room ``get_access_for_user`` check. That import/call is wrapped
+    in a try/except purely to support the plugin being disabled/removed
+    (matches the ``except ImportError: pass`` pattern used everywhere else
+    control_room is optionally imported, e.g. core/mixins/permissions.py).
+    A real bug in ``get_access_for_user`` must not be swallowed into a
+    silent "grant access" — that would be a fail-open authorization bug.
+    """
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = User.objects.create_user(username="plain", password="x")
+        self.permission = CanViewReports()
+        self.request = self.factory.get("/api/reports/")
+        self.request.user = self.user
+
+    def test_control_room_plugin_missing_grants_access(self):
+        with patch(
+            "plugins.control_room.services.scope_service.get_access_for_user",
+            side_effect=ImportError,
+        ):
+            self.assertTrue(self.permission.has_permission(self.request, None))
+
+    def test_unexpected_error_does_not_silently_grant_access(self):
+        with patch(
+            "plugins.control_room.services.scope_service.get_access_for_user",
+            side_effect=RuntimeError("boom"),
+        ):
+            with self.assertRaises(RuntimeError):
+                self.permission.has_permission(self.request, None)
 
 
 class ReportLeaveBusinessDaysTests(TestCase):

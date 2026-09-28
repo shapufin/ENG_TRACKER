@@ -46,7 +46,9 @@ class CanViewReports(BasePermission):
         try:
             from plugins.control_room.services.scope_service import get_access_for_user
             return get_access_for_user(user) is None
-        except Exception:
+        except ImportError:
+            # control_room plugin not installed/enabled — no CR-only concept
+            # exists, so nothing to exclude.
             return True
 
 
