@@ -23,8 +23,19 @@ FROM nginx:1.27-alpine-slim AS runtime
 # Remove default nginx config + static site
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Custom nginx config: SPA fallback + API proxy + security headers
-COPY docker/nginx.conf /etc/nginx/conf.d/app.conf
+# Custom nginx config: SPA fallback + API proxy + security headers.
+# Shipped as a template (not a static .conf) because the CSP header needs
+# ONLYOFFICE_ORIGIN substituted at container start, not baked in at image
+# build time. The base nginx image's own entrypoint
+# (docker-entrypoint.d/20-envsubst-on-templates.sh, included in every
+# official nginx tag since 1.19, unmodified here) auto-renders every
+# /etc/nginx/templates/*.template into /etc/nginx/conf.d/<name> before nginx
+# starts, running `envsubst` restricted to the container's actual
+# environment variables — nginx's own $lowercase variables (like $host,
+# $remote_addr, $trusted_ingress used throughout this config) are never
+# touched since none of them collide with a real (conventionally uppercase)
+# env var name.
+COPY docker/nginx.conf.template /etc/nginx/templates/app.conf.template
 
 # Copy built assets
 COPY --from=builder /build/dist /usr/share/nginx/html

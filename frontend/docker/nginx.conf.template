@@ -15,6 +15,12 @@ geo $realip_remote_addr $trusted_ingress {
     172.28.0.0/24 1;
 }
 
+# P1-3: admin login brute-force rate limit, keyed on $remote_addr — already
+# the real_ip-resolved client IP by the time any request reaches a location
+# block below (real_ip_module rewrites it for trusted cloudflared
+# connections, same as every other $remote_addr use in this file).
+limit_req_zone $binary_remote_addr zone=admin_login:10m rate=5r/m;
+
 server {
     listen 8080;
     server_name _;
@@ -81,11 +87,22 @@ server {
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
-        # CSP report-only (P0-1): collect violations before enforcing.
+        # CSP, enforcing (flipped from report-only 2026-09-27 after a clean
+        # report-only period with no violations — see
+        # .devin/plans/plan-production-security-2026-08-21.md P0-1).
         # Allows service worker ('self' covers /sw.js), Vite module preload
         # (inline script), web push endpoints, and data/blob images.
-        # Switch to enforcing (drop -Report-Only) after ~1 week of clean reports.
-        add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://fcm.googleapis.com https://push.services.mozilla.com https://updates.push.services.mozilla.com; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
+        # ${ONLYOFFICE_ORIGIN} is this template's one substituted variable
+        # (via nginx's built-in docker-entrypoint envsubst-on-templates,
+        # restricted to real container env vars — see Dockerfile comment):
+        # the onboarding plugin's document editor loads a script from, and
+        # opens an iframe to, the OnlyOffice Document Server origin, which
+        # is a different origin than this frontend and so needs an explicit
+        # allowlist entry in script-src/connect-src/frame-src. Empty when
+        # ONLYOFFICE_ORIGIN is unset (feature disabled) — envsubst leaves an
+        # empty token in the header value, which every browser's CSP parser
+        # ignores.
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' ${ONLYOFFICE_ORIGIN}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://fcm.googleapis.com https://push.services.mozilla.com https://updates.push.services.mozilla.com ${ONLYOFFICE_ORIGIN}; frame-src 'self' ${ONLYOFFICE_ORIGIN}; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
         try_files $uri $uri/ /index.html;
     }
 
@@ -157,5 +174,54 @@ server {
         proxy_set_header X-Forwarded-Proto $forwarded_proto;
         add_header X-Content-Type-Options "nosniff" always;
         add_header Content-Disposition "attachment" always;
+    }
+
+    # P0-8: proxy Django's static files (admin CSS/JS, collectstatic output,
+    # served by WhiteNoise on the backend — config/settings_production.py)
+    # to the backend. Without this location, /static/admin/... falls
+    # through to the SPA catch-all below and admin renders unstyled/broken
+    # — WhiteNoise being configured on the backend only helps once a
+    # request for /static/ actually reaches that process.
+    location /static/ {
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $host;
+    }
+
+    # Admin login brute-force protection (P1-3): Django admin uses
+    # django.contrib.auth.views.LoginView, not a DRF view, so the DRF
+    # ScopedRateThrottle ('auth': 20/min on CustomTokenObtainPairView) never
+    # covers it — admin login was completely unthrottled. Rate-limited here
+    # at the proxy layer instead of adding a new Python dependency
+    # (django-axes/django-defender) or a UX change (django-otp 2FA), per
+    # .devin/plans/plan-production-security-2026-08-21.md P1-3's options.
+    # 5 requests/minute per IP, burst 3 (one extra retry without an
+    # immediate 503) — generous enough for a real user mistyping a
+    # password twice, tight enough to make brute-forcing impractical.
+    location /admin/login/ {
+        limit_req zone=admin_login burst=3 nodelay;
+        limit_req_status 429;
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        set $forwarded_proto "http";
+        if ($trusted_ingress = 1) {
+            set $forwarded_proto $http_x_forwarded_proto;
+        }
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+    }
+
+    # Proxy the rest of Django admin (unthrottled here — only the login POST
+    # is brute-forceable; everything else requires an authenticated session).
+    location /admin/ {
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        set $forwarded_proto "http";
+        if ($trusted_ingress = 1) {
+            set $forwarded_proto $http_x_forwarded_proto;
+        }
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
     }
 }

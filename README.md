@@ -276,7 +276,7 @@ Tunnels):
 
 Cloudflare terminates TLS at its edge and always sets
 `X-Forwarded-Proto: https` and `CF-Connecting-IP` on what it forwards through
-the tunnel — `frontend/docker/nginx.conf` trusts and forwards both (see that
+the tunnel — `frontend/docker/nginx.conf.template` trusts and forwards both (see that
 file's comments) so Django sees the real client IP and scheme with no
 `NUM_PROXIES` change needed.
 
@@ -284,7 +284,7 @@ file's comments) so Django sees the real client IP and scheme with no
 entrypoint: drop the `cloudflared` service (and `--profile tunnel`), add
 Traefik as its own service on `frontend_net` with the usual
 `traefik.http.routers.*` labels on the `frontend` service, and update
-`nginx.conf`'s `set_real_ip_from`/`real_ip_header` to match Traefik's
+`nginx.conf.template`'s `set_real_ip_from`/`real_ip_header` to match Traefik's
 forwarded-header shape (`X-Forwarded-For`, not Cloudflare's
 `CF-Connecting-IP`) and its network/CIDR instead of `cloudflared`'s. The
 published port can go back to `0.0.0.0` (or be dropped) once Traefik is the
@@ -294,7 +294,7 @@ Either way, an upstream proxy **must** sit in front — see below.
 
 ### TLS / HTTPS — required
 
-This repo does **not** terminate TLS anywhere in the stack — `nginx.conf` has
+This repo does **not** terminate TLS anywhere in the stack — `nginx.conf.template` has
 no `ssl` listener. Whatever sits in front (Cloudflare Tunnel today, an AWS
 ALB, nginx-with-certs, Caddy, or Traefik later) **must**:
 
@@ -304,7 +304,7 @@ ALB, nginx-with-certs, Caddy, or Traefik later) **must**:
    published port if using an external proxy instead.
 3. Send `X-Forwarded-Proto: https` so Django detects HTTPS behind the proxy
    (`SECURE_PROXY_SSL_HEADER` is configured in `settings_production.py`).
-   `nginx.conf` forwards this header through unchanged rather than
+   `nginx.conf.template` forwards this header through unchanged rather than
    substituting its own scheme — it has none to substitute correctly, since
    it never terminates TLS itself.
 
@@ -386,12 +386,26 @@ The compose file defines two networks:
 
 ### Django admin
 
-The admin UI is served at `/admin/` (proxied to the backend). Static
-files (CSS/JS) are served via WhiteNoise in production. Admin login is
-**not** throttled by the DRF `auth` scope (it uses Django's built-in
-login view, not a DRF view) — rely on strong unique passwords for
-staff/superusers and consider adding `django-axes` or an nginx IP
-allowlist before any internet-facing deploy.
+The admin UI is served at `/admin/` (proxied to the backend by
+`frontend/docker/nginx.conf.template`). Static files (`/static/...`,
+CSS/JS) are also explicitly proxied to the backend, which serves them via
+WhiteNoise — both location blocks were missing until 2026-09-27 (admin was
+silently falling through to the SPA and rendering `index.html` instead).
+Admin login is not throttled by the DRF `auth` scope (it uses Django's
+built-in login view, not a DRF view); `/admin/login/` is rate-limited at
+the nginx layer instead (`limit_req zone=admin_login`, 5 req/min per IP,
+burst 3) — no new Python dependency. Revisit with `django-axes`/`django-otp`
+if nginx-layer rate limiting proves insufficient.
+
+### Content-Security-Policy
+
+Enforcing (flipped from report-only 2026-09-27, ~5 weeks with zero
+violations). If the onboarding plugin's OnlyOffice document editor is
+enabled (`ONLYOFFICE_DOCUMENT_SERVER_URL` on the backend), also set
+`ONLYOFFICE_ORIGIN` in `.env` to that URL's origin only (scheme + host +
+port, no path — e.g. `https://office.example.com`) so the frontend
+container's CSP allows loading the editor script and iframe from it;
+leave unset if OnlyOffice isn't used.
 
 ## API Endpoints
 
