@@ -50,7 +50,7 @@ class NotificationPluginLifecycleTest(TestCase):
         actual = {
             lookup_key[0]
             for signal in (pre_save, post_save, post_delete)
-            for lookup_key, _receiver, _is_async in signal.receivers
+            for lookup_key, _receiver, _sender_ref, _is_async in signal.receivers
             if isinstance(lookup_key, tuple)
             and isinstance(lookup_key[0], str)
             and lookup_key[0].startswith('notifications.')
