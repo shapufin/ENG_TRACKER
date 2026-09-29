@@ -6,7 +6,7 @@
 // dependency can make `node_modules/.bin/tsc` point at TypeScript 6 while every
 // check still passes, type-checking the whole app on the wrong compiler.
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REQUIRED_MAJOR = 7;
@@ -22,7 +22,9 @@ const fail = (message) => {
 
 const isInside = (parent, child) => {
   const rel = relative(parent, child);
-  return rel !== "" && !rel.startsWith("..");
+  // On Windows `relative()` returns an absolute path when the two paths are on
+  // different drives or UNC shares, where walking up would never reach `parent`.
+  return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 };
 
 // Walks up from a file to the root of the installed package containing it,
@@ -60,6 +62,10 @@ const resolveOwnerDir = () => {
 const ownerDir = resolveOwnerDir();
 const { version } = JSON.parse(readFileSync(join(ownerDir, "package.json"), "utf8"));
 const owner = relative(modulesDir, ownerDir).replace(/\\/g, "/");
+
+if (!version) {
+  fail(`the package owning ${binstub} ("${owner}") declares no version.`);
+}
 
 if (Number(version.split(".")[0]) !== REQUIRED_MAJOR) {
   fail(
