@@ -5,8 +5,8 @@
 // silently and with no warning — so a rename, a hoisting change, or a new
 // dependency can make `node_modules/.bin/tsc` point at TypeScript 6 while every
 // check still passes, type-checking the whole app on the wrong compiler.
-import { readFileSync, existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REQUIRED_MAJOR = 7;
@@ -20,20 +20,46 @@ const fail = (message) => {
   process.exit(1);
 };
 
-if (!existsSync(binstub)) {
-  fail(`no tsc binstub at ${binstub} — run \`npm install\` first.`);
-}
+const isInside = (parent, child) => {
+  const rel = relative(parent, child);
+  return rel !== "" && !rel.startsWith("..");
+};
 
-// The binstub is a generated shim whose only job is to exec one package's real
-// entry point; that relative path is the authoritative record of which package
-// won the bin collision.
-const owner = readFileSync(binstub, "utf8").match(/\.\.\/(.+?)\/bin\/tsc\b/)?.[1];
+// Walks up from a file to the root of the installed package containing it,
+// stopping at node_modules so we never escape into the app's own package.json.
+const packageRootOf = (file) => {
+  let dir = dirname(file);
+  while (isInside(modulesDir, dir)) {
+    if (existsSync(join(dir, "package.json"))) return dir;
+    dir = dirname(dir);
+  }
+  return null;
+};
 
-if (!owner) {
-  fail(`could not determine which package owns ${binstub}.`);
-}
+// npm exposes a package's bin two different ways, and which one appears is
+// platform-dependent: a symlink straight into the owning package (POSIX), or a
+// generated shim script that execs it by relative path (Windows). Handle both,
+// since this script runs in CI and in the Docker build as well as locally.
+const resolveOwnerDir = () => {
+  if (!existsSync(binstub)) {
+    fail(`no tsc binstub at ${binstub} — run \`npm install\` first.`);
+  }
 
-const { version } = JSON.parse(readFileSync(join(modulesDir, owner, "package.json"), "utf8"));
+  const fromSymlink = packageRootOf(realpathSync(binstub));
+  if (fromSymlink) return fromSymlink;
+
+  const shimTarget = readFileSync(binstub, "utf8").match(/\.\.[\\/](.+?)[\\/]bin[\\/]tsc\b/)?.[1];
+  if (shimTarget) {
+    const dir = join(modulesDir, shimTarget);
+    if (existsSync(join(dir, "package.json"))) return dir;
+  }
+
+  return fail(`could not determine which package owns ${binstub}.`);
+};
+
+const ownerDir = resolveOwnerDir();
+const { version } = JSON.parse(readFileSync(join(ownerDir, "package.json"), "utf8"));
+const owner = relative(modulesDir, ownerDir).replace(/\\/g, "/");
 
 if (Number(version.split(".")[0]) !== REQUIRED_MAJOR) {
   fail(

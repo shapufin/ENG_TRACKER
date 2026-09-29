@@ -425,14 +425,28 @@ tree-order tie-break, it is one rename or one new dependency away from
 silently reverting — with no failing test to catch it. The `build`
 script is therefore now
 `"node scripts/check-tsc-version.mjs && tsc -b && vite build"`: the guard
-reads which package `node_modules/.bin/tsc` actually execs and fails the
-build if it is not TypeScript 7. This is a deliberate, ruled-on
+resolves which package `node_modules/.bin/tsc` actually execs and fails
+the build if it is not TypeScript 7. This is a deliberate, ruled-on
 departure from the plan's "no build script changes" constraint — the
 constraint was premised on the `tsc6`-bin claim above, which proved
 wrong, so the plan's own "that's a plan defect, rule on it" escape
-hatch applies. The guard was tested in both directions: it passes on the
-correct layout, and it correctly fails with a diagnostic when the
-binstub is repointed at `@typescript/old`.
+hatch applies.
+
+The guard has to handle **two different binstub layouts**, because npm
+exposes a package's bin differently per platform: a generated shim script
+that execs the target by relative path (Windows), versus a plain symlink
+straight into the owning package (POSIX). A first version only parsed the
+shim text; the whole-branch review caught that this fails outright on
+Linux, where `readFileSync` follows the symlink and returns TypeScript's
+own entry file (`import "../lib/tsc.js";`) — which matches no shim
+pattern. That would have broken CI (`ubuntu-latest`) and the
+`node:22-slim` Docker build, i.e. the guard would have blocked every
+build it was supposed to protect. It now resolves the symlink with
+`realpathSync` and walks up to the owning package's `package.json`,
+falling back to shim parsing when the binstub is a regular file. Tested
+on both platforms in both directions: Windows shim -> TS7 passes / -> TS6
+fails, and on real Linux (WSL, genuine symlinks) -> TS7 passes / -> TS6
+fails / missing binstub fails cleanly.
 
 **Lockfile correctness.** The lockfile committed alongside the original
 alias change still recorded `node_modules/typescript` as the *real*
