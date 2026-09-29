@@ -369,3 +369,174 @@ production settings module and full production dependency set load and pass
   phase — the DRF throttle exhaustion from the two full `visual-verify`
   runs blocked that check for the rest of this session. Worth a follow-up
   manual pass once a fresh throttle window is available.
+
+## Phase 4: TypeScript — 2026-09-28
+
+- Version: `typescript==6.0.3` -> `7.0.2`, but not as a plain bump — see
+  below. Spec: `docs/superpowers/specs/2026-09-28-typescript-7-upgrade-design.md`.
+
+**The blocker this phase exists to solve:** TypeScript 7.0 (Microsoft's
+Go-ported "Project Corsa" native compiler, GA July 2026) ships with no
+programmatic/compiler API until 7.1. Verified directly against the npm
+registry, not assumed from blog posts: `typescript-eslint@8.71.0` (latest
+stable) declares `peerDependencies.typescript: '>=4.8.4 <6.1.0'` — zero
+TS7 support in any published version. A plain version bump breaks
+`npm run lint` outright. Presented to the user as a genuine fork in the
+road (defer the phase / two-compiler workaround / stay on 6.x); user
+chose the two-compiler workaround.
+
+**Architecture (two-compiler alias):** `frontend/package.json`'s
+`"typescript"` devDependency is now `"npm:@typescript/typescript6@^6.0.2"`
+(Microsoft's official TS6-API-compatible shim — it depends on
+`@typescript/old`, itself `npm:typescript@^6`, resolved to `6.0.3`). A
+second entry, `"@typescript/native": "npm:typescript@7.0.2"`, installs
+the real TS7 package, and is what `node_modules/.bin/tsc` must point at.
+
+**The `tsc` bin collision — the subtlest trap in this whole phase.** The
+spec originally claimed no build-script change was needed because "the
+shim's own binary is named `tsc6`, not `tsc`, so the real TS7 package is
+the only one that installs `node_modules/.bin/tsc`." **That is false,
+and it silently broke the upgrade.** The shim's hoisted dependency
+`@typescript/old` is a real `typescript@6`, which declares *both* `tsc`
+and `tsserver` bins — so two packages claim `tsc`. npm resolves that
+collision **first-wins by tree order, with no warning whatsoever.**
+
+The original alias key was `"typescript-native"`, which sorts *after*
+`@typescript/old`; the 6.x compiler therefore won the binstub. This was
+missed because it is install-path dependent: a plain `npm install` onto
+an already-populated `node_modules` happened to leave the TS7 binstub in
+place and reported `7.0.2`, while a clean `npm ci` — what CI and any
+fresh clone does — produced `node_modules/.bin/tsc` -> `@typescript/old`
+and reported **`6.0.3`**. Every check still passed; the entire app would
+simply have been type-checked on TypeScript 6 forever.
+
+Fixed by renaming the alias key to `"@typescript/native"`, which sorts
+*before* `@typescript/old` and so wins the collision — matching the
+layout in the upstream precedent this phase was modelled on
+([GemTalk/Jasper#602](https://github.com/GemTalk/Jasper/pull/602)),
+whose own docs describe the same hazard. Verified by deleting
+`node_modules` entirely and re-running both `npm install` and `npm ci`:
+both now yield `node_modules/.bin/tsc` -> `@typescript/native/bin/tsc`,
+TypeScript `7.0.2`.
+
+**Guard against silent regression (`frontend/scripts/check-tsc-version.mjs`).**
+Because the correct resolution rests on npm's undocumented, unwarned
+tree-order tie-break, it is one rename or one new dependency away from
+silently reverting — with no failing test to catch it. The `build`
+script is therefore now
+`"node scripts/check-tsc-version.mjs && tsc -b && vite build"`: the guard
+resolves which package `node_modules/.bin/tsc` actually execs and fails
+the build if it is not TypeScript 7. This is a deliberate, ruled-on
+departure from the plan's "no build script changes" constraint — the
+constraint was premised on the `tsc6`-bin claim above, which proved
+wrong, so the plan's own "that's a plan defect, rule on it" escape
+hatch applies.
+
+The guard has to handle **two different binstub layouts**, because npm
+exposes a package's bin differently per platform: a generated shim script
+that execs the target by relative path (Windows), versus a plain symlink
+straight into the owning package (POSIX). A first version only parsed the
+shim text; the whole-branch review caught that this fails outright on
+Linux, where `readFileSync` follows the symlink and returns TypeScript's
+own entry file (`import "../lib/tsc.js";`) — which matches no shim
+pattern. That would have broken CI (`ubuntu-latest`) and the
+`node:22-slim` Docker build, i.e. the guard would have blocked every
+build it was supposed to protect. It now resolves the symlink with
+`realpathSync` and walks up to the owning package's `package.json`,
+falling back to shim parsing when the binstub is a regular file. Tested
+on both platforms in both directions: Windows shim -> TS7 passes / -> TS6
+fails, and on real Linux (WSL, genuine symlinks) -> TS7 passes / -> TS6
+fails / missing binstub fails cleanly.
+
+**Lockfile correctness.** The lockfile committed alongside the original
+alias change still recorded `node_modules/typescript` as the *real*
+typescript `6.0.3` rather than the shim — i.e. it did not match
+`package.json`, so `npm ci` installed a different tree than `npm install`
+did. Regenerated and committed in sync. Note that a plain
+`npm install --package-lock-only` on this repo also re-expands six
+`@tailwindcss/oxide-wasm32-wasi` bundled-dep entries; that drift is
+pre-existing on `main` (reproduced against `main`'s own lockfile in an
+isolated temp checkout) and unrelated to this phase, so it was
+deliberately excluded to keep the lockfile diff TypeScript-only.
+
+**A note on verification method.** The original Task 2 implementer *and*
+its independent reviewer both confirmed `7.0.2` and both were wrong —
+they ran `node_modules/.bin/tsc --version` against a tree built by
+incremental `npm install`. Two independent confirmations of the same
+insufficient check are not two confirmations. Anything that depends on
+package *installation* layout must be verified from a deleted
+`node_modules` via `npm ci`, not from whatever the working tree happens
+to contain. (Use the binstub directly rather than `npx tsc --version`,
+which prints garbled output in this environment for reasons not
+investigated.)
+
+**Real breaking change found, config-level only:** TypeScript 7 removed
+the `baseUrl` compiler option entirely (`TS5102`, hard error — this
+codebase's `tsconfig.json` had `"baseUrl": "."`). This was actually
+found before any code type-checking could even happen, since `tsc`
+can't get past option parsing with an unrecognized option present —
+a mid-implementation ruling reordered the plan's Task 3
+(fix type errors) to run after this fix rather than before, since the
+plan's task numbering couldn't have anticipated which specific option
+would block first. Fixed by removing `baseUrl`; the existing
+`"paths": {"@/*": ["./src/*"]}` mapping continues to resolve correctly
+on its own (verified twice, independently, by the implementer and its
+reviewer, each with their own throwaway probe file: a deliberately
+type-mismatched import through the `@/` alias correctly triggered a real
+`TS2322` error both before and after the `baseUrl` removal — proving the
+alias genuinely still resolves and type-checks, not just that `tsc`
+didn't crash).
+
+Also removed the pre-existing `"ignoreDeprecations": "6.0"` flag —
+empirically confirmed via a before/after `tsc -b` comparison (identical
+output either way) that it was already dead weight, not something worth
+keeping "just in case."
+
+**Zero real code type errors found.** After the `baseUrl` fix, `tsc -b`
+was immediately clean across the entire `frontend/src` tree — TypeScript
+7's breaking changes are almost entirely compiler-implementation and
+config-level (Go rewrite, removed deprecated options), not new
+type-checking rules, so a codebase already on modern explicit compiler
+options (`target: es2023`, `moduleResolution: bundler`, no legacy
+`amd`/`umd`/`es5`/`node10` settings) saw no real type-error fallout. All
+three tsconfig files were audited for other TS7-deprecated-to-error
+options; none found beyond `baseUrl`.
+
+**ESLint verified unaffected** at every step: baseline (pre-alias) was
+4 problems (2 `react-hooks/set-state-in-effect` errors in
+`AdminSidebar.tsx`/`Sidebar.tsx`, 2 React Compiler warnings in
+`useSkillsGridVirtualizer.ts`, all pre-existing and unrelated to
+TypeScript version) — re-confirmed byte-identical after the alias swap
+and again after the tsconfig fixes.
+
+Verification (all re-run after the bin-collision fix, from a deleted
+`node_modules`): `npm ci` then `node_modules/.bin/tsc --version` ->
+`7.0.2`, binstub confirmed pointing at `@typescript/native`.
+`npm run build` — clean, exit 0, guard passing as its first step. Full
+`npx vitest run` — 2475 passed / 1 failed / 2476 total, matching the
+cross-phase baseline exactly (the one stable
+`PersonalDashboardProgressCard` failure; the flaky 2nd slot landed clean
+this run, consistent with the pattern documented in Phase 3). Two
+environment quirks worth knowing: a backgrounded vitest run's redirected
+log came back truncated (8 lines, no summary) despite exit 0, and a
+vitest run started immediately after a production build lost ~380 tests
+to `[vitest-pool-runner]: Timeout waiting for worker to respond`
+worker-startup failures — neither is a real regression, but both look
+like one. Re-run in the foreground on an otherwise-idle machine before
+believing a vitest result that disagrees with the baseline.
+
+**Residual item, tracked explicitly (this workaround is temporary):**
+remove the two-compiler alias once `typescript-eslint` ships real
+TypeScript 7 support. Check `npm view typescript-eslint peerDependencies`
+at that time — do not assume a specific future version number now
+(current community speculation points at a 7.1-compatible release,
+unconfirmed). When that lands: point `"typescript"` straight at `7.x`,
+drop `@typescript/typescript6`, the `@typescript/native` alias entry,
+and `frontend/scripts/check-tsc-version.mjs` (plus its `build`-script
+and `check:tsc-version` wiring) — the guard exists only to police the
+bin collision the alias layout creates, so it retires with it.
+Other residual items carried forward unchanged from Phases 1-3
+(notifications `__init__.py`, missing `sync_plugins`, brittle
+`psycopg2-binary` pin, native `@theme` CSS migration, `textarea.tsx`
+modal-audit finding, the 8 `tw-animate-css` components' pending live
+click-test).

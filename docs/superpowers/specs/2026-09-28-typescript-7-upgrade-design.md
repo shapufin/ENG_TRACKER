@@ -4,6 +4,17 @@ Part of the 7-phase major-dependency-upgrade series
 (`docs/superpowers/specs/2026-09-28-major-dependency-upgrades-design.md`).
 Read `docs/superpowers/UPGRADE-JOURNAL.md` (Phases 1-3) before starting.
 
+> **Correction (post-implementation).** Two claims below were wrong and
+> are superseded by the Phase 4 entry in
+> `docs/superpowers/UPGRADE-JOURNAL.md`, which is the source of truth:
+> (1) the TS6 shim does **not** leave `tsc` uncontested — it depends on
+> `@typescript/old` (a real `typescript@6`) which also declares a `tsc`
+> bin, so npm picks a winner silently by tree order; the alias must
+> therefore be named `@typescript/native`, not `typescript-native`, to
+> sort ahead of it. (2) A build-script change **was** needed: `build`
+> now runs `scripts/check-tsc-version.mjs` first to fail loudly if the
+> collision ever resolves back to TypeScript 6.
+
 ## Goal
 
 Upgrade `typescript` from `6.0.2` to `7.0.2` for the real build/type-check
