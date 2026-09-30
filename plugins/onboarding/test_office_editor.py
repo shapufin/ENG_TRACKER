@@ -130,12 +130,12 @@ class OfficeEditorAPITests(TestCase):
     # -- office-callback --
 
     def test_office_callback_missing_jwt_returns_error_1(self):
-        resp = self._office_callback(self.document.id, {'status': 2, 'url': 'http://x/y'})
+        resp = self._office_callback(self.document.id, {'status': 2, 'key': f'{self.document.id}-1.0', 'url': 'http://x/y'})
         self.assertEqual(json.loads(resp.content)['error'], 1)
 
     def test_office_callback_invalid_jwt_returns_error_1(self):
         resp = self._office_callback(
-            self.document.id, {'status': 2, 'url': 'http://x/y'}, auth_header='Bearer garbage',
+            self.document.id, {'status': 2, 'key': f'{self.document.id}-1.0', 'url': 'http://x/y'}, auth_header='Bearer garbage',
         )
         self.assertEqual(json.loads(resp.content)['error'], 1)
 
@@ -146,10 +146,10 @@ class OfficeEditorAPITests(TestCase):
         self.document.refresh_from_db()
         self.assertEqual(self.document.updated_by, None)
 
-    @patch('plugins.onboarding.viewsets.urllib.request.urlopen')
-    def test_office_callback_saves_new_file_and_sets_updated_by(self, mock_urlopen):
-        mock_urlopen.return_value.__enter__.return_value.read.return_value = b'PK\x03\x04 edited docx bytes'
-        body = {'status': 2, 'url': 'http://onlyoffice.test/saved.docx', 'users': [str(self.user_a.id)]}
+    @patch('plugins.onboarding.viewsets.fetch_document_bytes')
+    def test_office_callback_saves_new_file_and_sets_updated_by(self, mock_fetch):
+        mock_fetch.return_value = b'PK\x03\x04 edited docx bytes'
+        body = {'status': 2, 'key': f'{self.document.id}-1.0', 'url': 'http://onlyoffice.test/saved.docx', 'users': [str(self.user_a.id)]}
         token = self._callback_jwt(body)
         resp = self._office_callback(self.document.id, body, auth_header=f'Bearer {token}')
         self.assertEqual(json.loads(resp.content)['error'], 0)
@@ -157,30 +157,30 @@ class OfficeEditorAPITests(TestCase):
         self.assertEqual(self.document.updated_by, self.user_a)
         self.assertEqual(self.document.file.read(), b'PK\x03\x04 edited docx bytes')
 
-    @patch('plugins.onboarding.viewsets.urllib.request.urlopen')
-    def test_office_callback_rejects_saved_content_failing_validation(self, mock_urlopen):
-        mock_urlopen.return_value.__enter__.return_value.read.return_value = b'not a real docx'
-        body = {'status': 2, 'url': 'http://onlyoffice.test/saved.docx', 'users': [str(self.user_a.id)]}
+    @patch('plugins.onboarding.viewsets.fetch_document_bytes')
+    def test_office_callback_rejects_saved_content_failing_validation(self, mock_fetch):
+        mock_fetch.return_value = b'not a real docx'
+        body = {'status': 2, 'key': f'{self.document.id}-1.0', 'url': 'http://onlyoffice.test/saved.docx', 'users': [str(self.user_a.id)]}
         token = self._callback_jwt(body)
         resp = self._office_callback(self.document.id, body, auth_header=f'Bearer {token}')
         self.assertEqual(json.loads(resp.content)['error'], 1)
         self.document.refresh_from_db()
         self.assertIsNone(self.document.updated_by)
 
-    @patch('plugins.onboarding.viewsets.urllib.request.urlopen')
-    def test_office_callback_rejects_off_origin_download_url(self, mock_urlopen):
+    @patch('plugins.onboarding.viewsets.fetch_document_bytes')
+    def test_office_callback_rejects_off_origin_download_url(self, mock_fetch):
         # `url` points outside the configured document server's own origin —
         # must be rejected before ever being fetched (SSRF guard).
-        body = {'status': 2, 'url': 'http://attacker.example/steal', 'users': [str(self.user_a.id)]}
+        body = {'status': 2, 'key': f'{self.document.id}-1.0', 'url': 'http://attacker.example/steal', 'users': [str(self.user_a.id)]}
         token = self._callback_jwt(body)
         resp = self._office_callback(self.document.id, body, auth_header=f'Bearer {token}')
         self.assertEqual(json.loads(resp.content)['error'], 1)
-        mock_urlopen.assert_not_called()
+        mock_fetch.assert_not_called()
         self.document.refresh_from_db()
         self.assertIsNone(self.document.updated_by)
 
-    @patch('plugins.onboarding.viewsets.urllib.request.urlopen')
-    def test_office_callback_rejects_lookalike_origins_that_share_the_prefix(self, mock_urlopen):
+    @patch('plugins.onboarding.viewsets.fetch_document_bytes')
+    def test_office_callback_rejects_lookalike_origins_that_share_the_prefix(self, mock_fetch):
         # A bare startswith() lets these through: same string prefix, different host.
         for url in (
             'http://onlyoffice.test.attacker.example/steal',  # suffix on the hostname
@@ -190,54 +190,106 @@ class OfficeEditorAPITests(TestCase):
             'http://onlyoffice.testing/steal',                # hostname continues
         ):
             with self.subTest(url=url):
-                body = {'status': 2, 'url': url, 'users': [str(self.user_a.id)]}
+                body = {'status': 2, 'key': f'{self.document.id}-1.0', 'url': url, 'users': [str(self.user_a.id)]}
                 token = self._callback_jwt(body)
                 resp = self._office_callback(self.document.id, body, auth_header=f'Bearer {token}')
                 self.assertEqual(json.loads(resp.content)['error'], 1)
-        mock_urlopen.assert_not_called()
+        mock_fetch.assert_not_called()
 
-    @patch('plugins.onboarding.viewsets.urllib.request.urlopen')
-    def test_office_callback_accepts_document_server_url_with_path_and_query(self, mock_urlopen):
-        mock_urlopen.return_value.__enter__.return_value.read.return_value = b'PK edited docx bytes'
+    @patch('plugins.onboarding.viewsets.fetch_document_bytes')
+    def test_office_callback_accepts_document_server_url_with_path_and_query(self, mock_fetch):
+        mock_fetch.return_value = b'PK edited docx bytes'
         body = {
-            'status': 2,
+            'status': 2, 'key': f'{self.document.id}-1.0',
             'url': 'http://onlyoffice.test/cache/files/data/abc/output.docx/output.docx?md5=x&expires=1',
             'users': [str(self.user_a.id)],
         }
         token = self._callback_jwt(body)
         resp = self._office_callback(self.document.id, body, auth_header=f'Bearer {token}')
         self.assertEqual(json.loads(resp.content)['error'], 0)
-        mock_urlopen.assert_called_once()
+        mock_fetch.assert_called_once()
 
-    @patch('plugins.onboarding.viewsets.urllib.request.urlopen')
-    def test_office_callback_uses_jwt_payload_not_raw_body(self, mock_urlopen):
+    @patch('plugins.onboarding.viewsets.fetch_document_bytes')
+    def test_office_callback_rejects_key_minted_for_another_document(self, mock_fetch):
+        other = Document.objects.create(
+            client=self.document.client, name='other.docx', file=_docx_file(), uploaded_by=self.user_a,
+        )
+        body = {
+            'status': 2, 'key': f'{other.id}-1.0',
+            'url': 'http://onlyoffice.test/saved.docx', 'users': [str(self.user_a.id)],
+        }
+        token = self._callback_jwt(body)
+        resp = self._office_callback(self.document.id, body, auth_header=f'Bearer {token}')
+        self.assertEqual(json.loads(resp.content)['error'], 1)
+        mock_fetch.assert_not_called()
+
+    @patch('plugins.onboarding.viewsets.fetch_document_bytes')
+    def test_office_callback_returns_error_1_when_fetch_fails(self, mock_fetch):
+        import http.client
+        import urllib.error
+
+        for exc in (
+            urllib.error.HTTPError('http://onlyoffice.test/x', 302, 'redirect refused', {}, None),
+            urllib.error.URLError('down'),
+            http.client.InvalidURL('bad'),
+            ValueError('bad'),
+            ConnectionResetError('reset'),
+        ):
+            with self.subTest(exc=type(exc).__name__):
+                mock_fetch.side_effect = exc
+                body = {
+                    'status': 2, 'key': f'{self.document.id}-1.0',
+                    'url': 'http://onlyoffice.test/saved.docx', 'users': [str(self.user_a.id)],
+                }
+                token = self._callback_jwt(body)
+                resp = self._office_callback(self.document.id, body, auth_header=f'Bearer {token}')
+                self.assertEqual(json.loads(resp.content)['error'], 1)
+
+    @patch('plugins.onboarding.viewsets.fetch_document_bytes')
+    def test_office_callback_tolerates_non_numeric_acting_user_id(self, mock_fetch):
+        mock_fetch.return_value = b'PK edited docx bytes'
+        body = {
+            'status': 2, 'key': f'{self.document.id}-1.0',
+            'url': 'http://onlyoffice.test/saved.docx', 'users': ['not-a-number'],
+        }
+        token = self._callback_jwt(body)
+        resp = self._office_callback(self.document.id, body, auth_header=f'Bearer {token}')
+        self.assertEqual(json.loads(resp.content)['error'], 0)
+        self.document.refresh_from_db()
+        self.assertIsNone(self.document.updated_by)
+
+    @patch('plugins.onboarding.viewsets.fetch_document_bytes')
+    def test_office_callback_uses_jwt_payload_not_raw_body(self, mock_fetch):
         # The JWT is signed over a *different* body than what's actually
         # posted — everything read by the handler must come from the
         # decoded, authenticated payload, not the unauthenticated raw body.
         # Otherwise a forged body riding along a valid-looking header could
         # redirect the fetch or spoof the acting user.
-        mock_urlopen.return_value.__enter__.return_value.read.return_value = b'PK\x03\x04 edited docx bytes'
+        mock_fetch.return_value = b'PK\x03\x04 edited docx bytes'
         signed_body = {
-            'status': 2, 'url': 'http://onlyoffice.test/saved.docx', 'users': [str(self.user_a.id)],
+            'status': 2, 'key': f'{self.document.id}-1.0',
+            'url': 'http://onlyoffice.test/saved.docx', 'users': [str(self.user_a.id)],
         }
         token = self._callback_jwt(signed_body)
         forged_body = {
-            'status': 2, 'url': 'http://attacker.example/steal', 'users': [str(self.unassigned.id)],
+            'status': 2, 'key': f'{self.document.id}-1.0',
+            'url': 'http://attacker.example/steal', 'users': [str(self.unassigned.id)],
         }
         resp = self._office_callback(self.document.id, forged_body, auth_header=f'Bearer {token}')
         self.assertEqual(json.loads(resp.content)['error'], 0)
-        mock_urlopen.assert_called_once_with('http://onlyoffice.test/saved.docx', timeout=15)
+        mock_fetch.assert_called_once()
+        self.assertEqual(mock_fetch.call_args[0][0], 'http://onlyoffice.test/saved.docx')
         self.document.refresh_from_db()
         self.assertEqual(self.document.updated_by, self.user_a)
 
-    @patch('plugins.onboarding.viewsets.urllib.request.urlopen')
-    def test_office_callback_deletes_previous_physical_file_after_saving(self, mock_urlopen):
+    @patch('plugins.onboarding.viewsets.fetch_document_bytes')
+    def test_office_callback_deletes_previous_physical_file_after_saving(self, mock_fetch):
         old_file_name = self.document.file.name
         storage = self.document.file.storage
         self.assertTrue(storage.exists(old_file_name))
 
-        mock_urlopen.return_value.__enter__.return_value.read.return_value = b'PK\x03\x04 edited docx bytes'
-        body = {'status': 2, 'url': 'http://onlyoffice.test/saved.docx', 'users': [str(self.user_a.id)]}
+        mock_fetch.return_value = b'PK\x03\x04 edited docx bytes'
+        body = {'status': 2, 'key': f'{self.document.id}-1.0', 'url': 'http://onlyoffice.test/saved.docx', 'users': [str(self.user_a.id)]}
         token = self._callback_jwt(body)
         resp = self._office_callback(self.document.id, body, auth_header=f'Bearer {token}')
         self.assertEqual(json.loads(resp.content)['error'], 0)
@@ -271,3 +323,40 @@ class OfficeIntegrationHelperTests(TestCase):
         token = make_office_file_token(5)
         self.assertFalse(verify_office_file_token(token, 6))
         self.assertTrue(verify_office_file_token(token, 5))
+
+
+class FetchDocumentBytesTests(TestCase):
+    def test_redirects_are_not_followed(self):
+        import threading
+        import urllib.error
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        from plugins.onboarding.office_integration import fetch_document_bytes
+
+        hits = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                hits.append(self.path)
+                if self.path == '/start':
+                    self.send_response(302)
+                    self.send_header('Location', '/internal')
+                    self.end_headers()
+                else:
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'internal secret')
+
+            def log_message(self, *args):
+                pass
+
+        server = HTTPServer(('127.0.0.1', 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with self.assertRaises(urllib.error.HTTPError):
+                fetch_document_bytes(f'http://127.0.0.1:{server.server_port}/start', 1024)
+        finally:
+            server.shutdown()
+            server.server_close()
+        self.assertEqual(hits, ['/start'])

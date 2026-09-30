@@ -1,7 +1,7 @@
 import logging
+import http.client
 import os
 import urllib.error
-import urllib.request
 
 import jwt
 from django.conf import settings
@@ -23,6 +23,7 @@ from .models import MAX_FOLDER_DEPTH, SEARCH_RESULT_LIMIT, Document, Folder
 from .office_integration import (
     build_editor_config,
     decode_callback_jwt,
+    fetch_document_bytes,
     is_document_server_url,
     is_editable_office,
     office_editor_enabled,
@@ -459,6 +460,13 @@ class DocumentViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelVi
         if document is None:
             return JsonResponse({'error': 1})
 
+        # The signed `key` is minted per document ("<id>-<timestamp>"); a
+        # callback JWT captured for one document must not be replayable
+        # against another document's endpoint.
+        if not str(payload.get('key', '')).startswith(f'{document.pk}-'):
+            logger.warning('onboarding office_callback: key does not match document %s', pk)
+            return JsonResponse({'error': 1})
+
         download_url = payload.get('url')
         # Confines the server-to-server fetch to the configured document
         # server's own origin — without this, a valid JWT (signed with a
@@ -469,9 +477,8 @@ class DocumentViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelVi
             return JsonResponse({'error': 1})
 
         try:
-            with urllib.request.urlopen(download_url, timeout=15) as resp:  # nosec B310 - http(s) origin validated above
-                content = resp.read(DOCUMENT_POLICY['max_bytes'] + 1)
-        except (urllib.error.URLError, TimeoutError):
+            content = fetch_document_bytes(download_url, DOCUMENT_POLICY['max_bytes'])
+        except (urllib.error.URLError, OSError, ValueError, http.client.HTTPException):
             logger.warning('onboarding office_callback: failed to fetch saved file for document %s', pk)
             return JsonResponse({'error': 1})
 
@@ -483,7 +490,10 @@ class DocumentViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelVi
             return JsonResponse({'error': 1})
 
         acting_user_ids = payload.get('users') or []
-        acting_user = User.objects.filter(pk=acting_user_ids[0]).first() if acting_user_ids else None
+        try:
+            acting_user = User.objects.filter(pk=acting_user_ids[0]).first() if acting_user_ids else None
+        except (TypeError, ValueError):
+            acting_user = None
 
         # Delete the previous physical file only after the new one is
         # committed — every autosave otherwise leaves the prior revision
