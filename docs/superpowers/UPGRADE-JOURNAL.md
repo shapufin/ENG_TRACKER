@@ -907,3 +907,24 @@ uncontrolled with no `storageKey`) passed *before* the removal and after it.
 Verified: `tsc -b` clean, eslint back at the 4-problem baseline (same 4, none
 new), full suite 2482 passed / 1 failed / 2483 (known
 `PersonalDashboardProgressCard` failure). Frontend baseline is now **2483 total**.
+
+## Follow-up: PersonalDashboardProgressCard test — 2026-09-30 — RESOLVED
+
+The "known stable failure" carried through Phases 4-6 was **calendar drift, not
+a regression**. `renders a weekly overtime/standby bar chart from the passed
+logs` used fixed log dates (2026-09-14/15) but the card derives its week from
+*today* unless `weekReferenceDate` is passed, so the test only passed while the
+real date sat in that week and began failing once the calendar moved on. Fixed by
+passing `weekReferenceDate: "2026-09-16"` (the prop already existed).
+
+It also had a knock-on effect worth remembering: because vitest skips the
+coverage report when any test fails, this one test was preventing
+`coverage/coverage-final.json` from being written, which the CI fallow step
+reads. With it green, `npm test -- --run --coverage` exits 0 and writes the full
+report (545 source files, no test or setup files).
+
+**Frontend baseline is now fully green: 424 files, 2483 tests, 0 failures.**
+**Backend baseline: 1844 tests, 0 failures.** Lesson: the three date-drift tests
+found today (tl_scorecard x2, this one) share a cause — fixtures pinned to a
+calendar date while the code under test reads "now". Pin the reference date, or
+compute fixtures relative to today on business days.
