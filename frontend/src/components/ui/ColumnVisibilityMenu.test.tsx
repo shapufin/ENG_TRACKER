@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ColumnVisibilityMenu } from "./ColumnVisibilityMenu";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 const columns = [
   { id: "select", header: "Select" },
@@ -10,7 +10,7 @@ const columns = [
   { accessorKey: "phone", header: "Phone" },
   { id: "noHeader" },
   { header: "NoId" },
-] as ColumnDef<any, unknown>[];
+] as AppColumnDef<any, unknown>[];
 
 const visibility = { name: true, email: false, phone: true };
 
@@ -94,14 +94,14 @@ describe("ColumnVisibilityMenu", () => {
 
   // Branch coverage: header is a function (falls back to accessorKey/id)
   it("falls back to accessorKey when header is a function", () => {
-    const cols = [{ accessorKey: "dynamic", header: () => "Dynamic" }] as ColumnDef<any, unknown>[];
+    const cols = [{ accessorKey: "dynamic", header: () => "Dynamic" }] as AppColumnDef<any, unknown>[];
     render(<ColumnVisibilityMenu columns={cols} visibility={{}} onVisibilityChange={vi.fn()} />);
     fireEvent.click(screen.getByText("Columns (1/1)"));
     expect(screen.getByText("dynamic")).toBeInTheDocument();
   });
 
   it("falls back to id when header is a function and no accessorKey", () => {
-    const cols = [{ id: "fallbackId", header: () => "Custom" }] as ColumnDef<any, unknown>[];
+    const cols = [{ id: "fallbackId", header: () => "Custom" }] as AppColumnDef<any, unknown>[];
     render(<ColumnVisibilityMenu columns={cols} visibility={{}} onVisibilityChange={vi.fn()} />);
     fireEvent.click(screen.getByText("Columns (1/1)"));
     expect(screen.getByText("fallbackId")).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe("ColumnVisibilityMenu", () => {
     const cols = [
       { id: "empty", header: "" },
       { id: "valid", header: "Valid" },
-    ] as ColumnDef<any, unknown>[];
+    ] as AppColumnDef<any, unknown>[];
     render(<ColumnVisibilityMenu columns={cols} visibility={{}} onVisibilityChange={vi.fn()} />);
     fireEvent.click(screen.getByText("Columns (1/1)"));
     expect(screen.queryByText("empty")).not.toBeInTheDocument();
@@ -119,7 +119,7 @@ describe("ColumnVisibilityMenu", () => {
   });
 
   it("skips columns with non-string header and no id/accessorKey", () => {
-    const cols = [{ header: 42 }, { id: "valid", header: "Valid" }] as ColumnDef<any, unknown>[];
+    const cols = [{ header: 42 }, { id: "valid", header: "Valid" }] as AppColumnDef<any, unknown>[];
     render(<ColumnVisibilityMenu columns={cols} visibility={{}} onVisibilityChange={vi.fn()} />);
     fireEvent.click(screen.getByText("Columns (1/1)"));
     expect(screen.getByText("Valid")).toBeInTheDocument();
@@ -128,7 +128,7 @@ describe("ColumnVisibilityMenu", () => {
   it("uses fallback col-index id when neither id nor accessorKey is present", () => {
     const cols = [
       { header: "HeaderOnly" }, // no id, no accessorKey
-    ] as ColumnDef<any, unknown>[];
+    ] as AppColumnDef<any, unknown>[];
     render(<ColumnVisibilityMenu columns={cols} visibility={{}} onVisibilityChange={vi.fn()} />);
     // Should still render with a generated id; verify it doesn't crash
     expect(screen.getByText("Columns (0/0)")).toBeInTheDocument();

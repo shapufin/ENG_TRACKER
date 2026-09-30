@@ -19,10 +19,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ticketKPIService } from "../../services/ticketKPIService";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import type { YearlyReport } from "../../types/ticketKPI";
 
-const reportUserColumns: ColumnDef<YearlyReport["per_user_summary"][number]>[] = [
+const reportUserColumns: AppColumnDef<YearlyReport["per_user_summary"][number]>[] = [
   { accessorKey: "name", header: "Name" },
   { accessorKey: "username", header: "Username" },
   { accessorKey: "total_tickets", header: "Tickets" },

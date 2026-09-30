@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Pencil, KeyRound, Trash2, Shield } from "lucide-react";
 import type { UserProfile } from "@/types";
 import type { CRAccessRecord } from "./useUsersPage";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 
 interface UseUserColumnsOptions {
@@ -104,7 +104,7 @@ export const useUserColumns = (
   onReset: (userId: number) => void,
   onDelete: (profile: UserProfile) => void,
   options: UseUserColumnsOptions = {}
-): ColumnDef<UserProfile>[] => {
+): AppColumnDef<UserProfile>[] => {
   const {
     crActive = false,
     crAccessUserIds = new Set<number>(),
@@ -114,7 +114,7 @@ export const useUserColumns = (
   const navigate = useNavigate();
 
   return useMemo(() => {
-    const base: ColumnDef<UserProfile>[] = [
+    const base: AppColumnDef<UserProfile>[] = [
       {
         id: "username",
         accessorKey: "user.username",
@@ -165,7 +165,7 @@ export const useUserColumns = (
                 return row.original.team_name || <span className="text-muted-foreground">—</span>;
               },
               enableSorting: false,
-            } as ColumnDef<UserProfile>,
+            } as AppColumnDef<UserProfile>,
           ]),
       // CR scope teams column — shown for ALL admins (full + CR-only) when
       // the control_room plugin is active. Full admins see both "Team"
@@ -183,7 +183,7 @@ export const useUserColumns = (
                   accessByUserId: crAccessByUserId,
                 }),
               enableSorting: false,
-            } as ColumnDef<UserProfile>,
+            } as AppColumnDef<UserProfile>,
           ]
         : []),
       // Independent technology assignments (descriptive metadata, not

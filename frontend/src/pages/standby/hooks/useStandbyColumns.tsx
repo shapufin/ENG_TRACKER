@@ -4,7 +4,7 @@ import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { createCrudActionsColumn } from "@/components/ui/tableColumnHelpers";
 import { formatDateDDMMYYYY, isPastMonth } from "@/lib/date-format-utils";
 import type { StandbyLog } from "@/types";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 export const useStandbyColumns = (
   canViewTeamData: boolean,
@@ -15,7 +15,7 @@ export const useStandbyColumns = (
   onDelete: (id: number) => void,
   isAdmin = false,
   isSuperuser = false
-): ColumnDef<StandbyLog>[] =>
+): AppColumnDef<StandbyLog>[] =>
   useMemo(
     () => [
       {
@@ -24,7 +24,7 @@ export const useStandbyColumns = (
         cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
       },
       ...(canViewTeamData
-        ? [{ accessorKey: "user_full_name", header: "Employee" } satisfies ColumnDef<StandbyLog>]
+        ? [{ accessorKey: "user_full_name", header: "Employee" } satisfies AppColumnDef<StandbyLog>]
         : []),
       { accessorKey: "hours", header: "Hours" },
       {

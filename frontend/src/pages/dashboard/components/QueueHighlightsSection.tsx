@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { DashboardSectionShell } from "@/components/dashboard/DashboardSectionShell";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/DataTable";
@@ -76,7 +76,7 @@ export const QueueHighlightsSection: React.FC<QueueHighlightsSectionProps> = ({
   approvingIds,
   rejectingId = null,
 }: QueueHighlightsSectionProps) => {
-  const columns = useMemo<ColumnDef<QueueHighlight, unknown>[]>(
+  const columns = useMemo<AppColumnDef<QueueHighlight, unknown>[]>(
     () => [
       {
         accessorKey: "userName",

@@ -1,9 +1,9 @@
 import { Moon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { StandbyLog } from "@/types";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
-export const timeRangeColumn: ColumnDef<StandbyLog> = {
+export const timeRangeColumn: AppColumnDef<StandbyLog> = {
   id: "time_range",
   accessorKey: "time_range",
   header: "Time",

@@ -1,5 +1,5 @@
 import React from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { Moon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ import { initialsOf, teamColorFor } from "../utils/crViewHelpers";
 // file exports only the component (react-refresh rule). The person-cell
 // contrast test renders the user_name cell directly from this def because
 // the component test mocks DataTable.
-export const rosterColumns: ColumnDef<AggregatedUserRow>[] = [
+export const rosterColumns: AppColumnDef<AggregatedUserRow>[] = [
   {
     accessorKey: "user_name",
     header: "Person",

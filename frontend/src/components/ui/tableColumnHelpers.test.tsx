@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render } from "@testing-library/react";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import {
   createCrudActionsColumn,
   createEditDeleteActionsColumn,
@@ -11,7 +11,7 @@ type Row = { id: number; status: "pending" | "approved"; name: string };
 
 const row: Row = { id: 7, status: "pending", name: "Alice" };
 
-const renderCell = (column: ColumnDef<Row>, value = row) => {
+const renderCell = (column: AppColumnDef<Row>, value = row) => {
   if (typeof column.cell !== "function") throw new Error("Expected a cell renderer");
   const cell = column.cell as (context: { row: { original: Row } }) => React.ReactNode;
   return render(<>{cell({ row: { original: value } })}</>);

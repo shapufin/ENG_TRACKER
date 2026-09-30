@@ -4,7 +4,7 @@ import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { createCrudActionsColumn } from "@/components/ui/tableColumnHelpers";
 import { formatDateDDMMYYYY, isPastMonth } from "@/lib/date-format-utils";
 import type { OvertimeLog } from "@/types";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 export const useOvertimeColumns = (
   canViewTeamData: boolean,
@@ -15,7 +15,7 @@ export const useOvertimeColumns = (
   onDelete: (id: number) => void,
   isAdmin = false,
   isSuperuser = false
-): ColumnDef<OvertimeLog>[] =>
+): AppColumnDef<OvertimeLog>[] =>
   useMemo(
     () => [
       {
@@ -24,7 +24,7 @@ export const useOvertimeColumns = (
         cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
       },
       ...(canViewTeamData
-        ? [{ accessorKey: "user_full_name", header: "Employee" } satisfies ColumnDef<OvertimeLog>]
+        ? [{ accessorKey: "user_full_name", header: "Employee" } satisfies AppColumnDef<OvertimeLog>]
         : []),
       { accessorKey: "client_name", header: "Client" },
       { accessorKey: "hours", header: "Hours" },

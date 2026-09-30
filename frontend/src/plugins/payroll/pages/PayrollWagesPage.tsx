@@ -3,7 +3,7 @@
  */
 import React, { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
@@ -178,7 +178,7 @@ export const PayrollWagesPage: React.FC = () => {
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const formUser = eligibleUsers.find((user) => String(user.id) === form.user);
 
-  const columns = useMemo<ColumnDef<EmployeeWageRow>[]>(
+  const columns = useMemo<AppColumnDef<EmployeeWageRow>[]>(
     () => [
       {
         accessorKey: "full_name",
@@ -248,7 +248,7 @@ export const PayrollWagesPage: React.FC = () => {
                   )}
                 </div>
               ),
-            } as ColumnDef<EmployeeWageRow>,
+            } as AppColumnDef<EmployeeWageRow>,
           ]
         : []),
     ],

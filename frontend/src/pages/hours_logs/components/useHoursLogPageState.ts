@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { RowSelectionState } from "@tanstack/react-table";
 
 export interface CustomDateRange {
   from: string;
@@ -11,7 +12,7 @@ export const useHoursLogPageState = () => {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [customDateRange, setCustomDateRange] = useState<CustomDateRange | null>(null);
 

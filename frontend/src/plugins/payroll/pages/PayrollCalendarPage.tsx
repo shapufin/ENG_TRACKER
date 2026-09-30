@@ -30,7 +30,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ModalSection } from "@/components/ui/ModalSection";
 import { DataTable } from "@/components/ui/DataTable";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { payrollService } from "../services/payrollService";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { handleApiError } from "@/lib/error-handler";
@@ -267,8 +267,8 @@ export const PayrollCalendarPage: React.FC = () => {
     });
   };
 
-  const holidayColumns = useMemo<ColumnDef<PayrollWorkday>[]>(() => {
-    const columns: ColumnDef<PayrollWorkday>[] = [
+  const holidayColumns = useMemo<AppColumnDef<PayrollWorkday>[]>(() => {
+    const columns: AppColumnDef<PayrollWorkday>[] = [
       { accessorKey: "date", header: "Date" },
       { accessorKey: "holiday_name", header: "Holiday Name" },
     ];

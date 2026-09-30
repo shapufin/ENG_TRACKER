@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { DataTable } from "@/components/ui/DataTable";
 import { Eye } from "lucide-react";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import type { TeamMemberRow } from "../utils/teamCSVExport";
 import { FieldsPopulatedBadges } from "./FieldsPopulatedBadges";
 
@@ -20,7 +20,7 @@ export const TicketKPITeamMemberTable: React.FC<TicketKPITeamMemberTableProps> =
     [members]
   );
 
-  const columns = useMemo<ColumnDef<TeamMemberRow>[]>(
+  const columns = useMemo<AppColumnDef<TeamMemberRow>[]>(
     () => [
       {
         accessorKey: "name",

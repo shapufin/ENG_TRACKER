@@ -8,7 +8,8 @@ import { TechFacetFilter } from "@/components/admin/TechFacetFilter";
 import { TeamLeaderSelect } from "@/components/admin/TeamLeaderSelect";
 import { useHRTeamLeaderAssignment } from "./hooks/useHRTeamLeaderAssignment";
 import type { UserProfile } from "@/types";
-import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
+import type { RowSelectionState } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 export const HRTeamLeaderAssignmentPage: React.FC = () => {
   const {
@@ -51,7 +52,7 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
     }
   };
 
-  const columns = useMemo<ColumnDef<UserProfile>[]>(
+  const columns = useMemo<AppColumnDef<UserProfile>[]>(
     () => [
       {
         accessorKey: "user.username",

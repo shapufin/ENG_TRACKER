@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 export interface RowError {
   row_index: number;
@@ -6,7 +6,7 @@ export interface RowError {
 }
 
 /** Shared by the commit-result card and the history error dialog. */
-export const rowErrorColumns: ColumnDef<RowError>[] = [
+export const rowErrorColumns: AppColumnDef<RowError>[] = [
   {
     accessorKey: "row_index",
     header: "Row",

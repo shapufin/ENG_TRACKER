@@ -3,7 +3,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { createEditDeleteActionsColumn } from "@/components/ui/tableColumnHelpers";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import type { Client } from "@/types";
 
 interface ClientDataTableProps {
@@ -13,7 +13,7 @@ interface ClientDataTableProps {
 }
 
 export const ClientDataTable: React.FC<ClientDataTableProps> = ({ clients, onEdit, onDelete }) => {
-  const columns = useMemo<ColumnDef<Client>[]>(
+  const columns = useMemo<AppColumnDef<Client>[]>(
     () => [
       { id: "name", accessorKey: "name", header: "Name" },
       { id: "code", accessorKey: "code", header: "Code" },

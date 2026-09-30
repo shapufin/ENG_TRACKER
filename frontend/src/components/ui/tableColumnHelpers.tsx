@@ -9,7 +9,7 @@
  * - createViewApproveRejectActionsColumn: view + approve/reject with
  *   stopPropagation + disabled state (useTeamColumns x3)
  *
- * Each helper returns a single ColumnDef<T> — the caller spreads it into
+ * Each helper returns a single AppColumnDef<T> — the caller spreads it into
  * their column array. The row type T must extend { id: number } (and
  * { status: string } for helpers that check pending status).
  */
@@ -17,7 +17,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Check, X, Pencil, Trash2, Eye, CheckCircle, XCircle } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 interface WithId {
   id: number;
@@ -33,7 +33,7 @@ interface WithIdAndStatus extends WithId {
 export const createEditDeleteActionsColumn = <T extends WithId>(
   onEdit: (row: T) => void,
   onDelete: (row: T) => void
-): ColumnDef<T> => ({
+): AppColumnDef<T> => ({
   id: "actions",
   header: "Actions",
   cell: ({ row }) => (
@@ -77,7 +77,7 @@ export const createCrudActionsColumn = <T extends WithIdAndStatus>(config: {
   onDelete: (id: number) => void;
   canEdit?: (row: T) => boolean;
   canDelete?: (row: T) => boolean;
-}): ColumnDef<T> => ({
+}): AppColumnDef<T> => ({
   id: "actions",
   header: "Actions",
   cell: ({ row }) => {
@@ -186,7 +186,7 @@ export const createViewApproveRejectActionsColumn = <T extends WithIdAndStatus>(
   approvePending: boolean;
   onReject: (id: number) => void;
   rejectPending: boolean;
-}): ColumnDef<T> => ({
+}): AppColumnDef<T> => ({
   id: "actions",
   header: "Actions",
   cell: ({ row }) => (

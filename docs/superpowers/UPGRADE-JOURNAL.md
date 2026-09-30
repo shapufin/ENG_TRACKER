@@ -637,3 +637,93 @@ re-run idle in the foreground.
 
 **Residual item added:** raise `jsdom` to 30.x once vitest fixes its Blob impl
 sniffing. Other residual items carried forward unchanged from Phases 1-4.
+
+## Phase 6: @tanstack/react-table — 2026-09-30
+
+Spec: `docs/superpowers/specs/2026-09-30-react-table-upgrade-design.md`
+Plan: `docs/superpowers/plans/2026-09-30-react-table-upgrade.md`
+
+`@tanstack/react-table` 8.21.3 -> **9.2.4** (npm `latest`). Native v9 API, not
+the `useLegacyTable` bridge (which subscribes to full table state and would have
+needed a second migration later).
+
+**Sizing was measured before designing.** A probe bump + `tsc -b` gave 96 type
+errors in ~40 files, all type-level, and a grep showed exactly **one**
+`useReactTable` call (`components/ui/DataTable.tsx`). That is what made a
+one-shot mechanical migration safe. Real result: 96 errors -> 0 with two
+hand-edited core files plus a scripted rename in 38 consumers.
+
+**Shape of the change**
+- New `components/ui/tableTypes.ts`: one module-scope `appFeatures`
+  (`tableFeatures({...})`) and the `AppColumnDef` / `AppColumn` / `AppRow` /
+  `AppCell` / `AppCellContext` / `AppTable` aliases. Every column file uses these;
+  nobody spells `ColumnDef<typeof appFeatures, …>`. (The spec had the aliases in
+  `tableColumnHelpers.tsx`; they went in their own file because exporting
+  non-components from `DataTable.tsx` trips `react-refresh/only-export-components`
+  and `tableColumnHelpers` shouldn't be the type hub.)
+- `DataTable`: `useReactTable` -> `useTable({ features: appFeatures, … })`; the
+  four `get*RowModel()` options are gone (row models live on `features`).
+  `table.getState()` -> `table.state`.
+- Consumers: `ColumnDef<T>` -> `AppColumnDef<T>` etc., done by an import-aware
+  script (files with a *local* `Row` type, e.g. `Column<Row>`, must not have that
+  `Row` renamed — the script only renames identifiers actually imported from
+  react-table).
+
+**v9 gotchas hit in this codebase (each was a real compile error)**
+- **Features have hard dependencies, enforced in the type system.**
+  `globalFilteringFeature` requires `columnFilteringFeature` ("'…' requires '…' to
+  be included in this table's features" — error appears as a `never`-style string
+  literal, easy to misread as a generic mismatch). `columnDef.size` only exists if
+  `columnSizingFeature` is registered — leaving it out silently drops the
+  type, not just a warning. `DataTable` uses `size` for header/cell widths.
+- `TData` must now `extends RowData` on every generic component/hook that touches
+  table types (`DataTable`, `ColumnVisibilityMenu`, all `App*` aliases).
+- `VisibilityState` no longer exists -> `ColumnVisibilityState`.
+- `initialState.pagination` now requires `pageIndex` as well as `pageSize`.
+- `RowSelectionState` is stricter than `Record<string, boolean>`: state hooks
+  typed as `Record<string, boolean>` (`useHoursLogPageState`,
+  `HoursLogDataTable` props) had to become `RowSelectionState`.
+- Annotating a column's `cell: (info: AppCellContext<T, T["status"]>) => …` no
+  longer type-checks against the contextual `CellContext<…, unknown>`; drop the
+  annotation and cast the value (`leaveColumnsBase.tsx`).
+- v9's `useTable` is **React Compiler compatible**, unlike v8's `useReactTable`
+  (which needed `// eslint-disable-next-line react-hooks/incompatible-library`).
+  Consequence: the directive became "unused" and was removed, and the compiler
+  lint now analyzes `DataTable` for the first time, exposing a **pre-existing**
+  `react-hooks/set-state-in-effect` (the seed-visibility effect). It was
+  suppressed with a one-line justified disable rather than restructured — logic
+  changes don't belong in a dependency phase. This is why the eslint baseline
+  briefly read 6 problems, not 4.
+
+**`tsc` cannot prove parity for a feature-registration change.** The existing
+`DataTable` tests never exercised sorting, global search, pagination, select-all,
+or column `size` — precisely the behaviors that silently vanish if a feature is
+left out of `tableFeatures`. Added 5 characterization tests
+(`describe("table features (react-table 9 parity)")` in `DataTable.test.tsx`);
+they assert plain user-visible behavior and pass on v9. (Running them against v8
+to prove they're version-independent was attempted but blocked by a sandbox rule,
+so that claim is by construction, not measured.) Test baseline is therefore now
+**2481 total / 1 failed** (was 2476), the failure being the unchanged
+`PersonalDashboardProgressCard` one.
+
+**Not done, deliberately:** no live-app click-through (needs backend + login);
+the added tests cover the same interactions at the DOM level. No `table.Subscribe`
+/ selector optimization (a perf change, would confound the signal). Tables still
+re-render on any table-state change, exactly like v8.
+
+**Flake recurrence:** one full-suite run reported a second failure
+(`TicketKPITeamManagementPage` bulk review — a row-selection test, so not
+assumed flaky). It passed 3/3 in isolation and the next full run on a fresh
+install was clean, both configs. Same rule as before: never interpret a
+deviation until re-run idle in the foreground.
+
+Verification (all from `npm ci`, versions read from `node_modules`):
+react-table 9.2.4; `npx tsc -b` clean; `npx eslint src` -> 4 problems
+(2 errors, 2 warnings), exact baseline; `npx vitest run --config vite.config.ts`
+and `--config vitest.config.ts` -> 2480 passed / 1 failed / 2481 each;
+`npm run build` exit 0.
+
+**Residual items:** `useTable` selectors / `table.Subscribe` for fine-grained
+rendering (optional perf work); `jsdom` 30 still waits on vitest's Blob sniffing
+(Phase 5); the pre-existing `set-state-in-effect` in `DataTable` could be
+restructured now that it is visible. Others carried forward from Phases 1-5.

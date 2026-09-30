@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Pencil, Check, X } from "lucide-react";
 import type { LeaveRequest } from "@/types";
-import type { ColumnDef, CellContext } from "@tanstack/react-table";
+import type { AppCellContext, AppColumnDef } from "@/components/ui/tableTypes";
 import { leaveRequestBaseColumns } from "./leaveColumnsBase";
 import { DeleteRequestButton } from "../components/DeleteRequestButton";
 
@@ -13,14 +13,14 @@ export const useLeaveColumns = (
   canDelete: (req: LeaveRequest) => boolean,
   onApprove: (id: number) => void,
   onReject: (id: number) => void
-): ColumnDef<LeaveRequest>[] =>
+): AppColumnDef<LeaveRequest>[] =>
   useMemo(
     () => [
       ...leaveRequestBaseColumns<LeaveRequest>(true),
       {
         id: "actions",
         header: "Actions",
-        cell: (info: CellContext<LeaveRequest, unknown>) => {
+        cell: (info: AppCellContext<LeaveRequest, unknown>) => {
           const row = info.row.original;
           return (
             <div className="flex items-center gap-1">

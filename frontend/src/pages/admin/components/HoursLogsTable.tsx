@@ -11,7 +11,7 @@ import { DescriptionColumn } from "@/components/admin/DescriptionColumn";
 import { UserCell } from "@/components/admin/UserCell";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import type { StatusVariant } from "@/components/ui/StatusBadge";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 interface HoursLog {
   id: number;
@@ -25,7 +25,7 @@ interface HoursLog {
 
 interface HoursLogsTableProps<T extends HoursLog> {
   logs: T[];
-  extraColumns?: ColumnDef<T>[];
+  extraColumns?: AppColumnDef<T>[];
   onApprove: (id: number) => void;
   onReject: (id: number) => void;
   onDelete?: (id: number) => void;
@@ -72,7 +72,7 @@ export const HoursLogsTable = <T extends HoursLog>({
   canDelete = false,
   storageKey,
 }: HoursLogsTableProps<T>) => {
-  const columns = useMemo<ColumnDef<T>[]>(
+  const columns = useMemo<AppColumnDef<T>[]>(
     () => [
       {
         id: "user_name",

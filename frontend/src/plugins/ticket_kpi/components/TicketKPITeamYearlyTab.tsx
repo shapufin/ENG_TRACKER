@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/badge";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { KPICard } from "./KPICard";
 import { KPITrendChart } from "./KPITrendChart";
 import { FieldsPopulatedBadges } from "./FieldsPopulatedBadges";
@@ -27,7 +27,7 @@ export const TicketKPITeamYearlyTab: React.FC<TicketKPITeamYearlyTabProps> = ({
   yearlyTrendChartData,
   loading,
 }) => {
-  const columns = useMemo<ColumnDef<YearlyMemberRow>[]>(
+  const columns = useMemo<AppColumnDef<YearlyMemberRow>[]>(
     () => [
       { accessorKey: "name", header: "Name" },
       { accessorKey: "total_tickets", header: "Total Tickets" },

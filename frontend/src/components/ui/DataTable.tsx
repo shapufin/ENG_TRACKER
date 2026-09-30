@@ -1,20 +1,15 @@
 import React, { useMemo } from "react";
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
+  useTable,
   flexRender,
-  type ColumnDef,
   type SortingState,
   type RowSelectionState,
   type OnChangeFn,
-  type Row,
-  type Cell,
-  type VisibilityState,
+  type ColumnVisibilityState,
+  type RowData,
   type Updater,
 } from "@tanstack/react-table";
+import { appFeatures, type AppCell, type AppColumnDef, type AppRow } from "./tableTypes";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 import { Input } from "./input";
@@ -32,8 +27,8 @@ import { cn } from "@/lib/utils";
 import { ColumnVisibilityMenu } from "./ColumnVisibilityMenu";
 import { EmptyState } from "./EmptyState";
 
-interface DataTableProps<TData> {
-  columns: ColumnDef<TData, unknown>[];
+interface DataTableProps<TData extends RowData> {
+  columns: AppColumnDef<TData, unknown>[];
   data: TData[];
   searchColumn?: string;
   searchPlaceholder?: string;
@@ -54,7 +49,7 @@ interface DataTableProps<TData> {
 }
 
 // fallow-ignore-next-line complexity
-export const DataTable = function DataTable<TData>({
+export const DataTable = function DataTable<TData extends RowData>({
   columns,
   data,
   searchColumn,
@@ -120,11 +115,14 @@ export const DataTable = function DataTable<TData>({
           defaultVisibility[columnId] = true;
         }
       });
+      // Pre-existing seed-once effect. Only surfaced now: react-table 9's useTable is
+      // React Compiler compatible, so this component is no longer skipped by the lint.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInternalColumnVisibility(defaultVisibility);
     }
   }, [columns, columnVisibility]);
   const handleColumnVisibilityChange = React.useCallback(
-    (updaterOrValue: Updater<VisibilityState>) => {
+    (updaterOrValue: Updater<ColumnVisibilityState>) => {
       const newVisibility =
         typeof updaterOrValue === "function" ? updaterOrValue(columnVisibility) : updaterOrValue;
       if (onColumnVisibilityChange) {
@@ -141,7 +139,7 @@ export const DataTable = function DataTable<TData>({
 
   const globalFilterFn = React.useCallback(
     // fallow-ignore-next-line complexity
-    (row: Row<TData>, _columnId: string, filterValue: unknown) => {
+    (row: AppRow<TData>, _columnId: string, filterValue: unknown) => {
       const needle = String(filterValue ?? "")
         .trim()
         .toLowerCase();
@@ -160,7 +158,7 @@ export const DataTable = function DataTable<TData>({
       }
 
       // fallow-ignore-next-line complexity
-      return row.getAllCells().some((cell: Cell<TData, unknown>) => {
+      return row.getAllCells().some((cell: AppCell<TData, unknown>) => {
         const value = cell.getValue();
         // Skip complex objects/arrays to avoid "[Object object]" strings
         if (value === null || value === undefined) return false;
@@ -172,8 +170,8 @@ export const DataTable = function DataTable<TData>({
     [searchColumn]
   );
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
+  const table = useTable({
+    features: appFeatures,
     data,
     columns,
     state: { sorting, globalFilter, rowSelection, columnVisibility },
@@ -182,15 +180,11 @@ export const DataTable = function DataTable<TData>({
     onRowSelectionChange,
     onColumnVisibilityChange: handleColumnVisibilityChange,
     globalFilterFn,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     enableRowSelection,
     enableHiding: true,
     enableSorting: true,
     getRowId,
-    initialState: { pagination: { pageSize } },
+    initialState: { pagination: { pageIndex: 0, pageSize } },
   });
 
   const rows = table.getRowModel().rows;
@@ -416,7 +410,7 @@ export const DataTable = function DataTable<TData>({
           {table.getFilteredRowModel().rows.length} result
           {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
           {table.getPageCount() > 1 &&
-            ` · Page ${table.getState().pagination.pageIndex + 1} of ${table.getPageCount()}`}
+            ` · Page ${table.state.pagination.pageIndex + 1} of ${table.getPageCount()}`}
         </p>
         {table.getPageCount() > 1 && (
           <div className="flex items-center gap-1">
