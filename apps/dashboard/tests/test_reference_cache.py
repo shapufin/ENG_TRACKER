@@ -130,3 +130,55 @@ class GlobalSettingsCacheTests(TestCase):
         after = self.client.get("/api/leave-management/settings/")
         results = after.data["results"] if "results" in after.data else after.data
         self.assertEqual(float(results[0]["default_yearly_leave_days"]), 30.0)
+
+
+class ReferenceCacheInvalidationGapTests(TestCase):
+    """Writers that don't go through a CacheInvalidationMixin viewset hook."""
+
+    def setUp(self):
+        cache.clear()
+        self.superuser = User.objects.create_superuser(
+            username="root2", password="x", email="root2@example.com"
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(self.superuser)
+
+    def test_holiday_import_invalidates_the_cached_list(self):
+        from datetime import date
+
+        from plugins.data_import.importers.public_holidays import PublicHolidayImporter
+
+        before = self.client.get("/api/dashboard/holidays/")  # populate cache
+        self.assertEqual(before.status_code, 200)
+
+        importer = PublicHolidayImporter()
+        options = importer.get_default_options()
+        with self.captureOnCommitCallbacks(execute=True):
+            result = importer.commit_row(
+                {"name": "Imported Day", "date": date(2026, 12, 25), "__row_index": 1},
+                options,
+            )
+            importer.finalize_batch({}, options, dry_run=False)
+        self.assertEqual(result.status, "created")
+
+        after = self.client.get("/api/dashboard/holidays/")
+        rows = after.data["results"] if "results" in after.data else after.data
+        self.assertIn("Imported Day", [row["name"] for row in rows])
+
+    def test_global_settings_destroy_invalidates_the_cached_list(self):
+        settings_obj = GlobalSettings.objects.get_or_create(pk=1)[0]
+        patched = self.client.patch(
+            f"/api/leave-management/settings/{settings_obj.pk}/",
+            {"default_yearly_leave_days": 31},
+        )
+        self.assertEqual(patched.status_code, 200, patched.data)
+        cached = self.client.get("/api/leave-management/settings/")
+        rows = cached.data["results"] if "results" in cached.data else cached.data
+        self.assertEqual(float(rows[0]["default_yearly_leave_days"]), 31.0)
+
+        deleted = self.client.delete(f"/api/leave-management/settings/{settings_obj.pk}/")
+        self.assertIn(deleted.status_code, (200, 204), getattr(deleted, "data", None))
+
+        after = self.client.get("/api/leave-management/settings/")
+        rows = after.data["results"] if "results" in after.data else after.data
+        self.assertNotEqual(float(rows[0]["default_yearly_leave_days"]), 31.0)
