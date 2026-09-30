@@ -117,6 +117,11 @@ def track_leave_request_state(sender, instance, **kwargs):
 def leave_request_notification(sender, instance, created, **kwargs):
     if getattr(instance, '_skip_notifications', False):
         return
+    # LeaveRequest.save() re-saves a new row with update_fields=['submitted_at'];
+    # that bookkeeping save is not a user edit and must not dispatch.
+    update_fields = kwargs.get('update_fields')
+    if update_fields and set(update_fields) <= {'submitted_at'}:
+        return
     if created:
         own.LeaveSubmittedNotification().dispatch({'instance': instance})
         team.TeamActionRequiredNotification().dispatch({
