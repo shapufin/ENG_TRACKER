@@ -2,10 +2,11 @@ import React from "react";
 import { DataTable } from "@/components/ui/DataTable";
 import { GlassCard } from "@/components/ui/GlassCard";
 import type { UserProfile } from "@/types";
-import type { RowSelectionState, ColumnDef, OnChangeFn } from "@tanstack/react-table";
+import type { RowSelectionState, OnChangeFn } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 interface UsersPageTableProps {
-  columns: ColumnDef<UserProfile>[];
+  columns: AppColumnDef<UserProfile>[];
   data: UserProfile[];
   rowSelection: RowSelectionState;
   onRowSelectionChange: OnChangeFn<RowSelectionState>;

@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { useState } from "react";
 import { DataTable } from "./DataTable";
-import type { ColumnDef, RowSelectionState, VisibilityState } from "@tanstack/react-table";
+import type { RowSelectionState, ColumnVisibilityState } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 interface Item {
   id: number;
@@ -10,7 +11,7 @@ interface Item {
   email: string;
 }
 
-const columns: ColumnDef<Item>[] = [
+const columns: AppColumnDef<Item>[] = [
   {
     accessorKey: "name",
     header: "Name",
@@ -66,7 +67,7 @@ function SelectionWrapper() {
 }
 
 function ColumnVisibilityWrapper() {
-  const [visibility, setVisibility] = useState<VisibilityState>({ name: true, email: true });
+  const [visibility, setVisibility] = useState<ColumnVisibilityState>({ name: true, email: true });
   return (
     <div>
       <button onClick={() => setVisibility((prev) => ({ ...prev, email: !prev.email }))}>

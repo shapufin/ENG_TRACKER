@@ -8,7 +8,8 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/comp
 import { Eye, Trash2, CheckCircle2 } from "lucide-react";
 import { formatMonthLabel } from "@/lib/monthOptions";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
-import type { ColumnDef, OnChangeFn, RowSelectionState } from "@tanstack/react-table";
+import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import type { BatchRow } from "../pages/hooks/useTicketKPITeamManagement";
 
 interface TicketKPITeamBatchesTableProps {
@@ -33,7 +34,7 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
   // true (see DataTable.tsx) — a second column defining the same thing
   // rendered two checkboxes per row. See ControlRoomAccessPage.tsx for the
   // same enableRowSelection-only pattern.
-  const columns = useMemo<ColumnDef<BatchRow>[]>(
+  const columns = useMemo<AppColumnDef<BatchRow>[]>(
     () => [
       {
         accessorKey: "user_name",

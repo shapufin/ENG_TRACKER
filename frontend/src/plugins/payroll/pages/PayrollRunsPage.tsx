@@ -4,7 +4,7 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,7 @@ export const PayrollRunsPage: React.FC = () => {
     onError: (error) => handleApiError(error),
   });
 
-  const columns = useMemo<ColumnDef<PayrollRun>[]>(
+  const columns = useMemo<AppColumnDef<PayrollRun>[]>(
     () => [
       {
         id: "period",

@@ -2,13 +2,13 @@ import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import type { LeaveBalance } from "@/types";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 export const useLeaveBalanceColumns = (
   onEdit: (b: LeaveBalance) => void,
   onDelete: (b: LeaveBalance) => void,
   onView?: (b: LeaveBalance) => void
-): ColumnDef<LeaveBalance>[] =>
+): AppColumnDef<LeaveBalance>[] =>
   useMemo(
     () => [
       { id: "user_name", accessorKey: "user_name", header: "Employee" },

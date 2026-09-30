@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -130,7 +130,7 @@ export const ControlRoomAccessPage: React.FC = () => {
     [state.accessList]
   );
 
-  const columns = useMemo<ColumnDef<AccessTableRow>[]>(
+  const columns = useMemo<AppColumnDef<AccessTableRow>[]>(
     () => [
       {
         id: "user",

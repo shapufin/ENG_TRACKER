@@ -2,20 +2,20 @@ import { Plane } from "lucide-react";
 import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import type { LeaveRequest } from "@/types";
-import type { ColumnDef, CellContext } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 export const leaveRequestBaseColumns = <T extends LeaveRequest>(
   includePlaneIcon = false
-): ColumnDef<T>[] => [
+): AppColumnDef<T>[] => [
   { accessorKey: "user_name", header: "User" },
   includePlaneIcon
     ? {
         accessorKey: "request_type",
         header: "Type",
-        cell: (info: CellContext<T, T["request_type"]>) => (
+        cell: (info) => (
           <span className="inline-flex items-center gap-1 text-xs font-medium capitalize">
             <Plane className="h-3 w-3 text-icon-vacation" />
-            {info.getValue()}
+            {info.getValue() as string}
           </span>
         ),
       }
@@ -34,7 +34,7 @@ export const leaveRequestBaseColumns = <T extends LeaveRequest>(
   {
     accessorKey: "status",
     header: "Status",
-    cell: (info: CellContext<T, T["status"]>) => (
+    cell: (info) => (
       <StatusBadge variant={info.getValue() as StatusVariant} />
     ),
   },

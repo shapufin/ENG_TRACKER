@@ -5,7 +5,7 @@ import { ApprovalActionsWithView } from "@/components/admin/ApprovalActionsWithV
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { leaveRequestBaseColumns } from "@/pages/leave_management/hooks/leaveColumnsBase";
 import type { OvertimeLog, StandbyLog, LeaveRequest } from "@/types";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 type Tab = "overtime" | "standby" | "leave";
 
@@ -20,7 +20,7 @@ export const useTLApprovalColumns = ({
   onApprove,
   onReject,
 }: UseTLApprovalColumnsOptions) => {
-  const overtimeColumns: ColumnDef<OvertimeLog>[] = useMemo(
+  const overtimeColumns: AppColumnDef<OvertimeLog>[] = useMemo(
     () => [
       { accessorKey: "user_name", header: "User" },
       { accessorKey: "client_name", header: "Client" },
@@ -72,7 +72,7 @@ export const useTLApprovalColumns = ({
     [onView, onApprove, onReject]
   );
 
-  const standbyColumns: ColumnDef<StandbyLog>[] = useMemo(
+  const standbyColumns: AppColumnDef<StandbyLog>[] = useMemo(
     () => [
       { accessorKey: "user_name", header: "User" },
       {
@@ -123,7 +123,7 @@ export const useTLApprovalColumns = ({
     [onView, onApprove, onReject]
   );
 
-  const leaveColumns: ColumnDef<LeaveRequest>[] = useMemo(
+  const leaveColumns: AppColumnDef<LeaveRequest>[] = useMemo(
     () => [
       ...leaveRequestBaseColumns<LeaveRequest>(),
       { accessorKey: "reason", header: "Reason" },

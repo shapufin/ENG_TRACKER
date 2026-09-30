@@ -4,15 +4,16 @@ import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./dialog";
 import { Label } from "./label";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { RowData } from "@tanstack/react-table";
+import type { AppColumnDef } from "./tableTypes";
 
-interface ColumnVisibilityMenuProps<TData> {
-  columns: ColumnDef<TData, unknown>[];
+interface ColumnVisibilityMenuProps<TData extends RowData> {
+  columns: AppColumnDef<TData, unknown>[];
   visibility: Record<string, boolean>;
   onVisibilityChange: (visibility: Record<string, boolean>) => void;
 }
 
-export function ColumnVisibilityMenu<TData>({
+export function ColumnVisibilityMenu<TData extends RowData>({
   columns,
   visibility,
   onVisibilityChange,

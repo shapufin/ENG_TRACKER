@@ -5,7 +5,7 @@ import { LoadingCard } from "@/components/ui/LoadingCard";
 import { StatsCards } from "@/components/admin/StatsCards";
 import { FilterBar } from "./FilterBar";
 import { HoursLogsTable } from "./HoursLogsTable";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 interface HoursLog {
   id: number;
@@ -37,7 +37,7 @@ interface HoursLogsPageProps<T extends HoursLog> {
   onReject: (id: number) => void;
   onDelete?: (id: number) => void;
   canDelete?: boolean;
-  extraColumns?: ColumnDef<T>[];
+  extraColumns?: AppColumnDef<T>[];
   storageKey: string;
   children?: React.ReactNode;
 }

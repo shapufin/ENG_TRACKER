@@ -7,7 +7,7 @@ interface HoursLogDataTableProps<T extends { id: number }> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   columns: any[];
   data: T[];
-  rowSelection: Record<string, boolean>;
+  rowSelection: RowSelectionState;
   onRowSelectionChange: OnChangeFn<RowSelectionState>;
   storageKey: string;
   searchColumn?: string;

@@ -14,7 +14,7 @@ import { ApprovalActionsColumn } from "@/components/admin/ApprovalActionsColumn"
 import { DescriptionColumn } from "@/components/admin/DescriptionColumn";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UserCell } from "@/components/admin/UserCell";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import type { LeaveRequest } from "@/types";
 
 interface LeaveRequestsTableProps {
@@ -114,7 +114,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
   onDelete,
   canDelete = false,
 }) => {
-  const columns = useMemo<ColumnDef<LeaveRequest>[]>(
+  const columns = useMemo<AppColumnDef<LeaveRequest>[]>(
     () => [
       {
         id: "user_name",

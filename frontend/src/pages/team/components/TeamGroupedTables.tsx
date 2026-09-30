@@ -4,7 +4,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Inbox } from "lucide-react";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 interface GroupableRow {
   id: number;
@@ -19,7 +19,7 @@ interface GroupSection<T extends GroupableRow> {
 
 interface TeamGroupedTablesProps<T extends GroupableRow> {
   rows: T[];
-  columnsBuilder: (currentRows: T[]) => ColumnDef<T>[];
+  columnsBuilder: (currentRows: T[]) => AppColumnDef<T>[];
   emptyCopy: string;
   memberGroupMode: "none" | "team" | "italian_tl";
   userMetaMap: Map<number, { teamNames: string[]; italianTlName?: string | null }>;

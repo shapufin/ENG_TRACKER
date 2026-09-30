@@ -5,7 +5,7 @@ import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { createViewApproveRejectActionsColumn } from "@/components/ui/tableColumnHelpers";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import type { OvertimeLog, StandbyLog, LeaveRequest } from "@/types";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 export const useTeamColumns = (
   onView: (record: OvertimeLog | StandbyLog | LeaveRequest) => void,
@@ -17,7 +17,7 @@ export const useTeamColumns = (
   leaveApprove: { mutate: (id: number) => void; isPending: boolean },
   leaveReject: { mutate: (payload: { id: number; reason: string }) => void; isPending: boolean }
 ) => {
-  const getOvertimeColumns = useMemo<ColumnDef<OvertimeLog>[]>(
+  const getOvertimeColumns = useMemo<AppColumnDef<OvertimeLog>[]>(
     () => [
       {
         accessorKey: "user_name",
@@ -56,7 +56,7 @@ export const useTeamColumns = (
     [onView, onReject, otApprove, otReject]
   );
 
-  const getStandbyColumns = useMemo<ColumnDef<StandbyLog>[]>(
+  const getStandbyColumns = useMemo<AppColumnDef<StandbyLog>[]>(
     () => [
       {
         accessorKey: "user_name",
@@ -90,7 +90,7 @@ export const useTeamColumns = (
     [onView, onReject, sbApprove, sbReject]
   );
 
-  const getLeaveColumns = useMemo<ColumnDef<LeaveRequest>[]>(
+  const getLeaveColumns = useMemo<AppColumnDef<LeaveRequest>[]>(
     () => [
       {
         accessorKey: "user_name",
