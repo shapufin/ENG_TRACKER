@@ -42,7 +42,7 @@ Phase order (each is its own branch, its own review, its own merge):
    alongside since `lib/motion.ts` is exercised by the same test
    suite this phase re-validates)
 6. **react-table 9** (data-table consumers app-wide)
-7. **dagre 3** (Organigrama plugin chart layout only)
+7. **dagre 3** (Organigrama plugin chart layout only) — DEFERRED, see Upgrade Journal Phase 7 (v3 changes sibling order)
 
 ## Why this order
 

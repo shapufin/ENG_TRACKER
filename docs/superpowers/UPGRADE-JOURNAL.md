@@ -727,3 +727,49 @@ and `--config vitest.config.ts` -> 2480 passed / 1 failed / 2481 each;
 rendering (optional perf work); `jsdom` 30 still waits on vitest's Blob sniffing
 (Phase 5); the pre-existing `set-state-in-effect` in `DataTable` could be
 restructured now that it is visible. Others carried forward from Phases 1-5.
+
+## Phase 7: @dagrejs/dagre — 2026-09-30 — DEFERRED (stays 1.1.8)
+
+No code changed. `@dagrejs/dagre` is `^1.1.8`; npm `latest` is 3.1.1. Decision
+(with the owner): **do not upgrade**, because v3 changes org-chart layout output
+and there is no functional gain to justify that.
+
+**Usage surface:** two call sites, both in `frontend/src/plugins/organigrama/
+components/` — `OrgChartPage.tsx` (`layoutTree`: builds the graph, calls
+`dagre.layout`, and uses the resulting x/y **directly** for every node) and
+`CustomChartViewer.tsx` (`layoutGraph`: dagre pass inside a try/catch, but the
+viewer mostly renders stored `position_x`/`position_y`). Only the API
+`dagre.graphlib.Graph`, `setGraph({rankdir:"TB",nodesep,ranksep})`,
+`setDefaultEdgeLabel`, `setNode`, `setEdge`, `dagre.layout` is used.
+
+**API is not the problem.** All of the above works unchanged in 3.1.1 (verified by
+running it); v3 ships its own `.d.ts`, `"type": "module"`, ESM + CJS builds.
+Nothing would fail to compile or throw.
+
+**Output is the problem.** Ran identical graphs through 1.1.8 and 3.1.1 in a
+scratch directory outside the repo (two isolated `npm i`, a node script
+using `createRequire`). Both versions are deterministic run-to-run. Ranks
+(y) agree, but **horizontal sibling order differs**: for a root with children
+`a, b, c` (insertion order), v1 lays them out left-to-right as `a, b, c`;
+v3 gives `c, b, a` (x = 90, 310, 640). v3's ordering follows *edge insertion
+order*, and is not affected by node insertion order or by `ranker` /
+`disableOptimalOrderHeuristic`. Feeding v3 the edges reversed reproduced v1
+exactly on that one example, which looked like a cheap shim — **it is not**:
+across 300 seeded random trees/forests/DAGs (2-41 nodes, mixed node sizes) reversed-edge v3
+matched v1 on only 93 (31%), un-reversed on 19 (6%). So there is no
+compat trick; v3 is simply a different layout, and any "preserve the old
+look" work would be a real ordering algorithm (re-sort children to data
+order after layout), not a one-liner.
+
+**Why deferring is right:** `OrgChartPage` has no position assertions in its
+tests, so nothing in CI would flag the reshuffle — it would ship silently and every
+org chart would visibly re-order. v1.1.8 works.
+
+**If revisited:** budget for (1) characterization tests that pin node positions
+for a representative tree *before* bumping, (2) a decision on whether sibling
+order is semantically meaningful to the org (if it is, preserve it explicitly;
+if not, accept v3's layout and record the visual change), (3) re-running the
+Organigrama tests. The scratch probe is easy to recreate from the description
+above.
+
+**Series outcome:** Phases 1-6 done and merged; Phase 7 deliberately deferred.
