@@ -76,9 +76,9 @@ const RULES = [
   },
 ];
 
-// The dialog primitive owns the contract these rules police — auditing it
-// would flag its own definition.
-const PRIMITIVE_RE = /components[\\/]ui[\\/]dialog\.tsx$/;
+// The dialog and textarea primitives own the contracts these rules police —
+// auditing them would flag their own definitions (the shared Textarea IS the one legitimate raw <textarea>).
+const PRIMITIVE_RE = /components[\\/]ui[\\/](dialog|textarea)\.tsx$/;
 
 function* walk(dir) {
   for (const e of readdirSync(dir)) {

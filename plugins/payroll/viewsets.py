@@ -946,6 +946,11 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             return PayrollRunCreateSerializer
         return PayrollRunSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['scoped_user_ids'] = _allowed_payroll_user_ids(self.request.user)
+        return context
+
     def _ensure_draft_mutable(self, run):
         if run.status != 'draft':
             return Response(
@@ -1134,8 +1139,12 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path='period-closure-status')
     def period_closure_status(self, request, pk=None):
-        """Return TL approval-period closure readiness for this run."""
+        """Return TL approval-period closure readiness for this run.
+
+        Covers every user in the run, so (like the whole-run exports) it is
+        limited to unrestricted payroll access."""
         run = self.get_object()
+        self._ensure_unrestricted()
         readiness = get_period_closure_status(run)
         readiness['period'] = readiness['period'].isoformat()
         readiness['requires_tl_closed_before_finalize'] = (
@@ -1269,7 +1278,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         at all, only staff/superuser/payroll-'manage'-grant holders."""
         if _allowed_payroll_user_ids(self.request.user) is not None:
             raise PermissionDenied(
-                'Whole-run exports are limited to unrestricted payroll access. '
+                'This whole-run action is limited to unrestricted payroll access. '
                 'Use the payslip endpoint for an individual employee.'
             )
 

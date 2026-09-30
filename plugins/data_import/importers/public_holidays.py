@@ -8,7 +8,11 @@ A row with no workspace is a global holiday, constrained unique on
 
 from typing import Any, Dict, List, Optional
 
+from django.db import transaction
+
+from apps.core.cache_constants import CachePattern
 from apps.dashboard.models.calendar import CalendarWorkspace, PublicHoliday
+from core.utils.cache import delete_pattern_safe
 from .base import BaseImporter, ImportField, ImportRowResult
 from .authority import StaffOnlyAuthority
 from .registry import register
@@ -97,6 +101,20 @@ class PublicHolidayImporter(StaffOnlyAuthority, BaseImporter):
         if code and len(code) != 2:
             raise ValueError(f'country_code "{code}" must be a two-letter ISO code.')
         return code
+
+    def finalize_batch(
+        self,
+        context: Dict[str, Any],
+        options: Dict[str, Any],
+        *,
+        dry_run: bool = False,
+    ) -> None:
+        """Importer writes bypass the viewset's cache hooks, so drop the cached
+        holiday/reference lists once per import, after the transaction commits
+        (invalidating earlier would let a concurrent read re-cache old data)."""
+        if dry_run:
+            return
+        transaction.on_commit(lambda: delete_pattern_safe(CachePattern.dashboard_all()))
 
     def commit_row(
         self,

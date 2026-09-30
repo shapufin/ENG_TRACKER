@@ -291,6 +291,10 @@ class GlobalSettingsViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, vi
         serializer.save()
         self.invalidate_related_cache()
 
+    def perform_destroy(self, instance):
+        super().perform_destroy(instance)
+        self.invalidate_related_cache()
+
 
 class LeaveRequestViewSet(SuperuserPermissionMixin, HRReadOnlyMixin, TeamLeaderFilterMixin, BulkActionMixin, viewsets.ModelViewSet):
     """ViewSet for LeaveRequest model."""

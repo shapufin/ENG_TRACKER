@@ -21,7 +21,7 @@ from unittest.mock import patch
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
-from apps.users.models.core import Tech, TechLevel, UserProfile, UserTech
+from apps.users.models.core import Tech, TechLevel, UserTech
 from apps.permissions.models import Role, UserRole
 from plugins.organigrama.viewsets import OrganigramaViewSet
 from plugins.organigrama.services import tree_builder

@@ -9,6 +9,9 @@ set, so dev/test environments without the container running are unaffected.
 """
 from __future__ import annotations
 
+import urllib.request
+from urllib.parse import urlparse
+
 import jwt
 from django.conf import settings
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
@@ -37,6 +40,45 @@ def is_editable_office(name: str) -> bool:
 
 def office_editor_enabled() -> bool:
     return bool(settings.ONLYOFFICE_DOCUMENT_SERVER_URL)
+
+
+def is_document_server_url(url: str) -> bool:
+    """True only if ``url`` is on the configured document server's exact origin
+    (scheme + host + port, no userinfo), under its configured path prefix.
+
+    A bare ``startswith()`` is not enough: with ``http://docs.internal``
+    configured it also accepts ``http://docs.internal.evil.com/x`` and
+    ``http://docs.internal@evil.com/x``. Fails closed when the server URL is
+    unset or either URL is malformed.
+    """
+    try:
+        base = urlparse(settings.ONLYOFFICE_DOCUMENT_SERVER_URL)
+        target = urlparse(url)
+        if base.scheme not in ("http", "https") or not base.hostname:
+            return False
+        if (target.scheme, target.netloc.lower()) != (base.scheme, base.netloc.lower()):
+            return False
+    except ValueError:
+        return False
+    prefix = base.path.rstrip("/")
+    return not prefix or target.path == prefix or target.path.startswith(prefix + "/")
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Refuse redirects: the origin check only covers the first URL, so a 3xx
+    from (or via an open redirect on) the document server must not be followed
+    to an arbitrary internal host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def fetch_document_bytes(url: str, max_bytes: int, timeout: int = 15) -> bytes:
+    """Fetch the saved document from the (already origin-validated) http(s)
+    ``url``, following no redirects and reading at most ``max_bytes + 1``."""
+    opener = urllib.request.build_opener(_NoRedirect)
+    with opener.open(url, timeout=timeout) as resp:
+        return resp.read(max_bytes + 1)
 
 
 def make_office_file_token(document_id: int) -> str:

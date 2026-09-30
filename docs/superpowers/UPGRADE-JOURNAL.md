@@ -928,3 +928,98 @@ report (545 source files, no test or setup files).
 found today (tl_scorecard x2, this one) share a cause — fixtures pinned to a
 calendar date while the code under test reads "now". Pin the reference date, or
 compute fixtures relative to today on business days.
+
+## Verification & audit-review round — 2026-09-30
+
+Final review of the whole series plus the 2026-09-27/28 security/perf/cache audit
+commits (`087941f`, `dc1c629`, `e54644f`, `314b7c7`, `9a94d17`, `640a87b`). Method:
+two independent read-only review agents (security; perf/correctness with the
+`django-perf-review` skill), a third review of this round's own diff
+(`review` + `django-access-review`), every finding **verified against the code
+before acting**, and a fix only with a red test first.
+
+**Upgrade status (spec table, 11 packages):** 9 upgraded and merged; 2 deliberately
+deferred — `jsdom` 30 (vitest 5 Blob-sniffing bug) and `@dagrejs/dagre` 3 (reorders
+org-chart siblings; see Phases 5 and 7). Installed versions read from
+`node_modules` after a fresh `npm ci`: react-table 9.2.4, vitest 5.0.2,
+typescript shim 6.0.2 + native 7.0.2, tailwindcss 4.3.3, framer-motion 13.4.5,
+jsdom 29.1.1, dagre 1.1.8.
+
+**Real defects found and fixed (each with a regression test):**
+- **payroll — same "parent-scope != child-scope" class as the audit's own fix.**
+  `PayrollRunSerializer` (`fields='__all__'`) returned company-wide `totals` and
+  `line_count` on run list/retrieve, and `period_closure_status` listed other
+  teams' users, to any TL who could reach the run. Now: scoped viewers get
+  `line_count`/`totals` computed from their own lines (`aggregate_line_totals`,
+  extracted from `_update_run_totals`, context key `scoped_user_ids`), and
+  `period_closure_status` requires unrestricted access like the whole-run exports.
+- **OnlyOffice callback SSRF hardening.** `startswith(ONLYOFFICE_DOCUMENT_SERVER_URL)`
+  accepted `docs.internal.evil.com` and `docs.internal@evil.com`; replaced by
+  `is_document_server_url` (exact scheme+host+port, path prefix on a `/` boundary,
+  fails closed). Also: the fetch no longer follows redirects
+  (`fetch_document_bytes`, proven by a test against a real local HTTP server), the
+  signed `key` must belong to the document in the URL, broader fetch errors return
+  `{"error": 1}`, and a non-numeric acting-user id no longer 500s. Clears bandit
+  B310. Residual: the key check is a prefix bind, not replay protection.
+- **Cache invalidation still missed two writers:** `PublicHolidayImporter` (ORM
+  writes bypass viewset hooks; now invalidates once per import via
+  `transaction.on_commit` in `finalize_batch`) and `GlobalSettingsViewSet` delete.
+- **nginx `/static/` never forwarded `X-Forwarded-Proto`** (every other proxied
+  location did), so behind a TLS-terminating proxy admin assets would 301-loop
+  under `SECURE_SSL_REDIRECT`. Fixed, plus a contract test that every
+  backend-proxying location forwards it. (No nginx binary here to lint syntax; the
+  block is a verbatim copy of `/media/`.)
+- **CI was red before this round** on three fronts: 3 ruff errors in test files,
+  bandit B310, and the modal-audit gate (its `raw-textarea` rule flagged the shared
+  `Textarea` primitive itself; the primitive is now exempt like `dialog.tsx`).
+- **Two more date-drift tests** (in addition to the three earlier): 
+  `calcVacationDaysLeft` failed every Jan 1 - Mar 31 (production rule uses the
+  previous year until March 31; fixtures used the current year), and a ticket-KPI
+  bulk-review test raced react-query's scheduler (`waitFor` now).
+- Dev-only `npm audit`: `brace-expansion` 5.0.9 -> 5.0.12 (lockfile only).
+
+**Verified clean / parity checks:** `columnSizingFeature` gives unsized columns the
+same 150px default as v8 (measured in v8: `columnDef.size === 150`; pinned by a test);
+dynamic `pdfExport` import keeps its error handling; the audit's `CanViewReports`
+fail-closed fix and `_scoped_lines`/`_ensure_unrestricted` are sound; cache keys
+include every query dimension and cannot leak across users.
+
+**Accepted / not done (be explicit):**
+- CSP keeps `script-src 'unsafe-inline'` (Vite's inline preload script) — accepted
+  risk; a hash/nonce is the fix. `ONLYOFFICE_ORIGIN` must be a bare origin.
+- `React.memo(OrgNode)` is largely defeated because `layoutTree` builds a fresh
+  `data` object per node per layout; harmless, the perf claim in `640a87b` is
+  overstated (a comparator on `data` would fix it).
+- Cache nits, not fixed: `build_query_fingerprint` cannot tell `?a=1,2` from
+  `?a=1&a=2`; arbitrary query params create unbounded (culled) cache keys; every
+  preference save wipes the reference caches.
+- `frontend/src/pages/admin/CalendarManagementPage.tsx.backup` is dead and still
+  imports v8 `ColumnDef`; not compiled, would break `tsc` if ever renamed to `.tsx`.
+- **Audit Phase 6 (centralization) remains OPEN.** Measured, not assumed: 193 inline
+  `italian_tl`/`albanian_tl`/`led_teams` references across 7 viewsets
+  (`apps/users` 110, `apps/reports` 56, `plugins/organigrama` 12, `ticket_kpi` 8,
+  `dashboard` 5) vs 28 uses of `get_team_member_ids`/`is_hr_only` in 7 viewsets.
+  That crosses the plan's "duplicated >=3 places" trigger on its face, but much of
+  it is legitimate domain code (TL assignment, org chart), and telling that apart
+  from equivalent scoping logic (start with `apps/reports`) is security-critical
+  reading that the plan (section 8) assigns to its own follow-up plan. Also still
+  open from the audit: live-DB query profiling and the remaining core-app payload
+  audit. Cache-key formatting is already centralized (`CacheKey.dashboard_reference`).
+- `pip-audit` could not resolve the full tree locally (`psycopg2-binary` 2.9.10 has
+  no py3.14/Windows wheel); run with `--no-deps --disable-pip` against the exact pins
+  instead -> no known vulnerabilities, but transitive dependencies were not audited
+  here. CI (py3.12) audits the resolved tree.
+- Date-drift scan limits: a shifted-clock harness (Date faked, 2026-10-03,
+  2027-01-01, 2028-02-29) caught one real test; it cannot see fixtures computed at
+  import time, so `calcVacationDaysLeft` was found by reading, not by the scan. The
+  backend has no time-freezing library installed, so the backend was not scanned
+  dynamically.
+
+**Final baselines (fresh install, CI commands):** frontend `npm test -- --run
+--coverage` exit 0, 424 files / 2485 tests / 0 failed, `coverage-final.json`
+written (545 source files); `tsc -b`, `npm run build` (with the tsc guard) exit 0;
+eslint 4 problems (2 errors, 2 warnings, unchanged); `modal-audit` PASS;
+`npm audit` 0 vulnerabilities; script tests 35/35. Backend `manage.py test`
+**1859 tests, 0 failures**; `check`, `makemigrations --check`, `ruff`, `bandit -ll`
+clean; `check --deploy --settings=config.settings_production` shows only the 6
+known drf-spectacular warnings.
