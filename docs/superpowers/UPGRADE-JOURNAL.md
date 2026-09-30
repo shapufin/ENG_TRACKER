@@ -773,3 +773,47 @@ Organigrama tests. The scratch probe is easy to recreate from the description
 above.
 
 **Series outcome:** Phases 1-6 done and merged; Phase 7 deliberately deferred.
+
+## Follow-up: notifications test discovery — 2026-09-30 — RESOLVED
+
+Closes the Phase 1 residual ("notifications `__init__.py` + `LeaveSignalPushTest`",
+referenced in the Phase 1, 2, 3 and 4 residual lists above — those mentions are
+now stale). Branch `fix/notifications-test-discovery`.
+
+- **`plugins/notifications/__init__.py` added** (empty). Without it the plugin
+  was a namespace package: `manage.py test` skipped it, and even
+  `manage.py test plugins.notifications` crashed (`__file__` is `None`). CI's
+  backend job (`python manage.py test -v 1`) therefore never ran its tests.
+  Total discovered tests went **1771 -> 1841** (+70: 69 pre-existing + 1 new).
+  Only `plugins/notifications` and `apps/core` lacked `__init__.py`; `apps/core`
+  has no tests and is not in `INSTALLED_APPS`, so it was left alone.
+- **The `LeaveSignalPushTest` failure was a real double-dispatch bug, not just a
+  test-data problem.** `LeaveRequest.save()` saves a new row twice (the second
+  only sets `submitted_at`, `update_fields=['submitted_at']`), re-firing
+  `pre_save`/`post_save` with `created=False`. On that pass
+  `leave_request_notification` compared DB-typed old dates with the instance's
+  in-memory dates; if those were strings (tests, or any ORM path that assigns
+  strings) it saw a phantom edit and sent a spurious "edited" notification for a
+  brand-new request. DRF passes real `date` objects, which is why production
+  mostly hid it. Fix: `leave_request_notification` returns early when
+  `update_fields` is a subset of `{'submitted_at'}` (the bookkeeping save), which
+  fixes the class of problem for any input type without touching
+  `apps/leave_management`. Regression test:
+  `test_creation_sends_only_the_submitted_notification` (red before, green
+  after); the old test now passes too.
+- **Environment gotcha:** the default `python` in this checkout is 3.11 with
+  Django **5.2.17**; the Django 6 work needs `py -3.14` (Django 6.1.1). Running
+  the notifications tests under the wrong interpreter shows a misleading
+  `Signal.receivers` unpack error (the 3-vs-4 tuple change from Phase 1).
+- **New, unrelated, found while verifying:** two `plugins.tl_scorecard.
+  test_tl_scorecard_phase3.EscalationCandidatesServiceTests` tests
+  (`test_stale_pending_leave_surfaces_as_candidate`,
+  `test_recently_submitted_leave_does_not_escalate`) are **date-dependent**: they
+  create leave at `today+10`/`today+11`, and on days where that pair is
+  Saturday+Sunday `LeaveRequest.clean()` raises "Leave must include at least one
+  business day." Reproduced on unmodified `main` (2026-09-30, a Wednesday, so
+  10-11 days out is a weekend). Not fixed here; the fix is to pick the next
+  business day in the test. Until then the backend suite is red on those days
+  in CI. **Backend baseline today: 1841 tests, 1 known failure
+  (`config.test_deployment...test_cors_credentials_disabled_in_production`) plus
+  those 2 date-dependent errors.**

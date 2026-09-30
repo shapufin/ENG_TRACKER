@@ -479,6 +479,20 @@ class LeaveSignalPushTest(TestCase):
         self.assertEqual(call_args[0][0], self.user)  # first positional arg = user
 
     @patch('plugins.notifications.signals.send_push_notification')
+    def test_creation_sends_only_the_submitted_notification(self, mock_push):
+        # LeaveRequest.save() saves twice on creation (the second only sets
+        # submitted_at). That bookkeeping save must not re-dispatch as an edit,
+        # even when start/end dates are still strings in memory.
+        LeaveRequest.objects.create(
+            user=self.user,
+            request_type='vacation',
+            start_date='2026-08-10',
+            end_date='2026-08-12',
+            reason='Single notification',
+        )
+        self.assertEqual(Notification.objects.filter(user=self.user).count(), 1)
+
+    @patch('plugins.notifications.signals.send_push_notification')
     def test_preference_disables_both_delivery_channels(self, mock_push):
         NotificationPreference.objects.create(
             user=self.user,
