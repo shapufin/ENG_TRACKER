@@ -56,6 +56,21 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
-    exclude: ['**/e2e/**'],
+    exclude: ['**/e2e/**', 'node_modules/**', 'dist/**'],
+    // `npm test -- --coverage` (CI) reads this block. The `json` reporter must stay:
+    // the CI fallow step consumes coverage/coverage-final.json.
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'lcov'],
+      reportsDirectory: './coverage',
+      exclude: [
+        'node_modules/**',
+        'dist/**',
+        'src/test/**',
+        'src/setupTests.ts',
+        '**/*.test.{ts,tsx}',
+        '**/*.config.{ts,js}',
+      ],
+    },
   },
 })
