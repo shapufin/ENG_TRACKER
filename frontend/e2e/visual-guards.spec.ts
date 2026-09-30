@@ -41,26 +41,25 @@ test("pure-TL guard redirects (HR/analytics/admin routes); team routes stay", as
   expect(new URL(page.url()).pathname).toBe("/team");
 });
 
-test("pure-HR guard redirects (approvals); team denial + admin shell stay", async ({ page }) => {
+test("pure-HR guard redirects (approvals, admin shell); team denial stays", async ({ page }) => {
   await loginAsRole(page, "hr");
   await page.goto("/team");
   await page.waitForURL((url) => url.pathname === "/team", { timeout: 15_000 });
   expect(new URL(page.url()).pathname).toBe("/team");
   await expect(page.getByText("Access Denied")).toBeVisible();
   await expectRedirect(page, "/team/approvals", "/dashboard");
-  // Authorized: SuperuserRoute passes for HR — must NOT redirect.
-  await page.goto("/admin/users");
-  await page.waitForURL((url) => url.pathname === "/admin/users", { timeout: 15_000 });
-  expect(new URL(page.url()).pathname).toBe("/admin/users");
+  // HR admin-panel isolation (2026-09-26): SuperuserRoute admits admin/superuser only, so the
+  // whole /admin shell redirects HR. HR reaches holidays and payroll via /hr/* pages instead.
+  await expectRedirect(page, "/admin/users", "/dashboard");
 });
 
-test("hr plugin/leave-request surfaces redirect (unregistered routes + admin gate)", async ({
+test("hr admin-shell surfaces redirect to the dashboard (admin gate)", async ({
   page,
 }) => {
   await loginAsRole(page, "hr");
   await expectRedirect(page, "/admin/analytics", "/dashboard");
   await expectRedirect(page, "/analytics", "/dashboard");
   await expectRedirect(page, "/admin/payroll/runs", "/dashboard");
-  await expectRedirect(page, "/admin/leave-requests", "/leave-management");
-  await expectRedirect(page, "/admin/leave-balances", "/leave-management");
+  await expectRedirect(page, "/admin/leave-requests", "/dashboard");
+  await expectRedirect(page, "/admin/leave-balances", "/dashboard");
 });

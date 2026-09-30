@@ -191,8 +191,10 @@ test.describe("Skills pages", () => {
     await expect(page.getByRole("heading", { name: /Team Skills/i })).toBeVisible({
       timeout: 15_000,
     });
+    // Seniority / Strongest Domain only render once skills have ratings; Verification Progress
+    // is always present, so any of the three proves the KPI row rendered.
     await expect(
-      page.getByText(/Team Seniority/i).or(page.getByText(/Strongest Domain/i))
+      page.getByText(/Verification Progress|Team Seniority Index|Strongest Domain/i).first()
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -204,7 +206,8 @@ test.describe("Skills pages", () => {
     await expect(page.getByRole("heading", { name: /Skills Catalog/i })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText("Categories")).toBeVisible();
+    // "Categories" also appears in filters and headings; any visible match proves the pane.
+    await expect(page.getByText("Categories", { exact: true }).first()).toBeVisible();
   });
 
   test("skill history page filter bar renders for TL", async ({ page }) => {
