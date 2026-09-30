@@ -149,10 +149,16 @@ server) using `npm run test:e2e:pwa`. This covers manifest, service
 worker registration, offline app-shell reload, SPA deep-link fallback,
 and push/click handler safety.
 
+Role-by-role browser/API verification (every role, every plugin route, leave,
+overtime, payroll PDFs, theme checks) lives in `frontend/e2e/role-workflows.spec.ts`.
+It must run against an isolated database with the 3.14 interpreter and a
+pre-prepared plugin registry; the exact steps and the known pre-existing failures
+are in `docs/superpowers/UPGRADE-JOURNAL.md` ("Role-workflow simulation").
+
 ## Tech Stack
 
 ### Backend
-- Django 5.2.4
+- Django 6.1 (Python 3.12+)
 - Django REST Framework (DRF)
 - JWT Authentication (SimpleJWT) with startup validation
 - PostgreSQL (Production) / SQLite (Dev)
@@ -160,8 +166,9 @@ and push/click handler safety.
 
 ### Frontend
 - React 19 (Dark-first design)
-- TypeScript (Strict mode)
-- Tailwind CSS with semantic tokens
+- TypeScript 7 (Strict mode)
+- Tailwind CSS 4 with semantic tokens
+- TanStack Table v9 (one shared feature set and `AppColumnDef` types, `components/ui/tableTypes.ts`)
 - shadcn/ui + Lucide icons
 - TanStack Query (v5)
 - React Router v7
@@ -247,6 +254,13 @@ curl -f http://localhost:8080/api/health/ready/   # frontend -> backend
 Redeploying after a code change is the same command — `up -d --build` only
 rebuilds and restarts what changed, and migrations run again automatically
 (a no-op if there's nothing new to apply).
+
+**First deploy: plugins.** On boot the entrypoint registers every discovered
+plugin (`manage.py sync_plugins`: idempotent, never enables anything). Plugins
+start **disabled**: enable the ones you want in Admin → Plugins, then **restart
+the backend** (`docker compose restart backend`), because plugin URLs are computed
+once at process start. Enabling without a restart leaves the plugin's API routes
+returning 404.
 
 Without `--profile tunnel` (e.g. while `cloudflared` isn't configured yet),
 drop that flag — everything else still comes up:
