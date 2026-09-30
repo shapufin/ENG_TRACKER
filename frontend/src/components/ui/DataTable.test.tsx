@@ -219,4 +219,78 @@ describe("DataTable", () => {
     expect(headerRow?.className).toContain("backdrop-blur-sm");
     expect(headerRow?.className).not.toContain("bg-muted/40");
   });
+  describe("table features (react-table 9 parity)", () => {
+    const people: Item[] = [
+      { id: 1, name: "Carol", email: "carol@test.com" },
+      { id: 2, name: "Alice", email: "alice@test.com" },
+      { id: 3, name: "Bob", email: "bob@test.com" },
+    ];
+    const bodyNames = (container: HTMLElement) =>
+      Array.from(container.querySelectorAll("tbody tr td:first-child")).map((td) => td.textContent);
+
+    it("sorts ascending then descending when a sortable header is clicked", () => {
+      const { container } = render(<DataTable columns={columns} data={people} />);
+      expect(bodyNames(container)).toEqual(["Carol", "Alice", "Bob"]);
+
+      fireEvent.click(screen.getByRole("button", { name: "Sort by name" }));
+      expect(bodyNames(container)).toEqual(["Alice", "Bob", "Carol"]);
+
+      fireEvent.click(screen.getByRole("button", { name: "Sort by name" }));
+      expect(bodyNames(container)).toEqual(["Carol", "Bob", "Alice"]);
+    });
+
+    it("filters rows with the global search and reports the result count", () => {
+      const { container } = render(
+        <DataTable columns={columns} data={people} searchColumn="name" searchPlaceholder="Search..." />
+      );
+      fireEvent.change(screen.getByLabelText("Search..."), { target: { value: "bo" } });
+      expect(bodyNames(container)).toEqual(["Bob"]);
+      expect(screen.getByText("1 result")).toBeInTheDocument();
+    });
+
+    it("paginates and navigates between pages", () => {
+      const many: Item[] = Array.from({ length: 5 }, (_, i) => ({
+        id: i + 1,
+        name: `Person ${i + 1}`,
+        email: `p${i + 1}@test.com`,
+      }));
+      const { container } = render(<DataTable columns={columns} data={many} pageSize={2} />);
+      expect(bodyNames(container)).toEqual(["Person 1", "Person 2"]);
+      expect(screen.getByText(/Page 1 of 3/)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+      expect(bodyNames(container)).toEqual(["Person 3", "Person 4"]);
+
+      fireEvent.click(screen.getByRole("button", { name: "Last page" }));
+      expect(bodyNames(container)).toEqual(["Person 5"]);
+      expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+    });
+
+    it("select-all checks every row on the current page", () => {
+      function AllSelection() {
+        const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+        return (
+          <DataTable
+            columns={columns}
+            data={people}
+            getRowId={(row) => row.id.toString()}
+            enableRowSelection
+            rowSelection={rowSelection}
+            onRowSelectionChange={setRowSelection}
+          />
+        );
+      }
+      render(<AllSelection />);
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select all rows on this page" }));
+      for (const box of screen.getAllByRole("checkbox", { name: "Select row" })) {
+        expect(box).toBeChecked();
+      }
+    });
+
+    it("applies a column def size as the header width", () => {
+      const sized: AppColumnDef<Item>[] = [{ accessorKey: "name", header: "Name", size: 240 }];
+      const { container } = render(<DataTable columns={sized} data={people} />);
+      expect(container.querySelector("thead th")).toHaveStyle({ width: "240px" });
+    });
+  });
 });

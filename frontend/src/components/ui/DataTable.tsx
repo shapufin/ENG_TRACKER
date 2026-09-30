@@ -115,6 +115,9 @@ export const DataTable = function DataTable<TData extends RowData>({
           defaultVisibility[columnId] = true;
         }
       });
+      // Pre-existing seed-once effect. Only surfaced now: react-table 9's useTable is
+      // React Compiler compatible, so this component is no longer skipped by the lint.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInternalColumnVisibility(defaultVisibility);
     }
   }, [columns, columnVisibility]);
@@ -167,7 +170,6 @@ export const DataTable = function DataTable<TData extends RowData>({
     [searchColumn]
   );
 
-  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useTable({
     features: appFeatures,
     data,
