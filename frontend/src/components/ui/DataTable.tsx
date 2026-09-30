@@ -104,23 +104,6 @@ export const DataTable = function DataTable<TData extends RowData>({
 
   const columnVisibility = externalColumnVisibility ?? internalColumnVisibility;
 
-  // Initialize visibility state with all columns visible if empty
-  React.useEffect(() => {
-    if (Object.keys(columnVisibility).length === 0 && columns.length > 0) {
-      const defaultVisibility: Record<string, boolean> = {};
-      columns.forEach((col) => {
-        const typedCol = col as { id?: string; accessorKey?: string };
-        const columnId = typedCol.id || typedCol.accessorKey;
-        if (columnId && columnId !== "select") {
-          defaultVisibility[columnId] = true;
-        }
-      });
-      // Pre-existing seed-once effect. Only surfaced now: react-table 9's useTable is
-      // React Compiler compatible, so this component is no longer skipped by the lint.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setInternalColumnVisibility(defaultVisibility);
-    }
-  }, [columns, columnVisibility]);
   const handleColumnVisibilityChange = React.useCallback(
     (updaterOrValue: Updater<ColumnVisibilityState>) => {
       const newVisibility =

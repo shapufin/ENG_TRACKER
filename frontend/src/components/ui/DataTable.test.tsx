@@ -219,6 +219,35 @@ describe("DataTable", () => {
     expect(headerRow?.className).toContain("backdrop-blur-sm");
     expect(headerRow?.className).not.toContain("bg-muted/40");
   });
+  it("shows every column and reports all as visible by default when uncontrolled", () => {
+    const { container } = render(
+      <DataTable
+        columns={columns}
+        data={[{ id: 1, name: "Alice", email: "alice@test.com" }]}
+        getRowId={(row) => row.id.toString()}
+        enableColumnVisibility
+      />
+    );
+    expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+    expect(container.querySelectorAll("thead th")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: /Columns \(2\/2\)/ })).toBeInTheDocument();
+  });
+
+  it("hides a column via the column menu when uncontrolled and no storageKey", () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={[{ id: 1, name: "Alice", email: "alice@test.com" }]}
+        getRowId={(row) => row.id.toString()}
+        enableColumnVisibility
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Columns \(2\/2\)/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Email" }));
+    expect(screen.queryByText("alice@test.com")).not.toBeInTheDocument();
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+  });
+
   describe("table features (react-table 9 parity)", () => {
     const people: Item[] = [
       { id: 1, name: "Carol", email: "carol@test.com" },

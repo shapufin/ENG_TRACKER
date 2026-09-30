@@ -890,3 +890,20 @@ process startup.
   still have no `__init__.py` — `apps/core`, `apps/core/management/commands`,
   `apps/plugins/services`, `core/middleware`, `core/plugins` — but none contains
   tests, so they are not a CI blind spot (they work as namespace packages).
+
+## Follow-up: DataTable seed effect removed — 2026-09-30 — RESOLVED
+
+Closes the Phase 6 residual about the `react-hooks/set-state-in-effect`
+suppression in `DataTable.tsx`. The effect seeded uncontrolled column visibility
+with `{ <every column id>: true }` when it was empty. It was **redundant**, not
+just lint-unfriendly: react-table treats a missing id as visible and
+`ColumnVisibilityMenu` reads `visibility[id] ?? true`, so `{}` and all-`true`
+render identically. Removed the effect and its `eslint-disable`; nothing was
+restructured because nothing needed replacing.
+
+Done characterization-first: two tests (default uncontrolled table shows every
+column and the menu reads "Columns (2/2)"; hiding a column via the menu works
+uncontrolled with no `storageKey`) passed *before* the removal and after it.
+Verified: `tsc -b` clean, eslint back at the 4-problem baseline (same 4, none
+new), full suite 2482 passed / 1 failed / 2483 (known
+`PersonalDashboardProgressCard` failure). Frontend baseline is now **2483 total**.
