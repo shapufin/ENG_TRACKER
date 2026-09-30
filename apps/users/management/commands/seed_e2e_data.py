@@ -12,6 +12,8 @@ Usage:
 
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
+from datetime import date
+
 from django.utils import timezone
 
 from apps.dashboard.models.calendar import CalendarWorkspace
@@ -63,9 +65,40 @@ E2E_USERS = [
         "is_italian_tl_role": True,
         "is_hr_user": True,
     },
+    # Added for the role-workflow suite (kept after the originals so the
+    # existing specs' fixtures are unchanged):
+    {
+        "username": "e2e_super",
+        "email": "e2e_super@example.com",
+        "first_name": "E2E",
+        "last_name": "Superuser",
+        "is_staff": True,
+        "is_superuser": True,
+    },
+    {
+        "username": "e2e_cr",
+        "email": "e2e_cr@example.com",
+        "first_name": "E2E",
+        "last_name": "ControlRoom",
+        "extra_roles": ["cr_admin"],
+    },
+    {
+        "username": "e2e_tl_b",
+        "email": "e2e_tl_b@example.com",
+        "first_name": "E2E",
+        "last_name": "TeamLeaderB",
+        "is_albanian_tl_role": True,
+    },
+    {
+        "username": "e2e_employee_c",
+        "email": "e2e_c@example.com",
+        "first_name": "E2E",
+        "last_name": "EmployeeC",
+    },
 ]
 
 E2E_TEAM = {"name": "E2E Test Team", "code": "E2E_TEAM"}
+E2E_TEAM_B = {"name": "E2E Test Team B", "code": "E2E_TEAM_B"}
 E2E_CLIENT = {"name": "E2E Test Client", "code": "E2E", "is_active": True}
 E2E_CALENDAR = {"name": "E2E Team Calendar", "code": "E2E_CAL"}
 
@@ -91,6 +124,7 @@ class Command(BaseCommand):
             user.last_name = cfg["last_name"]
             user.is_active = True
             user.is_staff = cfg.get("is_staff", False)
+            user.is_superuser = cfg.get("is_superuser", False)
             user.set_password(E2E_PASSWORD)
             user.save()
 
@@ -104,7 +138,9 @@ class Command(BaseCommand):
                 "is_albanian_tl_role",
             ])
             assign_role(user, "employee")
-            if cfg.get("is_staff"):
+            for extra_role in cfg.get("extra_roles", []):
+                assign_role(user, extra_role)
+            if cfg.get("is_staff") and not cfg.get("is_superuser"):
                 assign_role(user, "admin")
             if cfg.get("is_hr_user"):
                 assign_role(user, "hr")
@@ -138,6 +174,24 @@ class Command(BaseCommand):
             profile.italian_tl = users["e2e_tl"]
             profile.save(update_fields=["italian_tl"])
 
+        # Second, independent team (Albanian TL) so scoping tests can prove one
+        # TL never sees the other team's people.
+        team_b, _ = Team.objects.get_or_create(
+            code=E2E_TEAM_B["code"], defaults={"name": E2E_TEAM_B["name"]}
+        )
+        team_b.name = E2E_TEAM_B["name"]
+        team_b.team_leader = users["e2e_tl_b"]
+        team_b.save(update_fields=["name", "team_leader"])
+        for username in ("e2e_employee_c", "e2e_tl_b"):
+            TeamMembership.objects.get_or_create(
+                user_profile=users[username].profile,
+                team=team_b,
+                defaults={"is_primary_team": username != "e2e_tl_b"},
+            )
+        employee_c = users["e2e_employee_c"].profile
+        employee_c.albanian_tl = users["e2e_tl_b"]
+        employee_c.save(update_fields=["albanian_tl"])
+
         client, client_created = Client.objects.get_or_create(
             code=E2E_CLIENT["code"],
             defaults={
@@ -159,14 +213,26 @@ class Command(BaseCommand):
         calendar.team = team
         calendar.save(update_fields=["name", "team"])
 
+        # Long-tenured staff: vacation accrues 1.8 days/month from the hire date
+        # (capped at 12 months), and an unset hire date would default to "today" on
+        # the first leave request, leaving only ~2 requestable days.
+        hire_date = date(timezone.localdate().year - 2, 1, 1)
         for user in users.values():
-            user.profile.clients.add(client)
+            profile = user.profile
+            profile.clients.add(client)
+            profile.hire_date = hire_date
+            profile.save(update_fields=["hire_date"])
             LeaveBalance.objects.update_or_create(
                 user=user,
                 leave_type="vacation",
                 year=timezone.localdate().year,
                 is_carry_over=False,
-                defaults={"total_days": 22, "used_days": 0, "pending_days": 0},
+                defaults={
+                    "total_days": 22,
+                    "used_days": 0,
+                    "pending_days": 0,
+                    "accrual_start_date": hire_date,
+                },
             )
 
         self.stdout.write(

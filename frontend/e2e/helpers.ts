@@ -8,7 +8,7 @@
  * already unit-tested in Vitest; the E2E suite validates the integration
  * (login → queue → flush → backend persistence).
  */
-import { type Page, type Request } from "@playwright/test";
+import { request, type Page, type Request } from "@playwright/test";
 
 export const E2E_CREDENTIALS = {
   employeeA: { username: "e2e_employee_a", password: "e2e_pass_2026" },
@@ -21,6 +21,29 @@ export const E2E_CREDENTIALS = {
 
 export const E2E_CLIENT_CODE = "E2E";
 export type E2ERole = keyof typeof E2E_CREDENTIALS;
+
+const API_ORIGIN = "http://127.0.0.1:8000";
+
+/**
+ * Log in through the API in an isolated request context and return a bearer
+ * token. The app keeps its own access token in memory (never in localStorage),
+ * so specs that call the API directly from `page.evaluate` need their own.
+ */
+export async function fetchApiToken(creds: {
+  username: string;
+  password: string;
+}): Promise<string> {
+  const context = await request.newContext({ baseURL: API_ORIGIN });
+  try {
+    const response = await context.post("/api/auth/token/", { data: creds });
+    if (!response.ok()) {
+      throw new Error(`API login failed for ${creds.username}: ${response.status()}`);
+    }
+    return (await response.json()).access as string;
+  } finally {
+    await context.dispose();
+  }
+}
 
 /**
  * Log in via the UI login page and wait for redirect away from /login.
@@ -43,6 +66,10 @@ export async function loginAsUser(
     const raw = localStorage.getItem("user");
     return raw !== null && JSON.parse(raw).id != null;
   });
+  // Test-only: several specs call the API from page.evaluate and read the
+  // token from this key; the app itself never uses it (see fetchApiToken).
+  const apiToken = await fetchApiToken(creds);
+  await page.evaluate((token) => localStorage.setItem("access_token", token), apiToken);
   return page.evaluate(() => JSON.parse(localStorage.getItem("user")!));
 }
 

@@ -34,6 +34,10 @@ logs/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+db.e2e.sqlite3
+db.e2e.sqlite3-journal
+db.e2e.sqlite3
+db.e2e.sqlite3-journal
 media/
 staticfiles/
 
@@ -132,5 +136,6 @@ time_tracker_export.json
 tmp-probe/
 frontend/tmp-btn-verify.mjs
 frontend/test-results/
+frontend/e2e-observed/
 /migration/
 stitch_team_tracker_dashboard_layout/
