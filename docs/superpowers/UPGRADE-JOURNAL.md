@@ -540,3 +540,100 @@ Other residual items carried forward unchanged from Phases 1-3
 `psycopg2-binary` pin, native `@theme` CSS migration, `textarea.tsx`
 modal-audit finding, the 8 `tw-animate-css` components' pending live
 click-test).
+
+## Phase 5: Frontend test toolchain + framer-motion — 2026-09-28
+
+Spec: `docs/superpowers/specs/2026-09-28-test-toolchain-upgrade-design.md`
+Plan: `docs/superpowers/plans/2026-09-28-test-toolchain-upgrade.md`
+
+Planned five packages, shipped four:
+
+| Package | From | To |
+| --- | --- | --- |
+| `vitest` | 4.1.5 | 5.0.2 |
+| `@vitest/coverage-v8` | 4.1.9 | 5.0.2 |
+| `@testing-library/jest-dom` | 6.9.1 | 7.0.1 |
+| `framer-motion` | 12.38.0 | 13.4.5 |
+| `jsdom` | 29.1.1 | **deferred, stays 29.1.1** |
+
+**jsdom 30 is blocked by a bug in vitest 5, not by anything in this repo.**
+vitest patches jsdom's `URL` to provide `createObjectURL`, and to do that it
+sniffs jsdom's private Blob impl symbol via
+`Object.getOwnPropertySymbols(Object.getOwnPropertyDescriptors(new window.Blob()))[0]`,
+then reads `impl._bytes ?? impl._buffer`. Measured directly: a jsdom 29.1.1
+Blob exposes `[ Symbol(impl) ]` with `_bytes`; a jsdom 30.1.1 Blob exposes
+**no own symbols at all**, so the sniff yields `undefined` and every
+`URL.createObjectURL` call throws
+`TypeError: Cannot read properties of undefined (reading '_bytes')`. That was
+9 test failures across `exportUtils`, `calendar-export` and
+`ImportCredentialsDialog`, all of which vanished on reverting jsdom alone.
+vitest 5.0.2 is the newest published release, so there is no fixed version to
+move to; revisit when vitest ships one. No loss — jsdom 30's only
+maintainer-declared breaking change was a Node engine floor bump.
+
+**This was invisible to dependency research.** Every package checked out fine
+in isolation and `vitest` declares `jsdom: "*"`, so no peer range catches it.
+Lesson for future phases: a green `npm install` says nothing about runtime
+compatibility between a test runner and its environment package — only
+running the suite does.
+
+**Real code fallout: exactly one file.** `src/utils/exportUtils.test.tsx`
+assigned `globalThis.document = {...}` and `globalThis.URL = {...}` wholesale.
+Vitest 5 changed DOM-environment global assignment so it now propagates to the
+underlying jsdom window, where `document` is a getter-only property —
+`TypeError: Cannot set property document of [object Window] which has only a
+getter`. Fixed by switching to `vi.spyOn(document, "createElement")` /
+`vi.spyOn(URL, ...)` with an `afterEach` restore, which is already the
+convention in `src/lib/calendar-export.test.ts` — no new pattern invented.
+
+**Pre-flight greps paid off; record them so nobody redoes them.** Every
+mechanically-detectable vitest 5 breaking change was searched across all 424
+test files *before* the bump, and all scored zero: `vi.mock`/`vi.unmock`/
+`vi.hoisted` inside a block (now throws at collection), unawaited
+`.resolves`/`.rejects` (now fails rather than warns — all 5 usages were
+correctly awaited), `.toThrow('')`, `test.sequential`/`describe.sequential`,
+the removed `vitest/*` entrypoints, `VITEST_WORKER_ID`/`VITEST_POOL_ID`, and
+`@emotion/is-prop-valid`. `clearMocks` flipping to `true` by default touched
+nothing despite 1,259 mock usages across 163 files, because `mockClear()`
+resets call history only, not implementations.
+
+**framer-motion 12 → 13 required no changes at all.** Its sole documented
+breaking change is the removal of the optional `@emotion/is-prop-valid`
+dependency; zero references in this codebase. Also worth recording because the
+series spec implied otherwise: `framer-motion` is **not** a deprecated shim for
+`motion` — the dependency runs the other way (`motion@13.4.5` depends on
+`framer-motion@^13.4.5`). No migration to `motion` is needed, now or later.
+
+**Config discovery, deliberately left alone.** The frontend has two vitest
+configs that disagree: `vitest.config.ts` (setup `./src/test/setup.ts`, bare
+`@testing-library/jest-dom` import, has a `coverage` block) and the `test`
+block in `vite.config.ts` (setup `./src/setupTests.ts`, the
+`@testing-library/jest-dom/vitest` import, no coverage block). CI runs
+`npm test`, which is `vitest --config vite.config.ts`, so **CI uses
+`vite.config.ts` and its `--coverage` flag therefore runs on vitest defaults,
+ignoring the coverage block that only exists in the other file**. Both were run
+to completion and agree (2475/1/2476), so there is no split-brain today, but
+every verification in this phase was run against **both** configs precisely
+because they load jest-dom two different ways. Consolidating them is a genuine
+cleanup and a good candidate for its own change — it was kept out of this phase
+so it could not confound the upgrade signal.
+
+Verification (all from a deleted `node_modules` + `npm ci`, per the Phase 4
+lesson): installed versions confirmed from `node_modules/<pkg>/package.json`
+rather than the manifest — vitest and `@vitest/coverage-v8` both exactly
+5.0.2, jest-dom 7.0.1, framer-motion 13.4.5, jsdom 29.1.1, and the Phase 4
+alias intact (`typescript` 6.0.2 shim + `@typescript/native` 7.0.2).
+`npx vitest run` → 2475 passed / 1 failed / 2476;
+`npx vitest run --config vite.config.ts` → same. `npx eslint .` → 4 problems
+(2 errors, 2 warnings), exact baseline. `npx tsc -b --noEmit` → exit 0.
+`npm run build` → exit 0 with the Phase 4 tsc guard passing first. Coverage
+smoke-tested under the CI config — `@vitest/coverage-v8` 5 reports normally.
+
+The known-flaky second slot reappeared once (`AnimatedNumber`, a framer-motion
+component — so not assumed to be flake): it passed 3/3 in isolation and the
+full suite landed clean on an idle re-run. The documented rule held again —
+never interpret a vitest result that disagrees with baseline until it has been
+re-run idle in the foreground.
+
+**Residual item added:** raise `jsdom` to 30.x once vitest fixes its Blob impl
+sniffing. Other residual items carried forward unchanged from Phases 1-4.
