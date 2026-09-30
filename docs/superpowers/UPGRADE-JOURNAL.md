@@ -835,3 +835,34 @@ origin, `CORS_ALLOW_CREDENTIALS` must be revisited** (the refresh cookie would
 then need credentials).
 
 **Backend baseline is now fully green: 1841 tests, 0 failures.**
+
+## Follow-up: vitest config consolidation — 2026-09-30 — RESOLVED
+
+Closes the Phase 5 "config discovery" residual. The frontend had two vitest
+configs that disagreed; CI (`npm test` = `vitest --config vite.config.ts`) used
+one while a bare `npx vitest` silently used the other (vitest prefers
+`vitest.config.ts`). Now there is **one**: the `test` block in `vite.config.ts`.
+
+- Moved the `coverage` block (v8; reporters `text`, `json`, `lcov`;
+  `reportsDirectory ./coverage`; excludes) into `vite.config.ts` and added
+  `node_modules/**` + `dist/**` to `exclude`. Before this, CI's `--coverage` ran
+  on vitest defaults and the real coverage settings were dead code. Kept the
+  `json` reporter deliberately: the CI fallow step reads
+  `coverage/coverage-final.json`.
+- Deleted `frontend/vitest.config.ts` and `frontend/src/test/setup.ts` (its bare
+  `@testing-library/jest-dom` import is superseded by
+  `src/setupTests.ts`'s `@testing-library/jest-dom/vitest`, which is what CI
+  always used). `src/test/hookTestUtils.tsx` stays. Nothing else referenced
+  either deleted file.
+- Verified with the exact CI command: full `npm test -- --run --coverage` gives
+  2480 passed / 1 failed / 2481 (the known `PersonalDashboardProgressCard`
+  failure); on a passing subset `coverage-final.json` and `lcov.info` are
+  produced, 30 source files, zero test/setup files included. A bare
+  `npx vitest run` now resolves to `vite.config.ts`.
+- **CI gotcha to know about:** vitest does not write the coverage report when
+  any test fails (`coverage.reportOnFailure` defaults to false), so with a red
+  test there is no `coverage-final.json` and the fallow step that follows has
+  nothing to read. Locally the known `PersonalDashboardProgressCard` failure
+  triggers exactly this. Not changed here (setting `reportOnFailure` is a policy
+  choice); the earlier "verify both configs" instruction in this journal no
+  longer applies.
