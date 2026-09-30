@@ -442,10 +442,10 @@ def generate_draft_run(run: PayrollRun, users) -> list[PayrollLine]:
     return lines
 
 
-def _update_run_totals(run: PayrollRun):
-    """Aggregate line totals into the run's totals JSON field."""
+def aggregate_line_totals(lines) -> dict:
+    """Totals JSON for a queryset of payroll lines (a whole run, or a scoped subset)."""
     from django.db.models import Sum
-    agg = run.lines.aggregate(
+    agg = lines.aggregate(
         total_gross=Sum('total_gross'),
         total_deductions=Sum('total_employee_deductions'),
         total_net=Sum('net_pay'),
@@ -453,15 +453,20 @@ def _update_run_totals(run: PayrollRun):
         total_overtime=Sum('overtime_amount'),
         total_standby=Sum('standby_amount'),
     )
-    run.totals = {
+    return {
         'total_gross': str(agg['total_gross'] or Decimal('0')),
         'total_deductions': str(agg['total_deductions'] or Decimal('0')),
         'total_net': str(agg['total_net'] or Decimal('0')),
         'total_employer_cost': str(agg['total_employer_cost'] or Decimal('0')),
         'total_overtime': str(agg['total_overtime'] or Decimal('0')),
         'total_standby': str(agg['total_standby'] or Decimal('0')),
-        'line_count': run.lines.count(),
+        'line_count': lines.count(),
     }
+
+
+def _update_run_totals(run: PayrollRun):
+    """Aggregate line totals into the run's totals JSON field."""
+    run.totals = aggregate_line_totals(run.lines.all())
 
 
 def get_period_closure_status(run: PayrollRun) -> dict:

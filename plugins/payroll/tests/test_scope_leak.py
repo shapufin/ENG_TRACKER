@@ -132,3 +132,55 @@ class PayrollRunLineScopeLeakTests(TestCase):
         resp = PayrollRunViewSet.as_view({'get': 'export_excel'})(request, pk=self.payroll_run.id)
 
         self.assertEqual(resp.status_code, 200)
+
+    # -- run-level aggregates: the run row itself is company-wide too --------
+
+    def _run_detail(self, user):
+        request = self.factory.get(f'/api/plugins/payroll/runs/{self.payroll_run.id}/')
+        force_authenticate(request, user=user)
+        resp = PayrollRunViewSet.as_view({'get': 'retrieve'})(request, pk=self.payroll_run.id)
+        resp.render()
+        return resp
+
+    def test_scoped_tl_run_detail_reports_only_their_own_lines(self):
+        resp = self._run_detail(self.tl_user)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['line_count'], 1)
+        own_line = self.payroll_run.lines.get(user=self.subordinate)
+        self.assertEqual(resp.data['totals']['line_count'], 1)
+        self.assertEqual(Decimal(resp.data['totals']['total_gross']), own_line.total_gross)
+        self.assertEqual(Decimal(resp.data['totals']['total_net']), own_line.net_pay)
+
+    def test_scoped_tl_run_list_does_not_leak_company_totals(self):
+        request = self.factory.get('/api/plugins/payroll/runs/')
+        force_authenticate(request, user=self.tl_user)
+        resp = PayrollRunViewSet.as_view({'get': 'list'})(request)
+        resp.render()
+        rows = resp.data['results'] if isinstance(resp.data, dict) else resp.data
+        self.assertEqual([row['line_count'] for row in rows], [1])
+
+    def test_admin_run_detail_still_reports_company_totals(self):
+        resp = self._run_detail(self.admin)
+        self.assertEqual(resp.data['line_count'], 2)
+        self.assertEqual(resp.data['totals']['line_count'], 2)
+
+    def test_scoped_tl_cannot_read_period_closure_status(self):
+        request = self.factory.get(
+            f'/api/plugins/payroll/runs/{self.payroll_run.id}/period-closure-status/'
+        )
+        force_authenticate(request, user=self.tl_user)
+        resp = PayrollRunViewSet.as_view({'get': 'period_closure_status'})(
+            request, pk=self.payroll_run.id
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_admin_period_closure_status_still_works(self):
+        request = self.factory.get(
+            f'/api/plugins/payroll/runs/{self.payroll_run.id}/period-closure-status/'
+        )
+        force_authenticate(request, user=self.admin)
+        resp = PayrollRunViewSet.as_view({'get': 'period_closure_status'})(
+            request, pk=self.payroll_run.id
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['total_users'], 2)

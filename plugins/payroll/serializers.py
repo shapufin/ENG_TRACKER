@@ -412,8 +412,23 @@ class PayrollRunSerializer(serializers.ModelSerializer):
                             'finalized_at', 'rule_set', 'configuration_snapshot',
                             'totals', 'status']
 
+    def _visible_lines(self, obj):
+        # A run is company-wide; a scoped viewer (plain TL) only sees their own
+        # team's lines, so counts/totals must not reveal anyone else's.
+        scoped_user_ids = self.context.get('scoped_user_ids')
+        if scoped_user_ids is None:
+            return obj.lines.all()
+        return obj.lines.filter(user_id__in=scoped_user_ids)
+
     def get_line_count(self, obj):
-        return obj.lines.count()
+        return self._visible_lines(obj).count()
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if self.context.get('scoped_user_ids') is not None:
+            from .services.payroll_service import aggregate_line_totals
+            data['totals'] = aggregate_line_totals(self._visible_lines(instance))
+        return data
 
 
 class PayrollRunCreateSerializer(serializers.Serializer):
