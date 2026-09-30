@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TicketKPITeamManagementPage } from "./TicketKPITeamManagementPage";
@@ -105,7 +105,9 @@ describe("TicketKPITeamManagementPage — bulk review", () => {
 
     expect(ticketKPIService.bulkReviewBatches).toHaveBeenCalledWith([1, 2]);
     expect(toast.success).toHaveBeenCalledWith("Reviewed 2 upload(s).");
-    expect(screen.queryByText("Review Selected")).not.toBeInTheDocument();
+    // Selection is cleared from the mutation's onSuccess, which react-query delivers on its
+    // own scheduler tick — not necessarily inside the act() above under load.
+    await waitFor(() => expect(screen.queryByText("Review Selected")).not.toBeInTheDocument());
   });
 
   it("warns with the skip reason when a batch could not be reviewed", async () => {
