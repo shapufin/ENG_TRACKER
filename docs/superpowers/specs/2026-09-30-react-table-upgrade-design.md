@@ -43,8 +43,8 @@ state and would need a second migration later).
    paginatedRowModel, filterFns, sortFns })` — include **only** features
    `DataTable` actually uses (YAGNI). Defined at module scope so the
    reference is stable.
-2. **One shared type alias set** (in `tableColumnHelpers.tsx`, which every
-   column file already imports from or sits beside):
+2. **One shared type alias set** (in `tableTypes.ts` — a dedicated file, since exporting non-components from `DataTable.tsx` trips react-refresh lint; the App* aliases live there;
+   column files import them from there):
    `AppColumnDef<TData, TValue = unknown> = ColumnDef<typeof appFeatures, TData, TValue>`
    plus `AppRow`, `AppColumn`, `AppTable`, `AppCell`, `AppCellContext` only as
    consumers need them. Consumers' change is then a mechanical rename, not
