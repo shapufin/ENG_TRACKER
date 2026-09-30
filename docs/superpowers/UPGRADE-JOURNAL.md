@@ -812,8 +812,6 @@ now stale). Branch `fix/notifications-test-discovery`.
   create leave at `today+10`/`today+11`, and on days where that pair is
   Saturday+Sunday `LeaveRequest.clean()` raises "Leave must include at least one
   business day." Reproduced on unmodified `main` (2026-09-30, a Wednesday, so
-  10-11 days out is a weekend). Not fixed here; the fix is to pick the next
-  business day in the test. Until then the backend suite is red on those days
-  in CI. **Backend baseline today: 1841 tests, 1 known failure
-  (`config.test_deployment...test_cors_credentials_disabled_in_production`) plus
-  those 2 date-dependent errors.**
+  10-11 days out is a weekend). **Fixed afterwards** (`fix/tl-scorecard-date-flake`): a
+  `_future_business_days()` helper in the test picks a Mon-Thu start at least 10 days out. **Backend baseline: 1841 tests, 1 known failure
+  (`config.test_deployment...test_cors_credentials_disabled_in_production`).**

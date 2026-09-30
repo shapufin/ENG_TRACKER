@@ -42,6 +42,14 @@ def _assign_tl_role(user, code='italian_tl'):
     UserRole.objects.get_or_create(user=user, role=role, defaults={'is_active': True})
 
 
+def _future_business_days(min_days=10):
+    """Two consecutive business days at least ``min_days`` ahead."""
+    start = date.today() + timedelta(days=min_days)
+    while start.weekday() > 3:  # Mon-Thu, so start+1 is also a business day
+        start += timedelta(days=1)
+    return start, start + timedelta(days=1)
+
+
 class AbsenceServiceTests(TestCase):
     def setUp(self):
         self.leader = _make_user('leader_abs')
@@ -137,7 +145,7 @@ class EscalationCandidatesServiceTests(TestCase):
     def test_stale_pending_leave_surfaces_as_candidate(self):
         LeaveRequest.objects.create(
             user=self.member, request_type='vacation',
-            start_date=date.today() + timedelta(days=10), end_date=date.today() + timedelta(days=11),
+            start_date=_future_business_days()[0], end_date=_future_business_days()[1],
             status='pending',
         )
         LeaveRequest.objects.filter(user=self.member).update(
@@ -149,7 +157,7 @@ class EscalationCandidatesServiceTests(TestCase):
     def test_recently_submitted_leave_does_not_escalate(self):
         LeaveRequest.objects.create(
             user=self.member, request_type='vacation',
-            start_date=date.today() + timedelta(days=10), end_date=date.today() + timedelta(days=11),
+            start_date=_future_business_days()[0], end_date=_future_business_days()[1],
             status='pending',
         )
         candidates = escalation_candidates(self.leader)
