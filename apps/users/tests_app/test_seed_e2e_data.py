@@ -62,3 +62,21 @@ class SeedE2EDataTests(TestCase):
             self.assertGreaterEqual(
                 balance.get_effective_available_days(), 20, user.username
             )
+
+    def test_org_chart_has_depth_italian_tl_then_albanian_tl_then_employee(self):
+        # The live org chart is Italian TL -> Albanian TL -> employees; a fixture without that
+        # chain renders childless roots (nothing to expand/collapse).
+        from plugins.organigrama.services.tree_builder import build_full_tree
+
+        def usernames_under(node):
+            found = set()
+            for child in node.get("children", []):
+                found.add(child.get("username"))
+                found |= usernames_under(child)
+            return found
+
+        tree = build_full_tree()
+        roots = tree if isinstance(tree, list) else tree.get("roots", [])
+        leader = next(node for node in roots if node.get("username") == "e2e_tl")
+        albanian = next(child for child in leader["children"] if child.get("username") == "e2e_tl_b")
+        self.assertIn("e2e_employee_c", usernames_under(albanian))

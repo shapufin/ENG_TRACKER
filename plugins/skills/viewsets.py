@@ -12,7 +12,9 @@ Permission design (see plan Gap 4 / Contract C6):
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db import IntegrityError
 from django.db.models import Count, Q
+from rest_framework.exceptions import ValidationError
 
 from core.mixins.permissions import PluginPermissionMixin
 
@@ -71,6 +73,15 @@ def _parse_top_n(request):
 # CATALOG: SkillCategory + Skill (admin/HR write, all read)
 # ============================================================================
 
+def _save_or_400(serializer, what):
+    """Two simultaneous creates can both pass validation (``name`` is uppercased into ``code``
+    only at save time) and then collide on the unique constraint; that is a 400, not a 500."""
+    try:
+        return serializer.save()
+    except IntegrityError:
+        raise ValidationError({"name": f"A {what} with this name already exists."})
+
+
 class SkillCategoryViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     """Admin/HR CRUD for skill categories. All authenticated users can list."""
     queryset = SkillCategory.objects.all().order_by('name')
@@ -87,6 +98,9 @@ class SkillCategoryViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             if active_only == 'true':
                 qs = qs.filter(is_active=True)
         return qs
+
+    def perform_create(self, serializer):
+        _save_or_400(serializer, "category")
 
     def perform_destroy(self, instance):
         """Catch PROTECT violations and return a clean 400."""
@@ -126,6 +140,9 @@ class SkillViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             if active in ('true', 'false'):
                 qs = qs.filter(is_active=(active == 'true'))
         return qs
+
+    def perform_create(self, serializer):
+        _save_or_400(serializer, "skill")
 
     def perform_destroy(self, instance):
         """Reject deletion when active UserSkill ratings reference the skill.
