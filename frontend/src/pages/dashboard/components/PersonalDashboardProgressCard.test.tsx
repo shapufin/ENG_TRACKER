@@ -134,6 +134,9 @@ describe("PersonalDashboardProgressCard", () => {
     const { container } = renderCard({
       weekOvertimeLogs: [{ date: "2026-09-14", hours: 2 }],
       weekStandbyLogs: [{ date: "2026-09-15", hours: 1 }],
+      // Pin the week: without it the card uses today, and the fixed log dates
+      // above fall outside the current week once the calendar moves on.
+      weekReferenceDate: "2026-09-16",
     });
 
     expect(container.querySelector('[data-testid="weekly-hours-chart"]')).toBeInTheDocument();
