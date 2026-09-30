@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { exportData } from "./exportUtils";
 
 type MockLink = { href: string; download: string; click: ReturnType<typeof vi.fn> };
@@ -9,13 +9,13 @@ const asAnchor = (link: MockLink) => link as unknown as HTMLAnchorElement;
 describe("exportData utility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    globalThis.document = {
-      createElement: vi.fn(),
-    } as unknown as Document;
-    globalThis.URL = {
-      createObjectURL: vi.fn(),
-      revokeObjectURL: vi.fn(),
-    } as unknown as typeof URL;
+    vi.spyOn(document, "createElement");
+    vi.spyOn(URL, "createObjectURL");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("should export data as JSON", () => {
