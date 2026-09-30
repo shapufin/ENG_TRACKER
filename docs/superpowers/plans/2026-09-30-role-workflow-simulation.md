@@ -135,3 +135,14 @@ Password for all: see `E2E_PASSWORD` in the seed command.
 - Production infrastructure (nginx/TLS/Redis/Postgres), load testing, live-DB
   query profiling (still open in the audit plan).
 - Audit Phase 6 (permission-check centralization) — its own plan.
+
+
+## Status (2026-09-30)
+
+Executed. Results, the A/B attribution against the pre-upgrade commit, the fixture and
+environment fixes, and what is still unverified are in the last section of
+`docs/superpowers/UPGRADE-JOURNAL.md`. Implemented layers: L1 (access matrix, core and
+all plugin routes), L2 workflows for employee / TL (two teams) / HR / admin /
+superuser / control room (leave, overtime, payroll, backup), L3 isolation, L4
+probes (reportlab PDFs, Tailwind themes, react-table DataTable). Not automated:
+overtime/standby/leave through the real form UI, PDF layout review, push delivery.

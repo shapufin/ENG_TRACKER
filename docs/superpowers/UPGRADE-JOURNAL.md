@@ -1023,3 +1023,98 @@ eslint 4 problems (2 errors, 2 warnings, unchanged); `modal-audit` PASS;
 **1859 tests, 0 failures**; `check`, `makemigrations --check`, `ruff`, `bandit -ll`
 clean; `check --deploy --settings=config.settings_production` shows only the 6
 known drf-spectacular warnings.
+
+## Role-workflow simulation (live stack, browser + API) — 2026-09-30
+
+Plan: `docs/superpowers/plans/2026-09-30-role-workflow-simulation.md`. Purpose: prove
+after the whole series that every role can still do its work and cannot do anyone
+else's, on the real upgraded stack (Django 6.1 + Vite 8 + real Chromium), not just
+unit tests. Spec: `frontend/e2e/role-workflows.spec.ts`.
+
+**How to run (each item was a real trap):**
+- `python` here is 3.11 + Django 5; the upgraded stack needs `py -3.14`. Playwright's
+  `webServer`/`global-setup` call plain `python`, so put a `python.cmd` shim
+  (`@py -3.14 %*`) first on `PATH` (resolves under `cmd.exe`, how Node spawns it).
+- `DJANGO_SETTINGS_MODULE=config.settings_e2e` (new): separate `db.e2e.sqlite3`
+  (gitignored) and throttling off. Never seed `db.sqlite3` from e2e.
+- **The DB must be prepared before the servers start:** Playwright launches
+  `webServer` *before* `global-setup`, plugin URLs are computed once at process
+  startup, and plugins are disabled on a fresh DB, so on an empty DB every plugin
+  route 404s for the whole run. `python manage.py prepare_e2e_db` (new, idempotent,
+  tested) migrates, activates all 13 plugins and seeds. Do **not** use
+  `ensure_plugins` for this: it runs `makemigrations` and writes files into the repo.
+- `cd frontend && npx playwright test --project=chromium` (then `mobile-chromium`).
+  Do not edit e2e files while a run is in progress (it aborted one mobile run).
+- **CI does not run Playwright at all** (no job in `.github/workflows`).
+
+**Fixture** (`seed_e2e_data`, contract-tested): added `e2e_super` (superuser),
+`e2e_cr` (cr_admin), a second independent team (`e2e_tl_b` Albanian TL +
+`e2e_employee_c`), and **long-tenured hire dates** for all fixture users. Reason:
+vacation accrues 1.8 days/month from `hire_date` (cap 12 months) and an unset
+hire date defaults to *today* on the first leave request, leaving about 2 requestable
+days, which made leave workflows depend on the calendar. (`accrual_start_date`
+cannot be PATCHed through the balances API; it is derived.)
+
+**A/B attribution: the upgrades introduced no e2e regressions.** The same suite was
+run against the last pre-upgrade commit (`a5a55e9`: Django 5.2.17, react-table
+8.21.3, Tailwind 3.4.17, framer-motion 12, vitest 4) in an isolated worktree:
+baseline failures were 23 (old) vs 22 (new); **21 were identical** (pre-existing),
+the two "only old" and one "only new" failures were load-dependent (the "only new"
+calendar mobile-filters test passed 12/12 in isolation). The same A/B was used for
+the PWA specs (identical 2 failures on both stacks).
+
+**Pre-existing e2e breakage found and fixed:** specs read
+`localStorage.getItem("access_token")`, but the app keeps the access token in memory
+(module variable in `api.ts`; refresh via cookie), so all direct API calls got 401:
+the 7 per-role notification-preference tests, 2 organigrama builder tests and the
+offline-queue tests. Fixed in one place: `loginAsUser` now fetches an API token via an
+isolated request context (`fetchApiToken`) and stores it where the specs expect it.
+
+**New coverage (all green on desktop Chromium):**
+- **A, UI access matrix**, 7 roles x 13 core routes from the route guards, with
+  uncaught-page-error capture. Documented surprises: an admin's `/dashboard` redirects
+  to `/admin` (intentional, `DashboardPage`); `/team` is not redirect-guarded, so an
+  employee gets an in-place "Access Denied".
+- **B, leave lifecycle over the API on two teams:** weekend-only rejected; accrual
+  ceiling enforced; **exactly one notification per created request** (the
+  double-dispatch fix, now proven end to end); each TL sees only their own team
+  (`team_logs`); cross-team approve/reject denied; approval deducts exactly the
+  business days, once; HR *may* approve (documented in `HRReadOnlyMixin`) but cannot
+  create; employees have no team view (403).
+- **C, DataTable (react-table 9) on real pages:** search filter, sort toggle,
+  select-all on the admin users table; TL approvals page renders team-only.
+- **D, every plugin route x every role (35 routes x 7 roles):** zero uncaught page
+  errors or error boundaries; admin/superuser reach every `/admin/*` plugin page;
+  employee/TL/HR never stay on `/admin/*`; employee/TL never stay on `/hr/*`.
+- **E, overtime:** team-scoped visibility, owning-TL-only approval, and the monthly
+  lock matrix (see the corrected `CLAUDE.md` bullet: updates locked for non-staff even
+  when pending, pending deletes bypass, approved past-month deletes superuser-only).
+- **F, payroll on the live server:** wages, run, finalize, then **payslip PDF, run
+  PDF (reportlab 5) and Excel download as real files** (`%PDF-` / `PK` signatures);
+  HR payroll parity; employees and plain TLs blocked from whole-run exports; site
+  backup reachable only by a superuser.
+- **G, light/dark theme sanity (Tailwind 4):** class applies, backgrounds differ and
+  are not transparent, no horizontal overflow; screenshots saved to
+  `frontend/e2e-observed/screens/` and inspected by eye (admin users DataTable in both
+  themes renders fully styled with sort icons, checkboxes, columns menu).
+- Observed per-role plugin access tables are written to `frontend/e2e-observed/`
+  (gitignored; Playwright wipes `test-results/` every run).
+
+**Final e2e state:** desktop Chromium 109 passed / 8 failed, mobile 106 / 12 (whole
+suite under parallel load). Every remaining failure is pre-existing (fails
+identically on the pre-upgrade stack) or load-only: `offline-data` (reload while
+offline), `organigrama` sidebar-menuitem and mobile expand/collapse selectors, two
+`skills` selectors ("Categories" strict-mode ambiguity; KPI card copy), two PWA
+offline/deep-link tests, and `visual-guards:57`. Mobile-only extras
+(`visual-guards:33/44`, `organigrama:245`) pass in isolation; they redirect to
+`/login` under full-suite load, which suggests a refresh-token race under heavy
+parallel load that I could not reproduce alone. `visual-guards:44` asserts pure HR
+*stays* on `/admin/users`, which contradicts the documented 2026-09-26 HR isolation:
+it is a stale spec that only ever passed because `waitForURL` matched the landing
+URL before the client-side redirect.
+
+**Not verified / needs a human eye:** PDF layout and visual polish beyond the
+screenshots taken; overtime/standby/leave creation through the real form UI (the suite
+uses the API for mutations, as `e2e/helpers.ts` intends); email/push delivery; any flow
+behind real OnlyOffice; the two-browser-tab offline queue; the remaining pre-existing
+failing specs (stale selectors, worth a separate pass).
