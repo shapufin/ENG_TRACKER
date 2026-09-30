@@ -1,4 +1,4 @@
-import api from "@/lib/api";
+import api, { withRefreshLock } from "@/lib/api";
 import type { LoginCredentials, AuthResponse, User } from "@/types";
 import { clearOfflineUserData } from "@/lib/offline/offlineQueue";
 
@@ -10,7 +10,9 @@ export const authService = {
 
   async refreshToken(_legacyRefresh?: string): Promise<{ access: string }> {
     void _legacyRefresh;
-    const { data } = await api.post<{ access: string }>("/auth/token/refresh/", {});
+    const { data } = await withRefreshLock(() =>
+      api.post<{ access: string }>("/auth/token/refresh/", {})
+    );
     return data;
   },
 

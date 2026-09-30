@@ -60,3 +60,33 @@ Thumbs.db
 # Docs (not needed in image)
 *.md
 docs/
+
+# Secrets, databases and local data: a Docker COPY ignores .gitignore, so anything
+# present at build time would otherwise ship inside the image.
+*.pem
+.env
+.env.*
+!.env.example
+*.sqlite3
+*.sqlite3-journal
+*.xlsx
+*.patch
+time_tracker_export.json
+export_skills_plugin.py
+
+# Agent / design / scratch / worktree material
+.worktrees
+.devin
+.agents
+.claude
+.claudeignore
+tmp-probe
+design-audit
+design-fingerprints
+design-screenshots
+stitch_team_tracker_dashboard_layout
+Time Tracker UI Project
+docs
+
+# The frontend ships from its own image (context ./frontend)
+frontend

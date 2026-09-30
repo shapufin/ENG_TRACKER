@@ -54,6 +54,18 @@ function clearAuthAndRedirect() {
   }
 }
 
+/**
+ * Refresh tokens rotate and the old one is blacklisted, so two tabs that refresh at the same
+ * moment (a restored multi-tab session, two windows) race on the same cookie and the loser is
+ * logged out. The Web Locks API serialises refreshes across tabs: the second tab waits, then
+ * refreshes with the cookie the first tab just rotated. Browsers without it (and jsdom) fall
+ * back to an unlocked call.
+ */
+export function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+  return locks ? locks.request("engtracker-token-refresh", task) : task();
+}
+
 async function performTokenRefresh(): Promise<string> {
   if (refreshPromise) {
     return refreshPromise;
@@ -61,10 +73,8 @@ async function performTokenRefresh(): Promise<string> {
 
   refreshPromise = (async () => {
     try {
-      const { data } = await axios.post(
-        `${API_BASE_URL}/auth/token/refresh/`,
-        {},
-        { withCredentials: true }
+      const { data } = await withRefreshLock(() =>
+        axios.post(`${API_BASE_URL}/auth/token/refresh/`, {}, { withCredentials: true })
       );
       accessToken = data.access;
       return data.access;

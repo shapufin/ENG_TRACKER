@@ -4,6 +4,8 @@ import { authService } from "./authService";
 
 vi.mock("@/lib/api", () => ({
   default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn(), put: vi.fn() },
+  // Pass-through: the cross-tab refresh lock is covered by src/lib/refreshLock.test.ts.
+  withRefreshLock: <T>(task: () => Promise<T>) => task(),
 }));
 
 vi.mock("@/lib/offline/offlineQueue", () => ({ clearOfflineUserData: vi.fn() }));

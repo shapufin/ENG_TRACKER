@@ -1118,3 +1118,73 @@ screenshots taken; overtime/standby/leave creation through the real form UI (the
 uses the API for mutations, as `e2e/helpers.ts` intends); email/push delivery; any flow
 behind real OnlyOffice; the two-browser-tab offline queue; the remaining pre-existing
 failing specs (stale selectors, worth a separate pass).
+
+## Deploy-readiness round — 2026-09-30
+
+Goal: make the upgraded app safe to ship. Each item was found by inspecting the
+deploy artifacts rather than the code paths the tests already cover.
+
+**Runtimes match the upgraded stack (checked, no change needed):** backend image
+`python:3.12-slim` (Django 6 needs 3.12+), frontend builder `node:22-slim` and CI
+Node 22 (Vite 8 needs >= 22.12; `node:22` floats to the latest 22.x), CI Python 3.12.
+
+**Fixed, each with a failing test first:**
+- **Docker build context leaked local secrets/data.** The backend image does
+  `COPY . /app`, and Docker ignores `.gitignore`; `.dockerignore` only excluded
+  `db.sqlite3`. Anything present at build time would ship in the image: `*.pem`
+  keys (a `private_key.pem` exists locally), other SQLite files (including the
+  `db.e2e.sqlite3` the e2e suite creates, with known test credentials), `.env*`,
+  the skills `.xlsx` (employee data), the JSON export, `.worktrees`, agent/design
+  scratch folders, `docs`, and the whole `frontend/` (it builds from its own
+  context). Both ignore files updated; `frontend/.dockerignore` now also excludes
+  `e2e`, `test-results`, `e2e-observed`, `playwright-report`, `.env*`.
+  Contract tests in `config/test_deployment.py` (`DockerIgnoreContractTests`).
+  Not verified: an actual image build (no Docker in this environment).
+- **A dev page with a real person's tokens shipped in the production bundle.**
+  `frontend/public/_dev_login.html` (committed in the initial commit) wrote a named
+  user's access/refresh JWTs and full profile (name, email, roles) into
+  `localStorage`; everything in `public/` lands in `dist/` and is served by nginx.
+  Both JWTs had already expired (2026-08-28 / 2026-09-03), so no live credential was
+  exposed, but it was personal data in the repo and a stray public page; nothing
+  referenced it and the app no longer reads tokens from `localStorage`. Removed, with
+  guards (`FrontendPublicAssetsTests`): no `_dev*` files and no embedded JWTs under
+  `frontend/public`. The data remains in git history (expired tokens, email/name);
+  rewriting history was not attempted. A sweep of all tracked files found no other
+  private keys, JWTs, API-key patterns, `.env` or database files.
+- **Fresh deploys showed no plugins.** The entrypoint migrated and created the
+  superuser but never registered plugins, so they appeared only after an admin hit the
+  `discover` action, and enabling one needs a restart (plugin URLs are computed once
+  at process start). The entrypoint now runs `manage.py sync_plugins` after
+  `migrate` (idempotent, never enables anything); ordering is pinned by
+  `EntrypointContractTests`. README documents the enable-then-restart step and the
+  stale "Django 5.2.4"/Tailwind/TypeScript versions are corrected.
+- **Two tabs loading at once could log a user out.** `SIMPLE_JWT` rotates refresh
+  tokens and blacklists the old one, every page load refreshes once, and session
+  restore (`AuthContext` -> `authService.refreshToken`) bypassed even the in-page
+  de-duplication. Reproduced deterministically (two tabs reloading together: a tab
+  was logged out in round 1, every run). Fix: `withRefreshLock` (`src/lib/api.ts`)
+  serialises refreshes across tabs with the Web Locks API (falls back to an unlocked
+  call where unavailable); both refresh paths use it. Unit-tested
+  (`src/lib/refreshLock.test.ts`); verified that Web Locks serialise across tabs in
+  real Chromium. Rotation/blacklisting is unchanged.
+  **Residual, documented, not fixed:** reloading two tabs in the *same millisecond*
+  still logs one tab out roughly one run in three (was every run). Verified cause, by
+  cross-checking the token table against the server access log: a reload cancels a
+  refresh request *after* the server has already rotated the token, so the browser
+  keeps the old, now-blacklisted cookie (a successor token exists and the old one is
+  blacklisted, but no 200 was ever logged). A client cannot prevent this; the fix is
+  server-side, a short reuse grace window for just-rotated refresh tokens, which is a
+  security trade-off that needs an owner decision. It is pinned as a `test.fixme` in
+  `e2e/session-concurrency.spec.ts`; the one-tab and sequential two-tab reload tests
+  pass deterministically.
+  Note the dev build double-invokes effects (React StrictMode), so each dev page load
+  rotates twice; a production build does not.
+
+**Verified by inspection, no change:** collectstatic runs at image build (WhiteNoise);
+`check --deploy` shows only the 6 known drf-spectacular warnings; CORS credentials and
+nginx proto headers were covered in earlier rounds.
+
+**Not verified / open for the owner:** a real `docker compose build`/boot; Postgres and
+Redis behavior (this environment uses SQLite and LocMem); the refresh-token grace-window
+decision above; running Playwright in CI (no job exists); the remaining stale e2e
+specs listed in the role-workflow section.
