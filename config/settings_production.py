@@ -108,8 +108,10 @@ if not _frontend_url:
         "Set it to the HTTPS URL of your frontend (e.g. https://app.example.com)."
     )
 CORS_ALLOWED_ORIGINS = [_frontend_url]
-# JWT-only SPA: credentials (cookies) are not needed for cross-origin
-# requests. The SPA uses the Authorization header, not cookies (P2-12).
+# The SPA calls the API same-origin (relative /api via the nginx proxy), so
+# cross-origin credentials are not needed. Access tokens go in the
+# Authorization header; the refresh_token cookie is same-origin only (P2-12).
+# If the API is ever served from a different origin, revisit this.
 CORS_ALLOW_CREDENTIALS = False
 # CSRF trusted origins — derived from FRONTEND_URL for session-auth
 # routes (e.g. Django admin) (P1-4).
