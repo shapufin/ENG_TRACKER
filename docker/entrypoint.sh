@@ -47,6 +47,13 @@ export BUILD_ID="${BUILD_ID:-$(cat /app/.build_id 2>/dev/null || echo 1)}"
 echo "[entrypoint] Running migrations..."
 python manage.py migrate --noinput
 
+# Register discovered plugins in the Plugin table (idempotent; never enables
+# anything). Without this a fresh deploy lists no plugins until an admin calls the
+# discover action. Enabling a plugin still needs a server restart afterwards,
+# because plugin URLs are computed once at process start.
+echo "[entrypoint] Syncing plugin registry..."
+python manage.py sync_plugins
+
 echo "[entrypoint] Ensuring superuser..."
 python manage.py ensure_superuser
 

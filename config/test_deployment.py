@@ -417,3 +417,93 @@ class NginxTemplateProxyContractTests(SimpleTestCase):
         for path, body in self._backend_locations().items():
             with self.subTest(location=path):
                 self.assertIn('proxy_set_header X-Forwarded-Proto', body)
+
+
+class DockerIgnoreContractTests(SimpleTestCase):
+    """The images COPY their build context, which ignores .gitignore.
+
+    Local-only secrets, databases and scratch data must be excluded explicitly or
+    they ship inside the production image.
+    """
+
+    @staticmethod
+    def _patterns(relative_path):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        text = (Path(settings.BASE_DIR) / relative_path).read_text(encoding='utf-8')
+        return {
+            line.strip().rstrip('/') for line in text.splitlines()
+            if line.strip() and not line.strip().startswith('#')
+        }
+
+    def test_backend_context_excludes_secrets_databases_and_scratch(self):
+        patterns = self._patterns('.dockerignore')
+        required = {
+            '*.pem', '.env', '.env.*', '*.sqlite3', '*.sqlite3-journal', '*.xlsx',
+            '*.patch', 'time_tracker_export.json', '.worktrees', '.devin', '.agents',
+            '.claude', 'tmp-probe', 'frontend',
+        }
+        self.assertEqual(required - patterns, set())
+
+    def test_backend_context_keeps_the_example_env(self):
+        self.assertIn('!.env.example', self._patterns('.dockerignore'))
+
+    def test_frontend_context_excludes_test_artifacts_and_env_files(self):
+        patterns = self._patterns('frontend/.dockerignore')
+        required = {'e2e', 'e2e-observed', 'test-results', 'playwright-report', '.env', '.env.*'}
+        self.assertEqual(required - patterns, set())
+
+
+class EntrypointContractTests(SimpleTestCase):
+    """docker/entrypoint.sh must prepare the app in a safe order before serving."""
+
+    @staticmethod
+    def _commands():
+        from pathlib import Path
+
+        from django.conf import settings
+
+        text = (Path(settings.BASE_DIR) / 'docker' / 'entrypoint.sh').read_text(encoding='utf-8')
+        return [
+            line.strip() for line in text.splitlines()
+            if line.strip().startswith(('python manage.py', 'exec '))
+        ]
+
+    def test_migrates_then_syncs_plugins_then_serves(self):
+        commands = self._commands()
+        migrate = commands.index('python manage.py migrate --noinput')
+        sync = commands.index('python manage.py sync_plugins')
+        serve = next(i for i, c in enumerate(commands) if c.startswith('exec '))
+        self.assertLess(migrate, sync)
+        self.assertLess(sync, serve)
+
+
+class FrontendPublicAssetsTests(SimpleTestCase):
+    """Everything under frontend/public is copied into dist/ and served to the internet."""
+
+    @staticmethod
+    def _public_files():
+        from pathlib import Path
+
+        from django.conf import settings
+
+        root = Path(settings.BASE_DIR) / 'frontend' / 'public'
+        return [p for p in root.rglob('*') if p.is_file()]
+
+    def test_no_dev_only_pages(self):
+        offenders = [p.name for p in self._public_files() if p.name.startswith('_dev')]
+        self.assertEqual(offenders, [])
+
+    def test_no_embedded_jwts(self):
+        import re
+
+        jwt = re.compile(r'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.')
+        offenders = []
+        for path in self._public_files():
+            if path.suffix.lower() in {'.png', '.jpg', '.jpeg', '.ico', '.webp', '.woff', '.woff2'}:
+                continue
+            if jwt.search(path.read_text(encoding='utf-8-sig', errors='ignore')):
+                offenders.append(path.name)
+        self.assertEqual(offenders, [])

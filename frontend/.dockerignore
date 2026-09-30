@@ -27,3 +27,11 @@ Thumbs.db
 
 # Docs
 *.md
+
+# Test artifacts and local env files
+e2e
+e2e-observed
+test-results
+playwright-report
+.env
+.env.*
