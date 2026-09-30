@@ -220,10 +220,13 @@ class ThrottleConfigurationTests(TestCase):
                 os.environ['FRONTEND_URL'] = saved_frontend
 
     def test_cors_credentials_disabled_in_production(self):
-        """P2-12: CORS_ALLOW_CREDENTIALS must be False for JWT-only SPA.
+        """P2-12: CORS_ALLOW_CREDENTIALS must be False in production.
 
-        The SPA uses the Authorization header, not cookies. Enabling
-        credentials increases cross-origin cookie/CSRF risk unnecessarily.
+        The SPA calls the API same-origin (relative /api proxied by nginx), so
+        CORS never applies to its cookie-bearing refresh request. Enabling
+        credentials would only add cross-origin cookie/CSRF risk. If the API is
+        ever hosted on a different origin, this must be revisited (the
+        refresh_token cookie would then need credentials).
         """
         import os
         env_vars = {
@@ -237,7 +240,7 @@ class ThrottleConfigurationTests(TestCase):
         os.environ.update(env_vars)
         try:
             from config.settings_production import CORS_ALLOW_CREDENTIALS
-            self.assertTrue(CORS_ALLOW_CREDENTIALS)
+            self.assertFalse(CORS_ALLOW_CREDENTIALS)
         finally:
             for k, v in saved.items():
                 if v is None:

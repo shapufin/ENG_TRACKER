@@ -815,3 +815,23 @@ now stale). Branch `fix/notifications-test-discovery`.
   10-11 days out is a weekend). **Fixed afterwards** (`fix/tl-scorecard-date-flake`): a
   `_future_business_days()` helper in the test picks a Mon-Thu start at least 10 days out. **Backend baseline: 1841 tests, 1 known failure
   (`config.test_deployment...test_cors_credentials_disabled_in_production`).**
+
+## Follow-up: CORS credentials test — 2026-09-30 — RESOLVED
+
+`config.test_deployment.ThrottleConfigurationTests.
+test_cors_credentials_disabled_in_production` (the long-standing "known
+pre-existing failure" from Phase 1) was an **inverted assertion, not a settings
+bug**: the docstring says credentials must be `False` and
+`config/settings_production.py` sets `CORS_ALLOW_CREDENTIALS = False`, but the
+test asserted `assertTrue`. Fixed to `assertFalse`.
+
+Checked before flipping it, since the frontend sets `withCredentials: true` and
+the refresh flow uses a `refresh_token` **cookie** (so the old comments' claim
+"the SPA uses no cookies" was wrong): production builds use a relative
+`VITE_API_URL=/api` proxied same-origin by nginx, so CORS never applies to that
+request and `False` is correct hardening. Docstring and settings comment now say
+that, and note the invariant: **if the API is ever hosted on a different
+origin, `CORS_ALLOW_CREDENTIALS` must be revisited** (the refresh cookie would
+then need credentials).
+
+**Backend baseline is now fully green: 1841 tests, 0 failures.**
