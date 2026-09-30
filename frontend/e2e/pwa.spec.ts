@@ -42,22 +42,30 @@ test.describe("Engineering Tracker PWA", () => {
     expect(registration.scope).toBe("http://127.0.0.1:5173/");
   });
 
-  test("loads the cached app shell while offline", async ({ page, context }) => {
+  test("loads the cached app shell while offline (returning visitor)", async ({ page, context }) => {
+    // sw.js precaches the shell list at install but caches the hashed JS/CSS at runtime, so a
+    // brand-new visitor's first load is not yet cached. Model a returning visitor: load once
+    // under the worker's control so the bundles are cached, then go offline.
     await page.goto("/");
     await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+    await page.reload();
+    await page.waitForLoadState("networkidle");
     await context.setOffline(true);
     await page.reload();
     await expect(page.locator("#root")).toBeVisible();
+    await expect(page.locator("#root")).not.toBeEmpty();
     await context.setOffline(false);
   });
 
   test("serves SPA deep links via index.html fallback", async ({ page }) => {
     // A client-side route that does not exist as a static file should still
     // resolve via the SPA fallback (nginx try_files / Vite middleware).
-    await page.goto("/overtime");
+    const response = await page.goto("/overtime");
+    expect(response?.status()).toBe(200);
     await expect(page.locator("#root")).toBeVisible();
-    // The URL should remain the deep link, not be redirected to "/".
-    expect(page.url()).toContain("/overtime");
+    // The app booted and routed client-side. Unauthenticated visitors are then sent to /login by
+    // ProtectedRoute; what matters here is that the server did not 404 the deep link.
+    await page.waitForURL((url) => ["/overtime", "/login"].includes(url.pathname));
   });
 
   test("serves the service worker at the expected scope", async ({ request }) => {

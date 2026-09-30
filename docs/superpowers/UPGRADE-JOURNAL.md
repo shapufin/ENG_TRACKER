@@ -1188,3 +1188,37 @@ nginx proto headers were covered in earlier rounds.
 Redis behavior (this environment uses SQLite and LocMem); the refresh-token grace-window
 decision above; running Playwright in CI (no job exists); the remaining stale e2e
 specs listed in the role-workflow section.
+
+## Stale e2e spec cleanup — 2026-09-30 (supersedes the "remaining failures" lists above)
+
+Each of the 8 long-failing desktop specs was triaged to a root cause before touching it.
+Result: **default desktop Chromium run: 113 passed, 0 failed, 2 skipped** (the documented
+same-millisecond two-tab `fixme` and one desktop-only skip); the production-build PWA
+suite (`npm run test:e2e:pwa`) passes 9/9, repeated twice.
+
+| Spec | Root cause | Fix |
+|---|---|---|
+| `visual-guards:57`, `:44` | Stale: expected HR to reach `/admin/users` and be sent to `/leave-management` from two admin routes; HR admin isolation (2026-09-26) sends every `/admin/*` route to `/dashboard` (verified by probing every route). `:44` had only ever "passed" because `waitForURL` matched the landing URL before the client-side redirect. | Expectations updated to the documented behavior. |
+| `organigrama` sidebar item | Wrong shell: an admin's `/dashboard` redirects into the AdminShell, whose sidebar has no Organigrama entry. | Use an employee (app shell). |
+| `organigrama` mobile expand/collapse | **Fixture gap, not an app bug.** The live chart is Italian TL -> Albanian TL -> employees; the seed's Team B leader (Albanian) was not under any Italian TL, so every node was a childless root. | Seed links `e2e_tl_b` under `e2e_tl`; test asserts the chain (`test_org_chart_has_depth...`). |
+| `skills` KPI cards | Seniority/Strongest Domain cards only render once skills have ratings; the fixture has none. | Assert the always-present "Verification Progress" (or either of the others). |
+| `skills` catalog split-pane | Strict-mode ambiguity: "Categories" appears 4 times. | `exact` + `.first()`. |
+| `pwa` offline shell, `offline-data` | These only work against a **production build**; the default (dev-server) config also ran them. | Excluded from the default config (`testIgnore`), run by `test:e2e:pwa` (which now includes `offline-data`). `playwright.pwa.config.ts` waited on `/api/schema/` (generates the whole OpenAPI schema, hit the 120 s timeout) and now uses `/api/health/live/` like the main config. |
+| `pwa` offline shell (content) | **Product limitation:** `sw.js` precaches the shell list at install but caches the hashed JS/CSS at runtime, so a brand-new visitor's first load is not cached and going offline straight away boots nothing. A returning visitor works. | Spec models a returning visitor; limitation documented here (real fix: precache the build's hashed assets, e.g. via vite-plugin-pwa/workbox). |
+| `pwa` deep link | Unauthenticated `/overtime` is redirected to `/login` by `ProtectedRoute` by design. | Assert HTTP 200 + app rendered + landed on `/overtime` or `/login`. |
+| `offline-data` banner | Emulated offline (`context.setOffline`) blocks the network but the new document still reports `navigator.onLine === true`; the auth bootstrap only restores the saved session when it is `false` (as a real browser does), so the spec logged the user out. Verified by probing `navigator.onLine` and by disabling my refresh lock (no effect). | Force `onLine=false` for the offline reload. |
+
+**Real backend bug found on the way and fixed:** creating the same skill category/skill
+from two requests at once could return **500** (serializers uppercase `name` into the
+unique `code` only at save time, so both pass validation and one hits the DB constraint).
+`SkillCategoryViewSet`/`SkillViewSet` now translate `IntegrityError` into a 400
+(`plugins/skills/tests/test_duplicate_creates.py`).
+
+**Two harness lessons (cost real time):**
+- A long job started as a detached subshell (`nohup ... &`) is killed when a *later*
+  tool call ends, which produced two truncated runs with exit 127. Use the tool's real
+  background mode, and do not kill/restart the dev servers in the same command that starts
+  Playwright (the first tests then hit `ECONNREFUSED` during the swap).
+- Never leave `/api/schema/` as a readiness probe.
+
+Backend baseline after this round: 1875 tests, 0 failures.

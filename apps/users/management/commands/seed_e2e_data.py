@@ -191,6 +191,11 @@ class Command(BaseCommand):
         employee_c = users["e2e_employee_c"].profile
         employee_c.albanian_tl = users["e2e_tl_b"]
         employee_c.save(update_fields=["albanian_tl"])
+        # The live org chart is Italian TL -> Albanian TL -> employees; hang Team B's leader
+        # under Team A's so the chart has real depth (expand/collapse, scoped chains).
+        tl_b = users["e2e_tl_b"].profile
+        tl_b.italian_tl = users["e2e_tl"]
+        tl_b.save(update_fields=["italian_tl"])
 
         client, client_created = Client.objects.get_or_create(
             code=E2E_CLIENT["code"],

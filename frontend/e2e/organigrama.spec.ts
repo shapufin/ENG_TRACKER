@@ -217,7 +217,9 @@ test.describe("Organigrama plugin", () => {
   });
 
   test("sidebar item navigates to /organigrama", async ({ page }) => {
-    await loginAsUser(page, E2E_CREDENTIALS.admin);
+    // An admin's /dashboard redirects into the AdminShell, whose sidebar has no Organigrama
+    // entry; the app-shell sidebar (employees, TLs, HR) does.
+    await loginAsUser(page, E2E_CREDENTIALS.employeeA);
     await page.goto("/dashboard");
 
     // The sidebar item renders as a menuitem (SidebarNavLink pattern).

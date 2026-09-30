@@ -13,7 +13,7 @@
     "test:ui": "vitest --config vite.config.ts --ui",
     "test:coverage": "vitest --config vite.config.ts --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:pwa": "playwright test --config playwright.pwa.config.ts e2e/pwa.spec.ts"
+    "test:e2e:pwa": "playwright test --config playwright.pwa.config.ts e2e/pwa.spec.ts e2e/offline-data.spec.ts"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.8",

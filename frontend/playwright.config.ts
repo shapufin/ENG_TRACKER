@@ -2,6 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  // Service-worker specs need a production build; `npm run test:e2e:pwa` runs them against
+  // `vite preview` (playwright.pwa.config.ts). The dev server has no offline app shell.
+  testIgnore: ["**/pwa.spec.ts", "**/offline-data.spec.ts"],
   fullyParallel: false,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",

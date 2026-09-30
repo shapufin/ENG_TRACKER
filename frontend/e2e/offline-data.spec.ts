@@ -7,8 +7,19 @@ test.describe("Personal offline data", () => {
     await page.goto("/overtime");
     await expect(page.getByRole("heading", { name: "Overtime" })).toBeVisible();
 
-    // The online GET is cached by the allowlisted personal API cache.
+    // The online GET is cached by the allowlisted personal API cache. The service worker
+    // caches the hashed bundles at runtime, so reload once under its control first.
+    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Overtime" })).toBeVisible();
+    await page.waitForLoadState("networkidle");
     await page.context().setOffline(true);
+    // Emulated offline mode blocks the network but the new document still reports
+    // navigator.onLine === true, and the auth bootstrap only restores the saved session
+    // when it is false (as a real browser in airplane mode does).
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "onLine", { get: () => false, configurable: true });
+    });
     await page.reload();
 
     await expect(page.getByText(/Showing saved data from your last connection/i)).toBeVisible();
