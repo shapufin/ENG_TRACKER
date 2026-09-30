@@ -253,7 +253,7 @@ class OnboardingAPITests(TestCase):
         self.assertEqual(doc.updated_by, self.user_a)
 
     def test_never_updated_folder_has_null_updated_by_name(self):
-        folder = Folder.objects.create(client=self.client_a, name='Untouched', created_by=self.user_a)
+        Folder.objects.create(client=self.client_a, name='Untouched', created_by=self.user_a)
         resp = self._folders_list(self.user_a, client_id=self.client_a.id)
         self.assertIsNone(resp.data['results'][0]['updated_by_name'])
 

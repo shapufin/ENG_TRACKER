@@ -180,6 +180,36 @@ class OfficeEditorAPITests(TestCase):
         self.assertIsNone(self.document.updated_by)
 
     @patch('plugins.onboarding.viewsets.urllib.request.urlopen')
+    def test_office_callback_rejects_lookalike_origins_that_share_the_prefix(self, mock_urlopen):
+        # A bare startswith() lets these through: same string prefix, different host.
+        for url in (
+            'http://onlyoffice.test.attacker.example/steal',  # suffix on the hostname
+            'http://onlyoffice.test@attacker.example/steal',  # userinfo trick
+            'http://onlyoffice.test:8080/steal',              # different port
+            'https://onlyoffice.test/steal',                  # different scheme
+            'http://onlyoffice.testing/steal',                # hostname continues
+        ):
+            with self.subTest(url=url):
+                body = {'status': 2, 'url': url, 'users': [str(self.user_a.id)]}
+                token = self._callback_jwt(body)
+                resp = self._office_callback(self.document.id, body, auth_header=f'Bearer {token}')
+                self.assertEqual(json.loads(resp.content)['error'], 1)
+        mock_urlopen.assert_not_called()
+
+    @patch('plugins.onboarding.viewsets.urllib.request.urlopen')
+    def test_office_callback_accepts_document_server_url_with_path_and_query(self, mock_urlopen):
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = b'PK edited docx bytes'
+        body = {
+            'status': 2,
+            'url': 'http://onlyoffice.test/cache/files/data/abc/output.docx/output.docx?md5=x&expires=1',
+            'users': [str(self.user_a.id)],
+        }
+        token = self._callback_jwt(body)
+        resp = self._office_callback(self.document.id, body, auth_header=f'Bearer {token}')
+        self.assertEqual(json.loads(resp.content)['error'], 0)
+        mock_urlopen.assert_called_once()
+
+    @patch('plugins.onboarding.viewsets.urllib.request.urlopen')
     def test_office_callback_uses_jwt_payload_not_raw_body(self, mock_urlopen):
         # The JWT is signed over a *different* body than what's actually
         # posted — everything read by the handler must come from the

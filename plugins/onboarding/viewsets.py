@@ -23,6 +23,7 @@ from .models import MAX_FOLDER_DEPTH, SEARCH_RESULT_LIMIT, Document, Folder
 from .office_integration import (
     build_editor_config,
     decode_callback_jwt,
+    is_document_server_url,
     is_editable_office,
     office_editor_enabled,
     verify_office_file_token,
@@ -463,12 +464,12 @@ class DocumentViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelVi
         # server's own origin — without this, a valid JWT (signed with a
         # leaked/shared secret) could still be used to make this backend
         # fetch an arbitrary internal URL (SSRF into backend_net).
-        if not download_url or not download_url.startswith(settings.ONLYOFFICE_DOCUMENT_SERVER_URL):
+        if not download_url or not is_document_server_url(download_url):
             logger.warning('onboarding office_callback: rejected off-origin url for document %s', pk)
             return JsonResponse({'error': 1})
 
         try:
-            with urllib.request.urlopen(download_url, timeout=15) as resp:
+            with urllib.request.urlopen(download_url, timeout=15) as resp:  # nosec B310 - http(s) origin validated above
                 content = resp.read(DOCUMENT_POLICY['max_bytes'] + 1)
         except (urllib.error.URLError, TimeoutError):
             logger.warning('onboarding office_callback: failed to fetch saved file for document %s', pk)

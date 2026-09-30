@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase
