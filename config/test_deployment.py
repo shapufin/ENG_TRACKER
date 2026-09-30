@@ -9,7 +9,7 @@ introduced).
 """
 from __future__ import annotations
 
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 
 
 class HealthEndpointTests(TestCase):
@@ -379,3 +379,41 @@ class OpenAPISmokeTests(TestCase):
                 HTTP_HOST="localhost",
             )
             self.assertEqual(response.status_code, 200)
+
+
+class NginxTemplateProxyContractTests(SimpleTestCase):
+    """Every location that proxies to Django must forward X-Forwarded-Proto.
+
+    Django runs with SECURE_SSL_REDIRECT behind a TLS-terminating proxy; a
+    proxied location that omits the header gets a 301 to https for every
+    request (a redirect loop for e.g. /static/ admin assets).
+    """
+
+    @staticmethod
+    def _backend_locations():
+        import re
+        from pathlib import Path
+
+        from django.conf import settings
+
+        text = (Path(settings.BASE_DIR) / 'frontend' / 'docker' / 'nginx.conf.template').read_text(
+            encoding='utf-8'
+        )
+        blocks = {}
+        for match in re.finditer(r'^\s*location\s+([^\s{]+)\s*\{', text, re.MULTILINE):
+            depth, pos = 1, match.end()
+            while depth and pos < len(text):
+                depth += {'{': 1, '}': -1}.get(text[pos], 0)
+                pos += 1
+            body = text[match.end():pos]
+            if 'proxy_pass http://backend' in body:
+                blocks[match.group(1)] = body
+        return blocks
+
+    def test_template_has_backend_locations(self):
+        self.assertTrue({'/api/', '/media/', '/static/', '/admin/'} <= set(self._backend_locations()))
+
+    def test_every_backend_location_forwards_x_forwarded_proto(self):
+        for path, body in self._backend_locations().items():
+            with self.subTest(location=path):
+                self.assertIn('proxy_set_header X-Forwarded-Proto', body)
