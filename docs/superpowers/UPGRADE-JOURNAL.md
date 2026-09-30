@@ -866,3 +866,27 @@ one while a bare `npx vitest` silently used the other (vitest prefers
   triggers exactly this. Not changed here (setting `reportOnFailure` is a policy
   choice); the earlier "verify both configs" instruction in this journal no
   longer applies.
+
+## Follow-up: `sync_plugins` management command — 2026-09-30 — RESOLVED
+
+Closes the Phase 1 "local dev DB needs a manual plugin-registry sync" gap.
+`python manage.py sync_plugins` now does from the CLI what the admin-only
+`discover` API action did: re-discovers plugins and creates/updates their
+`Plugin` rows. It **never sets `is_enabled`** (new rows are disabled) — enabling
+stays an explicit action (`activate_plugin`, or the admin UI toggle). Still
+required after enabling: restart the server, since plugin URLs are computed at
+process startup.
+
+- Logic lives once in `apps/plugins/services/registry_sync.py`
+  (`sync_plugin_registry()`); the `discover` action and the command both call it
+  (the action's inline copy was removed, behavior unchanged, `apps.plugins`
+  tests still green).
+- Tests: `apps/plugins/test_sync_plugins.py` (creates a disabled row per
+  discovered plugin, idempotent, preserves `is_enabled`, refreshes stale
+  metadata, command output). Backend baseline: **1844 tests, 0 failures**.
+- `ensure_plugins` (creates each plugin's own tables) is unchanged and separate;
+  a fresh checkout needs both, tables first.
+- Scan note: besides the now-fixed `plugins/notifications`, these directories
+  still have no `__init__.py` — `apps/core`, `apps/core/management/commands`,
+  `apps/plugins/services`, `core/middleware`, `core/plugins` — but none contains
+  tests, so they are not a CI blind spot (they work as namespace packages).

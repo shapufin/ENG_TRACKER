@@ -3,6 +3,7 @@ from rest_framework import viewsets, status, permissions, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from apps.plugins.models import Plugin
+from apps.plugins.services.registry_sync import sync_plugin_registry
 from core.plugins.registry import plugin_registry
 from core.mixins.permissions import PluginPermissionMixin
 from core.utils import get_client_ip
@@ -94,27 +95,8 @@ class PluginViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         """
         Force a re-discovery of plugins and sync with database.
         """
-        plugin_registry.discover_plugins()
-        discovered = plugin_registry.get_all_plugins()
-        
-        synced_plugins = []
-        for name, plugin_instance in discovered.items():
-            plugin_obj, created = Plugin.objects.get_or_create(
-                name=name,
-                defaults={
-                    'verbose_name': plugin_instance.verbose_name,
-                    'description': plugin_instance.description,
-                    'version': plugin_instance.version,
-                }
-            )
-            if not created:
-                # Update metadata if changed
-                plugin_obj.verbose_name = plugin_instance.verbose_name
-                plugin_obj.description = plugin_instance.description
-                plugin_obj.version = plugin_instance.version
-                plugin_obj.save()
-            synced_plugins.append(plugin_obj)
-            
+        synced_plugins = sync_plugin_registry()
+
         serializer = self.get_serializer(synced_plugins, many=True)
         return Response(serializer.data)
 
