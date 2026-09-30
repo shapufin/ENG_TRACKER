@@ -316,6 +316,13 @@ describe("DataTable", () => {
       }
     });
 
+    it("keeps the default 150px header width for unsized columns (v8 parity)", () => {
+      // v8 merged size: 150 into every columnDef and DataTable applies any truthy size;
+      // react-table 9's columnSizingFeature must give the same default.
+      const { container } = render(<DataTable columns={columns} data={people} />);
+      expect(container.querySelector("thead th")).toHaveStyle({ width: "150px" });
+    });
+
     it("applies a column def size as the header width", () => {
       const sized: AppColumnDef<Item>[] = [{ accessorKey: "name", header: "Name", size: 240 }];
       const { container } = render(<DataTable columns={sized} data={people} />);
