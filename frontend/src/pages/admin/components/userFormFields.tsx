@@ -46,6 +46,7 @@ interface FormRoleCheckboxesProps {
   is_italian_tl_role: boolean;
   is_albanian_tl_role: boolean;
   is_cr_admin?: boolean;
+  is_hbpr?: boolean;
   prefix: string;
   onChange: (key: string, value: boolean) => void;
 }
@@ -55,6 +56,7 @@ export const FormRoleCheckboxes: React.FC<FormRoleCheckboxesProps> = ({
   is_italian_tl_role,
   is_albanian_tl_role,
   is_cr_admin = false,
+  is_hbpr = false,
   prefix,
   onChange,
 }) => (
@@ -86,6 +88,13 @@ export const FormRoleCheckboxes: React.FC<FormRoleCheckboxesProps> = ({
       description="Control Room admin access"
       checked={is_cr_admin}
       onCheckedChange={(v) => onChange("is_cr_admin", v)}
+    />
+    <SwitchField
+      id={`${prefix}_hbpr`}
+      label="HBPR"
+      description="HR business partner for Italy"
+      checked={is_hbpr}
+      onCheckedChange={(v) => onChange("is_hbpr", v)}
     />
   </div>
 );

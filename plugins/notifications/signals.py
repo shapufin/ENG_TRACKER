@@ -9,6 +9,7 @@ from apps.users.models import Team
 
 from .models import Notification, NotificationEventTypeConfig, NotificationPreference
 from .push_service import send_push_notification
+from .types.base import REGISTRY
 # Importing types triggers __init_subclass__ registration of all types.
 from .types import own, period_finalized, team  # noqa: F401
 
@@ -23,7 +24,10 @@ def _preference_enabled(user, event_type, channel):
     preference = NotificationPreference.objects.filter(
         user=user, event_type=event_type
     ).first()
-    return getattr(preference, f'{channel}_enabled', True) if preference else True
+    if preference:
+        return getattr(preference, f'{channel}_enabled', True)
+    registered = REGISTRY.get(event_type)
+    return registered.push_by_default if registered and channel == 'push' else True
 
 
 def _team_recipients(user):

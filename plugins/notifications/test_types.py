@@ -40,10 +40,10 @@ User = get_user_model()
 
 class RegistryConsistencyTest(TestCase):
     def test_registry_contains_all_event_types(self):
-        """Registry keys must match NotificationPreference.EVENT_TYPES exactly."""
+        """Every core event type is registered; plugins may register more."""
         registry_keys = set(get_all_types().keys())
         preference_keys = {et for et, _label in NotificationPreference.EVENT_TYPES}
-        self.assertEqual(registry_keys, preference_keys)
+        self.assertLessEqual(preference_keys, registry_keys)
 
     def test_registry_labels_match_preference_choices(self):
         """Registry labels must match NotificationPreference.EVENT_TYPES labels."""
@@ -56,9 +56,14 @@ class RegistryConsistencyTest(TestCase):
             )
 
     def test_viewset_own_team_split_matches_registry(self):
-        """Each type's category must match the viewset OWN/TEAM split."""
+        """Each core type's category must match the viewset OWN/TEAM split;
+        plugin types may also declare 'oversight'."""
         from plugins.notifications.viewsets import OWN_EVENT_TYPES, TEAM_EVENT_TYPES
+        core = {et for et, _label in NotificationPreference.EVENT_TYPES}
         for event_type, type_cls in get_all_types().items():
+            if event_type not in core:
+                self.assertIn(type_cls.category, ('own', 'team', 'oversight'), event_type)
+                continue
             if type_cls.category == 'own':
                 self.assertIn(
                     event_type, OWN_EVENT_TYPES,
@@ -74,8 +79,10 @@ class RegistryConsistencyTest(TestCase):
             else:
                 self.fail(f'{event_type} has invalid category: {type_cls.category}')
 
-    def test_registry_has_10_types(self):
-        self.assertEqual(len(get_all_types()), 10)
+    def test_registry_has_the_10_core_types(self):
+        core = {et for et, _label in NotificationPreference.EVENT_TYPES}
+        self.assertEqual(len(core), 10)
+        self.assertLessEqual(core, set(get_all_types()))
 
 
 # ============================================================================

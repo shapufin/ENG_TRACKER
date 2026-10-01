@@ -27,6 +27,7 @@ interface CreateForm {
   is_italian_tl_role: boolean;
   is_albanian_tl_role: boolean;
   is_cr_admin: boolean;
+  is_hbpr: boolean;
   roles: string[];
 }
 

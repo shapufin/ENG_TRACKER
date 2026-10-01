@@ -6,7 +6,7 @@ import type { PIPRecord } from "../types/tlScorecard";
 const PENDING: PIPRecord = {
   id: 1, employee: 20, employee_name: "Jane Doe", tl: 1, tl_name: "Leader",
   status: "active", start_date: "2026-09-01", approved_by: null, approved_by_name: null,
-  approved_at: null, notes: "",
+  approved_at: null, notes: "", closed_on: null, status_note: "",
 };
 
 const APPROVED: PIPRecord = { ...PENDING, id: 2, approved_by: 5, approved_by_name: "HR Person", approved_at: "2026-09-10T00:00:00Z" };

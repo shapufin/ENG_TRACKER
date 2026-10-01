@@ -357,6 +357,41 @@ class ActiveMetadataTests(APITestCase):
         self.assertNotIn('control_room', plugin_names)
 
 
+class SelfServiceMetadataTests(APITestCase):
+    """A plugin's self-service pages reach users who hold no plugin grant."""
+
+    def setUp(self):
+        PluginRegistry().discover_plugins()
+        Plugin.objects.update_or_create(
+            name='tl_scorecard',
+            defaults={'verbose_name': 'TL Scorecard', 'description': 'x', 'version': '1.0.0', 'is_enabled': True},
+        )
+
+    def _scorecard_meta(self, user):
+        self.client.force_authenticate(user=user)
+        rows = self.client.get('/api/plugins/management/active_metadata/').data
+        return next((r for r in rows if r.get('name') == 'tl_scorecard'), None)
+
+    def test_ungranted_user_gets_only_self_service_pages(self):
+        meta = self._scorecard_meta(User.objects.create_user(username='plain_ss', password='x'))
+        self.assertIsNotNone(meta)
+        self.assertEqual([r['path'] for r in meta['routes']], ['/my-records'])
+        self.assertEqual([s['component'] for s in meta['injection_slots']], ['MyRecordsSidebarLink'])
+
+    def test_staff_still_gets_everything(self):
+        meta = self._scorecard_meta(User.objects.create_user(username='staff_ss', password='x', is_staff=True))
+        self.assertGreater(len(meta['routes']), 1)
+
+    def test_plugin_without_self_service_pages_stays_hidden(self):
+        Plugin.objects.update_or_create(
+            name='control_room',
+            defaults={'verbose_name': 'CR', 'description': 'x', 'version': '1.0.0', 'is_enabled': True},
+        )
+        self.client.force_authenticate(user=User.objects.create_user(username='plain_ss2', password='x'))
+        rows = self.client.get('/api/plugins/management/active_metadata/').data
+        self.assertNotIn('control_room', {r.get('name') for r in rows})
+
+
 class PluginPermissionDetailsTests(APITestCase):
     def test_details_exposes_plugin_specific_actions(self):
         user = User.objects.create_superuser(

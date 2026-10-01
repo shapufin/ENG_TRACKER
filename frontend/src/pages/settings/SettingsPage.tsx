@@ -20,10 +20,13 @@ import { PluginCRScopeCard } from "./components/PluginCRScopeCard";
 
 export const SettingsPage: React.FC = () => {
   const { user, logout, refreshUser } = useAuth();
-  const { isCRUser, isCRAdmin, isAdmin, isSuperuser, isHR, isTeamLeader } = usePermissions();
+  const { isCRUser, isCRAdmin, isAdmin, isSuperuser, isHR, isHBPR, isTeamLeader } =
+    usePermissions();
   const { activePlugins } = usePlugins();
   const isCROnlyAdmin = isCRAdmin && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
   const isCRScoped = isCRUser || isCROnlyAdmin;
+  // An HBPR has no overtime or standby, so there are no clients to work for.
+  const isHBPROnly = isHBPR && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
   const notificationsActive = activePlugins.some((plugin) => plugin.name === "notifications");
   const showAssignment = isTeamLeader && !isCRScoped;
   const navigate = useNavigate();
@@ -55,6 +58,7 @@ export const SettingsPage: React.FC = () => {
     if (isAdmin || isSuperuser || user?.is_staff) badges.push("Admin");
     if (isHR || user?.is_hr) badges.push("HR");
     if (isTeamLeader || user?.is_team_leader) badges.push("Team Leader");
+    if (isHBPR) badges.push("HBPR");
     // Show "CR Admin" only for scoped CR admins (not full staff/superusers,
     // for whom is_cr_admin() returns True by hierarchy). The isCROnlyAdmin
     // check ensures multi-role users with a higher role don't get a
@@ -136,7 +140,7 @@ export const SettingsPage: React.FC = () => {
         {/* My Clients — self-assign which clients the user works for.
             Hidden for CR-scoped identities: they only view standby for their
             scoped teams and have no client-selection workflow. */}
-        {!isCRScoped && (
+        {!isCRScoped && !isHBPROnly && (
           <MyClientsSection
             assignedClientIds={user?.client_ids ?? []}
             onAssignedChange={refreshUser}

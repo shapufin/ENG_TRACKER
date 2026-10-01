@@ -108,6 +108,21 @@ class OfflineSubmissionIdempotency(models.Model):
         indexes = [models.Index(fields=['created_at'])]
 
 
+def event_type_choices():
+    """Core event types plus any a plugin registered in the type registry.
+
+    Callable so a plugin adding a notification type needs no migration. A
+    plugin that is removed simply stops contributing; stored rows keep
+    working because the column is a plain string.
+    """
+    from plugins.notifications.types.base import REGISTRY
+
+    known = dict(NotificationPreference.EVENT_TYPES)
+    for event_type, cls in REGISTRY.items():
+        known.setdefault(event_type, cls.label or event_type)
+    return sorted(known.items())
+
+
 class NotificationPreference(models.Model):
     """Per-user delivery preferences for a notification event category.
 
@@ -133,7 +148,7 @@ class NotificationPreference(models.Model):
         on_delete=models.CASCADE,
         related_name='notification_preferences'
     )
-    event_type = models.CharField(max_length=40, choices=EVENT_TYPES)
+    event_type = models.CharField(max_length=40, choices=event_type_choices)
     in_app_enabled = models.BooleanField(default=True)
     push_enabled = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -162,7 +177,7 @@ class NotificationEventTypeConfig(models.Model):
     """
 
     event_type = models.CharField(
-        max_length=40, choices=NotificationPreference.EVENT_TYPES, unique=True
+        max_length=40, choices=event_type_choices, unique=True
     )
     is_enabled = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)

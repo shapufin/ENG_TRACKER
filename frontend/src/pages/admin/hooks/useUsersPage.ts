@@ -50,6 +50,7 @@ const emptyEditForm = {
   is_italian_tl_role: false,
   is_albanian_tl_role: false,
   is_cr_admin: false,
+  is_hbpr: false,
   roles: [] as string[],
   hire_date: "",
 };
@@ -69,6 +70,7 @@ const emptyCreateForm = {
   is_italian_tl_role: false,
   is_albanian_tl_role: false,
   is_cr_admin: false,
+  is_hbpr: false,
   roles: [] as string[],
 };
 
@@ -264,6 +266,8 @@ export const useUsersPage = () => {
           form.is_italian_tl_role && "italian_tl",
           form.is_albanian_tl_role && "albanian_tl",
           form.is_cr_admin && "cr_admin",
+          // Always sent: the server revokes any managed role missing from this list.
+          form.is_hbpr && "hbpr",
         ].filter(Boolean) as string[],
         hire_date: form.hire_date || null,
       },
@@ -291,6 +295,7 @@ export const useUsersPage = () => {
       is_italian_tl_role: profile.is_italian_tl_role || roles.includes("italian_tl"),
       is_albanian_tl_role: profile.is_albanian_tl_role || roles.includes("albanian_tl"),
       is_cr_admin: profile.user.is_cr_admin || false,
+      is_hbpr: roles.includes("hbpr"),
       roles: roles,
       hire_date: profile.hire_date || "",
     });
@@ -332,6 +337,7 @@ export const useUsersPage = () => {
         createForm.is_italian_tl_role && "italian_tl",
         createForm.is_albanian_tl_role && "albanian_tl",
         createForm.is_cr_admin && "cr_admin",
+        createForm.is_hbpr && "hbpr",
       ].filter(Boolean) as string[],
     });
   };

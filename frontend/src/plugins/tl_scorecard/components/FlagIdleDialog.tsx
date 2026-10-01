@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { userService } from "@/services/userService";
 import type { UserProfile } from "@/types";
+import type { IdleFlag } from "../types/tlScorecard";
 
 interface FlagIdleDialogProps {
   open: boolean;
@@ -15,22 +16,26 @@ interface FlagIdleDialogProps {
     productivity_task: string;
     notes: string;
   }) => Promise<void>;
+  /** In edit mode the employee is fixed and `onCreate` receives the edited values. */
+  mode?: "create" | "edit";
+  initial?: IdleFlag;
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-export const FlagIdleDialog: React.FC<FlagIdleDialogProps> = ({ open, onOpenChange, onCreate }) => {
-  const [employeeId, setEmployeeId] = useState<number | null>(null);
+export const FlagIdleDialog: React.FC<FlagIdleDialogProps> = ({ open, onOpenChange, onCreate, mode = "create", initial }) => {
+  const isEdit = mode === "edit";
+  const [employeeId, setEmployeeId] = useState<number | null>(initial?.employee ?? null);
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
-  const [flaggedOn, setFlaggedOn] = useState(todayIso());
-  const [productivityTask, setProductivityTask] = useState("");
-  const [notes, setNotes] = useState("");
+  const [flaggedOn, setFlaggedOn] = useState(initial?.flagged_on ?? todayIso());
+  const [productivityTask, setProductivityTask] = useState(initial?.productivity_task ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isEdit) return;
     userService.getMyTeamMembers().then(setTeamMembers).catch(() => setTeamMembers([]));
-  }, [open]);
+  }, [open, isEdit]);
 
   const canSubmit = employeeId !== null && flaggedOn;
 
@@ -40,10 +45,14 @@ export const FlagIdleDialog: React.FC<FlagIdleDialogProps> = ({ open, onOpenChan
     setIsSubmitting(true);
     try {
       await onCreate({ employee: employeeId, flagged_on: flaggedOn, productivity_task: productivityTask, notes });
-      setEmployeeId(null);
-      setProductivityTask("");
-      setNotes("");
+      if (!isEdit) {
+        setEmployeeId(null);
+        setProductivityTask("");
+        setNotes("");
+      }
       onOpenChange(false);
+    } catch {
+      // The caller reports the failure; keep the dialog open for a retry.
     } finally {
       setIsSubmitting(false);
     }
@@ -53,30 +62,37 @@ export const FlagIdleDialog: React.FC<FlagIdleDialogProps> = ({ open, onOpenChan
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Flag an idle risk"
+      title={isEdit ? "Edit idle flag" : "Flag an idle risk"}
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
-      submitLabel="Flag idle risk"
+      submitLabel={isEdit ? "Save changes" : "Flag idle risk"}
       submitDisabled={!canSubmit}
       size="sm"
     >
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="idle-employee">Team member</Label>
-          <select
-            id="idle-employee"
-            className="h-9 w-full rounded-xl border border-border bg-card px-2 text-sm text-foreground"
-            value={employeeId ?? ""}
-            onChange={(e) => setEmployeeId(e.target.value ? Number(e.target.value) : null)}
-          >
-            <option value="">Select a team member...</option>
-            {teamMembers.map((profile) => (
-              <option key={profile.user.id} value={profile.user.id}>
-                {profile.user.full_name || profile.user.username}
-              </option>
-            ))}
-          </select>
-        </div>
+        {isEdit ? (
+          <p className="text-sm">
+            <span className="text-muted-foreground">Team member: </span>
+            {initial?.employee_name}
+          </p>
+        ) : (
+          <div>
+            <Label htmlFor="idle-employee">Team member</Label>
+            <select
+              id="idle-employee"
+              className="h-9 w-full rounded-xl border border-border bg-card px-2 text-sm text-foreground"
+              value={employeeId ?? ""}
+              onChange={(e) => setEmployeeId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Select a team member...</option>
+              {teamMembers.map((profile) => (
+                <option key={profile.user.id} value={profile.user.id}>
+                  {profile.user.full_name || profile.user.username}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <Label htmlFor="idle-date">Flagged on</Label>

@@ -92,16 +92,63 @@ class KpiCoverageEntrySerializer(serializers.Serializer):
     note = serializers.CharField()
 
 
+def _viewer(serializer):
+    request = serializer.context.get('request')
+    return getattr(request, 'user', None)
+
+
+def _is_staff(user):
+    return bool(user and (user.is_staff or user.is_superuser))
+
+
+class _OwnerOnlyNotesMixin:
+    """Blank a TL's private free text for anyone but the owner and staff.
+
+    ``owner_field`` names the FK to the TL who wrote the record. The substance
+    of a record (an absence's reason, dates, status) stays visible.
+    """
+    owner_field = None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        viewer = _viewer(self)
+        owner_id = getattr(instance, f'{self.owner_field}_id', None)
+        if not (_is_staff(viewer) or (viewer and viewer.id == owner_id)):
+            data['notes'] = ''
+            if 'reference_url' in data:
+                data['reference_url'] = ''
+        return data
+
+
 class MeetingAttendeeSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
 
     class Meta:
         model = MeetingAttendee
-        fields = ['id', 'meeting', 'user', 'user_name', 'role']
+        fields = ['id', 'meeting', 'user', 'user_name', 'role', 'notes']
         read_only_fields = ['id']
 
     def get_user_name(self, obj):
         return _display_name(obj.user)
+
+    def validate(self, attrs):
+        role = attrs.get('role', getattr(self.instance, 'role', 'member'))
+        attendee = attrs.get('user', getattr(self.instance, 'user', None))
+        if role == 'hrbp' and attendee is not None:
+            from apps.users.services.hbpr_scope import is_hbpr
+            from core.mixins.permissions import has_hr_role
+            if not (is_hbpr(attendee) or has_hr_role(attendee) or _is_staff(attendee)):
+                raise serializers.ValidationError(
+                    {'user': 'An HRBP attendee must be an HBPR, HR or staff user.'})
+        return attrs
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        viewer = _viewer(self)
+        # An attendee's notes are theirs: the attendee and staff only.
+        if not (_is_staff(viewer) or (viewer and viewer.id == instance.user_id)):
+            data['notes'] = ''
+        return data
 
 
 class MeetingSerializer(serializers.ModelSerializer):
@@ -115,9 +162,27 @@ class MeetingSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'meeting_type', 'organizer', 'organizer_name', 'counterparty', 'counterparty_name',
             'team', 'occurred_on', 'notes', 'notes_published_at', 'reference_url',
+            'shared_summary', 'shared_at',
             'recorded_by', 'recorded_by_name', 'recorded_at', 'attendees',
         ]
-        read_only_fields = ['id', 'organizer', 'recorded_by', 'recorded_at']
+        read_only_fields = [
+            'id', 'organizer', 'recorded_by', 'recorded_at', 'shared_summary', 'shared_at',
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        viewer = _viewer(self)
+        # Private notes: organizer, staff, or someone who attended.
+        allowed = _is_staff(viewer) or (
+            viewer is not None and (
+                viewer.id == instance.organizer_id
+                or any(a.user_id == viewer.id for a in instance.attendees.all())
+            )
+        )
+        if not allowed:
+            data['notes'] = ''
+            data['reference_url'] = ''
+        return data
 
     def get_organizer_name(self, obj):
         return _display_name(obj.organizer)
@@ -145,7 +210,8 @@ class IdleStatusUpdateSerializer(serializers.ModelSerializer):
         return _display_name(obj.recorded_by)
 
 
-class IdleFlagSerializer(serializers.ModelSerializer):
+class IdleFlagSerializer(_OwnerOnlyNotesMixin, serializers.ModelSerializer):
+    owner_field = 'flagged_by'
     employee_name = serializers.SerializerMethodField()
     flagged_by_name = serializers.SerializerMethodField()
     status_updates = IdleStatusUpdateSerializer(many=True, read_only=True)
@@ -156,7 +222,8 @@ class IdleFlagSerializer(serializers.ModelSerializer):
             'id', 'employee', 'employee_name', 'flagged_by', 'flagged_by_name', 'flagged_on',
             'status', 'productivity_task', 'resolved_on', 'notes', 'reference_url', 'status_updates',
         ]
-        read_only_fields = ['id', 'flagged_by']
+        # status/resolved_on move together through the `resolve` action only.
+        read_only_fields = ['id', 'flagged_by', 'status', 'resolved_on']
 
     def get_employee_name(self, obj):
         return _display_name(obj.employee)
@@ -193,7 +260,8 @@ class EngagementSurveyResponseSerializer(serializers.ModelSerializer):
         return _display_name(obj.respondent)
 
 
-class AbsenceSerializer(serializers.ModelSerializer):
+class AbsenceSerializer(_OwnerOnlyNotesMixin, serializers.ModelSerializer):
+    owner_field = 'flagged_by'
     employee_name = serializers.SerializerMethodField()
     flagged_by_name = serializers.SerializerMethodField()
 
@@ -203,7 +271,8 @@ class AbsenceSerializer(serializers.ModelSerializer):
             'id', 'employee', 'employee_name', 'flagged_by', 'flagged_by_name', 'absence_date',
             'reason', 'addressed_on', 'notes', 'reference_url', 'recorded_at',
         ]
-        read_only_fields = ['id', 'flagged_by', 'recorded_at']
+        # addressed_on is set by the `address` action only.
+        read_only_fields = ['id', 'flagged_by', 'recorded_at', 'addressed_on']
 
     def get_employee_name(self, obj):
         return _display_name(obj.employee)
@@ -222,8 +291,21 @@ class PIPRecordSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'employee', 'employee_name', 'tl', 'tl_name', 'status', 'start_date',
             'approved_by', 'approved_by_name', 'approved_at', 'notes', 'reference_url',
+            'shared_notes', 'closed_on', 'status_note',
         ]
-        read_only_fields = ['id', 'tl', 'approved_by', 'approved_at']
+        # `status` is server-controlled: created as draft, moved only by actions.
+        read_only_fields = [
+            'id', 'tl', 'status', 'approved_by', 'approved_at', 'closed_on', 'status_note',
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        viewer = _viewer(self)
+        # `notes` is the TL's private evidence; `shared_notes` is what reviewers read.
+        if not (_is_staff(viewer) or (viewer and viewer.id == instance.tl_id)):
+            data['notes'] = ''
+            data['reference_url'] = ''
+        return data
 
     def get_employee_name(self, obj):
         return _display_name(obj.employee)
@@ -235,7 +317,8 @@ class PIPRecordSerializer(serializers.ModelSerializer):
         return _display_name(obj.approved_by)
 
 
-class PromotionFlagSerializer(serializers.ModelSerializer):
+class PromotionFlagSerializer(_OwnerOnlyNotesMixin, serializers.ModelSerializer):
+    owner_field = 'nominated_by'
     employee_name = serializers.SerializerMethodField()
     nominated_by_name = serializers.SerializerMethodField()
 
@@ -243,9 +326,12 @@ class PromotionFlagSerializer(serializers.ModelSerializer):
         model = PromotionFlag
         fields = [
             'id', 'employee', 'employee_name', 'nominated_by', 'nominated_by_name',
-            'nominated_on', 'status', 'decided_on', 'notes',
+            'nominated_on', 'status', 'decided_on', 'decided_by', 'decision_note', 'notes',
         ]
-        read_only_fields = ['id', 'nominated_by']
+        # Only the `decide` action may set these; a TL must not self-approve.
+        read_only_fields = [
+            'id', 'nominated_by', 'status', 'decided_on', 'decided_by', 'decision_note',
+        ]
 
     def get_employee_name(self, obj):
         return _display_name(obj.employee)

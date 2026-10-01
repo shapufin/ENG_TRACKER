@@ -2,11 +2,13 @@ from rest_framework import viewsets, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import (
+    event_type_choices,
     Notification,
     NotificationEventTypeConfig,
     NotificationPreference,
     PushSubscription,
 )
+from .types.base import REGISTRY
 from .vapid_utils import get_public_key
 
 
@@ -16,6 +18,14 @@ OWN_EVENT_TYPES = {
     'own_standby_submitted', 'own_standby_updated', 'team_period_finalized',
 }
 TEAM_EVENT_TYPES = {'team_action_required', 'team_leave_deleted'}
+
+
+def _types_in_category(category):
+    """Core types of a category plus any a plugin registered under it."""
+    core = {'own': OWN_EVENT_TYPES, 'team': TEAM_EVENT_TYPES}.get(category, set())
+    return set(core) | {
+        event_type for event_type, cls in REGISTRY.items() if cls.category == category
+    }
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -75,15 +85,22 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     def _available_event_types(self, user):
         profile = getattr(user, 'profile', None)
+        is_oversight_recipient = bool(
+            user.is_staff or user.is_superuser or
+            getattr(profile, 'is_hr', False) or
+            getattr(profile, 'is_hbpr', False)
+        )
         is_team_recipient = bool(
             user.is_staff or user.is_superuser or
             getattr(profile, 'is_hr', False) or
             getattr(profile, 'is_team_leader', False) or
             (hasattr(user, 'led_teams') and user.led_teams.exists())
         )
-        available = set(OWN_EVENT_TYPES)
+        available = _types_in_category('own')
         if is_team_recipient:
-            available.update(TEAM_EVENT_TYPES)
+            available |= _types_in_category('team')
+        if is_oversight_recipient:
+            available |= _types_in_category('oversight')
         # Admin kill-switch: globally disabled types vanish from the
         # preferences list (and PATCH) so user frontends stop showing them.
         return {t for t in available if NotificationEventTypeConfig.is_type_enabled(t)}
@@ -95,7 +112,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
         if request.method == 'PATCH':
             event_type = request.data.get('event_type')
-            if event_type not in available:
+            if not isinstance(event_type, str) or event_type not in available:
                 return Response(
                     {'error': 'This notification category is not available for your role.'},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -123,11 +140,13 @@ class NotificationViewSet(viewsets.ModelViewSet):
             )
         }
         rows = []
-        for event_type, _label in NotificationPreference.EVENT_TYPES:
+        for event_type, _label in event_type_choices():
             if event_type in available:
+                registered = REGISTRY.get(event_type)
                 rows.append(existing.get(event_type) or NotificationPreference(
                     user=request.user,
                     event_type=event_type,
+                    push_enabled=registered.push_by_default if registered else True,
                 ))
         serializer = NotificationPreferenceSerializer(
             rows,

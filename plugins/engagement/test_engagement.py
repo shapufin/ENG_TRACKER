@@ -386,3 +386,56 @@ class EngagementAPITests(TestCase):
             resp['Content-Type'],
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
+
+
+class EngagementHbprScopeTests(EngagementAPITests):
+    """HBPR sees Italian TLs' snapshots only; never an Albanian-only TL's."""
+
+    def setUp(self):
+        super().setUp()
+        self.hbpr = _make_user('hbpr_viewer')
+        _assign_tl_role(self.hbpr, 'hbpr')
+
+    def test_hbpr_sees_only_italian_tl_rows(self):
+        resp = self._call('team-breakdown', self.hbpr, month=self.month.isoformat())
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual({row['team_name'] for row in resp.data}, {'Team B'})
+
+    def test_hbpr_summary_counts_only_in_scope_teams(self):
+        resp = self._call('summary', self.hbpr)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['team_count'], 1)
+
+    def test_hbpr_export_is_scoped(self):
+        resp = self._call('export', self.hbpr, month=self.month.isoformat())
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn(b'leader3', resp.content)
+
+    def test_plain_employee_still_denied(self):
+        self.assertEqual(self._call('summary', self.employee).status_code, 403)
+
+
+class EngagementAutoSnapshotTests(EngagementHbprScopeTests):
+    """First read of a month creates the visible TLs' snapshots; it never
+    computes for TLs the viewer cannot see, and never recomputes twice."""
+
+    def setUp(self):
+        super().setUp()
+        TLApprovalMetric.objects.all().delete()
+
+    def test_hbpr_first_read_creates_italian_tl_rows_only(self):
+        resp = self._call('team-breakdown', self.hbpr, month=self.month.isoformat())
+        self.assertEqual({row['team_name'] for row in resp.data}, {'Team B'})
+        self.assertEqual(TLApprovalMetric.objects.filter(leader=self.other_leader).count(), 0)
+
+    def test_tl_first_read_creates_their_own_rows(self):
+        self._call('summary', self.leader)
+        self.assertEqual(TLApprovalMetric.objects.filter(leader=self.leader).count(), 1)
+        self.assertEqual(TLApprovalMetric.objects.filter(leader=self.other_leader).count(), 0)
+
+    def test_second_read_does_not_recompute(self):
+        self._call('summary', self.hbpr)
+        TLApprovalMetric.objects.update(computed_at=timezone.now())
+        stamp = TLApprovalMetric.objects.get(leader=self.leader).computed_at
+        self._call('summary', self.hbpr)
+        self.assertEqual(TLApprovalMetric.objects.get(leader=self.leader).computed_at, stamp)

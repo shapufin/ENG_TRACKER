@@ -16,7 +16,7 @@ from plugins.notifications.models import (
     NotificationPreference,
     PushSubscription,
 )
-from plugins.notifications.viewsets import NotificationViewSet
+from plugins.notifications.viewsets import OWN_EVENT_TYPES, NotificationViewSet
 
 User = get_user_model()
 
@@ -286,8 +286,11 @@ class PushSubscriptionAPITest(TestCase):
     def test_preferences_default_to_all_own_events_enabled(self):
         response = self._request('get', 'preferences')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 8)
-        self.assertTrue(all(item['in_app_enabled'] and item['push_enabled'] for item in response.data))
+        # Plugin-registered types (e.g. the scorecard's, push off by default)
+        # may also be listed; the core own types are what this pins down.
+        core = [item for item in response.data if item['event_type'] in OWN_EVENT_TYPES]
+        self.assertEqual(len(core), 8)
+        self.assertTrue(all(item['in_app_enabled'] and item['push_enabled'] for item in core))
 
     def test_preference_update_disables_in_app_delivery(self):
         response = self._request('patch', 'preferences', {

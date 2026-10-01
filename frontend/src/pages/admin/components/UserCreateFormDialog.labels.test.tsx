@@ -27,6 +27,7 @@ const form = {
   is_italian_tl_role: false,
   is_albanian_tl_role: false,
   is_cr_admin: false,
+  is_hbpr: false,
   roles: [],
 };
 

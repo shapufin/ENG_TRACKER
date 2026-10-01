@@ -9,6 +9,7 @@ describe("computePermissions", () => {
       isAlbanianTL: false,
       isTeamLeader: false,
       isHR: false,
+      isHBPR: false,
       isAdmin: false,
       isSuperuser: false,
       isCRAdmin: false,
@@ -297,6 +298,44 @@ describe("computePermissions", () => {
     const result = computePermissions({ has_control_room_access: true, is_staff: true });
     expect(result.isAdmin).toBe(true);
     expect(result.isCRUser).toBe(false);
+  });
+
+  describe("HBPR", () => {
+    const hbpr = { roles: ["hbpr"] };
+
+    it("is read from the database role only (no legacy flag)", () => {
+      expect(computePermissions(hbpr).isHBPR).toBe(true);
+      expect(computePermissions({ is_hbpr: true }).isHBPR).toBe(false);
+      expect(computePermissions({ roles: ["hr"] }).isHBPR).toBe(false);
+      expect(computePermissions(null).isHBPR).toBe(false);
+    });
+
+    it("is not a team leader and not an employee-shell user", () => {
+      const result = computePermissions(hbpr);
+      expect(result.isTeamLeader).toBe(false);
+      expect(result.canApprove).toBe(false);
+      expect(result.isEmployee).toBe(false);
+    });
+
+    it("HBPR-only gets the HBPR dashboard and no personal (overtime) dashboard", () => {
+      const result = computePermissions(hbpr);
+      expect(result.availableDashboards).toEqual(["hbpr"]);
+      expect(result.primaryDashboard).toBe("hbpr");
+    });
+
+    it("multi-role HBPR keeps the other role's home and the personal dashboard", () => {
+      const tl = computePermissions({ roles: ["hbpr", "italian_tl"] });
+      expect(tl.primaryDashboard).toBe("team_leader");
+      expect(tl.availableDashboards).toEqual(["team_leader", "hbpr", "employee"]);
+      const hr = computePermissions({ roles: ["hbpr", "hr"] });
+      expect(hr.primaryDashboard).toBe("hr");
+    });
+
+    it("HBPR with Control Room access is not treated as a CR-only user", () => {
+      const result = computePermissions({ roles: ["hbpr"], has_control_room_access: true });
+      expect(result.isCRUser).toBe(false);
+      expect(result.primaryDashboard).toBe("hbpr");
+    });
   });
 
   it("has_control_room_access flag is computed from user.has_control_room_access", () => {

@@ -19,6 +19,7 @@ interface UserFormCoreForm {
   is_italian_tl_role: boolean;
   is_albanian_tl_role: boolean;
   is_cr_admin?: boolean;
+  is_hbpr?: boolean;
   hire_date?: string;
 }
 
@@ -107,6 +108,7 @@ export const UserFormCore: React.FC<UserFormCoreProps> = ({
           is_italian_tl_role={form.is_italian_tl_role}
           is_albanian_tl_role={form.is_albanian_tl_role}
           is_cr_admin={form.is_cr_admin}
+          is_hbpr={form.is_hbpr}
           prefix={prefix}
           onChange={(key, value) => updateField(key, value)}
         />

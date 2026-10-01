@@ -19,6 +19,7 @@ from django.utils import timezone
 from apps.dashboard.models.calendar import CalendarWorkspace
 from apps.leave_management.models import LeaveBalance
 from apps.overtime.models import Client
+from apps.permissions.models import Role
 from apps.permissions.services.role_service import assign_role
 from apps.users.models import Team, TeamMembership, UserProfile
 
@@ -95,6 +96,13 @@ E2E_USERS = [
         "first_name": "E2E",
         "last_name": "EmployeeC",
     },
+    {
+        "username": "e2e_hbpr",
+        "email": "e2e_hbpr@example.com",
+        "first_name": "E2E",
+        "last_name": "HBPR",
+        "extra_roles": ["hbpr"],
+    },
 ]
 
 E2E_TEAM = {"name": "E2E Test Team", "code": "E2E_TEAM"}
@@ -107,6 +115,10 @@ class Command(BaseCommand):
     help = "Seed deterministic E2E users, team relationships, and client for Playwright."
 
     def handle(self, *args, **options):
+        # Idempotent, so the fixture works whether or not the role migration ran.
+        Role.objects.get_or_create(
+            code="hbpr", defaults={"name": "HR Business Partner (Italy)"}
+        )
         users = {}
         for cfg in E2E_USERS:
             defaults = {

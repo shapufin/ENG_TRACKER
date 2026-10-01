@@ -36,6 +36,7 @@ const basePerms: PermissionContextType = {
   isItalianTL: false,
   isAlbanianTL: false,
   isHR: false,
+  isHBPR: false,
   isAdmin: false,
   isSuperuser: false,
   isCRAdmin: false,

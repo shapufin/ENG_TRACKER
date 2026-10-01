@@ -8,6 +8,7 @@ from django.db.models.functions import TruncMonth
 from core.pagination import LargeResultsPagination
 from core.mixins.cache import CacheInvalidationMixin
 from core.mixins.permissions import (
+    HbprBlockedMixin,
     SuperuserPermissionMixin,
     PersonalOnlyFilterMixin,
     BulkActionMixin,
@@ -32,7 +33,7 @@ from .serializers import (
 )
 
 
-class StandbyPatternViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.ModelViewSet):
+class StandbyPatternViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.ModelViewSet):
     """
     ViewSet for StandbyPattern model.
     
@@ -73,7 +74,7 @@ class StandbyPatternViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, vi
         self.invalidate_related_cache()
 
 
-class StandbyLogViewSet(IdempotentCreateMixin, SuperuserPermissionMixin, HRReadOnlyMixin, PersonalOnlyFilterMixin, MonthlyLockMixin, BulkActionMixin, viewsets.ModelViewSet):
+class StandbyLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermissionMixin, HRReadOnlyMixin, PersonalOnlyFilterMixin, MonthlyLockMixin, BulkActionMixin, viewsets.ModelViewSet):
     """
     ViewSet for StandbyLog model.
     

@@ -8,6 +8,16 @@ from core.plugins.registry import plugin_registry
 from core.mixins.permissions import PluginPermissionMixin
 from core.utils import get_client_ip
 
+
+def _self_service_metadata(metadata):
+    """The part of ``metadata`` a plugin flagged ``"self_service": True``, or None."""
+    routes = [r for r in metadata.get('routes', []) if r.get('self_service')]
+    slots = [s for s in metadata.get('injection_slots', []) if s.get('self_service')]
+    if not routes and not slots:
+        return None
+    return {**metadata, 'routes': routes, 'injection_slots': slots}
+
+
 class PluginSerializer(serializers.ModelSerializer):
     is_installed = serializers.SerializerMethodField()
     table_names = serializers.SerializerMethodField()
@@ -232,8 +242,15 @@ class PluginViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                 if can_access_dashboard(user):
                     metadata.append(plugin.get_frontend_metadata())
                     continue
+            frontend_metadata = plugin.get_frontend_metadata()
             if user.is_superuser or user.is_staff or 'view' in user_perms.get(plugin.name, []):
-                metadata.append(plugin.get_frontend_metadata())
+                metadata.append(frontend_metadata)
+                continue
+            # No `view` grant: still expose pages the plugin marks self-service
+            # (an employee reading records about themselves), and nothing else.
+            self_service = _self_service_metadata(frontend_metadata)
+            if self_service:
+                metadata.append(self_service)
 
         return Response(metadata)
 

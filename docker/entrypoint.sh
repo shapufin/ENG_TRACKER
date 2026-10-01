@@ -54,6 +54,11 @@ python manage.py migrate --noinput
 echo "[entrypoint] Syncing plugin registry..."
 python manage.py sync_plugins
 
+# Existing databases keep their old PluginPermission rows, so the hbpr role needs a
+# one-time view grant; the command is a no-op once hbpr has been configured.
+echo "[entrypoint] Granting HBPR plugin access..."
+python manage.py grant_hbpr_plugin_access || echo "[entrypoint] HBPR grant skipped (non-fatal)"
+
 echo "[entrypoint] Ensuring superuser..."
 python manage.py ensure_superuser
 

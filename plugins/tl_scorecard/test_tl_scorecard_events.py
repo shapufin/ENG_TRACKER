@@ -98,6 +98,7 @@ class MeetingAttendeeAPITests(TestCase):
         self.other_leader = _make_user('leader_att2')
         _assign_tl_role(self.other_leader)
         self.hrbp = _make_user('hrbp_att')
+        _assign_tl_role(self.hrbp, 'hbpr')  # an HRBP attendee must hold a real HRBP-type role
         self.team = Team.objects.create(name='Attendee Team', code='ATT')
         self.meeting = Meeting.objects.create(
             meeting_type='team_meeting', organizer=self.leader, team=self.team, occurred_on='2026-09-10',

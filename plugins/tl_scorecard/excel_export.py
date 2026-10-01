@@ -177,7 +177,11 @@ def _build_governance_sheet(wb, fmt, governance):
 def build_workbook_bytes(scorecard, kpi_coverage, governance, period_label):
     """Build the tl_scorecard evidence workbook and return raw .xlsx bytes."""
     buffer = io.BytesIO()
-    wb = xlsxwriter.Workbook(buffer, {"in_memory": True})
+    # Free text (absence reasons, names) must never become a formula or link.
+    wb = xlsxwriter.Workbook(
+        buffer,
+        {"in_memory": True, "strings_to_formulas": False, "strings_to_urls": False},
+    )
     wb.set_properties({
         "title": f"TL Scorecard Report — {period_label}",
         "subject": "TL Scorecard KPIs",

@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Shield, Users, Briefcase, User } from "lucide-react";
+import { Shield, Users, Briefcase, User, Handshake } from "lucide-react";
 import type { DashboardType } from "@/context/permission-context-base";
 import { toneSurfaceClass, type Tone } from "@/components/ui/tone";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,12 @@ const DASHBOARD_OPTIONS: Record<DashboardType, DashboardOption> = {
     label: "HR Dashboard",
     icon: <Shield className="h-4 w-4" />,
     description: "Company-wide overview",
+  },
+  hbpr: {
+    id: "hbpr",
+    label: "HBPR Dashboard",
+    icon: <Handshake className="h-4 w-4" />,
+    description: "Italy team leaders and employees",
   },
   admin: {
     id: "admin",

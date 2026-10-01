@@ -128,6 +128,44 @@ def has_team_leader_role(user) -> bool:
     )
 
 
+def is_hbpr_only(user) -> bool:
+    """True when the user holds ``hbpr`` and no other elevated role.
+
+    HBPR is a business-partner role: no overtime, standby, reports or payroll.
+    Multi-role users keep whatever their other role (TL, HR, CR admin, staff)
+    grants, so the block applies only when HBPR is the sole capability. A plain
+    ``employee`` role does not lift the block: HBPRs have none of those duties.
+    """
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    if user.is_staff or user.is_superuser:
+        return False
+    if not has_role(user, 'hbpr'):
+        return False
+    # Role codes and legacy role flags only. `profile.is_team_leader` is derived
+    # from FKs / led teams, so being named someone's TL must not lift the block.
+    profile = getattr(user, 'profile', None)
+    has_tl_role = (
+        has_role(user, 'italian_tl') or has_role(user, 'albanian_tl')
+        or bool(getattr(profile, 'is_italian_tl_role', False))
+        or bool(getattr(profile, 'is_albanian_tl_role', False))
+    )
+    return not (has_hr_role(user) or has_tl_role or has_role(user, 'cr_admin'))
+
+
+class HbprBlockedMixin:
+    """Deny HBPR-only users on every action of a viewset (backend enforcement
+    of "no overtime / standby / reports"; hidden menus are not authorization).
+
+    Place first in the base list so it wraps the other permission mixins.
+    """
+
+    def check_permissions(self, request):
+        super().check_permissions(request)
+        if is_hbpr_only(request.user):
+            raise PermissionDenied("This area is not available for your role.")
+
+
 class IsSuperuser(permissions.BasePermission):
     """Allow only superusers."""
     def has_permission(self, request, view):

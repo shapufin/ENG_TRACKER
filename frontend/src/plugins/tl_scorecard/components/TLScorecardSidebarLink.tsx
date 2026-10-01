@@ -1,4 +1,4 @@
-/** Sidebar item for the TL Scorecard plugin (app layout, TL only). */
+/** Sidebar item for the TL Scorecard plugin (app layout, TL and HBPR). */
 import React from "react";
 import { useLocation } from "react-router-dom";
 import { ClipboardList } from "lucide-react";
@@ -7,10 +7,10 @@ import { usePermissions } from "@/context/PermissionContext";
 
 const TLScorecardSidebarLink: React.FC = () => {
   const location = useLocation();
-  const { isTeamLeader, isAdmin } = usePermissions();
+  const { isTeamLeader, isHBPR, isAdmin } = usePermissions();
   const isActive = location.pathname === "/tl-scorecard";
 
-  if (!isTeamLeader && !isAdmin) return null;
+  if (!isTeamLeader && !isHBPR && !isAdmin) return null;
 
   return (
     <SidebarNavLink

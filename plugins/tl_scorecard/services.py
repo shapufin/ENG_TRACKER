@@ -420,25 +420,34 @@ def escalation_candidates(leader) -> list[dict]:
     return candidates
 
 
-def governance_records(leader, team_member_ids, year: int) -> dict:
+def governance_records(leader, team_member_ids, year: int, subject_ids=None) -> dict:
     """Row-level detail (not just counts) for the export workbook's
     Governance sheet — open PIPs, open absences, pending promotion flags,
     and in-progress EPR cycles for this TL's team. Reuses the same
     querysets as pip_metrics/absence_metrics/promotion_ratio/epr_metrics,
-    just without collapsing them to counts."""
+    just without collapsing them to counts.
+
+    ``subject_ids`` (when given) limits PIP/absence/promotion rows to those
+    employees, so a viewer scoped to a subset never sees a record about someone
+    outside it just because the TL once wrote it."""
+    def _limit(qs, field):
+        return qs if subject_ids is None else qs.filter(**{f'{field}__in': subject_ids})
+
     open_pips = [
         {'employee': str(p.employee), 'status': p.status, 'start_date': p.start_date.isoformat(),
          'approved': p.approved_at is not None}
-        for p in PIPRecord.objects.filter(tl=leader).exclude(status__in=('completed', 'cancelled'))
-        .select_related('employee')
+        for p in _limit(PIPRecord.objects.filter(tl=leader), 'employee_id')
+        .exclude(status__in=('completed', 'cancelled')).select_related('employee')
     ]
     open_absences = [
         {'employee': str(a.employee), 'absence_date': a.absence_date.isoformat(), 'reason': a.reason}
-        for a in Absence.objects.filter(flagged_by=leader, addressed_on__isnull=True).select_related('employee')
+        for a in _limit(Absence.objects.filter(flagged_by=leader, addressed_on__isnull=True), 'employee_id')
+        .select_related('employee')
     ]
     pending_promotions = [
         {'employee': str(p.employee), 'nominated_on': p.nominated_on.isoformat()}
-        for p in PromotionFlag.objects.filter(nominated_by=leader, status='nominated').select_related('employee')
+        for p in _limit(PromotionFlag.objects.filter(nominated_by=leader, status='nominated'), 'employee_id')
+        .select_related('employee')
     ]
     in_progress_cycles = [
         {

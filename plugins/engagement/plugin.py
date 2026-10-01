@@ -36,7 +36,7 @@ class EngagementPlugin(BasePlugin):
     def get_permission_manifest(self):
         return {
             **super().get_permission_manifest(),
-            "view": {"roles": ["italian_tl", "albanian_tl"], "public": False},
+            "view": {"roles": ["italian_tl", "albanian_tl", "hbpr"], "public": False},
         }
 
     def get_frontend_metadata(self):

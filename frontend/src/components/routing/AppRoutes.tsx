@@ -73,6 +73,7 @@ const SettingsPage = React.lazy(() =>
 const TeamManagementPage = React.lazy(() => import("@/pages/team/TeamManagementPage"));
 const TLApprovalDashboard = React.lazy(() => import("@/pages/team/TLApprovalDashboard"));
 import { HRRoute } from "@/components/auth/HRRoute";
+import { HoursRoute } from "@/components/auth/HoursRoute";
 import { TLRoute } from "@/components/auth/TLRoute";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { PageLoader } from "@/components/ui/PageLoader";
@@ -135,8 +136,13 @@ export const AppRoutes: React.FC = () => {
               element: <CRUserGuard />,
               children: [
                 { path: "/dashboard", element: withErrorBoundary(<DashboardPage />) },
-                { path: "/overtime", element: withSuspense(<OvertimePage />) },
-                { path: "/standby", element: withSuspense(<StandbyPage />) },
+                {
+                  element: <HoursRoute />,
+                  children: [
+                    { path: "/overtime", element: withSuspense(<OvertimePage />) },
+                    { path: "/standby", element: withSuspense(<StandbyPage />) },
+                  ],
+                },
                 { path: "/leave-management", element: withSuspense(<LeavePage />) },
                 { path: "/calendar", element: withSuspense(<CalendarPage />) },
                 { path: "/team", element: withSuspense(<TeamManagementPage />) },

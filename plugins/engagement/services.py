@@ -6,8 +6,9 @@ compute time (via `recompute_tl_metrics`); read endpoints only serve the
 stored snapshot plus a freshness check.
 """
 from calendar import monthrange
-from datetime import timedelta
+from datetime import date, timedelta
 
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
@@ -114,6 +115,28 @@ def leader_team_pairs():
             if hasattr(leader, 'profile'):
                 pairs.append((leader, team))
     return pairs
+
+
+def ensure_current_month_snapshots(leader_ids):
+    """Create this month's snapshots for ``leader_ids`` that have none yet.
+
+    Snapshots otherwise exist only after ``recompute_tl_metrics`` runs, so a new
+    TL or a new month would read as empty. Existing rows are never touched
+    (staleness is handled separately on read)."""
+    month = date.today().replace(day=1)
+    missing = set(leader_ids) - set(
+        TLApprovalMetric.objects.filter(month=month, leader_id__in=leader_ids)
+        .values_list('leader_id', flat=True)
+    )
+    if not missing:
+        return
+    for leader, team in leader_team_pairs():
+        if leader.id in missing:
+            try:
+                with transaction.atomic():  # savepoint: keep the request's transaction usable
+                    compute_tl_metric(leader, team, month)
+            except IntegrityError:  # a concurrent read created the same row
+                pass
 
 
 def _resubmission_count(model, date_field, member_ids, month_start, month_end):

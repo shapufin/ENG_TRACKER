@@ -12,6 +12,7 @@ from django.db.models.functions import TruncMonth
 from core.pagination import LargeResultsPagination
 from core.mixins.cache import CacheInvalidationMixin
 from core.mixins.permissions import (
+    HbprBlockedMixin,
     SuperuserPermissionMixin,
     PersonalOnlyFilterMixin,
     BulkActionMixin,
@@ -99,7 +100,7 @@ class ClientViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.M
         return Response(serializer.data)
 
 
-class OvertimeLogViewSet(IdempotentCreateMixin, SuperuserPermissionMixin, HRReadOnlyMixin, PersonalOnlyFilterMixin, MonthlyLockMixin, BulkActionMixin, viewsets.ModelViewSet):
+class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermissionMixin, HRReadOnlyMixin, PersonalOnlyFilterMixin, MonthlyLockMixin, BulkActionMixin, viewsets.ModelViewSet):
     """
     ViewSet for OvertimeLog model.
 

@@ -15,8 +15,12 @@ from .viewsets import (
     ReviewDeliveryViewSet,
     TLScorecardViewSet,
 )
+from .viewsets_hbpr import HbprViewSet
+from .viewsets_my_records import MyRecordsViewSet
 
 router = DefaultRouter()
+router.register(r'hbpr', HbprViewSet, basename='tl-scorecard-hbpr')
+router.register(r'my-records', MyRecordsViewSet, basename='tl-scorecard-my-records')
 router.register(r'', TLScorecardViewSet, basename='tl-scorecard')
 router.register(r'meetings', MeetingViewSet, basename='tl-scorecard-meeting')
 router.register(r'meeting-attendees', MeetingAttendeeViewSet, basename='tl-scorecard-meeting-attendee')

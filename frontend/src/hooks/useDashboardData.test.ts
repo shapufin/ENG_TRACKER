@@ -344,4 +344,31 @@ describe("useDashboardData", () => {
     expect(result.current.weekReferenceDate).toBe(toLocalISO(end));
     expect(result.current.leaveAvailableDays).toBe(9);
   });
+
+  it("never requests overtime or standby while the HBPR dashboard is showing", async () => {
+    vi.mocked(overtimeService.getLogs).mockClear();
+    vi.mocked(overtimeService.getSummary).mockClear();
+    vi.mocked(standbyService.getLogs).mockClear();
+    vi.mocked(standbyService.getSummary).mockClear();
+    vi.mocked(leaveService.getRequests).mockResolvedValue({ count: 0, results: [] } as never);
+    vi.mocked(leaveService.getUserBalanceSummary).mockResolvedValue({} as never);
+
+    const { result } = renderHook(
+      () =>
+        useDashboardData({
+          userId: 1,
+          isAdmin: false,
+          isHR: false,
+          selectedDashboard: "hbpr",
+        }),
+      { wrapper: createWrapper(new QueryClient()) }
+    );
+
+    await waitFor(() => expect(leaveService.getRequests).toHaveBeenCalled());
+    expect(result.current).toBeDefined();
+    expect(overtimeService.getLogs).not.toHaveBeenCalled();
+    expect(overtimeService.getSummary).not.toHaveBeenCalled();
+    expect(standbyService.getLogs).not.toHaveBeenCalled();
+    expect(standbyService.getSummary).not.toHaveBeenCalled();
+  });
 });

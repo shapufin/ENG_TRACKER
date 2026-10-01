@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   Award,
   CalendarClock,
   CheckCircle2,
   ClipboardList,
-  Download,
   Gauge,
   Handshake,
   Hourglass,
@@ -25,11 +25,13 @@ import { Button } from "@/components/ui/button";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { InfoCallout } from "@/components/ui/InfoCallout";
+import { Label } from "@/components/ui/label";
 import { StatCard } from "@/components/ui/StatCard";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toneTextClass } from "@/components/ui/tone";
 import { usePermissions } from "@/context/PermissionContext";
-import { downloadBlobResponse } from "@/lib/download";
 import { EPRSection } from "../components/EPRSection";
+import { ExportButton } from "../components/ExportButton";
 import { EscalationsPanel } from "../components/EscalationsPanel";
 import { FlagAbsenceDialog } from "../components/FlagAbsenceDialog";
 import { FlagIdleDialog } from "../components/FlagIdleDialog";
@@ -39,6 +41,9 @@ import { LogReviewDeliveryDialog } from "../components/LogReviewDeliveryDialog";
 import { NominatePromotionDialog } from "../components/NominatePromotionDialog";
 import { OpenPIPDialog } from "../components/OpenPIPDialog";
 import { PIPListPanel } from "../components/PIPListPanel";
+import { errorMessage } from "../components/records/errorMessage";
+import { RecordsTab } from "../components/records/RecordsTab";
+import { TlPicker } from "../components/records/TlPicker";
 import { StartEPRCycleDialog } from "../components/StartEPRCycleDialog";
 import { tlScorecardService } from "../services/tlScorecardService";
 import type { EPRStage } from "../types/tlScorecard";
@@ -61,9 +66,28 @@ const slaTone = (pct: number | null) => {
   return toneTextClass.danger;
 };
 
+const notifyError = (error: unknown) => toast.error(errorMessage(error));
+
 export const TLScorecardPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { isAdmin } = usePermissions();
+  const { isAdmin, isHBPR, isTeamLeader } = usePermissions();
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") === "records" ? "records" : "overview";
+  const tlParam = Number(params.get("tl")) || null;
+  // An HBPR has no team of their own, so every scorecard call needs the team leader they picked.
+  const needsLeader = Boolean(isHBPR) && !isTeamLeader && !isAdmin;
+  const leaderId = needsLeader ? (tlParam ?? undefined) : undefined;
+  const awaitingLeader = needsLeader && leaderId === undefined;
+  const setParam = (key: string, value: string | null) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value) next.set(key, value);
+        else next.delete(key);
+        return next;
+      },
+      { replace: true },
+    );
   const [meetingDialogOpen, setMeetingDialogOpen] = useState(false);
   const [idleDialogOpen, setIdleDialogOpen] = useState(false);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
@@ -71,7 +95,6 @@ export const TLScorecardPage: React.FC = () => {
   const [promotionDialogOpen, setPromotionDialogOpen] = useState(false);
   const [pipDialogOpen, setPipDialogOpen] = useState(false);
   const [eprDialogOpen, setEprDialogOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
 
   const invalidateScorecard = () => queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "scorecard"] });
   const invalidatePips = () => queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "pip-records"] });
@@ -79,22 +102,27 @@ export const TLScorecardPage: React.FC = () => {
   const createMeetingMutation = useMutation({
     mutationFn: tlScorecardService.createMeeting,
     onSuccess: invalidateScorecard,
+    onError: notifyError,
   });
   const createIdleFlagMutation = useMutation({
     mutationFn: tlScorecardService.createIdleFlag,
     onSuccess: invalidateScorecard,
+    onError: notifyError,
   });
   const createReviewDeliveryMutation = useMutation({
     mutationFn: tlScorecardService.createReviewDelivery,
     onSuccess: invalidateScorecard,
+    onError: notifyError,
   });
   const createAbsenceMutation = useMutation({
     mutationFn: tlScorecardService.createAbsence,
     onSuccess: invalidateScorecard,
+    onError: notifyError,
   });
   const createPromotionFlagMutation = useMutation({
     mutationFn: tlScorecardService.createPromotionFlag,
     onSuccess: invalidateScorecard,
+    onError: notifyError,
   });
   const createPIPMutation = useMutation({
     mutationFn: tlScorecardService.createPIPRecord,
@@ -102,6 +130,7 @@ export const TLScorecardPage: React.FC = () => {
       invalidateScorecard();
       invalidatePips();
     },
+    onError: notifyError,
   });
   const approvePIPMutation = useMutation({
     mutationFn: tlScorecardService.approvePIPRecord,
@@ -109,34 +138,29 @@ export const TLScorecardPage: React.FC = () => {
       invalidateScorecard();
       invalidatePips();
     },
+    onError: notifyError,
   });
   const createEPRCycleMutation = useMutation({
     mutationFn: tlScorecardService.createEPRCycle,
     onSuccess: invalidateEprCycles,
+    onError: notifyError,
   });
   const addEPRGoalMutation = useMutation({
     mutationFn: tlScorecardService.createEPRGoal,
     onSuccess: invalidateEprCycles,
+    onError: notifyError,
   });
   const completeEPRStageMutation = useMutation({
     mutationFn: ({ cycleId, stage }: { cycleId: number; stage: EPRStage }) =>
       tlScorecardService.completeEPRStage(cycleId, `${stage}_completed_at`),
     onSuccess: invalidateEprCycles,
+    onError: notifyError,
   });
 
-  const handleExport = async () => {
-    setIsExporting(true);
-    try {
-      const response = await tlScorecardService.exportWorkbook();
-      downloadBlobResponse(response.data, `tl-scorecard-${new Date().toISOString().slice(0, 7)}.xlsx`);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   const scorecardQuery = useQuery({
-    queryKey: ["tl-scorecard", "scorecard"],
-    queryFn: async () => (await tlScorecardService.getScorecard()).data,
+    queryKey: ["tl-scorecard", "scorecard", leaderId ?? "self"],
+    queryFn: async () => (await tlScorecardService.getScorecard(undefined, leaderId)).data,
+    enabled: !awaitingLeader,
   });
   const coverageQuery = useQuery({
     queryKey: ["tl-scorecard", "kpi-coverage"],
@@ -151,8 +175,9 @@ export const TLScorecardPage: React.FC = () => {
     queryFn: async () => (await tlScorecardService.getEngagementSurveyTeamAverage()).data,
   });
   const escalationsQuery = useQuery({
-    queryKey: ["tl-scorecard", "escalations"],
-    queryFn: async () => (await tlScorecardService.getEscalations()).data,
+    queryKey: ["tl-scorecard", "escalations", leaderId ?? "self"],
+    queryFn: async () => (await tlScorecardService.getEscalations(leaderId)).data,
+    enabled: !awaitingLeader,
   });
   const pipRecordsQuery = useQuery({
     queryKey: ["tl-scorecard", "pip-records"],
@@ -162,6 +187,41 @@ export const TLScorecardPage: React.FC = () => {
     queryKey: ["tl-scorecard", "epr-cycles"],
     queryFn: () => tlScorecardService.listEPRCycles(),
   });
+
+  const pageTabs = (
+    <Tabs value={tab} onValueChange={(value) => setParam("tab", value === "records" ? "records" : null)}>
+      <TabsList aria-label="Scorecard sections">
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="records">Records</TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+
+  if (tab === "records") {
+    return (
+      <PageShell title="TL Scorecard" subtitle="Records you and your team have registered">
+        <div className="space-y-4">
+          {pageTabs}
+          <RecordsTab />
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (awaitingLeader) {
+    return (
+      <PageShell title="TL Scorecard">
+        <div className="space-y-4">
+          {pageTabs}
+          <div className="max-w-xs">
+            <Label htmlFor="overview-tl">Team leader</Label>
+            <TlPicker id="overview-tl" value={null} onChange={(id) => setParam("tl", String(id))} />
+          </div>
+          <InfoCallout tone="info" label="Pick a team leader to see their scorecard." />
+        </div>
+      </PageShell>
+    );
+  }
 
   if (scorecardQuery.isLoading) return <LoadingState />;
 
@@ -198,14 +258,18 @@ export const TLScorecardPage: React.FC = () => {
               Visualize
             </Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
-            <Download className="mr-2 h-4 w-4" />
-            {isExporting ? "Exporting…" : "Export Report"}
-          </Button>
+          <ExportButton leaderId={leaderId} />
         </>
       }
     >
       <div className="space-y-6">
+        {pageTabs}
+        {needsLeader && (
+          <div className="max-w-xs">
+            <Label htmlFor="overview-tl">Team leader</Label>
+            <TlPicker id="overview-tl" value={leaderId ?? null} onChange={(id) => setParam("tl", String(id))} />
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard
             label="Leave decided ≤2 days"

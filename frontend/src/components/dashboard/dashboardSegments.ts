@@ -7,5 +7,6 @@ export const DASHBOARD_SEGMENT_LABEL: Record<DashboardType, string> = {
   employee: "Personal",
   team_leader: "Team Leader",
   hr: "HR",
+  hbpr: "HBPR",
   admin: "Admin",
 };

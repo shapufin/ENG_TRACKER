@@ -28,8 +28,11 @@ class NotificationType:
     # Admin-facing explanation of exactly who gets this notification and
     # when. Shown in the Django admin and the custom admin GUI.
     description: str = ''
-    category: str = 'own'  # 'own' or 'team' — used by viewset drift test
+    # 'own' (anyone), 'team' (TLs/HR/staff) or 'oversight' (HBPR/HR/staff).
+    category: str = 'own'
     link: Optional[str] = None
+    # Sensitive types are push-off until the recipient opts in; in-app is unaffected.
+    push_by_default: bool = True
     notification_type: str = 'info'  # default; override or define as method
 
     def __init_subclass__(cls, **kwargs):
@@ -50,6 +53,10 @@ class NotificationType:
     def dedupe_key(self, context, user) -> Optional[str]:
         return None
 
+    def link_for(self, context, user) -> Optional[str]:
+        """In-app path for ``user``; override when it depends on the recipient."""
+        return self.link
+
     # --- Shared delivery (do not override) ---
     def _resolve_notification_type(self, context) -> str:
         nt = self.notification_type
@@ -68,7 +75,7 @@ class NotificationType:
                 title=self.title(context),
                 message=self.message(context),
                 notification_type=nt,
-                link=self.link,
+                link=self.link_for(context, user),
                 event_type=self.event_type,
                 dedupe_key=self.dedupe_key(context, user),
             )

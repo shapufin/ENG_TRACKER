@@ -1,3 +1,4 @@
+import React from "react";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -17,8 +18,41 @@ vi.mock("../services/tlScorecardService", () => ({
     listPIPRecords: vi.fn(),
     listEPRCycles: vi.fn(),
     exportWorkbook: vi.fn(),
+    getHbprOverview: vi.fn(),
+    listMeetings: vi.fn(),
+    listIdleFlags: vi.fn(),
+    listAbsences: vi.fn(),
+    listReviewDeliveries: vi.fn(),
+    listPromotionFlags: vi.fn(),
   },
 }));
+
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+// Radix Select is unreliable to drive via fireEvent in JSDOM: render it flat.
+vi.mock("@/components/ui/select", () => {
+  const Ctx = React.createContext<{ onValueChange?: (v: string) => void }>({});
+  return {
+    Select: ({ children, onValueChange }: { children: React.ReactNode; onValueChange?: (v: string) => void }) => (
+      <Ctx.Provider value={{ onValueChange }}>{children}</Ctx.Provider>
+    ),
+    SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => {
+      const ctx = React.useContext(Ctx);
+      return (
+        <button type="button" role="option" onClick={() => ctx.onValueChange?.(value)}>
+          {children}
+        </button>
+      );
+    },
+    SelectTrigger: ({ id, children }: { id?: string; children: React.ReactNode }) => (
+      <button type="button" role="combobox" id={id}>
+        {children}
+      </button>
+    ),
+    SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder}</span>,
+  };
+});
 
 vi.mock("@/lib/download", () => ({
   downloadBlobResponse: vi.fn(),
@@ -28,8 +62,9 @@ vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({ user: { id: 1, username: "leader", teams: [] } }),
 }));
 
+const perms = vi.hoisted(() => ({ value: { isAdmin: false } as Record<string, boolean> }));
 vi.mock("@/context/PermissionContext", () => ({
-  usePermissions: () => ({ isAdmin: false }),
+  usePermissions: () => perms.value,
 }));
 
 vi.mock("@/services/userService", () => ({
@@ -81,13 +116,13 @@ const mockDefaults = () => {
   });
 };
 
-const renderPage = () => {
+const renderPage = (entry = "/tl-scorecard") => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[entry]}>
         <TLScorecardPage />
       </MemoryRouter>
     </QueryClientProvider>
@@ -194,5 +229,55 @@ describe("TLScorecardPage", () => {
 
     await waitFor(() => expect(tlScorecardService.exportWorkbook).toHaveBeenCalledTimes(1));
     expect(downloadBlobResponse).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a visible message, not silence, when the export fails", async () => {
+    mockDefaults();
+    (tlScorecardService.exportWorkbook as ReturnType<typeof vi.fn>).mockRejectedValue({ response: { status: 500 } });
+    renderPage();
+
+    fireEvent.click(await screen.findByText("Export Report"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not be exported/i);
+    expect(downloadBlobResponse).not.toHaveBeenCalled();
+  });
+
+  it("offers Overview and Records tabs and keeps Overview as the default", async () => {
+    mockDefaults();
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("66.7%")).toBeInTheDocument());
+    expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Records" })).toBeInTheDocument();
+  });
+
+  it("opens the Records tab from the URL even when the scorecard cannot load", async () => {
+    mockDefaults();
+    (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("boom"));
+    (tlScorecardService.listPIPRecords as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    renderPage("/tl-scorecard?tab=records&kind=pips");
+
+    expect(await screen.findByText("No records yet")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Records" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: /pips/i })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("asks an HBPR to pick a team leader and passes it as leader_id", async () => {
+    mockDefaults();
+    perms.value = { isAdmin: false, isHBPR: true, isTeamLeader: false };
+    (tlScorecardService.getHbprOverview as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { tls: [{ id: 9, name: "Other TL" }] },
+    });
+
+    const first = renderPage();
+    expect(await screen.findByText("Pick a team leader to see their scorecard.")).toBeInTheDocument();
+    expect(tlScorecardService.getScorecard).not.toHaveBeenCalled();
+    first.unmount();
+
+    renderPage("/tl-scorecard?tl=9");
+    await waitFor(() => expect(screen.getByText("66.7%")).toBeInTheDocument());
+    expect(tlScorecardService.getScorecard).toHaveBeenCalledWith(undefined, 9);
+    expect(tlScorecardService.getEscalations).toHaveBeenCalledWith(9);
+    perms.value = { isAdmin: false };
   });
 });

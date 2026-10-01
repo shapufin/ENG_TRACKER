@@ -16,7 +16,7 @@ import { usePendingApprovalCount } from "@/hooks/usePendingApprovalCount";
 
 export const AppShell = React.memo(() => {
   const { user } = useAuth();
-  const { isAdmin, isHR, isTeamLeader, isEmployee, isSuperuser, isCRAdmin, isCRUser } =
+  const { isAdmin, isHR, isHBPR, isTeamLeader, isEmployee, isSuperuser, isCRAdmin, isCRUser } =
     usePermissions();
   // Sidebar brand subtitle — higher role wins (mirrors the CR multi-role
   // rule). Uppercase display is handled by the subtitle's `uppercase` class.
@@ -28,9 +28,11 @@ export const AppShell = React.memo(() => {
         ? "HR"
         : isTeamLeader
           ? "Team Leader"
-          : isCRUser || isCRAdmin
-            ? "Control Room"
-            : "Employee";
+          : isHBPR
+            ? "HR Business Partner"
+            : isCRUser || isCRAdmin
+              ? "Control Room"
+              : "Employee";
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);

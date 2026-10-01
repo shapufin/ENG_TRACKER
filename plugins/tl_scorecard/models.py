@@ -60,6 +60,10 @@ class Meeting(BaseModel, DocumentedEventMixin):
     )
     occurred_on = models.DateField()
     notes_published_at = models.DateTimeField(null=True, blank=True)
+    # What the counterparty may read. `notes` stays the organizer's private
+    # record; `notes_published_at` is the 24h team-meeting KPI clock, not this.
+    shared_summary = models.TextField(blank=True)
+    shared_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'tl_scorecard_meetings'
@@ -86,6 +90,8 @@ class MeetingAttendee(BaseModel):
     meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name='attendees')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='meeting_attendances')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
+    # The attendee's own notes. Visible to that attendee and staff only.
+    notes = models.TextField(blank=True)
 
     class Meta:
         db_table = 'tl_scorecard_meeting_attendees'
@@ -231,11 +237,23 @@ class PIPRecord(BaseModel, DocumentedEventMixin):
         help_text='Set by an HR user when the PIP is approved. Null = pending approval.',
     )
     approved_at = models.DateTimeField(null=True, blank=True)
+    # What the employee may read; `notes` stays the TL's private evidence.
+    shared_notes = models.TextField(blank=True)
+    closed_on = models.DateField(null=True, blank=True)
+    status_note = models.TextField(
+        blank=True, help_text='Reason recorded when a PIP is returned, completed or cancelled.',
+    )
 
     class Meta:
         db_table = 'tl_scorecard_pip_records'
         ordering = ['-start_date']
         indexes = [models.Index(fields=['employee', 'status'])]
+
+    @property
+    def awaiting_approval(self):
+        """Not yet approved. Plans saved before `status` became server-controlled
+        were stored 'active' without an approval, so those count as pending too."""
+        return self.approved_at is None and self.status in ('draft', 'active')
 
     def __str__(self):
         return f'PIP: {self.employee} ({self.status})'
@@ -257,6 +275,10 @@ class PromotionFlag(BaseModel):
     nominated_on = models.DateField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='nominated')
     decided_on = models.DateField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name='promotion_flags_decided',
+    )
+    decision_note = models.TextField(blank=True)
     notes = models.TextField(blank=True)
 
     class Meta:

@@ -95,6 +95,73 @@ export interface PIPRecord {
   approved_by_name: string | null;
   approved_at: string | null;
   notes: string;
+  closed_on: string | null;
+  status_note: string;
+}
+
+export type MeetingKind = "one_on_one" | "tl_sync" | "team_meeting";
+
+export interface Meeting {
+  id: number;
+  meeting_type: MeetingKind;
+  organizer: number;
+  organizer_name: string | null;
+  counterparty: number | null;
+  counterparty_name: string | null;
+  team: number | null;
+  occurred_on: string;
+  notes: string;
+  shared_summary: string;
+  shared_at: string | null;
+}
+
+export interface IdleFlag {
+  id: number;
+  employee: number;
+  employee_name: string | null;
+  flagged_by: number;
+  flagged_by_name: string | null;
+  flagged_on: string;
+  status: "open" | "resolved";
+  productivity_task: string;
+  resolved_on: string | null;
+  notes: string;
+}
+
+export interface Absence {
+  id: number;
+  employee: number;
+  employee_name: string | null;
+  flagged_by: number;
+  flagged_by_name: string | null;
+  absence_date: string;
+  reason: string;
+  addressed_on: string | null;
+  notes: string;
+}
+
+export interface ReviewDelivery {
+  id: number;
+  leader: number;
+  leader_name: string | null;
+  period: string;
+  recipient: string;
+  delivered_on: string;
+  notes: string;
+}
+
+export interface PromotionFlag {
+  id: number;
+  employee: number;
+  employee_name: string | null;
+  nominated_by: number;
+  nominated_by_name: string | null;
+  nominated_on: string;
+  status: "nominated" | "promoted" | "declined";
+  decided_on: string | null;
+  decided_by: number | null;
+  decision_note: string;
+  notes: string;
 }
 
 export interface EPRGoal {
@@ -125,4 +192,47 @@ export interface KpiCoverageEntry {
   status: KpiStatus;
   phase: number | null;
   note: string;
+}
+
+/** HBPR dashboard (GET hbpr/overview/ and hbpr/people/). */
+export interface PersonRef {
+  id: number;
+  name: string;
+}
+
+export interface HbprNeedsAttention {
+  pips_awaiting_approval: number;
+  oldest_pip_days: number | null;
+  promotions_to_decide: number;
+  absences_overdue: number;
+  tls_behind_on_one_on_ones: number;
+}
+
+export interface HbprTeamLeaderRow extends PersonRef {
+  team_size: number;
+  pending_pips: number;
+  active_pips: number;
+  open_idle_flags: number;
+  open_absences: number;
+  people_without_recent_one_on_one: number;
+}
+
+export interface HbprOverview {
+  needs_attention: HbprNeedsAttention;
+  tls: HbprTeamLeaderRow[];
+  one_on_one_stale_days: number;
+  absence_overdue_days: number;
+}
+
+export interface HbprPerson extends PersonRef {
+  italian_tl: PersonRef | null;
+  albanian_tl: PersonRef | null;
+  /** 'draft' = awaiting approval, 'active' = running. */
+  open_pip: "draft" | "active" | null;
+  last_one_on_one: string | null;
+}
+
+export interface HbprPeoplePage {
+  count: number;
+  results: HbprPerson[];
 }

@@ -6,8 +6,8 @@ EngagementSurveyResponse — see models.py for what each closes).
 from datetime import date
 
 from django.contrib.auth.models import User
-from django.db import IntegrityError
-from django.db.models import Avg, Count
+from django.db import IntegrityError, transaction
+from django.db.models import Avg, Count, Q
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import viewsets, status
@@ -15,7 +15,9 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 
+from apps.users.services.hbpr_scope import get_hbpr_scope, is_hbpr
 from core.mixins.permissions import PluginPermissionMixin
+from core.mixins.viewer_scope import HbprReadScopeMixin
 
 from .excel_export import build_workbook_bytes
 
@@ -70,15 +72,32 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         `?leader_id=` to view any TL's — same shape as this app's reports
         endpoints, which let staff pick a target rather than aggregating
         across everyone by default."""
+        user = request.user
+        is_staff = user.is_staff or user.is_superuser
         leader_id = request.query_params.get('leader_id')
         if not leader_id:
-            return request.user
-        if not (request.user.is_staff or request.user.is_superuser):
-            raise PermissionDenied('Only staff can view another TL\'s scorecard.')
+            profile = getattr(user, 'profile', None)
+            if is_hbpr(user) and not is_staff and not (profile and profile.is_team_leader):
+                # An HBPR has no team of their own: they must name an in-scope TL.
+                raise ValidationError({'leader_id': 'leader_id is required.'})
+            return user
         try:
-            return User.objects.get(pk=leader_id)
+            leader_pk = int(leader_id)
+        except (TypeError, ValueError):
+            raise ValidationError({'leader_id': 'leader_id must be an integer.'})
+        if not is_staff and leader_pk != user.id:
+            # Same error whether the id exists or not, so it can't be probed.
+            scope = get_hbpr_scope(user)
+            if scope is None or not scope.has_tl(leader_pk):
+                raise PermissionDenied('You cannot view this team leader\'s scorecard.')
+        try:
+            leader = User.objects.select_related('profile').get(pk=leader_pk)
         except User.DoesNotExist:
             raise NotFound('leader_id does not match an existing user.')
+        profile = getattr(leader, 'profile', None)
+        if profile is None or not profile.is_team_leader:
+            raise ValidationError({'leader_id': 'leader_id must belong to a team leader.'})
+        return leader
 
     @action(detail=False, methods=['get'])
     def scorecard(self, request):
@@ -126,7 +145,8 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def escalations(self, request):
         """Computed candidates, not a log — see services.escalation_candidates."""
-        return Response(EscalationCandidateSerializer(escalation_candidates(request.user), many=True).data)
+        leader = self._resolve_leader(request)
+        return Response(EscalationCandidateSerializer(escalation_candidates(leader), many=True).data)
 
     @action(detail=False, methods=['get'])
     def export(self, request):
@@ -144,7 +164,12 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         month = month or date.today()
         scorecard = build_scorecard(leader, month)
         team_member_ids = leader.profile.get_team_member_ids()
-        governance = governance_records(leader, team_member_ids, month.year)
+        subject_ids = None
+        if not (request.user.is_staff or request.user.is_superuser) and leader.id != request.user.id:
+            scope = get_hbpr_scope(request.user)
+            if scope is not None:
+                subject_ids = set(team_member_ids) & scope.user_ids
+        governance = governance_records(leader, team_member_ids, month.year, subject_ids)
         period_label = date.fromisoformat(scorecard['month']).strftime('%B %Y')
 
         workbook_bytes = build_workbook_bytes(scorecard, KPI_COVERAGE, governance, period_label)
@@ -158,7 +183,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         return response
 
 
-class MeetingViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+class MeetingViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     """1-on-1s, TL-Italy syncs, and team meetings — a TL only ever manages
     their own (organizer=request.user); staff see everything."""
     plugin_name = 'tl_scorecard'
@@ -168,7 +193,10 @@ class MeetingViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         qs = Meeting.objects.select_related('organizer', 'counterparty', 'recorded_by').prefetch_related('attendees')
         if self.request.user.is_staff or self.request.user.is_superuser:
             return qs
-        return qs.filter(organizer=self.request.user)
+        user = self.request.user
+        return self.limit_to_viewer(
+            qs, Q(organizer=user), leader_field='organizer', member_field='counterparty',
+            member_nullable=True)
 
     def perform_create(self, serializer):
         meeting_type = serializer.validated_data.get('meeting_type')
@@ -180,18 +208,38 @@ class MeetingViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             raise ValidationError({'team': 'Required for team meetings.'})
         serializer.save(organizer=self.request.user, recorded_by=self.request.user)
 
+    @action(detail=True, methods=['post'])
+    def share(self, request, pk=None):
+        """Publish a summary the counterparty may read. `notes` stays private."""
+        meeting = self.get_object()
+        summary = (request.data.get('summary') or '').strip()
+        if not summary:
+            raise ValidationError({'summary': 'A summary is required.'})
+        meeting.shared_summary = summary
+        meeting.shared_at = timezone.now()
+        meeting.save(update_fields=['shared_summary', 'shared_at'])
+        return Response(MeetingSerializer(meeting, context=self.get_serializer_context()).data)
 
-class MeetingAttendeeViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+
+class MeetingAttendeeViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     """Attendee roles (member/hrbp/observer) for a Meeting — write access is
     scoped through the meeting's own organizer, same as MeetingViewSet."""
     plugin_name = 'tl_scorecard'
     serializer_class = MeetingAttendeeSerializer
+    # An HBPR holds plugin `view` only; writing her own attendance notes is a
+    # participation action, checked below against the attendee row.
+    permission_action_map = {'notes': 'view'}
+    hbpr_participation_actions = frozenset({'notes'})
 
     def get_queryset(self):
         qs = MeetingAttendee.objects.select_related('meeting', 'user')
         if self.request.user.is_staff or self.request.user.is_superuser:
             return qs
-        return qs.filter(meeting__organizer=self.request.user)
+        user = self.request.user
+        return self.limit_to_viewer(
+            qs, Q(meeting__organizer=user),
+            leader_field='meeting__organizer', member_field='meeting__counterparty',
+            member_nullable=True)
 
     def perform_create(self, serializer):
         meeting = serializer.validated_data['meeting']
@@ -205,8 +253,18 @@ class MeetingAttendeeViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             raise PermissionDenied("You can only manage attendees on meetings you organize.")
         serializer.save()
 
+    @action(detail=True, methods=['post'])
+    def notes(self, request, pk=None):
+        """The attendee's own private notes on a meeting they attended."""
+        attendee = self.get_object()
+        if attendee.user_id != request.user.id:
+            raise PermissionDenied('You can only write your own attendance notes.')
+        attendee.notes = (request.data.get('notes') or '').strip()
+        attendee.save(update_fields=['notes'])
+        return Response(self.get_serializer(attendee).data)
 
-class IdleFlagViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+
+class IdleFlagViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'tl_scorecard'
     serializer_class = IdleFlagSerializer
 
@@ -214,7 +272,9 @@ class IdleFlagViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         qs = IdleFlag.objects.select_related('employee', 'flagged_by').prefetch_related('status_updates')
         if self.request.user.is_staff or self.request.user.is_superuser:
             return qs
-        return qs.filter(flagged_by=self.request.user)
+        user = self.request.user
+        return self.limit_to_viewer(
+            qs, Q(flagged_by=user), leader_field='flagged_by', member_field='employee')
 
     def perform_create(self, serializer):
         employee = serializer.validated_data['employee']
@@ -231,8 +291,18 @@ class IdleFlagViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                 raise ValidationError({'employee': 'You can only flag your own team members as idle.'})
         serializer.save()
 
+    @action(detail=True, methods=['post'])
+    def resolve(self, request, pk=None):
+        flag = self.get_object()
+        if flag.status != 'open':
+            return Response({'error': 'This idle flag is already resolved.'}, status=status.HTTP_409_CONFLICT)
+        flag.status = 'resolved'
+        flag.resolved_on = date.today()
+        flag.save(update_fields=['status', 'resolved_on'])
+        return Response(IdleFlagSerializer(flag, context=self.get_serializer_context()).data)
 
-class IdleStatusUpdateViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+
+class IdleStatusUpdateViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     """Weekly status log entries for an IdleFlag — write access scoped
     through the flag's own flagged_by, same pattern as MeetingAttendee."""
     plugin_name = 'tl_scorecard'
@@ -242,7 +312,10 @@ class IdleStatusUpdateViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         qs = IdleStatusUpdate.objects.select_related('flag', 'recorded_by')
         if self.request.user.is_staff or self.request.user.is_superuser:
             return qs
-        return qs.filter(flag__flagged_by=self.request.user)
+        user = self.request.user
+        return self.limit_to_viewer(
+            qs, Q(flag__flagged_by=user),
+            leader_field='flag__flagged_by', member_field='flag__employee')
 
     def perform_create(self, serializer):
         flag = serializer.validated_data['flag']
@@ -265,7 +338,7 @@ class IdleStatusUpdateViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             raise ValidationError({'week_of': 'A status update already exists for this flag and week.'})
 
 
-class ReviewDeliveryViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+class ReviewDeliveryViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'tl_scorecard'
     serializer_class = ReviewDeliverySerializer
 
@@ -273,7 +346,8 @@ class ReviewDeliveryViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         qs = ReviewDelivery.objects.select_related('leader', 'recorded_by')
         if self.request.user.is_staff or self.request.user.is_superuser:
             return qs
-        return qs.filter(leader=self.request.user)
+        user = self.request.user
+        return self.limit_to_viewer(qs, Q(leader=user), leader_field='leader')
 
     def perform_create(self, serializer):
         serializer.save(leader=self.request.user, recorded_by=self.request.user)
@@ -329,7 +403,7 @@ class EngagementSurveyResponseViewSet(PluginPermissionMixin, viewsets.ModelViewS
         })
 
 
-class AbsenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+class AbsenceViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'tl_scorecard'
     serializer_class = AbsenceSerializer
 
@@ -337,7 +411,9 @@ class AbsenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         qs = Absence.objects.select_related('employee', 'flagged_by')
         if self.request.user.is_staff or self.request.user.is_superuser:
             return qs
-        return qs.filter(flagged_by=self.request.user)
+        user = self.request.user
+        return self.limit_to_viewer(
+            qs, Q(flagged_by=user), leader_field='flagged_by', member_field='employee')
 
     def perform_create(self, serializer):
         employee = serializer.validated_data['employee']
@@ -353,21 +429,35 @@ class AbsenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                 raise ValidationError({'employee': 'You can only flag your own team members.'})
         serializer.save()
 
+    @action(detail=True, methods=['post'])
+    def address(self, request, pk=None):
+        absence = self.get_object()
+        if absence.addressed_on is not None:
+            return Response({'error': 'This absence is already addressed.'}, status=status.HTTP_409_CONFLICT)
+        absence.addressed_on = date.today()
+        absence.save(update_fields=['addressed_on'])
+        return Response(AbsenceSerializer(absence, context=self.get_serializer_context()).data)
 
-class PIPRecordViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+
+class PIPRecordViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     """Approval is deliberately staff-only (`approve` action) — this
     plugin's role manifest has no HR bucket, and "prior HR approval" is
     the one KPI requirement that must not be self-granted by the TL who
     created the record."""
     plugin_name = 'tl_scorecard'
     serializer_class = PIPRecordSerializer
-    permission_action_map = {'approve': 'manage'}
+    # `approve` needs only plugin `view`: the real gate is in the action body
+    # (staff, or an in-scope HBPR) so an HBPR need not hold `manage`, which
+    # would also open PATCH/DELETE.
+    permission_action_map = {'approve': 'view', 'reject': 'view'}
+    hbpr_participation_actions = frozenset({'approve', 'reject'})
 
     def get_queryset(self):
         qs = PIPRecord.objects.select_related('employee', 'tl', 'approved_by')
         if self.request.user.is_staff or self.request.user.is_superuser:
             return qs
-        return qs.filter(tl=self.request.user)
+        user = self.request.user
+        return self.limit_to_viewer(qs, Q(tl=user), leader_field='tl', member_field='employee')
 
     def perform_create(self, serializer):
         employee = serializer.validated_data['employee']
@@ -377,6 +467,13 @@ class PIPRecordViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         serializer.save(tl=self.request.user)
 
     def perform_update(self, serializer):
+        instance = serializer.instance
+        if instance.approved_at is not None:
+            # What HR/HBPR approved must not be rewritten afterwards.
+            for field in ('employee', 'start_date'):
+                if field in serializer.validated_data and \
+                        serializer.validated_data[field] != getattr(instance, field):
+                    raise ValidationError({field: 'This cannot change after the PIP is approved.'})
         employee = serializer.validated_data.get('employee')
         if employee and not (self.request.user.is_staff or self.request.user.is_superuser):
             if employee.id not in self.request.user.profile.get_team_member_ids():
@@ -385,25 +482,81 @@ class PIPRecordViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
-        if not (request.user.is_staff or request.user.is_superuser):
+        if not (request.user.is_staff or request.user.is_superuser or is_hbpr(request.user)):
             raise PermissionDenied('Only staff/HR can approve a PIP.')
         pip = self.get_object()
-        pip.approved_by = request.user
-        pip.approved_at = timezone.now()
-        pip.save(update_fields=['approved_by', 'approved_at'])
-        return Response(PIPRecordSerializer(pip).data)
+        if request.user.id in (pip.employee_id, pip.tl_id):
+            raise PermissionDenied('You cannot approve a PIP you are part of.')
+        with transaction.atomic():
+            # Re-read under a row lock: two concurrent approvers must not both pass.
+            pip = PIPRecord.objects.select_for_update().get(pk=pip.pk)
+            if not pip.awaiting_approval:
+                return Response(
+                    {'error': 'Only a PIP awaiting approval can be approved.'},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            pip.approved_by = request.user
+            pip.approved_at = timezone.now()
+            pip.status = 'active'
+            pip.save(update_fields=['approved_by', 'approved_at', 'status'])
+        return Response(PIPRecordSerializer(pip, context=self.get_serializer_context()).data)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Return a draft PIP to the TL (staff or in-scope HBPR). Needs a reason."""
+        if not (request.user.is_staff or request.user.is_superuser or is_hbpr(request.user)):
+            raise PermissionDenied('Only staff/HR can return a PIP.')
+        pip = self.get_object()
+        if request.user.id in (pip.employee_id, pip.tl_id):
+            raise PermissionDenied('You cannot return a PIP you are part of.')
+        note = (request.data.get('status_note') or '').strip()
+        if not note:
+            raise ValidationError({'status_note': 'A reason is required.'})
+        with transaction.atomic():
+            pip = PIPRecord.objects.select_for_update().get(pk=pip.pk)
+            if not pip.awaiting_approval:
+                return Response({'error': 'Only a PIP awaiting approval can be returned.'}, status=status.HTTP_409_CONFLICT)
+            pip.status = 'cancelled'
+            pip.status_note = note
+            pip.closed_on = date.today()
+            pip.save(update_fields=['status', 'status_note', 'closed_on'])
+        return Response(PIPRecordSerializer(pip, context=self.get_serializer_context()).data)
+
+    def _close(self, request, outcome, require_note):
+        pip = self.get_object()
+        if pip.status != 'active':
+            return Response({'error': 'Only an active PIP can be closed.'}, status=status.HTTP_409_CONFLICT)
+        note = (request.data.get('status_note') or '').strip()
+        if require_note and not note:
+            raise ValidationError({'status_note': 'A reason is required.'})
+        pip.status = outcome
+        pip.status_note = note
+        pip.closed_on = date.today()
+        pip.save(update_fields=['status', 'status_note', 'closed_on'])
+        return Response(PIPRecordSerializer(pip, context=self.get_serializer_context()).data)
+
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        return self._close(request, 'completed', require_note=False)
+
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        return self._close(request, 'cancelled', require_note=True)
 
 
-class PromotionFlagViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+class PromotionFlagViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'tl_scorecard'
     serializer_class = PromotionFlagSerializer
-    permission_action_map = {'decide': 'manage'}
+    permission_action_map = {'decide': 'view'}
+    hbpr_participation_actions = frozenset({'decide'})
 
     def get_queryset(self):
         qs = PromotionFlag.objects.select_related('employee', 'nominated_by')
         if self.request.user.is_staff or self.request.user.is_superuser:
             return qs
-        return qs.filter(nominated_by=self.request.user)
+        user = self.request.user
+        return self.limit_to_viewer(
+            qs, Q(nominated_by=user), leader_field='nominated_by', member_field='employee')
 
     def perform_create(self, serializer):
         employee = serializer.validated_data['employee']
@@ -421,9 +574,11 @@ class PromotionFlagViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def decide(self, request, pk=None):
-        if not (request.user.is_staff or request.user.is_superuser):
+        if not (request.user.is_staff or request.user.is_superuser or is_hbpr(request.user)):
             raise PermissionDenied('Only staff/HR can approve a promotion.')
         flag = self.get_object()
+        if request.user.id in (flag.employee_id, flag.nominated_by_id):
+            raise PermissionDenied('You cannot decide a nomination you are part of.')
         if flag.status != 'nominated':
             raise ValidationError({'status': 'This flag has already been decided.'})
         decided_status = request.data.get('status')
@@ -431,11 +586,13 @@ class PromotionFlagViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             raise ValidationError({'status': 'Must be "promoted" or "declined".'})
         flag.status = decided_status
         flag.decided_on = date.today()
-        flag.save(update_fields=['status', 'decided_on'])
-        return Response(PromotionFlagSerializer(flag).data)
+        flag.decided_by = request.user
+        flag.decision_note = (request.data.get('decision_note') or '').strip()
+        flag.save(update_fields=['status', 'decided_on', 'decided_by', 'decision_note'])
+        return Response(PromotionFlagSerializer(flag, context=self.get_serializer_context()).data)
 
 
-class EPRCycleViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+class EPRCycleViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'tl_scorecard'
     serializer_class = EPRCycleSerializer
 
@@ -444,7 +601,7 @@ class EPRCycleViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         if self.request.user.is_staff or self.request.user.is_superuser:
             return qs
         team_member_ids = self.request.user.profile.get_team_member_ids()
-        return qs.filter(user_id__in=team_member_ids)
+        return self.limit_to_viewer(qs, Q(user_id__in=team_member_ids), member_field='user')
 
     def perform_create(self, serializer):
         target_user = serializer.validated_data['user']
@@ -472,7 +629,7 @@ class EPRCycleViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         serializer.save()
 
 
-class EPRGoalViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+class EPRGoalViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'tl_scorecard'
     serializer_class = EPRGoalSerializer
 
@@ -481,7 +638,8 @@ class EPRGoalViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         if self.request.user.is_staff or self.request.user.is_superuser:
             return qs
         team_member_ids = self.request.user.profile.get_team_member_ids()
-        return qs.filter(cycle__user_id__in=team_member_ids)
+        return self.limit_to_viewer(
+            qs, Q(cycle__user_id__in=team_member_ids), member_field='cycle__user')
 
     def perform_create(self, serializer):
         cycle = serializer.validated_data['cycle']

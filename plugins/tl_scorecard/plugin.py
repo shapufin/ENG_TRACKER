@@ -39,7 +39,10 @@ class TlScorecardPlugin(BasePlugin):
     def get_permission_manifest(self):
         return {
             **super().get_permission_manifest(),
-            "view": {"roles": ["italian_tl", "albanian_tl"], "public": False},
+            # HBPR is read-only here: it participates only through the
+            # approve/decide actions, which are mapped to `view` and gated in
+            # code. Granting it `manage` would also open PATCH/DELETE.
+            "view": {"roles": ["italian_tl", "albanian_tl", "hbpr"], "public": False},
             "manage": {"roles": ["italian_tl", "albanian_tl"], "public": False},
             # Reserved for engagement-survey submission only (see
             # EngagementSurveyResponseViewSet's docstring) — every
@@ -63,6 +66,14 @@ class TlScorecardPlugin(BasePlugin):
                     "layout": "app",
                 },
                 {
+                    "path": "/my-records",
+                    "component": "MyRecordsPage",
+                    "layout": "app",
+                    # Employees hold no plugin grant; this page only ever shows
+                    # their own records (see MyRecordsViewSet).
+                    "self_service": True,
+                },
+                {
                     "path": "/admin/tl-scorecard",
                     "component": "TLScorecardPage",
                     "layout": "admin",
@@ -78,6 +89,26 @@ class TlScorecardPlugin(BasePlugin):
                     "slot": "admin-sidebar-nav",
                     "component": "TLScorecardAdminSidebarItem",
                 },
+                {
+                    "slot": "sidebar-nav",
+                    "component": "MyRecordsSidebarLink",
+                    "self_service": True,
+                },
+                {
+                    "slot": "hbpr-dashboard",
+                    "component": "HbprDashboardPage",
+                },
             ],
         })
         return metadata
+
+    def ready(self):
+        from . import signals
+        try:
+            signals.connect()
+        except ImportError:
+            pass  # notifications plugin not installed: the scorecard works without it
+
+    def disable(self):
+        from . import signals
+        signals.disconnect()

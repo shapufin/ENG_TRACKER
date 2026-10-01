@@ -22,6 +22,8 @@ const computeRoles = (user: any) => {
     hasDatabaseRole(user, "albanian_tl") ?? roleFlag(user, "is_albanian_tl_role");
   const isTeamLeader = anyRole(isItalianTL, isAlbanianTL, roleFlag(user, "is_team_leader"));
   const isHR = hasDatabaseRole(user, "hr") ?? roleFlag(user, "is_hr");
+  // HBPR has no legacy flag: the database role is the only source.
+  const isHBPR = hasDatabaseRole(user, "hbpr") ?? false;
   const isAdmin = roleFlag(user, "is_staff");
   const isSuperuser = roleFlag(user, "is_superuser");
   const isCRAdmin = hasDatabaseRole(user, "cr_admin") ?? roleFlag(user, "is_cr_admin");
@@ -32,12 +34,13 @@ const computeRoles = (user: any) => {
   // NOT a CR user — their home is /admin/users. A user who is BOTH a CR
   // user and a TL/HR/admin is treated as the higher role (isCRUser=false).
   const isCRUser =
-    hasControlRoomAccess && !anyRole(isCRAdmin, isTeamLeader, isHR, isAdmin, isSuperuser);
+    hasControlRoomAccess && !anyRole(isCRAdmin, isTeamLeader, isHR, isHBPR, isAdmin, isSuperuser);
   return {
     isItalianTL,
     isAlbanianTL,
     isTeamLeader,
     isHR,
+    isHBPR,
     isAdmin,
     isSuperuser,
     isCRAdmin,
@@ -47,7 +50,7 @@ const computeRoles = (user: any) => {
 
 // fallow-ignore-next-line complexity
 const computeBasePermissions = (roles: ReturnType<typeof computeRoles>) => {
-  const { isTeamLeader, isHR, isAdmin, isSuperuser, isCRAdmin, isCRUser } = roles;
+  const { isTeamLeader, isHR, isHBPR, isAdmin, isSuperuser, isCRAdmin, isCRUser } = roles;
   return {
     // CR admin (scoped admin) and CR user (scoped observer) are NOT regular
     // employees. Excluding both here prevents them from seeing employee nav
@@ -56,7 +59,10 @@ const computeBasePermissions = (roles: ReturnType<typeof computeRoles>) => {
     //   - CR user's home is /control-room/dashboard (CR plugin page).
     //   - Multi-role users (CR + TL/HR/admin) keep their higher role's nav
     //     (isCRUser is false when a higher role is present).
-    isEmployee: !isTeamLeader && !isHR && !isAdmin && !isSuperuser && !isCRAdmin && !isCRUser,
+    //   - HBPR has no overtime/standby, so it is not an employee-shell user
+    //     either (a multi-role HBPR + TL/HR/admin keeps that role's nav).
+    isEmployee:
+      !isTeamLeader && !isHR && !isHBPR && !isAdmin && !isSuperuser && !isCRAdmin && !isCRUser,
     canApprove: isTeamLeader || isHR || isAdmin,
     canManageTeam: isTeamLeader || isAdmin || isSuperuser,
     canViewTeamData: isTeamLeader || isHR || isAdmin,
@@ -66,12 +72,16 @@ const computeBasePermissions = (roles: ReturnType<typeof computeRoles>) => {
 };
 
 const computeDashboards = (roles: ReturnType<typeof computeRoles>) => {
-  const { isSuperuser, isAdmin, isHR, isTeamLeader } = roles;
+  const { isSuperuser, isAdmin, isHR, isHBPR, isTeamLeader } = roles;
+  // The personal dashboard is overtime/standby/leave: an HBPR-only user has no
+  // overtime or standby, so it is offered only alongside another role.
+  const isHBPROnly = isHBPR && !isSuperuser && !isAdmin && !isHR && !isTeamLeader;
   const availableDashboards: DashboardType[] = [];
   if (isSuperuser || isAdmin) availableDashboards.push("admin");
   if (isHR) availableDashboards.push("hr");
   if (isTeamLeader) availableDashboards.push("team_leader");
-  availableDashboards.push("employee");
+  if (isHBPR) availableDashboards.push("hbpr");
+  if (!isHBPROnly) availableDashboards.push("employee");
 
   let primaryDashboard: DashboardType = "employee";
   if (isSuperuser || isAdmin) {
@@ -80,6 +90,8 @@ const computeDashboards = (roles: ReturnType<typeof computeRoles>) => {
     primaryDashboard = "hr";
   } else if (isTeamLeader) {
     primaryDashboard = "team_leader";
+  } else if (isHBPR) {
+    primaryDashboard = "hbpr";
   }
 
   return { availableDashboards, primaryDashboard };

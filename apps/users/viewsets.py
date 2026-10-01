@@ -31,6 +31,7 @@ from .serializers import (
     TeamHierarchySerializer,
     ApprovalPeriodSerializer,
 )
+from .services.hbpr_scope import get_hbpr_scope
 from .services.tech_assignments import (
     TechAssignmentError,
     apply_tech_assignments,
@@ -68,7 +69,13 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == 'eligible_for_control_room':
             return [IsCRAdminOrStaff()]
-        if self.action in ['destroy', 'bulk_delete', 'bulk_update']:
+        # Every action that writes roles, TL links, credentials or accounts must be
+        # listed here: this method overrides the per-@action permission_classes,
+        # so an action missing from this list is open to any authenticated user.
+        if self.action in [
+            'destroy', 'bulk_delete', 'bulk_update',
+            'create_user', 'update_user', 'reset_password',
+        ]:
             return [IsAdminUser()]
         if self.action in ['create', 'update', 'partial_update']:
             return [IsAdminOrReadOnly()]
@@ -91,6 +98,9 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 return queryset.none()
         if has_hr_role(user):
             return queryset
+        hbpr_scope = get_hbpr_scope(user)
+        if hbpr_scope is not None:
+            return queryset.filter(Q(id=user.id) | Q(id__in=hbpr_scope.user_ids))
         return queryset.filter(id=user.id)
 
     @action(detail=False, methods=['get'])
@@ -1240,6 +1250,9 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
                 return queryset.none()
         if has_hr_role(user):
             return queryset
+        hbpr_scope = get_hbpr_scope(user)
+        if hbpr_scope is not None:
+            return queryset.filter(Q(user=user) | Q(user_id__in=hbpr_scope.user_ids))
         return queryset.filter(user=user)
 
 

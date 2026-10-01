@@ -2,20 +2,54 @@ import api from "@/lib/api";
 import { normalizeList } from "@/lib/api-utils";
 import type { PaginatedResponse } from "@/types";
 import type {
+  Absence,
   ApprovalEngagementScore,
   EngagementSurveyTeamAverage,
   EPRCycle,
   EscalationCandidate,
   KpiCoverageEntry,
   PIPRecord,
+  HbprOverview,
+  HbprPeoplePage,
+  IdleFlag,
+  Meeting,
+  PromotionFlag,
+  ReviewDelivery,
   Scorecard,
 } from "../types/tlScorecard";
 
 const BASE = "/plugins/tl_scorecard";
 
+export type RecordResource =
+  | "meetings"
+  | "idle-flags"
+  | "absences"
+  | "review-deliveries"
+  | "promotion-flags"
+  | "pip-records";
+
+// Lists are paginated (50 a page). The Records tab filters client-side, so it needs
+// every row: stopping at page one would silently hide an HBPR's older records.
+const MAX_PAGES = 40;
+
+const listAllPages = async <T>(path: string): Promise<T[]> => {
+  const rows: T[] = [];
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
+    const { data } = await api.get<T[] | PaginatedResponse<T>>(path, { params: { page } });
+    rows.push(...normalizeList(data));
+    if (Array.isArray(data) || !data.next) break;
+  }
+  return rows;
+};
+
+const listResource = <T>(resource: RecordResource): Promise<T[]> =>
+  listAllPages<T>(`${BASE}/${resource}/`);
+
+const leaderParams = (leaderId?: number): Record<string, number> => (leaderId ? { leader_id: leaderId } : {});
+
 export const tlScorecardService = {
-  getScorecard: (month?: string) => {
-    const params: Record<string, string> = {};
+  getScorecard: (month?: string, leaderId?: number) => {
+    const params: Record<string, string | number> = leaderParams(leaderId);
     if (month) params.month = month;
     return api.get<Scorecard>(`${BASE}/scorecard/`, { params });
   },
@@ -52,7 +86,8 @@ export const tlScorecardService = {
   createReviewDelivery: (data: { period: string; recipient: string; delivered_on: string }) =>
     api.post(`${BASE}/review-deliveries/`, data),
 
-  getEscalations: () => api.get<EscalationCandidate[]>(`${BASE}/escalations/`),
+  getEscalations: (leaderId?: number) =>
+    api.get<EscalationCandidate[]>(`${BASE}/escalations/`, { params: leaderParams(leaderId) }),
 
   createAbsence: (data: { employee: number; absence_date: string; reason: string; notes: string }) =>
     api.post(`${BASE}/absences/`, data),
@@ -60,20 +95,35 @@ export const tlScorecardService = {
   createPromotionFlag: (data: { employee: number; nominated_on: string; notes: string }) =>
     api.post(`${BASE}/promotion-flags/`, data),
 
-  async listPIPRecords(): Promise<PIPRecord[]> {
-    const { data } = await api.get<PIPRecord[] | PaginatedResponse<PIPRecord>>(`${BASE}/pip-records/`);
-    return normalizeList(data);
-  },
+  listPIPRecords: () => listResource<PIPRecord>("pip-records"),
+  listMeetings: () => listResource<Meeting>("meetings"),
+  listIdleFlags: () => listResource<IdleFlag>("idle-flags"),
+  listAbsences: () => listResource<Absence>("absences"),
+  listReviewDeliveries: () => listResource<ReviewDelivery>("review-deliveries"),
+  listPromotionFlags: () => listResource<PromotionFlag>("promotion-flags"),
+
+  updateRecord: (resource: RecordResource, id: number, data: Record<string, unknown>) =>
+    api.patch(`${BASE}/${resource}/${id}/`, data),
+  deleteRecord: (resource: RecordResource, id: number) => api.delete(`${BASE}/${resource}/${id}/`),
+
+  shareMeeting: (id: number, summary: string) => api.post(`${BASE}/meetings/${id}/share/`, { summary }),
+  resolveIdleFlag: (id: number) => api.post(`${BASE}/idle-flags/${id}/resolve/`),
+  addressAbsence: (id: number) => api.post(`${BASE}/absences/${id}/address/`),
+  rejectPIPRecord: (id: number, status_note: string) =>
+    api.post<PIPRecord>(`${BASE}/pip-records/${id}/reject/`, { status_note }),
+  completePIPRecord: (id: number) => api.post<PIPRecord>(`${BASE}/pip-records/${id}/complete/`),
+  cancelPIPRecord: (id: number, status_note: string) =>
+    api.post<PIPRecord>(`${BASE}/pip-records/${id}/cancel/`, { status_note }),
+  decidePromotionFlag: (id: number, data: { status: "promoted" | "declined"; decision_note: string }) =>
+    api.post<PromotionFlag>(`${BASE}/promotion-flags/${id}/decide/`, data),
 
   createPIPRecord: (data: { employee: number; start_date: string; notes: string }) =>
-    api.post<PIPRecord>(`${BASE}/pip-records/`, { ...data, status: "active" }),
+    // Status is server-controlled: a new plan starts as a draft awaiting HR approval.
+    api.post<PIPRecord>(`${BASE}/pip-records/`, data),
 
   approvePIPRecord: (id: number) => api.post<PIPRecord>(`${BASE}/pip-records/${id}/approve/`),
 
-  async listEPRCycles(): Promise<EPRCycle[]> {
-    const { data } = await api.get<EPRCycle[] | PaginatedResponse<EPRCycle>>(`${BASE}/epr-cycles/`);
-    return normalizeList(data);
-  },
+  listEPRCycles: (): Promise<EPRCycle[]> => listAllPages<EPRCycle>(`${BASE}/epr-cycles/`),
 
   createEPRCycle: (data: { user: number; year: number }) =>
     api.post<EPRCycle>(`${BASE}/epr-cycles/`, data),
@@ -84,8 +134,13 @@ export const tlScorecardService = {
   completeEPRStage: (cycleId: number, field: "goal_setting_completed_at" | "mid_year_completed_at" | "final_review_completed_at") =>
     api.patch<EPRCycle>(`${BASE}/epr-cycles/${cycleId}/`, { [field]: new Date().toISOString() }),
 
-  exportWorkbook: (month?: string) => {
-    const params: Record<string, string> = {};
+  getHbprOverview: () => api.get<HbprOverview>(`${BASE}/hbpr/overview/`),
+
+  getHbprPeople: (params: { q?: string; limit?: number; offset?: number } = {}) =>
+    api.get<HbprPeoplePage>(`${BASE}/hbpr/people/`, { params }),
+
+  exportWorkbook: (month?: string, leaderId?: number) => {
+    const params: Record<string, string | number> = leaderParams(leaderId);
     if (month) params.month = month;
     return api.get<Blob>(`${BASE}/export/`, { params, responseType: "blob" });
   },

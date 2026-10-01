@@ -2,11 +2,15 @@ import React, { useState } from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { ReviewDelivery } from "../types/tlScorecard";
 
 interface LogReviewDeliveryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (data: { period: string; recipient: string; delivered_on: string }) => Promise<void>;
+  /** In edit mode `onCreate` receives the edited values. */
+  mode?: "create" | "edit";
+  initial?: ReviewDelivery;
 }
 
 const currentPeriod = () => new Date().toISOString().slice(0, 7);
@@ -16,10 +20,13 @@ export const LogReviewDeliveryDialog: React.FC<LogReviewDeliveryDialogProps> = (
   open,
   onOpenChange,
   onCreate,
+  mode = "create",
+  initial,
 }) => {
-  const [period, setPeriod] = useState(currentPeriod());
-  const [recipient, setRecipient] = useState("");
-  const [deliveredOn, setDeliveredOn] = useState(todayIso());
+  const isEdit = mode === "edit";
+  const [period, setPeriod] = useState(initial?.period ?? currentPeriod());
+  const [recipient, setRecipient] = useState(initial?.recipient ?? "");
+  const [deliveredOn, setDeliveredOn] = useState(initial?.delivered_on ?? todayIso());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canSubmit = /^\d{4}-\d{2}$/.test(period) && recipient.trim() && deliveredOn;
@@ -30,8 +37,10 @@ export const LogReviewDeliveryDialog: React.FC<LogReviewDeliveryDialogProps> = (
     setIsSubmitting(true);
     try {
       await onCreate({ period, recipient: recipient.trim(), delivered_on: deliveredOn });
-      setRecipient("");
+      if (!isEdit) setRecipient("");
       onOpenChange(false);
+    } catch {
+      // The caller reports the failure; keep the dialog open for a retry.
     } finally {
       setIsSubmitting(false);
     }
@@ -41,10 +50,10 @@ export const LogReviewDeliveryDialog: React.FC<LogReviewDeliveryDialogProps> = (
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Log a management review delivery"
+      title={isEdit ? "Edit review delivery" : "Log a management review delivery"}
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
-      submitLabel="Log delivery"
+      submitLabel={isEdit ? "Save changes" : "Log delivery"}
       submitDisabled={!canSubmit}
       size="sm"
     >

@@ -4,22 +4,24 @@ Read-only TL engagement metrics endpoints.
 All data is served from `TLApprovalMetric` snapshots (never computed at
 request time). `view` access is TL-only via the plugin permission manifest;
 row-level scoping additionally restricts non-staff users to their own
-(leader=request.user) rows.
+(leader=request.user) rows; an HBPR also reads the Italian TLs' rows.
 """
 from datetime import date
 
 from dateutil.relativedelta import relativedelta
+from django.db.models import Q
 from django.http import HttpResponse
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.users.services.hbpr_scope import get_hbpr_scope
 from core.mixins.permissions import PluginPermissionMixin
 
 from .excel_export import build_workbook_bytes
 from .models import TLApprovalMetric
 from .serializers import TLApprovalMetricSerializer
-from .services import aggregate_rows, compute_tl_metric, is_stale, weighted_avg_tta_hours, weighted_mean
+from .services import aggregate_rows, compute_tl_metric, ensure_current_month_snapshots, is_stale, weighted_avg_tta_hours, weighted_mean
 
 
 def _parse_month(raw):
@@ -38,9 +40,18 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
     def _base_queryset(self, request):
         qs = TLApprovalMetric.objects.select_related('leader', 'team')
-        if not (request.user.is_staff or request.user.is_superuser):
-            qs = qs.filter(leader=request.user)
-        return qs
+        user = request.user
+        if user.is_staff or user.is_superuser:
+            return qs
+        scope = get_hbpr_scope(user)
+        if scope is not None:
+            # An HBPR reads the Italian TLs' snapshots; a TL role on the same
+            # user still adds their own row.
+            visible = scope.tl_ids | {user.id}
+            ensure_current_month_snapshots(visible)
+            return qs.filter(Q(leader=user) | Q(leader_id__in=scope.tl_ids))
+        ensure_current_month_snapshots({user.id})
+        return qs.filter(leader=user)
 
     def _ensure_fresh(self, rows):
         """Recompute any stale snapshot in place before serving it, so every

@@ -226,6 +226,15 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
       }))
     ),
     TLScorecardSidebarLink: lazy(() => import("./tl_scorecard/components/TLScorecardSidebarLink")),
+    MyRecordsPage: lazy(() =>
+      import("./tl_scorecard/pages/MyRecordsPage").then((m) => ({ default: m.MyRecordsPage }))
+    ),
+    MyRecordsSidebarLink: lazy(() => import("./tl_scorecard/components/MyRecordsSidebarLink")),
+    HbprDashboardPage: lazy(() =>
+      import("./tl_scorecard/pages/HbprDashboardPage").then((m) => ({
+        default: m.HbprDashboardPage,
+      }))
+    ),
     TLScorecardAdminSidebarItem: lazy(
       () => import("./tl_scorecard/components/TLScorecardAdminSidebarItem")
     ),

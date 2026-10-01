@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { DashboardPage } from "./DashboardPage";
 import { usePermissions } from "@/context/PermissionContext";
 import { useDashboardSelection } from "./hooks/useDashboardSelection";
+import { usePlugins } from "@/context/PluginContext";
 
 vi.mock("@/hooks/useDashboardData", () => ({
   useDashboardData: () => ({
@@ -28,6 +29,10 @@ vi.mock("@/hooks/useDashboardData", () => ({
 }));
 vi.mock("@/context/AuthContext", () => ({ useAuth: () => ({ user: { id: 1 } }) }));
 vi.mock("@/context/PermissionContext", () => ({ usePermissions: vi.fn() }));
+vi.mock("@/context/PluginContext", () => ({ usePlugins: vi.fn() }));
+vi.mock("@/components/plugins/PluginSlot", () => ({
+  PluginSlot: ({ slot }: { slot: string }) => <div data-testid={`slot-${slot}`} />,
+}));
 vi.mock("./hooks/useDashboardSelection", () => ({ useDashboardSelection: vi.fn() }));
 vi.mock("./hooks/usePersonalDashboardItems", () => ({
   usePersonalDashboardItems: () => ({
@@ -79,6 +84,7 @@ describe("DashboardPage", () => {
 
   beforeEach(() => {
     vi.mocked(usePermissions).mockReturnValue(defaultPermissions as any);
+    vi.mocked(usePlugins).mockReturnValue({ getInjectedComponents: () => [] } as any);
     vi.mocked(useDashboardSelection).mockReturnValue({
       selectedDashboard: "employee",
       handleDashboardChange: vi.fn(),
@@ -102,6 +108,38 @@ describe("DashboardPage", () => {
     } as any);
     renderPage();
     expect(screen.getByTestId("hr")).toBeInTheDocument();
+  });
+
+  describe("HBPR dashboard", () => {
+    const asHbpr = (injected: unknown[]) => {
+      vi.mocked(usePermissions).mockReturnValue({
+        ...defaultPermissions,
+        isAdmin: false,
+        isTeamLeader: false,
+        isHR: false,
+        isHBPR: true,
+        availableDashboards: ["hbpr"],
+        primaryDashboard: "hbpr",
+      } as any);
+      vi.mocked(usePlugins).mockReturnValue({ getInjectedComponents: () => injected } as any);
+      vi.mocked(useDashboardSelection).mockReturnValue({
+        selectedDashboard: "hbpr",
+        handleDashboardChange: vi.fn(),
+      } as any);
+    };
+
+    it("renders the plugin-injected HBPR dashboard", () => {
+      asHbpr([{ pluginName: "tl_scorecard", componentName: "HbprDashboardPage" }]);
+      renderPage();
+      expect(screen.getByTestId("slot-hbpr-dashboard")).toBeInTheDocument();
+    });
+
+    it("falls back to the empty state when the scorecard plugin is off", () => {
+      asHbpr([]);
+      renderPage();
+      expect(screen.queryByTestId("slot-hbpr-dashboard")).not.toBeInTheDocument();
+      expect(screen.getByTestId("empty")).toBeInTheDocument();
+    });
   });
 
   it("renders team leader dashboard", async () => {

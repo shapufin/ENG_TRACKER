@@ -233,7 +233,10 @@ def _assign_team_to_profile(profile: UserProfile, team: Team) -> None:
         membership.save(update_fields=['is_primary_team'])
 
 
-MANAGED_ROLE_CODES = frozenset({'employee', 'italian_tl', 'albanian_tl', 'hr', 'cr_admin'})
+# A ``roles`` list that omits a managed code revokes it, so every admin entry
+# point (user form create/edit/bulk, importer) must send ``hbpr`` to keep it.
+# Only staff reach these paths: granting HBPR is never self-service.
+MANAGED_ROLE_CODES = frozenset({'employee', 'italian_tl', 'albanian_tl', 'hr', 'cr_admin', 'hbpr'})
 
 
 def _sync_roles(user: User, roles: list[str]) -> None:
@@ -245,6 +248,12 @@ def _sync_roles(user: User, roles: list[str]) -> None:
     unknown = requested - MANAGED_ROLE_CODES
     if unknown:
         raise ValueError(f'Unknown role code(s): {", ".join(sorted(unknown))}')
+
+    if 'hbpr' in requested and not Role.objects.filter(code='hbpr').exists():
+        # Other missing roles are skipped (legacy flags still apply), but HBPR is
+        # flagless: skipping would report success while granting nothing. Checked
+        # before any write so a refusal leaves the profile untouched.
+        raise ValueError('The hbpr role is not seeded; run migrations first.')
 
     profile = user.profile
     profile.is_hr_user = 'hr' in requested

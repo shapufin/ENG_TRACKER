@@ -21,6 +21,7 @@ interface UserEditFormDialogProps {
     is_hr_user: boolean;
     is_italian_tl_role: boolean;
     is_albanian_tl_role: boolean;
+    is_hbpr?: boolean;
     hire_date: string;
   };
   formErrors: Record<string, string>;

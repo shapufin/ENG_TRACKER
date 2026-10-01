@@ -3,6 +3,8 @@ import { Navigate } from "react-router-dom";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
+import { usePlugins } from "@/context/PluginContext";
+import { PluginSlot } from "@/components/plugins/PluginSlot";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { useDashboardSelection } from "./hooks/useDashboardSelection";
 import { usePersonalDashboardItems } from "./hooks/usePersonalDashboardItems";
@@ -13,8 +15,16 @@ import { DashboardEmptyState } from "./components/DashboardEmptyState";
 const TeamLeaderDashboard = React.lazy(() => import("./TeamLeaderDashboard"));
 
 export const DashboardPage: React.FC = () => {
-  const { isAdmin, isTeamLeader, isHR, isSuperuser, availableDashboards, primaryDashboard } =
-    usePermissions();
+  const {
+    isAdmin,
+    isTeamLeader,
+    isHR,
+    isHBPR,
+    isSuperuser,
+    availableDashboards,
+    primaryDashboard,
+  } = usePermissions();
+  const { getInjectedComponents } = usePlugins();
   const { user } = useAuth();
   const userId = user?.id;
 
@@ -53,6 +63,17 @@ export const DashboardPage: React.FC = () => {
         />
       </Suspense>
     );
+  }
+
+  // The HBPR dashboard is owned by the TL Scorecard plugin and injected through a
+  // slot; with the plugin off there is nothing to show, so fall through to the
+  // empty state instead of a blank page.
+  if (
+    selectedDashboard === "hbpr" &&
+    isHBPR &&
+    getInjectedComponents("hbpr-dashboard").length > 0
+  ) {
+    return <PluginSlot slot="hbpr-dashboard" fallback={<LoadingCard />} />;
   }
 
   // The admin dashboard lives at /admin (AdminShell) — DashboardPage has no

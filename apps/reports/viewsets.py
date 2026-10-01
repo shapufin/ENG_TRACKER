@@ -21,6 +21,7 @@ from django.db.models.functions import TruncMonth, TruncYear
 from .models.core import ReportTemplate, GeneratedReport, AuditLog
 from .serializers import ReportTemplateSerializer, GeneratedReportSerializer, AuditLogSerializer, InsightsSerializer, TopTeamLeaderSerializer
 from core.mixins.permissions import (
+    HbprBlockedMixin,
     TeamLeaderFilterMixin,
     has_hr_role,
     has_team_leader_role,
@@ -52,7 +53,7 @@ class CanViewReports(BasePermission):
             return True
 
 
-class ReportTemplateViewSet(viewsets.ModelViewSet):
+class ReportTemplateViewSet(HbprBlockedMixin, viewsets.ModelViewSet):
     queryset = ReportTemplate.objects.filter(is_active=True)
     serializer_class = ReportTemplateSerializer
     pagination_class = None
@@ -141,7 +142,7 @@ class ReportTemplateViewSet(viewsets.ModelViewSet):
         })
 
 
-class GeneratedReportViewSet(TeamLeaderFilterMixin, viewsets.ModelViewSet):
+class GeneratedReportViewSet(HbprBlockedMixin, TeamLeaderFilterMixin, viewsets.ModelViewSet):
     queryset = GeneratedReport.objects.select_related('generated_by', 'template')
     serializer_class = GeneratedReportSerializer
     filter_backends = [DjangoFilterBackend]
@@ -191,7 +192,7 @@ class GeneratedReportViewSet(TeamLeaderFilterMixin, viewsets.ModelViewSet):
     ],
     responses={200: dict},
 )
-class SummaryReportView(APIView):
+class SummaryReportView(HbprBlockedMixin, APIView):
     """Generate aggregated summary reports for overtime, standby, and leave."""
     permission_classes = [CanViewReports]
     
@@ -253,7 +254,7 @@ class SummaryReportView(APIView):
     ],
     responses={200: dict},
 )
-class DetailedReportView(APIView):
+class DetailedReportView(HbprBlockedMixin, APIView):
     """Generate detailed per-user reports with monthly/yearly grouping."""
     permission_classes = [CanViewReports]
     
@@ -392,7 +393,7 @@ class DetailedReportView(APIView):
         (200, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'): OpenApiTypes.BINARY
     },
 )
-class ExportExcelView(APIView):
+class ExportExcelView(HbprBlockedMixin, APIView):
     """Export detailed report as Excel (.xlsx) file."""
     permission_classes = [CanViewReports]
 
@@ -629,7 +630,7 @@ class ExportExcelView(APIView):
         (200, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'): OpenApiTypes.BINARY
     },
 )
-class ExportOTStandbyView(APIView):
+class ExportOTStandbyView(HbprBlockedMixin, APIView):
     """Export detailed Overtime and Standby records as Excel (.xlsx) file with per-Italian TL sheets."""
     permission_classes = [CanViewReports]
 
@@ -762,7 +763,7 @@ class ExportOTStandbyView(APIView):
         (200, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'): OpenApiTypes.BINARY
     },
 )
-class ExportLeaveView(APIView):
+class ExportLeaveView(HbprBlockedMixin, APIView):
     """Export detailed Leave records as Excel (.xlsx) file with per-Italian TL sheets."""
     permission_classes = [CanViewReports]
 
@@ -849,7 +850,7 @@ class ExportLeaveView(APIView):
     ],
     responses={200: InsightsSerializer},
 )
-class InsightsView(APIView):
+class InsightsView(HbprBlockedMixin, APIView):
     """Calculate executive summary insights for HR dashboard."""
     permission_classes = [CanViewReports]
 
@@ -939,7 +940,7 @@ class InsightsView(APIView):
     ],
     responses={200: TopTeamLeaderSerializer(many=True)},
 )
-class TopTeamLeadersView(APIView):
+class TopTeamLeadersView(HbprBlockedMixin, APIView):
     """Rank team leaders by total approved hours."""
     permission_classes = [CanViewReports]
 
@@ -994,7 +995,7 @@ class TopTeamLeadersView(APIView):
         return Response(result, status=status.HTTP_200_OK)
 
 
-class AuditLogViewSet(TeamLeaderFilterMixin, viewsets.ReadOnlyModelViewSet):
+class AuditLogViewSet(HbprBlockedMixin, TeamLeaderFilterMixin, viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for AuditLog - read-only, with filtering.
     """

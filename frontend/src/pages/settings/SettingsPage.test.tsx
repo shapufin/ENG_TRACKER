@@ -338,6 +338,25 @@ describe("SettingsPage", () => {
     expect(screen.queryByTestId("client-assignment")).not.toBeInTheDocument();
   });
 
+  it("HBPR: shows the HBPR badge and no My Clients or Client Assignment card", () => {
+    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
+    vi.mocked(usePermissions.usePermissions).mockReturnValue({ isHBPR: true } as any);
+    render(<SettingsPage />);
+    expect(screen.getByText("HBPR")).toBeInTheDocument();
+    expect(screen.queryByTestId("my-clients")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("client-assignment")).not.toBeInTheDocument();
+  });
+
+  it("HBPR who is also a team leader keeps My Clients", () => {
+    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
+    vi.mocked(usePermissions.usePermissions).mockReturnValue({
+      isHBPR: true,
+      isTeamLeader: true,
+    } as any);
+    render(<SettingsPage />);
+    expect(screen.getByTestId("my-clients")).toBeInTheDocument();
+  });
+
   it("CR-scoped TL: hides the Client Assignment card", () => {
     vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue({

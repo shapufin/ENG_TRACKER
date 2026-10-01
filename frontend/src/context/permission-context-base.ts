@@ -1,12 +1,13 @@
 import { createContext } from "react";
 
-export type DashboardType = "employee" | "team_leader" | "hr" | "admin";
+export type DashboardType = "employee" | "team_leader" | "hr" | "hbpr" | "admin";
 
 export interface PermissionContextType {
   isTeamLeader: boolean;
   isItalianTL: boolean;
   isAlbanianTL: boolean;
   isHR: boolean;
+  isHBPR: boolean;
   isAdmin: boolean;
   isSuperuser: boolean;
   isCRAdmin: boolean;

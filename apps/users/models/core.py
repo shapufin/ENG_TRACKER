@@ -547,6 +547,11 @@ class UserProfile(BaseModel):
         return self.is_hr_user
 
     @property
+    def is_hbpr(self):
+        """HR Business Partner (Italy). Flagless role: ``role_codes`` only."""
+        return 'hbpr' in (self.role_codes or [])
+
+    @property
     def is_albanian_tl(self):
         """Check if user is an Albanian team leader (database role or legacy flag)."""
         if 'albanian_tl' in (self.role_codes or []):

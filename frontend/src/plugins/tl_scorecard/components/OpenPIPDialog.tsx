@@ -5,26 +5,31 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { userService } from "@/services/userService";
 import type { UserProfile } from "@/types";
+import type { PIPRecord } from "../types/tlScorecard";
 
 interface OpenPIPDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (data: { employee: number; start_date: string; notes: string }) => Promise<void>;
+  /** In edit mode the employee is fixed and `onCreate` receives the edited values. */
+  mode?: "create" | "edit";
+  initial?: PIPRecord;
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({ open, onOpenChange, onCreate }) => {
-  const [employeeId, setEmployeeId] = useState<number | null>(null);
+export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({ open, onOpenChange, onCreate, mode = "create", initial }) => {
+  const isEdit = mode === "edit";
+  const [employeeId, setEmployeeId] = useState<number | null>(initial?.employee ?? null);
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
-  const [startDate, setStartDate] = useState(todayIso());
-  const [notes, setNotes] = useState("");
+  const [startDate, setStartDate] = useState(initial?.start_date ?? todayIso());
+  const [notes, setNotes] = useState(initial?.notes ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isEdit) return;
     userService.getMyTeamMembers().then(setTeamMembers).catch(() => setTeamMembers([]));
-  }, [open]);
+  }, [open, isEdit]);
 
   const canSubmit = employeeId !== null && startDate && notes.trim().length > 0;
 
@@ -34,9 +39,13 @@ export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({ open, onOpenChange
     setIsSubmitting(true);
     try {
       await onCreate({ employee: employeeId, start_date: startDate, notes: notes.trim() });
-      setEmployeeId(null);
-      setNotes("");
+      if (!isEdit) {
+        setEmployeeId(null);
+        setNotes("");
+      }
       onOpenChange(false);
+    } catch {
+      // The caller reports the failure; keep the dialog open for a retry.
     } finally {
       setIsSubmitting(false);
     }
@@ -46,31 +55,40 @@ export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({ open, onOpenChange
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Open a PIP"
-      description="Requires prior HR approval before it counts as active — see the approval step below once opened."
+      title={isEdit ? "Edit PIP" : "Open a PIP"}
+      description={
+        isEdit ? undefined : "Requires prior HR approval before it counts as active — see the approval step below once opened."
+      }
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
-      submitLabel="Open PIP"
+      submitLabel={isEdit ? "Save changes" : "Open PIP"}
       submitDisabled={!canSubmit}
       size="sm"
     >
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="pip-employee">Team member</Label>
-          <select
-            id="pip-employee"
-            className="h-9 w-full rounded-xl border border-border bg-card px-2 text-sm text-foreground"
-            value={employeeId ?? ""}
-            onChange={(e) => setEmployeeId(e.target.value ? Number(e.target.value) : null)}
-          >
-            <option value="">Select a team member...</option>
-            {teamMembers.map((profile) => (
-              <option key={profile.user.id} value={profile.user.id}>
-                {profile.user.full_name || profile.user.username}
-              </option>
-            ))}
-          </select>
-        </div>
+        {isEdit ? (
+          <p className="text-sm">
+            <span className="text-muted-foreground">Team member: </span>
+            {initial?.employee_name}
+          </p>
+        ) : (
+          <div>
+            <Label htmlFor="pip-employee">Team member</Label>
+            <select
+              id="pip-employee"
+              className="h-9 w-full rounded-xl border border-border bg-card px-2 text-sm text-foreground"
+              value={employeeId ?? ""}
+              onChange={(e) => setEmployeeId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Select a team member...</option>
+              {teamMembers.map((profile) => (
+                <option key={profile.user.id} value={profile.user.id}>
+                  {profile.user.full_name || profile.user.username}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <Label htmlFor="pip-start-date">Start date</Label>
