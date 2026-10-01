@@ -124,3 +124,9 @@ When you say "update workflow" or "sync workflow":
 2. Update AGENTS.md workflow section if CONTEXT.md workflow changed
 3. Update trace-mcp reference if needed
 4. Report any changes made to AGENTS.md
+
+<!-- forge-outcome rules (outcome-first execution) -->
+- For substantial tasks: before coding, state the outcome and 1-3 checkable success criteria; confirm with the user if the request had none.
+- If the request is vague or self-contradictory, point it out before starting - never silently pick an interpretation.
+- For genuinely contested design choices, compare up to 3 approaches against the criteria, name the winner and why, build only the winner.
+- When done, verify against the stated criteria and report which pass, with evidence.
