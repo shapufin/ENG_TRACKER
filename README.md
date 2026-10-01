@@ -93,7 +93,7 @@ Project documentation is organized in `.devin/` (AI context) and `frontend/` (fr
 
 ## Features
 
-- **User Management**: Role-based access control (Employee, Team Leader, HR)
+- **User Management**: Role-based access control (Employee, Team Leader, HR, HBPR — HR business partner for Italy, see `docs/hbpr-and-scorecard.md`)
 - **Overtime Tracking**: Log and approve overtime hours with client/project details
 - **Standby Management**: Track on-call and standby hours
 - **Vacation Management**: Holiday requests with calendar view and balance tracking
@@ -261,6 +261,10 @@ start **disabled**: enable the ones you want in Admin → Plugins, then **restar
 the backend** (`docker compose restart backend`), because plugin URLs are computed
 once at process start. Enabling without a restart leaves the plugin's API routes
 returning 404.
+
+**HBPR access on existing databases.** The entrypoint also runs `manage.py grant_hbpr_plugin_access`
+(after `sync_plugins`), which gives the `hbpr` role `view` on the TL Scorecard and Engagement plugins once;
+nothing to do by hand. Details and the role's scope rules: `docs/hbpr-and-scorecard.md`.
 
 Without `--profile tunnel` (e.g. while `cloudflared` isn't configured yet),
 drop that flag — everything else still comes up:
