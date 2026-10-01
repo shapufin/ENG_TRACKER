@@ -1222,3 +1222,7 @@ unique `code` only at save time, so both pass validation and one hits the DB con
 - Never leave `/api/schema/` as a readiness probe.
 
 Backend baseline after this round: 1875 tests, 0 failures.
+
+## Font 404s in production - 2026-10-01
+
+Found on the first production load: every `/assets/files/*.woff2` returned 404. Root cause: Tailwind 4 inlines `@import`ed CSS but does not let Vite rewrite its `url(./files/*.woff2)`, so the fontsource files were never emitted and the CSS kept unhashed relative URLs (a Tailwind 3 / postcss-import build handled this). Fix: the four fontsource CSS files are imported from `src/main.tsx` instead of `index.css`; the build now emits 30 hashed woff2 files under `/assets/`, which the existing nginx `/assets/` block serves. Guard: `src/lib/fontImports.test.ts`. The Recharts "width(-1) and height(-1)" console warning is a first-render zero-size container message, not an error.

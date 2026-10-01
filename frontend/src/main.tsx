@@ -4,6 +4,13 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryProvider } from "@/context/QueryContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import App from "./App";
+// Fonts are imported here, not via `@import` in index.css: Tailwind 4 inlines CSS imports
+// without letting Vite rewrite their `url(./files/*.woff2)`, so the font files were never
+// emitted and every font 404ed in production.
+import "@fontsource-variable/plus-jakarta-sans";
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/500.css";
+import "@fontsource/jetbrains-mono/700.css";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
