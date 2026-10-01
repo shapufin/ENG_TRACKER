@@ -81,8 +81,8 @@ export const AVAILABLE_WIDGETS: WidgetConfig[] = [
   { id: "reports", title: "Reports", description: "View reports", icon: TrendingUp },
   {
     id: "holiday-balances",
-    title: "Holiday Balances",
-    description: "View holiday balances",
+    title: "Leave Balances",
+    description: "View leave balances",
     icon: CalendarDays,
   },
 ];

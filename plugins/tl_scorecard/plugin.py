@@ -73,21 +73,12 @@ class TlScorecardPlugin(BasePlugin):
                     # their own records (see MyRecordsViewSet).
                     "self_service": True,
                 },
-                {
-                    "path": "/admin/tl-scorecard",
-                    "component": "TLScorecardPage",
-                    "layout": "admin",
-                },
             ],
             "injection_slots": [
                 {
                     "slot": "sidebar-nav",
                     "component": "TLScorecardSidebarLink",
                     "section": "leadership",
-                },
-                {
-                    "slot": "admin-sidebar-nav",
-                    "component": "TLScorecardAdminSidebarItem",
                 },
                 {
                     "slot": "sidebar-nav",

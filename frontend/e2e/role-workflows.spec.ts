@@ -363,7 +363,7 @@ const PLUGIN_ROUTES = [
   "/admin/audit-logs",
   "/control-room/dashboard", "/control-room/access", "/admin/control-room/access",
   "/admin/data-import",
-  "/engagement/metrics", "/engagement/visualize", "/admin/engagement",
+  "/engagement/metrics", "/engagement/visualize",
   "/notifications",
   "/onboarding",
   "/organigrama", "/admin/organigrama",
@@ -373,7 +373,7 @@ const PLUGIN_ROUTES = [
   "/skills", "/skills/team", "/skills/history", "/admin/skills/catalog", "/admin/skills/settings",
   "/ticket-kpi/upload", "/ticket-kpi/dashboard", "/ticket-kpi/team", "/ticket-kpi/team-management",
   "/admin/ticket-kpi/mappings",
-  "/tl-scorecard", "/tl-scorecard/visualize", "/admin/tl-scorecard",
+  "/tl-scorecard", "/tl-scorecard/visualize",
 ];
 
 test.describe("D: plugin routes x roles (smoke + observed access table)", () => {

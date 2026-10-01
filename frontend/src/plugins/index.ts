@@ -198,9 +198,6 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
       }))
     ),
     EngagementSidebarLink: lazy(() => import("./engagement/components/EngagementSidebarLink")),
-    EngagementAdminSidebarItem: lazy(() =>
-      import("./engagement/components/EngagementAdminSidebarItem")
-    ),
     EngagementVisualizationPage: lazy(() =>
       import("./engagement/pages/EngagementVisualizationPage").then((m) => ({
         default: m.EngagementVisualizationPage,
@@ -213,7 +210,9 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
     ),
     OnboardingSidebarLink: lazy(() => import("./onboarding/components/OnboardingSidebarLink")),
     DocumentEditorPage: lazy(() =>
-      import("./onboarding/pages/DocumentEditorPage").then((m) => ({ default: m.DocumentEditorPage }))
+      import("./onboarding/pages/DocumentEditorPage").then((m) => ({
+        default: m.DocumentEditorPage,
+      }))
     ),
   },
   tl_scorecard: {
@@ -234,9 +233,6 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
       import("./tl_scorecard/pages/HbprDashboardPage").then((m) => ({
         default: m.HbprDashboardPage,
       }))
-    ),
-    TLScorecardAdminSidebarItem: lazy(
-      () => import("./tl_scorecard/components/TLScorecardAdminSidebarItem")
     ),
   },
 };
