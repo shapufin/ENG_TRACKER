@@ -733,10 +733,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         Payload: any of {email, first_name, last_name, phone, team, albanian_tl, italian_tl, is_hr, is_italian_tl_role, is_albanian_tl_role, is_cr_admin}
         """
         from .services.user_creation import _set_cr_admin_role, _sync_legacy_roles, _sync_roles
-        from apps.permissions.services.role_service import (
-            find_blocked_hbpr_revocations,
-            find_blocked_tl_revocations,
-        )
+        from apps.permissions.services.role_service import find_blocked_tl_revocations
+        from .services.hbpr_assignments import hbpr_revocation_refusal
         user = self.get_object()
         data = request.data
 
@@ -784,40 +782,11 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Same pre-check for the HBPR↔Albanian-TL assignment FK: revoking
-        # hbpr/albanian_tl while an open assignment depends on it would
-        # strand the assignment's scope resolution. Checked before any
-        # mutation so a refusal leaves the profile untouched.
-        if 'roles' in data:
-            hbpr_new_state = {
-                'hbpr': 'hbpr' in requested_roles,
-                'albanian_tl': 'albanian_tl' in requested_roles,
-            }
-        else:
-            hbpr_new_state = {}
-            if 'is_albanian_tl_role' in data:
-                hbpr_new_state['albanian_tl'] = bool(data['is_albanian_tl_role'])
-        blocked_hbpr = (
-            find_blocked_hbpr_revocations(user, hbpr_new_state)
-            if profile_for_check and hbpr_new_state
-            else []
-        )
-        if blocked_hbpr:
-            summary = '; '.join(
-                f"{b['role']}: {b['assignment_count']} open HBPR↔"
-                "Albanian TL assignment(s) depend on this role"
-                for b in blocked_hbpr
-            )
-            return Response(
-                {
-                    'error': (
-                        'Cannot revoke role while an open HBPR↔Albanian TL '
-                        'assignment depends on it: ' + summary
-                    ),
-                    'blocked_hbpr_revocations': blocked_hbpr,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Same pre-check for the HBPR↔Albanian-TL assignment FK (before any
+        # mutation, so a refusal leaves the profile untouched).
+        hbpr_refusal = hbpr_revocation_refusal(user, data)
+        if hbpr_refusal:
+            return Response(hbpr_refusal, status=status.HTTP_400_BAD_REQUEST)
 
         if 'email' in data:
             user.email = data['email']

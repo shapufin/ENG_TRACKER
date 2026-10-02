@@ -180,3 +180,38 @@ def cadence_status(assignment, *, last_meeting_on, on_date=None) -> str:
 
 def today() -> date:
     return timezone.now().date()
+
+
+def hbpr_revocation_refusal(user, data) -> dict | None:
+    """Error payload when an update would revoke ``hbpr``/``albanian_tl`` while an
+    open assignment depends on it, else ``None``.
+
+    ``data`` is the admin update payload: a ``roles`` array wins over the legacy
+    ``is_albanian_tl_role`` flag, exactly as ``update_user`` applies them. A role
+    absent from the request is "not touched" and never checked.
+    """
+    from apps.permissions.services.role_service import find_blocked_hbpr_revocations
+
+    if getattr(user, 'profile', None) is None:
+        return None
+    if 'roles' in data:
+        requested = set(data['roles'] or [])
+        new_state = {'hbpr': 'hbpr' in requested, 'albanian_tl': 'albanian_tl' in requested}
+    elif 'is_albanian_tl_role' in data:
+        new_state = {'albanian_tl': bool(data['is_albanian_tl_role'])}
+    else:
+        return None
+    blocked = find_blocked_hbpr_revocations(user, new_state)
+    if not blocked:
+        return None
+    summary = '; '.join(
+        f"{b['role']}: {b['assignment_count']} open HBPR↔Albanian TL assignment(s) depend on this role"
+        for b in blocked
+    )
+    return {
+        'error': (
+            'Cannot revoke role while an open HBPR↔Albanian TL assignment depends on it: '
+            + summary
+        ),
+        'blocked_hbpr_revocations': blocked,
+    }
