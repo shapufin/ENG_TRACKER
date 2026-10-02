@@ -128,6 +128,11 @@ def has_team_leader_role(user) -> bool:
     )
 
 
+def is_staff_user(user) -> bool:
+    """Staff or superuser — the one definition of the "bypass scoping" check."""
+    return bool(user and (user.is_staff or user.is_superuser))
+
+
 def is_hbpr_only(user) -> bool:
     """True when the user holds ``hbpr`` and no other elevated role.
 

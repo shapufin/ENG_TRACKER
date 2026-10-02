@@ -22,6 +22,7 @@ from django.db.models import Q
 from rest_framework.permissions import SAFE_METHODS
 
 from apps.users.services.hbpr_scope import get_hbpr_scope
+from core.mixins.permissions import is_staff_user
 
 
 class HbprReadScopeMixin:
@@ -59,3 +60,59 @@ class HbprReadScopeMixin:
         if hbpr_exclude is not None:
             hbpr_q &= hbpr_exclude
         return qs.filter(own_q | hbpr_q)
+
+
+class HbprScopedQuerysetMixin(HbprReadScopeMixin):
+    """Declarative, fail-closed ``get_queryset`` for HBPR-readable resources.
+
+    A concrete viewset implements ``base_queryset()`` and ``own_q(user)`` and
+    must DECLARE its HBPR policy as class attributes:
+
+    - ``hbpr_leader_field`` / ``hbpr_member_field`` (and ``hbpr_member_nullable``,
+      ``hbpr_exclude``) as for ``limit_to_viewer``; or
+    - ``hbpr_no_access = True`` when an HBPR must never read the resource.
+
+    Forgetting to declare raises ``TypeError`` when the class is created, so a
+    new related viewset cannot silently inherit "no HBPR exclusion" (the bug
+    class that once leaked employee one-on-one attendee rows).
+    """
+
+    hbpr_leader_field = None
+    hbpr_member_field = None
+    hbpr_member_nullable = False
+    hbpr_exclude = None
+    hbpr_no_access = False
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if 'base_queryset' not in vars(cls):
+            return  # abstract intermediate class
+        declared = (
+            'hbpr_leader_field' in vars(cls)
+            or 'hbpr_member_field' in vars(cls)
+            or vars(cls).get('hbpr_no_access') is True
+        )
+        if not declared:
+            raise TypeError(
+                f'{cls.__name__} must declare its HBPR policy: set hbpr_leader_field/'
+                'hbpr_member_field, or hbpr_no_access = True.'
+            )
+
+    def base_queryset(self):
+        raise NotImplementedError
+
+    def own_q(self, user):
+        raise NotImplementedError
+
+    def get_queryset(self):
+        qs = self.base_queryset()
+        user = self.request.user
+        if is_staff_user(user):
+            return qs
+        if self.hbpr_no_access:
+            return qs.filter(self.own_q(user))
+        return self.limit_to_viewer(
+            qs, self.own_q(user),
+            leader_field=self.hbpr_leader_field, member_field=self.hbpr_member_field,
+            member_nullable=self.hbpr_member_nullable, hbpr_exclude=self.hbpr_exclude,
+        )
