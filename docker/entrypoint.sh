@@ -54,6 +54,13 @@ python manage.py migrate --noinput
 echo "[entrypoint] Syncing plugin registry..."
 python manage.py sync_plugins
 
+# Reconcile every plugin's permission rows from its manifest (creates missing rows,
+# always re-asserts manifest-owned role denials such as the HBPR block). sync_plugins
+# only registers plugins; without this, a fresh database has no permission rows until a
+# plugin is enabled, and an upgraded one keeps stale rows with no denial.
+echo "[entrypoint] Reconciling plugin permissions..."
+python manage.py seed_plugin_permissions
+
 # Existing databases keep their old PluginPermission rows, so the hbpr role needs a
 # one-time view grant; the command is a no-op once hbpr has been configured.
 echo "[entrypoint] Granting HBPR plugin access..."
