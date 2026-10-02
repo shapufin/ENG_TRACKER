@@ -37,6 +37,32 @@ same day next month clamped to month end, from the last cadence meeting or the s
 `cadence_status` has exactly one definition
 (`apps/users/services/hbpr_assignments.cadence_status`). Due/overdue is UI-only.
 
+## Architecture guardrails (added by the 2026-10-02 hardening pass)
+
+- **Fail-closed scoping.** HBPR-readable scorecard viewsets subclass
+  `core.mixins.viewer_scope.HbprScopedQuerysetMixin` and DECLARE their policy
+  (`hbpr_leader_field`/`hbpr_member_field`/`hbpr_member_nullable`/`hbpr_exclude`, or
+  `hbpr_no_access = True`) plus `base_queryset()`/`own_q()`. A concrete class without a
+  declaration raises `TypeError` at import, and `test_hbpr_invariants.py` fails if a
+  hand-rolled `HbprReadScopeMixin` viewset reappears. The staff bypass lives in one place
+  (`get_queryset`, `core.mixins.permissions.is_staff_user`).
+- **Route-walking invariant.** `test_hbpr_invariants.py` plants a one-on-one, its
+  attendee and private notes, then hits every registered route as an HBPR; a new door that
+  leaks fails there without anyone writing a test for it.
+- **Zero-query change tracking.** `core.models.abstract.TrackedFieldsMixin` snapshots
+  `tracked_fields` in `from_db`/`save()`; signal handlers use `_changed()`. Never add a
+  pre_save `SELECT`. Tracked models: Meeting, IdleFlag, Absence, PIPRecord, PromotionFlag,
+  EPRCycle, HbprGovernanceEvidence, HbprAlbanianTlAssignment.
+- **Boot reconciliation.** `docker/entrypoint.sh` runs `sync_plugins` ->
+  `seed_plugin_permissions` -> `grant_hbpr_plugin_access` on every start;
+  `apps/plugins/test_hbpr_boot_path.py` reads the entrypoint itself and asserts the end
+  state (HBPR denied on Engagement/Organigrama/Skills/Ticket KPI, granted `tl_scorecard`).
+  Owners: manifest sync = source of truth, the command = reconciler, `plugins.0010` =
+  one-time backfill.
+- **Module layout.** `plugins/tl_scorecard/viewsets/` is a package (`scorecard`, `records`,
+  `decisions`, `epr`, `evidence`) that re-exports every name; import from `.viewsets`.
+  Shared test helper: `plugins/tl_scorecard/testing.py` (`make_user`).
+
 ## Notifications
 
 Registry types share one user-facing key via `preference_group` (resolved in
@@ -58,7 +84,13 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
 
 - `/hbpr` workspace (`HbprWorkspacePage`, `app` layout) with URL-backed view, year,
   leader, kind (`pips|promotions|idle|absences|meetings|reviews` — shared with the
-  notification deep links), status and period. Desktop table, mobile cards.
+  notification deep links), status, period and page. Desktop table, mobile cards.
+  Records and evidence are paged **server-side** (one kind / one page per request):
+  `GET .../hbpr/records/?kind=&leader=&status=&period=&limit=&offset=` returns
+  `{count, results}` and delegates to the resource viewsets, so scope and redaction are
+  reused, never copied (`plugins/tl_scorecard/hbpr_records.py`); evidence uses the
+  evidence viewset's DRF `page` plus `period_year` and `leader` filters. `kind` is
+  required (the mixed "all types" view was dropped).
 - `/tl-scorecard` is the AL-TL authoring workspace (`components/scorecard/*`); an
   HBPR-only viewer is redirected to `/hbpr` before any query fires. The AL TL's "HBPR
   partnership" section reads `GET /api/plugins/tl_scorecard/partnership/`.
@@ -70,9 +102,9 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
 ## Operations
 
 **Deploy:** `docker/entrypoint.sh` runs `migrate`, `sync_plugins`, then
+`seed_plugin_permissions` (reconciles every manifest incl. `denied_roles`) then
 `grant_hbpr_plugin_access` (a reconciler: grants `hbpr` view on `tl_scorecard`, removes
-it from `engagement`; runs on every start). Plugin permission manifests (including
-`denied_roles`) are reconciled when a plugin is enabled/synced. Migrations in this
+it from `engagement`); all run on every start. Migrations in this
 release: `users` 0019, `plugins` 0009/0010, `permissions` 0007 (dependency pinned to
 `plugins.0007_plugin_permission_system`), `tl_scorecard` 0004, `notifications` 0010.
 
@@ -118,6 +150,22 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   test; the lifecycle test skips with a reseed instruction instead of corrupting the
   fixture. `Signal.receivers` unpack in `plugins/notifications/test_push.py` made
   Django 5/6 agnostic; OpenAPI type hints added to the assignment serializer.
+
+- **2026-10-02, hardening pass (branch `refactor/hbpr-hardening`):** fail-closed
+  declarative scoping + route-walking invariant test; `viewsets.py` (803 lines) split
+  into a package; 35 duplicated staff-bypass checks -> 1; seven per-save `SELECT`
+  trackers -> zero (`TrackedFieldsMixin`); server-side paged `hbpr/records/` and evidence
+  (previously every page of 7 resources was fetched and filtered in the browser); HBPR
+  revocation guard extracted from `update_user`; **entrypoint now reconciles plugin
+  permissions** (a fresh/upgraded DB could previously keep HBPR un-denied on
+  Skills/Ticket KPI until a plugin was enabled); `CLAUDE.md` HBPR/scorecard bullets
+  trimmed (42 KB -> 34 KB); future-date validator uses the app calendar day
+  (`timezone.localdate()`), not the host's.
+
+**Accepted, not changed:** the assignment model and `/admin/hbpr-assignments` live in
+core (`apps/users`) while evidence lives in the plugin (moving a deployed model is the
+riskiest option for no user-visible gain); `UserViewSet.bulk_update` (complexity 37) and
+`update_user` (25) remain large; repo-wide ESLint/Prettier baseline.
 
 ## For AI agents
 
