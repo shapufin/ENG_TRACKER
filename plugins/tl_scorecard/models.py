@@ -14,7 +14,7 @@ from django.db import models
 from django.utils import timezone
 
 from apps.users.models.core import Team
-from core.models.abstract import BaseModel
+from core.models.abstract import BaseModel, TrackedFieldsMixin
 
 
 class DocumentedEventMixin(models.Model):
@@ -33,7 +33,7 @@ class DocumentedEventMixin(models.Model):
         abstract = True
 
 
-class Meeting(BaseModel, DocumentedEventMixin):
+class Meeting(TrackedFieldsMixin, BaseModel, DocumentedEventMixin):
     """Covers three KPIs at once (gap-audit findings #12/#13):
     1-on-1 compliance (meeting_type=one_on_one, counterparty=team member),
     the TL-Italy sync count (meeting_type=tl_sync, counterparty is whoever
@@ -42,6 +42,7 @@ class Meeting(BaseModel, DocumentedEventMixin):
     report), and team-meeting governance (meeting_type=team_meeting, `team`
     set, HRBP presence tracked via `MeetingAttendee.role`, 24h notes
     circulation checked as notes_published_at - created_at)."""
+    tracked_fields = ('occurred_on', 'shared_summary', 'shared_at')
     MEETING_TYPE_CHOICES = [
         ('one_on_one', 'One-on-one'),
         ('tl_sync', 'TL Sync'),
@@ -100,10 +101,11 @@ class MeetingAttendee(BaseModel):
         ]
 
 
-class IdleFlag(BaseModel, DocumentedEventMixin):
+class IdleFlag(TrackedFieldsMixin, BaseModel, DocumentedEventMixin):
     """Idle-risk flag (gap-audit finding #9 — part 1: the point-in-time
     flag itself). The recurring weekly report the KPI also requires lives
     in the child `IdleStatusUpdate` model below."""
+    tracked_fields = ('status',)
     STATUS_CHOICES = [
         ('open', 'Open'),
         ('resolved', 'Resolved'),
@@ -195,11 +197,12 @@ class EngagementSurveyResponse(BaseModel):
 # these plus Phase 1/2 data (see services.py's escalation_candidates()).
 # ---------------------------------------------------------------------------
 
-class Absence(BaseModel, DocumentedEventMixin):
+class Absence(TrackedFieldsMixin, BaseModel, DocumentedEventMixin):
     """Unplanned/unjustified absence (gap-audit finding #5) — distinct from
     LeaveRequest, which is pre-approved by definition. The 5-working-day
     "addressed within" SLA is computed in services.py from flagged_on vs
     addressed_on, not stored as a duration."""
+    tracked_fields = ('addressed_on',)
     employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='absences')
     flagged_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='absences_flagged')
     absence_date = models.DateField()
@@ -215,12 +218,13 @@ class Absence(BaseModel, DocumentedEventMixin):
         return f'Absence: {self.employee} — {self.absence_date}'
 
 
-class PIPRecord(BaseModel, DocumentedEventMixin):
+class PIPRecord(TrackedFieldsMixin, BaseModel, DocumentedEventMixin):
     """Performance Improvement Plan (gap-audit finding — "PIPs executed
     only with prior HR approval, evidence-based"). `approved_by`/
     `approved_at` are the entire approval model per decision — no
     multi-step workflow. "Pending too long" is computed in services.py from
     created_at vs approved_at, not stored."""
+    tracked_fields = ('status',)
     STATUS_CHOICES = [
         ('draft', 'Draft'),
         ('active', 'Active'),
@@ -259,11 +263,12 @@ class PIPRecord(BaseModel, DocumentedEventMixin):
         return f'PIP: {self.employee} ({self.status})'
 
 
-class PromotionFlag(BaseModel):
+class PromotionFlag(TrackedFieldsMixin, BaseModel):
     """High-potential/promotion nomination (gap-audit finding — "identify
     high-potential members for internal promotion, target 3%/year"). The
     nomination itself is a judgment call; the 3% ratio is computed in
     services.py from team_size vs promoted-count, never typed in."""
+    tracked_fields = ('status',)
     STATUS_CHOICES = [
         ('nominated', 'Nominated'),
         ('promoted', 'Promoted'),
@@ -289,13 +294,14 @@ class PromotionFlag(BaseModel):
         return f'Promotion flag: {self.employee} ({self.status})'
 
 
-class EPRCycle(BaseModel):
+class EPRCycle(TrackedFieldsMixin, BaseModel):
     """One EPR cycle per (user, year) — 3 fixed stages. Due dates are NOT
     stored: services.py computes them from the year (Q1/Q3/Q4-end) so a TL
     never types a due date, and the schedule can be tuned in one place.
     `goals` (child EPRGoal) must reach 5 before goal_setting_completed_at
     can be set — enforced in the viewset, not here (keeps the model a pure
     data holder, matching this plugin's other models)."""
+    tracked_fields = ('goal_setting_completed_at', 'mid_year_completed_at', 'final_review_completed_at')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='epr_cycles')
     year = models.PositiveIntegerField()
     goal_setting_completed_at = models.DateTimeField(null=True, blank=True)
@@ -326,7 +332,7 @@ class EPRGoal(BaseModel):
         ordering = ['id']
 
 
-class HbprGovernanceEvidence(BaseModel):
+class HbprGovernanceEvidence(TrackedFieldsMixin, BaseModel):
     """Evidence of the HBPR ↔ Albanian TL governance relationship.
 
     Two shapes, one table:
@@ -342,6 +348,7 @@ class HbprGovernanceEvidence(BaseModel):
     later hands the evidence to their manager, so rows are never deleted —
     ``recorded_by``/``updated_by`` keep the audit trail.
     """
+    tracked_fields = ('occurred_on', 'shared_summary', 'action_items', 'reference_url')
 
     KIND_CHOICES = [
         ('cadence_meeting', 'Cadence meeting'),

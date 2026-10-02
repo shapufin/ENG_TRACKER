@@ -214,3 +214,30 @@ class HbprGovernanceCoverageNotificationTests(TestCase):
         except Boom:
             pass
         self.assertEqual(self._titles(self.hbpr), [])
+
+    # --- change detection cost ---------------------------------------------
+    def test_saving_a_loaded_row_runs_no_tracker_select(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        flag = self._fire(lambda: IdleFlag.objects.create(
+            employee=self.emp, flagged_by=self.tl, flagged_on=date.today()))
+        flag = IdleFlag.objects.get(pk=flag.pk)
+        flag.status = 'resolved'
+        flag.resolved_on = date.today()
+        with CaptureQueriesContext(connection) as queries:
+            flag.save()
+        selects_on_flag = [
+            q['sql'] for q in queries.captured_queries
+            if q['sql'].lstrip().upper().startswith('SELECT') and 'tl_scorecard_idle_flags' in q['sql']
+        ]
+        self.assertEqual(selects_on_flag, [])
+
+    def test_a_second_unchanged_save_after_create_does_not_renotify(self):
+        flag = self._fire(lambda: IdleFlag.objects.create(
+            employee=self.emp, flagged_by=self.tl, flagged_on=date.today()))
+        flag.status = 'resolved'
+        self._fire(flag.save)
+        before = len(self._titles(self.hbpr))
+        self._fire(flag.save)
+        self.assertEqual(len(self._titles(self.hbpr)), before)

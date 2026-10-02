@@ -15,7 +15,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from core.models.abstract import BaseModel
+from core.models.abstract import BaseModel, TrackedFieldsMixin
 
 CADENCE_CHOICES = [
     ("weekly", "Weekly"),
@@ -26,8 +26,10 @@ CADENCE_CHOICES = [
 _CADENCE_STEP_DAYS = {"weekly": 7, "biweekly": 14}
 
 
-class HbprAlbanianTlAssignment(BaseModel):
+class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
     """A dated, admin-managed pairing of one HBPR with one Albanian TL."""
+
+    tracked_fields = ("effective_to",)
 
     hbpr = models.ForeignKey(
         settings.AUTH_USER_MODEL,

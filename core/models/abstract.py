@@ -105,3 +105,34 @@ class BaseUUIDModel(UUIDModel, TimeStampedModel, SoftDeleteModel):
     class Meta:
         abstract = True
         ordering = ['-created_at']
+
+
+class TrackedFieldsMixin(models.Model):
+    """Remember selected field values as loaded/last saved, at zero query cost.
+
+    ``tracked_fields`` names the fields; ``_old_fields`` holds their values as of
+    ``from_db`` (or the previous ``save()``), or ``None`` for a never-saved
+    instance. Signal handlers compare it with the instance's current values to
+    detect a *meaningful* change without the extra ``SELECT`` a pre_save lookup
+    costs on every save. Deferred (``.only()``) fields are simply not tracked.
+    """
+
+    tracked_fields: tuple = ()
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._snapshot_tracked_fields()
+        return instance
+
+    def _snapshot_tracked_fields(self):
+        self._old_fields = {
+            name: self.__dict__[name] for name in self.tracked_fields if name in self.__dict__
+        }
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self._snapshot_tracked_fields()

@@ -4,7 +4,7 @@ Connected from ``TLScorecardPlugin.ready()`` only when the notifications plugin
 is importable; nothing here runs, or is imported, without it.
 """
 from django.db import transaction
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save
 
 from apps.users.models.hbpr import HbprAlbanianTlAssignment
 
@@ -27,43 +27,15 @@ def _notify(notification_cls, **context):
     transaction.on_commit(lambda: notification_cls().dispatch(context))
 
 
-def _track_status(sender, instance, **kwargs):
-    old = None
-    if instance.pk and not getattr(instance, '_skip_notifications', False):
-        old = sender.objects.filter(pk=instance.pk).values_list('status', flat=True).first()
-    instance._old_status = old
-
-
-def _track_shared(sender, instance, **kwargs):
-    old = None
-    if instance.pk and not getattr(instance, '_skip_notifications', False):
-        old = sender.objects.filter(pk=instance.pk).values_list('shared_at', flat=True).first()
-    instance._old_shared_at = old
-
-
-def _tracker(*fields):
-    """pre_save receiver that snapshots ``fields`` from the stored row."""
-    def receiver(sender, instance, **kwargs):
-        old = None
-        if instance.pk and not getattr(instance, '_skip_notifications', False):
-            old = sender.objects.filter(pk=instance.pk).values(*fields).first()
-        instance._old_fields = old
-    return receiver
+def _old(instance):
+    """Tracked values as of load/last save (see ``TrackedFieldsMixin``), or {}."""
+    return getattr(instance, '_old_fields', None) or {}
 
 
 def _changed(instance, *fields):
-    """True when an existing row changed any of ``fields`` since pre_save."""
-    old = getattr(instance, '_old_fields', None)
-    return bool(old) and any(old[f] != getattr(instance, f) for f in fields)
-
-
-_track_meeting_fields = _tracker('occurred_on', 'shared_summary')
-_track_evidence_fields = _tracker('occurred_on', 'shared_summary', 'action_items', 'reference_url')
-_track_absence_fields = _tracker('addressed_on')
-_track_idle_fields = _tracker('status')
-_track_epr_fields = _tracker(
-    'goal_setting_completed_at', 'mid_year_completed_at', 'final_review_completed_at')
-_track_assignment_fields = _tracker('effective_to')
+    """True when an existing row changed any of ``fields`` since it was loaded."""
+    old = _old(instance)
+    return any(f in old and old[f] != getattr(instance, f) for f in fields)
 
 
 def _on_meeting_saved(sender, instance, created, **kwargs):
@@ -75,7 +47,7 @@ def _on_meeting_saved(sender, instance, created, **kwargs):
         created or _changed(instance, 'occurred_on', 'shared_summary')
     ):
         _notify(types.HbprMeetingChanged, instance=instance)
-    first_share = instance.shared_at is not None and getattr(instance, '_old_shared_at', None) is None
+    first_share = instance.shared_at is not None and _old(instance).get('shared_at') is None
     if first_share and instance.counterparty_id:
         _notify(types.RecordShared, instance=instance)
 
@@ -84,7 +56,7 @@ def _on_pip_saved(sender, instance, created, **kwargs):
     from . import notification_types as types
     if getattr(instance, '_skip_notifications', False):
         return
-    old = getattr(instance, '_old_status', None)
+    old = _old(instance).get('status')
     if created and instance.status == 'draft':
         _notify(types.PipAwaitingApproval, instance=instance)
     elif old == 'draft' and instance.status in ('active', 'cancelled'):
@@ -102,7 +74,7 @@ def _on_promotion_saved(sender, instance, created, **kwargs):
         return
     if created:
         _notify(types.PromotionNominated, instance=instance)
-    elif getattr(instance, '_old_status', None) == 'nominated' and instance.status != 'nominated':
+    elif _old(instance).get('status') == 'nominated' and instance.status != 'nominated':
         _notify(types.PromotionDecided, instance=instance)
 
 
@@ -143,11 +115,11 @@ _EPR_STAGES = ('goal_setting_completed_at', 'mid_year_completed_at', 'final_revi
 
 def _on_epr_saved(sender, instance, created, **kwargs):
     from . import notification_types as types
-    old = getattr(instance, '_old_fields', None)
-    if created or not old or getattr(instance, '_skip_notifications', False):
+    old = _old(instance)
+    if created or getattr(instance, '_skip_notifications', False):
         return
     for stage in _EPR_STAGES:
-        if old[stage] is None and getattr(instance, stage) is not None:
+        if stage in old and old[stage] is None and getattr(instance, stage) is not None:
             _notify(types.EprStageCompleted, instance=instance, stage=stage)
 
 
@@ -158,8 +130,8 @@ def _on_assignment_saved(sender, instance, created, **kwargs):
     if created:
         _notify(types.HbprAssignmentChanged, instance=instance, outcome='assigned')
     else:
-        old = getattr(instance, '_old_fields', None)
-        if old and old['effective_to'] is None and instance.effective_to is not None:
+        old = _old(instance)
+        if 'effective_to' in old and old['effective_to'] is None and instance.effective_to is not None:
             _notify(types.HbprAssignmentChanged, instance=instance, outcome='ended')
 
 
@@ -187,19 +159,10 @@ def _on_review_delivered(sender, instance, created, **kwargs):
 
 # (signal, sender, handler, uid suffix) — the single list connect/disconnect share.
 _RECEIVERS = (
-    (pre_save, Meeting, _track_shared, 'meeting_state'),
-    (pre_save, Meeting, _track_meeting_fields, 'meeting_fields'),
-    (pre_save, IdleFlag, _track_idle_fields, 'idle_fields'),
-    (pre_save, Absence, _track_absence_fields, 'absence_fields'),
-    (pre_save, EPRCycle, _track_epr_fields, 'epr_fields'),
     (post_save, EPRCycle, _on_epr_saved, 'epr'),
-    (pre_save, HbprGovernanceEvidence, _track_evidence_fields, 'hbpr_evidence_fields'),
-    (pre_save, HbprAlbanianTlAssignment, _track_assignment_fields, 'assignment_fields'),
     (post_save, HbprAlbanianTlAssignment, _on_assignment_saved, 'assignment'),
     (post_save, Meeting, _on_meeting_saved, 'meeting'),
-    (pre_save, PIPRecord, _track_status, 'pip_state'),
     (post_save, PIPRecord, _on_pip_saved, 'pip'),
-    (pre_save, PromotionFlag, _track_status, 'promotion_state'),
     (post_save, PromotionFlag, _on_promotion_saved, 'promotion'),
     (post_save, IdleFlag, _on_idle_saved, 'idle'),
     (post_save, Absence, _on_absence_saved, 'absence'),
