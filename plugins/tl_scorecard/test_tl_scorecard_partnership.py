@@ -7,7 +7,6 @@ read side of the Phase 8 "HBPR Partnership" scorecard section.
 """
 from datetime import date, timedelta
 
-from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
@@ -15,17 +14,11 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 from apps.permissions.models import Role
 from apps.permissions.services.role_service import assign_role
 from apps.plugins.models import PluginPermission
-from apps.users.models.core import UserProfile
 from apps.users.models.hbpr import HbprAlbanianTlAssignment
 
+from .testing import make_user as _make_user
 from .models import HbprGovernanceEvidence
 from .viewsets import TLScorecardViewSet
-
-
-def _make_user(username, **kwargs):
-    user = User.objects.create_user(username=username, password='testpass123', **kwargs)
-    UserProfile.objects.get_or_create(user=user)
-    return user
 
 
 class PartnershipBase(TestCase):

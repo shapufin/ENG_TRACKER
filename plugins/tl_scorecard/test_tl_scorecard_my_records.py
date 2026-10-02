@@ -2,21 +2,14 @@
 whitelisted fields, never another person's data, never TL-private text."""
 from datetime import date
 
-from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from apps.users.models.core import UserProfile
 
+from .testing import make_user as _make_user
 from .models import Absence, EPRCycle, EPRGoal, IdleFlag, Meeting, PIPRecord, PromotionFlag
 from .viewsets_my_records import MyRecordsViewSet
-
-
-def _make_user(username, **kwargs):
-    user = User.objects.create_user(username=username, password='x', **kwargs)
-    UserProfile.objects.get_or_create(user=user)
-    return user
 
 
 class MyRecordsTests(TestCase):

@@ -4,23 +4,16 @@ import io
 import zipfile
 from datetime import date
 
-from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.permissions.models import Role, UserRole
-from apps.users.models.core import UserProfile
 
 from .excel_export import build_workbook_bytes
+from .testing import make_user as _make_user
 from .models import PIPRecord, PromotionFlag
 from .viewsets import PIPRecordViewSet, PromotionFlagViewSet, TLScorecardViewSet
-
-
-def _make_user(username, **kwargs):
-    user = User.objects.create_user(username=username, password='testpass123', **kwargs)
-    UserProfile.objects.get_or_create(user=user)
-    return user
 
 
 def _assign_tl_role(user):

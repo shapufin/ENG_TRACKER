@@ -2,7 +2,6 @@
 and the computed (non-logged) escalation_candidates()."""
 from datetime import date, timedelta
 
-from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
@@ -10,8 +9,8 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.leave_management.models import LeaveRequest
 from apps.permissions.models import Role, UserRole
-from apps.users.models.core import UserProfile
 
+from .testing import make_user as _make_user
 from .models import Absence, EPRCycle, EPRGoal, IdleFlag, PIPRecord, PromotionFlag
 from .services import (
     absence_metrics,
@@ -29,12 +28,6 @@ from .viewsets import (
     PromotionFlagViewSet,
     TLScorecardViewSet,
 )
-
-
-def _make_user(username, **kwargs):
-    user = User.objects.create_user(username=username, password='testpass123', **kwargs)
-    UserProfile.objects.get_or_create(user=user)
-    return user
 
 
 def _assign_tl_role(user, code='italian_tl'):

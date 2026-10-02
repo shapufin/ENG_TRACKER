@@ -3,25 +3,19 @@ year-end EPR participation record. Authored by the assigned AL TL only; read and
 exported by the assigned HBPR and staff."""
 from datetime import date, timedelta
 
-from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.db import IntegrityError, transaction
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.permissions.models import Role
 from apps.permissions.services.role_service import assign_role
-from apps.users.models.core import UserProfile
 from apps.users.models.hbpr import HbprAlbanianTlAssignment
 
+from .testing import make_user as _make_user
 from .models import HbprGovernanceEvidence
 from .viewsets import HbprGovernanceEvidenceViewSet
-
-
-def _make_user(username, **kwargs):
-    user = User.objects.create_user(username=username, password='testpass123', **kwargs)
-    UserProfile.objects.get_or_create(user=user)
-    return user
 
 
 class EvidenceBase(TestCase):
@@ -51,7 +45,8 @@ class EvidenceBase(TestCase):
             cadence='monthly', effective_from=date(2020, 1, 1),
         )
         self.staff = _make_user('staff_ev', is_staff=True)
-        self.today = date.today()
+        # The app's calendar day is the UTC day (TIME_ZONE='UTC'), not the host's.
+        self.today = timezone.localdate()
 
     def call(self, action_name, user, pk=None, data=None, method='post'):
         request = getattr(self.factory, method)('/x/', data or {}, format='json')

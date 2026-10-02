@@ -2,7 +2,6 @@
 address, meeting share, promotion decision audit) and note privacy."""
 from datetime import date
 
-from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
@@ -10,9 +9,9 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.permissions.models import Role
 from apps.permissions.services.role_service import assign_role
-from apps.users.models.core import UserProfile
 from apps.users.models.hbpr import HbprAlbanianTlAssignment
 
+from .testing import make_user as _make_user
 from .models import Absence, IdleFlag, Meeting, MeetingAttendee, PIPRecord, PromotionFlag
 from .viewsets import (
     AbsenceViewSet,
@@ -22,12 +21,6 @@ from .viewsets import (
     PIPRecordViewSet,
     PromotionFlagViewSet,
 )
-
-
-def _make_user(username, **kwargs):
-    user = User.objects.create_user(username=username, password='testpass123', **kwargs)
-    UserProfile.objects.get_or_create(user=user)
-    return user
 
 
 class ActionsBase(TestCase):

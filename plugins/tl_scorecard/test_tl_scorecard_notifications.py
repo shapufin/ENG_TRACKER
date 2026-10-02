@@ -2,17 +2,16 @@
 employee is never a recipient of an oversight event."""
 from datetime import date
 
-from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
 
 from apps.permissions.models import Role
 from apps.permissions.services.role_service import assign_role
-from apps.users.models.core import UserProfile
 from apps.users.models.hbpr import HbprAlbanianTlAssignment
 from plugins.notifications.models import Notification, NotificationPreference
 
 from . import signals
+from .testing import make_user as _make_user
 from .models import (
     Absence,
     HbprGovernanceEvidence,
@@ -21,12 +20,6 @@ from .models import (
     PIPRecord,
     PromotionFlag,
 )
-
-
-def _make_user(username, **kwargs):
-    user = User.objects.create_user(username=username, password='x', **kwargs)
-    UserProfile.objects.get_or_create(user=user)
-    return user
 
 
 class ScorecardNotificationTests(TestCase):
