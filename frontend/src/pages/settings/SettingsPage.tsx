@@ -20,13 +20,13 @@ import { PluginCRScopeCard } from "./components/PluginCRScopeCard";
 
 export const SettingsPage: React.FC = () => {
   const { user, logout, refreshUser } = useAuth();
-  const { isCRUser, isCRAdmin, isAdmin, isSuperuser, isHR, isHBPR, isTeamLeader } =
+  const { isCRUser, isCRAdmin, isAdmin, isSuperuser, isHR, isHBPR, isTeamLeader, isHBPROnly } =
     usePermissions();
   const { activePlugins } = usePlugins();
   const isCROnlyAdmin = isCRAdmin && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
   const isCRScoped = isCRUser || isCROnlyAdmin;
-  // An HBPR has no overtime or standby, so there are no clients to work for.
-  const isHBPROnly = isHBPR && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
+  // `isHBPROnly` is the shared flag (mirrors the backend's `is_hbpr_only`): an
+  // HBPR has no overtime or standby, so there are no clients to work for.
   const notificationsActive = activePlugins.some((plugin) => plugin.name === "notifications");
   const showAssignment = isTeamLeader && !isCRScoped;
   const navigate = useNavigate();
@@ -85,19 +85,19 @@ export const SettingsPage: React.FC = () => {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <Label className="text-xs text-muted-foreground">Username</Label>
+                <Label className="text-muted-foreground text-xs">Username</Label>
                 <p className="font-medium">{user?.username || "—"}</p>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Email</Label>
+                <Label className="text-muted-foreground text-xs">Email</Label>
                 <p className="font-medium">{user?.email || "—"}</p>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">First Name</Label>
+                <Label className="text-muted-foreground text-xs">First Name</Label>
                 <p className="font-medium">{user?.first_name || "—"}</p>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Last Name</Label>
+                <Label className="text-muted-foreground text-xs">Last Name</Label>
                 <p className="font-medium">{user?.last_name || "—"}</p>
               </div>
             </div>
@@ -119,7 +119,7 @@ export const SettingsPage: React.FC = () => {
             </div>
             {(user?.techs?.length ?? 0) > 0 && (
               <div>
-                <Label className="text-xs text-muted-foreground">Tech</Label>
+                <Label className="text-muted-foreground text-xs">Tech</Label>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {user!.techs!.map((tech) => (
                     <Badge key={tech.id} variant="outline" title={tech.code}>

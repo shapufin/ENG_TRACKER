@@ -8,6 +8,8 @@ export interface PermissionContextType {
   isAlbanianTL: boolean;
   isHR: boolean;
   isHBPR: boolean;
+  /** HBPR and no other elevating role. Mirrors the backend `is_hbpr_only`. */
+  isHBPROnly: boolean;
   isAdmin: boolean;
   isSuperuser: boolean;
   isCRAdmin: boolean;

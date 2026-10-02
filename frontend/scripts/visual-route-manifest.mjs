@@ -38,6 +38,7 @@ export const ROLE_FIXTURES = {
   hr: { username: "e2e_hr" },
   tl_hr: { username: "e2e_tl_hr" },
   admin: { username: "e2e_admin" },
+  hbpr: { username: "e2e_hbpr" },
   cr_user: null, // NO FIXTURE — no deterministic CR identity in seed_e2e_data
   cr_admin: null, // NO FIXTURE — verified absent; stop CR gate, request fixture
 };
@@ -144,6 +145,26 @@ export const ROUTES = [
     adminExtractionSuspect: true,
   },
   // ---- App shell plugin routes ----
+  {
+    path: "/hbpr",
+    label: "hbpr-workspace",
+    layout: "app",
+    roles: ["hbpr"],
+    expectedHeading: "HBPR Workspace",
+    mockup: "NONE",
+    extraction: "NONE",
+    note: "assignment-backed HBPR governance workspace (2026-10-02); a plain employee's /hbpr falls through to /dashboard (GUARD_ONLY, proven live E2E)",
+  },
+  {
+    path: "/tl-scorecard",
+    label: "tl-scorecard",
+    layout: "app",
+    roles: ["tl", "tl_hr", "admin"],
+    expectedHeading: "TL Scorecard",
+    mockup: "NONE",
+    extraction: "NONE",
+    note: "AL-TL authoring workspace (2026-10-02 refactor); an HBPR-only viewer is Navigate-redirected to /hbpr before rendering (GUARD_ONLY, proven live E2E)",
+  },
   {
     path: "/analytics",
     label: "analytics",
@@ -405,6 +426,16 @@ export const ROUTES = [
     mockup: "NONE",
     extraction: "admin-plugins",
   },
+  {
+    path: "/admin/hbpr-assignments",
+    label: "admin-hbpr-assignments",
+    layout: "admin",
+    roles: ["admin"],
+    expectedHeading: "HBPR assignments",
+    mockup: "NONE",
+    extraction: "NONE",
+    note: "admin-managed HBPR <-> AL-TL assignments (2026-10-02); /admin/* is SuperuserRoute-gated so hr is excluded by design",
+  },
   // ---- Admin shell plugin routes ----
   {
     path: "/admin/analytics",
@@ -569,6 +600,30 @@ export const REDIRECTS = [
 // TeamManagementPage renders Access Denied in place) — only /team/approvals
 // sits behind TLRoute.
 export const GUARD_ONLY = [
+  {
+    path: "/hbpr",
+    roles: ["employee"],
+    expectRedirect: "/dashboard",
+    via: "unregistered plugin route for a plain employee -> HomeRedirect (proven live E2E 2026-10-02)",
+  },
+  {
+    path: "/tl-scorecard",
+    roles: ["hbpr"],
+    expectRedirect: "/hbpr",
+    via: "TLScorecardPage isHBPROnly Navigate before any query fires (proven live E2E 2026-10-02)",
+  },
+  {
+    path: "/calendar",
+    roles: ["hbpr"],
+    expectRedirect: "/dashboard",
+    via: "HbprRestrictedRoute (proven live E2E 2026-10-02)",
+  },
+  {
+    path: "/leave-management",
+    roles: ["hbpr"],
+    expectRedirect: "/dashboard",
+    via: "HbprRestrictedRoute (proven live E2E 2026-10-02)",
+  },
   {
     path: "/team/approvals",
     roles: ["employee", "hr"],

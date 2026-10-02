@@ -48,10 +48,22 @@ const computeRoles = (user: any) => {
   };
 };
 
+/**
+ * HBPR and nothing else elevating. Mirrors the backend `is_hbpr_only`: only a
+ * TL **role** (or legacy TL flag) elevates, never the derived `is_team_leader`
+ * — being named someone's TL must not lift an HBPR-only block, or the frontend
+ * would show nav the API then refuses.
+ */
+const computeIsHBPROnly = (roles: ReturnType<typeof computeRoles>) => {
+  const { isHBPR, isItalianTL, isAlbanianTL, isHR, isAdmin, isSuperuser, isCRAdmin } = roles;
+  return isHBPR && !isItalianTL && !isAlbanianTL && !isHR && !isAdmin && !isSuperuser && !isCRAdmin;
+};
+
 // fallow-ignore-next-line complexity
 const computeBasePermissions = (roles: ReturnType<typeof computeRoles>) => {
   const { isTeamLeader, isHR, isHBPR, isAdmin, isSuperuser, isCRAdmin, isCRUser } = roles;
   return {
+    isHBPROnly: computeIsHBPROnly(roles),
     // CR admin (scoped admin) and CR user (scoped observer) are NOT regular
     // employees. Excluding both here prevents them from seeing employee nav
     // items (overtime, standby, calendar, leave) in the user shell.
@@ -75,7 +87,7 @@ const computeDashboards = (roles: ReturnType<typeof computeRoles>) => {
   const { isSuperuser, isAdmin, isHR, isHBPR, isTeamLeader } = roles;
   // The personal dashboard is overtime/standby/leave: an HBPR-only user has no
   // overtime or standby, so it is offered only alongside another role.
-  const isHBPROnly = isHBPR && !isSuperuser && !isAdmin && !isHR && !isTeamLeader;
+  const isHBPROnly = computeIsHBPROnly(roles);
   const availableDashboards: DashboardType[] = [];
   if (isSuperuser || isAdmin) availableDashboards.push("admin");
   if (isHR) availableDashboards.push("hr");

@@ -16,8 +16,17 @@ import { usePendingApprovalCount } from "@/hooks/usePendingApprovalCount";
 
 export const AppShell = React.memo(() => {
   const { user } = useAuth();
-  const { isAdmin, isHR, isHBPR, isTeamLeader, isEmployee, isSuperuser, isCRAdmin, isCRUser } =
-    usePermissions();
+  const {
+    isAdmin,
+    isHR,
+    isHBPR,
+    isHBPROnly,
+    isTeamLeader,
+    isEmployee,
+    isSuperuser,
+    isCRAdmin,
+    isCRUser,
+  } = usePermissions();
   // Sidebar brand subtitle — higher role wins (mirrors the CR multi-role
   // rule). Uppercase display is handled by the subtitle's `uppercase` class.
   const roleSubtitle = isSuperuser
@@ -44,7 +53,8 @@ export const AppShell = React.memo(() => {
     isEmployee,
     isSuperuser,
     isCRAdmin,
-    isCRUser
+    isCRUser,
+    isHBPROnly
   );
   const handleLogout = useLogout();
   // Pending-approvals nav badge (mockup: amber count pill). Reuses the

@@ -13,9 +13,13 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/components/ui/select", () => {
   const Ctx = React.createContext<{ onValueChange?: (v: string) => void }>({});
   return {
-    Select: ({ children, onValueChange }: { children: React.ReactNode; onValueChange?: (v: string) => void }) => (
-      <Ctx.Provider value={{ onValueChange }}>{children}</Ctx.Provider>
-    ),
+    Select: ({
+      children,
+      onValueChange,
+    }: {
+      children: React.ReactNode;
+      onValueChange?: (v: string) => void;
+    }) => <Ctx.Provider value={{ onValueChange }}>{children}</Ctx.Provider>,
     SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => {
       const ctx = React.useContext(Ctx);
@@ -35,12 +39,20 @@ vi.mock("@/components/ui/select", () => {
 });
 
 const perms = vi.hoisted(() => ({
-  value: { isHBPR: false, isTeamLeader: true, isAdmin: false, isSuperuser: false } as Record<string, boolean>,
+  value: { isHBPR: false, isTeamLeader: true, isAdmin: false, isSuperuser: false } as Record<
+    string,
+    boolean
+  >,
 }));
 vi.mock("@/context/PermissionContext", () => ({ usePermissions: () => perms.value }));
-vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: { id: 1, username: "me", teams: [] } }) }));
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({ user: { id: 1, username: "me", teams: [] } }),
+}));
 vi.mock("@/services/userService", () => ({
-  userService: { getMyTeamMembers: vi.fn().mockResolvedValue([]), getItalianTeamLeaders: vi.fn().mockResolvedValue([]) },
+  userService: {
+    getMyTeamMembers: vi.fn().mockResolvedValue([]),
+    getItalianTeamLeaders: vi.fn().mockResolvedValue([]),
+  },
 }));
 
 vi.mock("../../services/tlScorecardService", () => ({
@@ -51,7 +63,6 @@ vi.mock("../../services/tlScorecardService", () => ({
     listReviewDeliveries: vi.fn(),
     listPromotionFlags: vi.fn(),
     listPIPRecords: vi.fn(),
-    getHbprOverview: vi.fn(),
     updateRecord: vi.fn(),
     deleteRecord: vi.fn(),
     shareMeeting: vi.fn(),
@@ -68,37 +79,91 @@ vi.mock("../../services/tlScorecardService", () => ({
 const svc = tlScorecardService as unknown as Record<string, ReturnType<typeof vi.fn>>;
 
 const MEETING = {
-  id: 1, meeting_type: "one_on_one", organizer: 1, organizer_name: "Me", counterparty: 20,
-  counterparty_name: "Jane", team: null, occurred_on: "2026-09-02", notes: "", shared_summary: "", shared_at: null,
+  id: 1,
+  meeting_type: "one_on_one",
+  organizer: 1,
+  organizer_name: "Me",
+  counterparty: 20,
+  counterparty_name: "Jane",
+  team: null,
+  occurred_on: "2026-09-02",
+  notes: "",
+  shared_summary: "",
+  shared_at: null,
 };
 const IDLE = {
-  id: 2, employee: 20, employee_name: "Jane", flagged_by: 1, flagged_by_name: "Me", flagged_on: "2026-09-03",
-  status: "open", productivity_task: "Docs", resolved_on: null, notes: "",
+  id: 2,
+  employee: 20,
+  employee_name: "Jane",
+  flagged_by: 1,
+  flagged_by_name: "Me",
+  flagged_on: "2026-09-03",
+  status: "open",
+  productivity_task: "Docs",
+  resolved_on: null,
+  notes: "",
 };
 const ABSENCE = {
-  id: 3, employee: 20, employee_name: "Jane", flagged_by: 1, flagged_by_name: "Me", absence_date: "2020-01-01",
-  reason: "Sick", addressed_on: null, notes: "",
+  id: 3,
+  employee: 20,
+  employee_name: "Jane",
+  flagged_by: 1,
+  flagged_by_name: "Me",
+  absence_date: "2020-01-01",
+  reason: "Sick",
+  addressed_on: null,
+  notes: "",
 };
-const REVIEW = { id: 4, leader: 1, leader_name: "Me", period: "2026-08", recipient: "GM", delivered_on: "2026-09-04", notes: "" };
+const REVIEW = {
+  id: 4,
+  leader: 1,
+  leader_name: "Me",
+  period: "2026-08",
+  recipient: "GM",
+  delivered_on: "2026-09-04",
+  notes: "",
+};
 const PROMOTION = {
-  id: 5, employee: 20, employee_name: "Jane", nominated_by: 1, nominated_by_name: "Me", nominated_on: "2026-09-05",
-  status: "nominated", decided_on: null, decided_by: null, decision_note: "", notes: "",
+  id: 5,
+  employee: 20,
+  employee_name: "Jane",
+  nominated_by: 1,
+  nominated_by_name: "Me",
+  nominated_on: "2026-09-05",
+  status: "nominated",
+  decided_on: null,
+  decided_by: null,
+  decision_note: "",
+  notes: "",
 };
 const PIP = {
-  id: 6, employee: 20, employee_name: "Jane", tl: 1, tl_name: "Me", status: "draft", start_date: "2026-09-06",
-  approved_by: null, approved_by_name: null, approved_at: null, notes: "", closed_on: null, status_note: "",
+  id: 6,
+  employee: 20,
+  employee_name: "Jane",
+  tl: 1,
+  tl_name: "Me",
+  status: "draft",
+  start_date: "2026-09-06",
+  approved_by: null,
+  approved_by_name: null,
+  approved_at: null,
+  notes: "",
+  closed_on: null,
+  status_note: "",
 };
 
 const Where: React.FC = () => <div data-testid="where">{useLocation().search}</div>;
 
 const renderTab = (search = "?tab=records") =>
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <MemoryRouter initialEntries={[`/tl-scorecard${search}`]}>
         <RecordsTab />
         <Where />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 
 const openAction = (title: string, label: string) => {
@@ -115,8 +180,18 @@ beforeEach(() => {
   svc.listReviewDeliveries.mockResolvedValue([REVIEW]);
   svc.listPromotionFlags.mockResolvedValue([PROMOTION]);
   svc.listPIPRecords.mockResolvedValue([PIP]);
-  for (const name of ["updateRecord", "deleteRecord", "shareMeeting", "resolveIdleFlag", "addressAbsence",
-    "approvePIPRecord", "rejectPIPRecord", "completePIPRecord", "cancelPIPRecord", "decidePromotionFlag"]) {
+  for (const name of [
+    "updateRecord",
+    "deleteRecord",
+    "shareMeeting",
+    "resolveIdleFlag",
+    "addressAbsence",
+    "approvePIPRecord",
+    "rejectPIPRecord",
+    "completePIPRecord",
+    "cancelPIPRecord",
+    "decidePromotionFlag",
+  ]) {
     svc[name].mockResolvedValue({ data: {} });
   }
 });
@@ -223,7 +298,9 @@ describe("RecordsTab state actions", () => {
     renderTab();
     await screen.findByText("1-on-1");
     openAction("1-on-1 on 2026-09-02", "Share summary");
-    fireEvent.change(await screen.findByLabelText("Summary for the team member"), { target: { value: "Agreed goals" } });
+    fireEvent.change(await screen.findByLabelText("Summary for the team member"), {
+      target: { value: "Agreed goals" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Share summary" }));
     await waitFor(() => expect(svc.shareMeeting).toHaveBeenCalledWith(1, "Agreed goals"));
     expect(toast.success).toHaveBeenCalledWith("Summary shared");
@@ -243,24 +320,19 @@ describe("RecordsTab state actions", () => {
     await waitFor(() => expect(svc.addressAbsence).toHaveBeenCalledWith(3));
   });
 
-  it("approves a draft PIP as an HBPR reviewer", async () => {
-    perms.value = { isHBPR: true, isTeamLeader: false, isAdmin: false, isSuperuser: false };
-    svc.getHbprOverview.mockResolvedValue({ data: { tls: [{ id: 9, name: "Other TL" }] } });
+  it("lets staff approve a draft PIP they are not part of", async () => {
+    perms.value = { isTeamLeader: false, isAdmin: true, isSuperuser: false };
     svc.listPIPRecords.mockResolvedValue([{ ...PIP, tl: 9, tl_name: "Other TL" }]);
-    renderTab("?tab=records&kind=pips&tl=9");
+    renderTab("?tab=records&kind=pips");
     await screen.findByText("Pending approval");
     openAction("PIP for Jane", "Approve");
     await waitFor(() => expect(svc.approvePIPRecord).toHaveBeenCalledWith(6));
-    // An HBPR reads, approves or returns; never edits or deletes another leader's plan.
-    fireEvent.click(screen.getByRole("button", { name: "Actions for PIP for Jane" }));
-    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
   });
 
   it("requires a reason to return a PIP", async () => {
-    perms.value = { isHBPR: true, isTeamLeader: false, isAdmin: false, isSuperuser: false };
-    svc.getHbprOverview.mockResolvedValue({ data: { tls: [{ id: 9, name: "Other TL" }] } });
+    perms.value = { isTeamLeader: false, isAdmin: true, isSuperuser: false };
     svc.listPIPRecords.mockResolvedValue([{ ...PIP, tl: 9 }]);
-    renderTab("?tab=records&kind=pips&tl=9");
+    renderTab("?tab=records&kind=pips");
     await screen.findByText("Pending approval");
     openAction("PIP for Jane", "Return to team leader");
     const submit = await screen.findByRole("button", { name: "Return PIP" });
@@ -289,16 +361,20 @@ describe("RecordsTab state actions", () => {
     ["Promote", "promoted"],
     ["Decline", "declined"],
   ])("decides a promotion: %s", async (label, status) => {
-    perms.value = { isHBPR: true, isTeamLeader: false, isAdmin: false, isSuperuser: false };
-    svc.getHbprOverview.mockResolvedValue({ data: { tls: [{ id: 9, name: "Other TL" }] } });
+    perms.value = { isTeamLeader: false, isAdmin: true, isSuperuser: false };
     svc.listPromotionFlags.mockResolvedValue([{ ...PROMOTION, nominated_by: 9 }]);
-    renderTab("?tab=records&kind=promotions&tl=9");
+    renderTab("?tab=records&kind=promotions");
     await screen.findByText("Awaiting decision");
     openAction("Promotion nomination for Jane", label);
-    fireEvent.change(await screen.findByLabelText(/decision note/i), { target: { value: "Strong year" } });
+    fireEvent.change(await screen.findByLabelText(/decision note/i), {
+      target: { value: "Strong year" },
+    });
     fireEvent.click(screen.getAllByRole("button", { name: label }).at(-1)!);
     await waitFor(() =>
-      expect(svc.decidePromotionFlag).toHaveBeenCalledWith(5, { status, decision_note: "Strong year" }),
+      expect(svc.decidePromotionFlag).toHaveBeenCalledWith(5, {
+        status,
+        decision_note: "Strong year",
+      })
     );
   });
 
@@ -316,12 +392,16 @@ describe("RecordsTab state actions", () => {
     openAction("Idle flag for Jane", "Edit");
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Edit idle flag")).toBeInTheDocument();
-    fireEvent.change(within(dialog).getByLabelText("Productivity task assigned"), { target: { value: "Review PRs" } });
+    fireEvent.change(within(dialog).getByLabelText("Productivity task assigned"), {
+      target: { value: "Review PRs" },
+    });
     fireEvent.click(within(dialog).getByRole("button", { name: "Save changes" }));
     await waitFor(() =>
       expect(svc.updateRecord).toHaveBeenCalledWith(
-        "idle-flags", 2, expect.objectContaining({ employee: 20, productivity_task: "Review PRs" }),
-      ),
+        "idle-flags",
+        2,
+        expect.objectContaining({ employee: 20, productivity_task: "Review PRs" })
+      )
     );
   });
 
@@ -336,35 +416,23 @@ describe("RecordsTab state actions", () => {
   });
 });
 
-describe("RecordsTab HBPR", () => {
-  beforeEach(() => {
-    perms.value = { isHBPR: true, isTeamLeader: false, isAdmin: false, isSuperuser: false };
-    svc.getHbprOverview.mockResolvedValue({ data: { tls: [{ id: 9, name: "Other TL" }, { id: 10, name: "Third TL" }] } });
-  });
-
-  it("requires a team leader before listing anything", async () => {
-    renderTab();
-    expect(await screen.findByText("Pick a team leader")).toBeInTheDocument();
-    expect(svc.listMeetings).not.toHaveBeenCalled();
-    expect(await screen.findByRole("option", { name: "Other TL" })).toBeInTheDocument();
-  });
-
-  it("writes the chosen team leader to the URL and filters rows by owner", async () => {
-    svc.listMeetings.mockResolvedValue([
-      { ...MEETING, id: 1, organizer: 9 },
-      { ...MEETING, id: 2, organizer: 10, counterparty_name: "Someone Else" },
-    ]);
-    renderTab();
-    fireEvent.click(await screen.findByRole("option", { name: "Other TL" }));
-    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("tl=9"));
-    expect(await screen.findByText("Jane")).toBeInTheDocument();
-    expect(screen.queryByText("Someone Else")).not.toBeInTheDocument();
-  });
-
-  it("hides the picker for a team leader", async () => {
-    perms.value = { isHBPR: false, isTeamLeader: true, isAdmin: false, isSuperuser: false };
+describe("RecordsTab scope", () => {
+  it("has no team-leader picker: an HBPR reads its own /hbpr workspace instead", async () => {
+    // The picker (and the `tl=` URL param) belonged to the HBPR branch of this
+    // shared tab; Phase 8 moved HBPR to /hbpr and removed it here.
     renderTab();
     await screen.findByText("1-on-1");
     expect(screen.queryByLabelText("Team leader")).not.toBeInTheDocument();
+    expect(svc.listMeetings).toHaveBeenCalled();
+  });
+
+  it("lists every own record regardless of the owner id", async () => {
+    svc.listMeetings.mockResolvedValue([
+      { ...MEETING, id: 1, organizer: 1 },
+      { ...MEETING, id: 2, organizer: 10, counterparty_name: "Someone Else" },
+    ]);
+    renderTab();
+    expect(await screen.findByText("Jane")).toBeInTheDocument();
+    expect(screen.getByText("Someone Else")).toBeInTheDocument();
   });
 });

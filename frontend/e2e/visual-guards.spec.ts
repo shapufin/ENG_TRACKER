@@ -63,3 +63,16 @@ test("hr admin-shell surfaces redirect to the dashboard (admin gate)", async ({
   await expectRedirect(page, "/admin/leave-requests", "/dashboard");
   await expectRedirect(page, "/admin/leave-balances", "/dashboard");
 });
+
+test("HBPR-only guard redirects (scorecard authoring, calendar, leave)", async ({ page }) => {
+  await loginAsRole(page, "hbpr");
+  // The AL-TL authoring page bounces to the HBPR's own workspace, before any of
+  // its queries fire; Calendar and Leave are HbprRestrictedRoute-wrapped.
+  await expectRedirect(page, "/tl-scorecard", "/hbpr");
+  await expectRedirect(page, "/calendar", "/dashboard");
+  await expectRedirect(page, "/leave-management", "/dashboard");
+  // Authorized: the workspace itself must NOT redirect.
+  await page.goto("/hbpr");
+  await page.waitForURL((url) => url.pathname === "/hbpr", { timeout: 15_000 });
+  expect(new URL(page.url()).pathname).toBe("/hbpr");
+});

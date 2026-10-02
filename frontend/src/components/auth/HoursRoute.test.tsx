@@ -22,7 +22,7 @@ const renderAt = (perms: Record<string, boolean>) => {
 
 describe("HoursRoute", () => {
   it("sends an HBPR-only user home", () => {
-    renderAt({ isHBPR: true });
+    renderAt({ isHBPROnly: true });
     expect(screen.getByText("home")).toBeInTheDocument();
   });
 

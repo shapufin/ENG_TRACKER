@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Area, AreaChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
@@ -16,6 +16,7 @@ import {
   type ChartConfig,
 } from "@/components/visualization/chart";
 import { ChartSection } from "@/components/visualization/ChartSection";
+import { usePermissions } from "@/context/PermissionContext";
 import { useAuth } from "@/hooks/useAuth";
 import { staggerContainer } from "@/lib/motion";
 import { formatMonthTick } from "@/lib/monthOptions";
@@ -33,7 +34,7 @@ const escalationConfig: ChartConfig = {
   escalation_count: { label: "Escalation risks", color: "hsl(var(--chart-3))" },
 };
 
-export const TLScorecardVisualizationPage: React.FC = () => {
+const TLScorecardVisualization: React.FC = () => {
   const trendQuery = useQuery({
     queryKey: ["tl-scorecard", "trend"],
     queryFn: async () => (await tlScorecardService.getTrend(6)).data,
@@ -72,7 +73,7 @@ export const TLScorecardVisualizationPage: React.FC = () => {
   if (trendQuery.isLoading) {
     return (
       <PageShell title="TL Scorecard Visualization">
-        <div className="h-96 animate-pulse rounded-lg border bg-muted/40" />
+        <div className="bg-muted/40 h-96 animate-pulse rounded-lg border" />
       </PageShell>
     );
   }
@@ -102,9 +103,18 @@ export const TLScorecardVisualizationPage: React.FC = () => {
     );
   }
 
-  const leaveData = trend.map((p) => ({ month: p.month, pct_within_2_days: p.leave.pct_within_2_days }));
-  const overtimeData = trend.map((p) => ({ month: p.month, avg_turnaround_days: p.overtime.avg_turnaround_days }));
-  const escalationData = trend.map((p) => ({ month: p.month, escalation_count: p.escalation_count }));
+  const leaveData = trend.map((p) => ({
+    month: p.month,
+    pct_within_2_days: p.leave.pct_within_2_days,
+  }));
+  const overtimeData = trend.map((p) => ({
+    month: p.month,
+    avg_turnaround_days: p.overtime.avg_turnaround_days,
+  }));
+  const escalationData = trend.map((p) => ({
+    month: p.month,
+    escalation_count: p.escalation_count,
+  }));
 
   return (
     <PageShell
@@ -140,7 +150,11 @@ export const TLScorecardVisualizationPage: React.FC = () => {
           />
         )}
 
-        <ChartSection id="viz-leave-sla" title="Leave SLA" description="% of leave requests decided within 2 working days">
+        <ChartSection
+          id="viz-leave-sla"
+          title="Leave SLA"
+          description="% of leave requests decided within 2 working days"
+        >
           <ChartContainer config={leaveConfig} className="max-h-[280px] w-full">
             <AreaChart data={leaveData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>
@@ -150,9 +164,16 @@ export const TLScorecardVisualizationPage: React.FC = () => {
                 </linearGradient>
               </defs>
               <CartesianGrid vertical={false} strokeDasharray="3 6" opacity={0.4} />
-              <XAxis dataKey="month" tickFormatter={formatMonthTick} tickLine={false} axisLine={false} />
+              <XAxis
+                dataKey="month"
+                tickFormatter={formatMonthTick}
+                tickLine={false}
+                axisLine={false}
+              />
               <YAxis domain={[0, 100]} tickLine={false} axisLine={false} />
-              <ChartTooltip content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />} />
+              <ChartTooltip
+                content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />}
+              />
               <Area
                 type="monotone"
                 dataKey="pct_within_2_days"
@@ -165,38 +186,70 @@ export const TLScorecardVisualizationPage: React.FC = () => {
           </ChartContainer>
         </ChartSection>
 
-        <ChartSection id="viz-ot-turnaround" title="Overtime Turnaround" description="Average approval turnaround in business days">
+        <ChartSection
+          id="viz-ot-turnaround"
+          title="Overtime Turnaround"
+          description="Average approval turnaround in business days"
+        >
           <ChartContainer config={overtimeConfig} className="max-h-[280px] w-full">
             <LineChart data={overtimeData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} strokeDasharray="3 6" opacity={0.4} />
-              <XAxis dataKey="month" tickFormatter={formatMonthTick} tickLine={false} axisLine={false} />
+              <XAxis
+                dataKey="month"
+                tickFormatter={formatMonthTick}
+                tickLine={false}
+                axisLine={false}
+              />
               <YAxis tickLine={false} axisLine={false} />
-              <ChartTooltip content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />} />
+              <ChartTooltip
+                content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />}
+              />
               <Line
                 type="monotone"
                 dataKey="avg_turnaround_days"
                 stroke="var(--color-avg_turnaround_days)"
                 strokeWidth={2.5}
-                dot={{ r: 3, fill: "hsl(var(--card))", stroke: "var(--color-avg_turnaround_days)", strokeWidth: 2 }}
+                dot={{
+                  r: 3,
+                  fill: "hsl(var(--card))",
+                  stroke: "var(--color-avg_turnaround_days)",
+                  strokeWidth: 2,
+                }}
                 connectNulls
               />
             </LineChart>
           </ChartContainer>
         </ChartSection>
 
-        <ChartSection id="viz-escalations" title="Escalation Risks" description="Computed live from breaches already tracked">
+        <ChartSection
+          id="viz-escalations"
+          title="Escalation Risks"
+          description="Computed live from breaches already tracked"
+        >
           <ChartContainer config={escalationConfig} className="max-h-[280px] w-full">
             <LineChart data={escalationData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} strokeDasharray="3 6" opacity={0.4} />
-              <XAxis dataKey="month" tickFormatter={formatMonthTick} tickLine={false} axisLine={false} />
+              <XAxis
+                dataKey="month"
+                tickFormatter={formatMonthTick}
+                tickLine={false}
+                axisLine={false}
+              />
               <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
-              <ChartTooltip content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />} />
+              <ChartTooltip
+                content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />}
+              />
               <Line
                 type="monotone"
                 dataKey="escalation_count"
                 stroke="var(--color-escalation_count)"
                 strokeWidth={2.5}
-                dot={{ r: 3, fill: "hsl(var(--card))", stroke: "var(--color-escalation_count)", strokeWidth: 2 }}
+                dot={{
+                  r: 3,
+                  fill: "hsl(var(--card))",
+                  stroke: "var(--color-escalation_count)",
+                  strokeWidth: 2,
+                }}
                 connectNulls
               />
             </LineChart>
@@ -205,4 +258,15 @@ export const TLScorecardVisualizationPage: React.FC = () => {
       </motion.div>
     </PageShell>
   );
+};
+
+/**
+ * An HBPR-only viewer has no team of their own, so every trend call would 400
+ * ("leader_id is required"). Send them to their own workspace instead of a raw
+ * error card.
+ */
+export const TLScorecardVisualizationPage: React.FC = () => {
+  const { isHBPROnly } = usePermissions();
+  if (isHBPROnly) return <Navigate to="/hbpr" replace />;
+  return <TLScorecardVisualization />;
 };

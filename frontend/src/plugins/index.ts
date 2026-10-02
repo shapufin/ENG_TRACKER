@@ -234,6 +234,12 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
         default: m.HbprDashboardPage,
       }))
     ),
+    HbprWorkspacePage: lazy(() =>
+      import("./tl_scorecard/pages/HbprWorkspacePage").then((m) => ({
+        default: m.HbprWorkspacePage,
+      }))
+    ),
+    HbprSidebarLink: lazy(() => import("./tl_scorecard/components/HbprSidebarLink")),
   },
 };
 

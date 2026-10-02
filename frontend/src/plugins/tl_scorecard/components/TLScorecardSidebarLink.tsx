@@ -1,4 +1,7 @@
-/** Sidebar item for the TL Scorecard plugin (app layout, TL and HBPR). */
+/** Sidebar item for the TL Scorecard plugin (app layout, TL and staff).
+ *
+ * An HBPR does not get this link: their authoring/governance surface is the
+ * dedicated HBPR Workspace (`HbprSidebarLink`), not the TL KPI page. */
 import React from "react";
 import { useLocation } from "react-router-dom";
 import { ClipboardList } from "lucide-react";
@@ -7,10 +10,10 @@ import { usePermissions } from "@/context/PermissionContext";
 
 const TLScorecardSidebarLink: React.FC = () => {
   const location = useLocation();
-  const { isTeamLeader, isHBPR, isAdmin } = usePermissions();
+  const { isTeamLeader, isAdmin } = usePermissions();
   const isActive = location.pathname === "/tl-scorecard";
 
-  if (!isTeamLeader && !isHBPR && !isAdmin) return null;
+  if (!isTeamLeader && !isAdmin) return null;
 
   return (
     <SidebarNavLink

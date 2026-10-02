@@ -289,7 +289,7 @@ function fingerprintFilename(entry) {
 async function cmdCapture(args) {
   await checkServers();
 
-  const roles = args.role || ["employee", "tl", "hr", "tl_hr", "admin"];
+  const roles = args.role || ["employee", "tl", "hr", "tl_hr", "admin", "hbpr"];
   const themes = args.theme ? [args.theme] : THEMES;
   const pathFilter = args.paths;
 
@@ -419,7 +419,7 @@ async function cmdCapture(args) {
 async function cmdVerify(args) {
   await checkServers();
 
-  const roles = args.role || ["employee", "tl", "hr", "tl_hr", "admin"];
+  const roles = args.role || ["employee", "tl", "hr", "tl_hr", "admin", "hbpr"];
   const themes = args.theme ? [args.theme] : THEMES;
   const pathFilter = args.paths;
 
@@ -676,7 +676,7 @@ async function cmdCompare(args) {
     process.exit(1);
   }
 
-  const roles = args.role || ["employee", "tl", "hr", "tl_hr", "admin"];
+  const roles = args.role || ["employee", "tl", "hr", "tl_hr", "admin", "hbpr"];
   const themes = args.theme ? [args.theme] : THEMES;
   const pathFilter = args.paths;
 

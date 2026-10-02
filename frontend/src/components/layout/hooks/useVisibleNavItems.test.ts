@@ -286,4 +286,32 @@ describe("useVisibleNavItems", () => {
     expect(result.current).toHaveLength(1);
     expect(result.current[0].section).toBe("system");
   });
+
+  // An HBPR-only user is refused Calendar/Leave (`HbprBlockedMixin`) and the
+  // ticket_kpi plugin (`denied_roles`), so their routes never register. A nav
+  // link to any of them is a dead link — the guard bounces it straight back.
+  it("hides the API-denied surfaces from an HBPR-only user", () => {
+    const { result } = renderHook(() =>
+      useVisibleNavItems(false, false, false, false, false, false, false, true)
+    );
+    const visible = labels(result.current);
+    expect(visible).not.toContain("Leave");
+    expect(visible).not.toContain("Calendar");
+    expect(visible).not.toContain("Ticket KPI");
+    expect(visible).not.toContain("Overtime");
+    expect(visible).not.toContain("Standby");
+    // The HBPR's own dashboard home and settings remain.
+    expect(visible).toContain("Dashboard");
+    expect(visible).toContain("Settings");
+  });
+
+  it("keeps those surfaces for a multi-role HBPR who is also a team leader", () => {
+    const { result } = renderHook(() =>
+      useVisibleNavItems(false, false, true, false, false, false, false, false)
+    );
+    const visible = labels(result.current);
+    expect(visible).toContain("Leave");
+    expect(visible).toContain("Calendar");
+    expect(visible).toContain("Ticket KPI");
+  });
 });

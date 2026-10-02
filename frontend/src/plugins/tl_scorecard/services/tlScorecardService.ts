@@ -9,8 +9,11 @@ import type {
   EscalationCandidate,
   KpiCoverageEntry,
   PIPRecord,
+  HbprEvidence,
+  HbprEvidenceKind,
+  HbprEvidencePayload,
   HbprOverview,
-  HbprPeoplePage,
+  HbprPartnership,
   IdleFlag,
   Meeting,
   PromotionFlag,
@@ -32,10 +35,15 @@ export type RecordResource =
 // every row: stopping at page one would silently hide an HBPR's older records.
 const MAX_PAGES = 40;
 
-const listAllPages = async <T>(path: string): Promise<T[]> => {
+const listAllPages = async <T>(
+  path: string,
+  params: Record<string, string | number> = {}
+): Promise<T[]> => {
   const rows: T[] = [];
   for (let page = 1; page <= MAX_PAGES; page += 1) {
-    const { data } = await api.get<T[] | PaginatedResponse<T>>(path, { params: { page } });
+    const { data } = await api.get<T[] | PaginatedResponse<T>>(path, {
+      params: { ...params, page },
+    });
     rows.push(...normalizeList(data));
     if (Array.isArray(data) || !data.next) break;
   }
@@ -45,7 +53,8 @@ const listAllPages = async <T>(path: string): Promise<T[]> => {
 const listResource = <T>(resource: RecordResource): Promise<T[]> =>
   listAllPages<T>(`${BASE}/${resource}/`);
 
-const leaderParams = (leaderId?: number): Record<string, number> => (leaderId ? { leader_id: leaderId } : {});
+const leaderParams = (leaderId?: number): Record<string, number> =>
+  leaderId ? { leader_id: leaderId } : {};
 
 export const tlScorecardService = {
   getScorecard: (month?: string, leaderId?: number) => {
@@ -61,12 +70,16 @@ export const tlScorecardService = {
   // Hits the engagement plugin's own public REST endpoint directly rather
   // than importing its service module — see ApprovalEngagementScore's
   // comment in types/tlScorecard.ts for why.
-  getApprovalEngagementScore: () => api.get<ApprovalEngagementScore>("/plugins/engagement/metrics/summary/"),
+  getApprovalEngagementScore: () =>
+    api.get<ApprovalEngagementScore>("/plugins/engagement/metrics/summary/"),
 
   getEngagementSurveyTeamAverage: (period?: string) => {
     const params: Record<string, string> = {};
     if (period) params.period = period;
-    return api.get<EngagementSurveyTeamAverage>(`${BASE}/engagement-survey-responses/team-average/`, { params });
+    return api.get<EngagementSurveyTeamAverage>(
+      `${BASE}/engagement-survey-responses/team-average/`,
+      { params }
+    );
   },
 
   submitEngagementSurveyResponse: (data: { period: string; score: number }) =>
@@ -80,8 +93,12 @@ export const tlScorecardService = {
     notes: string;
   }) => api.post(`${BASE}/meetings/`, data),
 
-  createIdleFlag: (data: { employee: number; flagged_on: string; productivity_task: string; notes: string }) =>
-    api.post(`${BASE}/idle-flags/`, data),
+  createIdleFlag: (data: {
+    employee: number;
+    flagged_on: string;
+    productivity_task: string;
+    notes: string;
+  }) => api.post(`${BASE}/idle-flags/`, data),
 
   createReviewDelivery: (data: { period: string; recipient: string; delivered_on: string }) =>
     api.post(`${BASE}/review-deliveries/`, data),
@@ -89,8 +106,12 @@ export const tlScorecardService = {
   getEscalations: (leaderId?: number) =>
     api.get<EscalationCandidate[]>(`${BASE}/escalations/`, { params: leaderParams(leaderId) }),
 
-  createAbsence: (data: { employee: number; absence_date: string; reason: string; notes: string }) =>
-    api.post(`${BASE}/absences/`, data),
+  createAbsence: (data: {
+    employee: number;
+    absence_date: string;
+    reason: string;
+    notes: string;
+  }) => api.post(`${BASE}/absences/`, data),
 
   createPromotionFlag: (data: { employee: number; nominated_on: string; notes: string }) =>
     api.post(`${BASE}/promotion-flags/`, data),
@@ -106,7 +127,8 @@ export const tlScorecardService = {
     api.patch(`${BASE}/${resource}/${id}/`, data),
   deleteRecord: (resource: RecordResource, id: number) => api.delete(`${BASE}/${resource}/${id}/`),
 
-  shareMeeting: (id: number, summary: string) => api.post(`${BASE}/meetings/${id}/share/`, { summary }),
+  shareMeeting: (id: number, summary: string) =>
+    api.post(`${BASE}/meetings/${id}/share/`, { summary }),
   resolveIdleFlag: (id: number) => api.post(`${BASE}/idle-flags/${id}/resolve/`),
   addressAbsence: (id: number) => api.post(`${BASE}/absences/${id}/address/`),
   rejectPIPRecord: (id: number, status_note: string) =>
@@ -114,8 +136,10 @@ export const tlScorecardService = {
   completePIPRecord: (id: number) => api.post<PIPRecord>(`${BASE}/pip-records/${id}/complete/`),
   cancelPIPRecord: (id: number, status_note: string) =>
     api.post<PIPRecord>(`${BASE}/pip-records/${id}/cancel/`, { status_note }),
-  decidePromotionFlag: (id: number, data: { status: "promoted" | "declined"; decision_note: string }) =>
-    api.post<PromotionFlag>(`${BASE}/promotion-flags/${id}/decide/`, data),
+  decidePromotionFlag: (
+    id: number,
+    data: { status: "promoted" | "declined"; decision_note: string }
+  ) => api.post<PromotionFlag>(`${BASE}/promotion-flags/${id}/decide/`, data),
 
   createPIPRecord: (data: { employee: number; start_date: string; notes: string }) =>
     // Status is server-controlled: a new plan starts as a draft awaiting HR approval.
@@ -131,13 +155,31 @@ export const tlScorecardService = {
   createEPRGoal: (data: { cycle: number; description: string }) =>
     api.post(`${BASE}/epr-goals/`, data),
 
-  completeEPRStage: (cycleId: number, field: "goal_setting_completed_at" | "mid_year_completed_at" | "final_review_completed_at") =>
-    api.patch<EPRCycle>(`${BASE}/epr-cycles/${cycleId}/`, { [field]: new Date().toISOString() }),
+  completeEPRStage: (
+    cycleId: number,
+    field: "goal_setting_completed_at" | "mid_year_completed_at" | "final_review_completed_at"
+  ) => api.patch<EPRCycle>(`${BASE}/epr-cycles/${cycleId}/`, { [field]: new Date().toISOString() }),
 
-  getHbprOverview: () => api.get<HbprOverview>(`${BASE}/hbpr/overview/`),
+  getHbprOverview: (year?: number) =>
+    api.get<HbprOverview>(`${BASE}/hbpr/overview/`, { params: year ? { year } : undefined }),
 
-  getHbprPeople: (params: { q?: string; limit?: number; offset?: number } = {}) =>
-    api.get<HbprPeoplePage>(`${BASE}/hbpr/people/`, { params }),
+  /** Governance evidence for the viewer's assignments (HBPR and the AL TL). */
+  listHbprEvidence: (
+    params: { year?: number; kind?: HbprEvidenceKind; assignment?: number } = {}
+  ) => listAllPages<HbprEvidence>(`${BASE}/hbpr-evidence/`, params),
+
+  /** The AL TL's own HBPR partnership (staff/HBPR must pass a leaderId). */
+  getPartnership: (leaderId?: number, year?: number) => {
+    const params: Record<string, number> = leaderParams(leaderId);
+    if (year) params.year = year;
+    return api.get<HbprPartnership>(`${BASE}/partnership/`, { params });
+  },
+
+  createHbprEvidence: (data: HbprEvidencePayload) =>
+    api.post<HbprEvidence>(`${BASE}/hbpr-evidence/`, data),
+
+  updateHbprEvidence: (id: number, data: Partial<HbprEvidencePayload>) =>
+    api.patch<HbprEvidence>(`${BASE}/hbpr-evidence/${id}/`, data),
 
   exportWorkbook: (month?: string, leaderId?: number) => {
     const params: Record<string, string | number> = leaderParams(leaderId);

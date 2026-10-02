@@ -3,6 +3,7 @@ import { useRoutes, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { SuperuserRoute } from "@/components/auth/SuperuserRoute";
 import { CRUserGuard } from "@/components/auth/CRUserGuard";
+import { HbprRestrictedRoute } from "@/components/auth/HbprRestrictedRoute";
 import { HomeRedirect } from "@/components/routing/HomeRedirect";
 import { AppShell } from "@/components/layout/AppShell";
 import { AdminShell } from "@/components/layout/AdminShell";
@@ -32,6 +33,11 @@ const TechsPage = React.lazy(() =>
 );
 const ClientsPage = React.lazy(() =>
   import("@/pages/admin/ClientsPage").then((m) => ({ default: m.ClientsPage }))
+);
+const HbprAssignmentsPage = React.lazy(() =>
+  import("@/pages/admin/HbprAssignmentsPage").then((m) => ({
+    default: m.HbprAssignmentsPage,
+  }))
 );
 const ResourceAccessPage = React.lazy(() =>
   import("@/pages/admin/ResourceAccessPage").then((m) => ({ default: m.ResourceAccessPage }))
@@ -143,8 +149,13 @@ export const AppRoutes: React.FC = () => {
                     { path: "/standby", element: withSuspense(<StandbyPage />) },
                   ],
                 },
-                { path: "/leave-management", element: withSuspense(<LeavePage />) },
-                { path: "/calendar", element: withSuspense(<CalendarPage />) },
+                {
+                  element: <HbprRestrictedRoute />,
+                  children: [
+                    { path: "/leave-management", element: withSuspense(<LeavePage />) },
+                    { path: "/calendar", element: withSuspense(<CalendarPage />) },
+                  ],
+                },
                 { path: "/team", element: withSuspense(<TeamManagementPage />) },
                 {
                   element: <TLRoute />,
@@ -187,6 +198,10 @@ export const AppRoutes: React.FC = () => {
                 { path: "/admin/teams", element: withSuspense(<TeamsPage />) },
                 { path: "/admin/techs", element: withSuspense(<TechsPage />) },
                 { path: "/admin/clients", element: withSuspense(<ClientsPage />) },
+                {
+                  path: "/admin/hbpr-assignments",
+                  element: withSuspense(<HbprAssignmentsPage />),
+                },
                 {
                   path: "/admin/resource-access",
                   element: withSuspense(<ResourceAccessPage />),

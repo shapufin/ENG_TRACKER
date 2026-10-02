@@ -49,4 +49,16 @@ describe("TLScorecardSidebarLink", () => {
 
     expect(screen.getByText("TL Scorecard")).toBeInTheDocument();
   });
+
+  it("is hidden for an HBPR (they get the HBPR Workspace link instead)", () => {
+    usePermissions.mockReturnValue({ isTeamLeader: false, isAdmin: false, isHBPR: true });
+
+    render(
+      <MemoryRouter>
+        <TLScorecardSidebarLink />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText("TL Scorecard")).not.toBeInTheDocument();
+  });
 });

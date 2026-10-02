@@ -16,6 +16,9 @@ vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({ user: { id: 1, username: "leader", full_name: "Leader One" } }),
 }));
 
+const perms = vi.hoisted(() => ({ value: { isHBPROnly: false } as Record<string, boolean> }));
+vi.mock("@/context/PermissionContext", () => ({ usePermissions: () => perms.value }));
+
 const point = (month: string, teamSize: number): Scorecard => ({
   month,
   team_size: teamSize,
@@ -64,7 +67,9 @@ describe("TLScorecardVisualizationPage", () => {
 
     renderPage();
 
-    await waitFor(() => expect(screen.getByText("Couldn't load visualization data")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("Couldn't load visualization data")).toBeInTheDocument()
+    );
   });
 
   it("renders all chart sections and export/back controls once data loads", async () => {
@@ -79,5 +84,14 @@ describe("TLScorecardVisualizationPage", () => {
     expect(screen.getByText("Escalation Risks")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /export pdf/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /back to scorecard/i })).toBeInTheDocument();
+  });
+
+  it("sends an HBPR-only viewer to their own workspace without calling the trend API", async () => {
+    perms.value = { isHBPROnly: true };
+    renderPage();
+
+    await waitFor(() => expect(screen.queryByText("Leave SLA")).not.toBeInTheDocument());
+    expect(tlScorecardService.getTrend).not.toHaveBeenCalled();
+    perms.value = { isHBPROnly: false };
   });
 });

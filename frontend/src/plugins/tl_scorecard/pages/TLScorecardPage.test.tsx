@@ -18,7 +18,10 @@ vi.mock("../services/tlScorecardService", () => ({
     listPIPRecords: vi.fn(),
     listEPRCycles: vi.fn(),
     exportWorkbook: vi.fn(),
-    getHbprOverview: vi.fn(),
+    getPartnership: vi.fn(),
+    listHbprEvidence: vi.fn(),
+    createHbprEvidence: vi.fn(),
+    updateHbprEvidence: vi.fn(),
     listMeetings: vi.fn(),
     listIdleFlags: vi.fn(),
     listAbsences: vi.fn(),
@@ -33,9 +36,13 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/components/ui/select", () => {
   const Ctx = React.createContext<{ onValueChange?: (v: string) => void }>({});
   return {
-    Select: ({ children, onValueChange }: { children: React.ReactNode; onValueChange?: (v: string) => void }) => (
-      <Ctx.Provider value={{ onValueChange }}>{children}</Ctx.Provider>
-    ),
+    Select: ({
+      children,
+      onValueChange,
+    }: {
+      children: React.ReactNode;
+      onValueChange?: (v: string) => void;
+    }) => <Ctx.Provider value={{ onValueChange }}>{children}</Ctx.Provider>,
     SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => {
       const ctx = React.useContext(Ctx);
@@ -95,16 +102,34 @@ const SCORECARD: Scorecard = {
 };
 
 const COVERAGE: KpiCoverageEntry[] = [
-  { kpi: "Leave requests decided within 2 working days", sheet: 2, status: "measured", phase: 1, note: "n/a" },
-  { kpi: "Regretted voluntary turnover < 7%", sheet: 1, status: "blocked", phase: 3, note: "needs HR taxonomy" },
+  {
+    kpi: "Leave requests decided within 2 working days",
+    sheet: 2,
+    status: "measured",
+    phase: 1,
+    note: "n/a",
+  },
+  {
+    kpi: "Regretted voluntary turnover < 7%",
+    sheet: 1,
+    status: "blocked",
+    phase: 3,
+    note: "needs HR taxonomy",
+  },
 ];
 
 const mockDefaults = () => {
-  (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockResolvedValue({ data: SCORECARD });
-  (tlScorecardService.getKpiCoverage as ReturnType<typeof vi.fn>).mockResolvedValue({ data: COVERAGE });
-  (tlScorecardService.getEngagementSurveyTeamAverage as ReturnType<typeof vi.fn>).mockResolvedValue({
-    data: { period: "2026-09", average_score: null, response_count: 0 },
+  (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockResolvedValue({
+    data: SCORECARD,
   });
+  (tlScorecardService.getKpiCoverage as ReturnType<typeof vi.fn>).mockResolvedValue({
+    data: COVERAGE,
+  });
+  (tlScorecardService.getEngagementSurveyTeamAverage as ReturnType<typeof vi.fn>).mockResolvedValue(
+    {
+      data: { period: "2026-09", average_score: null, response_count: 0 },
+    }
+  );
   (tlScorecardService.getApprovalEngagementScore as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: { engagement_score: 82 },
   });
@@ -114,6 +139,10 @@ const mockDefaults = () => {
   (tlScorecardService.exportWorkbook as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: new Blob(["fake xlsx"]),
   });
+  (tlScorecardService.getPartnership as ReturnType<typeof vi.fn>).mockResolvedValue({
+    data: { reporting_year: 2026, assignment: null },
+  });
+  (tlScorecardService.listHbprEvidence as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 };
 
 const renderPage = (entry = "/tl-scorecard") => {
@@ -151,7 +180,9 @@ describe("TLScorecardPage", () => {
 
   it("shows the real pulse-survey average once responses exist", async () => {
     mockDefaults();
-    (tlScorecardService.getEngagementSurveyTeamAverage as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (
+      tlScorecardService.getEngagementSurveyTeamAverage as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({
       data: { period: "2026-09", average_score: 8.7, response_count: 3 },
     });
 
@@ -186,8 +217,11 @@ describe("TLScorecardPage", () => {
     (tlScorecardService.getEscalations as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: [
         {
-          kind: "leave_pending", subject_id: 5, subject_name: "Jane Doe",
-          detail: "Leave request pending 5 business days.", since: "2026-09-01",
+          kind: "leave_pending",
+          subject_id: 5,
+          subject_name: "Jane Doe",
+          detail: "Leave request pending 5 business days.",
+          since: "2026-09-01",
         },
       ],
     });
@@ -213,11 +247,15 @@ describe("TLScorecardPage", () => {
 
   it("shows an error card when the scorecard fetch fails", async () => {
     mockDefaults();
-    (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("boom"));
+    (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("boom")
+    );
 
     renderPage();
 
-    await waitFor(() => expect(screen.getByText("Couldn't load your scorecard")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("Couldn't load your scorecard")).toBeInTheDocument()
+    );
   });
 
   it("downloads the evidence workbook when Export Report is clicked", async () => {
@@ -233,7 +271,9 @@ describe("TLScorecardPage", () => {
 
   it("shows a visible message, not silence, when the export fails", async () => {
     mockDefaults();
-    (tlScorecardService.exportWorkbook as ReturnType<typeof vi.fn>).mockRejectedValue({ response: { status: 500 } });
+    (tlScorecardService.exportWorkbook as ReturnType<typeof vi.fn>).mockRejectedValue({
+      response: { status: 500 },
+    });
     renderPage();
 
     fireEvent.click(await screen.findByText("Export Report"));
@@ -253,7 +293,9 @@ describe("TLScorecardPage", () => {
 
   it("opens the Records tab from the URL even when the scorecard cannot load", async () => {
     mockDefaults();
-    (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("boom"));
+    (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("boom")
+    );
     (tlScorecardService.listPIPRecords as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     renderPage("/tl-scorecard?tab=records&kind=pips");
 
@@ -262,22 +304,53 @@ describe("TLScorecardPage", () => {
     expect(screen.getByRole("tab", { name: /pips/i })).toHaveAttribute("aria-selected", "true");
   });
 
-  it("asks an HBPR to pick a team leader and passes it as leader_id", async () => {
+  it("shows the HBPR partnership with its cadence state", async () => {
     mockDefaults();
-    perms.value = { isAdmin: false, isHBPR: true, isTeamLeader: false };
-    (tlScorecardService.getHbprOverview as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { tls: [{ id: 9, name: "Other TL" }] },
+    perms.value = { isAdmin: false, isTeamLeader: true };
+    (tlScorecardService.getPartnership as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        reporting_year: 2026,
+        assignment: {
+          id: 11,
+          hbpr: { id: 5, name: "Elda Partner" },
+          cadence: "weekly",
+          effective_from: "2026-01-01",
+          last_meeting_on: null,
+          next_due_on: "2026-01-08",
+          cadence_status: "not_started",
+          epr_mid_year: false,
+          epr_year_end: false,
+          evidence_count: 0,
+          last_evidence_on: null,
+        },
+      },
     });
 
-    const first = renderPage();
-    expect(await screen.findByText("Pick a team leader to see their scorecard.")).toBeInTheDocument();
-    expect(tlScorecardService.getScorecard).not.toHaveBeenCalled();
-    first.unmount();
+    renderPage();
 
-    renderPage("/tl-scorecard?tl=9");
-    await waitFor(() => expect(screen.getByText("66.7%")).toBeInTheDocument());
-    expect(tlScorecardService.getScorecard).toHaveBeenCalledWith(undefined, 9);
-    expect(tlScorecardService.getEscalations).toHaveBeenCalledWith(9);
+    expect(await screen.findByText("HBPR partnership")).toBeInTheDocument();
+    expect(screen.getByText("Elda Partner")).toBeInTheDocument();
+    expect(screen.getByText("Mid-year EPR: missing")).toBeInTheDocument();
+    // The AL TL authors the evidence.
+    expect(screen.getByRole("button", { name: /record evidence/i })).toBeInTheDocument();
+    perms.value = { isAdmin: false };
+  });
+
+  it("tells an unpaired Albanian TL there is no HBPR yet", async () => {
+    mockDefaults();
+    renderPage();
+    expect(await screen.findByText("No HR business partner assigned yet")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /record evidence/i })).not.toBeInTheDocument();
+  });
+
+  it("sends an HBPR-only user to their own workspace instead of this page", async () => {
+    mockDefaults();
+    perms.value = { isAdmin: false, isHBPROnly: true, isTeamLeader: false };
+
+    renderPage();
+
+    await waitFor(() => expect(screen.queryByText("TL Scorecard")).not.toBeInTheDocument());
+    expect(tlScorecardService.getScorecard).not.toHaveBeenCalled();
     perms.value = { isAdmin: false };
   });
 });

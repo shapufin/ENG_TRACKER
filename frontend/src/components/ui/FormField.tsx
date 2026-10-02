@@ -11,6 +11,7 @@ interface FormFieldProps {
   required?: boolean;
   placeholder?: string;
   list?: string;
+  type?: string;
   className?: string;
 }
 
@@ -23,6 +24,7 @@ export const FormField: React.FC<FormFieldProps> = ({
   required,
   placeholder,
   list,
+  type,
   className,
 }) => (
   <div className={className ? `space-y-2 ${className}` : "space-y-2"}>
@@ -34,8 +36,9 @@ export const FormField: React.FC<FormFieldProps> = ({
       required={required}
       placeholder={placeholder}
       list={list}
+      type={type}
       className={error ? "border-destructive" : ""}
     />
-    {error && <p className="text-xs text-destructive">{error}</p>}
+    {error && <p className="text-destructive text-xs">{error}</p>}
   </div>
 );

@@ -10,6 +10,7 @@ describe("computePermissions", () => {
       isTeamLeader: false,
       isHR: false,
       isHBPR: false,
+      isHBPROnly: false,
       isAdmin: false,
       isSuperuser: false,
       isCRAdmin: false,
@@ -335,6 +336,18 @@ describe("computePermissions", () => {
       const result = computePermissions({ roles: ["hbpr"], has_control_room_access: true });
       expect(result.isCRUser).toBe(false);
       expect(result.primaryDashboard).toBe("hbpr");
+    });
+
+    it("isHBPROnly is true only for an HBPR with no elevating role", () => {
+      expect(computePermissions({ roles: ["hbpr"] }).isHBPROnly).toBe(true);
+      // A derived TL relationship must not lift the block.
+      expect(computePermissions({ roles: ["hbpr"], is_team_leader: true }).isHBPROnly).toBe(true);
+      for (const role of ["italian_tl", "albanian_tl", "hr", "cr_admin"]) {
+        expect(computePermissions({ roles: ["hbpr", role] }).isHBPROnly).toBe(false);
+      }
+      expect(computePermissions({ roles: ["hbpr"], is_staff: true }).isHBPROnly).toBe(false);
+      expect(computePermissions({ roles: ["hbpr"], is_superuser: true }).isHBPROnly).toBe(false);
+      expect(computePermissions({ roles: ["employee"] }).isHBPROnly).toBe(false);
     });
   });
 

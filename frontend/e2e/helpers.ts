@@ -13,10 +13,16 @@ import { request, type Page, type Request } from "@playwright/test";
 export const E2E_CREDENTIALS = {
   employeeA: { username: "e2e_employee_a", password: "e2e_pass_2026" },
   employeeB: { username: "e2e_employee_b", password: "e2e_pass_2026" },
+  /** Plain employee on the Albanian TL's team (no elevated role). */
+  employeeC: { username: "e2e_employee_c", password: "e2e_pass_2026" },
   teamLeader: { username: "e2e_tl", password: "e2e_pass_2026" },
   hr: { username: "e2e_hr", password: "e2e_pass_2026" },
   admin: { username: "e2e_admin", password: "e2e_pass_2026" },
   teamLeaderHr: { username: "e2e_tl_hr", password: "e2e_pass_2026" },
+  // Albanian TL + the HBPR they are paired with (seeded with an explicit
+  // HbprAlbanianTlAssignment) — see `seed_e2e_data`.
+  albanianTeamLeader: { username: "e2e_tl_b", password: "e2e_pass_2026" },
+  hbpr: { username: "e2e_hbpr", password: "e2e_pass_2026" },
 };
 
 export const E2E_CLIENT_CODE = "E2E";

@@ -44,6 +44,12 @@ export interface NavItem {
    * dashboard sidebar item is injected separately via PluginSlot and
    * is unaffected by this flag. */
   crUserVisible?: boolean;
+  /** Hidden from an HBPR-only user. Set this on any item whose surface the API
+   * refuses an HBPR (Calendar/Leave via `HbprBlockedMixin`, a denied plugin) —
+   * otherwise the link renders, the route guard bounces it, and the user gets a
+   * dead link. Multi-role HBPR+TL/HR/admin users are not HBPR-only and keep
+   * these items. */
+  hbprHidden?: boolean;
   /** Rendered at the very bottom of the nav, after section groups AND
    * plugin-injected items, separated by a divider (footer-convention item,
    * e.g. Settings). Excluded from its section's label/group flow. */
@@ -66,8 +72,14 @@ const allNavItems: NavItem[] = [
     section: "core",
     roles: ["employee", "team_leader", "hr"],
   },
-  { path: "/leave-management", label: "Leave", icon: Calendar, section: "core" },
-  { path: "/calendar", label: "Calendar", icon: CalendarDays, section: "core" },
+  {
+    path: "/leave-management",
+    label: "Leave",
+    icon: Calendar,
+    section: "core",
+    hbprHidden: true,
+  },
+  { path: "/calendar", label: "Calendar", icon: CalendarDays, section: "core", hbprHidden: true },
   {
     path: "/team/approvals",
     label: "Pending Approvals",
@@ -132,6 +144,9 @@ const allNavItems: NavItem[] = [
     label: "Ticket KPI",
     icon: Ticket,
     section: "skills-kpi",
+    // The ticket_kpi plugin is denied to an HBPR (`denied_roles`), so its route
+    // never registers for them.
+    hbprHidden: true,
   },
   {
     path: "/ticket-kpi/team",
@@ -164,7 +179,8 @@ export const useVisibleNavItems = (
   isEmployee: boolean,
   isSuperuser: boolean,
   isCRAdmin: boolean = false,
-  isCRUser: boolean = false
+  isCRUser: boolean = false,
+  isHBPROnly: boolean = false
 ) =>
   useMemo(() => {
     // A CR-only admin (cr_admin role, no other elevated role) uses the
@@ -183,6 +199,7 @@ export const useVisibleNavItems = (
     const isCRScoped = isCRUser || isCROnlyAdmin;
     return allNavItems.filter((item) => {
       if (isCRScoped && !item.crUserVisible) return false;
+      if (isHBPROnly && item.hbprHidden) return false;
       if (!item.roles) return true;
       if (isSuperuser) return true;
       if (isAdmin && item.roles.includes("admin")) return true;
@@ -191,4 +208,4 @@ export const useVisibleNavItems = (
       if (isEmployee && item.roles.includes("employee")) return true;
       return false;
     });
-  }, [isAdmin, isHR, isTeamLeader, isEmployee, isSuperuser, isCRAdmin, isCRUser]);
+  }, [isAdmin, isHR, isTeamLeader, isEmployee, isSuperuser, isCRAdmin, isCRUser, isHBPROnly]);

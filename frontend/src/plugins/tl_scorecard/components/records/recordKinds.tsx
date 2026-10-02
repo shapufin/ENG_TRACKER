@@ -2,9 +2,23 @@ import React from "react";
 import { Ban, CheckCircle2, CircleDot, Clock, type LucideIcon } from "lucide-react";
 import type { Tone } from "@/components/ui/tone";
 import { tlScorecardService, type RecordResource } from "../../services/tlScorecardService";
-import type { Absence, IdleFlag, Meeting, PIPRecord, PromotionFlag, ReviewDelivery } from "../../types/tlScorecard";
+import type {
+  Absence,
+  IdleFlag,
+  Meeting,
+  PIPRecord,
+  PromotionFlag,
+  ReviewDelivery,
+} from "../../types/tlScorecard";
 
-export const RECORD_KINDS = ["meetings", "idle", "absences", "reviews", "promotions", "pips"] as const;
+export const RECORD_KINDS = [
+  "meetings",
+  "idle",
+  "absences",
+  "reviews",
+  "promotions",
+  "pips",
+] as const;
 export type RecordKind = (typeof RECORD_KINDS)[number];
 export const DEFAULT_KIND: RecordKind = "meetings";
 
@@ -12,8 +26,17 @@ export const parseKind = (raw: string | null): RecordKind =>
   RECORD_KINDS.find((kind) => kind === raw) ?? DEFAULT_KIND;
 
 export type RecordActionId =
-  | "edit" | "delete" | "share" | "resolve" | "address"
-  | "approve" | "reject" | "complete" | "cancel" | "promote" | "decline";
+  | "edit"
+  | "delete"
+  | "share"
+  | "resolve"
+  | "address"
+  | "approve"
+  | "reject"
+  | "complete"
+  | "cancel"
+  | "promote"
+  | "decline";
 
 export const ACTION_LABELS: Record<RecordActionId, string> = {
   edit: "Edit",
@@ -37,6 +60,7 @@ export interface Viewer {
   userId: number | null;
   isStaff: boolean;
   /** HBPR or staff: may approve/return PIPs and decide promotions (the server re-checks). */
+  /** Staff/superuser only — the API gates approve/reject/decide on that. */
   canReview: boolean;
 }
 
@@ -60,13 +84,20 @@ export interface KindConfig<T extends RecordRow> {
   actions: (r: T, viewer: Viewer) => RecordActionId[];
 }
 
-const define = <T extends RecordRow>(config: KindConfig<T>) => config as unknown as KindConfig<RecordRow>;
+const define = <T extends RecordRow>(config: KindConfig<T>) =>
+  config as unknown as KindConfig<RecordRow>;
 
 const name = (value: string | null) => value ?? "Unknown";
-const MEETING_LABELS = { one_on_one: "1-on-1", tl_sync: "TL sync", team_meeting: "Team meeting" } as const;
+const MEETING_LABELS = {
+  one_on_one: "1-on-1",
+  tl_sync: "TL sync",
+  team_meeting: "Team meeting",
+} as const;
 
-const owns = (viewer: Viewer, ownerId: number | null) => viewer.userId !== null && viewer.userId === ownerId;
-const canManage = (viewer: Viewer, ownerId: number | null) => viewer.isStaff || owns(viewer, ownerId);
+const owns = (viewer: Viewer, ownerId: number | null) =>
+  viewer.userId !== null && viewer.userId === ownerId;
+const canManage = (viewer: Viewer, ownerId: number | null) =>
+  viewer.isStaff || owns(viewer, ownerId);
 
 const DAY_MS = 86_400_000;
 export const daysOpen = (isoDate: string, now = new Date()) =>
@@ -119,7 +150,11 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
         ? { label: "Resolved", tone: "success", icon: CheckCircle2 }
         : { label: "Open", tone: "warning", icon: Clock },
     actions: (r, v) =>
-      canManage(v, r.flagged_by) ? (r.status === "open" ? ["edit", "resolve", "delete"] : ["edit", "delete"]) : [],
+      canManage(v, r.flagged_by)
+        ? r.status === "open"
+          ? ["edit", "resolve", "delete"]
+          : ["edit", "delete"]
+        : [],
   }),
   define<Absence>({
     key: "absences",
@@ -143,7 +178,11 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
         : { label: `${days} day${days === 1 ? "" : "s"} open`, tone: "warning", icon: Clock };
     },
     actions: (r, v) =>
-      canManage(v, r.flagged_by) ? (r.addressed_on ? ["edit", "delete"] : ["edit", "address", "delete"]) : [],
+      canManage(v, r.flagged_by)
+        ? r.addressed_on
+          ? ["edit", "delete"]
+          : ["edit", "address", "delete"]
+        : [],
   }),
   define<ReviewDelivery>({
     key: "reviews",
@@ -177,7 +216,8 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
       { header: "Nominated by", cell: (r) => name(r.nominated_by_name) },
     ],
     state: (r) => {
-      if (r.status === "promoted") return { label: "Promoted", tone: "success", icon: CheckCircle2 };
+      if (r.status === "promoted")
+        return { label: "Promoted", tone: "success", icon: CheckCircle2 };
       if (r.status === "declined") return { label: "Declined", tone: "neutral", icon: Ban };
       return { label: "Awaiting decision", tone: "warning", icon: Clock };
     },
@@ -208,8 +248,11 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
     actions: (r, v) => {
       const manage = canManage(v, r.tl);
       const review =
-        v.canReview && !owns(v, r.tl) && r.status === "draft" ? (["approve", "reject"] as RecordActionId[]) : [];
-      const close = manage && r.status === "active" ? (["complete", "cancel"] as RecordActionId[]) : [];
+        v.canReview && !owns(v, r.tl) && r.status === "draft"
+          ? (["approve", "reject"] as RecordActionId[])
+          : [];
+      const close =
+        manage && r.status === "active" ? (["complete", "cancel"] as RecordActionId[]) : [];
       return [...review, ...close, ...(manage ? (["edit", "delete"] as RecordActionId[]) : [])];
     },
   }),

@@ -340,7 +340,10 @@ describe("SettingsPage", () => {
 
   it("HBPR: shows the HBPR badge and no My Clients or Client Assignment card", () => {
     vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
-    vi.mocked(usePermissions.usePermissions).mockReturnValue({ isHBPR: true } as any);
+    vi.mocked(usePermissions.usePermissions).mockReturnValue({
+      isHBPR: true,
+      isHBPROnly: true,
+    } as any);
     render(<SettingsPage />);
     expect(screen.getByText("HBPR")).toBeInTheDocument();
     expect(screen.queryByTestId("my-clients")).not.toBeInTheDocument();
