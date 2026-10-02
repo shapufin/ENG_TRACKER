@@ -139,3 +139,7 @@ frontend/test-results/
 frontend/e2e-observed/
 /migration/
 stitch_team_tracker_dashboard_layout/
+
+# Tool-generated, not project files
+/package-lock.json
+.windsurf/

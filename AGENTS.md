@@ -109,6 +109,12 @@ destroying each other's uncommitted work:
 - Verify `git status` before and after any git operation; if another worker's
   files disappear, stop and report instead of re-applying blindly.
 
+## Test Environment (2026-10-02)
+
+- Production is Python 3.12 + Django 6.1.1. Run backend tests with `py -3.14 manage.py test` (Django 6.1.1); the default `python` is 3.11 + Django 5.2 and hides Django-6 differences.
+- `.devin/` is gitignored: durable, cross-agent knowledge must live in tracked files (`CLAUDE.md`, `docs/`). HBPR/scorecard: `docs/hbpr-and-scorecard.md`.
+- Playwright: run `prepare_e2e_db` before the servers start (see `.devin/context/12-VISUAL-VERIFICATION.md`).
+
 ## Completion
 
 - Summarize the implementation.
