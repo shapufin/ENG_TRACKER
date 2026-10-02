@@ -218,10 +218,12 @@ class EngagementServiceTests(TestCase):
         self.assertEqual(snapshot.decisions_during_leave, 1)
 
     def test_decisions_during_leave_not_double_counted_across_month_boundary(self):
-        from calendar import monthrange
-
-        last_day = self.month.replace(day=monthrange(self.month.year, self.month.month)[1])
-        next_month_first = last_day + timedelta(days=1)
+        # Pin to a month whose last day is a weekday: `count_business_days`
+        # rejects a weekend-only range, so deriving this from `date.today()`
+        # made the test fail whenever the boundary landed on Sat/Sun.
+        month = date(2026, 3, 1)
+        last_day = date(2026, 3, 31)  # Tuesday
+        next_month_first = date(2026, 4, 1)  # Wednesday
 
         # Leave spans the month boundary: last day of this month through
         # first day of next month.
@@ -240,15 +242,15 @@ class EngagementServiceTests(TestCase):
             timezone.datetime(next_month_first.year, next_month_first.month, next_month_first.day, 10)
         )
         _make_overtime(
-            self.member, self.month, decided_this_month, status='approved',
+            self.member, month, decided_this_month, status='approved',
             approved_at=decided_this_month, client=self.client_obj, approved_by=self.leader,
         )
         _make_overtime(
-            self.member, self.month, decided_next_month, status='approved',
+            self.member, month, decided_next_month, status='approved',
             approved_at=decided_next_month, client=self.client_obj, approved_by=self.leader,
         )
 
-        this_month_snapshot = compute_tl_metric(self.leader, self.team, self.month)
+        this_month_snapshot = compute_tl_metric(self.leader, self.team, month)
         next_month_snapshot = compute_tl_metric(self.leader, self.team, next_month_first)
 
         # Each month's snapshot only credits the decision made during its
@@ -388,45 +390,44 @@ class EngagementAPITests(TestCase):
         )
 
 
-class EngagementHbprScopeTests(EngagementAPITests):
-    """HBPR sees Italian TLs' snapshots only; never an Albanian-only TL's."""
+class EngagementHbprDeniedTests(EngagementAPITests):
+    """HBPR has no Engagement access (manifest denial), and the role never
+    broadens the viewset even for a multi-role HBPR+TL user."""
 
     def setUp(self):
         super().setUp()
         self.hbpr = _make_user('hbpr_viewer')
         _assign_tl_role(self.hbpr, 'hbpr')
 
-    def test_hbpr_sees_only_italian_tl_rows(self):
+    def test_hbpr_is_denied_on_every_action(self):
+        self.assertEqual(self._call('summary', self.hbpr).status_code, 403)
+        self.assertEqual(
+            self._call('team-breakdown', self.hbpr, month=self.month.isoformat()).status_code,
+            403,
+        )
+        self.assertEqual(
+            self._call('export', self.hbpr, month=self.month.isoformat()).status_code, 403
+        )
+
+    def test_multi_role_hbpr_tl_sees_only_their_own_rows(self):
+        _assign_tl_role(self.hbpr, 'italian_tl')
+        team = _make_team('Team H', 'TH', leader=self.hbpr)
+        compute_tl_metric(self.hbpr, team, self.month)
         resp = self._call('team-breakdown', self.hbpr, month=self.month.isoformat())
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual({row['team_name'] for row in resp.data}, {'Team B'})
-
-    def test_hbpr_summary_counts_only_in_scope_teams(self):
-        resp = self._call('summary', self.hbpr)
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.data['team_count'], 1)
-
-    def test_hbpr_export_is_scoped(self):
-        resp = self._call('export', self.hbpr, month=self.month.isoformat())
-        self.assertEqual(resp.status_code, 200)
-        self.assertNotIn(b'leader3', resp.content)
+        self.assertEqual({row['team_name'] for row in resp.data}, {'Team H'})
 
     def test_plain_employee_still_denied(self):
         self.assertEqual(self._call('summary', self.employee).status_code, 403)
 
 
-class EngagementAutoSnapshotTests(EngagementHbprScopeTests):
-    """First read of a month creates the visible TLs' snapshots; it never
+class EngagementAutoSnapshotTests(EngagementAPITests):
+    """First read of a month creates only the viewer's own snapshots; it never
     computes for TLs the viewer cannot see, and never recomputes twice."""
 
     def setUp(self):
         super().setUp()
         TLApprovalMetric.objects.all().delete()
-
-    def test_hbpr_first_read_creates_italian_tl_rows_only(self):
-        resp = self._call('team-breakdown', self.hbpr, month=self.month.isoformat())
-        self.assertEqual({row['team_name'] for row in resp.data}, {'Team B'})
-        self.assertEqual(TLApprovalMetric.objects.filter(leader=self.other_leader).count(), 0)
 
     def test_tl_first_read_creates_their_own_rows(self):
         self._call('summary', self.leader)
@@ -434,8 +435,8 @@ class EngagementAutoSnapshotTests(EngagementHbprScopeTests):
         self.assertEqual(TLApprovalMetric.objects.filter(leader=self.other_leader).count(), 0)
 
     def test_second_read_does_not_recompute(self):
-        self._call('summary', self.hbpr)
+        self._call('summary', self.leader)
         TLApprovalMetric.objects.update(computed_at=timezone.now())
         stamp = TLApprovalMetric.objects.get(leader=self.leader).computed_at
-        self._call('summary', self.hbpr)
+        self._call('summary', self.leader)
         self.assertEqual(TLApprovalMetric.objects.get(leader=self.leader).computed_at, stamp)

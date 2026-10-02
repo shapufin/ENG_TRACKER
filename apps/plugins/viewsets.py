@@ -230,9 +230,22 @@ class PluginViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         """
         active_plugins = plugin_registry.get_active_plugins()
         user = request.user
-        
+
         from apps.plugins.models import PluginPermission
         user_perms = PluginPermission.get_user_permissions(user)
+        # One prefetched fetch for the denial branch below: `denies_access`
+        # reads both M2Ms, so a per-plugin `.filter().first()` here would add
+        # 2-3 queries per blocked plugin on an endpoint the app calls on every
+        # load and on every refocus.
+        role_ids = set(
+            user.user_roles.filter(is_active=True).values_list('role_id', flat=True)
+        )
+        view_perms = {
+            perm.plugin_name: perm
+            for perm in PluginPermission.objects.filter(action='view').prefetch_related(
+                'denied_roles', 'denial_override_roles'
+            )
+        }
         metadata = []
         for plugin in active_plugins.values():
             # Control Room is special: dashboard visibility is scoped by
@@ -245,6 +258,14 @@ class PluginViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             frontend_metadata = plugin.get_frontend_metadata()
             if user.is_superuser or user.is_staff or 'view' in user_perms.get(plugin.name, []):
                 metadata.append(frontend_metadata)
+                continue
+            # Explicit denial (e.g. HBPR-only users on plugins outside their
+            # role) wins before the self-service fallback: a denied plugin's
+            # routes and injection slots must not register at all.
+            view_perm = view_perms.get(plugin.name)
+            if view_perm is not None and view_perm.denies_access(
+                user, role_ids=role_ids
+            ):
                 continue
             # No `view` grant: still expose pages the plugin marks self-service
             # (an employee reading records about themselves), and nothing else.

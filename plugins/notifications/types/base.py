@@ -35,9 +35,22 @@ class NotificationType:
     push_by_default: bool = True
     notification_type: str = 'info'  # default; override or define as method
 
+    # Optional user-facing grouping. Several event types can share one
+    # preference key so the Settings page shows a small number of meaningful
+    # groups instead of one row per event (the HBPR governance groups use
+    # this). Empty means "the event type is its own preference key".
+    preference_group: str = ''
+    preference_group_label: str = ''
+    # Resolved in __init_subclass__ so it is readable on the CLASS as well as an
+    # instance — `REGISTRY[...]` holds classes, and a `property` would return
+    # the property object when read off the class.
+    preference_key: str = ''
+
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         if cls.event_type:
+            if not cls.preference_key:
+                cls.preference_key = cls.preference_group or cls.event_type
             REGISTRY[cls.event_type] = cls
 
     # --- API to override ---
@@ -77,12 +90,22 @@ class NotificationType:
                 notification_type=nt,
                 link=self.link_for(context, user),
                 event_type=self.event_type,
+                preference_key=self.preference_key,
                 dedupe_key=self.dedupe_key(context, user),
             )
 
 
 def get_all_types() -> dict[str, type[NotificationType]]:
     return dict(REGISTRY)
+
+
+def get_preference_groups() -> dict[str, str]:
+    """``group_key -> label`` for every registered type that declares one."""
+    groups: dict[str, str] = {}
+    for cls in REGISTRY.values():
+        if cls.preference_group:
+            groups.setdefault(cls.preference_group, cls.preference_group_label)
+    return groups
 
 
 def get_event_type_choices() -> list[tuple[str, str]]:

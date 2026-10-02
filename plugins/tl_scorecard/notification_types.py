@@ -14,11 +14,14 @@ from plugins.notifications.types.base import NotificationType
 User = get_user_model()
 
 _RECORDS_LINK = '/tl-scorecard?tab=records'
+# HBPR governance notifications open the dedicated HBPR workspace, not the
+# AL-TL scorecard (which is the TL's own authoring surface).
+_HBPR_LINK = '/hbpr?view=records'
 
 
 class _HbprAudience:
-    """Recipients are the active HBPRs covering the record's employee, provided
-    the TL who wrote it is also in their scope."""
+    """Recipients are the active HBPR assigned to the record's owning AL TL,
+    provided the subject is that TL or one of their current team members."""
     owner_field = 'tl_id'
 
     def recipients(self, context):
@@ -26,6 +29,23 @@ class _HbprAudience:
         return User.objects.filter(
             id__in=hbpr_user_ids_for(record.employee, getattr(record, self.owner_field))
         )
+
+
+def _evidence_dedupe(prefix, context, user):
+    """One key per evidence row and *version*: the first record and each
+    meaningful edit (a new ``updated_at``) notify once, a re-save never does."""
+    row = context['instance']
+    version = row.updated_at.isoformat() if context.get('edited') else 'new'
+    return f'{prefix}:{row.pk}:{version}:user:{user.id}'
+
+
+# The five grouped HBPR preference keys (Settings shows one row per group with
+# independent in-app/push switches, not one row per event).
+HBPR_MEETINGS = 'hbpr_meetings'
+HBPR_EPR = 'hbpr_epr'
+HBPR_PIP_PROMOTION = 'hbpr_pip_promotion'
+HBPR_TEAM_RISKS = 'hbpr_team_risks'
+HBPR_RECORD_UPDATES = 'hbpr_record_updates'
 
 
 class _RecordsItem(NotificationType):
@@ -71,17 +91,19 @@ class PipStarted(_RecordsItem):
 class PipAwaitingApproval(_HbprAudience, NotificationType):
     event_type = 'scorecard_pip_pending'
     label = 'Improvement plan awaiting approval'
-    description = 'Sent to the HR business partners covering an employee when a TL opens an improvement plan that needs approval.'
+    description = 'Sent to the HR business partner assigned to an Albanian TL when the TL opens an improvement plan.'
     category = 'oversight'
     notification_type = 'warning'
     push_by_default = False
-    link = f'{_RECORDS_LINK}&kind=pips'
+    preference_group = HBPR_PIP_PROMOTION
+    preference_group_label = 'PIP & promotion changes'
+    link = f'{_HBPR_LINK}&kind=pips'
 
     def title(self, context):
         return 'Improvement plan awaiting approval'
 
     def message(self, context):
-        return 'A team leader opened an improvement plan that needs your review.'
+        return 'A team leader you partner with opened an improvement plan.'
 
     def dedupe_key(self, context, user):
         return f'pip-pending:{context["instance"].pk}:user:{user.id}'
@@ -113,11 +135,13 @@ class PipDecided(NotificationType):
 class PipClosed(_HbprAudience, NotificationType):
     event_type = 'scorecard_pip_closed'
     label = 'Improvement plan closed'
-    description = 'Sent to the HR business partners covering an employee when an active improvement plan is completed or cancelled.'
+    description = 'Sent to the HR business partner assigned to an Albanian TL when an active improvement plan is completed or cancelled.'
     category = 'oversight'
     notification_type = 'info'
     push_by_default = False
-    link = f'{_RECORDS_LINK}&kind=pips'
+    preference_group = HBPR_PIP_PROMOTION
+    preference_group_label = 'PIP & promotion changes'
+    link = f'{_HBPR_LINK}&kind=pips'
 
     def title(self, context):
         return 'Improvement plan closed'
@@ -132,15 +156,17 @@ class PipClosed(_HbprAudience, NotificationType):
 class FlagRaised(_HbprAudience, NotificationType):
     event_type = 'scorecard_flag_raised'
     label = 'Idle or absence flag raised'
-    description = 'Sent to the HR business partners covering an employee when a TL flags idle time or an unexplained absence.'
+    description = 'Sent to the HR business partner assigned to an Albanian TL when the TL flags idle time or an unexplained absence.'
     category = 'oversight'
     notification_type = 'warning'
     push_by_default = False
+    preference_group = HBPR_TEAM_RISKS
+    preference_group_label = 'Team risks'
     owner_field = 'flagged_by_id'
 
     def link_for(self, context, user):
         kind = 'idle' if context['kind'] == 'idle' else 'absences'
-        return f'{_RECORDS_LINK}&kind={kind}'
+        return f'{_HBPR_LINK}&kind={kind}'
 
     def title(self, context):
         return 'New flag raised'
@@ -152,18 +178,110 @@ class FlagRaised(_HbprAudience, NotificationType):
 class PromotionNominated(_HbprAudience, NotificationType):
     event_type = 'scorecard_promotion_nominated'
     label = 'Promotion nominated'
-    description = 'Sent to the HR business partners covering an employee when a TL nominates them for promotion.'
+    description = 'Sent to the HR business partner assigned to an Albanian TL when the TL nominates someone for promotion.'
     category = 'oversight'
     notification_type = 'info'
     push_by_default = False
+    preference_group = HBPR_PIP_PROMOTION
+    preference_group_label = 'PIP & promotion changes'
     owner_field = 'nominated_by_id'
-    link = f'{_RECORDS_LINK}&kind=promotions'
+    link = f'{_HBPR_LINK}&kind=promotions'
 
     def title(self, context):
         return 'Promotion nomination to review'
 
     def message(self, context):
         return 'A team leader nominated someone for promotion.'
+
+
+class HbprCadenceEvidenceRecorded(NotificationType):
+    """The assigned AL TL recorded a cadence meeting with the HBPR."""
+    event_type = 'scorecard_hbpr_cadence_evidence'
+    label = 'Meeting with your team leader was recorded'
+    description = 'Sent to the assigned HBPR when the Albanian TL records a cadence meeting for their partnership.'
+    category = 'oversight'
+    notification_type = 'info'
+    push_by_default = False
+    preference_group = HBPR_MEETINGS
+    preference_group_label = 'Meetings & cadence'
+    link = '/hbpr?view=evidence'
+
+    def recipients(self, context):
+        row = context['instance']
+        return User.objects.filter(id=row.assignment.hbpr_id, is_active=True)
+
+    def title(self, context):
+        if context.get('edited'):
+            return 'A partnership meeting was updated'
+        return 'A partnership meeting was recorded'
+
+    def message(self, context):
+        if context.get('edited'):
+            return 'Your team leader updated a cadence meeting for your partnership.'
+        return 'Your team leader logged a cadence meeting for your partnership.'
+
+    def dedupe_key(self, context, user):
+        return _evidence_dedupe('hbpr-cadence', context, user)
+
+
+class HbprEprEvidenceRecorded(NotificationType):
+    """The assigned AL TL recorded HBPR participation in a mid-year/year-end EPR."""
+    event_type = 'scorecard_hbpr_epr_evidence'
+    label = 'EPR participation was recorded'
+    description = 'Sent to the assigned HBPR when the Albanian TL records their mid-year or year-end EPR participation.'
+    category = 'oversight'
+    notification_type = 'info'
+    push_by_default = False
+    preference_group = HBPR_EPR
+    preference_group_label = 'EPR milestones'
+    link = '/hbpr?view=evidence'
+
+    def recipients(self, context):
+        row = context['instance']
+        return User.objects.filter(id=row.assignment.hbpr_id, is_active=True)
+
+    def title(self, context):
+        if context.get('edited'):
+            return 'Your EPR participation was updated'
+        return 'Your EPR participation was recorded'
+
+    def message(self, context):
+        if context.get('edited'):
+            return 'Your team leader updated the record of your participation in their EPR review.'
+        return 'Your team leader recorded your participation in their EPR review.'
+
+    def dedupe_key(self, context, user):
+        return _evidence_dedupe(f'hbpr-epr:{context["instance"].kind}', context, user)
+
+
+class HbprReviewDelivered(NotificationType):
+    """The AL TL logged a management review delivery — a governance update."""
+    event_type = 'scorecard_hbpr_review_delivered'
+    label = 'A management review was delivered'
+    description = 'Sent to the assigned HBPR when the Albanian TL logs a management review delivery.'
+    category = 'oversight'
+    notification_type = 'info'
+    push_by_default = False
+    preference_group = HBPR_RECORD_UPDATES
+    preference_group_label = 'Other governance updates'
+    link = '/hbpr?view=records'
+
+    def recipients(self, context):
+        row = context['instance']
+        # A review has no employee subject; the HBPR is the one assigned to the
+        # leader who delivered it.
+        return User.objects.filter(
+            id__in=hbpr_user_ids_for(row.leader, row.leader_id)
+        )
+
+    def title(self, context):
+        return 'A review was delivered'
+
+    def message(self, context):
+        return 'Your team leader logged a management review delivery.'
+
+    def dedupe_key(self, context, user):
+        return f'hbpr-review:{context["instance"].pk}:user:{user.id}'
 
 
 class PromotionDecided(NotificationType):
@@ -186,3 +304,118 @@ class PromotionDecided(NotificationType):
 
     def dedupe_key(self, context, user):
         return f'promotion-decided:{context["instance"].pk}:user:{user.id}'
+
+
+class HbprAssignmentChanged(NotificationType):
+    """An admin assigned a team leader to the HBPR, or ended the assignment."""
+    event_type = 'scorecard_hbpr_assignment_changed'
+    label = 'Team leader assignment changed'
+    description = 'Sent to an HBPR when an Albanian TL is assigned to them or the assignment ends.'
+    category = 'oversight'
+    notification_type = 'info'
+    push_by_default = False
+    preference_group = HBPR_MEETINGS
+    preference_group_label = 'Meetings & cadence'
+    link = '/hbpr?view=overview'
+
+    def recipients(self, context):
+        return User.objects.filter(id=context['instance'].hbpr_id, is_active=True)
+
+    def title(self, context):
+        if context['outcome'] == 'ended':
+            return 'A team leader assignment ended'
+        return 'A team leader was assigned to you'
+
+    def message(self, context):
+        if context['outcome'] == 'ended':
+            return 'One of your team leader partnerships has ended.'
+        return 'You now partner with a new team leader.'
+
+    def dedupe_key(self, context, user):
+        return f'hbpr-assignment:{context["instance"].pk}:{context["outcome"]}:user:{user.id}'
+
+
+class FlagResolved(_HbprAudience, NotificationType):
+    """An idle flag was resolved or an absence was addressed."""
+    event_type = 'scorecard_flag_resolved'
+    label = 'Idle or absence flag resolved'
+    description = 'Sent to the HR business partner assigned to an Albanian TL when the TL resolves an idle flag or addresses an absence.'
+    category = 'oversight'
+    notification_type = 'info'
+    push_by_default = False
+    preference_group = HBPR_TEAM_RISKS
+    preference_group_label = 'Team risks'
+    owner_field = 'flagged_by_id'
+
+    def link_for(self, context, user):
+        kind = 'idle' if context['kind'] == 'idle' else 'absences'
+        return f'{_HBPR_LINK}&kind={kind}'
+
+    def title(self, context):
+        return 'A flag was resolved'
+
+    def message(self, context):
+        return 'A team leader resolved a flag for someone you partner with.'
+
+    def dedupe_key(self, context, user):
+        return f'flag-resolved:{context["kind"]}:{context["instance"].pk}:user:{user.id}'
+
+
+class EprStageCompleted(NotificationType):
+    """A team member's EPR cycle reached a new stage."""
+    event_type = 'scorecard_epr_stage_completed'
+    label = 'EPR stage completed'
+    description = "Sent to the HR business partner assigned to an Albanian TL when one of the TL's team members completes an EPR stage."
+    category = 'oversight'
+    notification_type = 'info'
+    push_by_default = False
+    preference_group = HBPR_EPR
+    preference_group_label = 'EPR milestones'
+    link = f'{_HBPR_LINK}&kind=reviews'
+
+    def recipients(self, context):
+        cycle = context['instance']
+        profile = getattr(cycle.user, 'profile', None)
+        owner_id = getattr(profile, 'albanian_tl_id', None)
+        return User.objects.filter(id__in=hbpr_user_ids_for(cycle.user, owner_id))
+
+    def title(self, context):
+        return 'An EPR stage was completed'
+
+    def message(self, context):
+        return 'Someone on a team you partner on completed an EPR stage.'
+
+    def dedupe_key(self, context, user):
+        return f'epr-stage:{context["instance"].pk}:{context["stage"]}:user:{user.id}'
+
+
+class HbprMeetingChanged(NotificationType):
+    """A governance meeting (never an employee one-on-one) was added or changed."""
+    event_type = 'scorecard_hbpr_meeting_changed'
+    label = 'Governance meeting changed'
+    description = 'Sent to the HR business partner assigned to an Albanian TL when the TL records or changes a team or TL-sync meeting.'
+    category = 'oversight'
+    notification_type = 'info'
+    push_by_default = False
+    preference_group = HBPR_RECORD_UPDATES
+    preference_group_label = 'Other governance updates'
+    link = f'{_HBPR_LINK}&kind=meetings'
+
+    def recipients(self, context):
+        meeting = context['instance']
+        if meeting.meeting_type == 'one_on_one':
+            return User.objects.none()
+        subject = meeting.counterparty or meeting.organizer
+        return User.objects.filter(
+            id__in=hbpr_user_ids_for(subject, meeting.organizer_id)
+        )
+
+    def title(self, context):
+        return 'A governance meeting was updated'
+
+    def message(self, context):
+        return 'A team leader you partner with recorded or changed a meeting.'
+
+    def dedupe_key(self, context, user):
+        meeting = context['instance']
+        return f'hbpr-meeting:{meeting.pk}:{meeting.updated_at.isoformat()}:user:{user.id}'

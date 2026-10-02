@@ -6,6 +6,7 @@ from .viewsets import (
     EngagementSurveyResponseViewSet,
     EPRCycleViewSet,
     EPRGoalViewSet,
+    HbprGovernanceEvidenceViewSet,
     IdleFlagViewSet,
     IdleStatusUpdateViewSet,
     MeetingAttendeeViewSet,
@@ -35,6 +36,10 @@ router.register(r'pip-records', PIPRecordViewSet, basename='tl-scorecard-pip-rec
 router.register(r'promotion-flags', PromotionFlagViewSet, basename='tl-scorecard-promotion-flag')
 router.register(r'epr-cycles', EPRCycleViewSet, basename='tl-scorecard-epr-cycle')
 router.register(r'epr-goals', EPRGoalViewSet, basename='tl-scorecard-epr-goal')
+router.register(
+    r'hbpr-evidence', HbprGovernanceEvidenceViewSet,
+    basename='tl-scorecard-hbpr-evidence',
+)
 
 urlpatterns = [
     path('', include(router.urls)),

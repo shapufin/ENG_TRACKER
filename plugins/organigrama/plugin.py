@@ -44,6 +44,11 @@ class OrganigramaPlugin(BasePlugin):
             **super().get_permission_manifest(),
             "view": {
                 "roles": ["employee", "italian_tl", "albanian_tl", "hr", "cr_admin"],
+                # HBPR-only users do not get the org chart: it is not part of
+                # the business-partner workflow. Elevated multi-role users
+                # (HBPR+HR/TL/CR-admin) keep access via the overrides.
+                "denied_roles": ["hbpr"],
+                "denial_override_roles": ["hr", "italian_tl", "albanian_tl", "cr_admin"],
                 # Public=True so the sidebar link and tree API are visible to
                 # ALL authenticated users, including those without UserRole rows.
                 # The org chart is read-only and scoped by get_team_member_ids(),

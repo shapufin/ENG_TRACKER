@@ -209,6 +209,21 @@ class Command(BaseCommand):
         tl_b.italian_tl = users["e2e_tl"]
         tl_b.save(update_fields=["italian_tl"])
 
+        # Explicit HBPR ↔ Albanian TL assignment — the single source of truth
+        # for HBPR scope since 2026-10-01. e2e_hbpr partners with e2e_tl_b;
+        # the Italian TL is deliberately NOT in scope any more.
+        from apps.users.models.hbpr import HbprAlbanianTlAssignment
+
+        if not HbprAlbanianTlAssignment.objects.filter(
+            albanian_tl=users["e2e_tl_b"], effective_to__isnull=True
+        ).exists():
+            HbprAlbanianTlAssignment.objects.create(
+                hbpr=users["e2e_hbpr"],
+                albanian_tl=users["e2e_tl_b"],
+                cadence="weekly",
+                effective_from=date(timezone.localdate().year - 1, 1, 1),
+            )
+
         client, client_created = Client.objects.get_or_create(
             code=E2E_CLIENT["code"],
             defaults={

@@ -11,7 +11,12 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
 from django.db import models, transaction
 from core.mixins.cache import CacheInvalidationMixin
-from core.mixins.permissions import IsHR, has_hr_role, has_team_leader_role
+from core.mixins.permissions import (
+    HbprBlockedMixin,
+    IsHR,
+    has_hr_role,
+    has_team_leader_role,
+)
 from core.utils.cache import (
     build_query_fingerprint,
     get_cached_response_data,
@@ -613,7 +618,7 @@ class UserDashboardPreferenceViewSet(CacheInvalidationMixin, viewsets.ModelViewS
         self.invalidate_related_cache()
 
 
-class CalendarWorkspaceViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
+class CalendarWorkspaceViewSet(HbprBlockedMixin, CacheInvalidationMixin, viewsets.ModelViewSet):
     queryset = CalendarWorkspace.objects.all()
     serializer_class = CalendarWorkspaceSerializer
     permission_classes = [IsAuthenticated]
@@ -874,7 +879,7 @@ class CalendarWorkspaceViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
         return Response({'status': 'user removed'})
 
 
-class PublicHolidayViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
+class PublicHolidayViewSet(HbprBlockedMixin, CacheInvalidationMixin, viewsets.ModelViewSet):
     queryset = PublicHoliday.objects.all().select_related('calendar')
     serializer_class = PublicHolidaySerializer
     permission_classes = [IsAuthenticated]

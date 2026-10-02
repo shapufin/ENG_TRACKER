@@ -26,6 +26,7 @@ from .models import (
     EngagementSurveyResponse,
     EPRCycle,
     EPRGoal,
+    HbprGovernanceEvidence,
     IdleFlag,
     IdleStatusUpdate,
     Meeting,
@@ -40,6 +41,7 @@ from .serializers import (
     EPRCycleSerializer,
     EPRGoalSerializer,
     EscalationCandidateSerializer,
+    HbprGovernanceEvidenceSerializer,
     IdleFlagSerializer,
     IdleStatusUpdateSerializer,
     KpiCoverageEntrySerializer,
@@ -99,6 +101,16 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             raise ValidationError({'leader_id': 'leader_id must belong to a team leader.'})
         return leader
 
+    @staticmethod
+    def _mask_one_on_one(request, leader, *payloads):
+        """An HBPR reads a TL's governance, never their employee one-on-ones —
+        and the compliance % is derived from exactly those meetings."""
+        user = request.user
+        if user.is_staff or user.is_superuser or leader.id == user.id:
+            return
+        for payload in payloads:
+            payload['meetings']['one_on_one_compliance_pct'] = None
+
     @action(detail=False, methods=['get'])
     def scorecard(self, request):
         try:
@@ -112,6 +124,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
                              status=status.HTTP_400_BAD_REQUEST)
 
         data = build_scorecard(leader, month or date.today())
+        self._mask_one_on_one(request, leader, data)
         return Response(ScorecardSerializer(data).data)
 
     @action(detail=False, methods=['get'])
@@ -136,11 +149,30 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
                              status=status.HTTP_400_BAD_REQUEST)
 
         points = scorecard_trend(leader, months, month or date.today())
+        self._mask_one_on_one(request, leader, *points)
         return Response(ScorecardSerializer(points, many=True).data)
 
     @action(detail=False, methods=['get'], url_path='kpi-coverage', url_name='kpi-coverage')
     def kpi_coverage(self, request):
         return Response(KpiCoverageEntrySerializer(KPI_COVERAGE, many=True).data)
+
+    @action(detail=False, methods=['get'])
+    def partnership(self, request):
+        """The resolved leader's own HBPR partnership (assignment + cadence/EPR).
+
+        An Albanian TL authors the governance evidence but cannot read the
+        staff-only `/api/users/hbpr-assignments/`, so this is where they see who
+        their HBPR is and what the cadence state is. Same leader resolution as
+        `scorecard`/`export`.
+        """
+        from . import services_hbpr
+
+        try:
+            year = services_hbpr.parse_reporting_year(request.query_params.get('year'))
+        except ValueError as exc:
+            raise ValidationError({'year': str(exc)})
+        leader = self._resolve_leader(request)
+        return Response(services_hbpr.partnership(leader, reporting_year=year))
 
     @action(detail=False, methods=['get'])
     def escalations(self, request):
@@ -163,6 +195,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
         month = month or date.today()
         scorecard = build_scorecard(leader, month)
+        self._mask_one_on_one(request, leader, scorecard)
         team_member_ids = leader.profile.get_team_member_ids()
         subject_ids = None
         if not (request.user.is_staff or request.user.is_superuser) and leader.id != request.user.id:
@@ -172,7 +205,29 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         governance = governance_records(leader, team_member_ids, month.year, subject_ids)
         period_label = date.fromisoformat(scorecard['month']).strftime('%B %Y')
 
-        workbook_bytes = build_workbook_bytes(scorecard, KPI_COVERAGE, governance, period_label)
+        # HBPR ↔ AL-TL governance evidence for this leader (the AL TL authors
+        # it; employee one-on-ones are never part of this data set).
+        evidence_qs = HbprGovernanceEvidence.objects.filter(assignment__albanian_tl=leader)
+        if not (request.user.is_staff or request.user.is_superuser) and leader.id != request.user.id:
+            # An HBPR exports the evidence of the assignments they own, not what
+            # a predecessor built up with the same AL TL.
+            evidence_qs = evidence_qs.filter(assignment__hbpr=request.user)
+        evidence_rows = [
+            {
+                'kind_display': row.get_kind_display(),
+                'occurred_on': row.occurred_on.isoformat(),
+                'reporting_year': row.reporting_year,
+                'shared_summary': row.shared_summary,
+                'action_items': row.action_items,
+                'reference_url': row.reference_url,
+            }
+            for row in evidence_qs.order_by('-occurred_on', '-id')
+        ]
+
+        workbook_bytes = build_workbook_bytes(
+            scorecard, KPI_COVERAGE, governance, period_label,
+            hbpr_evidence=evidence_rows,
+        )
 
         filename = f'tl_scorecard_{leader.username}_{scorecard["month"][:7]}.xlsx'
         response = HttpResponse(
@@ -194,9 +249,12 @@ class MeetingViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelVi
         if self.request.user.is_staff or self.request.user.is_superuser:
             return qs
         user = self.request.user
+        # Employee one-on-ones are never part of the HBPR slice: the exclusion
+        # applies to the HBPR branch only, so a TL who is also an HBPR still
+        # reads their own one-on-ones via `own_q`.
         return self.limit_to_viewer(
             qs, Q(organizer=user), leader_field='organizer', member_field='counterparty',
-            member_nullable=True)
+            member_nullable=True, hbpr_exclude=~Q(meeting_type='one_on_one'))
 
     def perform_create(self, serializer):
         meeting_type = serializer.validated_data.get('meeting_type')
@@ -226,10 +284,6 @@ class MeetingAttendeeViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets
     scoped through the meeting's own organizer, same as MeetingViewSet."""
     plugin_name = 'tl_scorecard'
     serializer_class = MeetingAttendeeSerializer
-    # An HBPR holds plugin `view` only; writing her own attendance notes is a
-    # participation action, checked below against the attendee row.
-    permission_action_map = {'notes': 'view'}
-    hbpr_participation_actions = frozenset({'notes'})
 
     def get_queryset(self):
         qs = MeetingAttendee.objects.select_related('meeting', 'user')
@@ -239,7 +293,8 @@ class MeetingAttendeeViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets
         return self.limit_to_viewer(
             qs, Q(meeting__organizer=user),
             leader_field='meeting__organizer', member_field='meeting__counterparty',
-            member_nullable=True)
+            member_nullable=True,
+            hbpr_exclude=~Q(meeting__meeting_type='one_on_one'))
 
     def perform_create(self, serializer):
         meeting = serializer.validated_data['meeting']
@@ -440,17 +495,16 @@ class AbsenceViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelVi
 
 
 class PIPRecordViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelViewSet):
-    """Approval is deliberately staff-only (`approve` action) — this
+    """Approval is deliberately staff/HR-only (`approve` action) — this
     plugin's role manifest has no HR bucket, and "prior HR approval" is
     the one KPI requirement that must not be self-granted by the TL who
-    created the record."""
+    created the record. HBPR is read-only: it never approves or returns."""
     plugin_name = 'tl_scorecard'
     serializer_class = PIPRecordSerializer
     # `approve` needs only plugin `view`: the real gate is in the action body
-    # (staff, or an in-scope HBPR) so an HBPR need not hold `manage`, which
-    # would also open PATCH/DELETE.
+    # (staff/HR) so an approver need not hold `manage`, which would also open
+    # PATCH/DELETE.
     permission_action_map = {'approve': 'view', 'reject': 'view'}
-    hbpr_participation_actions = frozenset({'approve', 'reject'})
 
     def get_queryset(self):
         qs = PIPRecord.objects.select_related('employee', 'tl', 'approved_by')
@@ -469,7 +523,7 @@ class PIPRecordViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.Model
     def perform_update(self, serializer):
         instance = serializer.instance
         if instance.approved_at is not None:
-            # What HR/HBPR approved must not be rewritten afterwards.
+            # What HR approved must not be rewritten afterwards.
             for field in ('employee', 'start_date'):
                 if field in serializer.validated_data and \
                         serializer.validated_data[field] != getattr(instance, field):
@@ -482,7 +536,10 @@ class PIPRecordViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.Model
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
-        if not (request.user.is_staff or request.user.is_superuser or is_hbpr(request.user)):
+        # HBPR is read-only: participation in PIP decisions was removed, so
+        # only staff/HR may approve. (HBPR would otherwise reach this through
+        # the tl_scorecard `view` grant.)
+        if not (request.user.is_staff or request.user.is_superuser):
             raise PermissionDenied('Only staff/HR can approve a PIP.')
         pip = self.get_object()
         if request.user.id in (pip.employee_id, pip.tl_id):
@@ -503,8 +560,8 @@ class PIPRecordViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.Model
 
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
-        """Return a draft PIP to the TL (staff or in-scope HBPR). Needs a reason."""
-        if not (request.user.is_staff or request.user.is_superuser or is_hbpr(request.user)):
+        """Return a draft PIP to the TL (staff/HR only). Needs a reason."""
+        if not (request.user.is_staff or request.user.is_superuser):
             raise PermissionDenied('Only staff/HR can return a PIP.')
         pip = self.get_object()
         if request.user.id in (pip.employee_id, pip.tl_id):
@@ -545,10 +602,11 @@ class PIPRecordViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.Model
 
 
 class PromotionFlagViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelViewSet):
+    """Promotion nominations are decided by staff/HR only — HBPR is read-only
+    and never decides a nomination (participation was removed)."""
     plugin_name = 'tl_scorecard'
     serializer_class = PromotionFlagSerializer
     permission_action_map = {'decide': 'view'}
-    hbpr_participation_actions = frozenset({'decide'})
 
     def get_queryset(self):
         qs = PromotionFlag.objects.select_related('employee', 'nominated_by')
@@ -574,7 +632,8 @@ class PromotionFlagViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.M
 
     @action(detail=True, methods=['post'])
     def decide(self, request, pk=None):
-        if not (request.user.is_staff or request.user.is_superuser or is_hbpr(request.user)):
+        # HBPR is read-only: it never decides a promotion nomination.
+        if not (request.user.is_staff or request.user.is_superuser):
             raise PermissionDenied('Only staff/HR can approve a promotion.')
         flag = self.get_object()
         if request.user.id in (flag.employee_id, flag.nominated_by_id):
@@ -654,3 +713,91 @@ class EPRGoalViewSet(HbprReadScopeMixin, PluginPermissionMixin, viewsets.ModelVi
             if cycle.user_id not in self.request.user.profile.get_team_member_ids():
                 raise ValidationError({'cycle': 'You can only add goals for your own team members.'})
         serializer.save()
+
+
+class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+    """Evidence of the HBPR ↔ Albanian TL governance relationship.
+
+    Authored by the **assigned AL TL only**; read and exported by the assigned
+    HBPR and staff. There is no destroy — the evidence is the AL TL's record to
+    hand to their manager, so corrections go through audited updates.
+    """
+
+    plugin_name = 'tl_scorecard'
+    serializer_class = HbprGovernanceEvidenceSerializer
+
+    def get_queryset(self):
+        from django.db.models import OuterRef, Subquery
+
+        qs = HbprGovernanceEvidence.objects.select_related(
+            'assignment__hbpr', 'assignment__albanian_tl', 'recorded_by', 'updated_by',
+        )
+        # One subquery for the owning assignment's latest cadence meeting, so a
+        # list response does not run two queries per row for the cadence fields.
+        qs = qs.annotate(
+            last_cadence_on=Subquery(
+                HbprGovernanceEvidence.objects.filter(
+                    assignment=OuterRef('assignment_id'), kind='cadence_meeting',
+                ).order_by('-occurred_on').values('occurred_on')[:1]
+            )
+        )
+        user = self.request.user
+        if not (user.is_staff or user.is_superuser):
+            from apps.users.services.hbpr_assignments import today
+
+            if is_hbpr(user):
+                # An HBPR reads evidence for the assignments they own, current
+                # and historical (an ended assignment's evidence is still theirs)
+                # — but a FUTURE-dated assignment grants nothing yet, mirroring
+                # hbpr_scope's `effective_from <= today` rule, and a deactivated
+                # AL TL's assignment is out of scope too.
+                qs = qs.filter(
+                    assignment__hbpr=user,
+                    assignment__effective_from__lte=today(),
+                    assignment__albanian_tl__is_active=True,
+                )
+            else:
+                # An Albanian TL reads the evidence recorded on their own
+                # assignments.
+                qs = qs.filter(assignment__albanian_tl=user)
+
+        params = self.request.query_params
+        kind = params.get('kind')
+        if kind:
+            qs = qs.filter(kind=kind)
+        year = params.get('year')
+        if year:
+            try:
+                year_value = int(year)
+            except ValueError:
+                raise ValidationError({'year': 'year must be an integer.'})
+            qs = qs.filter(reporting_year=year_value)
+        assignment = params.get('assignment')
+        if assignment:
+            try:
+                qs = qs.filter(assignment_id=int(assignment))
+            except ValueError:
+                raise ValidationError({'assignment': 'assignment must be an integer.'})
+        return qs
+
+    def perform_create(self, serializer):
+        assignment = serializer.validated_data['assignment']
+        # Staff audit this evidence; only the assigned AL TL authors it.
+        if assignment.albanian_tl_id != self.request.user.id:
+            raise PermissionDenied(
+                'Only the assigned Albanian TL can record this evidence.'
+            )
+        serializer.save(recorded_by=self.request.user)
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        if instance.assignment.albanian_tl_id != self.request.user.id:
+            raise PermissionDenied(
+                'Only the assigned Albanian TL can edit this evidence.'
+            )
+        serializer.save(updated_by=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        raise PermissionDenied(
+            'Governance evidence cannot be deleted; update it instead.'
+        )

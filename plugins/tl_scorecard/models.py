@@ -324,3 +324,91 @@ class EPRGoal(BaseModel):
     class Meta:
         db_table = 'tl_scorecard_epr_goals'
         ordering = ['id']
+
+
+class HbprGovernanceEvidence(BaseModel):
+    """Evidence of the HBPR ↔ Albanian TL governance relationship.
+
+    Two shapes, one table:
+
+    - ``cadence_meeting`` — a recurring weekly/biweekly/monthly meeting.
+      ``reporting_year`` is NULL and rows are repeatable.
+    - ``epr_mid_year`` / ``epr_year_end`` — the HBPR's participation in the AL
+      TL's mid-year / year-end EPR. ``reporting_year`` is required and the row
+      is unique per ``(assignment, kind, reporting_year)``.
+
+    Authored by the assigned AL TL only (the HBPR participates but is
+    read-only); read and exported by the assigned HBPR and staff. The AL TL
+    later hands the evidence to their manager, so rows are never deleted —
+    ``recorded_by``/``updated_by`` keep the audit trail.
+    """
+
+    KIND_CHOICES = [
+        ('cadence_meeting', 'Cadence meeting'),
+        ('epr_mid_year', 'EPR mid-year participation'),
+        ('epr_year_end', 'EPR year-end participation'),
+    ]
+    EPR_KINDS = ('epr_mid_year', 'epr_year_end')
+
+    assignment = models.ForeignKey(
+        'users.HbprAlbanianTlAssignment',
+        on_delete=models.PROTECT,
+        related_name='governance_evidence',
+    )
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+    occurred_on = models.DateField()
+    reporting_year = models.PositiveIntegerField(null=True, blank=True)
+    shared_summary = models.TextField(blank=True)
+    action_items = models.TextField(blank=True)
+    reference_url = models.URLField(blank=True)
+    recorded_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name='hbpr_evidence_recorded',
+    )
+    updated_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='hbpr_evidence_updated',
+    )
+
+    class Meta:
+        db_table = 'tl_scorecard_hbpr_governance_evidence'
+        ordering = ['-occurred_on', '-id']
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(kind__in=['epr_mid_year', 'epr_year_end'],
+                             reporting_year__isnull=False)
+                    | models.Q(kind='cadence_meeting', reporting_year__isnull=True)
+                ),
+                name='hbpr_evidence_year_matches_kind',
+            ),
+            models.UniqueConstraint(
+                fields=['assignment', 'kind', 'reporting_year'],
+                condition=models.Q(kind__in=['epr_mid_year', 'epr_year_end']),
+                name='unique_hbpr_epr_evidence_per_year',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['assignment', 'kind', 'occurred_on'],
+                name='hbpr_evidence_assign_kind_idx',
+            ),
+            models.Index(
+                fields=['reporting_year', 'kind'],
+                name='hbpr_evidence_year_kind_idx',
+            ),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if self.kind in self.EPR_KINDS and self.reporting_year is None:
+            raise ValidationError(
+                {'reporting_year': 'Required for EPR participation evidence.'}
+            )
+        if self.kind == 'cadence_meeting' and self.reporting_year is not None:
+            raise ValidationError(
+                {'reporting_year': 'Only EPR evidence carries a reporting year.'}
+            )
+
+    def __str__(self):
+        return f'{self.get_kind_display()} — {self.occurred_on}'

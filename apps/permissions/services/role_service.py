@@ -195,9 +195,62 @@ def find_blocked_tl_revocations_bulk(candidates, new_state: dict) -> list[dict]:
 @transaction.atomic
 def revoke_role(user, role_code: str, team=None) -> int:
     """Deactivate matching role assignments while preserving assignment history."""
+    _assert_no_active_hbpr_assignment(user, role_code)
     role = Role.objects.get(code=role_code)
     updated = UserRole.objects.filter(
         user=user, role=role, team=team, is_active=True
     ).update(is_active=False)
     _refresh_role_cache(user)
     return updated
+
+
+def _assert_no_active_hbpr_assignment(user, role_code: str) -> None:
+    """Block revoking hbpr/albanian_tl while an open assignment depends on it.
+
+    Mirrors the TL-FK revocation guard: an open HBPR↔AL-TL assignment makes
+    the role load-bearing for scope resolution, so the caller must end or
+    reassign the assignment first.
+    """
+    if role_code not in ("hbpr", "albanian_tl"):
+        return
+    from apps.users.models.hbpr import HbprAlbanianTlAssignment
+
+    lookup = "hbpr" if role_code == "hbpr" else "albanian_tl"
+    if HbprAlbanianTlAssignment.objects.filter(
+        **{lookup: user}, effective_to__isnull=True
+    ).exists():
+        raise HbprAssignmentRevokeBlockedError(
+            f"Cannot revoke the {role_code} role while an open HBPR↔"
+            "Albanian TL assignment depends on it. End or reassign the "
+            "assignment first."
+        )
+
+
+class HbprAssignmentRevokeBlockedError(Exception):
+    """Raised when revoking hbpr/albanian_tl would strand an open assignment."""
+
+
+def find_blocked_hbpr_revocations(user, new_state: dict) -> list[dict]:
+    """The single source of truth for "would revoking user's hbpr/albanian_tl
+    role strand an open HBPR↔Albanian TL assignment."
+
+    ``new_state`` maps a subset of {'hbpr', 'albanian_tl'} to the role state
+    the user WILL have after the pending change — a role_code absent from
+    ``new_state`` is treated as "not touched by this request" and is never
+    checked. Every caller that can revoke these roles must call this before
+    mutating anything, so a revoke initiated through any path is checked the
+    same way (mirrors ``find_blocked_tl_revocations``).
+    """
+    from apps.users.models.hbpr import HbprAlbanianTlAssignment
+
+    blocked = []
+    for role_code in ('hbpr', 'albanian_tl'):
+        if new_state.get(role_code, None) is not False:
+            continue  # not being revoked by this request
+        lookup = 'hbpr' if role_code == 'hbpr' else 'albanian_tl'
+        open_rows = HbprAlbanianTlAssignment.objects.filter(
+            **{lookup: user}, effective_to__isnull=True
+        ).select_related('hbpr', 'albanian_tl')
+        if open_rows.exists():
+            blocked.append({'role': role_code, 'assignment_count': open_rows.count()})
+    return blocked

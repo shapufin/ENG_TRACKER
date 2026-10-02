@@ -37,8 +37,20 @@ class TicketKPIPlugin(BasePlugin):
     def get_permission_manifest(self):
         return {
             **super().get_permission_manifest(),
-            "view": {"roles": [], "public": True},
-            "manage": {"roles": [], "public": True},
+            # Ticket/evidence KPIs are outside the HBPR role; multi-role
+            # HBPR+HR/TL/CR-admin keeps access via the overrides.
+            "view": {
+                "roles": [],
+                "denied_roles": ["hbpr"],
+                "denial_override_roles": ["hr", "italian_tl", "albanian_tl", "cr_admin"],
+                "public": True,
+            },
+            "manage": {
+                "roles": [],
+                "denied_roles": ["hbpr"],
+                "denial_override_roles": ["hr", "italian_tl", "albanian_tl", "cr_admin"],
+                "public": True,
+            },
         }
 
     def get_frontend_metadata(self):

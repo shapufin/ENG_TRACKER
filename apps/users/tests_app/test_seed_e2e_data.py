@@ -30,16 +30,17 @@ class SeedE2EDataTests(TestCase):
         self.assertEqual(_roles("e2e_cr"), {"employee", "cr_admin"})
         self.assertEqual(_roles("e2e_hbpr"), {"employee", "hbpr"})
 
-    def test_hbpr_scope_covers_italian_team_but_not_the_albanian_team(self):
+    def test_hbpr_scope_is_assignment_backed(self):
         from apps.users.services.hbpr_scope import get_hbpr_scope
 
         scope = get_hbpr_scope(User.objects.get(username="e2e_hbpr"))
         ids = {u.username: u.id for u in User.objects.filter(username__startswith="e2e_")}
-        # e2e_tl_b reports to the Italian TL in the seeded org chart, so it is in scope.
-        for name in ("e2e_tl", "e2e_employee_a", "e2e_employee_b", "e2e_tl_b"):
+        # Assigned to e2e_tl_b: that Albanian TL and their team are in scope.
+        for name in ("e2e_tl_b", "e2e_employee_c"):
             self.assertTrue(scope.has_user(ids[name]), name)
-        # Leak canaries: the Albanian TL's own report and the HBPR themselves.
-        for name in ("e2e_employee_c", "e2e_hbpr"):
+        # The Italian TL is no longer in scope (no assignment to them), and the
+        # HBPR is never in their own scope.
+        for name in ("e2e_tl", "e2e_employee_a", "e2e_employee_b", "e2e_hbpr"):
             self.assertFalse(scope.has_user(ids[name]), name)
 
     def test_superuser_is_a_real_superuser(self):

@@ -109,17 +109,23 @@ class OfflineSubmissionIdempotency(models.Model):
 
 
 def event_type_choices():
-    """Core event types plus any a plugin registered in the type registry.
+    """Core event types, plugin-registered types, and preference groups.
 
     Callable so a plugin adding a notification type needs no migration. A
     plugin that is removed simply stops contributing; stored rows keep
     working because the column is a plain string.
+
+    Preference *groups* are included so a preference row stored under a group
+    key (several event types sharing one user-facing toggle — the HBPR
+    governance groups) resolves a display label instead of the raw key.
     """
-    from plugins.notifications.types.base import REGISTRY
+    from plugins.notifications.types.base import REGISTRY, get_preference_groups
 
     known = dict(NotificationPreference.EVENT_TYPES)
     for event_type, cls in REGISTRY.items():
         known.setdefault(event_type, cls.label or event_type)
+    for group, label in get_preference_groups().items():
+        known.setdefault(group, label or group)
     return sorted(known.items())
 
 

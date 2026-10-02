@@ -73,11 +73,24 @@ class TlScorecardPlugin(BasePlugin):
                     # their own records (see MyRecordsViewSet).
                     "self_service": True,
                 },
+                {
+                    # The HBPR's own workspace: assignment-backed governance
+                    # records, cadence and EPR evidence. Not /tl-scorecard —
+                    # that is the Albanian TL's authoring page.
+                    "path": "/hbpr",
+                    "component": "HbprWorkspacePage",
+                    "layout": "app",
+                },
             ],
             "injection_slots": [
                 {
                     "slot": "sidebar-nav",
                     "component": "TLScorecardSidebarLink",
+                    "section": "leadership",
+                },
+                {
+                    "slot": "sidebar-nav",
+                    "component": "HbprSidebarLink",
                     "section": "leadership",
                 },
                 {

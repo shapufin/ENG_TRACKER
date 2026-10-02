@@ -1,21 +1,15 @@
-"""HBPR (HR Business Partner, Italy) role helpers and population scope.
+"""HBPR (HR Business Partner, Italy) role helpers and assignment scope.
 
-The HBPR population is *computed*, never stored: every active holder of the
-``italian_tl`` role (database role or legacy flag), plus everyone those TLs
-manage per ``UserProfile.get_team_member_ids()`` — direct ``italian_tl`` /
-``albanian_tl`` FK reports, members of teams the TL belongs to, and members of
-teams the TL leads. The ``italian_tl`` FK on its own is NOT used: every profile
-carries both TL FKs, so it would match nearly everyone.
-
-All HBPRs share one population. Scope is built in exactly one place
-(``_population``) so a per-HBPR assignment table could replace it later.
+Scope is **explicit, not computed**: an HBPR sees exactly the Albanian TLs they
+have an open ``HbprAlbanianTlAssignment`` for, plus those TLs' current
+``UserProfile.get_team_member_ids()`` union. There is no global "all Italian
+TLs" population any more — the assignment table is the single source of truth.
 
 This module is core: it must never import from ``plugins.*``.
 """
 from dataclasses import dataclass
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q
 
 from apps.permissions.services.role_service import has_role
 
@@ -27,6 +21,7 @@ _SCOPE_ATTR = '_hbpr_scope'
 
 @dataclass(frozen=True)
 class HbprScope:
+    assignment_ids: frozenset
     tl_ids: frozenset
     member_ids: frozenset
 
@@ -49,47 +44,62 @@ def is_hbpr(user) -> bool:
     return has_role(user, HBPR_ROLE_CODE)
 
 
-def _population() -> tuple[frozenset, frozenset]:
-    """Return ``(tl_ids, member_ids)`` for the Italian population, unfiltered."""
-    from apps.users.models.core import Team, UserProfile
+def _assignment_population(hbpr) -> tuple[frozenset, frozenset, frozenset]:
+    """Return ``(assignment_ids, tl_ids, member_ids)`` for one HBPR.
 
-    tl_ids = frozenset(
-        User.objects.filter(is_active=True).filter(
-            Q(user_roles__is_active=True, user_roles__role__code='italian_tl')
-            | Q(profile__is_italian_tl_role=True)
-        ).values_list('id', flat=True).distinct()
+    Only *open* assignments whose AL TL is active count. ``member_ids`` is the
+    union of each assigned AL TL's ``get_team_member_ids()`` (which does not
+    itself filter by ``is_active``), minus the TLs themselves and minus
+    deactivated users — mirroring the old population's active-only rule.
+    """
+    from apps.users.services.hbpr_assignments import (
+        active_assignments_for_hbpr,
+        today,
     )
-    if not tl_ids:
-        return frozenset(), frozenset()
 
-    team_ids = set(
-        Team.objects.filter(
-            Q(team_leader_id__in=tl_ids) | Q(user_memberships__user_profile__user_id__in=tl_ids)
-        ).values_list('id', flat=True)
-    )
-    filters = Q(italian_tl_id__in=tl_ids) | Q(albanian_tl_id__in=tl_ids)
-    if team_ids:
-        filters |= Q(teams__id__in=team_ids)
-    member_ids = frozenset(
-        UserProfile.objects.filter(filters, user__is_active=True)
-        .values_list('user_id', flat=True).distinct()
-    )
-    return tl_ids, member_ids
+    # `on_date=today()` so a FUTURE-dated assignment grants no scope until it
+    # starts; open-but-not-yet-effective rows must not leak data early.
+    assignments = [
+        a for a in active_assignments_for_hbpr(hbpr, on_date=today())
+        if a.albanian_tl.is_active
+    ]
+    if not assignments:
+        return frozenset(), frozenset(), frozenset()
+
+    assignment_ids = frozenset(a.id for a in assignments)
+    tl_ids = frozenset(a.albanian_tl_id for a in assignments)
+    member_ids: set = set()
+    for assignment in assignments:
+        profile = getattr(assignment.albanian_tl, 'profile', None)
+        if profile is not None:
+            member_ids |= profile.get_team_member_ids()
+    member_ids -= tl_ids
+    if member_ids:
+        active_ids = set(
+            User.objects.filter(id__in=member_ids, is_active=True).values_list(
+                'id', flat=True
+            )
+        )
+        member_ids &= active_ids
+    return assignment_ids, tl_ids, frozenset(member_ids)
 
 
 def get_hbpr_scope(user) -> 'HbprScope | None':
     """Scope for an HBPR viewer, or ``None`` if ``user`` is not an HBPR.
 
-    The viewer is removed from their own scope so an HBPR can never act on
-    records about themselves. Memoised on the user instance for the request.
+    An HBPR with no open assignments gets an *empty* scope (not ``None``): they
+    are still an HBPR, they just cover nobody. The viewer is removed from their
+    own scope so an HBPR can never act on records about themselves. Memoised on
+    the user instance for the request.
     """
     if not is_hbpr(user):
         return None
     cached = getattr(user, _SCOPE_ATTR, None)
     if cached is not None:
         return cached
-    tl_ids, member_ids = _population()
+    assignment_ids, tl_ids, member_ids = _assignment_population(user)
     scope = HbprScope(
+        assignment_ids=assignment_ids,
         tl_ids=tl_ids - {user.id},
         member_ids=member_ids - {user.id},
     )
@@ -98,23 +108,32 @@ def get_hbpr_scope(user) -> 'HbprScope | None':
 
 
 def hbpr_user_ids_for(subject_user, owner_id=None) -> list:
-    """Ids of active HBPR users who cover ``subject_user`` (notification
-    recipients). Empty when the subject is outside the Italian population.
-    The subject is never their own recipient. When ``owner_id`` (the TL who
-    wrote the record) is given it must be an Italian TL too, mirroring the
-    read rule: a record HBPRs cannot open must not notify them."""
-    tl_ids, member_ids = _population()
-    if subject_user.id not in tl_ids and subject_user.id not in member_ids:
+    """Ids of active HBPR users who cover a record (notification recipients).
+
+    ``owner_id`` is the AL TL who owns the record. The covering HBPR is the
+    owner of that TL's open assignment. Returns ``[]`` when the owner has no
+    open assignment, the HBPR is inactive, or the subject is neither the owner
+    nor one of the owner's current team members — mirroring the read rule, so a
+    record the HBPR cannot open never notifies them. The subject is never their
+    own recipient.
+    """
+    if owner_id is None:
         return []
-    if owner_id is not None and owner_id not in tl_ids:
-        return []
-    return list(
-        User.objects.filter(
-            is_active=True,
-            user_roles__is_active=True,
-            user_roles__role__code=HBPR_ROLE_CODE,
-        )
-        .exclude(id=subject_user.id)
-        .values_list('id', flat=True)
-        .distinct()
+    from apps.users.services.hbpr_assignments import (
+        active_assignment_for_tl,
+        today,
     )
+
+    assignment = active_assignment_for_tl(owner_id, on_date=today())
+    if assignment is None or not assignment.hbpr.is_active:
+        return []
+    if not assignment.albanian_tl.is_active:
+        return []
+    if subject_user.id == assignment.hbpr_id:
+        return []
+    profile = getattr(assignment.albanian_tl, 'profile', None)
+    if profile is None:
+        return []
+    if subject_user.id != owner_id and subject_user.id not in profile.get_team_member_ids():
+        return []
+    return [assignment.hbpr_id]

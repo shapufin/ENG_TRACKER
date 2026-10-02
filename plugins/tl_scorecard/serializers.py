@@ -1,3 +1,5 @@
+from datetime import date
+
 from rest_framework import serializers
 
 from .models import (
@@ -5,6 +7,7 @@ from .models import (
     EngagementSurveyResponse,
     EPRCycle,
     EPRGoal,
+    HbprGovernanceEvidence,
     IdleFlag,
     IdleStatusUpdate,
     Meeting,
@@ -19,6 +22,9 @@ def _display_name(user):
     if user is None:
         return None
     return user.get_full_name() or user.username
+
+
+_UNSET = object()
 
 
 class LeaveSlaSerializer(serializers.Serializer):
@@ -232,7 +238,12 @@ class IdleFlagSerializer(_OwnerOnlyNotesMixin, serializers.ModelSerializer):
         return _display_name(obj.flagged_by)
 
 
-class ReviewDeliverySerializer(serializers.ModelSerializer):
+class ReviewDeliverySerializer(_OwnerOnlyNotesMixin, serializers.ModelSerializer):
+    """``notes``/``reference_url`` are the TL's private record — redacted for
+    anyone but the owner and staff, like every other record family. The
+    substance (recipient, period, delivered date) stays visible."""
+
+    owner_field = 'leader'
     leader_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -377,3 +388,109 @@ class EscalationCandidateSerializer(serializers.Serializer):
     subject_name = serializers.CharField()
     detail = serializers.CharField()
     since = serializers.DateField()
+
+
+class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
+    """Evidence of the HBPR↔AL-TL relationship. ``recorded_by``/``updated_by``
+    are server-set (never taken from the payload); ``next_due_on`` and
+    ``cadence_status`` are computed from the owning assignment's cadence."""
+
+    kind_display = serializers.CharField(source='get_kind_display', read_only=True)
+    recorded_by_name = serializers.SerializerMethodField()
+    updated_by_name = serializers.SerializerMethodField()
+    albanian_tl = serializers.IntegerField(
+        source='assignment.albanian_tl_id', read_only=True
+    )
+    hbpr = serializers.IntegerField(source='assignment.hbpr_id', read_only=True)
+    cadence = serializers.CharField(source='assignment.cadence', read_only=True)
+    next_due_on = serializers.SerializerMethodField()
+    cadence_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HbprGovernanceEvidence
+        fields = [
+            'id', 'assignment', 'albanian_tl', 'hbpr', 'cadence',
+            'kind', 'kind_display', 'occurred_on', 'reporting_year',
+            'shared_summary', 'action_items', 'reference_url',
+            'recorded_by', 'recorded_by_name', 'updated_by', 'updated_by_name',
+            'next_due_on', 'cadence_status',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'recorded_by', 'updated_by', 'created_at', 'updated_at',
+        ]
+
+    def get_recorded_by_name(self, obj):
+        return _display_name(obj.recorded_by)
+
+    def get_updated_by_name(self, obj):
+        return _display_name(obj.updated_by)
+
+    def _last_cadence_on(self, obj):
+        """Latest cadence meeting for the owning assignment.
+
+        Prefers the `last_cadence_on` annotation the viewset adds (one query for
+        a whole list); falls back to a query for a bare instance.
+        """
+        annotated = getattr(obj, 'last_cadence_on', _UNSET)
+        if annotated is not _UNSET:
+            return annotated
+        return (
+            HbprGovernanceEvidence.objects.filter(
+                assignment_id=obj.assignment_id, kind='cadence_meeting'
+            )
+            .order_by('-occurred_on')
+            .values_list('occurred_on', flat=True)
+            .first()
+        )
+
+    def get_next_due_on(self, obj):
+        assignment = obj.assignment
+        if not assignment.is_current:
+            return None
+        # The raw cadence date, matching the admin assignment serializer and the
+        # HBPR overview. Lateness is carried by `cadence_status`, not by
+        # rewriting the date, so all three surfaces agree.
+        return str(assignment.next_due_on(last_meeting_on=self._last_cadence_on(obj)))
+
+    def get_cadence_status(self, obj):
+        from apps.users.services.hbpr_assignments import cadence_status
+
+        # One definition, shared with the admin serializer and the HBPR overview
+        # (an inline copy here could never emit 'due' on the exact due date).
+        return cadence_status(obj.assignment, last_meeting_on=self._last_cadence_on(obj))
+
+    def validate(self, attrs):
+        # Evidence cannot be re-homed. `assignment` is writable on create (the AL
+        # TL picks their own partnership), but moving an existing row would hand
+        # it to another TL's partnership — and to that TL's HBPR — while the
+        # ownership check in `perform_update` only looks at the row's OLD owner.
+        new_assignment = attrs.get('assignment')
+        if (
+            self.instance is not None
+            and new_assignment is not None
+            and new_assignment.id != self.instance.assignment_id
+        ):
+            raise serializers.ValidationError(
+                {'assignment': 'Evidence cannot be moved to another assignment.'}
+            )
+
+        kind = attrs.get('kind', getattr(self.instance, 'kind', None))
+        year = attrs.get('reporting_year', getattr(self.instance, 'reporting_year', None))
+        if kind in HbprGovernanceEvidence.EPR_KINDS and year is None:
+            raise serializers.ValidationError(
+                {'reporting_year': 'Required for EPR participation evidence.'}
+            )
+        if kind == 'cadence_meeting' and year is not None:
+            raise serializers.ValidationError(
+                {'reporting_year': 'Only EPR evidence carries a reporting year.'}
+            )
+
+        # Evidence records something that happened; a future date would also make
+        # `next_due_on` future and read as 'on_track' prematurely.
+        occurred_on = attrs.get('occurred_on', getattr(self.instance, 'occurred_on', None))
+        if occurred_on is not None and occurred_on > date.today():
+            raise serializers.ValidationError(
+                {'occurred_on': 'Evidence cannot be recorded for a future date.'}
+            )
+        return attrs

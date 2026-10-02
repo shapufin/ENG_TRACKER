@@ -59,6 +59,22 @@ class PluginPermission(models.Model):
         related_name='plugin_permissions',
         help_text="Groups that have access to this plugin action"
     )
+    denied_roles = models.ManyToManyField(
+        Role,
+        blank=True,
+        related_name='plugin_permission_denials',
+        help_text="Roles explicitly denied this plugin action (e.g. HBPR-only "
+                  "users on plugins outside their role). Beats is_public and "
+                  "allowed_roles unless a denial_override_role matches."
+    )
+    denial_override_roles = models.ManyToManyField(
+        Role,
+        blank=True,
+        related_name='plugin_permission_denial_overrides',
+        help_text="Elevated roles that keep access even when a denied_role "
+                  "matches (e.g. an HBPR user who is also HR). Never list "
+                  "'employee' here."
+    )
     
     # Metadata
     is_public = models.BooleanField(
@@ -83,7 +99,7 @@ class PluginPermission(models.Model):
     
     def has_access(self, user, *, role_ids=None, group_ids=None):
         """Check access, optionally using preloaded role/group ID sets."""
-        if user.is_superuser or user.is_staff or self.is_public:
+        if user.is_superuser or user.is_staff:
             return True
 
         if role_ids is None:
@@ -92,6 +108,12 @@ class PluginPermission(models.Model):
             )
         if group_ids is None:
             group_ids = set(user.user_groups.values_list('group_id', flat=True))
+
+        if self.denies_access(user, role_ids=role_ids):
+            return False
+
+        if self.is_public:
+            return True
 
         allowed_role_ids = {
             role.id for role in self.allowed_roles.all()
@@ -103,6 +125,29 @@ class PluginPermission(models.Model):
             group.id for group in self.allowed_groups.all()
         }
         return bool(allowed_group_ids.intersection(group_ids))
+
+    def denies_access(self, user, *, role_ids=None) -> bool:
+        """True when a denied_role matches and no denial_override_role does.
+
+        Side-effect-free; also used by ``active_metadata`` to keep a denied
+        plugin's routes/injection slots from registering for HBPR-only users
+        while preserving public access for everyone else. Reads the M2M sets
+        through ``.all()`` so a prefetch cache is honored (callers that check
+        many rows must prefetch both fields — see ``get_user_permissions``).
+        """
+        if user.is_superuser or user.is_staff:
+            return False
+        denied_ids = {role.id for role in self.denied_roles.all()}
+        if not denied_ids:
+            return False
+        if role_ids is None:
+            role_ids = set(
+                user.user_roles.filter(is_active=True).values_list('role_id', flat=True)
+            )
+        if not denied_ids.intersection(role_ids):
+            return False
+        override_ids = {role.id for role in self.denial_override_roles.all()}
+        return not override_ids.intersection(role_ids)
     
     @classmethod
     def get_user_permissions(cls, user, plugin_name=None):
@@ -128,7 +173,10 @@ class PluginPermission(models.Model):
             user.user_roles.filter(is_active=True).values_list('role_id', flat=True)
         )
         group_ids = set(user.user_groups.values_list('group_id', flat=True))
-        query = cls.objects.prefetch_related('allowed_roles', 'allowed_groups')
+        query = cls.objects.prefetch_related(
+            'allowed_roles', 'allowed_groups', 'denied_roles',
+            'denial_override_roles',
+        )
         if plugin_name:
             query = query.filter(plugin_name=plugin_name)
 

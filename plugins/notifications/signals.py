@@ -54,16 +54,23 @@ def _create_notification(
     notification_type='info',
     link=None,
     dedupe_key=None,
+    preference_key=None,
 ):
-    """Deliver an event according to the recipient's saved preferences."""
+    """Deliver an event according to the recipient's saved preferences.
+
+    ``preference_key`` is the key the user's preference row is stored under;
+    it defaults to ``event_type`` but may be a group shared by several event
+    types (the HBPR governance groups). The admin kill-switch stays per-event.
+    """
     notification = None
+    pref_key = preference_key or event_type
 
     # Admin kill-switch wins over per-user rows: a globally disabled type
     # emits nothing, even for users who never toggled it off themselves.
     if not NotificationEventTypeConfig.is_type_enabled(event_type):
         return None
 
-    if _preference_enabled(user, event_type, 'in_app'):
+    if _preference_enabled(user, pref_key, 'in_app'):
         defaults = {
             'title': title,
             'message': message,
@@ -79,7 +86,7 @@ def _create_notification(
         else:
             notification = Notification.objects.create(user=user, **defaults)
 
-    if _preference_enabled(user, event_type, 'push'):
+    if _preference_enabled(user, pref_key, 'push'):
         try:
             send_push_notification(user, title, message, url=link)
         except Exception:

@@ -174,7 +174,45 @@ def _build_governance_sheet(wb, fmt, governance):
     )
 
 
-def build_workbook_bytes(scorecard, kpi_coverage, governance, period_label):
+def _build_hbpr_evidence_sheet(wb, fmt, evidence):
+    """HBPR ↔ Albanian TL governance evidence.
+
+    Cadence meetings and the mid-year / year-end EPR participation records the
+    AL TL authored for the HBPR relationship. Employee one-on-one meetings are
+    never part of this data set.
+    """
+    ws = wb.add_worksheet("HBPR evidence")
+    ws.hide_gridlines(2)
+    ws.set_column("A:A", 22)
+    ws.set_column("B:B", 14)
+    ws.set_column("C:C", 10)
+    ws.set_column("D:D", 40)
+    ws.set_column("E:E", 40)
+    ws.set_column("F:F", 26)
+
+    headers = [
+        "Kind", "Occurred on", "Year", "Shared summary",
+        "Action items", "Reference",
+    ]
+    ws.merge_range(0, 0, 0, len(headers) - 1, "HBPR ↔ Albanian TL evidence", fmt.header)
+    for col, label in enumerate(headers):
+        ws.write(1, col, label, fmt.label)
+
+    row = 2
+    if not evidence:
+        ws.write(row, 0, "No evidence recorded yet", fmt.empty)
+        return
+    for item in evidence:
+        ws.write(row, 0, item["kind_display"], fmt.cell_center)
+        ws.write(row, 1, item["occurred_on"], fmt.cell_center)
+        ws.write(row, 2, item["reporting_year"] or "—", fmt.cell_center)
+        ws.write(row, 3, item["shared_summary"] or "—", fmt.cell)
+        ws.write(row, 4, item["action_items"] or "—", fmt.cell)
+        ws.write(row, 5, item["reference_url"] or "—", fmt.cell)
+        row += 1
+
+
+def build_workbook_bytes(scorecard, kpi_coverage, governance, period_label, hbpr_evidence=None):
     """Build the tl_scorecard evidence workbook and return raw .xlsx bytes."""
     buffer = io.BytesIO()
     # Free text (absence reasons, names) must never become a formula or link.
@@ -192,5 +230,6 @@ def build_workbook_bytes(scorecard, kpi_coverage, governance, period_label):
     _build_summary_sheet(wb, fmt, scorecard, period_label)
     _build_kpi_coverage_sheet(wb, fmt, kpi_coverage)
     _build_governance_sheet(wb, fmt, governance)
+    _build_hbpr_evidence_sheet(wb, fmt, hbpr_evidence or [])
     wb.close()
     return buffer.getvalue()

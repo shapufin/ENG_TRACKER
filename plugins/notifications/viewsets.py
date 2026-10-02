@@ -2,12 +2,12 @@ from rest_framework import viewsets, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import (
-    event_type_choices,
     Notification,
     NotificationEventTypeConfig,
     NotificationPreference,
     PushSubscription,
 )
+from core.mixins.permissions import is_hbpr_only
 from .types.base import REGISTRY
 from .vapid_utils import get_public_key
 
@@ -83,7 +83,13 @@ class NotificationViewSet(viewsets.ModelViewSet):
         count = self.get_queryset().filter(is_read=False).count()
         return Response({'count': count})
 
-    def _available_event_types(self, user):
+    def _available_preference_pairs(self, user):
+        """``(key, label, push_default)`` rows the user may configure.
+
+        A *key* is a preference key: usually the event type itself, but several
+        event types may share one group key (the HBPR governance groups), so
+        Settings shows one row per group rather than one per event.
+        """
         profile = getattr(user, 'profile', None)
         is_oversight_recipient = bool(
             user.is_staff or user.is_superuser or
@@ -96,19 +102,50 @@ class NotificationViewSet(viewsets.ModelViewSet):
             getattr(profile, 'is_team_leader', False) or
             (hasattr(user, 'led_teams') and user.led_teams.exists())
         )
-        available = _types_in_category('own')
+        event_types = _types_in_category('own')
         if is_team_recipient:
-            available |= _types_in_category('team')
+            event_types |= _types_in_category('team')
         if is_oversight_recipient:
-            available |= _types_in_category('oversight')
-        # Admin kill-switch: globally disabled types vanish from the
-        # preferences list (and PATCH) so user frontends stop showing them.
-        return {t for t in available if NotificationEventTypeConfig.is_type_enabled(t)}
+            event_types |= _types_in_category('oversight')
+        if is_hbpr_only(user):
+            # An HBPR-only user has no leave/overtime/standby of their own
+            # (those surfaces are denied), so the employee categories are
+            # meaningless — only the governance groups apply.
+            event_types = _types_in_category('oversight')
+
+        core_labels = dict(NotificationPreference.EVENT_TYPES)
+        labels: dict[str, str] = {}
+        push_defaults: dict[str, bool] = {}
+        for event_type in event_types:
+            # Admin kill-switch: globally disabled types vanish from the
+            # preferences list (and PATCH) so user frontends stop showing them.
+            if not NotificationEventTypeConfig.is_type_enabled(event_type):
+                continue
+            registered = REGISTRY.get(event_type)
+            if registered is None:
+                key = event_type
+                label = core_labels.get(event_type, event_type)
+                push_default = True
+            else:
+                key = registered.preference_key
+                label = registered.preference_group_label or registered.label or event_type
+                push_default = registered.push_by_default
+            labels.setdefault(key, label)
+            # A group is push-off by default if ANY member type is
+            # (conservative for HR matters).
+            push_defaults[key] = push_defaults.get(key, True) and push_default
+        return [
+            (key, labels[key], push_defaults.get(key, True)) for key in sorted(labels)
+        ]
+
+    def _available_event_types(self, user):
+        return {key for key, _label, _push in self._available_preference_pairs(user)}
 
     @action(detail=False, methods=['get', 'patch'])
     def preferences(self, request):
         """Read or update the current user's notification preferences."""
-        available = self._available_event_types(request.user)
+        pairs = self._available_preference_pairs(request.user)
+        available = {key for key, _label, _push in pairs}
 
         if request.method == 'PATCH':
             event_type = request.data.get('event_type')
@@ -139,15 +176,14 @@ class NotificationViewSet(viewsets.ModelViewSet):
                 event_type__in=available,
             )
         }
-        rows = []
-        for event_type, _label in event_type_choices():
-            if event_type in available:
-                registered = REGISTRY.get(event_type)
-                rows.append(existing.get(event_type) or NotificationPreference(
-                    user=request.user,
-                    event_type=event_type,
-                    push_enabled=registered.push_by_default if registered else True,
-                ))
+        rows = [
+            existing.get(key) or NotificationPreference(
+                user=request.user,
+                event_type=key,
+                push_enabled=push_default,
+            )
+            for key, _label, push_default in pairs
+        ]
         serializer = NotificationPreferenceSerializer(
             rows,
             many=True,

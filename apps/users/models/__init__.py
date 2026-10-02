@@ -13,6 +13,7 @@ from .core import (
     UserTech,
     TeamMembership,
 )
+from .hbpr import HbprAlbanianTlAssignment
 
 __all__ = [
     'ApprovalPeriodBoundary',
@@ -24,4 +25,5 @@ __all__ = [
     'UserProfile',
     'UserTech',
     'TeamMembership',
+    'HbprAlbanianTlAssignment',
 ]

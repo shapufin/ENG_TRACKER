@@ -50,7 +50,8 @@ class NotificationPluginLifecycleTest(TestCase):
         actual = {
             lookup_key[0]
             for signal in (pre_save, post_save, post_delete)
-            for lookup_key, _receiver, _sender_ref, _is_async in signal.receivers
+            # Django 5.2 stores 3-tuples, 6.x 4-tuples (adds is_async): index, don't unpack.
+            for lookup_key in (entry[0] for entry in signal.receivers)
             if isinstance(lookup_key, tuple)
             and isinstance(lookup_key[0], str)
             and lookup_key[0].startswith('notifications.')

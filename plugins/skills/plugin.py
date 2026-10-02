@@ -39,6 +39,10 @@ class SkillsPlugin(BasePlugin):
             # Catalog ViewSets use default mapping (writes → manage, HR-only).
             "view": {
                 "roles": ["employee", "hr", "italian_tl", "albanian_tl", "cr_admin"],
+                # HBPR-only users have no skills-matrix duties; multi-role
+                # HBPR+HR/TL/CR-admin keeps access via the overrides.
+                "denied_roles": ["hbpr"],
+                "denial_override_roles": ["hr", "italian_tl", "albanian_tl", "cr_admin"],
                 "public": True,
             },
             "manage": {"roles": ["hr"], "public": False},

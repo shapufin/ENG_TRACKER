@@ -9,6 +9,8 @@ not depend on a plugin permission grant, which employees do not hold.
 from rest_framework import permissions, viewsets
 from rest_framework.response import Response
 
+from core.mixins.permissions import HbprBlockedMixin
+
 from .models import EPRCycle, Meeting, PIPRecord
 
 
@@ -64,7 +66,7 @@ def _epr_cycles(user):
     ]
 
 
-class MyRecordsViewSet(viewsets.ViewSet):
+class MyRecordsViewSet(HbprBlockedMixin, viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = None
 

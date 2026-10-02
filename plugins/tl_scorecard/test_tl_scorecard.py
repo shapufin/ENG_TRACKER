@@ -133,8 +133,13 @@ class TLScorecardServiceTests(TestCase):
         )
         team_meeting = Meeting.objects.create(
             meeting_type='team_meeting', organizer=self.leader, occurred_on=self.month.date(),
-            notes_published_at=self.month + timedelta(hours=2),
         )
+        # Publish notes 2h after the row was created, not 2h after a fixed
+        # calendar day: `self.month` is the 15th, which is in the future early
+        # in a month, making the gap > 24h and the metric 0.
+        Meeting.objects.filter(pk=team_meeting.pk).update(
+            notes_published_at=team_meeting.created_at + timedelta(hours=2))
+        team_meeting.refresh_from_db()
         MeetingAttendee.objects.create(meeting=team_meeting, user=_make_user('hrbp_x'), role='hrbp')
 
         result = meeting_compliance_metrics(self.leader, {self.member.id}, self.month_start)

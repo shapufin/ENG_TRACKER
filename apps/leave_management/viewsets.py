@@ -22,6 +22,7 @@ from django.db.models import Prefetch, Count
 from django.db.models.functions import TruncMonth
 from core.pagination import LargeResultsPagination
 from core.mixins.permissions import (
+    HbprBlockedMixin,
     SuperuserPermissionMixin,
     PersonalOnlyFilterMixin,
     TeamLeaderFilterMixin,
@@ -94,7 +95,7 @@ def ensure_current_year_balance(user, year):
     return balance
 
 
-class LeaveBalanceViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, HRReadOnlyMixin, PersonalOnlyFilterMixin, viewsets.ModelViewSet):
+class LeaveBalanceViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserPermissionMixin, HRReadOnlyMixin, PersonalOnlyFilterMixin, viewsets.ModelViewSet):
     """ViewSet for LeaveBalance model. Admin/HR can update; regular users read-only."""
     allow_staff_global_view = False
     staff_global_view_actions = {'team_balances'}
@@ -248,7 +249,7 @@ class LeaveBalanceViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, HRRe
         return summary
 
 
-class GlobalSettingsViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.ModelViewSet):
+class GlobalSettingsViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.ModelViewSet):
     """ViewSet for GlobalSettings singleton. Admin write, all authenticated read."""
     queryset = GlobalSettings.objects.all()
     serializer_class = GlobalSettingsSerializer
@@ -296,7 +297,7 @@ class GlobalSettingsViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, vi
         self.invalidate_related_cache()
 
 
-class LeaveRequestViewSet(SuperuserPermissionMixin, HRReadOnlyMixin, TeamLeaderFilterMixin, BulkActionMixin, viewsets.ModelViewSet):
+class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnlyMixin, TeamLeaderFilterMixin, BulkActionMixin, viewsets.ModelViewSet):
     """ViewSet for LeaveRequest model."""
     allow_staff_global_view = False
     staff_global_view_actions = {'approve', 'reject', 'bulk_approve', 'bulk_reject', 'bulk_delete', 'team_logs', 'team_pending'}

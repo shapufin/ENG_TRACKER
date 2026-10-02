@@ -9,10 +9,18 @@ from django.utils import timezone
 from apps.permissions.models import Role
 from apps.permissions.services.role_service import assign_role
 from apps.users.models.core import UserProfile
-from plugins.notifications.models import Notification
+from apps.users.models.hbpr import HbprAlbanianTlAssignment
+from plugins.notifications.models import Notification, NotificationPreference
 
 from . import signals
-from .models import Absence, IdleFlag, Meeting, PIPRecord, PromotionFlag
+from .models import (
+    Absence,
+    HbprGovernanceEvidence,
+    IdleFlag,
+    Meeting,
+    PIPRecord,
+    PromotionFlag,
+)
 
 
 def _make_user(username, **kwargs):
@@ -32,11 +40,17 @@ class ScorecardNotificationTests(TestCase):
             Role.objects.get_or_create(code=code, defaults={'name': code})
         self.hbpr = _make_user('hbpr_n')
         assign_role(self.hbpr, 'hbpr')
+        # The assigned Albanian TL (owns the records) + their report.
         self.tl = _make_user('tl_n')
-        assign_role(self.tl, 'italian_tl')
+        assign_role(self.tl, 'albanian_tl')
         self.emp = _make_user('emp_n', first_name='Giulia', last_name='Rossi')
-        self.emp.profile.italian_tl = self.tl
+        self.emp.profile.albanian_tl = self.tl
         self.emp.profile.save()
+        HbprAlbanianTlAssignment.objects.create(
+            hbpr=self.hbpr, albanian_tl=self.tl,
+            cadence='weekly', effective_from=date(2020, 1, 1),
+        )
+        # An UNASSIGNED Albanian TL + their report: must never notify the HBPR.
         self.al_tl = _make_user('al_tl_n')
         assign_role(self.al_tl, 'albanian_tl')
         self.al_emp = _make_user('al_emp_n')
@@ -111,8 +125,8 @@ class ScorecardNotificationTests(TestCase):
         self.assertEqual(len(self._titles(self.hbpr)), 2)
         self.assertEqual(self._titles(self.emp), [])
         links = set(Notification.objects.filter(user=self.hbpr).values_list('link', flat=True))
-        self.assertEqual(links, {'/tl-scorecard?tab=records&kind=idle',
-                                 '/tl-scorecard?tab=records&kind=absences'})
+        self.assertEqual(links, {'/hbpr?view=records&kind=idle',
+                                 '/hbpr?view=records&kind=absences'})
 
     def test_promotion_nomination_and_decision(self):
         promo = self._fire(lambda: PromotionFlag.objects.create(
@@ -197,8 +211,9 @@ class ScorecardPreferenceVisibilityTests(ScorecardNotificationTests):
 
     def test_hbpr_sees_oversight_types_with_push_off(self):
         prefs = self._prefs(self.hbpr)
-        self.assertIn('scorecard_pip_pending', prefs)
-        self.assertFalse(prefs['scorecard_pip_pending']['push_enabled'])
+        # HBPR oversight events are grouped into user-facing preference keys.
+        self.assertIn('hbpr_pip_promotion', prefs)
+        self.assertFalse(prefs['hbpr_pip_promotion']['push_enabled'])
         self.assertNotIn('scorecard_pip_decided', prefs)  # TL-facing
 
     def test_tl_sees_decision_types_not_oversight(self):
@@ -226,3 +241,104 @@ class OutOfScopeOwnerTests(ScorecardNotificationTests):
         request = APIRequestFactory().patch('/x/', {'event_type': ['a']}, format='json')
         force_authenticate(request, user=self.hbpr)
         self.assertEqual(NotificationViewSet.as_view({'patch': 'preferences'})(request).status_code, 400)
+
+
+class HbprGovernanceNotificationTests(TestCase):
+    """The five grouped HBPR governance notifications."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        signals.connect()
+
+    def setUp(self):
+        for code in ('hbpr', 'albanian_tl', 'italian_tl'):
+            Role.objects.get_or_create(code=code, defaults={'name': code})
+        self.hbpr = _make_user('hbpr_gov')
+        assign_role(self.hbpr, 'hbpr')
+        self.tl = _make_user('tl_gov')
+        assign_role(self.tl, 'albanian_tl')
+        self.assignment = HbprAlbanianTlAssignment.objects.create(
+            hbpr=self.hbpr, albanian_tl=self.tl,
+            cadence='weekly', effective_from=date(2020, 1, 1),
+        )
+        self.other_hbpr = _make_user('other_hbpr_gov')
+        assign_role(self.other_hbpr, 'hbpr')
+
+    def _fire(self, fn):
+        with self.captureOnCommitCallbacks(execute=True):
+            return fn()
+
+    def _titles(self, user):
+        return list(Notification.objects.filter(user=user).values_list('title', flat=True))
+
+    def _cadence(self, **overrides):
+        data = {
+            'assignment': self.assignment, 'kind': 'cadence_meeting',
+            'occurred_on': date.today(), 'recorded_by': self.tl,
+        }
+        data.update(overrides)
+        return self._fire(lambda: HbprGovernanceEvidence.objects.create(**data))
+
+    def test_cadence_evidence_notifies_the_assigned_hbpr(self):
+        self._cadence()
+        self.assertEqual(self._titles(self.hbpr), ['A partnership meeting was recorded'])
+        self.assertEqual(self._titles(self.other_hbpr), [])
+
+    def test_epr_evidence_notifies_the_assigned_hbpr(self):
+        self._cadence(kind='epr_mid_year', reporting_year=date.today().year)
+        self.assertEqual(self._titles(self.hbpr), ['Your EPR participation was recorded'])
+
+    def test_review_delivery_notifies_the_assigned_hbpr(self):
+        from .models import ReviewDelivery
+
+        self._fire(lambda: ReviewDelivery.objects.create(
+            leader=self.tl, period='2026-01', recipient='Ops',
+            delivered_on=date.today(),
+        ))
+        self.assertEqual(self._titles(self.hbpr), ['A review was delivered'])
+
+    def test_disabling_the_group_suppresses_the_notification(self):
+        NotificationPreference.objects.create(
+            user=self.hbpr, event_type='hbpr_meetings', in_app_enabled=False,
+        )
+        self._cadence()
+        self.assertEqual(self._titles(self.hbpr), [])
+
+    def test_group_toggle_covers_every_member_event(self):
+        # `hbpr_pip_promotion` covers both PIP and promotion events.
+        NotificationPreference.objects.create(
+            user=self.hbpr, event_type='hbpr_pip_promotion', in_app_enabled=False,
+        )
+        self._fire(lambda: PromotionFlag.objects.create(
+            employee=self._make_member(), nominated_by=self.tl,
+            nominated_on=date.today(),
+        ))
+        self.assertEqual(self._titles(self.hbpr), [])
+
+    def _make_member(self):
+        member = _make_user('gov_member')
+        member.profile.albanian_tl = self.tl
+        member.profile.save()
+        return member
+
+    def test_available_groups_for_hbpr_only(self):
+        from plugins.notifications.viewsets import NotificationViewSet
+
+        available = NotificationViewSet()._available_event_types(self.hbpr)
+        for group in (
+            'hbpr_meetings', 'hbpr_epr', 'hbpr_pip_promotion',
+            'hbpr_team_risks', 'hbpr_record_updates',
+        ):
+            self.assertIn(group, available)
+        # An HBPR-only user gets no employee own/team categories.
+        self.assertNotIn('own_leave_submitted', available)
+        self.assertNotIn('team_action_required', available)
+
+    def test_employee_keeps_own_categories_and_no_hbpr_groups(self):
+        from plugins.notifications.viewsets import NotificationViewSet
+
+        employee = _make_user('plain_gov')
+        available = NotificationViewSet()._available_event_types(employee)
+        self.assertIn('own_leave_submitted', available)
+        self.assertNotIn('hbpr_meetings', available)

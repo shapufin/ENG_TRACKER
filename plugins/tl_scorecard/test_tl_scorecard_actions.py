@@ -11,6 +11,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 from apps.permissions.models import Role
 from apps.permissions.services.role_service import assign_role
 from apps.users.models.core import UserProfile
+from apps.users.models.hbpr import HbprAlbanianTlAssignment
 
 from .models import Absence, IdleFlag, Meeting, MeetingAttendee, PIPRecord, PromotionFlag
 from .viewsets import (
@@ -32,18 +33,24 @@ def _make_user(username, **kwargs):
 class ActionsBase(TestCase):
     def setUp(self):
         self.factory = APIRequestFactory()
-        for code in ('hbpr', 'italian_tl'):
+        for code in ('hbpr', 'italian_tl', 'albanian_tl'):
             Role.objects.get_or_create(code=code, defaults={'name': code})
         call_command('seed_plugin_permissions')
         self.hbpr = _make_user('hbpr_act')
         assign_role(self.hbpr, 'hbpr')
+        # The assigned Albanian TL (owns the records) + their report.
         self.tl = _make_user('tl_act')
-        assign_role(self.tl, 'italian_tl')
+        assign_role(self.tl, 'albanian_tl')
         self.member = _make_user('member_act')
-        self.member.profile.italian_tl = self.tl
+        self.member.profile.albanian_tl = self.tl
         self.member.profile.save()
+        HbprAlbanianTlAssignment.objects.create(
+            hbpr=self.hbpr, albanian_tl=self.tl,
+            cadence='weekly', effective_from=date(2020, 1, 1),
+        )
+        # An unassigned Albanian TL.
         self.other_tl = _make_user('other_tl_act')
-        assign_role(self.other_tl, 'italian_tl')
+        assign_role(self.other_tl, 'albanian_tl')
         self.staff = _make_user('staff_act', is_staff=True)
         self.today = date.today()
 
@@ -82,8 +89,14 @@ class PipTransitionTests(ActionsBase):
         self.pip.refresh_from_db()
         self.assertEqual(self.pip.employee_id, self.member.id)
 
-    def test_hbpr_can_return_a_draft_pip_with_a_reason(self):
+    def test_hbpr_cannot_return_a_draft_pip(self):
         resp = self.call(PIPRecordViewSet, 'reject', self.hbpr, self.pip.id, {'status_note': 'Needs evidence'})
+        self.assertIn(resp.status_code, (403, 404))
+        self.pip.refresh_from_db()
+        self.assertEqual(self.pip.status, 'draft')
+
+    def test_staff_can_return_a_draft_pip_with_a_reason(self):
+        resp = self.call(PIPRecordViewSet, 'reject', self.staff, self.pip.id, {'status_note': 'Needs evidence'})
         self.assertEqual(resp.status_code, 200, resp.data)
         self.pip.refresh_from_db()
         self.assertEqual(self.pip.status, 'cancelled')
@@ -91,14 +104,14 @@ class PipTransitionTests(ActionsBase):
         self.assertEqual(self.pip.closed_on, self.today)
 
     def test_return_requires_a_reason(self):
-        resp = self.call(PIPRecordViewSet, 'reject', self.hbpr, self.pip.id, {})
+        resp = self.call(PIPRecordViewSet, 'reject', self.staff, self.pip.id, {})
         self.assertEqual(resp.status_code, 400)
         self.pip.refresh_from_db()
         self.assertEqual(self.pip.status, 'draft')
 
     def test_return_only_applies_to_a_draft(self):
         self._active()
-        resp = self.call(PIPRecordViewSet, 'reject', self.hbpr, self.pip.id, {'status_note': 'x'})
+        resp = self.call(PIPRecordViewSet, 'reject', self.staff, self.pip.id, {'status_note': 'x'})
         self.assertEqual(resp.status_code, 409)
 
     def test_tl_cannot_return_their_own_pip(self):
@@ -150,12 +163,21 @@ class PromotionAuditTests(ActionsBase):
         flag = PromotionFlag.objects.create(
             employee=self.member, nominated_by=self.tl, nominated_on=self.today)
         resp = self.call(
-            PromotionFlagViewSet, 'decide', self.hbpr, flag.id,
+            PromotionFlagViewSet, 'decide', self.staff, flag.id,
             {'status': 'declined', 'decision_note': 'Not yet'})
         self.assertEqual(resp.status_code, 200, resp.data)
         flag.refresh_from_db()
-        self.assertEqual(flag.decided_by_id, self.hbpr.id)
+        self.assertEqual(flag.decided_by_id, self.staff.id)
         self.assertEqual(flag.decision_note, 'Not yet')
+
+    def test_hbpr_cannot_decide(self):
+        flag = PromotionFlag.objects.create(
+            employee=self.member, nominated_by=self.tl, nominated_on=self.today)
+        resp = self.call(
+            PromotionFlagViewSet, 'decide', self.hbpr, flag.id, {'status': 'promoted'})
+        self.assertIn(resp.status_code, (403, 404))
+        flag.refresh_from_db()
+        self.assertEqual(flag.status, 'nominated')
 
 
 class IdleAndAbsenceActionTests(ActionsBase):
@@ -224,11 +246,13 @@ class MeetingShareAndPrivacyTests(ActionsBase):
         force_authenticate(request, user=user)
         return MeetingViewSet.as_view({'get': 'retrieve'})(request, pk=self.meeting.id)
 
-    def test_hbpr_does_not_see_private_notes_unless_an_attendee(self):
-        self.assertEqual(self._read(self.hbpr).data['notes'], '')
+    def test_hbpr_cannot_read_a_one_on_one_at_all(self):
+        # Employee one-on-ones are never part of the HBPR slice, so an HBPR
+        # gets not-found even though the owner TL is assigned to them.
+        self.assertEqual(self._read(self.hbpr).status_code, 404)
+
+    def test_owner_tl_reads_their_own_private_notes(self):
         self.assertEqual(self._read(self.tl).data['notes'], 'private TL notes')
-        MeetingAttendee.objects.create(meeting=self.meeting, user=self.hbpr, role='hrbp')
-        self.assertEqual(self._read(self.hbpr).data['notes'], 'private TL notes')
 
     def test_hbpr_does_not_see_pip_private_notes_but_sees_shared_notes(self):
         pip = PIPRecord.objects.create(
@@ -276,8 +300,8 @@ class AttendeeRulesTests(ActionsBase):
 
 
 class AttendeeOwnNotesTests(ActionsBase):
-    """An HBPR who attended writes her own notes; she holds plugin `view` only,
-    so this is a participation action rather than a generic attendee write."""
+    """HBPR is read-only: it never writes attendee notes. The organizer (TL)
+    still manages attendees on their own meetings."""
 
     def setUp(self):
         super().setUp()
@@ -285,12 +309,11 @@ class AttendeeOwnNotesTests(ActionsBase):
             meeting_type='team_meeting', organizer=self.tl, occurred_on=self.today)
         self.att = MeetingAttendee.objects.create(meeting=self.meeting, user=self.hbpr, role='hrbp')
 
-    def test_attendee_writes_own_notes(self):
-        resp = self.call(MeetingAttendeeViewSet, 'notes', self.hbpr, self.att.id, {'notes': ' Agreed actions '})
-        self.assertEqual(resp.status_code, 200, resp.data)
+    def test_hbpr_cannot_write_attendee_notes(self):
+        resp = self.call(MeetingAttendeeViewSet, 'notes', self.hbpr, self.att.id, {'notes': 'Agreed actions'})
+        self.assertIn(resp.status_code, (403, 404))
         self.att.refresh_from_db()
-        self.assertEqual(self.att.notes, 'Agreed actions')
-        self.assertEqual(resp.data['notes'], 'Agreed actions')
+        self.assertEqual(self.att.notes, '')
 
     def test_cannot_write_someone_elses_notes(self):
         other = _make_user('hbpr_other')
@@ -307,7 +330,9 @@ class AttendeeOwnNotesTests(ActionsBase):
             meeting_type='team_meeting', organizer=outsider, occurred_on=self.today)
         att = MeetingAttendee.objects.create(meeting=meeting, user=self.hbpr, role='hrbp')
         resp = self.call(MeetingAttendeeViewSet, 'notes', self.hbpr, att.id, {'notes': 'x'})
-        self.assertEqual(resp.status_code, 404)
+        self.assertIn(resp.status_code, (403, 404))
+        att.refresh_from_db()
+        self.assertEqual(att.notes, '')
 
     def test_the_tl_cannot_use_it_to_write_the_attendees_notes(self):
         resp = self.call(MeetingAttendeeViewSet, 'notes', self.tl, self.att.id, {'notes': 'x'})
@@ -324,29 +349,32 @@ class LegacyPipRowTests(ActionsBase):
             employee=self.member, tl=self.tl, start_date=self.today, status='active')
 
     def test_legacy_pending_plan_can_be_approved(self):
-        resp = self.call(PIPRecordViewSet, 'approve', self.hbpr, self.legacy.id)
+        resp = self.call(PIPRecordViewSet, 'approve', self.staff, self.legacy.id)
         self.assertEqual(resp.status_code, 200, resp.data)
         self.legacy.refresh_from_db()
-        self.assertEqual((self.legacy.status, self.legacy.approved_by_id), ('active', self.hbpr.id))
+        self.assertEqual((self.legacy.status, self.legacy.approved_by_id), ('active', self.staff.id))
         self.assertIsNotNone(self.legacy.approved_at)
 
     def test_legacy_pending_plan_can_be_returned(self):
-        resp = self.call(PIPRecordViewSet, 'reject', self.hbpr, self.legacy.id, {'status_note': 'Rework'})
+        resp = self.call(PIPRecordViewSet, 'reject', self.staff, self.legacy.id, {'status_note': 'Rework'})
         self.assertEqual(resp.status_code, 200, resp.data)
         self.legacy.refresh_from_db()
         self.assertEqual(self.legacy.status, 'cancelled')
 
-    def test_legacy_pending_plan_counts_as_awaiting_approval_not_active(self):
-        from apps.users.services.hbpr_scope import get_hbpr_scope
-        from .services_hbpr import overview
-        data = overview(get_hbpr_scope(self.hbpr))
-        self.assertEqual(data['needs_attention']['pips_awaiting_approval'], 1)
-        row = next(r for r in data['tls'] if r['id'] == self.tl.id)
-        self.assertEqual((row['pending_pips'], row['active_pips']), (1, 0))
+    def test_hbpr_cannot_approve_or_return(self):
+        for name, data in (('approve', None), ('reject', {'status_note': 'x'})):
+            resp = self.call(PIPRecordViewSet, name, self.hbpr, self.legacy.id, data)
+            self.assertIn(resp.status_code, (403, 404), name)
+
+    def test_legacy_pending_plan_is_still_awaiting_approval(self):
+        # A row saved 'active' without an approval stays pending — the flag the
+        # approve/reject actions gate on. (It is no longer surfaced in the HBPR
+        # overview, which carries cadence/EPR attention only.)
+        self.assertTrue(self.legacy.awaiting_approval)
 
     def test_approved_plan_still_cannot_be_approved_twice(self):
-        self.call(PIPRecordViewSet, 'approve', self.hbpr, self.legacy.id)
-        resp = self.call(PIPRecordViewSet, 'approve', self.hbpr, self.legacy.id)
+        self.call(PIPRecordViewSet, 'approve', self.staff, self.legacy.id)
+        resp = self.call(PIPRecordViewSet, 'approve', self.staff, self.legacy.id)
         self.assertEqual(resp.status_code, 409)
 
 

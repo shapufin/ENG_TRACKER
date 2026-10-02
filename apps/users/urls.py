@@ -11,6 +11,7 @@ from .viewsets import (
     UserViewSet,
     UserProfileViewSet,
     TeamViewSet,
+    HbprAssignmentViewSet,
 )
 
 router = DefaultRouter()
@@ -20,6 +21,7 @@ router.register(r'techs', TechViewSet, basename='tech')
 router.register(r'tech-levels', TechLevelViewSet, basename='tech-level')
 router.register(r'teams', TeamViewSet, basename='team')
 router.register(r'approval-periods', ApprovalPeriodViewSet, basename='approval-period')
+router.register(r'hbpr-assignments', HbprAssignmentViewSet, basename='hbpr-assignment')
 
 urlpatterns = [
     path('', include(router.urls)),

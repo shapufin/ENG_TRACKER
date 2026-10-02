@@ -1,4 +1,5 @@
-"""HBPR dashboard endpoints: needs-attention counts, per-TL table, people list."""
+"""HBPR workspace endpoints: assignment-backed cadence/EPR overview and the
+in-scope people list. Both are read-only and strictly assignment-scoped."""
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -24,7 +25,11 @@ class HbprViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def overview(self, request):
-        return Response(services_hbpr.overview(self._scope(request)))
+        try:
+            year = services_hbpr.parse_reporting_year(request.query_params.get('year'))
+        except ValueError as exc:
+            raise ValidationError({'year': str(exc)})
+        return Response(services_hbpr.overview(self._scope(request), reporting_year=year))
 
     @action(detail=False, methods=['get'])
     def people(self, request):

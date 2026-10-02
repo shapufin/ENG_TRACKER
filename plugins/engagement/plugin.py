@@ -36,7 +36,14 @@ class EngagementPlugin(BasePlugin):
     def get_permission_manifest(self):
         return {
             **super().get_permission_manifest(),
-            "view": {"roles": ["italian_tl", "albanian_tl", "hbpr"], "public": False},
+            # Engagement metrics are TL/staff-only: HBPR reads governance
+            # records through tl_scorecard, not standalone engagement scores.
+            "view": {
+                "roles": ["italian_tl", "albanian_tl"],
+                "denied_roles": ["hbpr"],
+                "denial_override_roles": ["italian_tl", "albanian_tl"],
+                "public": False,
+            },
         }
 
     def get_frontend_metadata(self):

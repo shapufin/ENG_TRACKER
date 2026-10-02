@@ -2,20 +2,18 @@
 Read-only TL engagement metrics endpoints.
 
 All data is served from `TLApprovalMetric` snapshots (never computed at
-request time). `view` access is TL-only via the plugin permission manifest;
-row-level scoping additionally restricts non-staff users to their own
-(leader=request.user) rows; an HBPR also reads the Italian TLs' rows.
+request time). `view` access is TL-only via the plugin permission manifest
+(HBPR is explicitly denied); row-level scoping restricts non-staff users to
+their own (leader=request.user) rows only.
 """
 from datetime import date
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import Q
 from django.http import HttpResponse
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.users.services.hbpr_scope import get_hbpr_scope
 from core.mixins.permissions import PluginPermissionMixin
 
 from .excel_export import build_workbook_bytes
@@ -43,13 +41,9 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
         user = request.user
         if user.is_staff or user.is_superuser:
             return qs
-        scope = get_hbpr_scope(user)
-        if scope is not None:
-            # An HBPR reads the Italian TLs' snapshots; a TL role on the same
-            # user still adds their own row.
-            visible = scope.tl_ids | {user.id}
-            ensure_current_month_snapshots(visible)
-            return qs.filter(Q(leader=user) | Q(leader_id__in=scope.tl_ids))
+        # HBPR has no Engagement access at all (denied at the plugin-permission
+        # level), and the role must never broaden this viewset even for a
+        # multi-role HBPR+TL user: only the viewer's own TL row is visible.
         ensure_current_month_snapshots({user.id})
         return qs.filter(leader=user)
 

@@ -14,22 +14,24 @@ def validate_manifest(manifest: dict) -> None:
     if unknown_actions:
         raise ValueError(f"Unsupported plugin action(s): {', '.join(sorted(unknown_actions))}")
 
-    role_codes = {
+    all_codes = {
         code
         for settings in manifest.values()
-        for code in settings.get("roles", [])
+        for key in ("roles", "denied_roles", "denial_override_roles")
+        for code in settings.get(key, [])
     }
-    existing_codes = set(Role.objects.filter(code__in=role_codes).values_list("code", flat=True))
-    unknown_roles = role_codes - existing_codes
+    existing_codes = set(Role.objects.filter(code__in=all_codes).values_list("code", flat=True))
+    unknown_roles = all_codes - existing_codes
     if unknown_roles:
         raise ValueError(f"Unknown plugin role code(s): {', '.join(sorted(unknown_roles))}")
 
     for action, settings in manifest.items():
         if not isinstance(settings, dict):
             raise ValueError(f"Permission manifest for {action} must be an object")
-        roles = settings.get("roles", [])
-        if not isinstance(roles, list) or not all(isinstance(code, str) for code in roles):
-            raise ValueError(f"Permission manifest roles for {action} must be a list of codes")
+        for key in ("roles", "denied_roles", "denial_override_roles"):
+            codes = settings.get(key, [])
+            if not isinstance(codes, list) or not all(isinstance(code, str) for code in codes):
+                raise ValueError(f"Permission manifest {key} for {action} must be a list of codes")
         if not isinstance(settings.get("public", False), bool):
             raise ValueError(f"Permission manifest public flag for {action} must be boolean")
 
@@ -39,15 +41,21 @@ def sync_plugin_permission_manifest(plugin, *, reset=False) -> dict[str, int]:
 
     Existing rows are preserved by default so administrator customizations are
     not silently overwritten. New rows receive explicit deny unless the
-    manifest grants public or role access.
+    manifest grants public or role access. Manifest-owned denial and override
+    roles are always reconciled (even without ``reset``) so a plugin that
+    declares HBPR-only denial keeps it after every boot sync.
     """
     manifest = plugin.get_permission_manifest()
     validate_manifest(manifest)
+    all_codes = {
+        code
+        for settings in manifest.values()
+        for key in ("roles", "denied_roles", "denial_override_roles")
+        for code in settings.get(key, [])
+    }
     role_ids = {
         role.code: role.id
-        for role in Role.objects.filter(
-            code__in={code for settings in manifest.values() for code in settings.get("roles", [])}
-        )
+        for role in Role.objects.filter(code__in=all_codes)
     }
     created = 0
     updated = 0
@@ -71,4 +79,10 @@ def sync_plugin_permission_manifest(plugin, *, reset=False) -> dict[str, int]:
                     [role_ids[code] for code in settings.get("roles", [])]
                 )
                 updated += 1
+            permission.denied_roles.set(
+                [role_ids[code] for code in settings.get("denied_roles", [])]
+            )
+            permission.denial_override_roles.set(
+                [role_ids[code] for code in settings.get("denial_override_roles", [])]
+            )
     return {"created": created, "updated": updated}

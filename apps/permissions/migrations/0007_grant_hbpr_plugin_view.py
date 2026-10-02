@@ -28,6 +28,11 @@ def revoke(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ('permissions', '0006_seed_hbpr_role'),
-        ('plugins', '__latest__'),
+        # Pinned to the migration that actually creates the PluginPermission
+        # table. It used to be ('plugins', '__latest__'), which made this
+        # already-applied migration depend on every FUTURE plugins migration —
+        # adding one (e.g. 0010_seed_hbpr_plugin_denial) then tripped
+        # InconsistentMigrationHistory on any DB where this row was applied.
+        ('plugins', '0007_plugin_permission_system'),
     ]
     operations = [migrations.RunPython(grant, revoke)]

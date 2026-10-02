@@ -64,6 +64,31 @@ class MyRecordsTests(TestCase):
         request = APIRequestFactory().get('/x/')
         self.assertIn(MyRecordsViewSet.as_view({'get': 'list'})(request).status_code, (401, 403))
 
+    def test_hbpr_only_user_is_denied(self):
+        """My Records is denied for HBPR-only identities (approved decision 13).
+
+        It is a self-service surface with no plugin grant, so the denial comes
+        from `HbprBlockedMixin`, not from a permission manifest.
+        """
+        from apps.permissions.models import Role
+        from apps.permissions.services.role_service import assign_role
+
+        Role.objects.get_or_create(code='hbpr', defaults={'name': 'hbpr'})
+        hbpr = _make_user('hbpr_mr')
+        assign_role(hbpr, 'hbpr')
+        self.assertEqual(self._get(hbpr).status_code, 403)
+
+    def test_multi_role_user_keeps_my_records(self):
+        # HBPR+HR keeps the non-HBPR role's access; the block is HBPR-only.
+        from apps.permissions.models import Role
+        from apps.permissions.services.role_service import assign_role
+
+        Role.objects.get_or_create(code='hr', defaults={'name': 'hr'})
+        multi = _make_user('hbpr_hr_mr')
+        assign_role(multi, 'hbpr')
+        assign_role(multi, 'hr')
+        self.assertEqual(self._get(multi).status_code, 200)
+
     def test_shows_only_shared_one_on_ones_about_me(self):
         data = self._get(self.emp).data
         self.assertEqual(len(data['one_on_ones']), 1)

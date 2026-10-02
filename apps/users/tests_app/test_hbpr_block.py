@@ -92,8 +92,28 @@ class HbprOnlyBlockTests(APITestCase):
         response = self.client.get('/api/overtime/logs/')
         self.assertEqual(response.status_code, 200)
 
-    def test_hbpr_keeps_own_leave_access(self):
-        # Leave and Calendar stay available to HBPR for their own use.
+    def test_hbpr_own_leave_access_blocked(self):
+        # Approved plan (decision 13): HBPR-only users are denied Leave.
         self.client.force_authenticate(self.hbpr)
         response = self.client.get('/api/leave-management/requests/')
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 403)
+
+    def test_hbpr_own_calendar_access_blocked(self):
+        # Calendar is a static core surface, denied via HbprBlockedMixin rather
+        # than a plugin manifest — both Calendar view sets must refuse.
+        self.client.force_authenticate(self.hbpr)
+        for path in ('/api/dashboard/calendar-workspaces/', '/api/dashboard/holidays/'):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path).status_code, 403, path)
+
+    def test_calendar_stays_available_to_other_roles(self):
+        # The block is HBPR-only: the same endpoints keep working for an
+        # employee and for a multi-role user who also holds another role.
+        for name, roles in (('cal-emp', ['employee']), ('cal-tl-hbpr', ['hbpr', 'italian_tl'])):
+            with self.subTest(user=name):
+                self.client.force_authenticate(_user(name, roles))
+                self.assertEqual(
+                    self.client.get('/api/dashboard/calendar-workspaces/').status_code,
+                    200,
+                    name,
+                )

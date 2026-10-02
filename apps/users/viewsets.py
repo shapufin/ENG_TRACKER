@@ -30,6 +30,7 @@ from .serializers import (
     TeamSerializer,
     TeamHierarchySerializer,
     ApprovalPeriodSerializer,
+    HbprAlbanianTlAssignmentSerializer,
 )
 from .services.hbpr_scope import get_hbpr_scope
 from .services.tech_assignments import (
@@ -646,6 +647,24 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 # Clear team leader references
                 Team.objects.filter(team_leader=user).update(team_leader=None)
 
+                # HBPR↔AL-TL assignments PROTECT both participants: an
+                # assigned user must have their assignments ended (history
+                # retained) before the account can be deleted.
+                from apps.users.models.hbpr import HbprAlbanianTlAssignment
+
+                open_assignments = HbprAlbanianTlAssignment.objects.filter(
+                    Q(hbpr=user) | Q(albanian_tl=user), effective_to__isnull=True
+                )
+                if open_assignments.exists():
+                    failed_users.append({
+                        'id': user.id,
+                        'reason': (
+                            'User has open HBPR↔Albanian TL assignments; '
+                            'end or reassign them first.'
+                        ),
+                    })
+                    continue
+
                 logger.info(f"Clearing references for user {user.id} complete, attempting deletion")
                 user.delete()
                 deleted_count += 1
@@ -714,7 +733,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         Payload: any of {email, first_name, last_name, phone, team, albanian_tl, italian_tl, is_hr, is_italian_tl_role, is_albanian_tl_role, is_cr_admin}
         """
         from .services.user_creation import _set_cr_admin_role, _sync_legacy_roles, _sync_roles
-        from apps.permissions.services.role_service import find_blocked_tl_revocations
+        from apps.permissions.services.role_service import (
+            find_blocked_hbpr_revocations,
+            find_blocked_tl_revocations,
+        )
         user = self.get_object()
         data = request.data
 
@@ -758,6 +780,41 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                         'assigned to them: ' + summary
                     ),
                     'blocked_revocations': blocked_revocations,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Same pre-check for the HBPR↔Albanian-TL assignment FK: revoking
+        # hbpr/albanian_tl while an open assignment depends on it would
+        # strand the assignment's scope resolution. Checked before any
+        # mutation so a refusal leaves the profile untouched.
+        if 'roles' in data:
+            hbpr_new_state = {
+                'hbpr': 'hbpr' in requested_roles,
+                'albanian_tl': 'albanian_tl' in requested_roles,
+            }
+        else:
+            hbpr_new_state = {}
+            if 'is_albanian_tl_role' in data:
+                hbpr_new_state['albanian_tl'] = bool(data['is_albanian_tl_role'])
+        blocked_hbpr = (
+            find_blocked_hbpr_revocations(user, hbpr_new_state)
+            if profile_for_check and hbpr_new_state
+            else []
+        )
+        if blocked_hbpr:
+            summary = '; '.join(
+                f"{b['role']}: {b['assignment_count']} open HBPR↔"
+                "Albanian TL assignment(s) depend on this role"
+                for b in blocked_hbpr
+            )
+            return Response(
+                {
+                    'error': (
+                        'Cannot revoke role while an open HBPR↔Albanian TL '
+                        'assignment depends on it: ' + summary
+                    ),
+                    'blocked_hbpr_revocations': blocked_hbpr,
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -1825,3 +1882,146 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         updated = Team.objects.filter(calendar_group=calendar_group).update(calendar_group='')
 
         return Response({'updated_count': updated})
+
+
+class HbprAssignmentViewSet(viewsets.ModelViewSet):
+    """Admin-managed HBPR ↔ Albanian TL assignments.
+
+    Staff/admin only. No destructive delete: history is closed via the
+    ``end`` action so governance evidence keeps a resolvable FK.
+    """
+
+    from .models.hbpr import HbprAlbanianTlAssignment as _Model
+
+    queryset = (
+        _Model.objects.select_related("hbpr", "albanian_tl")
+        .order_by("-effective_from", "-id")
+    )
+    serializer_class = HbprAlbanianTlAssignmentSerializer
+    permission_classes = [IsAdminUser]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = [
+        "hbpr__username", "hbpr__first_name", "hbpr__last_name",
+        "albanian_tl__username", "albanian_tl__first_name",
+        "albanian_tl__last_name",
+    ]
+
+    def get_serializer_class(self):
+        return HbprAlbanianTlAssignmentSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        current = self.request.query_params.get("current")
+        if current is not None:
+            if current not in ("true", "false"):
+                raise DRFValidationError(
+                    {"current": "current must be 'true' or 'false'."}
+                )
+            qs = qs.filter(effective_to__isnull=(current == "true"))
+        return qs
+
+    def perform_create(self, serializer):
+        from django.db import IntegrityError
+
+        from .services.hbpr_assignments import AssignmentError, create_assignment
+
+        data = serializer.validated_data
+        try:
+            assignment = create_assignment(
+                hbpr=data["hbpr"],
+                albanian_tl=data["albanian_tl"],
+                cadence=data["cadence"],
+                effective_from=data["effective_from"],
+                assigned_by=self.request.user,
+            )
+        except AssignmentError as exc:
+            raise DRFValidationError({"detail": str(exc)})
+        except IntegrityError:
+            # Two concurrent first assignments for one TL both pass the
+            # service check (an empty row set locks nothing); the partial
+            # unique is the real gate. Translate to the same structured 400.
+            raise DRFValidationError(
+                {
+                    "detail": (
+                        "An open assignment already exists for this Albanian "
+                        "TL. End or reassign it first."
+                    )
+                }
+            )
+        serializer.instance = assignment
+
+    def perform_update(self, serializer):
+        # Cadence/effective_from edits are allowed on an open assignment;
+        # ending goes through the explicit ``end`` action.
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        raise DRFValidationError(
+            "Assignments cannot be deleted. End the assignment instead so "
+            "governance evidence keeps a resolvable reference."
+        )
+
+    @action(detail=True, methods=["post"])
+    def end(self, request, pk=None):
+        from datetime import date as date_type
+
+        from .services.hbpr_assignments import AssignmentError, end_assignment
+
+        raw = request.data.get("effective_to")
+        try:
+            effective_to = date_type.fromisoformat(raw)
+        except (TypeError, ValueError):
+            raise DRFValidationError(
+                {"effective_to": "A valid ISO date is required."}
+            )
+        try:
+            assignment = end_assignment(
+                assignment=self.get_object(),
+                effective_to=effective_to,
+                actor=request.user,
+            )
+        except AssignmentError as exc:
+            raise DRFValidationError({"detail": str(exc)})
+        serializer = self.get_serializer(assignment)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"])
+    def reassign(self, request, pk=None):
+        """Close this assignment and create its replacement in one transaction."""
+        from datetime import date as date_type
+
+        from .services.hbpr_assignments import (
+            AssignmentError,
+            reassign_assignment,
+        )
+
+        raw = request.data.get("effective_from")
+        try:
+            effective_from = date_type.fromisoformat(raw)
+        except (TypeError, ValueError):
+            raise DRFValidationError(
+                {"effective_from": "A valid ISO date is required."}
+            )
+        new_hbpr_id = request.data.get("new_hbpr")
+        cadence = request.data.get("cadence")
+        if not new_hbpr_id:
+            raise DRFValidationError({"new_hbpr": "new_hbpr is required."})
+        if not cadence:
+            raise DRFValidationError({"cadence": "cadence is required."})
+        current = self.get_object()
+        try:
+            new_hbpr_user = User.objects.get(pk=int(new_hbpr_id))
+        except (User.DoesNotExist, ValueError, TypeError):
+            raise DRFValidationError({"new_hbpr": "User does not exist."})
+        try:
+            replacement = reassign_assignment(
+                albanian_tl=current.albanian_tl,
+                new_hbpr=new_hbpr_user,
+                cadence=cadence,
+                effective_from=effective_from,
+                actor=request.user,
+            )
+        except AssignmentError as exc:
+            raise DRFValidationError({"detail": str(exc)})
+        serializer = self.get_serializer(replacement)
+        return Response(serializer.data)

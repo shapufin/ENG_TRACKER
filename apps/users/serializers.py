@@ -4,6 +4,8 @@ Users app serializers.
 This module contains DRF serializers for User, UserProfile, and Team models.
 """
 
+from datetime import date
+
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.models import User
@@ -606,3 +608,90 @@ class TeamMembershipSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class HbprAlbanianTlAssignmentSerializer(serializers.ModelSerializer):
+    """Admin-managed HBPR ↔ Albanian TL assignment with cadence state.
+
+    ``last_meeting_on``/``evidence_count`` are annotated by the ViewSet from
+    the TL-scorecard governance-evidence table; they are ``None``/0 when the
+    plugin has not produced evidence yet, so the serializer never reaches
+    across apps for them itself.
+    """
+
+    hbpr_detail = serializers.SerializerMethodField()
+    albanian_tl_detail = serializers.SerializerMethodField()
+    is_current = serializers.BooleanField(read_only=True)
+    last_meeting_on = serializers.SerializerMethodField()
+    next_due_on = serializers.SerializerMethodField()
+    cadence_status = serializers.SerializerMethodField()
+    evidence_count = serializers.SerializerMethodField()
+
+    class Meta:
+        from apps.users.models.hbpr import HbprAlbanianTlAssignment as _Model
+
+        model = _Model
+        fields = [
+            "id", "hbpr", "albanian_tl",
+            "hbpr_detail", "albanian_tl_detail",
+            "cadence", "effective_from", "effective_to",
+            "assigned_by", "ended_by",
+            "is_current", "last_meeting_on", "next_due_on",
+            "cadence_status", "evidence_count",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = [
+            "assigned_by", "ended_by", "is_current", "last_meeting_on",
+            "next_due_on", "cadence_status", "evidence_count",
+            "created_at", "updated_at",
+        ]
+
+    def update(self, instance, validated_data):
+        # Identity and range are immutable after creation: reassignment and
+        # ending go through the service (reassign/end actions) so overlap
+        # checks and audit fields cannot be bypassed via PATCH.
+        # `effective_from` is included because the DB partial-unique only
+        # constrains OPEN rows — moving the start date backward could silently
+        # overlap a closed historical range with no error. To change the range,
+        # end + create (or use `reassign`).
+        immutable = {"hbpr", "albanian_tl", "effective_from", "effective_to"}
+        attempted = sorted(immutable & set(self.initial_data))
+        if attempted:
+            from rest_framework.exceptions import ValidationError as DRFValidationError
+
+            raise DRFValidationError(
+                {
+                    field: (
+                        "This field is immutable. End the assignment or use "
+                        "the reassign action instead."
+                    )
+                    for field in attempted
+                }
+            )
+        return super().update(instance, validated_data)
+
+    def get_hbpr_detail(self, obj) -> dict:
+        user = obj.hbpr
+        return {"id": user.id, "name": user.get_full_name() or user.username}
+
+    def get_albanian_tl_detail(self, obj) -> dict:
+        user = obj.albanian_tl
+        return {"id": user.id, "name": user.get_full_name() or user.username}
+
+    def get_last_meeting_on(self, obj) -> date | None:
+        return getattr(obj, "last_meeting_on", None)
+
+    def get_next_due_on(self, obj) -> date | None:
+        last = getattr(obj, "last_meeting_on", None)
+        if last is None and not obj.is_current:
+            return None
+        return obj.next_due_on(last_meeting_on=last)
+
+    def get_evidence_count(self, obj) -> int:
+        return getattr(obj, "evidence_count", 0)
+
+    def get_cadence_status(self, obj) -> str:
+        from apps.users.services.hbpr_assignments import cadence_status
+
+        return cadence_status(obj, last_meeting_on=getattr(obj, "last_meeting_on", None))
+

@@ -16,17 +16,23 @@ class GrantHbprPluginAccessTests(TestCase):
     def _holders(self, name):
         return set(self.rows[name].allowed_roles.values_list('code', flat=True))
 
-    def test_grants_only_the_designated_plugins(self):
+    def test_grants_tl_scorecard_only(self):
         call_command('grant_hbpr_plugin_access')
         self.assertIn('hbpr', self._holders('tl_scorecard'))
-        self.assertIn('hbpr', self._holders('engagement'))
+        # Engagement was removed from the HBPR scope when the role became
+        # read-only over Albanian-TL governance.
+        self.assertNotIn('hbpr', self._holders('engagement'))
         self.assertNotIn('hbpr', self._holders('payroll'))
 
-    def test_does_not_undo_an_admin_removal(self):
-        call_command('grant_hbpr_plugin_access')
-        self.rows['engagement'].allowed_roles.remove(self.role)
+    def test_revokes_a_stale_engagement_grant(self):
+        self.rows['engagement'].allowed_roles.add(self.role)
         call_command('grant_hbpr_plugin_access')
         self.assertNotIn('hbpr', self._holders('engagement'))
+
+    def test_is_idempotent(self):
+        call_command('grant_hbpr_plugin_access')
+        call_command('grant_hbpr_plugin_access')
+        self.assertEqual(self._holders('tl_scorecard'), {'hbpr'})
 
     def test_noop_when_role_missing(self):
         self.role.delete()

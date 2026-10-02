@@ -1,25 +1,54 @@
-"""HBPR dashboard aggregates, computed in a handful of grouped queries.
+"""HBPR workspace aggregates, computed in a handful of grouped queries.
 
 Everything is limited to the viewer's ``HbprScope`` with the same rule the record
-viewsets use: the owning TL is one of the scope's TLs AND the subject is in scope,
-so a record a TL wrote about someone outside the scope is never counted.
+viewsets use: the owning TL is one of the viewer's assigned Albanian TLs AND the
+subject is in that assignment's population, so a record a TL wrote about someone
+outside the assignment is never counted.
+
+Two things are deliberately **not** surfaced here:
+
+* Employee one-on-one meetings — an HBPR sees governance records, not the
+  private employee 1:1, so there is no "behind on 1-on-1s" metric.
+* Approval/decision counts (PIP awaiting approval, promotions to decide) — those
+  are HR/staff decisions the HBPR does not make, so an attention card about them
+  would imply an action the HBPR cannot take. The HBPR's attention surface is
+  cadence and EPR governance evidence only.
 """
 from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Max, Q
-from django.utils import timezone
 
-from .models import Absence, IdleFlag, Meeting, PIPRecord, PromotionFlag
+from apps.users.models.hbpr import HbprAlbanianTlAssignment
+from apps.users.services.hbpr_assignments import cadence_status
+
+from .models import HbprGovernanceEvidence, PIPRecord
 
 User = get_user_model()
 
-ONE_ON_ONE_STALE_DAYS = 35
-ABSENCE_OVERDUE_DAYS = 5
+# An evidence row recorded within this window is "new governance activity".
+RECENT_EVIDENCE_DAYS = 7
+EPR_KINDS = ('epr_mid_year', 'epr_year_end')
 
 
 def _person(user):
     return {'id': user.id, 'name': user.get_full_name() or user.username} if user else None
+
+
+def parse_reporting_year(raw):
+    """Validate an optional ``?year=`` (2000–2100); ``None``/empty = current year.
+
+    Raises ``ValueError`` with a message the viewset turns into a 400 — shared by
+    the HBPR overview and the AL-TL partnership so both reject the same inputs.
+    """
+    if raw in (None, ''):
+        return None
+    try:
+        year = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError('year must be an integer.')
+    if year < 2000 or year > 2100:
+        raise ValueError('year must be between 2000 and 2100.')
+    return year
 
 
 def _scoped(model, scope, owner_field, subject_field='employee'):
@@ -30,21 +59,11 @@ def _scoped(model, scope, owner_field, subject_field='employee'):
 
 
 def _people_queryset(scope):
-    """Employees under the HBPR: everyone in scope who is not themselves one of the TLs."""
+    """Employees under the HBPR: everyone in scope who is not one of the TLs."""
     return (
         User.objects.filter(id__in=scope.member_ids - scope.tl_ids)
         .select_related('profile', 'profile__italian_tl', 'profile__albanian_tl')
     )
-
-
-def _last_one_on_one(person_ids):
-    return {
-        counterparty_id: last
-        for counterparty_id, last in (
-            Meeting.objects.filter(meeting_type='one_on_one', counterparty_id__in=person_ids)
-            .values_list('counterparty_id').annotate(last=Max('occurred_on'))
-        )
-    }
 
 
 def _open_pip_status(scope):
@@ -58,13 +77,11 @@ def _open_pip_status(scope):
     return result
 
 
-def _is_stale(last, today):
-    return last is None or (today - last) > timedelta(days=ONE_ON_ONE_STALE_DAYS)
-
-
 def people(scope, search='', limit=50, offset=0):
     qs = _people_queryset(scope)
     if search:
+        from django.db.models import Q
+
         qs = qs.filter(
             Q(first_name__icontains=search) | Q(last_name__icontains=search)
             | Q(username__icontains=search)
@@ -72,7 +89,6 @@ def people(scope, search='', limit=50, offset=0):
     qs = qs.order_by('first_name', 'last_name', 'username')
     total = qs.count()
     page = list(qs[offset:offset + limit])
-    last_meeting = _last_one_on_one([u.id for u in page])
     pip_status = _open_pip_status(scope)
     return {
         'count': total,
@@ -82,66 +98,140 @@ def people(scope, search='', limit=50, offset=0):
                 'italian_tl': _person(u.profile.italian_tl),
                 'albanian_tl': _person(u.profile.albanian_tl),
                 'open_pip': pip_status.get(u.id),
-                'last_one_on_one': last_meeting.get(u.id),
             }
             for u in page
         ],
     }
 
 
-def overview(scope):
+def _team_sizes(assignments, scope):
+    """AL TL id -> number of in-scope members under that TL.
+
+    Uses the same ``get_team_member_ids()`` sources the scope population uses
+    (direct `italian_tl`/`albanian_tl` FK **and** shared-team membership), then
+    intersects with the scope. Counting only the direct FK would report fewer
+    members than the HBPR can actually see records for.
+
+    Costs a few queries per *assignment*, never per member — so the overview's
+    query count still does not grow with headcount.
+    """
+    sizes = {}
+    for assignment in assignments:
+        profile = getattr(assignment.albanian_tl, 'profile', None)
+        sizes[assignment.albanian_tl_id] = (
+            len(profile.get_team_member_ids() & scope.member_ids) if profile is not None else 0
+        )
+    return sizes
+
+
+def _evidence_rollup(assignment_ids, year):
+    """Per-assignment evidence facts in one pass over the rows."""
+    last_cadence, last_evidence, counts, epr = {}, {}, {}, {}
+    rows = HbprGovernanceEvidence.objects.filter(
+        assignment_id__in=assignment_ids,
+    ).values('assignment_id', 'kind', 'reporting_year', 'occurred_on')
+    for row in rows:
+        aid = row['assignment_id']
+        counts[aid] = counts.get(aid, 0) + 1
+        occurred_on = row['occurred_on']
+        if last_evidence.get(aid) is None or occurred_on > last_evidence[aid]:
+            last_evidence[aid] = occurred_on
+        if row['kind'] == 'cadence_meeting':
+            if last_cadence.get(aid) is None or occurred_on > last_cadence[aid]:
+                last_cadence[aid] = occurred_on
+        elif row['kind'] in EPR_KINDS and row['reporting_year'] == year:
+            epr.setdefault(aid, set()).add(row['kind'])
+    return last_cadence, last_evidence, counts, epr
+
+
+def overview(scope, *, reporting_year=None):
     today = date.today()
-    now = timezone.now()
-    tls = list(User.objects.filter(id__in=scope.tl_ids))
-    members = list(_people_queryset(scope))
-    last_meeting = _last_one_on_one([u.id for u in members])
+    year = reporting_year or today.year
 
-    # Open plans are few; counting in Python keeps "awaiting approval" defined once
-    # (PIPRecord.awaiting_approval), including legacy rows saved as 'active'.
-    pip_by_tl, pending_dates = {}, []
-    for pip in _scoped(PIPRecord, scope, 'tl_id').filter(status__in=('draft', 'active')):
-        state = 'draft' if pip.awaiting_approval else 'active'
-        pip_by_tl[(pip.tl_id, state)] = pip_by_tl.get((pip.tl_id, state), 0) + 1
-        if state == 'draft':
-            pending_dates.append(pip.created_at)
-    pending = {'n': len(pending_dates), 'oldest': min(pending_dates, default=None)}
-    idle_by_tl = dict(
-        _scoped(IdleFlag, scope, 'flagged_by_id').filter(status='open')
-        .values_list('flagged_by_id').annotate(n=Count('id'))
+    assignments = list(
+        HbprAlbanianTlAssignment.objects.filter(id__in=scope.assignment_ids)
+        .select_related('albanian_tl', 'albanian_tl__profile')
+        .order_by('albanian_tl__first_name', 'albanian_tl__last_name', 'albanian_tl__username')
     )
-    absences = _scoped(Absence, scope, 'flagged_by_id').filter(addressed_on__isnull=True)
-    absence_by_tl = dict(absences.values_list('flagged_by_id').annotate(n=Count('id')))
-    overdue = absences.filter(absence_date__lte=today - timedelta(days=ABSENCE_OVERDUE_DAYS)).count()
-    promotions = _scoped(PromotionFlag, scope, 'nominated_by_id').filter(status='nominated').count()
+    assignment_ids = [a.id for a in assignments]
+    team_sizes = _team_sizes(assignments, scope)
+    last_cadence, last_evidence, counts, epr = _evidence_rollup(assignment_ids, year)
 
-    team_size, behind = {}, {}
-    for u in members:
-        for tl_id in {u.profile.italian_tl_id, u.profile.albanian_tl_id} & scope.tl_ids:
-            team_size[tl_id] = team_size.get(tl_id, 0) + 1
-            if _is_stale(last_meeting.get(u.id), today):
-                behind[tl_id] = behind.get(tl_id, 0) + 1
+    leaders = []
+    for assignment in assignments:
+        last_meeting_on = last_cadence.get(assignment.id)
+        leaders.append({
+            **_person(assignment.albanian_tl),
+            'assignment_id': assignment.id,
+            'cadence': assignment.cadence,
+            'team_size': team_sizes.get(assignment.albanian_tl_id, 0),
+            'last_meeting_on': last_meeting_on,
+            'next_due_on': (
+                assignment.next_due_on(last_meeting_on=last_meeting_on)
+                if assignment.is_current else None
+            ),
+            'cadence_status': cadence_status(assignment, last_meeting_on=last_meeting_on, on_date=today),
+            'epr_mid_year': 'epr_mid_year' in epr.get(assignment.id, ()),
+            'epr_year_end': 'epr_year_end' in epr.get(assignment.id, ()),
+            'evidence_count': counts.get(assignment.id, 0),
+            'last_evidence_on': last_evidence.get(assignment.id),
+        })
 
-    rows = [
-        {
-            **_person(tl),
-            'team_size': team_size.get(tl.id, 0),
-            'pending_pips': pip_by_tl.get((tl.id, 'draft'), 0),
-            'active_pips': pip_by_tl.get((tl.id, 'active'), 0),
-            'open_idle_flags': idle_by_tl.get(tl.id, 0),
-            'open_absences': absence_by_tl.get(tl.id, 0),
-            'people_without_recent_one_on_one': behind.get(tl.id, 0),
-        }
-        for tl in sorted(tls, key=lambda u: (u.get_full_name() or u.username).lower())
-    ]
+    recent_since = today - timedelta(days=RECENT_EVIDENCE_DAYS)
+    recent_evidence = HbprGovernanceEvidence.objects.filter(
+        assignment_id__in=assignment_ids, occurred_on__gte=recent_since,
+    ).count()
+
     return {
+        'reporting_year': year,
+        'recent_evidence_days': RECENT_EVIDENCE_DAYS,
         'needs_attention': {
-            'pips_awaiting_approval': pending['n'],
-            'oldest_pip_days': (now - pending['oldest']).days if pending['oldest'] else None,
-            'promotions_to_decide': promotions,
-            'absences_overdue': overdue,
-            'tls_behind_on_one_on_ones': sum(1 for r in rows if r['people_without_recent_one_on_one']),
+            'cadence_overdue': sum(1 for r in leaders if r['cadence_status'] == 'overdue'),
+            'cadence_due': sum(1 for r in leaders if r['cadence_status'] == 'due'),
+            'missing_mid_year_evidence': sum(1 for r in leaders if not r['epr_mid_year']),
+            'missing_year_end_evidence': sum(1 for r in leaders if not r['epr_year_end']),
+            'recent_evidence': recent_evidence,
         },
-        'tls': rows,
-        'one_on_one_stale_days': ONE_ON_ONE_STALE_DAYS,
-        'absence_overdue_days': ABSENCE_OVERDUE_DAYS,
+        'leaders': leaders,
+    }
+
+
+def partnership(leader, *, reporting_year=None):
+    """One Albanian TL's own HBPR partnership, or ``{'assignment': None}``.
+
+    The AL TL authors the evidence but cannot read the staff-only assignment API,
+    so this is where they learn who their HBPR is and what the cadence/EPR state
+    is. It shares ``_evidence_rollup``/``cadence_status`` with the HBPR overview,
+    so the AL TL's view and the HBPR's view can never disagree.
+    """
+    from apps.users.services.hbpr_assignments import active_assignment_for_tl
+
+    today = date.today()
+    year = reporting_year or today.year
+    assignment = active_assignment_for_tl(leader.id, on_date=today)
+    if assignment is None:
+        return {'reporting_year': year, 'assignment': None}
+
+    last_cadence, last_evidence, counts, epr = _evidence_rollup([assignment.id], year)
+    last_meeting_on = last_cadence.get(assignment.id)
+    return {
+        'reporting_year': year,
+        'assignment': {
+            'id': assignment.id,
+            'hbpr': _person(assignment.hbpr),
+            'cadence': assignment.cadence,
+            'effective_from': assignment.effective_from.isoformat(),
+            'last_meeting_on': last_meeting_on,
+            'next_due_on': (
+                assignment.next_due_on(last_meeting_on=last_meeting_on)
+                if assignment.is_current else None
+            ),
+            'cadence_status': cadence_status(
+                assignment, last_meeting_on=last_meeting_on, on_date=today
+            ),
+            'epr_mid_year': 'epr_mid_year' in epr.get(assignment.id, ()),
+            'epr_year_end': 'epr_year_end' in epr.get(assignment.id, ()),
+            'evidence_count': counts.get(assignment.id, 0),
+            'last_evidence_on': last_evidence.get(assignment.id),
+        },
     }
