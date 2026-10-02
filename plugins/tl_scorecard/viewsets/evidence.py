@@ -28,7 +28,7 @@ class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet
     serializer_class = HbprGovernanceEvidenceSerializer
 
     def get_queryset(self):
-        from django.db.models import OuterRef, Subquery
+        from django.db.models import Q, OuterRef, Subquery
 
         qs = HbprGovernanceEvidence.objects.select_related(
             'assignment__hbpr', 'assignment__albanian_tl', 'recorded_by', 'updated_by',
@@ -73,6 +73,23 @@ class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet
             except ValueError:
                 raise ValidationError({'year': 'year must be an integer.'})
             qs = qs.filter(reporting_year=year_value)
+        period_year = params.get('period_year')
+        if period_year:
+            # The reporting year of a record: EPR evidence by `reporting_year`,
+            # cadence meetings (no reporting year) by the year they occurred.
+            try:
+                py = int(period_year)
+            except ValueError:
+                raise ValidationError({'period_year': 'period_year must be an integer.'})
+            qs = qs.filter(
+                Q(reporting_year=py) | Q(reporting_year__isnull=True, occurred_on__year=py)
+            )
+        leader = params.get('leader')
+        if leader:
+            try:
+                qs = qs.filter(assignment__albanian_tl_id=int(leader))
+            except ValueError:
+                raise ValidationError({'leader': 'leader must be an integer.'})
         assignment = params.get('assignment')
         if assignment:
             try:

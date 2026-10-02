@@ -461,3 +461,47 @@ class EvidenceExportTenureTests(EvidenceBase):
             text = shared_strings(user)
             self.assertIn('Predecessor era note', text)
             self.assertIn('Successor era note', text)
+
+
+class EvidenceServerSideFilterTests(EvidenceBase):
+    """`period_year` and `leader` let the timeline page on the server."""
+
+    def _ids(self, user, **params):
+        request = self.factory.get('/x/', params)
+        force_authenticate(request, user=user)
+        response = HbprGovernanceEvidenceViewSet.as_view({'get': 'list'})(request)
+        self.assertEqual(response.status_code, 200, response.data)
+        rows = response.data['results'] if isinstance(response.data, dict) else response.data
+        return {row['id'] for row in rows}
+
+    def test_period_year_matches_cadence_by_date_and_epr_by_reporting_year(self):
+        cadence_now = HbprGovernanceEvidence.objects.create(
+            assignment=self.assignment, kind='cadence_meeting',
+            occurred_on=date(2026, 3, 1), recorded_by=self.tl)
+        cadence_old = HbprGovernanceEvidence.objects.create(
+            assignment=self.assignment, kind='cadence_meeting',
+            occurred_on=date(2025, 3, 1), recorded_by=self.tl)
+        epr_now = HbprGovernanceEvidence.objects.create(
+            assignment=self.assignment, kind='epr_mid_year', reporting_year=2026,
+            occurred_on=date(2026, 6, 1), recorded_by=self.tl)
+        ids = self._ids(self.hbpr, period_year=2026)
+        self.assertEqual(ids, {cadence_now.id, epr_now.id})
+        self.assertNotIn(cadence_old.id, ids)
+
+    def test_leader_filter_is_scoped_by_the_assignment_scope(self):
+        mine = HbprGovernanceEvidence.objects.create(
+            assignment=self.assignment, kind='cadence_meeting',
+            occurred_on=date(2026, 3, 1), recorded_by=self.tl)
+        HbprGovernanceEvidence.objects.create(
+            assignment=self.other_assignment, kind='cadence_meeting',
+            occurred_on=date(2026, 3, 1), recorded_by=self.other_tl)
+        self.assertEqual(self._ids(self.hbpr, leader=self.tl.id), {mine.id})
+        # Asking for someone else's leader yields nothing, never their rows.
+        self.assertEqual(self._ids(self.hbpr, leader=self.other_tl.id), set())
+
+    def test_bad_values_are_400(self):
+        for params in ({'period_year': 'x'}, {'leader': 'x'}):
+            request = self.factory.get('/x/', params)
+            force_authenticate(request, user=self.hbpr)
+            response = HbprGovernanceEvidenceViewSet.as_view({'get': 'list'})(request)
+            self.assertEqual(response.status_code, 400, params)
