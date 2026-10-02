@@ -16,6 +16,9 @@ import { E2E_CREDENTIALS, fetchApiToken, loginAsUser } from "./helpers";
 
 const API = "http://127.0.0.1:8000";
 
+/** The backend's calendar day: Django runs with TIME_ZONE="UTC", not the host's zone. */
+const serverToday = () => new Date().toISOString().slice(0, 10);
+
 async function settle(page: import("@playwright/test").Page) {
   await page.waitForLoadState("networkidle").catch(() => undefined);
   await page.waitForTimeout(300);
@@ -334,7 +337,7 @@ test.describe("Admin", () => {
     // would drop the HBPR's scope and fail every later test — so stop here with
     // an instruction instead of corrupting the fixture.
     test.skip(
-      open.effective_from >= new Date().toLocaleDateString("en-CA"),
+      open.effective_from >= serverToday(),
       "Seeded assignment is at/after today: run `python manage.py prepare_e2e_db` to reseed."
     );
     const hbprId = open.hbpr_detail?.id ?? open.hbpr;
@@ -395,7 +398,7 @@ test.describe("Employee one-on-ones stay private through every door", () => {
     const tlToken = await fetchApiToken(E2E_CREDENTIALS.albanianTeamLeader);
     const tlAuth = { Authorization: `Bearer ${tlToken}` };
     const employeeId = userIdFromToken(await fetchApiToken(E2E_CREDENTIALS.employeeC));
-    const today = new Date().toLocaleDateString("en-CA");
+    const today = serverToday();
 
     const meeting = await request.post(`${API}/api/plugins/tl_scorecard/meetings/`, {
       headers: tlAuth,
@@ -424,6 +427,14 @@ test.describe("Employee one-on-ones stay private through every door", () => {
     expect(
       (await get(request, hbprToken, `/api/plugins/tl_scorecard/meetings/${meetingId}/`)).status
     ).toBe(404);
+    // The server-paged workspace endpoint reuses the same scope: no one-on-one there either.
+    const paged = await get(
+      request,
+      hbprToken,
+      "/api/plugins/tl_scorecard/hbpr/records/?kind=meetings&limit=100"
+    );
+    expect(paged.status).toBe(200);
+    expect((paged.body.results as { id: number }[]).map((row) => row.id)).not.toContain(meetingId);
     expect(await ids("/api/plugins/tl_scorecard/meeting-attendees/")).not.toContain(attendeeId);
     expect(
       (await get(request, hbprToken, `/api/plugins/tl_scorecard/meeting-attendees/${attendeeId}/`))
@@ -457,7 +468,7 @@ test.describe("Employee one-on-ones stay private through every door", () => {
       data: {
         assignment: open.id,
         kind: "cadence_meeting",
-        occurred_on: new Date().toLocaleDateString("en-CA"),
+        occurred_on: serverToday(),
         shared_summary: "staff must not author this",
       },
     });

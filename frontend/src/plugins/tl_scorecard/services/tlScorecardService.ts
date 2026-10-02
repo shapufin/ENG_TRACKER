@@ -53,6 +53,15 @@ const listAllPages = async <T>(
 const listResource = <T>(resource: RecordResource): Promise<T[]> =>
   listAllPages<T>(`${BASE}/${resource}/`);
 
+export interface HbprRecordsQuery {
+  kind: string;
+  leader?: number;
+  status?: string;
+  period?: string;
+  limit: number;
+  offset: number;
+}
+
 const leaderParams = (leaderId?: number): Record<string, number> =>
   leaderId ? { leader_id: leaderId } : {};
 
@@ -164,6 +173,14 @@ export const tlScorecardService = {
     api.get<HbprOverview>(`${BASE}/hbpr/overview/`, { params: year ? { year } : undefined }),
 
   /** Governance evidence for the viewer's assignments (HBPR and the AL TL). */
+  /** One server-side page of one governance record kind (scope + redaction by the API). */
+  getHbprRecordsPage: (params: HbprRecordsQuery) =>
+    api.get<{ count: number; results: unknown[] }>(`${BASE}/hbpr/records/`, { params }),
+
+  /** One server-side page of evidence (DRF page numbers), filtered by reporting year/leader. */
+  listHbprEvidencePage: (params: Record<string, string | number>) =>
+    api.get<PaginatedResponse<HbprEvidence>>(`${BASE}/hbpr-evidence/`, { params }),
+
   listHbprEvidence: (
     params: { year?: number; kind?: HbprEvidenceKind; assignment?: number } = {}
   ) => listAllPages<HbprEvidence>(`${BASE}/hbpr-evidence/`, params),

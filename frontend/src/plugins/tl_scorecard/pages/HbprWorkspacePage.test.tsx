@@ -15,13 +15,8 @@ import type {
 vi.mock("../services/tlScorecardService", () => ({
   tlScorecardService: {
     getHbprOverview: vi.fn(),
-    listHbprEvidence: vi.fn(),
-    listMeetings: vi.fn(),
-    listIdleFlags: vi.fn(),
-    listAbsences: vi.fn(),
-    listReviewDeliveries: vi.fn(),
-    listPIPRecords: vi.fn(),
-    listPromotionFlags: vi.fn(),
+    listHbprEvidencePage: vi.fn(),
+    getHbprRecordsPage: vi.fn(),
   },
 }));
 
@@ -200,13 +195,22 @@ describe("HbprWorkspacePage", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     svc.getHbprOverview.mockResolvedValue(ok(OVERVIEW));
-    svc.listHbprEvidence.mockResolvedValue(EVIDENCE);
-    svc.listMeetings.mockResolvedValue([]);
-    svc.listIdleFlags.mockResolvedValue([]);
-    svc.listAbsences.mockResolvedValue([ABSENCE]);
-    svc.listReviewDeliveries.mockResolvedValue([REVIEW]);
-    svc.listPIPRecords.mockResolvedValue([]);
-    svc.listPromotionFlags.mockResolvedValue([PROMOTION]);
+    // The API filters by reporting year and leader, so the mock does too.
+    svc.listHbprEvidencePage.mockImplementation(async (params) => {
+      const rows = EVIDENCE.slice(0, 2).filter(
+        (e) => params.leader === undefined || e.albanian_tl === params.leader
+      );
+      return ok({ count: rows.length, results: rows });
+    });
+    svc.getHbprRecordsPage.mockImplementation(async ({ kind, status }) => {
+      const byKind: Record<string, unknown[]> = {
+        absences: [ABSENCE],
+        promotions: [PROMOTION],
+        reviews: [REVIEW],
+      };
+      const results = status ? [] : (byKind[kind] ?? []);
+      return ok({ count: results.length, results });
+    });
   });
 
   it("shows the attention summary and the assigned leaders roster on the overview", async () => {
@@ -263,10 +267,13 @@ describe("HbprWorkspacePage", () => {
     expect(screen.getByRole("tab", { name: "Records" })).toHaveAttribute("aria-selected", "true");
   });
 
-  it("filters records by the notification deep-link kind", async () => {
+  it("asks the API for the notification deep-link kind and shows its rows", async () => {
     renderPage("/hbpr?view=records&kind=absences");
     expect((await screen.findAllByText("Anna Rossi")).length).toBeGreaterThan(0);
     expect(screen.queryAllByText("Bruno Neri")).toHaveLength(0);
+    expect(svc.getHbprRecordsPage).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "absences", limit: 25, offset: 0 })
+    );
   });
 
   it("applies the promotion deep-link kind used by the notification links", async () => {
@@ -275,25 +282,67 @@ describe("HbprWorkspacePage", () => {
     expect(screen.queryAllByText("Anna Rossi")).toHaveLength(0);
   });
 
-  it("reports no matches for an impossible filter combination", async () => {
-    renderPage("/hbpr?view=records&kind=absences&status=promoted");
+  it("defaults to the first record type when no kind is given", async () => {
+    renderPage("/hbpr?view=records");
+    await screen.findByText("Governance records");
+    expect(svc.getHbprRecordsPage).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "meetings" })
+    );
+  });
+
+  it("reports no matches for a filter combination that returns nothing", async () => {
+    renderPage("/hbpr?view=records&kind=absences&status=addressed");
     expect((await screen.findAllByText("No records match these filters")).length).toBeGreaterThan(
       0
     );
   });
 
-  it("scopes the evidence timeline to the reporting year", async () => {
+  it("sends status, period and leader to the API instead of filtering in the browser", async () => {
+    renderPage("/hbpr?view=records&kind=pips&status=draft&period=2026-03&leader=8");
+    await screen.findByText("Governance records");
+    expect(svc.getHbprRecordsPage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "pips",
+        status: "draft",
+        period: "2026-03",
+        leader: 8,
+      })
+    );
+  });
+
+  it("pages records on the server and restores the page from the URL", async () => {
+    svc.getHbprRecordsPage.mockImplementation(async () => ok({ count: 60, results: [ABSENCE] }));
+    renderPage("/hbpr?view=records&kind=absences");
+    expect((await screen.findAllByText("Showing 1–25 of 60 records")).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Next page" })[0]);
+    await screen.findAllByText("Showing 26–50 of 60 records");
+    expect(svc.getHbprRecordsPage).toHaveBeenLastCalledWith(
+      expect.objectContaining({ offset: 25 })
+    );
+  });
+
+  it("restores a deep-linked page", async () => {
+    svc.getHbprRecordsPage.mockImplementation(async () => ok({ count: 60, results: [ABSENCE] }));
+    renderPage("/hbpr?view=records&kind=absences&page=3");
+    expect((await screen.findAllByText("Showing 51–60 of 60 records")).length).toBeGreaterThan(0);
+    expect(svc.getHbprRecordsPage).toHaveBeenCalledWith(expect.objectContaining({ offset: 50 }));
+  });
+
+  it("scopes the evidence timeline to the reporting year on the server", async () => {
     renderPage(`/hbpr?view=evidence&year=${YEAR}`);
     expect(await screen.findByText("Weekly governance sync.")).toBeInTheDocument();
     expect(screen.getByText("Mid-year participation.")).toBeInTheDocument();
-    expect(screen.queryByText("Last year's sync.")).not.toBeInTheDocument();
+    expect(svc.listHbprEvidencePage).toHaveBeenCalledWith(
+      expect.objectContaining({ period_year: YEAR, page: 1 })
+    );
   });
 
-  it("filters the evidence timeline to the selected leader", async () => {
+  it("asks the API for the selected leader's evidence", async () => {
     renderPage(`/hbpr?view=evidence&year=${YEAR}&leader=8`);
-    // Wait for the timeline to load, then assert the other leader is excluded.
     expect(await screen.findByText("Mid-year participation.")).toBeInTheDocument();
     expect(screen.queryByText("Weekly governance sync.")).not.toBeInTheDocument();
+    expect(svc.listHbprEvidencePage).toHaveBeenCalledWith(expect.objectContaining({ leader: 8 }));
   });
 
   it("exports evidence for the selected leader", async () => {
@@ -311,6 +360,9 @@ describe("HbprWorkspacePage", () => {
     expect(await screen.findByText("Weekly governance sync.")).toBeInTheDocument();
     expect(screen.getByText("Mid-year participation.")).toBeInTheDocument();
     expect(screen.getAllByText("Export evidence for 7").length).toBeGreaterThan(0);
+    expect(svc.listHbprEvidencePage).not.toHaveBeenCalledWith(
+      expect.objectContaining({ leader: 999 })
+    );
   });
 
   it("falls back to the current year for an out-of-range year", async () => {

@@ -15,16 +15,19 @@ import {
 } from "@/components/ui/select";
 import {
   HBPR_RECORD_RESOURCES,
+  HBPR_RECORD_STATUSES,
   type HbprRecordResource,
   type HbprRecordRow,
 } from "../../hooks/useHbprWorkspaceQueries";
 import type { HbprLeaderRow } from "../../types/tlScorecard";
-import { formatDate, plural } from "./hbprMeta";
+import { formatDate } from "./hbprMeta";
+import { PageNav } from "./PageNav";
 
 const ALL = "all";
 
 export interface HbprRecordFilters {
-  resource: HbprRecordResource | null;
+  /** One kind is always selected: the API pages a single record type at a time. */
+  resource: HbprRecordResource;
   leader: number | null;
   status: string;
   /** YYYY-MM, or "" for every period. */
@@ -32,7 +35,12 @@ export interface HbprRecordFilters {
 }
 
 interface HbprRecordExplorerProps {
+  /** The current server page of rows. */
   rows: HbprRecordRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
   leaders: HbprLeaderRow[];
   filters: HbprRecordFilters;
   onFilterChange: <K extends keyof HbprRecordFilters>(key: K, value: HbprRecordFilters[K]) => void;
@@ -45,6 +53,10 @@ interface HbprRecordExplorerProps {
 /** Read-only explorer over the HBPR's governance records (never employee 1:1s). */
 export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
   rows,
+  total,
+  page,
+  pageSize,
+  onPageChange,
   leaders,
   filters,
   onFilterChange,
@@ -53,20 +65,8 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
   isError,
   onRetry,
 }) => {
-  const statuses = Array.from(new Set(rows.map((r) => r.status))).sort();
-  const hasFilters =
-    filters.resource !== null ||
-    filters.leader !== null ||
-    filters.status !== "" ||
-    filters.period !== "";
-
-  const filtered = rows.filter(
-    (row) =>
-      (filters.resource === null || row.resource === filters.resource) &&
-      (filters.leader === null || row.owner_id === filters.leader) &&
-      (filters.status === "" || row.status === filters.status) &&
-      (filters.period === "" || row.date.startsWith(filters.period))
-  );
+  const statuses = HBPR_RECORD_STATUSES[filters.resource];
+  const hasFilters = filters.leader !== null || filters.status !== "" || filters.period !== "";
 
   const resourceLabel = (resource: HbprRecordResource) =>
     HBPR_RECORD_RESOURCES.find((r) => r.value === resource)?.label ?? resource;
@@ -90,16 +90,13 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
           <div>
             <Label htmlFor="hbpr-filter-resource">Record type</Label>
             <Select
-              value={filters.resource ?? ALL}
-              onValueChange={(v) =>
-                onFilterChange("resource", v === ALL ? null : (v as HbprRecordResource))
-              }
+              value={filters.resource}
+              onValueChange={(v) => onFilterChange("resource", v as HbprRecordResource)}
             >
               <SelectTrigger id="hbpr-filter-resource" className="mt-1.5">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}>All record types</SelectItem>
                 {HBPR_RECORD_RESOURCES.map((r) => (
                   <SelectItem key={r.value} value={r.value}>
                     {r.label}
@@ -129,25 +126,27 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="hbpr-filter-status">Status</Label>
-            <Select
-              value={filters.status === "" ? ALL : filters.status}
-              onValueChange={(v) => onFilterChange("status", v === ALL ? "" : v)}
-            >
-              <SelectTrigger id="hbpr-filter-status" className="mt-1.5">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>All statuses</SelectItem>
-                {statuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status.replace(/_/g, " ")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {statuses.length > 0 && (
+            <div>
+              <Label htmlFor="hbpr-filter-status">Status</Label>
+              <Select
+                value={filters.status === "" ? ALL : filters.status}
+                onValueChange={(v) => onFilterChange("status", v === ALL ? "" : v)}
+              >
+                <SelectTrigger id="hbpr-filter-status" className="mt-1.5">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All statuses</SelectItem>
+                  {statuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status.replace(/_/g, " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="hbpr-filter-period">Period</Label>
@@ -171,7 +170,7 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
             <div key={i} className="bg-muted/40 h-14 animate-pulse rounded-xl border" />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : rows.length === 0 ? (
         <GlassCard animateOnMount={false} isHoverLift={false} className="p-0">
           <EmptyState
             icon={ScrollText}
@@ -186,12 +185,16 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
         </GlassCard>
       ) : (
         <>
-          <p className="text-muted-foreground text-xs">
-            {plural(filtered.length, "record", "records")}
-          </p>
+          <PageNav
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={onPageChange}
+            noun="records"
+          />
 
           <ul className="grid gap-3 md:hidden">
-            {filtered.map((row) => (
+            {rows.map((row) => (
               <li key={row.key}>
                 <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -239,7 +242,7 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-border/50 divide-y">
-                  {filtered.map((row) => (
+                  {rows.map((row) => (
                     <tr key={row.key}>
                       <th scope="row" className="max-w-[12rem] truncate px-4 py-2.5 font-medium">
                         {row.subject}

@@ -15,11 +15,17 @@ import {
 import { ExportButton } from "../ExportButton";
 import type { HbprEvidence, HbprLeaderRow } from "../../types/tlScorecard";
 import { EVIDENCE_KIND_LABELS, EVIDENCE_KIND_TONE, formatDate } from "./hbprMeta";
+import { PageNav } from "./PageNav";
 
 const ALL = "all";
 
 interface HbprEvidenceTimelineProps {
+  /** The current server page, already filtered by year and leader. */
   evidence: HbprEvidence[];
+  total: number;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
   leaders: HbprLeaderRow[];
   year: number;
   leaderFilter: number | null;
@@ -32,6 +38,10 @@ interface HbprEvidenceTimelineProps {
 /** Read-only timeline of cadence meetings and EPR participation evidence. */
 export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
   evidence,
+  total,
+  page,
+  pageSize,
+  onPageChange,
   leaders,
   year,
   leaderFilter,
@@ -41,8 +51,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
   onRetry,
 }) => {
   const byId = new Map(leaders.map((l) => [l.id, l]));
-  const rows =
-    leaderFilter === null ? evidence : evidence.filter((e) => e.albanian_tl === leaderFilter);
+  const rows = evidence;
 
   return (
     <section aria-labelledby="hbpr-evidence" className="space-y-3">
@@ -93,59 +102,68 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
           />
         </GlassCard>
       ) : (
-        <ol className="space-y-3">
-          {rows.map((row) => (
-            <li key={row.id}>
-              <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={EVIDENCE_KIND_TONE[row.kind]}>
-                        {EVIDENCE_KIND_LABELS[row.kind]}
-                      </Badge>
-                      <span className="text-sm font-medium tabular-nums">
-                        {formatDate(row.occurred_on)}
-                      </span>
+        <>
+          <PageNav
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={onPageChange}
+            noun="entries"
+          />
+          <ol className="space-y-3">
+            {rows.map((row) => (
+              <li key={row.id}>
+                <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={EVIDENCE_KIND_TONE[row.kind]}>
+                          {EVIDENCE_KIND_LABELS[row.kind]}
+                        </Badge>
+                        <span className="text-sm font-medium tabular-nums">
+                          {formatDate(row.occurred_on)}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {byId.get(row.albanian_tl)?.name ?? "Albanian team leader"}
+                        {row.reporting_year ? ` · reporting ${row.reporting_year}` : ""}
+                      </p>
                     </div>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {byId.get(row.albanian_tl)?.name ?? "Albanian team leader"}
-                      {row.reporting_year ? ` · reporting ${row.reporting_year}` : ""}
+                    <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                      <FileClock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      Recorded by {row.recorded_by_name ?? "—"}
                     </p>
                   </div>
-                  <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                    <FileClock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    Recorded by {row.recorded_by_name ?? "—"}
-                  </p>
-                </div>
 
-                {row.shared_summary && (
-                  <p className="mt-3 text-sm break-words whitespace-pre-line">
-                    {row.shared_summary}
-                  </p>
-                )}
-                {row.action_items && (
-                  <div className="border-line-subtle bg-muted/40 mt-3 rounded-lg border p-3">
-                    <p className="text-muted-foreground text-xs font-medium">Action items</p>
-                    <p className="mt-1 text-sm break-words whitespace-pre-line">
-                      {row.action_items}
+                  {row.shared_summary && (
+                    <p className="mt-3 text-sm break-words whitespace-pre-line">
+                      {row.shared_summary}
                     </p>
-                  </div>
-                )}
-                {row.reference_url && (
-                  <a
-                    href={row.reference_url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="text-primary mt-3 inline-flex items-center gap-1.5 text-xs font-medium underline-offset-4 hover:underline"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                    Reference
-                  </a>
-                )}
-              </GlassCard>
-            </li>
-          ))}
-        </ol>
+                  )}
+                  {row.action_items && (
+                    <div className="border-line-subtle bg-muted/40 mt-3 rounded-lg border p-3">
+                      <p className="text-muted-foreground text-xs font-medium">Action items</p>
+                      <p className="mt-1 text-sm break-words whitespace-pre-line">
+                        {row.action_items}
+                      </p>
+                    </div>
+                  )}
+                  {row.reference_url && (
+                    <a
+                      href={row.reference_url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="text-primary mt-3 inline-flex items-center gap-1.5 text-xs font-medium underline-offset-4 hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                      Reference
+                    </a>
+                  )}
+                </GlassCard>
+              </li>
+            ))}
+          </ol>
+        </>
       )}
     </section>
   );

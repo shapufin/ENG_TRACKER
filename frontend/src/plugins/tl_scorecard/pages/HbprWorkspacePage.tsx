@@ -11,8 +11,10 @@ import { HbprRecordExplorer, type HbprRecordFilters } from "../components/hbpr/H
 import { HbprWorkspaceEmptyState } from "../components/hbpr/HbprWorkspaceEmptyState";
 import { HbprWorkspaceHeader, type HbprView } from "../components/hbpr/HbprWorkspaceHeader";
 import {
-  evidenceForYear,
+  DEFAULT_RECORD_RESOURCE,
+  HBPR_EVIDENCE_PAGE_SIZE,
   HBPR_RECORD_KINDS,
+  HBPR_RECORD_PAGE_SIZE,
   resourceFromKind,
   useHbprWorkspaceQueries,
 } from "../hooks/useHbprWorkspaceQueries";
@@ -46,35 +48,40 @@ export const HbprWorkspacePage: React.FC = () => {
       ? yearParam
       : new Date().getFullYear();
   const leaderParam = Number(params.get("leader")) || null;
+  const page = Math.max(1, Math.trunc(Number(params.get("page"))) || 1);
 
+  // Changing anything but the page itself returns to page one.
   const setParam = (key: string, value: string | null) =>
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev);
         if (value) next.set(key, value);
         else next.delete(key);
+        if (key !== "page") next.delete("page");
         return next;
       },
       { replace: true }
     );
 
-  const { overview, evidence, records } = useHbprWorkspaceQueries({
-    year,
-    includeRecords: view === "records",
-  });
-
-  const leaders = overview.data?.leaders ?? [];
-  // An out-of-scope `?leader=` id is dropped rather than trusted: the API would
-  // 403 the export, and the filters would show a permanently empty list.
-  const leader = leaders.some((l) => l.id === leaderParam) ? leaderParam : null;
-  const exportLeaderId = leader ?? leaders[0]?.id;
-  const filters: HbprRecordFilters = {
-    // `kind` is the shared deep-link vocabulary (see HBPR_RECORD_KINDS).
-    resource: resourceFromKind(params.get("kind")),
-    leader,
+  const filters = {
+    // `kind` is the shared deep-link vocabulary (see HBPR_RECORD_KINDS); the API
+    // pages one kind at a time, so one is always selected.
+    resource: resourceFromKind(params.get("kind")) ?? DEFAULT_RECORD_RESOURCE,
     status: params.get("status") ?? "",
     period: params.get("period") ?? "",
   };
+
+  const { overview, evidence, records, leader } = useHbprWorkspaceQueries({
+    year,
+    view,
+    leaderParam,
+    record: { ...filters, page },
+    evidencePage: page,
+  });
+
+  const leaders = overview.data?.leaders ?? [];
+  const exportLeaderId = leader ?? leaders[0]?.id;
+  const recordFilters: HbprRecordFilters = { ...filters, leader };
 
   if (overview.isError) {
     return (
@@ -116,8 +123,6 @@ export const HbprWorkspacePage: React.FC = () => {
     );
   }
 
-  const evidenceRows = evidenceForYear(evidence.data ?? [], year);
-
   return (
     <HbprWorkspaceHeader
       view={view}
@@ -142,24 +147,35 @@ export const HbprWorkspacePage: React.FC = () => {
 
       {view === "records" && (
         <HbprRecordExplorer
-          rows={records.data ?? []}
+          rows={records.data?.rows ?? []}
+          total={records.data?.count ?? 0}
+          page={page}
+          pageSize={HBPR_RECORD_PAGE_SIZE}
+          onPageChange={(next) => setParam("page", next > 1 ? String(next) : null)}
           leaders={leaders}
-          filters={filters}
-          onFilterChange={(key, value) =>
-            setParam(
-              key === "resource" ? "kind" : key,
-              value === null || value === ""
-                ? null
-                : key === "resource"
-                  ? HBPR_RECORD_KINDS[value as keyof typeof HBPR_RECORD_KINDS]
-                  : String(value)
-            )
-          }
+          filters={recordFilters}
+          onFilterChange={(key, value) => {
+            if (key === "resource") {
+              // A status of one kind means nothing for another.
+              setParams(
+                (prev) => {
+                  const next = new URLSearchParams(prev);
+                  next.set("kind", HBPR_RECORD_KINDS[value as keyof typeof HBPR_RECORD_KINDS]);
+                  next.delete("status");
+                  next.delete("page");
+                  return next;
+                },
+                { replace: true }
+              );
+              return;
+            }
+            setParam(key, value === null || value === "" ? null : String(value));
+          }}
           onReset={() =>
             setParams(
               (prev) => {
                 const next = new URLSearchParams(prev);
-                ["kind", "leader", "status", "period"].forEach((k) => next.delete(k));
+                ["leader", "status", "period", "page"].forEach((k) => next.delete(k));
                 return next;
               },
               { replace: true }
@@ -173,7 +189,11 @@ export const HbprWorkspacePage: React.FC = () => {
 
       {view === "evidence" && (
         <HbprEvidenceTimeline
-          evidence={evidenceRows}
+          evidence={evidence.data?.rows ?? []}
+          total={evidence.data?.count ?? 0}
+          page={page}
+          pageSize={HBPR_EVIDENCE_PAGE_SIZE}
+          onPageChange={(next) => setParam("page", next > 1 ? String(next) : null)}
           leaders={leaders}
           year={year}
           leaderFilter={leader}

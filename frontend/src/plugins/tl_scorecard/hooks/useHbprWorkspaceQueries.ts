@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { tlScorecardService } from "../services/tlScorecardService";
 import type {
   Absence,
@@ -141,24 +141,60 @@ const mapPromotions = (p: PromotionFlag) => ({
   detail: p.decision_note || "—",
 });
 
-/** Read-only governance records for the HBPR's assignments, newest first. */
-export const fetchHbprGovernanceRecords = async (): Promise<HbprRecordRow[]> => {
-  const [meetings, idle, absences, reviews, pips, promotions] = await Promise.all([
-    tlScorecardService.listMeetings(),
-    tlScorecardService.listIdleFlags(),
-    tlScorecardService.listAbsences(),
-    tlScorecardService.listReviewDeliveries(),
-    tlScorecardService.listPIPRecords(),
-    tlScorecardService.listPromotionFlags(),
-  ]);
-  return [
-    ...toRows("meetings", meetings, mapMeetings),
-    ...toRows("idle-flags", idle, mapIdle),
-    ...toRows("absences", absences, mapAbsences),
-    ...toRows("review-deliveries", reviews, mapReviews),
-    ...toRows("pip-records", pips, mapPips),
-    ...toRows("promotion-flags", promotions, mapPromotions),
-  ].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : a.key.localeCompare(b.key)));
+export const HBPR_RECORD_PAGE_SIZE = 25;
+export const HBPR_EVIDENCE_PAGE_SIZE = 50; // DRF page size (settings PAGE_SIZE)
+export const DEFAULT_RECORD_RESOURCE: HbprRecordResource = "meetings";
+
+/** Statuses the API's `?status=` filter accepts per kind (reviews have none). */
+export const HBPR_RECORD_STATUSES: Record<HbprRecordResource, string[]> = {
+  meetings: ["team_meeting", "tl_sync"],
+  "idle-flags": ["open", "resolved"],
+  absences: ["open", "addressed"],
+  "review-deliveries": [],
+  "pip-records": ["draft", "active", "completed", "cancelled"],
+  "promotion-flags": ["nominated", "promoted", "declined"],
+};
+
+const ROW_MAPPERS: Record<
+  HbprRecordResource,
+  (row: never) => Omit<HbprRecordRow, "key" | "resource">
+> = {
+  meetings: mapMeetings,
+  "idle-flags": mapIdle,
+  absences: mapAbsences,
+  "review-deliveries": mapReviews,
+  "pip-records": mapPips,
+  "promotion-flags": mapPromotions,
+};
+
+export interface HbprRecordQuery {
+  resource: HbprRecordResource;
+  leader: number | null;
+  status: string;
+  period: string;
+  /** 1-based page number. */
+  page: number;
+}
+
+export interface HbprRecordsPage {
+  count: number;
+  rows: HbprRecordRow[];
+}
+
+/** One server-side page of governance records (never employee 1:1s). */
+export const fetchHbprRecordsPage = async (query: HbprRecordQuery): Promise<HbprRecordsPage> => {
+  const { data } = await tlScorecardService.getHbprRecordsPage({
+    kind: HBPR_RECORD_KINDS[query.resource],
+    ...(query.leader !== null && { leader: query.leader }),
+    ...(query.status && { status: query.status }),
+    ...(query.period && { period: query.period }),
+    limit: HBPR_RECORD_PAGE_SIZE,
+    offset: (query.page - 1) * HBPR_RECORD_PAGE_SIZE,
+  });
+  return {
+    count: data.count,
+    rows: toRows(query.resource, data.results, ROW_MAPPERS[query.resource]),
+  };
 };
 
 /** Evidence within a reporting year: cadence meetings by date, EPR rows by year. */
@@ -169,39 +205,68 @@ export const evidenceForYear = (rows: HbprEvidence[], year: number): HbprEvidenc
       : row.reporting_year === year
   );
 
+export interface HbprEvidencePage {
+  count: number;
+  rows: HbprEvidence[];
+}
+
 export interface HbprWorkspaceQueries {
   overview: ReturnType<typeof useQuery<HbprOverview>>;
-  evidence: ReturnType<typeof useQuery<HbprEvidence[]>>;
-  records: ReturnType<typeof useQuery<HbprRecordRow[]>>;
+  evidence: ReturnType<typeof useQuery<HbprEvidencePage>>;
+  records: ReturnType<typeof useQuery<HbprRecordsPage>>;
+  /** `leaderParam`, or null when it is not one of the assigned leaders. */
+  leader: number | null;
 }
 
 export function useHbprWorkspaceQueries({
   year,
-  includeRecords,
+  view,
+  leaderParam,
+  record,
+  evidencePage,
 }: {
   year: number;
-  includeRecords: boolean;
+  view: string;
+  /** Raw `?leader=` value; dropped when it is not one of the assigned leaders. */
+  leaderParam: number | null;
+  record: Omit<HbprRecordQuery, "leader">;
+  evidencePage: number;
 }): HbprWorkspaceQueries {
   const overview = useQuery({
     queryKey: ["tl-scorecard", "hbpr-overview", year],
     queryFn: async () => (await tlScorecardService.getHbprOverview(year)).data,
   });
 
-  // Fetched without the API `year` filter: a cadence meeting carries no
-  // reporting year, so a server-side year filter would silently drop it. The
-  // reporting year is applied in `evidenceForYear` instead.
+  // An out-of-scope `?leader=` id is dropped rather than trusted: the filters
+  // would show a permanently empty list.
+  const leader =
+    leaderParam !== null && overview.data?.leaders.some((l) => l.id === leaderParam)
+      ? leaderParam
+      : null;
+
+  // Each list is fetched only for its own view, one server page at a time, and
+  // only once we know the viewer is an HBPR — otherwise a non-HBPR deep link
+  // fires doomed 403 requests first.
   const evidence = useQuery({
-    queryKey: ["tl-scorecard", "hbpr-evidence"],
-    queryFn: () => tlScorecardService.listHbprEvidence(),
+    queryKey: ["tl-scorecard", "hbpr-evidence", year, leader, evidencePage],
+    queryFn: async (): Promise<HbprEvidencePage> => {
+      const { data } = await tlScorecardService.listHbprEvidencePage({
+        period_year: year,
+        page: evidencePage,
+        ...(leader !== null && { leader }),
+      });
+      return { count: data.count, rows: data.results };
+    },
+    enabled: view === "evidence" && overview.isSuccess,
+    placeholderData: keepPreviousData,
   });
 
   const records = useQuery({
-    queryKey: ["tl-scorecard", "hbpr-records"],
-    queryFn: fetchHbprGovernanceRecords,
-    // Only on the records view, and only once we know the viewer is an HBPR —
-    // otherwise a non-HBPR deep link fires six doomed 403 requests first.
-    enabled: includeRecords && overview.isSuccess,
+    queryKey: ["tl-scorecard", "hbpr-records", record, leader],
+    queryFn: () => fetchHbprRecordsPage({ ...record, leader }),
+    enabled: view === "records" && overview.isSuccess,
+    placeholderData: keepPreviousData,
   });
 
-  return { overview, evidence, records };
+  return { overview, evidence, records, leader };
 }
