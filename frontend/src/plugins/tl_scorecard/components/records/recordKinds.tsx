@@ -92,9 +92,18 @@ const owns = (viewer: Viewer, ownerId: number | null) =>
 const canManage = (viewer: Viewer, ownerId: number | null) =>
   viewer.isStaff || owns(viewer, ownerId);
 
-const DAY_MS = 86_400_000;
-const daysOpen = (isoDate: string, now = new Date()) =>
-  Math.max(0, Math.floor((now.getTime() - new Date(`${isoDate}T00:00:00`).getTime()) / DAY_MS));
+// Same rule as the backend SLA (`count_business_days(start, today) - 1`): Mon-Fri
+// inclusive, minus the day it started, so a weekend never counts as time open.
+export const workingDaysOpen = (isoDate: string, now = new Date()) => {
+  const day = new Date(`${isoDate}T00:00:00`);
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let weekdays = 0;
+  for (; day <= end; day.setDate(day.getDate() + 1)) {
+    if (day.getDay() % 6 !== 0) weekdays += 1;
+  }
+  return Math.max(0, weekdays - 1);
+};
+const ABSENCE_SLA_DAYS = 5;
 
 const PIP_STATES: Record<PIPRecord["status"], RecordState> = {
   draft: { label: "Pending approval", tone: "warning", icon: Clock },
@@ -165,10 +174,14 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
     ],
     state: (r) => {
       if (r.addressed_on) return { label: "Addressed", tone: "success", icon: CheckCircle2 };
-      const days = daysOpen(r.absence_date);
-      return days >= 5
-        ? { label: "5+ days open", tone: "danger", icon: Clock }
-        : { label: `${days} day${days === 1 ? "" : "s"} open`, tone: "warning", icon: Clock };
+      const days = workingDaysOpen(r.absence_date);
+      return days > ABSENCE_SLA_DAYS
+        ? { label: "Over 5 working days open", tone: "danger", icon: Clock }
+        : {
+            label: `${days} working day${days === 1 ? "" : "s"} open`,
+            tone: "warning",
+            icon: Clock,
+          };
     },
     actions: (r, v) =>
       canManage(v, r.flagged_by)

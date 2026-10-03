@@ -14,12 +14,13 @@ Two things are deliberately **not** surfaced here:
   would imply an action the HBPR cannot take. The HBPR's attention surface is
   cadence and EPR governance evidence only.
 """
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 
 from apps.users.models.hbpr import HbprAlbanianTlAssignment
 from apps.users.services.hbpr_assignments import cadence_status
+from apps.users.services.hbpr_assignments import today as app_today
 
 from .models import HbprGovernanceEvidence, PIPRecord
 
@@ -145,7 +146,7 @@ def _evidence_rollup(assignment_ids, year):
 
 
 def overview(scope, *, reporting_year=None):
-    today = date.today()
+    today = app_today()
     year = reporting_year or today.year
 
     assignments = list(
@@ -206,7 +207,7 @@ def partnership(leader, *, reporting_year=None):
     """
     from apps.users.services.hbpr_assignments import active_assignment_for_tl
 
-    today = date.today()
+    today = app_today()
     year = reporting_year or today.year
     assignment = active_assignment_for_tl(leader.id, on_date=today)
     if assignment is None:
