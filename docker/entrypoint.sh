@@ -61,8 +61,8 @@ python manage.py sync_plugins
 echo "[entrypoint] Reconciling plugin permissions..."
 python manage.py seed_plugin_permissions
 
-# Existing databases keep their old PluginPermission rows, so the hbpr role needs a
-# one-time view grant; the command is a no-op once hbpr has been configured.
+# Existing databases keep their old PluginPermission rows, so reconcile the hbpr role's
+# view grants (tl_scorecard only) on every boot; an admin edit to them is re-asserted.
 echo "[entrypoint] Granting HBPR plugin access..."
 python manage.py grant_hbpr_plugin_access || echo "[entrypoint] HBPR grant skipped (non-fatal)"
 
