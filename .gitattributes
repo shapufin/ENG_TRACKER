@@ -1,0 +1,27 @@
+# Normalize line endings. Without this, `core.autocrlf=true` + Prettier's
+# default `endOfLine: "lf"` made every CRLF file fail `prettier --check`
+# (540 files, a mixture of real drift and pure line-ending artifacts) and made
+# IDEs show whole-file diffs for any file a formatter rewrote.
+#
+# `text=auto` lets git decide binary vs text; `eol=lf` stores and checks out LF,
+# matching CI (ubuntu) and the formatter. Existing working-tree files are NOT
+# rewritten — git already normalizes them for comparison, so this changes
+# nothing until a file is next checked out or added.
+* text=auto eol=lf
+
+# Windows batch/PowerShell scripts must keep CRLF to run.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary — never normalize.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.xlsx binary
+*.zip binary
