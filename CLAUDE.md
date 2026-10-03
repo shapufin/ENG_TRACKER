@@ -122,6 +122,14 @@ Targeted while iterating; the full pass exactly once, after implementation.
 
 ```bash
 # Iterating — narrow the path, never the whole suite
-python manage.py check
-python manage.py test apps.<app>.tests.<name>
+py -3.14 manage.py check
+py -3.14 manage.py test apps.<app>.tests.<name>
 cd frontend && npx vitest run src/<path> && npx eslint src/<path>
+
+# Full pass, once at the end
+py -3.14 manage.py makemigrations --check && py -3.14 manage.py test
+python -m ruff check --output-format=concise <changed .py files>
+cd frontend && npx tsc --noEmit && npx vitest run && npm run build
+```
+
+Production is Python 3.12 + Django 6.1.1; the default `python` is 3.11 + Django 5.2 and hides Django-6 differences, so use `py -3.14` for Django commands.

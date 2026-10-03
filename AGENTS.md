@@ -16,6 +16,9 @@ to reference the new structure.
 - Do not modify generated files, secrets, production configuration, or unrelated work.
 - Never commit or push unless explicitly requested.
 
+## Required reading for every agent
+- `CLAUDE.md` (tracked) holds the "Hot Invariants" (permissions, payroll scope, HBPR, fail-closed imports, tech levels, ...). They apply to all agents, not just Claude Code; read it before touching those areas.
+
 ## Repository
 - Backend: Django/Python.
 - Frontend: React/TypeScript.
@@ -66,10 +69,15 @@ and serves framework-aware cross-stack queries.
 - Preserve tenant, role, and permission boundaries.
 - Use transactions and row locks where required by the domain.
 - Create migrations for model changes.
+- **Use `py -3.14` for every Django command — never bare `python`.** The stack is
+  Python 3.14 + Django 6.1.1 (`requirements.txt` pins it; CI runs 3.12 + the same
+  pin). Local `python` is 3.11 + Django 5.2: a suite run there is green against
+  the wrong framework version, discovers a different test set, and is not
+  evidence. History: `docs/superpowers/UPGRADE-JOURNAL.md`.
 - Run:
-  - `python manage.py check`
-  - `python manage.py makemigrations --check`
-  - relevant Django/Pytest tests
+  - `py -3.14 manage.py check`
+  - `py -3.14 manage.py makemigrations --check`
+  - relevant Django/Pytest tests (`py -3.14 manage.py test apps.<app>`)
   - Ruff on changed Python files
 
 ## Frontend Rules
