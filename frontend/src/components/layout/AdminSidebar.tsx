@@ -58,8 +58,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const hasAdminPluginNav = getInjectedComponents("admin-sidebar-nav").length > 0;
   const hasAdminPluginNavSystem = getInjectedComponents("admin-sidebar-nav-system").length > 0;
   const { data: branding } = useSiteBranding();
-  const [logoFailed, setLogoFailed] = React.useState(false);
-  React.useEffect(() => setLogoFailed(false), [branding?.logo_url]);
+  // Keyed by URL, so a new logo is tried again without resetting state in an effect.
+  const [failedLogoUrl, setFailedLogoUrl] = React.useState<string | null>(null);
+  const logoFailed = failedLogoUrl === branding?.logo_url;
 
   const isActive = (item: AdminNavItem) =>
     item.exact
@@ -110,7 +111,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               src={branding.logo_url}
               alt=""
               className="h-8 w-8 shrink-0 rounded-xl object-contain shadow-md shadow-primary/30"
-              onError={() => setLogoFailed(true)}
+              onError={() => setFailedLogoUrl(branding?.logo_url ?? null)}
             />
           ) : (
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-tr from-primary to-info text-white shadow-md shadow-primary/30">
