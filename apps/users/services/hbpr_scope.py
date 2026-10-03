@@ -137,3 +137,24 @@ def hbpr_user_ids_for(subject_user, owner_id=None) -> list:
     if subject_user.id != owner_id and subject_user.id not in profile.get_team_member_ids():
         return []
     return [assignment.hbpr_id]
+
+
+def hbpr_user_ids_covering(subject_user) -> list:
+    """Ids of active HBPR users whose assigned Albanian TLs cover ``subject_user``.
+
+    For records with no owning-TL column (an employee's EPR cycle): scope reaches
+    a member through the direct FK *and* a shared team, so the owner is found by
+    asking each open assignment, never from the direct FK alone.
+    """
+    from apps.users.models.hbpr import HbprAlbanianTlAssignment
+    from apps.users.services.hbpr_assignments import today
+
+    owner_ids = HbprAlbanianTlAssignment.objects.filter(
+        effective_to__isnull=True, effective_from__lte=today(),
+    ).values_list('albanian_tl_id', flat=True)
+    covering: list = []
+    for owner_id in owner_ids:
+        for hbpr_id in hbpr_user_ids_for(subject_user, owner_id):
+            if hbpr_id not in covering:
+                covering.append(hbpr_id)
+    return covering
