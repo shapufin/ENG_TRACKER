@@ -108,7 +108,7 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
                     <Link
                       to={`/hbpr?view=evidence&year=${year}&leader=${leader.id}`}
                       aria-label={`Open governance evidence for ${leader.name}`}
-                      className="text-primary inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline sm:min-h-0"
+                      className="text-primary inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline sm:min-h-6"
                     >
                       Evidence
                     </Link>

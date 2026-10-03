@@ -11,16 +11,9 @@ import type {
   ReviewDelivery,
 } from "../../types/tlScorecard";
 
-export const RECORD_KINDS = [
-  "meetings",
-  "idle",
-  "absences",
-  "reviews",
-  "promotions",
-  "pips",
-] as const;
+const RECORD_KINDS = ["meetings", "idle", "absences", "reviews", "promotions", "pips"] as const;
 export type RecordKind = (typeof RECORD_KINDS)[number];
-export const DEFAULT_KIND: RecordKind = "meetings";
+const DEFAULT_KIND: RecordKind = "meetings";
 
 export const parseKind = (raw: string | null): RecordKind =>
   RECORD_KINDS.find((kind) => kind === raw) ?? DEFAULT_KIND;
@@ -100,7 +93,7 @@ const canManage = (viewer: Viewer, ownerId: number | null) =>
   viewer.isStaff || owns(viewer, ownerId);
 
 const DAY_MS = 86_400_000;
-export const daysOpen = (isoDate: string, now = new Date()) =>
+const daysOpen = (isoDate: string, now = new Date()) =>
   Math.max(0, Math.floor((now.getTime() - new Date(`${isoDate}T00:00:00`).getTime()) / DAY_MS));
 
 const PIP_STATES: Record<PIPRecord["status"], RecordState> = {

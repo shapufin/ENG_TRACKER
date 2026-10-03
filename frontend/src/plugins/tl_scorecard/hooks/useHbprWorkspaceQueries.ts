@@ -182,7 +182,7 @@ export interface HbprRecordsPage {
 }
 
 /** One server-side page of governance records (never employee 1:1s). */
-export const fetchHbprRecordsPage = async (query: HbprRecordQuery): Promise<HbprRecordsPage> => {
+const fetchHbprRecordsPage = async (query: HbprRecordQuery): Promise<HbprRecordsPage> => {
   const { data } = await tlScorecardService.getHbprRecordsPage({
     kind: HBPR_RECORD_KINDS[query.resource],
     ...(query.leader !== null && { leader: query.leader }),

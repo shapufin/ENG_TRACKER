@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services/userService";
 import type { Meeting, MeetingKind } from "../types/tlScorecard";
 
-export type MeetingType = MeetingKind;
+type MeetingType = MeetingKind;
 
 interface LogMeetingDialogProps {
   open: boolean;

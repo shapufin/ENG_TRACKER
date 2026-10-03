@@ -153,7 +153,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
                       href={row.reference_url}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="text-primary mt-3 inline-flex items-center gap-1.5 text-xs font-medium underline-offset-4 hover:underline"
+                      className="text-primary mt-3 inline-flex min-h-6 items-center gap-1.5 text-xs font-medium underline-offset-4 hover:underline"
                     >
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                       Reference

@@ -82,6 +82,12 @@ export const HbprWorkspacePage: React.FC = () => {
   const leaders = overview.data?.leaders ?? [];
   const exportLeaderId = leader ?? leaders[0]?.id;
   const recordFilters: HbprRecordFilters = { ...filters, leader };
+  const headerProps = {
+    view,
+    onViewChange: (next: HbprView) => setParam("view", next === "overview" ? null : next),
+    year,
+    onYearChange: (next: number) => setParam("year", String(next)),
+  };
 
   if (overview.isError) {
     return (
@@ -99,12 +105,7 @@ export const HbprWorkspacePage: React.FC = () => {
     // Keep the header (period selector, views) mounted so the skeleton occupies
     // the final geometry instead of the layout shifting when data lands.
     return (
-      <HbprWorkspaceHeader
-        view={view}
-        onViewChange={(next) => setParam("view", next === "overview" ? null : next)}
-        year={year}
-        onYearChange={(next) => setParam("year", String(next))}
-      >
+      <HbprWorkspaceHeader {...headerProps}>
         <Skeleton />
       </HbprWorkspaceHeader>
     );
@@ -112,12 +113,7 @@ export const HbprWorkspacePage: React.FC = () => {
 
   if (leaders.length === 0) {
     return (
-      <HbprWorkspaceHeader
-        view={view}
-        onViewChange={(next) => setParam("view", next === "overview" ? null : next)}
-        year={year}
-        onYearChange={(next) => setParam("year", String(next))}
-      >
+      <HbprWorkspaceHeader {...headerProps}>
         <HbprWorkspaceEmptyState />
       </HbprWorkspaceHeader>
     );
@@ -125,10 +121,7 @@ export const HbprWorkspacePage: React.FC = () => {
 
   return (
     <HbprWorkspaceHeader
-      view={view}
-      onViewChange={(next) => setParam("view", next === "overview" ? null : next)}
-      year={year}
-      onYearChange={(next) => setParam("year", String(next))}
+      {...headerProps}
       exportLeaderId={exportLeaderId}
       exportLeaderName={leaders.find((l) => l.id === exportLeaderId)?.name}
     >

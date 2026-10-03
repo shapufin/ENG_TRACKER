@@ -96,7 +96,7 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
             )}
             <Link
               to="/engagement/metrics"
-              className="text-primary mt-3 inline-block text-xs font-medium hover:underline"
+              className="text-primary mt-3 inline-flex min-h-6 items-center text-xs font-medium hover:underline"
             >
               View full engagement metrics →
             </Link>
@@ -122,7 +122,7 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
             </p>
             <Link
               to="/skills"
-              className="text-primary mt-3 inline-block text-xs font-medium hover:underline"
+              className="text-primary mt-3 inline-flex min-h-6 items-center text-xs font-medium hover:underline"
             >
               View Skills Matrix →
             </Link>

@@ -53,7 +53,7 @@ const listAllPages = async <T>(
 const listResource = <T>(resource: RecordResource): Promise<T[]> =>
   listAllPages<T>(`${BASE}/${resource}/`);
 
-export interface HbprRecordsQuery {
+interface HbprRecordsQuery {
   kind: string;
   leader?: number;
   status?: string;
