@@ -232,7 +232,7 @@ describe("RecordsTab panels", () => {
   it.each([
     ["meetings", "1-on-1", "Not shared"],
     ["idle", "Docs", "Open"],
-    ["absences", "Sick", "5+ days open"],
+    ["absences", "Sick", "Over 5 working days open"],
     ["reviews", "GM", "Delivered"],
     ["promotions", "2026-09-05", "Awaiting decision"],
     ["pips", "2026-09-06", "Pending approval"],
