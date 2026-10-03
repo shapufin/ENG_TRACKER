@@ -261,6 +261,23 @@ describe("RecordsTab panels", () => {
     expect(await screen.findByText("No records yet")).toBeInTheDocument();
   });
 
+  it("shows an honest stat strip above the list", async () => {
+    renderTab("?tab=records&kind=idle");
+    await screen.findByText("Docs");
+    expect(screen.getByText("Needs attention")).toBeInTheDocument();
+    expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.getByTestId("stat-card-progress-fill")).toHaveStyle({ width: "0%" });
+  });
+
+  it("filters the visible rows by search text", async () => {
+    renderTab();
+    await screen.findByText("1-on-1");
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "zzz" } });
+    expect(await screen.findByText("No match")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "jane" } });
+    expect(await screen.findByText("Jane")).toBeInTheDocument();
+  });
+
   it("shows a no-access message, not an empty list, on 403", async () => {
     svc.listMeetings.mockRejectedValue({ response: { status: 403 } });
     renderTab();

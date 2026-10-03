@@ -38,7 +38,12 @@ const RowActions: React.FC<{
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={`Actions for ${title}`} className="h-11 w-11 sm:h-9 sm:w-9">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Actions for ${title}`}
+          className="h-11 w-11 sm:h-9 sm:w-9"
+        >
           <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
         </Button>
       </PopoverTrigger>
@@ -48,7 +53,7 @@ const RowActions: React.FC<{
             <li key={action}>
               <button
                 type="button"
-                className={`flex min-h-11 w-full items-center rounded-sm px-3 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-hidden sm:min-h-9 ${
+                className={`hover:bg-accent focus-visible:bg-accent flex min-h-11 w-full items-center rounded-sm px-3 text-left text-sm focus-visible:outline-hidden sm:min-h-9 ${
                   action === "delete" ? "text-tone-danger-text" : ""
                 }`}
                 onClick={() => {
@@ -70,7 +75,7 @@ const Skeleton: React.FC<{ label: string }> = ({ label }) => (
   <div aria-busy="true" className="space-y-2">
     <span className="sr-only">Loading {label}...</span>
     {Array.from({ length: 3 }).map((_, i) => (
-      <div key={i} className="h-12 animate-pulse rounded-lg border bg-muted/40" />
+      <div key={i} className="bg-muted/40 h-12 animate-pulse rounded-lg border" />
     ))}
   </div>
 );
@@ -95,9 +100,19 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
   }
   if (!rows || rows.length === 0) {
     return totalCount === 0 ? (
-      <EmptyState icon={ClipboardList} title="No records yet" description={`${config.label} you register will show up here.`} className="py-10" />
+      <EmptyState
+        icon={ClipboardList}
+        title="No records yet"
+        description={`${config.label} you register will show up here.`}
+        className="py-10"
+      />
     ) : (
-      <EmptyState icon={SearchX} title="No match" description="Try another month or team leader." className="py-10" />
+      <EmptyState
+        icon={SearchX}
+        title="No match"
+        description="Try another month or search."
+        className="py-10"
+      />
     );
   }
 
@@ -106,26 +121,35 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm max-md:block">
           <caption className="sr-only">{config.label}</caption>
-          <thead className="text-xs text-muted-foreground max-md:sr-only">
-            <tr className="border-b border-border/50">
+          <thead className="text-muted-foreground text-xs max-md:sr-only">
+            <tr className="border-border/50 border-b">
               {config.columns.map((column) => (
-                <th key={column.header} scope="col" className="px-4 py-2 font-medium">{column.header}</th>
+                <th key={column.header} scope="col" className="px-4 py-2 font-medium">
+                  {column.header}
+                </th>
               ))}
-              <th scope="col" className="px-4 py-2 font-medium">State</th>
-              <th scope="col" className="px-4 py-2"><span className="sr-only">Actions</span></th>
+              <th scope="col" className="px-4 py-2 font-medium">
+                State
+              </th>
+              <th scope="col" className="px-4 py-2">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/50 max-md:block">
+          <tbody className="divide-border/50 divide-y max-md:block">
             {rows.map((record) => {
               const state = config.state(record);
               const title = config.title(record);
               return (
-                <tr key={record.id} className="max-md:block max-md:space-y-1 max-md:px-4 max-md:py-3">
+                <tr
+                  key={record.id}
+                  className="max-md:block max-md:space-y-1 max-md:px-4 max-md:py-3"
+                >
                   {config.columns.map((column) => (
                     <td
                       key={column.header}
                       data-label={column.header}
-                      className="px-4 py-2.5 max-md:flex max-md:justify-between max-md:gap-3 max-md:px-0 max-md:py-0.5 max-md:before:text-xs max-md:before:text-muted-foreground max-md:before:content-[attr(data-label)]"
+                      className="max-md:before:text-muted-foreground px-4 py-2.5 max-md:flex max-md:justify-between max-md:gap-3 max-md:px-0 max-md:py-0.5 max-md:before:text-xs max-md:before:content-[attr(data-label)]"
                     >
                       {column.cell(record)}
                     </td>

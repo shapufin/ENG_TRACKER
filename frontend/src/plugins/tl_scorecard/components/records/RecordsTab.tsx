@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePermissions } from "@/context/PermissionContext";
 import { useAuth } from "@/hooks/useAuth";
 import { RecordListPanel } from "./RecordListPanel";
+import { RecordStrip } from "./RecordStrip";
 import { parseKind, RECORD_CONFIGS, type RecordRow, type Viewer } from "./recordKinds";
 import { useRecordActions } from "./useRecordActions";
 
@@ -29,6 +30,7 @@ export const RecordsTab: React.FC = () => {
 
   const kind = parseKind(params.get("kind"));
   const month = params.get("month") ?? "";
+  const search = (params.get("q") ?? "").trim().toLowerCase();
   const isStaff = isAdmin || isSuperuser;
   // Approving a PIP / deciding a promotion is staff-only on the API.
   const viewer: Viewer = { userId: user?.id ?? null, isStaff, canReview: isStaff };
@@ -54,9 +56,19 @@ export const RecordsTab: React.FC = () => {
 
   const narrow = (index: number): RecordRow[] | undefined => {
     const config = RECORD_CONFIGS[index];
-    return results[index].data?.filter(
-      (row) => !month || config.date(row).startsWith(month.slice(0, 7))
-    );
+    return results[index].data?.filter((row) => {
+      if (month && !config.date(row).startsWith(month.slice(0, 7))) return false;
+      if (!search) return true;
+      const haystack = [
+        config.title(row),
+        config.state(row).label,
+        ...config.columns.map((column) => column.cell(row)),
+      ]
+        .filter((cell): cell is string => typeof cell === "string")
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(search);
+    });
   };
 
   const activeIndex = RECORD_CONFIGS.findIndex((config) => config.key === kind);
@@ -72,6 +84,16 @@ export const RecordsTab: React.FC = () => {
             type="month"
             value={month.slice(0, 7)}
             onChange={(e) => setParam("month", e.target.value ? `${e.target.value}-01` : null)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="records-search">Search</Label>
+          <Input
+            id="records-search"
+            type="search"
+            placeholder="Search loaded records…"
+            value={params.get("q") ?? ""}
+            onChange={(e) => setParam("q", e.target.value || null)}
           />
         </div>
       </div>
@@ -117,16 +139,26 @@ export const RecordsTab: React.FC = () => {
           </TabsList>
         </div>
         <TabsContent value={kind} className="mt-0 min-w-0">
-          <RecordListPanel
-            config={RECORD_CONFIGS[activeIndex]}
-            rows={activeRows}
-            totalCount={results[activeIndex].data?.length ?? 0}
-            isLoading={results[activeIndex].isLoading}
-            error={results[activeIndex].error}
-            onRetry={() => void results[activeIndex].refetch()}
-            viewer={viewer}
-            onAction={(action, record) => run(action, RECORD_CONFIGS[activeIndex], record)}
-          />
+          <div className="space-y-4">
+            {activeRows && (
+              <RecordStrip
+                config={RECORD_CONFIGS[activeIndex]}
+                rows={activeRows}
+                totalCount={results[activeIndex].data?.length ?? 0}
+                month={month}
+              />
+            )}
+            <RecordListPanel
+              config={RECORD_CONFIGS[activeIndex]}
+              rows={activeRows}
+              totalCount={results[activeIndex].data?.length ?? 0}
+              isLoading={results[activeIndex].isLoading}
+              error={results[activeIndex].error}
+              onRetry={() => void results[activeIndex].refetch()}
+              viewer={viewer}
+              onAction={(action, record) => run(action, RECORD_CONFIGS[activeIndex], record)}
+            />
+          </div>
         </TabsContent>
       </Tabs>
       {dialogs}
