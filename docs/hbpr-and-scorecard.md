@@ -162,6 +162,20 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   trimmed (42 KB -> 34 KB); future-date validator uses the app calendar day
   (`timezone.localdate()`), not the host's.
 
+- **2026-10-03, follow-up review (PRs #2–#6):** paged records now break date ties on pk
+  and reject an out-of-range `?offset=` (400, not 500); the EPR-stage notification finds
+  the covering HBPR through shared-team membership, not only the direct FK
+  (`hbpr_user_ids_covering`); the Records tab counts an open absence in working days like
+  the backend SLA; `services_hbpr` uses the app day helper.
+
+**Known semantics (deliberate, fail-closed):** an assignment is "open" only while
+`effective_to IS NULL`. Setting `effective_to` — even to a future date — ends scope
+**immediately**; the date records the last day, it does not schedule the end. Likewise
+`reassign` with a future `effective_from` leaves the new HBPR without scope until that
+date while the old one loses it at once. Do not rely on a future end date to keep
+coverage; make date-aware openness a deliberate change touching `hbpr_assignments`,
+`role_service`, `UserViewSet` deletion and the evidence serializer together.
+
 **Accepted, not changed:** the assignment model and `/admin/hbpr-assignments` live in
 core (`apps/users`) while evidence lives in the plugin (moving a deployed model is the
 riskiest option for no user-visible gain); `UserViewSet.bulk_update` (complexity 37) and
