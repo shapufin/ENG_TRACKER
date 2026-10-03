@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, it, expect, vi } from "vitest";
@@ -376,5 +376,45 @@ describe("HbprWorkspacePage", () => {
     // The period is the visible substance; the TL's private note must not appear.
     expect(screen.getAllByText(`${YEAR}-03`).length).toBeGreaterThan(0);
     expect(screen.queryByText("private review note")).not.toBeInTheDocument();
+  });
+
+  it("renders record states as tone badges with icon and text, never color alone", async () => {
+    renderPage("/hbpr?view=records&kind=absences");
+    const badges = await screen.findAllByText(/working days open/i);
+    expect(badges.length).toBeGreaterThan(0);
+    for (const badge of badges) {
+      expect(badge.closest('[role="status"]')).not.toBeNull();
+    }
+  });
+
+  it("switches record kinds from the sidebar and drops the old status filter", async () => {
+    renderPage("/hbpr?view=records&kind=absences&status=addressed");
+    const nav = await screen.findByRole("navigation", { name: "Record types" });
+    fireEvent.click(within(nav).getByRole("button", { name: /promotions/i }));
+    await waitFor(() =>
+      expect(svc.getHbprRecordsPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ kind: "promotions" })
+      )
+    );
+    const last = svc.getHbprRecordsPage.mock.calls.at(-1)?.[0] as unknown as Record<
+      string,
+      unknown
+    >;
+    expect(last).not.toHaveProperty("status");
+  });
+
+  it("marks the active kind pressed and shows its server total", async () => {
+    renderPage("/hbpr?view=records&kind=absences");
+    // Wait for the server total before asserting the count beside the kind.
+    expect((await screen.findAllByText("Anna Rossi")).length).toBeGreaterThan(0);
+    const nav = await screen.findByRole("navigation", { name: "Record types" });
+    expect(within(nav).getByRole("button", { name: /absences 1/i })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(within(nav).getByRole("button", { name: /promotions/i })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
   });
 });
