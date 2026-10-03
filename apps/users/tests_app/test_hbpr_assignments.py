@@ -6,7 +6,7 @@ never a global role population. One open assignment per AL TL is enforced in
 the write service; history is retained via effective dates.
 """
 
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -28,6 +28,7 @@ from apps.users.services.hbpr_assignments import (
     create_assignment,
     end_assignment,
     reassign_assignment,
+    today,
 )
 
 User = get_user_model()
@@ -116,7 +117,7 @@ class AssignmentModelTests(HbprAssignmentTestBase):
             assigned_by=self.admin,
         )
         ended = end_assignment(
-            assignment=assignment, effective_to=date(2026, 10, 15),
+            assignment=assignment, effective_to=date(2026, 10, 2),
             actor=self.admin,
         )
         self.assertFalse(ended.is_current)
@@ -161,26 +162,28 @@ class AssignmentServiceTests(HbprAssignmentTestBase):
         with self.assertRaises(AssignmentError):
             create_assignment(
                 hbpr=self.hbpr2, albanian_tl=self.al_tl,
-                cadence="weekly", effective_from=date(2026, 10, 15),
+                cadence="weekly", effective_from=date(2026, 10, 2),
                 assigned_by=self.admin,
             )
 
     def test_reassignment_closes_prior_and_creates_new(self):
+        start = today() + timedelta(days=5)
         first = create_assignment(
             hbpr=self.hbpr, albanian_tl=self.al_tl,
-            cadence="weekly", effective_from=date(2026, 10, 1),
+            cadence="weekly", effective_from=today() - timedelta(days=10),
             assigned_by=self.admin,
         )
         replacement = reassign_assignment(
             albanian_tl=self.al_tl, new_hbpr=self.hbpr2,
-            cadence="monthly", effective_from=date(2026, 11, 1),
+            cadence="monthly", effective_from=start,
             actor=self.admin,
         )
         first.refresh_from_db()
-        self.assertEqual(first.effective_to, date(2026, 10, 31))
+        self.assertEqual(first.effective_to, start - timedelta(days=1))
         self.assertEqual(first.ended_by, self.admin)
         self.assertTrue(replacement.is_current)
-        self.assertFalse(first.is_current)
+        # The outgoing assignment stays in effect through its last day.
+        self.assertTrue(first.is_current)
 
     def test_historical_rows_retained_after_end(self):
         assignment = create_assignment(
@@ -189,12 +192,12 @@ class AssignmentServiceTests(HbprAssignmentTestBase):
             assigned_by=self.admin,
         )
         end_assignment(
-            assignment=assignment, effective_to=date(2026, 10, 15),
+            assignment=assignment, effective_to=date(2026, 10, 2),
             actor=self.admin,
         )
         self.assertTrue(
             HbprAlbanianTlAssignment.objects.filter(
-                pk=assignment.pk, effective_to=date(2026, 10, 15)
+                pk=assignment.pk, effective_to=date(2026, 10, 2)
             ).exists()
         )
 
@@ -215,7 +218,7 @@ class AssignmentServiceTests(HbprAssignmentTestBase):
             assigned_by=self.admin,
         )
         end_assignment(
-            assignment=assignment, effective_to=date(2026, 10, 15),
+            assignment=assignment, effective_to=date(2026, 10, 2),
             actor=self.admin,
         )
         self.assertIsNone(active_assignment_for_tl(self.al_tl.id))
@@ -231,7 +234,7 @@ class AssignmentServiceTests(HbprAssignmentTestBase):
             cadence="monthly", effective_from=date(2026, 10, 1),
             assigned_by=self.admin,
         )
-        end_assignment(assignment=a1, effective_to=date(2026, 10, 15),
+        end_assignment(assignment=a1, effective_to=date(2026, 10, 2),
                        actor=self.admin)
         current = active_assignments_for_hbpr(self.hbpr)
         self.assertEqual({a.albanian_tl_id for a in current}, {self.al_tl2.id})
@@ -328,7 +331,7 @@ class RoleRevocationGuardTests(HbprAssignmentTestBase):
             assigned_by=self.admin,
         )
         end_assignment(
-            assignment=assignment, effective_to=date(2026, 10, 15),
+            assignment=assignment, effective_to=date(2026, 10, 2),
             actor=self.admin,
         )
         revoke_role(self.hbpr, "hbpr")
@@ -408,6 +411,25 @@ class AssignmentApiTests(HbprAssignmentTestBase):
         self.assertEqual(row["cadence"], "weekly")
         self.assertTrue(row["is_current"])
 
+    def test_current_filter_follows_the_end_date(self):
+        assignment = create_assignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl,
+            cadence="weekly", effective_from=today() - timedelta(days=30),
+            assigned_by=self.admin,
+        )
+        end = today() + timedelta(days=10)
+        self.client.post(
+            self._detail_url(assignment.pk) + "end/", {"effective_to": end.isoformat()},
+        )
+        listed = lambda flag: len(  # noqa: E731
+            self.client.get(self._list_url(), {"current": flag}).data["results"]
+        )
+        self.assertEqual((listed("true"), listed("false")), (1, 0))
+        assignment.refresh_from_db()
+        assignment.effective_to = today() - timedelta(days=1)
+        assignment.save(update_fields=["effective_to"])
+        self.assertEqual((listed("true"), listed("false")), (0, 1))
+
     def test_end_action_closes_assignment(self):
         assignment = create_assignment(
             hbpr=self.hbpr, albanian_tl=self.al_tl,
@@ -416,11 +438,11 @@ class AssignmentApiTests(HbprAssignmentTestBase):
         )
         response = self.client.post(
             self._detail_url(assignment.pk) + "end/",
-            {"effective_to": "2026-10-15"},
+            {"effective_to": "2026-10-02"},
         )
         self.assertEqual(response.status_code, 200)
         assignment.refresh_from_db()
-        self.assertEqual(assignment.effective_to, date(2026, 10, 15))
+        self.assertEqual(assignment.effective_to, date(2026, 10, 2))
         self.assertEqual(assignment.ended_by, self.admin)
 
     def test_end_requires_date(self):
@@ -557,7 +579,7 @@ class AssignmentApiTests(HbprAssignmentTestBase):
         )
         response = self.client.patch(
             self._detail_url(assignment.pk),
-            {"effective_to": "2026-10-15"},
+            {"effective_to": "2026-10-02"},
             format="json",
         )
         self.assertEqual(response.status_code, 400)
@@ -573,7 +595,7 @@ class AssignmentApiTests(HbprAssignmentTestBase):
         self.client.force_authenticate(user=self.plain)
         response = self.client.post(
             self._detail_url(assignment.pk) + "end/",
-            {"effective_to": "2026-10-15"},
+            {"effective_to": "2026-10-02"},
         )
         self.assertEqual(response.status_code, 403)
 

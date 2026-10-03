@@ -241,7 +241,7 @@ export const HbprAssignmentsPage: React.FC = () => {
         title="End assignment"
         description={`End the assignment between ${ending?.hbpr_detail.name ?? ""} and ${
           ending?.albanian_tl_detail.name ?? ""
-        }? The history is kept for its governance evidence.`}
+        }? The end date is the last day of access; the history is kept for its governance evidence.`}
         onConfirm={() => ending && endMutation.mutate({ id: ending.id, date: endDate })}
       >
         <FormField

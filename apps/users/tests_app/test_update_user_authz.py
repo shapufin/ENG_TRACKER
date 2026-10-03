@@ -131,7 +131,7 @@ class HbprRevocationGuardTests(APITestCase):
         from apps.users.services.hbpr_assignments import end_assignment
         from datetime import date
 
-        end_assignment(assignment=self.assignment, effective_to=date(2026, 10, 15))
+        end_assignment(assignment=self.assignment, effective_to=date(2026, 10, 2))
         resp = self._update(self.assigned_hbpr, {'roles': ['employee']})
         self.assertEqual(resp.status_code, 200, resp.data)
         self.assigned_hbpr.profile.refresh_from_db()

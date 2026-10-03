@@ -214,10 +214,11 @@ def _assert_no_active_hbpr_assignment(user, role_code: str) -> None:
     if role_code not in ("hbpr", "albanian_tl"):
         return
     from apps.users.models.hbpr import HbprAlbanianTlAssignment
+    from apps.users.services.hbpr_assignments import unfinished_q
 
     lookup = "hbpr" if role_code == "hbpr" else "albanian_tl"
     if HbprAlbanianTlAssignment.objects.filter(
-        **{lookup: user}, effective_to__isnull=True
+        unfinished_q(), **{lookup: user}
     ).exists():
         raise HbprAssignmentRevokeBlockedError(
             f"Cannot revoke the {role_code} role while an open HBPR↔"
@@ -242,6 +243,7 @@ def find_blocked_hbpr_revocations(user, new_state: dict) -> list[dict]:
     same way (mirrors ``find_blocked_tl_revocations``).
     """
     from apps.users.models.hbpr import HbprAlbanianTlAssignment
+    from apps.users.services.hbpr_assignments import unfinished_q
 
     blocked = []
     for role_code in ('hbpr', 'albanian_tl'):
@@ -249,7 +251,7 @@ def find_blocked_hbpr_revocations(user, new_state: dict) -> list[dict]:
             continue  # not being revoked by this request
         lookup = 'hbpr' if role_code == 'hbpr' else 'albanian_tl'
         open_rows = HbprAlbanianTlAssignment.objects.filter(
-            **{lookup: user}, effective_to__isnull=True
+            unfinished_q(), **{lookup: user}
         ).select_related('hbpr', 'albanian_tl')
         if open_rows.exists():
             blocked.append({'role': role_code, 'assignment_count': open_rows.count()})

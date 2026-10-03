@@ -168,13 +168,15 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   (`hbpr_user_ids_covering`); the Records tab counts an open absence in working days like
   the backend SLA; `services_hbpr` uses the app day helper.
 
-**Known semantics (deliberate, fail-closed):** an assignment is "open" only while
-`effective_to IS NULL`. Setting `effective_to` — even to a future date — ends scope
-**immediately**; the date records the last day, it does not schedule the end. Likewise
-`reassign` with a future `effective_from` leaves the new HBPR without scope until that
-date while the old one loses it at once. Do not rely on a future end date to keep
-coverage; make date-aware openness a deliberate change touching `hbpr_assignments`,
-`role_service`, `UserViewSet` deletion and the evidence serializer together.
+**Assignment dates (2026-10-03).** `effective_to` is the **last day in effect**, not a
+switch. An assignment covers a day `d` when `effective_from <= d` and (`effective_to` is
+null or `>= d`) — one definition, `in_effect_q()` / `unfinished_q()` in
+`apps/users/services/hbpr_assignments.py`, used by scope, notifications, role-revocation
+and user-deletion guards, the admin `current` filter and `is_current`. So a future end date
+keeps access until that day, and `reassign` with a future `effective_from` hands over
+without a gap (old ends the day before). The DB unique constraint and `end`/`reassign`
+targeting still key on `effective_to IS NULL` (one *unended* row per Albanian TL). Notifications
+still fire when the end date is set, not on the day it passes (there is no scheduler).
 
 **Accepted, not changed:** the assignment model and `/admin/hbpr-assignments` live in
 core (`apps/users`) while evidence lives in the plugin (moving a deployed model is the
