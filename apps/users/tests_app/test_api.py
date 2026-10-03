@@ -245,6 +245,18 @@ class TestUserTechAndRoleFacets(APITestCase):
         self.assertNotIn('facet-tl', usernames)
         self.assertNotIn('facet-django', usernames)
 
+    def test_role_filter_employee_includes_team_leader_without_role(self):
+        """Documented definition: Employees excludes elevated ROLES only. A
+        user who merely leads a Team row (no TL role/flag/FK) stays an
+        employee — no other tab could classify them as IT or AL, so excluding
+        them here would make them unreachable."""
+        leader = User.objects.create_user(username='facet-led-team', password='x')
+        Team.objects.create(name='Facet Led Team', code='FACET-LED', team_leader=leader)
+
+        response = self.client.get('/api/users/profiles/', {'role': 'employee'})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('facet-led-team', self._usernames(response))
+
     def test_role_filter_cr_admin_matches_cr_users_only(self):
         Role.objects.get_or_create(code='cr_admin', defaults={'name': 'cr_admin'})
         cr_user = User.objects.create_user(username='facet-cr', password='x')
@@ -646,6 +658,29 @@ class TestBulkUpdateUsers(APITestCase):
         )
         self.assertEqual(response.status_code, 200, response.data)
 
+    def test_mid_batch_tech_failure_writes_nothing(self):
+        """The in-loop TechAssignmentError return must roll the whole batch
+        back — previously the first profile's teams.set committed before the
+        guard fired, contradicting the documented all-or-nothing contract."""
+        retired = Tech.objects.create(name='Bulk Retired', code='BULK-RETIRED', is_active=False)
+        self.first.profile.teams.set([self.team_a])
+
+        response = self.client.post(
+            '/api/users/users/bulk_update/',
+            {
+                'user_ids': [self.first.id, self.second.id],
+                'teams': [self.team_b.id],
+                'techs': [{'tech': retired.id, 'level': None}],
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400, response.data)
+        self.first.profile.refresh_from_db()
+        self.assertEqual(
+            set(self.first.profile.teams.values_list('id', flat=True)), {self.team_a.id}
+        )
+
 
 class TestUpdateUserTlRevokeCascadeBlock(APITestCase):
     """update_user must apply the same TL-revoke dependent block as
@@ -659,6 +694,19 @@ class TestUpdateUserTlRevokeCascadeBlock(APITestCase):
         self.tl = User.objects.create_user(username='update-tl', password='testpass123')
         self.dependent = User.objects.create_user(username='update-dep', password='testpass123')
         self.client.force_authenticate(user=self.admin)
+
+    def test_update_user_with_unseeded_hbpr_role_returns_400(self):
+        """_sync_roles raises ValueError for an unseeded managed role;
+        update_user must translate it to 400 the way create_user does."""
+        Role.objects.filter(code='hbpr').delete()
+
+        response = self.client.patch(
+            f'/api/users/users/{self.tl.id}/update_user/',
+            {'roles': ['hbpr']},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400, response.data)
 
     def test_revoking_italian_tl_role_blocked_while_dependent_fk_remains(self):
         self.tl.profile.is_italian_tl_role = True

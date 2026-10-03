@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Handshake, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -128,10 +128,11 @@ export const HbprAssignmentsPage: React.FC = () => {
     });
   };
 
-  const columns = useHbprAssignmentColumns((row) => {
+  const handleEnd = useCallback((row: HbprAssignment) => {
     setEnding(row);
     setEndDate(todayIso());
-  });
+  }, []);
+  const columns = useHbprAssignmentColumns(handleEnd);
 
   if (assignmentsQuery.isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
   if (assignmentsQuery.isError) {
@@ -166,7 +167,7 @@ export const HbprAssignmentsPage: React.FC = () => {
           <DataTable
             columns={columns}
             data={rows}
-            searchColumn="hbpr_detail.name"
+            searchColumn={["hbpr_detail.name", "albanian_tl_detail.name"]}
             searchPlaceholder="Search assignments..."
             getRowId={(row) => String(row.id)}
             emptyMessage="No assignments match your search."

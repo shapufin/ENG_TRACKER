@@ -30,7 +30,10 @@ import { EmptyState } from "./EmptyState";
 interface DataTableProps<TData extends RowData> {
   columns: AppColumnDef<TData, unknown>[];
   data: TData[];
-  searchColumn?: string;
+  /** Column path(s) the global search matches. Nested paths use dot notation
+   * ("user.username"); an array matches ANY listed path. Omit to search every
+   * primitive cell value. */
+  searchColumn?: string | string[];
   searchPlaceholder?: string;
   enableRowSelection?: boolean;
   rowSelection?: RowSelectionState;
@@ -120,6 +123,11 @@ export const DataTable = function DataTable<TData extends RowData>({
     [onColumnVisibilityChange, storageKey, columnVisibility]
   );
 
+  const searchPaths = React.useMemo(
+    () => (Array.isArray(searchColumn) ? searchColumn : searchColumn ? [searchColumn] : []),
+    [searchColumn]
+  );
+
   const globalFilterFn = React.useCallback(
     // fallow-ignore-next-line complexity
     (row: AppRow<TData>, _columnId: string, filterValue: unknown) => {
@@ -128,16 +136,18 @@ export const DataTable = function DataTable<TData extends RowData>({
         .toLowerCase();
       if (!needle) return true;
 
-      if (searchColumn) {
-        // Handle nested paths like "user.username"
-        const path = searchColumn.split(".");
-        let value: unknown = row.original;
-        for (const key of path) {
-          value = (value as Record<string, unknown>)?.[key];
-          if (value === undefined || value === null) break;
-        }
-        const strValue = String(value ?? "").toLowerCase();
-        return strValue.includes(needle);
+      if (searchPaths.length > 0) {
+        return searchPaths.some((path) => {
+          // Handle nested paths like "user.username"
+          let value: unknown = row.original;
+          for (const key of path.split(".")) {
+            value = (value as Record<string, unknown>)?.[key];
+            if (value === undefined || value === null) break;
+          }
+          return String(value ?? "")
+            .toLowerCase()
+            .includes(needle);
+        });
       }
 
       // fallow-ignore-next-line complexity
@@ -150,7 +160,7 @@ export const DataTable = function DataTable<TData extends RowData>({
         return String(value).toLowerCase().includes(needle);
       });
     },
-    [searchColumn]
+    [searchPaths]
   );
 
   const table = useTable({
@@ -189,7 +199,7 @@ export const DataTable = function DataTable<TData extends RowData>({
           key={row.id}
           data-state={isSelected ? "selected" : undefined}
           className={cn(
-            "transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60",
+            "focus-visible:ring-ring/60 transition-colors focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-inset",
             isSelected && "bg-primary/10",
             onRowClick && "cursor-pointer",
             getRowClassName ? getRowClassName(row.original) : "hover:bg-table-hover"
@@ -277,11 +287,11 @@ export const DataTable = function DataTable<TData extends RowData>({
 
   return (
     <div className="space-y-4">
-      {(searchColumn || enableColumnVisibility) && (
+      {(searchPaths.length > 0 || enableColumnVisibility) && (
         <div className="flex flex-wrap items-center gap-3 pb-1">
-          {searchColumn && (
+          {searchPaths.length > 0 && (
             <div className="relative w-full max-w-sm flex-1 sm:w-auto">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder={searchPlaceholder}
                 value={globalFilter}
@@ -304,18 +314,18 @@ export const DataTable = function DataTable<TData extends RowData>({
       {/* Scroll wrapper with shadow indicators */}
       <div className="relative">
         {showLeftShadow && (
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 rounded-l-md bg-linear-to-r from-card to-transparent" />
+          <div className="from-card pointer-events-none absolute inset-y-0 left-0 z-10 w-8 rounded-l-md bg-linear-to-r to-transparent" />
         )}
         {showRightShadow && (
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 rounded-r-md bg-linear-to-l from-card to-transparent" />
+          <div className="from-card pointer-events-none absolute inset-y-0 right-0 z-10 w-8 rounded-r-md bg-linear-to-l to-transparent" />
         )}
         <div
           ref={scrollRef}
-          className="overflow-x-auto rounded-xl border border-border/70 bg-background/20"
+          className="border-border/70 bg-background/20 overflow-x-auto rounded-xl border"
         >
           <table className="w-full min-w-max text-sm">
             <thead>
-              <tr className="border-b border-border/70 bg-muted/90 backdrop-blur-sm">
+              <tr className="border-border/70 bg-muted/90 border-b backdrop-blur-sm">
                 {enableRowSelection && (
                   <th className="w-10 px-4 py-3 text-left">
                     <Checkbox
@@ -330,7 +340,7 @@ export const DataTable = function DataTable<TData extends RowData>({
                   hg.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                      className="text-muted-foreground px-4 py-3 text-left text-xs font-semibold tracking-wider whitespace-nowrap uppercase"
                       style={
                         header.column.columnDef.size
                           ? { width: header.column.columnDef.size }
@@ -349,7 +359,7 @@ export const DataTable = function DataTable<TData extends RowData>({
                       {header.isPlaceholder ? null : header.column.getCanSort() ? (
                         <button
                           type="button"
-                          className="flex min-h-11 items-center gap-1 transition-colors hover:text-foreground"
+                          className="hover:text-foreground flex min-h-11 items-center gap-1 transition-colors"
                           onClick={header.column.getToggleSortingHandler()}
                           aria-label={`Sort by ${header.column.id}`}
                           title={`Sort by ${header.column.id}`}
@@ -373,7 +383,7 @@ export const DataTable = function DataTable<TData extends RowData>({
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/50">
+            <tbody className="divide-border/50 divide-y">
               {rows.length ? (
                 renderedRows
               ) : (
@@ -389,7 +399,7 @@ export const DataTable = function DataTable<TData extends RowData>({
       </div>
 
       <div className="flex items-center justify-between px-1">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           {table.getFilteredRowModel().rows.length} result
           {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
           {table.getPageCount() > 1 &&

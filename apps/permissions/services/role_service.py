@@ -291,5 +291,18 @@ def find_blocked_hbpr_revocations(user, new_state: dict) -> list[dict]:
             unfinished_q(), **{lookup: user}
         ).select_related('hbpr', 'albanian_tl')
         if open_rows.exists():
-            blocked.append({'role': role_code, 'assignment_count': open_rows.count()})
+            # Shaped for the frontend's BlockedRevocation contract so the
+            # single-user refusal feeds the same dialog as the bulk path.
+            blocked.append(
+                {
+                    'user_id': user.id,
+                    'username': user.username,
+                    'role': role_code,
+                    # HBPR guards resolve outside the dialog (end the
+                    # assignment), so the reassignable list is always empty —
+                    # mirrors find_blocked_hbpr_revocations_bulk.
+                    'dependents': [],
+                    'assignment_count': open_rows.count(),
+                }
+            )
     return blocked

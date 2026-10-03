@@ -33,6 +33,16 @@ describe("UserFilterTabs", () => {
     expect(screen.getByRole("button", { name: "CR Admin" })).toBeInTheDocument();
   });
 
+  it("marks the active tab as pressed — Employees is the default", () => {
+    render(<UserFilterTabs filter="employee" onFilterChange={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Employees" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.getByRole("button", { name: "HBPR" })).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("reports the clicked role key", () => {
     const onFilterChange = vi.fn();
     render(<UserFilterTabs filter="employee" onFilterChange={onFilterChange} showCRAdmin />);

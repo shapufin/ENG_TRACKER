@@ -4,7 +4,9 @@ import { Users2, Crown, Handshake, UserCog, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LAYOUT_ID, useMotionTransition } from "@/lib/motion";
 
-type TLFilter = "employee" | "italian_tl" | "albanian_tl" | "hbpr" | "hr" | "cr_admin";
+/** The Admin Users role-tab filter. Single declaration — `useUsersPage`
+ * imports this rather than redeclaring the union. */
+export type TLFilter = "employee" | "italian_tl" | "albanian_tl" | "hbpr" | "hr" | "cr_admin";
 
 interface UserFilterTabsProps {
   filter: TLFilter;
@@ -38,6 +40,7 @@ export const UserFilterTabs: React.FC<UserFilterTabsProps> = ({
             <button
               key={f.key}
               onClick={() => onFilterChange(f.key)}
+              aria-pressed={isActive}
               className={cn(
                 "relative flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
                 isActive

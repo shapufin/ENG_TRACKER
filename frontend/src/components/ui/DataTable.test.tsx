@@ -268,9 +268,31 @@ describe("DataTable", () => {
       expect(bodyNames(container)).toEqual(["Carol", "Bob", "Alice"]);
     });
 
+    it("matches any of the listed search paths when searchColumn is an array", () => {
+      const { container } = render(
+        <DataTable
+          columns={columns}
+          data={[
+            { id: 1, name: "Alice", email: "alice@test.com" },
+            { id: 2, name: "Bob", email: "bob@test.com" },
+          ]}
+          searchColumn={["name", "email"]}
+          searchPlaceholder="Search people..."
+        />
+      );
+
+      fireEvent.change(screen.getByLabelText("Search people..."), { target: { value: "bob@" } });
+      expect(bodyNames(container)).toEqual(["Bob"]);
+    });
+
     it("filters rows with the global search and reports the result count", () => {
       const { container } = render(
-        <DataTable columns={columns} data={people} searchColumn="name" searchPlaceholder="Search..." />
+        <DataTable
+          columns={columns}
+          data={people}
+          searchColumn="name"
+          searchPlaceholder="Search..."
+        />
       );
       fireEvent.change(screen.getByLabelText("Search..."), { target: { value: "bo" } });
       expect(bodyNames(container)).toEqual(["Bob"]);

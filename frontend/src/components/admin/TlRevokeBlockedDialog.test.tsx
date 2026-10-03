@@ -112,10 +112,14 @@ describe("TlRevokeBlockedDialog", () => {
 
     const options = screen.getAllByRole("option", { name: "Dave TL" });
     fireEvent.click(options[1]);
-    await waitFor(() => expect(userService.setTeamLeader).toHaveBeenCalledWith(10, "italian_tl", 5));
+    await waitFor(() =>
+      expect(userService.setTeamLeader).toHaveBeenCalledWith(10, "italian_tl", 5)
+    );
 
     fireEvent.click(screen.getAllByRole("option", { name: "No TL" })[2]);
-    await waitFor(() => expect(userService.setTeamLeader).toHaveBeenCalledWith(11, "italian_tl", null));
+    await waitFor(() =>
+      expect(userService.setTeamLeader).toHaveBeenCalledWith(11, "italian_tl", null)
+    );
 
     const retryButton = screen.getByRole("button", { name: "Retry" });
     await waitFor(() => expect(retryButton).not.toBeDisabled());
@@ -204,6 +208,6 @@ describe("TlRevokeBlockedDialog", () => {
         onRetry={vi.fn()}
       />
     );
-    expect(screen.queryByText("Reassign team members first")).not.toBeInTheDocument();
+    expect(screen.queryByText("Resolve dependencies first")).not.toBeInTheDocument();
   });
 });

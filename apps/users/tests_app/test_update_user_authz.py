@@ -114,12 +114,26 @@ class HbprRevocationGuardTests(APITestCase):
     def test_revoking_hbpr_returns_400_not_500(self):
         resp = self._update(self.assigned_hbpr, {'roles': ['employee']})
         self.assertEqual(resp.status_code, 400, resp.data)
-        self.assertIn('blocked_hbpr_revocations', resp.data)
+        self.assertIn('blocked_revocations', resp.data)
 
     def test_revoking_albanian_tl_returns_400_not_500(self):
         resp = self._update(self.assigned_tl, {'roles': ['employee']})
         self.assertEqual(resp.status_code, 400, resp.data)
-        self.assertIn('blocked_hbpr_revocations', resp.data)
+        self.assertIn('blocked_revocations', resp.data)
+
+    def test_hbpr_refusal_payload_is_dialog_shaped(self):
+        """The frontend's getBlockedRevocations reads `blocked_revocations`
+        and BlockedRevocation requires user_id/username — a single-user block
+        must feed the same dialog as the bulk path."""
+        resp = self._update(self.assigned_hbpr, {'roles': ['employee']})
+        self.assertEqual(resp.status_code, 400, resp.data)
+        blocked = resp.data['blocked_revocations']
+        self.assertEqual(len(blocked), 1)
+        self.assertEqual(blocked[0]['user_id'], self.assigned_hbpr.id)
+        self.assertEqual(blocked[0]['username'], 'hbpr_guarded')
+        self.assertEqual(blocked[0]['role'], 'hbpr')
+        self.assertEqual(blocked[0]['assignment_count'], 1)
+        self.assertEqual(blocked[0]['dependents'], [])
 
     def test_profile_untouched_after_blocked_revoke(self):
         resp = self._update(self.assigned_hbpr, {'roles': ['employee'], 'email': 'new@x.test'})

@@ -88,14 +88,20 @@ describe("HbprAssignmentsPage", () => {
     expect(await screen.findByText("Failed to load assignments")).toBeInTheDocument();
   });
 
+  it("renders the effective-to date for an ended assignment", async () => {
+    vi.mocked(hbprAssignmentService.list).mockResolvedValue({
+      data: [{ ...assignment, id: 3, is_current: false, effective_to: "2026-06-30" }],
+    } as never);
+    renderPage();
+    expect(await screen.findByText("2026-06-30")).toBeInTheDocument();
+  });
+
   it("only offers End for a current assignment", async () => {
     vi.mocked(hbprAssignmentService.list).mockResolvedValue({
       data: [{ ...assignment, id: 2, is_current: false, effective_to: "2026-06-30" }],
     } as never);
     renderPage();
     await waitFor(() => expect(screen.getByText("Enri Leader")).toBeInTheDocument());
-    expect(
-      screen.queryByRole("button", { name: /end assignment/i })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /end assignment/i })).not.toBeInTheDocument();
   });
 });
