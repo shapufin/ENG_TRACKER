@@ -81,11 +81,14 @@ class QueueHighlightsScopeAndTagTests(TestCase):
         StandbyLog.objects.create(
             user=self.member, date=self.today, hours=24, status="pending"
         )
+        # start_date stays "today" (the period bucket is keyed on it); the range
+        # must still contain a business day, or `LeaveRequest.clean()` rejects it
+        # on a Saturday/Sunday. today -> today+2 always contains one.
         LeaveRequest.objects.create(
             user=self.member,
             request_type="vacation",
             start_date=self.today,
-            end_date=self.today,
+            end_date=self.today + timedelta(days=2),
             status="pending",
         )
 
@@ -127,11 +130,13 @@ class MonthlyComparisonGranularityTests(TestCase):
         self.team = Team.objects.create(name="Infra3", code="INFRA3")
         TeamMembership.objects.create(user_profile=self.tl.profile, team=self.team)
 
+        # Same weekend-proof range as above: a single-day fixture leave dated on a
+        # Saturday/Sunday has zero business days and fails model validation.
         LeaveRequest.objects.create(
             user=self.tl,
             request_type="vacation",
             start_date=self.today,
-            end_date=self.today,
+            end_date=self.today + timedelta(days=2),
             status="pending",
         )
 
