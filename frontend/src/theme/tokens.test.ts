@@ -5,15 +5,28 @@ import { describe, expect, it } from "vitest";
 
 const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
 
-const darkStart = css.indexOf(".dark");
-if (darkStart === -1) throw new Error("index.css is missing the .dark block");
-const lightBlock = css.slice(0, darkStart);
+// Strip CSS comments before locating the blocks. A comment anywhere above the
+// dark block that happens to contain `.dark` (or a `}`) would otherwise move
+// `darkStart` and cascade misleading failures across every assertion below —
+// it is not enough to ask authors to avoid those characters in prose.
+const cssNoComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+
+// Anchor on a line whose first non-space token is the `.dark` selector, so a
+// mention of `.dark` inside a comment or a string cannot be mistaken for it.
+const darkMatch = cssNoComments.match(/(?:^|[\r\n])[ \t]*\.dark[ \t]*\{/);
+if (!darkMatch || darkMatch.index === undefined) {
+  throw new Error("index.css is missing the .dark block");
+}
+const darkStart = darkMatch.index + darkMatch[0].indexOf(".dark");
+const lightBlock = cssNoComments.slice(0, darkStart);
 // NOTE: darkBlock terminates at the FIRST `}` after `.dark`. Keep the `.dark`
-// token list flat — a nested rule, or a `}` inside a comment, truncates this
-// slice and cascades misleading failures across every assertion below.
-const darkBlock = css.slice(
+// token list flat — a nested rule truncates this slice and cascades misleading
+// failures across every assertion below.
+const darkBlock = cssNoComments.slice(
   darkStart,
-  css.indexOf("}", darkStart) === -1 ? css.length : css.indexOf("}", darkStart)
+  cssNoComments.indexOf("}", darkStart) === -1
+    ? cssNoComments.length
+    : cssNoComments.indexOf("}", darkStart)
 );
 
 /**
@@ -120,11 +133,7 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
   });
 
   it("proves the AA claims by computing contrast (not just pinning strings)", () => {
-    const toRgb = (
-      h: number,
-      s: number,
-      l: number,
-    ): [number, number, number] => {
+    const toRgb = (h: number, s: number, l: number): [number, number, number] => {
       const hh = h / 360;
       const ss = s / 100;
       const ll = l / 100;
@@ -146,14 +155,12 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
                   : [c, 0, x];
       return [r + m, g + m, b + m];
     };
-    const lin = (v: number) =>
-      v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    const lin = (v: number) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
     const luminance = (h: number, s: number, l: number) => {
       const [r, g, b] = toRgb(h, s, l).map(lin);
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     };
-    const ratio = (l1: number, l2: number) =>
-      (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    const ratio = (l1: number, l2: number) => (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
     const white = luminance(0, 0, 100);
     // Solid-button pairs: white text on primary / destructive / info.
     expect(ratio(white, luminance(221, 83, 53))).toBeGreaterThanOrEqual(4.5);
@@ -161,13 +168,8 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     expect(ratio(white, luminance(201, 96, 32))).toBeGreaterThanOrEqual(4.5);
     // Tinted info surface: 12% sky-600 over a white card, dark sky text.
     const [sr, sg, sb] = toRgb(199, 98, 39);
-    const surface = [0.12 * sr + 0.88, 0.12 * sg + 0.88, 0.12 * sb + 0.88].map(
-      lin,
-    );
-    const surfaceLum =
-      0.2126 * surface[0] + 0.7152 * surface[1] + 0.0722 * surface[2];
-    expect(ratio(luminance(201, 90, 27), surfaceLum)).toBeGreaterThanOrEqual(
-      4.5,
-    );
+    const surface = [0.12 * sr + 0.88, 0.12 * sg + 0.88, 0.12 * sb + 0.88].map(lin);
+    const surfaceLum = 0.2126 * surface[0] + 0.7152 * surface[1] + 0.0722 * surface[2];
+    expect(ratio(luminance(201, 90, 27), surfaceLum)).toBeGreaterThanOrEqual(4.5);
   });
 });

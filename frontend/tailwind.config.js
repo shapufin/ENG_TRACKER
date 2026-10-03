@@ -114,6 +114,14 @@ export default {
           },
         },
       },
+      // `text-primary` is a TEXT role, `bg-primary` a FILL role. One lightness
+      // cannot satisfy both in dark mode (measured 2026-10-03: the fill needs
+      // L<=62% for white button labels, text needs L>=68% for AA 4.5:1 on a dark
+      // card), so text-* resolves from --primary-text while bg-*/border-*/ring-*
+      // keep --primary. Splitting here means zero call-site churn.
+      textColor: {
+        primary: "hsl(var(--primary-text))",
+      },
       fontFamily: {
         sans: ["Plus Jakarta Sans Variable", ...defaultTheme.fontFamily.sans],
         mono: ["JetBrains Mono", ...defaultTheme.fontFamily.mono],

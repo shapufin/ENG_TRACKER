@@ -13,6 +13,9 @@
     --primary: 221 83% 53%;
     --primary-foreground: 210 40% 98%;
     --primary-hover: 224 76% 48%;
+    /* Text role for primary. Light mode matches --primary (already AA on white),
+       so nothing changes here; the dark theme needs a lighter value. */
+    --primary-text: 221 83% 53%;
     --secondary: 220 16% 94%;
     --secondary-foreground: 222 47% 11%;
     --muted: 220 16% 93%;
@@ -93,6 +96,11 @@
     --primary: 262 83% 58%;
     --primary-foreground: 0 0% 100%;
     --primary-hover: 262 83% 52%;
+    /* Two roles, because one lightness cannot satisfy both (measured 2026-10-03):
+       --primary is the FILL (buttons/rings/borders) and pairs with white text at
+       5.67:1; as TEXT on a dark card it is only 3.07:1, below AA 4.5:1. L=68% is
+       4.74:1 on --card and 5.34:1 on the page, so text uses --primary-text. */
+    --primary-text: 262 83% 68%;
     --secondary: 221 33% 15.5%;
     --secondary-foreground: 214 32% 91%;
     --muted: 221 33% 14.5%;
