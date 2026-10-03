@@ -226,5 +226,7 @@ def hbpr_revocation_refusal(user, data) -> dict | None:
             'Cannot revoke role while an open HBPR↔Albanian TL assignment depends on it: '
             + summary
         ),
-        'blocked_hbpr_revocations': blocked,
+        # Canonical key: getBlockedRevocations reads `blocked_revocations`, so
+        # the edit form opens the same dialog the bulk path does.
+        'blocked_revocations': blocked,
     }

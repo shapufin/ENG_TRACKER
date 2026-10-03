@@ -50,14 +50,14 @@ const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
       <Badge
         key="hbpr"
         variant="default"
-        className="h-5 shrink-0 border-violet-500/30 bg-violet-500/15 px-1.5 py-0 text-[10px] text-violet-700 hover:bg-violet-500/25 dark:text-violet-400"
+        className="h-5 shrink-0 border-violet-500/30 bg-violet-500/10 px-1.5 py-0 text-[10px] font-normal text-violet-400 hover:bg-violet-500/20"
       >
         HBPR
       </Badge>
     );
   }
   if (badges.length === 0) {
-    return <span className="text-[10px] text-muted-foreground">—</span>;
+    return <span className="text-muted-foreground text-[10px]">—</span>;
   }
   return <div className="flex gap-1">{badges}</div>;
 };
@@ -70,7 +70,7 @@ const renderCRScopeTeamsCell = ({
   accessByUserId: Map<number, CRAccessRecord>;
 }) => {
   const scopes = accessByUserId.get(profile.user?.id)?.team_scopes ?? [];
-  if (scopes.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+  if (scopes.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
   return (
     <div className="flex flex-wrap gap-1">
       {scopes.map((scope) => (
@@ -92,13 +92,13 @@ const renderCRAccessCell = ({
   accessUserIds.has(profile.user?.id) ? (
     <Badge
       variant="default"
-      className="h-5 shrink-0 border-primary/30 bg-primary/15 px-1.5 py-0 text-[10px] text-foreground hover:bg-primary/20"
+      className="border-primary/30 bg-primary/15 text-foreground hover:bg-primary/20 h-5 shrink-0 px-1.5 py-0 text-[10px]"
       title="Control Room access granted"
     >
       CR
     </Badge>
   ) : (
-    <span className="text-[10px] text-muted-foreground">—</span>
+    <span className="text-muted-foreground text-[10px]">—</span>
   );
 
 export const useUserColumns = (
@@ -123,7 +123,7 @@ export const useUserColumns = (
         header: "Username",
         size: 140,
         cell: ({ row }) => (
-          <span className="font-medium text-foreground">{row.original.user?.username}</span>
+          <span className="text-foreground font-medium">{row.original.user?.username}</span>
         ),
       },
       {
@@ -133,7 +133,7 @@ export const useUserColumns = (
         size: 200,
         cell: ({ row }) => (
           <span
-            className="block max-w-[180px] truncate text-sm text-muted-foreground"
+            className="text-muted-foreground block max-w-[180px] truncate text-sm"
             title={row.original.user?.email}
           >
             {row.original.user?.email || <span className="opacity-50">—</span>}
@@ -217,7 +217,7 @@ export const useUserColumns = (
               </div>
             );
           }
-          return <span className="text-[10px] text-muted-foreground">—</span>;
+          return <span className="text-muted-foreground text-[10px]">—</span>;
         },
         enableSorting: false,
       },
@@ -260,7 +260,7 @@ export const useUserColumns = (
           row.original.italian_tl_name ? (
             <span className="text-xs font-medium">{row.original.italian_tl_name}</span>
           ) : (
-            <span className="text-[10px] text-muted-foreground">—</span>
+            <span className="text-muted-foreground text-[10px]">—</span>
           ),
       },
       {
@@ -272,7 +272,7 @@ export const useUserColumns = (
           row.original.albanian_tl_name ? (
             <span className="text-xs font-medium">{row.original.albanian_tl_name}</span>
           ) : (
-            <span className="text-[10px] text-muted-foreground">—</span>
+            <span className="text-muted-foreground text-[10px]">—</span>
           ),
       },
       {
@@ -284,7 +284,7 @@ export const useUserColumns = (
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0 hover:bg-primary/10"
+              className="hover:bg-primary/10 h-8 w-8 p-0"
               onClick={() => onEdit(row.original)}
               aria-label={`Edit user ${row.original.user?.username}`}
             >
@@ -293,7 +293,7 @@ export const useUserColumns = (
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0 text-warning hover:bg-warning/10"
+              className="text-warning hover:bg-warning/10 h-8 w-8 p-0"
               onClick={() => onReset(row.original.user?.id)}
               aria-label={`Reset password for ${row.original.user?.username}`}
             >
@@ -302,7 +302,7 @@ export const useUserColumns = (
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+              className="text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
               onClick={() => onDelete(row.original)}
               aria-label={`Delete user ${row.original.user?.username}`}
             >
@@ -312,7 +312,7 @@ export const useUserColumns = (
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-8 w-8 p-0 hover:bg-primary/10"
+                className="hover:bg-primary/10 h-8 w-8 p-0"
                 onClick={() =>
                   navigate(`/admin/control-room/access?user_id=${row.original.user?.id}`)
                 }

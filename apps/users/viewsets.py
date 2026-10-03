@@ -619,6 +619,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                             already_assigned_ids=assigned_by_profile.get(profile.id, set()),
                         )
                     except TechAssignmentError as exc:
+                        # Returning normally would COMMIT the writes already
+                        # made in this batch (atomic() only rolls back on an
+                        # exception), breaking the all-or-nothing contract.
+                        transaction.set_rollback(True)
                         return Response(
                             {'error': f'{profile.user.username}: {exc}'},
                             status=status.HTTP_400_BAD_REQUEST,
@@ -885,7 +889,12 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 profile.is_albanian_tl_role = bool(data['is_albanian_tl_role'])
         profile.save()
         if 'roles' in data:
-            _sync_roles(user, data['roles'])
+            try:
+                _sync_roles(user, data['roles'])
+            except ValueError as e:
+                # e.g. the hbpr role row was never seeded — create_user
+                # translates the same failure to a 400.
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         else:
             _sync_legacy_roles(
                 user,
@@ -1208,6 +1217,12 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
             # or TL-via-dependents — but their own TL-assignment FKs do NOT
             # exclude them (an employee with a manager is still an employee;
             # that distinguishes this from the no_tl "unassigned" metric).
+            # Deliberately NOT excluded: Django staff/superusers and users who
+            # lead a Team row without holding the TL role. They carry no
+            # elevated role, and no other tab can classify them (the TL tabs
+            # match role/flag/own-members, not Team.team_leader), so excluding
+            # them here would leave them unreachable. Documented in
+            # docs/hbpr-and-scorecard.md.
             return queryset.filter(
                 Q(is_italian_tl_role=False)
                 & Q(is_albanian_tl_role=False)

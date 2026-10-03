@@ -168,6 +168,28 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   (`hbpr_user_ids_covering`); the Records tab counts an open absence in working days like
   the backend SLA; `services_hbpr` uses the app day helper.
 
+- **2026-10-03, admin Users/HBPR UX (PRs #11–#13) + review follow-ups:** the Users page role
+  tabs are now Employees (default) | Italian TL | Albanian TL | HBPR | HR | CR Admin (CR
+  gated on the control_room plugin) — no All/No TL tab. `Employees` means "no elevated
+  **role**" (no IT/AL TL, HR, HBPR or CR admin) and deliberately still lists Django
+  staff/superusers and users who only lead a `Team` row: neither holds an elevated role and
+  no other tab can classify them, so excluding them would make them unreachable
+  (`viewsets._apply_role_filter`, pinned by
+  `test_role_filter_employee_includes_team_leader_without_role`). The HBPR user form hides
+  team/tech/TL controls and the TL/CR switches, warns which hidden roles will be revoked,
+  and omits hidden assignment keys so stored values survive while the `roles` array drops
+  incompatible roles (shared `buildRolePayload`); the bulk drawer mirrors this and gained a
+  tri-state `is_hbpr` toggle. `bulk_update` accepts `is_hbpr` behind a batched
+  `find_blocked_hbpr_revocations_bulk` pre-check inside the transaction. `/admin/hbpr-assignments`
+  uses the shared `DataTable` (sort/search/pagination, effective from/to columns), and
+  `DataTable.searchColumn` accepts a path array so a search matches either person. Follow-up
+  fixes after review: the single-user HBPR refusal returns the canonical `blocked_revocations`
+  key with dialog-shaped entries (`user_id`/`username`/`dependents: []`/`assignment_count`),
+  so the edit form opens the same `TlRevokeBlockedDialog` as bulk; `update_user` translates
+  `_sync_roles`' unseeded-role `ValueError` into a 400 like `create_user`; and
+  `bulk_update`'s in-loop `TechAssignmentError` return calls `transaction.set_rollback(True)`
+  so a mid-batch failure writes nothing (the old `return` committed earlier profiles' writes).
+
 **Assignment dates (2026-10-03).** `effective_to` is the **last day in effect**, not a
 switch. An assignment covers a day `d` when `effective_from <= d` and (`effective_to` is
 null or `>= d`) — one definition, `in_effect_q()` / `unfinished_q()` in
