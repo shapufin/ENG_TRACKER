@@ -5,8 +5,8 @@ import { toast } from "sonner";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
@@ -14,22 +14,14 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FormField } from "@/components/ui/FormField";
 import { HbprAssignmentDialog } from "./components/HbprAssignmentDialog";
 import type { HbprAssignmentForm } from "./components/HbprAssignmentDialog";
+import { useHbprAssignmentColumns } from "./hooks/useHbprAssignmentColumns";
 import api from "@/lib/api";
 import { hbprAssignmentService } from "@/services/hbprAssignmentService";
 import { handleApiError } from "@/lib/error-handler";
-import { CADENCE_LABELS, CADENCE_STATUS_LABELS } from "@/types/hbprAssignment";
-import type { HbprAssignment, HbprCadenceStatus, HbprPersonRef } from "@/types/hbprAssignment";
+import type { HbprAssignment, HbprPersonRef } from "@/types/hbprAssignment";
 import type { PaginatedResponse } from "@/types";
 
 const QUERY_KEY = ["admin", "hbpr-assignments"];
-
-const STATUS_TONE: Record<HbprCadenceStatus, "success" | "warning" | "destructive" | "neutral"> = {
-  on_track: "success",
-  due: "warning",
-  overdue: "destructive",
-  not_started: "neutral",
-  ended: "neutral",
-};
 
 // Local calendar date (en-CA formats as YYYY-MM-DD); `toISOString()` is UTC and
 // is a day off for an admin working just after local midnight.
@@ -107,7 +99,7 @@ export const HbprAssignmentsPage: React.FC = () => {
       setForm(emptyForm());
       invalidate();
     },
-    onError: (error) => toast.error(handleApiError(error)),
+    onError: handleApiError,
   });
 
   const endMutation = useMutation({
@@ -117,7 +109,7 @@ export const HbprAssignmentsPage: React.FC = () => {
       setEnding(null);
       invalidate();
     },
-    onError: (error) => toast.error(handleApiError(error)),
+    onError: handleApiError,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -135,6 +127,11 @@ export const HbprAssignmentsPage: React.FC = () => {
       effective_from: form.effective_from,
     });
   };
+
+  const columns = useHbprAssignmentColumns((row) => {
+    setEnding(row);
+    setEndDate(todayIso());
+  });
 
   if (assignmentsQuery.isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
   if (assignmentsQuery.isError) {
@@ -156,72 +153,26 @@ export const HbprAssignmentsPage: React.FC = () => {
         </Button>
       }
     >
-      <GlassCard>
-        {rows.length === 0 ? (
+      {rows.length === 0 ? (
+        <GlassCard>
           <EmptyState
             icon={Handshake}
             title="No assignments yet"
             description="Create an assignment to give an HBPR visibility of an Albanian team leader."
           />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <caption className="sr-only">HBPR assignments</caption>
-              <thead>
-                <tr className="border-border/60 text-muted-foreground border-b text-xs tracking-wide uppercase">
-                  <th scope="col" className="py-3 pr-4 font-semibold">
-                    HBPR
-                  </th>
-                  <th scope="col" className="py-3 pr-4 font-semibold">
-                    Albanian TL
-                  </th>
-                  <th scope="col" className="py-3 pr-4 font-semibold">
-                    Cadence
-                  </th>
-                  <th scope="col" className="py-3 pr-4 font-semibold">
-                    Status
-                  </th>
-                  <th scope="col" className="py-3 pr-4 font-semibold">
-                    Next due
-                  </th>
-                  <th scope="col" className="py-3 text-right font-semibold">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-border/50 divide-y">
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td className="py-3 pr-4">{row.hbpr_detail.name}</td>
-                    <td className="py-3 pr-4">{row.albanian_tl_detail.name}</td>
-                    <td className="py-3 pr-4">{CADENCE_LABELS[row.cadence]}</td>
-                    <td className="py-3 pr-4">
-                      <Badge variant={STATUS_TONE[row.cadence_status]}>
-                        {CADENCE_STATUS_LABELS[row.cadence_status]}
-                      </Badge>
-                    </td>
-                    <td className="py-3 pr-4 font-mono tabular-nums">{row.next_due_on ?? "—"}</td>
-                    <td className="py-3 text-right">
-                      {row.is_current && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEnding(row);
-                            setEndDate(todayIso());
-                          }}
-                        >
-                          End
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </GlassCard>
+        </GlassCard>
+      ) : (
+        <GlassCard delay={0} className="p-4">
+          <DataTable
+            columns={columns}
+            data={rows}
+            searchColumn="hbpr_detail.name"
+            searchPlaceholder="Search assignments..."
+            getRowId={(row) => String(row.id)}
+            emptyMessage="No assignments match your search."
+          />
+        </GlassCard>
+      )}
 
       <HbprAssignmentDialog
         open={dialogOpen}

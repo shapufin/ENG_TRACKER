@@ -20,6 +20,16 @@ vi.mock("@/lib/api", () => ({
   default: { get: vi.fn() },
 }));
 
+// DataTable (TanStack) needs ResizeObserver, which jsdom lacks.
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+);
+
 const assignment = {
   id: 1,
   hbpr: 10,
@@ -63,6 +73,7 @@ describe("HbprAssignmentsPage", () => {
     expect(screen.getByText("Weekly")).toBeInTheDocument();
     expect(screen.getByText("On track")).toBeInTheDocument();
     expect(screen.getByText("2026-09-08")).toBeInTheDocument();
+    expect(screen.getByText("2026-01-01")).toBeInTheDocument();
   });
 
   it("shows an empty state when there are no assignments", async () => {
@@ -83,6 +94,8 @@ describe("HbprAssignmentsPage", () => {
     } as never);
     renderPage();
     await waitFor(() => expect(screen.getByText("Enri Leader")).toBeInTheDocument());
-    expect(screen.queryByRole("button", { name: "End" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /end assignment/i })
+    ).not.toBeInTheDocument();
   });
 });
