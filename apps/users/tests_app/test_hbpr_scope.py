@@ -4,17 +4,23 @@ Scope is explicit: an HBPR sees exactly the Albanian TLs they have an open
 ``HbprAlbanianTlAssignment`` for, plus those TLs' team members. There is no
 global Italian-TL population any more.
 """
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.permissions.models import Role
-from apps.permissions.services.role_service import assign_role, revoke_role
+from apps.permissions.services.role_service import (
+    assign_role,
+    find_blocked_hbpr_revocations,
+    revoke_role,
+)
 from apps.users.models import Team, TeamMembership
 from apps.users.services.hbpr_assignments import (
     create_assignment,
     end_assignment,
+    reassign_assignment,
+    today,
 )
 from apps.users.services.hbpr_scope import (
     get_hbpr_scope,
@@ -93,7 +99,7 @@ class IsHbprTests(HbprScopeTestBase):
 
     def test_false_after_revoke(self):
         end_assignment(
-            assignment=self.assignment, effective_to=date(2026, 10, 15),
+            assignment=self.assignment, effective_to=date(2026, 10, 2),
         )
         revoke_role(self.hbpr, 'hbpr')
         self.hbpr.profile.refresh_from_db()
@@ -139,7 +145,7 @@ class GetHbprScopeTests(HbprScopeTestBase):
 
     def test_ended_assignment_drops_out_of_scope(self):
         end_assignment(
-            assignment=self.assignment, effective_to=date(2026, 10, 15),
+            assignment=self.assignment, effective_to=date(2026, 10, 2),
         )
         scope = get_hbpr_scope(self.hbpr)
         self.assertFalse(scope.has_tl(self.al_tl.id))
@@ -178,7 +184,7 @@ class GetHbprScopeTests(HbprScopeTestBase):
         from datetime import timedelta
 
         end_assignment(
-            assignment=self.assignment, effective_to=date(2026, 10, 15),
+            assignment=self.assignment, effective_to=date(2026, 10, 2),
         )
         create_assignment(
             hbpr=self.hbpr, albanian_tl=self.al_tl,
@@ -250,7 +256,7 @@ class HbprUserIdsForTests(HbprScopeTestBase):
 
     def test_ended_assignment_notifies_nobody(self):
         end_assignment(
-            assignment=self.assignment, effective_to=date(2026, 10, 15),
+            assignment=self.assignment, effective_to=date(2026, 10, 2),
         )
         self.assertEqual(
             hbpr_user_ids_for(self.fk_report, owner_id=self.al_tl.id),
@@ -325,3 +331,70 @@ class SyncRolesUnseededTests(HbprScopeTestBase):
         Role.objects.filter(code='hbpr').delete()
         with self.assertRaises(ValueError):
             _sync_roles(self.outsider, ['employee', 'hbpr'])
+
+
+class HbprAssignmentDatesTests(HbprScopeTestBase):
+    """An end date is the last day in effect; it must not cut scope short."""
+
+    def setUp(self):
+        super().setUp()
+        self.today = today()
+        self.assignment.effective_from = self.today - timedelta(days=30)
+        self.assignment.save(update_fields=['effective_from'])
+
+    def _end(self, days_from_today):
+        end_assignment(
+            assignment=self.assignment,
+            effective_to=self.today + timedelta(days=days_from_today),
+        )
+
+    def test_future_end_date_keeps_scope_until_that_day(self):
+        self._end(10)
+        scope = get_hbpr_scope(self.hbpr)
+        self.assertTrue(scope.has_tl(self.al_tl.id))
+        self.assertTrue(scope.has_user(self.fk_report.id))
+        self.assertEqual(
+            hbpr_user_ids_for(self.fk_report, owner_id=self.al_tl.id), [self.hbpr.id],
+        )
+
+    def test_end_date_today_is_still_in_effect_today(self):
+        self._end(0)
+        self.assertTrue(get_hbpr_scope(self.hbpr).has_tl(self.al_tl.id))
+
+    def test_past_end_date_removes_scope(self):
+        self._end(-1)
+        self.assertFalse(get_hbpr_scope(self.hbpr).has_tl(self.al_tl.id))
+
+    def test_is_current_follows_the_end_date(self):
+        self._end(10)
+        self.assertTrue(self.assignment.is_current)
+        self.assignment.effective_to = self.today - timedelta(days=1)
+        self.assertFalse(self.assignment.is_current)
+
+    def test_planned_handover_has_no_coverage_gap(self):
+        new_hbpr = _user('hbpr-next')
+        assign_role(new_hbpr, 'hbpr')
+        start = self.today + timedelta(days=5)
+        reassign_assignment(
+            albanian_tl=self.al_tl, new_hbpr=new_hbpr, cadence='weekly',
+            effective_from=start,
+        )
+        # Until the handover day the outgoing HBPR still covers the leader...
+        self.assertTrue(get_hbpr_scope(self.hbpr).has_tl(self.al_tl.id))
+        self.assertFalse(get_hbpr_scope(new_hbpr).has_tl(self.al_tl.id))
+        self.assertEqual(
+            hbpr_user_ids_for(self.al_tl, owner_id=self.al_tl.id), [self.hbpr.id],
+        )
+
+    def test_role_revocation_stays_blocked_until_the_end_date_passes(self):
+        self._end(10)
+        self.assertEqual(
+            find_blocked_hbpr_revocations(self.hbpr, {'hbpr': False})[0]['role'], 'hbpr',
+        )
+        self._end_in_past()
+        self.assertEqual(find_blocked_hbpr_revocations(self.hbpr, {'hbpr': False}), [])
+
+    def _end_in_past(self):
+        self.assignment.refresh_from_db()
+        self.assignment.effective_to = self.today - timedelta(days=1)
+        self.assignment.save(update_fields=['effective_to'])

@@ -147,10 +147,10 @@ def hbpr_user_ids_covering(subject_user) -> list:
     asking each open assignment, never from the direct FK alone.
     """
     from apps.users.models.hbpr import HbprAlbanianTlAssignment
-    from apps.users.services.hbpr_assignments import today
+    from apps.users.services.hbpr_assignments import in_effect_q
 
     owner_ids = HbprAlbanianTlAssignment.objects.filter(
-        effective_to__isnull=True, effective_from__lte=today(),
+        in_effect_q()
     ).values_list('albanian_tl_id', flat=True)
     covering: list = []
     for owner_id in owner_ids:

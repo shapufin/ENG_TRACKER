@@ -10,6 +10,7 @@ from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.permissions.services.role_service import has_role
@@ -137,25 +138,37 @@ def end_assignment(
     return assignment
 
 
+def unfinished_q(on_date: date | None = None) -> Q:
+    """Assignments not yet over on ``on_date``: no end date, or an end date that
+    has not passed. ``effective_to`` is the LAST day in effect, so an assignment
+    ending in the future still counts (it may not have started yet)."""
+    return Q(effective_to__isnull=True) | Q(effective_to__gte=on_date or today())
+
+
+def in_effect_q(on_date: date | None = None) -> Q:
+    """Assignments covering ``on_date``: started on or before it and not over."""
+    on_date = on_date or today()
+    return Q(effective_from__lte=on_date) & unfinished_q(on_date)
+
+
 def active_assignment_for_tl(albanian_tl_id, *, on_date: date | None = None):
-    """The current open assignment for one AL TL, or None."""
-    qs = HbprAlbanianTlAssignment.objects.filter(
-        albanian_tl_id=albanian_tl_id, effective_to__isnull=True
+    """The assignment in effect for one AL TL on ``on_date`` (default today), or None."""
+    return (
+        HbprAlbanianTlAssignment.objects.filter(
+            in_effect_q(on_date), albanian_tl_id=albanian_tl_id
+        )
+        .select_related("hbpr", "albanian_tl")
+        .order_by("-effective_from", "-id")
+        .first()
     )
-    if on_date is not None:
-        qs = qs.filter(effective_from__lte=on_date)
-    return qs.select_related("hbpr", "albanian_tl").first()
 
 
 def active_assignments_for_hbpr(hbpr, *, on_date: date | None = None):
-    """Current open assignments for one HBPR, newest first."""
-    qs = HbprAlbanianTlAssignment.objects.filter(
-        hbpr=hbpr, effective_to__isnull=True
-    )
-    if on_date is not None:
-        qs = qs.filter(effective_from__lte=on_date)
-    return qs.select_related("hbpr", "albanian_tl").order_by(
-        "-effective_from", "-id"
+    """Assignments in effect for one HBPR on ``on_date`` (default today), newest first."""
+    return (
+        HbprAlbanianTlAssignment.objects.filter(in_effect_q(on_date), hbpr=hbpr)
+        .select_related("hbpr", "albanian_tl")
+        .order_by("-effective_from", "-id")
     )
 
 

@@ -651,9 +651,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 # assigned user must have their assignments ended (history
                 # retained) before the account can be deleted.
                 from apps.users.models.hbpr import HbprAlbanianTlAssignment
+                from apps.users.services.hbpr_assignments import unfinished_q
 
                 open_assignments = HbprAlbanianTlAssignment.objects.filter(
-                    Q(hbpr=user) | Q(albanian_tl=user), effective_to__isnull=True
+                    Q(hbpr=user) | Q(albanian_tl=user), unfinished_q()
                 )
                 if open_assignments.exists():
                     failed_users.append({
@@ -1886,7 +1887,9 @@ class HbprAssignmentViewSet(viewsets.ModelViewSet):
                 raise DRFValidationError(
                     {"current": "current must be 'true' or 'false'."}
                 )
-            qs = qs.filter(effective_to__isnull=(current == "true"))
+            from .services.hbpr_assignments import unfinished_q
+
+            qs = qs.filter(unfinished_q() if current == "true" else ~unfinished_q())
         return qs
 
     def perform_create(self, serializer):
