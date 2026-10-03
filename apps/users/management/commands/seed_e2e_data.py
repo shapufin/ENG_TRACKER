@@ -11,7 +11,8 @@ Usage:
 """
 
 from django.contrib.auth.models import User
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
+from django.db import connection
 from datetime import date
 
 from django.utils import timezone
@@ -115,6 +116,12 @@ class Command(BaseCommand):
     help = "Seed deterministic E2E users, team relationships, and client for Playwright."
 
     def handle(self, *args, **options):
+        # The fixture creates a staff user with a published password, so it must
+        # never touch a real database. e2e/dev run on SQLite; production does not.
+        if connection.vendor != "sqlite":
+            raise CommandError(
+                "seed_e2e_data only runs against a SQLite database (e2e/dev)."
+            )
         # Idempotent, so the fixture works whether or not the role migration ran.
         Role.objects.get_or_create(
             code="hbpr", defaults={"name": "HR Business Partner (Italy)"}
