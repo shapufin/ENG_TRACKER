@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userService } from "@/services/userService";
 import { handleApiError, getBlockedRevocations } from "@/lib/error-handler";
 import { toast } from "sonner";
-import type { ApiError, BlockedRevocation } from "@/types";
+import type { ApiError, BlockedRevocation, TLFilter } from "@/types";
 
 interface UseUserManagementOptions {
   onUpdateSuccess?: () => void;
@@ -12,7 +12,7 @@ interface UseUserManagementOptions {
   onDeleteSuccess?: () => void;
   /** Server-side role tab + tech chip selection. Must be included in every
    * result-changing React Query key so filtered results/counts never go stale. */
-  role?: string;
+  role?: TLFilter;
   techIds?: number[];
   techLevelIds?: number[];
   noTechOnly?: boolean;

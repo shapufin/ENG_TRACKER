@@ -6,7 +6,7 @@ import { usePermissions } from "@/context/PermissionContext";
 import api from "@/lib/api";
 import type { TechAssignmentInput, UserProfile } from "@/types";
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
-import type { TLFilter } from "@/components/admin/UserFilterTabs";
+import type { TLFilter } from "@/types";
 
 /** Local mirror of the control_room plugin's ControlRoomAccess fields
  * actually consumed here and downstream (useUserColumns, PluginCRUserDialogs),

@@ -285,6 +285,28 @@ describe("DataTable", () => {
       expect(bodyNames(container)).toEqual(["Bob"]);
     });
 
+    it("searches ONLY the listed paths when searchColumn is an array", () => {
+      const richColumns: AppColumnDef<Item & { role: string }>[] = [
+        { accessorKey: "name", header: "Name" },
+        { accessorKey: "email", header: "Email" },
+        { accessorKey: "role", header: "Role" },
+      ];
+      const { container } = render(
+        <DataTable
+          columns={richColumns}
+          data={[{ id: 1, name: "Alice", email: "alice@test.com", role: "admin" }]}
+          searchColumn={["name", "email"]}
+          searchPlaceholder="Search people..."
+        />
+      );
+
+      // "admin" exists only in the unlisted `role` column — an all-cells
+      // fallback would match it, the listed-path filter must not.
+      fireEvent.change(screen.getByLabelText("Search people..."), { target: { value: "admin" } });
+      expect(bodyNames(container)).not.toContain("Alice");
+      expect(screen.getByText("No results found.")).toBeInTheDocument();
+    });
+
     it("filters rows with the global search and reports the result count", () => {
       const { container } = render(
         <DataTable
