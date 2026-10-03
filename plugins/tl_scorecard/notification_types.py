@@ -8,7 +8,7 @@ preview must not disclose an HR matter, and the link leads to the record itself.
 """
 from django.contrib.auth import get_user_model
 
-from apps.users.services.hbpr_scope import hbpr_user_ids_for
+from apps.users.services.hbpr_scope import hbpr_user_ids_covering, hbpr_user_ids_for
 from plugins.notifications.types.base import NotificationType
 
 User = get_user_model()
@@ -375,9 +375,7 @@ class EprStageCompleted(NotificationType):
 
     def recipients(self, context):
         cycle = context['instance']
-        profile = getattr(cycle.user, 'profile', None)
-        owner_id = getattr(profile, 'albanian_tl_id', None)
-        return User.objects.filter(id__in=hbpr_user_ids_for(cycle.user, owner_id))
+        return User.objects.filter(id__in=hbpr_user_ids_covering(cycle.user))
 
     def title(self, context):
         return 'An EPR stage was completed'
