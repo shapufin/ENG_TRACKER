@@ -15,6 +15,23 @@ def _roles(username):
     )
 
 
+class SeedE2EDataGuardTests(TestCase):
+    def test_refuses_a_non_sqlite_database(self):
+        # The fixture creates a staff user with a published password: never on a
+        # real (Postgres) database unless explicitly forced.
+        from unittest import mock
+
+        from django.core.management.base import CommandError
+
+        with mock.patch(
+            "apps.users.management.commands.seed_e2e_data.connection"
+        ) as fake:
+            fake.vendor = "postgresql"
+            with self.assertRaisesRegex(CommandError, "SQLite"):
+                call_command("seed_e2e_data", verbosity=0)
+        self.assertFalse(User.objects.filter(username="e2e_admin").exists())
+
+
 class SeedE2EDataTests(TestCase):
     @classmethod
     def setUpTestData(cls):
