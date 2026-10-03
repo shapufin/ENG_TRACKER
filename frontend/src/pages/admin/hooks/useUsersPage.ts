@@ -7,7 +7,7 @@ import api from "@/lib/api";
 import type { TechAssignmentInput, UserProfile } from "@/types";
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
 
-type TLFilter = "all" | "italian_tl" | "albanian_tl" | "no_tl";
+type TLFilter = "all" | "italian_tl" | "albanian_tl" | "hbpr" | "no_tl";
 
 /** Local mirror of the control_room plugin's ControlRoomAccess fields
  * actually consumed here and downstream (useUserColumns, PluginCRUserDialogs),

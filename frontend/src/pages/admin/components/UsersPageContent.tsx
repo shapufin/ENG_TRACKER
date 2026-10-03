@@ -70,6 +70,7 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
   const roleLabels: Record<string, string> = {
     italian_tl: "Italian TL",
     albanian_tl: "Albanian TL",
+    hbpr: "HBPR",
     no_tl: "No TL",
   };
   const activeTechLabels = state.techFacets

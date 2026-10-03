@@ -1,10 +1,10 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Users2, Crown, XCircle } from "lucide-react";
+import { Users2, Crown, XCircle, Handshake } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LAYOUT_ID, useMotionTransition } from "@/lib/motion";
 
-type TLFilter = "all" | "italian_tl" | "albanian_tl" | "no_tl";
+type TLFilter = "all" | "italian_tl" | "albanian_tl" | "hbpr" | "no_tl";
 
 interface UserFilterTabsProps {
   filter: TLFilter;
@@ -17,6 +17,7 @@ export const UserFilterTabs: React.FC<UserFilterTabsProps> = ({ filter, onFilter
     { key: "all" as TLFilter, label: "All", icon: Users2 },
     { key: "italian_tl" as TLFilter, label: "Italian TL", icon: Crown },
     { key: "albanian_tl" as TLFilter, label: "Albanian TL", icon: Crown },
+    { key: "hbpr" as TLFilter, label: "HBPR", icon: Handshake },
     { key: "no_tl" as TLFilter, label: "No TL", icon: XCircle },
   ];
 

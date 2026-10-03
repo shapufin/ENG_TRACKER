@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 from apps.overtime.models import Client
+from apps.permissions.models import Role
+from apps.permissions.services.role_service import assign_role
 from apps.users.models import Team, Tech
 
 User = get_user_model()
@@ -165,6 +167,19 @@ class TestUserTechAndRoleFacets(APITestCase):
         usernames = self._usernames(response)
         self.assertIn('facet-tl', usernames)
         self.assertNotIn('facet-django', usernames)
+
+    def test_role_filter_hbpr_matches_only_hbpr_users(self):
+        Role.objects.get_or_create(code='hbpr', defaults={'name': 'hbpr'})
+        hbpr_user = User.objects.create_user(username='facet-hbpr', password='testpass123')
+        assign_role(hbpr_user, 'hbpr')
+
+        response = self.client.get('/api/users/profiles/', {'role': 'hbpr'})
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertIn('facet-hbpr', usernames)
+        self.assertNotIn('facet-tl', usernames)
+        self.assertNotIn('facet-django', usernames)
+        self.assertNotIn('facet-none', usernames)
 
     def test_tech_and_role_filters_combine(self):
         response = self.client.get(
