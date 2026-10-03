@@ -1121,6 +1121,14 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
                 | Q(role_codes__icontains='albanian_tl')
                 | Q(user__albanian_team_members__isnull=False)
             ).distinct()
+        if role == 'hbpr':
+            # 'hbpr' is flagless — it lives only in the role_codes JSON cache
+            # and the authoritative UserRole rows (mirrors the TL filters,
+            # which check flag OR cache OR relation).
+            return queryset.filter(
+                Q(role_codes__icontains='hbpr')
+                | Q(user__user_roles__role__code='hbpr', user__user_roles__is_active=True)
+            ).distinct()
         if role == 'no_tl':
             return queryset.filter(
                 Q(is_italian_tl_role=False)
