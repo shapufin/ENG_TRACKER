@@ -90,3 +90,14 @@ docs
 
 # The frontend ships from its own image (context ./frontend)
 frontend
+
+# Other tools' local state, scratch venvs and the repo-root node_modules
+.windsurf
+.verdent
+.superpowers
+.trace-mcp
+.fallow
+.mcheck
+opencode.json
+$TEMP
+node_modules

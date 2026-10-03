@@ -444,6 +444,9 @@ class DockerIgnoreContractTests(SimpleTestCase):
             '*.pem', '.env', '.env.*', '*.sqlite3', '*.sqlite3-journal', '*.xlsx',
             '*.patch', 'time_tracker_export.json', '.worktrees', '.devin', '.agents',
             '.claude', 'tmp-probe', 'frontend',
+            # Other agents' state, scratch venvs and the repo-root node_modules.
+            '.windsurf', '.verdent', '.superpowers', '.trace-mcp', '.fallow', '.mcheck',
+            'opencode.json', '$TEMP', 'node_modules',
         }
         self.assertEqual(required - patterns, set())
 
