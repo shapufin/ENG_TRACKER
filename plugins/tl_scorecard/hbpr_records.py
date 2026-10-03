@@ -105,6 +105,7 @@ def records_page(request, *, kind, leader=None, status=None, period=None, limit=
         qs = qs.filter(**{f'{spec.date_field}__year': year, f'{spec.date_field}__month': month})
 
     total = qs.count()
-    window = list(qs[offset:offset + limit])
+    # The models order by their date alone; break ties on pk so offset paging is stable.
+    window = list(qs.order_by(f'-{spec.date_field}', '-pk')[offset:offset + limit])
     serializer = view.get_serializer(window, many=True)
     return {'count': total, 'results': serializer.data}

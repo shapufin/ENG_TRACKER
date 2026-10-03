@@ -11,6 +11,7 @@ from core.mixins.permissions import PluginPermissionMixin
 from . import hbpr_records, services_hbpr
 
 MAX_PAGE_SIZE = 100
+MAX_OFFSET = 1_000_000  # keeps a hand-edited ?offset= inside the DB integer range
 
 
 class HbprViewSet(PluginPermissionMixin, viewsets.ViewSet):
@@ -39,8 +40,8 @@ class HbprViewSet(PluginPermissionMixin, viewsets.ViewSet):
             offset = int(request.query_params.get('offset', 0))
         except ValueError:
             raise ValidationError('limit and offset must be integers.')
-        if limit < 1 or offset < 0:
-            raise ValidationError('limit must be positive and offset non-negative.')
+        if limit < 1 or not 0 <= offset <= MAX_OFFSET:
+            raise ValidationError('limit must be positive and offset within 0..%d.' % MAX_OFFSET)
         search = request.query_params.get('q', '').strip()[:100]
         return Response(services_hbpr.people(scope, search, limit, offset))
 
@@ -61,8 +62,8 @@ class HbprViewSet(PluginPermissionMixin, viewsets.ViewSet):
             leader = int(params['leader']) if params.get('leader') else None
         except ValueError:
             raise ValidationError('limit, offset and leader must be integers.')
-        if limit < 1 or offset < 0:
-            raise ValidationError('limit must be positive and offset non-negative.')
+        if limit < 1 or not 0 <= offset <= MAX_OFFSET:
+            raise ValidationError('limit must be positive and offset within 0..%d.' % MAX_OFFSET)
         return Response(hbpr_records.records_page(
             request, kind=params.get('kind'), leader=leader,
             status=params.get('status'), period=params.get('period'),
