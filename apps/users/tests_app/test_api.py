@@ -256,6 +256,9 @@ class TestUserTechAndRoleFacets(APITestCase):
         response = self.client.get('/api/users/profiles/', {'role': 'employee'})
         self.assertEqual(response.status_code, 200)
         self.assertIn('facet-led-team', self._usernames(response))
+        # Staff/superusers are deliberately listed too — they hold no elevated
+        # role and no other tab would show them.
+        self.assertIn(self.admin.username, self._usernames(response))
 
     def test_role_filter_cr_admin_matches_cr_users_only(self):
         Role.objects.get_or_create(code='cr_admin', defaults={'name': 'cr_admin'})
@@ -663,7 +666,11 @@ class TestBulkUpdateUsers(APITestCase):
         back — previously the first profile's teams.set committed before the
         guard fired, contradicting the documented all-or-nothing contract."""
         retired = Tech.objects.create(name='Bulk Retired', code='BULK-RETIRED', is_active=False)
+        # Seed BOTH profiles: UserProfile has no Meta.ordering, so whichever row
+        # is processed first must stay unchanged for this to catch a missing
+        # rollback.
         self.first.profile.teams.set([self.team_a])
+        self.second.profile.teams.set([self.team_a])
 
         response = self.client.post(
             '/api/users/users/bulk_update/',
@@ -676,10 +683,11 @@ class TestBulkUpdateUsers(APITestCase):
         )
 
         self.assertEqual(response.status_code, 400, response.data)
-        self.first.profile.refresh_from_db()
-        self.assertEqual(
-            set(self.first.profile.teams.values_list('id', flat=True)), {self.team_a.id}
-        )
+        for user in (self.first, self.second):
+            user.profile.refresh_from_db()
+            self.assertEqual(
+                set(user.profile.teams.values_list('id', flat=True)), {self.team_a.id}
+            )
 
 
 class TestUpdateUserTlRevokeCascadeBlock(APITestCase):

@@ -23,6 +23,10 @@ import type { PaginatedResponse } from "@/types";
 
 const QUERY_KEY = ["admin", "hbpr-assignments"];
 
+// Module constant: an inline array would be a fresh identity every render and
+// defeat DataTable's searchPaths memo.
+const SEARCH_PATHS = ["hbpr_detail.name", "albanian_tl_detail.name"];
+
 // Local calendar date (en-CA formats as YYYY-MM-DD); `toISOString()` is UTC and
 // is a day off for an admin working just after local midnight.
 const todayIso = () => new Date().toLocaleDateString("en-CA");
@@ -167,7 +171,7 @@ export const HbprAssignmentsPage: React.FC = () => {
           <DataTable
             columns={columns}
             data={rows}
-            searchColumn={["hbpr_detail.name", "albanian_tl_detail.name"]}
+            searchColumn={SEARCH_PATHS}
             searchPlaceholder="Search assignments..."
             getRowId={(row) => String(row.id)}
             emptyMessage="No assignments match your search."

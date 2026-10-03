@@ -4,9 +4,7 @@ import { Users2, Crown, Handshake, UserCog, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LAYOUT_ID, useMotionTransition } from "@/lib/motion";
 
-/** The Admin Users role-tab filter. Single declaration — `useUsersPage`
- * imports this rather than redeclaring the union. */
-export type TLFilter = "employee" | "italian_tl" | "albanian_tl" | "hbpr" | "hr" | "cr_admin";
+import type { TLFilter } from "@/types";
 
 interface UserFilterTabsProps {
   filter: TLFilter;

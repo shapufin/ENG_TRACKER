@@ -8,6 +8,7 @@ import type { UserProfile } from "@/types";
 import type { CRAccessRecord } from "./useUsersPage";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
+import { toneSurfaceClass } from "@/components/ui/tone";
 
 interface UseUserColumnsOptions {
   crActive?: boolean;
@@ -50,7 +51,7 @@ const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
       <Badge
         key="hbpr"
         variant="default"
-        className="h-5 shrink-0 border-violet-500/30 bg-violet-500/10 px-1.5 py-0 text-[10px] font-normal text-violet-400 hover:bg-violet-500/20"
+        className={`${toneSurfaceClass.accent} h-5 shrink-0 px-1.5 py-0 text-[10px] font-normal`}
       >
         HBPR
       </Badge>
