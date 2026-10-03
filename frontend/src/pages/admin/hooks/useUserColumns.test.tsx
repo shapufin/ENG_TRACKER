@@ -55,6 +55,27 @@ describe("useUserColumns", () => {
     expect(screen.getByText("AL")).toBeInTheDocument();
   });
 
+  it("renders an HBPR badge alongside the TL role badges", () => {
+    const { result } = renderHook(() => useUserColumns(vi.fn(), vi.fn(), vi.fn()));
+    const column = result.current.find((item) => item.id === "tl_role");
+    const cell = column?.cell as (context: { row: { original: UserProfile } }) => React.ReactNode;
+
+    const hbprOnly = profile({
+      user: { id: 8, username: "elda", email: "", roles: ["hbpr"] } as never,
+    });
+    const { unmount } = render(<>{cell({ row: { original: hbprOnly } })}</>);
+    expect(screen.getByText("HBPR")).toBeInTheDocument();
+    unmount();
+
+    const multiRole = profile({
+      is_albanian_tl_role: true,
+      user: { id: 9, username: "mix", email: "", roles: ["albanian_tl", "hbpr"] } as never,
+    });
+    render(<>{cell({ row: { original: multiRole } })}</>);
+    expect(screen.getByText("AL TL")).toBeInTheDocument();
+    expect(screen.getByText("HBPR")).toBeInTheDocument();
+  });
+
   it("renders CR scope teams from the latest access map", () => {
     const { result } = renderHook(() =>
       useUserColumns(vi.fn(), vi.fn(), vi.fn(), {

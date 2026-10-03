@@ -47,6 +47,9 @@ interface FormRoleCheckboxesProps {
   is_albanian_tl_role: boolean;
   is_cr_admin?: boolean;
   is_hbpr?: boolean;
+  /** HBPR mode: only HR + HBPR switches are relevant — TL and CR roles are
+   * force-revoked via the roles payload (see useUsersPage). */
+  hbprOnly?: boolean;
   prefix: string;
   onChange: (key: string, value: boolean) => void;
 }
@@ -57,6 +60,7 @@ export const FormRoleCheckboxes: React.FC<FormRoleCheckboxesProps> = ({
   is_albanian_tl_role,
   is_cr_admin = false,
   is_hbpr = false,
+  hbprOnly = false,
   prefix,
   onChange,
 }) => (
@@ -68,27 +72,31 @@ export const FormRoleCheckboxes: React.FC<FormRoleCheckboxesProps> = ({
       checked={is_hr_user}
       onCheckedChange={(v) => onChange("is_hr_user", v)}
     />
-    <SwitchField
-      id={`${prefix}_it_tl`}
-      label="IT TL"
-      description="Italian team leader"
-      checked={is_italian_tl_role}
-      onCheckedChange={(v) => onChange("is_italian_tl_role", v)}
-    />
-    <SwitchField
-      id={`${prefix}_al_tl`}
-      label="AL TL"
-      description="Albanian team leader"
-      checked={is_albanian_tl_role}
-      onCheckedChange={(v) => onChange("is_albanian_tl_role", v)}
-    />
-    <SwitchField
-      id={`${prefix}_cr_admin`}
-      label="CR Admin"
-      description="Control Room admin access"
-      checked={is_cr_admin}
-      onCheckedChange={(v) => onChange("is_cr_admin", v)}
-    />
+    {!hbprOnly && (
+      <>
+        <SwitchField
+          id={`${prefix}_it_tl`}
+          label="IT TL"
+          description="Italian team leader"
+          checked={is_italian_tl_role}
+          onCheckedChange={(v) => onChange("is_italian_tl_role", v)}
+        />
+        <SwitchField
+          id={`${prefix}_al_tl`}
+          label="AL TL"
+          description="Albanian team leader"
+          checked={is_albanian_tl_role}
+          onCheckedChange={(v) => onChange("is_albanian_tl_role", v)}
+        />
+        <SwitchField
+          id={`${prefix}_cr_admin`}
+          label="CR Admin"
+          description="Control Room admin access"
+          checked={is_cr_admin}
+          onCheckedChange={(v) => onChange("is_cr_admin", v)}
+        />
+      </>
+    )}
     <SwitchField
       id={`${prefix}_hbpr`}
       label="HBPR"

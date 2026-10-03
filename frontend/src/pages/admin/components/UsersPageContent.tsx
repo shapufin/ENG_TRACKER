@@ -68,10 +68,12 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
   }
 
   const roleLabels: Record<string, string> = {
+    employee: "Employees",
     italian_tl: "Italian TL",
     albanian_tl: "Albanian TL",
     hbpr: "HBPR",
-    no_tl: "No TL",
+    hr: "HR",
+    cr_admin: "CR Admin",
   };
   const activeTechLabels = state.techFacets
     .filter((f) => state.techIds.includes(f.id))
@@ -81,11 +83,9 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
         .map((level) => level.code);
       return levels.length > 0 ? `${f.name} (${levels.join(", ")})` : f.name;
     });
-  const activeTeamLabels = teams
-    .filter((t) => state.teamIds.includes(t.id))
-    .map((t) => t.name);
+  const activeTeamLabels = teams.filter((t) => state.teamIds.includes(t.id)).map((t) => t.name);
   const hasActiveFilters =
-    state.tlFilter !== "all" ||
+    state.tlFilter !== "employee" ||
     activeTechLabels.length > 0 ||
     state.noTechOnly ||
     activeTeamLabels.length > 0;
@@ -97,9 +97,13 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
   return (
     <div className="space-y-4 pb-8">
       {state.stats && <UserStatsCards stats={state.stats} />}
-      <div className="space-y-3 rounded-2xl border border-border/70 p-4">
+      <div className="border-border/70 space-y-3 rounded-2xl border p-4">
         <div className="flex flex-wrap items-center gap-4">
-          <UserFilterTabs filter={state.tlFilter} onFilterChange={state.setTlFilter} />
+          <UserFilterTabs
+            filter={state.tlFilter}
+            onFilterChange={state.setTlFilter}
+            showCRAdmin={state.crActive}
+          />
           {state.crActive && (
             <CRUsersFilterButton
               active={state.crOnly}
@@ -128,7 +132,7 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
         {hasActiveFilters && (
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
             <span className="text-muted-foreground">Active:</span>
-            {state.tlFilter !== "all" && (
+            {state.tlFilter !== "employee" && (
               <span
                 className={cn(
                   "rounded-md border px-2 py-0.5 font-mono font-semibold",
@@ -172,9 +176,9 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
             ))}
             <button
               type="button"
-              className="text-muted-foreground underline hover:text-destructive"
+              className="text-muted-foreground hover:text-destructive underline"
               onClick={() => {
-                state.setTlFilter("all");
+                state.setTlFilter("employee");
                 state.setTechIds([]);
                 state.setTechLevelIds([]);
                 state.setNoTechOnly(false);
@@ -183,7 +187,7 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
             >
               Clear all
             </button>
-            <span className="ml-auto font-mono text-muted-foreground">
+            <span className="text-muted-foreground ml-auto font-mono">
               · {matchCount} users match
             </span>
           </div>

@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 from apps.overtime.models import Client
-from apps.permissions.models import Role
+from apps.permissions.models import Role, UserRole
 from apps.permissions.services.role_service import assign_role
 from apps.users.models import Team, Tech
 
@@ -180,6 +180,82 @@ class TestUserTechAndRoleFacets(APITestCase):
         self.assertNotIn('facet-tl', usernames)
         self.assertNotIn('facet-django', usernames)
         self.assertNotIn('facet-none', usernames)
+
+    def test_role_filter_employee_returns_only_plain_employees(self):
+        # Elevated-role holders must not appear: TLs (flag, cache, or
+        # dependents), HR (flag or cache), CR admin, HBPR.
+        for code in ('hr', 'cr_admin', 'hbpr', 'albanian_tl'):
+            Role.objects.get_or_create(code=code, defaults={'name': code})
+        hr_flag = User.objects.create_user(username='facet-hr-flag', password='x')
+        hr_flag.profile.is_hr_user = True
+        hr_flag.profile.save()
+        hr_role = User.objects.create_user(username='facet-hr-role', password='x')
+        assign_role(hr_role, 'hr')
+        cr_user = User.objects.create_user(username='facet-cr', password='x')
+        assign_role(cr_user, 'cr_admin')
+        hbpr_user = User.objects.create_user(username='facet-hbpr', password='x')
+        assign_role(hbpr_user, 'hbpr')
+        al_tl = User.objects.create_user(username='facet-altl', password='x')
+        assign_role(al_tl, 'albanian_tl')
+        # Functioning-as-TL via dependents but without any TL role flag.
+        pseudo_tl = User.objects.create_user(username='facet-pseudo-tl', password='x')
+        member = User.objects.create_user(username='facet-member', password='x')
+        member.profile.italian_tl = pseudo_tl
+        member.profile.save()
+
+        response = self.client.get('/api/users/profiles/', {'role': 'employee'})
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertIn('facet-django', usernames)
+        self.assertIn('facet-none', usernames)
+        self.assertIn('facet-admin', usernames)
+        self.assertIn('facet-member', usernames)
+        for elevated in (
+            'facet-tl', 'facet-hr-flag', 'facet-hr-role', 'facet-cr',
+            'facet-hbpr', 'facet-altl', 'facet-pseudo-tl',
+        ):
+            self.assertNotIn(elevated, usernames)
+
+    def test_role_filter_employee_includes_employee_with_tl_assigned(self):
+        # "Employees" means no elevated ROLE — an employee whose own TL FK
+        # points at a leader is still an employee (unlike no_tl, which is
+        # the "unassigned" metric).
+        self.django_user.profile.italian_tl = self.tl_user
+        self.django_user.profile.save()
+
+        response = self.client.get('/api/users/profiles/', {'role': 'employee'})
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertIn('facet-django', usernames)
+        self.assertNotIn('facet-tl', usernames)
+
+    def test_role_filter_hr_matches_hr_users_only(self):
+        Role.objects.get_or_create(code='hr', defaults={'name': 'hr'})
+        hr_flag = User.objects.create_user(username='facet-hr-flag', password='x')
+        hr_flag.profile.is_hr_user = True
+        hr_flag.profile.save()
+        hr_role = User.objects.create_user(username='facet-hr-role', password='x')
+        assign_role(hr_role, 'hr')
+
+        response = self.client.get('/api/users/profiles/', {'role': 'hr'})
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertIn('facet-hr-flag', usernames)
+        self.assertIn('facet-hr-role', usernames)
+        self.assertNotIn('facet-tl', usernames)
+        self.assertNotIn('facet-django', usernames)
+
+    def test_role_filter_cr_admin_matches_cr_users_only(self):
+        Role.objects.get_or_create(code='cr_admin', defaults={'name': 'cr_admin'})
+        cr_user = User.objects.create_user(username='facet-cr', password='x')
+        assign_role(cr_user, 'cr_admin')
+
+        response = self.client.get('/api/users/profiles/', {'role': 'cr_admin'})
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertIn('facet-cr', usernames)
+        self.assertNotIn('facet-tl', usernames)
+        self.assertNotIn('facet-django', usernames)
 
     def test_tech_and_role_filters_combine(self):
         response = self.client.get(
@@ -457,6 +533,118 @@ class TestBulkUpdateUsers(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.first.profile.refresh_from_db()
         self.assertTrue(self.first.profile.is_italian_tl_role)
+
+    def _open_hbpr_assignment(self, hbpr_user, tl_user):
+        from datetime import date
+
+        from apps.users.models.hbpr import HbprAlbanianTlAssignment
+
+        for code in ('hbpr', 'albanian_tl'):
+            Role.objects.get_or_create(code=code, defaults={'name': code})
+        assign_role(hbpr_user, 'hbpr')
+        assign_role(tl_user, 'albanian_tl')
+        return HbprAlbanianTlAssignment.objects.create(
+            hbpr=hbpr_user, albanian_tl=tl_user, cadence='weekly',
+            effective_from=date(2026, 10, 1),
+        )
+
+    def test_bulk_is_hbpr_grants_and_revokes_hbpr_role(self):
+        Role.objects.get_or_create(code='hbpr', defaults={'name': 'hbpr'})
+
+        response = self.client.post(
+            '/api/users/users/bulk_update/',
+            {'user_ids': [self.first.id, self.second.id], 'is_hbpr': True},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        for user in (self.first, self.second):
+            self.assertTrue(
+                UserRole.objects.filter(
+                    user=user, role__code='hbpr', is_active=True
+                ).exists()
+            )
+
+        response = self.client.post(
+            '/api/users/users/bulk_update/',
+            {'user_ids': [self.first.id], 'is_hbpr': False},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertFalse(
+            UserRole.objects.filter(
+                user=self.first, role__code='hbpr', is_active=True
+            ).exists()
+        )
+        self.assertTrue(
+            UserRole.objects.filter(
+                user=self.second, role__code='hbpr', is_active=True
+            ).exists()
+        )
+
+    def test_bulk_is_hbpr_rejects_non_bool(self):
+        response = self.client.post(
+            '/api/users/users/bulk_update/',
+            {'user_ids': [self.first.id], 'is_hbpr': 'yes'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_revoking_hbpr_blocked_by_open_assignment(self):
+        tl = User.objects.create_user(username='bulk-altl', password='x')
+        self._open_hbpr_assignment(self.first, tl)
+
+        response = self.client.post(
+            '/api/users/users/bulk_update/',
+            {'user_ids': [self.first.id], 'is_hbpr': False},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400, response.data)
+        blocked = response.data['blocked_revocations']
+        self.assertEqual(len(blocked), 1)
+        self.assertEqual(blocked[0]['user_id'], self.first.id)
+        self.assertEqual(blocked[0]['role'], 'hbpr')
+        self.assertEqual(blocked[0]['assignment_count'], 1)
+        self.assertTrue(
+            UserRole.objects.filter(
+                user=self.first, role__code='hbpr', is_active=True
+            ).exists()
+        )
+
+    def test_revoking_albanian_tl_blocked_by_open_hbpr_assignment(self):
+        """Regression: bulk_update revoking albanian_tl on a TL with an open
+        HBPR assignment hit the guard inside revoke_role and returned a 500;
+        it must be a structured 400 with blocked_revocations, like the
+        single-user update path."""
+        self.first.profile.is_albanian_tl_role = True
+        self.first.profile.save()
+        self._open_hbpr_assignment(self.second, self.first)
+
+        response = self.client.post(
+            '/api/users/users/bulk_update/',
+            {'user_ids': [self.first.id], 'is_albanian_tl_role': False},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400, response.data)
+        blocked = response.data['blocked_revocations']
+        self.assertEqual(len(blocked), 1)
+        self.assertEqual(blocked[0]['user_id'], self.first.id)
+        self.assertEqual(blocked[0]['role'], 'albanian_tl')
+        self.assertEqual(blocked[0]['assignment_count'], 1)
+        self.first.profile.refresh_from_db()
+        self.assertTrue(self.first.profile.is_albanian_tl_role)
+
+    def test_bulk_revoke_hbpr_tolerates_missing_role_seed(self):
+        """If the hbpr Role row was never seeded, a revoke request is a
+        harmless no-op (no UserRole can exist without the Role), not a 500."""
+        Role.objects.filter(code='hbpr').delete()
+        response = self.client.post(
+            '/api/users/users/bulk_update/',
+            {'user_ids': [self.first.id], 'is_hbpr': False},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.data)
 
 
 class TestUpdateUserTlRevokeCascadeBlock(APITestCase):

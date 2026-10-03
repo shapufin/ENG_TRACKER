@@ -95,6 +95,34 @@ describe("useUsersPageBulk — TL-revoke-blocked interception", () => {
     expect(result.current.bulkBlockedRevocations).toBeNull();
   });
 
+  it("passes is_hbpr through to bulkUpdateUsers", async () => {
+    vi.mocked(userService.bulkUpdateUsers).mockResolvedValue({
+      detail: "ok",
+      updated_count: 1,
+    });
+
+    const { result } = renderHook(
+      () =>
+        useUsersPageBulk({
+          filteredData: [profile],
+          rowSelection: { "1": true },
+          onClearSelection: vi.fn(),
+          onCloseDrawer: vi.fn(),
+        }),
+      { wrapper }
+    );
+
+    act(() => {
+      result.current.handleBulkUpdate({ is_hbpr: true });
+    });
+
+    await waitFor(() => expect(userService.bulkUpdateUsers).toHaveBeenCalled());
+    expect(userService.bulkUpdateUsers).toHaveBeenCalledWith({
+      is_hbpr: true,
+      user_ids: [10],
+    });
+  });
+
   it("retryBlockedBulkUpdate re-submits the same payload that was blocked", async () => {
     vi.mocked(userService.bulkUpdateUsers)
       .mockRejectedValueOnce({

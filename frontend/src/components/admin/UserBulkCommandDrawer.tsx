@@ -201,8 +201,14 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
   const [hrRole, setHrRole] = useState<TriStateValue>("indeterminate");
   const [italianRole, setItalianRole] = useState<TriStateValue>("indeterminate");
   const [albanianRole, setAlbanianRole] = useState<TriStateValue>("indeterminate");
+  const [hbprRole, setHbprRole] = useState<TriStateValue>("indeterminate");
 
   const selectedCount = selectedProfiles.length;
+  // HBPR-only users have no team/tech/TL surface — when the whole selection
+  // is HBPR, hide those sections and offer only the role toggles that apply.
+  const allHbpr =
+    selectedCount > 0 &&
+    selectedProfiles.every((profile) => profile.user?.roles?.includes("hbpr"));
   const selectedNames = selectedProfiles
     .slice(0, 3)
     .map((profile) => profile.user?.username)
@@ -217,6 +223,7 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
     hrRole !== "indeterminate",
     italianRole !== "indeterminate",
     albanianRole !== "indeterminate",
+    hbprRole !== "indeterminate",
   ].filter(Boolean).length;
   const hasChanges = changeCount > 0;
 
@@ -231,6 +238,7 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
     setHrRole("indeterminate");
     setItalianRole("indeterminate");
     setAlbanianRole("indeterminate");
+    setHbprRole("indeterminate");
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -256,6 +264,7 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
     if (hrRole !== "indeterminate") payload.is_hr = hrRole === true;
     if (italianRole !== "indeterminate") payload.is_italian_tl_role = italianRole === true;
     if (albanianRole !== "indeterminate") payload.is_albanian_tl_role = albanianRole === true;
+    if (hbprRole !== "indeterminate") payload.is_hbpr = hbprRole === true;
     onBulkUpdate(payload);
   };
 
@@ -280,72 +289,80 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
             <span>
               Changes apply to all {selectedCount} selected user{selectedCount === 1 ? "" : "s"}.
               Turn on a section to edit it — everything else is left unchanged.
+              {allHbpr &&
+                " HBPR users have no team, tech, or TL assignments — only role changes apply."}
             </span>
           </div>
 
           {/* Teams — full width (TeamMultiSelect needs horizontal space) */}
-          <ToggleSectionCard
-            icon={<Users className="h-4 w-4" />}
-            title="Teams"
-            description="Replace complete team membership for every selected user."
-            hint="Selecting no teams clears all team assignments."
-            applyId="bulk-apply-teams"
-            applied={applyTeams}
-            onAppliedChange={setApplyTeams}
-          >
-            <TeamMultiSelect
-              teams={teams?.results ?? []}
-              value={teamIds}
-              onChange={setTeamIds}
-              placeholder="Select one or more teams..."
-              disabled={!applyTeams || isMutating}
-            />
-          </ToggleSectionCard>
+          {!allHbpr && (
+            <ToggleSectionCard
+              icon={<Users className="h-4 w-4" />}
+              title="Teams"
+              description="Replace complete team membership for every selected user."
+              hint="Selecting no teams clears all team assignments."
+              applyId="bulk-apply-teams"
+              applied={applyTeams}
+              onAppliedChange={setApplyTeams}
+            >
+              <TeamMultiSelect
+                teams={teams?.results ?? []}
+                value={teamIds}
+                onChange={setTeamIds}
+                placeholder="Select one or more teams..."
+                disabled={!applyTeams || isMutating}
+              />
+            </ToggleSectionCard>
+          )}
 
-          <ToggleSectionCard
-            icon={<ListChecks className="h-4 w-4" />}
-            title="Tech"
-            description="Replace technology assignments for every selected user."
-            hint="Selecting no Tech clears all Tech assignments. A level applies to every selected user."
-            applyId="bulk-apply-techs"
-            applied={applyTechs}
-            onAppliedChange={setApplyTechs}
-          >
-            <TechMultiSelect
-              techs={techs?.results ?? []}
-              value={techIds}
-              onChange={setTechIds}
-              levelByTech={techLevels}
-              onLevelChange={(techId, levelId) =>
-                setTechLevels((current) => ({ ...current, [techId]: levelId }))
-              }
-              placeholder="Select one or more Tech..."
-              disabled={!applyTechs || isMutating}
-            />
-          </ToggleSectionCard>
+          {!allHbpr && (
+            <ToggleSectionCard
+              icon={<ListChecks className="h-4 w-4" />}
+              title="Tech"
+              description="Replace technology assignments for every selected user."
+              hint="Selecting no Tech clears all Tech assignments. A level applies to every selected user."
+              applyId="bulk-apply-techs"
+              applied={applyTechs}
+              onAppliedChange={setApplyTechs}
+            >
+              <TechMultiSelect
+                techs={techs?.results ?? []}
+                value={techIds}
+                onChange={setTechIds}
+                levelByTech={techLevels}
+                onLevelChange={(techId, levelId) =>
+                  setTechLevels((current) => ({ ...current, [techId]: levelId }))
+                }
+                placeholder="Select one or more Tech..."
+                disabled={!applyTechs || isMutating}
+              />
+            </ToggleSectionCard>
+          )}
 
           {/* TL assignments + Roles — side by side to save vertical space */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <SectionCard
-              icon={<Crown className="h-4 w-4" />}
-              title="Team leader assignments"
-              description="Assign or remove each language TL independently."
-            >
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
-                <AssignmentSelect
-                  label="Italian TL"
-                  value={italianTl}
-                  leaders={italianTLs}
-                  onChange={setItalianTl}
-                />
-                <AssignmentSelect
-                  label="Albanian TL"
-                  value={albanianTl}
-                  leaders={albanianTLs}
-                  onChange={setAlbanianTl}
-                />
-              </div>
-            </SectionCard>
+          <div className={cn("grid gap-4", !allHbpr && "md:grid-cols-2")}>
+            {!allHbpr && (
+              <SectionCard
+                icon={<Crown className="h-4 w-4" />}
+                title="Team leader assignments"
+                description="Assign or remove each language TL independently."
+              >
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
+                  <AssignmentSelect
+                    label="Italian TL"
+                    value={italianTl}
+                    leaders={italianTLs}
+                    onChange={setItalianTl}
+                  />
+                  <AssignmentSelect
+                    label="Albanian TL"
+                    value={albanianTl}
+                    leaders={albanianTLs}
+                    onChange={setAlbanianTl}
+                  />
+                </div>
+              </SectionCard>
+            )}
 
             <SectionCard
               icon={<Shield className="h-4 w-4" />}
@@ -354,17 +371,27 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
             >
               <div className="space-y-2">
                 <RoleToggle id="bulk-role-hr" label="HR" value={hrRole} onChange={setHrRole} />
+                {!allHbpr && (
+                  <>
+                    <RoleToggle
+                      id="bulk-role-italian"
+                      label="Italian TL role"
+                      value={italianRole}
+                      onChange={setItalianRole}
+                    />
+                    <RoleToggle
+                      id="bulk-role-albanian"
+                      label="Albanian TL role"
+                      value={albanianRole}
+                      onChange={setAlbanianRole}
+                    />
+                  </>
+                )}
                 <RoleToggle
-                  id="bulk-role-italian"
-                  label="Italian TL role"
-                  value={italianRole}
-                  onChange={setItalianRole}
-                />
-                <RoleToggle
-                  id="bulk-role-albanian"
-                  label="Albanian TL role"
-                  value={albanianRole}
-                  onChange={setAlbanianRole}
+                  id="bulk-role-hbpr"
+                  label="HBPR role"
+                  value={hbprRole}
+                  onChange={setHbprRole}
                 />
               </div>
             </SectionCard>

@@ -66,6 +66,26 @@ describe("FormRoleCheckboxes", () => {
     const crToggle = screen.getByRole("switch", { name: /CR Admin/i });
     expect(crToggle).not.toBeChecked();
   });
+
+  it("hbprOnly renders only the HR and HBPR switches", () => {
+    render(
+      <FormRoleCheckboxes
+        is_hr_user={false}
+        is_italian_tl_role={true}
+        is_albanian_tl_role={false}
+        is_cr_admin={false}
+        is_hbpr={true}
+        hbprOnly
+        prefix="edit"
+        onChange={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("switch", { name: /HR/i })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /HBPR/i })).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /IT TL/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /AL TL/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /CR Admin/i })).not.toBeInTheDocument();
+  });
 });
 
 describe("FormInputField", () => {

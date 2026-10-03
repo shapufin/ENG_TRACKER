@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,45 +20,46 @@ const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
   const roles = profile.user?.roles || [];
   const isIT = profile.is_italian_tl_role || roles.includes("italian_tl");
   const isAL = profile.is_albanian_tl_role || roles.includes("albanian_tl");
-  if (isIT && isAL) {
-    return (
-      <div className="flex gap-1">
-        <Badge
-          variant="default"
-          className="h-5 shrink-0 border-blue-500/30 bg-blue-500/15 px-1.5 py-0 text-[10px] text-blue-700 hover:bg-blue-500/30 dark:text-blue-400"
-        >
-          IT
-        </Badge>
-        <Badge
-          variant="default"
-          className="h-5 shrink-0 border-emerald-600/30 bg-emerald-600/15 px-1.5 py-0 text-[10px] text-emerald-800 hover:bg-emerald-600/25 dark:text-emerald-400"
-        >
-          AL
-        </Badge>
-      </div>
-    );
-  }
+  const isHbpr = roles.includes("hbpr");
+  const compact = isIT && isAL;
+  const badges: ReactNode[] = [];
   if (isIT) {
-    return (
+    badges.push(
       <Badge
+        key="it"
         variant="default"
         className="h-5 shrink-0 border-blue-500/30 bg-blue-500/15 px-1.5 py-0 text-[10px] text-blue-700 hover:bg-blue-500/30 dark:text-blue-400"
       >
-        IT TL
+        {compact ? "IT" : "IT TL"}
       </Badge>
     );
   }
   if (isAL) {
-    return (
+    badges.push(
       <Badge
+        key="al"
         variant="default"
         className="h-5 shrink-0 border-emerald-600/30 bg-emerald-600/15 px-1.5 py-0 text-[10px] text-emerald-800 hover:bg-emerald-600/25 dark:text-emerald-400"
       >
-        AL TL
+        {compact ? "AL" : "AL TL"}
       </Badge>
     );
   }
-  return <span className="text-[10px] text-muted-foreground">—</span>;
+  if (isHbpr) {
+    badges.push(
+      <Badge
+        key="hbpr"
+        variant="default"
+        className="h-5 shrink-0 border-violet-500/30 bg-violet-500/15 px-1.5 py-0 text-[10px] text-violet-700 hover:bg-violet-500/25 dark:text-violet-400"
+      >
+        HBPR
+      </Badge>
+    );
+  }
+  if (badges.length === 0) {
+    return <span className="text-[10px] text-muted-foreground">—</span>;
+  }
+  return <div className="flex gap-1">{badges}</div>;
 };
 
 const renderCRScopeTeamsCell = ({

@@ -115,10 +115,10 @@ export const userService = {
     role: "italian_tl" | "albanian_tl",
     teamLeaderUserId: number | null
   ): Promise<UserProfile> {
-    const { data } = await api.post<UserProfile>(
-      `/users/profiles/${profileId}/set_team_leader/`,
-      { role, team_leader_user_id: teamLeaderUserId }
-    );
+    const { data } = await api.post<UserProfile>(`/users/profiles/${profileId}/set_team_leader/`, {
+      role,
+      team_leader_user_id: teamLeaderUserId,
+    });
     return data;
   },
 
@@ -308,6 +308,7 @@ export const userService = {
     is_hr?: boolean;
     is_italian_tl_role?: boolean;
     is_albanian_tl_role?: boolean;
+    is_hbpr?: boolean;
   }): Promise<{ detail: string; updated_count: number }> {
     const { data } = await api.post<{ detail: string; updated_count: number }>(
       "/users/users/bulk_update/",

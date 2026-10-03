@@ -34,15 +34,17 @@ interface TlRevokeBlockedDialogProps {
 const roleLabel: Record<BlockedRevocation["role"], string> = {
   italian_tl: "Italian TL",
   albanian_tl: "Albanian TL",
+  hbpr: "HBPR",
 };
 
 const dependentKey = (role: string, profileId: number) => `${role}:${profileId}`;
 
-/** Shown when bulk_update/update_user rejects a TL-role revoke because
- * dependents still have italian_tl/albanian_tl pointed at the user being
- * revoked (apps/users/viewsets.py's blocked_revocations). Lets the admin
- * reassign each dependent to a different TL, or clear them to "no TL",
- * right here — then retries the original revoke. */
+/** Shown when bulk_update/update_user rejects a role revoke — either TL-role
+ * revokes whose dependents still have italian_tl/albanian_tl pointed at the
+ * user (reassignable right here), or hbpr/albanian_tl revokes blocked by an
+ * open HBPR↔AL-TL assignment (entries with empty dependents + an
+ * assignment_count; those resolve on the HBPR assignments page, not here).
+ * See apps/users/viewsets.py's blocked_revocations. */
 export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
   open,
   onOpenChange,
@@ -59,10 +61,13 @@ export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
     () => blockedRevocations.reduce((sum, b) => sum + b.dependents.length, 0),
     [blockedRevocations]
   );
-  const allResolved = totalDependents > 0 && resolved.size >= totalDependents;
+  // HBPR-guard entries carry no dependents (they resolve outside the dialog),
+  // so Retry unlocks once every listed dependent is reassigned — including
+  // when the response is HBPR-only (zero dependents → immediately retryable).
+  const allResolved = blockedRevocations.length > 0 && resolved.size >= totalDependents;
 
   const handleChange = (
-    role: BlockedRevocation["role"],
+    role: Exclude<BlockedRevocation["role"], "hbpr">,
     profileId: number,
     teamLeaderUserId: number | null
   ) => {
@@ -84,7 +89,7 @@ export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
   };
 
   const handleBulkChange = (
-    role: BlockedRevocation["role"],
+    role: Exclude<BlockedRevocation["role"], "hbpr">,
     profileIds: number[],
     teamLeaderUserId: number | null
   ) => {
@@ -95,15 +100,32 @@ export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>Reassign team members first</DialogTitle>
+          <DialogTitle>Resolve dependencies first</DialogTitle>
           <DialogDescription>
-            These users still have the TL you're removing assigned to them. Pick a
-            replacement TL or clear each one before continuing.
+            This role change is blocked: users still report to the TL being removed, or open
+            HBPR↔Albanian TL assignments depend on the role. Reassign each dependent below — and end
+            open assignments under Admin → HBPR assignments — then retry.
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-5">
           {blockedRevocations.map((blocked) => {
+            if (blocked.dependents.length === 0) {
+              return (
+                <div key={`${blocked.user_id}-${blocked.role}`} className="space-y-2">
+                  <p className="text-sm font-medium">
+                    {blocked.username} — {roleLabel[blocked.role]}
+                  </p>
+                  <p className="border-border text-muted-foreground rounded-lg border p-2 text-xs">
+                    {blocked.assignment_count ?? 0} open HBPR↔Albanian TL assignment(s) depend on
+                    this role. End them under Admin → HBPR assignments, then retry.
+                  </p>
+                </div>
+              );
+            }
             const groupOptions = blocked.role === "italian_tl" ? italianTLs : albanianTLs;
+            // Entries with dependents are always TL-guard blocks — hbpr-guard
+            // entries returned early above with the assignment_count line.
+            const tlRole = blocked.role as "italian_tl" | "albanian_tl";
             const groupSaving = blocked.dependents.some((dependent) =>
               savingKeys.has(dependentKey(blocked.role, dependent.profile_id))
             );
@@ -121,7 +143,7 @@ export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
                       disabled={groupSaving}
                       onChange={(teamLeaderUserId) =>
                         handleBulkChange(
-                          blocked.role,
+                          tlRole,
                           blocked.dependents.map((dependent) => dependent.profile_id),
                           teamLeaderUserId
                         )
@@ -136,11 +158,9 @@ export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
                     return (
                       <div
                         key={dependent.profile_id}
-                        className="flex items-center gap-3 rounded-lg border border-border p-2"
+                        className="border-border flex items-center gap-3 rounded-lg border p-2"
                       >
-                        <span className="w-32 shrink-0 truncate text-sm">
-                          {dependent.username}
-                        </span>
+                        <span className="w-32 shrink-0 truncate text-sm">{dependent.username}</span>
                         <div className="flex-1">
                           <TeamLeaderSelect
                             ariaLabel={`Reassign ${roleLabel[blocked.role]} for ${dependent.username}`}
@@ -148,12 +168,12 @@ export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
                             options={groupOptions}
                             disabled={savingKeys.has(key) || isResolved}
                             onChange={(teamLeaderUserId) =>
-                              handleChange(blocked.role, dependent.profile_id, teamLeaderUserId)
+                              handleChange(tlRole, dependent.profile_id, teamLeaderUserId)
                             }
                           />
                         </div>
                         {isResolved && (
-                          <span className="shrink-0 text-xs font-medium text-tone-success-text">
+                          <span className="text-tone-success-text shrink-0 text-xs font-medium">
                             Resolved
                           </span>
                         )}

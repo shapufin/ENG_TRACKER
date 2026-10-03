@@ -1,29 +1,36 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Users2, Crown, XCircle, Handshake } from "lucide-react";
+import { Users2, Crown, Handshake, UserCog, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LAYOUT_ID, useMotionTransition } from "@/lib/motion";
 
-type TLFilter = "all" | "italian_tl" | "albanian_tl" | "hbpr" | "no_tl";
+type TLFilter = "employee" | "italian_tl" | "albanian_tl" | "hbpr" | "hr" | "cr_admin";
 
 interface UserFilterTabsProps {
   filter: TLFilter;
   onFilterChange: (filter: TLFilter) => void;
+  /** Show the CR Admin tab — only meaningful when the control_room plugin is active. */
+  showCRAdmin?: boolean;
 }
 
-export const UserFilterTabs: React.FC<UserFilterTabsProps> = ({ filter, onFilterChange }) => {
+export const UserFilterTabs: React.FC<UserFilterTabsProps> = ({
+  filter,
+  onFilterChange,
+  showCRAdmin,
+}) => {
   const transition = useMotionTransition({ type: "spring", bounce: 0.2, duration: 0.6 });
   const filters = [
-    { key: "all" as TLFilter, label: "All", icon: Users2 },
+    { key: "employee" as TLFilter, label: "Employees", icon: Users2 },
     { key: "italian_tl" as TLFilter, label: "Italian TL", icon: Crown },
     { key: "albanian_tl" as TLFilter, label: "Albanian TL", icon: Crown },
     { key: "hbpr" as TLFilter, label: "HBPR", icon: Handshake },
-    { key: "no_tl" as TLFilter, label: "No TL", icon: XCircle },
+    { key: "hr" as TLFilter, label: "HR", icon: UserCog },
+    ...(showCRAdmin ? [{ key: "cr_admin" as TLFilter, label: "CR Admin", icon: Shield }] : []),
   ];
 
   return (
-    <div className="flex items-center gap-6 border-b border-border/70">
-      <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1">
+    <div className="border-border/70 flex items-center gap-6 border-b">
+      <div className="bg-muted/50 flex items-center gap-1 rounded-lg p-1">
         {filters.map((f) => {
           const Icon = f.icon;
           const isActive = filter === f.key;
@@ -41,7 +48,7 @@ export const UserFilterTabs: React.FC<UserFilterTabsProps> = ({ filter, onFilter
               {isActive && (
                 <motion.div
                   layoutId={LAYOUT_ID.userFilterTab}
-                  className="absolute inset-0 rounded-md bg-primary"
+                  className="bg-primary absolute inset-0 rounded-md"
                   transition={transition}
                 />
               )}

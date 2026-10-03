@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { ModalSection } from "@/components/ui/ModalSection";
 import { TeamMultiSelect } from "@/components/admin/TeamMultiSelect";
 import { TechMultiSelect } from "@/components/admin/TechMultiSelect";
+import { InfoCallout } from "@/components/ui/InfoCallout";
 import { FormInputField, FormRoleCheckboxes, FormTLSelect } from "./userFormFields";
 import type { Tech, Team } from "@/types";
 
@@ -49,6 +50,14 @@ export const UserFormCore: React.FC<UserFormCoreProps> = ({
   showHireDate,
 }) => {
   const teams = (teamsData || []) as unknown as Team[];
+  const hbprMode = Boolean(form.is_hbpr);
+  // Roles the HBPR switch hides but the form state still holds — they are
+  // force-revoked by the roles payload on save, so warn while any is on.
+  const hiddenRevocations = [
+    form.is_italian_tl_role && "Italian TL",
+    form.is_albanian_tl_role && "Albanian TL",
+    form.is_cr_admin && "CR Admin",
+  ].filter(Boolean) as string[];
   return (
     <>
       <ModalSection title="Assignment" columns={2}>
@@ -67,48 +76,61 @@ export const UserFormCore: React.FC<UserFormCoreProps> = ({
             />
           </div>
         )}
-        <div className="space-y-2">
-          <Label>Teams</Label>
-          <TeamMultiSelect
-            teams={teams}
-            value={form.teams}
-            onChange={(ids) => updateField("teams", ids)}
-            placeholder="No team"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Tech</Label>
-          <TechMultiSelect
-            techs={techsData}
-            value={form.techs}
-            onChange={(ids) => updateField("techs", ids)}
-            levelByTech={form.tech_levels ?? {}}
-            onLevelChange={(techId, levelId) =>
-              updateField("tech_levels", { ...(form.tech_levels ?? {}), [techId]: levelId })
-            }
-            placeholder="No Tech"
-          />
-        </div>
-        <FormTLSelect
-          label="Albanian TL"
-          value={form.albanian_tl}
-          onChange={(v) => updateField("albanian_tl", v)}
-          tls={albanianTLs}
-        />
-        <FormTLSelect
-          label="Italian TL"
-          value={form.italian_tl}
-          onChange={(v) => updateField("italian_tl", v)}
-          tls={italianTLs}
-        />
+        {!hbprMode && (
+          <>
+            <div className="space-y-2">
+              <Label>Teams</Label>
+              <TeamMultiSelect
+                teams={teams}
+                value={form.teams}
+                onChange={(ids) => updateField("teams", ids)}
+                placeholder="No team"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tech</Label>
+              <TechMultiSelect
+                techs={techsData}
+                value={form.techs}
+                onChange={(ids) => updateField("techs", ids)}
+                levelByTech={form.tech_levels ?? {}}
+                onLevelChange={(techId, levelId) =>
+                  updateField("tech_levels", { ...(form.tech_levels ?? {}), [techId]: levelId })
+                }
+                placeholder="No Tech"
+              />
+            </div>
+            <FormTLSelect
+              label="Albanian TL"
+              value={form.albanian_tl}
+              onChange={(v) => updateField("albanian_tl", v)}
+              tls={albanianTLs}
+            />
+            <FormTLSelect
+              label="Italian TL"
+              value={form.italian_tl}
+              onChange={(v) => updateField("italian_tl", v)}
+              tls={italianTLs}
+            />
+          </>
+        )}
       </ModalSection>
       <ModalSection title="Roles" columns={1}>
+        {hbprMode && hiddenRevocations.length > 0 && (
+          <InfoCallout
+            tone="warning"
+            role="status"
+            className="text-xs"
+            label={`Saving with HBPR checked will revoke: ${hiddenRevocations.join(", ")}. Open HBPR assignments or users still reporting to them may block the save — end those first.`}
+          />
+        )}
         <FormRoleCheckboxes
           is_hr_user={form.is_hr_user}
           is_italian_tl_role={form.is_italian_tl_role}
           is_albanian_tl_role={form.is_albanian_tl_role}
           is_cr_admin={form.is_cr_admin}
           is_hbpr={form.is_hbpr}
+          hbprOnly={hbprMode}
           prefix={prefix}
           onChange={(key, value) => updateField(key, value)}
         />
