@@ -52,8 +52,21 @@ class HbprRecordsEndpointTests(HbprScorecardBase):
         ids = [r['id'] for r in first['results'] + second['results']]
         self.assertEqual(len(set(ids)), 4)
 
+    def test_same_date_rows_page_in_a_stable_total_order(self):
+        # A date alone is not a total order: ties must break on id or offset
+        # paging can repeat/skip rows between pages.
+        same_day = [
+            PIPRecord.objects.create(employee=self.member, tl=self.tl, start_date=date(2026, 2, 2)).id
+            for _ in range(3)
+        ]
+        ids = [r['id'] for r in self._get(self.hbpr, kind='pips', limit=100).data['results']]
+        self.assertEqual([i for i in ids if i in same_day], sorted(same_day, reverse=True))
+
     def test_bad_paging_params_are_400(self):
-        for params in ({'limit': 'x'}, {'offset': '-1'}, {'limit': '0'}, {'leader': 'abc'}):
+        for params in (
+            {'limit': 'x'}, {'offset': '-1'}, {'limit': '0'}, {'leader': 'abc'},
+            {'offset': str(10 ** 30)},  # beyond the DB integer range: 400, never a 500
+        ):
             with self.subTest(params=params):
                 self.assertEqual(self._get(self.hbpr, kind='pips', **params).status_code, 400)
 
