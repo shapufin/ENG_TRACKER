@@ -7,7 +7,7 @@ import api from "@/lib/api";
 import type { TechAssignmentInput, UserProfile } from "@/types";
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
 
-type TLFilter = "all" | "italian_tl" | "albanian_tl" | "hbpr" | "no_tl";
+type TLFilter = "employee" | "italian_tl" | "albanian_tl" | "hbpr" | "hr" | "cr_admin";
 
 /** Local mirror of the control_room plugin's ControlRoomAccess fields
  * actually consumed here and downstream (useUserColumns, PluginCRUserDialogs),
@@ -35,6 +35,48 @@ const toTechAssignments = (
   levels: Record<number, number | null> | undefined
 ): TechAssignmentInput[] =>
   techIds.map((techId) => ({ tech: techId, level: levels?.[techId] ?? null }));
+
+/** HBPR-mode payload shaping shared by the edit and create payloads. HBPR
+ * hides the assignment fields entirely — omitted keys leave stored values
+ * untouched server-side (absent key = unchanged), so empties must NOT be
+ * sent. Hidden role flags are forced off and the authoritative roles array
+ * drops every incompatible role (the server revokes managed roles missing
+ * from the list). Exported for the payload-shaping tests. */
+export const buildRolePayload = (form: {
+  is_hbpr?: boolean;
+  teams: number[];
+  techs: number[];
+  tech_levels?: Record<number, number | null>;
+  albanian_tl: string;
+  italian_tl: string;
+  is_hr_user: boolean;
+  is_italian_tl_role: boolean;
+  is_albanian_tl_role: boolean;
+  is_cr_admin?: boolean;
+}) => ({
+  ...(form.is_hbpr
+    ? {}
+    : {
+        teams: form.teams,
+        techs: toTechAssignments(form.techs, form.tech_levels),
+        albanian_tl:
+          form.albanian_tl && form.albanian_tl !== "none" ? Number(form.albanian_tl) : null,
+        italian_tl: form.italian_tl && form.italian_tl !== "none" ? Number(form.italian_tl) : null,
+      }),
+  is_italian_tl_role: form.is_hbpr ? false : form.is_italian_tl_role,
+  is_albanian_tl_role: form.is_hbpr ? false : form.is_albanian_tl_role,
+  is_cr_admin: form.is_hbpr ? false : form.is_cr_admin,
+  roles: (form.is_hbpr
+    ? [form.is_hr_user && "hr", "hbpr"]
+    : [
+        form.is_hr_user && "hr",
+        form.is_italian_tl_role && "italian_tl",
+        form.is_albanian_tl_role && "albanian_tl",
+        form.is_cr_admin && "cr_admin",
+        form.is_hbpr && "hbpr",
+      ]
+  ).filter(Boolean) as string[],
+});
 
 const emptyEditForm = {
   first_name: "",
@@ -81,7 +123,7 @@ export const useUsersPage = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState<UserProfile | null>(null);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [tlFilter, setTlFilter] = useState<TLFilter>("all");
+  const [tlFilter, setTlFilter] = useState<TLFilter>("employee");
   const [techIds, setTechIds] = useState<number[]>([]);
   const [techLevelIds, setTechLevelIds] = useState<number[]>([]);
   const [noTechOnly, setNoTechOnly] = useState(false);
@@ -171,9 +213,7 @@ export const useUsersPage = () => {
   const isCROnlyAdmin = isCRAdmin && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
   const [crOnly, setCrOnly] = useState(false);
   const [crAccessUserIds, setCrAccessUserIds] = useState<Set<number>>(new Set());
-  const [crAccessByUserId, setCrAccessByUserId] = useState<Map<number, CRAccessRecord>>(
-    new Map()
-  );
+  const [crAccessByUserId, setCrAccessByUserId] = useState<Map<number, CRAccessRecord>>(new Map());
 
   const visibleUserIds = useMemo(() => filteredData.map((p) => p.user.id), [filteredData]);
 
@@ -252,23 +292,8 @@ export const useUsersPage = () => {
         last_name: form.last_name,
         email: form.email,
         phone: form.phone,
-        teams: form.teams,
-        techs: toTechAssignments(form.techs, form.tech_levels),
-        albanian_tl:
-          form.albanian_tl && form.albanian_tl !== "none" ? Number(form.albanian_tl) : null,
-        italian_tl: form.italian_tl && form.italian_tl !== "none" ? Number(form.italian_tl) : null,
+        ...buildRolePayload(form),
         is_hr: form.is_hr_user,
-        is_italian_tl_role: form.is_italian_tl_role,
-        is_albanian_tl_role: form.is_albanian_tl_role,
-        is_cr_admin: form.is_cr_admin,
-        roles: [
-          form.is_hr_user && "hr",
-          form.is_italian_tl_role && "italian_tl",
-          form.is_albanian_tl_role && "albanian_tl",
-          form.is_cr_admin && "cr_admin",
-          // Always sent: the server revokes any managed role missing from this list.
-          form.is_hbpr && "hbpr",
-        ].filter(Boolean) as string[],
         hire_date: form.hire_date || null,
       },
     });
@@ -318,27 +343,9 @@ export const useUsersPage = () => {
       last_name: createForm.last_name,
       password: createForm.password,
       phone: createForm.phone,
-      teams: createForm.teams,
-      techs: toTechAssignments(createForm.techs, createForm.tech_levels),
-      albanian_tl:
-        createForm.albanian_tl && createForm.albanian_tl !== "none"
-          ? Number(createForm.albanian_tl)
-          : null,
-      italian_tl:
-        createForm.italian_tl && createForm.italian_tl !== "none"
-          ? Number(createForm.italian_tl)
-          : null,
+      // Same HBPR minimal-mode contract as the edit payload — shared helper.
+      ...buildRolePayload(createForm),
       is_hr: createForm.is_hr_user,
-      is_italian_tl_role: createForm.is_italian_tl_role,
-      is_albanian_tl_role: createForm.is_albanian_tl_role,
-      is_cr_admin: createForm.is_cr_admin,
-      roles: [
-        createForm.is_hr_user && "hr",
-        createForm.is_italian_tl_role && "italian_tl",
-        createForm.is_albanian_tl_role && "albanian_tl",
-        createForm.is_cr_admin && "cr_admin",
-        createForm.is_hbpr && "hbpr",
-      ].filter(Boolean) as string[],
     });
   };
 

@@ -164,6 +164,35 @@ describe("TlRevokeBlockedDialog", () => {
     await waitFor(() => expect(retryButton).not.toBeDisabled());
   });
 
+  it("HBPR-guard entries render the assignment_count line and leave Retry enabled", () => {
+    const hbprBlocked: BlockedRevocation[] = [
+      {
+        user_id: 2,
+        username: "elda",
+        role: "hbpr",
+        dependents: [],
+        assignment_count: 2,
+      },
+    ];
+    render(
+      <TlRevokeBlockedDialog
+        open
+        onOpenChange={vi.fn()}
+        blockedRevocations={hbprBlocked}
+        italianTLs={italianTLs}
+        albanianTLs={albanianTLs}
+        onRetry={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/elda/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/open HBPR↔Albanian TL assignment\(s\) depend on this role/)
+    ).toBeInTheDocument();
+    // Nothing to reassign inside the dialog — Retry is usable immediately.
+    expect(screen.getByRole("button", { name: "Retry" })).not.toBeDisabled();
+  });
+
   it("does not render when closed", () => {
     render(
       <TlRevokeBlockedDialog

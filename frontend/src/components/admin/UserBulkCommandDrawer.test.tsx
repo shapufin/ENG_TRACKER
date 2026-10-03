@@ -109,4 +109,69 @@ describe("UserBulkCommandDrawer", () => {
       is_italian_tl_role: false,
     });
   });
+
+  it("HBPR role toggle sends is_hbpr in the payload", () => {
+    renderDrawer();
+
+    clickRole("HBPR role");
+    fireEvent.click(screen.getByRole("button", { name: "Apply changes" }));
+    expect(onBulkUpdate).toHaveBeenCalledWith({ is_hbpr: true });
+    onBulkUpdate.mockReset();
+
+    clickRole("HBPR role"); // on → off
+    fireEvent.click(screen.getByRole("button", { name: "Apply changes" }));
+    expect(onBulkUpdate).toHaveBeenCalledWith({ is_hbpr: false });
+  });
+
+  it("all-HBPR selection hides team/tech/TL sections and TL role toggles", () => {
+    render(
+      <UserBulkCommandDrawer
+        open
+        onOpenChange={vi.fn()}
+        selectedProfiles={
+          [
+            { id: 1, user: { id: 11, username: "elda", roles: ["hbpr"] } },
+            { id: 2, user: { id: 12, username: "hilda", roles: ["hbpr"] } },
+          ] as any
+        }
+        teams={{ results: [] }}
+        italianTLs={[]}
+        albanianTLs={[]}
+        onBulkUpdate={onBulkUpdate}
+      />
+    );
+
+    expect(screen.queryByText("Teams")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tech")).not.toBeInTheDocument();
+    expect(screen.queryByText("Team leader assignments")).not.toBeInTheDocument();
+    expect(screen.getByText("Roles")).toBeInTheDocument();
+    expect(screen.getByText("HBPR role")).toBeInTheDocument();
+    expect(screen.queryByText("Italian TL role")).not.toBeInTheDocument();
+    expect(screen.queryByText("Albanian TL role")).not.toBeInTheDocument();
+    expect(screen.getByText("HR")).toBeInTheDocument();
+  });
+
+  it("mixed selection keeps all sections and still offers the HBPR toggle", () => {
+    render(
+      <UserBulkCommandDrawer
+        open
+        onOpenChange={vi.fn()}
+        selectedProfiles={
+          [
+            { id: 1, user: { id: 11, username: "elda", roles: ["hbpr"] } },
+            { id: 2, user: { id: 12, username: "bob", roles: [] } },
+          ] as any
+        }
+        teams={{ results: [] }}
+        italianTLs={[]}
+        albanianTLs={[]}
+        onBulkUpdate={onBulkUpdate}
+      />
+    );
+
+    expect(screen.getByText("Teams")).toBeInTheDocument();
+    expect(screen.getByText("Team leader assignments")).toBeInTheDocument();
+    expect(screen.getByText("HBPR role")).toBeInTheDocument();
+    expect(screen.getByText("Italian TL role")).toBeInTheDocument();
+  });
 });

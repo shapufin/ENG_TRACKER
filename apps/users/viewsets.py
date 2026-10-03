@@ -377,10 +377,11 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         """Apply selected core user-management fields atomically.
 
         Payload accepts ``user_ids`` plus any of: ``teams`` (complete M2M
-        replacement), ``italian_tl``, ``albanian_tl``, ``is_hr``,
-        ``is_italian_tl_role``, and ``is_albanian_tl_role``. Omitted fields
-        remain unchanged. This endpoint is intentionally full-admin-only;
-        CR-only admins use the Control Room plugin bulk endpoint instead.
+        replacement), ``techs``, ``italian_tl``, ``albanian_tl``, ``is_hr``,
+        ``is_italian_tl_role``, ``is_albanian_tl_role``, and ``is_hbpr``.
+        Omitted fields remain unchanged. This endpoint is intentionally
+        full-admin-only; CR-only admins use the Control Room plugin bulk
+        endpoint instead.
         """
         data = request.data
         user_ids = data.get('user_ids')
@@ -409,7 +410,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
 
         allowed_fields = {
             'teams', 'techs', 'italian_tl', 'albanian_tl', 'is_hr',
-            'is_italian_tl_role', 'is_albanian_tl_role',
+            'is_italian_tl_role', 'is_albanian_tl_role', 'is_hbpr',
         }
         unknown_fields = sorted(set(data.keys()) - {'user_ids'} - allowed_fields)
         if unknown_fields:
@@ -465,7 +466,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         else:
             tech_entries = None
 
-        for field in ('is_hr', 'is_italian_tl_role', 'is_albanian_tl_role'):
+        for field in ('is_hr', 'is_italian_tl_role', 'is_albanian_tl_role', 'is_hbpr'):
             if field in data and not isinstance(data[field], bool):
                 return Response(
                     {'error': f'{field} must be a boolean'},
@@ -500,7 +501,13 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 )
 
         from .services.user_creation import _sync_legacy_roles
-        from apps.permissions.services.role_service import find_blocked_tl_revocations_bulk
+        from apps.permissions.models import Role
+        from apps.permissions.services.role_service import (
+            assign_role,
+            find_blocked_hbpr_revocations_bulk,
+            find_blocked_tl_revocations_bulk,
+            revoke_role,
+        )
 
         with transaction.atomic():
             profiles = list(
@@ -551,6 +558,47 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            # Same pre-check for the HBPR↔Albanian-TL assignment FK — an
+            # is_hbpr=False or is_albanian_tl_role=False bulk revoke would
+            # otherwise hit the guard inside revoke_role mid-loop and 500.
+            hbpr_new_state = {}
+            if data.get('is_hbpr') is False:
+                hbpr_new_state['hbpr'] = False
+            if data.get('is_albanian_tl_role') is False:
+                hbpr_new_state['albanian_tl'] = False
+            blocked_hbpr = (
+                find_blocked_hbpr_revocations_bulk(
+                    [profile.user for profile in profiles], hbpr_new_state
+                )
+                if hbpr_new_state
+                else []
+            )
+            if blocked_hbpr:
+                summary = '; '.join(
+                    f"{b['username']} ({b['role']}): {b['assignment_count']} "
+                    f"open HBPR↔Albanian TL assignment(s)"
+                    for b in blocked_hbpr
+                )
+                return Response(
+                    {
+                        'error': (
+                            'Cannot revoke role while an open HBPR↔Albanian TL '
+                            'assignment depends on it: ' + summary
+                        ),
+                        'blocked_revocations': blocked_hbpr,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            hbpr_role_exists = (
+                'is_hbpr' in data and Role.objects.filter(code='hbpr').exists()
+            )
+            if data.get('is_hbpr') and not hbpr_role_exists:
+                return Response(
+                    {'error': 'hbpr role is not seeded'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             # One query for every target's current Techs, so the per-user
             # inactive-Tech check below costs nothing extra.
             assigned_by_profile = {}
@@ -595,6 +643,11 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     is_italian_tl_role=data.get('is_italian_tl_role'),
                     is_albanian_tl_role=data.get('is_albanian_tl_role'),
                 )
+                if 'is_hbpr' in data:
+                    if data['is_hbpr']:
+                        assign_role(profile.user, 'hbpr')
+                    elif hbpr_role_exists:
+                        revoke_role(profile.user, 'hbpr')
 
         return Response({
             'detail': f'Successfully updated {len(profiles)} users.',
@@ -1129,6 +1182,18 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
                 Q(role_codes__icontains='hbpr')
                 | Q(user__user_roles__role__code='hbpr', user__user_roles__is_active=True)
             ).distinct()
+        if role == 'hr':
+            return queryset.filter(
+                Q(is_hr_user=True)
+                | Q(role_codes__icontains='hr')
+                | Q(user__user_roles__role__code='hr', user__user_roles__is_active=True)
+            ).distinct()
+        if role == 'cr_admin':
+            # flagless like hbpr — lives in the role_codes cache + UserRole.
+            return queryset.filter(
+                Q(role_codes__icontains='cr_admin')
+                | Q(user__user_roles__role__code='cr_admin', user__user_roles__is_active=True)
+            ).distinct()
         if role == 'no_tl':
             return queryset.filter(
                 Q(is_italian_tl_role=False)
@@ -1138,6 +1203,23 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
                 & Q(italian_tl__isnull=True)
                 & Q(albanian_tl__isnull=True)
             )
+        if role == 'employee':
+            # Plain employees: no elevated role via flag, role_codes cache,
+            # or TL-via-dependents — but their own TL-assignment FKs do NOT
+            # exclude them (an employee with a manager is still an employee;
+            # that distinguishes this from the no_tl "unassigned" metric).
+            return queryset.filter(
+                Q(is_italian_tl_role=False)
+                & Q(is_albanian_tl_role=False)
+                & Q(is_hr_user=False)
+                & Q(user__italian_team_members__isnull=True)
+                & Q(user__albanian_team_members__isnull=True)
+                & ~Q(role_codes__icontains='italian_tl')
+                & ~Q(role_codes__icontains='albanian_tl')
+                & ~Q(role_codes__icontains='hbpr')
+                & ~Q(role_codes__icontains='hr')
+                & ~Q(role_codes__icontains='cr_admin')
+            ).distinct()
         return queryset
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])

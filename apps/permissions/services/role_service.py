@@ -192,6 +192,43 @@ def find_blocked_tl_revocations_bulk(candidates, new_state: dict) -> list[dict]:
     return blocked
 
 
+def find_blocked_hbpr_revocations_bulk(candidates, new_state: dict) -> list[dict]:
+    """Batched variant of find_blocked_hbpr_revocations for many users checked
+    against the same new_state — mirrors find_blocked_tl_revocations_bulk.
+
+    One query per role being revoked (at most 2: hbpr, albanian_tl). Returns
+    entries in the shared ``blocked_revocations`` shape (dependents empty;
+    ``assignment_count`` carries the HBPR-specific detail).
+    """
+    from apps.users.models.hbpr import HbprAlbanianTlAssignment
+    from apps.users.services.hbpr_assignments import unfinished_q
+
+    if not candidates:
+        return []
+    usernames = {u.id: u.username for u in candidates}
+    blocked = []
+    for role_code in ('hbpr', 'albanian_tl'):
+        if new_state.get(role_code, None) is not False:
+            continue
+        lookup = 'hbpr' if role_code == 'hbpr' else 'albanian_tl'
+        counts: dict[int, int] = {}
+        for owner_id in (
+            HbprAlbanianTlAssignment.objects.filter(
+                unfinished_q(), **{f'{lookup}__in': usernames.keys()}
+            ).values_list(lookup, flat=True)
+        ):
+            counts[owner_id] = counts.get(owner_id, 0) + 1
+        for uid, count in counts.items():
+            blocked.append({
+                'user_id': uid,
+                'username': usernames[uid],
+                'role': role_code,
+                'dependents': [],
+                'assignment_count': count,
+            })
+    return blocked
+
+
 @transaction.atomic
 def revoke_role(user, role_code: str, team=None) -> int:
     """Deactivate matching role assignments while preserving assignment history."""

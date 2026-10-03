@@ -16,6 +16,7 @@ export interface BulkUserUpdatePayload {
   is_hr?: boolean;
   is_italian_tl_role?: boolean;
   is_albanian_tl_role?: boolean;
+  is_hbpr?: boolean;
 }
 
 interface UseUsersPageBulkOptions {

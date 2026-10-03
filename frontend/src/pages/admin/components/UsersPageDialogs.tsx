@@ -5,7 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserEditFormDialog } from "./UserEditFormDialog";
 import { UserCreateFormDialog } from "./UserCreateFormDialog";
-import { PluginCreateCRUserDialog, PluginEditCRUserDialog } from "@/components/admin/PluginCRUserDialogs";
+import {
+  PluginCreateCRUserDialog,
+  PluginEditCRUserDialog,
+} from "@/components/admin/PluginCRUserDialogs";
 import { TlRevokeBlockedDialog } from "@/components/admin/TlRevokeBlockedDialog";
 import type { useUsersPage } from "../hooks/useUsersPage";
 import type { Team } from "@/types";
@@ -124,6 +127,9 @@ export const UsersPageDialogs: React.FC<UsersPageDialogsProps> = ({ state }) => 
       />
 
       <TlRevokeBlockedDialog
+        // Remount per blocked payload — the dialog's resolved/saving state
+        // must never leak from one block response into the next.
+        key={JSON.stringify(state.blockedRevocations)}
         open={Boolean(state.blockedRevocations)}
         onOpenChange={(open) => {
           if (!open) state.closeBlockedDialog();
