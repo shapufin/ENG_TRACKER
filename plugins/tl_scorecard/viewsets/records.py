@@ -51,13 +51,14 @@ class MeetingViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMi
     hbpr_exclude = ~Q(meeting_type='one_on_one')
 
     search_fields = (
-        'counterparty__first_name', 'counterparty__last_name', 'notes', 'shared_summary',
+        'counterparty__first_name', 'counterparty__last_name', 'shared_summary',
     )
+    private_search_fields = ('notes',)
 
     def base_queryset(self):
         return Meeting.objects.select_related(
             'organizer', 'counterparty', 'recorded_by',
-        ).prefetch_related('attendees')
+        ).prefetch_related('attendees__user')
 
     def own_q(self, user):
         return Q(organizer=user)
@@ -135,11 +136,13 @@ class IdleFlagViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionM
     hbpr_member_field = 'employee'
 
     search_fields = (
-        'productivity_task', 'notes', 'employee__first_name', 'employee__last_name',
+        'productivity_task', 'employee__first_name', 'employee__last_name',
     )
+    private_search_fields = ('notes',)
 
     def base_queryset(self):
-        return IdleFlag.objects.select_related('employee', 'flagged_by').prefetch_related('status_updates')
+        return IdleFlag.objects.select_related('employee', 'flagged_by').prefetch_related(
+            'status_updates__recorded_by')
 
     def own_q(self, user):
         return Q(flagged_by=user)
@@ -214,7 +217,8 @@ class ReviewDeliveryViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermi
     hbpr_leader_field = 'leader'
     hbpr_member_field = None  # a review has no employee subject
 
-    search_fields = ('recipient', 'period', 'notes')
+    search_fields = ('recipient', 'period')
+    private_search_fields = ('notes',)
 
     def base_queryset(self):
         return ReviewDelivery.objects.select_related('leader', 'recorded_by')
@@ -284,7 +288,8 @@ class AbsenceViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMi
     hbpr_leader_field = 'flagged_by'
     hbpr_member_field = 'employee'
 
-    search_fields = ('reason', 'notes', 'employee__first_name', 'employee__last_name')
+    search_fields = ('reason', 'employee__first_name', 'employee__last_name')
+    private_search_fields = ('notes',)
 
     def base_queryset(self):
         return Absence.objects.select_related('employee', 'flagged_by')

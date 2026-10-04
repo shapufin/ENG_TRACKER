@@ -42,9 +42,10 @@ class PIPRecordViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermission
     hbpr_member_field = 'employee'
 
     search_fields = (
-        'status_note', 'notes', 'shared_notes',
+        'status_note', 'shared_notes',
         'employee__first_name', 'employee__last_name',
     )
+    private_search_fields = ('notes',)
 
     def base_queryset(self):
         return PIPRecord.objects.select_related('employee', 'tl', 'approved_by')
@@ -152,8 +153,9 @@ class PromotionFlagViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermis
     hbpr_member_field = 'employee'
 
     search_fields = (
-        'decision_note', 'notes', 'employee__first_name', 'employee__last_name',
+        'decision_note', 'employee__first_name', 'employee__last_name',
     )
+    private_search_fields = ('notes',)
 
     def base_queryset(self):
         return PromotionFlag.objects.select_related('employee', 'nominated_by')

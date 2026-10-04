@@ -15,6 +15,10 @@ from rest_framework.exceptions import ValidationError
 CSV_MAX_ROWS = 2000
 
 
+# A cell that starts with one of these is run as a formula by Excel/Sheets.
+_FORMULA_TRIGGERS = ('=', '+', '-', '@', '\t', '\r')
+
+
 def _cell(value):
     if value is None:
         return ''
@@ -22,7 +26,12 @@ def _cell(value):
         return 'TRUE' if value else 'FALSE'
     if isinstance(value, (list, dict)):
         return json.dumps(value, ensure_ascii=False, default=str)
-    return str(value)
+    text = str(value)
+    # Only free text can carry a payload; numbers/dates come through
+    # `str()` of non-str values and are never prefixed (a legit "-5" stays).
+    if isinstance(value, str) and text.lstrip(' ').startswith(_FORMULA_TRIGGERS):
+        return f"'{text}"
+    return text
 
 
 def build_records_csv(rows):

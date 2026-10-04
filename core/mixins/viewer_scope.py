@@ -82,10 +82,14 @@ class HbprScopedQuerysetMixin(HbprReadScopeMixin):
     hbpr_member_nullable = False
     hbpr_exclude = None
     hbpr_no_access = False
-    # Model lookups ORed for `?q=` text search (e.g. ('reason', 'notes',
+    # Model lookups ORed for `?q=` text search (e.g. ('reason',
     # 'employee__first_name')). Empty by default: viewsets without searchable
     # text behave exactly as before.
     search_fields = ()
+    # Lookups the serializer blanks for anyone but the record's owner (private
+    # TL notes). They are searchable only on rows `own_q` says the viewer owns
+    # (staff: all) — otherwise a hit/miss would reveal text the API hides.
+    private_search_fields = ()
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -111,11 +115,17 @@ class HbprScopedQuerysetMixin(HbprReadScopeMixin):
     def apply_search(self, qs, raw):
         """Narrow an already-scoped queryset by `?q=` (capped, blank is a no-op)."""
         term = (raw or '').strip()[:100]
-        if not term or not self.search_fields:
+        if not term or not (self.search_fields or self.private_search_fields):
             return qs
         query = Q()
         for field in self.search_fields:
             query |= Q(**{f'{field}__icontains': term})
+        if self.private_search_fields:
+            private = Q()
+            for field in self.private_search_fields:
+                private |= Q(**{f'{field}__icontains': term})
+            user = self.request.user
+            query |= private if is_staff_user(user) else private & self.own_q(user)
         return qs.filter(query)
 
     def get_queryset(self):

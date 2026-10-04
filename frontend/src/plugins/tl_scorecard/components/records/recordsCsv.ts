@@ -3,6 +3,9 @@ import type { KindConfig, RecordRow } from "./recordKinds";
 /** Table column order, mirrored 1:1 in the CSV so the file matches the list. */
 export const RECORDS_CSV_COLUMNS = ["ID", "Date", "Type", "With", "Focus", "State"] as const;
 
+/** Excel/Sheets run a cell starting with these as a formula; prefix `'` so free text stays text. */
+const neutralise = (value: string): string => (/^\s*[=+\-@\t\r]/.test(value) ? `'${value}` : value);
+
 const escape = (value: string): string =>
   /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 
@@ -18,10 +21,12 @@ export const recordsToCsv = (config: KindConfig<RecordRow>, rows: RecordRow[]): 
       [
         String(row.id),
         config.date(row),
-        config.typeChip(row),
-        config.person(row),
-        config.focus(row) ?? "",
-        config.state(row).label,
+        ...[
+          config.typeChip(row),
+          config.person(row),
+          config.focus(row) ?? "",
+          config.state(row).label,
+        ].map(neutralise),
       ]
         .map(escape)
         .join(",")

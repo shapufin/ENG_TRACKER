@@ -40,4 +40,20 @@ describe("recordsToCsv", () => {
     expect(csv).not.toContain("null");
     expect(csv).not.toContain("undefined");
   });
+
+  it("neutralises formula triggers in free text so Excel never runs them", () => {
+    const csv = recordsToCsv(byKey("absences"), [
+      {
+        id: 1,
+        absence_date: "2026-10-04",
+        employee_name: "=HYPERLINK(1)",
+        reason: "@SUM(A1)",
+      } as never,
+      { id: 2, absence_date: "2026-10-04", employee_name: "Jane", reason: "-2+3" } as never,
+    ]);
+    expect(csv).toContain("'=HYPERLINK(1)");
+    expect(csv).toContain("'@SUM(A1)");
+    expect(csv).toContain("'-2+3");
+    expect(csv).not.toMatch(/(^|,)=HYPERLINK/m);
+  });
 });

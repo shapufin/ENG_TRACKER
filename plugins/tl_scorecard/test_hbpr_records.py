@@ -4,7 +4,7 @@ from datetime import date
 from rest_framework.test import force_authenticate
 
 from . import hbpr_records
-from .models import Absence, IdleFlag, PIPRecord
+from .models import Absence, IdleFlag, Meeting, PIPRecord, PromotionFlag
 from .test_tl_scorecard_hbpr import HbprScorecardBase
 from .viewsets import PIPRecordViewSet
 from .viewsets_hbpr import HbprViewSet
@@ -102,6 +102,25 @@ class HbprRecordsEndpointTests(HbprScorecardBase):
         IdleFlag.objects.filter(pk=self.idle_in.pk).update(notes='private idle note')
         results = self._get(self.hbpr, kind='idle').data['results']
         self.assertEqual([r['notes'] for r in results], [''])
+
+    def test_search_cannot_probe_private_notes(self):
+        """`?q=` must not match a column the serializer blanks for this viewer:
+        hit/miss on a private word would leak the note's content."""
+        word = 'zq-private-probe'
+        IdleFlag.objects.filter(pk=self.idle_in.pk).update(notes=word)
+        Absence.objects.filter(pk=self.absence_in.pk).update(notes=word)
+        PIPRecord.objects.filter(pk=self.pip_in.pk).update(notes=word)
+        PromotionFlag.objects.filter(pk=self.promo_in.pk).update(notes=word)
+        Meeting.objects.filter(pk=self.meeting_in.pk).update(notes=word)
+        for kind in ('idle', 'absences', 'pips', 'promotions', 'meetings'):
+            with self.subTest(kind=kind):
+                data = self._get(self.hbpr, kind=kind, q=word).data
+                self.assertEqual((data['count'], data['results']), (0, []))
+
+    def test_search_still_matches_shared_text_for_hbpr(self):
+        PIPRecord.objects.filter(pk=self.pip_in.pk).update(shared_notes='zq-shared-visible')
+        data = self._get(self.hbpr, kind='pips', q='zq-shared-visible').data
+        self.assertEqual(data['count'], 1)
 
     def test_query_count_does_not_grow_with_rows(self):
         from django.db import connection
