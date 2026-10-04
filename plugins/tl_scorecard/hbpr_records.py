@@ -79,8 +79,13 @@ def parse_period(raw):
     return int(match.group(1)), int(match.group(2))
 
 
-def records_page(request, *, kind, leader=None, status=None, period=None, limit=25, offset=0):
-    """``{count, results}`` for one record kind, scoped and redacted by its viewset."""
+def _scoped_qs(request, *, kind, leader=None, status=None, period=None):
+    """The resource viewset's own scoped queryset plus the common filters.
+
+    No serialization happens here, so this is also what the counts endpoint
+    uses: whatever the viewset would list for this HBPR is exactly what gets
+    counted — there is no second copy of the scope logic.
+    """
     spec = RECORD_SPECS.get(kind)
     if spec is None:
         raise ValidationError({'kind': f'kind must be one of {sorted(RECORD_SPECS)}.'})
@@ -103,6 +108,26 @@ def records_page(request, *, kind, leader=None, status=None, period=None, limit=
     if parsed:
         year, month = parsed
         qs = qs.filter(**{f'{spec.date_field}__year': year, f'{spec.date_field}__month': month})
+    return spec, view, qs
+
+
+def records_summary(request, *, leader=None, period=None):
+    """``{kind: count}`` for every record kind under the same scope as the pages.
+
+    Deliberately no ``status`` filter: statuses are per-kind vocabularies, so
+    one value cannot apply to all six counts. The sidebar shows these
+    leader+period counts; the active kind's own page total (status included)
+    stays the precise filtered number.
+    """
+    return {
+        kind: _scoped_qs(request, kind=kind, leader=leader, period=period)[2].count()
+        for kind in RECORD_SPECS
+    }
+
+
+def records_page(request, *, kind, leader=None, status=None, period=None, limit=25, offset=0):
+    """``{count, results}`` for one record kind, scoped and redacted by its viewset."""
+    spec, view, qs = _scoped_qs(request, kind=kind, leader=leader, status=status, period=period)
 
     total = qs.count()
     # The models order by their date alone; break ties on pk so offset paging is stable.

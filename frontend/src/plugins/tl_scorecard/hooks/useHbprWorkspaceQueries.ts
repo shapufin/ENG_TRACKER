@@ -214,6 +214,8 @@ export interface HbprWorkspaceQueries {
   overview: ReturnType<typeof useQuery<HbprOverview>>;
   evidence: ReturnType<typeof useQuery<HbprEvidencePage>>;
   records: ReturnType<typeof useQuery<HbprRecordsPage>>;
+  /** Per-kind counts for the sidebar (leader + period scope, no status). */
+  recordsSummary: ReturnType<typeof useQuery<Record<string, number>>>;
   /** `leaderParam`, or null when it is not one of the assigned leaders. */
   leader: number | null;
 }
@@ -268,5 +270,21 @@ export function useHbprWorkspaceQueries({
     placeholderData: keepPreviousData,
   });
 
-  return { overview, evidence, records, leader };
+  // Sidebar badges: one request for all six counts (leader + period scope).
+  // Statuses are per-kind vocabularies, so the summary deliberately takes no
+  // ?status= — the active kind's own page total stays the precise number.
+  const recordsSummary = useQuery({
+    queryKey: ["tl-scorecard", "hbpr-records-summary", leader, record.period],
+    queryFn: async () =>
+      (
+        await tlScorecardService.getHbprRecordsSummary({
+          ...(leader !== null && { leader }),
+          ...(record.period && { period: record.period }),
+        })
+      ).data,
+    enabled: view === "records" && overview.isSuccess,
+    placeholderData: keepPreviousData,
+  });
+
+  return { overview, evidence, records, recordsSummary, leader };
 }

@@ -17,6 +17,7 @@ vi.mock("../services/tlScorecardService", () => ({
     getHbprOverview: vi.fn(),
     listHbprEvidencePage: vi.fn(),
     getHbprRecordsPage: vi.fn(),
+    getHbprRecordsSummary: vi.fn(),
   },
 }));
 
@@ -211,6 +212,7 @@ describe("HbprWorkspacePage", () => {
       const results = status ? [] : (byKind[kind] ?? []);
       return ok({ count: results.length, results });
     });
+    svc.getHbprRecordsSummary.mockResolvedValue(ok({}));
   });
 
   it("shows the attention summary and the assigned leaders roster on the overview", async () => {
@@ -307,6 +309,13 @@ describe("HbprWorkspacePage", () => {
       "href",
       "/hbpr?view=records&kind=absences"
     );
+  });
+
+  it("shows which team leader authored each record", async () => {
+    renderPage(`/hbpr?view=records&kind=absences&year=${YEAR}`);
+    expect((await screen.findAllByText("Unjustified")).length).toBeGreaterThan(0);
+    // The author cell carries the title; the export label does not.
+    expect(screen.getAllByTitle("Alb TL").length).toBeGreaterThan(0);
   });
 
   it("shows member avatars and a pressed active kind", async () => {
@@ -463,18 +472,37 @@ describe("HbprWorkspacePage", () => {
     expect(last).not.toHaveProperty("status");
   });
 
-  it("marks the active kind pressed and shows its server total", async () => {
-    renderPage("/hbpr?view=records&kind=absences");
-    // Wait for the server total before asserting the count beside the kind.
+  it("shows per-kind server counts in the sidebar", async () => {
+    svc.getHbprRecordsSummary.mockResolvedValue(
+      ok({
+        meetings: 3,
+        idle: 0,
+        absences: 1,
+        reviews: 0,
+        pips: 0,
+        promotions: 2,
+      })
+    );
+    renderPage(`/hbpr?view=records&kind=absences&year=${YEAR}`);
+    // Wait for both the page and the summary counts to land.
     expect((await screen.findAllByText("Anna Rossi")).length).toBeGreaterThan(0);
     const nav = await screen.findByRole("navigation", { name: "Record types" });
-    expect(within(nav).getByRole("button", { name: /absences 1/i })).toHaveAttribute(
-      "aria-pressed",
-      "true"
+    await waitFor(() =>
+      expect(within(nav).getByRole("button", { name: /meetings 3/i })).toBeInTheDocument()
     );
-    expect(within(nav).getByRole("button", { name: /promotions/i })).toHaveAttribute(
-      "aria-pressed",
-      "false"
-    );
+    expect(within(nav).getByRole("button", { name: /promotions 2/i })).toBeInTheDocument();
+    expect(svc.getHbprRecordsSummary).toHaveBeenCalledWith({});
+  });
+
+  it("marks the active kind pressed and shows its server total", async () => {
+    renderPage(`/hbpr?view=records&kind=absences&year=${YEAR}`);
+    // Wait for the rows before asserting the count beside the kind.
+    expect((await screen.findAllByText("Anna Rossi")).length).toBeGreaterThan(0);
+    // The summary mock resolves no counts here, so only the active kind
+    // falls back to its own page total.
+    const nav = screen.getByRole("navigation", { name: "Record types" });
+    const active = within(nav).getByRole("button", { name: /absences/i });
+    expect(active).toHaveAttribute("aria-pressed", "true");
+    expect(within(active).getByText("1")).toBeInTheDocument();
   });
 });

@@ -3,6 +3,7 @@ from datetime import date
 
 from rest_framework.test import force_authenticate
 
+from . import hbpr_records
 from .models import Absence, IdleFlag, PIPRecord
 from .test_tl_scorecard_hbpr import HbprScorecardBase
 from .viewsets import PIPRecordViewSet
@@ -108,3 +109,79 @@ class HbprRecordsEndpointTests(HbprScorecardBase):
             PIPRecord.objects.create(
                 employee=self.member, tl=self.tl, start_date=date(2026, 2, 1 + i))
         self.assertLessEqual(count(), baseline + 1)
+
+
+class HbprRecordsSummaryTests(HbprScorecardBase):
+    """`hbpr/records/summary/`: per-kind counts under the same scope as the pages."""
+
+    def _get(self, user, **params):
+        request = self.factory.get('/api/plugins/tl_scorecard/hbpr/records/summary/', params)
+        force_authenticate(request, user=user)
+        return HbprViewSet.as_view({'get': 'records_summary'})(request)
+
+    def _page_count(self, kind, **params):
+        request = self.factory.get('/api/plugins/tl_scorecard/hbpr/records/', {'kind': kind, **params})
+        force_authenticate(request, user=self.hbpr)
+        return HbprViewSet.as_view({'get': 'records'})(request).data['count']
+
+    def test_counts_match_what_each_kind_page_reports(self):
+        response = self._get(self.hbpr)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(
+            sorted(response.data),
+            ['absences', 'idle', 'meetings', 'pips', 'promotions', 'reviews'],
+        )
+        for kind in response.data:
+            with self.subTest(kind=kind):
+                self.assertEqual(response.data[kind], self._page_count(kind))
+
+    def test_one_on_ones_are_not_counted(self):
+        # The base fixture holds an in-scope meeting plus a 1:1 and an
+        # out-of-scope meeting: only the governance meeting counts.
+        self.assertEqual(self._get(self.hbpr).data['meetings'], 1)
+
+    def test_only_an_hbpr_may_call_it(self):
+        for user in (self.tl, self.member, self.staff):
+            with self.subTest(user=user.username):
+                self.assertEqual(self._get(user).status_code, 403)
+
+    def test_leader_filter_cannot_widen_scope(self):
+        in_scope = self._get(self.hbpr, leader=self.tl.id).data
+        self.assertEqual(in_scope, self._get(self.hbpr).data)
+        # An out-of-scope leader yields zeros, never someone else's rows.
+        self.assertEqual(
+            self._get(self.hbpr, leader=self.other_tl.id).data,
+            {kind: 0 for kind in in_scope},
+        )
+
+    def test_period_filter_applies(self):
+        this_month = date.today().strftime('%Y-%m')
+        self.assertEqual(
+            self._get(self.hbpr, period='2000-01').data,
+            {kind: 0 for kind in hbpr_records.RECORD_SPECS},
+        )
+        unfiltered = self._get(self.hbpr).data
+        for kind in unfiltered:
+            with self.subTest(kind=kind):
+                page = self.factory.get(
+                    '/api/plugins/tl_scorecard/hbpr/records/',
+                    {'kind': kind, 'period': this_month},
+                )
+                force_authenticate(page, user=self.hbpr)
+                expected = HbprViewSet.as_view({'get': 'records'})(page).data['count']
+                self.assertEqual(
+                    self._get(self.hbpr, period=this_month).data[kind], expected)
+
+    def test_bad_params_are_400(self):
+        self.assertEqual(self._get(self.hbpr, leader='abc').status_code, 400)
+        self.assertEqual(self._get(self.hbpr, period='2026-13').status_code, 400)
+
+    def test_summary_action_is_routed(self):
+        # The frontend calls this path directly (as_view() tests bypass
+        # routing), so pin the URL here.
+        from .urls import router
+
+        names = [url.name for url in router.urls]
+        self.assertIn('tl-scorecard-hbpr-records-summary', names)
+        paths = [str(url.pattern) for url in router.urls]
+        self.assertTrue(any('records_summary' in path for path in paths))

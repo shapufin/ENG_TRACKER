@@ -16,6 +16,7 @@ import { LogReviewDeliveryDialog } from "../components/LogReviewDeliveryDialog";
 import { NominatePromotionDialog } from "../components/NominatePromotionDialog";
 import { OpenPIPDialog } from "../components/OpenPIPDialog";
 import { errorMessage } from "../components/records/errorMessage";
+import type { RecordKind } from "../components/records/recordKinds";
 import { RecordsTab } from "../components/records/RecordsTab";
 import { StartEPRCycleDialog } from "../components/StartEPRCycleDialog";
 import { evidenceForYear } from "../hooks/useHbprWorkspaceQueries";
@@ -188,6 +189,67 @@ const TLScorecardAuthoring: React.FC = () => {
     enabled: Boolean(partnershipQuery.data?.assignment),
   });
 
+  const openCreateDialog = (kind: RecordKind) =>
+    (
+      ({
+        meetings: setMeetingDialogOpen,
+        idle: setIdleDialogOpen,
+        absences: setAbsenceDialogOpen,
+        reviews: setReviewDialogOpen,
+        promotions: setPromotionDialogOpen,
+        pips: setPipDialogOpen,
+      }) as const
+    )[kind](true);
+
+  // Mounted on both tabs so a record can be created from the table as well
+  // as from the overview sections; each dialog only fetches once opened.
+  const createDialogs = (
+    <>
+      <LogMeetingDialog
+        open={meetingDialogOpen}
+        onOpenChange={setMeetingDialogOpen}
+        onCreate={async (data) => {
+          await createMeetingMutation.mutateAsync(data);
+        }}
+      />
+      <FlagIdleDialog
+        open={idleDialogOpen}
+        onOpenChange={setIdleDialogOpen}
+        onCreate={async (data) => {
+          await createIdleFlagMutation.mutateAsync(data);
+        }}
+      />
+      <LogReviewDeliveryDialog
+        open={reviewDialogOpen}
+        onOpenChange={setReviewDialogOpen}
+        onCreate={async (data) => {
+          await createReviewDeliveryMutation.mutateAsync(data);
+        }}
+      />
+      <FlagAbsenceDialog
+        open={absenceDialogOpen}
+        onOpenChange={setAbsenceDialogOpen}
+        onCreate={async (data) => {
+          await createAbsenceMutation.mutateAsync(data);
+        }}
+      />
+      <NominatePromotionDialog
+        open={promotionDialogOpen}
+        onOpenChange={setPromotionDialogOpen}
+        onCreate={async (data) => {
+          await createPromotionFlagMutation.mutateAsync(data);
+        }}
+      />
+      <OpenPIPDialog
+        open={pipDialogOpen}
+        onOpenChange={setPipDialogOpen}
+        onCreate={async (data) => {
+          await createPIPMutation.mutateAsync(data);
+        }}
+      />
+    </>
+  );
+
   if (tab === "records") {
     return (
       <TLScorecardHeader
@@ -195,7 +257,8 @@ const TLScorecardAuthoring: React.FC = () => {
         tab={tab}
         onTabChange={setTab}
       >
-        <RecordsTab />
+        <RecordsTab onCreateRecord={openCreateDialog} />
+        {createDialogs}
       </TLScorecardHeader>
     );
   }
@@ -284,48 +347,7 @@ const TLScorecardAuthoring: React.FC = () => {
 
       <EvidenceExportSection coverage={coverageQuery.data} month={scorecard.month} />
 
-      <LogMeetingDialog
-        open={meetingDialogOpen}
-        onOpenChange={setMeetingDialogOpen}
-        onCreate={async (data) => {
-          await createMeetingMutation.mutateAsync(data);
-        }}
-      />
-      <FlagIdleDialog
-        open={idleDialogOpen}
-        onOpenChange={setIdleDialogOpen}
-        onCreate={async (data) => {
-          await createIdleFlagMutation.mutateAsync(data);
-        }}
-      />
-      <LogReviewDeliveryDialog
-        open={reviewDialogOpen}
-        onOpenChange={setReviewDialogOpen}
-        onCreate={async (data) => {
-          await createReviewDeliveryMutation.mutateAsync(data);
-        }}
-      />
-      <FlagAbsenceDialog
-        open={absenceDialogOpen}
-        onOpenChange={setAbsenceDialogOpen}
-        onCreate={async (data) => {
-          await createAbsenceMutation.mutateAsync(data);
-        }}
-      />
-      <NominatePromotionDialog
-        open={promotionDialogOpen}
-        onOpenChange={setPromotionDialogOpen}
-        onCreate={async (data) => {
-          await createPromotionFlagMutation.mutateAsync(data);
-        }}
-      />
-      <OpenPIPDialog
-        open={pipDialogOpen}
-        onOpenChange={setPipDialogOpen}
-        onCreate={async (data) => {
-          await createPIPMutation.mutateAsync(data);
-        }}
-      />
+      {createDialogs}
       <StartEPRCycleDialog
         open={eprDialogOpen}
         onOpenChange={setEprDialogOpen}
