@@ -29,7 +29,7 @@ export const useHbprAssignmentColumns = (
         header: "HBPR",
         size: 180,
         cell: ({ row }) => (
-          <span className="font-medium text-foreground">{row.original.hbpr_detail.name}</span>
+          <span className="text-foreground font-medium">{row.original.hbpr_detail.name}</span>
         ),
       },
       {
@@ -52,7 +52,7 @@ export const useHbprAssignmentColumns = (
         header: "Status",
         size: 110,
         cell: ({ row }) => (
-          <Badge variant={STATUS_TONE[row.original.cadence_status]}>
+          <Badge variant={STATUS_TONE[row.original.cadence_status]} className="whitespace-nowrap">
             {CADENCE_STATUS_LABELS[row.original.cadence_status]}
           </Badge>
         ),
@@ -63,7 +63,9 @@ export const useHbprAssignmentColumns = (
         header: "Next due",
         size: 110,
         cell: ({ row }) => (
-          <span className="font-mono tabular-nums">{row.original.next_due_on ?? "—"}</span>
+          <span className="font-mono whitespace-nowrap tabular-nums">
+            {row.original.next_due_on ?? "—"}
+          </span>
         ),
       },
       {
@@ -72,7 +74,9 @@ export const useHbprAssignmentColumns = (
         header: "Effective from",
         size: 120,
         cell: ({ row }) => (
-          <span className="font-mono tabular-nums">{row.original.effective_from}</span>
+          <span className="font-mono whitespace-nowrap tabular-nums">
+            {row.original.effective_from}
+          </span>
         ),
       },
       {
@@ -81,7 +85,9 @@ export const useHbprAssignmentColumns = (
         header: "Effective to",
         size: 110,
         cell: ({ row }) => (
-          <span className="font-mono tabular-nums">{row.original.effective_to ?? "—"}</span>
+          <span className="font-mono whitespace-nowrap tabular-nums">
+            {row.original.effective_to ?? "—"}
+          </span>
         ),
       },
       {

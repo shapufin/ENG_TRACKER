@@ -171,4 +171,20 @@ describe("EngagementMetricsPage", () => {
     expect(screen.getByText("Team A")).toBeInTheDocument();
     expect(screen.getByText("Jane Leader")).toBeInTheDocument();
   });
+
+  it("exposes the score status as a live region, never color alone", () => {
+    vi.mocked(useEngagementMetrics.useEngagementMetrics).mockReturnValue({
+      summary: baseSummary,
+      trend: baseTrend,
+      teamBreakdown: baseTeamBreakdown,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderPage();
+
+    expect(screen.getByRole("status", { name: /watch/i })).toBeInTheDocument();
+  });
 });
