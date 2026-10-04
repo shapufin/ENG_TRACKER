@@ -91,6 +91,20 @@ export const useHbprAssignmentColumns = (
         ),
       },
       {
+        id: "evidence_count",
+        accessorKey: "evidence_count",
+        header: "Evidence",
+        size: 90,
+        cell: ({ row }) =>
+          row.original.evidence_count > 0 ? (
+            <Badge variant="neutral" className="whitespace-nowrap">
+              {row.original.evidence_count}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
+      },
+      {
         id: "actions",
         header: "Actions",
         size: 90,

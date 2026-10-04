@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+from dateutil.relativedelta import relativedelta
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
@@ -19,6 +21,11 @@ from apps.users.models.hbpr import HbprAlbanianTlAssignment
 User = get_user_model()
 
 CADENCES = {"weekly", "biweekly", "monthly"}
+
+# Ended assignments are audit history, but evidence-free history does not need
+# to live forever: rows whose last day in effect is older than this window are
+# deleted. Evidence-bearing rows are never touched — their FK is PROTECT.
+ARCHIVE_RETENTION_MONTHS = 6
 
 
 class AssignmentError(Exception):
@@ -136,6 +143,26 @@ def end_assignment(
     assignment.ended_by = actor
     assignment.save(update_fields=["effective_to", "ended_by", "updated_at"])
     return assignment
+
+
+def purge_ended_assignments(*, on_date: date | None = None) -> int:
+    """Delete ended assignments whose last day in effect is older than the
+    retention window, returning the deleted count.
+
+    Only evidence-free rows are eligible: ``HbprGovernanceEvidence`` holds a
+    PROTECT FK to the assignment, so evidence-bearing history must survive.
+    There is no scheduler in this deployment — callers are the staff-only
+    admin list (lazy sweep on read) and the ``purge_hbpr_archive`` command
+    wired into ``docker/entrypoint.sh``.
+    """
+    cutoff = (on_date or today()) - relativedelta(months=ARCHIVE_RETENTION_MONTHS)
+    qs = HbprAlbanianTlAssignment.objects.filter(
+        effective_to__isnull=False, effective_to__lt=cutoff
+    )
+    if apps.is_installed("plugins.tl_scorecard"):
+        qs = qs.filter(governance_evidence__isnull=True)
+    deleted, _ = qs.delete()
+    return deleted
 
 
 def unfinished_q(on_date: date | None = None) -> Q:

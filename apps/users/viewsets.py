@@ -1985,7 +1985,22 @@ class HbprAssignmentViewSet(viewsets.ModelViewSet):
         return HbprAlbanianTlAssignmentSerializer
 
     def get_queryset(self):
+        from django.apps import apps as django_apps
+        from django.db.models import Count, Max
+
         qs = super().get_queryset()
+        # The serializer reads ``last_meeting_on``/``evidence_count`` off the
+        # row for the cadence columns; they come from the TL-scorecard plugin's
+        # evidence table, so annotate only while that app is installed (a
+        # removed plugin leaves no reverse accessor at all).
+        if django_apps.is_installed("plugins.tl_scorecard"):
+            qs = qs.annotate(
+                last_meeting_on=Max(
+                    "governance_evidence__occurred_on",
+                    filter=Q(governance_evidence__kind="cadence_meeting"),
+                ),
+                evidence_count=Count("governance_evidence", distinct=True),
+            )
         current = self.request.query_params.get("current")
         if current is not None:
             if current not in ("true", "false"):
@@ -1996,6 +2011,15 @@ class HbprAssignmentViewSet(viewsets.ModelViewSet):
 
             qs = qs.filter(unfinished_q() if current == "true" else ~unfinished_q())
         return qs
+
+    def list(self, request, *args, **kwargs):
+        # There is no scheduler in this deployment: the staff-only admin list
+        # is the lazy sweep point for the archive purge (same heal-on-read
+        # pattern as TLEngagementMetricsViewSet._ensure_fresh).
+        from .services.hbpr_assignments import purge_ended_assignments
+
+        purge_ended_assignments()
+        return super().list(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         from django.db import IntegrityError

@@ -7,6 +7,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
@@ -51,6 +52,7 @@ export const HbprAssignmentsPage: React.FC = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [ending, setEnding] = useState<HbprAssignment | null>(null);
   const [endDate, setEndDate] = useState(todayIso());
+  const [tab, setTab] = useState<"active" | "archive">("active");
 
   const assignmentsQuery = useQuery({
     queryKey: QUERY_KEY,
@@ -138,6 +140,18 @@ export const HbprAssignmentsPage: React.FC = () => {
   }, []);
   const columns = useHbprAssignmentColumns(handleEnd);
 
+  const rows = useMemo(() => assignmentsQuery.data ?? [], [assignmentsQuery.data]);
+  // Active = still in effect or scheduled (no end date, or an end date that has
+  // not passed — matches the backend's `?current=`/`unfinished_q` semantics).
+  // Archive = ended. `is_current` is the same split the backend makes.
+  const { activeRows, archivedRows } = useMemo(
+    () => ({
+      activeRows: rows.filter((row) => row.is_current),
+      archivedRows: rows.filter((row) => !row.is_current),
+    }),
+    [rows]
+  );
+
   if (assignmentsQuery.isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
   if (assignmentsQuery.isError) {
     return (
@@ -145,7 +159,18 @@ export const HbprAssignmentsPage: React.FC = () => {
     );
   }
 
-  const rows = assignmentsQuery.data ?? [];
+  const table = (data: HbprAssignment[], emptyMessage: string) => (
+    <GlassCard delay={0} className="p-4">
+      <DataTable
+        columns={columns}
+        data={data}
+        searchColumn={SEARCH_PATHS}
+        searchPlaceholder="Search assignments..."
+        getRowId={(row) => String(row.id)}
+        emptyMessage={emptyMessage}
+      />
+    </GlassCard>
+  );
 
   return (
     <PageShell
@@ -167,16 +192,22 @@ export const HbprAssignmentsPage: React.FC = () => {
           />
         </GlassCard>
       ) : (
-        <GlassCard delay={0} className="p-4">
-          <DataTable
-            columns={columns}
-            data={rows}
-            searchColumn={SEARCH_PATHS}
-            searchPlaceholder="Search assignments..."
-            getRowId={(row) => String(row.id)}
-            emptyMessage="No assignments match your search."
-          />
-        </GlassCard>
+        <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
+          <TabsList aria-label="Assignment groups">
+            <TabsTrigger value="active">Active ({activeRows.length})</TabsTrigger>
+            <TabsTrigger value="archive">Archive ({archivedRows.length})</TabsTrigger>
+          </TabsList>
+          <TabsContent value="active" className="mt-4">
+            {table(activeRows, "No active assignments.")}
+          </TabsContent>
+          <TabsContent value="archive" className="mt-4">
+            <p className="text-muted-foreground mb-3 px-1 text-sm">
+              Ended relationships are retained for their governance evidence. Entries older than 6
+              months are removed automatically unless evidence references them.
+            </p>
+            {table(archivedRows, "No ended assignments.")}
+          </TabsContent>
+        </Tabs>
       )}
 
       <HbprAssignmentDialog

@@ -27,6 +27,7 @@ from apps.users.services.hbpr_assignments import (
     active_assignments_for_hbpr,
     create_assignment,
     end_assignment,
+    purge_ended_assignments,
     reassign_assignment,
     today,
 )
@@ -305,6 +306,87 @@ class AssignmentServiceTests(HbprAssignmentTestBase):
         )
 
 
+class AssignmentPurgeTests(HbprAssignmentTestBase):
+    """Ended rows purge after a 6-month retention window — but only rows no
+    governance evidence references (the evidence FK is PROTECT). There is no
+    scheduler, so the sweep runs on the staff-only admin list read and at
+    container start via ``purge_hbpr_archive``."""
+
+    def _ended_assignment(self, *, al_tl, hbpr=None, ended_days_ago):
+        end = today() - timedelta(days=ended_days_ago)
+        assignment = create_assignment(
+            hbpr=hbpr or self.hbpr,
+            albanian_tl=al_tl,
+            cadence="weekly",
+            effective_from=end - timedelta(days=30),
+            assigned_by=self.admin,
+        )
+        return end_assignment(
+            assignment=assignment, effective_to=end, actor=self.admin
+        )
+
+    def test_purge_deletes_evidence_free_rows_older_than_six_months(self):
+        ended = self._ended_assignment(al_tl=self.al_tl, ended_days_ago=200)
+        self.assertEqual(purge_ended_assignments(), 1)
+        self.assertFalse(
+            HbprAlbanianTlAssignment.objects.filter(pk=ended.pk).exists()
+        )
+
+    def test_purge_keeps_recently_ended_rows(self):
+        ended = self._ended_assignment(al_tl=self.al_tl, ended_days_ago=10)
+        self.assertEqual(purge_ended_assignments(), 0)
+        self.assertTrue(
+            HbprAlbanianTlAssignment.objects.filter(pk=ended.pk).exists()
+        )
+
+    def test_purge_never_touches_open_assignments(self):
+        assignment = create_assignment(
+            hbpr=self.hbpr,
+            albanian_tl=self.al_tl,
+            cadence="weekly",
+            effective_from=today() - timedelta(days=400),
+            assigned_by=self.admin,
+        )
+        self.assertEqual(purge_ended_assignments(), 0)
+        self.assertTrue(
+            HbprAlbanianTlAssignment.objects.filter(pk=assignment.pk).exists()
+        )
+
+    def test_purge_respects_the_six_month_boundary(self):
+        from dateutil.relativedelta import relativedelta
+
+        cutoff = today() - relativedelta(months=6)
+        # One ends exactly at the cutoff (kept); a different TL's row ends the
+        # day before (purged).
+        boundary = create_assignment(
+            hbpr=self.hbpr,
+            albanian_tl=self.al_tl,
+            cadence="weekly",
+            effective_from=cutoff - timedelta(days=10),
+            assigned_by=self.admin,
+        )
+        end_assignment(assignment=boundary, effective_to=cutoff, actor=self.admin)
+        older = create_assignment(
+            hbpr=self.hbpr,
+            albanian_tl=self.al_tl2,
+            cadence="weekly",
+            effective_from=cutoff - timedelta(days=40),
+            assigned_by=self.admin,
+        )
+        end_assignment(
+            assignment=older,
+            effective_to=cutoff - timedelta(days=1),
+            actor=self.admin,
+        )
+        self.assertEqual(purge_ended_assignments(), 1)
+        self.assertTrue(
+            HbprAlbanianTlAssignment.objects.filter(pk=boundary.pk).exists()
+        )
+        self.assertFalse(
+            HbprAlbanianTlAssignment.objects.filter(pk=older.pk).exists()
+        )
+
+
 class RoleRevocationGuardTests(HbprAssignmentTestBase):
     def test_revoking_hbpr_role_blocked_while_assignment_active(self):
         create_assignment(
@@ -429,6 +511,22 @@ class AssignmentApiTests(HbprAssignmentTestBase):
         assignment.effective_to = today() - timedelta(days=1)
         assignment.save(update_fields=["effective_to"])
         self.assertEqual((listed("true"), listed("false")), (0, 1))
+
+    def test_list_sweeps_stale_evidence_free_archive_rows(self):
+        end = today() - timedelta(days=200)
+        stale = create_assignment(
+            hbpr=self.hbpr,
+            albanian_tl=self.al_tl,
+            cadence="weekly",
+            effective_from=end - timedelta(days=30),
+            assigned_by=self.admin,
+        )
+        end_assignment(assignment=stale, effective_to=end, actor=self.admin)
+        response = self.client.get(self._list_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            HbprAlbanianTlAssignment.objects.filter(pk=stale.pk).exists()
+        )
 
     def test_end_action_closes_assignment(self):
         assignment = create_assignment(

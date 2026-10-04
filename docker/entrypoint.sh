@@ -66,6 +66,12 @@ python manage.py seed_plugin_permissions
 echo "[entrypoint] Granting HBPR plugin access..."
 python manage.py grant_hbpr_plugin_access || echo "[entrypoint] HBPR grant skipped (non-fatal)"
 
+# Archive retention: ended HBPR assignments older than 6 months are deleted when
+# no governance evidence references them. No scheduler exists, so the sweep also
+# runs lazily on the staff-only admin list read; this reconciles on every boot.
+echo "[entrypoint] Purging HBPR assignment archive..."
+python manage.py purge_hbpr_archive || echo "[entrypoint] HBPR archive purge skipped (non-fatal)"
+
 echo "[entrypoint] Ensuring superuser..."
 python manage.py ensure_superuser
 

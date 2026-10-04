@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 
@@ -46,6 +46,21 @@ const assignment = {
   evidence_count: 0,
 };
 
+const endedAssignment = {
+  ...assignment,
+  id: 3,
+  hbpr_detail: { id: 11, name: "Olda Partner" },
+  albanian_tl_detail: { id: 21, name: "Olsa Leader" },
+  effective_to: "2026-06-30",
+  is_current: false,
+  cadence_status: "ended" as const,
+  evidence_count: 2,
+};
+
+// Radix Tabs activate a trigger on mousedown.
+const openArchiveTab = async () =>
+  fireEvent.mouseDown(await screen.findByRole("tab", { name: /archive/i }));
+
 const renderPage = () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -88,11 +103,15 @@ describe("HbprAssignmentsPage", () => {
     expect(await screen.findByText("Failed to load assignments")).toBeInTheDocument();
   });
 
-  it("renders the effective-to date for an ended assignment", async () => {
+  it("renders the effective-to date for an ended assignment on the archive tab", async () => {
     vi.mocked(hbprAssignmentService.list).mockResolvedValue({
-      data: [{ ...assignment, id: 3, is_current: false, effective_to: "2026-06-30" }],
+      data: [endedAssignment],
     } as never);
     renderPage();
+    // The only row is ended, so the default Active tab is empty.
+    expect(await screen.findByText("Active (0)")).toBeInTheDocument();
+    expect(screen.queryByText("2026-06-30")).not.toBeInTheDocument();
+    await openArchiveTab();
     expect(await screen.findByText("2026-06-30")).toBeInTheDocument();
   });
 
@@ -108,10 +127,36 @@ describe("HbprAssignmentsPage", () => {
 
   it("only offers End for a current assignment", async () => {
     vi.mocked(hbprAssignmentService.list).mockResolvedValue({
-      data: [{ ...assignment, id: 2, is_current: false, effective_to: "2026-06-30" }],
+      data: [endedAssignment],
     } as never);
     renderPage();
-    await waitFor(() => expect(screen.getByText("Enri Leader")).toBeInTheDocument());
+    await openArchiveTab();
+    await waitFor(() => expect(screen.getByText("Olsa Leader")).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /end assignment/i })).not.toBeInTheDocument();
+  });
+
+  it("splits active and ended rows across the tabs with counts", async () => {
+    vi.mocked(hbprAssignmentService.list).mockResolvedValue({
+      data: [assignment, endedAssignment],
+    } as never);
+    renderPage();
+    expect(await screen.findByText("Active (1)")).toBeInTheDocument();
+    expect(screen.getByText("Archive (1)")).toBeInTheDocument();
+    // Default view: the active row only.
+    expect(screen.getByText("Enri Leader")).toBeInTheDocument();
+    expect(screen.queryByText("Olsa Leader")).not.toBeInTheDocument();
+    await openArchiveTab();
+    expect(await screen.findByText("Olsa Leader")).toBeInTheDocument();
+    expect(screen.queryByText("Enri Leader")).not.toBeInTheDocument();
+  });
+
+  it("explains the 6-month purge on the archive tab", async () => {
+    vi.mocked(hbprAssignmentService.list).mockResolvedValue({
+      data: [endedAssignment],
+    } as never);
+    renderPage();
+    await openArchiveTab();
+    expect(await screen.findByText(/older than 6 months/i)).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument(); // evidence_count badge
   });
 });

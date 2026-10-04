@@ -73,6 +73,38 @@ class EvidenceBase(TestCase):
         return data
 
 
+class AssignmentPurgeProtectionTests(EvidenceBase):
+    """The archive purge deletes ended assignments older than 6 months — but
+    never one the evidence PROTECT FK still references."""
+
+    def test_evidence_bearing_assignment_survives_the_purge(self):
+        from apps.users.services.hbpr_assignments import purge_ended_assignments
+
+        self.assignment.effective_to = self.today - timedelta(days=200)
+        self.assignment.save(update_fields=['effective_to'])
+        HbprGovernanceEvidence.objects.create(
+            assignment=self.assignment, kind='cadence_meeting',
+            occurred_on=self.today - timedelta(days=200),
+            recorded_by=self.tl,
+        )
+        self.assertEqual(purge_ended_assignments(), 0)
+        self.assertTrue(
+            HbprAlbanianTlAssignment.objects.filter(pk=self.assignment.pk).exists()
+        )
+
+    def test_evidence_free_assignment_is_purged(self):
+        from apps.users.services.hbpr_assignments import purge_ended_assignments
+
+        self.other_assignment.effective_to = self.today - timedelta(days=200)
+        self.other_assignment.save(update_fields=['effective_to'])
+        purge_ended_assignments()
+        self.assertFalse(
+            HbprAlbanianTlAssignment.objects.filter(
+                pk=self.other_assignment.pk
+            ).exists()
+        )
+
+
 class EvidenceModelTests(EvidenceBase):
     def test_epr_kind_requires_reporting_year(self):
         row = HbprGovernanceEvidence(

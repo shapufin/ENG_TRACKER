@@ -15,8 +15,8 @@ is not a team leader and not HR, and has no overtime, standby, payroll or report
 
 | Area | Behaviour |
 |---|---|
-| Scope | **Stored, not computed.** `HbprAlbanianTlAssignment` (`apps/users/models/hbpr.py`): one open row per AL TL (partial-unique on `effective_to IS NULL`), dated history kept, PROTECT FKs so assignments are never deleted. `hbpr_scope.py` returns the assigned AL TLs plus their `get_team_member_ids()` union (active only, viewer excluded); an unassigned HBPR gets an empty scope, not `None`. |
-| Writes | All through `apps/users/services/hbpr_assignments.py` (overlap rejected under `select_for_update`; `reassign` is end+create atomically). Admin API `/api/users/hbpr-assignments/` is staff-only: `end` and `reassign` actions, no delete, identity/range immutable via PATCH. |
+| Scope | **Stored, not computed.** `HbprAlbanianTlAssignment` (`apps/users/models/hbpr.py`): one open row per AL TL (partial-unique on `effective_to IS NULL`), dated history kept; evidence holds a PROTECT FK, so evidence-bearing rows are never deleted — evidence-free ended rows older than 6 months are purged by `purge_ended_assignments` (no scheduler: the staff-only admin list sweeps on read, `purge_hbpr_archive` runs in the entrypoint reconcile chain). `hbpr_scope.py` returns the assigned AL TLs plus their `get_team_member_ids()` union (active only, viewer excluded); an unassigned HBPR gets an empty scope, not `None`. |
+| Writes | All through `apps/users/services/hbpr_assignments.py` (overlap rejected under `select_for_update`; `reassign` is end+create atomically). Admin API `/api/users/hbpr-assignments/` is staff-only: `end` and `reassign` actions, no delete (the retention purge is a service, not an API action), identity/range immutable via PATCH. |
 | Reads | AL-TL governance records via `HbprReadScopeMixin`: **safe methods only**, owner AL TL in scope **and** subject in scope. HBPR never approves a PIP, decides a promotion or writes attendee notes (HR/staff do). Private TL `notes` stay redacted. |
 | Employee one-on-ones | Never reachable through **any** door: the meeting list/detail, `MeetingAttendeeViewSet` (`hbpr_exclude` on `meeting__meeting_type`), the scorecard aggregate (`_mask_one_on_one` nulls `one_on_one_compliance_pct` for anyone who is neither the leader nor staff), exports, and notifications. A guessed id must 404. |
 | Denied surfaces | For an HBPR-**only** user: Calendar, Leave, Organigrama, Skills, Ticket KPI, Engagement, My Records, overtime, standby, reports. Plugins use manifest `denied_roles`/`denial_override_roles` on `PluginPermission` (denial beats `is_public`; overrides list only elevated roles, never `employee`); static views use `HbprBlockedMixin`. Multi-role HBPR+HR/TL/CR-admin keeps the other role's access (`is_hbpr_only`, mirrored by the frontend `isHBPROnly`). |
@@ -95,6 +95,14 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   HBPR-only viewer is redirected to `/hbpr` before any query fires. The AL TL's "HBPR
   partnership" section reads `GET /api/plugins/tl_scorecard/partnership/`.
 - `/admin/hbpr-assignments` (`SuperuserRoute`): create and end assignments.
+  The table splits into **Active** (`is_current` — no end date or end date not
+  yet passed, the same split as `?current=`/`unfinished_q`) and **Archive**
+  (ended, read-only) tabs with counts; an Evidence column shows each row's
+  `evidence_count`, which is also why an archived row can outlive the 6-month
+  purge. The viewset annotates `last_meeting_on`/`evidence_count` from the
+  plugin's `governance_evidence` table, guarded on `apps.is_installed` (a
+  removed plugin leaves no reverse accessor; the serializer falls back to
+  `None`/`0`).
 - `HbprRestrictedRoute` guards Calendar and Leave; `isHBPROnly` is computed once in
   `computePermissions.ts`. Settings shows an "HBPR Governance" group with in-app and
   push switches per group.
@@ -102,9 +110,10 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
 ## Operations
 
 **Deploy:** `docker/entrypoint.sh` runs `migrate`, `sync_plugins`, then
-`seed_plugin_permissions` (reconciles every manifest incl. `denied_roles`) then
+`seed_plugin_permissions` (reconciles every manifest incl. `denied_roles`), then
 `grant_hbpr_plugin_access` (a reconciler: grants `hbpr` view on `tl_scorecard`, removes
-it from `engagement`); all run on every start. Migrations in this
+it from `engagement`), then `purge_hbpr_archive` (deletes ended, evidence-free
+assignments older than 6 months); all run on every start. Migrations in this
 release: `users` 0019, `plugins` 0009/0010, `permissions` 0007 (dependency pinned to
 `plugins.0007_plugin_permission_system`), `tl_scorecard` 0004, `notifications` 0010.
 
@@ -189,6 +198,21 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   `_sync_roles`' unseeded-role `ValueError` into a 400 like `create_user`; and
   `bulk_update`'s in-loop `TechAssignmentError` return calls `transaction.set_rollback(True)`
   so a mid-batch failure writes nothing (the old `return` committed earlier profiles' writes).
+
+- **2026-10-04, HBPR dashboard 403s + assignment archive UX:** `useDashboardData`
+  fired the two leave queries (`getRequests`, `getUserBalanceSummary`) gated only
+  on `!!userId` while overtime/standby already used `selectedDashboard !==
+  "hbpr"` — an HBPR-only viewer got console 403s from `HbprBlockedMixin` (the
+  denial itself is correct). All self-service queries now share
+  `canLoadSelfService`. `/admin/hbpr-assignments` gained Active/Archive tabs
+  (split on `is_current` ≡ `unfinished_q`), an Evidence column, and a 6-month
+  retention purge for ended **evidence-free** rows
+  (`hbpr_assignments.purge_ended_assignments` + `purge_hbpr_archive` command in
+  the entrypoint + lazy sweep in `HbprAssignmentViewSet.list`); the PROTECTed
+  evidence FK is honoured by filtering, never weakened. Latent bug fixed
+  alongside: the admin serializer's `last_meeting_on`/`evidence_count` were never
+  annotated (Status showed "Not started" for every open row) — the viewset now
+  annotates them, guarded on `plugins.tl_scorecard` being installed.
 
 **Assignment dates (2026-10-03).** `effective_to` is the **last day in effect**, not a
 switch. An assignment covers a day `d` when `effective_from <= d` and (`effective_to` is
