@@ -494,6 +494,27 @@ describe("HbprWorkspacePage", () => {
     expect(svc.getHbprRecordsSummary).toHaveBeenCalledWith({});
   });
 
+  it("sends search text to the API instead of filtering in the browser", async () => {
+    renderPage(`/hbpr?view=records&kind=absences&year=${YEAR}`);
+    expect((await screen.findAllByText("Unjustified")).length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search records" }), {
+      target: { value: "anna" },
+    });
+    await waitFor(() =>
+      expect(svc.getHbprRecordsPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ q: "anna" })
+      )
+    );
+  });
+
+  it("renders the records CSV export in the toolbar", async () => {
+    renderPage(`/hbpr?view=records&kind=absences&year=${YEAR}`);
+    expect((await screen.findAllByText("Unjustified")).length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("button", { name: "Export visible records (CSV)" })
+    ).toBeInTheDocument();
+  });
+
   it("marks the active kind pressed and shows its server total", async () => {
     renderPage(`/hbpr?view=records&kind=absences&year=${YEAR}`);
     // Wait for the rows before asserting the count beside the kind.

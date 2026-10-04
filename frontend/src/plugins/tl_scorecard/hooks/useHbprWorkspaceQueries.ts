@@ -172,6 +172,8 @@ export interface HbprRecordQuery {
   leader: number | null;
   status: string;
   period: string;
+  /** Server-side text search (same `?q=` semantics as the resource endpoints). */
+  q: string;
   /** 1-based page number. */
   page: number;
 }
@@ -188,6 +190,7 @@ const fetchHbprRecordsPage = async (query: HbprRecordQuery): Promise<HbprRecords
     ...(query.leader !== null && { leader: query.leader }),
     ...(query.status && { status: query.status }),
     ...(query.period && { period: query.period }),
+    ...(query.q && { q: query.q }),
     limit: HBPR_RECORD_PAGE_SIZE,
     offset: (query.page - 1) * HBPR_RECORD_PAGE_SIZE,
   });
@@ -273,13 +276,15 @@ export function useHbprWorkspaceQueries({
   // Sidebar badges: one request for all six counts (leader + period scope).
   // Statuses are per-kind vocabularies, so the summary deliberately takes no
   // ?status= — the active kind's own page total stays the precise number.
+  // ?q= does apply: like the TL badges, counts follow the search text.
   const recordsSummary = useQuery({
-    queryKey: ["tl-scorecard", "hbpr-records-summary", leader, record.period],
+    queryKey: ["tl-scorecard", "hbpr-records-summary", leader, record.period, record.q],
     queryFn: async () =>
       (
         await tlScorecardService.getHbprRecordsSummary({
           ...(leader !== null && { leader }),
           ...(record.period && { period: record.period }),
+          ...(record.q && { q: record.q }),
         })
       ).data,
     enabled: view === "records" && overview.isSuccess,

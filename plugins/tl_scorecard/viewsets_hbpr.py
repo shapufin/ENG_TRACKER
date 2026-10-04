@@ -9,6 +9,7 @@ from apps.users.services.hbpr_scope import get_hbpr_scope
 from core.mixins.permissions import PluginPermissionMixin
 
 from . import hbpr_records, services_hbpr
+from .csv_export import csv_download_response
 
 MAX_PAGE_SIZE = 100
 MAX_OFFSET = 1_000_000  # keeps a hand-edited ?offset= inside the DB integer range
@@ -56,6 +57,9 @@ class HbprViewSet(PluginPermissionMixin, viewsets.ViewSet):
         """
         self._scope(request)  # HBPR only; also memoises the scope for the viewset
         params = request.query_params
+        file_format = (params.get('file_format') or '').lower()
+        if file_format and file_format != 'csv':
+            raise ValidationError({'file_format': "Unsupported format. Use 'csv'."})
         try:
             limit = min(int(params.get('limit', 25)), MAX_PAGE_SIZE)
             offset = int(params.get('offset', 0))
@@ -64,6 +68,12 @@ class HbprViewSet(PluginPermissionMixin, viewsets.ViewSet):
             raise ValidationError('limit, offset and leader must be integers.')
         if limit < 1 or not 0 <= offset <= MAX_OFFSET:
             raise ValidationError('limit must be positive and offset within 0..%d.' % MAX_OFFSET)
+        if file_format == 'csv':
+            filename, content = hbpr_records.records_csv(
+                request, kind=params.get('kind'), leader=leader,
+                status=params.get('status'), period=params.get('period'),
+            )
+            return csv_download_response(content, filename)
         return Response(hbpr_records.records_page(
             request, kind=params.get('kind'), leader=leader,
             status=params.get('status'), period=params.get('period'),

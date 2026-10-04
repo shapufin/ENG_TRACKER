@@ -90,6 +90,14 @@ class HbprRecordsEndpointTests(HbprScorecardBase):
         self.assertEqual(self._get(self.hbpr, kind='absences', status='open').data['count'], 0)
         self.assertEqual(self._get(self.hbpr, kind='absences', status='bogus').status_code, 400)
 
+    def test_search_text_filters_the_page_server_side(self):
+        full = self._get(self.hbpr, kind='absences').data['count']
+        self.assertGreater(full, 0)
+        narrowed = self._get(self.hbpr, kind='absences', q='zzz-no-such-text').data
+        self.assertEqual((narrowed['count'], narrowed['results']), (0, []))
+        blank = self._get(self.hbpr, kind='absences', q='').data['count']
+        self.assertEqual(blank, full)
+
     def test_private_notes_stay_redacted(self):
         IdleFlag.objects.filter(pk=self.idle_in.pk).update(notes='private idle note')
         results = self._get(self.hbpr, kind='idle').data['results']
@@ -175,6 +183,12 @@ class HbprRecordsSummaryTests(HbprScorecardBase):
     def test_bad_params_are_400(self):
         self.assertEqual(self._get(self.hbpr, leader='abc').status_code, 400)
         self.assertEqual(self._get(self.hbpr, period='2026-13').status_code, 400)
+
+    def test_search_text_applies_to_counts(self):
+        full = self._get(self.hbpr).data
+        self.assertGreater(sum(full.values()), 0)
+        narrowed = self._get(self.hbpr, q='zzz-no-such-text').data
+        self.assertEqual(narrowed, {kind: 0 for kind in full})
 
     def test_summary_action_is_routed(self):
         # The frontend calls this path directly (as_view() tests bypass

@@ -10,7 +10,11 @@ import re
 from dataclasses import dataclass
 from typing import Callable
 
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
+
+from . import csv_export
+from .csv_export import build_records_csv
 
 from .viewsets import (
     AbsenceViewSet,
@@ -123,6 +127,28 @@ def records_summary(request, *, leader=None, period=None):
         kind: _scoped_qs(request, kind=kind, leader=leader, period=period)[2].count()
         for kind in RECORD_SPECS
     }
+
+
+def records_csv(request, *, kind, leader=None, status=None, period=None):
+    """``(filename, content)`` for a full filtered CSV download.
+
+    Same scope, filters and redacting serializer as the page — the download
+    can never contain more (or less redacted) than the JSON list. Capped:
+    a huge export is a 400 asking for narrower filters, never a timeout.
+    """
+    spec, view, qs = _scoped_qs(
+        request, kind=kind, leader=leader, status=status, period=period)
+    total = qs.count()
+    if total > csv_export.CSV_MAX_ROWS:
+        raise ValidationError({
+            'file_format': (
+                f'{total} rows exceed the {csv_export.CSV_MAX_ROWS}-row CSV limit — '
+                'refine the filters.'
+            ),
+        })
+    serializer = view.get_serializer(qs, many=True)
+    stamp = timezone.now().strftime('%Y%m%d')
+    return f'hbpr-{kind}-records-{stamp}.csv', build_records_csv(serializer.data)
 
 
 def records_page(request, *, kind, leader=None, status=None, period=None, limit=25, offset=0):

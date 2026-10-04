@@ -69,6 +69,7 @@ export const HbprWorkspacePage: React.FC = () => {
     resource: resourceFromKind(params.get("kind")) ?? DEFAULT_RECORD_RESOURCE,
     status: params.get("status") ?? "",
     period: params.get("period") ?? "",
+    q: params.get("q") ?? "",
   };
 
   const { overview, evidence, records, recordsSummary, leader } = useHbprWorkspaceQueries({

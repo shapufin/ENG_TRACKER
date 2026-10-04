@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from core.mixins.permissions import PluginPermissionMixin
 
 
+from ..csv_export import CsvExportMixin
 from ..models import (
     PIPRecord,
     PromotionFlag,
@@ -24,13 +25,14 @@ from core.mixins.permissions import is_staff_user
 from core.mixins.viewer_scope import HbprScopedQuerysetMixin
 
 
-class PIPRecordViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
+class PIPRecordViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     """Approval is deliberately staff/HR-only (`approve` action) — this
     plugin's role manifest has no HR bucket, and "prior HR approval" is
     the one KPI requirement that must not be self-granted by the TL who
     created the record. HBPR is read-only: it never approves or returns."""
     plugin_name = 'tl_scorecard'
     serializer_class = PIPRecordSerializer
+    csv_filename = 'pip-records'
     # `approve` needs only plugin `view`: the real gate is in the action body
     # (staff/HR) so an approver need not hold `manage`, which would also open
     # PATCH/DELETE.
@@ -38,6 +40,11 @@ class PIPRecordViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.
 
     hbpr_leader_field = 'tl'
     hbpr_member_field = 'employee'
+
+    search_fields = (
+        'status_note', 'notes', 'shared_notes',
+        'employee__first_name', 'employee__last_name',
+    )
 
     def base_queryset(self):
         return PIPRecord.objects.select_related('employee', 'tl', 'approved_by')
@@ -133,15 +140,20 @@ class PIPRecordViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.
         return self._close(request, 'cancelled', require_note=True)
 
 
-class PromotionFlagViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
+class PromotionFlagViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     """Promotion nominations are decided by staff/HR only — HBPR is read-only
     and never decides a nomination (participation was removed)."""
     plugin_name = 'tl_scorecard'
     serializer_class = PromotionFlagSerializer
+    csv_filename = 'promotion-flags'
     permission_action_map = {'decide': 'view'}
 
     hbpr_leader_field = 'nominated_by'
     hbpr_member_field = 'employee'
+
+    search_fields = (
+        'decision_note', 'notes', 'employee__first_name', 'employee__last_name',
+    )
 
     def base_queryset(self):
         return PromotionFlag.objects.select_related('employee', 'nominated_by')

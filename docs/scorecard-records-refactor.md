@@ -27,6 +27,15 @@
 - [x] Phase 4 (this round): prettier, eslint clean, `tsc` clean, `modal-audit` PASS, 80/80 vitest, Playwright
   Chromium PASS (sidebar kind-switch + pressed, strip + search + No-match, asserted in-browser, screenshots
   inspected). Planted rows deleted via API; temp specs/screenshots removed.
+- [x] Search + CSV round (2026-10-04): server `?q=` on all six viewsets via the shared
+  scope mixin (`search_fields`, default empty — EPR/attendees/status-updates unchanged),
+  `?q=` flows through `hbpr/records/` + summary automatically; `?file_format=csv` via a
+  `CsvExportMixin` (own scoped queryset + redacting serializer, 2000-row fail-closed cap,
+  `utf-8-sig`, attachment filename) + `hbpr/records/` CSV. TL toolbar downloads exactly the
+  visible rows client-side (server cannot reproduce month/search/state filters); HBPR
+  downloads server-side. Caught live: a stale dev server 404'd everything (killed it),
+  then the real `records_summary` path + kind-vs-resource keying. 36 backend + 141 frontend
+  green; Chromium proof incl. both real downloads; planted rows cleaned.
 - [x] Full-workflow simulation round (2026-10-04): planted all 6 kinds × real states,
   click-walked every tab/action/dialog/export/visualize as TL and all 4 HBPR views. Found and
   fixed: (F1) no create entry on Records — per-kind New button, create dialogs lifted to page
@@ -35,9 +44,8 @@
   counts only, no `?status=` since vocabularies are per-kind) + sidebar badges; (F4) HBPR
   table lost the author column in the mirror — Owner restored. Caught live: frontend called
   `hbpr/records/summary/` but DRF routes `records_summary` (unit tests bypass routing) —
-  fixed + pinned with a router-registry test. CSV export and server `?q=` recorded as
-  deferred options. 131 frontend + 326 backend green; Chromium proof incl. a real XLSX
-  download; matrix rows cleaned.
+  fixed + pinned with a router-registry test. 131 frontend + 326 backend green; Chromium
+  proof incl. a real XLSX download; matrix rows cleaned.
 - [x] HBPR mirror (2026-10-04, PR #20 `6bb41ce`, direction confirmed with user): full `/hbpr`
   rebuild in the TL mockup language — header status pill (`N overdue`/`N due`/`All clear`),
   leaders table card (title + count, avatars, unbroken dates), records explorer mirror (toolbar

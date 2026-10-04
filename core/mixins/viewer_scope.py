@@ -82,6 +82,10 @@ class HbprScopedQuerysetMixin(HbprReadScopeMixin):
     hbpr_member_nullable = False
     hbpr_exclude = None
     hbpr_no_access = False
+    # Model lookups ORed for `?q=` text search (e.g. ('reason', 'notes',
+    # 'employee__first_name')). Empty by default: viewsets without searchable
+    # text behave exactly as before.
+    search_fields = ()
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -104,15 +108,27 @@ class HbprScopedQuerysetMixin(HbprReadScopeMixin):
     def own_q(self, user):
         raise NotImplementedError
 
+    def apply_search(self, qs, raw):
+        """Narrow an already-scoped queryset by `?q=` (capped, blank is a no-op)."""
+        term = (raw or '').strip()[:100]
+        if not term or not self.search_fields:
+            return qs
+        query = Q()
+        for field in self.search_fields:
+            query |= Q(**{f'{field}__icontains': term})
+        return qs.filter(query)
+
     def get_queryset(self):
         qs = self.base_queryset()
         user = self.request.user
         if is_staff_user(user):
-            return qs
-        if self.hbpr_no_access:
-            return qs.filter(self.own_q(user))
-        return self.limit_to_viewer(
-            qs, self.own_q(user),
-            leader_field=self.hbpr_leader_field, member_field=self.hbpr_member_field,
-            member_nullable=self.hbpr_member_nullable, hbpr_exclude=self.hbpr_exclude,
-        )
+            scoped = qs
+        elif self.hbpr_no_access:
+            scoped = qs.filter(self.own_q(user))
+        else:
+            scoped = self.limit_to_viewer(
+                qs, self.own_q(user),
+                leader_field=self.hbpr_leader_field, member_field=self.hbpr_member_field,
+                member_nullable=self.hbpr_member_nullable, hbpr_exclude=self.hbpr_exclude,
+            )
+        return self.apply_search(scoped, self.request.query_params.get('q'))

@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from core.mixins.permissions import PluginPermissionMixin
 
 
+from ..csv_export import CsvExportMixin
 from ..models import (
     Absence,
     EngagementSurveyResponse,
@@ -34,11 +35,12 @@ from core.mixins.permissions import is_staff_user
 from core.mixins.viewer_scope import HbprScopedQuerysetMixin
 
 
-class MeetingViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
+class MeetingViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     """1-on-1s, TL-Italy syncs, and team meetings — a TL only ever manages
     their own (organizer=request.user); staff see everything."""
     plugin_name = 'tl_scorecard'
     serializer_class = MeetingSerializer
+    csv_filename = 'meetings'
 
     hbpr_leader_field = 'organizer'
     hbpr_member_field = 'counterparty'
@@ -47,6 +49,10 @@ class MeetingViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.Mo
     # to the HBPR branch only, so a TL who is also an HBPR still reads their own
     # one-on-ones via `own_q`.
     hbpr_exclude = ~Q(meeting_type='one_on_one')
+
+    search_fields = (
+        'counterparty__first_name', 'counterparty__last_name', 'notes', 'shared_summary',
+    )
 
     def base_queryset(self):
         return Meeting.objects.select_related(
@@ -120,12 +126,17 @@ class MeetingAttendeeViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, vie
         return Response(self.get_serializer(attendee).data)
 
 
-class IdleFlagViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
+class IdleFlagViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'tl_scorecard'
     serializer_class = IdleFlagSerializer
+    csv_filename = 'idle-flags'
 
     hbpr_leader_field = 'flagged_by'
     hbpr_member_field = 'employee'
+
+    search_fields = (
+        'productivity_task', 'notes', 'employee__first_name', 'employee__last_name',
+    )
 
     def base_queryset(self):
         return IdleFlag.objects.select_related('employee', 'flagged_by').prefetch_related('status_updates')
@@ -195,12 +206,15 @@ class IdleStatusUpdateViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, vi
             raise ValidationError({'week_of': 'A status update already exists for this flag and week.'})
 
 
-class ReviewDeliveryViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
+class ReviewDeliveryViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'tl_scorecard'
     serializer_class = ReviewDeliverySerializer
+    csv_filename = 'review-deliveries'
 
     hbpr_leader_field = 'leader'
     hbpr_member_field = None  # a review has no employee subject
+
+    search_fields = ('recipient', 'period', 'notes')
 
     def base_queryset(self):
         return ReviewDelivery.objects.select_related('leader', 'recorded_by')
@@ -262,12 +276,15 @@ class EngagementSurveyResponseViewSet(PluginPermissionMixin, viewsets.ModelViewS
         })
 
 
-class AbsenceViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
+class AbsenceViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'tl_scorecard'
     serializer_class = AbsenceSerializer
+    csv_filename = 'absences'
 
     hbpr_leader_field = 'flagged_by'
     hbpr_member_field = 'employee'
+
+    search_fields = ('reason', 'notes', 'employee__first_name', 'employee__last_name')
 
     def base_queryset(self):
         return Absence.objects.select_related('employee', 'flagged_by')

@@ -8,6 +8,7 @@ import { RecordsTab } from "./RecordsTab";
 import { tlScorecardService } from "../../services/tlScorecardService";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/download", () => ({ downloadBlobResponse: vi.fn() }));
 
 // Radix Select is unreliable to drive via fireEvent in JSDOM: render it flat.
 vi.mock("@/components/ui/select", () => {
@@ -276,6 +277,22 @@ describe("RecordsTab mockup layout", () => {
     expect(screen.getByText("Record Categories")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Resolved records" })).toBeInTheDocument();
     expect(screen.getAllByTitle("Jane").length).toBeGreaterThan(0);
+  });
+
+  it("downloads exactly the visible rows as CSV", async () => {
+    const { downloadBlobResponse } = await import("@/lib/download");
+    renderTab("?tab=records&kind=idle");
+    await screen.findByText("Docs");
+    fireEvent.click(screen.getByRole("button", { name: "Export visible records (CSV)" }));
+    expect(downloadBlobResponse).toHaveBeenCalledTimes(1);
+    const [blob, filename] = vi.mocked(downloadBlobResponse).mock.calls[0];
+    expect(filename).toMatch(/^tl-idle-records-\d{8}\.csv$/);
+    // Blob.text() strips a leading BOM (TextDecoder), so assert the raw bytes.
+    const bytes = new Uint8Array(await (blob as Blob).arrayBuffer());
+    expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    const text = new TextDecoder("utf-8").decode(bytes);
+    expect(text).toContain("ID,Date,Type,With,Focus,State");
+    expect(text).toContain("Docs");
   });
 });
 
