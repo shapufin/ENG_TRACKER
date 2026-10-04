@@ -25,13 +25,13 @@ const LoadingState: React.FC = () => (
       <span className="sr-only">Loading...</span>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-lg border bg-muted/40" />
+          <div key={i} className="bg-muted/40 h-24 animate-pulse rounded-lg border" />
         ))}
       </div>
-      <div className="h-[280px] animate-pulse rounded-lg border bg-muted/40 sm:h-[350px]" />
+      <div className="bg-muted/40 h-[280px] animate-pulse rounded-lg border sm:h-[350px]" />
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="h-[280px] animate-pulse rounded-lg border bg-muted/40 sm:h-[350px]" />
-        <div className="h-64 animate-pulse rounded-lg border bg-muted/40" />
+        <div className="bg-muted/40 h-[280px] animate-pulse rounded-lg border sm:h-[350px]" />
+        <div className="bg-muted/40 h-64 animate-pulse rounded-lg border" />
       </div>
     </div>
   </PageShell>
@@ -168,6 +168,8 @@ export const EngagementMetricsPage: React.FC = () => {
       subtitle={subtitle}
       titleBadge={
         <span
+          role="status"
+          aria-label={status.label}
           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${toneSurfaceClass[status.tone]}`}
         >
           <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
@@ -177,11 +179,11 @@ export const EngagementMetricsPage: React.FC = () => {
       actions={
         <>
           {monthOptions.length > 1 && (
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <label className="text-muted-foreground flex items-center gap-2 text-xs">
               Month
               <select
                 aria-label="Snapshot month"
-                className="h-9 rounded-xl border border-border bg-card px-2 text-sm text-foreground"
+                className="border-border bg-card text-foreground h-9 rounded-xl border px-2 text-sm"
                 value={month ?? summary.month ?? ""}
                 onChange={(e) => setMonth(e.target.value || undefined)}
               >
@@ -198,7 +200,7 @@ export const EngagementMetricsPage: React.FC = () => {
             aria-label="Refresh metrics"
             title="Refresh metrics"
             onClick={() => refetch()}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-foreground"
+            className="border-border bg-card text-muted-foreground hover:text-foreground flex h-9 w-9 items-center justify-center rounded-xl border transition-colors"
           >
             <RefreshCw
               className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
@@ -207,7 +209,7 @@ export const EngagementMetricsPage: React.FC = () => {
           </button>
           <Link
             to={month ? `/engagement/visualize?month=${month}` : "/engagement/visualize"}
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="border-border bg-card text-muted-foreground hover:text-foreground inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-sm font-medium transition-colors"
           >
             <LineChart className="h-4 w-4" aria-hidden="true" />
             Visualize
@@ -217,7 +219,7 @@ export const EngagementMetricsPage: React.FC = () => {
               <button
                 type="button"
                 disabled={isExporting}
-                className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors disabled:opacity-60"
               >
                 <Upload className="h-4 w-4" aria-hidden="true" />
                 {isExporting ? "Exporting…" : "Export Report"}
@@ -227,14 +229,14 @@ export const EngagementMetricsPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleExport("month")}
-                className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-muted"
+                className="hover:bg-muted block w-full rounded-lg px-3 py-2 text-left text-sm"
               >
                 Export this month
               </button>
               <button
                 type="button"
                 onClick={() => handleExport("year")}
-                className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-muted"
+                className="hover:bg-muted block w-full rounded-lg px-3 py-2 text-left text-sm"
               >
                 Export full year
               </button>
@@ -270,7 +272,10 @@ export const EngagementMetricsPage: React.FC = () => {
         <div className="grid gap-6 md:grid-cols-2">
           <AgingBucketChart rows={teamBreakdown} />
           <ScoreBreakdownCard summary={summary} />
-          <ChartCard title="Score Composition Trend" description="Which component is moving, and since when">
+          <ChartCard
+            title="Score Composition Trend"
+            description="Which component is moving, and since when"
+          >
             <ScoreCompositionTrendChart data={trend} />
           </ChartCard>
           <ChartCard title="Request Volume" description="Approved, rejected, and pending, by type">
@@ -280,7 +285,7 @@ export const EngagementMetricsPage: React.FC = () => {
         <div className="flex items-center gap-2">
           <div className="relative max-w-xs flex-1">
             <Search
-              className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2"
               aria-hidden="true"
             />
             <input
@@ -289,7 +294,7 @@ export const EngagementMetricsPage: React.FC = () => {
               onChange={(e) => setTeamFilter(e.target.value)}
               placeholder="Filter teams..."
               aria-label="Filter teams"
-              className="h-9 w-full rounded-lg border border-border bg-card pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground"
+              className="border-border bg-card text-foreground placeholder:text-muted-foreground h-9 w-full rounded-lg border pr-3 pl-8 text-sm"
             />
           </div>
         </div>

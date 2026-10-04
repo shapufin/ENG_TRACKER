@@ -96,6 +96,16 @@ describe("HbprAssignmentsPage", () => {
     expect(await screen.findByText("2026-06-30")).toBeInTheDocument();
   });
 
+  it("keeps dates and status on one line so narrow columns never split them", async () => {
+    vi.mocked(hbprAssignmentService.list).mockResolvedValue({
+      data: [{ ...assignment, cadence_status: "not_started" as const }],
+    } as never);
+    renderPage();
+    expect(await screen.findByText("2026-09-08")).toHaveClass("whitespace-nowrap");
+    expect(screen.getByText("2026-01-01")).toHaveClass("whitespace-nowrap");
+    expect(screen.getByText("Not started")).toHaveClass("whitespace-nowrap");
+  });
+
   it("only offers End for a current assignment", async () => {
     vi.mocked(hbprAssignmentService.list).mockResolvedValue({
       data: [{ ...assignment, id: 2, is_current: false, effective_to: "2026-06-30" }],
