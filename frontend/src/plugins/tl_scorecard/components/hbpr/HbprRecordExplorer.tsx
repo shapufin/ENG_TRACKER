@@ -46,6 +46,8 @@ interface HbprRecordExplorerProps {
   /** The current server page of rows. */
   rows: HbprRecordRow[];
   total: number;
+  /** Per-kind server counts for the sidebar (leader + period scope). */
+  counts: Record<string, number> | null;
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
@@ -62,6 +64,7 @@ interface HbprRecordExplorerProps {
 export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
   rows,
   total,
+  counts,
   page,
   pageSize,
   onPageChange,
@@ -188,6 +191,10 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
             <ul className="space-y-1.5">
               {HBPR_RECORD_RESOURCES.map((r) => {
                 const active = r.value === filters.resource;
+                // The summary is keyed by the shared kind vocabulary and takes
+                // no ?status= (per-kind vocabularies); until it loads, the
+                // active kind falls back to its own page total.
+                const count = counts?.[HBPR_RECORD_KINDS[r.value]] ?? (active ? total : null);
                 const Icon = HBPR_RESOURCE_ICONS[r.value].icon;
                 const tone = HBPR_RESOURCE_ICONS[r.value].tone;
                 return (
@@ -207,9 +214,15 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
                         aria-hidden="true"
                       />
                       <span className="truncate">{r.label}</span>{" "}
-                      {active && (
-                        <span className="bg-background/20 text-background ml-auto rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums">
-                          {total}
+                      {count !== null && (
+                        <span
+                          className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${
+                            active
+                              ? "bg-background/20 text-background"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {count}
                         </span>
                       )}
                     </button>
@@ -320,6 +333,9 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
                         <th scope="col" className="px-4 py-2 font-medium">
                           State
                         </th>
+                        <th scope="col" className="px-4 py-2 font-medium">
+                          Owner
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-border/50 divide-y">
@@ -356,6 +372,12 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
                           </td>
                           <td className="px-4 py-2.5">
                             <StateBadge {...hbprRecordState(row.resource, row.status, row.date)} />
+                          </td>
+                          <td
+                            className="text-muted-foreground max-w-[8rem] truncate px-4 py-2.5 text-xs"
+                            title={row.owner_name}
+                          >
+                            {row.owner_name}
                           </td>
                         </tr>
                       ))}

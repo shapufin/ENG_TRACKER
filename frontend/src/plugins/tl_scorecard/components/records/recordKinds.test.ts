@@ -50,6 +50,18 @@ describe("recordKind person/focus/typeChip", () => {
     expect(byKey("reviews").person({ recipient: "Elena" } as never)).toBe("Elena");
   });
 
+  it("treats an unshared meeting summary as needing attention", () => {
+    const config = byKey("meetings");
+    expect(config.state({ shared_at: null } as never)).toMatchObject({
+      label: "Not shared",
+      tone: "warning",
+    });
+    expect(config.state({ shared_at: "2026-10-04T10:00:00Z" } as never)).toMatchObject({
+      label: "Summary shared",
+      tone: "success",
+    });
+  });
+
   it("maps every kind to an icon and tone", () => {
     for (const config of RECORD_CONFIGS) {
       expect(KIND_ICONS[config.key].icon).toBeTruthy();

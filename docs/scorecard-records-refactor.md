@@ -27,6 +27,17 @@
 - [x] Phase 4 (this round): prettier, eslint clean, `tsc` clean, `modal-audit` PASS, 80/80 vitest, Playwright
   Chromium PASS (sidebar kind-switch + pressed, strip + search + No-match, asserted in-browser, screenshots
   inspected). Planted rows deleted via API; temp specs/screenshots removed.
+- [x] Full-workflow simulation round (2026-10-04): planted all 6 kinds × real states,
+  click-walked every tab/action/dialog/export/visualize as TL and all 4 HBPR views. Found and
+  fixed: (F1) no create entry on Records — per-kind New button, create dialogs lifted to page
+  level; (F2) unshared meetings were neutral and invisible to Needs-attention — now warning;
+  (F3a) HBPR sidebar had no per-kind totals — new `GET hbpr/records_summary/` (same scope,
+  counts only, no `?status=` since vocabularies are per-kind) + sidebar badges; (F4) HBPR
+  table lost the author column in the mirror — Owner restored. Caught live: frontend called
+  `hbpr/records/summary/` but DRF routes `records_summary` (unit tests bypass routing) —
+  fixed + pinned with a router-registry test. CSV export and server `?q=` recorded as
+  deferred options. 131 frontend + 326 backend green; Chromium proof incl. a real XLSX
+  download; matrix rows cleaned.
 - [x] HBPR mirror (2026-10-04, PR #20 `6bb41ce`, direction confirmed with user): full `/hbpr`
   rebuild in the TL mockup language — header status pill (`N overdue`/`N due`/`All clear`),
   leaders table card (title + count, avatars, unbroken dates), records explorer mirror (toolbar

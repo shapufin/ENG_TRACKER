@@ -362,4 +362,13 @@ describe("TLScorecardPage", () => {
     expect(tlScorecardService.getScorecard).not.toHaveBeenCalled();
     perms.value = { isAdmin: false };
   });
+
+  it("opens the create dialog from the records toolbar", async () => {
+    mockDefaults();
+    (tlScorecardService.listIdleFlags as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    renderPage("/tl-scorecard?tab=records&kind=idle");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Flag idle" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
 });

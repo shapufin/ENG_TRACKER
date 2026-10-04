@@ -199,6 +199,10 @@ export const tlScorecardService = {
   getHbprRecordsPage: (params: HbprRecordsQuery) =>
     api.get<{ count: number; results: unknown[] }>(`${BASE}/hbpr/records/`, { params }),
 
+  /** Per-kind counts under the same scope as the records pages (sidebar badges). */
+  getHbprRecordsSummary: (params: { leader?: number; period?: string }) =>
+    api.get<Record<string, number>>(`${BASE}/hbpr/records_summary/`, { params }),
+
   /** One server-side page of evidence (DRF page numbers), filtered by reporting year/leader. */
   listHbprEvidencePage: (params: Record<string, string | number>) =>
     api.get<PaginatedResponse<HbprEvidence>>(`${BASE}/hbpr-evidence/`, { params }),

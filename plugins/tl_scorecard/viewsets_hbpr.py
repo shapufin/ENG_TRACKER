@@ -69,3 +69,22 @@ class HbprViewSet(PluginPermissionMixin, viewsets.ViewSet):
             status=params.get('status'), period=params.get('period'),
             limit=limit, offset=offset,
         ))
+
+    @action(detail=False, methods=['get'])
+    def records_summary(self, request):
+        """Per-kind counts under the same scope as `records`, for the sidebar.
+
+        Keys are the shared `?kind=` vocabulary; ``leader`` and ``period``
+        (YYYY-MM) are optional. There is deliberately no ``status`` filter —
+        statuses are per-kind vocabularies, so one value cannot apply to all
+        six counts. Counts only, no rows: nothing here can leak a record the
+        page itself would not show.
+        """
+        self._scope(request)  # HBPR only
+        params = request.query_params
+        try:
+            leader = int(params['leader']) if params.get('leader') else None
+        except ValueError:
+            raise ValidationError('leader must be an integer.')
+        return Response(hbpr_records.records_summary(
+            request, leader=leader, period=params.get('period')))

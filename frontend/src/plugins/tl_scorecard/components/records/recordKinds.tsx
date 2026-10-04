@@ -165,7 +165,9 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
     state: (r) =>
       r.shared_at
         ? { label: "Summary shared", tone: "success", icon: CheckCircle2 }
-        : { label: "Not shared", tone: "neutral", icon: CircleDot },
+        : // An unshared summary is pending work, not a neutral fact: it belongs
+          // in Needs attention until the TL shares it.
+          { label: "Not shared", tone: "warning", icon: Clock },
     actions: (r, v) => (canManage(v, r.organizer) ? ["edit", "share", "delete"] : []),
   }),
   define<IdleFlag>({

@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useQueries } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,16 @@ export const RECORDS_PAGE_SIZE = 8;
 
 type StateFilter = "all" | "attention" | "done";
 
+/** Toolbar verb per record kind for the create entry point. */
+const CREATE_LABELS: Record<RecordKind, string> = {
+  meetings: "Log meeting",
+  idle: "Flag idle",
+  absences: "Flag absence",
+  reviews: "Log review",
+  promotions: "Nominate",
+  pips: "Open PIP",
+};
+
 const parseStateFilter = (raw: string | null): StateFilter =>
   raw === "attention" || raw === "done" ? raw : "all";
 
@@ -43,7 +54,9 @@ const toneForState = (tone: string): boolean => tone === "warning" || tone === "
  * already-loaded rows — the mockup's durations, sync rates and targets have no
  * backend and are deliberately not shown.
  */
-export const RecordsTab: React.FC = () => {
+export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void }> = ({
+  onCreateRecord,
+}) => {
   const [params, setParams] = useSearchParams();
   const { user } = useAuth();
   const { isAdmin, isSuperuser } = usePermissions();
@@ -236,6 +249,12 @@ export const RecordsTab: React.FC = () => {
                 onChange={(e) => setParam("q", e.target.value || null)}
               />
             </div>
+            {onCreateRecord && (
+              <Button onClick={() => onCreateRecord(kind)} className="shrink-0">
+                <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                {CREATE_LABELS[kind]}
+              </Button>
+            )}
             <ExportButton iconOnly month={month || undefined} />
           </div>
         </div>

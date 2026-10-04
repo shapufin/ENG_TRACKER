@@ -155,13 +155,16 @@ const PIP = {
 
 const Where: React.FC = () => <div data-testid="where">{useLocation().search}</div>;
 
-const renderTab = (search = "?tab=records") =>
+const renderTab = (
+  search = "?tab=records",
+  props: Partial<React.ComponentProps<typeof RecordsTab>> = {}
+) =>
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
       <MemoryRouter initialEntries={[`/tl-scorecard${search}`]}>
-        <RecordsTab />
+        <RecordsTab {...props} />
         <Where />
       </MemoryRouter>
     </QueryClientProvider>
@@ -293,6 +296,22 @@ describe("RecordsTab detail dialog", () => {
       key: "Enter",
     });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("RecordsTab create entry point", () => {
+  it("offers the kind's create action in the toolbar", async () => {
+    const onCreateRecord = vi.fn();
+    renderTab("?tab=records&kind=idle", { onCreateRecord });
+    await screen.findByText("Docs");
+    fireEvent.click(screen.getByRole("button", { name: "Flag idle" }));
+    expect(onCreateRecord).toHaveBeenCalledWith("idle");
+  });
+
+  it("renders no create button without a create handler", async () => {
+    renderTab("?tab=records&kind=idle");
+    await screen.findByText("Docs");
+    expect(screen.queryByRole("button", { name: "Flag idle" })).not.toBeInTheDocument();
   });
 });
 

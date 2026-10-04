@@ -71,7 +71,7 @@ export const HbprWorkspacePage: React.FC = () => {
     period: params.get("period") ?? "",
   };
 
-  const { overview, evidence, records, leader } = useHbprWorkspaceQueries({
+  const { overview, evidence, records, recordsSummary, leader } = useHbprWorkspaceQueries({
     year,
     view,
     leaderParam,
@@ -143,6 +143,7 @@ export const HbprWorkspacePage: React.FC = () => {
         <HbprRecordExplorer
           rows={records.data?.rows ?? []}
           total={records.data?.count ?? 0}
+          counts={recordsSummary.data ?? null}
           page={page}
           pageSize={HBPR_RECORD_PAGE_SIZE}
           onPageChange={(next) => setParam("page", next > 1 ? String(next) : null)}
