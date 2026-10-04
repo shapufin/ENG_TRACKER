@@ -276,6 +276,26 @@ describe("RecordsTab mockup layout", () => {
   });
 });
 
+describe("RecordsTab detail dialog", () => {
+  it("opens the detail dialog from the eye button without firing the row action", async () => {
+    renderTab("?tab=records&kind=idle");
+    await screen.findByText("Docs");
+    const eyeButtons = screen.getAllByRole("button", { name: /view details of/i });
+    expect(eyeButtons).toHaveLength(1);
+    fireEvent.click(eyeButtons[0]);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("does not open the detail dialog when a row action is activated by keyboard", async () => {
+    renderTab("?tab=records&kind=idle");
+    await screen.findByText("Docs");
+    fireEvent.keyDown(screen.getByRole("button", { name: /actions for/i }), {
+      key: "Enter",
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
 describe("RecordsTab panels", () => {
   it.each([
     ["meetings", "1-on-1", "Not shared"],
