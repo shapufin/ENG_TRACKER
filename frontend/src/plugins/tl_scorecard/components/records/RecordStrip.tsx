@@ -7,25 +7,18 @@ import type { KindConfig, RecordRow } from "./recordKinds";
 
 interface RecordStripProps {
   config: KindConfig<RecordRow>;
-  /** Rows after the month filter — the strip always describes what is listed. */
+  /** Rows after every filter — the strip always describes what is listed. */
   rows: RecordRow[];
-  /** Rows before the month filter, for scope context. */
-  totalCount: number;
-  /** Full `YYYY-MM-DD` month value, or "" for every month. */
-  month: string;
+  /** Scope context under the Total value ("across all months", "of 12 total"). */
+  totalTrend: string;
 }
 
 /** At-a-glance counts from already-loaded rows; tones match the table badges. */
-export const RecordStrip: React.FC<RecordStripProps> = ({ config, rows, totalCount, month }) => {
+export const RecordStrip: React.FC<RecordStripProps> = ({ config, rows, totalTrend }) => {
   const stats = recordStripStats(config, rows);
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <StatCard
-        label="Total"
-        value={stats.total}
-        icon={ClipboardList}
-        trend={month ? `of ${totalCount} total` : "across all months"}
-      />
+      <StatCard label="Total" value={stats.total} icon={ClipboardList} trend={totalTrend} />
       <StatCard
         label="Needs attention"
         value={stats.attention}
