@@ -17,6 +17,13 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
+  // Deps imported ONLY from lazy chunks / dynamic imports are invisible to
+  // Vite's startup scan. Hitting them mid-session forces a re-optimize, and any
+  // open tab then 504s ("Outdated Optimize Dep") on its old ?v= hash, which
+  // breaks every lazy page that needs them. Pre-bundle them up front.
+  optimizeDeps: {
+    include: ['dompurify', 'jspdf', 'html2canvas-pro'],
+  },
   build: {
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
