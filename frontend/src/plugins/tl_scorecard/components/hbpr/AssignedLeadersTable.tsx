@@ -4,9 +4,17 @@ import { UsersRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { UserAvatar } from "@/components/calendar/UserAvatar";
 import type { HbprLeaderRow } from "../../types/tlScorecard";
+import { avatarSeed } from "../avatarSeed";
 import { AssignedLeaderCard } from "./AssignedLeaderCard";
-import { CADENCE_LABELS, CADENCE_STATUS_LABELS, CADENCE_STATUS_TONE, formatDate } from "./hbprMeta";
+import {
+  CADENCE_LABELS,
+  CADENCE_STATUS_LABELS,
+  CADENCE_STATUS_TONE,
+  formatDate,
+  plural,
+} from "./hbprMeta";
 
 const EprCell: React.FC<{ label: string; recorded: boolean }> = ({ label, recorded }) => (
   <Badge variant={recorded ? "success" : "warning"}>
@@ -36,11 +44,7 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
   }
 
   return (
-    <section aria-labelledby="hbpr-leaders" className="space-y-3">
-      <h2 id="hbpr-leaders" className="text-muted-foreground text-sm font-semibold">
-        Assigned Albanian team leaders
-      </h2>
-
+    <section aria-label="Assigned Albanian team leaders" className="space-y-3">
       <ul className="grid gap-3 md:hidden">
         {leaders.map((leader) => (
           <li key={leader.assignment_id}>
@@ -49,36 +53,49 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
         ))}
       </ul>
 
-      <GlassCard animateOnMount={false} isHoverLift={false} className="hidden p-0 md:block">
+      <GlassCard
+        animateOnMount={false}
+        isHoverLift={false}
+        className="hidden overflow-hidden p-0 md:block"
+      >
+        <div className="border-line-subtle flex items-center justify-between gap-3 border-b px-5 py-3.5">
+          <h2 className="text-foreground flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
+            Assigned Albanian team leaders
+            <span className="bg-tone-success-text h-1.5 w-1.5 rounded-full" aria-hidden="true" />
+          </h2>
+          <span className="text-muted-foreground text-xs">
+            {plural(leaders.length, "team leader", "team leaders")}
+          </span>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">
               Assigned Albanian team leaders and their governance state
             </caption>
-            <thead>
-              <tr className="border-border/60 text-muted-foreground border-b text-xs tracking-wide uppercase">
-                <th scope="col" className="px-4 py-2.5 font-medium">
+            <thead className="bg-muted/40 text-muted-foreground text-xs">
+              <tr className="border-border/50 border-b">
+                <th scope="col" className="px-4 py-2 font-medium">
                   Albanian TL
                 </th>
-                <th scope="col" className="px-4 py-2.5 font-medium">
+                <th scope="col" className="px-4 py-2 font-medium">
                   Team
                 </th>
-                <th scope="col" className="px-4 py-2.5 font-medium">
+                <th scope="col" className="px-4 py-2 font-medium">
                   Cadence
                 </th>
-                <th scope="col" className="px-4 py-2.5 font-medium">
+                <th scope="col" className="px-4 py-2 font-medium">
                   Last HBPR meeting
                 </th>
-                <th scope="col" className="px-4 py-2.5 font-medium">
+                <th scope="col" className="px-4 py-2 font-medium">
                   Next due
                 </th>
-                <th scope="col" className="px-4 py-2.5 font-medium">
+                <th scope="col" className="px-4 py-2 font-medium">
                   EPR evidence
                 </th>
-                <th scope="col" className="px-4 py-2.5 font-medium">
+                <th scope="col" className="px-4 py-2 font-medium">
                   State
                 </th>
-                <th scope="col" className="px-4 py-2.5 text-right font-medium">
+                <th scope="col" className="px-4 py-2 text-right font-medium">
                   <span className="sr-only">Actions</span>
                 </th>
               </tr>
@@ -86,13 +103,26 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
             <tbody className="divide-border/50 divide-y">
               {leaders.map((leader) => (
                 <tr key={leader.assignment_id}>
-                  <th scope="row" className="max-w-[14rem] truncate px-4 py-2.5 font-medium">
-                    {leader.name}
+                  <th scope="row" className="px-4 py-2.5 font-medium">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <UserAvatar
+                        name={leader.name}
+                        size="sm"
+                        colorSeed={avatarSeed(leader.name)}
+                      />
+                      <span className="max-w-[14rem] truncate" title={leader.name}>
+                        {leader.name}
+                      </span>
+                    </div>
                   </th>
                   <td className="px-4 py-2.5 tabular-nums">{leader.team_size}</td>
                   <td className="px-4 py-2.5">{CADENCE_LABELS[leader.cadence]}</td>
-                  <td className="px-4 py-2.5 tabular-nums">{formatDate(leader.last_meeting_on)}</td>
-                  <td className="px-4 py-2.5 tabular-nums">{formatDate(leader.next_due_on)}</td>
+                  <td className="px-4 py-2.5 whitespace-nowrap tabular-nums">
+                    {formatDate(leader.last_meeting_on)}
+                  </td>
+                  <td className="px-4 py-2.5 whitespace-nowrap tabular-nums">
+                    {formatDate(leader.next_due_on)}
+                  </td>
                   <td className="px-4 py-2.5">
                     <div className="flex flex-wrap gap-1.5">
                       <EprCell label="Mid-year" recorded={leader.epr_mid_year} />
@@ -100,7 +130,10 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
                     </div>
                   </td>
                   <td className="px-4 py-2.5">
-                    <Badge variant={CADENCE_STATUS_TONE[leader.cadence_status]}>
+                    <Badge
+                      variant={CADENCE_STATUS_TONE[leader.cadence_status]}
+                      className="whitespace-nowrap"
+                    >
                       {CADENCE_STATUS_LABELS[leader.cadence_status]}
                     </Badge>
                   </td>

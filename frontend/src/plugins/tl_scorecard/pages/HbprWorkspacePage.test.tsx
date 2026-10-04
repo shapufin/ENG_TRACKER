@@ -223,6 +223,37 @@ describe("HbprWorkspacePage", () => {
     expect(screen.getAllByText("Overdue").length).toBeGreaterThan(0);
   });
 
+  it("names the workspace status in the header pill", async () => {
+    renderPage();
+    expect(await screen.findByRole("status", { name: "1 overdue" })).toBeInTheDocument();
+  });
+
+  it("shows All clear in the header when nothing is due or overdue", async () => {
+    svc.getHbprOverview.mockResolvedValue(
+      ok({
+        ...OVERVIEW,
+        needs_attention: { ...OVERVIEW.needs_attention, cadence_overdue: 0, cadence_due: 0 },
+      })
+    );
+    renderPage();
+    expect(await screen.findByRole("status", { name: "All clear" })).toBeInTheDocument();
+  });
+
+  it("shows the roster count in the table card header", async () => {
+    renderPage();
+    expect(await screen.findByText("2 team leaders")).toBeInTheDocument();
+  });
+
+  it("shows leader avatars and keeps dates on one line", async () => {
+    renderPage();
+    await screen.findByText("Assigned Albanian team leaders");
+    // Avatar title + truncated name carry the same title.
+    expect(screen.getAllByTitle("Alb TL").length).toBeGreaterThan(1);
+    for (const cell of screen.getAllByText(/Mar 1, \d{4}|Jan 31, \d{4}/)) {
+      expect(cell).toHaveClass("whitespace-nowrap");
+    }
+  });
+
   it("does not surface one-on-one or approval-decision alerts", async () => {
     renderPage();
     await screen.findByText("Cadence meetings overdue");
@@ -263,8 +294,31 @@ describe("HbprWorkspacePage", () => {
     expect(screen.getByRole("tab", { name: "Evidence" })).toHaveAttribute("aria-selected", "true");
 
     selectView("Records");
-    expect(await screen.findByText("Governance records")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /meetings records/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Records" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("shows the latest focus with a history link that clears the period", async () => {
+    renderPage(`/hbpr?view=records&kind=absences&year=${YEAR}`);
+    expect(await screen.findByText(/Latest absence \(Anna Rossi\):/)).toBeInTheDocument();
+    // Mobile cards and the desktop table both render the same detail.
+    expect((await screen.findAllByText("Unjustified")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /view full absence history/i })).toHaveAttribute(
+      "href",
+      "/hbpr?view=records&kind=absences"
+    );
+  });
+
+  it("shows member avatars and a pressed active kind", async () => {
+    renderPage(`/hbpr?view=records&kind=absences&year=${YEAR}`);
+    expect((await screen.findAllByText("Unjustified")).length).toBeGreaterThan(0);
+    // Avatar title + truncated name carry the same title.
+    expect(screen.getAllByTitle("Anna Rossi").length).toBeGreaterThan(1);
+    const nav = screen.getByRole("navigation", { name: "Record types" });
+    expect(within(nav).getByRole("button", { name: /absences/i })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
   });
 
   it("asks the API for the notification deep-link kind and shows its rows", async () => {
@@ -284,7 +338,7 @@ describe("HbprWorkspacePage", () => {
 
   it("defaults to the first record type when no kind is given", async () => {
     renderPage("/hbpr?view=records");
-    await screen.findByText("Governance records");
+    await screen.findByRole("heading", { name: /meetings records/i });
     expect(svc.getHbprRecordsPage).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "meetings" })
     );
@@ -299,7 +353,7 @@ describe("HbprWorkspacePage", () => {
 
   it("sends status, period and leader to the API instead of filtering in the browser", async () => {
     renderPage("/hbpr?view=records&kind=pips&status=draft&period=2026-03&leader=8");
-    await screen.findByText("Governance records");
+    await screen.findByRole("heading", { name: /improvement plans records/i });
     expect(svc.getHbprRecordsPage).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: "pips",
@@ -336,6 +390,12 @@ describe("HbprWorkspacePage", () => {
     expect(svc.listHbprEvidencePage).toHaveBeenCalledWith(
       expect.objectContaining({ period_year: YEAR, page: 1 })
     );
+  });
+
+  it("shows the recorder's avatar on the evidence timeline", async () => {
+    renderPage(`/hbpr?view=evidence&year=${YEAR}`);
+    await screen.findByText("Weekly governance sync.");
+    expect(screen.getAllByTitle("Alb TL")).toHaveLength(1);
   });
 
   it("asks the API for the selected leader's evidence", async () => {
