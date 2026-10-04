@@ -200,8 +200,21 @@ export const tlScorecardService = {
     api.get<{ count: number; results: unknown[] }>(`${BASE}/hbpr/records/`, { params }),
 
   /** Per-kind counts under the same scope as the records pages (sidebar badges). */
-  getHbprRecordsSummary: (params: { leader?: number; period?: string }) =>
+  getHbprRecordsSummary: (params: { leader?: number; period?: string; q?: string }) =>
     api.get<Record<string, number>>(`${BASE}/hbpr/records_summary/`, { params }),
+
+  /** Server-side CSV of the filtered records (the table is server-paged). */
+  downloadHbprRecordsCsv: (params: {
+    kind: string;
+    leader?: number;
+    status?: string;
+    period?: string;
+    q?: string;
+  }) =>
+    api.get<Blob>(`${BASE}/hbpr/records/`, {
+      params: { ...params, file_format: "csv" },
+      responseType: "blob",
+    }),
 
   /** One server-side page of evidence (DRF page numbers), filtered by reporting year/leader. */
   listHbprEvidencePage: (params: Record<string, string | number>) =>

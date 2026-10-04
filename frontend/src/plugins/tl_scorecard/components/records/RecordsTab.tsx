@@ -1,8 +1,9 @@
 import React, { useMemo } from "react";
-import { Plus, Search } from "lucide-react";
+import { FileSpreadsheet, Plus, Search } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useQueries } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { downloadBlobResponse } from "@/lib/download";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,7 @@ import {
 import { useRecordActions } from "./useRecordActions";
 import { RecordListPanel } from "./RecordListPanel";
 import { RecordStrip } from "./RecordStrip";
+import { recordsToCsv } from "./recordsCsv";
 
 export const RECORDS_PAGE_SIZE = 8;
 
@@ -255,6 +257,23 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
                 {CREATE_LABELS[kind]}
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Export visible records (CSV)"
+              title="Export visible records (CSV)"
+              onClick={() => {
+                const stamp = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+                downloadBlobResponse(
+                  new Blob([recordsToCsv(RECORD_CONFIGS[activeIndex], activeRows ?? [])], {
+                    type: "text/csv",
+                  }),
+                  `tl-${kind}-records-${stamp}.csv`
+                );
+              }}
+            >
+              <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
+            </Button>
             <ExportButton iconOnly month={month || undefined} />
           </div>
         </div>

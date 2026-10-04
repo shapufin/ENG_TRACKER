@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { FilterX, ScrollText } from "lucide-react";
+import { FilterX, ScrollText, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -28,6 +28,7 @@ import { avatarSeed } from "../avatarSeed";
 import { formatDate, HBPR_RESOURCE_ICONS, HBPR_RESOURCE_NOUNS } from "./hbprMeta";
 import { toneTextClass } from "@/components/ui/tone";
 import { hbprRecordState } from "./hbprRecordState";
+import { HbprRecordsCsvButton } from "./HbprRecordsCsvButton";
 import { StateBadge } from "../records/StateBadge";
 import { PageNav } from "./PageNav";
 
@@ -40,6 +41,8 @@ export interface HbprRecordFilters {
   status: string;
   /** YYYY-MM, or "" for every period. */
   period: string;
+  /** Server-side text search across every page (same `?q=` as the endpoints). */
+  q: string;
 }
 
 interface HbprRecordExplorerProps {
@@ -77,7 +80,8 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
   onRetry,
 }) => {
   const statuses = HBPR_RECORD_STATUSES[filters.resource];
-  const hasFilters = filters.leader !== null || filters.status !== "" || filters.period !== "";
+  const hasFilters =
+    filters.leader !== null || filters.status !== "" || filters.period !== "" || filters.q !== "";
   const noun = HBPR_RESOURCE_NOUNS[filters.resource];
 
   const resourceLabel = (resource: HbprRecordResource) =>
@@ -99,7 +103,7 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
     <section aria-label="Governance records" className="space-y-4">
       <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-          <div className="grid grow gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grow gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <Label htmlFor="hbpr-filter-leader">Albanian team leader</Label>
               <Select
@@ -152,13 +156,40 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
                 onChange={(e) => onFilterChange("period", e.target.value)}
               />
             </div>
+            <div>
+              <Label htmlFor="hbpr-filter-search">Search</Label>
+              <div className="relative mt-1.5">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <Input
+                  id="hbpr-filter-search"
+                  type="search"
+                  aria-label="Search records"
+                  placeholder="Search all records…"
+                  className="pl-8"
+                  value={filters.q}
+                  onChange={(e) => onFilterChange("q", e.target.value)}
+                />
+              </div>
+            </div>
           </div>
-          {hasFilters && (
-            <Button variant="ghost" size="sm" onClick={onReset} className="shrink-0">
-              <FilterX className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-              Clear filters
-            </Button>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            <HbprRecordsCsvButton
+              kind={HBPR_RECORD_KINDS[filters.resource]}
+              leader={filters.leader}
+              status={filters.status}
+              period={filters.period}
+              q={filters.q}
+            />
+            {hasFilters && (
+              <Button variant="ghost" size="sm" onClick={onReset}>
+                <FilterX className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                Clear filters
+              </Button>
+            )}
+          </div>
         </div>
       </GlassCard>
 
