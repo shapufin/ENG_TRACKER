@@ -1,3 +1,4 @@
+// fallow-ignore-file circular-dependencies
 /**
  * Core-owned entry point for the data_import plugin's per-page button.
  *
@@ -6,6 +7,12 @@
  * break the build (its cross-reference sweep is Python-only and matches
  * frontend files by filename). Resolving through the plugin registry means a
  * removed or disabled plugin simply renders nothing.
+ *
+ * The cycle this file takes part in (plugins/index.ts -> plugin page ->
+ * this button -> plugins/index.ts) is the same registry indirection that
+ * keeps `remove_plugin` from breaking the build: core never statically
+ * imports plugin code, it resolves through `getPluginComponent`. Breaking
+ * the cycle would mean reintroducing the static import it exists to avoid.
  */
 import React, { Suspense } from "react";
 import { usePlugins } from "@/context/PluginContext";
