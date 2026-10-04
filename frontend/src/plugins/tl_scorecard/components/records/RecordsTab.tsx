@@ -31,7 +31,7 @@ import { RecordListPanel } from "./RecordListPanel";
 import { RecordStrip } from "./RecordStrip";
 import { recordsToCsv } from "./recordsCsv";
 
-export const RECORDS_PAGE_SIZE = 8;
+const RECORDS_PAGE_SIZE = 8;
 
 type StateFilter = "all" | "attention" | "done";
 

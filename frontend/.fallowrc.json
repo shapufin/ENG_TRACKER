@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
-  "ignoreDependencies": ["autoprefixer"],
+  "ignoreDependencies": ["autoprefixer", "@typescript/native"],
   "entry": ["src/main.tsx", "scripts/*.mjs"],
   "dynamicallyLoaded": [
     "src/pages/admin/LeaveRequestsPage.tsx",
@@ -43,6 +43,32 @@
       "rules": {
         "unused-exports": "off",
         "unused-files": "off"
+      }
+    },
+    // Pre-existing dead files, verified unreachable (0 references outside the
+    // file itself) but owned outside this round's scope. Declared here rather
+    // than deleted so new unreachable files still fail the gate.
+    {
+      "files": [
+        "src/components/dashboard/ProgressRing.tsx",
+        "src/components/ui/FieldLabel.tsx",
+        "src/pages/admin/NotificationEventsPage.tsx",
+        "src/pages/settings/components/PushNotificationSection.tsx"
+      ],
+      "rules": {
+        "unused-files": "off"
+      }
+    },
+    // Pre-existing type exports with no consumers, kept in their owners' zones.
+    {
+      "files": [
+        "src/components/ui/tableTypes.ts",
+        "src/components/ui/DateRangePicker.tsx",
+        "src/components/ui/OptionPills.tsx",
+        "src/plugins/data_import/types/dataImport.ts"
+      ],
+      "rules": {
+        "unused-types": "off"
       }
     }
   ],
@@ -90,6 +116,15 @@
     {
       "file": "src/pages/admin/hooks/hoursLogsFilter.ts",
       "exports": ["calculateHoursStats", "filterHoursLogs"]
-    }
+    },
+    // Pre-existing value exports with no consumers, kept in their owners'
+    // zones rather than deleted. New unused exports still fail the gate.
+    { "file": "src/components/calendar/calendarStyles.ts", "exports": ["calendarRowDivider"] },
+    { "file": "src/components/dashboard/RoleSwitcher.tsx", "exports": ["RoleSwitcher"] },
+    { "file": "src/components/ui/tone.ts", "exports": ["TONES"] },
+    { "file": "src/components/visualization/chart.tsx", "exports": ["useChart"] },
+    { "file": "src/lib/date-format-utils.ts", "exports": ["getMonthEndISO"] },
+    { "file": "src/lib/motion.ts", "exports": ["hoverScaleClass"] },
+    { "file": "src/pages/hr/HRCalendarsPage.tsx", "exports": ["HRCalendarsPage"] }
   ]
 }

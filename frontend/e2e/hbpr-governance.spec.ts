@@ -24,15 +24,23 @@ async function settle(page: import("@playwright/test").Page) {
   await page.waitForTimeout(300);
 }
 
+/** One row of the HBPR assignment API, as the test asserts on it. */
+interface ApiAssignmentRow {
+  albanian_tl_detail?: { name?: string };
+}
+
+/** Either a DRF paginated envelope or a bare array, depending on the endpoint. */
+type ApiBody = { results?: ApiAssignmentRow[] } | ApiAssignmentRow[] | null;
+
 async function get(
   request: APIRequestContext,
   token: string,
   path: string
-): Promise<{ status: number; body: any }> {
+): Promise<{ status: number; body: ApiBody }> {
   const response = await request.get(`${API}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const body = response.ok() ? await response.json().catch(() => null) : null;
+  const body = response.ok() ? ((await response.json().catch(() => null)) as ApiBody) : null;
   return { status: response.status(), body };
 }
 
@@ -307,8 +315,10 @@ test.describe("Admin", () => {
 
     const assignments = await get(request, token, "/api/users/hbpr-assignments/");
     expect(assignments.status).toBe(200);
-    const rows = assignments.body.results ?? assignments.body;
-    expect(rows.some((row: any) => row.albanian_tl_detail?.name === "E2E TeamLeaderB")).toBe(true);
+    const rows = Array.isArray(assignments.body)
+      ? assignments.body
+      : (assignments.body?.results ?? []);
+    expect(rows.some((row) => row.albanian_tl_detail?.name === "E2E TeamLeaderB")).toBe(true);
 
     await loginAsUser(page, E2E_CREDENTIALS.admin);
     await page.goto("/admin/hbpr-assignments");

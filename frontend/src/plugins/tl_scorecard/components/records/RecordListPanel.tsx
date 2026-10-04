@@ -21,7 +21,7 @@ import {
   type Viewer,
 } from "./recordKinds";
 
-export interface RecordSnippet {
+interface RecordSnippet {
   person: string;
   focus: string;
 }
