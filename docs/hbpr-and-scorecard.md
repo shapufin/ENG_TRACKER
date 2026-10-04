@@ -240,6 +240,17 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   change — every field was already serialized and writable. Backend authorization,
   HBPR redaction and the `_OwnerOnlyNotesMixin` redaction are untouched.
 
+- **2026-10-04, audit of the last 21 commits (PRs #9–#25):** two defects in the records 
+  search/CSV work (#24), fixed test-first. (1) `?q=` matched the private `notes` column, so an HBPR 
+  could probe a TL's hidden notes by hit/miss — reproduced for idle/absence/PIP/promotion/meeting 
+  before the fix; `private_search_fields` now restricts `notes` to the owner (staff: all). 
+  (2) CSV cells were written verbatim, so free text such as `=HYPERLINK(...)` ran as a formula in 
+  Excel; the server and client writers now prefix `'`. (3) record lists ran one query per meeting attendee / idle update (`attendees__user`, 
+  `status_updates__recorded_by` now prefetched), which the 2000-row CSV multiplied. Cleared on inspection: `is_current` vs 
+  `unfinished_q` (both UTC), `reference_url` rendering (`rel=noopener`, `URLField`). Open, not 
+  changed: the assignment-archive purge deletes on a GET (documented, no audit entry); 
+  `role_codes__icontains='hr'` in the Users role filters is substring-based.
+
 **Assignment dates (2026-10-03).** `effective_to` is the **last day in effect**, not a
 switch. An assignment covers a day `d` when `effective_from <= d` and (`effective_to` is
 null or `>= d`) — one definition, `in_effect_q()` / `unfinished_q()` in

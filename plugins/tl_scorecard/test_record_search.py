@@ -121,6 +121,15 @@ class RecordSearchTests(TestCase):
         mine = Meeting.objects.get(organizer=self.tl).id
         self.assertEqual(self._ids(MeetingViewSet, 'roadmap'), {mine})
 
+    def test_staff_can_search_private_notes_and_owner_keeps_them(self):
+        staff = _make_user('staff_q', is_staff=True)
+        request = self.factory.get('/', {'q': 'roadmap'})
+        force_authenticate(request, user=staff)
+        rows = MeetingViewSet.as_view({'get': 'list'})(request).data
+        rows = rows['results'] if isinstance(rows, dict) else rows
+        self.assertEqual(len(rows), 2)  # both TLs' meetings, matched on notes
+        self.assertEqual(len(self._ids(MeetingViewSet, 'roadmap')), 1)  # owner
+
     def test_overlong_search_is_truncated_not_an_error(self):
         response_ids = self._ids(MeetingViewSet, 'x' * 500)
         self.assertEqual(response_ids, set())

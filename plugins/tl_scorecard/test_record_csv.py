@@ -133,3 +133,82 @@ class TestConstants(TestCase):
         self.assertGreaterEqual(CSV_MAX_ROWS, 100)
         self.assertLessEqual(CSV_MAX_ROWS, 10000)
         _ = timezone.now()
+
+
+class CsvFormulaSafetyTests(TestCase):
+    def test_free_text_starting_with_a_formula_trigger_is_neutralised(self):
+        for raw in ('=HYPERLINK("http://x","y")', '+1+1', '-2+3', '@SUM(A1)', '	cmd', '  =1+1'):
+            with self.subTest(raw=raw):
+                cell = _parse(build_records_csv([{'reason': raw}]))[1][0]
+                self.assertTrue(cell.startswith("'"), cell)
+                self.assertEqual(cell[1:], raw)
+
+    def test_plain_text_numbers_and_dates_are_untouched(self):
+        rows = _parse(build_records_csv([{'a': 'Family emergency', 'b': 5, 'c': '2026-10-04', 'd': None}]))
+        self.assertEqual(rows[1], ['Family emergency', '5', '2026-10-04', ''])
+
+
+class RecordListQueryCountTests(TestCase):
+    """Embedded children (attendees, idle updates) must not cost a query per row —
+    the CSV download serialises up to CSV_MAX_ROWS of them in one request."""
+
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        call_command('seed_plugin_permissions')
+        self.tl = _make_user('tl_qc')
+        _assign_tl_role(self.tl)
+        self.people = [_make_user(f'att_qc{i}') for i in range(4)]
+
+    def _meeting_with_attendees(self, n):
+        from datetime import date
+        from .models import MeetingAttendee
+        meeting = Meeting.objects.create(
+            organizer=self.tl, meeting_type='tl_sync', counterparty=self.people[0],
+            occurred_on=date.today())
+        for person in self.people[:n]:
+            MeetingAttendee.objects.create(meeting=meeting, user=person, role='member')
+
+    def _queries(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        request = self.factory.get('/')
+        force_authenticate(request, user=self.tl)
+        with CaptureQueriesContext(connection) as ctx:
+            response = MeetingViewSet.as_view({'get': 'list'})(request)
+        self.assertEqual(response.status_code, 200)
+        return len(ctx)
+
+    def test_meeting_list_queries_do_not_grow_with_attendees(self):
+        self._meeting_with_attendees(1)
+        few = self._queries()
+        for _ in range(3):
+            self._meeting_with_attendees(4)
+        self.assertEqual(self._queries(), few)
+
+    def test_idle_list_queries_do_not_grow_with_status_updates(self):
+        from datetime import date, timedelta
+        from .models import IdleFlag, IdleStatusUpdate
+        from .viewsets import IdleFlagViewSet
+
+        def count():
+            from django.db import connection
+            from django.test.utils import CaptureQueriesContext
+            request = self.factory.get('/')
+            force_authenticate(request, user=self.tl)
+            with CaptureQueriesContext(connection) as ctx:
+                IdleFlagViewSet.as_view({'get': 'list'})(request)
+            return len(ctx)
+
+        def flag(updates):
+            f = IdleFlag.objects.create(
+                employee=self.people[0], flagged_by=self.tl, flagged_on=date.today())
+            for i in range(updates):
+                IdleStatusUpdate.objects.create(
+                    flag=f, week_of=date.today() - timedelta(weeks=i + 1),
+                    status_note='x', recorded_by=self.people[i % 4])
+
+        flag(1)
+        few = count()
+        for _ in range(3):
+            flag(3)
+        self.assertEqual(count(), few)
