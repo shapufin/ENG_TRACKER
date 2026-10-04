@@ -12,10 +12,10 @@ from unittest import mock
 from apps.permissions.models import Role, UserRole
 
 from .csv_export import CSV_MAX_ROWS, build_records_csv
-from .models import Absence, Meeting
+from .models import Meeting
 from .testing import make_user as _make_user
 from .test_tl_scorecard_hbpr import HbprScorecardBase
-from .viewsets import AbsenceViewSet, MeetingViewSet
+from .viewsets import MeetingViewSet
 from .viewsets_hbpr import HbprViewSet
 
 
