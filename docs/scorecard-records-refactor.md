@@ -27,6 +27,14 @@
 - [x] Phase 4 (this round): prettier, eslint clean, `tsc` clean, `modal-audit` PASS, 80/80 vitest, Playwright
   Chromium PASS (sidebar kind-switch + pressed, strip + search + No-match, asserted in-browser, screenshots
   inspected). Planted rows deleted via API; temp specs/screenshots removed.
+- [x] HBPR mirror (2026-10-04, PR #20 `6bb41ce`, direction confirmed with user): full `/hbpr`
+  rebuild in the TL mockup language — header status pill (`N overdue`/`N due`/`All clear`),
+  leaders table card (title + count, avatars, unbroken dates), records explorer mirror (toolbar
+  card, icon sidebar, table card with avatar With / Focus preview / latest-row snippet +
+  history link, server PageNav), evidence toolbar card + recorder avatars. Shared `avatarSeed`.
+  Fixed `div`-in-`p`/`span` nesting the test output surfaced (3 files). 113 tests green (all new
+  RED first), tsc/eslint/modal-audit clean, backend 319 OK, Chromium light/dark/393px proof
+  with inspected screenshots. Read-only, kind vocab, deep links, paging, one-on-one untouched.
 - [x] Mockup rebuild (2026-10-04, PR #18 `0e84904`): TL Records tab rebuilt block-by-block to
   `stitch_modern_page_content_redesign` — header description + `Qn Active` pill, toolbar card
   (Timeframe, All/Needs attention/Completed `?state=` pills, search, icon-only XLSX export), icon
