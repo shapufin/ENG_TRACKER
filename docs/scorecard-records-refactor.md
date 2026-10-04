@@ -1,4 +1,4 @@
-# Scorecard Records Refactor — Cross-Agent Tracking (2026-10-03)
+# Scorecard Records Refactor — Cross-Agent Tracking (2026-10-03 → mockup rebuild 2026-10-04)
 
 > **Workstream:** TL Scorecard `RecordsTab` + HBPR `HbprRecordExplorer` master-detail refactor.
 > **Owner files (single-writer: this session):** `frontend/src/plugins/tl_scorecard/components/hbpr/*`,
@@ -27,6 +27,15 @@
 - [x] Phase 4 (this round): prettier, eslint clean, `tsc` clean, `modal-audit` PASS, 80/80 vitest, Playwright
   Chromium PASS (sidebar kind-switch + pressed, strip + search + No-match, asserted in-browser, screenshots
   inspected). Planted rows deleted via API; temp specs/screenshots removed.
+- [x] Mockup rebuild (2026-10-04, PR #18 `0e84904`): TL Records tab rebuilt block-by-block to
+  `stitch_modern_page_content_redesign` — header description + `Qn Active` pill, toolbar card
+  (Timeframe, All/Needs attention/Completed `?state=` pills, search, icon-only XLSX export), icon
+  sidebar card (counts + Resolved summary), table card (title header, avatar With column, Focus
+  preview, latest-row snippet + full-history link clearing the month, 8/page client pagination).
+  Kind configs carry `person/focus/typeChip` (+`KIND_ICONS`); per-kind `columns` removed. Honest
+  deviations: no time/role/duration/sync/target metrics, 3 stat cards, PageNav pagination.
+  113 tests green (all new RED first), tsc/eslint/modal-audit clean, Chromium light/dark/393px
+  proof with inspected screenshots. Restored pre-existing `workingDaysOpen` cases verbatim.
 - [x] Phase 4 (final): full `npx vitest run` — 2653 passed, 5 timeout-flakes in unrelated files
   (DataTable, FolderBrowser, PayrollRuleSetEditorDialog, SkillsTeamPage, TicketKPITeamManagementPage),
   all 5 pass in isolation (84/84) — load-induced, not this workstream. Backend
