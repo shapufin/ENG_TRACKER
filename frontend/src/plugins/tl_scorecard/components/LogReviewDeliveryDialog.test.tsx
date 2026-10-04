@@ -18,15 +18,27 @@ describe("LogReviewDeliveryDialog", () => {
     expect(screen.getByRole("button", { name: /log delivery/i })).toBeDisabled();
   });
 
-  it("submits period, recipient, and delivered_on", () => {
+  it("submits period, recipient, delivered_on and the notes/reference the TL captured", () => {
     const onCreate = vi.fn().mockResolvedValue(undefined);
     render(<LogReviewDeliveryDialog open onOpenChange={() => {}} onCreate={onCreate} />);
 
     fireEvent.change(screen.getByLabelText("Period (YYYY-MM)"), { target: { value: "2026-09" } });
     fireEvent.change(screen.getByLabelText("Recipient"), { target: { value: "Ops" } });
     fireEvent.change(screen.getByLabelText("Delivered on"), { target: { value: "2026-09-15" } });
+    fireEvent.change(screen.getByLabelText("Notes (private)"), {
+      target: { value: "Deck reviewed" },
+    });
+    fireEvent.change(screen.getByLabelText("Reference link (optional)"), {
+      target: { value: "https://example.com/deck" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /log delivery/i }));
 
-    expect(onCreate).toHaveBeenCalledWith({ period: "2026-09", recipient: "Ops", delivered_on: "2026-09-15" });
+    expect(onCreate).toHaveBeenCalledWith({
+      period: "2026-09",
+      recipient: "Ops",
+      delivered_on: "2026-09-15",
+      notes: "Deck reviewed",
+      reference_url: "https://example.com/deck",
+    });
   });
 });

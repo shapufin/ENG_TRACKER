@@ -56,6 +56,17 @@ describe("recordKind person/focus/typeChip", () => {
       expect(KIND_ICONS[config.key].tone).toMatch(/success|warning|info|accent|danger/);
     }
   });
+
+  it("offers the weekly update action only on an open idle flag the viewer manages", () => {
+    const idle = byKey("idle");
+    const viewer = { userId: 1, isStaff: false, canReview: false };
+    const open = { flagged_by: 1, status: "open" } as never;
+    const resolved = { flagged_by: 1, status: "resolved" } as never;
+    const notMine = { flagged_by: 9, status: "open" } as never;
+    expect(idle.actions(open, viewer)).toEqual(["edit", "log-update", "resolve", "delete"]);
+    expect(idle.actions(resolved, viewer)).toEqual(["edit", "delete"]);
+    expect(idle.actions(notMine, viewer)).toEqual([]);
+  });
 });
 
 // Mirrors the backend: weekdays inclusive between the dates, minus one

@@ -2,12 +2,19 @@ import React, { useState } from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { ReviewDelivery } from "../types/tlScorecard";
 
 interface LogReviewDeliveryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (data: { period: string; recipient: string; delivered_on: string }) => Promise<void>;
+  onCreate: (data: {
+    period: string;
+    recipient: string;
+    delivered_on: string;
+    notes?: string;
+    reference_url?: string;
+  }) => Promise<void>;
   /** In edit mode `onCreate` receives the edited values. */
   mode?: "create" | "edit";
   initial?: ReviewDelivery;
@@ -27,6 +34,8 @@ export const LogReviewDeliveryDialog: React.FC<LogReviewDeliveryDialogProps> = (
   const [period, setPeriod] = useState(initial?.period ?? currentPeriod());
   const [recipient, setRecipient] = useState(initial?.recipient ?? "");
   const [deliveredOn, setDeliveredOn] = useState(initial?.delivered_on ?? todayIso());
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [referenceUrl, setReferenceUrl] = useState(initial?.reference_url ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canSubmit = /^\d{4}-\d{2}$/.test(period) && recipient.trim() && deliveredOn;
@@ -36,8 +45,18 @@ export const LogReviewDeliveryDialog: React.FC<LogReviewDeliveryDialogProps> = (
     if (!canSubmit) return;
     setIsSubmitting(true);
     try {
-      await onCreate({ period, recipient: recipient.trim(), delivered_on: deliveredOn });
-      if (!isEdit) setRecipient("");
+      await onCreate({
+        period,
+        recipient: recipient.trim(),
+        delivered_on: deliveredOn,
+        notes,
+        reference_url: referenceUrl.trim(),
+      });
+      if (!isEdit) {
+        setRecipient("");
+        setNotes("");
+        setReferenceUrl("");
+      }
       onOpenChange(false);
     } catch {
       // The caller reports the failure; keep the dialog open for a retry.
@@ -83,6 +102,26 @@ export const LogReviewDeliveryDialog: React.FC<LogReviewDeliveryDialogProps> = (
             type="date"
             value={deliveredOn}
             onChange={(e) => setDeliveredOn(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="review-notes">Notes (private)</Label>
+          <Textarea
+            id="review-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="What was covered, decisions taken..."
+            rows={3}
+          />
+        </div>
+        <div>
+          <Label htmlFor="review-reference">Reference link (optional)</Label>
+          <Input
+            id="review-reference"
+            type="url"
+            value={referenceUrl}
+            onChange={(e) => setReferenceUrl(e.target.value)}
+            placeholder="https://..."
           />
         </div>
       </div>

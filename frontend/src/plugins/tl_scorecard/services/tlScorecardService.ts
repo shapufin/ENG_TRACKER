@@ -100,6 +100,7 @@ export const tlScorecardService = {
     team: number | null;
     occurred_on: string;
     notes: string;
+    reference_url?: string;
   }) => api.post(`${BASE}/meetings/`, data),
 
   createIdleFlag: (data: {
@@ -107,10 +108,24 @@ export const tlScorecardService = {
     flagged_on: string;
     productivity_task: string;
     notes: string;
+    reference_url?: string;
   }) => api.post(`${BASE}/idle-flags/`, data),
 
-  createReviewDelivery: (data: { period: string; recipient: string; delivered_on: string }) =>
-    api.post(`${BASE}/review-deliveries/`, data),
+  /** Weekly status log entry for an idle flag (one per flag per week, server-enforced). */
+  createIdleStatusUpdate: (data: {
+    flag: number;
+    week_of: string;
+    status_note: string;
+    productivity_task_snapshot?: string;
+  }) => api.post(`${BASE}/idle-status-updates/`, data),
+
+  createReviewDelivery: (data: {
+    period: string;
+    recipient: string;
+    delivered_on: string;
+    notes?: string;
+    reference_url?: string;
+  }) => api.post(`${BASE}/review-deliveries/`, data),
 
   getEscalations: (leaderId?: number) =>
     api.get<EscalationCandidate[]>(`${BASE}/escalations/`, { params: leaderParams(leaderId) }),
@@ -120,6 +135,7 @@ export const tlScorecardService = {
     absence_date: string;
     reason: string;
     notes: string;
+    reference_url?: string;
   }) => api.post(`${BASE}/absences/`, data),
 
   createPromotionFlag: (data: { employee: number; nominated_on: string; notes: string }) =>
@@ -150,7 +166,13 @@ export const tlScorecardService = {
     data: { status: "promoted" | "declined"; decision_note: string }
   ) => api.post<PromotionFlag>(`${BASE}/promotion-flags/${id}/decide/`, data),
 
-  createPIPRecord: (data: { employee: number; start_date: string; notes: string }) =>
+  createPIPRecord: (data: {
+    employee: number;
+    start_date: string;
+    notes: string;
+    shared_notes?: string;
+    reference_url?: string;
+  }) =>
     // Status is server-controlled: a new plan starts as a draft awaiting HR approval.
     api.post<PIPRecord>(`${BASE}/pip-records/`, data),
 

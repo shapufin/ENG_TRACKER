@@ -31,9 +31,18 @@ describe("FlagAbsenceDialog", () => {
     await waitFor(() => expect(screen.getByText("Member One")).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText("Team member"), { target: { value: "20" } });
     fireEvent.change(screen.getByLabelText("Reason (if known)"), { target: { value: "No contact" } });
+    fireEvent.change(screen.getByLabelText("Reference link (optional)"), {
+      target: { value: "https://example.com/absence" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /flag absence/i }));
 
     await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
-    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ employee: 20, reason: "No contact" }));
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        employee: 20,
+        reason: "No contact",
+        reference_url: "https://example.com/absence",
+      })
+    );
   });
 });

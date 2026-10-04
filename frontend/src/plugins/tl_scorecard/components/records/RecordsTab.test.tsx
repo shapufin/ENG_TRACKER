@@ -73,6 +73,7 @@ vi.mock("../../services/tlScorecardService", () => ({
     completePIPRecord: vi.fn(),
     cancelPIPRecord: vi.fn(),
     decidePromotionFlag: vi.fn(),
+    createIdleStatusUpdate: vi.fn(),
   },
 }));
 
@@ -191,6 +192,7 @@ beforeEach(() => {
     "completePIPRecord",
     "cancelPIPRecord",
     "decidePromotionFlag",
+    "createIdleStatusUpdate",
   ]) {
     svc[name].mockResolvedValue({ data: {} });
   }
@@ -480,6 +482,38 @@ describe("RecordsTab state actions", () => {
     expect(svc.deleteRecord).not.toHaveBeenCalled();
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }));
     await waitFor(() => expect(svc.deleteRecord).toHaveBeenCalledWith("idle-flags", 2));
+  });
+});
+
+describe("RecordsTab record detail", () => {
+  it("opens the detail dialog from the row's eye button", async () => {
+    svc.listIdleFlags.mockResolvedValue([{ ...IDLE, notes: "Weekly check-ins agreed" }]);
+    renderTab("?tab=records&kind=idle");
+    // The list cell joins task and notes, so match the joined preview.
+    await screen.findByText("Docs — Weekly check-ins agreed");
+    fireEvent.click(screen.getByRole("button", { name: "View details of Idle flag for Jane" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Idle flag for Jane")).toBeInTheDocument();
+    expect(within(dialog).getByText("Weekly check-ins agreed")).toBeInTheDocument();
+    expect(within(dialog).getByText("Weekly status log")).toBeInTheDocument();
+  });
+
+  it("opens the detail dialog on row click and logs a weekly update", async () => {
+    renderTab("?tab=records&kind=idle");
+    await screen.findByText("Docs");
+    fireEvent.click(screen.getByText("Docs").closest("tr")!);
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: /log weekly update/i }));
+    fireEvent.change(await screen.findByLabelText("Status note"), {
+      target: { value: "Still waiting on work" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Log update" }));
+    await waitFor(() =>
+      expect(svc.createIdleStatusUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ flag: 2, status_note: "Still waiting on work" })
+      )
+    );
+    expect(toast.success).toHaveBeenCalledWith("Weekly update logged");
   });
 });
 

@@ -19,6 +19,7 @@ interface LogMeetingDialogProps {
     team: number | null;
     occurred_on: string;
     notes: string;
+    reference_url?: string;
   }) => Promise<void>;
   /** In edit mode type, counterparty and team are fixed; `onCreate` receives the edited values. */
   mode?: "create" | "edit";
@@ -69,6 +70,7 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [occurredOn, setOccurredOn] = useState(initial?.occurred_on ?? todayIso());
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [referenceUrl, setReferenceUrl] = useState(initial?.reference_url ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const needsCounterparty = meetingType === "one_on_one" || meetingType === "tl_sync";
@@ -117,10 +119,12 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
         team: needsTeam ? teamId : null,
         occurred_on: occurredOn,
         notes,
+        reference_url: referenceUrl.trim(),
       });
       if (!isEdit) {
         setNotes("");
         setCounterpartyId(null);
+        setReferenceUrl("");
       }
       onOpenChange(false);
     } catch {
@@ -228,6 +232,17 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
             onChange={(e) => setNotes(e.target.value)}
             placeholder="What was discussed..."
             rows={3}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="meeting-reference">Reference link (optional)</Label>
+          <Input
+            id="meeting-reference"
+            type="url"
+            value={referenceUrl}
+            onChange={(e) => setReferenceUrl(e.target.value)}
+            placeholder="https://..."
           />
         </div>
       </div>

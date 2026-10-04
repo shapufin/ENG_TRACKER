@@ -10,7 +10,13 @@ import type { Absence } from "../types/tlScorecard";
 interface FlagAbsenceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (data: { employee: number; absence_date: string; reason: string; notes: string }) => Promise<void>;
+  onCreate: (data: {
+    employee: number;
+    absence_date: string;
+    reason: string;
+    notes: string;
+    reference_url?: string;
+  }) => Promise<void>;
   /** In edit mode the employee is fixed and `onCreate` receives the edited values. */
   mode?: "create" | "edit";
   initial?: Absence;
@@ -25,6 +31,7 @@ export const FlagAbsenceDialog: React.FC<FlagAbsenceDialogProps> = ({ open, onOp
   const [absenceDate, setAbsenceDate] = useState(initial?.absence_date ?? todayIso());
   const [reason, setReason] = useState(initial?.reason ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [referenceUrl, setReferenceUrl] = useState(initial?.reference_url ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -39,11 +46,18 @@ export const FlagAbsenceDialog: React.FC<FlagAbsenceDialogProps> = ({ open, onOp
     if (!canSubmit || employeeId === null) return;
     setIsSubmitting(true);
     try {
-      await onCreate({ employee: employeeId, absence_date: absenceDate, reason, notes });
+      await onCreate({
+        employee: employeeId,
+        absence_date: absenceDate,
+        reason,
+        notes,
+        reference_url: referenceUrl.trim(),
+      });
       if (!isEdit) {
         setEmployeeId(null);
         setReason("");
         setNotes("");
+        setReferenceUrl("");
       }
       onOpenChange(false);
     } catch {
@@ -102,6 +116,17 @@ export const FlagAbsenceDialog: React.FC<FlagAbsenceDialogProps> = ({ open, onOp
         <div>
           <Label htmlFor="absence-notes">Notes</Label>
           <Textarea id="absence-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+        </div>
+
+        <div>
+          <Label htmlFor="absence-reference">Reference link (optional)</Label>
+          <Input
+            id="absence-reference"
+            type="url"
+            value={referenceUrl}
+            onChange={(e) => setReferenceUrl(e.target.value)}
+            placeholder="https://..."
+          />
         </div>
       </div>
     </FormDialog>

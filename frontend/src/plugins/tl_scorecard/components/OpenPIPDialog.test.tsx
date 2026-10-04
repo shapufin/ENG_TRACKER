@@ -34,9 +34,18 @@ describe("OpenPIPDialog", () => {
     await waitFor(() => expect(screen.getByText("Member One")).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText("Team member"), { target: { value: "20" } });
     fireEvent.change(screen.getByLabelText("Evidence / rationale"), { target: { value: "Missed deadlines" } });
+    fireEvent.change(screen.getByLabelText("Shared with reviewers (optional)"), {
+      target: { value: "Weekly check-ins agreed" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /open pip/i }));
 
     await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
-    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ employee: 20, notes: "Missed deadlines" }));
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        employee: 20,
+        notes: "Missed deadlines",
+        shared_notes: "Weekly check-ins agreed",
+      })
+    );
   });
 });

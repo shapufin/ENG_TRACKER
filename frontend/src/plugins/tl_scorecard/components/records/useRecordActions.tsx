@@ -5,8 +5,11 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { tlScorecardService } from "../../services/tlScorecardService";
 import { EditRecordDialog } from "./EditRecordDialog";
 import { errorMessage } from "./errorMessage";
+import { LogIdleStatusUpdateDialog } from "./LogIdleStatusUpdateDialog";
 import { NoteActionDialog } from "./NoteActionDialog";
-import type { KindConfig, RecordActionId, RecordRow } from "./recordKinds";
+import { RecordDetailDialog } from "./RecordDetailDialog";
+import type { IdleFlag } from "../../types/tlScorecard";
+import type { KindConfig, RecordActionId, RecordRow, Viewer } from "./recordKinds";
 
 interface NoteAction {
   title: string;
@@ -76,9 +79,10 @@ interface Pending {
 const INVALIDATED = ["records", "scorecard", "escalations", "pip-records"] as const;
 
 /** Runs a record's state action and renders the dialogs that action needs. */
-export const useRecordActions = () => {
+export const useRecordActions = (viewer: Viewer) => {
   const queryClient = useQueryClient();
   const [pending, setPending] = useState<Pending | null>(null);
+  const [detail, setDetail] = useState<Pick<Pending, "config" | "record"> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const perform = async (fn: () => Promise<unknown>, success: string) => {
@@ -103,9 +107,45 @@ export const useRecordActions = () => {
 
   const close = () => setPending(null);
   const noteAction = pending ? NOTE_ACTIONS[pending.action] : undefined;
+  const view = (config: KindConfig<RecordRow>, record: RecordRow) => setDetail({ config, record });
 
   const dialogs = (
     <>
+      {detail && (
+        <RecordDetailDialog
+          open
+          config={detail.config}
+          record={detail.record}
+          viewer={viewer}
+          onOpenChange={(open) => {
+            if (!open) setDetail(null);
+          }}
+          onLogUpdate={(record) => {
+            setDetail(null);
+            setPending({ action: "log-update", config: detail.config, record });
+          }}
+        />
+      )}
+      {pending?.action === "log-update" && (
+        <LogIdleStatusUpdateDialog
+          key={pending.record.id}
+          open
+          flag={pending.record as IdleFlag}
+          onOpenChange={(open) => {
+            if (!open) close();
+          }}
+          onSubmit={(data) =>
+            perform(
+              () =>
+                tlScorecardService.createIdleStatusUpdate({
+                  flag: pending.record.id,
+                  ...data,
+                }),
+              "Weekly update logged"
+            )
+          }
+        />
+      )}
       {pending?.action === "edit" && (
         <EditRecordDialog
           key={pending.record.id}
@@ -158,5 +198,5 @@ export const useRecordActions = () => {
     </>
   );
 
-  return { run, dialogs };
+  return { run, view, dialogs };
 };

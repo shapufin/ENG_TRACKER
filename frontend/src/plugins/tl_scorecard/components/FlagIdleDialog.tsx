@@ -15,6 +15,7 @@ interface FlagIdleDialogProps {
     flagged_on: string;
     productivity_task: string;
     notes: string;
+    reference_url?: string;
   }) => Promise<void>;
   /** In edit mode the employee is fixed and `onCreate` receives the edited values. */
   mode?: "create" | "edit";
@@ -30,6 +31,7 @@ export const FlagIdleDialog: React.FC<FlagIdleDialogProps> = ({ open, onOpenChan
   const [flaggedOn, setFlaggedOn] = useState(initial?.flagged_on ?? todayIso());
   const [productivityTask, setProductivityTask] = useState(initial?.productivity_task ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [referenceUrl, setReferenceUrl] = useState(initial?.reference_url ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -44,11 +46,18 @@ export const FlagIdleDialog: React.FC<FlagIdleDialogProps> = ({ open, onOpenChan
     if (!canSubmit || employeeId === null) return;
     setIsSubmitting(true);
     try {
-      await onCreate({ employee: employeeId, flagged_on: flaggedOn, productivity_task: productivityTask, notes });
+      await onCreate({
+        employee: employeeId,
+        flagged_on: flaggedOn,
+        productivity_task: productivityTask,
+        notes,
+        reference_url: referenceUrl.trim(),
+      });
       if (!isEdit) {
         setEmployeeId(null);
         setProductivityTask("");
         setNotes("");
+        setReferenceUrl("");
       }
       onOpenChange(false);
     } catch {
@@ -113,6 +122,17 @@ export const FlagIdleDialog: React.FC<FlagIdleDialogProps> = ({ open, onOpenChan
         <div>
           <Label htmlFor="idle-notes">Notes (for HRBP / NS Demand)</Label>
           <Textarea id="idle-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+        </div>
+
+        <div>
+          <Label htmlFor="idle-reference">Reference link (optional)</Label>
+          <Input
+            id="idle-reference"
+            type="url"
+            value={referenceUrl}
+            onChange={(e) => setReferenceUrl(e.target.value)}
+            placeholder="https://..."
+          />
         </div>
       </div>
     </FormDialog>

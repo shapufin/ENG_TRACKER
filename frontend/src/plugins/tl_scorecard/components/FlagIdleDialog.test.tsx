@@ -36,11 +36,18 @@ describe("FlagIdleDialog", () => {
     fireEvent.change(screen.getByLabelText("Productivity task assigned"), {
       target: { value: "Doc review" },
     });
+    fireEvent.change(screen.getByLabelText("Reference link (optional)"), {
+      target: { value: "https://example.com/evidence" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /flag idle risk/i }));
 
     await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
     expect(onCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ employee: 20, productivity_task: "Doc review" })
+      expect.objectContaining({
+        employee: 20,
+        productivity_task: "Doc review",
+        reference_url: "https://example.com/evidence",
+      })
     );
   });
 });

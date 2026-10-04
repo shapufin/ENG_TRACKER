@@ -10,7 +10,13 @@ import type { PIPRecord } from "../types/tlScorecard";
 interface OpenPIPDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (data: { employee: number; start_date: string; notes: string }) => Promise<void>;
+  onCreate: (data: {
+    employee: number;
+    start_date: string;
+    notes: string;
+    shared_notes?: string;
+    reference_url?: string;
+  }) => Promise<void>;
   /** In edit mode the employee is fixed and `onCreate` receives the edited values. */
   mode?: "create" | "edit";
   initial?: PIPRecord;
@@ -24,6 +30,8 @@ export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({ open, onOpenChange
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [startDate, setStartDate] = useState(initial?.start_date ?? todayIso());
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [sharedNotes, setSharedNotes] = useState(initial?.shared_notes ?? "");
+  const [referenceUrl, setReferenceUrl] = useState(initial?.reference_url ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -38,10 +46,18 @@ export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({ open, onOpenChange
     if (!canSubmit || employeeId === null) return;
     setIsSubmitting(true);
     try {
-      await onCreate({ employee: employeeId, start_date: startDate, notes: notes.trim() });
+      await onCreate({
+        employee: employeeId,
+        start_date: startDate,
+        notes: notes.trim(),
+        shared_notes: sharedNotes.trim(),
+        reference_url: referenceUrl.trim(),
+      });
       if (!isEdit) {
         setEmployeeId(null);
         setNotes("");
+        setSharedNotes("");
+        setReferenceUrl("");
       }
       onOpenChange(false);
     } catch {
@@ -98,6 +114,28 @@ export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({ open, onOpenChange
         <div>
           <Label htmlFor="pip-notes">Evidence / rationale</Label>
           <Textarea id="pip-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+        </div>
+
+        <div>
+          <Label htmlFor="pip-shared-notes">Shared with reviewers (optional)</Label>
+          <Textarea
+            id="pip-shared-notes"
+            value={sharedNotes}
+            onChange={(e) => setSharedNotes(e.target.value)}
+            placeholder="What HR / your HBPR may read — the evidence above stays private."
+            rows={2}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="pip-reference">Reference link (optional)</Label>
+          <Input
+            id="pip-reference"
+            type="url"
+            value={referenceUrl}
+            onChange={(e) => setReferenceUrl(e.target.value)}
+            placeholder="https://..."
+          />
         </div>
       </div>
     </FormDialog>

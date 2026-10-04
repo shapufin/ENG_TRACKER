@@ -39,7 +39,8 @@ export type RecordActionId =
   | "complete"
   | "cancel"
   | "promote"
-  | "decline";
+  | "decline"
+  | "log-update";
 
 export const ACTION_LABELS: Record<RecordActionId, string> = {
   edit: "Edit",
@@ -53,6 +54,7 @@ export const ACTION_LABELS: Record<RecordActionId, string> = {
   cancel: "Cancel plan",
   promote: "Promote",
   decline: "Decline",
+  "log-update": "Log weekly update",
 };
 
 export interface RecordRow {
@@ -114,7 +116,8 @@ const MEETING_LABELS = {
 
 const owns = (viewer: Viewer, ownerId: number | null) =>
   viewer.userId !== null && viewer.userId === ownerId;
-const canManage = (viewer: Viewer, ownerId: number | null) =>
+/** Staff or the record's owner — same rule as the per-kind `actions` lists. */
+export const canManage = (viewer: Viewer, ownerId: number | null) =>
   viewer.isStaff || owns(viewer, ownerId);
 
 // Same rule as the backend SLA (`count_business_days(start, today) - 1`): Mon-Fri
@@ -184,7 +187,7 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
     actions: (r, v) =>
       canManage(v, r.flagged_by)
         ? r.status === "open"
-          ? ["edit", "resolve", "delete"]
+          ? ["edit", "log-update", "resolve", "delete"]
           : ["edit", "delete"]
         : [],
   }),

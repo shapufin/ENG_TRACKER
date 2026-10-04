@@ -164,7 +164,7 @@ export const RecordsTab: React.FC = () => {
     };
   }, [activeRows, activeIndex]);
 
-  const { run, dialogs } = useRecordActions();
+  const { run, view, dialogs } = useRecordActions(viewer);
 
   const pills: { value: StateFilter; label: string }[] = [
     { value: "all", label: "All" },
@@ -346,6 +346,7 @@ export const RecordsTab: React.FC = () => {
                       onRetry={() => results[index].refetch()}
                       viewer={viewer}
                       onAction={(action, record) => run(action, config, record)}
+                      onView={(record) => view(config, record)}
                     />
                   </div>
                 )}

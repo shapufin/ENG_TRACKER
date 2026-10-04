@@ -99,9 +99,24 @@ export interface PIPRecord {
   notes: string;
   closed_on: string | null;
   status_note: string;
+  /** What reviewers (staff) may read; `notes` stays the TL's private evidence. */
+  shared_notes?: string;
+  reference_url?: string;
 }
 
 export type MeetingKind = "one_on_one" | "tl_sync" | "team_meeting";
+
+export type MeetingAttendeeRole = "member" | "hrbp" | "observer";
+
+export interface MeetingAttendee {
+  id: number;
+  meeting: number;
+  user: number;
+  user_name: string | null;
+  role: MeetingAttendeeRole;
+  /** The attendee's own notes — the API redacts them unless the viewer is that attendee or staff. */
+  notes: string;
+}
 
 export interface Meeting {
   id: number;
@@ -115,6 +130,25 @@ export interface Meeting {
   notes: string;
   shared_summary: string;
   shared_at: string | null;
+  attendees?: MeetingAttendee[];
+  notes_published_at?: string | null;
+  reference_url?: string;
+  recorded_by?: number | null;
+  recorded_by_name?: string | null;
+  recorded_at?: string;
+}
+
+/** Weekly check-in logged against an idle flag (`status_updates` on the serializer). */
+export interface IdleStatusUpdate {
+  id: number;
+  flag: number;
+  /** Monday of the reported week (YYYY-MM-DD). */
+  week_of: string;
+  status_note: string;
+  productivity_task_snapshot: string;
+  recorded_by: number | null;
+  recorded_by_name: string | null;
+  recorded_at: string;
 }
 
 export interface IdleFlag {
@@ -128,6 +162,8 @@ export interface IdleFlag {
   productivity_task: string;
   resolved_on: string | null;
   notes: string;
+  reference_url?: string;
+  status_updates?: IdleStatusUpdate[];
 }
 
 export interface Absence {
@@ -140,6 +176,8 @@ export interface Absence {
   reason: string;
   addressed_on: string | null;
   notes: string;
+  reference_url?: string;
+  recorded_at?: string;
 }
 
 export interface ReviewDelivery {
@@ -150,6 +188,10 @@ export interface ReviewDelivery {
   recipient: string;
   delivered_on: string;
   notes: string;
+  reference_url?: string;
+  recorded_by?: number | null;
+  recorded_by_name?: string | null;
+  recorded_at?: string;
 }
 
 export interface PromotionFlag {

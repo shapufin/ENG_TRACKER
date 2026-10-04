@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { ClipboardList, MoreHorizontal, ScrollText, SearchX } from "lucide-react";
+import { ClipboardList, Eye, MoreHorizontal, ScrollText, SearchX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -45,6 +45,8 @@ interface RecordListPanelProps {
   onRetry: () => void;
   viewer: Viewer;
   onAction: (action: RecordActionId, record: RecordRow) => void;
+  /** Opens the full record detail dialog (row click, Enter key or the eye button). */
+  onView: (record: RecordRow) => void;
 }
 
 const RowActions: React.FC<{
@@ -117,6 +119,7 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
   onRetry,
   viewer,
   onAction,
+  onView,
 }) => {
   if (isLoading) return <Skeleton label={config.label.toLowerCase()} />;
   if (error) {
@@ -188,7 +191,15 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
               return (
                 <tr
                   key={record.id}
-                  className="max-md:block max-md:space-y-1 max-md:px-4 max-md:py-3"
+                  tabIndex={0}
+                  onClick={() => onView(record)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onView(record);
+                    }
+                  }}
+                  className="hover:bg-muted/40 cursor-pointer max-md:block max-md:space-y-1 max-md:px-4 max-md:py-3"
                 >
                   <td
                     data-label="Date"
@@ -221,12 +232,26 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
                   <td data-label="State" className={cellClass}>
                     <StateBadge {...state} />
                   </td>
-                  <td className="px-4 py-1 text-right max-md:px-0">
-                    <RowActions
-                      title={config.title(record)}
-                      actions={config.actions(record, viewer)}
-                      onPick={(action) => onAction(action, record)}
-                    />
+                  <td
+                    className="px-4 py-1 text-right max-md:px-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="flex items-center justify-end gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`View details of ${config.title(record)}`}
+                        className="h-11 w-11 sm:h-9 sm:w-9"
+                        onClick={() => onView(record)}
+                      >
+                        <Eye className="h-4 w-4" aria-hidden="true" />
+                      </Button>
+                      <RowActions
+                        title={config.title(record)}
+                        actions={config.actions(record, viewer)}
+                        onPick={(action) => onAction(action, record)}
+                      />
+                    </span>
                   </td>
                 </tr>
               );
