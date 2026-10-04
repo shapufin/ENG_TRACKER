@@ -4,8 +4,7 @@ import type { KindConfig, RecordRow } from "./recordKinds";
 export const RECORDS_CSV_COLUMNS = ["ID", "Date", "Type", "With", "Focus", "State"] as const;
 
 /** Excel/Sheets run a cell starting with these as a formula; prefix `'` so free text stays text. */
-const neutralise = (value: string): string =>
-  /^\s*[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+const neutralise = (value: string): string => (/^\s*[=+\-@\t\r]/.test(value) ? `'${value}` : value);
 
 const escape = (value: string): string =>
   /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
