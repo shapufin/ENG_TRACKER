@@ -194,6 +194,9 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
                   tabIndex={0}
                   onClick={() => onView(record)}
                   onKeyDown={(e) => {
+                    // The eye and ⋯ buttons handle their own keys; only a key
+                    // pressed on the row itself opens the record.
+                    if (e.target !== e.currentTarget) return;
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       onView(record);
