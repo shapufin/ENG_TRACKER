@@ -1,5 +1,16 @@
+import {
+  CalendarDays,
+  Clock,
+  ShieldCheck,
+  TrendingUp,
+  TriangleAlert,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { CADENCE_LABELS, CADENCE_STATUS_LABELS } from "@/types/hbprAssignment";
 import type { HbprCadenceStatus, HbprEvidenceKind } from "../../types/tlScorecard";
+import type { HbprRecordResource } from "../../hooks/useHbprWorkspaceQueries";
+import type { Tone } from "@/components/ui/tone";
 
 export { CADENCE_LABELS, CADENCE_STATUS_LABELS };
 
@@ -37,3 +48,23 @@ export const formatDate = (iso: string | null): string =>
     : "—";
 
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** Sidebar icon + tone per record category (mirrors the TL reference mockup). */
+export const HBPR_RESOURCE_ICONS: Record<HbprRecordResource, { icon: LucideIcon; tone: Tone }> = {
+  meetings: { icon: Users, tone: "success" },
+  "idle-flags": { icon: Clock, tone: "warning" },
+  absences: { icon: CalendarDays, tone: "info" },
+  "review-deliveries": { icon: ShieldCheck, tone: "accent" },
+  "pip-records": { icon: TriangleAlert, tone: "danger" },
+  "promotion-flags": { icon: TrendingUp, tone: "success" },
+};
+
+/** Singular noun per record category, for snippet headers and history links. */
+export const HBPR_RESOURCE_NOUNS: Record<HbprRecordResource, string> = {
+  meetings: "meeting",
+  "idle-flags": "idle flag",
+  absences: "absence",
+  "review-deliveries": "review delivery",
+  "pip-records": "PIP",
+  "promotion-flags": "promotion nomination",
+};

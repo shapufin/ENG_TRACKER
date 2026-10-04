@@ -105,7 +105,7 @@ export const HbprWorkspacePage: React.FC = () => {
     // Keep the header (period selector, views) mounted so the skeleton occupies
     // the final geometry instead of the layout shifting when data lands.
     return (
-      <HbprWorkspaceHeader {...headerProps}>
+      <HbprWorkspaceHeader {...headerProps} attention={null}>
         <Skeleton />
       </HbprWorkspaceHeader>
     );
@@ -113,7 +113,7 @@ export const HbprWorkspacePage: React.FC = () => {
 
   if (leaders.length === 0) {
     return (
-      <HbprWorkspaceHeader {...headerProps}>
+      <HbprWorkspaceHeader {...headerProps} attention={null}>
         <HbprWorkspaceEmptyState />
       </HbprWorkspaceHeader>
     );
@@ -122,6 +122,7 @@ export const HbprWorkspacePage: React.FC = () => {
   return (
     <HbprWorkspaceHeader
       {...headerProps}
+      attention={overview.data.needs_attention}
       exportLeaderId={exportLeaderId}
       exportLeaderName={leaders.find((l) => l.id === exportLeaderId)?.name}
     >

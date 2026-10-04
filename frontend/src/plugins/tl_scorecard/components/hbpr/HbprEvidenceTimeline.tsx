@@ -12,7 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { UserAvatar } from "@/components/calendar/UserAvatar";
 import { ExportButton } from "../ExportButton";
+import { avatarSeed } from "../avatarSeed";
 import type { HbprEvidence, HbprLeaderRow } from "../../types/tlScorecard";
 import { EVIDENCE_KIND_LABELS, EVIDENCE_KIND_TONE, formatDate } from "./hbprMeta";
 import { PageNav } from "./PageNav";
@@ -54,13 +56,11 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
   const rows = evidence;
 
   return (
-    <section aria-labelledby="hbpr-evidence" className="space-y-3">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <h2 id="hbpr-evidence" className="text-muted-foreground text-sm font-semibold">
-          Governance evidence · {year}
-        </h2>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="w-56">
+    <section aria-label={`Governance evidence · ${year}`} className="space-y-4">
+      <h2 className="text-muted-foreground text-sm font-semibold">Governance evidence · {year}</h2>
+      <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <div className="w-full sm:max-w-xs">
             <Label htmlFor="hbpr-evidence-leader">Albanian team leader</Label>
             <Select
               value={leaderFilter === null ? ALL : String(leaderFilter)}
@@ -81,7 +81,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
           </div>
           {leaderFilter !== null && <ExportButton leaderId={leaderFilter} />}
         </div>
-      </div>
+      </GlassCard>
 
       {isError ? (
         <ErrorCard title="Could not load governance evidence" onRetry={onRetry} />
@@ -129,10 +129,18 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
                         {row.reporting_year ? ` · reporting ${row.reporting_year}` : ""}
                       </p>
                     </div>
-                    <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                      <FileClock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                      Recorded by {row.recorded_by_name ?? "—"}
-                    </p>
+                    <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                      {row.recorded_by_name ? (
+                        <UserAvatar
+                          name={row.recorded_by_name}
+                          size="xs"
+                          colorSeed={avatarSeed(row.recorded_by_name)}
+                        />
+                      ) : (
+                        <FileClock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      )}
+                      <span>Recorded by {row.recorded_by_name ?? "—"}</span>
+                    </div>
                   </div>
 
                   {row.shared_summary && (

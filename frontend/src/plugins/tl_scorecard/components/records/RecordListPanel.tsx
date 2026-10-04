@@ -11,6 +11,7 @@ import { UserAvatar } from "@/components/calendar/UserAvatar";
 import { isForbidden } from "../hbpr/isForbidden";
 import { NoAccess } from "../hbpr/NoAccess";
 import { PageNav } from "../hbpr/PageNav";
+import { avatarSeed } from "../avatarSeed";
 import { StateBadge } from "./StateBadge";
 import {
   ACTION_LABELS,
@@ -45,9 +46,6 @@ interface RecordListPanelProps {
   viewer: Viewer;
   onAction: (action: RecordActionId, record: RecordRow) => void;
 }
-
-const avatarSeed = (name: string): number =>
-  [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
 
 const RowActions: React.FC<{
   title: string;
@@ -204,12 +202,12 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
                     </Badge>
                   </td>
                   <td data-label="With" className={cellClass}>
-                    <span className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex min-w-0 items-center gap-2.5">
                       <UserAvatar name={person} size="sm" colorSeed={avatarSeed(person)} />
                       <span className="max-w-[10rem] truncate font-medium" title={person}>
                         {person}
                       </span>
-                    </span>
+                    </div>
                   </td>
                   <td data-label="Focus" className={cellClass}>
                     {focus ? (
