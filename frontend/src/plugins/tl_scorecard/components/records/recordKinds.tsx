@@ -1,5 +1,15 @@
-import React from "react";
-import { Ban, CheckCircle2, CircleDot, Clock, type LucideIcon } from "lucide-react";
+import {
+  Ban,
+  CalendarDays,
+  CheckCircle2,
+  CircleDot,
+  Clock,
+  ShieldCheck,
+  TrendingUp,
+  TriangleAlert,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import type { Tone } from "@/components/ui/tone";
 import { tlScorecardService, type RecordResource } from "../../services/tlScorecardService";
 import type {
@@ -72,10 +82,25 @@ export interface KindConfig<T extends RecordRow> {
   ownerId: (r: T) => number | null;
   date: (r: T) => string;
   title: (r: T) => string;
-  columns: { header: string; cell: (r: T) => React.ReactNode }[];
+  /** Person shown in the "With" column (avatar + name); roles are not in the API. */
+  person: (r: T) => string;
+  /** "Focus / notes preview" text, or null when the row carries none. */
+  focus: (r: T) => string | null;
+  /** Small type chip ("1-on-1", "Absence", the review period, ...). */
+  typeChip: (r: T) => string;
   state: (r: T) => RecordState;
   actions: (r: T, viewer: Viewer) => RecordActionId[];
 }
+
+/** Sidebar icon + tone per record category (mirrors the reference mockup). */
+export const KIND_ICONS: Record<RecordKind, { icon: LucideIcon; tone: Tone }> = {
+  meetings: { icon: Users, tone: "success" },
+  idle: { icon: Clock, tone: "warning" },
+  absences: { icon: CalendarDays, tone: "info" },
+  reviews: { icon: ShieldCheck, tone: "accent" },
+  promotions: { icon: TrendingUp, tone: "success" },
+  pips: { icon: TriangleAlert, tone: "danger" },
+};
 
 const define = <T extends RecordRow>(config: KindConfig<T>) =>
   config as unknown as KindConfig<RecordRow>;
@@ -105,6 +130,15 @@ export const workingDaysOpen = (isoDate: string, now = new Date()) => {
 };
 const ABSENCE_SLA_DAYS = 5;
 
+/** "Task — detail" preview; null when the row carries no focus text at all. */
+const joinFocus = (...parts: (string | null | undefined)[]): string | null => {
+  const text = parts
+    .map((p) => p?.trim())
+    .filter(Boolean)
+    .join(" — ");
+  return text || null;
+};
+
 const PIP_STATES: Record<PIPRecord["status"], RecordState> = {
   draft: { label: "Pending approval", tone: "warning", icon: Clock },
   active: { label: "Active", tone: "info", icon: CircleDot },
@@ -122,11 +156,9 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
     ownerId: (r) => r.organizer,
     date: (r) => r.occurred_on,
     title: (r) => `${MEETING_LABELS[r.meeting_type]} on ${r.occurred_on}`,
-    columns: [
-      { header: "Date", cell: (r) => r.occurred_on },
-      { header: "Type", cell: (r) => MEETING_LABELS[r.meeting_type] },
-      { header: "With", cell: (r) => r.counterparty_name ?? "Whole team" },
-    ],
+    person: (r) => r.counterparty_name ?? "Whole team",
+    focus: (r) => r.shared_summary || r.notes || null,
+    typeChip: (r) => MEETING_LABELS[r.meeting_type],
     state: (r) =>
       r.shared_at
         ? { label: "Summary shared", tone: "success", icon: CheckCircle2 }
@@ -142,11 +174,9 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
     ownerId: (r) => r.flagged_by,
     date: (r) => r.flagged_on,
     title: (r) => `Idle flag for ${name(r.employee_name)}`,
-    columns: [
-      { header: "Team member", cell: (r) => name(r.employee_name) },
-      { header: "Flagged on", cell: (r) => r.flagged_on },
-      { header: "Task", cell: (r) => r.productivity_task || "—" },
-    ],
+    person: (r) => name(r.employee_name),
+    focus: (r) => joinFocus(r.productivity_task, r.notes),
+    typeChip: () => "Idle flag",
     state: (r) =>
       r.status === "resolved"
         ? { label: "Resolved", tone: "success", icon: CheckCircle2 }
@@ -167,11 +197,9 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
     ownerId: (r) => r.flagged_by,
     date: (r) => r.absence_date,
     title: (r) => `Absence of ${name(r.employee_name)} on ${r.absence_date}`,
-    columns: [
-      { header: "Team member", cell: (r) => name(r.employee_name) },
-      { header: "Date", cell: (r) => r.absence_date },
-      { header: "Reason", cell: (r) => r.reason || "—" },
-    ],
+    person: (r) => name(r.employee_name),
+    focus: (r) => joinFocus(r.reason, r.notes),
+    typeChip: () => "Absence",
     state: (r) => {
       if (r.addressed_on) return { label: "Addressed", tone: "success", icon: CheckCircle2 };
       const days = workingDaysOpen(r.absence_date);
@@ -199,11 +227,9 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
     ownerId: (r) => r.leader,
     date: (r) => r.delivered_on,
     title: (r) => `Review for ${r.recipient} (${r.period})`,
-    columns: [
-      { header: "Period", cell: (r) => r.period },
-      { header: "Recipient", cell: (r) => r.recipient },
-      { header: "Delivered on", cell: (r) => r.delivered_on },
-    ],
+    person: (r) => name(r.recipient),
+    focus: (r) => joinFocus(`Period ${r.period}`, r.notes),
+    typeChip: (r) => r.period,
     state: () => ({ label: "Delivered", tone: "success", icon: CheckCircle2 }),
     actions: (r, v) => (canManage(v, r.leader) ? ["edit", "delete"] : []),
   }),
@@ -216,11 +242,9 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
     ownerId: (r) => r.nominated_by,
     date: (r) => r.nominated_on,
     title: (r) => `Promotion nomination for ${name(r.employee_name)}`,
-    columns: [
-      { header: "Team member", cell: (r) => name(r.employee_name) },
-      { header: "Nominated on", cell: (r) => r.nominated_on },
-      { header: "Nominated by", cell: (r) => name(r.nominated_by_name) },
-    ],
+    person: (r) => name(r.employee_name),
+    focus: (r) => r.decision_note || r.notes || null,
+    typeChip: () => "Nomination",
     state: (r) => {
       if (r.status === "promoted")
         return { label: "Promoted", tone: "success", icon: CheckCircle2 };
@@ -245,11 +269,9 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
     ownerId: (r) => r.tl,
     date: (r) => r.start_date,
     title: (r) => `PIP for ${name(r.employee_name)}`,
-    columns: [
-      { header: "Team member", cell: (r) => name(r.employee_name) },
-      { header: "Started", cell: (r) => r.start_date },
-      { header: "Team leader", cell: (r) => name(r.tl_name) },
-    ],
+    person: (r) => name(r.employee_name),
+    focus: (r) => r.status_note || r.notes || null,
+    typeChip: () => "PIP",
     state: (r) => PIP_STATES[r.status],
     actions: (r, v) => {
       const manage = canManage(v, r.tl);

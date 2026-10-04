@@ -9,9 +9,11 @@ interface ExportButtonProps {
   leaderId?: number;
   /** ISO date inside the month to export; defaults to the current month. */
   month?: string;
+  /** Icon-only toolbar rendering (same workbook, same errors). */
+  iconOnly?: boolean;
 }
 
-export const ExportButton: React.FC<ExportButtonProps> = ({ leaderId, month }) => {
+export const ExportButton: React.FC<ExportButtonProps> = ({ leaderId, month, iconOnly }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +22,10 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ leaderId, month }) =
     setError(null);
     try {
       const response = await tlScorecardService.exportWorkbook(month, leaderId);
-      downloadBlobResponse(response.data, `tl-scorecard-${(month ?? new Date().toISOString()).slice(0, 7)}.xlsx`);
+      downloadBlobResponse(
+        response.data,
+        `tl-scorecard-${(month ?? new Date().toISOString()).slice(0, 7)}.xlsx`
+      );
     } catch (e) {
       const forbidden = (e as { response?: { status?: number } } | null)?.response?.status === 403;
       const message = forbidden
@@ -33,6 +38,28 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ leaderId, month }) =
     }
   };
 
+  if (iconOnly) {
+    return (
+      <div className="flex flex-col items-start gap-1">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleExport}
+          disabled={isExporting}
+          aria-label="Export report"
+          title="Export report"
+        >
+          <Download className="h-4 w-4" aria-hidden="true" />
+        </Button>
+        {error && (
+          <p role="alert" className="text-tone-danger-text text-xs">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-start gap-1">
       <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
@@ -40,7 +67,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ leaderId, month }) =
         {isExporting ? "Exporting…" : "Export Report"}
       </Button>
       {error && (
-        <p role="alert" className="text-xs text-tone-danger-text">
+        <p role="alert" className="text-tone-danger-text text-xs">
           {error}
         </p>
       )}

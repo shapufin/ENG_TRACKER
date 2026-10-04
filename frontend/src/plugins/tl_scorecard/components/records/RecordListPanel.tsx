@@ -1,12 +1,16 @@
 import React, { useState } from "react";
-import { ClipboardList, MoreHorizontal, SearchX } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ClipboardList, MoreHorizontal, ScrollText, SearchX } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { UserAvatar } from "@/components/calendar/UserAvatar";
 import { isForbidden } from "../hbpr/isForbidden";
 import { NoAccess } from "../hbpr/NoAccess";
+import { PageNav } from "../hbpr/PageNav";
 import { StateBadge } from "./StateBadge";
 import {
   ACTION_LABELS,
@@ -16,10 +20,24 @@ import {
   type Viewer,
 } from "./recordKinds";
 
+export interface RecordSnippet {
+  person: string;
+  focus: string;
+}
+
 interface RecordListPanelProps {
   config: KindConfig<RecordRow>;
-  rows: RecordRow[] | undefined;
-  /** Rows before the month / team-leader filters, to tell "no records" from "no match". */
+  /** Current page slice. */
+  rows: RecordRow[];
+  /** Filtered rows across all pages (for counts, pagination and the snippet). */
+  total: number;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  latest: { row: RecordRow; snippet: RecordSnippet } | null;
+  /** Clears the month filter to show the full history of this kind. */
+  historyHref: string;
+  /** Rows before every filter, to tell "no records" from "no match". */
   totalCount: number;
   isLoading: boolean;
   error: unknown;
@@ -27,6 +45,9 @@ interface RecordListPanelProps {
   viewer: Viewer;
   onAction: (action: RecordActionId, record: RecordRow) => void;
 }
+
+const avatarSeed = (name: string): number =>
+  [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
 
 const RowActions: React.FC<{
   title: string;
@@ -80,9 +101,18 @@ const Skeleton: React.FC<{ label: string }> = ({ label }) => (
   </div>
 );
 
+const cellClass =
+  "max-md:before:text-muted-foreground px-4 py-2.5 max-md:flex max-md:justify-between max-md:gap-3 max-md:px-0 max-md:py-0.5 max-md:before:text-xs max-md:before:content-[attr(data-label)]";
+
 export const RecordListPanel: React.FC<RecordListPanelProps> = ({
   config,
   rows,
+  total,
+  page,
+  pageSize,
+  onPageChange,
+  latest,
+  historyHref,
   totalCount,
   isLoading,
   error,
@@ -98,7 +128,7 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
       <ErrorCard title={`Could not load ${config.label.toLowerCase()}`} onRetry={onRetry} />
     );
   }
-  if (!rows || rows.length === 0) {
+  if (total === 0) {
     return totalCount === 0 ? (
       <EmptyState
         icon={ClipboardList}
@@ -117,17 +147,33 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
   }
 
   return (
-    <GlassCard animateOnMount={false} isHoverLift={false} className="p-0">
+    <GlassCard animateOnMount={false} isHoverLift={false} className="overflow-hidden p-0">
+      <div className="border-line-subtle flex items-center justify-between gap-3 border-b px-5 py-3.5">
+        <h2 className="text-foreground flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
+          {config.label} Records
+          <span className="bg-tone-success-text h-1.5 w-1.5 rounded-full" aria-hidden="true" />
+        </h2>
+        <span className="text-muted-foreground text-xs">
+          Showing {rows.length} of {total} records
+        </span>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm max-md:block">
           <caption className="sr-only">{config.label}</caption>
-          <thead className="text-muted-foreground text-xs max-md:sr-only">
+          <thead className="bg-muted/40 text-muted-foreground text-xs max-md:sr-only">
             <tr className="border-border/50 border-b">
-              {config.columns.map((column) => (
-                <th key={column.header} scope="col" className="px-4 py-2 font-medium">
-                  {column.header}
-                </th>
-              ))}
+              <th scope="col" className="px-4 py-2 font-medium">
+                Date
+              </th>
+              <th scope="col" className="px-4 py-2 font-medium">
+                Type
+              </th>
+              <th scope="col" className="px-4 py-2 font-medium">
+                With
+              </th>
+              <th scope="col" className="px-4 py-2 font-medium">
+                Focus / Notes preview
+              </th>
               <th scope="col" className="px-4 py-2 font-medium">
                 State
               </th>
@@ -139,27 +185,47 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
           <tbody className="divide-border/50 divide-y max-md:block">
             {rows.map((record) => {
               const state = config.state(record);
-              const title = config.title(record);
+              const person = config.person(record);
+              const focus = config.focus(record);
               return (
                 <tr
                   key={record.id}
                   className="max-md:block max-md:space-y-1 max-md:px-4 max-md:py-3"
                 >
-                  {config.columns.map((column) => (
-                    <td
-                      key={column.header}
-                      data-label={column.header}
-                      className="max-md:before:text-muted-foreground px-4 py-2.5 max-md:flex max-md:justify-between max-md:gap-3 max-md:px-0 max-md:py-0.5 max-md:before:text-xs max-md:before:content-[attr(data-label)]"
-                    >
-                      {column.cell(record)}
-                    </td>
-                  ))}
-                  <td className="px-4 py-2.5 max-md:px-0 max-md:py-0.5">
+                  <td
+                    data-label="Date"
+                    className={`${cellClass} font-mono text-xs whitespace-nowrap`}
+                  >
+                    {config.date(record)}
+                  </td>
+                  <td data-label="Type" className={cellClass}>
+                    <Badge variant="neutral" className="whitespace-nowrap">
+                      {config.typeChip(record)}
+                    </Badge>
+                  </td>
+                  <td data-label="With" className={cellClass}>
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <UserAvatar name={person} size="sm" colorSeed={avatarSeed(person)} />
+                      <span className="max-w-[10rem] truncate font-medium" title={person}>
+                        {person}
+                      </span>
+                    </span>
+                  </td>
+                  <td data-label="Focus" className={cellClass}>
+                    {focus ? (
+                      <span className="text-muted-foreground block max-w-xs truncate" title={focus}>
+                        {focus}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td data-label="State" className={cellClass}>
                     <StateBadge {...state} />
                   </td>
                   <td className="px-4 py-1 text-right max-md:px-0">
                     <RowActions
-                      title={title}
+                      title={config.title(record)}
                       actions={config.actions(record, viewer)}
                       onPick={(action) => onAction(action, record)}
                     />
@@ -169,6 +235,41 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
             })}
           </tbody>
         </table>
+      </div>
+      {latest && (
+        <div className="border-line-subtle bg-muted/40 flex flex-col gap-3 border-t px-5 py-4 text-xs md:flex-row md:items-center md:justify-between">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <span className="border-border bg-card text-muted-foreground rounded-md border p-1">
+              <ScrollText className="h-3.5 w-3.5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-foreground font-bold">
+                Latest {config.noun} ({latest.snippet.person}):
+              </p>
+              <p
+                className="text-muted-foreground mt-0.5 line-clamp-2 italic"
+                title={latest.snippet.focus}
+              >
+                &ldquo;{latest.snippet.focus}&rdquo;
+              </p>
+            </div>
+          </div>
+          <Link
+            to={historyHref}
+            className="text-primary inline-flex min-h-6 shrink-0 items-center font-semibold"
+          >
+            View full {config.noun} history →
+          </Link>
+        </div>
+      )}
+      <div className="border-line-subtle border-t px-5 py-3">
+        <PageNav
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          noun="records"
+          onPageChange={onPageChange}
+        />
       </div>
     </GlassCard>
   );

@@ -190,7 +190,11 @@ const TLScorecardAuthoring: React.FC = () => {
 
   if (tab === "records") {
     return (
-      <TLScorecardHeader tab={tab} onTabChange={setTab}>
+      <TLScorecardHeader
+        subtitle="Historical activity log, compliance benchmarks, and employee touchpoints recorded by team leaders."
+        tab={tab}
+        onTabChange={setTab}
+      >
         <RecordsTab />
       </TLScorecardHeader>
     );

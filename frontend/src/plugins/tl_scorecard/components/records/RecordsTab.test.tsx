@@ -228,6 +228,52 @@ describe("RecordsTab URL state", () => {
   });
 });
 
+describe("RecordsTab mockup layout", () => {
+  it("filters by state pills and writes ?state= to the URL", async () => {
+    renderTab("?tab=records&kind=idle");
+    await screen.findByText("Docs");
+    fireEvent.click(screen.getByRole("button", { name: /needs attention/i }));
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("state=attention"));
+    expect(screen.getByText("Docs")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^completed$/i }));
+    expect(await screen.findByText("No match")).toBeInTheDocument();
+  });
+
+  it("pages long lists eight at a time", async () => {
+    const meetings = Array.from({ length: 9 }, (_, i) => ({
+      ...MEETING,
+      id: 100 + i,
+      occurred_on: `2026-09-${String(i + 1).padStart(2, "0")}`,
+    }));
+    svc.listMeetings.mockResolvedValue(meetings);
+    renderTab("?tab=records&kind=meetings");
+    expect(await screen.findByText("Showing 8 of 9 records")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(await screen.findByText("Showing 1 of 9 records")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("page=2"));
+  });
+
+  it("shows the latest focus with a full-history link that clears the month", async () => {
+    svc.listMeetings.mockResolvedValue([{ ...MEETING, notes: "Discussed roadmap" }]);
+    renderTab("?tab=records&kind=meetings&month=2026-09-01");
+    expect(await screen.findByText(/Latest meeting \(Jane\):/)).toBeInTheDocument();
+    expect(screen.getByText("Discussed roadmap")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /view full meeting history/i });
+    expect(link).toHaveAttribute("href", "/tl-scorecard?tab=records&kind=meetings");
+  });
+
+  it("renders the toolbar, sidebar summary and avatars", async () => {
+    renderTab("?tab=records&kind=idle");
+    expect(await screen.findByText("Docs")).toBeInTheDocument();
+    expect(await screen.findByText("Timeframe")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search records or members…")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export report" })).toBeInTheDocument();
+    expect(screen.getByText("Record Categories")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Resolved records" })).toBeInTheDocument();
+    expect(screen.getAllByTitle("Jane").length).toBeGreaterThan(0);
+  });
+});
+
 describe("RecordsTab panels", () => {
   it.each([
     ["meetings", "1-on-1", "Not shared"],
@@ -265,16 +311,20 @@ describe("RecordsTab panels", () => {
     renderTab("?tab=records&kind=idle");
     await screen.findByText("Docs");
     expect(screen.getByText("Needs attention")).toBeInTheDocument();
-    expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.getAllByText("Completed")).toHaveLength(2);
     expect(screen.getByTestId("stat-card-progress-fill")).toHaveStyle({ width: "0%" });
   });
 
   it("filters the visible rows by search text", async () => {
     renderTab();
     await screen.findByText("1-on-1");
-    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "zzz" } });
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search records or members" }), {
+      target: { value: "zzz" },
+    });
     expect(await screen.findByText("No match")).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "jane" } });
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search records or members" }), {
+      target: { value: "jane" },
+    });
     expect(await screen.findByText("Jane")).toBeInTheDocument();
   });
 

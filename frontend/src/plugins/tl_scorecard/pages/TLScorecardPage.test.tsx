@@ -304,6 +304,15 @@ describe("TLScorecardPage", () => {
     expect(screen.getByRole("tab", { name: /pips/i })).toHaveAttribute("aria-selected", "true");
   });
 
+  it("shows the records description and current-quarter pill", async () => {
+    mockDefaults();
+    (tlScorecardService.listPIPRecords as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    renderPage("/tl-scorecard?tab=records&kind=pips");
+
+    expect(await screen.findByText(/Historical activity log/i)).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: /Q[1-4] Active/i })).toBeInTheDocument();
+  });
+
   it("shows the HBPR partnership with its cadence state", async () => {
     mockDefaults();
     perms.value = { isAdmin: false, isTeamLeader: true };
