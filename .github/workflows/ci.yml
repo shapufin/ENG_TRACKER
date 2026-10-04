@@ -57,7 +57,11 @@ jobs:
             echo "No base commit to diff against — skipping Prettier."
             exit 0
           fi
-          mapfile -t files < <(git diff --name-only --diff-filter=ACMR "${RANGE}" -- src \
+          # --relative: this job runs with working-directory: frontend, but
+          # plain `git diff --name-only` prints repo-root paths
+          # (frontend/src/...), which prettier would reject from here with
+          # "No files matching the pattern were found".
+          mapfile -t files < <(git diff --name-only --relative --diff-filter=ACMR "${RANGE}" -- src \
             | grep -E '\.(ts|tsx|js|jsx|json|css|md)$' || true)
           if [ "${#files[@]}" -eq 0 ]; then
             echo "No formattable src files changed in ${RANGE} — skipping Prettier."
