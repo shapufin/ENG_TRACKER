@@ -94,6 +94,18 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
 - `/tl-scorecard` is the AL-TL authoring workspace (`components/scorecard/*`); an
   HBPR-only viewer is redirected to `/hbpr` before any query fires. The AL TL's "HBPR
   partnership" section reads `GET /api/plugins/tl_scorecard/partnership/`.
+- `/tl-scorecard?tab=records` — the TL's record table (`components/records/*`). Row
+  click / Enter / the row's eye button opens `RecordDetailDialog` (`DialogContent
+  size="lg"`): every serialized field of that record, full untruncated text, and a
+  privacy chip per free-text block ("Private — only you and staff" vs "Shared with …").
+  It also surfaces what the table never showed and **no extra request is needed** — the
+  list serializers already embed it: `attendees` on meetings (name + Member/HRBP/Observer
+  role; the API redacts each attendee's own `notes` unless the viewer is that attendee or
+  staff) and `status_updates` on idle flags (the weekly log). Open idle flags the viewer
+  manages offer **Log weekly update** → `LogIdleStatusUpdateDialog` →
+  `POST .../idle-status-updates/` (one entry per flag per week, server-enforced; the 400
+  is surfaced verbatim). Meeting attendees remain **read-only** here — there is no
+  TL-scoped member picker, so the UI never offers creating one.
 - `/admin/hbpr-assignments` (`SuperuserRoute`): create and end assignments.
   The table splits into **Active** (`is_current` — no end date or end date not
   yet passed, the same split as `?current=`/`unfinished_q`) and **Archive**
@@ -213,6 +225,20 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   alongside: the admin serializer's `last_meeting_on`/`evidence_count` were never
   annotated (Status showed "Not started" for every open row) — the viewset now
   annotates them, guarded on `plugins.tl_scorecard` being installed.
+
+- **2026-10-04, TL records detail + note capture:** the TL Records tab was a flat table
+  whose only preview was one truncated `focus` line, so the notes the models already
+  store were effectively invisible. Added `RecordDetailDialog` (read-only, privacy
+  chips per block), the idle-flag weekly log UI over the pre-existing
+  `idle-status-updates/` endpoint (`LogIdleStatusUpdateDialog`, also reachable from the
+  row menu), and closed the capture gaps that made some fields unreachable: review
+  deliveries could not store `notes`/`reference_url` at all (the dialog never sent
+  them), and meetings / idle flags / absences had no `reference_url` field while PIPs
+  had no `shared_notes` field. TypeScript types gained the fields the API already
+  returned (`attendees`, `status_updates`, `reference_url`, `recorded_at`,
+  `shared_notes`) as **optional**, so existing test fixtures stay valid. Zero backend
+  change — every field was already serialized and writable. Backend authorization,
+  HBPR redaction and the `_OwnerOnlyNotesMixin` redaction are untouched.
 
 **Assignment dates (2026-10-03).** `effective_to` is the **last day in effect**, not a
 switch. An assignment covers a day `d` when `effective_from <= d` and (`effective_to` is

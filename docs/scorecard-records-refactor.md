@@ -51,6 +51,32 @@
   eslint clean, `modal-audit` PASS. Dark-mode Chromium PASS (badges + strip readable, screenshots
   inspected). Planted rows deleted; temp specs/screenshots removed.
 
+## Continuation — record detail + note capture (2026-10-04, after the mockup rebuild)
+
+The mockup rebuild made the table honest but the records still read as "bland": the only
+preview of a record's content was one truncated `focus` line, and three fields the API
+already stored were unreachable from any dialog.
+
+- [x] `RecordDetailDialog` (+ `recordDetails.tsx` per-kind `DETAIL_ITEMS`) — read-only full
+  record: untruncated text, privacy chip per block, meeting attendees with role badges,
+  idle-flag weekly log, reference links, recorded/approved meta. Opened by row click,
+  Enter/Space on the row, or the always-rendered eye button; the actions cell
+  `stopPropagation`s so the ⋯ menu is unaffected.
+- [x] `LogIdleStatusUpdateDialog` + `log-update` action (row menu + dialog footer; open
+  flags the viewer manages) over the pre-existing `idle-status-updates/` endpoint —
+  duplicate-week 400 surfaced verbatim via `errorMessage`.
+- [x] Capture gaps closed: review `notes`/`reference_url` (the dialog previously sent
+  neither), PIP `shared_notes`, and `reference_url` on meeting/idle/absence.
+- [x] No new requests and no backend change: `attendees`/`status_updates` are embedded in
+  the list serializers; `reference_url`/`shared_notes` were already writable.
+- [x] Types extended as **optional** fields (`attendees`, `status_updates`,
+  `reference_url`, `recorded_at`, `shared_notes`) so existing fixtures keep compiling.
+- [x] Verification: 87/87 targeted vitest (records + 5 dialog files), `tsc` clean, eslint
+  clean, prettier clean on my lines. Prettier flags 3 files with **pre-existing** drift
+  (`OpenPIPDialog`/`FlagIdleDialog`/`LogMeetingDialog`) — confirmed against their HEAD
+  blobs; left alone deliberately. Windows CRLF (`core.autocrlf=true`) also trips the
+  default `endOfLine: lf`; use `--end-of-line auto`.
+
 ## DO-NOT-BREAK (fail-closed)
 
 1. HBPR read-only: no action column in explorer; `approve/reject/decide` staff-only + self-dealing 403.
