@@ -345,13 +345,15 @@ describe("useDashboardData", () => {
     expect(result.current.leaveAvailableDays).toBe(9);
   });
 
-  it("never requests overtime or standby while the HBPR dashboard is showing", async () => {
+  it("never requests overtime, standby or leave while the HBPR dashboard is showing", async () => {
+    // An HBPR-only viewer is denied all self-service endpoints by
+    // HbprBlockedMixin — firing these queries produces console 403s.
     vi.mocked(overtimeService.getLogs).mockClear();
     vi.mocked(overtimeService.getSummary).mockClear();
     vi.mocked(standbyService.getLogs).mockClear();
     vi.mocked(standbyService.getSummary).mockClear();
-    vi.mocked(leaveService.getRequests).mockResolvedValue({ count: 0, results: [] } as never);
-    vi.mocked(leaveService.getUserBalanceSummary).mockResolvedValue({} as never);
+    vi.mocked(leaveService.getRequests).mockClear();
+    vi.mocked(leaveService.getUserBalanceSummary).mockClear();
 
     const { result } = renderHook(
       () =>
@@ -364,11 +366,14 @@ describe("useDashboardData", () => {
       { wrapper: createWrapper(new QueryClient()) }
     );
 
-    await waitFor(() => expect(leaveService.getRequests).toHaveBeenCalled());
+    // Let any would-be queries settle, then assert none of them ran.
+    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(result.current).toBeDefined();
     expect(overtimeService.getLogs).not.toHaveBeenCalled();
     expect(overtimeService.getSummary).not.toHaveBeenCalled();
     expect(standbyService.getLogs).not.toHaveBeenCalled();
     expect(standbyService.getSummary).not.toHaveBeenCalled();
+    expect(leaveService.getRequests).not.toHaveBeenCalled();
+    expect(leaveService.getUserBalanceSummary).not.toHaveBeenCalled();
   });
 });

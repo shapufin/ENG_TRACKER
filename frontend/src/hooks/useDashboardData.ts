@@ -25,9 +25,10 @@ export const useDashboardData = ({
 }: UseDashboardDataOptions) => {
   const isPrivilegedDashboard = selectedDashboard === "hr" || selectedDashboard === "admin";
   const dashboardPageSize = isPrivilegedDashboard ? 50 : 5;
-  // An HBPR has no overtime or standby (the API refuses it), so those tiles
-  // must not even be requested while its dashboard is showing.
-  const canLoadHours = !!userId && selectedDashboard !== "hbpr";
+  // An HBPR-only viewer has no overtime, standby or leave (the API refuses
+  // all of them via HbprBlockedMixin), so those queries must not even be
+  // requested while its dashboard is showing.
+  const canLoadSelfService = !!userId && selectedDashboard !== "hbpr";
 
   const { data: hrStats } = useQuery({
     queryKey: ["dashboard", "hr", userId ?? "anonymous"],
@@ -44,7 +45,7 @@ export const useDashboardData = ({
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
-    enabled: canLoadHours,
+    enabled: canLoadSelfService,
   });
 
   const { data: standbyData, isLoading: standbyLoading } = useQuery({
@@ -53,7 +54,7 @@ export const useDashboardData = ({
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
-    enabled: canLoadHours,
+    enabled: canLoadSelfService,
   });
 
   // Dedicated aggregate queries for the "total hours" dashboard tiles: the
@@ -68,7 +69,7 @@ export const useDashboardData = ({
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
-    enabled: canLoadHours,
+    enabled: canLoadSelfService,
   });
 
   const { data: standbySummary } = useQuery({
@@ -77,7 +78,7 @@ export const useDashboardData = ({
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
-    enabled: canLoadHours,
+    enabled: canLoadSelfService,
   });
 
   const { data: leaveData, isLoading: leaveLoading } = useQuery({
@@ -86,7 +87,7 @@ export const useDashboardData = ({
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
-    enabled: !!userId,
+    enabled: canLoadSelfService,
   });
 
   // The "Vacation Balance" tile must show the user's actual remaining
@@ -99,7 +100,7 @@ export const useDashboardData = ({
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
-    enabled: !!userId,
+    enabled: canLoadSelfService,
   });
 
   const overtimeResults = overtimeData?.results ?? [];
@@ -146,7 +147,8 @@ export const useDashboardData = ({
 
   const { data: weeklyStandbyData } = useQuery({
     queryKey: ["standby", userId ?? "anonymous", "weekly", weekStart],
-    queryFn: () => standbyService.getLogs({ date_from: weekStart, date_to: weekEnd, page_size: 100 }),
+    queryFn: () =>
+      standbyService.getLogs({ date_from: weekStart, date_to: weekEnd, page_size: 100 }),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
