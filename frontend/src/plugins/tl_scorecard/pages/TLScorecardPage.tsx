@@ -21,7 +21,7 @@ import { RecordsTab } from "../components/records/RecordsTab";
 import { StartEPRCycleDialog } from "../components/StartEPRCycleDialog";
 import { evidenceForYear } from "../hooks/useHbprWorkspaceQueries";
 import { tlScorecardService } from "../services/tlScorecardService";
-import type { EPRStage, HbprEvidencePayload } from "../types/tlScorecard";
+import type { CompleteEprStagePayload, HbprEvidencePayload } from "../types/tlScorecard";
 
 const Skeleton: React.FC = () => (
   <div aria-busy="true" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -131,8 +131,8 @@ const TLScorecardAuthoring: React.FC = () => {
     onError: notifyError,
   });
   const completeEPRStageMutation = useMutation({
-    mutationFn: ({ cycleId, stage }: { cycleId: number; stage: EPRStage }) =>
-      tlScorecardService.completeEPRStage(cycleId, `${stage}_completed_at`),
+    mutationFn: ({ cycleId, data }: { cycleId: number; data: CompleteEprStagePayload }) =>
+      tlScorecardService.completeEPRStage(cycleId, data),
     onSuccess: invalidateEprCycles,
     onError: notifyError,
   });
@@ -299,6 +299,7 @@ const TLScorecardAuthoring: React.FC = () => {
       subtitle={`${monthLabel} · ${scorecard.team_size} team member(s)`}
       tab={tab}
       onTabChange={setTab}
+      month={scorecard.month}
     >
       <ScorecardOverview
         scorecard={scorecard}
@@ -317,8 +318,8 @@ const TLScorecardAuthoring: React.FC = () => {
         onAddGoal={async (cycleId, description) => {
           await addEPRGoalMutation.mutateAsync({ cycle: cycleId, description });
         }}
-        onCompleteStage={async (cycleId, stage) => {
-          await completeEPRStageMutation.mutateAsync({ cycleId, stage });
+        onCompleteStage={async (cycleId, data) => {
+          await completeEPRStageMutation.mutateAsync({ cycleId, data });
         }}
         onLogMeeting={() => setMeetingDialogOpen(true)}
         onLogReview={() => setReviewDialogOpen(true)}
@@ -343,6 +344,9 @@ const TLScorecardAuthoring: React.FC = () => {
         onUpdate={async (id, data) => {
           await updateEvidenceMutation.mutateAsync({ id, data });
         }}
+        loadEvidencePack={async (assignmentId, packYear) =>
+          (await tlScorecardService.getEvidencePack(assignmentId, packYear)).data
+        }
       />
 
       <EvidenceExportSection coverage={coverageQuery.data} month={scorecard.month} />

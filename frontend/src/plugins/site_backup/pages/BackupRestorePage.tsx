@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Download, Trash2, ShieldAlert, DatabaseBackup } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -72,7 +73,7 @@ const BackupsTab: React.FC = () => {
         <h2 className="text-sm font-semibold">Create a new backup</h2>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[240px] flex-1">
-            <label htmlFor="backup-note" className="mb-1 block text-xs text-muted-foreground">
+            <label htmlFor="backup-note" className="text-muted-foreground mb-1 block text-xs">
               Note (optional)
             </label>
             <Input
@@ -106,12 +107,12 @@ const BackupsTab: React.FC = () => {
           {error ? (
             <ErrorCard title="Failed to load backups" message={(error as Error).message} />
           ) : !backups || backups.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">No backups yet.</p>
+            <p className="text-muted-foreground py-6 text-center text-sm">No backups yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] text-sm">
                 <thead>
-                  <tr className="border-b border-line-subtle text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr className={TABLE_HEAD_ROW_CLASS}>
                     <th className="py-2 pr-4">Filename</th>
                     <th className="py-2 pr-4">Created</th>
                     <th className="py-2 pr-4 text-right">Size</th>
@@ -123,7 +124,7 @@ const BackupsTab: React.FC = () => {
                 </thead>
                 <tbody>
                   {backups.map((record) => (
-                    <tr key={record.id} className="border-b border-line-subtle last:border-0">
+                    <tr key={record.id} className="border-line-subtle border-b last:border-0">
                       <td className="py-2 pr-4 font-mono text-xs">{record.filename}</td>
                       <td className="py-2 pr-4">{new Date(record.created_at).toLocaleString()}</td>
                       <td className="py-2 pr-4 text-right tabular-nums">
@@ -133,7 +134,7 @@ const BackupsTab: React.FC = () => {
                       <td className="py-2 pr-4 text-right tabular-nums">
                         {record.media_file_count}
                       </td>
-                      <td className="py-2 pr-4 text-muted-foreground">{record.note || "—"}</td>
+                      <td className="text-muted-foreground py-2 pr-4">{record.note || "—"}</td>
                       <td className="py-2 pr-2">
                         <div className="flex justify-end gap-1">
                           <Button
@@ -272,7 +273,7 @@ const RestoreTab: React.FC = () => {
         <h2 className="text-sm font-semibold">Choose a source</h2>
         <div className="flex flex-wrap items-center gap-4">
           <div>
-            <label htmlFor="restore-file" className="mb-1 block text-xs text-muted-foreground">
+            <label htmlFor="restore-file" className="text-muted-foreground mb-1 block text-xs">
               Upload an archive
             </label>
             <input
@@ -287,14 +288,14 @@ const RestoreTab: React.FC = () => {
               className="block text-sm"
             />
           </div>
-          <span className="text-xs text-muted-foreground">or</span>
+          <span className="text-muted-foreground text-xs">or</span>
           <div>
-            <label htmlFor="restore-backup" className="mb-1 block text-xs text-muted-foreground">
+            <label htmlFor="restore-backup" className="text-muted-foreground mb-1 block text-xs">
               Pick a stored backup
             </label>
             <select
               id="restore-backup"
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+              className="border-input bg-background h-9 rounded-md border px-2 text-sm"
               value={selectedBackupId}
               onChange={(e) => {
                 setSelectedBackupId(e.target.value ? Number(e.target.value) : "");
@@ -321,10 +322,10 @@ const RestoreTab: React.FC = () => {
 
       {preview && !preview.schema_compatible && (
         <GlassCard glow="destructive" className="flex items-start gap-3 p-4">
-          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-tone-danger-text" />
+          <ShieldAlert className="text-tone-danger-text mt-0.5 h-5 w-5 shrink-0" />
           <div>
-            <p className="font-semibold text-tone-danger-text">Restore blocked</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-tone-danger-text font-semibold">Restore blocked</p>
+            <p className="text-muted-foreground text-sm">
               This backup was taken from a different database schema and cannot be safely restored
               here. Take a fresh backup on this environment, or restore onto an environment with a
               matching schema.
@@ -357,7 +358,7 @@ const RestoreTab: React.FC = () => {
             onToggleDeleteMissing={toggleDeleteMissing}
           />
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-subtle pt-4">
+          <div className="border-line-subtle flex flex-wrap items-center justify-between gap-3 border-t pt-4">
             <label className="flex items-center gap-2 text-sm">
               <Checkbox
                 checked={understood}
@@ -404,7 +405,7 @@ const RestoreTab: React.FC = () => {
               ))}
           </div>
           {commitResult.media_extracted > 0 && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               {commitResult.media_extracted} media file(s) extracted.
             </p>
           )}

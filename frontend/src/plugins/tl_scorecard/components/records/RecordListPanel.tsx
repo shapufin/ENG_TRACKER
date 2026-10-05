@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
+import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { UserAvatar } from "@/components/calendar/UserAvatar";
 import { isForbidden } from "../hbpr/isForbidden";
@@ -161,24 +163,24 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm max-md:block">
           <caption className="sr-only">{config.label}</caption>
-          <thead className="bg-muted/40 text-muted-foreground text-xs max-md:sr-only">
-            <tr className="border-border/50 border-b">
-              <th scope="col" className="px-4 py-2 font-medium">
+          <thead className="max-md:sr-only">
+            <tr className={TABLE_HEAD_ROW_CLASS}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                 Date
               </th>
-              <th scope="col" className="px-4 py-2 font-medium">
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                 Type
               </th>
-              <th scope="col" className="px-4 py-2 font-medium">
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                 With
               </th>
-              <th scope="col" className="px-4 py-2 font-medium">
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                 Focus / Notes preview
               </th>
-              <th scope="col" className="px-4 py-2 font-medium">
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                 State
               </th>
-              <th scope="col" className="px-4 py-2">
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                 <span className="sr-only">Actions</span>
               </th>
             </tr>

@@ -6,6 +6,7 @@ import React from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
 import type { PayrollLine } from "../types";
 
 interface PayrollRunLinesTableProps {
@@ -43,21 +44,21 @@ export const PayrollRunLinesTable: React.FC<PayrollRunLinesTableProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="pb-2 pr-4">Employee</th>
-              <th className="pb-2 pr-4 text-right">Gross</th>
-              <th className="pb-2 pr-4 text-right">Overtime</th>
-              <th className="pb-2 pr-4 text-right">Standby</th>
-              <th className="pb-2 pr-4 text-right">Social</th>
-              <th className="pb-2 pr-4 text-right">Health</th>
-              <th className="pb-2 pr-4 text-right">Tax</th>
-              <th className="pb-2 pr-4 text-right">Net Pay</th>
+            <tr className={TABLE_HEAD_ROW_CLASS}>
+              <th className="pr-4 pb-2">Employee</th>
+              <th className="pr-4 pb-2 text-right">Gross</th>
+              <th className="pr-4 pb-2 text-right">Overtime</th>
+              <th className="pr-4 pb-2 text-right">Standby</th>
+              <th className="pr-4 pb-2 text-right">Social</th>
+              <th className="pr-4 pb-2 text-right">Health</th>
+              <th className="pr-4 pb-2 text-right">Tax</th>
+              <th className="pr-4 pb-2 text-right">Net Pay</th>
               <th className="pb-2"></th>
             </tr>
           </thead>
           <tbody>
             {lines.map((line: PayrollLine) => (
-              <tr key={line.id} className="border-b border-border/50">
+              <tr key={line.id} className="border-border/50 border-b">
                 <td className="py-2 pr-4">{line.user_full_name}</td>
                 <td className="py-2 pr-4 text-right">
                   {Number(line.gross_monthly_wage).toLocaleString()}
@@ -117,7 +118,7 @@ export const PayrollRunLinesTable: React.FC<PayrollRunLinesTableProps> = ({
         </table>
       </div>
     ) : (
-      <p className="py-4 text-center text-muted-foreground">
+      <p className="text-muted-foreground py-4 text-center">
         No payroll lines. {isDraft && "Click Regenerate to calculate."}
       </p>
     )}

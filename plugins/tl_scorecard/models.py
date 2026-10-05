@@ -332,6 +332,45 @@ class EPRGoal(BaseModel):
         ordering = ['id']
 
 
+class EPRStageRecord(BaseModel):
+    """Evidence for one completed EPR stage — created only by
+    ``EPRCycleViewSet.complete_stage``, one per (cycle, stage). Carries what
+    the bare ``*_completed_at`` timestamp could not: what was agreed
+    (``summary``), where the review artifact lives (``reference_url``, e.g.
+    the Workday doc), who recorded it, and whether the summary is shared
+    with the employee on My Records."""
+    STAGE_CHOICES = [
+        ('goal_setting', 'Goal setting'),
+        ('mid_year', 'Mid-year'),
+        ('final_review', 'Final review'),
+    ]
+    cycle = models.ForeignKey(
+        EPRCycle, on_delete=models.CASCADE, related_name='stage_records'
+    )
+    stage = models.CharField(max_length=20, choices=STAGE_CHOICES)
+    summary = models.TextField()
+    reference_url = models.URLField(
+        blank=True, help_text='Link to the review artifact (e.g. Workday).'
+    )
+    shared_with_employee = models.BooleanField(default=False)
+    recorded_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name='epr_stage_records'
+    )
+
+    class Meta:
+        db_table = 'tl_scorecard_epr_stage_records'
+        ordering = ['id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['cycle', 'stage'],
+                name='unique_epr_stage_record_per_cycle_stage',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.get_stage_display()}: {self.cycle}'
+
+
 class HbprGovernanceEvidence(TrackedFieldsMixin, BaseModel):
     """Evidence of the HBPR ↔ Albanian TL governance relationship.
 

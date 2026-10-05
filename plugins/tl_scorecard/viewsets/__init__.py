@@ -18,6 +18,7 @@ from .decisions import (
 from .epr import (
     EPRCycleViewSet,
     EPRGoalViewSet,
+    EPRStageRecordViewSet,
 )
 from .evidence import (
     HbprGovernanceEvidenceViewSet,
@@ -35,5 +36,6 @@ __all__ = [
     'PromotionFlagViewSet',
     'EPRCycleViewSet',
     'EPRGoalViewSet',
+    'EPRStageRecordViewSet',
     'HbprGovernanceEvidenceViewSet',
 ]

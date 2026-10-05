@@ -3,6 +3,17 @@ import { render, screen } from "@testing-library/react";
 import { HolidayTable } from "./HolidayTable";
 import type { PublicHoliday } from "@/types";
 
+// HolidayTable now renders a DataTable (TanStack), which needs ResizeObserver —
+// jsdom lacks it. Assertions below are unchanged.
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+);
+
 vi.mock("@/components/ui/LoadingCard", () => ({
   LoadingCard: ({ className }: { className?: string }) => (
     <div data-testid="loading-card" className={className} />

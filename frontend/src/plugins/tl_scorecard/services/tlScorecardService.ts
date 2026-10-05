@@ -4,8 +4,10 @@ import type { PaginatedResponse } from "@/types";
 import type {
   Absence,
   ApprovalEngagementScore,
+  CompleteEprStagePayload,
   EngagementSurveyTeamAverage,
   EPRCycle,
+  EPRStageRecord,
   EscalationCandidate,
   KpiCoverageEntry,
   PIPRecord,
@@ -19,6 +21,7 @@ import type {
   PromotionFlag,
   ReviewDelivery,
   Scorecard,
+  YearEndEvidencePack,
 } from "../types/tlScorecard";
 
 const BASE = "/plugins/tl_scorecard";
@@ -186,10 +189,23 @@ export const tlScorecardService = {
   createEPRGoal: (data: { cycle: number; description: string }) =>
     api.post(`${BASE}/epr-goals/`, data),
 
-  completeEPRStage: (
-    cycleId: number,
-    field: "goal_setting_completed_at" | "mid_year_completed_at" | "final_review_completed_at"
-  ) => api.patch<EPRCycle>(`${BASE}/epr-cycles/${cycleId}/`, { [field]: new Date().toISOString() }),
+  /** The only writer of `*_completed_at`: stamps the stage AND records its
+   * evidence (summary required) in one request. */
+  completeEPRStage: (cycleId: number, data: CompleteEprStagePayload) =>
+    api.post<EPRCycle>(`${BASE}/epr-cycles/${cycleId}/complete_stage/`, data),
+
+  /** Corrections to stage evidence (summary / reference / shared flag). */
+  updateEPRStageRecord: (
+    recordId: number,
+    data: Partial<Pick<EPRStageRecord, "summary" | "reference_url" | "shared_with_employee">>
+  ) => api.patch<EPRStageRecord>(`${BASE}/epr-stage-records/${recordId}/`, data),
+
+  /** Packaged per-assignment+year evidence summary for the TL's year-end
+   * review (assigned TL / owning HBPR / staff). */
+  getEvidencePack: (assignmentId: number, year: number) =>
+    api.get<YearEndEvidencePack>(`${BASE}/hbpr-evidence/year-end-pack/`, {
+      params: { assignment: assignmentId, year },
+    }),
 
   getHbprOverview: (year?: number) =>
     api.get<HbprOverview>(`${BASE}/hbpr/overview/`, { params: year ? { year } : undefined }),

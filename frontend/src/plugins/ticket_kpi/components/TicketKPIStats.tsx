@@ -1,5 +1,6 @@
 import React from "react";
 import { KPICard } from "./KPICard";
+import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import { Ticket, Clock, CheckCircle, TrendingUp, Gauge } from "lucide-react";
 import type { MonthlyKPIComparison } from "../types/ticketKPI";
 
@@ -33,6 +34,8 @@ export const TicketKPIStats: React.FC<TicketKPIStatsProps> = ({
       value={total}
       subtitle="This month"
       icon={Ticket}
+      iconWellClass={`border ${toneSurfaceClass.info}`}
+      iconColorClass={toneTextClass.info}
       delta={comparison?.total_tickets_delta}
       deltaLabel={`vs ${comparison?.month ?? "last month"}`}
     />
@@ -41,6 +44,8 @@ export const TicketKPIStats: React.FC<TicketKPIStatsProps> = ({
       value={fmtHours(avgRes)}
       subtitle="Per ticket"
       icon={Clock}
+      iconWellClass={`border ${toneSurfaceClass.info}`}
+      iconColorClass={toneTextClass.info}
       delta={comparison?.avg_resolution_delta}
       deltaLabel={`vs ${comparison?.month ?? "last month"}`}
       lowerIsBetter
@@ -50,6 +55,8 @@ export const TicketKPIStats: React.FC<TicketKPIStatsProps> = ({
       value={fmtHours(p50)}
       subtitle="Typical resolution"
       icon={Gauge}
+      iconWellClass={`border ${toneSurfaceClass.accent}`}
+      iconColorClass={toneTextClass.accent}
       delta={comparison?.p50_resolution_delta}
       deltaLabel={`vs ${comparison?.month ?? "last month"}`}
       lowerIsBetter
@@ -59,6 +66,8 @@ export const TicketKPIStats: React.FC<TicketKPIStatsProps> = ({
       value={fmtHours(p90)}
       subtitle="Worst-case tail"
       icon={Gauge}
+      iconWellClass={`border ${toneSurfaceClass.accent}`}
+      iconColorClass={toneTextClass.accent}
       delta={comparison?.p90_resolution_delta}
       deltaLabel={`vs ${comparison?.month ?? "last month"}`}
       lowerIsBetter
@@ -68,6 +77,8 @@ export const TicketKPIStats: React.FC<TicketKPIStatsProps> = ({
       value={fmtPct(sla)}
       subtitle="On target"
       icon={CheckCircle}
+      iconWellClass={`border ${toneSurfaceClass.success}`}
+      iconColorClass={toneTextClass.success}
       delta={comparison?.sla_compliance_delta}
       deltaLabel={`vs ${comparison?.month ?? "last month"}`}
     />
@@ -76,6 +87,8 @@ export const TicketKPIStats: React.FC<TicketKPIStatsProps> = ({
       value={closed}
       subtitle="This month"
       icon={TrendingUp}
+      iconWellClass={`border ${toneSurfaceClass.success}`}
+      iconColorClass={toneTextClass.success}
       delta={comparison?.closed_tickets_delta}
       deltaLabel={`vs ${comparison?.month ?? "last month"}`}
     />

@@ -3,6 +3,8 @@ import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
+import { cn } from "@/lib/utils";
 import { UserPlus, Trash2, X } from "lucide-react";
 import type { UserGroup } from "@/types";
 
@@ -83,29 +85,29 @@ export function ResourceAccessMemberList({
       <div className="hidden overflow-hidden md:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground">
-              <th className="px-4 py-3 font-medium">Member</th>
-              <th className="px-4 py-3 font-medium">Username</th>
-              <th className="px-4 py-3 text-right font-medium">Action</th>
+            <tr className={TABLE_HEAD_ROW_CLASS}>
+              <th className={TABLE_HEAD_CELL_CLASS}>Member</th>
+              <th className={TABLE_HEAD_CELL_CLASS}>Username</th>
+              <th className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>Action</th>
             </tr>
           </thead>
           <tbody>
             {members.map((membership) => (
               <tr
                 key={membership.id}
-                className="border-b border-border/40 transition-colors last:border-0 hover:bg-table-hover"
+                className="border-border/40 hover:bg-table-hover border-b transition-colors last:border-0"
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
+                    <div className="bg-secondary text-secondary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                       {(membership.user_name || "?").slice(0, 2).toUpperCase()}
                     </div>
-                    <span className="font-medium text-foreground">
+                    <span className="text-foreground font-medium">
                       {membership.user_name || "Unknown user"}
                     </span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{membership.user_name}</td>
+                <td className="text-muted-foreground px-4 py-3">{membership.user_name}</td>
                 <td className="px-4 py-3 text-right">
                   <RemoveButton membership={membership} groupName={groupName} onRemove={onRemove} />
                 </td>
@@ -114,11 +116,11 @@ export function ResourceAccessMemberList({
           </tbody>
         </table>
       </div>
-      <div className="divide-y divide-border/40 md:hidden">
+      <div className="divide-border/40 divide-y md:hidden">
         {members.map((membership) => (
           <div key={membership.id} className="flex items-center justify-between gap-3 p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
+              <div className="bg-secondary text-secondary-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                 {(membership.user_name || "?").slice(0, 2).toUpperCase()}
               </div>
               <div className="min-w-0">
@@ -128,7 +130,7 @@ export function ResourceAccessMemberList({
                 >
                   {membership.user_name || "Unknown user"}
                 </p>
-                <p className="truncate text-xs text-muted-foreground" title={membership.user_name}>
+                <p className="text-muted-foreground truncate text-xs" title={membership.user_name}>
                   {membership.user_name}
                 </p>
               </div>
@@ -138,7 +140,7 @@ export function ResourceAccessMemberList({
         ))}
       </div>
       {memberTotalPages > 1 && (
-        <div className="flex items-center justify-between gap-3 border-t border-border/60 px-4 py-3 text-xs text-muted-foreground">
+        <div className="border-border/60 text-muted-foreground flex items-center justify-between gap-3 border-t px-4 py-3 text-xs">
           <span>
             Page {memberPage} of {memberTotalPages}
           </span>
@@ -182,7 +184,7 @@ function RemoveButton({
     <Button
       variant="ghost"
       size="icon"
-      className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive shrink-0"
       aria-label={`Remove ${membership.user_name || "this person"} from ${groupName}`}
       onClick={() => onRemove(membership)}
     >

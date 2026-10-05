@@ -52,7 +52,8 @@ def _pips(user):
 
 
 def _epr_cycles(user):
-    cycles = EPRCycle.objects.filter(user=user).prefetch_related('goals').order_by('-year')
+    cycles = EPRCycle.objects.filter(user=user).prefetch_related(
+        'goals', 'stage_records').order_by('-year')
     return [
         {
             'id': c.id,
@@ -61,6 +62,10 @@ def _epr_cycles(user):
             'mid_year_completed_at': c.mid_year_completed_at,
             'final_review_completed_at': c.final_review_completed_at,
             'goals': [{'id': g.id, 'description': g.description} for g in c.goals.all()],
+            'stage_summaries': [
+                {'stage': r.stage, 'summary': r.summary}
+                for r in c.stage_records.all() if r.shared_with_employee
+            ],
         }
         for c in cycles
     ]

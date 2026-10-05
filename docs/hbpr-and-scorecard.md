@@ -32,6 +32,32 @@ corrections are audited updates (`updated_by`). An HBPR sees/exports only eviden
 assignments **they** own (a successor never receives a predecessor's evidence). API:
 `/api/plugins/tl_scorecard/hbpr-evidence/`.
 
+**Year-end evidence pack** — `GET .../hbpr-evidence/year-end-pack/?assignment=&year=`
+returns the packaged summary the AL TL hands to their manager at year-end review:
+cadence meetings held vs **expected** (computed from the assignment's active window
+inside the year — `max(effective_from, Jan 1)` → `min(effective_to, Dec 31, today)`;
+weekly→⌈days/7⌉, biweekly→⌈days/14⌉, monthly→months touched), coverage %, the meeting
+rows, and both EPR participations. Readable by the assigned AL TL, the owning HBPR and
+staff; the action consumes the viewset's scoped queryset **without** the `?year=` row
+filter (it collides with `reporting_year` and would drop every cadence row —
+`_scoped_queryset` exists for exactly this).
+
+**Employee EPR stage evidence** — `EPRStageRecord` (one per cycle+stage, `summary`
+required, `reference_url` for the review artifact e.g. Workday, `recorded_by`,
+`shared_with_employee`). `POST .../epr-cycles/{id}/complete_stage/` is the **only**
+writer of `*_completed_at` — it stamps the stage and creates the record atomically
+(the three timestamp fields are read-only on PATCH, same rule as
+`Absence.addressed_on`); a bare click is not evidence. Corrections go through
+`epr-stage-records/` PATCH/DELETE (owner TL/staff; no create). The employee sees
+`stage_summaries` on My Records only where `shared_with_employee`; an HBPR sees
+evidence-**existence** metadata (`has_reference`, `recorded_by_name`) on embedded
+`stage_records`, never summary text or the URL — mirrors notes redaction. The
+standalone `epr-stage-records/` endpoint serves the **full** serializer, so it is
+`hbpr_no_access` (the embed is the HBPR's only read path); `complete_stage` also
+guards the URL (length + format — `objects.create` skips `full_clean`), turns the
+unique-constraint race into 409, and re-fetches the cycle before serializing so the
+200 response carries the record it just created (the prefetch cache predates it).
+
 Cadence (`weekly`/`biweekly`/`monthly`) is per assignment. `next_due_on`: +7d / +14d /
 same day next month clamped to month end, from the last cadence meeting or the start.
 `cadence_status` has exactly one definition
@@ -93,7 +119,12 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   required (the mixed "all types" view was dropped).
 - `/tl-scorecard` is the AL-TL authoring workspace (`components/scorecard/*`); an
   HBPR-only viewer is redirected to `/hbpr` before any query fires. The AL TL's "HBPR
-  partnership" section reads `GET /api/plugins/tl_scorecard/partnership/`.
+  partnership" section reads `GET /api/plugins/tl_scorecard/partnership/`; its
+  **Evidence pack** button opens `EvidencePackDialog`, which fetches
+  `year-end-pack` on open. In the EPR section a stage button opens
+  `CompleteEprStageDialog` (summary required, optional reference link and
+  "Share with employee") — completing a stage can no longer be a bare click —
+  and each completed stage renders its recorded evidence inline.
 - `/tl-scorecard?tab=records` — the TL's record table (`components/records/*`). Row
   click / Enter / the row's eye button opens `RecordDetailDialog` (`DialogContent
   size="lg"`): every serialized field of that record, full untruncated text, and a
@@ -239,6 +270,23 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   `shared_notes`) as **optional**, so existing test fixtures stay valid. Zero backend
   change — every field was already serialized and writable. Backend authorization,
   HBPR redaction and the `_OwnerOnlyNotesMixin` redaction are untouched.
+
+- **2026-10-04, EPR evidence parity + year-end pack:** `EPRCycle` was the only
+  record type without evidence fields — a stage completed with one bare PATCH
+  click, so the "100% timely EPR" KPI measured clicks, not reviews. Now
+  `EPRStageRecord` (unique per cycle+stage) carries the required summary,
+  `reference_url`, `recorded_by` and a per-stage `shared_with_employee` flag;
+  `complete_stage` writes timestamp+evidence atomically and `*_completed_at`
+  is read-only on PATCH (the `addressed_on` rule). My Records returns
+  `stage_summaries` for shared rows only; the HBPR embed on `EPRCycleSerializer`
+  shows existence metadata, never content. `year-end-pack` packages
+  held-vs-expected cadence + both EPR participations per assignment+year —
+  its `?year=` had to bypass the viewset's `reporting_year` row filter or it
+  dropped every `NULL`-year cadence meeting (`_scoped_queryset` split out for
+  it). `epr_metrics` gained `stages_completed`/`stages_with_evidence` so
+  pre-change bare completions stay visible. Frontend: `CompleteEprStageDialog`,
+  inline stage evidence in `EPRSection`, `EvidencePackDialog` on the
+  partnership section, shared summaries in `EprReview`.
 
 - **2026-10-04, audit of the last 21 commits (PRs #9–#25):** two defects in the records 
   search/CSV work (#24), fixed test-first. (1) `?q=` matched the private `notes` column, so an HBPR 

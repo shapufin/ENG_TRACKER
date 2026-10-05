@@ -27,6 +27,8 @@ import type { HbprLeaderRow } from "../../types/tlScorecard";
 import { avatarSeed } from "../avatarSeed";
 import { formatDate, HBPR_RESOURCE_ICONS, HBPR_RESOURCE_NOUNS } from "./hbprMeta";
 import { toneTextClass } from "@/components/ui/tone";
+import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
+import { cn } from "@/lib/utils";
 import { hbprRecordState } from "./hbprRecordState";
 import { HbprRecordsCsvButton } from "./HbprRecordsCsvButton";
 import { StateBadge } from "../records/StateBadge";
@@ -160,7 +162,7 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
               <Label htmlFor="hbpr-filter-search">Search</Label>
               <div className="relative mt-1.5">
                 <Search
-                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2"
                   aria-hidden="true"
                 />
                 <Input
@@ -347,24 +349,24 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <caption className="sr-only">Governance records in your assigned scope</caption>
-                    <thead className="bg-muted/40 text-muted-foreground text-xs">
-                      <tr className="border-border/50 border-b">
-                        <th scope="col" className="px-4 py-2 font-medium">
+                    <thead>
+                      <tr className={TABLE_HEAD_ROW_CLASS}>
+                        <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                           Date
                         </th>
-                        <th scope="col" className="px-4 py-2 font-medium">
+                        <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                           Type
                         </th>
-                        <th scope="col" className="px-4 py-2 font-medium">
+                        <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                           With
                         </th>
-                        <th scope="col" className="px-4 py-2 font-medium">
+                        <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                           Focus / Notes preview
                         </th>
-                        <th scope="col" className="px-4 py-2 font-medium">
+                        <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                           State
                         </th>
-                        <th scope="col" className="px-4 py-2 font-medium">
+                        <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                           Owner
                         </th>
                       </tr>

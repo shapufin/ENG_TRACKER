@@ -4,6 +4,17 @@ import { MemoryRouter } from "react-router-dom";
 import { EngagementMetricsPage } from "./EngagementMetricsPage";
 import * as useEngagementMetrics from "./hooks/useEngagementMetrics";
 
+// TeamBreakdownTable renders a DataTable (TanStack), which needs ResizeObserver —
+// jsdom lacks it. Assertions below are unchanged.
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+);
+
 const renderPage = () => render(<EngagementMetricsPage />, { wrapper: MemoryRouter });
 
 vi.mock("./hooks/useEngagementMetrics", () => ({

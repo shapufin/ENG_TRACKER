@@ -74,6 +74,8 @@ jobs:
         run: npm run lint
       - name: TypeScript check
         run: npx tsc -b --noEmit
+      - name: Table header contract
+        run: node --test scripts/table-header-audit.test.mjs && node scripts/table-header-audit.mjs
       - name: Build
         run: npm run build
       - name: Tests with coverage

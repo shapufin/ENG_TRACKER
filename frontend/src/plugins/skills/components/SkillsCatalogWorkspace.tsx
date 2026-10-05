@@ -14,6 +14,12 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Switch } from "@/components/ui/switch";
+import {
+  TABLE_HEAD_CELL_CHECKBOX_CLASS,
+  TABLE_HEAD_CELL_CLASS,
+  TABLE_HEAD_ROW_CLASS,
+} from "@/components/ui/tableStyles";
+import { cn } from "@/lib/utils";
 import type { Skill, SkillCategory } from "../types/skills";
 
 interface SkillsCatalogWorkspaceProps {
@@ -95,12 +101,12 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
       <GlassCard isHoverLift={false} className="h-fit p-3 lg:sticky lg:top-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-lg">
               <FolderTree className="h-4 w-4" aria-hidden="true" />
             </div>
             <div>
               <p className="text-sm font-semibold">Categories</p>
-              <p className="text-xs text-muted-foreground">{categories.length} total</p>
+              <p className="text-muted-foreground text-xs">{categories.length} total</p>
             </div>
           </div>
           <Button
@@ -123,7 +129,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
             onClick={() => onCategoryChange("all")}
             className={`flex min-h-11 w-full items-center justify-between rounded-lg px-3 text-left text-sm transition-all duration-150 ${
               selectedCategory === "all"
-                ? "bg-primary/10 font-medium text-foreground ring-1 ring-primary/20"
+                ? "bg-primary/10 text-foreground ring-primary/20 font-medium ring-1"
                 : "hover:bg-accent"
             }`}
           >
@@ -142,7 +148,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
               <div
                 key={category.id}
                 className={`group flex items-center gap-1 rounded-lg transition-colors duration-150 ${
-                  isSelected ? "bg-primary/10 ring-1 ring-primary/20" : "hover:bg-accent/50"
+                  isSelected ? "bg-primary/10 ring-primary/20 ring-1" : "hover:bg-accent/50"
                 }`}
               >
                 <button
@@ -150,13 +156,13 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
                   aria-pressed={isSelected}
                   onClick={() => onCategoryChange(category.code)}
                   className={`flex min-h-11 min-w-0 flex-1 items-center justify-between px-3 text-left text-sm ${
-                    isSelected ? "font-medium text-foreground" : ""
+                    isSelected ? "text-foreground font-medium" : ""
                   }`}
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <ChevronRight
                       className={`h-3.5 w-3.5 shrink-0 transition-transform ${
-                        isSelected ? "rotate-90 text-primary" : "text-muted-foreground"
+                        isSelected ? "text-primary rotate-90" : "text-muted-foreground"
                       }`}
                       aria-hidden="true"
                     />
@@ -172,7 +178,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="mr-1 h-8 w-8 shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+                  className="mr-1 h-8 w-8 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                   onClick={() => onEditCategory(category)}
                   aria-label={`Edit category ${category.name}`}
                 >
@@ -187,9 +193,9 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
       {/* ─── Skill list panel ─── */}
       <GlassCard isHoverLift={false} className="min-w-0 p-0">
         {/* Header with title + actions */}
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/70 p-4">
+        <div className="border-border/70 flex flex-wrap items-start justify-between gap-3 border-b p-4">
           <div className="min-w-0">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Skill catalog</p>
+            <p className="text-muted-foreground text-xs tracking-wide uppercase">Skill catalog</p>
             <h2
               className="truncate text-xl font-semibold"
               title={selectedCategoryData?.name ?? "All skills"}
@@ -197,7 +203,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
               {selectedCategoryData?.name ?? "All skills"}
             </h2>
             {selectedCategoryData?.description && (
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="text-muted-foreground mt-1 text-sm">
                 {selectedCategoryData.description}
               </p>
             )}
@@ -207,7 +213,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
               <Button
                 type="button"
                 variant="ghost"
-                className="min-h-11 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive min-h-11"
                 onClick={() => onDeleteCategory(selectedCategoryData)}
               >
                 <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" /> Delete category
@@ -223,7 +229,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
         </div>
 
         {/* Stats + selection bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 bg-muted/20 px-4 py-3">
+        <div className="border-border/70 bg-muted/20 flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
           <div className="flex items-center gap-3 text-sm">
             <button
               type="button"
@@ -243,14 +249,14 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
             </span>
             {visibleSkills.length > 0 && (
               <span className="flex items-center gap-1.5 text-xs">
-                <span className="inline-flex items-center gap-1 text-success">
-                  <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+                <span className="text-success inline-flex items-center gap-1">
+                  <span className="bg-success h-1.5 w-1.5 rounded-full" aria-hidden="true" />
                   {activeCount} active
                 </span>
                 {inactiveCount > 0 && (
-                  <span className="inline-flex items-center gap-1 text-muted-foreground">
+                  <span className="text-muted-foreground inline-flex items-center gap-1">
                     <span
-                      className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50"
+                      className="bg-muted-foreground/50 h-1.5 w-1.5 rounded-full"
                       aria-hidden="true"
                     />
                     {inactiveCount} inactive
@@ -259,7 +265,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
               </span>
             )}
             {selectedSkills.length > 0 && (
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-foreground">
+              <span className="bg-primary/10 text-foreground rounded-full px-2 py-0.5 text-xs font-medium">
                 {selectedSkills.length} selected
               </span>
             )}
@@ -295,7 +301,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
 
         {/* Skill list — table on desktop, card list on mobile */}
         {isLoading ? (
-          <p role="status" className="flex items-center gap-2 p-8 text-sm text-muted-foreground">
+          <p role="status" className="text-muted-foreground flex items-center gap-2 p-8 text-sm">
             <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> Loading skills...
           </p>
         ) : visibleSkills.length === 0 ? (
@@ -319,23 +325,17 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
             {/* Desktop table */}
             <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[480px] text-sm">
-                <thead className="bg-muted/40">
-                  <tr className="border-b border-border/70">
-                    <th className="w-12 px-3 py-3 text-center">
+                <thead>
+                  <tr className={TABLE_HEAD_ROW_CLASS}>
+                    <th className={cn(TABLE_HEAD_CELL_CHECKBOX_CLASS, "w-12 px-3 text-center")}>
                       <span className="sr-only">Select</span>
                     </th>
-                    <th className="px-3 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                      Skill
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="px-3 py-3 text-right text-xs uppercase tracking-wide text-muted-foreground">
-                      Actions
-                    </th>
+                    <th className={cn(TABLE_HEAD_CELL_CLASS, "px-3")}>Skill</th>
+                    <th className={cn(TABLE_HEAD_CELL_CLASS, "px-3")}>Status</th>
+                    <th className={cn(TABLE_HEAD_CELL_CLASS, "px-3 text-right")}>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/50">
+                <tbody className="divide-border/50 divide-y">
                   {visibleSkills.map((skill) => (
                     <tr
                       key={skill.id}
@@ -370,7 +370,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
                         <p className="font-medium" title={skill.name}>
                           {skill.name}
                         </p>
-                        <p className="text-xs text-muted-foreground" title={skill.code}>
+                        <p className="text-muted-foreground text-xs" title={skill.code}>
                           {skill.code}
                         </p>
                       </td>
@@ -410,7 +410,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive h-9 w-9"
                             onClick={() => onDeleteSkills([skill])}
                             aria-label={`Delete skill ${skill.name}`}
                             disabled={isDeleting}
@@ -441,7 +441,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
                       <p className="font-medium" title={skill.name}>
                         {skill.name}
                       </p>
-                      <p className="text-xs text-muted-foreground" title={skill.code}>
+                      <p className="text-muted-foreground text-xs" title={skill.code}>
                         {skill.code}
                       </p>
                     </div>
@@ -499,7 +499,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive h-9 w-9"
                         onClick={() => onDeleteSkills([skill])}
                         aria-label={`Delete skill ${skill.name}`}
                         disabled={isDeleting}

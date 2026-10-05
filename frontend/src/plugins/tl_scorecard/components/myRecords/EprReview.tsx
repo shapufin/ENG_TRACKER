@@ -4,6 +4,12 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import type { MyEprCycle } from "../../types/myRecords";
 
+const STAGE_LABELS: Record<string, string> = {
+  goal_setting: "Goal setting",
+  mid_year: "Mid-year",
+  final_review: "Final review",
+};
+
 const stepsOf = (c: MyEprCycle) => [
   { label: "Goal setting", at: c.goal_setting_completed_at },
   { label: "Mid-year", at: c.mid_year_completed_at },
@@ -30,8 +36,8 @@ const Stepper: React.FC<{ cycle: MyEprCycle }> = ({ cycle }) => {
             <span
               className={
                 s.at
-                  ? "flex h-6 w-6 items-center justify-center rounded-full bg-tone-info-surface text-tone-info-text"
-                  : "flex h-6 w-6 items-center justify-center rounded-full bg-tone-neutral-surface text-tone-neutral-text"
+                  ? "bg-tone-info-surface text-tone-info-text flex h-6 w-6 items-center justify-center rounded-full"
+                  : "bg-tone-neutral-surface text-tone-neutral-text flex h-6 w-6 items-center justify-center rounded-full"
               }
               aria-hidden="true"
             >
@@ -54,8 +60,24 @@ const Goals: React.FC<{ goals: MyEprCycle["goals"] }> = ({ goals }) =>
       ))}
     </ul>
   ) : (
-    <p className="text-sm text-muted-foreground">No goals have been shared yet.</p>
+    <p className="text-muted-foreground text-sm">No goals have been shared yet.</p>
   );
+
+/** Stage summaries the TL marked "Share with employee" — already filtered
+ * server-side; nothing private reaches this list. */
+const SharedSummaries: React.FC<{ summaries: MyEprCycle["stage_summaries"] }> = ({ summaries }) =>
+  summaries.length > 0 ? (
+    <div>
+      <h4 className="text-muted-foreground text-xs font-semibold">Shared by your team leader</h4>
+      <ul className="mt-1 space-y-1 text-sm">
+        {summaries.map((s) => (
+          <li key={s.stage}>
+            <span className="font-medium">{STAGE_LABELS[s.stage] ?? s.stage}:</span> {s.summary}
+          </li>
+        ))}
+      </ul>
+    </div>
+  ) : null;
 
 export const EprReview: React.FC<{ cycles: MyEprCycle[] }> = ({ cycles }) => {
   const [latest, ...older] = [...cycles].sort((a, b) => b.year - a.year);
@@ -68,6 +90,7 @@ export const EprReview: React.FC<{ cycles: MyEprCycle[] }> = ({ cycles }) => {
         <h3 className="text-sm font-semibold">{latest.year} review</h3>
         <Stepper cycle={latest} />
         <Goals goals={latest.goals} />
+        <SharedSummaries summaries={latest.stage_summaries} />
       </GlassCard>
       {older.map((c) => (
         <details key={c.id} className="rounded-lg border p-3">
@@ -75,6 +98,7 @@ export const EprReview: React.FC<{ cycles: MyEprCycle[] }> = ({ cycles }) => {
           <div className="mt-3 space-y-4">
             <Stepper cycle={c} />
             <Goals goals={c.goals} />
+            <SharedSummaries summaries={c.stage_summaries} />
           </div>
         </details>
       ))}

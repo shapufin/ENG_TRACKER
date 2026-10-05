@@ -1,6 +1,7 @@
 import React from "react";
-import { StatCard, type StatCardProps } from "@/components/ui/StatCard";
+import { StatCard, STAT_CARD_MICRO_LABEL, type StatCardProps } from "@/components/ui/StatCard";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import { Clock, FileText, CheckCircle, AlertCircle, XCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -25,28 +26,44 @@ const SUMMARY_CONFIG: Record<
   {
     icon: LucideIcon;
     glow: NonNullable<StatCardProps["glow"]>;
-    iconColorClass?: string;
+    iconColorClass: string;
+    iconWellClass: string;
     progressColorClass: string;
   }
 > = {
-  total_hours: { icon: Clock, glow: "primary", progressColorClass: "bg-indigo-500" },
-  total_entries: { icon: FileText, glow: "primary", progressColorClass: "bg-purple-500" },
+  total_hours: {
+    icon: Clock,
+    glow: "primary",
+    iconColorClass: toneTextClass.info,
+    iconWellClass: `border ${toneSurfaceClass.info}`,
+    progressColorClass: "bg-indigo-500",
+  },
+  total_entries: {
+    icon: FileText,
+    glow: "primary",
+    iconColorClass: toneTextClass.accent,
+    iconWellClass: `border ${toneSurfaceClass.accent}`,
+    progressColorClass: "bg-purple-500",
+  },
   approved_hours: {
     icon: CheckCircle,
     glow: "success",
-    iconColorClass: "text-success",
+    iconColorClass: toneTextClass.success,
+    iconWellClass: `border ${toneSurfaceClass.success}`,
     progressColorClass: "bg-emerald-500",
   },
   pending_hours: {
     icon: AlertCircle,
     glow: "warning",
-    iconColorClass: "text-warning",
+    iconColorClass: toneTextClass.warning,
+    iconWellClass: `border ${toneSurfaceClass.warning}`,
     progressColorClass: "bg-amber-500",
   },
   rejected_hours: {
     icon: XCircle,
     glow: "destructive",
-    iconColorClass: "text-destructive",
+    iconColorClass: toneTextClass.danger,
+    iconWellClass: `border ${toneSurfaceClass.danger}`,
     progressColorClass: "bg-rose-500",
   },
 };
@@ -82,10 +99,12 @@ export const OvertimeSummaryCards: React.FC<OvertimeSummaryCardsProps> = ({
           <StatCard
             key={k}
             label={SUMMARY_LABELS[k]}
+            labelClassName={STAT_CARD_MICRO_LABEL}
             value={<AnimatedNumber value={summary[k]} />}
             icon={cfg.icon}
             glow={cfg.glow}
             iconColorClass={cfg.iconColorClass}
+            iconWellClass={cfg.iconWellClass}
             delay={i * 0.05}
             progressPercent={progressByKey[k]}
             progressColorClass={cfg.progressColorClass}

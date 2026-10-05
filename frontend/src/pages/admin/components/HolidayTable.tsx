@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from "react";
-import { Button } from "@/components/ui/button";
+import React, { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
-import { LoadingCard } from "@/components/ui/LoadingCard";
+import { DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Pencil, Trash2, CalendarDays } from "lucide-react";
+import { LoadingCard } from "@/components/ui/LoadingCard";
+import { createEditDeleteActionsColumn } from "@/components/ui/tableColumnHelpers";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
+import { CalendarDays } from "lucide-react";
 import type { PublicHoliday } from "@/types";
 
 interface HolidayRow {
@@ -30,6 +32,49 @@ export const HolidayTable: React.FC<HolidayTableProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const columns = useMemo<AppColumnDef<HolidayRow>[]>(
+    () => [
+      {
+        id: "name",
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      },
+      {
+        id: "date",
+        accessorKey: "formattedDate",
+        header: "Date",
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-sm">{row.original.formattedDate}</span>
+        ),
+      },
+      {
+        id: "country",
+        accessorKey: "country_code",
+        header: "Country",
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-sm tracking-wide uppercase">
+            {row.original.country_code || "—"}
+          </span>
+        ),
+      },
+      {
+        id: "scope",
+        header: "Scope",
+        cell: ({ row }) => (
+          <Badge variant={row.original.is_global ? "secondary" : "outline"}>
+            {row.original.scope}
+          </Badge>
+        ),
+      },
+      createEditDeleteActionsColumn<HolidayRow>(
+        (row) => onEdit(row as any),
+        (row) => onDelete(row as any)
+      ),
+    ],
+    [onEdit, onDelete]
+  );
+
   if (isLoading) {
     return <LoadingCard rows={4} className="min-h-[200px]" />;
   }
@@ -45,51 +90,8 @@ export const HolidayTable: React.FC<HolidayTableProps> = ({
   }
 
   return (
-    <GlassCard isHoverLift={false} className="overflow-hidden p-0">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-border/50">
-          <thead className="bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="px-6 py-4 text-left">Name</th>
-              <th className="px-6 py-4 text-left">Date</th>
-              <th className="px-6 py-4 text-left">Country</th>
-              <th className="px-6 py-4 text-left">Scope</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/50">
-            {holidays.map((holiday) => (
-              <tr key={holiday.id}>
-                <td className="px-6 py-4 font-medium">{holiday.name}</td>
-                <td className="px-6 py-4 text-sm text-muted-foreground">{holiday.formattedDate}</td>
-                <td className="px-6 py-4 text-sm uppercase tracking-wide text-muted-foreground">
-                  {holiday.country_code || "—"}
-                </td>
-                <td className="px-6 py-4">
-                  <Badge variant={holiday.is_global ? "secondary" : "outline"}>
-                    {holiday.scope}
-                  </Badge>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => onEdit(holiday as any)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive/80"
-                      onClick={() => onDelete(holiday as any)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <GlassCard isHoverLift={false} className="p-4">
+      <DataTable columns={columns} data={holidays} emptyMessage="No holidays defined yet." />
     </GlassCard>
   );
 };

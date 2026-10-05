@@ -34,6 +34,22 @@ describe("OvertimeSummaryCards", () => {
     expect(container.querySelector(".bg-linear-to-br")).toBeNull();
   });
 
+  it("wraps every icon in a tone well with a micro label", () => {
+    const { container } = render(
+      <OvertimeSummaryCards
+        summary={{
+          total_hours: 42,
+          total_entries: 7,
+          approved_hours: 30,
+          pending_hours: 10,
+          rejected_hours: 2,
+        }}
+      />
+    );
+
+    expect(container.querySelectorAll('[class*="bg-tone-"]').length).toBeGreaterThanOrEqual(5);
+  });
+
   it("renders nothing when summary is missing", () => {
     const { container } = render(<OvertimeSummaryCards summary={null} />);
     expect(container).toBeEmptyDOMElement();

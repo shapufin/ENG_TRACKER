@@ -14,6 +14,23 @@ describe("KPICard", () => {
     expect(screen.getByText("42")).toHaveClass("tabular-nums");
   });
 
+  it("wraps the icon in a tone well when well classes are provided", () => {
+    const { container } = render(
+      <KPICard
+        title="Total"
+        value={42}
+        subtitle="This month"
+        icon={Users}
+        iconWellClass="border bg-tone-info-surface"
+        iconColorClass="text-tone-info-text"
+      />
+    );
+
+    const well = container.querySelector("div.bg-tone-info-surface");
+    expect(well).not.toBeNull();
+    expect(well?.querySelector("svg")).toBeInTheDocument();
+  });
+
   it("does not render a delta badge when delta is undefined", () => {
     render(<KPICard title="Total" value={42} subtitle="This month" icon={Users} />);
     expect(screen.queryByText("+5")).not.toBeInTheDocument();

@@ -214,6 +214,37 @@ export interface EPRGoal {
   description: string;
 }
 
+export type EPRStage = "goal_setting" | "mid_year" | "final_review";
+
+/** Evidence for one completed EPR stage, written by `complete_stage` —
+ * the TL/staff view. */
+export interface EPRStageRecord {
+  id: number;
+  cycle: number;
+  stage: EPRStage;
+  stage_display: string;
+  summary: string;
+  reference_url: string;
+  shared_with_employee: boolean;
+  recorded_by: number;
+  recorded_by_name: string | null;
+  created_at: string;
+}
+
+/**
+ * The same row as an HBPR sees it: evidence-EXISTENCE metadata only — the
+ * API never sends summary text or the reference URL to a non-owner (mirrors
+ * notes redaction).
+ */
+export interface EPRStageRecordMeta {
+  id: number;
+  stage: EPRStage;
+  has_reference: boolean;
+  shared_with_employee: boolean;
+  recorded_by_name: string | null;
+  created_at: string;
+}
+
 export interface EPRCycle {
   id: number;
   user: number;
@@ -224,9 +255,46 @@ export interface EPRCycle {
   final_review_completed_at: string | null;
   goals: EPRGoal[];
   goal_count: number;
+  /** Full rows for the owning TL/staff; metadata-only for an HBPR. */
+  stage_records?: (EPRStageRecord | EPRStageRecordMeta)[];
 }
 
-export type EPRStage = "goal_setting" | "mid_year" | "final_review";
+/** Payload for POST epr-cycles/{id}/complete_stage/ — summary is required. */
+export interface CompleteEprStagePayload {
+  stage: EPRStage;
+  summary: string;
+  reference_url?: string;
+  shared_with_employee?: boolean;
+}
+
+/** One evidence row inside the year-end pack (the TL's own content). */
+export interface YearEndPackEvidenceRow {
+  id: number;
+  occurred_on: string;
+  shared_summary: string;
+  action_items: string;
+  reference_url: string;
+  recorded_by_name: string | null;
+}
+
+/** GET hbpr-evidence/year-end-pack/?assignment=&year= */
+export interface YearEndEvidencePack {
+  assignment: {
+    id: number;
+    albanian_tl_name: string | null;
+    hbpr_name: string | null;
+    cadence: HbprCadence;
+    effective_from: string;
+    effective_to: string | null;
+  };
+  year: number;
+  cadence_expected: number;
+  cadence_held: number;
+  coverage_pct: number | null;
+  meetings: YearEndPackEvidenceRow[];
+  epr_mid_year: YearEndPackEvidenceRow | null;
+  epr_year_end: YearEndPackEvidenceRow | null;
+}
 
 export type KpiStatus = "measured" | "approximate" | "planned" | "blocked" | "excluded";
 

@@ -1,4 +1,6 @@
 import React from "react";
+import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
+import { cn } from "@/lib/utils";
 import type { UploadPreview } from "../types/ticketKPI";
 
 interface TestMappingResultProps {
@@ -20,7 +22,7 @@ export const TestMappingResult: React.FC<TestMappingResultProps> = ({ result }) 
     {result.errors.length > 0 && (
       <div className="space-y-1">
         {result.errors.map((err, i) => (
-          <p key={i} className="text-xs text-destructive">
+          <p key={i} className="text-destructive text-xs">
             {err}
           </p>
         ))}
@@ -29,10 +31,10 @@ export const TestMappingResult: React.FC<TestMappingResultProps> = ({ result }) 
     {result.preview_rows.length > 0 && (
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
-          <thead className="bg-muted">
-            <tr>
+          <thead>
+            <tr className={TABLE_HEAD_ROW_CLASS}>
               {Object.keys(result.preview_rows[0]).map((k) => (
-                <th key={k} className="px-2 py-1 text-left">
+                <th key={k} className={cn(TABLE_HEAD_CELL_CLASS, "px-2 py-1")}>
                   {k}
                 </th>
               ))}

@@ -48,8 +48,13 @@ export const DashboardPageHeader: React.FC<DashboardPageHeaderProps> = ({
         />
       )}
       {showSettings && (
-        <Button variant="outline" size="icon" onClick={() => navigate("/settings")}>
-          <Settings className="h-4 w-4" />
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Settings"
+          onClick={() => navigate("/settings")}
+        >
+          <Settings className="h-4 w-4" aria-hidden="true" />
         </Button>
       )}
     </div>
