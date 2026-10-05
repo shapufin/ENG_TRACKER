@@ -93,14 +93,6 @@ class ScorecardSerializer(serializers.Serializer):
     escalation_count = serializers.IntegerField()
 
 
-class KpiCoverageEntrySerializer(serializers.Serializer):
-    kpi = serializers.CharField()
-    sheet = serializers.IntegerField()
-    status = serializers.CharField()
-    phase = serializers.IntegerField(allow_null=True)
-    note = serializers.CharField()
-
-
 def _viewer(serializer):
     request = serializer.context.get('request')
     return getattr(request, 'user', None)

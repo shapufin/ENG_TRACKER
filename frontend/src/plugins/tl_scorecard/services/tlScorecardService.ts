@@ -9,7 +9,6 @@ import type {
   EPRCycle,
   EPRStageRecord,
   EscalationCandidate,
-  KpiCoverageEntry,
   PIPRecord,
   HbprEvidence,
   HbprEvidenceKind,
@@ -74,8 +73,6 @@ export const tlScorecardService = {
     if (month) params.month = month;
     return api.get<Scorecard>(`${BASE}/scorecard/`, { params });
   },
-
-  getKpiCoverage: () => api.get<KpiCoverageEntry[]>(`${BASE}/kpi-coverage/`),
 
   getTrend: (months = 6) => api.get<Scorecard[]>(`${BASE}/trend/`, { params: { months } }),
 

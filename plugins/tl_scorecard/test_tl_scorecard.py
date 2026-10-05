@@ -186,11 +186,6 @@ class TLScorecardAPITests(TestCase):
         force_authenticate(request, user=user)
         return TLScorecardViewSet.as_view({'get': 'scorecard'})(request)
 
-    def _kpi_coverage(self, user):
-        request = self.factory.get('/api/plugins/tl_scorecard/kpi-coverage/')
-        force_authenticate(request, user=user)
-        return TLScorecardViewSet.as_view({'get': 'kpi_coverage'})(request)
-
     def test_tl_sees_own_scorecard(self):
         resp = self._scorecard(self.leader)
         self.assertEqual(resp.status_code, 200, resp.data)
@@ -204,10 +199,3 @@ class TLScorecardAPITests(TestCase):
         resp = self._scorecard(self.staff, leader_id=self.leader.id)
         self.assertEqual(resp.status_code, 200, resp.data)
         self.assertEqual(resp.data['team_size'], 1)
-
-    def test_kpi_coverage_lists_every_kpi_with_a_status(self):
-        resp = self._kpi_coverage(self.leader)
-        self.assertEqual(resp.status_code, 200)
-        self.assertGreater(len(resp.data), 15)
-        statuses = {row['status'] for row in resp.data}
-        self.assertTrue(statuses.issubset({'measured', 'approximate', 'planned', 'blocked', 'excluded'}))

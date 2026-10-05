@@ -10,7 +10,7 @@ import { toneSurfaceClass } from "@/components/ui/tone";
 import { userService } from "@/services/userService";
 import { ExportButton } from "../ExportButton";
 
-export type TLScorecardTab = "overview" | "records";
+export type TLScorecardTab = "overview" | "records" | "evidence";
 
 /** Current calendar quarter, e.g. "Q4 Active" — the program runs every quarter. */
 const quarterLabel = (): string => `Q${Math.floor(new Date().getMonth() / 3) + 1} Active`;
@@ -112,18 +112,14 @@ export const TLScorecardHeader: React.FC<TLScorecardHeaderProps> = ({
     }
   >
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div className="no-scrollbar -mx-1 min-w-0 flex-1 overflow-x-auto px-1">
-          <Tabs value={tab} onValueChange={(value) => onTabChange(value as TLScorecardTab)}>
-            <TabsList aria-label="Scorecard sections">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="records">Records</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-        <span className="text-muted-foreground hidden shrink-0 text-xs sm:inline-block">
-          Last synced: Just now
-        </span>
+      <div className="no-scrollbar -mx-1 overflow-x-auto px-1">
+        <Tabs value={tab} onValueChange={(value) => onTabChange(value as TLScorecardTab)}>
+          <TabsList aria-label="Scorecard sections">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="records">Records</TabsTrigger>
+            <TabsTrigger value="evidence">Evidence</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
       {children}
     </div>

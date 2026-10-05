@@ -157,7 +157,7 @@ class WorkbookFormulaInjectionTests(TestCase):
             'promotion': {'promoted_pct': None},
             'escalation_count': 0,
         }
-        data = build_workbook_bytes(scorecard, [], governance, 'September 2026')
+        data = build_workbook_bytes(scorecard, governance, 'September 2026')
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
             sheet_xml = ''.join(
                 zf.read(name).decode('utf-8')

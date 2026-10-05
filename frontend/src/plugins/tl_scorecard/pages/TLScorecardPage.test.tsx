@@ -6,12 +6,11 @@ import { describe, it, expect, vi } from "vitest";
 import { TLScorecardPage } from "./TLScorecardPage";
 import { tlScorecardService } from "../services/tlScorecardService";
 import { downloadBlobResponse } from "@/lib/download";
-import type { KpiCoverageEntry, Scorecard } from "../types/tlScorecard";
+import type { Scorecard } from "../types/tlScorecard";
 
 vi.mock("../services/tlScorecardService", () => ({
   tlScorecardService: {
     getScorecard: vi.fn(),
-    getKpiCoverage: vi.fn(),
     getApprovalEngagementScore: vi.fn(),
     getEngagementSurveyTeamAverage: vi.fn(),
     getEscalations: vi.fn(),
@@ -101,29 +100,9 @@ const SCORECARD: Scorecard = {
   escalation_count: 0,
 };
 
-const COVERAGE: KpiCoverageEntry[] = [
-  {
-    kpi: "Leave requests decided within 2 working days",
-    sheet: 2,
-    status: "measured",
-    phase: 1,
-    note: "n/a",
-  },
-  {
-    kpi: "Regretted voluntary turnover < 7%",
-    sheet: 1,
-    status: "blocked",
-    phase: 3,
-    note: "needs HR taxonomy",
-  },
-];
-
 const mockDefaults = () => {
   (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: SCORECARD,
-  });
-  (tlScorecardService.getKpiCoverage as ReturnType<typeof vi.fn>).mockResolvedValue({
-    data: COVERAGE,
   });
   (tlScorecardService.getEngagementSurveyTeamAverage as ReturnType<typeof vi.fn>).mockResolvedValue(
     {
@@ -232,19 +211,6 @@ describe("TLScorecardPage", () => {
     expect(screen.getByText("Leave request pending 5 business days.")).toBeInTheDocument();
   });
 
-  it("renders the KPI coverage panel with every entry's status", async () => {
-    mockDefaults();
-
-    renderPage();
-
-    await waitFor(() =>
-      expect(screen.getByText("Leave requests decided within 2 working days")).toBeInTheDocument()
-    );
-    expect(screen.getByText("Regretted voluntary turnover < 7%")).toBeInTheDocument();
-    expect(screen.getByText("Measured")).toBeInTheDocument();
-    expect(screen.getByText("Blocked")).toBeInTheDocument();
-  });
-
   it("shows an error card when the scorecard fetch fails", async () => {
     mockDefaults();
     (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockRejectedValue(
@@ -282,13 +248,14 @@ describe("TLScorecardPage", () => {
     expect(downloadBlobResponse).not.toHaveBeenCalled();
   });
 
-  it("offers Overview and Records tabs and keeps Overview as the default", async () => {
+  it("offers Overview, Records and Evidence tabs and keeps Overview as the default", async () => {
     mockDefaults();
     renderPage();
 
     await waitFor(() => expect(screen.getByText("66.7%")).toBeInTheDocument());
     expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tab", { name: "Records" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Evidence" })).toBeInTheDocument();
   });
 
   it("opens the Records tab from the URL even when the scorecard cannot load", async () => {
@@ -335,10 +302,10 @@ describe("TLScorecardPage", () => {
       },
     });
 
-    renderPage();
+    renderPage("/tl-scorecard?tab=evidence");
 
     expect(await screen.findByText("HBPR partnership")).toBeInTheDocument();
-    expect(screen.getByText("Elda Partner")).toBeInTheDocument();
+    expect(await screen.findByText("Elda Partner")).toBeInTheDocument();
     expect(screen.getByText("Mid-year EPR: missing")).toBeInTheDocument();
     // The AL TL authors the evidence.
     expect(screen.getByRole("button", { name: /record evidence/i })).toBeInTheDocument();
@@ -347,9 +314,17 @@ describe("TLScorecardPage", () => {
 
   it("tells an unpaired Albanian TL there is no HBPR yet", async () => {
     mockDefaults();
-    renderPage();
+    renderPage("/tl-scorecard?tab=evidence");
     expect(await screen.findByText("No HR business partner assigned yet")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /record evidence/i })).not.toBeInTheDocument();
+  });
+
+  it("does not fetch the HBPR partnership on the overview tab", async () => {
+    mockDefaults();
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("66.7%")).toBeInTheDocument());
+    expect(tlScorecardService.getPartnership).not.toHaveBeenCalled();
   });
 
   it("sends an HBPR-only user to their own workspace instead of this page", async () => {

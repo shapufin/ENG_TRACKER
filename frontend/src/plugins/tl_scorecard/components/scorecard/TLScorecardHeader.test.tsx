@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
-import { TLScorecardHeader } from "./TLScorecardHeader";
+import { TLScorecardHeader, type TLScorecardTab } from "./TLScorecardHeader";
 import { userService } from "@/services/userService";
 
 vi.mock("@/services/userService", () => ({
@@ -14,7 +14,7 @@ const MEMBERS = [1, 2, 3, 4, 5, 6].map((id) => ({
   user: { id, full_name: `Member${id} Person`, username: `member${id}` },
 }));
 
-const renderHeader = (tab: "overview" | "records" = "overview") => {
+const renderHeader = (tab: TLScorecardTab = "overview") => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const onTabChange = vi.fn();
   render(
@@ -50,11 +50,13 @@ describe("TLScorecardHeader (mockup button hierarchy)", () => {
     });
   });
 
-  it("shows the last-synced line and switches tabs", async () => {
+  it("switches between the three tabs", async () => {
     vi.mocked(userService.getMyTeamMembers).mockResolvedValue([]);
     const { onTabChange } = renderHeader();
-    expect(await screen.findByText(/last synced/i)).toBeDefined();
-    fireEvent.mouseDown(screen.getByRole("tab", { name: "Records" }));
-    expect(onTabChange).toHaveBeenCalledWith("records");
+    expect(await screen.findByRole("tab", { name: "Overview" })).toBeDefined();
+    expect(screen.getByRole("tab", { name: "Records" })).toBeDefined();
+    expect(screen.getByRole("tab", { name: "Evidence" })).toBeDefined();
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Evidence" }));
+    expect(onTabChange).toHaveBeenCalledWith("evidence");
   });
 });
