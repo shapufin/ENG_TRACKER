@@ -73,7 +73,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
         iconWellClass={`border ${toneSurfaceClass.warning}`}
         footer={
           <>
-            <span className="font-medium text-muted-foreground">
+            <span className="text-muted-foreground font-medium">
               {Math.round(sbPercent)}% queue mix
             </span>
             <span className="text-muted-foreground">On-call shifts</span>
@@ -92,7 +92,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
         iconWellClass={`border ${toneSurfaceClass.info}`}
         footer={
           <>
-            <span className="font-medium text-muted-foreground">
+            <span className="text-muted-foreground font-medium">
               {Math.round(vacPercent)}% queue mix
             </span>
             <span className="text-muted-foreground">Planned absence</span>
@@ -111,7 +111,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
         progressColorClass="bg-tone-warning-text"
         footer={
           <>
-            <span className="font-medium text-muted-foreground">
+            <span className="text-muted-foreground font-medium">
               {Math.round(otPercent)}% queue mix
             </span>
             <span className="text-muted-foreground">Extra capacity</span>

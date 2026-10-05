@@ -20,11 +20,11 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
   standbyHours,
 }) => {
   return (
-    <GlassCard className="border-l-4 border-l-primary p-6">
+    <GlassCard className="border-l-primary border-l-4 p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Team Overview</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Manage your team&apos;s overtime, standby, and leave requests
           </p>
         </div>
@@ -41,32 +41,26 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
       {memberCount > 0 && (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Teams</p>
+            <p className="text-muted-foreground text-xs tracking-wider uppercase">Teams</p>
             <p className="font-mono text-2xl font-semibold tabular-nums">
               {teamCount > 0 ? teamCount : "–"}
             </p>
           </div>
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Vacation Left</p>
-            <p
-              className={`font-mono text-2xl font-semibold tabular-nums ${toneTextClass.success}`}
-            >
+            <p className="text-muted-foreground text-xs tracking-wider uppercase">Vacation Left</p>
+            <p className={`font-mono text-2xl font-semibold tabular-nums ${toneTextClass.success}`}>
               {vacationDaysLeft.toFixed(1)}
             </p>
           </div>
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Overtime (Mo)</p>
-            <p
-              className={`font-mono text-2xl font-semibold tabular-nums ${toneTextClass.warning}`}
-            >
+            <p className="text-muted-foreground text-xs tracking-wider uppercase">Overtime (Mo)</p>
+            <p className={`font-mono text-2xl font-semibold tabular-nums ${toneTextClass.warning}`}>
               {overtimeHours.toFixed(2)}
             </p>
           </div>
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Standby (Mo)</p>
-            <p
-              className={`font-mono text-2xl font-semibold tabular-nums ${toneTextClass.danger}`}
-            >
+            <p className="text-muted-foreground text-xs tracking-wider uppercase">Standby (Mo)</p>
+            <p className={`font-mono text-2xl font-semibold tabular-nums ${toneTextClass.danger}`}>
               {standbyHours.toFixed(2)}
             </p>
           </div>
