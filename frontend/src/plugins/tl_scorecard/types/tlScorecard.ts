@@ -296,16 +296,6 @@ export interface YearEndEvidencePack {
   epr_year_end: YearEndPackEvidenceRow | null;
 }
 
-export type KpiStatus = "measured" | "approximate" | "planned" | "blocked" | "excluded";
-
-export interface KpiCoverageEntry {
-  kpi: string;
-  sheet: number;
-  status: KpiStatus;
-  phase: number | null;
-  note: string;
-}
-
 /** HBPR workspace (GET hbpr/overview/ and hbpr-evidence/). */
 export interface PersonRef {
   id: number;

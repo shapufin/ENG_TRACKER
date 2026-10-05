@@ -118,7 +118,11 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   evidence viewset's DRF `page` plus `period_year` and `leader` filters. `kind` is
   required (the mixed "all types" view was dropped).
 - `/tl-scorecard` is the AL-TL authoring workspace (`components/scorecard/*`); an
-  HBPR-only viewer is redirected to `/hbpr` before any query fires. The AL TL's "HBPR
+  HBPR-only viewer is redirected to `/hbpr` before any query fires. The page is
+  three URL-backed tabs — `?tab=` overview (default: scorecard metrics +
+  governance actions) / records / evidence — and each tab's queries are
+  `enabled`-gated on it, so no fetch fires for a surface that isn't rendered.
+  The **Evidence** tab owns the HBPR partnership surface: the "HBPR
   partnership" section reads `GET /api/plugins/tl_scorecard/partnership/`; its
   **Evidence pack** button opens `EvidencePackDialog`, which fetches
   `year-end-pack` on open. In the EPR section a stage button opens
@@ -298,6 +302,21 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   `unfinished_q` (both UTC), `reference_url` rendering (`rel=noopener`, `URLField`). Open, not 
   changed: the assignment-archive purge deletes on a GET (documented, no audit entry); 
   `role_codes__icontains='hr'` in the Users role filters is substring-based.
+
+- **2026-10-05, scorecard tabs + KPI-coverage removal:** `/tl-scorecard` gained a
+  third, URL-backed **Evidence** tab (`?tab=evidence`) that owns
+  `HbprPartnershipSection` + `EvidenceExportSection`; every page query is now
+  `enabled`-gated on its tab (records/evidence no longer fire scorecard/EPR/
+  partnership fetches). The static `KPI_COVERAGE` catalog was removed end to
+  end — `kpi-coverage` action, `KpiCoverageEntrySerializer`, `KpiCoveragePanel`,
+  `KpiCoverageEntry`/`KpiStatus`, `getKpiCoverage`, and the "KPI Coverage"
+  workbook sheet — because it shipped developer-facing build status ("Phase 3 /
+  planned / needs HR taxonomy") inside what is supposed to be an evidence
+  artifact; the workbook is now Summary + Governance + HBPR evidence. The
+  hardcoded `Last synced: Just now` header text was removed (it was literal
+  fiction). The engagement plugin's `sidebar-nav` slot now declares
+  `section: "leadership"` — without a `section` a slot item falls into the
+  generic "Plugins" bucket, which is where the engagement link sat.
 
 **Assignment dates (2026-10-03).** `effective_to` is the **last day in effect**, not a
 switch. An assignment covers a day `d` when `effective_from <= d` and (`effective_to` is

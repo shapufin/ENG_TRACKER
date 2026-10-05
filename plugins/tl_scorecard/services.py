@@ -27,136 +27,6 @@ from .models import (
     ReviewDelivery,
 )
 
-# Every KPI from both TL job-description sheets, with its current coverage
-# status. A plain data structure (not a model) — it only changes when a
-# later phase actually ships that KPI. Powers the frontend's "KPI Coverage"
-# panel so nothing this effort is meant to eventually cover is silently
-# invisible while it's still unbuilt.
-KPI_COVERAGE = [
-    {
-        "kpi": "Leave requests decided within 2 working days",
-        "sheet": 2, "status": "measured", "phase": 1,
-        "note": "Computed live from LeaveRequest.submitted_at/approved_at.",
-    },
-    {
-        "kpi": "0 pending leave requests at month-end",
-        "sheet": 2, "status": "measured", "phase": 1,
-        "note": "Computed live from LeaveRequest.status at month boundary.",
-    },
-    {
-        "kpi": "Overtime approval turnaround",
-        "sheet": 2, "status": "measured", "phase": 1,
-        "note": "Turnaround time only — see 'Zero unauthorized overtime' below for why this isn't that KPI.",
-    },
-    {
-        "kpi": "Engagement score ≥ 8.5/10",
-        "sheet": 1, "status": "measured", "phase": 2,
-        "note": (
-            "Two numbers now exist: the engagement plugin's approval-behavior score "
-            "(speed/consistency, not sentiment — shown as a labeled proxy) and the new "
-            "EngagementSurveyResponse pulse score, aggregated team-wide via "
-            "team-average/ so individual responses stay anonymous to the TL."
-        ),
-    },
-    {
-        "kpi": "Certification achievement via Skills Matrix",
-        "sheet": 1, "status": "approximate", "phase": 2,
-        "note": (
-            "Skill.is_certifiable + UserSkill.certified_on now exist on the skills plugin, "
-            "but no aggregate count is exposed through its API yet — fields are there, "
-            "the number on this page isn't. Small follow-up to the skills plugin, not tl_scorecard."
-        ),
-    },
-    {
-        "kpi": "Balanced junior/senior workforce ratio",
-        "sheet": 1, "status": "measured", "phase": 2,
-        "note": "UserProfile.seniority_level (apps/users, a core app) — populated manually, ratio computed live.",
-    },
-    {
-        "kpi": "1-on-1 compliance (≥1/member/month)",
-        "sheet": 1, "status": "measured", "phase": 2,
-        "note": "Meeting(meeting_type=one_on_one) — % of team members with ≥1 logged this month.",
-    },
-    {
-        "kpi": "≥45 documented Technical Lead syncs",
-        "sheet": 1, "status": "measured", "phase": 2,
-        "note": "Meeting(meeting_type=tl_sync) — cumulative count over the requested date range.",
-    },
-    {
-        "kpi": "Monthly team meetings with HRBP, notes within 24h",
-        "sheet": 2, "status": "measured", "phase": 2,
-        "note": "Meeting(meeting_type=team_meeting) + MeetingAttendee(role=hrbp) + notes_published_at SLA check.",
-    },
-    {
-        "kpi": "Idle risks flagged with weekly status reporting",
-        "sheet": 2, "status": "measured", "phase": 2,
-        "note": "IdleFlag + IdleStatusUpdate — open/resolved counts and weekly-log presence.",
-    },
-    {
-        "kpi": "≥12 monthly management reviews to Ops/GM",
-        "sheet": 2, "status": "measured", "phase": 2,
-        "note": "ReviewDelivery — cumulative count over the requested date range.",
-    },
-    {
-        "kpi": "Zero unauthorized overtime",
-        "sheet": 2, "status": "blocked", "phase": 3,
-        "note": "OvertimeLog has no pre-approval concept — needs an ops decision on how 'authorized before work' is actually tracked.",
-    },
-    {
-        "kpi": "Regretted voluntary turnover < 7%",
-        "sheet": 1, "status": "blocked", "phase": 3,
-        "note": "Needs HR to define the voluntary/regretted taxonomy before a termination model can be designed.",
-    },
-    {
-        "kpi": "Unjustified absences addressed within 5 working days",
-        "sheet": 2, "status": "measured", "phase": 3,
-        "note": "Absence model — flagged manually, 5-working-day SLA computed automatically.",
-    },
-    {
-        "kpi": "0 escalations from administrative delays/communication failures",
-        "sheet": 1, "status": "measured", "phase": 3,
-        "note": (
-            "No manual escalation log — computed live from breaches already tracked: "
-            "stale leave decisions, idle flags open >4 weeks with no update, PIPs pending "
-            "approval >14 days, absences unaddressed >5 working days."
-        ),
-    },
-    {
-        "kpi": "HR Albania formal communications correctly routed/documented",
-        "sheet": 1, "status": "planned", "phase": 3,
-        "note": "Needs HR to define the taxonomy of formal-communication types first.",
-    },
-    {
-        "kpi": "100% timely EPR completion (3 stages, ≥5 goals/member)",
-        "sheet": 2, "status": "measured", "phase": 3,
-        "note": (
-            "EPRCycle+EPRGoal — due dates computed from the year (Q1/Q3/Q4-end), never typed; "
-            "≥5-goal rule enforced before Goal Setting can be marked complete."
-        ),
-    },
-    {
-        "kpi": "PIPs executed only with prior HR approval, evidence-based",
-        "sheet": 2, "status": "measured", "phase": 3,
-        "note": "PIPRecord.approved_by/approved_at — pending-too-long computed automatically, not typed.",
-    },
-    {
-        "kpi": "100% onboarding sign-offs before start date",
-        "sheet": 2, "status": "planned", "phase": 3,
-        "note": "Onboarding plugin is currently pure file storage — needs a plan/checklist + approval state.",
-    },
-    {
-        "kpi": "High-potential members identified for promotion (3%/year)",
-        "sheet": 1, "status": "measured", "phase": 3,
-        "note": "PromotionFlag — nomination is manual, the 3%-of-team ratio is computed automatically.",
-    },
-    {
-        "kpi": "34% female headcount (Group diversity target)",
-        "sheet": 1, "status": "excluded", "phase": None,
-        "note": "Explicitly excluded from this effort pending HR decisions on collecting/storing gender data.",
-    },
-]
-
-
 def reporting_period(month: date | None) -> date:
     """Normalize any date within a month to that month's first day — the
     one shared "as-of month" convention every later phase should reuse
@@ -204,8 +74,8 @@ def leave_sla_metrics(team_member_ids, month: date) -> dict:
 
 def ot_turnaround_metrics(team_member_ids, month: date) -> dict:
     """Overtime approval turnaround only — deliberately NOT a measure of
-    'unauthorized overtime' (see KPI_COVERAGE: that KPI has no data source
-    yet, since OvertimeLog has no pre-approval concept)."""
+    'unauthorized overtime': that KPI has no data source yet, since
+    OvertimeLog has no pre-approval concept."""
     month_start, month_end = _month_bounds(month)
     qs = OvertimeLog.objects.filter(
         user_id__in=team_member_ids, submitted_at__gte=month_start, submitted_at__lt=month_end,

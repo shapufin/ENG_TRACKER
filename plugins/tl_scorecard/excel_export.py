@@ -8,27 +8,17 @@ plugin: only xlsxwriter + this plugin's own `services` output (already-
 computed `dict`s passed in) are used — no cross-plugin imports, see the
 "Plugin removal safety" invariant.
 
-Sheets: Summary (scorecard metrics), KPI Coverage (status per KPI),
-Governance (open PIPs/absences/pending promotions/EPR cycle progress).
+Sheets: Summary (scorecard metrics),
+Governance (open PIPs/absences/pending promotions/EPR cycle progress),
+HBPR evidence (cadence meetings + EPR participation).
 """
 import io
 
 import xlsxwriter
 
 PRIMARY = "#1D4ED8"
-SUCCESS = "#059669"
-WARNING = "#F59E0B"
-DANGER = "#DC2626"
 INK = "#0F172A"
 MUTED = "#475569"
-
-STATUS_COLORS = {
-    "measured": SUCCESS,
-    "approximate": WARNING,
-    "planned": "#6366F1",
-    "blocked": DANGER,
-    "excluded": MUTED,
-}
 
 
 class _Formats:
@@ -52,16 +42,6 @@ class _Formats:
         self.cell = wb.add_format({"border": 1, "border_color": "#E2E8F0", "text_wrap": True, "valign": "top"})
         self.cell_center = wb.add_format({"border": 1, "border_color": "#E2E8F0", "align": "center"})
         self.empty = wb.add_format({"italic": True, "font_color": MUTED})
-
-
-def _status_formats(wb):
-    return {
-        status: wb.add_format({
-            "bold": True, "align": "center", "font_color": "white", "bg_color": color,
-            "border": 1, "border_color": "#E2E8F0",
-        })
-        for status, color in STATUS_COLORS.items()
-    }
 
 
 def _build_summary_sheet(wb, fmt, scorecard, period_label):
@@ -104,24 +84,6 @@ def _build_summary_sheet(wb, fmt, scorecard, period_label):
         else:
             ws.write(r, 1, value, fmt.value)
         r += 1
-
-
-def _build_kpi_coverage_sheet(wb, fmt, kpi_coverage):
-    ws = wb.add_worksheet("KPI Coverage")
-    ws.hide_gridlines(2)
-    ws.set_column("A:A", 44)
-    ws.set_column("B:B", 14)
-    ws.set_column("C:C", 50)
-
-    status_fmt = _status_formats(wb)
-    headers = ["KPI", "Status", "Note"]
-    for col, label in enumerate(headers):
-        ws.write(0, col, label, fmt.header)
-
-    for idx, entry in enumerate(kpi_coverage, start=1):
-        ws.write(idx, 0, entry["kpi"], fmt.cell)
-        ws.write(idx, 1, entry["status"].capitalize(), status_fmt.get(entry["status"], fmt.value))
-        ws.write(idx, 2, entry["note"], fmt.cell)
 
 
 def _build_governance_sheet(wb, fmt, governance):
@@ -212,7 +174,7 @@ def _build_hbpr_evidence_sheet(wb, fmt, evidence):
         row += 1
 
 
-def build_workbook_bytes(scorecard, kpi_coverage, governance, period_label, hbpr_evidence=None):
+def build_workbook_bytes(scorecard, governance, period_label, hbpr_evidence=None):
     """Build the tl_scorecard evidence workbook and return raw .xlsx bytes."""
     buffer = io.BytesIO()
     # Free text (absence reasons, names) must never become a formula or link.
@@ -228,7 +190,6 @@ def build_workbook_bytes(scorecard, kpi_coverage, governance, period_label, hbpr
     })
     fmt = _Formats(wb)
     _build_summary_sheet(wb, fmt, scorecard, period_label)
-    _build_kpi_coverage_sheet(wb, fmt, kpi_coverage)
     _build_governance_sheet(wb, fmt, governance)
     _build_hbpr_evidence_sheet(wb, fmt, hbpr_evidence or [])
     wb.close()

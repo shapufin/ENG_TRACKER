@@ -59,7 +59,7 @@ Before writing or modifying any code, follow this mandatory 7-step ladder:
 | backup, restore, site backup | `.devin/context/PLUGINS/07-backup-restore.md` | Backup/restore invariants: PK-based fixture, dependent closure, superuser-only |
 | calendar, workspace, workspace_users | `.devin/context/07-CALENDAR.md` | Calendar privacy + workspace rules |
 | chart, Recharts, analytics, visualization, dashboard chart | `.devin/context/08-ANALYTICS-VISUALIZATION.md` | Chart sizing + data-source rules |
-| scorecard, TL scorecard, KPI coverage, EPR, PIP, escalation, HBPR, hbpr, HR business partner, Albanian TL assignment, cadence | `docs/hbpr-and-scorecard.md` (tracked, source of truth) + `.devin/context/PLUGINS/08-hbpr-scorecard.md` (local detail) | Scorecard metrics computed live (no snapshot); HBPR role, assignment, denial and evidence invariants |
+| scorecard, TL scorecard, EPR, PIP, escalation, HBPR, hbpr, HR business partner, Albanian TL assignment, cadence | `docs/hbpr-and-scorecard.md` (tracked, source of truth) + `.devin/context/PLUGINS/08-hbpr-scorecard.md` (local detail) | Scorecard metrics computed live (no snapshot); HBPR role, assignment, denial and evidence invariants |
 | plugin permission, render surface, plugin slot, metadata, resource access, remove/disable a plugin | `.devin/context/09-RESOURCE-ACCESS.md` + `.devin/context/10-PLUGIN-PERMISSIONS.md` | Group grants, plugin gates, removal safety |
 | file location, where is, find file | `.devin/context/PROJECT_INDEX.md` | Directory inventory |
 | plan, create plan, megaplan, refactor plan, optimize plan, plan review | `.devin/context/11-PLAN-CREATION.md` | Senior plan protocol: zero-hallucination specs + self-correcting gates |

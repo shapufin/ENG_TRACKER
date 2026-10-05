@@ -65,6 +65,10 @@ class EngagementPlugin(BasePlugin):
                 {
                     "slot": "sidebar-nav",
                     "component": "EngagementSidebarLink",
+                    # A TL surface, grouped with the other leadership links —
+                    # without a section it would fall into the generic
+                    # "Plugins" bucket at the bottom of the sidebar.
+                    "section": "leadership",
                 },
             ],
         })

@@ -45,15 +45,16 @@ const TLScorecardAuthoring: React.FC = () => {
   // `is_staff or is_superuser`; `isAdmin` is `is_staff` only.
   const isStaff = isAdmin || isSuperuser;
   const [params, setParams] = useSearchParams();
-  const tab: TLScorecardTab = params.get("tab") === "records" ? "records" : "overview";
+  const rawTab = params.get("tab");
+  const tab: TLScorecardTab = rawTab === "records" || rawTab === "evidence" ? rawTab : "overview";
   const year = new Date().getFullYear();
 
   const setTab = (next: TLScorecardTab) =>
     setParams(
       (prev) => {
         const params = new URLSearchParams(prev);
-        if (next === "records") params.set("tab", "records");
-        else params.delete("tab");
+        if (next === "overview") params.delete("tab");
+        else params.set("tab", next);
         return params;
       },
       { replace: true }
@@ -149,44 +150,51 @@ const TLScorecardAuthoring: React.FC = () => {
     onError: notifyError,
   });
 
+  // Each tab's queries are gated on that tab so the Records table doesn't pay
+  // for scorecard/EPR/partnership fetches it never renders.
+  const onOverview = tab === "overview";
+  const onEvidence = tab === "evidence";
   const scorecardQuery = useQuery({
     queryKey: ["tl-scorecard", "scorecard", "self"],
     queryFn: async () => (await tlScorecardService.getScorecard()).data,
-  });
-  const coverageQuery = useQuery({
-    queryKey: ["tl-scorecard", "kpi-coverage"],
-    queryFn: async () => (await tlScorecardService.getKpiCoverage()).data,
+    enabled: onOverview,
   });
   const engagementQuery = useQuery({
     queryKey: ["tl-scorecard", "engagement-summary"],
     queryFn: async () => (await tlScorecardService.getApprovalEngagementScore()).data,
+    enabled: onOverview,
   });
   const surveyQuery = useQuery({
     queryKey: ["tl-scorecard", "engagement-survey-average"],
     queryFn: async () => (await tlScorecardService.getEngagementSurveyTeamAverage()).data,
+    enabled: onOverview,
   });
   const escalationsQuery = useQuery({
     queryKey: ["tl-scorecard", "escalations", "self"],
     queryFn: async () => (await tlScorecardService.getEscalations()).data,
+    enabled: onOverview,
   });
   const pipRecordsQuery = useQuery({
     queryKey: ["tl-scorecard", "pip-records"],
     queryFn: () => tlScorecardService.listPIPRecords(),
+    enabled: onOverview,
   });
   const eprCyclesQuery = useQuery({
     queryKey: ["tl-scorecard", "epr-cycles"],
     queryFn: () => tlScorecardService.listEPRCycles(),
+    enabled: onOverview,
   });
   const partnershipQuery = useQuery({
     queryKey: ["tl-scorecard", "partnership", year],
     queryFn: async () => (await tlScorecardService.getPartnership(undefined, year)).data,
+    enabled: onEvidence,
   });
   // Fetched without the API `year` filter: a cadence meeting has no reporting
   // year, so a server-side year filter would silently drop it.
   const evidenceQuery = useQuery({
     queryKey: ["tl-scorecard", "hbpr-evidence"],
     queryFn: () => tlScorecardService.listHbprEvidence(),
-    enabled: Boolean(partnershipQuery.data?.assignment),
+    enabled: onEvidence && Boolean(partnershipQuery.data?.assignment),
   });
 
   const openCreateDialog = (kind: RecordKind) =>
@@ -263,6 +271,43 @@ const TLScorecardAuthoring: React.FC = () => {
     );
   }
 
+  // The Evidence tab owns the HBPR partnership surface — the cadence state,
+  // evidence timeline and the workbook the TL hands to their manager. Its
+  // queries only fire here (gated above), and it doesn't wait on scorecard.
+  if (tab === "evidence") {
+    const assignment = partnershipQuery.data?.assignment ?? null;
+    const partnershipEvidence = evidenceForYear(evidenceQuery.data ?? [], year).filter(
+      (row) => row.assignment === assignment?.id
+    );
+    return (
+      <TLScorecardHeader
+        subtitle="Cadence meetings, EPR participation and the exportable evidence pack for your HBPR partnership."
+        tab={tab}
+        onTabChange={setTab}
+      >
+        <HbprPartnershipSection
+          partnership={partnershipQuery.data}
+          evidence={partnershipEvidence}
+          year={year}
+          isLoading={partnershipQuery.isLoading}
+          isError={partnershipQuery.isError}
+          onRetry={() => void partnershipQuery.refetch()}
+          canAuthor={isTeamLeader || isStaff}
+          onCreate={async (data) => {
+            await createEvidenceMutation.mutateAsync(data);
+          }}
+          onUpdate={async (id, data) => {
+            await updateEvidenceMutation.mutateAsync({ id, data });
+          }}
+          loadEvidencePack={async (assignmentId, packYear) =>
+            (await tlScorecardService.getEvidencePack(assignmentId, packYear)).data
+          }
+        />
+        <EvidenceExportSection />
+      </TLScorecardHeader>
+    );
+  }
+
   if (scorecardQuery.isLoading) {
     return (
       <TLScorecardHeader tab={tab} onTabChange={setTab}>
@@ -288,11 +333,6 @@ const TLScorecardAuthoring: React.FC = () => {
     month: "long",
     year: "numeric",
   });
-
-  const assignment = partnershipQuery.data?.assignment ?? null;
-  const partnershipEvidence = evidenceForYear(evidenceQuery.data ?? [], year).filter(
-    (row) => row.assignment === assignment?.id
-  );
 
   return (
     <TLScorecardHeader
@@ -329,27 +369,6 @@ const TLScorecardAuthoring: React.FC = () => {
         onOpenPip={() => setPipDialogOpen(true)}
         onStartEprCycle={() => setEprDialogOpen(true)}
       />
-
-      <HbprPartnershipSection
-        partnership={partnershipQuery.data}
-        evidence={partnershipEvidence}
-        year={year}
-        isLoading={partnershipQuery.isLoading}
-        isError={partnershipQuery.isError}
-        onRetry={() => void partnershipQuery.refetch()}
-        canAuthor={isTeamLeader || isStaff}
-        onCreate={async (data) => {
-          await createEvidenceMutation.mutateAsync(data);
-        }}
-        onUpdate={async (id, data) => {
-          await updateEvidenceMutation.mutateAsync({ id, data });
-        }}
-        loadEvidencePack={async (assignmentId, packYear) =>
-          (await tlScorecardService.getEvidencePack(assignmentId, packYear)).data
-        }
-      />
-
-      <EvidenceExportSection coverage={coverageQuery.data} month={scorecard.month} />
 
       {createDialogs}
       <StartEPRCycleDialog

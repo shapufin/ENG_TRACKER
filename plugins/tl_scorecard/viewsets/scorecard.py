@@ -18,10 +18,9 @@ from ..models import (
 )
 from ..serializers import (
     EscalationCandidateSerializer,
-    KpiCoverageEntrySerializer,
     ScorecardSerializer,
 )
-from ..services import KPI_COVERAGE, build_scorecard, escalation_candidates, governance_records, scorecard_trend
+from ..services import build_scorecard, escalation_candidates, governance_records, scorecard_trend
 from core.mixins.permissions import is_staff_user
 
 
@@ -37,7 +36,6 @@ def _parse_month(raw):
 
 class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
     plugin_name = 'tl_scorecard'
-    permission_action_map = {'kpi_coverage': 'view'}
 
     def _resolve_leader(self, request):
         """A TL always sees their own scorecard. Staff/superuser may pass
@@ -122,10 +120,6 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         self._mask_one_on_one(request, leader, *points)
         return Response(ScorecardSerializer(points, many=True).data)
 
-    @action(detail=False, methods=['get'], url_path='kpi-coverage', url_name='kpi-coverage')
-    def kpi_coverage(self, request):
-        return Response(KpiCoverageEntrySerializer(KPI_COVERAGE, many=True).data)
-
     @action(detail=False, methods=['get'])
     def partnership(self, request):
         """The resolved leader's own HBPR partnership (assignment + cadence/EPR).
@@ -195,7 +189,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         ]
 
         workbook_bytes = build_workbook_bytes(
-            scorecard, KPI_COVERAGE, governance, period_label,
+            scorecard, governance, period_label,
             hbpr_evidence=evidence_rows,
         )
 
