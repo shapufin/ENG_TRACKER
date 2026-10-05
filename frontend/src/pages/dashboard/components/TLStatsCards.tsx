@@ -1,5 +1,6 @@
 import React from "react";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, STAT_CARD_MICRO_LABEL } from "@/components/ui/StatCard";
+import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import { Clock, Shield, Plane, CheckCircle, AlertCircle } from "lucide-react";
 
 interface TLStatsCardsProps {
@@ -37,18 +38,21 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
       <StatCard
         label="Pending Approvals"
+        labelClassName={STAT_CARD_MICRO_LABEL}
         value={pendingTotal}
         icon={AlertCircle}
         glow="destructive"
-        iconColorClass="text-accent-red"
-        iconWellClass="bg-accent-red/10"
+        iconColorClass={toneTextClass.danger}
+        iconWellClass={`border ${toneSurfaceClass.danger}`}
         progressPercent={pendingTotal > 0 ? 100 : 0}
         progressColorClass="bg-tone-danger-text"
         footer={
           <>
             <span
               className={
-                pendingTotal > 0 ? "font-semibold text-accent-red" : "font-semibold text-success"
+                pendingTotal > 0
+                  ? `font-semibold ${toneTextClass.danger}`
+                  : `font-semibold ${toneTextClass.success}`
               }
             >
               {pendingTotal > 0 ? "Requires your action" : "Queue clear"}
@@ -59,13 +63,14 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
       />
       <StatCard
         label="Pending Standby"
+        labelClassName={STAT_CARD_MICRO_LABEL}
         value={pendingStandby}
         icon={Shield}
         glow="warning"
-        iconColorClass="text-accent-yellow"
+        iconColorClass={toneTextClass.warning}
         progressPercent={sbPercent}
         progressColorClass="bg-tone-warning-text"
-        iconWellClass="bg-accent-yellow/10"
+        iconWellClass={`border ${toneSurfaceClass.warning}`}
         footer={
           <>
             <span className="font-medium text-muted-foreground">
@@ -77,13 +82,14 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
       />
       <StatCard
         label="Pending Leave"
+        labelClassName={STAT_CARD_MICRO_LABEL}
         value={pendingLeave}
         icon={Plane}
         glow="primary"
-        iconColorClass="text-accent-violet"
+        iconColorClass={toneTextClass.info}
         progressPercent={vacPercent}
         progressColorClass="bg-tone-accent-text"
-        iconWellClass="bg-accent-violet/10"
+        iconWellClass={`border ${toneSurfaceClass.info}`}
         footer={
           <>
             <span className="font-medium text-muted-foreground">
@@ -95,11 +101,12 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
       />
       <StatCard
         label="Pending Overtime"
+        labelClassName={STAT_CARD_MICRO_LABEL}
         value={pendingOvertime}
         icon={Clock}
         glow="warning"
-        iconColorClass="text-accent-orange"
-        iconWellClass="bg-accent-orange/10"
+        iconColorClass={toneTextClass.accent}
+        iconWellClass={`border ${toneSurfaceClass.accent}`}
         progressPercent={otPercent}
         progressColorClass="bg-tone-warning-text"
         footer={
@@ -113,17 +120,18 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
       />
       <StatCard
         label="Approved MTD"
+        labelClassName={STAT_CARD_MICRO_LABEL}
         value={approvedCount}
         icon={CheckCircle}
         glow="success"
-        iconColorClass="text-success"
+        iconColorClass={toneTextClass.success}
         progressPercent={approvedPercent}
         progressColorClass="bg-tone-success-text"
-        iconWellClass="bg-accent-emerald/10"
+        iconWellClass={`border ${toneSurfaceClass.success}`}
         footer={
           approvedCount + pendingTotal > 0 ? (
             <>
-              <span className="font-semibold text-success">
+              <span className={`font-semibold ${toneTextClass.success}`}>
                 {Math.round(approvedPercent)}% of all requests
               </span>
               <span className="text-muted-foreground">Recently approved</span>

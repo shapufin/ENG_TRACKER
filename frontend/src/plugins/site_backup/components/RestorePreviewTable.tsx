@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
 import type { RestoreModelGroup } from "../types/siteBackup";
 
 interface RestorePreviewTableProps {
@@ -36,7 +37,7 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
 
   if (modelGroups.length === 0) {
     return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
+      <p className="text-muted-foreground py-6 text-center text-sm">
         This backup contains no rows to restore.
       </p>
     );
@@ -46,7 +47,7 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
     <div className="overflow-x-auto">
       <table className="w-full min-w-[640px] text-sm">
         <thead>
-          <tr className="border-b border-line-subtle text-left text-xs uppercase tracking-wide text-muted-foreground">
+          <tr className={TABLE_HEAD_ROW_CLASS}>
             <th className="w-10 py-2 pr-2">
               <span className="sr-only">Restore</span>
             </th>
@@ -64,7 +65,7 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
             const rowChecked = isApproved || isForced;
             const hasDependents = group.forced_dependents.length > 0;
             return (
-              <tr key={group.model} className="border-b border-line-subtle last:border-0">
+              <tr key={group.model} className="border-line-subtle border-b last:border-0">
                 <td className="py-2 pr-2 align-top">
                   <Checkbox
                     checked={rowChecked}
@@ -77,7 +78,7 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
                   <div className="font-mono text-xs">{group.model}</div>
                   {isForced && (
                     <span
-                      className="mt-1 inline-block text-micro text-muted-foreground"
+                      className="text-micro text-muted-foreground mt-1 inline-block"
                       title={`Required because it references an approved model's rows.`}
                     >
                       Required by an approved model
@@ -85,7 +86,7 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
                   )}
                   {hasDependents && (
                     <span
-                      className="mt-1 block text-micro text-muted-foreground"
+                      className="text-micro text-muted-foreground mt-1 block"
                       title={group.forced_dependents.join(", ")}
                     >
                       Forces {group.forced_dependents.length} dependent model
@@ -110,7 +111,7 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
                       )}
                     </label>
                   ) : (
-                    <span className="font-mono text-micro uppercase tracking-wider text-muted-foreground/60">
+                    <span className="text-micro text-muted-foreground/60 font-mono tracking-wider uppercase">
                       n/a
                     </span>
                   )}

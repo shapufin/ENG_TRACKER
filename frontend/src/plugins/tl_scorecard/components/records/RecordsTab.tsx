@@ -235,8 +235,8 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
               })}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 sm:w-64 sm:flex-none">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative w-full sm:w-64 sm:flex-none">
               <Search
                 className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2"
                 aria-hidden="true"

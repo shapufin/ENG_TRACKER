@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { toneTextClass } from "@/components/ui/tone";
 
 interface TeamOverviewCardProps {
   memberCount: number;
@@ -47,19 +48,25 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
           </div>
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Vacation Left</p>
-            <p className="font-mono text-2xl font-semibold tabular-nums text-success">
+            <p
+              className={`font-mono text-2xl font-semibold tabular-nums ${toneTextClass.success}`}
+            >
               {vacationDaysLeft.toFixed(1)}
             </p>
           </div>
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Overtime (Mo)</p>
-            <p className="font-mono text-2xl font-semibold tabular-nums text-warning">
+            <p
+              className={`font-mono text-2xl font-semibold tabular-nums ${toneTextClass.warning}`}
+            >
               {overtimeHours.toFixed(2)}
             </p>
           </div>
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Standby (Mo)</p>
-            <p className="font-mono text-2xl font-semibold tabular-nums text-destructive">
+            <p
+              className={`font-mono text-2xl font-semibold tabular-nums ${toneTextClass.danger}`}
+            >
               {standbyHours.toFixed(2)}
             </p>
           </div>

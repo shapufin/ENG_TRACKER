@@ -273,7 +273,7 @@ describe("RecordsTab mockup layout", () => {
     expect(await screen.findByText("Docs")).toBeInTheDocument();
     expect(await screen.findByText("Timeframe")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search records or members…")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Export report" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export summary" })).toBeInTheDocument();
     expect(screen.getByText("Record Categories")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Resolved records" })).toBeInTheDocument();
     expect(screen.getAllByTitle("Jane").length).toBeGreaterThan(0);

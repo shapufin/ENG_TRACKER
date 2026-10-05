@@ -29,6 +29,10 @@ to reference the new structure.
 - Plans: `.devin/plans/`
 - Domain context: `.devin/context/`
 - Historical outcomes: `.devin/tracking/agents-archive-*.md`
+- **Tracked design/engineering contracts** (`.devin/` is gitignored, so durable
+  cross-agent knowledge must live here): `DESIGN.md` (design system + surface
+  inventory), `CLAUDE.md` (hot invariants), and `docs/*.md` — currently
+  `docs/table-header-contract.md` (table header rule, gate, migration queue).
 
 ## Workflow
 
@@ -87,12 +91,19 @@ and serves framework-aware cross-stack queries.
 - Preserve responsive behavior and accessibility.
 - Every interactive control must have an accessible name.
 - Preserve API query keys and payload contracts unless explicitly changing them.
+- **Tables**: header typography and the header fill come from
+  `frontend/src/components/ui/tableStyles.ts` — never inline in a `<thead>`.
+  Gate: `cd frontend && node scripts/table-header-audit.mjs` exit 0 (state at
+  handoff 2026-10-05: **PASS — 0 violations across 19 files**). Read the tracked
+  `docs/table-header-contract.md` before touching any table: the rule, the
+  converge-vs-migrate recipe, traps, known gaps.
 - Run:
   - targeted Vitest tests
   - TypeScript checking
   - ESLint on changed files
   - Prettier on touched files
   - production build when applicable
+  - `node scripts/table-header-audit.mjs` when any table is touched
 
 ## Security
 

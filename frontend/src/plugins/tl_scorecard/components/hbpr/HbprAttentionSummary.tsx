@@ -95,7 +95,7 @@ export const HbprAttentionSummary: React.FC<HbprAttentionSummaryProps> = ({
   const cards = buildCards(attention, year);
   return (
     <section aria-labelledby="hbpr-attention" className="space-y-3">
-      <h2 id="hbpr-attention" className="text-muted-foreground text-sm font-semibold">
+      <h2 id="hbpr-attention" className="text-foreground text-base font-bold tracking-tight">
         Needs your attention
       </h2>
       {cards.length === 0 ? (

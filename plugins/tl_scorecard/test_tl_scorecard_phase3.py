@@ -377,13 +377,15 @@ class EPRCycleAPITests(TestCase):
 
     def test_cannot_complete_goal_setting_with_fewer_than_5_goals(self):
         cycle_id = self._create_cycle().data['id']
-        request = self.factory.patch(f'/api/plugins/tl_scorecard/epr-cycles/{cycle_id}/', {
-            'goal_setting_completed_at': timezone.now().isoformat(),
-        })
+        request = self.factory.post(
+            f'/api/plugins/tl_scorecard/epr-cycles/{cycle_id}/complete_stage/',
+            {'stage': 'goal_setting', 'summary': 'Goals agreed.'},
+            format='json',
+        )
         force_authenticate(request, user=self.leader)
-        resp = EPRCycleViewSet.as_view({'patch': 'partial_update'})(request, pk=cycle_id)
+        resp = EPRCycleViewSet.as_view({'post': 'complete_stage'})(request, pk=cycle_id)
         self.assertEqual(resp.status_code, 400)
-        self.assertIn('goal_setting_completed_at', resp.data)
+        self.assertIn('stage', resp.data)
 
     def test_can_complete_goal_setting_with_5_goals(self):
         cycle_id = self._create_cycle().data['id']
@@ -395,11 +397,13 @@ class EPRCycleAPITests(TestCase):
             goal_resp = EPRGoalViewSet.as_view({'post': 'create'})(goal_request)
             self.assertEqual(goal_resp.status_code, 201, goal_resp.data)
 
-        request = self.factory.patch(f'/api/plugins/tl_scorecard/epr-cycles/{cycle_id}/', {
-            'goal_setting_completed_at': timezone.now().isoformat(),
-        })
+        request = self.factory.post(
+            f'/api/plugins/tl_scorecard/epr-cycles/{cycle_id}/complete_stage/',
+            {'stage': 'goal_setting', 'summary': 'Goals agreed.'},
+            format='json',
+        )
         force_authenticate(request, user=self.leader)
-        resp = EPRCycleViewSet.as_view({'patch': 'partial_update'})(request, pk=cycle_id)
+        resp = EPRCycleViewSet.as_view({'post': 'complete_stage'})(request, pk=cycle_id)
         self.assertEqual(resp.status_code, 200, resp.data)
 
     def test_duplicate_cycle_for_same_user_year_rejected_cleanly(self):

@@ -20,4 +20,21 @@ describe("HRTableShell", () => {
     expect(screen.getByText("Days").className).toContain("text-right");
     expect(screen.getByText("Status").className).toContain("text-center");
   });
+
+  it("sources its header from the shared table contract", () => {
+    const { container } = render(
+      <HRTableShell title="T" headers={[{ label: "Days", align: "right" }]}>
+        <tr>
+          <td>x</td>
+        </tr>
+      </HRTableShell>
+    );
+
+    const th = container.querySelector("thead th");
+    expect(th?.className).toContain("text-foreground");
+    expect(th?.className).toContain("font-medium");
+    expect(th?.className).toContain("text-right");
+    expect(th?.className).not.toContain("uppercase");
+    expect(th?.className).not.toContain("text-[10px]");
+  });
 });

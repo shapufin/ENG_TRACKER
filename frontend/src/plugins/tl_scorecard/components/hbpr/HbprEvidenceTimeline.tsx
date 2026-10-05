@@ -57,7 +57,9 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
 
   return (
     <section aria-label={`Governance evidence · ${year}`} className="space-y-4">
-      <h2 className="text-muted-foreground text-sm font-semibold">Governance evidence · {year}</h2>
+      <h2 className="text-foreground text-base font-bold tracking-tight">
+        Governance evidence · {year}
+      </h2>
       <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div className="w-full sm:max-w-xs">

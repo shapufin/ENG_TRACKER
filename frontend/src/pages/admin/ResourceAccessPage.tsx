@@ -20,6 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
+import {
+  TABLE_HEAD_CELL_CHECKBOX_CLASS,
+  TABLE_HEAD_CELL_CLASS,
+  TABLE_HEAD_ROW_CLASS,
+} from "@/components/ui/tableStyles";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { ResourceAccessGroupDialog } from "./components/ResourceAccessGroupDialog";
 import { useResourceAccessDirectory } from "./hooks/useResourceAccessDirectory";
@@ -141,7 +147,7 @@ export function ResourceAccessPage() {
       subtitle="Create focused access groups and assign people without changing their roles."
       actions={
         <Badge variant="outline" className="gap-2 px-3 py-1.5 text-xs">
-          <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+          <ShieldCheck className="text-primary h-3.5 w-3.5" />
           Superuser controls
         </Badge>
       }
@@ -149,39 +155,39 @@ export function ResourceAccessPage() {
       {/* Summary metrics */}
       <GlassCard className="overflow-visible p-0" isHoverLift={false} glow="primary">
         <div className="grid gap-0 md:grid-cols-[1.4fr_1fr]">
-          <div className="border-b border-border/60 p-6 md:border-b-0 md:border-r md:p-8">
+          <div className="border-border/60 border-b p-6 md:border-r md:border-b-0 md:p-8">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <div className="bg-primary/10 text-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl">
                 <KeyRound className="h-6 w-6" />
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-foreground">Least-privilege access</p>
+                <p className="text-foreground text-sm font-medium">Least-privilege access</p>
                 <h2 className="text-xl font-semibold tracking-tight">
                   Keep access easy to understand
                 </h2>
-                <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                <p className="text-muted-foreground max-w-2xl text-sm leading-6">
                   Groups add plugin capabilities to specific people. They never change a user&apos;s
                   role, shell, or Control Room scope.
                 </p>
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 divide-x divide-border/60">
+          <div className="divide-border/60 grid grid-cols-2 divide-x">
             <div className="flex flex-col justify-center p-6">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                 Groups
               </p>
               <p className="mt-2 text-3xl font-semibold tracking-tight">{totalCount}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Reusable access sets</p>
+              <p className="text-muted-foreground mt-1 text-xs">Reusable access sets</p>
             </div>
             <div className="flex flex-col justify-center p-6">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                 Memberships
               </p>
               <p className="mt-2 text-3xl font-semibold tracking-tight">
                 {groupList.reduce((sum, g) => sum + (g.member_count ?? 0), 0)}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">On this page</p>
+              <p className="text-muted-foreground mt-1 text-xs">On this page</p>
             </div>
           </div>
         </div>
@@ -191,7 +197,7 @@ export function ResourceAccessPage() {
       <GlassCard className="p-4" isHoverLift={false}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-md flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
               type="search"
               placeholder="Search by name or code..."
@@ -204,7 +210,7 @@ export function ResourceAccessPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
+                className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
                 onClick={clearSearch}
                 aria-label="Clear search"
               >
@@ -273,26 +279,26 @@ export function ResourceAccessPage() {
           <div className="hidden overflow-hidden md:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="w-12 px-4 py-3 font-medium">
+                <tr className={TABLE_HEAD_ROW_CLASS}>
+                  <th className={cn(TABLE_HEAD_CELL_CHECKBOX_CLASS, "w-12")}>
                     <Checkbox
                       checked={allVisibleSelected}
                       onCheckedChange={(checked) => toggleAllVisible(checked === true)}
                       aria-label="Select all visible groups"
                     />
                   </th>
-                  <th className="px-4 py-3 font-medium">Name</th>
-                  <th className="px-4 py-3 font-medium">Code</th>
-                  <th className="px-4 py-3 font-medium">Members</th>
-                  <th className="px-4 py-3 text-right font-medium">Action</th>
+                  <th className={TABLE_HEAD_CELL_CLASS}>Name</th>
+                  <th className={TABLE_HEAD_CELL_CLASS}>Code</th>
+                  <th className={TABLE_HEAD_CELL_CLASS}>Members</th>
+                  <th className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {groupList.map((group) => (
                   <tr
                     key={group.id}
-                    className={`border-b border-border/40 transition-colors last:border-0 hover:bg-table-hover ${
-                      selectedGroupIds.has(group.id) ? "ring-1 ring-primary/20" : ""
+                    className={`border-border/40 hover:bg-table-hover border-b transition-colors last:border-0 ${
+                      selectedGroupIds.has(group.id) ? "ring-primary/20 ring-1" : ""
                     }`}
                   >
                     <td className="px-4 py-3">
@@ -304,16 +310,16 @@ export function ResourceAccessPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <div className="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
                           <UsersRound className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate font-medium text-foreground" title={group.name}>
+                          <p className="text-foreground truncate font-medium" title={group.name}>
                             {group.name}
                           </p>
                           {group.description && (
                             <p
-                              className="truncate text-xs text-muted-foreground"
+                              className="text-muted-foreground truncate text-xs"
                               title={group.description}
                             >
                               {group.description}
@@ -349,11 +355,11 @@ export function ResourceAccessPage() {
           </div>
 
           {/* Mobile stacked cards */}
-          <div className="divide-y divide-border/40 md:hidden">
+          <div className="divide-border/40 divide-y md:hidden">
             {groupList.map((group) => (
               <div
                 key={group.id}
-                className={`p-4 ${selectedGroupIds.has(group.id) ? "ring-1 ring-primary/20" : ""}`}
+                className={`p-4 ${selectedGroupIds.has(group.id) ? "ring-primary/20 ring-1" : ""}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
@@ -363,19 +369,19 @@ export function ResourceAccessPage() {
                       aria-label={`Select ${group.name}`}
                       className="mt-2"
                     />
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
                       <UsersRound className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground" title={group.name}>
+                      <p className="text-foreground truncate font-medium" title={group.name}>
                         {group.name}
                       </p>
-                      <p className="truncate text-xs text-muted-foreground" title={group.code}>
+                      <p className="text-muted-foreground truncate text-xs" title={group.code}>
                         {group.code}
                       </p>
                       {group.description && (
                         <p
-                          className="mt-1 truncate text-xs text-muted-foreground"
+                          className="text-muted-foreground mt-1 truncate text-xs"
                           title={group.description}
                         >
                           {group.description}
@@ -403,7 +409,7 @@ export function ResourceAccessPage() {
 
           {/* Pagination footer */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between gap-3 border-t border-border/60 px-4 py-3 text-xs text-muted-foreground">
+            <div className="border-border/60 text-muted-foreground flex items-center justify-between gap-3 border-t px-4 py-3 text-xs">
               <span>
                 Page {page} of {totalPages}
                 {totalCount > 0 && ` · ${totalCount} groups`}
@@ -454,13 +460,13 @@ export function ResourceAccessPage() {
         confirmLabel="Delete groups"
         variant="destructive"
       >
-        <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 p-3 text-sm">
+        <div className="border-border/60 bg-muted/20 space-y-3 rounded-lg border p-3 text-sm">
           <p className="font-medium">Plugin access that will be removed</p>
           {selectedPluginAccess.length > 0 ? (
-            <ul className="space-y-1 text-muted-foreground">
+            <ul className="text-muted-foreground space-y-1">
               {selectedPluginAccess.map(({ plugin_name, actions }) => (
                 <li key={plugin_name}>
-                  <span className="font-medium text-foreground">{plugin_name}</span>:{" "}
+                  <span className="text-foreground font-medium">{plugin_name}</span>:{" "}
                   {Array.from(actions).sort().join(", ")}
                 </li>
               ))}

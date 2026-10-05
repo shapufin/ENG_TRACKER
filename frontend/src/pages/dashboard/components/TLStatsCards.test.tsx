@@ -26,6 +26,13 @@ describe("TLStatsCards modernization", () => {
     ].forEach((label) => expect(getByText(label)).toBeInTheDocument());
   });
 
+  it("wraps icons in tone wells instead of raw accent tints", () => {
+    const { container } = renderCards();
+
+    expect(container.querySelectorAll('[class*="bg-tone-"]').length).toBeGreaterThanOrEqual(5);
+    expect(container.querySelector('[class*="bg-accent-"]')).toBeNull();
+  });
+
   it("renders values with tabular-nums", () => {
     const { getByText } = renderCards();
     expect(getByText("4").className).toContain("tabular-nums");
@@ -103,17 +110,19 @@ describe("TLStatsCards modernization", () => {
     expect((fills[4] as HTMLElement).style.width).toBe("64%"); // approvedCount / (approvedCount + pendingTotal)
   });
 
-  // Per-type tinted icon wells: break up the monochrome row when all counts
-  // are zero (each card gets a faint accent tint behind its icon).
-  it("gives every card a distinct tinted icon well", () => {
+  // Per-type tinted icon wells from the semantic tone scale: break up the
+  // monochrome row when all counts are zero (no raw accent tints, which lack
+  // the light/dark text pair the tone tokens carry).
+  it("gives every card a distinct tone icon well", () => {
     const { container } = renderCards();
-    const wells = [...container.querySelectorAll('div[class*="bg-accent-"]')];
+    const wells = [...container.querySelectorAll('div.h-10[class*="bg-tone-"]')];
     expect(wells).toHaveLength(5);
     const classes = wells.map((w) => w.className);
-    expect(classes[0]).toContain("bg-accent-red/10");
-    expect(classes[1]).toContain("bg-accent-yellow/10");
-    expect(classes[2]).toContain("bg-accent-violet/10");
-    expect(classes[3]).toContain("bg-accent-orange/10");
-    expect(classes[4]).toContain("bg-accent-emerald/10");
+    expect(classes[0]).toContain("bg-tone-danger-surface");
+    expect(classes[1]).toContain("bg-tone-warning-surface");
+    expect(classes[2]).toContain("bg-tone-info-surface");
+    expect(classes[3]).toContain("bg-tone-accent-surface");
+    expect(classes[4]).toContain("bg-tone-success-surface");
+    expect(container.querySelector('[class*="bg-accent-"]')).toBeNull();
   });
 });

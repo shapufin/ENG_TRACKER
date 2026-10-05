@@ -80,7 +80,7 @@ describe("WeeklyGeneratorDialog", () => {
     expect(screen.getByRole("checkbox", { name: "Second Client" })).toBeInTheDocument();
   });
 
-  it("uses an opaque blurred header surface in the preview table", () => {
+  it("sources the preview table header from the shared table contract", () => {
     const weeklyPreview: PreviewEntry[] = [
       {
         date: "2026-08-31",
@@ -94,8 +94,11 @@ describe("WeeklyGeneratorDialog", () => {
     render(<WeeklyGeneratorDialog {...makeProps({ weeklyPreview })} />);
 
     // Radix Dialog portals to document.body, so query the document.
+    // Header treatment is an explicit override of the Time Tracker mockups — see
+    // DESIGN.md "Table header contract". Non-sticky headers are transparent.
     const thead = document.querySelector("thead");
-    expect(thead?.className).toContain("bg-muted/90");
-    expect(thead?.className).toContain("backdrop-blur-sm");
+    expect(thead?.className).toContain("border-b");
+    expect(thead?.className).not.toContain("bg-muted/90");
+    expect(thead?.className).not.toContain("backdrop-blur-sm");
   });
 });

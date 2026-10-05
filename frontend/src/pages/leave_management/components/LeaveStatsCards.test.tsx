@@ -27,6 +27,14 @@ describe("LeaveStatsCards", () => {
     expect(screen.getByText("8d")).toBeInTheDocument();
   });
 
+  it("wraps every icon in a tone well", () => {
+    const { container } = render(
+      <LeaveStatsCards pendingCount={2} approvedCount={4} balances={[]} isLoading={false} />
+    );
+
+    expect(container.querySelectorAll('[class*="bg-tone-"]').length).toBeGreaterThanOrEqual(4);
+  });
+
   it("renders loading state", () => {
     render(
       <LeaveStatsCards pendingCount={0} approvedCount={0} balances={undefined} isLoading={true} />

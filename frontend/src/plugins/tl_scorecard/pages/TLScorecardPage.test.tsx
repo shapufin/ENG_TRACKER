@@ -258,12 +258,12 @@ describe("TLScorecardPage", () => {
     );
   });
 
-  it("downloads the evidence workbook when Export Report is clicked", async () => {
+  it("downloads the evidence workbook when Export Summary is clicked", async () => {
     mockDefaults();
     renderPage();
 
-    await waitFor(() => expect(screen.getByText("Export Report")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Export Report"));
+    const buttons = await screen.findAllByRole("button", { name: "Export Summary" });
+    fireEvent.click(buttons[0]);
 
     await waitFor(() => expect(tlScorecardService.exportWorkbook).toHaveBeenCalledTimes(1));
     expect(downloadBlobResponse).toHaveBeenCalledTimes(1);
@@ -276,7 +276,7 @@ describe("TLScorecardPage", () => {
     });
     renderPage();
 
-    fireEvent.click(await screen.findByText("Export Report"));
+    fireEvent.click((await screen.findAllByRole("button", { name: "Export Summary" }))[0]);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/could not be exported/i);
     expect(downloadBlobResponse).not.toHaveBeenCalled();

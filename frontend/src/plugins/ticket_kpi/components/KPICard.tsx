@@ -1,7 +1,7 @@
 import React from "react";
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, STAT_CARD_MICRO_LABEL } from "@/components/ui/StatCard";
 import { cn } from "@/lib/utils";
 import { toneSurfaceClass } from "@/components/ui/tone";
 
@@ -20,6 +20,10 @@ interface KPICardProps {
   /** TL-flavored cards render a mockup-matching progress bar; Employee cards do not. */
   progressPercent?: number;
   progressColorClass?: string;
+  /** Optional tinted icon well (tone classes). Omit = bare icon (backward compatible). */
+  iconWellClass?: string;
+  /** Glyph color inside the well. Omit = StatCard default. */
+  iconColorClass?: string;
 }
 
 export const KPICard: React.FC<KPICardProps> = ({
@@ -32,6 +36,8 @@ export const KPICard: React.FC<KPICardProps> = ({
   lowerIsBetter = false,
   progressPercent,
   progressColorClass,
+  iconWellClass,
+  iconColorClass,
 }) => {
   const hasDelta = delta !== undefined && delta !== null && Number.isFinite(delta);
   const isPositive = hasDelta && delta! > 0;
@@ -60,9 +66,11 @@ export const KPICard: React.FC<KPICardProps> = ({
   return (
     <StatCard
       label={title}
+      labelClassName={STAT_CARD_MICRO_LABEL}
       value={value}
       icon={Icon}
-      iconColorClass="text-muted-foreground"
+      iconColorClass={iconColorClass ?? "text-muted-foreground"}
+      iconWellClass={iconWellClass}
       trend={
         <>
           <span>{subtitle}</span>

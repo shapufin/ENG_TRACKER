@@ -143,7 +143,60 @@ grep for `tabular-nums` found ~15 other hero-number spots that had
 typography app-wide is a Batch B call (visual regression risk across many
 surfaces, needs screenshot validation), not a mechanical Batch A swap.
 
+## Table header contract (2026-10-05) — OVERRIDES THE MOCKUPS
+
+The table header treatment is **deliberately not the mockup's**. The mockups
+(`Time Tracker UI Project/{Admin,Employee,TL}/assets/tokens.css`) specify:
+
+```css
+table.data-table thead th { padding:.75rem 1rem; color:#94A3B8; font-weight:600;
+  border-bottom:1px solid #1E2738; background:#0C1019; white-space:nowrap; }
+```
+
+— i.e. 12px, weight 600, muted slate, an **opaque `#0C1019` band**, and no
+`text-transform`/`letter-spacing` anywhere. That was **overridden by an explicit
+user decision (2026-10-05)**: the shadcn treatment (normal-case, body size,
+`text-foreground`, transparent header) reads better. **Do not "restore" the mockup
+values** — this note is the only reason the override survives.
+
+Single source of truth: `frontend/src/components/ui/tableStyles.ts`. No `<thead>`
+may declare header typography or a header fill inline; that is how 4 tracking
+values, 3 font sizes and 5 band variants accumulated across 21 files.
+
+| Constant | Use |
+|---|---|
+| `TABLE_HEAD_ROW_CLASS` | header row: transparent, separated by its bottom border only |
+| `TABLE_HEAD_ROW_STICKY_CLASS` | header row for a header that sticks / rows scroll under (`bg-muted/90 backdrop-blur-sm`) |
+| `TABLE_HEAD_CELL_CLASS` | header cell: `text-foreground px-4 py-3 text-left font-medium whitespace-nowrap` |
+| `TABLE_HEAD_CELL_CHECKBOX_CLASS` | the selection cell: `w-10 px-4 py-3 text-left` |
+| `TABLE_BODY_CELL_CLASS`, `TABLE_ROW_HOVER_CLASS` | body cell / row hover |
+
+Two traps, both test-pinned:
+
+- The selection checkbox cell must use `TABLE_HEAD_CELL_CHECKBOX_CLASS`, **never**
+  `TABLE_HEAD_CELL_CLASS` — the latter's padding fights `w-10` and breaks
+  `DataTable.test.tsx`'s `select-all checks every row on the current page`.
+- Compose alignment with `cn(TABLE_HEAD_CELL_CLASS, "text-right")`. Appending it in
+  a template string does **not** merge: both `text-left` and `text-right` survive and
+  CSS source order decides, not the class attribute.
+
+Gate: `cd frontend && node scripts/table-header-audit.mjs` exit 0.
+
+**Outstanding queue and the engineering detail** (per-file verdicts, migration
+recipe, check commands, traps): the tracked **`docs/table-header-contract.md`**.
+At handoff (2026-10-05) the gate reports **PASS — 0 violations across 19 files**;
+every table is converged.
+
+This closes the "Batch B" item noted in the numeric-convention section below:
+table-cell typography is now decided once, app-wide, instead of per surface.
+
 ## Last Updated
+
+2026-10-05 — **table header contract** added and an explicit **override of the
+`Time Tracker UI Project/` mockups** recorded (shadcn treatment chosen over the
+mockup's 12px/muted/opaque-band header). Single source of truth
+`components/ui/tableStyles.ts`, enforced by `scripts/table-header-audit.mjs`.
+Supersedes the "Batch B" deferral in the numeric-convention section.
 
 2026-09-11 (final) — initial creation + Admin Users tech-facet build, HR
 Reports/Settings/Add-Skills-modal mockup verification, site_backup bug fix,

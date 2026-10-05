@@ -1,12 +1,25 @@
 import React, { useState } from "react";
-import { CalendarClock, ExternalLink, Handshake, History, Pencil, Plus } from "lucide-react";
+import {
+  CalendarClock,
+  ExternalLink,
+  FileText,
+  Handshake,
+  History,
+  Pencil,
+  Plus,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { InfoCallout } from "@/components/ui/InfoCallout";
-import type { HbprEvidence, HbprEvidencePayload, HbprPartnership } from "../../types/tlScorecard";
+import type {
+  HbprEvidence,
+  HbprEvidencePayload,
+  HbprPartnership,
+  YearEndEvidencePack,
+} from "../../types/tlScorecard";
 import {
   CADENCE_LABELS,
   CADENCE_STATUS_LABELS,
@@ -15,6 +28,7 @@ import {
   EVIDENCE_KIND_TONE,
   formatDate,
 } from "../hbpr/hbprMeta";
+import { EvidencePackDialog } from "./EvidencePackDialog";
 import { HbprEvidenceDialog } from "./HbprEvidenceDialog";
 
 interface HbprPartnershipSectionProps {
@@ -29,6 +43,8 @@ interface HbprPartnershipSectionProps {
   canAuthor: boolean;
   onCreate: (data: HbprEvidencePayload) => Promise<void>;
   onUpdate: (id: number, data: HbprEvidencePayload) => Promise<void>;
+  /** Fetches the packaged year-end evidence summary for an assignment+year. */
+  loadEvidencePack: (assignmentId: number, year: number) => Promise<YearEndEvidencePack>;
 }
 
 /**
@@ -45,9 +61,11 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
   canAuthor,
   onCreate,
   onUpdate,
+  loadEvidencePack,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<HbprEvidence | null>(null);
+  const [packOpen, setPackOpen] = useState(false);
 
   const assignment = partnership?.assignment ?? null;
 
@@ -72,11 +90,19 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
         <h2 id="hbpr-partnership" className="text-muted-foreground text-sm font-semibold">
           HBPR partnership
         </h2>
-        {canAuthor && assignment && (
-          <Button variant="outline" size="sm" onClick={openCreate}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-            Record evidence
-          </Button>
+        {assignment && (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPackOpen(true)}>
+              <FileText className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+              Evidence pack
+            </Button>
+            {canAuthor && (
+              <Button variant="outline" size="sm" onClick={openCreate}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                Record evidence
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -234,6 +260,12 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
               onSave={(data) => (editing ? onUpdate(editing.id, data) : onCreate(data))}
             />
           )}
+
+          <EvidencePackDialog
+            open={packOpen}
+            onOpenChange={setPackOpen}
+            load={() => loadEvidencePack(assignment.id, year)}
+          />
         </>
       )}
     </section>

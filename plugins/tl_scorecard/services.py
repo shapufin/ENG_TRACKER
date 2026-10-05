@@ -9,12 +9,23 @@ those plugins is composed in the frontend against their own existing APIs.
 """
 from __future__ import annotations
 
+import math
 from datetime import date, timedelta
+
+from django.utils import timezone
 
 from apps.leave_management.models import LeaveRequest, count_business_days
 from apps.overtime.models.core import OvertimeLog
 
-from .models import Absence, EPRCycle, IdleFlag, Meeting, PIPRecord, PromotionFlag, ReviewDelivery
+from .models import (
+    Absence,
+    EPRCycle,
+    IdleFlag,
+    Meeting,
+    PIPRecord,
+    PromotionFlag,
+    ReviewDelivery,
+)
 
 # Every KPI from both TL job-description sheets, with its current coverage
 # status. A plain data structure (not a model) — it only changes when a
@@ -334,9 +345,13 @@ def epr_stage_due_date(year: int, stage: str) -> date:
 def epr_metrics(team_member_ids, year: int) -> dict:
     """Per-stage on-time completion for a TL's team this year. Due dates
     come from epr_stage_due_date(), never from a typed-in field."""
-    cycles = list(EPRCycle.objects.filter(user_id__in=team_member_ids, year=year).prefetch_related('goals'))
+    cycles = list(
+        EPRCycle.objects.filter(user_id__in=team_member_ids, year=year)
+        .prefetch_related('goals', 'stage_records')
+    )
     total = len(team_member_ids)
     stages = {}
+    stages_completed = 0
     for stage in EPR_STAGE_DUE_MONTH_DAY:
         field = f'{stage}_completed_at'
         due = epr_stage_due_date(year, stage)
@@ -344,6 +359,7 @@ def epr_metrics(team_member_ids, year: int) -> dict:
             1 for c in cycles
             if getattr(c, field) and getattr(c, field).date() <= due
         )
+        stages_completed += sum(1 for c in cycles if getattr(c, field))
         stages[stage] = {
             'due_date': due.isoformat(),
             'completed_on_time': on_time,
@@ -351,7 +367,103 @@ def epr_metrics(team_member_ids, year: int) -> dict:
             'pct_on_time': round((on_time / total) * 100, 1) if total else None,
         }
     goals_met = sum(1 for c in cycles if len(c.goals.all()) >= 5)
-    return {'stages': stages, 'cycles_with_5plus_goals': goals_met, 'cycles_started': len(cycles)}
+    stages_with_evidence = sum(
+        1 for c in cycles
+        for r in c.stage_records.all()
+        if getattr(c, f'{r.stage}_completed_at')
+    )
+    return {
+        'stages': stages,
+        'cycles_with_5plus_goals': goals_met,
+        'cycles_started': len(cycles),
+        'stages_completed': stages_completed,
+        'stages_with_evidence': stages_with_evidence,
+    }
+
+
+def _pack_name(user):
+    if user is None:
+        return None
+    return user.get_full_name() or user.username
+
+
+def build_year_end_pack(assignment, year: int, evidence_qs) -> dict:
+    """Held-vs-expected cadence + EPR participations for one assignment+year
+    — the packaged summary the AL TL hands to their manager at year-end.
+
+    Expected-meeting window: ``max(effective_from, Jan 1)`` →
+    ``min(effective_to, Dec 31, today)`` (a current assignment can't owe a
+    future meeting). Weekly → ceil(days/7); biweekly → ceil(days/14);
+    monthly → calendar months touched.
+
+    ``evidence_qs`` is the caller's already-scoped evidence queryset — the
+    viewset passes ``self._scoped_queryset()`` (the pack's own ``?year=``
+    must not hit the list's ``reporting_year`` row filter, which would drop
+    every NULL-year cadence meeting).
+    """
+    rows = list(
+        evidence_qs.filter(assignment=assignment)
+        .select_related('recorded_by')
+        .order_by('occurred_on', 'id')
+    )
+    meetings = [r for r in rows if r.kind == 'cadence_meeting'
+                and r.occurred_on.year == year]
+    epr_mid = next(
+        (r for r in rows if r.kind == 'epr_mid_year' and r.reporting_year == year), None)
+    epr_end = next(
+        (r for r in rows if r.kind == 'epr_year_end' and r.reporting_year == year), None)
+
+    window_start = max(assignment.effective_from, date(year, 1, 1))
+    # The app clock (timezone.now().date(), same as hbpr_assignments.today()),
+    # not the host's local date — the two can differ across midnight.
+    window_end = min(
+        assignment.effective_to or date.max,
+        date(year, 12, 31),
+        timezone.now().date(),
+    )
+    if window_end < window_start:
+        expected = 0
+    else:
+        days = (window_end - window_start).days + 1
+        if assignment.cadence == 'weekly':
+            expected = math.ceil(days / 7)
+        elif assignment.cadence == 'biweekly':
+            expected = math.ceil(days / 14)
+        else:  # monthly
+            expected = (window_end.year * 12 + window_end.month) \
+                - (window_start.year * 12 + window_start.month) + 1
+    held = len(meetings)
+
+    def _row(r):
+        if r is None:
+            return None
+        return {
+            'id': r.id,
+            'occurred_on': r.occurred_on.isoformat(),
+            'shared_summary': r.shared_summary,
+            'action_items': r.action_items,
+            'reference_url': r.reference_url,
+            'recorded_by_name': _pack_name(r.recorded_by),
+        }
+
+    return {
+        'assignment': {
+            'id': assignment.id,
+            'albanian_tl_name': _pack_name(assignment.albanian_tl),
+            'hbpr_name': _pack_name(assignment.hbpr),
+            'cadence': assignment.cadence,
+            'effective_from': assignment.effective_from.isoformat(),
+            'effective_to': assignment.effective_to.isoformat()
+            if assignment.effective_to else None,
+        },
+        'year': year,
+        'cadence_expected': expected,
+        'cadence_held': held,
+        'coverage_pct': round((held / expected) * 100, 1) if expected else None,
+        'meetings': [_row(r) for r in meetings],
+        'epr_mid_year': _row(epr_mid),
+        'epr_year_end': _row(epr_end),
+    }
 
 
 def scorecard_trend(user, months: int, end_month: date) -> list[dict]:

@@ -12,6 +12,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/badge";
 import { Search, RotateCcw, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
 import { useTicketKPITickets } from "../pages/hooks/useTicketKPITickets";
 import type { TicketQueryFilters, TicketRecord } from "../types/ticketKPI";
 
@@ -90,11 +91,17 @@ const renderStatusCell = (row: TicketRecord): React.ReactNode => {
 const renderSlaCell = (row: TicketRecord): React.ReactNode => {
   if (row.sla_breached === null || row.sla_breached === undefined) return "—";
   return row.sla_breached ? (
-    <Badge variant="outline" className="border-tone-danger-border bg-tone-danger-surface text-tone-danger-text">
+    <Badge
+      variant="outline"
+      className="border-tone-danger-border bg-tone-danger-surface text-tone-danger-text"
+    >
       Breached
     </Badge>
   ) : (
-    <Badge variant="outline" className="border-tone-success-border bg-tone-success-surface text-tone-success-text">
+    <Badge
+      variant="outline"
+      className="border-tone-success-border bg-tone-success-surface text-tone-success-text"
+    >
       OK
     </Badge>
   );
@@ -178,7 +185,7 @@ const TicketRecordsFilterBar: React.FC<FilterBarProps> = ({
 }) => (
   <div className="flex flex-wrap items-center gap-2">
     <div className="relative max-w-xs flex-1">
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
       <Input
         placeholder="Search ticket id, title, assignee…"
         value={filters.search ?? ""}
@@ -241,23 +248,23 @@ const TicketRecordsTableBody: React.FC<TableBodyProps> = ({
   isError,
   hasActiveFilters,
 }) => (
-  <tbody className="divide-y divide-border/30">
+  <tbody className="divide-border/30 divide-y">
     {isLoading ? (
       <tr>
-        <td colSpan={columns.length} className="px-4 py-10 text-center text-muted-foreground">
+        <td colSpan={columns.length} className="text-muted-foreground px-4 py-10 text-center">
           Loading tickets…
         </td>
       </tr>
     ) : isError ? (
       <tr>
-        <td colSpan={columns.length} className="px-4 py-10 text-center text-muted-foreground">
+        <td colSpan={columns.length} className="text-muted-foreground px-4 py-10 text-center">
           Failed to load ticket records. Try adjusting filters or reloading.
         </td>
       </tr>
     ) : results.length === 0 ? (
       <tr>
         <td colSpan={columns.length} className="px-4 py-12 text-center">
-          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+          <div className="text-muted-foreground flex flex-col items-center gap-2">
             <Inbox className="h-8 w-8 opacity-30" />
             <p className="text-sm">
               {hasActiveFilters
@@ -269,7 +276,7 @@ const TicketRecordsTableBody: React.FC<TableBodyProps> = ({
       </tr>
     ) : (
       results.map((row) => (
-        <tr key={row.id} className="transition-colors hover:bg-muted/25">
+        <tr key={row.id} className="hover:bg-muted/25 transition-colors">
           {columns.map((field) => (
             <td key={field} className="px-4 py-3 align-middle">
               {renderCell(field, row)}
@@ -309,7 +316,7 @@ const TicketRecordsPagination: React.FC<PaginationProps> = ({
   setPageSize,
 }) => (
   <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-    <p className="text-xs text-muted-foreground">
+    <p className="text-muted-foreground text-xs">
       {totalCount === 0 ? "0 results" : `Showing ${rangeStart}–${rangeEnd} of ${totalCount}`}
       {isFetching && !isLoading && " · updating…"}
     </p>
@@ -330,22 +337,24 @@ const TicketRecordsPagination: React.FC<PaginationProps> = ({
         variant="outline"
         size="sm"
         className="h-8"
+        aria-label="Previous page"
         disabled={page <= 1}
         onClick={() => setPage(page - 1)}
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
       </Button>
-      <span className="text-xs tabular-nums text-muted-foreground">
+      <span className="text-muted-foreground text-xs tabular-nums">
         Page {page} of {totalPages}
       </span>
       <Button
         variant="outline"
         size="sm"
         className="h-8"
+        aria-label="Next page"
         disabled={page >= totalPages}
         onClick={() => setPage(page + 1)}
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </Button>
     </div>
   </div>
@@ -413,7 +422,7 @@ export const MemberTicketRecordsTable: React.FC<MemberTicketRecordsTableProps> =
     <div className="space-y-4">
       <div className="flex flex-col gap-1">
         <h3 className="text-lg font-semibold">Ticket Records</h3>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Every uploaded ticket for this month. Columns are discovered automatically from the
           uploaded file. Filter, search, and paginate server-side.
         </p>
@@ -435,12 +444,9 @@ export const MemberTicketRecordsTable: React.FC<MemberTicketRecordsTableProps> =
         <div className="overflow-x-auto">
           <table className="w-full min-w-max text-sm">
             <thead>
-              <tr className="border-b border-border/70 bg-muted/40">
+              <tr className={TABLE_HEAD_ROW_CLASS}>
                 {columns.map((field) => (
-                  <th
-                    key={field}
-                    className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                  >
+                  <th key={field} className={TABLE_HEAD_CELL_CLASS}>
                     {labelFor(field)}
                   </th>
                 ))}

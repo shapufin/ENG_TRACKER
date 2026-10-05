@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -60,7 +62,7 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Eye className="h-5 w-5 text-primary" />
+          <Eye className="text-primary h-5 w-5" />
           Preview ({preview.total_records} records)
         </CardTitle>
       </CardHeader>
@@ -104,7 +106,7 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
 
         {showMappingFix && (
           <div className="space-y-3 rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Map our fields to the actual column names detected in your file, then re-preview.
             </p>
             <FieldMappingGrid
@@ -141,7 +143,7 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
             {preview.errors.map((err, i) => (
               <div
                 key={i}
-                className="flex items-center gap-2 rounded-md bg-muted p-2 text-sm text-destructive"
+                className="bg-muted text-destructive flex items-center gap-2 rounded-md p-2 text-sm"
               >
                 <AlertTriangle className="h-4 w-4" />
                 {err}
@@ -153,10 +155,10 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
         {preview.preview_rows && preview.preview_rows.length > 0 && (
           <div className="overflow-x-auto rounded-md border">
             <table className="w-full text-sm">
-              <thead className="bg-muted">
-                <tr>
+              <thead>
+                <tr className={TABLE_HEAD_ROW_CLASS}>
                   {Object.keys(preview.preview_rows[0]).map((k) => (
-                    <th key={k} className="px-3 py-2 text-left font-medium">
+                    <th key={k} className={cn(TABLE_HEAD_CELL_CLASS, "px-3 py-2")}>
                       {k}
                     </th>
                   ))}

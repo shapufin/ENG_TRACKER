@@ -207,17 +207,31 @@ describe("DataTable", () => {
     expect(onRowClick).toHaveBeenCalledWith({ id: 1, name: "Alice", email: "alice@test.com" });
   });
 
-  it("uses an opaque blurred header surface so body rows do not bleed through", () => {
-    // Design convergence: sticky header surfaces use bg-muted/90 + backdrop-blur-sm
-    // (never the translucent /40 or /50 variants that let rows show through).
+  it("renders a transparent header because the header never overlaps rows", () => {
+    // Header treatment is an explicit override of the Time Tracker UI Project
+    // mockups — see DESIGN.md "Table header contract" and
+    // components/ui/tableStyles.ts. The viewport is overflow-x-auto only (no
+    // max-height, no `sticky`), so no row can pass beneath the header. Headers
+    // that DO stick use TABLE_HEAD_ROW_STICKY_CLASS instead.
     const { container } = render(
       <DataTable columns={columns} data={[{ id: 1, name: "Alice", email: "alice@test.com" }]} />
     );
 
     const headerRow = container.querySelector("thead tr");
-    expect(headerRow?.className).toContain("bg-muted/90");
-    expect(headerRow?.className).toContain("backdrop-blur-sm");
-    expect(headerRow?.className).not.toContain("bg-muted/40");
+    expect(headerRow?.className).not.toContain("bg-muted/90");
+    expect(headerRow?.className).not.toContain("backdrop-blur-sm");
+  });
+
+  it("sources its header from the shared table contract", () => {
+    const { container } = render(
+      <DataTable columns={columns} data={[{ id: 1, name: "Alice", email: "alice@test.com" }]} />
+    );
+
+    const th = container.querySelector("thead th");
+    expect(th?.className).toContain("text-foreground");
+    expect(th?.className).toContain("font-medium");
+    expect(th?.className).not.toContain("uppercase");
+    expect(th?.className).not.toContain("tracking-wider");
   });
   it("shows every column and reports all as visible by default when uncontrolled", () => {
     const { container } = render(

@@ -3,6 +3,9 @@ import { GlassCard } from "./GlassCard";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/** Uppercase micro-label shared by every metric card (scorecard language). */
+export const STAT_CARD_MICRO_LABEL = "font-semibold uppercase tracking-wider";
+
 export interface StatCardProps {
   label: string;
   value: React.ReactNode;
@@ -29,6 +32,8 @@ export interface StatCardProps {
   progressColorClass?: string;
   /** Optional bottom strip (mockup KPI footer: left/right pair). Omit = card unchanged. */
   footer?: React.ReactNode;
+  /** Optional extra label classes (e.g. scorecard micro-labels). Omit = default label. */
+  labelClassName?: string;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -46,12 +51,13 @@ export const StatCard: React.FC<StatCardProps> = ({
   progressPercent,
   progressColorClass = "bg-primary",
   footer,
+  labelClassName,
 }) => (
   <GlassCard delay={delay} glow={glow}>
     <div className="p-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs text-muted-foreground">{label}</p>
+          <p className={cn("text-muted-foreground text-xs", labelClassName)}>{label}</p>
           <div
             className={cn(
               "mt-1 flex items-center gap-2 font-mono text-2xl font-bold tabular-nums",
@@ -64,13 +70,13 @@ export const StatCard: React.FC<StatCardProps> = ({
                 role="status"
                 aria-label={statusDotLabel}
                 className={cn(
-                  "inline-block h-2 w-2 shrink-0 rounded-full bg-success",
+                  "bg-success inline-block h-2 w-2 shrink-0 rounded-full",
                   statusDotClassName
                 )}
               />
             )}
           </div>
-          {trend && <div className="mt-1 text-xs text-muted-foreground">{trend}</div>}
+          {trend && <div className="text-muted-foreground mt-1 text-xs">{trend}</div>}
         </div>
         {iconWellClass ? (
           <div
@@ -86,7 +92,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         )}
       </div>
       {typeof progressPercent === "number" && (
-        <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-input-bg">
+        <div className="bg-input-bg mt-2.5 h-1.5 w-full overflow-hidden rounded-full">
           <div
             data-testid="stat-card-progress-fill"
             className={cn("h-full rounded-full", progressColorClass)}
@@ -97,7 +103,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       {footer && (
         <div
           data-testid="stat-card-footer"
-          className="mt-2.5 flex items-center justify-between gap-2 border-t border-line-subtle pt-2 text-[11px]"
+          className="border-line-subtle mt-2.5 flex items-center justify-between gap-2 border-t pt-2 text-[11px]"
         >
           {footer}
         </div>

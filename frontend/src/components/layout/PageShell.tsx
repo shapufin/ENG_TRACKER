@@ -3,7 +3,8 @@ import { cn } from "@/lib/utils";
 
 interface PageShellProps {
   title: string;
-  subtitle?: string;
+  /** Plain text or composed meta (e.g. text + avatar stack); rendered as-is. */
+  subtitle?: React.ReactNode;
   category?: string;
   /** Optional badge rendered inline next to the title (e.g. a status pill). */
   titleBadge?: React.ReactNode;
@@ -23,17 +24,17 @@ const PageShellComponent: React.FC<PageShellProps> = ({
 }) => {
   return (
     <div className={cn("space-y-6", className)}>
-      <div className="flex flex-col gap-4 border-b border-line-subtle pb-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="border-line-subtle flex flex-col gap-4 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           {category && (
-            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">{category}</p>
+            <p className="text-muted-foreground text-xs tracking-[0.25em] uppercase">{category}</p>
           )}
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-2xl font-black tracking-tight">{title}</h1>
             {titleBadge}
           </div>
           {subtitle && (
-            <p className="mt-2 text-sm text-muted-foreground sm:text-base">{subtitle}</p>
+            <div className="text-muted-foreground mt-2 text-sm sm:text-base">{subtitle}</div>
           )}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
