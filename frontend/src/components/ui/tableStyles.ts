@@ -16,13 +16,6 @@
 export const TABLE_HEAD_ROW_CLASS = "border-border/70 border-b";
 
 /**
- * Header row for a header that actually sticks (or has rows scrolling under it).
- * Opaque so body rows cannot bleed through — `04-skills.md` records the
- * translucent variants as a real bug.
- */
-export const TABLE_HEAD_ROW_STICKY_CLASS = "border-border/70 bg-muted/90 border-b backdrop-blur-sm";
-
-/**
  * Header cell. Left-aligned by default; an action column composes it with
  * `cn(TABLE_HEAD_CELL_CLASS, "text-right")` so tailwind-merge resolves the
  * text-align group. Never append the alignment in a template string — both

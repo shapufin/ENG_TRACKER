@@ -166,7 +166,6 @@ values, 3 font sizes and 5 band variants accumulated across 21 files.
 | Constant | Use |
 |---|---|
 | `TABLE_HEAD_ROW_CLASS` | header row: transparent, separated by its bottom border only |
-| `TABLE_HEAD_ROW_STICKY_CLASS` | header row for a header that sticks / rows scroll under (`bg-muted/90 backdrop-blur-sm`) |
 | `TABLE_HEAD_CELL_CLASS` | header cell: `text-foreground px-4 py-3 text-left font-medium whitespace-nowrap` |
 | `TABLE_HEAD_CELL_CHECKBOX_CLASS` | the selection cell: `w-10 px-4 py-3 text-left` |
 | `TABLE_BODY_CELL_CLASS`, `TABLE_ROW_HOVER_CLASS` | body cell / row hover |

@@ -212,7 +212,7 @@ describe("DataTable", () => {
     // mockups — see DESIGN.md "Table header contract" and
     // components/ui/tableStyles.ts. The viewport is overflow-x-auto only (no
     // max-height, no `sticky`), so no row can pass beneath the header. Headers
-    // that DO stick use TABLE_HEAD_ROW_STICKY_CLASS instead.
+    // that DO stick keep their own opaque fill (see the allowlist in table-header-audit.mjs).
     const { container } = render(
       <DataTable columns={columns} data={[{ id: 1, name: "Alice", email: "alice@test.com" }]} />
     );

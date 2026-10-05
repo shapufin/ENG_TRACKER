@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export interface CompleteEprStageValues {
+interface CompleteEprStageValues {
   summary: string;
   reference_url: string;
   shared_with_employee: boolean;

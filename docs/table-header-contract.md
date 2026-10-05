@@ -18,7 +18,6 @@ Single source of truth: `frontend/src/components/ui/tableStyles.ts`.
 | Constant | Use |
 |---|---|
 | `TABLE_HEAD_ROW_CLASS` | header row: transparent, separated by its bottom border only |
-| `TABLE_HEAD_ROW_STICKY_CLASS` | header row that sticks / has rows scrolling under it (`bg-muted/90 backdrop-blur-sm`) |
 | `TABLE_HEAD_CELL_CLASS` | header cell: `text-foreground px-4 py-3 text-left font-medium whitespace-nowrap` |
 | `TABLE_HEAD_CELL_CHECKBOX_CLASS` | the selection cell: `w-10 px-4 py-3 text-left font-medium` (weight set so the cell does not fall back to the UA bold default) |
 | `TABLE_HEAD_GRID_CLASS` | header row of a div-grid table (compose with the grid template) |
@@ -51,7 +50,7 @@ untracked** `src/**/*.{ts,tsx,js,jsx}` (non-test).
 | Rule | Fires on |
 |---|---|
 | `INLINE-HEADER` | inside any `<thead>` / `<TableHeader>` block: `uppercase`, `capitalize`, any `tracking-*`, `text-xs/sm/base/lg`, `text-[Npx]`, `font-light/normal/medium/semibold/bold`, `text-foreground/muted-foreground/muted`, `bg-muted/card/secondary/accent/background` |
-| `OPAQUE-CLASS` | `className={ident}` inside a header block, unless the same file defines `const ident = [cn(]TABLE_…` |
+| `OPAQUE-CLASS` | `className={ident}` inside a header block, unless the same file defines `const ident = [cn(]TABLE_ï¿½` |
 | `GRID-HEADER` | a line with `grid-cols` plus `uppercase` or `tracking-*` (a div-grid "table" has no `<thead>`) |
 
 The scan is **text-based on purpose**. The earlier tag-level regex was truncated by the
@@ -60,11 +59,11 @@ The scan is **text-based on purpose**. The earlier tag-level regex was truncated
 all slipped through (found in the 2026-10-05 review). Each evasion is now a test case.
 
 Allowlisted (documented, sticky/virtualised grids that keep an opaque fill and compact
-type — `DESIGN.md` "Known intentional token exceptions"):
+type ï¿½ `DESIGN.md` "Known intentional token exceptions"):
 `components/calendar/ListView.tsx`, `plugins/skills/components/SkillsMatrixTable.tsx`,
 `SkillsDenseMatrix.tsx`, `SkillsHeatmapGrid.tsx` (the last two use `role="columnheader"`).
 
-Div-grid headers use `TABLE_HEAD_GRID_CLASS`: `cn("grid grid-cols-[…]", TABLE_HEAD_GRID_CLASS)`
+Div-grid headers use `TABLE_HEAD_GRID_CLASS`: `cn("grid grid-cols-[ï¿½]", TABLE_HEAD_GRID_CLASS)`
 (`TeamsTableHeader.tsx`).
 
 **Status: PASS, 0 violations; 24/24 detector tests.** If you change a pattern, add the
@@ -230,9 +229,9 @@ mockup captures live in `design-screenshots/tables-plan/mocks/`.
   eslint / prettier / build clean. Browser-verified at `/engagement/metrics`: 8
   columns, 1 row, sortable headers, result count, transparent header
   (`design-screenshots/tables-plan/engagement/`).
-- **2026-10-05 (review pass)** — independent review found the gate could be evaded and one
+- **2026-10-05 (review pass)** ï¿½ independent review found the gate could be evaded and one
   real violation it could not see. Fixed: audit rewritten as a text-based detector with 24
   tests and wired into CI; `TeamsTableHeader` (div-grid, was `uppercase tracking-[0.2em]`)
   moved onto `TABLE_HEAD_GRID_CLASS`; skills-catalog select cell and the checkbox constant
-  now set a weight. Browser sweep (`shot-review`, 20 pages × light/dark × 1280/320): every
+  now set a weight. Browser sweep (`shot-review`, 20 pages ï¿½ light/dark ï¿½ 1280/320): every
   `thead th` is 14px / 500 / no transform / no tracking, no page-level horizontal overflow.
