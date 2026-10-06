@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/calendar/UserAvatar";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { CADENCE_LABELS, CADENCE_STATUS_LABELS } from "@/types/hbprAssignment";
 import type { HbprAssignment, HbprCadenceStatus } from "@/types/hbprAssignment";
@@ -29,7 +30,10 @@ export const useHbprAssignmentColumns = (
         header: "HBPR",
         size: 180,
         cell: ({ row }) => (
-          <span className="text-foreground font-medium">{row.original.hbpr_detail.name}</span>
+          <span className="flex items-center gap-2.5">
+            <UserAvatar name={row.original.hbpr_detail.name} size="sm" />
+            <span className="text-foreground font-medium">{row.original.hbpr_detail.name}</span>
+          </span>
         ),
       },
       {
@@ -37,7 +41,12 @@ export const useHbprAssignmentColumns = (
         accessorKey: "albanian_tl_detail.name",
         header: "Albanian TL",
         size: 180,
-        cell: ({ row }) => row.original.albanian_tl_detail.name,
+        cell: ({ row }) => (
+          <span className="flex items-center gap-2.5">
+            <UserAvatar name={row.original.albanian_tl_detail.name} size="sm" />
+            {row.original.albanian_tl_detail.name}
+          </span>
+        ),
       },
       {
         id: "cadence",

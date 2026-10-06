@@ -18,6 +18,7 @@ numpy==2.5.3
 openpyxl==3.1.5
 reportlab==5.0.1
 pandas==3.0.6
+pypdf==6.19.0
 XlsxWriter==3.2.9
 PyJWT==2.15.0
 python-dateutil==2.9.0.post0

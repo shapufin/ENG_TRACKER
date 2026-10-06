@@ -16,7 +16,7 @@
     /* Text role for primary. Light mode matches --primary (already AA on white),
        so nothing changes here; the dark theme needs a lighter value. */
     --primary-text: 221 83% 53%;
-    --secondary: 220 16% 94%;
+    --secondary: 220 18% 95%;
     --secondary-foreground: 222 47% 11%;
     --muted: 220 16% 93%;
     --muted-foreground: 220 10% 40%;
@@ -24,8 +24,8 @@
     --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 214 32% 88%;
+    --input: 214 32% 88%;
     --ring: 221 83% 53%;
     --radius: 0.625rem;
     --safe-area-top: env(safe-area-inset-top, 0px);
@@ -65,7 +65,7 @@
     --radius-control: 0.75rem;
     --radius-surface: 1rem;
     --radius-dialog: 1.5rem;
-    --overlay: 222 47% 11% / 0.60;
+    --overlay: 222 47% 11% / 0.6;
     --tone-success-surface: 150 60% 45% / 0.15;
     --tone-success-border: 150 60% 45% / 0.3;
     --tone-success-text: 163 94% 24%;

@@ -7,6 +7,7 @@ import type {
   CompleteEprStagePayload,
   EngagementSurveyTeamAverage,
   EPRCycle,
+  EPRStage,
   EPRStageRecord,
   EscalationCandidate,
   PIPRecord,
@@ -183,8 +184,17 @@ export const tlScorecardService = {
   createEPRCycle: (data: { user: number; year: number }) =>
     api.post<EPRCycle>(`${BASE}/epr-cycles/`, data),
 
-  createEPRGoal: (data: { cycle: number; description: string }) =>
-    api.post(`${BASE}/epr-goals/`, data),
+  /** Preview-only Workday parse; the PDF bytes are never persisted server-side. */
+  parseEPRGoalPdf: (cycleId: number, stage: EPRStage, file: File) => {
+    const form = new FormData();
+    form.append("stage", stage);
+    form.append("file", file);
+    return api.post<{ goal_titles: string[] }>(
+      `${BASE}/epr-cycles/${cycleId}/parse_goal_pdf/`,
+      form,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+  },
 
   /** The only writer of `*_completed_at`: stamps the stage AND records its
    * evidence (summary required) in one request. */

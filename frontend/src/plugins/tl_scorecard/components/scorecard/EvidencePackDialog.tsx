@@ -198,9 +198,7 @@ export const EvidencePackDialog: React.FC<EvidencePackDialogProps> = ({
         <Button variant="outline" onClick={() => onOpenChange(false)}>
           Close
         </Button>
-        <Button variant="outline" onClick={() => window.print()}>
-          Print
-        </Button>
+        <Button onClick={() => window.print()}>Print</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

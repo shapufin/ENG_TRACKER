@@ -67,7 +67,7 @@ export const AssignedLeaderCard: React.FC<AssignedLeaderCardProps> = ({ leader, 
     </div>
 
     <div className="border-line-subtle mt-3 border-t pt-3">
-      <Button variant="outline" size="sm" asChild className="w-full shadow-sm">
+      <Button variant="outline" size="sm" asChild className="min-h-11 w-full shadow-sm">
         <Link
           to={`/hbpr?view=evidence&year=${year}&leader=${leader.id}`}
           aria-label={`Open governance evidence for ${leader.name}`}

@@ -58,6 +58,17 @@ guards the URL (length + format — `objects.create` skips `full_clean`), turns 
 unique-constraint race into 409, and re-fetches the cycle before serializing so the
 200 response carries the record it just created (the prefetch cache predates it).
 
+**Employee EPR goals** — Workday remains authoritative. `EPRGoal` stores only the
+operational titles the TL confirms; goal details, reviews and ratings stay outside
+this app. `POST .../epr-cycles/{id}/parse_goal_pdf/` is preview-only: it accepts a
+bounded `.pdf` upload, extracts titles from the Workday `Goals`/`Weight:` layout,
+and returns `goal_titles` without creating goals, stage records, timestamps or any
+file persistence. Goal Setting and Mid-year can send `goal_titles` to
+`complete_stage`; the title replacement, evidence row and stage timestamp commit
+atomically. Mid-year without `goal_titles` confirms the existing ≥5 set. Final
+Review rejects `goal_titles`, and standalone `epr-goals/` is read-only so goals can
+never bypass checkpoint locks.
+
 Cadence (`weekly`/`biweekly`/`monthly`) is per assignment. `next_due_on`: +7d / +14d /
 same day next month clamped to month end, from the last cadence meeting or the start.
 `cadence_status` has exactly one definition
@@ -131,8 +142,10 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   **Evidence pack** button opens `EvidencePackDialog`, which fetches
   `year-end-pack` on open. In the EPR section a stage button opens
   `CompleteEprStageDialog` (summary required, optional reference link and
-  "Share with employee") — completing a stage can no longer be a bare click —
-  and each completed stage renders its recorded evidence inline.
+  "Share with employee"). Goal Setting and Mid-year additionally expose a
+  Workday PDF preview plus editable goal rows; Final Review exposes neither.
+  Completing a stage can no longer be a bare click, and each completed stage
+  renders its recorded evidence inline.
 - `/tl-scorecard?tab=records` — the TL's record table (`components/records/*`). Row
   click / Enter / the row's eye button opens `RecordDetailDialog` (`DialogContent
   size="lg"`): every serialized field of that record, full untruncated text, and a

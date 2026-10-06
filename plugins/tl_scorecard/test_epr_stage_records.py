@@ -16,7 +16,7 @@ from apps.users.models.hbpr import HbprAlbanianTlAssignment
 from .testing import make_user as _make_user
 from .models import EPRCycle, EPRGoal, EPRStageRecord, HbprGovernanceEvidence
 from .services import epr_metrics
-from .viewsets import EPRCycleViewSet, EPRStageRecordViewSet
+from .viewsets import EPRCycleViewSet, EPRGoalViewSet, EPRStageRecordViewSet
 from .viewsets_my_records import MyRecordsViewSet
 from .viewsets.evidence import HbprGovernanceEvidenceViewSet
 
@@ -48,6 +48,7 @@ class CompleteStageTests(TestCase):
             EPRGoal.objects.create(cycle=self.cycle, description=f'Goal {i}')
 
     def test_complete_stage_creates_record_and_timestamp(self):
+        self._add_goals()
         resp = self._complete(self.leader, self.cycle.id, {
             'stage': 'mid_year', 'summary': 'Mid-year review held.',
             'reference_url': 'https://workday.example/review/1',
@@ -92,6 +93,7 @@ class CompleteStageTests(TestCase):
         self.assertIsNone(self.cycle.mid_year_completed_at)
 
     def test_complete_stage_twice_conflicts(self):
+        self._add_goals()
         first = self._complete(self.leader, self.cycle.id, {
             'stage': 'mid_year', 'summary': 'Held.',
         })
@@ -106,6 +108,7 @@ class CompleteStageTests(TestCase):
     def test_complete_stage_response_includes_the_new_record(self):
         """The 200 payload must carry the evidence row it just created — the
         cycle's prefetch cache is stale by then and must not be serialized."""
+        self._add_goals()
         resp = self._complete(self.leader, self.cycle.id, {
             'stage': 'mid_year', 'summary': 'Mid-year review held.',
         })
@@ -169,12 +172,168 @@ class CompleteStageTests(TestCase):
         self.assertIsNone(EPRCycle.objects.get(pk=outsider_cycle.id).mid_year_completed_at)
 
     def test_staff_can_complete_stage(self):
+        self._add_goals()
         resp = self._complete(self.staff, self.cycle.id, {
             'stage': 'mid_year', 'summary': 'Held by HR.',
         })
         self.assertEqual(resp.status_code, 200, resp.data)
         self.assertEqual(
             EPRStageRecord.objects.get(cycle=self.cycle).recorded_by, self.staff)
+
+    def test_goal_setting_with_goal_titles_replaces_and_stamps(self):
+        self._add_goals(2)
+        titles = [f' Workday  Goal {index} ' for index in range(1, 6)]
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'goal_setting',
+            'summary': 'Workday goals confirmed.',
+            'goal_titles': titles,
+        })
+
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(
+            list(self.cycle.goals.order_by('id').values_list('description', flat=True)),
+            [f'Workday Goal {index}' for index in range(1, 6)],
+        )
+        self.cycle.refresh_from_db()
+        self.assertIsNotNone(self.cycle.goal_setting_completed_at)
+
+    def test_invalid_goal_titles_preserve_existing_goals_and_stage(self):
+        self._add_goals(2)
+        old_ids = list(self.cycle.goals.values_list('id', flat=True))
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'goal_setting',
+            'summary': 'Workday goals confirmed.',
+            'goal_titles': ['One', 'Two', 'Three', 'Four', 'one'],
+        })
+
+        self.assertEqual(resp.status_code, 400, resp.data)
+        self.assertIn('goal_titles', resp.data)
+        self.assertEqual(list(self.cycle.goals.values_list('id', flat=True)), old_ids)
+        self.cycle.refresh_from_db()
+        self.assertIsNone(self.cycle.goal_setting_completed_at)
+        self.assertFalse(EPRStageRecord.objects.filter(cycle=self.cycle).exists())
+
+    def test_mid_year_without_titles_confirms_existing_goals(self):
+        self._add_goals()
+        old_ids = list(self.cycle.goals.values_list('id', flat=True))
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'mid_year', 'summary': 'No goal changes.',
+        })
+
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(list(self.cycle.goals.values_list('id', flat=True)), old_ids)
+        self.cycle.refresh_from_db()
+        self.assertIsNotNone(self.cycle.mid_year_completed_at)
+
+    def test_mid_year_without_titles_requires_existing_five_goal_set(self):
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'mid_year', 'summary': 'No goal changes.',
+        })
+
+        self.assertEqual(resp.status_code, 400, resp.data)
+        self.assertIn('goals', resp.data)
+        self.cycle.refresh_from_db()
+        self.assertIsNone(self.cycle.mid_year_completed_at)
+
+    def test_mid_year_with_titles_replaces_goals_atomically(self):
+        self._add_goals()
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'mid_year',
+            'summary': 'Updated Workday goals confirmed.',
+            'goal_titles': [f'Revised {index}' for index in range(1, 6)],
+        })
+
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(
+            list(self.cycle.goals.order_by('id').values_list('description', flat=True)),
+            [f'Revised {index}' for index in range(1, 6)],
+        )
+
+    def test_mid_year_with_too_few_titles_preserves_old_goals(self):
+        self._add_goals()
+        old_ids = list(self.cycle.goals.values_list('id', flat=True))
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'mid_year',
+            'summary': 'Updated Workday goals confirmed.',
+            'goal_titles': ['One', 'Two', 'Three', 'Four'],
+        })
+
+        self.assertEqual(resp.status_code, 400, resp.data)
+        self.assertIn('goal_titles', resp.data)
+        self.assertEqual(list(self.cycle.goals.values_list('id', flat=True)), old_ids)
+        self.cycle.refresh_from_db()
+        self.assertIsNone(self.cycle.mid_year_completed_at)
+        self.assertFalse(EPRStageRecord.objects.filter(cycle=self.cycle).exists())
+
+    def test_failed_mid_year_record_creation_rolls_back_goal_replacement(self):
+        """A preexisting evidence row simulates the race; rollback must restore
+        the prior goal set rather than leave deleted/replaced rows behind."""
+        self._add_goals()
+        old_ids = list(self.cycle.goals.values_list('id', flat=True))
+        EPRStageRecord.objects.create(
+            cycle=self.cycle, stage='mid_year', summary='Concurrent save.',
+            recorded_by=self.leader,
+        )
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'mid_year',
+            'summary': 'Updated Workday goals confirmed.',
+            'goal_titles': [f'Revised {index}' for index in range(1, 6)],
+        })
+
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(list(self.cycle.goals.values_list('id', flat=True)), old_ids)
+        self.cycle.refresh_from_db()
+        self.assertIsNone(self.cycle.mid_year_completed_at)
+
+    def test_final_review_rejects_goal_titles_and_preserves_rows(self):
+        self._add_goals()
+        old_ids = list(self.cycle.goals.values_list('id', flat=True))
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'final_review',
+            'summary': 'Final review held.',
+            'goal_titles': [f'Revised {index}' for index in range(1, 6)],
+        })
+
+        self.assertEqual(resp.status_code, 400, resp.data)
+        self.assertIn('goal_titles', resp.data)
+        self.assertEqual(list(self.cycle.goals.values_list('id', flat=True)), old_ids)
+        self.cycle.refresh_from_db()
+        self.assertIsNone(self.cycle.final_review_completed_at)
+
+    def test_goal_titles_rejected_after_mid_year_completed(self):
+        self._add_goals()
+        self.cycle.mid_year_completed_at = timezone.now()
+        self.cycle.save(update_fields=['mid_year_completed_at'])
+        old_ids = list(self.cycle.goals.values_list('id', flat=True))
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'mid_year',
+            'summary': 'Late replacement.',
+            'goal_titles': [f'Revised {index}' for index in range(1, 6)],
+        })
+
+        self.assertEqual(resp.status_code, 409, resp.data)
+        self.assertEqual(list(self.cycle.goals.values_list('id', flat=True)), old_ids)
+
+    def test_direct_epr_goal_endpoint_is_read_only(self):
+        goal = EPRGoal.objects.create(cycle=self.cycle, description='Existing')
+
+        for method, mapping, pk, data in (
+            ('post', {'post': 'create'}, None,
+             {'cycle': self.cycle.id, 'description': 'New'}),
+            ('patch', {'patch': 'partial_update'}, goal.id,
+             {'description': 'Changed'}),
+            ('put', {'put': 'update'}, goal.id,
+             {'cycle': self.cycle.id, 'description': 'Changed'}),
+            ('delete', {'delete': 'destroy'}, goal.id, None),
+        ):
+            request = getattr(self.factory, method)(f'/x/{pk or ""}', data, format='json')
+            force_authenticate(request, user=self.leader)
+            kwargs = {'pk': pk} if pk is not None else {}
+            resp = EPRGoalViewSet.as_view(mapping)(request, **kwargs)
+            self.assertEqual(resp.status_code, 405, (method, resp.data))
+
+        goal.refresh_from_db()
+        self.assertEqual(goal.description, 'Existing')
 
     def test_completed_at_fields_not_patchable(self):
         """Mirrors Absence.addressed_on: the only writer is the action."""
