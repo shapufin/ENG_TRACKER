@@ -18,3 +18,11 @@ export const slaWell = (pct: number | null) => {
   if (pct >= 70) return `border ${toneSurfaceClass.warning}`;
   return `border ${toneSurfaceClass.danger}`;
 };
+
+/** Progress-bar fill echoing the same SLA thresholds (mirrors slaTone). */
+export const slaBar = (pct: number | null) => {
+  if (pct === null) return "bg-muted-foreground/40";
+  if (pct >= 90) return "bg-tone-success-text";
+  if (pct >= 70) return "bg-tone-warning-text";
+  return "bg-tone-danger-text";
+};

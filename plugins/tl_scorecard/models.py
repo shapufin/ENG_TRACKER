@@ -299,8 +299,9 @@ class EPRCycle(TrackedFieldsMixin, BaseModel):
     stored: services.py computes them from the year (Q1/Q3/Q4-end) so a TL
     never types a due date, and the schedule can be tuned in one place.
     `goals` (child EPRGoal) must reach 5 before goal_setting_completed_at
-    can be set — enforced in the viewset, not here (keeps the model a pure
-    data holder, matching this plugin's other models)."""
+    can be set, and are only written by the checkpoint action — enforced in
+    the viewset, not here (keeps the model a pure data holder, matching this
+    plugin's other models)."""
     tracked_fields = ('goal_setting_completed_at', 'mid_year_completed_at', 'final_review_completed_at')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='epr_cycles')
     year = models.PositiveIntegerField()
@@ -320,10 +321,13 @@ class EPRCycle(TrackedFieldsMixin, BaseModel):
 
 
 class EPRGoal(BaseModel):
-    """A single goal within an EPRCycle. Deliberately just a short
-    description — the actual review conversation/content lives wherever it
-    already happens (Workday); this only tracks that ≥5 goals exist and
-    when the cycle's stages were completed, for the KPI."""
+    """The operational title of a Workday goal within an EPRCycle.
+
+    Deliberately just a short description — the authoritative goal document
+    and review conversation stay in Workday. Rows are written only while a
+    Goal Setting/Mid-year stage is completed, so Final Review cannot reopen
+    the goal list.
+    """
     cycle = models.ForeignKey(EPRCycle, on_delete=models.CASCADE, related_name='goals')
     description = models.CharField(max_length=255)
 

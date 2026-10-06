@@ -4,17 +4,17 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-150 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary-hover",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        default: "bg-primary text-primary-foreground shadow-xs hover:bg-primary-hover",
+        destructive: "bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90",
         outline:
-          "border border-input bg-background hover:bg-accent hover:border-border-focus hover:text-accent-foreground",
+          "border border-input bg-card text-foreground shadow-2xs hover:bg-accent/80 hover:border-border-focus hover:text-accent-foreground",
         secondary:
-          "border border-border bg-secondary text-secondary-foreground hover:bg-accent hover:border-border-focus",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+          "border border-border/80 bg-secondary/70 text-secondary-foreground shadow-2xs hover:bg-secondary hover:border-border-focus",
+        ghost: "hover:bg-accent/70 hover:text-foreground",
         link: "text-primary underline-offset-4 hover:text-primary-hover hover:underline",
         /** Opt-in hero CTA. Use once per surface — page header or modal submit. */
         gradient:

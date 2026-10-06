@@ -135,7 +135,11 @@ export const HbprWorkspaceHeader: React.FC<HbprWorkspaceHeaderProps> = ({
           <Tabs value={view} onValueChange={(value) => onViewChange(value as HbprView)}>
             <TabsList ref={listRef} aria-label="HBPR workspace sections">
               {VIEWS.map((v) => (
-                <TabsTrigger key={v.value} value={v.value}>
+                <TabsTrigger
+                  key={v.value}
+                  value={v.value}
+                  className="data-[state=active]:border-primary min-h-11 border-b-2 border-transparent sm:min-h-9"
+                >
                   {v.label}
                 </TabsTrigger>
               ))}

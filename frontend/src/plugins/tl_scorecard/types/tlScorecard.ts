@@ -265,6 +265,8 @@ export interface CompleteEprStagePayload {
   summary: string;
   reference_url?: string;
   shared_with_employee?: boolean;
+  /** Confirmed Workday titles; allowed at Goal Setting and Mid-year only. */
+  goal_titles?: string[];
 }
 
 /** One evidence row inside the year-end pack (the TL's own content). */

@@ -112,9 +112,13 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
             onPageChange={onPageChange}
             noun="entries"
           />
-          <ol className="space-y-3">
+          <ol className="border-border/70 relative ml-2 space-y-3 border-l-2 pl-5">
             {rows.map((row) => (
-              <li key={row.id}>
+              <li key={row.id} className="relative">
+                <span
+                  aria-hidden="true"
+                  className="bg-primary border-background absolute top-6 -left-[1.72rem] h-3 w-3 rounded-full border-2"
+                />
                 <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -122,7 +126,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
                         <Badge variant={EVIDENCE_KIND_TONE[row.kind]}>
                           {EVIDENCE_KIND_LABELS[row.kind]}
                         </Badge>
-                        <span className="text-sm font-medium tabular-nums">
+                        <span className="bg-muted text-foreground rounded-md px-2 py-0.5 font-mono text-xs font-medium tabular-nums">
                           {formatDate(row.occurred_on)}
                         </span>
                       </div>

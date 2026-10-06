@@ -21,7 +21,7 @@ import { RecordsTab } from "../components/records/RecordsTab";
 import { StartEPRCycleDialog } from "../components/StartEPRCycleDialog";
 import { evidenceForYear } from "../hooks/useHbprWorkspaceQueries";
 import { tlScorecardService } from "../services/tlScorecardService";
-import type { CompleteEprStagePayload, HbprEvidencePayload } from "../types/tlScorecard";
+import type { CompleteEprStagePayload, EPRStage, HbprEvidencePayload } from "../types/tlScorecard";
 
 const Skeleton: React.FC = () => (
   <div aria-busy="true" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -126,9 +126,9 @@ const TLScorecardAuthoring: React.FC = () => {
     onSuccess: invalidateEprCycles,
     onError: notifyError,
   });
-  const addEPRGoalMutation = useMutation({
-    mutationFn: tlScorecardService.createEPRGoal,
-    onSuccess: invalidateEprCycles,
+  const parseEPRGoalPdfMutation = useMutation({
+    mutationFn: ({ cycleId, stage, file }: { cycleId: number; stage: EPRStage; file: File }) =>
+      tlScorecardService.parseEPRGoalPdf(cycleId, stage, file),
     onError: notifyError,
   });
   const completeEPRStageMutation = useMutation({
@@ -355,8 +355,9 @@ const TLScorecardAuthoring: React.FC = () => {
         canApprovePip={isStaff}
         isApprovingPip={approvePIPMutation.isPending}
         onApprovePip={(id) => approvePIPMutation.mutate(id)}
-        onAddGoal={async (cycleId, description) => {
-          await addEPRGoalMutation.mutateAsync({ cycle: cycleId, description });
+        onParseGoals={async (cycleId, stage, file) => {
+          const response = await parseEPRGoalPdfMutation.mutateAsync({ cycleId, stage, file });
+          return response.data.goal_titles;
         }}
         onCompleteStage={async (cycleId, data) => {
           await completeEPRStageMutation.mutateAsync({ cycleId, data });

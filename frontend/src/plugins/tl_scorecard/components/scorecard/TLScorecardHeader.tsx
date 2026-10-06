@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { LineChart } from "lucide-react";
+import { FolderArchive, LayoutDashboard, LineChart, ListChecks } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { UserAvatar } from "@/components/calendar/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,16 @@ export type TLScorecardTab = "overview" | "records" | "evidence";
 const quarterLabel = (): string => `Q${Math.floor(new Date().getMonth() / 3) + 1} Active`;
 
 const MAX_VISIBLE_AVATARS = 4;
+
+const TABS = [
+  { value: "overview", label: "Overview", icon: LayoutDashboard },
+  { value: "records", label: "Records", icon: ListChecks },
+  { value: "evidence", label: "Evidence", icon: FolderArchive },
+] as const;
+
+/** Pill trigger: 44px touch target, active pill lifts onto the card surface. */
+const TAB_TRIGGER_CLASS =
+  "min-h-11 rounded-full px-4 data-[state=active]:bg-card data-[state=active]:shadow-xs";
 
 /**
  * Overlapping direct-report avatar stack for the header meta line. Decorative:
@@ -112,12 +122,15 @@ export const TLScorecardHeader: React.FC<TLScorecardHeaderProps> = ({
     }
   >
     <div className="space-y-6">
-      <div className="no-scrollbar -mx-1 overflow-x-auto px-1">
+      <div className="no-scrollbar -mx-1 overflow-x-auto px-1 py-1">
         <Tabs value={tab} onValueChange={(value) => onTabChange(value as TLScorecardTab)}>
-          <TabsList aria-label="Scorecard sections">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="records">Records</TabsTrigger>
-            <TabsTrigger value="evidence">Evidence</TabsTrigger>
+          <TabsList aria-label="Scorecard sections" className="h-auto gap-1 rounded-full p-1">
+            {TABS.map(({ value, label, icon: Icon }) => (
+              <TabsTrigger key={value} value={value} className={TAB_TRIGGER_CLASS}>
+                <Icon className="mr-2 h-4 w-4" aria-hidden="true" />
+                {label}
+              </TabsTrigger>
+            ))}
           </TabsList>
         </Tabs>
       </div>

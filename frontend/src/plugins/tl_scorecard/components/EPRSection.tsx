@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Input } from "@/components/ui/input";
 import { toneTextClass } from "@/components/ui/tone";
 import { CompleteEprStageDialog } from "./CompleteEprStageDialog";
 import type {
@@ -25,7 +24,7 @@ const stageLabel = (stage: EPRStage) => STAGES.find((s) => s.field === stage)?.l
 
 interface EPRSectionProps {
   cycles: EPRCycle[];
-  onAddGoal: (cycleId: number, description: string) => Promise<void>;
+  onParseGoals: (cycleId: number, stage: EPRStage, file: File) => Promise<string[]>;
   onCompleteStage: (cycleId: number, data: CompleteEprStagePayload) => Promise<void>;
 }
 
@@ -67,23 +66,10 @@ const StageRecordRow: React.FC<{ record: EPRStageRecord | EPRStageRecordMeta }> 
 
 const CycleRow: React.FC<{
   cycle: EPRCycle;
-  onAddGoal: (cycleId: number, description: string) => Promise<void>;
+  onParseGoals: (cycleId: number, stage: EPRStage, file: File) => Promise<string[]>;
   onCompleteStage: (cycleId: number, data: CompleteEprStagePayload) => Promise<void>;
-}> = ({ cycle, onAddGoal, onCompleteStage }) => {
-  const [goalText, setGoalText] = useState("");
-  const [isAdding, setIsAdding] = useState(false);
+}> = ({ cycle, onParseGoals, onCompleteStage }) => {
   const [completing, setCompleting] = useState<EPRStage | null>(null);
-
-  const handleAddGoal = async () => {
-    if (!goalText.trim()) return;
-    setIsAdding(true);
-    try {
-      await onAddGoal(cycle.id, goalText.trim());
-      setGoalText("");
-    } finally {
-      setIsAdding(false);
-    }
-  };
 
   return (
     <li className="py-3">
@@ -94,15 +80,14 @@ const CycleRow: React.FC<{
         <p
           className={`text-xs ${cycle.goal_count >= 5 ? toneTextClass.success : toneTextClass.warning}`}
         >
-          {cycle.goal_count}/5 goals
+          {cycle.goal_count}/5 confirmed goals
         </p>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {STAGES.map(({ field, label }) => {
           const fieldKey = `${field}_completed_at` as const;
           const completedAt = cycle[fieldKey];
-          const disabled =
-            Boolean(completedAt) || (field === "goal_setting" && cycle.goal_count < 5);
+          const disabled = Boolean(completedAt);
           return (
             <Button
               key={field}
@@ -124,27 +109,15 @@ const CycleRow: React.FC<{
           ))}
         </ul>
       )}
-      <div className="mt-2 flex gap-2">
-        <Input
-          value={goalText}
-          onChange={(e) => setGoalText(e.target.value)}
-          placeholder="Add a goal..."
-          className="h-8 text-xs"
-        />
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={isAdding || !goalText.trim()}
-          onClick={handleAddGoal}
-        >
-          Add
-        </Button>
-      </div>
       {completing && (
         <CompleteEprStageDialog
+          key={completing}
           open
           onOpenChange={(open) => !open && setCompleting(null)}
+          stage={completing}
           stageLabel={stageLabel(completing)}
+          initialGoalTitles={cycle.goals.map((goal) => goal.description)}
+          onParseGoals={(file) => onParseGoals(cycle.id, completing, file)}
           onSave={async (values) => {
             await onCompleteStage(cycle.id, { stage: completing, ...values });
           }}
@@ -154,7 +127,11 @@ const CycleRow: React.FC<{
   );
 };
 
-export const EPRSection: React.FC<EPRSectionProps> = ({ cycles, onAddGoal, onCompleteStage }) => (
+export const EPRSection: React.FC<EPRSectionProps> = ({
+  cycles,
+  onParseGoals,
+  onCompleteStage,
+}) => (
   <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
     <h2 className="text-sm font-semibold">EPR cycles</h2>
     {cycles.length === 0 ? (
@@ -165,7 +142,7 @@ export const EPRSection: React.FC<EPRSectionProps> = ({ cycles, onAddGoal, onCom
           <CycleRow
             key={cycle.id}
             cycle={cycle}
-            onAddGoal={onAddGoal}
+            onParseGoals={onParseGoals}
             onCompleteStage={onCompleteStage}
           />
         ))}
