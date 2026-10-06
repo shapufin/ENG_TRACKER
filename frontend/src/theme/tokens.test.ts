@@ -117,7 +117,7 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
   });
 
   it("defines the overlay token in both modes", () => {
-    expect(lightBlock).toContain("--overlay: 222 47% 11% / 0.60");
+    expect(lightBlock).toContain("--overlay: 222 47% 11% / 0.6");
     expect(darkBlock).toContain("--overlay: 0 0% 0% / 0.68");
   });
 
