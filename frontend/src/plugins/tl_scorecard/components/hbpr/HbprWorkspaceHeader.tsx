@@ -19,7 +19,7 @@ const VIEWS: { value: HbprView; label: string }[] = [
   { value: "overview", label: "Overview" },
   { value: "leaders", label: "Team leaders" },
   { value: "records", label: "Records" },
-  { value: "evidence", label: "Evidence" },
+  { value: "evidence", label: "Partnership log" },
 ];
 
 const yearOptions = (): number[] => {

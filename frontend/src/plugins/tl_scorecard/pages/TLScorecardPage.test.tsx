@@ -248,14 +248,14 @@ describe("TLScorecardPage", () => {
     expect(downloadBlobResponse).not.toHaveBeenCalled();
   });
 
-  it("offers Overview, Records and Evidence tabs and keeps Overview as the default", async () => {
+  it("offers Overview, Records and Partnership log tabs and keeps Overview as the default", async () => {
     mockDefaults();
     renderPage();
 
     await waitFor(() => expect(screen.getByText("66.7%")).toBeInTheDocument());
     expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tab", { name: "Records" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Evidence" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Partnership log" })).toBeInTheDocument();
   });
 
   it("opens the Records tab from the URL even when the scorecard cannot load", async () => {
@@ -308,7 +308,7 @@ describe("TLScorecardPage", () => {
     expect(await screen.findByText("Elda Partner")).toBeInTheDocument();
     expect(screen.getByText("Mid-year EPR: missing")).toBeInTheDocument();
     // The AL TL authors the evidence.
-    expect(screen.getByRole("button", { name: /record evidence/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add log entry/i })).toBeInTheDocument();
     perms.value = { isAdmin: false };
   });
 
@@ -316,7 +316,7 @@ describe("TLScorecardPage", () => {
     mockDefaults();
     renderPage("/tl-scorecard?tab=evidence");
     expect(await screen.findByText("No HR business partner assigned yet")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /record evidence/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add log entry/i })).not.toBeInTheDocument();
   });
 
   it("does not fetch the HBPR partnership on the overview tab", async () => {

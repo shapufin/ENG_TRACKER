@@ -13,6 +13,7 @@ from core.mixins.permissions import PluginPermissionMixin
 
 
 from ..csv_export import CsvExportMixin
+from ..scope import scoreable_member_ids
 from ..models import (
     Absence,
     EngagementSurveyResponse,
@@ -150,7 +151,7 @@ class IdleFlagViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionM
     def perform_create(self, serializer):
         employee = serializer.validated_data['employee']
         if not is_staff_user(self.request.user):
-            team_member_ids = self.request.user.profile.get_team_member_ids()
+            team_member_ids = scoreable_member_ids(self.request.user)
             if employee.id not in team_member_ids:
                 raise ValidationError({'employee': 'You can only flag your own team members as idle.'})
         serializer.save(flagged_by=self.request.user, recorded_by=self.request.user)
@@ -158,7 +159,7 @@ class IdleFlagViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionM
     def perform_update(self, serializer):
         employee = serializer.validated_data.get('employee')
         if employee and not is_staff_user(self.request.user):
-            if employee.id not in self.request.user.profile.get_team_member_ids():
+            if employee.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'employee': 'You can only flag your own team members as idle.'})
         serializer.save()
 
@@ -269,7 +270,7 @@ class EngagementSurveyResponseViewSet(PluginPermissionMixin, viewsets.ModelViewS
 
         if not hasattr(request.user, 'profile'):
             return Response({'period': period, 'average_score': None, 'response_count': 0})
-        team_member_ids = request.user.profile.get_team_member_ids()
+        team_member_ids = scoreable_member_ids(request.user)
         agg = EngagementSurveyResponse.objects.filter(
             respondent_id__in=team_member_ids, period=period,
         ).aggregate(average_score=Avg('score'), response_count=Count('id'))
@@ -300,14 +301,14 @@ class AbsenceViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMi
     def perform_create(self, serializer):
         employee = serializer.validated_data['employee']
         if not is_staff_user(self.request.user):
-            if employee.id not in self.request.user.profile.get_team_member_ids():
+            if employee.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'employee': 'You can only flag your own team members.'})
         serializer.save(flagged_by=self.request.user)
 
     def perform_update(self, serializer):
         employee = serializer.validated_data.get('employee')
         if employee and not is_staff_user(self.request.user):
-            if employee.id not in self.request.user.profile.get_team_member_ids():
+            if employee.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'employee': 'You can only flag your own team members.'})
         serializer.save()
 

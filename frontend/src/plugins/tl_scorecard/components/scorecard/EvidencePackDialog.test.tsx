@@ -43,7 +43,7 @@ const renderDialog = (load = vi.fn().mockResolvedValue(PACK)) =>
 describe("EvidencePackDialog", () => {
   it("summarises held-vs-expected cadence with coverage", async () => {
     renderDialog();
-    expect(await screen.findByText("2026 evidence pack")).toBeInTheDocument();
+    expect(await screen.findByText("2026 year-end summary")).toBeInTheDocument();
     expect(screen.getByText("Enri Leader")).toBeInTheDocument();
     expect(screen.getByText("Elda Partner")).toBeInTheDocument();
     expect(screen.getByText("31/40")).toBeInTheDocument();
@@ -76,6 +76,6 @@ describe("EvidencePackDialog", () => {
         load={vi.fn().mockRejectedValue(new Error("denied"))}
       />
     );
-    expect(await screen.findByText(/could not load the evidence pack/i)).toBeInTheDocument();
+    expect(await screen.findByText(/could not load the year-end summary/i)).toBeInTheDocument();
   });
 });

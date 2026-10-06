@@ -56,7 +56,7 @@ const buildCards = (n: HbprNeedsAttention, year: number): Card[] => {
       icon: FileClock,
       tone: "info",
       count: n.missing_mid_year_evidence,
-      title: "Mid-year EPR evidence missing",
+      title: "Mid-year EPR not logged",
       action: `Open ${plural(n.missing_mid_year_evidence, "record", "records")}`,
       to: `/hbpr?view=evidence&year=${year}`,
     },
@@ -65,7 +65,7 @@ const buildCards = (n: HbprNeedsAttention, year: number): Card[] => {
       icon: FilePlus2,
       tone: "info",
       count: n.missing_year_end_evidence,
-      title: "Year-end EPR evidence missing",
+      title: "Year-end EPR not logged",
       action: `Open ${plural(n.missing_year_end_evidence, "record", "records")}`,
       to: `/hbpr?view=evidence&year=${year}`,
     },
@@ -104,7 +104,7 @@ export const HbprAttentionSummary: React.FC<HbprAttentionSummaryProps> = ({
           tone="success"
           icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
           label="Nothing needs your attention"
-          value="Cadence and EPR evidence are up to date for your assigned team leaders."
+          value="Cadence meetings and EPR logs are up to date for your assigned team leaders."
         />
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">

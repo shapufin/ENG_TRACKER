@@ -281,7 +281,7 @@ const TLScorecardAuthoring: React.FC = () => {
     );
     return (
       <TLScorecardHeader
-        subtitle="Cadence meetings, EPR participation and the exportable evidence pack for your HBPR partnership."
+        subtitle="Cadence meetings, EPR participation and the year-end summary for your HBPR partnership."
         tab={tab}
         onTabChange={setTab}
       >

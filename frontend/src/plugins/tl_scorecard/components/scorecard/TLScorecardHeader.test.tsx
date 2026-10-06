@@ -55,8 +55,8 @@ describe("TLScorecardHeader (mockup button hierarchy)", () => {
     const { onTabChange } = renderHeader();
     expect(await screen.findByRole("tab", { name: "Overview" })).toBeDefined();
     expect(screen.getByRole("tab", { name: "Records" })).toBeDefined();
-    expect(screen.getByRole("tab", { name: "Evidence" })).toBeDefined();
-    fireEvent.mouseDown(screen.getByRole("tab", { name: "Evidence" }));
+    expect(screen.getByRole("tab", { name: "Partnership log" })).toBeDefined();
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Partnership log" }));
     expect(onTabChange).toHaveBeenCalledWith("evidence");
   });
 });

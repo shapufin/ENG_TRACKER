@@ -33,17 +33,17 @@ describe("AssignedLeadersTable", () => {
 
     const expectedHref = "/hbpr?view=evidence&year=2026&leader=8";
     expect(
-      within(screen.getByRole("table")).getByRole("link", { name: /evidence.*alba leader/i })
+      within(screen.getByRole("table")).getByRole("link", { name: /partnership log.*alba leader/i })
     ).toHaveAttribute("href", expectedHref);
     expect(
-      within(screen.getByRole("list")).getByRole("link", { name: /evidence.*alba leader/i })
+      within(screen.getByRole("list")).getByRole("link", { name: /partnership log.*alba leader/i })
     ).toHaveAttribute("href", expectedHref);
   });
 
   it("scopes the evidence action to the reporting year it was given", () => {
     renderTable([LEADER], 2025);
 
-    expect(screen.getAllByRole("link", { name: /evidence.*alba leader/i })[0]).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: /partnership log.*alba leader/i })[0]).toHaveAttribute(
       "href",
       "/hbpr?view=evidence&year=2025&leader=8"
     );

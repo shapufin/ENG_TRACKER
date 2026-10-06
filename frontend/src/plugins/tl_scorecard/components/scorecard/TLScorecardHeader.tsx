@@ -20,7 +20,7 @@ const MAX_VISIBLE_AVATARS = 4;
 const TABS = [
   { value: "overview", label: "Overview", icon: LayoutDashboard },
   { value: "records", label: "Records", icon: ListChecks },
-  { value: "evidence", label: "Evidence", icon: FolderArchive },
+  { value: "evidence", label: "Partnership log", icon: FolderArchive },
 ] as const;
 
 /** Pill trigger: 44px touch target, active pill lifts onto the card surface. */

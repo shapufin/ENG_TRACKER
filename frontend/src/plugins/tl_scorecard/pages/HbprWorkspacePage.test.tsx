@@ -218,7 +218,7 @@ describe("HbprWorkspacePage", () => {
   it("shows the attention summary and the assigned leaders roster on the overview", async () => {
     renderPage();
     expect(await screen.findByText("Cadence meetings overdue")).toBeInTheDocument();
-    expect(screen.getByText("Mid-year EPR evidence missing")).toBeInTheDocument();
+    expect(screen.getByText("Mid-year EPR not logged")).toBeInTheDocument();
     // The roster renders a mobile card list and a desktop table, so names repeat.
     expect(screen.getAllByText("Alb TL").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Second TL").length).toBeGreaterThan(0);
@@ -292,8 +292,8 @@ describe("HbprWorkspacePage", () => {
 
   it("restores the active view from the URL and switches views via the tabs", async () => {
     renderPage(`/hbpr?view=evidence&year=${YEAR}`);
-    expect(await screen.findByText(`Governance evidence · ${YEAR}`)).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Evidence" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByText(`Partnership log · ${YEAR}`)).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Partnership log" })).toHaveAttribute("aria-selected", "true");
 
     selectView("Records");
     expect(await screen.findByRole("heading", { name: /meetings records/i })).toBeInTheDocument();
@@ -436,7 +436,7 @@ describe("HbprWorkspacePage", () => {
 
   it("falls back to the current year for an out-of-range year", async () => {
     renderPage("/hbpr?view=evidence&year=1999");
-    expect(await screen.findByText(`Governance evidence · ${YEAR}`)).toBeInTheDocument();
+    expect(await screen.findByText(`Partnership log · ${YEAR}`)).toBeInTheDocument();
   });
 
   it("never renders a review delivery's private notes", async () => {

@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from core.mixins.permissions import PluginPermissionMixin
 
 
+from ..scope import scoreable_member_ids
 from ..models import (
     EPRCycle,
     EPRGoal,
@@ -62,12 +63,12 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
             'goals', 'stage_records__recorded_by')
 
     def own_q(self, user):
-        return Q(user_id__in=user.profile.get_team_member_ids())
+        return Q(user_id__in=scoreable_member_ids(user))
 
     def perform_create(self, serializer):
         target_user = serializer.validated_data['user']
         if not is_staff_user(self.request.user):
-            if target_user.id not in self.request.user.profile.get_team_member_ids():
+            if target_user.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'user': 'You can only open an EPR cycle for your own team members.'})
         try:
             serializer.save()
@@ -77,7 +78,7 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
     def perform_update(self, serializer):
         target_user = serializer.validated_data.get('user')
         if target_user and not is_staff_user(self.request.user):
-            if target_user.id not in self.request.user.profile.get_team_member_ids():
+            if target_user.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'user': 'You can only manage an EPR cycle for your own team members.'})
         serializer.save()
 
@@ -223,13 +224,13 @@ class EPRStageRecordViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, view
         return EPRStageRecord.objects.select_related('cycle', 'cycle__user', 'recorded_by')
 
     def own_q(self, user):
-        return Q(cycle__user_id__in=user.profile.get_team_member_ids())
+        return Q(cycle__user_id__in=scoreable_member_ids(user))
 
     def _check_writer(self):
         user = self.request.user
         instance = self.get_object()
         if not is_staff_user(user) \
-                and instance.cycle.user_id not in user.profile.get_team_member_ids():
+                and instance.cycle.user_id not in scoreable_member_ids(user):
             raise PermissionDenied('You can only manage EPR stage records for your own team members.')
         return instance
 
@@ -255,4 +256,4 @@ class EPRGoalViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.Mo
         return EPRGoal.objects.select_related('cycle', 'cycle__user')
 
     def own_q(self, user):
-        return Q(cycle__user_id__in=user.profile.get_team_member_ids())
+        return Q(cycle__user_id__in=scoreable_member_ids(user))

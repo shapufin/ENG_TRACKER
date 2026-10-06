@@ -352,6 +352,19 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   guard working (their overtime/standby/leave must never be requested — the
   API refuses via `HbprBlockedMixin`).
 
+- **2026-10-06, AL TL is not scored by an IT TL; "Evidence" → "Partnership log":** every
+  record write/read and scorecard metric used `get_team_member_ids()`, which includes an
+  Albanian TL who sits in an Italian TL's team (direct `italian_tl` FK or shared team), so
+  an IT TL could open PIPs, EPR cycles, flags and nominations on them and count them in team
+  metrics. All of it now goes through `plugins/tl_scorecard/scope.scoreable_member_ids()`
+  (team ids minus `albanian_tl` role holders); an AL TL is governed only through the HBPR
+  partnership. The `My records` sidebar link is hidden for AL TLs (they are never a subject
+  of those records). User-facing copy no longer says "evidence" for the HBPR↔AL TL surface:
+  tab/section = **Partnership log**, entries = *log entries*, the year-end deliverable =
+  **Year-end summary**, workbook sheet = "HBPR partnership log". Code identifiers, API
+  routes and `?view=evidence` deep links are unchanged on purpose. Pinned by
+  `test_al_tl_not_scoreable.py`.
+
 **Assignment dates (2026-10-03).** `effective_to` is the **last day in effect**, not a
 switch. An assignment covers a day `d` when `effective_from <= d` and (`effective_to` is
 null or `>= d`) — one definition, `in_effect_q()` / `unfinished_q()` in

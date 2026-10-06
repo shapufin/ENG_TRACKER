@@ -86,11 +86,11 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={isEdit ? "Edit governance evidence" : "Record governance evidence"}
+      title={isEdit ? "Edit log entry" : "Add log entry"}
       description="The assigned Albanian team leader authors this; the HBPR and staff can read it."
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
-      submitLabel={isEdit ? "Save changes" : "Record evidence"}
+      submitLabel={isEdit ? "Save changes" : "Save entry"}
       submitDisabled={!canSubmit}
     >
       <div className="space-y-4">

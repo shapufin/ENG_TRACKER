@@ -406,7 +406,7 @@ class EvidenceExportTests(EvidenceBase):
             shared = zf.read('xl/sharedStrings.xml').decode('utf-8')
         self.assertIn('Mid-year participation', shared)
         self.assertIn('Follow up', shared)
-        self.assertIn('Albanian TL evidence', shared)
+        self.assertIn('Albanian TL partnership log', shared)
 
     def test_export_excludes_other_assignments_evidence(self):
         import io

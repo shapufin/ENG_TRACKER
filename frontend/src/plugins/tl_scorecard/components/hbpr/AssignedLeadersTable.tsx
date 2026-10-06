@@ -106,7 +106,7 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
                   Next due
                 </th>
                 <th scope="col" className={HEAD_CELL}>
-                  EPR evidence
+                  EPR log
                 </th>
                 <th scope="col" className={HEAD_CELL}>
                   State
@@ -157,9 +157,9 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
                     <Button variant="outline" size="sm" asChild className="shadow-sm">
                       <Link
                         to={`/hbpr?view=evidence&year=${year}&leader=${leader.id}`}
-                        aria-label={`Open governance evidence for ${leader.name}`}
+                        aria-label={`Open partnership log for ${leader.name}`}
                       >
-                        Evidence
+                        Partnership log
                       </Link>
                     </Button>
                   </td>

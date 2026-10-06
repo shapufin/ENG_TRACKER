@@ -13,6 +13,7 @@ from core.mixins.permissions import PluginPermissionMixin
 
 
 from ..csv_export import CsvExportMixin
+from ..scope import scoreable_member_ids
 from ..models import (
     PIPRecord,
     PromotionFlag,
@@ -56,7 +57,7 @@ class PIPRecordViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermission
     def perform_create(self, serializer):
         employee = serializer.validated_data['employee']
         if not is_staff_user(self.request.user):
-            if employee.id not in self.request.user.profile.get_team_member_ids():
+            if employee.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'employee': 'You can only open a PIP for your own team members.'})
         serializer.save(tl=self.request.user)
 
@@ -70,7 +71,7 @@ class PIPRecordViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermission
                     raise ValidationError({field: 'This cannot change after the PIP is approved.'})
         employee = serializer.validated_data.get('employee')
         if employee and not is_staff_user(self.request.user):
-            if employee.id not in self.request.user.profile.get_team_member_ids():
+            if employee.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'employee': 'You can only open a PIP for your own team members.'})
         serializer.save()
 
@@ -166,14 +167,14 @@ class PromotionFlagViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermis
     def perform_create(self, serializer):
         employee = serializer.validated_data['employee']
         if not is_staff_user(self.request.user):
-            if employee.id not in self.request.user.profile.get_team_member_ids():
+            if employee.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'employee': 'You can only nominate your own team members.'})
         serializer.save(nominated_by=self.request.user)
 
     def perform_update(self, serializer):
         employee = serializer.validated_data.get('employee')
         if employee and not is_staff_user(self.request.user):
-            if employee.id not in self.request.user.profile.get_team_member_ids():
+            if employee.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'employee': 'You can only nominate your own team members.'})
         serializer.save()
 

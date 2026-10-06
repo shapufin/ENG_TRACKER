@@ -19,17 +19,17 @@ export const EvidenceExportSection: React.FC<EvidenceExportSectionProps> = ({
 }) => (
   <section aria-labelledby="tl-evidence-export" className="space-y-3">
     <h2 id="tl-evidence-export" className="text-muted-foreground text-sm font-semibold">
-      Evidence export
+      Report export
     </h2>
     <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-2 font-medium">
             <FileSpreadsheet className="text-primary/50 h-4 w-4" aria-hidden="true" />
-            Governance evidence workbook
+            Governance report workbook
           </p>
           <p className="text-muted-foreground mt-1 text-xs">
-            Scorecard metrics, governance records and the HBPR↔Albanian-TL evidence sheet for this
+            Scorecard metrics, governance records and the HBPR↔Albanian-TL partnership log for this
             month. Employee one-on-one content is never included.
           </p>
         </div>

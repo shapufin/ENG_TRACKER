@@ -50,7 +50,7 @@ const PackContent: React.FC<{ load: () => Promise<YearEndEvidencePack> }> = ({ l
   if (state.status === "loading") {
     return (
       <div aria-busy="true" className="space-y-2">
-        <span className="sr-only">Loading the evidence pack…</span>
+        <span className="sr-only">Loading the year-end summary…</span>
         <div className="bg-muted/40 h-16 animate-pulse rounded-lg border" />
         <div className="bg-muted/40 h-24 animate-pulse rounded-lg border" />
       </div>
@@ -59,7 +59,7 @@ const PackContent: React.FC<{ load: () => Promise<YearEndEvidencePack> }> = ({ l
   if (state.status === "error") {
     return (
       <p role="alert" className="text-tone-danger-text text-sm">
-        Could not load the evidence pack. Close and try again.
+        Could not load the year-end summary. Close and try again.
       </p>
     );
   }
@@ -102,7 +102,7 @@ const EvidenceRow: React.FC<{ row: NonNullable<YearEndEvidencePack["epr_mid_year
 
 const PackBody: React.FC<{ pack: YearEndEvidencePack }> = ({ pack }) => (
   <div className="space-y-4">
-    <h3 className="text-sm font-semibold">{pack.year} evidence pack</h3>
+    <h3 className="text-sm font-semibold">{pack.year} year-end summary</h3>
     <div className="text-sm">
       <p>
         <span className="font-medium">{pack.assignment.albanian_tl_name}</span>
@@ -185,7 +185,7 @@ export const EvidencePackDialog: React.FC<EvidencePackDialogProps> = ({
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent size="lg" aria-describedby={undefined}>
       <DialogHeader>
-        <DialogTitle>Evidence pack</DialogTitle>
+        <DialogTitle>Year-end summary</DialogTitle>
         <DialogDescription>
           Held-vs-expected cadence and EPR participation for this assignment — the summary to hand
           over at year-end review.

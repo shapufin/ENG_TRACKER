@@ -58,7 +58,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
   return (
     <section aria-label={`Governance evidence · ${year}`} className="space-y-4">
       <h2 className="text-foreground text-base font-bold tracking-tight">
-        Governance evidence · {year}
+        Partnership log · {year}
       </h2>
       <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
@@ -86,10 +86,10 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
       </GlassCard>
 
       {isError ? (
-        <ErrorCard title="Could not load governance evidence" onRetry={onRetry} />
+        <ErrorCard title="Could not load the partnership log" onRetry={onRetry} />
       ) : isLoading ? (
         <div aria-busy="true" className="space-y-2">
-          <span className="sr-only">Loading governance evidence…</span>
+          <span className="sr-only">Loading the partnership log…</span>
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="bg-muted/40 h-20 animate-pulse rounded-xl border" />
           ))}
@@ -99,7 +99,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
           <EmptyState
             icon={History}
             title={`No governance evidence recorded in ${year}`}
-            description="The assigned Albanian team leader records cadence meetings and EPR participation evidence."
+            description="The assigned Albanian team leader logs their cadence meetings and EPR participation here."
             className="py-10"
           />
         </GlassCard>
