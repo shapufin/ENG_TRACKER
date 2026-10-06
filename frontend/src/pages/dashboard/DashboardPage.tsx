@@ -4,7 +4,6 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { usePlugins } from "@/context/PluginContext";
-import { PluginSlot } from "@/components/plugins/PluginSlot";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { useDashboardSelection } from "./hooks/useDashboardSelection";
 import { usePersonalDashboardItems } from "./hooks/usePersonalDashboardItems";
@@ -19,12 +18,12 @@ export const DashboardPage: React.FC = () => {
     isAdmin,
     isTeamLeader,
     isHR,
-    isHBPR,
+    isHBPROnly,
     isSuperuser,
     availableDashboards,
     primaryDashboard,
   } = usePermissions();
-  const { getInjectedComponents } = usePlugins();
+  const { activePlugins } = usePlugins();
   const { user } = useAuth();
   const userId = user?.id;
 
@@ -65,15 +64,16 @@ export const DashboardPage: React.FC = () => {
     );
   }
 
-  // The HBPR dashboard is owned by the TL Scorecard plugin and injected through a
-  // slot; with the plugin off there is nothing to show, so fall through to the
-  // empty state instead of a blank page.
-  if (
-    selectedDashboard === "hbpr" &&
-    isHBPR &&
-    getInjectedComponents("hbpr-dashboard").length > 0
-  ) {
-    return <PluginSlot slot="hbpr-dashboard" fallback={<LoadingCard />} />;
+  // An HBPR-only user has no dashboard — their home is the plugin-owned /hbpr
+  // workspace. The route check is required: with the tl_scorecard plugin off,
+  // /hbpr hits the catch-all, which sends them back to /dashboard — an
+  // unconditional Navigate would loop forever. Plugin off falls through to the
+  // empty state, same as the old slot branch's fallback.
+  const hbprWorkspaceRegistered = activePlugins.some((plugin) =>
+    plugin.routes.some((route) => route.path === "/hbpr" && route.layout === "app")
+  );
+  if (isHBPROnly && hbprWorkspaceRegistered) {
+    return <Navigate to="/hbpr" replace />;
   }
 
   // The admin dashboard lives at /admin (AdminShell) — DashboardPage has no

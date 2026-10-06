@@ -229,11 +229,6 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
       import("./tl_scorecard/pages/MyRecordsPage").then((m) => ({ default: m.MyRecordsPage }))
     ),
     MyRecordsSidebarLink: lazy(() => import("./tl_scorecard/components/MyRecordsSidebarLink")),
-    HbprDashboardPage: lazy(() =>
-      import("./tl_scorecard/pages/HbprDashboardPage").then((m) => ({
-        default: m.HbprDashboardPage,
-      }))
-    ),
     HbprWorkspacePage: lazy(() =>
       import("./tl_scorecard/pages/HbprWorkspacePage").then((m) => ({
         default: m.HbprWorkspacePage,

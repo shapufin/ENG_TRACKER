@@ -300,8 +300,9 @@ describe("useVisibleNavItems", () => {
     expect(visible).not.toContain("Ticket KPI");
     expect(visible).not.toContain("Overtime");
     expect(visible).not.toContain("Standby");
-    // The HBPR's own dashboard home and settings remain.
-    expect(visible).toContain("Dashboard");
+    // Dashboard is gone too — an HBPR-only home is the /hbpr workspace, so
+    // the link would only bounce there. Settings remains.
+    expect(visible).not.toContain("Dashboard");
     expect(visible).toContain("Settings");
   });
 

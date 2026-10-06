@@ -26,8 +26,9 @@ export const useDashboardData = ({
   const isPrivilegedDashboard = selectedDashboard === "hr" || selectedDashboard === "admin";
   const dashboardPageSize = isPrivilegedDashboard ? 50 : 5;
   // An HBPR-only viewer has no overtime, standby or leave (the API refuses
-  // all of them via HbprBlockedMixin), so those queries must not even be
-  // requested while its dashboard is showing.
+  // all of them via HbprBlockedMixin), so those queries must not fire even in
+  // the single render before DashboardPage's /hbpr redirect mounts — "hbpr"
+  // survives as their primaryDashboard routing token for exactly this.
   const canLoadSelfService = !!userId && selectedDashboard !== "hbpr";
 
   const { data: hrStats } = useQuery({

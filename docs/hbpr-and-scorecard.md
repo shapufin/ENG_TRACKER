@@ -108,7 +108,11 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
 
 ## Frontend
 
-- `/hbpr` workspace (`HbprWorkspacePage`, `app` layout) with URL-backed view, year,
+- `/hbpr` workspace (`HbprWorkspacePage`, `app` layout) — the HBPR-only user's
+  home: `/dashboard`, login, and `HbprRestrictedRoute` all redirect straight to
+  it (there is no HBPR dashboard — `primaryDashboard` keeps `"hbpr"` as a
+  routing token only, and the DashboardPage redirect is guarded on the route
+  being registered so a disabled plugin can't loop). With URL-backed view, year,
   leader, kind (`pips|promotions|idle|absences|meetings|reviews` — shared with the
   notification deep links), status, period and page. Desktop table, mobile cards.
   Records and evidence are paged **server-side** (one kind / one page per request):
@@ -317,6 +321,21 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   fiction). The engagement plugin's `sidebar-nav` slot now declares
   `section: "leadership"` — without a `section` a slot item falls into the
   generic "Plugins" bucket, which is where the engagement link sat.
+
+- **2026-10-06, HBPR dashboard removed (plan
+  `.devin/plans/plan-hbpr-tables-buttons-dashboard-removal-2026-10-04.md` §3):**
+  the `hbpr-dashboard` injection slot + `HbprDashboardPage` widget are deleted —
+  `/hbpr` (the management workspace) IS the HBPR home. `DashboardPage` redirects
+  `isHBPROnly` → `/hbpr` guarded on the `/hbpr` route being registered (an
+  unconditional Navigate would loop through the catch-all when the plugin is
+  off); `LoginPage` sends HBPR-only logins there (after the CR checks — an
+  HBPR+CR user keeps the CR home); `HbprRestrictedRoute` and the nav's core
+  "Dashboard" item point at/hide it accordingly. `"hbpr"` survives as a
+  `DashboardType` member only as a routing token: it is never pushed into
+  `availableDashboards`, but `primaryDashboard = "hbpr"` for HBPR-only feeds
+  the redirect and keeps `useDashboardData`'s `!== "hbpr"` self-service fetch
+  guard working (their overtime/standby/leave must never be requested — the
+  API refuses via `HbprBlockedMixin`).
 
 **Assignment dates (2026-10-03).** `effective_to` is the **last day in effect**, not a
 switch. An assignment covers a day `d` when `effective_from <= d` and (`effective_to` is

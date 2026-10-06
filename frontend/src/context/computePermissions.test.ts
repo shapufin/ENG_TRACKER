@@ -318,18 +318,22 @@ describe("computePermissions", () => {
       expect(result.isEmployee).toBe(false);
     });
 
-    it("HBPR-only gets the HBPR dashboard and no personal (overtime) dashboard", () => {
+    it("HBPR-only holds no dashboard — 'hbpr' survives as a routing token", () => {
       const result = computePermissions(hbpr);
-      expect(result.availableDashboards).toEqual(["hbpr"]);
+      // No dashboard entries at all: the HBPR home is the /hbpr workspace.
+      expect(result.availableDashboards).toEqual([]);
+      // "hbpr" stays a valid DashboardType only so DashboardPage's redirect
+      // and useDashboardData's fetch guard can key off it.
       expect(result.primaryDashboard).toBe("hbpr");
     });
 
     it("multi-role HBPR keeps the other role's home and the personal dashboard", () => {
       const tl = computePermissions({ roles: ["hbpr", "italian_tl"] });
       expect(tl.primaryDashboard).toBe("team_leader");
-      expect(tl.availableDashboards).toEqual(["team_leader", "hbpr", "employee"]);
+      expect(tl.availableDashboards).toEqual(["team_leader", "employee"]);
       const hr = computePermissions({ roles: ["hbpr", "hr"] });
       expect(hr.primaryDashboard).toBe("hr");
+      expect(hr.availableDashboards).toEqual(["hr", "employee"]);
     });
 
     it("HBPR with Control Room access is not treated as a CR-only user", () => {

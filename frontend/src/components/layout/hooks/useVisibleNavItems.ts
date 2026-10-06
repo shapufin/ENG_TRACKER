@@ -57,7 +57,15 @@ export interface NavItem {
 }
 
 const allNavItems: NavItem[] = [
-  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "core" },
+  {
+    path: "/dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    section: "core",
+    // An HBPR-only user has no dashboard — their home is the /hbpr workspace,
+    // so this link would only bounce them there anyway.
+    hbprHidden: true,
+  },
   {
     path: "/overtime",
     label: "Overtime",
