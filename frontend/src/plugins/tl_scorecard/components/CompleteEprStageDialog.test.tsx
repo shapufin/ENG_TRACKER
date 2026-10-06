@@ -40,7 +40,7 @@ describe("CompleteEprStageDialog", () => {
       />
     );
 
-    fireEvent.change(screen.getByLabelText("Summary"), {
+    fireEvent.change(screen.getByLabelText(/^Summary/), {
       target: { value: "Year-end rating agreed; promotion case opened." },
     });
     fireEvent.change(screen.getByLabelText("Reference link"), {
@@ -70,7 +70,7 @@ describe("CompleteEprStageDialog", () => {
         onSave={onSave}
       />
     );
-    fireEvent.change(screen.getByLabelText("Summary"), { target: { value: "x" } });
+    fireEvent.change(screen.getByLabelText(/^Summary/), { target: { value: "x" } });
     fireEvent.click(screen.getByRole("button", { name: "Complete stage" }));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(onOpenChange).not.toHaveBeenCalledWith(false);

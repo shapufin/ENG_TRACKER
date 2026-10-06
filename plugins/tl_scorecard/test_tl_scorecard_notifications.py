@@ -2,6 +2,7 @@
 employee is never a recipient of an oversight event."""
 from datetime import date
 
+from django.db import transaction
 from django.test import TestCase
 from django.utils import timezone
 
@@ -14,6 +15,8 @@ from . import signals
 from .testing import make_user as _make_user
 from .models import (
     Absence,
+    EPRCycle,
+    EPRStageRecord,
     HbprGovernanceEvidence,
     IdleFlag,
     Meeting,
@@ -192,6 +195,92 @@ class ScorecardNotificationTests(TestCase):
         self._fire(pip.save)
         self.assertEqual(self._titles(self.emp), [])
 
+    def _epr_stage_record(self, **overrides):
+        cycle = EPRCycle.objects.create(user=self.emp, year=2026)
+        data = {
+            'cycle': cycle, 'stage': 'mid_year', 'summary': 'Discussed progress',
+            'shared_with_employee': True, 'recorded_by': self.tl,
+        }
+        data.update(overrides)
+        return self._fire(lambda: EPRStageRecord.objects.create(**data))
+
+    def test_shared_epr_stage_record_tells_the_employee_only(self):
+        self._epr_stage_record()
+        self.assertEqual(self._titles(self.emp), ['New item in your records'])
+        note = Notification.objects.get(user=self.emp)
+        self.assertEqual(note.link, '/my-records')
+        self.assertNotIn('Discussed', note.message)
+        self.assertEqual(self._titles(self.tl), [])
+        self.assertEqual(self._titles(self.hbpr), [])
+
+    def test_unshared_stage_record_notifies_nobody(self):
+        self._epr_stage_record(shared_with_employee=False)
+        self.assertEqual(Notification.objects.count(), 0)
+
+    def test_flipping_share_flag_on_tells_the_employee(self):
+        record = self._epr_stage_record(shared_with_employee=False)
+        record.shared_with_employee = True
+        self._fire(record.save)
+        self.assertEqual(self._titles(self.emp), ['New item in your records'])
+
+    def test_editing_a_shared_record_does_not_renotify(self):
+        record = self._epr_stage_record()
+        Notification.objects.all().delete()
+        record.summary = 'corrected'
+        self._fire(record.save)
+        self.assertEqual(Notification.objects.count(), 0)
+
+    def test_share_then_unshare_in_one_transaction_notifies_nobody(self):
+        # The on-commit callback must see the row's final state, not the
+        # (mutated) instance captured at signal time.
+        cycle = EPRCycle.objects.create(user=self.emp, year=2026)
+        with self.captureOnCommitCallbacks(execute=True):
+            with transaction.atomic():
+                record = EPRStageRecord.objects.create(
+                    cycle=cycle, stage='mid_year', summary='Discussed progress',
+                    shared_with_employee=True, recorded_by=self.tl,
+                )
+                record.shared_with_employee = False
+                record.save()
+        self.assertEqual(self._titles(self.emp), [])
+
+    def test_reshare_in_one_transaction_notifies_exactly_once(self):
+        cycle = EPRCycle.objects.create(user=self.emp, year=2026)
+        with self.captureOnCommitCallbacks(execute=True):
+            with transaction.atomic():
+                record = EPRStageRecord.objects.create(
+                    cycle=cycle, stage='mid_year', summary='Discussed progress',
+                    shared_with_employee=False, recorded_by=self.tl,
+                )
+                record.shared_with_employee = True
+                record.save()
+                record.shared_with_employee = False
+                record.save()
+                record.shared_with_employee = True
+                record.save()
+        self.assertEqual(self._titles(self.emp), ['New item in your records'])
+
+    def test_record_deleted_before_commit_notifies_nobody(self):
+        cycle = EPRCycle.objects.create(user=self.emp, year=2026)
+        with self.captureOnCommitCallbacks(execute=True):
+            with transaction.atomic():
+                record = EPRStageRecord.objects.create(
+                    cycle=cycle, stage='mid_year', summary='Discussed progress',
+                    shared_with_employee=True, recorded_by=self.tl,
+                )
+                record.delete()
+        self.assertEqual(Notification.objects.count(), 0)
+
+    def test_stale_disabled_preference_cannot_suppress_a_records_item(self):
+        # A leftover row from before the type became always-on must not
+        # suppress delivery — non-configurable types ignore stored prefs.
+        NotificationPreference.objects.create(
+            user=self.emp, event_type='scorecard_epr_stage_shared',
+            in_app_enabled=False,
+        )
+        self._epr_stage_record()
+        self.assertEqual(self._titles(self.emp), ['New item in your records'])
+
 
 class ScorecardPreferenceVisibilityTests(ScorecardNotificationTests):
     def _prefs(self, user):
@@ -214,12 +303,22 @@ class ScorecardPreferenceVisibilityTests(ScorecardNotificationTests):
         self.assertIn('scorecard_pip_decided', prefs)
         self.assertNotIn('scorecard_pip_pending', prefs)
 
-    def test_employee_sees_only_the_records_types(self):
+    def test_employee_sees_no_scorecard_types_they_are_always_on(self):
+        # _RecordsItem types are not user-configurable: the employee's own
+        # records always notify in-app, so Settings offers no kill switch.
         prefs = self._prefs(self.emp)
-        self.assertEqual(
-            {k for k in prefs if k.startswith('scorecard_')},
-            {'scorecard_record_shared', 'scorecard_pip_started'},
-        )
+        self.assertEqual({k for k in prefs if k.startswith('scorecard_')}, set())
+        self.assertIn('own_leave_submitted', prefs)  # other own types stay
+
+    def test_non_configurable_type_cannot_be_disabled_via_api(self):
+        from rest_framework.test import APIRequestFactory, force_authenticate
+        from plugins.notifications.viewsets import NotificationViewSet
+        request = APIRequestFactory().patch(
+            '/x/', {'event_type': 'scorecard_record_shared',
+                    'in_app_enabled': False}, format='json')
+        force_authenticate(request, user=self.emp)
+        response = NotificationViewSet.as_view({'patch': 'preferences'})(request)
+        self.assertEqual(response.status_code, 400)
 
 
 class OutOfScopeOwnerTests(ScorecardNotificationTests):

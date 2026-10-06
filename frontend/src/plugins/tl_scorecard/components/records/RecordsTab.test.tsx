@@ -423,7 +423,7 @@ describe("RecordsTab state actions", () => {
     renderTab();
     await screen.findByText("1-on-1");
     openAction("1-on-1 on 2026-09-02", "Share summary");
-    fireEvent.change(await screen.findByLabelText("Summary for the team member"), {
+    fireEvent.change(await screen.findByLabelText(/^Summary for the team member/), {
       target: { value: "Agreed goals" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Share summary" }));
@@ -462,7 +462,7 @@ describe("RecordsTab state actions", () => {
     openAction("PIP for Jane", "Return to team leader");
     const submit = await screen.findByRole("button", { name: "Return PIP" });
     expect(submit).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Reason"), { target: { value: "Needs evidence" } });
+    fireEvent.change(screen.getByLabelText(/^Reason/), { target: { value: "Needs evidence" } });
     fireEvent.click(submit);
     await waitFor(() => expect(svc.rejectPIPRecord).toHaveBeenCalledWith(6, "Needs evidence"));
   });
@@ -477,7 +477,7 @@ describe("RecordsTab state actions", () => {
     openAction("PIP for Jane", "Cancel plan");
     const submit = await screen.findByRole("button", { name: "Cancel PIP" });
     expect(submit).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Reason"), { target: { value: "Resigned" } });
+    fireEvent.change(screen.getByLabelText(/^Reason/), { target: { value: "Resigned" } });
     fireEvent.click(submit);
     await waitFor(() => expect(svc.cancelPIPRecord).toHaveBeenCalledWith(6, "Resigned"));
   });
@@ -560,7 +560,7 @@ describe("RecordsTab record detail", () => {
     fireEvent.click(screen.getByText("Docs").closest("tr")!);
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: /log weekly update/i }));
-    fireEvent.change(await screen.findByLabelText("Status note"), {
+    fireEvent.change(await screen.findByLabelText(/^Status note/), {
       target: { value: "Still waiting on work" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Log update" }));

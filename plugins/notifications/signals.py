@@ -21,12 +21,17 @@ User = get_user_model()
 # ============================================================================
 
 def _preference_enabled(user, event_type, channel):
+    registered = REGISTRY.get(event_type)
+    if registered is not None and not registered.user_configurable:
+        # Always-on types ignore stored preference rows entirely — the
+        # preferences endpoint never offers them, so a leftover row (from
+        # before the flag existed) must not suppress delivery.
+        return registered.push_by_default if channel == 'push' else True
     preference = NotificationPreference.objects.filter(
         user=user, event_type=event_type
     ).first()
     if preference:
         return getattr(preference, f'{channel}_enabled', True)
-    registered = REGISTRY.get(event_type)
     return registered.push_by_default if registered and channel == 'push' else True
 
 

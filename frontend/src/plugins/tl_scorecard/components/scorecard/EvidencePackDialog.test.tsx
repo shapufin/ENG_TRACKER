@@ -58,6 +58,16 @@ describe("EvidencePackDialog", () => {
     expect(screen.getByText(/year-end epr participation: missing/i)).toBeInTheDocument();
   });
 
+  it("marks the meeting and EPR captions up as level-3 headings", async () => {
+    renderDialog();
+    expect(
+      await screen.findByRole("heading", { level: 3, name: /cadence meetings \(1\)/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "EPR participation" })
+    ).toBeInTheDocument();
+  });
+
   it("surfaces a load failure", async () => {
     render(
       <EvidencePackDialog

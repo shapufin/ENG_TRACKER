@@ -1,7 +1,7 @@
 import React, { useState } from "react";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { IdleFlag } from "../../types/tlScorecard";
 
@@ -69,8 +69,10 @@ export const LogIdleStatusUpdateDialog: React.FC<LogIdleStatusUpdateDialogProps>
       size="sm"
     >
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="idle-update-week">Week starting (Monday)</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="idle-update-week" required>
+            Week starting (Monday)
+          </FieldLabel>
           <Input
             id="idle-update-week"
             type="date"
@@ -78,8 +80,10 @@ export const LogIdleStatusUpdateDialog: React.FC<LogIdleStatusUpdateDialogProps>
             onChange={(e) => setWeekOf(e.target.value)}
           />
         </div>
-        <div>
-          <Label htmlFor="idle-update-note">Status note</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="idle-update-note" required>
+            Status note
+          </FieldLabel>
           <Textarea
             id="idle-update-note"
             value={statusNote}
@@ -88,8 +92,8 @@ export const LogIdleStatusUpdateDialog: React.FC<LogIdleStatusUpdateDialogProps>
             rows={3}
           />
         </div>
-        <div>
-          <Label htmlFor="idle-update-task">Assigned task this week (optional)</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="idle-update-task">Assigned task this week</FieldLabel>
           <Textarea
             id="idle-update-task"
             value={task}

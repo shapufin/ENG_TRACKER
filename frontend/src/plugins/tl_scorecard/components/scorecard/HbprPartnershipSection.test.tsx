@@ -170,7 +170,7 @@ describe("HbprPartnershipSection", () => {
     fireEvent.click(screen.getByRole("button", { name: /record evidence/i }));
 
     fireEvent.click(screen.getByRole("option", { name: "EPR mid-year participation" }));
-    const yearInput = await screen.findByLabelText("Reporting year");
+    const yearInput = await screen.findByLabelText(/^Reporting year/);
     fireEvent.change(yearInput, { target: { value: "1999" } });
     expect(screen.getByRole("alert")).toHaveTextContent(/between 2000 and 2100/i);
     expect(screen.getByRole("button", { name: "Record evidence" })).toBeDisabled();

@@ -41,6 +41,10 @@ class NotificationType:
     # this). Empty means "the event type is its own preference key".
     preference_group: str = ''
     preference_group_label: str = ''
+    # When False the type never appears in the preferences endpoint — the
+    # notification is always delivered in-app (push still follows
+    # ``push_by_default``) and a stored preference row cannot suppress it.
+    user_configurable: bool = True
     # Resolved in __init_subclass__ so it is readable on the CLASS as well as an
     # instance — `REGISTRY[...]` holds classes, and a `property` would return
     # the property object when read off the class.

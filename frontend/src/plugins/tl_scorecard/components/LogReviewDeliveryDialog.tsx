@@ -1,7 +1,7 @@
 import React, { useState } from "react";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ReviewDelivery } from "../types/tlScorecard";
 
@@ -70,6 +70,7 @@ export const LogReviewDeliveryDialog: React.FC<LogReviewDeliveryDialogProps> = (
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Edit review delivery" : "Log a management review delivery"}
+      description="Evidence that a management review for the period was delivered — notes stay private."
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
       submitLabel={isEdit ? "Save changes" : "Log delivery"}
@@ -77,17 +78,22 @@ export const LogReviewDeliveryDialog: React.FC<LogReviewDeliveryDialogProps> = (
       size="sm"
     >
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="review-period">Period (YYYY-MM)</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="review-period" required>
+            Period
+          </FieldLabel>
           <Input
             id="review-period"
+            type="month"
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
             placeholder="2026-09"
           />
         </div>
-        <div>
-          <Label htmlFor="review-recipient">Recipient</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="review-recipient" required>
+            Recipient
+          </FieldLabel>
           <Input
             id="review-recipient"
             value={recipient}
@@ -95,8 +101,10 @@ export const LogReviewDeliveryDialog: React.FC<LogReviewDeliveryDialogProps> = (
             placeholder="e.g. Ops, GM"
           />
         </div>
-        <div>
-          <Label htmlFor="review-delivered-on">Delivered on</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="review-delivered-on" required>
+            Delivered on
+          </FieldLabel>
           <Input
             id="review-delivered-on"
             type="date"
@@ -104,8 +112,8 @@ export const LogReviewDeliveryDialog: React.FC<LogReviewDeliveryDialogProps> = (
             onChange={(e) => setDeliveredOn(e.target.value)}
           />
         </div>
-        <div>
-          <Label htmlFor="review-notes">Notes (private)</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="review-notes">Notes (private)</FieldLabel>
           <Textarea
             id="review-notes"
             value={notes}
@@ -114,8 +122,8 @@ export const LogReviewDeliveryDialog: React.FC<LogReviewDeliveryDialogProps> = (
             rows={3}
           />
         </div>
-        <div>
-          <Label htmlFor="review-reference">Reference link (optional)</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="review-reference">Reference link</FieldLabel>
           <Input
             id="review-reference"
             type="url"

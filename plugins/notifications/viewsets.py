@@ -122,6 +122,10 @@ class NotificationViewSet(viewsets.ModelViewSet):
             if not NotificationEventTypeConfig.is_type_enabled(event_type):
                 continue
             registered = REGISTRY.get(event_type)
+            if registered is not None and not registered.user_configurable:
+                # Always-on types are hidden from Settings and cannot be
+                # disabled — a preference row can never be created for them.
+                continue
             if registered is None:
                 key = event_type
                 label = core_labels.get(event_type, event_type)
