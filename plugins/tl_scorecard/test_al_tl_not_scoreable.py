@@ -18,7 +18,8 @@ from .scope import scoreable_member_ids
 from .services import build_scorecard
 from .testing import make_user
 from .viewsets import (
-    AbsenceViewSet, EPRCycleViewSet, IdleFlagViewSet, PIPRecordViewSet, PromotionFlagViewSet,
+    AbsenceViewSet, EPRCycleViewSet, IdleFlagViewSet, MeetingViewSet, PIPRecordViewSet,
+    PromotionFlagViewSet,
 )
 
 
@@ -76,3 +77,11 @@ class AlTlNotScoreableTests(TestCase):
 
     def test_scorecard_team_size_does_not_count_the_al_tl(self):
         self.assertEqual(build_scorecard(self.it_tl, date.today())['team_size'], 1)
+
+    def test_it_tl_cannot_hold_a_one_on_one_with_an_unrelated_user(self):
+        stranger = make_user('stranger_x')
+        data = {'meeting_type': 'one_on_one', 'counterparty': stranger.id,
+                'occurred_on': date.today().isoformat()}
+        self.assertEqual(self._post(MeetingViewSet, self.it_tl, data).status_code, 400)
+        data['counterparty'] = self.member.id
+        self.assertEqual(self._post(MeetingViewSet, self.it_tl, data).status_code, 201)

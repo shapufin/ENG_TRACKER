@@ -36,6 +36,7 @@ from core.mixins.viewer_scope import HbprScopedQuerysetMixin
 
 class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'tl_scorecard'
+    throttle_scope = None  # set per action (parse_goal_pdf)
     serializer_class = EPRCycleSerializer
 
     hbpr_leader_field = None  # EPRCycle has no owning-TL field: scoped by subject
@@ -118,7 +119,7 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
         except GoalImportError as exc:
             raise ValidationError({exc.field: [str(exc)]})
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], throttle_scope='upload')
     def parse_goal_pdf(self, request, pk=None):
         """Preview Workday goal titles; the upload is never persisted."""
         cycle = self.get_object()

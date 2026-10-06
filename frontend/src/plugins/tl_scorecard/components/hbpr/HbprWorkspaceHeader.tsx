@@ -50,7 +50,7 @@ const statusForAttention = (
       tone: "danger",
     };
   if (attention.cadence_due > 0) return { label: `${attention.cadence_due} due`, tone: "warning" };
-  return { label: "All clear", tone: "success" };
+  return { label: "Cadence on track", tone: "success" };
 };
 
 /**
@@ -122,7 +122,7 @@ export const HbprWorkspaceHeader: React.FC<HbprWorkspaceHeaderProps> = ({
           {exportLeaderId !== undefined && (
             <div>
               <span className="text-muted-foreground block text-xs">
-                Evidence export{exportLeaderName ? ` · ${exportLeaderName}` : ""}
+                Export{exportLeaderName ? ` · ${exportLeaderName}` : ""}
               </span>
               <ExportButton leaderId={exportLeaderId} />
             </div>

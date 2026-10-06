@@ -165,10 +165,10 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
 
             <div className="mt-4 flex flex-wrap gap-2">
               <Badge variant={assignment.epr_mid_year ? "success" : "warning"}>
-                Mid-year EPR: {assignment.epr_mid_year ? "recorded" : "missing"}
+                Mid-year EPR: {assignment.epr_mid_year ? "logged" : "not logged"}
               </Badge>
               <Badge variant={assignment.epr_year_end ? "success" : "warning"}>
-                Year-end EPR: {assignment.epr_year_end ? "recorded" : "missing"}
+                Year-end EPR: {assignment.epr_year_end ? "logged" : "not logged"}
               </Badge>
             </div>
           </GlassCard>

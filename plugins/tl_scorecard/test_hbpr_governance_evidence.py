@@ -155,6 +155,11 @@ class EvidenceWriteTests(EvidenceBase):
         self.assertEqual(resp.data['recorded_by'], self.tl.id)
         self.assertIsNone(resp.data['updated_by'])
 
+    def test_cannot_log_a_meeting_dated_before_the_assignment_started(self):
+        resp = self.call('create', self.tl, data=self._cadence(occurred_on='2019-12-31'))
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('occurred_on', resp.data)
+
     def test_hbpr_cannot_create_evidence(self):
         resp = self.call('create', self.hbpr, data=self._cadence())
         self.assertIn(resp.status_code, (403, 404))
