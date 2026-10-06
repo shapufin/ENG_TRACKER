@@ -173,11 +173,12 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
                     size="sm"
                     aria-label={`Remove Goal ${index + 1}`}
                     disabled={isSubmitting}
-                    onClick={() =>
+                    onClick={() => {
+                      setParseError(null);
                       setGoalTitles((current) =>
                         current.filter((_, titleIndex) => titleIndex !== index)
-                      )
-                    }
+                      );
+                    }}
                   >
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </Button>
@@ -188,7 +189,10 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
                 variant="outline"
                 size="sm"
                 disabled={isSubmitting}
-                onClick={() => setGoalTitles((current) => [...current, ""])}
+                onClick={() => {
+                  setParseError(null);
+                  setGoalTitles((current) => [...current, ""]);
+                }}
               >
                 <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
                 Add goal

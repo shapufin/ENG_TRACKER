@@ -70,6 +70,10 @@ const CycleRow: React.FC<{
   onCompleteStage: (cycleId: number, data: CompleteEprStagePayload) => Promise<void>;
 }> = ({ cycle, onParseGoals, onCompleteStage }) => {
   const [completing, setCompleting] = useState<EPRStage | null>(null);
+  const completedAt = (field: EPRStage) => cycle[`${field}_completed_at` as const];
+  // Stages complete in order — the backend rejects a later stage while an
+  // earlier one is open, so don't offer a button that can only 400.
+  const firstOpenIndex = STAGES.findIndex((stage) => !completedAt(stage.field));
 
   return (
     <li className="py-3">
@@ -84,24 +88,29 @@ const CycleRow: React.FC<{
         </p>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
-        {STAGES.map(({ field, label }) => {
-          const fieldKey = `${field}_completed_at` as const;
-          const completedAt = cycle[fieldKey];
-          const disabled = Boolean(completedAt);
+        {STAGES.map(({ field, label }, index) => {
+          const stageCompletedAt = completedAt(field);
+          const earlierOpen = STAGES.slice(0, index).some((earlier) => !completedAt(earlier.field));
+          const disabled = Boolean(stageCompletedAt) || earlierOpen;
           return (
             <Button
               key={field}
               size="sm"
-              variant={completedAt ? "secondary" : "outline"}
+              variant={stageCompletedAt ? "secondary" : "outline"}
               disabled={disabled}
               onClick={() => setCompleting(field)}
             >
-              {completedAt && <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}
+              {stageCompletedAt && <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}
               {label}
             </Button>
           );
         })}
       </div>
+      {firstOpenIndex !== -1 && firstOpenIndex < STAGES.length - 1 && (
+        <p className="text-muted-foreground mt-1 text-xs">
+          Stages complete in order — {STAGES[firstOpenIndex].label} is next.
+        </p>
+      )}
       {cycle.stage_records && cycle.stage_records.length > 0 && (
         <ul className="mt-2 space-y-2">
           {cycle.stage_records.map((record) => (

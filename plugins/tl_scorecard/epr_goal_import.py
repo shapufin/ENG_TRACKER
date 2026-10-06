@@ -19,6 +19,10 @@ MAX_PDF_PAGES = 20
 MAX_GOAL_TITLES = 20
 MIN_CONFIRMED_GOALS = 5
 GOAL_TITLE_MAX_LENGTH = 255
+# Cumulative bound on one title group. A Workday description that lacks
+# terminal punctuation cannot be told apart from a wrapped title, so the merge
+# is bounded rather than trusted: beyond this the group is a description.
+TITLE_MAX_CHARS = 120
 
 _WHITESPACE_RE = re.compile(r'\s+')
 _METADATA_RE = re.compile(
@@ -85,7 +89,12 @@ def normalize_goal_titles(
 
 def _looks_like_title_fragment(line: str) -> bool:
     """Whether a contiguous line can belong to a Workday goal title."""
-    return len(line) <= 120 and not line.endswith(('.', '?', '!', ';'))
+    return len(line) <= TITLE_MAX_CHARS and not line.endswith(('.', '?', '!', ';'))
+
+
+def _fits_title(fragments: list[str], line: str) -> bool:
+    """Whether the line still fits the bounded title group."""
+    return len(' '.join([*fragments, line])) <= TITLE_MAX_CHARS
 
 
 def _title_from_block(lines: Iterable[str]) -> str | None:
@@ -109,7 +118,7 @@ def _title_from_block(lines: Iterable[str]) -> str | None:
             if title:
                 return title
             continue
-        if _looks_like_title_fragment(line):
+        if _looks_like_title_fragment(line) and _fits_title(fragments, line):
             fragments.append(line)
             continue
         title = finish()

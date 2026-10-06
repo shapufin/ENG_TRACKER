@@ -14,6 +14,7 @@ from apps.permissions.models import Role, UserRole
 from .epr_goal_import import (
     GoalImportError,
     MAX_UPLOAD_BYTES,
+    TITLE_MAX_CHARS,
     extract_goal_titles,
     normalize_goal_titles,
 )
@@ -130,6 +131,24 @@ Description B.
 Weight: 50
 '''
         self.assertEqual(extract_goal_titles(text), ['Goal A', 'Goal B'])
+
+    def test_bounds_a_title_group_that_runs_into_a_description(self):
+        """A description without terminal punctuation is indistinguishable from
+        a wrapped title, so the merge is bounded rather than unbounded. (A
+        *short* unpunctuated description still merges — known ambiguity.)"""
+        text = (
+            'Goals\n'
+            'Short Title\n'
+            'first unpunctuated description line about automation adoption\n'
+            'second unpunctuated description line about quality targets\n'
+            'Weight: 50\n'
+        )
+
+        titles = extract_goal_titles(text)
+
+        self.assertEqual(len(titles), 1)
+        self.assertLessEqual(len(titles[0]), TITLE_MAX_CHARS)
+        self.assertNotIn('quality targets', titles[0])
 
     def test_deduplicates_titles_in_first_seen_order(self):
         text = '''
