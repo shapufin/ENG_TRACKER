@@ -1,6 +1,7 @@
 import React from "react";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, STAT_CARD_MICRO_LABEL } from "@/components/ui/StatCard";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import { Plane, Check, Calendar } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { LeaveBalance } from "@/types";
@@ -21,6 +22,7 @@ interface CardConfig {
   suffix?: string;
   glow: "primary" | "success" | "warning" | "destructive" | "none";
   iconColorClass: string;
+  iconWellClass: string;
   delay: number;
   progressPercent?: number;
   progressColorClass?: string;
@@ -33,6 +35,7 @@ const StatCardContent: React.FC<CardConfig & { isLoading: boolean }> = ({
   suffix,
   glow,
   iconColorClass,
+  iconWellClass,
   delay,
   isLoading,
   progressPercent,
@@ -40,6 +43,7 @@ const StatCardContent: React.FC<CardConfig & { isLoading: boolean }> = ({
 }) => (
   <StatCard
     label={label}
+    labelClassName={STAT_CARD_MICRO_LABEL}
     value={
       isLoading ? (
         <span className="animate-pulse">...</span>
@@ -50,6 +54,7 @@ const StatCardContent: React.FC<CardConfig & { isLoading: boolean }> = ({
     icon={Icon}
     glow={glow}
     iconColorClass={iconColorClass}
+    iconWellClass={iconWellClass}
     delay={delay}
     progressPercent={progressPercent}
     progressColorClass={progressColorClass}
@@ -89,7 +94,8 @@ export const LeaveStatsCards: React.FC<LeaveStatsCardsProps> = ({
       label: "Pending",
       value: pendingCount,
       glow: "warning",
-      iconColorClass: "text-icon-sick",
+      iconColorClass: toneTextClass.warning,
+      iconWellClass: `border ${toneSurfaceClass.warning}`,
       delay: 0,
       progressPercent: pendingPercent,
       progressColorClass: "bg-amber-500",
@@ -99,7 +105,8 @@ export const LeaveStatsCards: React.FC<LeaveStatsCardsProps> = ({
       label: "Approved",
       value: approvedCount,
       glow: "success",
-      iconColorClass: "text-success",
+      iconColorClass: toneTextClass.success,
+      iconWellClass: `border ${toneSurfaceClass.success}`,
       delay: 0.05,
       progressPercent: approvedPercent,
       progressColorClass: "bg-emerald-500",
@@ -110,7 +117,8 @@ export const LeaveStatsCards: React.FC<LeaveStatsCardsProps> = ({
       value: balanceValue,
       suffix: "d",
       glow: "none",
-      iconColorClass: "text-icon-balance",
+      iconColorClass: toneTextClass.info,
+      iconWellClass: `border ${toneSurfaceClass.info}`,
       delay: 0.1,
       progressPercent: balancePercent,
       progressColorClass: "bg-indigo-500",
@@ -121,7 +129,8 @@ export const LeaveStatsCards: React.FC<LeaveStatsCardsProps> = ({
       value: totalUsedDays,
       suffix: "d",
       glow: "none",
-      iconColorClass: "text-icon-vacation",
+      iconColorClass: toneTextClass.neutral,
+      iconWellClass: `border ${toneSurfaceClass.neutral}`,
       delay: 0.12,
       progressPercent: usedPercent,
       progressColorClass: "bg-rose-500",

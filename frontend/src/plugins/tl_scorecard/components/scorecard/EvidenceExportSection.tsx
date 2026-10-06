@@ -2,11 +2,8 @@ import React from "react";
 import { FileSpreadsheet } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ExportButton } from "../ExportButton";
-import { KpiCoveragePanel } from "../KpiCoveragePanel";
-import type { KpiCoverageEntry } from "../../types/tlScorecard";
 
 interface EvidenceExportSectionProps {
-  coverage: KpiCoverageEntry[] | undefined;
   leaderId?: number;
   /** ISO date inside the month to export; defaults to the current month. */
   month?: string;
@@ -17,7 +14,6 @@ interface EvidenceExportSectionProps {
  * to their manager, so it gets its own section rather than a stray button.
  */
 export const EvidenceExportSection: React.FC<EvidenceExportSectionProps> = ({
-  coverage,
   leaderId,
   month,
 }) => (
@@ -40,6 +36,5 @@ export const EvidenceExportSection: React.FC<EvidenceExportSectionProps> = ({
         <ExportButton leaderId={leaderId} month={month} />
       </div>
     </GlassCard>
-    {coverage && <KpiCoveragePanel entries={coverage} />}
   </section>
 );

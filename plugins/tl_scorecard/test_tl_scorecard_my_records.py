@@ -113,7 +113,7 @@ class MyRecordsTests(TestCase):
         self.assertEqual(
             set(cycles[0]),
             {'id', 'year', 'goal_setting_completed_at', 'mid_year_completed_at',
-             'final_review_completed_at', 'goals'},
+             'final_review_completed_at', 'goals', 'stage_summaries'},
         )
 
     def test_nothing_else_is_ever_exposed(self):

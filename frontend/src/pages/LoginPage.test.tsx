@@ -130,4 +130,42 @@ describe("LoginPage redirect logic", () => {
     await submitLogin();
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith("/dashboard"));
   });
+
+  it("redirects an HBPR-only user straight to the /hbpr workspace", async () => {
+    loginMock.mockResolvedValue({
+      access: "a",
+      refresh: "r",
+      user: {
+        id: 5,
+        username: "elda",
+        roles: ["hbpr"],
+        is_superuser: false,
+        is_staff: false,
+        is_cr_admin: false,
+        has_control_room_access: false,
+      },
+    });
+    renderPage();
+    await submitLogin();
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith("/hbpr"));
+  });
+
+  it("an HBPR with Control Room access still lands on the CR home", async () => {
+    loginMock.mockResolvedValue({
+      access: "a",
+      refresh: "r",
+      user: {
+        id: 6,
+        username: "hbprcr",
+        roles: ["hbpr"],
+        is_superuser: false,
+        is_staff: false,
+        is_cr_admin: false,
+        has_control_room_access: true,
+      },
+    });
+    renderPage();
+    await submitLogin();
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith("/control-room/dashboard"));
+  });
 });

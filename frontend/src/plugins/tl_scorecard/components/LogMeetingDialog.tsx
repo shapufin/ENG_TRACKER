@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from "react";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import { FormDialog } from "@/components/ui/FormDialog";
+import { InfoCallout } from "@/components/ui/InfoCallout";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services/userService";
 import type { Meeting, MeetingKind } from "../types/tlScorecard";
+import { OptionSelect, type SelectOption } from "./MemberSelectField";
 
 type MeetingType = MeetingKind;
 
@@ -26,33 +34,7 @@ interface LogMeetingDialogProps {
   initial?: Meeting;
 }
 
-interface Option {
-  id: number;
-  label: string;
-}
-
 const todayIso = () => new Date().toISOString().slice(0, 10);
-
-const OptionSelect: React.FC<{
-  id: string;
-  value: number | null;
-  options: Option[];
-  placeholder: string;
-  onChange: (id: number) => void;
-}> = ({ id, value, options, placeholder, onChange }) => (
-  <Select value={value === null ? "" : String(value)} onValueChange={(v) => onChange(Number(v))}>
-    <SelectTrigger id={id}>
-      <SelectValue placeholder={placeholder} />
-    </SelectTrigger>
-    <SelectContent>
-      {options.map((option) => (
-        <SelectItem key={option.id} value={String(option.id)}>
-          {option.label}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-);
 
 export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
   open,
@@ -63,10 +45,16 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
 }) => {
   const isEdit = mode === "edit";
   const { user } = useAuth();
-  const [meetingType, setMeetingType] = useState<MeetingType>(initial?.meeting_type ?? "one_on_one");
-  const [counterpartyId, setCounterpartyId] = useState<number | null>(initial?.counterparty ?? null);
-  const [teamId, setTeamId] = useState<number | null>(initial?.team ?? user?.teams?.[0]?.id ?? null);
-  const [options, setOptions] = useState<Option[]>([]);
+  const [meetingType, setMeetingType] = useState<MeetingType>(
+    initial?.meeting_type ?? "one_on_one"
+  );
+  const [counterpartyId, setCounterpartyId] = useState<number | null>(
+    initial?.counterparty ?? null
+  );
+  const [teamId, setTeamId] = useState<number | null>(
+    initial?.team ?? user?.teams?.[0]?.id ?? null
+  );
+  const [options, setOptions] = useState<SelectOption[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [occurredOn, setOccurredOn] = useState(initial?.occurred_on ?? todayIso());
   const [notes, setNotes] = useState(initial?.notes ?? "");
@@ -81,16 +69,18 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
   useEffect(() => {
     if (!open || isEdit || !needsCounterparty) return;
     let cancelled = false;
-    const load: Promise<Option[]> =
+    const load: Promise<SelectOption[]> =
       meetingType === "one_on_one"
         ? userService
             .getMyTeamMembers()
             .then((profiles) =>
-              profiles.map((p) => ({ id: p.user.id, label: p.user.full_name || p.user.username })),
+              profiles.map((p) => ({ id: p.user.id, label: p.user.full_name || p.user.username }))
             )
         : userService
             .getItalianTeamLeaders()
-            .then((leaders) => leaders.map((l) => ({ id: l.id, label: l.full_name || l.username })));
+            .then((leaders) =>
+              leaders.map((l) => ({ id: l.id, label: l.full_name || l.username }))
+            );
     load
       .then((loaded) => {
         if (!cancelled) {
@@ -99,14 +89,18 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
         }
       })
       .catch(() => {
-        if (!cancelled) setLoadError("Could not load the list of people. Close this dialog and try again.");
+        if (!cancelled)
+          setLoadError("Could not load the list of people. Close this dialog and try again.");
       });
     return () => {
       cancelled = true;
     };
   }, [open, isEdit, needsCounterparty, meetingType]);
 
-  const canSubmit = occurredOn && (!needsCounterparty || counterpartyId !== null) && (!needsTeam || teamId !== null);
+  const canSubmit =
+    occurredOn &&
+    (!needsCounterparty || counterpartyId !== null) &&
+    (!needsTeam || teamId !== null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +133,7 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Edit meeting" : "Log a meeting"}
+      description="Logs a 1-on-1, TL sync or team meeting — private notes stay visible only to you and staff."
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
       submitLabel={isEdit ? "Save changes" : "Log meeting"}
@@ -147,14 +142,23 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
     >
       <div className="space-y-4">
         {isEdit ? (
-          <p className="text-sm">
-            <span className="text-muted-foreground">With: </span>
-            {initial?.counterparty_name ?? "Whole team"}
-          </p>
+          <InfoCallout
+            tone="neutral"
+            label={
+              <span className="text-muted-foreground">
+                With:{" "}
+                <span className="text-foreground font-medium">
+                  {initial?.counterparty_name ?? "Whole team"}
+                </span>
+              </span>
+            }
+          />
         ) : (
           <>
-            <div>
-              <Label htmlFor="meeting-type">Type</Label>
+            <div className="space-y-2">
+              <FieldLabel htmlFor="meeting-type" required>
+                Type
+              </FieldLabel>
               <Select
                 value={meetingType}
                 onValueChange={(v) => {
@@ -175,19 +179,23 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
             </div>
 
             {needsCounterparty && (
-              <div>
-                <Label htmlFor="meeting-counterparty">
+              <div className="space-y-2">
+                <FieldLabel htmlFor="meeting-counterparty" required>
                   {meetingType === "one_on_one" ? "Team member" : "Italy team leader"}
-                </Label>
+                </FieldLabel>
                 <OptionSelect
                   id="meeting-counterparty"
                   value={counterpartyId}
                   options={options}
-                  placeholder={meetingType === "one_on_one" ? "Select a team member..." : "Select a team leader..."}
+                  placeholder={
+                    meetingType === "one_on_one"
+                      ? "Select a team member..."
+                      : "Select a team leader..."
+                  }
                   onChange={setCounterpartyId}
                 />
                 {loadError && (
-                  <p role="alert" className="mt-1 text-xs text-tone-danger-text">
+                  <p role="alert" className="text-tone-danger-text mt-1 text-xs">
                     {loadError}
                   </p>
                 )}
@@ -195,8 +203,10 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
             )}
 
             {needsTeam && teams.length > 1 && (
-              <div>
-                <Label htmlFor="meeting-team">Team</Label>
+              <div className="space-y-2">
+                <FieldLabel htmlFor="meeting-team" required>
+                  Team
+                </FieldLabel>
                 <OptionSelect
                   id="meeting-team"
                   value={teamId}
@@ -207,15 +217,17 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
               </div>
             )}
             {needsTeam && teams.length === 0 && (
-              <p role="alert" className="text-xs text-tone-danger-text">
+              <p role="alert" className="text-tone-danger-text text-xs">
                 You are not assigned to a team, so a team meeting cannot be logged.
               </p>
             )}
           </>
         )}
 
-        <div>
-          <Label htmlFor="meeting-date">Date</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="meeting-date" required>
+            Date
+          </FieldLabel>
           <Input
             id="meeting-date"
             type="date"
@@ -224,8 +236,8 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
           />
         </div>
 
-        <div>
-          <Label htmlFor="meeting-notes">Notes</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="meeting-notes">Notes</FieldLabel>
           <Textarea
             id="meeting-notes"
             value={notes}
@@ -235,8 +247,8 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
           />
         </div>
 
-        <div>
-          <Label htmlFor="meeting-reference">Reference link (optional)</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="meeting-reference">Reference link</FieldLabel>
           <Input
             id="meeting-reference"
             type="url"

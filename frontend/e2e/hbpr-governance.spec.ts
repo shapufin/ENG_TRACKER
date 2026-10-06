@@ -91,8 +91,11 @@ test.describe("HBPR-only user", () => {
     const nav = page.getByRole("navigation", { name: "Main navigation" });
     await expect(nav.getByRole("menuitem", { name: "HBPR Workspace" })).toBeVisible();
     // Every one of these is a dead link for an HBPR: the API refuses the
-    // surface, so the route never registers or the guard bounces it.
+    // surface, so the route never registers or the guard bounces it. The
+    // Dashboard item is also gone — an HBPR's home IS /hbpr, so the link
+    // would only bounce straight here.
     for (const hidden of [
+      "Dashboard",
       "TL Scorecard",
       "Calendar",
       "Leave",
@@ -117,7 +120,8 @@ test.describe("HBPR-only user", () => {
     for (const route of ["/calendar", "/leave-management"]) {
       await page.goto(route);
       await settle(page);
-      expect(new URL(page.url()).pathname, route).toBe("/dashboard");
+      // Denied surfaces bounce straight to their home — the /hbpr workspace.
+      expect(new URL(page.url()).pathname, route).toBe("/hbpr");
     }
   });
 

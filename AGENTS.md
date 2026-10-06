@@ -29,6 +29,10 @@ to reference the new structure.
 - Plans: `.devin/plans/`
 - Domain context: `.devin/context/`
 - Historical outcomes: `.devin/tracking/agents-archive-*.md`
+- **Tracked design/engineering contracts** (`.devin/` is gitignored, so durable
+  cross-agent knowledge must live here): `DESIGN.md` (design system + surface
+  inventory), `CLAUDE.md` (hot invariants), and `docs/*.md` — currently
+  `docs/table-header-contract.md` (table header rule, gate, migration queue).
 
 ## Workflow
 
@@ -87,12 +91,19 @@ and serves framework-aware cross-stack queries.
 - Preserve responsive behavior and accessibility.
 - Every interactive control must have an accessible name.
 - Preserve API query keys and payload contracts unless explicitly changing them.
+- **Tables**: header typography and the header fill come from
+  `frontend/src/components/ui/tableStyles.ts` — never inline in a `<thead>`.
+  Gate: `cd frontend && node scripts/table-header-audit.mjs` exit 0 (state at
+  handoff 2026-10-05: **PASS — 0 violations across 19 files**). Read the tracked
+  `docs/table-header-contract.md` before touching any table: the rule, the
+  converge-vs-migrate recipe, traps, known gaps.
 - Run:
   - targeted Vitest tests
   - TypeScript checking
   - ESLint on changed files
   - Prettier on touched files
   - production build when applicable
+  - `node scripts/table-header-audit.mjs` when any table is touched
 
 ## Security
 
@@ -131,6 +142,26 @@ destroying each other's uncommitted work:
 - Clearly identify failed, skipped, or environment-blocked checks.
 - Do not claim a test passed unless it was run.
 
+## UI redesign note (2026-10-06)
+
+Button variants (`frontend/src/components/ui/button.tsx`) and light tokens were refreshed; TL scorecard, HBPR and My Records layouts redesigned. Rules and verification recipe (CloakBrowser MCP) live in `.devin/context/03-FRONTEND-PATTERNS.md` §18 and `CLAUDE.md` Hot Invariants; every IDE entry point (`CLAUDE.md`, `opencode.json`, `.devin/rules/CONTEXT.md`) routes there.
+
+## Workday EPR goal import (2026-10-06)
+
+Workday owns goal content; this app stores only confirmed short titles on
+`EPRGoal.description`. `POST epr-cycles/{id}/parse_goal_pdf/` parses a Workday
+goal-setting PDF request-only via `plugins/tl_scorecard/epr_goal_import.py`
+(pinned `pypdf==6.19.0`, layout mode, `Weight:`-delimited blocks) and returns
+titles only — the upload is never persisted. `complete_stage` accepts optional
+`goal_titles` for `goal_setting`/`mid_year` and replaces goals atomically under
+`select_for_update()`; `final_review` rejects them. `epr-goals/` is read-only —
+goal rows cannot bypass the checkpoints. Multipart posts need the explicit
+`{ "Content-Type": "multipart/form-data" }` header on `api.post` or Django sees
+an empty `request.FILES` (verified in browser 2026-10-06). Verified:
+430 backend tests, 244 tl_scorecard + 2,769 total frontend tests, build,
+modal-audit, browser E2E (parse→edit→confirm, mid-year confirm-only,
+final-review immutable, 375px/dark, employee My Records).
+
 ## Workflow Sync Command
 
 When you say "update workflow" or "sync workflow":
@@ -144,3 +175,10 @@ When you say "update workflow" or "sync workflow":
 - If the request is vague or self-contradictory, point it out before starting - never silently pick an interpretation.
 - For genuinely contested design choices, compare up to 3 approaches against the criteria, name the winner and why, build only the winner.
 - When done, verify against the stated criteria and report which pass, with evidence.
+
+## Windows commands
+You are on Windows. Emit PowerShell-compatible commands, never bash:
+- No `&&` chaining - use `;` or separate statements
+- No single quotes around strings with variables; PowerShell uses double quotes for expansion
+- Paths use backslashes in native commands
+- Forward slashes are fine for node/npm/python arguments

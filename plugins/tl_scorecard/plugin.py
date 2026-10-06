@@ -21,9 +21,8 @@ class TlScorecardPlugin(BasePlugin):
     def description(self) -> str:
         return (
             "Team leader KPI scorecard — leave/overtime approval SLA, "
-            "links to engagement and skills-matrix data, and a live "
-            "coverage view of every KPI this tool measures, approximates, "
-            "or has not yet built."
+            "governance records, HBPR partnership evidence, and links to "
+            "engagement and skills-matrix data."
         )
 
     @property
@@ -97,10 +96,6 @@ class TlScorecardPlugin(BasePlugin):
                     "slot": "sidebar-nav",
                     "component": "MyRecordsSidebarLink",
                     "self_service": True,
-                },
-                {
-                    "slot": "hbpr-dashboard",
-                    "component": "HbprDashboardPage",
                 },
             ],
         })

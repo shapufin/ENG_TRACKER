@@ -377,29 +377,30 @@ class EPRCycleAPITests(TestCase):
 
     def test_cannot_complete_goal_setting_with_fewer_than_5_goals(self):
         cycle_id = self._create_cycle().data['id']
-        request = self.factory.patch(f'/api/plugins/tl_scorecard/epr-cycles/{cycle_id}/', {
-            'goal_setting_completed_at': timezone.now().isoformat(),
-        })
+        request = self.factory.post(
+            f'/api/plugins/tl_scorecard/epr-cycles/{cycle_id}/complete_stage/',
+            {'stage': 'goal_setting', 'summary': 'Goals agreed.'},
+            format='json',
+        )
         force_authenticate(request, user=self.leader)
-        resp = EPRCycleViewSet.as_view({'patch': 'partial_update'})(request, pk=cycle_id)
+        resp = EPRCycleViewSet.as_view({'post': 'complete_stage'})(request, pk=cycle_id)
         self.assertEqual(resp.status_code, 400)
-        self.assertIn('goal_setting_completed_at', resp.data)
+        self.assertIn('goals', resp.data)
 
     def test_can_complete_goal_setting_with_5_goals(self):
         cycle_id = self._create_cycle().data['id']
-        for i in range(5):
-            goal_request = self.factory.post('/api/plugins/tl_scorecard/epr-goals/', {
-                'cycle': cycle_id, 'description': f'Goal {i}',
-            })
-            force_authenticate(goal_request, user=self.leader)
-            goal_resp = EPRGoalViewSet.as_view({'post': 'create'})(goal_request)
-            self.assertEqual(goal_resp.status_code, 201, goal_resp.data)
+        cycle = EPRCycle.objects.get(pk=cycle_id)
+        EPRGoal.objects.bulk_create(
+            EPRGoal(cycle=cycle, description=f'Goal {i}') for i in range(5)
+        )
 
-        request = self.factory.patch(f'/api/plugins/tl_scorecard/epr-cycles/{cycle_id}/', {
-            'goal_setting_completed_at': timezone.now().isoformat(),
-        })
+        request = self.factory.post(
+            f'/api/plugins/tl_scorecard/epr-cycles/{cycle_id}/complete_stage/',
+            {'stage': 'goal_setting', 'summary': 'Goals agreed.'},
+            format='json',
+        )
         force_authenticate(request, user=self.leader)
-        resp = EPRCycleViewSet.as_view({'patch': 'partial_update'})(request, pk=cycle_id)
+        resp = EPRCycleViewSet.as_view({'post': 'complete_stage'})(request, pk=cycle_id)
         self.assertEqual(resp.status_code, 200, resp.data)
 
     def test_duplicate_cycle_for_same_user_year_rejected_cleanly(self):
@@ -418,24 +419,20 @@ class EPRCycleAPITests(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(EPRCycle.objects.get(pk=cycle_id).user_id, self.member.id)
 
-    def test_cannot_reassign_goal_to_cycle_outside_team_via_update(self):
+    def test_goal_endpoint_rejects_updates_even_with_valid_scope(self):
         outsider = _make_user('outsider_epr_goal_update')
         outsider_cycle = EPRCycle.objects.create(user=outsider, year=2026)
         cycle_id = self._create_cycle().data['id']
+        cycle = EPRCycle.objects.get(pk=cycle_id)
+        goal = EPRGoal.objects.create(cycle=cycle, description='Goal 0')
 
-        goal_request = self.factory.post('/api/plugins/tl_scorecard/epr-goals/', {
-            'cycle': cycle_id, 'description': 'Goal 0',
-        })
-        force_authenticate(goal_request, user=self.leader)
-        goal_id = EPRGoalViewSet.as_view({'post': 'create'})(goal_request).data['id']
-
-        update_request = self.factory.patch(f'/api/plugins/tl_scorecard/epr-goals/{goal_id}/', {
+        update_request = self.factory.patch(f'/api/plugins/tl_scorecard/epr-goals/{goal.id}/', {
             'cycle': outsider_cycle.id,
         })
         force_authenticate(update_request, user=self.leader)
-        resp = EPRGoalViewSet.as_view({'patch': 'partial_update'})(update_request, pk=goal_id)
-        self.assertEqual(resp.status_code, 400)
-        self.assertEqual(EPRGoal.objects.get(pk=goal_id).cycle_id, cycle_id)
+        resp = EPRGoalViewSet.as_view({'patch': 'partial_update'})(update_request, pk=goal.id)
+        self.assertEqual(resp.status_code, 405)
+        self.assertEqual(EPRGoal.objects.get(pk=goal.id).cycle_id, cycle_id)
 
 
 class ScorecardTrendTests(TestCase):

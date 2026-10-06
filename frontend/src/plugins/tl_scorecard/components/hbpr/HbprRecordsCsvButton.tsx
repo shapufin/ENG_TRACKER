@@ -61,7 +61,7 @@ export const HbprRecordsCsvButton: React.FC<HbprRecordsCsvButtonProps> = ({
         <Download className="h-4 w-4" aria-hidden="true" />
       </Button>
       {error && (
-        <p role="alert" className="text-xs text-tone-danger-text">
+        <p role="alert" className="text-tone-danger-text text-xs">
           {error}
         </p>
       )}

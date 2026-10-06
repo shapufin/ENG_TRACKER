@@ -1,7 +1,7 @@
 import React, { useState } from "react";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -94,10 +94,12 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
       submitDisabled={!canSubmit}
     >
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="hbpr-evidence-kind">Evidence type</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="hbpr-evidence-kind" required>
+            Evidence type
+          </FieldLabel>
           <Select value={kind} onValueChange={(v) => setKind(v as HbprEvidenceKind)}>
-            <SelectTrigger id="hbpr-evidence-kind" className="mt-1.5">
+            <SelectTrigger id="hbpr-evidence-kind">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -111,27 +113,27 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="hbpr-evidence-date">
+          <div className="space-y-2">
+            <FieldLabel htmlFor="hbpr-evidence-date" required>
               {needsYear ? "Participation date" : "Meeting date"}
-            </Label>
+            </FieldLabel>
             <Input
               id="hbpr-evidence-date"
               type="date"
-              className="mt-1.5"
               value={occurredOn}
               onChange={(e) => setOccurredOn(e.target.value)}
             />
           </div>
           {needsYear && (
-            <div>
-              <Label htmlFor="hbpr-evidence-year">Reporting year</Label>
+            <div className="space-y-2">
+              <FieldLabel htmlFor="hbpr-evidence-year" required>
+                Reporting year
+              </FieldLabel>
               <Input
                 id="hbpr-evidence-year"
                 type="number"
                 min={2000}
                 max={2100}
-                className="mt-1.5"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
               />
@@ -144,11 +146,10 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
           )}
         </div>
 
-        <div>
-          <Label htmlFor="hbpr-evidence-summary">Summary</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="hbpr-evidence-summary">Summary</FieldLabel>
           <Textarea
             id="hbpr-evidence-summary"
-            className="mt-1.5"
             rows={4}
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
@@ -156,11 +157,10 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
           />
         </div>
 
-        <div>
-          <Label htmlFor="hbpr-evidence-actions">Action items</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="hbpr-evidence-actions">Action items</FieldLabel>
           <Textarea
             id="hbpr-evidence-actions"
-            className="mt-1.5"
             rows={3}
             value={actionItems}
             onChange={(e) => setActionItems(e.target.value)}
@@ -168,12 +168,11 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
           />
         </div>
 
-        <div>
-          <Label htmlFor="hbpr-evidence-reference">Reference link</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="hbpr-evidence-reference">Reference link</FieldLabel>
           <Input
             id="hbpr-evidence-reference"
             type="url"
-            className="mt-1.5"
             value={referenceUrl}
             onChange={(e) => setReferenceUrl(e.target.value)}
             placeholder="https://…"

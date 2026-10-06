@@ -25,4 +25,18 @@ describe("TeamOverviewCard", () => {
     expect(container.querySelector(".text-amber-500")).toBeNull();
     expect(container.querySelector(".text-rose-500")).toBeNull();
   });
+
+  it("tints stat values with the semantic tone scale", () => {
+    const { container } = render(
+      <TeamOverviewCard
+        memberCount={3}
+        teamCount={2}
+        vacationDaysLeft={10.5}
+        overtimeHours={4.25}
+        standbyHours={2.5}
+      />
+    );
+
+    expect(container.querySelector('[class*="text-tone-"]')).not.toBeNull();
+  });
 });

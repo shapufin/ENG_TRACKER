@@ -96,7 +96,7 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     // white cards AND on the 96%-tinted app background (PageShell header),
     // where #F1F5F9 vanishes. Track backgrounds on sunken surfaces read as
     // a groove either way; divider function wins over track framing.
-    expect(lightBlock).toContain("--border: 214 32% 91%");
+    expect(lightBlock).toContain("--border: 214 32% 88%");
     expect(lightBlock).toContain("--line-subtle: 220 18% 92%");
   });
 
@@ -117,7 +117,7 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
   });
 
   it("defines the overlay token in both modes", () => {
-    expect(lightBlock).toContain("--overlay: 222 47% 11% / 0.60");
+    expect(lightBlock).toContain("--overlay: 222 47% 11% / 0.6");
     expect(darkBlock).toContain("--overlay: 0 0% 0% / 0.68");
   });
 

@@ -77,6 +77,12 @@ describe("StatCard", () => {
     expect(svg?.parentElement?.className).not.toContain("rounded-xl");
   });
 
+  it("applies an opt-in label class without changing the default label style", () => {
+    render(<StatCard label="Leave decided" value={7} icon={Clock} labelClassName="uppercase" />);
+
+    expect(screen.getByText("Leave decided").className).toContain("uppercase");
+  });
+
   it("renders no footer when the footer prop is omitted", () => {
     const { container } = render(<StatCard label="Active users" value={7} icon={Clock} />);
 

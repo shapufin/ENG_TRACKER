@@ -1,50 +1,155 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { EPRSection } from "./EPRSection";
 import type { EPRCycle } from "../types/tlScorecard";
 
+// Radix Checkbox (in the stage dialog) needs ResizeObserver, which jsdom lacks.
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+);
+
+const goals = ["Goal A", "Goal B", "Goal C", "Goal D", "Goal E"].map((description, index) => ({
+  id: index + 1,
+  cycle: 1,
+  description,
+}));
+
 const cycleWithFewGoals: EPRCycle = {
-  id: 1, user: 20, user_name: "Jane Doe", year: 2026,
-  goal_setting_completed_at: null, mid_year_completed_at: null, final_review_completed_at: null,
-  goals: [{ id: 1, cycle: 1, description: "Goal A" }], goal_count: 1,
+  id: 1,
+  user: 20,
+  user_name: "Jane Doe",
+  year: 2026,
+  goal_setting_completed_at: null,
+  mid_year_completed_at: null,
+  final_review_completed_at: null,
+  goals: goals.slice(0, 1),
+  goal_count: 1,
 };
 
-const cycleWithFiveGoals: EPRCycle = { ...cycleWithFewGoals, id: 2, goal_count: 5 };
+const cycleWithFiveGoals: EPRCycle = {
+  ...cycleWithFewGoals,
+  id: 2,
+  goals,
+  goal_count: 5,
+};
 
 const completedCycle: EPRCycle = {
-  ...cycleWithFiveGoals, id: 3, goal_setting_completed_at: "2026-03-01T00:00:00Z",
+  ...cycleWithFiveGoals,
+  id: 3,
+  goal_setting_completed_at: "2026-03-01T00:00:00Z",
+  stage_records: [
+    {
+      id: 7,
+      cycle: 3,
+      stage: "goal_setting",
+      stage_display: "Goal setting",
+      summary: "Five SMART goals agreed with Jane.",
+      reference_url: "https://workday.example/goals/3",
+      shared_with_employee: true,
+      recorded_by: 9,
+      recorded_by_name: "Enri Leader",
+      created_at: "2026-03-01T10:00:00Z",
+    },
+  ],
 };
+
+const renderSection = (
+  cycles: EPRCycle[],
+  onCompleteStage = vi.fn().mockResolvedValue(undefined),
+  onParseGoals = vi.fn().mockResolvedValue(goals.map((goal) => goal.description))
+) =>
+  render(
+    <EPRSection cycles={cycles} onParseGoals={onParseGoals} onCompleteStage={onCompleteStage} />
+  );
 
 describe("EPRSection", () => {
   it("shows an empty state with no cycles", () => {
-    render(<EPRSection cycles={[]} onAddGoal={vi.fn()} onCompleteStage={vi.fn()} />);
+    renderSection([]);
     expect(screen.getByText("No EPR cycles started")).toBeInTheDocument();
   });
 
-  it("disables Goal Setting completion with fewer than 5 goals", () => {
-    render(<EPRSection cycles={[cycleWithFewGoals]} onAddGoal={vi.fn()} onCompleteStage={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Goal Setting" })).toBeDisabled();
+  it("lets Goal Setting open with fewer than five goals so they can be confirmed", () => {
+    renderSection([cycleWithFewGoals]);
+    expect(screen.getByText("1/5 confirmed goals")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Goal Setting" }));
+    expect(screen.getByText("Complete Goal Setting")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Workday PDF/i)).toBeInTheDocument();
   });
 
-  it("enables Goal Setting completion with 5 goals and calls onCompleteStage", () => {
-    const onCompleteStage = vi.fn();
-    render(<EPRSection cycles={[cycleWithFiveGoals]} onAddGoal={vi.fn()} onCompleteStage={onCompleteStage} />);
-    const button = screen.getByRole("button", { name: "Goal Setting" });
-    expect(button).not.toBeDisabled();
-    fireEvent.click(button);
-    expect(onCompleteStage).toHaveBeenCalledWith(2, "goal_setting");
+  it("opens the evidence dialog instead of completing on a bare click", async () => {
+    const onCompleteStage = vi.fn().mockResolvedValue(undefined);
+    renderSection([cycleWithFiveGoals], onCompleteStage);
+    fireEvent.click(screen.getByRole("button", { name: "Goal Setting" }));
+
+    expect(onCompleteStage).not.toHaveBeenCalled();
+    fireEvent.change(await screen.findByLabelText(/^Summary/), {
+      target: { value: "Goals agreed in the kickoff." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Complete stage" }));
+
+    await waitFor(() =>
+      expect(onCompleteStage).toHaveBeenCalledWith(2, {
+        stage: "goal_setting",
+        summary: "Goals agreed in the kickoff.",
+        reference_url: "",
+        shared_with_employee: false,
+        goal_titles: goals.map((goal) => goal.description),
+      })
+    );
   });
 
-  it("disables an already-completed stage", () => {
-    render(<EPRSection cycles={[completedCycle]} onAddGoal={vi.fn()} onCompleteStage={vi.fn()} />);
+  it("renders recorded evidence under a completed stage", () => {
+    renderSection([completedCycle]);
     expect(screen.getByRole("button", { name: /Goal Setting/ })).toBeDisabled();
+    expect(screen.getByText("Five SMART goals agreed with Jane.")).toBeInTheDocument();
+    expect(screen.getByText("Shared with employee")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /reference/i })).toHaveAttribute(
+      "href",
+      "https://workday.example/goals/3"
+    );
   });
 
-  it("adds a goal via the inline input", () => {
-    const onAddGoal = vi.fn();
-    render(<EPRSection cycles={[cycleWithFewGoals]} onAddGoal={onAddGoal} onCompleteStage={vi.fn()} />);
-    fireEvent.change(screen.getByPlaceholderText("Add a goal..."), { target: { value: "Ship feature X" } });
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
-    expect(onAddGoal).toHaveBeenCalledWith(1, "Ship feature X");
+  it("threads the PDF parse callback with cycle and stage", async () => {
+    const onParseGoals = vi
+      .fn()
+      .mockResolvedValue(["Parsed A", "Parsed B", "Parsed C", "Parsed D", "Parsed E"]);
+    renderSection([cycleWithFewGoals], undefined, onParseGoals);
+
+    fireEvent.click(screen.getByRole("button", { name: "Goal Setting" }));
+    const file = new File(["%PDF-1.4"], "workday.pdf", { type: "application/pdf" });
+    fireEvent.change(await screen.findByLabelText(/Workday PDF/i), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => expect(onParseGoals).toHaveBeenCalledWith(1, "goal_setting", file));
+  });
+
+  it("passes existing titles to Mid-year and omits goal_titles when unchanged", async () => {
+    const onCompleteStage = vi.fn().mockResolvedValue(undefined);
+    renderSection(
+      [{ ...cycleWithFiveGoals, goal_setting_completed_at: "2026-03-01T00:00:00Z" }],
+      onCompleteStage
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Mid-year" }));
+    expect(await screen.findByDisplayValue("Goal A")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/^Summary/), {
+      target: { value: "No Workday changes." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Complete stage" }));
+
+    await waitFor(() =>
+      expect(onCompleteStage).toHaveBeenCalledWith(2, {
+        stage: "mid_year",
+        summary: "No Workday changes.",
+        reference_url: "",
+        shared_with_employee: false,
+      })
+    );
   });
 });

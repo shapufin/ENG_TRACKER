@@ -50,10 +50,15 @@ HBPR_RECORD_UPDATES = 'hbpr_record_updates'
 
 class _RecordsItem(NotificationType):
     """Something a TL added to the employee's own My-records page. Generic copy:
-    the employee reads the content there, not on a lock screen."""
+    the employee reads the content there, not on a lock screen.
+
+    Always on: these are the employee's own records, so the types are not
+    user-configurable — they never appear in Settings and cannot be disabled
+    (in-app; push stays off by default via ``push_by_default``)."""
     category = 'own'
     notification_type = 'info'
     push_by_default = False
+    user_configurable = False
     link = '/my-records'
 
     def title(self, context):
@@ -86,6 +91,22 @@ class PipStarted(_RecordsItem):
 
     def dedupe_key(self, context, user):
         return f'pip-started:{context["instance"].pk}:user:{user.id}'
+
+
+class EprStageShared(_RecordsItem):
+    event_type = 'scorecard_epr_stage_shared'
+    label = 'A review stage summary was shared with me'
+    description = 'Sent to an employee when their team leader completes an EPR stage with the summary marked shared with them.'
+
+    def recipients(self, context):
+        record = context['instance']
+        return User.objects.filter(id=record.cycle.user_id, is_active=True)
+
+    def dedupe_key(self, context, user):
+        # Versioned like _evidence_dedupe: an unshare → reshare produces a new
+        # updated_at and notifies again; the share event itself notifies once.
+        record = context['instance']
+        return f'epr-stage-shared:{record.pk}:{record.updated_at.isoformat()}:user:{user.id}'
 
 
 class PipAwaitingApproval(_HbprAudience, NotificationType):

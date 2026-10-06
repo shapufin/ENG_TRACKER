@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { X } from "lucide-react";
+import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
+import { cn } from "@/lib/utils";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 
 interface WeeklyPreviewEntry {
@@ -96,7 +98,7 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
       <div className="space-y-4">
         {isAdmin && (
           <div className="space-y-2">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               User (optional - defaults to self)
             </Label>
             <Select value={weeklyForm.user} onValueChange={(v) => onPatchWeeklyForm({ user: v })}>
@@ -175,7 +177,7 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
                 </div>
               ))
             ) : (
-              <p className="text-xs text-muted-foreground">No clients available.</p>
+              <p className="text-muted-foreground text-xs">No clients available.</p>
             )}
           </div>
         </div>
@@ -192,19 +194,19 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
                 <col className="w-20" />
                 <col className="w-8" />
               </colgroup>
-              <thead className="bg-muted/90 backdrop-blur-sm">
+              <thead className={TABLE_HEAD_ROW_CLASS}>
                 <tr>
-                  <th className="px-3 py-1 text-left">Date</th>
-                  <th className="px-3 py-1 text-left">Start</th>
-                  <th className="px-3 py-1 text-left">End</th>
-                  <th className="px-3 py-1 text-left">Hours</th>
-                  <th className="px-3 py-1 text-left"></th>
+                  <th className={cn(TABLE_HEAD_CELL_CLASS, "px-3 py-1")}>Date</th>
+                  <th className={cn(TABLE_HEAD_CELL_CLASS, "px-3 py-1")}>Start</th>
+                  <th className={cn(TABLE_HEAD_CELL_CLASS, "px-3 py-1")}>End</th>
+                  <th className={cn(TABLE_HEAD_CELL_CLASS, "px-3 py-1")}>Hours</th>
+                  <th className={cn(TABLE_HEAD_CELL_CLASS, "px-3 py-1")}></th>
                 </tr>
               </thead>
               <tbody>
                 {weeklyPreview.map((day, idx) => (
                   <tr key={idx} className={`border-t ${day.isWeekend ? "bg-warning/10" : ""}`}>
-                    <td className="whitespace-nowrap px-3 py-1">
+                    <td className="px-3 py-1 whitespace-nowrap">
                       {formatDateDDMMYYYY(day.date)}
                       {day.isWeekend && (
                         <span className="ml-1 text-xs font-medium text-amber-700 dark:text-amber-400">

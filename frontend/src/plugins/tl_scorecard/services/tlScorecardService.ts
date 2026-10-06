@@ -4,10 +4,12 @@ import type { PaginatedResponse } from "@/types";
 import type {
   Absence,
   ApprovalEngagementScore,
+  CompleteEprStagePayload,
   EngagementSurveyTeamAverage,
   EPRCycle,
+  EPRStage,
+  EPRStageRecord,
   EscalationCandidate,
-  KpiCoverageEntry,
   PIPRecord,
   HbprEvidence,
   HbprEvidenceKind,
@@ -19,6 +21,7 @@ import type {
   PromotionFlag,
   ReviewDelivery,
   Scorecard,
+  YearEndEvidencePack,
 } from "../types/tlScorecard";
 
 const BASE = "/plugins/tl_scorecard";
@@ -71,8 +74,6 @@ export const tlScorecardService = {
     if (month) params.month = month;
     return api.get<Scorecard>(`${BASE}/scorecard/`, { params });
   },
-
-  getKpiCoverage: () => api.get<KpiCoverageEntry[]>(`${BASE}/kpi-coverage/`),
 
   getTrend: (months = 6) => api.get<Scorecard[]>(`${BASE}/trend/`, { params: { months } }),
 
@@ -183,13 +184,35 @@ export const tlScorecardService = {
   createEPRCycle: (data: { user: number; year: number }) =>
     api.post<EPRCycle>(`${BASE}/epr-cycles/`, data),
 
-  createEPRGoal: (data: { cycle: number; description: string }) =>
-    api.post(`${BASE}/epr-goals/`, data),
+  /** Preview-only Workday parse; the PDF bytes are never persisted server-side. */
+  parseEPRGoalPdf: (cycleId: number, stage: EPRStage, file: File) => {
+    const form = new FormData();
+    form.append("stage", stage);
+    form.append("file", file);
+    return api.post<{ goal_titles: string[] }>(
+      `${BASE}/epr-cycles/${cycleId}/parse_goal_pdf/`,
+      form,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+  },
 
-  completeEPRStage: (
-    cycleId: number,
-    field: "goal_setting_completed_at" | "mid_year_completed_at" | "final_review_completed_at"
-  ) => api.patch<EPRCycle>(`${BASE}/epr-cycles/${cycleId}/`, { [field]: new Date().toISOString() }),
+  /** The only writer of `*_completed_at`: stamps the stage AND records its
+   * evidence (summary required) in one request. */
+  completeEPRStage: (cycleId: number, data: CompleteEprStagePayload) =>
+    api.post<EPRCycle>(`${BASE}/epr-cycles/${cycleId}/complete_stage/`, data),
+
+  /** Corrections to stage evidence (summary / reference / shared flag). */
+  updateEPRStageRecord: (
+    recordId: number,
+    data: Partial<Pick<EPRStageRecord, "summary" | "reference_url" | "shared_with_employee">>
+  ) => api.patch<EPRStageRecord>(`${BASE}/epr-stage-records/${recordId}/`, data),
+
+  /** Packaged per-assignment+year evidence summary for the TL's year-end
+   * review (assigned TL / owning HBPR / staff). */
+  getEvidencePack: (assignmentId: number, year: number) =>
+    api.get<YearEndEvidencePack>(`${BASE}/hbpr-evidence/year-end-pack/`, {
+      params: { assignment: assignmentId, year },
+    }),
 
   getHbprOverview: (year?: number) =>
     api.get<HbprOverview>(`${BASE}/hbpr/overview/`, { params: year ? { year } : undefined }),

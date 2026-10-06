@@ -1,6 +1,8 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { CalendarClock, UsersRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { UserAvatar } from "@/components/calendar/UserAvatar";
 import type { HbprLeaderRow } from "../../types/tlScorecard";
@@ -13,8 +15,13 @@ const EprPill: React.FC<{ label: string; recorded: boolean }> = ({ label, record
   </Badge>
 );
 
+interface AssignedLeaderCardProps {
+  leader: HbprLeaderRow;
+  year: number;
+}
+
 /** One assigned Albanian TL as a mobile summary card (the table is desktop-only). */
-export const AssignedLeaderCard: React.FC<{ leader: HbprLeaderRow }> = ({ leader }) => (
+export const AssignedLeaderCard: React.FC<AssignedLeaderCardProps> = ({ leader, year }) => (
   <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
     <div className="flex items-start justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2.5">
@@ -57,6 +64,17 @@ export const AssignedLeaderCard: React.FC<{ leader: HbprLeaderRow }> = ({ leader
     <div className="mt-3 flex flex-wrap gap-2">
       <EprPill label="Mid-year" recorded={leader.epr_mid_year} />
       <EprPill label="Year-end" recorded={leader.epr_year_end} />
+    </div>
+
+    <div className="border-line-subtle mt-3 border-t pt-3">
+      <Button variant="outline" size="sm" asChild className="min-h-11 w-full shadow-sm">
+        <Link
+          to={`/hbpr?view=evidence&year=${year}&leader=${leader.id}`}
+          aria-label={`Open governance evidence for ${leader.name}`}
+        >
+          Evidence
+        </Link>
+      </Button>
     </div>
   </GlassCard>
 );

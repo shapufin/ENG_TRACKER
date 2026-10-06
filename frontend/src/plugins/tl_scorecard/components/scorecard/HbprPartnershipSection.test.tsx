@@ -2,7 +2,7 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { HbprPartnershipSection } from "./HbprPartnershipSection";
-import type { HbprEvidence, HbprPartnership } from "../../types/tlScorecard";
+import type { HbprEvidence, HbprPartnership, YearEndEvidencePack } from "../../types/tlScorecard";
 
 // Radix Select is unreliable to drive via fireEvent in JSDOM: render it flat.
 vi.mock("@/components/ui/select", () => {
@@ -73,12 +73,31 @@ const EVIDENCE: HbprEvidence = {
   updated_at: "2026-03-01T10:00:00Z",
 };
 
+const PACK: YearEndEvidencePack = {
+  assignment: {
+    id: 11,
+    albanian_tl_name: "Enri Leader",
+    hbpr_name: "Elda Partner",
+    cadence: "weekly",
+    effective_from: "2026-01-01",
+    effective_to: null,
+  },
+  year: 2026,
+  cadence_expected: 40,
+  cadence_held: 31,
+  coverage_pct: 77.5,
+  meetings: [],
+  epr_mid_year: null,
+  epr_year_end: null,
+};
+
 const renderSection = (
   overrides: Partial<React.ComponentProps<typeof HbprPartnershipSection>> = {}
 ) => {
   const onCreate = vi.fn().mockResolvedValue(undefined);
   const onUpdate = vi.fn().mockResolvedValue(undefined);
   const onRetry = vi.fn();
+  const loadEvidencePack = vi.fn().mockResolvedValue(PACK);
   render(
     <HbprPartnershipSection
       partnership={PARTNERSHIP}
@@ -90,10 +109,11 @@ const renderSection = (
       canAuthor
       onCreate={onCreate}
       onUpdate={onUpdate}
+      loadEvidencePack={loadEvidencePack}
       {...overrides}
     />
   );
-  return { onCreate, onUpdate, onRetry };
+  return { onCreate, onUpdate, onRetry, loadEvidencePack };
 };
 
 describe("HbprPartnershipSection", () => {
@@ -150,7 +170,7 @@ describe("HbprPartnershipSection", () => {
     fireEvent.click(screen.getByRole("button", { name: /record evidence/i }));
 
     fireEvent.click(screen.getByRole("option", { name: "EPR mid-year participation" }));
-    const yearInput = await screen.findByLabelText("Reporting year");
+    const yearInput = await screen.findByLabelText(/^Reporting year/);
     fireEvent.change(yearInput, { target: { value: "1999" } });
     expect(screen.getByRole("alert")).toHaveTextContent(/between 2000 and 2100/i);
     expect(screen.getByRole("button", { name: "Record evidence" })).toBeDisabled();
@@ -179,5 +199,14 @@ describe("HbprPartnershipSection", () => {
         expect.objectContaining({ assignment: 11, shared_summary: "Revised summary" })
       )
     );
+  });
+
+  it("opens the year-end evidence pack for the assignment", async () => {
+    const { loadEvidencePack } = renderSection();
+    fireEvent.click(screen.getByRole("button", { name: /evidence pack/i }));
+
+    await waitFor(() => expect(loadEvidencePack).toHaveBeenCalledWith(11, 2026));
+    expect(await screen.findByText("2026 evidence pack")).toBeInTheDocument();
+    expect(screen.getByText("31/40")).toBeInTheDocument();
   });
 });

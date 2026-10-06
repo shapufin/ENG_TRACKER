@@ -11,7 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { InfoCallout } from "@/components/ui/InfoCallout";
-import { toneSurfaceClass, type Tone } from "@/components/ui/tone";
+import { toneSurfaceClass, toneTextClass, type Tone } from "@/components/ui/tone";
+import { cn } from "@/lib/utils";
 import type { HbprNeedsAttention } from "../../types/tlScorecard";
 import { plural } from "./hbprMeta";
 
@@ -95,7 +96,7 @@ export const HbprAttentionSummary: React.FC<HbprAttentionSummaryProps> = ({
   const cards = buildCards(attention, year);
   return (
     <section aria-labelledby="hbpr-attention" className="space-y-3">
-      <h2 id="hbpr-attention" className="text-muted-foreground text-sm font-semibold">
+      <h2 id="hbpr-attention" className="text-foreground text-base font-bold tracking-tight">
         Needs your attention
       </h2>
       {cards.length === 0 ? (
@@ -112,17 +113,32 @@ export const HbprAttentionSummary: React.FC<HbprAttentionSummaryProps> = ({
               <GlassCard
                 animateOnMount={false}
                 isHoverLift={false}
-                className="flex h-full flex-col gap-3 p-4"
+                className={cn(
+                  "flex h-full flex-col gap-3 border-l-4 p-4",
+                  key === "cadence_overdue" ? "border-l-tone-danger-text" : "border-l-transparent"
+                )}
               >
                 <div className="flex items-start gap-3">
                   <span
                     aria-hidden="true"
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${toneSurfaceClass[tone]}`}
+                    className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border",
+                      toneSurfaceClass[tone],
+                      // motion-safe: the pulse never runs under prefers-reduced-motion.
+                      key === "cadence_overdue" && "motion-safe:animate-pulse"
+                    )}
                   >
                     <Icon className="h-5 w-5" />
                   </span>
                   <div className="min-w-0">
-                    <p className="font-mono text-2xl font-bold tabular-nums">{count}</p>
+                    <p
+                      className={cn(
+                        "font-mono text-2xl font-bold tabular-nums",
+                        toneTextClass[tone]
+                      )}
+                    >
+                      {count}
+                    </p>
                     <p className="text-sm font-medium">{title}</p>
                     {key === "recent_evidence" && (
                       <p className="text-muted-foreground text-xs">

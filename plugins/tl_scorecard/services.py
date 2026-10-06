@@ -9,142 +9,23 @@ those plugins is composed in the frontend against their own existing APIs.
 """
 from __future__ import annotations
 
+import math
 from datetime import date, timedelta
+
+from django.utils import timezone
 
 from apps.leave_management.models import LeaveRequest, count_business_days
 from apps.overtime.models.core import OvertimeLog
 
-from .models import Absence, EPRCycle, IdleFlag, Meeting, PIPRecord, PromotionFlag, ReviewDelivery
-
-# Every KPI from both TL job-description sheets, with its current coverage
-# status. A plain data structure (not a model) — it only changes when a
-# later phase actually ships that KPI. Powers the frontend's "KPI Coverage"
-# panel so nothing this effort is meant to eventually cover is silently
-# invisible while it's still unbuilt.
-KPI_COVERAGE = [
-    {
-        "kpi": "Leave requests decided within 2 working days",
-        "sheet": 2, "status": "measured", "phase": 1,
-        "note": "Computed live from LeaveRequest.submitted_at/approved_at.",
-    },
-    {
-        "kpi": "0 pending leave requests at month-end",
-        "sheet": 2, "status": "measured", "phase": 1,
-        "note": "Computed live from LeaveRequest.status at month boundary.",
-    },
-    {
-        "kpi": "Overtime approval turnaround",
-        "sheet": 2, "status": "measured", "phase": 1,
-        "note": "Turnaround time only — see 'Zero unauthorized overtime' below for why this isn't that KPI.",
-    },
-    {
-        "kpi": "Engagement score ≥ 8.5/10",
-        "sheet": 1, "status": "measured", "phase": 2,
-        "note": (
-            "Two numbers now exist: the engagement plugin's approval-behavior score "
-            "(speed/consistency, not sentiment — shown as a labeled proxy) and the new "
-            "EngagementSurveyResponse pulse score, aggregated team-wide via "
-            "team-average/ so individual responses stay anonymous to the TL."
-        ),
-    },
-    {
-        "kpi": "Certification achievement via Skills Matrix",
-        "sheet": 1, "status": "approximate", "phase": 2,
-        "note": (
-            "Skill.is_certifiable + UserSkill.certified_on now exist on the skills plugin, "
-            "but no aggregate count is exposed through its API yet — fields are there, "
-            "the number on this page isn't. Small follow-up to the skills plugin, not tl_scorecard."
-        ),
-    },
-    {
-        "kpi": "Balanced junior/senior workforce ratio",
-        "sheet": 1, "status": "measured", "phase": 2,
-        "note": "UserProfile.seniority_level (apps/users, a core app) — populated manually, ratio computed live.",
-    },
-    {
-        "kpi": "1-on-1 compliance (≥1/member/month)",
-        "sheet": 1, "status": "measured", "phase": 2,
-        "note": "Meeting(meeting_type=one_on_one) — % of team members with ≥1 logged this month.",
-    },
-    {
-        "kpi": "≥45 documented Technical Lead syncs",
-        "sheet": 1, "status": "measured", "phase": 2,
-        "note": "Meeting(meeting_type=tl_sync) — cumulative count over the requested date range.",
-    },
-    {
-        "kpi": "Monthly team meetings with HRBP, notes within 24h",
-        "sheet": 2, "status": "measured", "phase": 2,
-        "note": "Meeting(meeting_type=team_meeting) + MeetingAttendee(role=hrbp) + notes_published_at SLA check.",
-    },
-    {
-        "kpi": "Idle risks flagged with weekly status reporting",
-        "sheet": 2, "status": "measured", "phase": 2,
-        "note": "IdleFlag + IdleStatusUpdate — open/resolved counts and weekly-log presence.",
-    },
-    {
-        "kpi": "≥12 monthly management reviews to Ops/GM",
-        "sheet": 2, "status": "measured", "phase": 2,
-        "note": "ReviewDelivery — cumulative count over the requested date range.",
-    },
-    {
-        "kpi": "Zero unauthorized overtime",
-        "sheet": 2, "status": "blocked", "phase": 3,
-        "note": "OvertimeLog has no pre-approval concept — needs an ops decision on how 'authorized before work' is actually tracked.",
-    },
-    {
-        "kpi": "Regretted voluntary turnover < 7%",
-        "sheet": 1, "status": "blocked", "phase": 3,
-        "note": "Needs HR to define the voluntary/regretted taxonomy before a termination model can be designed.",
-    },
-    {
-        "kpi": "Unjustified absences addressed within 5 working days",
-        "sheet": 2, "status": "measured", "phase": 3,
-        "note": "Absence model — flagged manually, 5-working-day SLA computed automatically.",
-    },
-    {
-        "kpi": "0 escalations from administrative delays/communication failures",
-        "sheet": 1, "status": "measured", "phase": 3,
-        "note": (
-            "No manual escalation log — computed live from breaches already tracked: "
-            "stale leave decisions, idle flags open >4 weeks with no update, PIPs pending "
-            "approval >14 days, absences unaddressed >5 working days."
-        ),
-    },
-    {
-        "kpi": "HR Albania formal communications correctly routed/documented",
-        "sheet": 1, "status": "planned", "phase": 3,
-        "note": "Needs HR to define the taxonomy of formal-communication types first.",
-    },
-    {
-        "kpi": "100% timely EPR completion (3 stages, ≥5 goals/member)",
-        "sheet": 2, "status": "measured", "phase": 3,
-        "note": (
-            "EPRCycle+EPRGoal — due dates computed from the year (Q1/Q3/Q4-end), never typed; "
-            "≥5-goal rule enforced before Goal Setting can be marked complete."
-        ),
-    },
-    {
-        "kpi": "PIPs executed only with prior HR approval, evidence-based",
-        "sheet": 2, "status": "measured", "phase": 3,
-        "note": "PIPRecord.approved_by/approved_at — pending-too-long computed automatically, not typed.",
-    },
-    {
-        "kpi": "100% onboarding sign-offs before start date",
-        "sheet": 2, "status": "planned", "phase": 3,
-        "note": "Onboarding plugin is currently pure file storage — needs a plan/checklist + approval state.",
-    },
-    {
-        "kpi": "High-potential members identified for promotion (3%/year)",
-        "sheet": 1, "status": "measured", "phase": 3,
-        "note": "PromotionFlag — nomination is manual, the 3%-of-team ratio is computed automatically.",
-    },
-    {
-        "kpi": "34% female headcount (Group diversity target)",
-        "sheet": 1, "status": "excluded", "phase": None,
-        "note": "Explicitly excluded from this effort pending HR decisions on collecting/storing gender data.",
-    },
-]
-
+from .models import (
+    Absence,
+    EPRCycle,
+    IdleFlag,
+    Meeting,
+    PIPRecord,
+    PromotionFlag,
+    ReviewDelivery,
+)
 
 def reporting_period(month: date | None) -> date:
     """Normalize any date within a month to that month's first day — the
@@ -193,8 +74,8 @@ def leave_sla_metrics(team_member_ids, month: date) -> dict:
 
 def ot_turnaround_metrics(team_member_ids, month: date) -> dict:
     """Overtime approval turnaround only — deliberately NOT a measure of
-    'unauthorized overtime' (see KPI_COVERAGE: that KPI has no data source
-    yet, since OvertimeLog has no pre-approval concept)."""
+    'unauthorized overtime': that KPI has no data source yet, since
+    OvertimeLog has no pre-approval concept."""
     month_start, month_end = _month_bounds(month)
     qs = OvertimeLog.objects.filter(
         user_id__in=team_member_ids, submitted_at__gte=month_start, submitted_at__lt=month_end,
@@ -334,9 +215,13 @@ def epr_stage_due_date(year: int, stage: str) -> date:
 def epr_metrics(team_member_ids, year: int) -> dict:
     """Per-stage on-time completion for a TL's team this year. Due dates
     come from epr_stage_due_date(), never from a typed-in field."""
-    cycles = list(EPRCycle.objects.filter(user_id__in=team_member_ids, year=year).prefetch_related('goals'))
+    cycles = list(
+        EPRCycle.objects.filter(user_id__in=team_member_ids, year=year)
+        .prefetch_related('goals', 'stage_records')
+    )
     total = len(team_member_ids)
     stages = {}
+    stages_completed = 0
     for stage in EPR_STAGE_DUE_MONTH_DAY:
         field = f'{stage}_completed_at'
         due = epr_stage_due_date(year, stage)
@@ -344,6 +229,7 @@ def epr_metrics(team_member_ids, year: int) -> dict:
             1 for c in cycles
             if getattr(c, field) and getattr(c, field).date() <= due
         )
+        stages_completed += sum(1 for c in cycles if getattr(c, field))
         stages[stage] = {
             'due_date': due.isoformat(),
             'completed_on_time': on_time,
@@ -351,7 +237,103 @@ def epr_metrics(team_member_ids, year: int) -> dict:
             'pct_on_time': round((on_time / total) * 100, 1) if total else None,
         }
     goals_met = sum(1 for c in cycles if len(c.goals.all()) >= 5)
-    return {'stages': stages, 'cycles_with_5plus_goals': goals_met, 'cycles_started': len(cycles)}
+    stages_with_evidence = sum(
+        1 for c in cycles
+        for r in c.stage_records.all()
+        if getattr(c, f'{r.stage}_completed_at')
+    )
+    return {
+        'stages': stages,
+        'cycles_with_5plus_goals': goals_met,
+        'cycles_started': len(cycles),
+        'stages_completed': stages_completed,
+        'stages_with_evidence': stages_with_evidence,
+    }
+
+
+def _pack_name(user):
+    if user is None:
+        return None
+    return user.get_full_name() or user.username
+
+
+def build_year_end_pack(assignment, year: int, evidence_qs) -> dict:
+    """Held-vs-expected cadence + EPR participations for one assignment+year
+    — the packaged summary the AL TL hands to their manager at year-end.
+
+    Expected-meeting window: ``max(effective_from, Jan 1)`` →
+    ``min(effective_to, Dec 31, today)`` (a current assignment can't owe a
+    future meeting). Weekly → ceil(days/7); biweekly → ceil(days/14);
+    monthly → calendar months touched.
+
+    ``evidence_qs`` is the caller's already-scoped evidence queryset — the
+    viewset passes ``self._scoped_queryset()`` (the pack's own ``?year=``
+    must not hit the list's ``reporting_year`` row filter, which would drop
+    every NULL-year cadence meeting).
+    """
+    rows = list(
+        evidence_qs.filter(assignment=assignment)
+        .select_related('recorded_by')
+        .order_by('occurred_on', 'id')
+    )
+    meetings = [r for r in rows if r.kind == 'cadence_meeting'
+                and r.occurred_on.year == year]
+    epr_mid = next(
+        (r for r in rows if r.kind == 'epr_mid_year' and r.reporting_year == year), None)
+    epr_end = next(
+        (r for r in rows if r.kind == 'epr_year_end' and r.reporting_year == year), None)
+
+    window_start = max(assignment.effective_from, date(year, 1, 1))
+    # The app clock (timezone.now().date(), same as hbpr_assignments.today()),
+    # not the host's local date — the two can differ across midnight.
+    window_end = min(
+        assignment.effective_to or date.max,
+        date(year, 12, 31),
+        timezone.now().date(),
+    )
+    if window_end < window_start:
+        expected = 0
+    else:
+        days = (window_end - window_start).days + 1
+        if assignment.cadence == 'weekly':
+            expected = math.ceil(days / 7)
+        elif assignment.cadence == 'biweekly':
+            expected = math.ceil(days / 14)
+        else:  # monthly
+            expected = (window_end.year * 12 + window_end.month) \
+                - (window_start.year * 12 + window_start.month) + 1
+    held = len(meetings)
+
+    def _row(r):
+        if r is None:
+            return None
+        return {
+            'id': r.id,
+            'occurred_on': r.occurred_on.isoformat(),
+            'shared_summary': r.shared_summary,
+            'action_items': r.action_items,
+            'reference_url': r.reference_url,
+            'recorded_by_name': _pack_name(r.recorded_by),
+        }
+
+    return {
+        'assignment': {
+            'id': assignment.id,
+            'albanian_tl_name': _pack_name(assignment.albanian_tl),
+            'hbpr_name': _pack_name(assignment.hbpr),
+            'cadence': assignment.cadence,
+            'effective_from': assignment.effective_from.isoformat(),
+            'effective_to': assignment.effective_to.isoformat()
+            if assignment.effective_to else None,
+        },
+        'year': year,
+        'cadence_expected': expected,
+        'cadence_held': held,
+        'coverage_pct': round((held / expected) * 100, 1) if expected else None,
+        'meetings': [_row(r) for r in meetings],
+        'epr_mid_year': _row(epr_mid),
+        'epr_year_end': _row(epr_end),
+    }
 
 
 def scorecard_trend(user, months: int, end_month: date) -> list[dict]:

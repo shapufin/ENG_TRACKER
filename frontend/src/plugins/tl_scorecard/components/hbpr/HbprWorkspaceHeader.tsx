@@ -53,6 +53,24 @@ const statusForAttention = (
   return { label: "All clear", tone: "success" };
 };
 
+/**
+ * Keeps the active tab visible inside the scrollable tab row on narrow screens
+ * (the row hides its scrollbar, so an off-screen tab would be undiscoverable).
+ */
+const useActiveTabVisible = (view: HbprView) => {
+  const listRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const active = listRef.current?.querySelector('[data-state="active"]');
+    // scrollIntoView is a no-op in JSDOM — the optional call keeps tests green.
+    active?.scrollIntoView?.({
+      inline: "center",
+      block: "nearest",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }, [view]);
+  return listRef;
+};
+
 /** Workspace shell: title, reporting-period selector, evidence export and views. */
 export const HbprWorkspaceHeader: React.FC<HbprWorkspaceHeaderProps> = ({
   view,
@@ -65,6 +83,7 @@ export const HbprWorkspaceHeader: React.FC<HbprWorkspaceHeaderProps> = ({
   children,
 }: HbprWorkspaceHeaderProps) => {
   const status = statusForAttention(attention);
+  const listRef = useActiveTabVisible(view);
   return (
     <PageShell
       title="HBPR Workspace"
@@ -112,15 +131,21 @@ export const HbprWorkspaceHeader: React.FC<HbprWorkspaceHeaderProps> = ({
       }
     >
       <div className="space-y-6">
-        <Tabs value={view} onValueChange={(value) => onViewChange(value as HbprView)}>
-          <TabsList aria-label="HBPR workspace sections">
-            {VIEWS.map((v) => (
-              <TabsTrigger key={v.value} value={v.value}>
-                {v.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <div className="no-scrollbar -mx-1 min-w-0 overflow-x-auto px-1">
+          <Tabs value={view} onValueChange={(value) => onViewChange(value as HbprView)}>
+            <TabsList ref={listRef} aria-label="HBPR workspace sections">
+              {VIEWS.map((v) => (
+                <TabsTrigger
+                  key={v.value}
+                  value={v.value}
+                  className="data-[state=active]:border-primary min-h-11 border-b-2 border-transparent sm:min-h-9"
+                >
+                  {v.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
         {children}
       </div>
     </PageShell>

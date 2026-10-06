@@ -2,11 +2,14 @@
 from django.utils import timezone
 from rest_framework import serializers
 
+from core.mixins.permissions import is_staff_user
+
 from .models import (
     Absence,
     EngagementSurveyResponse,
     EPRCycle,
     EPRGoal,
+    EPRStageRecord,
     HbprGovernanceEvidence,
     IdleFlag,
     IdleStatusUpdate,
@@ -88,14 +91,6 @@ class ScorecardSerializer(serializers.Serializer):
     pip = PipMetricsSerializer()
     promotion = PromotionRatioSerializer()
     escalation_count = serializers.IntegerField()
-
-
-class KpiCoverageEntrySerializer(serializers.Serializer):
-    kpi = serializers.CharField()
-    sheet = serializers.IntegerField()
-    status = serializers.CharField()
-    phase = serializers.IntegerField(allow_null=True)
-    note = serializers.CharField()
 
 
 def _viewer(serializer):
@@ -358,21 +353,44 @@ class EPRGoalSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class EPRStageRecordSerializer(serializers.ModelSerializer):
+    stage_display = serializers.CharField(source='get_stage_display', read_only=True)
+    recorded_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EPRStageRecord
+        fields = [
+            'id', 'cycle', 'stage', 'stage_display', 'summary', 'reference_url',
+            'shared_with_employee', 'recorded_by', 'recorded_by_name', 'created_at',
+        ]
+        read_only_fields = ['id', 'cycle', 'stage', 'recorded_by', 'created_at']
+
+    def get_recorded_by_name(self, obj):
+        return _display_name(obj.recorded_by)
+
+
 class EPRCycleSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     goals = EPRGoalSerializer(many=True, read_only=True)
     goal_count = serializers.SerializerMethodField()
+    stage_records = serializers.SerializerMethodField()
 
     class Meta:
         model = EPRCycle
         fields = [
             'id', 'user', 'user_name', 'year', 'goal_setting_completed_at',
-            'mid_year_completed_at', 'final_review_completed_at', 'goals', 'goal_count',
+            'mid_year_completed_at', 'final_review_completed_at', 'goals',
+            'goal_count', 'stage_records',
         ]
         # `user` (the employee this cycle is about) is writable — it's the
         # target, not the request's caller, so it can't be read-only like
-        # the caller-derived fields on other serializers.
-        read_only_fields = ['id']
+        # the caller-derived fields on other serializers. The three
+        # `*_completed_at` fields are set by the `complete_stage` action
+        # only — same mechanism as `Absence.addressed_on`.
+        read_only_fields = [
+            'id', 'goal_setting_completed_at', 'mid_year_completed_at',
+            'final_review_completed_at',
+        ]
         validators = []
 
     def get_user_name(self, obj):
@@ -380,6 +398,34 @@ class EPRCycleSerializer(serializers.ModelSerializer):
 
     def get_goal_count(self, obj):
         return obj.goals.count()
+
+    def get_stage_records(self, obj):
+        """Stage evidence: full rows for the owning TL and staff; existence
+        metadata only for an HBPR (they verify evidence was recorded, never
+        read employee review content — mirrors notes redaction)."""
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user is not None and not is_staff_user(user):
+            # get_team_member_ids() costs 3 queries — memoize per serializer
+            # instance (one request), not per cycle row.
+            member_ids = getattr(self, '_member_ids_cache', None)
+            if member_ids is None:
+                member_ids = self._member_ids_cache = user.profile.get_team_member_ids()
+            if obj.user_id not in member_ids:
+                return [
+                    {
+                        'id': r.id,
+                        'stage': r.stage,
+                        'has_reference': bool(r.reference_url),
+                        'shared_with_employee': r.shared_with_employee,
+                        'recorded_by_name': _display_name(r.recorded_by),
+                        'created_at': r.created_at,
+                    }
+                    for r in obj.stage_records.all()
+                ]
+        return EPRStageRecordSerializer(
+            obj.stage_records.all(), many=True, context=self.context
+        ).data
 
 
 class EscalationCandidateSerializer(serializers.Serializer):

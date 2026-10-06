@@ -1,6 +1,8 @@
 import React from "react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ClientMultiSelect } from "./ClientMultiSelect";
@@ -34,28 +36,28 @@ export const ClientAssignmentSection: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Assign team members to business clients for accurate payroll export.
         </p>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading team…</p>
+          <p className="text-muted-foreground text-sm">Loading team…</p>
         ) : members.length === 0 ? (
           <EmptyState icon={Users} title="No team members found" />
         ) : (
           <>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  <th scope="col" className="pb-2 pr-2 font-medium">
+                <tr className={TABLE_HEAD_ROW_CLASS}>
+                  <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-0 py-0 pr-2 pb-2")}>
                     Member
                   </th>
-                  <th scope="col" className="pb-2 font-medium">
+                  <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-0 py-0 pb-2")}>
                     Client
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/50">
+              <tbody className="divide-border/50 divide-y">
                 {members.map((m) => {
                   const name = displayName(m);
                   const draft = effective[m.user.id] ?? [];
@@ -63,7 +65,7 @@ export const ClientAssignmentSection: React.FC = () => {
                     <tr key={m.user.id}>
                       <td className="py-2 pr-2">
                         <span className="block font-medium">{name}</span>
-                        <span className="block text-xs text-muted-foreground">
+                        <span className="text-muted-foreground block text-xs">
                           @{m.user.username}
                         </span>
                       </td>
@@ -87,7 +89,7 @@ export const ClientAssignmentSection: React.FC = () => {
                 {isSaving ? "Saving…" : "Save Changes"}
               </Button>
               {isDirty && !isSaving && (
-                <span className="text-xs text-muted-foreground">Unsaved changes</span>
+                <span className="text-muted-foreground text-xs">Unsaved changes</span>
               )}
             </div>
           </>

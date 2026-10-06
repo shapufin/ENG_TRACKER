@@ -1,8 +1,11 @@
 """HBPR <-> Albanian TL governance evidence."""
 
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
 
+from apps.users.models.hbpr import HbprAlbanianTlAssignment
 from apps.users.services.hbpr_scope import is_hbpr
 from core.mixins.permissions import PluginPermissionMixin
 
@@ -13,6 +16,7 @@ from ..models import (
 from ..serializers import (
     HbprGovernanceEvidenceSerializer,
 )
+from ..services import build_year_end_pack
 from core.mixins.permissions import is_staff_user
 
 
@@ -27,8 +31,11 @@ class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet
     plugin_name = 'tl_scorecard'
     serializer_class = HbprGovernanceEvidenceSerializer
 
-    def get_queryset(self):
-        from django.db.models import Q, OuterRef, Subquery
+    def _scoped_queryset(self):
+        """Role-scoped evidence rows, before any `?kind/year/leader` row
+        filters — the year-end pack consumes this directly so its own
+        `?year=` can't collide with the list's `reporting_year` filter."""
+        from django.db.models import OuterRef, Subquery
 
         qs = HbprGovernanceEvidence.objects.select_related(
             'assignment__hbpr', 'assignment__albanian_tl', 'recorded_by', 'updated_by',
@@ -61,7 +68,12 @@ class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet
                 # An Albanian TL reads the evidence recorded on their own
                 # assignments.
                 qs = qs.filter(assignment__albanian_tl=user)
+        return qs
 
+    def get_queryset(self):
+        from django.db.models import Q
+
+        qs = self._scoped_queryset()
         params = self.request.query_params
         kind = params.get('kind')
         if kind:
@@ -119,3 +131,28 @@ class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet
         raise PermissionDenied(
             'Governance evidence cannot be deleted; update it instead.'
         )
+
+    @action(detail=False, methods=['get'], url_path='year-end-pack')
+    def year_end_pack(self, request):
+        """Packaged per-assignment+year summary the AL TL hands to their
+        manager: cadence meetings held vs expected, both EPR participations.
+        Readable by the assigned TL, the owning HBPR and staff."""
+        try:
+            assignment_id = int(request.query_params.get('assignment', ''))
+            year = int(request.query_params.get('year', ''))
+        except ValueError:
+            raise ValidationError({
+                'detail': 'Query params assignment and year are required integers.',
+            })
+        try:
+            assignment = HbprAlbanianTlAssignment.objects.select_related(
+                'hbpr', 'albanian_tl').get(pk=assignment_id)
+        except HbprAlbanianTlAssignment.DoesNotExist:
+            raise PermissionDenied('You cannot read this evidence pack.')
+        user = request.user
+        if not is_staff_user(user) and user.id not in (
+            assignment.hbpr_id, assignment.albanian_tl_id
+        ):
+            raise PermissionDenied('You cannot read this evidence pack.')
+        return Response(
+            build_year_end_pack(assignment, year, self._scoped_queryset()))

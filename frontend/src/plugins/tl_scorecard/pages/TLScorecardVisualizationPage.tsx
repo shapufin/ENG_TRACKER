@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Area, AreaChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ArrowLeft, Download, LineChart as LineChartIcon, TriangleAlert } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,29 @@ const overtimeConfig: ChartConfig = {
 const escalationConfig: ChartConfig = {
   escalation_count: { label: "Escalation risks", color: "hsl(var(--chart-3))" },
 };
+
+/** Latest value pill for a chart card header. Hidden when no month has data. */
+const LatestBadge: React.FC<{ value: number | null; suffix?: string }> = ({
+  value,
+  suffix = "",
+}) =>
+  value === null ? null : (
+    <span className="border-line-subtle bg-muted text-muted-foreground shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold tabular-nums">
+      Latest · {value}
+      {suffix}
+    </span>
+  );
+
+const lastValue = (rows: Array<Record<string, string | number | null>>, key: string) => {
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const v = rows[i][key];
+    if (typeof v === "number") return v;
+  }
+  return null;
+};
+
+const CHART_MARGIN = { top: 8, right: 12, left: 0, bottom: 0 };
+const CHART_CLASS = "aspect-auto h-56 w-full sm:h-72";
 
 const TLScorecardVisualization: React.FC = () => {
   const trendQuery = useQuery({
@@ -154,9 +177,10 @@ const TLScorecardVisualization: React.FC = () => {
           id="viz-leave-sla"
           title="Leave SLA"
           description="% of leave requests decided within 2 working days"
+          action={<LatestBadge value={lastValue(leaveData, "pct_within_2_days")} suffix="%" />}
         >
-          <ChartContainer config={leaveConfig} className="max-h-[280px] w-full">
-            <AreaChart data={leaveData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <ChartContainer config={leaveConfig} className={CHART_CLASS}>
+            <AreaChart data={leaveData} margin={CHART_MARGIN}>
               <defs>
                 <linearGradient id="vizLeaveFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.45} />
@@ -172,6 +196,7 @@ const TLScorecardVisualization: React.FC = () => {
               />
               <YAxis domain={[0, 100]} tickLine={false} axisLine={false} />
               <ChartTooltip
+                cursor={{ stroke: "hsl(var(--border))", strokeDasharray: "3 3" }}
                 content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />}
               />
               <Area
@@ -190,9 +215,16 @@ const TLScorecardVisualization: React.FC = () => {
           id="viz-ot-turnaround"
           title="Overtime Turnaround"
           description="Average approval turnaround in business days"
+          action={<LatestBadge value={lastValue(overtimeData, "avg_turnaround_days")} suffix="d" />}
         >
-          <ChartContainer config={overtimeConfig} className="max-h-[280px] w-full">
-            <LineChart data={overtimeData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <ChartContainer config={overtimeConfig} className={CHART_CLASS}>
+            <AreaChart data={overtimeData} margin={CHART_MARGIN}>
+              <defs>
+                <linearGradient id="vizOtFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
               <CartesianGrid vertical={false} strokeDasharray="3 6" opacity={0.4} />
               <XAxis
                 dataKey="month"
@@ -202,11 +234,13 @@ const TLScorecardVisualization: React.FC = () => {
               />
               <YAxis tickLine={false} axisLine={false} />
               <ChartTooltip
+                cursor={{ stroke: "hsl(var(--border))", strokeDasharray: "3 3" }}
                 content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />}
               />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="avg_turnaround_days"
+                fill="url(#vizOtFill)"
                 stroke="var(--color-avg_turnaround_days)"
                 strokeWidth={2.5}
                 dot={{
@@ -217,7 +251,7 @@ const TLScorecardVisualization: React.FC = () => {
                 }}
                 connectNulls
               />
-            </LineChart>
+            </AreaChart>
           </ChartContainer>
         </ChartSection>
 
@@ -225,9 +259,16 @@ const TLScorecardVisualization: React.FC = () => {
           id="viz-escalations"
           title="Escalation Risks"
           description="Computed live from breaches already tracked"
+          action={<LatestBadge value={lastValue(escalationData, "escalation_count")} />}
         >
-          <ChartContainer config={escalationConfig} className="max-h-[280px] w-full">
-            <LineChart data={escalationData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <ChartContainer config={escalationConfig} className={CHART_CLASS}>
+            <AreaChart data={escalationData} margin={CHART_MARGIN}>
+              <defs>
+                <linearGradient id="vizEscFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--chart-3))" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="hsl(var(--chart-3))" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
               <CartesianGrid vertical={false} strokeDasharray="3 6" opacity={0.4} />
               <XAxis
                 dataKey="month"
@@ -237,11 +278,13 @@ const TLScorecardVisualization: React.FC = () => {
               />
               <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
               <ChartTooltip
+                cursor={{ stroke: "hsl(var(--border))", strokeDasharray: "3 3" }}
                 content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />}
               />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="escalation_count"
+                fill="url(#vizEscFill)"
                 stroke="var(--color-escalation_count)"
                 strokeWidth={2.5}
                 dot={{
@@ -252,7 +295,7 @@ const TLScorecardVisualization: React.FC = () => {
                 }}
                 connectNulls
               />
-            </LineChart>
+            </AreaChart>
           </ChartContainer>
         </ChartSection>
       </motion.div>

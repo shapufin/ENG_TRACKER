@@ -32,6 +32,43 @@ corrections are audited updates (`updated_by`). An HBPR sees/exports only eviden
 assignments **they** own (a successor never receives a predecessor's evidence). API:
 `/api/plugins/tl_scorecard/hbpr-evidence/`.
 
+**Year-end evidence pack** — `GET .../hbpr-evidence/year-end-pack/?assignment=&year=`
+returns the packaged summary the AL TL hands to their manager at year-end review:
+cadence meetings held vs **expected** (computed from the assignment's active window
+inside the year — `max(effective_from, Jan 1)` → `min(effective_to, Dec 31, today)`;
+weekly→⌈days/7⌉, biweekly→⌈days/14⌉, monthly→months touched), coverage %, the meeting
+rows, and both EPR participations. Readable by the assigned AL TL, the owning HBPR and
+staff; the action consumes the viewset's scoped queryset **without** the `?year=` row
+filter (it collides with `reporting_year` and would drop every cadence row —
+`_scoped_queryset` exists for exactly this).
+
+**Employee EPR stage evidence** — `EPRStageRecord` (one per cycle+stage, `summary`
+required, `reference_url` for the review artifact e.g. Workday, `recorded_by`,
+`shared_with_employee`). `POST .../epr-cycles/{id}/complete_stage/` is the **only**
+writer of `*_completed_at` — it stamps the stage and creates the record atomically
+(the three timestamp fields are read-only on PATCH, same rule as
+`Absence.addressed_on`); a bare click is not evidence. Corrections go through
+`epr-stage-records/` PATCH/DELETE (owner TL/staff; no create). The employee sees
+`stage_summaries` on My Records only where `shared_with_employee`; an HBPR sees
+evidence-**existence** metadata (`has_reference`, `recorded_by_name`) on embedded
+`stage_records`, never summary text or the URL — mirrors notes redaction. The
+standalone `epr-stage-records/` endpoint serves the **full** serializer, so it is
+`hbpr_no_access` (the embed is the HBPR's only read path); `complete_stage` also
+guards the URL (length + format — `objects.create` skips `full_clean`), turns the
+unique-constraint race into 409, and re-fetches the cycle before serializing so the
+200 response carries the record it just created (the prefetch cache predates it).
+
+**Employee EPR goals** — Workday remains authoritative. `EPRGoal` stores only the
+operational titles the TL confirms; goal details, reviews and ratings stay outside
+this app. `POST .../epr-cycles/{id}/parse_goal_pdf/` is preview-only: it accepts a
+bounded `.pdf` upload, extracts titles from the Workday `Goals`/`Weight:` layout,
+and returns `goal_titles` without creating goals, stage records, timestamps or any
+file persistence. Goal Setting and Mid-year can send `goal_titles` to
+`complete_stage`; the title replacement, evidence row and stage timestamp commit
+atomically. Mid-year without `goal_titles` confirms the existing ≥5 set. Final
+Review rejects `goal_titles`, and standalone `epr-goals/` is read-only so goals can
+never bypass checkpoint locks.
+
 Cadence (`weekly`/`biweekly`/`monthly`) is per assignment. `next_due_on`: +7d / +14d /
 same day next month clamped to month end, from the last cadence meeting or the start.
 `cadence_status` has exactly one definition
@@ -82,7 +119,11 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
 
 ## Frontend
 
-- `/hbpr` workspace (`HbprWorkspacePage`, `app` layout) with URL-backed view, year,
+- `/hbpr` workspace (`HbprWorkspacePage`, `app` layout) — the HBPR-only user's
+  home: `/dashboard`, login, and `HbprRestrictedRoute` all redirect straight to
+  it (there is no HBPR dashboard — `primaryDashboard` keeps `"hbpr"` as a
+  routing token only, and the DashboardPage redirect is guarded on the route
+  being registered so a disabled plugin can't loop). With URL-backed view, year,
   leader, kind (`pips|promotions|idle|absences|meetings|reviews` — shared with the
   notification deep links), status, period and page. Desktop table, mobile cards.
   Records and evidence are paged **server-side** (one kind / one page per request):
@@ -92,8 +133,21 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   evidence viewset's DRF `page` plus `period_year` and `leader` filters. `kind` is
   required (the mixed "all types" view was dropped).
 - `/tl-scorecard` is the AL-TL authoring workspace (`components/scorecard/*`); an
-  HBPR-only viewer is redirected to `/hbpr` before any query fires. The AL TL's "HBPR
-  partnership" section reads `GET /api/plugins/tl_scorecard/partnership/`.
+  HBPR-only viewer is redirected to `/hbpr` before any query fires. The page is
+  three URL-backed tabs — `?tab=` overview (default: scorecard metrics +
+  governance actions) / records / evidence — and each tab's queries are
+  `enabled`-gated on it, so no fetch fires for a surface that isn't rendered.
+  The **Evidence** tab owns the HBPR partnership surface: the "HBPR
+  partnership" section reads `GET /api/plugins/tl_scorecard/partnership/`; its
+  **Evidence pack** button opens `EvidencePackDialog`, which fetches
+  `year-end-pack` on open. In the EPR section a stage button opens
+  `CompleteEprStageDialog` (summary required, optional reference link and
+  "Share with employee"). Goal Setting and Mid-year additionally expose a
+  Workday PDF preview plus editable goal rows; Final Review exposes neither.
+  Completing a stage can no longer be a bare click, and each completed stage
+  renders its recorded evidence inline. Stages complete strictly in order
+  (Goal Setting → Mid-year → Final Review): `complete_stage` returns 400 while an
+  earlier stage is open, and the UI disables the later buttons.
 - `/tl-scorecard?tab=records` — the TL's record table (`components/records/*`). Row
   click / Enter / the row's eye button opens `RecordDetailDialog` (`DialogContent
   size="lg"`): every serialized field of that record, full untruncated text, and a
@@ -240,6 +294,23 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   change — every field was already serialized and writable. Backend authorization,
   HBPR redaction and the `_OwnerOnlyNotesMixin` redaction are untouched.
 
+- **2026-10-04, EPR evidence parity + year-end pack:** `EPRCycle` was the only
+  record type without evidence fields — a stage completed with one bare PATCH
+  click, so the "100% timely EPR" KPI measured clicks, not reviews. Now
+  `EPRStageRecord` (unique per cycle+stage) carries the required summary,
+  `reference_url`, `recorded_by` and a per-stage `shared_with_employee` flag;
+  `complete_stage` writes timestamp+evidence atomically and `*_completed_at`
+  is read-only on PATCH (the `addressed_on` rule). My Records returns
+  `stage_summaries` for shared rows only; the HBPR embed on `EPRCycleSerializer`
+  shows existence metadata, never content. `year-end-pack` packages
+  held-vs-expected cadence + both EPR participations per assignment+year —
+  its `?year=` had to bypass the viewset's `reporting_year` row filter or it
+  dropped every `NULL`-year cadence meeting (`_scoped_queryset` split out for
+  it). `epr_metrics` gained `stages_completed`/`stages_with_evidence` so
+  pre-change bare completions stay visible. Frontend: `CompleteEprStageDialog`,
+  inline stage evidence in `EPRSection`, `EvidencePackDialog` on the
+  partnership section, shared summaries in `EprReview`.
+
 - **2026-10-04, audit of the last 21 commits (PRs #9–#25):** two defects in the records 
   search/CSV work (#24), fixed test-first. (1) `?q=` matched the private `notes` column, so an HBPR 
   could probe a TL's hidden notes by hit/miss — reproduced for idle/absence/PIP/promotion/meeting 
@@ -250,6 +321,36 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   `unfinished_q` (both UTC), `reference_url` rendering (`rel=noopener`, `URLField`). Open, not 
   changed: the assignment-archive purge deletes on a GET (documented, no audit entry); 
   `role_codes__icontains='hr'` in the Users role filters is substring-based.
+
+- **2026-10-05, scorecard tabs + KPI-coverage removal:** `/tl-scorecard` gained a
+  third, URL-backed **Evidence** tab (`?tab=evidence`) that owns
+  `HbprPartnershipSection` + `EvidenceExportSection`; every page query is now
+  `enabled`-gated on its tab (records/evidence no longer fire scorecard/EPR/
+  partnership fetches). The static `KPI_COVERAGE` catalog was removed end to
+  end — `kpi-coverage` action, `KpiCoverageEntrySerializer`, `KpiCoveragePanel`,
+  `KpiCoverageEntry`/`KpiStatus`, `getKpiCoverage`, and the "KPI Coverage"
+  workbook sheet — because it shipped developer-facing build status ("Phase 3 /
+  planned / needs HR taxonomy") inside what is supposed to be an evidence
+  artifact; the workbook is now Summary + Governance + HBPR evidence. The
+  hardcoded `Last synced: Just now` header text was removed (it was literal
+  fiction). The engagement plugin's `sidebar-nav` slot now declares
+  `section: "leadership"` — without a `section` a slot item falls into the
+  generic "Plugins" bucket, which is where the engagement link sat.
+
+- **2026-10-06, HBPR dashboard removed (plan
+  `.devin/plans/plan-hbpr-tables-buttons-dashboard-removal-2026-10-04.md` §3):**
+  the `hbpr-dashboard` injection slot + `HbprDashboardPage` widget are deleted —
+  `/hbpr` (the management workspace) IS the HBPR home. `DashboardPage` redirects
+  `isHBPROnly` → `/hbpr` guarded on the `/hbpr` route being registered (an
+  unconditional Navigate would loop through the catch-all when the plugin is
+  off); `LoginPage` sends HBPR-only logins there (after the CR checks — an
+  HBPR+CR user keeps the CR home); `HbprRestrictedRoute` and the nav's core
+  "Dashboard" item point at/hide it accordingly. `"hbpr"` survives as a
+  `DashboardType` member only as a routing token: it is never pushed into
+  `availableDashboards`, but `primaryDashboard = "hbpr"` for HBPR-only feeds
+  the redirect and keeps `useDashboardData`'s `!== "hbpr"` self-service fetch
+  guard working (their overtime/standby/leave must never be requested — the
+  API refuses via `HbprBlockedMixin`).
 
 **Assignment dates (2026-10-03).** `effective_to` is the **last day in effect**, not a
 switch. An assignment covers a day `d` when `effective_from <= d` and (`effective_to` is

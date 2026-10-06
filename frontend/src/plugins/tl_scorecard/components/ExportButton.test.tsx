@@ -18,7 +18,7 @@ describe("ExportButton", () => {
   it("exports the workbook for the viewed month", async () => {
     vi.mocked(tlScorecardService.exportWorkbook).mockResolvedValue({ data: new Blob() } as never);
     render(<ExportButton month="2026-10-01" />);
-    fireEvent.click(screen.getByRole("button", { name: "Export Report" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export Summary" }));
     await waitFor(() =>
       expect(tlScorecardService.exportWorkbook).toHaveBeenCalledWith("2026-10-01", undefined)
     );
@@ -28,8 +28,8 @@ describe("ExportButton", () => {
   it("renders an icon-only toolbar button that exports the same workbook", async () => {
     vi.mocked(tlScorecardService.exportWorkbook).mockResolvedValue({ data: new Blob() } as never);
     render(<ExportButton month="2026-10-01" iconOnly />);
-    const button = screen.getByRole("button", { name: "Export report" });
-    expect(button).toHaveAttribute("title", "Export report");
+    const button = screen.getByRole("button", { name: "Export summary" });
+    expect(button).toHaveAttribute("title", "Export summary");
     fireEvent.click(button);
     await waitFor(() =>
       expect(tlScorecardService.exportWorkbook).toHaveBeenCalledWith("2026-10-01", undefined)

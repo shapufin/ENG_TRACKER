@@ -86,13 +86,14 @@ const computeBasePermissions = (roles: ReturnType<typeof computeRoles>) => {
 const computeDashboards = (roles: ReturnType<typeof computeRoles>) => {
   const { isSuperuser, isAdmin, isHR, isHBPR, isTeamLeader } = roles;
   // The personal dashboard is overtime/standby/leave: an HBPR-only user has no
-  // overtime or standby, so it is offered only alongside another role.
+  // overtime or standby, so it is offered only alongside another role. There is
+  // no "hbpr" dashboard — an HBPR's home is the plugin-owned `/hbpr` workspace,
+  // reached via the DashboardPage redirect.
   const isHBPROnly = computeIsHBPROnly(roles);
   const availableDashboards: DashboardType[] = [];
   if (isSuperuser || isAdmin) availableDashboards.push("admin");
   if (isHR) availableDashboards.push("hr");
   if (isTeamLeader) availableDashboards.push("team_leader");
-  if (isHBPR) availableDashboards.push("hbpr");
   if (!isHBPROnly) availableDashboards.push("employee");
 
   let primaryDashboard: DashboardType = "employee";
@@ -103,6 +104,11 @@ const computeDashboards = (roles: ReturnType<typeof computeRoles>) => {
   } else if (isTeamLeader) {
     primaryDashboard = "team_leader";
   } else if (isHBPR) {
+    // "hbpr" stays a valid DashboardType as a routing token: an HBPR-only user
+    // holds no dashboard, but this value (a) feeds DashboardPage's /hbpr
+    // redirect and (b) keeps useDashboardData's `selectedDashboard !== "hbpr"`
+    // self-service fetch guard working. Deliberately outside
+    // availableDashboards — safe only because they never render /dashboard.
     primaryDashboard = "hbpr";
   }
 

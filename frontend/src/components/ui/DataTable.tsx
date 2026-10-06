@@ -10,6 +10,12 @@ import {
   type Updater,
 } from "@tanstack/react-table";
 import { appFeatures, type AppCell, type AppColumnDef, type AppRow } from "./tableTypes";
+import {
+  TABLE_BODY_CELL_CLASS,
+  TABLE_HEAD_CELL_CHECKBOX_CLASS,
+  TABLE_HEAD_CELL_CLASS,
+  TABLE_HEAD_ROW_CLASS,
+} from "./tableStyles";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 import { Input } from "./input";
@@ -227,7 +233,7 @@ export const DataTable = function DataTable<TData extends RowData>({
           {row.getVisibleCells().map((cell) => (
             <td
               key={cell.id}
-              className="px-4 py-3 align-middle"
+              className={TABLE_BODY_CELL_CLASS}
               style={
                 cell.column.columnDef.size
                   ? { width: cell.column.columnDef.size, maxWidth: cell.column.columnDef.size }
@@ -325,9 +331,9 @@ export const DataTable = function DataTable<TData extends RowData>({
         >
           <table className="w-full min-w-max text-sm">
             <thead>
-              <tr className="border-border/70 bg-muted/90 border-b backdrop-blur-sm">
+              <tr className={TABLE_HEAD_ROW_CLASS}>
                 {enableRowSelection && (
-                  <th className="w-10 px-4 py-3 text-left">
+                  <th className={TABLE_HEAD_CELL_CHECKBOX_CLASS}>
                     <Checkbox
                       checked={table.getIsAllPageRowsSelected()}
                       onCheckedChange={(value) => table.toggleAllPageRowsSelected(Boolean(value))}
@@ -340,7 +346,7 @@ export const DataTable = function DataTable<TData extends RowData>({
                   hg.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="text-muted-foreground px-4 py-3 text-left text-xs font-semibold tracking-wider whitespace-nowrap uppercase"
+                      className={TABLE_HEAD_CELL_CLASS}
                       style={
                         header.column.columnDef.size
                           ? { width: header.column.columnDef.size }
@@ -359,7 +365,7 @@ export const DataTable = function DataTable<TData extends RowData>({
                       {header.isPlaceholder ? null : header.column.getCanSort() ? (
                         <button
                           type="button"
-                          className="hover:text-foreground flex min-h-11 items-center gap-1 transition-colors"
+                          className="flex min-h-11 items-center gap-1 transition-colors hover:opacity-80"
                           onClick={header.column.getToggleSortingHandler()}
                           aria-label={`Sort by ${header.column.id}`}
                           title={`Sort by ${header.column.id}`}

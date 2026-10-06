@@ -53,9 +53,7 @@ test("pure-HR guard redirects (approvals, admin shell); team denial stays", asyn
   await expectRedirect(page, "/admin/users", "/dashboard");
 });
 
-test("hr admin-shell surfaces redirect to the dashboard (admin gate)", async ({
-  page,
-}) => {
+test("hr admin-shell surfaces redirect to the dashboard (admin gate)", async ({ page }) => {
   await loginAsRole(page, "hr");
   await expectRedirect(page, "/admin/analytics", "/dashboard");
   await expectRedirect(page, "/analytics", "/dashboard");
@@ -67,10 +65,11 @@ test("hr admin-shell surfaces redirect to the dashboard (admin gate)", async ({
 test("HBPR-only guard redirects (scorecard authoring, calendar, leave)", async ({ page }) => {
   await loginAsRole(page, "hbpr");
   // The AL-TL authoring page bounces to the HBPR's own workspace, before any of
-  // its queries fire; Calendar and Leave are HbprRestrictedRoute-wrapped.
+  // its queries fire; Calendar and Leave are HbprRestrictedRoute-wrapped and go
+  // straight to /hbpr too (that IS their home — no /dashboard for an HBPR).
   await expectRedirect(page, "/tl-scorecard", "/hbpr");
-  await expectRedirect(page, "/calendar", "/dashboard");
-  await expectRedirect(page, "/leave-management", "/dashboard");
+  await expectRedirect(page, "/calendar", "/hbpr");
+  await expectRedirect(page, "/leave-management", "/hbpr");
   // Authorized: the workspace itself must NOT redirect.
   await page.goto("/hbpr");
   await page.waitForURL((url) => url.pathname === "/hbpr", { timeout: 15_000 });

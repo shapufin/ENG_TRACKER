@@ -20,6 +20,8 @@ export interface MyEprCycle {
   mid_year_completed_at: string | null;
   final_review_completed_at: string | null;
   goals: { id: number; description: string }[];
+  /** Stage summaries the TL marked "Shared with employee". */
+  stage_summaries: { stage: string; summary: string }[];
 }
 
 export interface MyRecords {
