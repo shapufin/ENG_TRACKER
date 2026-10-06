@@ -97,10 +97,6 @@ class TlScorecardPlugin(BasePlugin):
                     "component": "MyRecordsSidebarLink",
                     "self_service": True,
                 },
-                {
-                    "slot": "hbpr-dashboard",
-                    "component": "HbprDashboardPage",
-                },
             ],
         })
         return metadata

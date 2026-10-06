@@ -30,9 +30,6 @@ vi.mock("@/hooks/useDashboardData", () => ({
 vi.mock("@/context/AuthContext", () => ({ useAuth: () => ({ user: { id: 1 } }) }));
 vi.mock("@/context/PermissionContext", () => ({ usePermissions: vi.fn() }));
 vi.mock("@/context/PluginContext", () => ({ usePlugins: vi.fn() }));
-vi.mock("@/components/plugins/PluginSlot", () => ({
-  PluginSlot: ({ slot }: { slot: string }) => <div data-testid={`slot-${slot}`} />,
-}));
 vi.mock("./hooks/useDashboardSelection", () => ({ useDashboardSelection: vi.fn() }));
 vi.mock("./hooks/usePersonalDashboardItems", () => ({
   usePersonalDashboardItems: () => ({
@@ -53,14 +50,15 @@ vi.mock("./components/DashboardEmptyState", () => ({
 }));
 vi.mock("./TeamLeaderDashboard", () => ({ default: () => <div data-testid="tl" /> }));
 
-// DashboardPage renders <Navigate> for the admin dashboard type, so every
-// render needs a router; /admin is stubbed to observe the redirect target.
+// DashboardPage renders <Navigate> for the admin dashboard type and the
+// HBPR-only home, so every render needs a router; the targets are stubbed.
 const renderPage = () =>
   render(
     <MemoryRouter initialEntries={["/dashboard"]}>
       <Routes>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/admin" element={<div data-testid="admin-dashboard" />} />
+        <Route path="/hbpr" element={<div data-testid="hbpr-workspace" />} />
       </Routes>
     </MemoryRouter>
   );
@@ -84,7 +82,10 @@ describe("DashboardPage", () => {
 
   beforeEach(() => {
     vi.mocked(usePermissions).mockReturnValue(defaultPermissions as any);
-    vi.mocked(usePlugins).mockReturnValue({ getInjectedComponents: () => [] } as any);
+    vi.mocked(usePlugins).mockReturnValue({
+      activePlugins: [],
+      getInjectedComponents: () => [],
+    } as any);
     vi.mocked(useDashboardSelection).mockReturnValue({
       selectedDashboard: "employee",
       handleDashboardChange: vi.fn(),
@@ -110,34 +111,48 @@ describe("DashboardPage", () => {
     expect(screen.getByTestId("hr")).toBeInTheDocument();
   });
 
-  describe("HBPR dashboard", () => {
-    const asHbpr = (injected: unknown[]) => {
+  describe("HBPR home", () => {
+    // An HBPR-only user holds no dashboard — "hbpr" survives only as the
+    // primaryDashboard routing token. Their home is the plugin-owned /hbpr
+    // workspace, so the dashboard redirects them there.
+    const asHbprOnly = (plugins: unknown[]) => {
       vi.mocked(usePermissions).mockReturnValue({
         ...defaultPermissions,
         isAdmin: false,
         isTeamLeader: false,
         isHR: false,
         isHBPR: true,
-        availableDashboards: ["hbpr"],
+        isHBPROnly: true,
+        availableDashboards: [],
         primaryDashboard: "hbpr",
       } as any);
-      vi.mocked(usePlugins).mockReturnValue({ getInjectedComponents: () => injected } as any);
+      vi.mocked(usePlugins).mockReturnValue({
+        activePlugins: plugins,
+        getInjectedComponents: () => [],
+      } as any);
       vi.mocked(useDashboardSelection).mockReturnValue({
         selectedDashboard: "hbpr",
         handleDashboardChange: vi.fn(),
       } as any);
     };
 
-    it("renders the plugin-injected HBPR dashboard", () => {
-      asHbpr([{ pluginName: "tl_scorecard", componentName: "HbprDashboardPage" }]);
+    it("redirects an HBPR-only user to the /hbpr workspace", () => {
+      asHbprOnly([
+        {
+          name: "tl_scorecard",
+          routes: [{ path: "/hbpr", component: "HbprWorkspacePage", layout: "app" }],
+        },
+      ]);
       renderPage();
-      expect(screen.getByTestId("slot-hbpr-dashboard")).toBeInTheDocument();
+      expect(screen.getByTestId("hbpr-workspace")).toBeInTheDocument();
     });
 
     it("falls back to the empty state when the scorecard plugin is off", () => {
-      asHbpr([]);
+      // /hbpr isn't registered without the plugin — a redirect would loop
+      // through the catch-all back to /dashboard.
+      asHbprOnly([]);
       renderPage();
-      expect(screen.queryByTestId("slot-hbpr-dashboard")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("hbpr-workspace")).not.toBeInTheDocument();
       expect(screen.getByTestId("empty")).toBeInTheDocument();
     });
   });

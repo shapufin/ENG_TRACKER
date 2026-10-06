@@ -17,16 +17,16 @@ const renderAt = (path = "/calendar") =>
         <Route element={<HbprRestrictedRoute />}>
           <Route path="/calendar" element={<div>Calendar page</div>} />
         </Route>
-        <Route path="/dashboard" element={<div>Dashboard page</div>} />
+        <Route path="/hbpr" element={<div>HBPR workspace</div>} />
       </Routes>
     </MemoryRouter>
   );
 
 describe("HbprRestrictedRoute", () => {
-  it("redirects an HBPR-only user to the dashboard", () => {
+  it("redirects an HBPR-only user to their /hbpr workspace", () => {
     perms.value = { isHBPROnly: true };
     renderAt();
-    expect(screen.getByText("Dashboard page")).toBeInTheDocument();
+    expect(screen.getByText("HBPR workspace")).toBeInTheDocument();
     expect(screen.queryByText("Calendar page")).not.toBeInTheDocument();
   });
 

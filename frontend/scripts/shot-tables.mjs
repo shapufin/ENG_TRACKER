@@ -22,7 +22,8 @@ const TARGETS = [
   { user: "e2e_hbpr", url: "/hbpr", slug: "hbpr-overview" },
   { user: "e2e_tl_b", url: "/tl-scorecard?tab=records", slug: "tl-records" },
   { user: "e2e_admin", url: "/admin/hbpr-assignments", slug: "admin-hbpr" },
-  { user: "e2e_hbpr", url: "/dashboard", slug: "hbpr-dashboard" },
+  // The HBPR home is the /hbpr workspace — /dashboard just redirects there.
+  { user: "e2e_hbpr", url: "/dashboard", slug: "hbpr-home-redirect" },
 ];
 const VIEWPORTS = {
   v320: { width: 320, height: 700 },
@@ -63,7 +64,9 @@ print('===TOKENS_JSON_END===')
   writeFileSync(tmpFile, shellScript, "utf-8");
   try {
     const output = execSync(`python "${tmpFile}"`, {
-      cwd: REPO_ROOT, encoding: "utf-8", timeout: 60_000,
+      cwd: REPO_ROOT,
+      encoding: "utf-8",
+      timeout: 60_000,
       env: { ...process.env, PYTHONPATH: REPO_ROOT },
     });
     const s = output.indexOf("===TOKENS_JSON_START===");
@@ -79,25 +82,41 @@ const viewports = onlyVp ? { [onlyVp]: VIEWPORTS[onlyVp] } : VIEWPORTS;
 const themes = onlyTheme ? [onlyTheme] : THEMES;
 const tokens = generateTokens([...new Set(targets.map((t) => t.user))]);
 const browser = await chromium.launch();
-let ok = 0, fail = 0;
+let ok = 0,
+  fail = 0;
 for (const theme of themes) {
   for (const [vpName, vp] of Object.entries(viewports)) {
     for (const t of targets) {
       const tok = tokens[t.user];
-      if (!tok) { console.log(`SKIP ${t.slug}/${vpName}/${theme}: no token`); fail++; continue; }
+      if (!tok) {
+        console.log(`SKIP ${t.slug}/${vpName}/${theme}: no token`);
+        fail++;
+        continue;
+      }
       const ctx = await browser.newContext({ viewport: vp, colorScheme: theme });
       await ctx.addCookies([
-        { name: "refresh_token", value: tok.refresh, domain: "127.0.0.1", path: "/api/auth/token/", httpOnly: true, sameSite: "Lax" },
+        {
+          name: "refresh_token",
+          value: tok.refresh,
+          domain: "127.0.0.1",
+          path: "/api/auth/token/",
+          httpOnly: true,
+          sameSite: "Lax",
+        },
       ]);
       await ctx.addInitScript(
         ({ userObj, themeName }) => {
           localStorage.setItem("user", JSON.stringify(userObj));
           localStorage.setItem("theme", themeName);
         },
-        { userObj: tok.user, themeName: theme },
+        { userObj: tok.user, themeName: theme }
       );
       await ctx.route("**/api/auth/token/refresh/", (route) =>
-        route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ access: tok.access }) }),
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ access: tok.access }),
+        })
       );
       const page = await ctx.newPage();
       try {
@@ -106,7 +125,10 @@ for (const theme of themes) {
         const finalPath = new URL(page.url()).pathname + new URL(page.url()).search;
         const dir = path.join(OUT_ROOT, tag);
         mkdirSync(dir, { recursive: true });
-        await page.screenshot({ path: path.join(dir, `${t.slug}-${vpName}-${theme}.png`), fullPage: true });
+        await page.screenshot({
+          path: path.join(dir, `${t.slug}-${vpName}-${theme}.png`),
+          fullPage: true,
+        });
         console.log(`+ ${t.slug}/${vpName}/${theme} final=${finalPath}`);
         ok++;
       } catch (e) {

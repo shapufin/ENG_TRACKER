@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
+import { computePermissions } from "@/context/computePermissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,11 @@ export const LoginPage: React.FC = () => {
         // is the Control Room dashboard (standby coverage for their scoped
         // teams). They have no overtime/leave/holiday access.
         navigate("/control-room/dashboard");
+      } else if (computePermissions(data.user).isHBPROnly) {
+        // An HBPR-only user has no dashboard — their home is the HBPR
+        // workspace. Deliberately after the CR checks: an HBPR who also
+        // holds ControlRoomAccess still lands on the CR home.
+        navigate("/hbpr");
       } else {
         navigate("/dashboard");
       }
@@ -51,7 +57,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
+    <div className="bg-background flex min-h-screen items-center justify-center px-4 py-8">
       <motion.div
         initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -60,15 +66,15 @@ export const LoginPage: React.FC = () => {
       >
         <GlassCard delay={0} className="p-8">
           <div className="mb-6 text-center">
-            <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <LogIn className="h-6 w-6 text-primary" />
+            <div className="bg-primary/10 mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full">
+              <LogIn className="text-primary h-6 w-6" />
             </div>
             <h1 className="text-2xl font-bold">Time Tracker</h1>
-            <p className="mt-1 text-muted-foreground">Sign in to your account</p>
+            <p className="text-muted-foreground mt-1">Sign in to your account</p>
           </div>
 
           {error && (
-            <div className="mb-4 rounded border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="border-destructive/20 bg-destructive/10 text-destructive mb-4 rounded border p-3 text-sm">
               {error}
             </div>
           )}
