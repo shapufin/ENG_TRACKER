@@ -112,6 +112,16 @@ describe("RecordDetailDialog — meetings", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("marks section captions up as level-3 headings", () => {
+    renderDialog("meetings", MEETING);
+    const dialog = screen.getByRole("dialog");
+    for (const caption of ["With", "Notes", "Shared summary", "Attendees"]) {
+      expect(within(dialog).getByRole("heading", { level: 3, name: caption })).toBeInTheDocument();
+    }
+    // Captions are headings, not orphaned <label> elements.
+    expect(within(dialog).queryByText("Shared summary")?.closest("label")).toBeNull();
+  });
+
   it("renders explicit empty text instead of blank space", () => {
     renderDialog("meetings", { ...MEETING, notes: "", shared_summary: "", attendees: [] });
     const dialog = screen.getByRole("dialog");

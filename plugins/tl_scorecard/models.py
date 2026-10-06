@@ -332,13 +332,14 @@ class EPRGoal(BaseModel):
         ordering = ['id']
 
 
-class EPRStageRecord(BaseModel):
+class EPRStageRecord(TrackedFieldsMixin, BaseModel):
     """Evidence for one completed EPR stage — created only by
     ``EPRCycleViewSet.complete_stage``, one per (cycle, stage). Carries what
     the bare ``*_completed_at`` timestamp could not: what was agreed
     (``summary``), where the review artifact lives (``reference_url``, e.g.
     the Workday doc), who recorded it, and whether the summary is shared
     with the employee on My Records."""
+    tracked_fields = ('shared_with_employee',)
     STAGE_CHOICES = [
         ('goal_setting', 'Goal setting'),
         ('mid_year', 'Mid-year'),

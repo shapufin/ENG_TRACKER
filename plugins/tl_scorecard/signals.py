@@ -11,6 +11,7 @@ from apps.users.models.hbpr import HbprAlbanianTlAssignment
 from .models import (
     Absence,
     EPRCycle,
+    EPRStageRecord,
     HbprGovernanceEvidence,
     IdleFlag,
     Meeting,
@@ -123,6 +124,29 @@ def _on_epr_saved(sender, instance, created, **kwargs):
             _notify(types.EprStageCompleted, instance=instance, stage=stage)
 
 
+def _on_epr_stage_record_saved(sender, instance, created, **kwargs):
+    """Tell the employee when a stage summary reaches them — on creation
+    with the share flag set, or on a correction that flips it on."""
+    from . import notification_types as types
+    if getattr(instance, '_skip_notifications', False):
+        return
+    if not instance.shared_with_employee:
+        return
+    if not (created or _changed(instance, 'shared_with_employee')):
+        return
+    pk = instance.pk
+
+    def _dispatch():
+        # The captured instance may be stale: read the row's final state so a
+        # share that was undone (or deleted) inside the same transaction
+        # notifies nobody.
+        record = EPRStageRecord.objects.select_related('cycle').filter(pk=pk).first()
+        if record is not None and record.shared_with_employee:
+            types.EprStageShared().dispatch({'instance': record})
+
+    transaction.on_commit(_dispatch)
+
+
 def _on_assignment_saved(sender, instance, created, **kwargs):
     from . import notification_types as types
     if getattr(instance, '_skip_notifications', False):
@@ -160,6 +184,7 @@ def _on_review_delivered(sender, instance, created, **kwargs):
 # (signal, sender, handler, uid suffix) — the single list connect/disconnect share.
 _RECEIVERS = (
     (post_save, EPRCycle, _on_epr_saved, 'epr'),
+    (post_save, EPRStageRecord, _on_epr_stage_record_saved, 'epr_stage_record'),
     (post_save, HbprAlbanianTlAssignment, _on_assignment_saved, 'assignment'),
     (post_save, Meeting, _on_meeting_saved, 'meeting'),
     (post_save, PIPRecord, _on_pip_saved, 'pip'),

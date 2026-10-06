@@ -1,6 +1,6 @@
 import React, { useState } from "react";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import { FormDialog } from "@/components/ui/FormDialog";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 interface NoteActionDialogProps {
@@ -53,8 +53,17 @@ export const NoteActionDialog: React.FC<NoteActionDialogProps> = ({
       submitDisabled={required && !note.trim()}
       size="sm"
     >
-      <Label htmlFor="record-action-note">{fieldLabel}</Label>
-      <Textarea id="record-action-note" value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
+      <div className="space-y-2">
+        <FieldLabel htmlFor="record-action-note" required={required}>
+          {fieldLabel}
+        </FieldLabel>
+        <Textarea
+          id="record-action-note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={3}
+        />
+      </div>
     </FormDialog>
   );
 };

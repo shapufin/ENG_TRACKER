@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import { FormDialog } from "@/components/ui/FormDialog";
+import { InfoCallout } from "@/components/ui/InfoCallout";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { userService } from "@/services/userService";
-import type { UserProfile } from "@/types";
 import type { PIPRecord } from "../types/tlScorecard";
+import { MemberSelectField } from "./MemberSelectField";
+import { useTeamMemberOptions } from "./useTeamMemberOptions";
 
 interface OpenPIPDialogProps {
   open: boolean;
@@ -24,20 +25,21 @@ interface OpenPIPDialogProps {
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({ open, onOpenChange, onCreate, mode = "create", initial }) => {
+export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({
+  open,
+  onOpenChange,
+  onCreate,
+  mode = "create",
+  initial,
+}) => {
   const isEdit = mode === "edit";
   const [employeeId, setEmployeeId] = useState<number | null>(initial?.employee ?? null);
-  const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
+  const { options: memberOptions, loadError } = useTeamMemberOptions(open, !isEdit);
   const [startDate, setStartDate] = useState(initial?.start_date ?? todayIso());
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [sharedNotes, setSharedNotes] = useState(initial?.shared_notes ?? "");
   const [referenceUrl, setReferenceUrl] = useState(initial?.reference_url ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open || isEdit) return;
-    userService.getMyTeamMembers().then(setTeamMembers).catch(() => setTeamMembers([]));
-  }, [open, isEdit]);
 
   const canSubmit = employeeId !== null && startDate && notes.trim().length > 0;
 
@@ -73,7 +75,9 @@ export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({ open, onOpenChange
       onOpenChange={onOpenChange}
       title={isEdit ? "Edit PIP" : "Open a PIP"}
       description={
-        isEdit ? undefined : "Requires prior HR approval before it counts as active — see the approval step below once opened."
+        isEdit
+          ? undefined
+          : "Requires prior HR approval before it counts as active — see the approval step below once opened."
       }
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
@@ -83,41 +87,51 @@ export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({ open, onOpenChange
     >
       <div className="space-y-4">
         {isEdit ? (
-          <p className="text-sm">
-            <span className="text-muted-foreground">Team member: </span>
-            {initial?.employee_name}
-          </p>
+          <InfoCallout
+            tone="neutral"
+            label={
+              <span className="text-muted-foreground">
+                Team member:{" "}
+                <span className="text-foreground font-medium">{initial?.employee_name}</span>
+              </span>
+            }
+          />
         ) : (
-          <div>
-            <Label htmlFor="pip-employee">Team member</Label>
-            <select
-              id="pip-employee"
-              className="h-9 w-full rounded-xl border border-border bg-card px-2 text-sm text-foreground"
-              value={employeeId ?? ""}
-              onChange={(e) => setEmployeeId(e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">Select a team member...</option>
-              {teamMembers.map((profile) => (
-                <option key={profile.user.id} value={profile.user.id}>
-                  {profile.user.full_name || profile.user.username}
-                </option>
-              ))}
-            </select>
-          </div>
+          <MemberSelectField
+            id="pip-employee"
+            value={employeeId}
+            options={memberOptions}
+            onChange={setEmployeeId}
+            loadError={loadError}
+          />
         )}
 
-        <div>
-          <Label htmlFor="pip-start-date">Start date</Label>
-          <Input id="pip-start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        <div className="space-y-2">
+          <FieldLabel htmlFor="pip-start-date" required>
+            Start date
+          </FieldLabel>
+          <Input
+            id="pip-start-date"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
         </div>
 
-        <div>
-          <Label htmlFor="pip-notes">Evidence / rationale</Label>
-          <Textarea id="pip-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+        <div className="space-y-2">
+          <FieldLabel htmlFor="pip-notes" required>
+            Evidence / rationale
+          </FieldLabel>
+          <Textarea
+            id="pip-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+          />
         </div>
 
-        <div>
-          <Label htmlFor="pip-shared-notes">Shared with reviewers (optional)</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="pip-shared-notes">Shared with reviewers</FieldLabel>
           <Textarea
             id="pip-shared-notes"
             value={sharedNotes}
@@ -127,8 +141,8 @@ export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({ open, onOpenChange
           />
         </div>
 
-        <div>
-          <Label htmlFor="pip-reference">Reference link (optional)</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="pip-reference">Reference link</FieldLabel>
           <Input
             id="pip-reference"
             type="url"

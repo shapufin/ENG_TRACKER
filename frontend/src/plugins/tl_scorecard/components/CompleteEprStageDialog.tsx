@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 interface CompleteEprStageValues {
@@ -69,11 +69,12 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
       size="md"
     >
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="epr-stage-summary">Summary</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="epr-stage-summary" required>
+            Summary
+          </FieldLabel>
           <Textarea
             id="epr-stage-summary"
-            className="mt-1.5"
             rows={4}
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
@@ -81,12 +82,11 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
           />
         </div>
 
-        <div>
-          <Label htmlFor="epr-stage-reference">Reference link</Label>
+        <div className="space-y-2">
+          <FieldLabel htmlFor="epr-stage-reference">Reference link</FieldLabel>
           <Input
             id="epr-stage-reference"
             type="url"
-            className="mt-1.5"
             value={referenceUrl}
             onChange={(e) => setReferenceUrl(e.target.value)}
             placeholder="https://… (e.g. the Workday review)"

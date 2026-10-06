@@ -49,7 +49,7 @@ const VisibilityChip: React.FC<{ item: DetailItem }> = ({ item }) => {
 const DetailBlock: React.FC<{ item: DetailItem }> = ({ item }) => (
   <section>
     <div className="flex flex-wrap items-center gap-2">
-      <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+      <h3 className="text-micro text-muted-foreground flex items-center gap-1.5 font-mono font-semibold tracking-wider uppercase">
         {item.label}
       </h3>
       <VisibilityChip item={item} />

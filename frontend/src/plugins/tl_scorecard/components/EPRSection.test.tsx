@@ -73,7 +73,7 @@ describe("EPRSection", () => {
 
     // A stage is not completed without evidence: the click only opens the dialog.
     expect(onCompleteStage).not.toHaveBeenCalled();
-    fireEvent.change(await screen.findByLabelText("Summary"), {
+    fireEvent.change(await screen.findByLabelText(/^Summary/), {
       target: { value: "Goals agreed in the kickoff." },
     });
     fireEvent.click(screen.getByRole("button", { name: "Complete stage" }));
