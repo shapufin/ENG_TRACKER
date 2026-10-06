@@ -274,8 +274,22 @@ class EngagementSurveyResponseAPITests(TestCase):
         )
         resp = self._team_average(self.leader, period='2026-09')
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.data['average_score'], 8.0)
+        # One respondent: the "average" would be that person's score.
+        self.assertIsNone(resp.data['average_score'])
         self.assertEqual(resp.data['response_count'], 1)
         self.assertNotIn('responses', resp.data)
+        for i in range(2):
+            extra = _make_user(f'extra_resp_{i}')
+            extra.profile.italian_tl = self.leader
+            extra.profile.save()
+            EngagementSurveyResponse.objects.create(respondent=extra, period='2026-09', score=10 - 2 * i)
+        # A request gets a fresh user; the team lookup is memoised per user object.
+        resp = self._team_average(type(self.leader).objects.get(pk=self.leader.pk), period='2026-09')
+        self.assertEqual(resp.data['average_score'], 8.7)
+        self.assertEqual(resp.data['response_count'], 3)
         # Outsider's score never leaks into this leader's aggregate.
-        self.assertNotEqual(resp.data['average_score'], outsider_flag.score)
+        self.assertEqual(outsider_flag.score, 2)
+
+    def test_survey_period_must_be_year_month(self):
+        resp = self._create(self.employee, {'period': 'sept-26', 'score': 9})
+        self.assertEqual(resp.status_code, 400)

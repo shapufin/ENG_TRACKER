@@ -71,7 +71,7 @@ const TLScorecardAuthoring: React.FC = () => {
   const invalidateScorecard = () =>
     queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "scorecard"] });
   const invalidatePips = () =>
-    queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "pip-records"] });
+    queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "records", "pips"] });
   const invalidateEprCycles = () =>
     queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "epr-cycles"] });
   const invalidatePartnership = () => {
@@ -175,7 +175,7 @@ const TLScorecardAuthoring: React.FC = () => {
     enabled: onOverview,
   });
   const pipRecordsQuery = useQuery({
-    queryKey: ["tl-scorecard", "pip-records"],
+    queryKey: ["tl-scorecard", "records", "pips"],
     queryFn: () => tlScorecardService.listPIPRecords(),
     enabled: onOverview,
   });

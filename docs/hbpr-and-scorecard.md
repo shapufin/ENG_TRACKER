@@ -365,6 +365,20 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   routes and `?view=evidence` deep links are unchanged on purpose. Pinned by
   `test_al_tl_not_scoreable.py`.
 
+- **2026-10-06, audit follow-ups:** the pulse-survey `team-average` withholds the average
+  (`average_score: null`, count still returned) below `MIN_SURVEY_RESPONSES = 3` — with one
+  respondent the "aggregate" is that person's score; `period` must be `YYYY-MM`. The trend
+  computes the month-independent metrics (`idle`, `seniority`, `absences`, `pip`,
+  `escalation_count`) once via `_current_state_metrics` instead of per month. **Accepted,
+  not changed:** (1) the TL Records tab loads every kind client-side because the side-tab
+  counts and the completion summary need all of them — the real fix is a server-side
+  counts endpoint plus per-kind paging (`hbpr/records/` is the model); revisit when a TL
+  holds thousands of rows. (2) `?tab=evidence` / `?view=evidence` URL values stay: they are
+  baked into stored notification links, and the visible wording is "Partnership log".
+  (3) HBPR scope (~3 queries per assigned TL per request) is correct and per-request
+  memoised; batching it touches the security boundary for a gain that only shows with
+  dozens of assignments.
+
 **Assignment dates (2026-10-03).** `effective_to` is the **last day in effect**, not a
 switch. An assignment covers a day `d` when `effective_from <= d` and (`effective_to` is
 null or `>= d`) — one definition, `in_effect_q()` / `unfinished_q()` in
