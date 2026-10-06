@@ -94,12 +94,12 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => setPackOpen(true)}>
               <FileText className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-              Evidence pack
+              Year-end summary
             </Button>
             {canAuthor && (
               <Button variant="outline" size="sm" onClick={openCreate}>
                 <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                Record evidence
+                Add log entry
               </Button>
             )}
           </div>
@@ -119,7 +119,7 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
           <EmptyState
             icon={Handshake}
             title="No HR business partner assigned yet"
-            description="An administrator pairs each Albanian team leader with an HR business partner. Once you are paired, your cadence and EPR evidence live here."
+            description="An administrator pairs each Albanian team leader with an HR business partner. Once you are paired, your cadence meetings and EPR participation are logged here."
             className="py-10"
           />
         </GlassCard>
@@ -158,7 +158,7 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Evidence recorded</dt>
+                <dt className="text-muted-foreground">Entries logged</dt>
                 <dd className="mt-0.5 font-medium tabular-nums">{assignment.evidence_count}</dd>
               </div>
             </dl>
@@ -177,10 +177,10 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
             <InfoCallout
               tone="info"
               icon={<History className="h-4 w-4" aria-hidden="true" />}
-              label={`No governance evidence recorded in ${year}`}
+              label={`Nothing logged for ${year}`}
               value={
                 canAuthor
-                  ? "Record your cadence meetings and EPR participation to build the evidence trail."
+                  ? "Record your cadence meetings and EPR participation to start the log."
                   : undefined
               }
             />

@@ -102,7 +102,7 @@ export const useHbprAssignmentColumns = (
       {
         id: "evidence_count",
         accessorKey: "evidence_count",
-        header: "Evidence",
+        header: "Log entries",
         size: 90,
         cell: ({ row }) =>
           row.original.evidence_count > 0 ? (

@@ -44,4 +44,10 @@ describe("MyRecordsSidebarLink", () => {
     renderLink();
     expect(screen.queryByText("My records")).not.toBeInTheDocument();
   });
+
+  it("is hidden for an Albanian TL, who is never the subject of these records", () => {
+    perms.value = { isHBPROnly: false, isAlbanianTL: true };
+    renderLink();
+    expect(screen.queryByText("My records")).not.toBeInTheDocument();
+  });
 });

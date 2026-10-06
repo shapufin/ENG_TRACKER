@@ -130,12 +130,12 @@ describe("HbprPartnershipSection", () => {
   it("tells an unpaired team leader there is no HBPR yet", () => {
     renderSection({ partnership: { reporting_year: 2026, assignment: null } });
     expect(screen.getByText("No HR business partner assigned yet")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /record evidence/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add log entry/i })).not.toBeInTheDocument();
   });
 
   it("is read-only for a viewer who cannot author", () => {
     renderSection({ canAuthor: false, evidence: [EVIDENCE] });
-    expect(screen.queryByRole("button", { name: /record evidence/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add log entry/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
     expect(screen.getByText("Weekly governance sync.")).toBeInTheDocument();
   });
@@ -148,10 +148,10 @@ describe("HbprPartnershipSection", () => {
 
   it("records a cadence meeting for the assignment", async () => {
     const { onCreate } = renderSection();
-    fireEvent.click(screen.getByRole("button", { name: /record evidence/i }));
+    fireEvent.click(screen.getByRole("button", { name: /add log entry/i }));
 
     fireEvent.change(screen.getByLabelText("Summary"), { target: { value: "Discussed Q2 goals" } });
-    fireEvent.click(screen.getByRole("button", { name: "Record evidence" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
 
     await waitFor(() =>
       expect(onCreate).toHaveBeenCalledWith(
@@ -167,16 +167,16 @@ describe("HbprPartnershipSection", () => {
 
   it("requires a reporting year for EPR participation", async () => {
     const { onCreate } = renderSection();
-    fireEvent.click(screen.getByRole("button", { name: /record evidence/i }));
+    fireEvent.click(screen.getByRole("button", { name: /add log entry/i }));
 
     fireEvent.click(screen.getByRole("option", { name: "EPR mid-year participation" }));
     const yearInput = await screen.findByLabelText(/^Reporting year/);
     fireEvent.change(yearInput, { target: { value: "1999" } });
     expect(screen.getByRole("alert")).toHaveTextContent(/between 2000 and 2100/i);
-    expect(screen.getByRole("button", { name: "Record evidence" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save entry" })).toBeDisabled();
 
     fireEvent.change(yearInput, { target: { value: "2026" } });
-    fireEvent.click(screen.getByRole("button", { name: "Record evidence" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
     await waitFor(() =>
       expect(onCreate).toHaveBeenCalledWith(
         expect.objectContaining({ kind: "epr_mid_year", reporting_year: 2026 })
@@ -203,10 +203,10 @@ describe("HbprPartnershipSection", () => {
 
   it("opens the year-end evidence pack for the assignment", async () => {
     const { loadEvidencePack } = renderSection();
-    fireEvent.click(screen.getByRole("button", { name: /evidence pack/i }));
+    fireEvent.click(screen.getByRole("button", { name: /year-end summary/i }));
 
     await waitFor(() => expect(loadEvidencePack).toHaveBeenCalledWith(11, 2026));
-    expect(await screen.findByText("2026 evidence pack")).toBeInTheDocument();
+    expect(await screen.findByText("2026 year-end summary")).toBeInTheDocument();
     expect(screen.getByText("31/40")).toBeInTheDocument();
   });
 });

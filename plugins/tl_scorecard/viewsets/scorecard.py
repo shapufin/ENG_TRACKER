@@ -13,6 +13,7 @@ from core.mixins.permissions import PluginPermissionMixin
 
 from ..excel_export import build_workbook_bytes
 
+from ..scope import scoreable_member_ids
 from ..models import (
     HbprGovernanceEvidence,
 )
@@ -160,7 +161,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         month = month or date.today()
         scorecard = build_scorecard(leader, month)
         self._mask_one_on_one(request, leader, scorecard)
-        team_member_ids = leader.profile.get_team_member_ids()
+        team_member_ids = scoreable_member_ids(leader)
         subject_ids = None
         if not is_staff_user(request.user) and leader.id != request.user.id:
             scope = get_hbpr_scope(request.user)

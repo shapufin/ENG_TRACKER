@@ -28,7 +28,7 @@ describe("AssignedLeaderCard", () => {
       </MemoryRouter>
     );
 
-    const action = screen.getByRole("link", { name: /evidence.*alba leader/i });
+    const action = screen.getByRole("link", { name: /partnership log.*alba leader/i });
     expect(action).toHaveAttribute("href", "/hbpr?view=evidence&year=2026&leader=8");
   });
 });

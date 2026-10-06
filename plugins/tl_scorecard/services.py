@@ -17,6 +17,7 @@ from django.utils import timezone
 from apps.leave_management.models import LeaveRequest, count_business_days
 from apps.overtime.models.core import OvertimeLog
 
+from .scope import scoreable_member_ids
 from .models import (
     Absence,
     EPRCycle,
@@ -358,7 +359,7 @@ def escalation_candidates(leader) -> list[dict]:
     escalation if left unhandled, from data already tracked elsewhere.
     Directly answers "0 escalations from administrative delays" without a
     single new manual entry."""
-    team_member_ids = leader.profile.get_team_member_ids()
+    team_member_ids = scoreable_member_ids(leader)
     today = date.today()
     candidates = []
 
@@ -452,7 +453,7 @@ def governance_records(leader, team_member_ids, year: int, subject_ids=None) -> 
 
 def build_scorecard(user, month: date) -> dict:
     """Full scorecard for one TL (`user`) for `month`."""
-    team_member_ids = user.profile.get_team_member_ids()
+    team_member_ids = scoreable_member_ids(user)
     month = reporting_period(month)
     return {
         'month': month.isoformat(),

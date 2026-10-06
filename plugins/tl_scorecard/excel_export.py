@@ -143,7 +143,7 @@ def _build_hbpr_evidence_sheet(wb, fmt, evidence):
     AL TL authored for the HBPR relationship. Employee one-on-one meetings are
     never part of this data set.
     """
-    ws = wb.add_worksheet("HBPR evidence")
+    ws = wb.add_worksheet("HBPR partnership log")
     ws.hide_gridlines(2)
     ws.set_column("A:A", 22)
     ws.set_column("B:B", 14)
@@ -156,13 +156,13 @@ def _build_hbpr_evidence_sheet(wb, fmt, evidence):
         "Kind", "Occurred on", "Year", "Shared summary",
         "Action items", "Reference",
     ]
-    ws.merge_range(0, 0, 0, len(headers) - 1, "HBPR ↔ Albanian TL evidence", fmt.header)
+    ws.merge_range(0, 0, 0, len(headers) - 1, "HBPR ↔ Albanian TL partnership log", fmt.header)
     for col, label in enumerate(headers):
         ws.write(1, col, label, fmt.label)
 
     row = 2
     if not evidence:
-        ws.write(row, 0, "No evidence recorded yet", fmt.empty)
+        ws.write(row, 0, "No entries logged yet", fmt.empty)
         return
     for item in evidence:
         ws.write(row, 0, item["kind_display"], fmt.cell_center)

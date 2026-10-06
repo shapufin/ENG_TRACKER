@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from core.mixins.permissions import is_staff_user
 
+from .scope import scoreable_member_ids
 from .models import (
     Absence,
     EngagementSurveyResponse,
@@ -410,7 +411,7 @@ class EPRCycleSerializer(serializers.ModelSerializer):
             # instance (one request), not per cycle row.
             member_ids = getattr(self, '_member_ids_cache', None)
             if member_ids is None:
-                member_ids = self._member_ids_cache = user.profile.get_team_member_ids()
+                member_ids = self._member_ids_cache = scoreable_member_ids(user)
             if obj.user_id not in member_ids:
                 return [
                     {

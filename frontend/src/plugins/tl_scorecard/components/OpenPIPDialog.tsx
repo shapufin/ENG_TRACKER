@@ -136,7 +136,7 @@ export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({
             id="pip-shared-notes"
             value={sharedNotes}
             onChange={(e) => setSharedNotes(e.target.value)}
-            placeholder="What HR / your HBPR may read — the evidence above stays private."
+            placeholder="What HR / your HBPR may read — your notes above stay private."
             rows={2}
           />
         </div>

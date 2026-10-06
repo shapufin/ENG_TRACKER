@@ -202,8 +202,8 @@ export const HbprAssignmentsPage: React.FC = () => {
           </TabsContent>
           <TabsContent value="archive" className="mt-4">
             <p className="text-muted-foreground mb-3 px-1 text-sm">
-              Ended relationships are retained for their governance evidence. Entries older than 6
-              months are removed automatically unless evidence references them.
+              Ended relationships are retained for their partnership log. Entries older than 6
+              months are removed automatically unless log entries reference them.
             </p>
             {table(archivedRows, "No ended assignments.")}
           </TabsContent>
@@ -228,7 +228,7 @@ export const HbprAssignmentsPage: React.FC = () => {
         title="End assignment"
         description={`End the assignment between ${ending?.hbpr_detail.name ?? ""} and ${
           ending?.albanian_tl_detail.name ?? ""
-        }? The end date is the last day of access; the history is kept for its governance evidence.`}
+        }? The end date is the last day of access; the history is kept for its partnership log.`}
         onConfirm={() => ending && endMutation.mutate({ id: ending.id, date: endDate })}
       >
         <FormField

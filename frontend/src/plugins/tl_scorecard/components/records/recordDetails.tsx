@@ -223,7 +223,7 @@ const pipItems = (row: RecordRow): DetailItem[] => {
   const p = row as PIPRecord;
   return [
     {
-      label: "Your evidence notes",
+      label: "Your private notes",
       text: p.notes,
       emptyText: "No notes recorded.",
       visibility: "private",
