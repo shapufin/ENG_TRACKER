@@ -72,6 +72,9 @@ class MeetingViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMi
             raise ValidationError({'counterparty': 'Required for one-on-one and TL-sync meetings.'})
         if meeting_type == 'team_meeting' and team is None:
             raise ValidationError({'team': 'Required for team meetings.'})
+        if (meeting_type == 'one_on_one' and not is_staff_user(self.request.user)
+                and counterparty.id not in scoreable_member_ids(self.request.user)):
+            raise ValidationError({'counterparty': 'You can only hold one-on-ones with your own team members.'})
         serializer.save(organizer=self.request.user, recorded_by=self.request.user)
 
     @action(detail=True, methods=['post'])

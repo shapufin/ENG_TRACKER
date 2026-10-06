@@ -37,6 +37,7 @@ def _parse_month(raw):
 
 class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
     plugin_name = 'tl_scorecard'
+    throttle_scope = None  # set per action (export)
 
     def _resolve_leader(self, request):
         """A TL always sees their own scorecard. Staff/superuser may pass
@@ -145,7 +146,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         leader = self._resolve_leader(request)
         return Response(EscalationCandidateSerializer(escalation_candidates(leader), many=True).data)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], throttle_scope='export')
     def export(self, request):
         """Download the evidence workbook. ?month=YYYY-MM-DD."""
         try:

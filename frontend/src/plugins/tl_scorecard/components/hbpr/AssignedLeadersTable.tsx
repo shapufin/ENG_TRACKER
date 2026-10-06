@@ -26,7 +26,7 @@ import {
 
 const EprCell: React.FC<{ label: string; recorded: boolean }> = ({ label, recorded }) => (
   <Badge variant={recorded ? "success" : "warning"} className="whitespace-nowrap">
-    {label}: {recorded ? "recorded" : "missing"}
+    {label}: {recorded ? "logged" : "not logged"}
   </Badge>
 );
 

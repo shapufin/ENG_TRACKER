@@ -57,7 +57,7 @@ const buildCards = (n: HbprNeedsAttention, year: number): Card[] => {
       tone: "info",
       count: n.missing_mid_year_evidence,
       title: "Mid-year EPR not logged",
-      action: `Open ${plural(n.missing_mid_year_evidence, "record", "records")}`,
+      action: "Open log",
       to: `/hbpr?view=evidence&year=${year}`,
     },
     {
@@ -66,7 +66,7 @@ const buildCards = (n: HbprNeedsAttention, year: number): Card[] => {
       tone: "info",
       count: n.missing_year_end_evidence,
       title: "Year-end EPR not logged",
-      action: `Open ${plural(n.missing_year_end_evidence, "record", "records")}`,
+      action: "Open log",
       to: `/hbpr?view=evidence&year=${year}`,
     },
     {

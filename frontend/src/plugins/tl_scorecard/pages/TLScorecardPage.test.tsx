@@ -306,7 +306,7 @@ describe("TLScorecardPage", () => {
 
     expect(await screen.findByText("HBPR partnership")).toBeInTheDocument();
     expect(await screen.findByText("Elda Partner")).toBeInTheDocument();
-    expect(screen.getByText("Mid-year EPR: missing")).toBeInTheDocument();
+    expect(screen.getByText("Mid-year EPR: not logged")).toBeInTheDocument();
     // The AL TL authors the evidence.
     expect(screen.getByRole("button", { name: /add log entry/i })).toBeInTheDocument();
     perms.value = { isAdmin: false };

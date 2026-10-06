@@ -133,10 +133,10 @@ const PackBody: React.FC<{ pack: YearEndEvidencePack }> = ({ pack }) => (
         <p className="text-muted-foreground text-xs">EPR participation</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           <Badge variant={pack.epr_mid_year ? "success" : "warning"}>
-            {pack.epr_mid_year ? "Mid-year: recorded" : "Mid-year EPR participation: missing"}
+            {pack.epr_mid_year ? "Mid-year: logged" : "Mid-year EPR participation: not logged"}
           </Badge>
           <Badge variant={pack.epr_year_end ? "success" : "warning"}>
-            {pack.epr_year_end ? "Year-end: recorded" : "Year-end EPR participation: missing"}
+            {pack.epr_year_end ? "Year-end: logged" : "Year-end EPR participation: not logged"}
           </Badge>
         </div>
       </div>

@@ -55,7 +55,7 @@ describe("EvidencePackDialog", () => {
     expect(await screen.findByText("Weekly governance sync.")).toBeInTheDocument();
     expect(screen.getByText("Follow up on attrition.")).toBeInTheDocument();
     expect(screen.getByText("HBPR joined the mid-year review panel.")).toBeInTheDocument();
-    expect(screen.getByText(/year-end epr participation: missing/i)).toBeInTheDocument();
+    expect(screen.getByText(/year-end epr participation: not logged/i)).toBeInTheDocument();
   });
 
   it("marks the meeting and EPR captions up as level-3 headings", async () => {

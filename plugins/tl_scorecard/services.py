@@ -179,9 +179,9 @@ PROMOTION_TARGET_PCT = 3.0
 def absence_metrics(team_member_ids) -> dict:
     """Unaddressed count + 5-working-day SLA breach count (gap-audit
     finding #5). `addressed_on is None` means still open."""
-    absences = Absence.objects.filter(employee_id__in=team_member_ids)
+    open_absences = list(Absence.objects.filter(
+        employee_id__in=team_member_ids, addressed_on__isnull=True).only('absence_date'))
     today = date.today()
-    open_absences = [a for a in absences if a.addressed_on is None]
     breached = sum(
         1 for a in open_absences
         if count_business_days(a.absence_date, today) - 1 > ESCALATION_ABSENCE_SLA_DAYS
@@ -363,7 +363,8 @@ def escalation_candidates(leader) -> list[dict]:
     today = date.today()
     candidates = []
 
-    for r in LeaveRequest.objects.filter(user_id__in=team_member_ids, status='pending'):
+    for r in LeaveRequest.objects.filter(
+            user_id__in=team_member_ids, status='pending').select_related('user'):
         elapsed = count_business_days(r.submitted_at.date(), today) - 1 if r.submitted_at else 0
         if elapsed > ESCALATION_LEAVE_SLA_DAYS:
             candidates.append({
@@ -373,7 +374,8 @@ def escalation_candidates(leader) -> list[dict]:
             })
 
     stale_cutoff = today - timedelta(weeks=ESCALATION_IDLE_STALE_WEEKS)
-    for flag in IdleFlag.objects.filter(flagged_by=leader, status='open').prefetch_related('status_updates'):
+    for flag in IdleFlag.objects.filter(
+            flagged_by=leader, status='open').select_related('employee').prefetch_related('status_updates'):
         latest_update = max((u.week_of for u in flag.status_updates.all()), default=None)
         last_activity = latest_update or flag.flagged_on
         if last_activity < stale_cutoff:
@@ -384,14 +386,16 @@ def escalation_candidates(leader) -> list[dict]:
             })
 
     pip_cutoff = today - timedelta(days=ESCALATION_PIP_PENDING_DAYS)
-    for pip in PIPRecord.objects.filter(tl=leader, approved_at__isnull=True, created_at__date__lt=pip_cutoff):
+    for pip in PIPRecord.objects.filter(
+            tl=leader, approved_at__isnull=True, created_at__date__lt=pip_cutoff).select_related('employee'):
         candidates.append({
             'kind': 'pip_pending_approval', 'subject_id': pip.employee_id, 'subject_name': str(pip.employee),
             'detail': f'PIP still pending HR approval since {pip.created_at.date()}.',
             'since': pip.created_at.date(),
         })
 
-    for a in Absence.objects.filter(flagged_by=leader, addressed_on__isnull=True):
+    for a in Absence.objects.filter(
+            flagged_by=leader, addressed_on__isnull=True).select_related('employee'):
         elapsed = count_business_days(a.absence_date, today) - 1
         if elapsed > ESCALATION_ABSENCE_SLA_DAYS:
             candidates.append({

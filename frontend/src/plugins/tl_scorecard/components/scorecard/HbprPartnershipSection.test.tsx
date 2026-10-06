@@ -123,8 +123,8 @@ describe("HbprPartnershipSection", () => {
     renderSection();
     expect(screen.getByText("Elda Partner")).toBeInTheDocument();
     expect(screen.getByText("On track")).toBeInTheDocument();
-    expect(screen.getByText("Mid-year EPR: missing")).toBeInTheDocument();
-    expect(screen.getByText("Year-end EPR: missing")).toBeInTheDocument();
+    expect(screen.getByText("Mid-year EPR: not logged")).toBeInTheDocument();
+    expect(screen.getByText("Year-end EPR: not logged")).toBeInTheDocument();
   });
 
   it("tells an unpaired team leader there is no HBPR yet", () => {

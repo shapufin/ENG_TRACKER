@@ -11,7 +11,7 @@ import { CADENCE_LABELS, CADENCE_STATUS_LABELS, CADENCE_STATUS_TONE, formatDate 
 
 const EprPill: React.FC<{ label: string; recorded: boolean }> = ({ label, recorded }) => (
   <Badge variant={recorded ? "success" : "warning"}>
-    {label}: {recorded ? "recorded" : "missing"}
+    {label}: {recorded ? "logged" : "not logged"}
   </Badge>
 );
 

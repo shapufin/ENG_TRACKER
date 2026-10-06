@@ -81,6 +81,18 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
   isError,
   onRetry,
 }) => {
+  // Typing is local; the URL (and so both server queries) updates once typing pauses.
+  const [draftQ, setDraftQ] = React.useState<string | null>(null);
+  const timer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  React.useEffect(() => () => clearTimeout(timer.current), []);
+  const onSearchChange = (value: string) => {
+    setDraftQ(value);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      onFilterChange("q", value);
+      setDraftQ(null);
+    }, 300);
+  };
   const statuses = HBPR_RECORD_STATUSES[filters.resource];
   const hasFilters =
     filters.leader !== null || filters.status !== "" || filters.period !== "" || filters.q !== "";
@@ -171,8 +183,8 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
                   aria-label="Search records"
                   placeholder="Search all records…"
                   className="pl-8"
-                  value={filters.q}
-                  onChange={(e) => onFilterChange("q", e.target.value)}
+                  value={draftQ ?? filters.q}
+                  onChange={(e) => onSearchChange(e.target.value)}
                 />
               </div>
             </div>

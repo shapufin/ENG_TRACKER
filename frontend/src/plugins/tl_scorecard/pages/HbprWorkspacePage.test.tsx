@@ -230,7 +230,7 @@ describe("HbprWorkspacePage", () => {
     expect(await screen.findByRole("status", { name: "1 overdue" })).toBeInTheDocument();
   });
 
-  it("shows All clear in the header when nothing is due or overdue", async () => {
+  it("shows Cadence on track in the header when nothing is due or overdue", async () => {
     svc.getHbprOverview.mockResolvedValue(
       ok({
         ...OVERVIEW,
@@ -238,7 +238,7 @@ describe("HbprWorkspacePage", () => {
       })
     );
     renderPage();
-    expect(await screen.findByRole("status", { name: "All clear" })).toBeInTheDocument();
+    expect(await screen.findByRole("status", { name: "Cadence on track" })).toBeInTheDocument();
   });
 
   it("shows the roster count in the table card header", async () => {

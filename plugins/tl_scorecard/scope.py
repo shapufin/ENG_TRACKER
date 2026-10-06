@@ -9,7 +9,11 @@ def scoreable_member_ids(user):
     shares a team with one (or is their direct `italian_tl`) must not open PIPs,
     EPR cycles, flags or nominations on them, nor have them in team metrics.
     """
-    ids = user.profile.get_team_member_ids()
+    profile = user.profile
+    cached = getattr(profile, '_scoreable_ids', None)
+    if cached is not None:
+        return cached
+    ids = profile.get_team_member_ids()
     if not ids:
         return ids
     al_tl_ids = {
@@ -18,4 +22,5 @@ def scoreable_member_ids(user):
         .values_list('user_id', 'role_codes')
         if 'albanian_tl' in (codes or [])
     }
-    return ids - al_tl_ids
+    profile._scoreable_ids = ids - al_tl_ids
+    return profile._scoreable_ids

@@ -87,7 +87,7 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Edit log entry" : "Add log entry"}
-      description="The assigned Albanian team leader authors this; the HBPR and staff can read it."
+      description="Logged by the assigned Albanian team leader. Your HBPR and staff can read it."
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
       submitLabel={isEdit ? "Save changes" : "Save entry"}
@@ -96,7 +96,7 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
       <div className="space-y-4">
         <div className="space-y-2">
           <FieldLabel htmlFor="hbpr-evidence-kind" required>
-            Evidence type
+            Entry type
           </FieldLabel>
           <Select value={kind} onValueChange={(v) => setKind(v as HbprEvidenceKind)}>
             <SelectTrigger id="hbpr-evidence-kind">
