@@ -1,3 +1,5 @@
+import re
+
 
 from django.utils import timezone
 from rest_framework import serializers
@@ -262,6 +264,11 @@ class EngagementSurveyResponseSerializer(serializers.ModelSerializer):
         fields = ['id', 'respondent', 'respondent_name', 'team', 'period', 'score', 'submitted_at']
         read_only_fields = ['id', 'respondent', 'submitted_at']
         validators = []
+
+    def validate_period(self, value):
+        if not re.fullmatch(r'\d{4}-(0[1-9]|1[0-2])', value):
+            raise serializers.ValidationError('Use the YYYY-MM format.')
+        return value
 
     def get_respondent_name(self, obj):
         return _display_name(obj.respondent)

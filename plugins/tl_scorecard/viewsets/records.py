@@ -234,6 +234,9 @@ class ReviewDeliveryViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermi
         serializer.save(leader=self.request.user, recorded_by=self.request.user)
 
 
+MIN_SURVEY_RESPONSES = 3
+
+
 class EngagementSurveyResponseViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     """Sentiment/pulse survey responses. Deliberately public to every
     authenticated employee (not TL-only like the rest of this plugin) via
@@ -277,9 +280,11 @@ class EngagementSurveyResponseViewSet(PluginPermissionMixin, viewsets.ModelViewS
         agg = EngagementSurveyResponse.objects.filter(
             respondent_id__in=team_member_ids, period=period,
         ).aggregate(average_score=Avg('score'), response_count=Count('id'))
+        # Below the threshold the average IS an individual's score: withhold it.
+        reveal = agg['response_count'] >= MIN_SURVEY_RESPONSES
         return Response({
             'period': period,
-            'average_score': round(agg['average_score'], 1) if agg['average_score'] is not None else None,
+            'average_score': round(agg['average_score'], 1) if reveal else None,
             'response_count': agg['response_count'],
         })
 

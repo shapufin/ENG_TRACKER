@@ -76,7 +76,7 @@ interface Pending {
   record: RecordRow;
 }
 
-const INVALIDATED = ["records", "scorecard", "escalations", "pip-records"] as const;
+const INVALIDATED = ["records", "scorecard", "escalations"] as const;
 
 /** Runs a record's state action and renders the dialogs that action needs. */
 export const useRecordActions = (viewer: Viewer) => {

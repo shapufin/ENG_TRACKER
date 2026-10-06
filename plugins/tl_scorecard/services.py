@@ -343,10 +343,11 @@ def scorecard_trend(user, months: int, end_month: date) -> list[dict]:
     no snapshot model (same "computed live" approach as the rest of this
     plugin)."""
     end = reporting_period(end_month)
+    current_state = _current_state_metrics(user, scoreable_member_ids(user))
     points = []
     cursor = end
     for _ in range(months):
-        points.append(build_scorecard(user, cursor))
+        points.append(build_scorecard(user, cursor, current_state))
         if cursor.month == 1:
             cursor = cursor.replace(year=cursor.year - 1, month=12)
         else:
@@ -455,21 +456,31 @@ def governance_records(leader, team_member_ids, year: int, subject_ids=None) -> 
     }
 
 
-def build_scorecard(user, month: date) -> dict:
+def _current_state_metrics(user, team_member_ids) -> dict:
+    """Metrics that describe "now", not a month — identical for every point of a
+    trend, so `scorecard_trend` computes them once."""
+    return {
+        'idle': idle_metrics(user),
+        'seniority': seniority_ratio(team_member_ids),
+        'absences': absence_metrics(team_member_ids),
+        'pip': pip_metrics(user),
+        'escalation_count': len(escalation_candidates(user)),
+    }
+
+
+def build_scorecard(user, month: date, current_state: dict | None = None) -> dict:
     """Full scorecard for one TL (`user`) for `month`."""
     team_member_ids = scoreable_member_ids(user)
     month = reporting_period(month)
+    if current_state is None:
+        current_state = _current_state_metrics(user, team_member_ids)
     return {
         'month': month.isoformat(),
         'team_size': len(team_member_ids),
         'leave': leave_sla_metrics(team_member_ids, month),
         'overtime': ot_turnaround_metrics(team_member_ids, month),
         'meetings': meeting_compliance_metrics(user, team_member_ids, month),
-        'idle': idle_metrics(user),
         'review_deliveries_ytd': review_delivery_count(user, month.year),
-        'seniority': seniority_ratio(team_member_ids),
-        'absences': absence_metrics(team_member_ids),
-        'pip': pip_metrics(user),
         'promotion': promotion_ratio(team_member_ids, month.year),
-        'escalation_count': len(escalation_candidates(user)),
+        **current_state,
     }
