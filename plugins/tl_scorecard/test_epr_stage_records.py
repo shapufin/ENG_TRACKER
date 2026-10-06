@@ -47,8 +47,29 @@ class CompleteStageTests(TestCase):
         for i in range(count):
             EPRGoal.objects.create(cycle=self.cycle, description=f'Goal {i}')
 
+    def _complete_goal_setting(self, titles=None):
+        """Complete Goal Setting the way the UI does — stages complete in
+        order, so a later stage is unreachable without this."""
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'goal_setting',
+            'summary': 'Goals agreed in Workday.',
+            'goal_titles': titles or [f'Goal {index}' for index in range(5)],
+        })
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.cycle.refresh_from_db()
+        return resp
+
+    def _complete_mid_year(self):
+        self._complete_goal_setting()
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'mid_year', 'summary': 'Mid-year review held.',
+        })
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.cycle.refresh_from_db()
+        return resp
+
     def test_complete_stage_creates_record_and_timestamp(self):
-        self._add_goals()
+        self._complete_goal_setting()
         resp = self._complete(self.leader, self.cycle.id, {
             'stage': 'mid_year', 'summary': 'Mid-year review held.',
             'reference_url': 'https://workday.example/review/1',
@@ -93,7 +114,7 @@ class CompleteStageTests(TestCase):
         self.assertIsNone(self.cycle.mid_year_completed_at)
 
     def test_complete_stage_twice_conflicts(self):
-        self._add_goals()
+        self._complete_goal_setting()
         first = self._complete(self.leader, self.cycle.id, {
             'stage': 'mid_year', 'summary': 'Held.',
         })
@@ -108,7 +129,7 @@ class CompleteStageTests(TestCase):
     def test_complete_stage_response_includes_the_new_record(self):
         """The 200 payload must carry the evidence row it just created — the
         cycle's prefetch cache is stale by then and must not be serialized."""
-        self._add_goals()
+        self._complete_goal_setting()
         resp = self._complete(self.leader, self.cycle.id, {
             'stage': 'mid_year', 'summary': 'Mid-year review held.',
         })
@@ -121,6 +142,7 @@ class CompleteStageTests(TestCase):
         """Simulates the race: the evidence row already exists but the
         timestamp was not yet visible to this request's read — the unique
         constraint must surface as 409, never a 500."""
+        self._complete_mid_year()
         EPRStageRecord.objects.create(
             cycle=self.cycle, stage='final_review', summary='x',
             recorded_by=self.leader,
@@ -156,11 +178,33 @@ class CompleteStageTests(TestCase):
         })
         self.assertEqual(resp.status_code, 200, resp.data)
 
-    def test_other_stages_do_not_need_goals(self):
+    def test_stages_must_be_completed_in_order(self):
+        """A later stage cannot be completed first — otherwise Goal Setting is
+        stranded forever (it needs 5 goals, and goal rows stop being writable
+        once a later stage is complete)."""
+        for stage in ('mid_year', 'final_review'):
+            with self.subTest(stage=stage):
+                resp = self._complete(self.leader, self.cycle.id, {
+                    'stage': stage, 'summary': 'Out of order.',
+                })
+                self.assertEqual(resp.status_code, 400, resp.data)
+                self.assertIn('stage', resp.data)
+                self.assertIn('Goal Setting', str(resp.data['stage']))
+
+        self.cycle.refresh_from_db()
+        self.assertIsNone(self.cycle.mid_year_completed_at)
+        self.assertIsNone(self.cycle.final_review_completed_at)
+        # The dead-end is gone: Goal Setting is still reachable afterwards.
+        self._complete_goal_setting()
+
+    def test_final_review_needs_no_goal_titles_once_ordered(self):
+        self._complete_mid_year()
+        old_ids = list(self.cycle.goals.values_list('id', flat=True))
         resp = self._complete(self.leader, self.cycle.id, {
             'stage': 'final_review', 'summary': 'Final held.',
         })
         self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(list(self.cycle.goals.values_list('id', flat=True)), old_ids)
 
     def test_outsider_tl_cannot_complete(self):
         outsider = _make_user('outsider_stage')
@@ -172,13 +216,14 @@ class CompleteStageTests(TestCase):
         self.assertIsNone(EPRCycle.objects.get(pk=outsider_cycle.id).mid_year_completed_at)
 
     def test_staff_can_complete_stage(self):
-        self._add_goals()
+        self._complete_goal_setting()
         resp = self._complete(self.staff, self.cycle.id, {
             'stage': 'mid_year', 'summary': 'Held by HR.',
         })
         self.assertEqual(resp.status_code, 200, resp.data)
         self.assertEqual(
-            EPRStageRecord.objects.get(cycle=self.cycle).recorded_by, self.staff)
+            EPRStageRecord.objects.get(cycle=self.cycle, stage='mid_year').recorded_by,
+            self.staff)
 
     def test_goal_setting_with_goal_titles_replaces_and_stamps(self):
         self._add_goals(2)
@@ -214,7 +259,7 @@ class CompleteStageTests(TestCase):
         self.assertFalse(EPRStageRecord.objects.filter(cycle=self.cycle).exists())
 
     def test_mid_year_without_titles_confirms_existing_goals(self):
-        self._add_goals()
+        self._complete_goal_setting()
         old_ids = list(self.cycle.goals.values_list('id', flat=True))
         resp = self._complete(self.leader, self.cycle.id, {
             'stage': 'mid_year', 'summary': 'No goal changes.',
@@ -226,6 +271,11 @@ class CompleteStageTests(TestCase):
         self.assertIsNotNone(self.cycle.mid_year_completed_at)
 
     def test_mid_year_without_titles_requires_existing_five_goal_set(self):
+        """Defense in depth: the order guard makes this unreachable through the
+        API, but a legacy/manually-stamped cycle must still be rejected."""
+        self._add_goals(3)
+        self.cycle.goal_setting_completed_at = timezone.now()
+        self.cycle.save(update_fields=['goal_setting_completed_at'])
         resp = self._complete(self.leader, self.cycle.id, {
             'stage': 'mid_year', 'summary': 'No goal changes.',
         })
@@ -236,7 +286,7 @@ class CompleteStageTests(TestCase):
         self.assertIsNone(self.cycle.mid_year_completed_at)
 
     def test_mid_year_with_titles_replaces_goals_atomically(self):
-        self._add_goals()
+        self._complete_goal_setting()
         resp = self._complete(self.leader, self.cycle.id, {
             'stage': 'mid_year',
             'summary': 'Updated Workday goals confirmed.',
@@ -250,7 +300,7 @@ class CompleteStageTests(TestCase):
         )
 
     def test_mid_year_with_too_few_titles_preserves_old_goals(self):
-        self._add_goals()
+        self._complete_goal_setting()
         old_ids = list(self.cycle.goals.values_list('id', flat=True))
         resp = self._complete(self.leader, self.cycle.id, {
             'stage': 'mid_year',
@@ -263,12 +313,13 @@ class CompleteStageTests(TestCase):
         self.assertEqual(list(self.cycle.goals.values_list('id', flat=True)), old_ids)
         self.cycle.refresh_from_db()
         self.assertIsNone(self.cycle.mid_year_completed_at)
-        self.assertFalse(EPRStageRecord.objects.filter(cycle=self.cycle).exists())
+        self.assertFalse(
+            EPRStageRecord.objects.filter(cycle=self.cycle, stage='mid_year').exists())
 
     def test_failed_mid_year_record_creation_rolls_back_goal_replacement(self):
         """A preexisting evidence row simulates the race; rollback must restore
         the prior goal set rather than leave deleted/replaced rows behind."""
-        self._add_goals()
+        self._complete_goal_setting()
         old_ids = list(self.cycle.goals.values_list('id', flat=True))
         EPRStageRecord.objects.create(
             cycle=self.cycle, stage='mid_year', summary='Concurrent save.',
@@ -286,7 +337,7 @@ class CompleteStageTests(TestCase):
         self.assertIsNone(self.cycle.mid_year_completed_at)
 
     def test_final_review_rejects_goal_titles_and_preserves_rows(self):
-        self._add_goals()
+        self._complete_mid_year()
         old_ids = list(self.cycle.goals.values_list('id', flat=True))
         resp = self._complete(self.leader, self.cycle.id, {
             'stage': 'final_review',

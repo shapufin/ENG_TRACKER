@@ -131,7 +131,10 @@ describe("EPRSection", () => {
 
   it("passes existing titles to Mid-year and omits goal_titles when unchanged", async () => {
     const onCompleteStage = vi.fn().mockResolvedValue(undefined);
-    renderSection([cycleWithFiveGoals], onCompleteStage);
+    renderSection(
+      [{ ...cycleWithFiveGoals, goal_setting_completed_at: "2026-03-01T00:00:00Z" }],
+      onCompleteStage
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Mid-year" }));
     expect(await screen.findByDisplayValue("Goal A")).toBeInTheDocument();

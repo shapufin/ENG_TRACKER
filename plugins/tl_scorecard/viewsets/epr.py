@@ -46,6 +46,17 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
         'final_review': 'final_review_completed_at',
     }
 
+    # An EPR cycle is a fixed sequence. Without this guard a TL can complete
+    # Final Review first on a cycle with <5 goals, which permanently strands
+    # Goal Setting: it needs 5 confirmed goals, and goal rows can no longer be
+    # written once a later stage is complete.
+    STAGE_ORDER = ('goal_setting', 'mid_year', 'final_review')
+    STAGE_LABEL = {
+        'goal_setting': 'Goal Setting',
+        'mid_year': 'Mid-year',
+        'final_review': 'Final Review',
+    }
+
     def base_queryset(self):
         return EPRCycle.objects.select_related('user').prefetch_related(
             'goals', 'stage_records__recorded_by')
@@ -69,6 +80,14 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
             if target_user.id not in self.request.user.profile.get_team_member_ids():
                 raise ValidationError({'user': 'You can only manage an EPR cycle for your own team members.'})
         serializer.save()
+
+    def _ensure_stage_order(self, cycle, stage):
+        """Reject a stage while an earlier one is still open — see STAGE_ORDER."""
+        for earlier in self.STAGE_ORDER[:self.STAGE_ORDER.index(stage)]:
+            if getattr(cycle, self.STAGE_FIELD[earlier]) is None:
+                raise ValidationError({
+                    'stage': f'{self.STAGE_LABEL[earlier]} must be completed first.',
+                })
 
     def _goal_titles_for_stage(self, request, stage, cycle):
         """Validate lifecycle-specific goal payloads inside the row lock."""
@@ -154,6 +173,7 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
                         {'error': 'This stage is already completed.'},
                         status=status.HTTP_409_CONFLICT,
                     )
+                self._ensure_stage_order(locked, stage)
                 goal_titles = self._goal_titles_for_stage(request, stage, locked)
                 if goal_titles is not None:
                     locked.goals.all().delete()
