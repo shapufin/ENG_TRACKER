@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { CheckCircle2, ClipboardCheck, ExternalLink } from "lucide-react";
+import { ChevronRight, ClipboardCheck, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { Input } from "@/components/ui/input";
 import { toneTextClass } from "@/components/ui/tone";
 import { CompleteEprStageDialog } from "./CompleteEprStageDialog";
 import type {
@@ -70,123 +71,181 @@ const STAGE_HINT: Record<EPRStage, string> = {
   final_review: "Close the year with a review summary. Goals stay as they are.",
 };
 
+const SHORT_LABEL: Record<EPRStage, string> = {
+  goal_setting: "Goals",
+  mid_year: "Mid-year",
+  final_review: "Final",
+};
+
+type StepState = "done" | "current" | "locked" | "blocked" | "evidence-only";
+
+interface StepInfo {
+  field: EPRStage;
+  label: string;
+  completedAt: string | null | undefined;
+  state: StepState;
+  status: string;
+}
+
+/** One pass over a cycle: the state of each step and the phase to show at a glance. */
+const describeCycle = (cycle: EPRCycle) => {
+  const completedAt = (field: EPRStage) => cycle[`${field}_completed_at` as const];
+  const firstOpenIndex = STAGES.findIndex((stage) => !completedAt(stage.field));
+  const steps: StepInfo[] = STAGES.map(({ field, label }, index) => {
+    const done = completedAt(field);
+    const earlierOpen = STAGES.slice(0, index).some((earlier) => !completedAt(earlier.field));
+    const laterDone = STAGES.slice(index + 1).some((later) => completedAt(later.field));
+    // Completed out of order before the sequence was enforced: the backend
+    // locks goals once a later stage is done, so only evidence remains.
+    const stranded = !done && laterDone;
+    let state: StepState = "locked";
+    let status = "Locked until the previous step is done";
+    if (done) {
+      state = "done";
+      status = `Completed ${new Date(done).toLocaleDateString()}`;
+    } else if (stranded && cycle.goal_count >= 5) {
+      state = "evidence-only";
+      status = "Out of order — record evidence only; goals are locked";
+    } else if (stranded) {
+      state = "blocked";
+      status = "Blocked — a later step is already complete";
+    } else if (!earlierOpen) {
+      state = "current";
+      status = "Ready to complete";
+    }
+    return { field, label, completedAt: done, state, status };
+  });
+  const open = firstOpenIndex === -1 ? null : steps[firstOpenIndex];
+  const attention = steps.some(
+    (step) => step.state === "blocked" || step.state === "evidence-only"
+  );
+  return { steps, open, firstOpenIndex, attention };
+};
+
+type PhaseFilter = "all" | EPRStage | "complete" | "attention";
+
+const phaseOf = (cycle: EPRCycle): PhaseFilter => {
+  const { open, attention } = describeCycle(cycle);
+  if (attention) return "attention";
+  return open ? open.field : "complete";
+};
+
+const SEGMENT_CLASS: Record<StepState, string> = {
+  done: "bg-tone-success-text",
+  current: "bg-primary",
+  locked: "bg-border",
+  blocked: "bg-tone-warning-text",
+  "evidence-only": "bg-tone-warning-text",
+};
+
 const CycleRow: React.FC<{
   cycle: EPRCycle;
   onParseGoals: (cycleId: number, stage: EPRStage, file: File) => Promise<string[]>;
   onCompleteStage: (cycleId: number, data: CompleteEprStagePayload) => Promise<void>;
 }> = ({ cycle, onParseGoals, onCompleteStage }) => {
   const [completing, setCompleting] = useState<EPRStage | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const { steps, open, attention } = describeCycle(cycle);
   const completedAt = (field: EPRStage) => cycle[`${field}_completed_at` as const];
-  // Stages complete in order — the backend rejects a later stage while an
-  // earlier one is open, so don't offer a button that can only 400.
-  const firstOpenIndex = STAGES.findIndex((stage) => !completedAt(stage.field));
-  const allDone = firstOpenIndex === -1;
   const recordsFor = (field: EPRStage) =>
     (cycle.stage_records ?? []).filter((record) => record.stage === field);
+  // The one step the TL can act on now; completed and locked steps have none.
+  const actionable = steps.find(
+    (step) => step.state === "current" || step.state === "evidence-only"
+  );
+  const phaseBadge = !open ? (
+    <Badge variant="success">Complete</Badge>
+  ) : attention ? (
+    <Badge variant="warning">Needs attention</Badge>
+  ) : (
+    <Badge variant="info">{open.label}</Badge>
+  );
+  const detailsId = `epr-${cycle.id}-details`;
 
   return (
-    <li className="py-4">
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
-        <div>
-          <p className="text-sm font-semibold">
-            {cycle.user_name} · {cycle.year}
-          </p>
-          <p className="text-muted-foreground text-xs">
-            {allDone
-              ? "All three steps are complete."
-              : `Next step: ${STAGES[firstOpenIndex].label}`}
-          </p>
-        </div>
-        <p
-          className={`text-xs ${cycle.goal_count >= 5 ? toneTextClass.success : toneTextClass.warning}`}
+    <li className="py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 basis-56 items-start gap-2 text-left"
+          aria-expanded={expanded}
+          aria-controls={detailsId}
+          onClick={() => setExpanded((value) => !value)}
         >
-          {cycle.goal_count}/5 confirmed goals
-        </p>
+          <ChevronRight
+            className={`text-muted-foreground mt-0.5 h-4 w-4 shrink-0 transition-transform motion-reduce:transition-none ${
+              expanded ? "rotate-90" : ""
+            }`}
+            aria-hidden="true"
+          />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold">
+              {cycle.user_name} · {cycle.year}
+            </span>
+            <span
+              className={`block text-xs ${
+                cycle.goal_count >= 5 ? toneTextClass.success : toneTextClass.warning
+              }`}
+            >
+              {cycle.goal_count}/5 confirmed goals
+            </span>
+          </span>
+        </button>
+
+        <ol className="flex w-48 shrink-0 gap-1" aria-label="EPR progress">
+          {steps.map((step) => (
+            <li
+              key={step.field}
+              className="min-w-0 flex-1"
+              aria-current={step === actionable ? "step" : undefined}
+              title={`${step.label}: ${step.status}`}
+            >
+              <span className={`block h-1.5 rounded-full ${SEGMENT_CLASS[step.state]}`} />
+              <span className="text-muted-foreground text-micro mt-0.5 block truncate">
+                {SHORT_LABEL[step.field]}
+                <span className="sr-only"> — {step.status}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+
+        <div className="flex items-center gap-2">
+          {phaseBadge}
+          {actionable && (
+            <Button
+              size="sm"
+              variant={actionable.state === "current" ? "default" : "outline"}
+              onClick={() => setCompleting(actionable.field)}
+              aria-label={`Complete ${actionable.label}`}
+            >
+              Complete step
+            </Button>
+          )}
+        </div>
       </div>
 
-      <ol className="mt-3" aria-label="EPR progress">
-        {STAGES.map(({ field, label }, index) => {
-          const stageCompletedAt = completedAt(field);
-          const isCurrent = index === firstOpenIndex;
-          const earlierOpen = STAGES.slice(0, index).some((earlier) => !completedAt(earlier.field));
-          const laterDone = STAGES.slice(index + 1).some((later) => completedAt(later.field));
-          // Opened out of order before the sequence was enforced: the backend
-          // locks goals once a later stage is done, so only evidence remains.
-          const stranded = !stageCompletedAt && laterDone;
-          const evidenceOnly = stranded && cycle.goal_count >= 5;
-          const disabled = Boolean(stageCompletedAt) || earlierOpen || (stranded && !evidenceOnly);
-          const status = stageCompletedAt
-            ? `Completed ${new Date(stageCompletedAt).toLocaleDateString()}`
-            : stranded
-              ? evidenceOnly
-                ? "Out of order — record evidence only; goals are locked"
-                : "Blocked — a later step is already complete"
-              : earlierOpen
-                ? "Locked until the previous step is done"
-                : "Ready to complete";
-          const records = recordsFor(field);
-          const isLast = index === STAGES.length - 1;
-          return (
-            <li
-              key={field}
-              aria-current={isCurrent ? "step" : undefined}
-              className="relative flex gap-3 pb-4 last:pb-0"
-            >
-              {!isLast && (
-                <span
-                  aria-hidden="true"
-                  className={`absolute top-7 bottom-0 left-[11px] w-px ${
-                    stageCompletedAt ? "bg-tone-success-text/50" : "bg-border"
+      {expanded && (
+        <ol id={detailsId} className="mt-3 ml-6 space-y-3 border-l pl-4">
+          {steps.map((step, index) => {
+            const records = recordsFor(step.field);
+            return (
+              <li key={step.field} className="space-y-1.5">
+                <p className="text-sm font-medium">
+                  {index + 1}. {step.label}
+                </p>
+                <p
+                  className={`text-xs ${
+                    step.state === "blocked" || step.state === "evidence-only"
+                      ? toneTextClass.warning
+                      : "text-muted-foreground"
                   }`}
-                />
-              )}
-              <span
-                aria-hidden="true"
-                className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
-                  stageCompletedAt
-                    ? "bg-tone-success-surface text-tone-success-text border-transparent"
-                    : isCurrent && !stranded
-                      ? "bg-primary text-primary-foreground border-transparent"
-                      : "bg-card text-muted-foreground"
-                }`}
-              >
-                {stageCompletedAt ? <CheckCircle2 className="h-3.5 w-3.5" /> : index + 1}
-              </span>
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {label}
-                      <span className="sr-only">
-                        {" "}
-                        Step {index + 1}
-                        {isCurrent && !stranded ? " · Current" : ""}
-                      </span>
-                    </p>
-                    <p
-                      id={`epr-${cycle.id}-${field}-status`}
-                      className={`text-xs ${stranded ? toneTextClass.warning : "text-muted-foreground"}`}
-                    >
-                      {status}
-                    </p>
-                  </div>
-                  {!stageCompletedAt && !earlierOpen && (
-                    <Button
-                      size="sm"
-                      variant={isCurrent && !stranded ? "default" : "outline"}
-                      disabled={disabled}
-                      onClick={() => setCompleting(field)}
-                      aria-label={`Complete ${label}`}
-                      aria-describedby={`epr-${cycle.id}-${field}-status`}
-                    >
-                      Complete step
-                    </Button>
-                  )}
-                </div>
-                {isCurrent && !stranded && (
-                  <p className="text-muted-foreground text-xs">{STAGE_HINT[field]}</p>
+                >
+                  {step.status}
+                </p>
+                {step.state === "current" && (
+                  <p className="text-muted-foreground text-xs">{STAGE_HINT[step.field]}</p>
                 )}
-                {field === "goal_setting" && cycle.goals.length > 0 && (
+                {step.field === "goal_setting" && cycle.goals.length > 0 && (
                   <details className="text-xs">
                     <summary className="text-primary cursor-pointer font-medium">
                       {cycle.goals.length} confirmed goals
@@ -207,17 +266,17 @@ const CycleRow: React.FC<{
                     ))}
                   </ul>
                 )}
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+              </li>
+            );
+          })}
+        </ol>
+      )}
 
       {completing && (
         <CompleteEprStageDialog
           key={completing}
           open
-          onOpenChange={(open) => !open && setCompleting(null)}
+          onOpenChange={(isOpen) => !isOpen && setCompleting(null)}
           stage={completing}
           stageLabel={stageLabel(completing)}
           stepNumber={STAGES.findIndex((stage) => stage.field === completing) + 1}
@@ -239,26 +298,107 @@ const CycleRow: React.FC<{
   );
 };
 
+const PAGE_SIZE = 10;
+
+const FILTERS: { value: PhaseFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "attention", label: "Needs attention" },
+  { value: "goal_setting", label: "Goal Setting" },
+  { value: "mid_year", label: "Mid-year" },
+  { value: "final_review", label: "Final Review" },
+  { value: "complete", label: "Complete" },
+];
+
 export const EPRSection: React.FC<EPRSectionProps> = ({
   cycles,
   onParseGoals,
   onCompleteStage,
-}) => (
-  <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
-    <h2 className="text-sm font-semibold">EPR cycles</h2>
-    {cycles.length === 0 ? (
-      <EmptyState icon={ClipboardCheck} title="No EPR cycles started" className="py-6" />
-    ) : (
-      <ul className="divide-border/50 divide-y">
-        {cycles.map((cycle) => (
-          <CycleRow
-            key={cycle.id}
-            cycle={cycle}
-            onParseGoals={onParseGoals}
-            onCompleteStage={onCompleteStage}
-          />
-        ))}
-      </ul>
-    )}
-  </GlassCard>
-);
+}) => {
+  const [filter, setFilter] = useState<PhaseFilter>("all");
+  const [query, setQuery] = useState("");
+  const [visible, setVisible] = useState(PAGE_SIZE);
+
+  const phases = cycles.map((cycle) => ({ cycle, phase: phaseOf(cycle) }));
+  const counts = (value: PhaseFilter) =>
+    value === "all" ? phases.length : phases.filter((item) => item.phase === value).length;
+  const needle = query.trim().toLowerCase();
+  const matching = phases
+    .filter((item) => filter === "all" || item.phase === filter)
+    .filter((item) => !needle || (item.cycle.user_name ?? "").toLowerCase().includes(needle))
+    // Needs-attention first so a long list never buries a stuck cycle.
+    .sort((a, b) => Number(b.phase === "attention") - Number(a.phase === "attention"));
+  const shown = matching.slice(0, visible);
+
+  return (
+    <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+      <h2 className="text-sm font-semibold">EPR cycles</h2>
+      {cycles.length === 0 ? (
+        <EmptyState icon={ClipboardCheck} title="No EPR cycles started" className="py-6" />
+      ) : (
+        <>
+          {cycles.length > 3 && (
+            <div className="mt-3 space-y-2">
+              <Input
+                type="search"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setVisible(PAGE_SIZE);
+                }}
+                placeholder="Search by name"
+                aria-label="Search EPR cycles by name"
+              />
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by phase">
+                {FILTERS.filter(
+                  (item) => item.value === "all" || counts(item.value) > 0 || item.value === filter
+                ).map((item) => (
+                  <Button
+                    key={item.value}
+                    type="button"
+                    size="sm"
+                    variant={filter === item.value ? "default" : "outline"}
+                    aria-pressed={filter === item.value}
+                    onClick={() => {
+                      setFilter(item.value);
+                      setVisible(PAGE_SIZE);
+                    }}
+                  >
+                    {item.label} {counts(item.value)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+          {shown.length === 0 ? (
+            <p className="text-muted-foreground py-6 text-center text-sm">
+              No cycles match this filter.
+            </p>
+          ) : (
+            <ul className="divide-border/50 divide-y">
+              {shown.map(({ cycle }) => (
+                <CycleRow
+                  key={cycle.id}
+                  cycle={cycle}
+                  onParseGoals={onParseGoals}
+                  onCompleteStage={onCompleteStage}
+                />
+              ))}
+            </ul>
+          )}
+          {matching.length > shown.length && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2 w-full"
+              onClick={() => setVisible((value) => value + PAGE_SIZE)}
+            >
+              Show {Math.min(PAGE_SIZE, matching.length - shown.length)} more (
+              {matching.length - shown.length} hidden)
+            </Button>
+          )}
+        </>
+      )}
+    </GlassCard>
+  );
+};

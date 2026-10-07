@@ -143,3 +143,6 @@ stitch_team_tracker_dashboard_layout/
 # Tool-generated, not project files
 /package-lock.json
 .windsurf/
+
+# Playwright MCP browser logs/snapshots
+.playwright-mcp/
