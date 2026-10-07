@@ -25,7 +25,6 @@ export const E2E_CREDENTIALS = {
   hbpr: { username: "e2e_hbpr", password: "e2e_pass_2026" },
 };
 
-export const E2E_CLIENT_CODE = "E2E";
 export type E2ERole = keyof typeof E2E_CREDENTIALS;
 
 const API_ORIGIN = "http://127.0.0.1:8000";
