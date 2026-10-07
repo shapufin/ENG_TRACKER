@@ -378,6 +378,59 @@ export interface DashboardStats {
   active_teams_count: number;
 }
 
+/** Response of GET /dashboard/widgets/admin_overview/ (staff/superuser only). */
+export interface AdminOverview {
+  headcount: {
+    total_users: number;
+    active_users: number;
+    inactive_users: number;
+    new_hires_30d: number;
+    never_logged_in: number;
+  };
+  coverage_gaps: {
+    teams_without_leader: number;
+    users_without_team: number;
+    users_without_tech: number;
+    employees_without_tl: number;
+    al_tls_without_hbpr_assignment: number;
+  };
+  pending_backlog: {
+    overtime: { count: number; hours: number };
+    standby: { count: number; hours: number };
+    leave: { count: number; days: number };
+  };
+  approval_aging: {
+    buckets: string[];
+    overtime: number[];
+    standby: number[];
+    leave: number[];
+  };
+  leave_utilization: {
+    year: number;
+    total_days: number;
+    used_days: number;
+    pending_days: number;
+    available_days: number;
+    utilization_pct: number | null;
+  };
+  carryover_expiry: { window_days: number; days_at_risk: number; users_affected: number };
+  period_close: {
+    period: string;
+    tls_total: number;
+    tls_closed: number;
+    tls_open: number;
+    open_tls: { id: number; name: string }[];
+  };
+  /** Null unless the viewer is a superuser. */
+  backup: {
+    count: number;
+    last_created_at: string | null;
+    age_hours: number | null;
+    size_mb: number | null;
+    stale: boolean;
+  } | null;
+}
+
 export interface UserStats {
   total_users: number;
   italian_tl_count: number;

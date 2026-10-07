@@ -4,6 +4,16 @@ import { auditLogService } from "@/services/auditLogService";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { computeAdminDashboardSummary } from "./adminDashboardSummary";
 
+/** One request feeds every overview widget; it only fires while one is enabled. */
+export const useAdminOverview = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["admin", "overview"],
+    queryFn: dashboardService.getAdminOverview,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    enabled,
+  });
+
 export const useAdminDashboardQueries = () => {
   const { canView } = usePluginPermissions();
   const canViewAudit = canView("audit_log");

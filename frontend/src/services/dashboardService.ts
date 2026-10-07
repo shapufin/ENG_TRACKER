@@ -1,6 +1,7 @@
 import api from "@/lib/api";
 import { normalizeList } from "@/lib/api-utils";
 import type {
+  AdminOverview,
   DashboardStats,
   TeamDashboardStats,
   CalendarWorkspace,
@@ -18,6 +19,11 @@ import type {
 export const dashboardService = {
   async getHRStats(): Promise<DashboardStats> {
     const { data } = await api.get<DashboardStats>("/dashboard/widgets/global_stats/");
+    return data;
+  },
+
+  async getAdminOverview(): Promise<AdminOverview> {
+    const { data } = await api.get<AdminOverview>("/dashboard/widgets/admin_overview/");
     return data;
   },
 
