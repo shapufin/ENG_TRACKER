@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 class PluginRegistry:
     _instance = None
     _plugins: Dict[str, BasePlugin] = {}
+    # plugin dir name -> import error, for plugins discover_plugins() skipped.
+    load_errors: Dict[str, str] = {}
     _lock = threading.Lock()
 
     def __new__(cls):
@@ -29,6 +31,7 @@ class PluginRegistry:
             return
 
         discovered_plugins = {}
+        load_errors = {}
         for plugin_name in sorted(os.listdir(plugins_dir)):
             plugin_path = os.path.join(plugins_dir, plugin_name)
             plugin_file = os.path.join(plugin_path, 'plugin.py')
@@ -55,9 +58,11 @@ class PluginRegistry:
                         )
             except Exception as e:
                 logger.error("Failed to load plugin %s: %s", plugin_name, e)
+                load_errors[plugin_name] = str(e)
 
         with self._lock:
             self._plugins = discovered_plugins
+            self.load_errors = load_errors
 
     def get_plugin_apps(self) -> list:
         """Return valid plugin app labels for ``INSTALLED_APPS``.

@@ -11,6 +11,8 @@ class PluginsConfig(AppConfig):
     verbose_name = 'Plugin Management'
 
     def ready(self):
+        from . import checks  # noqa: F401  (registers plugins.E001)
+
         # We delay discovery until all apps are ready
         # to avoid circular imports with models
         from core.plugins.registry import plugin_registry
