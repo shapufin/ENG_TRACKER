@@ -176,10 +176,25 @@ Weight: 60
             ['Goal A', 'Goal B', 'Goal C', 'Goal D', 'goal a'],
             ['Goal A', 'Goal B', 'Goal C', 'Goal D', 'x' * 256],
             ['Goal A', 'Goal B', 'Goal C', 'Goal D', 42],
+            ['Goal A', 'Goal B', 'Goal C', 'Goal D', 'Goal E', '   '],
+            [f'Goal {i}' for i in range(51)],
         ):
             with self.subTest(raw=raw):
                 with self.assertRaises(GoalImportError):
                     normalize_goal_titles(raw)
+
+    def test_normalize_accepts_the_maximum_goal_count(self):
+        titles = [f'Goal {i}' for i in range(50)]
+        self.assertEqual(normalize_goal_titles(titles), titles)
+
+    def test_extract_rejects_more_than_the_maximum_candidates(self):
+        def text_for(count):
+            blocks = ''.join(f'Goal {i}\n\nWeight: 1\n' for i in range(count))
+            return 'Goals\n' + blocks
+
+        with self.assertRaises(GoalImportError):
+            extract_goal_titles(text_for(51))
+        self.assertEqual(len(extract_goal_titles(text_for(50))), 50)
 
     def test_normalize_collapses_whitespace_and_preserves_order(self):
         self.assertEqual(

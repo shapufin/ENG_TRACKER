@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
@@ -119,7 +120,10 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
         except GoalImportError as exc:
             raise ValidationError({exc.field: [str(exc)]})
 
-    @action(detail=True, methods=['post'], throttle_scope='upload')
+    @action(
+        detail=True, methods=['post'], throttle_scope='upload',
+        parser_classes=[MultiPartParser, FormParser],
+    )
     def parse_goal_pdf(self, request, pk=None):
         """Preview Workday goal titles; the upload is never persisted."""
         cycle = self.get_object()

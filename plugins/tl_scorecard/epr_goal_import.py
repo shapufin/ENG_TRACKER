@@ -15,8 +15,9 @@ from typing import Iterable
 from pypdf import PdfReader
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
-MAX_PDF_PAGES = 20
-MAX_GOAL_TITLES = 20
+MAX_PDF_PAGES = 25
+MAX_EXTRACTED_CHARS = 250_000
+MAX_GOAL_TITLES = 50
 MIN_CONFIRMED_GOALS = 5
 GOAL_TITLE_MAX_LENGTH = 255
 # Cumulative bound on one title group. A Workday description that lacks
@@ -67,7 +68,7 @@ def normalize_goal_titles(
             raise GoalImportError('Each goal title must be text.', field='goal_titles')
         title = _clean_line(item)
         if not title:
-            continue
+            raise GoalImportError('Goal titles cannot be blank.', field='goal_titles')
         if len(title) > GOAL_TITLE_MAX_LENGTH:
             raise GoalImportError(
                 f'Goal titles must be {GOAL_TITLE_MAX_LENGTH} characters or fewer.',
@@ -79,6 +80,11 @@ def normalize_goal_titles(
         seen.add(key)
         normalized.append(title)
 
+    if len(normalized) > MAX_GOAL_TITLES:
+        raise GoalImportError(
+            f'At most {MAX_GOAL_TITLES} goal titles are allowed.',
+            field='goal_titles',
+        )
     if len(normalized) < minimum:
         raise GoalImportError(
             f'At least {minimum} goal titles are required.',
@@ -203,10 +209,15 @@ def extract_goal_titles_from_pdf(upload) -> list[str]:
             raise GoalImportError('Password-protected PDFs cannot be parsed.')
         if len(reader.pages) > MAX_PDF_PAGES:
             raise GoalImportError('The PDF has too many pages to be a goal-setting export.')
-        text = '\n'.join(
-            page.extract_text(extraction_mode='layout') or ''
-            for page in reader.pages
-        )
+        chunks: list[str] = []
+        total = 0
+        for page in reader.pages:
+            chunk = page.extract_text(extraction_mode='layout') or ''
+            total += len(chunk)
+            if total > MAX_EXTRACTED_CHARS:
+                raise GoalImportError('The PDF contains too much text to be a goal-setting export.')
+            chunks.append(chunk)
+        text = '\n'.join(chunks)
     except GoalImportError:
         raise
     except Exception as exc:
