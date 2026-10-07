@@ -4,6 +4,7 @@ import { StatsWidgets } from "./dashboard-widgets/StatsWidgets";
 import { HoursChartWidget } from "./dashboard-widgets/HoursChartWidget";
 import { ApprovalStatusWidget } from "./dashboard-widgets/ApprovalStatusWidget";
 import { RecentActivityWidget } from "./dashboard-widgets/RecentActivityWidget";
+import { OverviewSection } from "./dashboard-widgets/OverviewSection";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 
 interface AuditLog {
@@ -23,6 +24,7 @@ interface AdminDashboardWidgetsProps {
   auditLogs?: AuditLog[];
   statsLoading?: boolean;
   auditLogsLoading?: boolean;
+  isSuperuser?: boolean;
 }
 
 export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
@@ -36,6 +38,7 @@ export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
   auditLogs,
   statsLoading,
   auditLogsLoading,
+  isSuperuser = false,
 }) => {
   // The recent-activity widget reads audit_log data the viewer may not be
   // permitted to see (plugin permission is fail-secure server-side) — hide
@@ -53,6 +56,7 @@ export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
         overtimeSummary={overtimeSummary}
         isLoading={statsLoading}
       />
+      <OverviewSection isWidgetActive={isWidgetActive} isSuperuser={isSuperuser} />
       <div className="grid gap-4 lg:grid-cols-3">
         {isWidgetActive("hours-overview") && (
           <HoursChartWidget hoursData={hoursData} isLoading={statsLoading} />

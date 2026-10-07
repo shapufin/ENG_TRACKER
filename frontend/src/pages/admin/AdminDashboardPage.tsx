@@ -15,7 +15,7 @@ import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const AdminDashboardContent: React.FC = () => {
-  const { availableDashboards } = usePermissions();
+  const { availableDashboards, isSuperuser } = usePermissions();
   const navigate = useNavigate();
   // The admin dashboard lives at /admin; every other dashboard lives at /.
   // Persist the choice (DashboardPage hydrates from the same key) then go.
@@ -81,13 +81,14 @@ const AdminDashboardContent: React.FC = () => {
             auditLogs={auditLogs}
             statsLoading={statsLoading}
             auditLogsLoading={auditLogsLoading}
+            isSuperuser={isSuperuser}
           />
         </SortableContext>
       </DndContext>
       <CustomizeDashboardModal
         open={customizeModalOpen}
         onOpenChange={setCustomizeModalOpen}
-        availableWidgets={AVAILABLE_WIDGETS}
+        availableWidgets={AVAILABLE_WIDGETS.filter((w) => !w.superuserOnly || isSuperuser)}
         activeWidgets={activeWidgetIds}
         onToggleWidget={handleToggleWidget}
       />

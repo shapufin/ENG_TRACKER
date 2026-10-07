@@ -5,7 +5,7 @@ Dashboard app viewsets.
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
@@ -176,6 +176,17 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
             'avg_overtime_hours': avg_overtime_hours,
             'active_teams_count': active_teams_count,
         })
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
+    def admin_overview(self, request):
+        """Org-wide health/backlog/leave aggregates for the admin dashboard.
+
+        Staff/superuser only (stricter than ``global_stats``' HR gate): it lists
+        coverage gaps and HBPR assignment gaps. ``backup`` is superuser-only.
+        """
+        from .admin_overview import build_admin_overview
+
+        return Response(build_admin_overview(request.user))
 
     @action(detail=False, methods=['get'])
     def team_stats(self, request):

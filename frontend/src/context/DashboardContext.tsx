@@ -49,8 +49,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
     const loadLayout = async () => {
       try {
         const savedLayout = await dashboardService.getDashboardLayout(dashboardType);
-        if (savedLayout && savedLayout.layout) {
-          setLayout(savedLayout.layout);
+        // The preferences endpoint is paginated: the saved row is results[0].
+        const saved = savedLayout?.results?.[0]?.layout ?? savedLayout?.layout;
+        if (saved) {
+          setLayout(saved);
         }
       } catch (error) {
         console.error("Failed to load dashboard layout:", error);
