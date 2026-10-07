@@ -105,6 +105,7 @@ describe("EPRSection", () => {
 
   it("renders recorded evidence under a completed stage", () => {
     renderSection([completedCycle]);
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
     expect(screen.queryByRole("button", { name: /Goal Setting/ })).not.toBeInTheDocument();
     expect(screen.getByText(/^Completed /)).toBeInTheDocument();
     expect(screen.getByText("Five SMART goals agreed with Jane.")).toBeInTheDocument();
@@ -117,26 +118,28 @@ describe("EPRSection", () => {
 
   it("disables later stages until the earlier one is complete", () => {
     renderSection([cycleWithFewGoals]);
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
 
-    expect(screen.getByRole("button", { name: /Goal Setting/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Complete Goal Setting/ })).toBeEnabled();
     expect(screen.queryByRole("button", { name: /Mid-year/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Final Review/ })).not.toBeInTheDocument();
     expect(screen.getByText("Ready to complete")).toBeInTheDocument();
     expect(screen.getAllByText("Locked until the previous step is done")).toHaveLength(2);
-    expect(screen.getByText(/Step 1 · Current/)).toBeInTheDocument();
   });
 
   it("explains a step blocked by a later completed step", () => {
     renderSection([{ ...cycleWithFewGoals, mid_year_completed_at: "2026-07-01T00:00:00Z" }]);
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
 
-    expect(screen.getByRole("button", { name: /Goal Setting/ })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /Complete Goal Setting/ })).not.toBeInTheDocument();
+    expect(screen.getByText("Needs attention")).toBeInTheDocument();
     expect(screen.getByText("Blocked — a later step is already complete")).toBeInTheDocument();
   });
 
   it("lets an out-of-order step record evidence when goals are already confirmed", () => {
     renderSection([{ ...cycleWithFiveGoals, mid_year_completed_at: "2026-07-01T00:00:00Z" }]);
 
-    const button = screen.getByRole("button", { name: /Goal Setting/ });
+    const button = screen.getByRole("button", { name: /Complete Goal Setting/ });
     expect(button).toBeEnabled();
     fireEvent.click(button);
     expect(screen.getByText(/the goals are locked/)).toBeInTheDocument();
@@ -193,5 +196,25 @@ describe("EPRSection", () => {
         shared_with_employee: false,
       })
     );
+  });
+
+  it("filters, searches and pages a long list of cycles", () => {
+    const many = Array.from({ length: 14 }, (_, index) => ({
+      ...cycleWithFiveGoals,
+      id: 100 + index,
+      user_name: `Person ${index}`,
+      goal_setting_completed_at: index < 4 ? "2026-03-01T00:00:00Z" : null,
+    }));
+    renderSection(many);
+
+    expect(screen.getByRole("button", { name: /Show 4 more/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Mid-year 4$/ }));
+    expect(screen.queryByRole("button", { name: /Show .* more/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^All 14$/ }));
+    fireEvent.change(screen.getByLabelText("Search EPR cycles by name"), {
+      target: { value: "person 13" },
+    });
+    expect(screen.getByText(/Person 13/)).toBeInTheDocument();
+    expect(screen.queryByText(/Person 12/)).not.toBeInTheDocument();
   });
 });
