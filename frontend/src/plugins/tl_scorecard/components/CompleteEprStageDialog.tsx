@@ -168,7 +168,7 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
           <ModalSection
             columns={1}
             title="Confirmed Workday goals"
-            description="Upload a Workday goal-setting PDF to preview titles, or edit the list manually. The PDF is parsed for this request only and is not stored."
+            description="Upload the Workday PDF to fill the list, or type the goals yourself. The PDF is read once and never stored."
           >
             <div className="space-y-2">
               <FieldLabel htmlFor="epr-goal-pdf">Workday PDF</FieldLabel>
@@ -180,7 +180,7 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
                 onChange={handleFileChange}
               />
               <p className="text-muted-foreground text-xs">
-                PDF only. Parsed titles are editable before confirmation.
+                You can edit every title before confirming. Five goals are needed.
               </p>
             </div>
 

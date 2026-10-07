@@ -76,7 +76,7 @@ describe("EPRSection", () => {
   it("lets Goal Setting open with fewer than five goals so they can be confirmed", () => {
     renderSection([cycleWithFewGoals]);
     expect(screen.getByText("1/5 confirmed goals")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Goal Setting" }));
+    fireEvent.click(screen.getByRole("button", { name: "Complete Goal Setting" }));
     expect(screen.getByText("Complete Goal Setting")).toBeInTheDocument();
     expect(screen.getByLabelText(/Workday PDF/i)).toBeInTheDocument();
   });
@@ -84,7 +84,7 @@ describe("EPRSection", () => {
   it("opens the evidence dialog instead of completing on a bare click", async () => {
     const onCompleteStage = vi.fn().mockResolvedValue(undefined);
     renderSection([cycleWithFiveGoals], onCompleteStage);
-    fireEvent.click(screen.getByRole("button", { name: "Goal Setting" }));
+    fireEvent.click(screen.getByRole("button", { name: "Complete Goal Setting" }));
 
     expect(onCompleteStage).not.toHaveBeenCalled();
     fireEvent.change(await screen.findByLabelText(/^Summary/), {
@@ -105,7 +105,8 @@ describe("EPRSection", () => {
 
   it("renders recorded evidence under a completed stage", () => {
     renderSection([completedCycle]);
-    expect(screen.getByRole("button", { name: /Goal Setting/ })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /Goal Setting/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/^Completed /)).toBeInTheDocument();
     expect(screen.getByText("Five SMART goals agreed with Jane.")).toBeInTheDocument();
     expect(screen.getByText("Shared with employee")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /reference/i })).toHaveAttribute(
@@ -118,8 +119,8 @@ describe("EPRSection", () => {
     renderSection([cycleWithFewGoals]);
 
     expect(screen.getByRole("button", { name: /Goal Setting/ })).toBeEnabled();
-    expect(screen.getByRole("button", { name: /Mid-year/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /Final Review/ })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /Mid-year/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Final Review/ })).not.toBeInTheDocument();
     expect(screen.getByText("Ready to complete")).toBeInTheDocument();
     expect(screen.getAllByText("Locked until the previous step is done")).toHaveLength(2);
     expect(screen.getByText(/Step 1 · Current/)).toBeInTheDocument();
@@ -151,7 +152,7 @@ describe("EPRSection", () => {
       },
     ]);
 
-    expect(screen.getByRole("button", { name: /Mid-year/ })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /Mid-year/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Final Review/ })).toBeEnabled();
   });
 
@@ -161,7 +162,7 @@ describe("EPRSection", () => {
       .mockResolvedValue(["Parsed A", "Parsed B", "Parsed C", "Parsed D", "Parsed E"]);
     renderSection([cycleWithFewGoals], undefined, onParseGoals);
 
-    fireEvent.click(screen.getByRole("button", { name: "Goal Setting" }));
+    fireEvent.click(screen.getByRole("button", { name: "Complete Goal Setting" }));
     const file = new File(["%PDF-1.4"], "workday.pdf", { type: "application/pdf" });
     fireEvent.change(await screen.findByLabelText(/Workday PDF/i), {
       target: { files: [file] },
@@ -177,7 +178,7 @@ describe("EPRSection", () => {
       onCompleteStage
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Mid-year" }));
+    fireEvent.click(screen.getByRole("button", { name: "Complete Mid-year" }));
     expect(await screen.findByDisplayValue("Goal A")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/^Summary/), {
       target: { value: "No Workday changes." },

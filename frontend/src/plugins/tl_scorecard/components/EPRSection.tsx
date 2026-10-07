@@ -64,6 +64,12 @@ const StageRecordRow: React.FC<{ record: EPRStageRecord | EPRStageRecordMeta }> 
   );
 };
 
+const STAGE_HINT: Record<EPRStage, string> = {
+  goal_setting: "Agree the goals for the year with the employee, then confirm them here.",
+  mid_year: "Check progress. Keep the goals as they are, or replace them.",
+  final_review: "Close the year with a review summary. Goals stay as they are.",
+};
+
 const CycleRow: React.FC<{
   cycle: EPRCycle;
   onParseGoals: (cycleId: number, stage: EPRStage, file: File) => Promise<string[]>;
@@ -74,29 +80,39 @@ const CycleRow: React.FC<{
   // Stages complete in order — the backend rejects a later stage while an
   // earlier one is open, so don't offer a button that can only 400.
   const firstOpenIndex = STAGES.findIndex((stage) => !completedAt(stage.field));
+  const allDone = firstOpenIndex === -1;
+  const recordsFor = (field: EPRStage) =>
+    (cycle.stage_records ?? []).filter((record) => record.stage === field);
 
   return (
-    <li className="py-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium">
-          {cycle.user_name} · {cycle.year}
-        </p>
+    <li className="py-4">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+        <div>
+          <p className="text-sm font-semibold">
+            {cycle.user_name} · {cycle.year}
+          </p>
+          <p className="text-muted-foreground text-xs">
+            {allDone
+              ? "All three steps are complete."
+              : `Next step: ${STAGES[firstOpenIndex].label}`}
+          </p>
+        </div>
         <p
           className={`text-xs ${cycle.goal_count >= 5 ? toneTextClass.success : toneTextClass.warning}`}
         >
           {cycle.goal_count}/5 confirmed goals
         </p>
       </div>
-      <ol className="mt-3 grid gap-2 sm:grid-cols-3" aria-label="EPR progress">
+
+      <ol className="mt-3" aria-label="EPR progress">
         {STAGES.map(({ field, label }, index) => {
           const stageCompletedAt = completedAt(field);
           const isCurrent = index === firstOpenIndex;
           const earlierOpen = STAGES.slice(0, index).some((earlier) => !completedAt(earlier.field));
           const laterDone = STAGES.slice(index + 1).some((later) => completedAt(later.field));
           // Opened out of order before the sequence was enforced: the backend
-          // locks goals once a later stage is done, so the step can't proceed.
+          // locks goals once a later stage is done, so only evidence remains.
           const stranded = !stageCompletedAt && laterDone;
-          // Stranded but with a confirmed goal set: evidence-only is still possible.
           const evidenceOnly = stranded && cycle.goal_count >= 5;
           const disabled = Boolean(stageCompletedAt) || earlierOpen || (stranded && !evidenceOnly);
           const status = stageCompletedAt
@@ -108,60 +124,95 @@ const CycleRow: React.FC<{
               : earlierOpen
                 ? "Locked until the previous step is done"
                 : "Ready to complete";
+          const records = recordsFor(field);
+          const isLast = index === STAGES.length - 1;
           return (
             <li
               key={field}
               aria-current={isCurrent ? "step" : undefined}
-              className={`flex flex-col gap-2 rounded-lg border p-3 ${
-                isCurrent && !stranded
-                  ? "border-primary bg-tone-info-surface"
-                  : "border-line-subtle"
-              }`}
+              className="relative flex gap-3 pb-4 last:pb-0"
             >
-              <div className="flex items-center gap-2 text-xs">
+              {!isLast && (
                 <span
-                  className={`text-micro flex h-5 w-5 shrink-0 items-center justify-center rounded-full border font-semibold ${
-                    stageCompletedAt
-                      ? "bg-tone-success-surface text-tone-success-text border-transparent"
-                      : "text-muted-foreground"
-                  }`}
                   aria-hidden="true"
-                >
-                  {stageCompletedAt ? <CheckCircle2 className="h-3.5 w-3.5" /> : index + 1}
-                </span>
-                <span className="text-muted-foreground font-medium">
-                  Step {index + 1}
-                  {isCurrent && !stranded ? " · Current" : ""}
-                </span>
+                  className={`absolute top-7 bottom-0 left-[11px] w-px ${
+                    stageCompletedAt ? "bg-tone-success-text/50" : "bg-border"
+                  }`}
+                />
+              )}
+              <span
+                aria-hidden="true"
+                className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
+                  stageCompletedAt
+                    ? "bg-tone-success-surface text-tone-success-text border-transparent"
+                    : isCurrent && !stranded
+                      ? "bg-primary text-primary-foreground border-transparent"
+                      : "bg-card text-muted-foreground"
+                }`}
+              >
+                {stageCompletedAt ? <CheckCircle2 className="h-3.5 w-3.5" /> : index + 1}
+              </span>
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {label}
+                      <span className="sr-only">
+                        {" "}
+                        Step {index + 1}
+                        {isCurrent && !stranded ? " · Current" : ""}
+                      </span>
+                    </p>
+                    <p
+                      id={`epr-${cycle.id}-${field}-status`}
+                      className={`text-xs ${stranded ? toneTextClass.warning : "text-muted-foreground"}`}
+                    >
+                      {status}
+                    </p>
+                  </div>
+                  {!stageCompletedAt && !earlierOpen && (
+                    <Button
+                      size="sm"
+                      variant={isCurrent && !stranded ? "default" : "outline"}
+                      disabled={disabled}
+                      onClick={() => setCompleting(field)}
+                      aria-label={`Complete ${label}`}
+                      aria-describedby={`epr-${cycle.id}-${field}-status`}
+                    >
+                      Complete step
+                    </Button>
+                  )}
+                </div>
+                {isCurrent && !stranded && (
+                  <p className="text-muted-foreground text-xs">{STAGE_HINT[field]}</p>
+                )}
+                {field === "goal_setting" && cycle.goals.length > 0 && (
+                  <details className="text-xs">
+                    <summary className="text-primary cursor-pointer font-medium">
+                      {cycle.goals.length} confirmed goals
+                    </summary>
+                    <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                      {cycle.goals.map((goal) => (
+                        <li key={goal.id} className="break-words">
+                          {goal.description}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+                {records.length > 0 && (
+                  <ul className="space-y-2">
+                    {records.map((record) => (
+                      <StageRecordRow key={record.id} record={record} />
+                    ))}
+                  </ul>
+                )}
               </div>
-              <Button
-                size="sm"
-                variant={
-                  stageCompletedAt ? "secondary" : isCurrent && !stranded ? "default" : "outline"
-                }
-                disabled={disabled}
-                onClick={() => setCompleting(field)}
-                aria-describedby={`epr-${cycle.id}-${field}-status`}
-              >
-                {label}
-              </Button>
-              <p
-                id={`epr-${cycle.id}-${field}-status`}
-                className={`text-xs ${stranded ? toneTextClass.warning : "text-muted-foreground"}`}
-              >
-                {status}
-              </p>
             </li>
           );
         })}
       </ol>
-      {cycle.stage_records && cycle.stage_records.length > 0 && (
-        <ul className="mt-2 space-y-2">
-          {cycle.stage_records.map((record) => (
-            <StageRecordRow key={record.id} record={record} />
-          ))}
-        </ul>
-      )}
+
       {completing && (
         <CompleteEprStageDialog
           key={completing}
