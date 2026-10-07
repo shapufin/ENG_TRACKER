@@ -120,7 +120,26 @@ describe("EPRSection", () => {
     expect(screen.getByRole("button", { name: /Goal Setting/ })).toBeEnabled();
     expect(screen.getByRole("button", { name: /Mid-year/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Final Review/ })).toBeDisabled();
-    expect(screen.getByText(/Stages complete in order/)).toBeInTheDocument();
+    expect(screen.getByText("Ready to complete")).toBeInTheDocument();
+    expect(screen.getAllByText("Locked until the previous step is done")).toHaveLength(2);
+    expect(screen.getByText(/Step 1 · Current/)).toBeInTheDocument();
+  });
+
+  it("explains a step blocked by a later completed step", () => {
+    renderSection([{ ...cycleWithFewGoals, mid_year_completed_at: "2026-07-01T00:00:00Z" }]);
+
+    expect(screen.getByRole("button", { name: /Goal Setting/ })).toBeDisabled();
+    expect(screen.getByText("Blocked — a later step is already complete")).toBeInTheDocument();
+  });
+
+  it("lets an out-of-order step record evidence when goals are already confirmed", () => {
+    renderSection([{ ...cycleWithFiveGoals, mid_year_completed_at: "2026-07-01T00:00:00Z" }]);
+
+    const button = screen.getByRole("button", { name: /Goal Setting/ });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    expect(screen.getByText(/the goals are locked/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Workday PDF")).not.toBeInTheDocument();
   });
 
   it("unlocks the next stage as each one completes", () => {

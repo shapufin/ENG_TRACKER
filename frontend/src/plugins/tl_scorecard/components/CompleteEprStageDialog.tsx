@@ -42,6 +42,11 @@ interface CompleteEprStageDialogProps {
   stage: EPRStage;
   /** Human-readable stage name shown in the title, e.g. "Mid-year". */
   stageLabel: string;
+  /** 1-based position in the EPR sequence, shown as "Step N of M". */
+  stepNumber?: number;
+  stepCount?: number;
+  /** A later step is already done, so goals are fixed: record evidence only. */
+  goalsLocked?: boolean;
   initialGoalTitles?: string[];
   onParseGoals?: (file: File) => Promise<string[]>;
   onSave: (values: CompleteEprStageValues) => Promise<void>;
@@ -58,11 +63,14 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
   onOpenChange,
   stage,
   stageLabel,
+  stepNumber,
+  stepCount,
+  goalsLocked = false,
   initialGoalTitles = [],
   onParseGoals,
   onSave,
 }) => {
-  const supportsGoals = stage !== "final_review";
+  const supportsGoals = stage !== "final_review" && !goalsLocked;
   const [summary, setSummary] = useState("");
   const [referenceUrl, setReferenceUrl] = useState("");
   const [shared, setShared] = useState(false);
@@ -94,7 +102,12 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
     try {
       setGoalTitles(await onParseGoals(file));
     } catch (error) {
-      setParseError(extractApiErrorMessage(error, "Could not parse the Workday PDF."));
+      setParseError(
+        extractApiErrorMessage(error, "Could not parse the Workday PDF.").replace(
+          /^(file|stage|goal_titles):\s*/i,
+          ""
+        )
+      );
     } finally {
       setIsParsing(false);
     }
@@ -117,7 +130,7 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
         reference_url: referenceUrl.trim(),
         shared_with_employee: shared,
       };
-      if (stage === "goal_setting" || (stage === "mid_year" && goalsChanged)) {
+      if (supportsGoals && (stage === "goal_setting" || goalsChanged)) {
         values.goal_titles = normalizedGoalTitles;
       }
       await onSave(values);
@@ -134,10 +147,10 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       title={`Complete ${stageLabel}`}
-      description={
-        STAGE_DESCRIPTION[stage] ??
+      description={`${stepNumber && stepCount ? `Step ${stepNumber} of ${stepCount} · ` : ""}${
+        (goalsLocked ? undefined : STAGE_DESCRIPTION[stage]) ??
         "Record the outcome of this stage — what was agreed, and where the review artifact lives."
-      }
+      }`}
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
       submitLabel="Complete stage"
@@ -145,6 +158,12 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
       size="lg"
     >
       <div className="space-y-4">
+        {goalsLocked && (
+          <InfoCallout
+            tone="warning"
+            label="A later step was already completed, so the goals are locked. This records the evidence for this step only."
+          />
+        )}
         {supportsGoals && (
           <ModalSection
             columns={1}
@@ -218,6 +237,21 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
                 <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
                 Add goal
               </Button>
+              <div
+                className="bg-muted h-1.5 overflow-hidden rounded-full"
+                role="progressbar"
+                aria-label="Goals ready"
+                aria-valuemin={0}
+                aria-valuemax={MIN_GOALS}
+                aria-valuenow={Math.min(normalizedGoalTitles.length, MIN_GOALS)}
+              >
+                <div
+                  className="bg-primary h-full transition-[width] motion-reduce:transition-none"
+                  style={{
+                    width: `${(Math.min(normalizedGoalTitles.length, MIN_GOALS) / MIN_GOALS) * 100}%`,
+                  }}
+                />
+              </div>
               <p
                 className={`text-xs ${
                   normalizedGoalTitles.length >= MIN_GOALS
@@ -234,47 +268,53 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
           </ModalSection>
         )}
 
-        <div className="space-y-2">
-          <FieldLabel htmlFor="epr-stage-summary" required>
-            Summary
-          </FieldLabel>
-          <Textarea
-            id="epr-stage-summary"
-            rows={4}
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            placeholder="What was discussed and agreed at this stage."
-          />
-        </div>
-
-        <div className="space-y-2">
-          <FieldLabel htmlFor="epr-stage-reference">Reference link</FieldLabel>
-          <Input
-            id="epr-stage-reference"
-            type="url"
-            value={referenceUrl}
-            onChange={(e) => setReferenceUrl(e.target.value)}
-            placeholder="https://… (e.g. the Workday review)"
-          />
-        </div>
-
-        <label
-          htmlFor="epr-stage-share"
-          className="flex cursor-pointer items-start gap-2.5 text-sm"
+        <ModalSection
+          columns={1}
+          title="Review evidence"
+          description="Recorded with the stage. Optionally shared with the employee."
         >
-          <Checkbox
-            id="epr-stage-share"
-            className="mt-0.5"
-            checked={shared}
-            onCheckedChange={(checked) => setShared(checked === true)}
-          />
-          <span>
-            Share with employee
-            <span className="text-muted-foreground block text-xs">
-              The summary appears on their My Records page.
+          <div className="space-y-2">
+            <FieldLabel htmlFor="epr-stage-summary" required>
+              Summary
+            </FieldLabel>
+            <Textarea
+              id="epr-stage-summary"
+              rows={4}
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder="What was discussed and agreed at this stage."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <FieldLabel htmlFor="epr-stage-reference">Reference link</FieldLabel>
+            <Input
+              id="epr-stage-reference"
+              type="url"
+              value={referenceUrl}
+              onChange={(e) => setReferenceUrl(e.target.value)}
+              placeholder="https://… (e.g. the Workday review)"
+            />
+          </div>
+
+          <label
+            htmlFor="epr-stage-share"
+            className="flex cursor-pointer items-start gap-2.5 text-sm"
+          >
+            <Checkbox
+              id="epr-stage-share"
+              className="mt-0.5"
+              checked={shared}
+              onCheckedChange={(checked) => setShared(checked === true)}
+            />
+            <span>
+              Share with employee
+              <span className="text-muted-foreground block text-xs">
+                The summary appears on their My Records page.
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
+        </ModalSection>
       </div>
     </FormDialog>
   );
