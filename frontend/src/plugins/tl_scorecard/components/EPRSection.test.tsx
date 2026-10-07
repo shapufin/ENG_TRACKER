@@ -114,6 +114,28 @@ describe("EPRSection", () => {
     );
   });
 
+  it("disables later stages until the earlier one is complete", () => {
+    renderSection([cycleWithFewGoals]);
+
+    expect(screen.getByRole("button", { name: /Goal Setting/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Mid-year/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Final Review/ })).toBeDisabled();
+    expect(screen.getByText(/Stages complete in order/)).toBeInTheDocument();
+  });
+
+  it("unlocks the next stage as each one completes", () => {
+    renderSection([
+      {
+        ...cycleWithFiveGoals,
+        goal_setting_completed_at: "2026-03-01T00:00:00Z",
+        mid_year_completed_at: "2026-07-01T00:00:00Z",
+      },
+    ]);
+
+    expect(screen.getByRole("button", { name: /Mid-year/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Final Review/ })).toBeEnabled();
+  });
+
   it("threads the PDF parse callback with cycle and stage", async () => {
     const onParseGoals = vi
       .fn()
