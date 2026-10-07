@@ -64,7 +64,13 @@ export const ApprovalAgingWidget: React.FC<ApprovalAgingWidgetProps> = ({ aging 
               tickLine={false}
               axisLine={{ stroke: "hsl(var(--border))" }}
             />
-            <YAxis tick={axisTickStyle} tickLine={false} axisLine={false} width={28} allowDecimals={false} />
+            <YAxis
+              tick={axisTickStyle}
+              tickLine={false}
+              axisLine={false}
+              width={28}
+              allowDecimals={false}
+            />
             <Tooltip
               cursor={{ fill: "hsl(var(--muted) / 0.4)" }}
               contentStyle={chartTooltipStyle}

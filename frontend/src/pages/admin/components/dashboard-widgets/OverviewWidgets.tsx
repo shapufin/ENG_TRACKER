@@ -32,7 +32,7 @@ const GRID = "grid gap-4 sm:grid-cols-2 lg:grid-cols-4";
 const Skeleton: React.FC = () => (
   <div className={GRID}>
     {Array.from({ length: 4 }).map((_, i) => (
-      <div key={i} className="h-24 animate-pulse rounded-xl border border-border/70 bg-card" />
+      <div key={i} className="border-border/70 bg-card h-24 animate-pulse rounded-xl border" />
     ))}
   </div>
 );
@@ -60,7 +60,9 @@ const CoverageGapsCard: React.FC<{ gaps: AdminOverview["coverage_gaps"] }> = ({ 
           {rows.map(([label, n]) => (
             <li key={label} className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">{label}</span>
-              <span className={`font-mono tabular-nums ${n > 0 ? "text-warning font-semibold" : ""}`}>
+              <span
+                className={`font-mono tabular-nums ${n > 0 ? "text-warning font-semibold" : ""}`}
+              >
                 {n}
               </span>
             </li>

@@ -13,7 +13,9 @@ vi.mock("@/services/dashboardService", () => ({
 
 const Probe = () => {
   const { layout, isLoading } = useDashboard();
-  return <div data-testid="ids">{isLoading ? "loading" : layout.widgets.map((w) => w.id).join(",")}</div>;
+  return (
+    <div data-testid="ids">{isLoading ? "loading" : layout.widgets.map((w) => w.id).join(",")}</div>
+  );
 };
 
 const saved = {

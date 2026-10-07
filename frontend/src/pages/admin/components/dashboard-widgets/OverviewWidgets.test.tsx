@@ -58,14 +58,7 @@ const data: AdminOverview = {
 };
 
 const renderAll = (overrides: Partial<React.ComponentProps<typeof OverviewWidgets>> = {}) =>
-  render(
-    <OverviewWidgets
-      isWidgetActive={() => true}
-      data={data}
-      isSuperuser
-      {...overrides}
-    />
-  );
+  render(<OverviewWidgets isWidgetActive={() => true} data={data} isSuperuser {...overrides} />);
 
 describe("OverviewWidgets", () => {
   it("renders every active widget with real values", () => {
@@ -104,7 +97,9 @@ describe("OverviewWidgets", () => {
   });
 
   it("shows an empty-state message when there are no backups", () => {
-    renderAll({ data: { ...data, backup: { ...data.backup!, count: 0, age_hours: null, size_mb: null } } });
+    renderAll({
+      data: { ...data, backup: { ...data.backup!, count: 0, age_hours: null, size_mb: null } },
+    });
     expect(screen.getByText("No backups yet")).toBeInTheDocument();
   });
 
