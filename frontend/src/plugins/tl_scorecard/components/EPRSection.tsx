@@ -87,30 +87,70 @@ const CycleRow: React.FC<{
           {cycle.goal_count}/5 confirmed goals
         </p>
       </div>
-      <div className="mt-2 flex flex-wrap gap-1.5">
+      <ol className="mt-3 grid gap-2 sm:grid-cols-3" aria-label="EPR progress">
         {STAGES.map(({ field, label }, index) => {
           const stageCompletedAt = completedAt(field);
+          const isCurrent = index === firstOpenIndex;
           const earlierOpen = STAGES.slice(0, index).some((earlier) => !completedAt(earlier.field));
-          const disabled = Boolean(stageCompletedAt) || earlierOpen;
+          const laterDone = STAGES.slice(index + 1).some((later) => completedAt(later.field));
+          // Opened out of order before the sequence was enforced: the backend
+          // locks goals once a later stage is done, so the step can't proceed.
+          const stranded = !stageCompletedAt && laterDone;
+          const disabled = Boolean(stageCompletedAt) || earlierOpen || stranded;
+          const status = stageCompletedAt
+            ? `Completed ${new Date(stageCompletedAt).toLocaleDateString()}`
+            : stranded
+              ? "Blocked — a later step is already complete"
+              : earlierOpen
+                ? "Locked until the previous step is done"
+                : "Ready to complete";
           return (
-            <Button
+            <li
               key={field}
-              size="sm"
-              variant={stageCompletedAt ? "secondary" : "outline"}
-              disabled={disabled}
-              onClick={() => setCompleting(field)}
+              aria-current={isCurrent ? "step" : undefined}
+              className={`flex flex-col gap-2 rounded-lg border p-3 ${
+                isCurrent && !stranded
+                  ? "border-primary bg-tone-info-surface"
+                  : "border-line-subtle"
+              }`}
             >
-              {stageCompletedAt && <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}
-              {label}
-            </Button>
+              <div className="flex items-center gap-2 text-xs">
+                <span
+                  className={`text-micro flex h-5 w-5 shrink-0 items-center justify-center rounded-full border font-semibold ${
+                    stageCompletedAt
+                      ? "bg-tone-success-surface text-tone-success-text border-transparent"
+                      : "text-muted-foreground"
+                  }`}
+                  aria-hidden="true"
+                >
+                  {stageCompletedAt ? <CheckCircle2 className="h-3.5 w-3.5" /> : index + 1}
+                </span>
+                <span className="text-muted-foreground font-medium">
+                  Step {index + 1}
+                  {isCurrent && !stranded ? " · Current" : ""}
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant={
+                  stageCompletedAt ? "secondary" : isCurrent && !stranded ? "default" : "outline"
+                }
+                disabled={disabled}
+                onClick={() => setCompleting(field)}
+                aria-describedby={`epr-${cycle.id}-${field}-status`}
+              >
+                {label}
+              </Button>
+              <p
+                id={`epr-${cycle.id}-${field}-status`}
+                className={`text-xs ${stranded ? toneTextClass.warning : "text-muted-foreground"}`}
+              >
+                {status}
+              </p>
+            </li>
           );
         })}
-      </div>
-      {firstOpenIndex !== -1 && firstOpenIndex < STAGES.length - 1 && (
-        <p className="text-muted-foreground mt-1 text-xs">
-          Stages complete in order — {STAGES[firstOpenIndex].label} is next.
-        </p>
-      )}
+      </ol>
       {cycle.stage_records && cycle.stage_records.length > 0 && (
         <ul className="mt-2 space-y-2">
           {cycle.stage_records.map((record) => (
@@ -125,6 +165,8 @@ const CycleRow: React.FC<{
           onOpenChange={(open) => !open && setCompleting(null)}
           stage={completing}
           stageLabel={stageLabel(completing)}
+          stepNumber={STAGES.findIndex((stage) => stage.field === completing) + 1}
+          stepCount={STAGES.length}
           initialGoalTitles={cycle.goals.map((goal) => goal.description)}
           onParseGoals={(file) => onParseGoals(cycle.id, completing, file)}
           onSave={async (values) => {

@@ -120,7 +120,16 @@ describe("EPRSection", () => {
     expect(screen.getByRole("button", { name: /Goal Setting/ })).toBeEnabled();
     expect(screen.getByRole("button", { name: /Mid-year/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Final Review/ })).toBeDisabled();
-    expect(screen.getByText(/Stages complete in order/)).toBeInTheDocument();
+    expect(screen.getByText("Ready to complete")).toBeInTheDocument();
+    expect(screen.getAllByText("Locked until the previous step is done")).toHaveLength(2);
+    expect(screen.getByText(/Step 1 · Current/)).toBeInTheDocument();
+  });
+
+  it("explains a step blocked by a later completed step", () => {
+    renderSection([{ ...cycleWithFiveGoals, mid_year_completed_at: "2026-07-01T00:00:00Z" }]);
+
+    expect(screen.getByRole("button", { name: /Goal Setting/ })).toBeDisabled();
+    expect(screen.getByText("Blocked — a later step is already complete")).toBeInTheDocument();
   });
 
   it("unlocks the next stage as each one completes", () => {
