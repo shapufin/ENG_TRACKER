@@ -45,6 +45,8 @@ interface CompleteEprStageDialogProps {
   /** 1-based position in the EPR sequence, shown as "Step N of M". */
   stepNumber?: number;
   stepCount?: number;
+  /** A later step is already done, so goals are fixed: record evidence only. */
+  goalsLocked?: boolean;
   initialGoalTitles?: string[];
   onParseGoals?: (file: File) => Promise<string[]>;
   onSave: (values: CompleteEprStageValues) => Promise<void>;
@@ -63,11 +65,12 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
   stageLabel,
   stepNumber,
   stepCount,
+  goalsLocked = false,
   initialGoalTitles = [],
   onParseGoals,
   onSave,
 }) => {
-  const supportsGoals = stage !== "final_review";
+  const supportsGoals = stage !== "final_review" && !goalsLocked;
   const [summary, setSummary] = useState("");
   const [referenceUrl, setReferenceUrl] = useState("");
   const [shared, setShared] = useState(false);
@@ -127,7 +130,7 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
         reference_url: referenceUrl.trim(),
         shared_with_employee: shared,
       };
-      if (stage === "goal_setting" || (stage === "mid_year" && goalsChanged)) {
+      if (supportsGoals && (stage === "goal_setting" || goalsChanged)) {
         values.goal_titles = normalizedGoalTitles;
       }
       await onSave(values);
@@ -145,7 +148,7 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
       onOpenChange={onOpenChange}
       title={`Complete ${stageLabel}`}
       description={`${stepNumber && stepCount ? `Step ${stepNumber} of ${stepCount} · ` : ""}${
-        STAGE_DESCRIPTION[stage] ??
+        (goalsLocked ? undefined : STAGE_DESCRIPTION[stage]) ??
         "Record the outcome of this stage — what was agreed, and where the review artifact lives."
       }`}
       onSubmit={handleSubmit}
@@ -155,6 +158,12 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
       size="lg"
     >
       <div className="space-y-4">
+        {goalsLocked && (
+          <InfoCallout
+            tone="warning"
+            label="A later step was already completed, so the goals are locked. This records the evidence for this step only."
+          />
+        )}
         {supportsGoals && (
           <ModalSection
             columns={1}

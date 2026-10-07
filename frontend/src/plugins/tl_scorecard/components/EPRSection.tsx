@@ -96,11 +96,15 @@ const CycleRow: React.FC<{
           // Opened out of order before the sequence was enforced: the backend
           // locks goals once a later stage is done, so the step can't proceed.
           const stranded = !stageCompletedAt && laterDone;
-          const disabled = Boolean(stageCompletedAt) || earlierOpen || stranded;
+          // Stranded but with a confirmed goal set: evidence-only is still possible.
+          const evidenceOnly = stranded && cycle.goal_count >= 5;
+          const disabled = Boolean(stageCompletedAt) || earlierOpen || (stranded && !evidenceOnly);
           const status = stageCompletedAt
             ? `Completed ${new Date(stageCompletedAt).toLocaleDateString()}`
             : stranded
-              ? "Blocked — a later step is already complete"
+              ? evidenceOnly
+                ? "Out of order — record evidence only; goals are locked"
+                : "Blocked — a later step is already complete"
               : earlierOpen
                 ? "Locked until the previous step is done"
                 : "Ready to complete";
@@ -167,6 +171,12 @@ const CycleRow: React.FC<{
           stageLabel={stageLabel(completing)}
           stepNumber={STAGES.findIndex((stage) => stage.field === completing) + 1}
           stepCount={STAGES.length}
+          goalsLocked={
+            completing !== "final_review" &&
+            STAGES.slice(STAGES.findIndex((stage) => stage.field === completing) + 1).some(
+              (later) => completedAt(later.field)
+            )
+          }
           initialGoalTitles={cycle.goals.map((goal) => goal.description)}
           onParseGoals={(file) => onParseGoals(cycle.id, completing, file)}
           onSave={async (values) => {
