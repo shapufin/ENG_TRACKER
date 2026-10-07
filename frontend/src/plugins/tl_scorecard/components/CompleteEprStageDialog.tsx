@@ -12,6 +12,15 @@ import { extractApiErrorMessage } from "@/lib/apiFormError";
 import type { EPRStage } from "../types/tlScorecard";
 
 const MIN_GOALS = 5;
+const MAX_GOALS = 50;
+const MAX_TITLE_LENGTH = 255;
+
+const STAGE_DESCRIPTION: Partial<Record<EPRStage, string>> = {
+  goal_setting:
+    "Import the Workday goal-setting PDF or enter the goal titles, then record the evidence.",
+  mid_year:
+    "Confirm the current goals or replace them from a new Workday PDF, then record the review evidence.",
+};
 
 const normalizeTitle = (title: string) => title.replace(/\s+/g, " ").trim();
 
@@ -57,7 +66,9 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
   const [summary, setSummary] = useState("");
   const [referenceUrl, setReferenceUrl] = useState("");
   const [shared, setShared] = useState(false);
-  const [goalTitles, setGoalTitles] = useState<string[]>(initialGoalTitles);
+  const [goalTitles, setGoalTitles] = useState<string[]>(
+    supportsGoals && initialGoalTitles.length === 0 ? [""] : initialGoalTitles
+  );
   const [isParsing, setIsParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,8 +76,14 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
   const normalizedGoalTitles = normalizeTitles(goalTitles);
   const initialTitles = normalizeTitles(initialGoalTitles);
   const goalsChanged = !sameTitles(normalizedGoalTitles, initialTitles);
-  const hasEnoughGoals = !supportsGoals || normalizedGoalTitles.length >= MIN_GOALS;
-  const canSubmit = Boolean(summary.trim()) && hasEnoughGoals && !isParsing;
+  const goalsValid =
+    !supportsGoals ||
+    (normalizedGoalTitles.length >= MIN_GOALS &&
+      normalizedGoalTitles.length <= MAX_GOALS &&
+      new Set(normalizedGoalTitles.map((title) => title.toLowerCase())).size ===
+        normalizedGoalTitles.length &&
+      normalizedGoalTitles.every((title) => title.length <= MAX_TITLE_LENGTH));
+  const canSubmit = Boolean(summary.trim()) && goalsValid && !isParsing && !isSubmitting;
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -117,7 +134,10 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       title={`Complete ${stageLabel}`}
-      description="Record the outcome of this stage — what was agreed, and where the review artifact lives."
+      description={
+        STAGE_DESCRIPTION[stage] ??
+        "Record the outcome of this stage — what was agreed, and where the review artifact lives."
+      }
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
       submitLabel="Complete stage"
@@ -171,6 +191,7 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="min-h-11 min-w-11"
                     aria-label={`Remove Goal ${index + 1}`}
                     disabled={isSubmitting}
                     onClick={() => {
@@ -188,7 +209,7 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={isSubmitting}
+                disabled={isSubmitting || goalTitles.length >= MAX_GOALS}
                 onClick={() => {
                   setParseError(null);
                   setGoalTitles((current) => [...current, ""]);
