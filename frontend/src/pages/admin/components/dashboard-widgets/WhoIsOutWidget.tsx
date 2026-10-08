@@ -21,6 +21,7 @@ export const WhoIsOutWidget: React.FC<TrendWidgetProps> = ({
   const capped = leave.length >= LIMIT || standby.length >= LIMIT;
   return (
     <WidgetFrame
+      sectionId="who-is-out"
       title="Who's Out Today"
       description={
         out ? `${out.upcoming_leave_14d} more starting leave in the next 14 days` : undefined

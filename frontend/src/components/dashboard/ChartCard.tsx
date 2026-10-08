@@ -8,6 +8,8 @@ interface ChartCardProps {
   delay?: number;
   className?: string;
   action?: React.ReactNode;
+  /** Marks this card as a section for PDF export (`captureChartsToPdf`). */
+  sectionId?: string;
   children: React.ReactNode;
 }
 
@@ -17,14 +19,19 @@ export const ChartCard: React.FC<ChartCardProps> = ({
   delay = 0,
   className,
   action,
+  sectionId,
   children,
 }) => {
   return (
-    <GlassCard delay={delay} className={cn("flex flex-col overflow-hidden", className)}>
-      <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
+    <GlassCard
+      delay={delay}
+      data-chart-section={sectionId}
+      className={cn("flex flex-col overflow-hidden", className)}
+    >
+      <div className="border-border/60 flex items-center justify-between border-b px-5 py-4">
         <div>
           <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-          {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
+          {description && <p className="text-muted-foreground mt-1 text-xs">{description}</p>}
         </div>
         {action}
       </div>

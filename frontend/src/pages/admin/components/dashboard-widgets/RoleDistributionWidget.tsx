@@ -24,6 +24,7 @@ export const RoleDistributionWidget: React.FC<PeopleWidgetProps> = ({
     : [];
   return (
     <WidgetFrame
+      sectionId="role-distribution"
       title="Role Distribution"
       description="Active users by role; a person can hold several"
       isLoading={isLoading}

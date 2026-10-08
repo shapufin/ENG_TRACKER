@@ -34,6 +34,7 @@ export const OtStandbyTrendWidget: React.FC<TrendWidgetProps> = ({
   const last = rows[rows.length - 1];
   return (
     <WidgetFrame
+      sectionId="ot-standby-trend"
       title="Overtime & Standby Trend"
       description="Approved hours per month, last 12 months"
       className="lg:col-span-2"

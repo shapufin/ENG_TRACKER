@@ -6,6 +6,8 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 
 interface WidgetFrameProps {
   title: string;
+  /** PDF capture id (the widget id). */
+  sectionId?: string;
   description?: string;
   className?: string;
   isLoading?: boolean;
@@ -19,6 +21,7 @@ interface WidgetFrameProps {
 /** Card with the shared loading / error / empty states every dashboard widget needs. */
 export const WidgetFrame: React.FC<WidgetFrameProps> = ({
   title,
+  sectionId,
   description,
   className,
   isLoading,
@@ -38,7 +41,12 @@ export const WidgetFrame: React.FC<WidgetFrameProps> = ({
     );
   }
   return (
-    <ChartCard title={title} description={description} className={className}>
+    <ChartCard
+      title={title}
+      description={description}
+      className={className}
+      sectionId={isLoading ? undefined : sectionId}
+    >
       {isLoading ? (
         <div
           role="status"

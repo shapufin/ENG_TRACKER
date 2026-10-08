@@ -20,6 +20,7 @@ export const RejectionAnalysisWidget: React.FC<PeopleWidgetProps> = ({
   const total = types.reduce((s, [, n]) => s + n, 0);
   return (
     <WidgetFrame
+      sectionId="rejection-analysis"
       title="Rejection Analysis"
       description={rej ? `Rejected in ${rej.month}` : undefined}
       isLoading={isLoading}

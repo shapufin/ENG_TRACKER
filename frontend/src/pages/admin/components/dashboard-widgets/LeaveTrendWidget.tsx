@@ -33,6 +33,7 @@ export const LeaveTrendWidget: React.FC<TrendWidgetProps> = ({
   const last = rows[rows.length - 1];
   return (
     <WidgetFrame
+      sectionId="leave-trend"
       title="Leave Trend"
       description="Approved business days per month"
       className="lg:col-span-2"
