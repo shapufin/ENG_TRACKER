@@ -242,11 +242,11 @@ test.describe("Assigned Albanian TL", () => {
     const assignmentId = partnership.body.assignment.id as number;
 
     await loginAsUser(page, E2E_CREDENTIALS.albanianTeamLeader);
-    await page.goto("/tl-scorecard");
+    await page.goto("/tl-scorecard?tab=evidence");
     await settle(page);
     await expect(page.getByRole("heading", { name: "HBPR partnership" })).toBeVisible();
     await expect(page.getByText("E2E HBPR")).toBeVisible();
-    await expect(page.getByRole("button", { name: /record evidence/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /add log entry/i })).toBeVisible();
 
     // The authoring path the button opens, exercised through the API.
     const created = await request.post(`${API}/api/plugins/tl_scorecard/hbpr-evidence/`, {
