@@ -27,22 +27,22 @@ export const TeamComparisonWidget: React.FC<TrendWidgetProps> = ({
         <table className="w-full text-xs">
           <thead>
             <tr className={TABLE_HEAD_ROW_CLASS}>
-              <th scope="col" className={TABLE_HEAD_CELL_CLASS}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-2 py-2")}>
                 Team
               </th>
-              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-2 py-2 text-right")}>
                 Size
               </th>
-              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-2 py-2 text-right")}>
                 OT h
               </th>
-              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-2 py-2 text-right")}>
                 OT / person
               </th>
-              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-2 py-2 text-right")}>
                 Standby h
               </th>
-              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-2 py-2 text-right")}>
                 Leave d
               </th>
             </tr>
@@ -50,16 +50,16 @@ export const TeamComparisonWidget: React.FC<TrendWidgetProps> = ({
           <tbody className="font-mono tabular-nums">
             {rows.map((t) => (
               <tr key={t.team_id} className="border-border/50 border-t">
-                <th scope="row" className="py-2 text-left font-sans font-medium">
+                <th scope="row" className="px-2 py-2 text-left font-sans font-medium">
                   {t.name}
                 </th>
-                <td className="py-2 text-right">{t.team_size}</td>
-                <td className="py-2 text-right">{fmt1(t.overtime_hours)}</td>
-                <td className="py-2 text-right">
+                <td className="px-2 py-2 text-right">{t.team_size}</td>
+                <td className="px-2 py-2 text-right">{fmt1(t.overtime_hours)}</td>
+                <td className="px-2 py-2 text-right">
                   {t.overtime_per_capita === null ? "—" : fmt1(t.overtime_per_capita)}
                 </td>
-                <td className="py-2 text-right">{fmt1(t.standby_hours)}</td>
-                <td className="py-2 text-right">{fmt1(t.leave_days)}</td>
+                <td className="px-2 py-2 text-right">{fmt1(t.standby_hours)}</td>
+                <td className="px-2 py-2 text-right">{fmt1(t.leave_days)}</td>
               </tr>
             ))}
           </tbody>
