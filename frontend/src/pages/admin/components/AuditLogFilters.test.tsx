@@ -17,6 +17,6 @@ describe("AuditLogFilters", () => {
     // Shared Select triggers expose their Label text as accessible name.
     expect(screen.getByRole("combobox", { name: "Action" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Model" })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Search by user or object...")).toHaveClass("bg-input-bg");
+    expect(screen.getByPlaceholderText("Search by user or object...")).toHaveClass("bg-field-bg");
   });
 });

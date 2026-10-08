@@ -8,9 +8,10 @@ const point = (overrides: Partial<EngagementTrendPoint> = {}): EngagementTrendPo
   engagement_score: 78,
   avg_tta_hours: 6,
   decisions_during_leave: 0,
+  decisions_on_holidays: 0,
   score_speed: 90,
   score_approval_rate: 90,
-  score_activity: 60,
+  score_responsiveness: 60,
   score_consistency: 80,
   ...overrides,
 });
@@ -23,7 +24,7 @@ describe("ScoreCompositionTrendChart", () => {
           point({
             score_speed: null,
             score_approval_rate: null,
-            score_activity: null,
+            score_responsiveness: null,
             score_consistency: null,
           }),
         ]}

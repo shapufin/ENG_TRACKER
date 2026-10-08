@@ -11,7 +11,7 @@ const buttonVariants = cva(
         default: "bg-primary text-primary-foreground shadow-xs hover:bg-primary-hover",
         destructive: "bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90",
         outline:
-          "border border-input bg-card text-foreground shadow-2xs hover:bg-accent/80 hover:border-border-focus hover:text-accent-foreground",
+          "border border-control-edge bg-card text-foreground shadow-2xs hover:bg-accent/80 hover:border-control-edge-hover hover:text-accent-foreground",
         secondary:
           "border border-border/80 bg-secondary/70 text-secondary-foreground shadow-2xs hover:bg-secondary hover:border-border-focus",
         ghost: "hover:bg-accent/70 hover:text-foreground",
@@ -25,6 +25,10 @@ const buttonVariants = cva(
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
+        // Token-backed heights so a toolbar's buttons align with its fields (controlSurface.ts).
+        "control-sm": "h-[var(--control-h-sm)] rounded-[var(--control-radius)] px-3",
+        control: "h-[var(--control-h)] rounded-[var(--control-radius)] px-4",
+        "control-lg": "h-[var(--control-h-lg)] rounded-[var(--control-radius)] px-5",
       },
     },
     defaultVariants: {

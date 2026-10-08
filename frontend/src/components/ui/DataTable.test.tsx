@@ -184,7 +184,7 @@ describe("DataTable", () => {
       />
     );
 
-    expect(screen.getByRole("textbox", { name: "Search people..." })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search people..." })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "First page" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Previous page" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next page" })).toBeInTheDocument();

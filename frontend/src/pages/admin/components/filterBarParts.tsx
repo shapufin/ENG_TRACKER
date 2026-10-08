@@ -1,7 +1,7 @@
 import React from "react";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { Button } from "@/components/ui/button";
-import { Search, Filter } from "lucide-react";
+import { Filter } from "lucide-react";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 
 interface SearchInputProps {
@@ -24,15 +24,12 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   onChange,
   placeholder = "Search by user...",
 }) => (
-  <div className="relative">
-    <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-    <Input
-      placeholder={placeholder}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-12 pl-11"
-    />
-  </div>
+  <SearchField
+    value={value}
+    onChange={onChange}
+    placeholder={placeholder}
+    aria-label={placeholder}
+  />
 );
 
 interface StatusFilterButtonProps {
