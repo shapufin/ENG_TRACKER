@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { dashboardService } from "@/services/dashboardService";
 import { defaultAdminLayout } from "@/components/dashboard/widgetRegistry";
 
@@ -42,6 +42,21 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
 }) => {
   const [layout, setLayout] = useState<DashboardLayout>(defaultAdminLayout);
   const [isLoading, setIsLoading] = useState(true);
+  // Latest layout, readable synchronously so back-to-back toggles build on each
+  // other instead of on a stale render, and saves queue up (each save is a
+  // GET + PUT, so overlapping ones would race and drop the last toggles).
+  const layoutRef = useRef<DashboardLayout>(defaultAdminLayout);
+  const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const commit = useCallback(
+    (next: DashboardLayout, failure: string) => {
+      layoutRef.current = next;
+      setLayout(next);
+      saveQueue.current = saveQueue.current
+        .then(() => dashboardService.saveDashboardLayout(next, dashboardType))
+        .catch((error) => console.error(failure, error));
+    },
+    [dashboardType]
+  );
 
   // Load layout from backend on mount
   useEffect(() => {
@@ -51,6 +66,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
         // The preferences endpoint is paginated: the saved row is results[0].
         const saved = savedLayout?.results?.[0]?.layout ?? savedLayout?.layout;
         if (saved) {
+          layoutRef.current = saved;
           setLayout(saved);
         }
       } catch (error) {
@@ -66,6 +82,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
 
   const updateLayout = useCallback(
     async (newLayout: DashboardLayout) => {
+      layoutRef.current = newLayout;
       setLayout(newLayout);
       try {
         await dashboardService.saveDashboardLayout(newLayout, dashboardType);
@@ -78,6 +95,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
   );
 
   const resetLayout = useCallback(async () => {
+    layoutRef.current = defaultAdminLayout;
     setLayout(defaultAdminLayout);
     try {
       await dashboardService.resetDashboardLayout(dashboardType);
@@ -88,41 +106,30 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
 
   const addWidget = useCallback(
     (widgetId: string) => {
-      setLayout((prev) => {
-        const newWidget = {
-          id: widgetId,
-          position: { x: 0, y: prev.widgets.length },
-          size: { w: 1, h: 1 },
-        };
-        const newLayout = {
+      const prev = layoutRef.current;
+      commit(
+        {
           ...prev,
-          widgets: [...prev.widgets, newWidget],
-        };
-        // Persist to backend
-        dashboardService.saveDashboardLayout(newLayout, dashboardType).catch((error) => {
-          console.error("Failed to save widget addition:", error);
-        });
-        return newLayout;
-      });
+          widgets: [
+            ...prev.widgets,
+            { id: widgetId, position: { x: 0, y: prev.widgets.length }, size: { w: 1, h: 1 } },
+          ],
+        },
+        "Failed to save widget addition:"
+      );
     },
-    [dashboardType]
+    [commit]
   );
 
   const removeWidget = useCallback(
     (widgetId: string) => {
-      setLayout((prev) => {
-        const newLayout = {
-          ...prev,
-          widgets: prev.widgets.filter((w) => w.id !== widgetId),
-        };
-        // Persist to backend
-        dashboardService.saveDashboardLayout(newLayout, dashboardType).catch((error) => {
-          console.error("Failed to save widget removal:", error);
-        });
-        return newLayout;
-      });
+      const prev = layoutRef.current;
+      commit(
+        { ...prev, widgets: prev.widgets.filter((w) => w.id !== widgetId) },
+        "Failed to save widget removal:"
+      );
     },
-    [dashboardType]
+    [commit]
   );
 
   const value: DashboardContextValue = {

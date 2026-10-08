@@ -27,16 +27,16 @@ export const ApproverSlaWidget: React.FC<PeopleWidgetProps> = ({
         <table className="w-full text-xs">
           <thead>
             <tr className={TABLE_HEAD_ROW_CLASS}>
-              <th scope="col" className={TABLE_HEAD_CELL_CLASS}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-2 py-2")}>
                 Approver
               </th>
-              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-2 py-2 text-right")}>
                 Decisions
               </th>
-              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-2 py-2 text-right")}>
                 Approved
               </th>
-              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-2 py-2 text-right")}>
                 Avg time
               </th>
             </tr>
@@ -44,12 +44,12 @@ export const ApproverSlaWidget: React.FC<PeopleWidgetProps> = ({
           <tbody className="font-mono tabular-nums">
             {rows.map((a) => (
               <tr key={a.user_id} className="border-border/50 border-t">
-                <th scope="row" className="py-2 text-left font-sans font-medium">
+                <th scope="row" className="px-2 py-2 text-left font-sans font-medium">
                   {a.name}
                 </th>
-                <td className="py-2 text-right">{a.decisions_30d}</td>
-                <td className="py-2 text-right">{fmt1(a.approval_rate_pct)}%</td>
-                <td className="py-2 text-right">{fmt1(a.avg_decision_hours)}h</td>
+                <td className="px-2 py-2 text-right">{a.decisions_30d}</td>
+                <td className="px-2 py-2 text-right">{fmt1(a.approval_rate_pct)}%</td>
+                <td className="px-2 py-2 text-right">{fmt1(a.avg_decision_hours)}h</td>
               </tr>
             ))}
           </tbody>

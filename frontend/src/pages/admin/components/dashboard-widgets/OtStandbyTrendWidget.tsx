@@ -69,31 +69,31 @@ export const OtStandbyTrendWidget: React.FC<TrendWidgetProps> = ({
             <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [`${fmt1(Number(v))}h`]} />
             <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
             <Line
-              type="monotone"
+              type="linear"
               dataKey="overtime"
               name="Overtime"
               stroke="hsl(var(--chart-1))"
               strokeWidth={2}
-              dot={false}
+              dot={{ r: 2 }}
               isAnimationActive={!reduce}
             />
             <Line
-              type="monotone"
+              type="linear"
               dataKey="standby"
               name="Standby"
               stroke="hsl(var(--chart-2))"
               strokeWidth={2}
-              dot={false}
+              dot={{ r: 2 }}
               isAnimationActive={!reduce}
             />
             <Line
-              type="monotone"
+              type="linear"
               dataKey="pending"
               name="Pending overtime"
               stroke="hsl(var(--chart-3))"
               strokeWidth={2}
               strokeDasharray="4 3"
-              dot={false}
+              dot={{ r: 2 }}
               isAnimationActive={!reduce}
             />
           </LineChart>
