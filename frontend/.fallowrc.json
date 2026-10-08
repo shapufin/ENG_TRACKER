@@ -52,7 +52,6 @@
       "files": [
         "src/components/dashboard/ProgressRing.tsx",
         "src/components/ui/FieldLabel.tsx",
-        "src/pages/admin/NotificationEventsPage.tsx",
         "src/pages/settings/components/PushNotificationSection.tsx"
       ],
       "rules": {
