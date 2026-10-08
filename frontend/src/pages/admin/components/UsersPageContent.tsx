@@ -1,4 +1,5 @@
 import React from "react";
+import { useSearchParams } from "react-router-dom";
 import { UserFilterTabs } from "@/components/admin/UserFilterTabs";
 import { TechFacetFilter } from "@/components/admin/TechFacetFilter";
 import { TeamFacetFilter } from "@/components/admin/TeamFacetFilter";
@@ -23,6 +24,7 @@ interface UsersPageContentProps {
 }
 
 export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, columns }) => {
+  const initialSearch = useSearchParams()[0].get("q") ?? undefined;
   const teams = (state.teamsData || []) as unknown as Team[];
   // CR-only admin: render the CR bulk drawer instead of the standard one.
   // The standard drawer targets core UserProfile fields (teams/TL/roles) that
@@ -58,6 +60,7 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
         />
 
         <UsersPageTable
+          initialSearch={initialSearch}
           columns={columns}
           data={state.filteredData}
           rowSelection={state.rowSelection}
@@ -215,6 +218,7 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
       />
 
       <UsersPageTable
+        initialSearch={initialSearch}
         columns={columns}
         data={state.filteredData}
         rowSelection={state.rowSelection}
