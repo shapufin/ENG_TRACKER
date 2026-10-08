@@ -185,3 +185,6 @@ You are on Windows. Emit PowerShell-compatible commands, never bash:
 
 ## 2026-10-08 — EPR legacy repair
 - `complete_stage`/`parse_goal_pdf` now allow `goal_titles` for an open Goal Setting after later stages (stuck legacy cycles). `describeCycle` has no `blocked` state; `recover` shows "Repair goals". "Log review" renamed "Log management review". Plan: `docs/superpowers/plans/2026-10-08-tl-scorecard-epr-recovery-and-light-theme.md`.
+
+## 2026-10-08 — Light-theme contrast
+- Light `--border/--input/--background/--surface-sunken/--line-subtle` raised for non-text contrast (see CLAUDE.md "Light boundaries"); `tokens.test.ts` pins them.
