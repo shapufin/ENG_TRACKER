@@ -18,6 +18,8 @@ vi.mock("@/context/AuthContext", () => ({
   useAuth: () => ({ user: { id: 1, username: "admin" } }),
 }));
 
+vi.mock("./components/AdminInsightsStrip", () => ({ AdminInsightsStrip: () => null }));
+
 vi.mock("./hooks/useAdminDashboardPage", () => ({
   useAdminDashboardPage: () => ({
     resetLayout: vi.fn(),

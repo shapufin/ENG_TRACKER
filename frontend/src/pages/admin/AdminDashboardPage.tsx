@@ -10,6 +10,7 @@ import { DashboardSwitcher } from "@/components/dashboard/DashboardSwitcher";
 import { CustomizeDashboardModal } from "@/components/admin/CustomizeDashboardModal";
 import { AVAILABLE_WIDGETS } from "@/config/dashboardWidgets";
 import { AdminDashboardWidgets } from "./components/AdminDashboardWidgets";
+import { AdminInsightsStrip } from "./components/AdminInsightsStrip";
 import { useAdminDashboardPage } from "./hooks/useAdminDashboardPage";
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,7 @@ const AdminDashboardContent: React.FC = () => {
         </div>
       }
     >
+      <AdminInsightsStrip />
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={activeWidgetIds} strategy={verticalListSortingStrategy}>
           <AdminDashboardWidgets
