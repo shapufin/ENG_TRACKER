@@ -24,7 +24,11 @@ export const AdminDashboardFreshness: React.FC = () => {
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30_000);
     // Re-render when any query lands so the stamp never lags behind the data.
-    const unsubscribe = qc.getQueryCache().subscribe(() => setNow(Date.now()));
+    // Observer add/remove events fire while another component renders, so only react
+    // to data events, and never set state synchronously from the notification.
+    const unsubscribe = qc.getQueryCache().subscribe((event) => {
+      if (event.type === "updated") queueMicrotask(() => setNow(Date.now()));
+    });
     return () => {
       clearInterval(id);
       unsubscribe();
