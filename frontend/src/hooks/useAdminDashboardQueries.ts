@@ -14,6 +14,25 @@ export const useAdminOverview = (enabled: boolean) =>
     enabled,
   });
 
+/** Same staleness policy as the overview; fires only while a trends widget is on. */
+export const useAdminTrends = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["admin", "trends"],
+    queryFn: dashboardService.getAdminTrends,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    enabled,
+  });
+
+export const useAdminPeople = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["admin", "people"],
+    queryFn: dashboardService.getAdminPeople,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    enabled,
+  });
+
 export const useAdminDashboardQueries = () => {
   const { canView } = usePluginPermissions();
   const canViewAudit = canView("audit_log");

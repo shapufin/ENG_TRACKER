@@ -17,7 +17,7 @@ const SKELETON_COUNT = 4;
 const StatsSkeleton: React.FC = () => (
   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-      <div key={i} className="h-24 animate-pulse rounded-xl border border-border/70 bg-card" />
+      <div key={i} className="border-border/70 bg-card h-24 animate-pulse rounded-xl border" />
     ))}
   </div>
 );
@@ -47,7 +47,7 @@ export const StatsWidgets: React.FC<StatsWidgetsProps> = ({
           delay={0}
           footer={
             <>
-              <span className="font-medium tabular-nums text-muted-foreground">
+              <span className="text-muted-foreground font-medium tabular-nums">
                 {totalUsers} registered
               </span>
               <span className="text-muted-foreground">All roles</span>
@@ -66,7 +66,7 @@ export const StatsWidgets: React.FC<StatsWidgetsProps> = ({
           delay={0.05}
           footer={
             <>
-              <span className="font-medium tabular-nums text-muted-foreground">
+              <span className="text-muted-foreground font-medium tabular-nums">
                 {totalTeams} teams
               </span>
               <span className="text-muted-foreground">Active now</span>
@@ -86,7 +86,7 @@ export const StatsWidgets: React.FC<StatsWidgetsProps> = ({
           trend={totalPending === 0 ? "No pending items" : `${totalPending} pending`}
           footer={
             <>
-              <span className="font-medium tabular-nums text-muted-foreground">
+              <span className="text-muted-foreground font-medium tabular-nums">
                 {totalPending} awaiting
               </span>
               <span className="text-muted-foreground">Needs decision</span>
@@ -106,7 +106,7 @@ export const StatsWidgets: React.FC<StatsWidgetsProps> = ({
           trend={`${overtimeHours}h this month`}
           footer={
             <>
-              <span className="font-medium tabular-nums text-muted-foreground">
+              <span className="text-muted-foreground font-medium tabular-nums">
                 {overtimeHours}h logged
               </span>
               <span className="text-muted-foreground">This month</span>

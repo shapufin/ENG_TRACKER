@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { AdminQuickLinks } from "./AdminQuickLinks";
 import { StatsWidgets } from "./dashboard-widgets/StatsWidgets";
 import { HoursChartWidget } from "./dashboard-widgets/HoursChartWidget";
@@ -6,6 +6,26 @@ import { ApprovalStatusWidget } from "./dashboard-widgets/ApprovalStatusWidget";
 import { RecentActivityWidget } from "./dashboard-widgets/RecentActivityWidget";
 import { OverviewSection } from "./dashboard-widgets/OverviewSection";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
+import { PEOPLE_WIDGET_IDS, TRENDS_WIDGET_IDS } from "@/config/dashboardWidgets";
+
+// Chart-heavy sections load only when one of their widgets is switched on.
+const TrendsSection = React.lazy(() =>
+  import("./dashboard-widgets/TrendsSection").then((m) => ({ default: m.TrendsSection }))
+);
+const PeopleSection = React.lazy(() =>
+  import("./dashboard-widgets/PeopleSection").then((m) => ({ default: m.PeopleSection }))
+);
+
+const SectionFallback: React.FC = () => (
+  <div className="grid gap-4 lg:grid-cols-4" aria-hidden>
+    {Array.from({ length: 2 }).map((_, i) => (
+      <div
+        key={i}
+        className="border-border/70 bg-card h-56 animate-pulse rounded-xl border lg:col-span-2"
+      />
+    ))}
+  </div>
+);
 
 interface AuditLog {
   id: number;
@@ -57,6 +77,16 @@ export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
         isLoading={statsLoading}
       />
       <OverviewSection isWidgetActive={isWidgetActive} isSuperuser={isSuperuser} />
+      {PEOPLE_WIDGET_IDS.some(isWidgetActive) && (
+        <Suspense fallback={<SectionFallback />}>
+          <PeopleSection isWidgetActive={isWidgetActive} />
+        </Suspense>
+      )}
+      {TRENDS_WIDGET_IDS.some(isWidgetActive) && (
+        <Suspense fallback={<SectionFallback />}>
+          <TrendsSection isWidgetActive={isWidgetActive} />
+        </Suspense>
+      )}
       <div className="grid gap-4 lg:grid-cols-3">
         {isWidgetActive("hours-overview") && (
           <HoursChartWidget hoursData={hoursData} isLoading={statsLoading} />

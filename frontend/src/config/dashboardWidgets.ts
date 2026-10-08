@@ -9,6 +9,11 @@ import {
   CheckCircle,
   UserPlus,
   ShieldCheck,
+  Cpu,
+  Gauge,
+  ThumbsDown,
+  UserCheck,
+  UsersRound,
 } from "lucide-react";
 
 export interface WidgetConfig {
@@ -31,6 +36,23 @@ export const OVERVIEW_WIDGET_IDS = [
   "carryover-expiry",
   "period-close",
   "backup-status",
+] as const;
+
+/** Widgets fed by the single admin_trends request. */
+export const TRENDS_WIDGET_IDS = [
+  "ot-standby-trend",
+  "leave-trend",
+  "ot-by-client",
+  "team-comparison",
+  "who-is-out",
+] as const;
+
+/** Widgets fed by the single admin_people request. */
+export const PEOPLE_WIDGET_IDS = [
+  "role-distribution",
+  "tech-distribution",
+  "approver-sla",
+  "rejection-analysis",
 ] as const;
 
 /**
@@ -148,6 +170,60 @@ export const AVAILABLE_WIDGETS: WidgetConfig[] = [
     description: "View leave balances",
     icon: CalendarDays,
   },
+  {
+    id: "ot-standby-trend",
+    title: "Overtime & Standby Trend",
+    description: "Approved hours per month, last 12 months",
+    icon: TrendingUp,
+  },
+  {
+    id: "leave-trend",
+    title: "Leave Trend",
+    description: "Approved vacation and sick business days per month",
+    icon: CalendarDays,
+  },
+  {
+    id: "ot-by-client",
+    title: "Overtime by Client",
+    description: "This month's approved overtime split by client",
+    icon: Briefcase,
+  },
+  {
+    id: "team-comparison",
+    title: "Team Comparison",
+    description: "Hours and leave per team, with overtime per person",
+    icon: Building2,
+  },
+  {
+    id: "who-is-out",
+    title: "Who's Out Today",
+    description: "People on leave or standby today",
+    icon: UserCheck,
+  },
+  {
+    id: "role-distribution",
+    title: "Role Distribution",
+    description: "Active users by role and employees without a TL",
+    icon: UsersRound,
+  },
+  {
+    id: "tech-distribution",
+    title: "Tech Distribution",
+    description: "Members per tech and level",
+    icon: Cpu,
+  },
+  {
+    id: "approver-sla",
+    title: "Approver Speed",
+    description: "Decision volume, approval rate and average time per approver",
+    icon: Gauge,
+  },
+  {
+    id: "rejection-analysis",
+    title: "Rejection Analysis",
+    description: "This month's rejections by type and top reasons",
+    icon: ThumbsDown,
+  },
 ];
 
 export type AdminDashboardSection =
@@ -185,6 +261,15 @@ const WIDGET_SECTION: Record<string, AdminDashboardSection> = {
   "holiday-balances": "shortcuts",
   "recent-activity": "system",
   "backup-status": "system",
+  "ot-standby-trend": "trends",
+  "leave-trend": "trends",
+  "ot-by-client": "trends",
+  "team-comparison": "trends",
+  "who-is-out": "trends",
+  "role-distribution": "overview",
+  "tech-distribution": "overview",
+  "approver-sla": "approvals",
+  "rejection-analysis": "approvals",
   users: "shortcuts",
   teams: "shortcuts",
   clients: "shortcuts",
