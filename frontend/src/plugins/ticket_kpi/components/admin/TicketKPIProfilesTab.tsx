@@ -31,7 +31,7 @@ export const TicketKPIProfilesTab: React.FC<TicketKPIProfilesTabProps> = ({
     </div>
 
     {!profiles || profiles.length === 0 ? (
-      <GlassCard isHoverLift={false}>
+      <GlassCard>
         <CardContent className="py-8 text-center text-muted-foreground">
           No profiles yet.
         </CardContent>

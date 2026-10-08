@@ -42,7 +42,7 @@ export const ImportFileDropzone: React.FC<ImportFileDropzoneProps> = ({
   };
 
   return (
-    <GlassCard isHoverLift={false} className="p-4">
+    <GlassCard className="p-4">
       <div>
         <div
           onDrop={handleDrop}

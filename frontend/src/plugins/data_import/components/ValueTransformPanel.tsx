@@ -46,7 +46,7 @@ export const ValueTransformPanel: React.FC<ValueTransformPanelProps> = ({
   }
 
   return (
-    <GlassCard isHoverLift={false}>
+    <GlassCard>
       <CardHeader>
         <CardTitle>Value Transforms</CardTitle>
       </CardHeader>

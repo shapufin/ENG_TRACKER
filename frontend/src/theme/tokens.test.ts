@@ -96,18 +96,40 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     // white cards AND on the 96%-tinted app background (PageShell header),
     // where #F1F5F9 vanishes. Track backgrounds on sunken surfaces read as
     // a groove either way; divider function wins over track framing.
-    expect(lightBlock).toContain("--border: 214 22% 78%");
+    expect(lightBlock).toContain("--border: 214 20% 81%");
     expect(lightBlock).toContain("--line-subtle: 220 18% 90%");
   });
 
-  // Non-text contrast (WCAG 1.4.11). Measured 2026-10-08 against a white card:
-  // the old values gave card/page 1.10:1, card border 1.34:1 and input border
-  // 1.34:1, so cards, outline buttons and inputs dissolved into the page.
-  it("keeps light-mode boundaries visible", () => {
-    expect(lightBlock).toContain("--background: 220 18% 94%");
-    // Input and outline-button borders must reach 3:1 on a card (3.2:1).
+  // Light layering (2026-10-08, decision D1 = soft control edge). Measured by
+  // script against a white card: page/card 1.09:1 (the card edge now comes from
+  // border + --shadow-card, not from a dark line), border 1.60:1 on card,
+  // sunken well 1.15:1 under a card, --control-edge 2.05:1 on card (the focus
+  // ring carries the 3:1: 5.20:1 on card), muted-foreground 7.06:1 on card and
+  // 6.50:1 on the page. --input stays at the strict 3:1 value for now.
+  it("keeps light-mode boundaries layered", () => {
+    expect(lightBlock).toContain("--background: 220 20% 96.5%");
+    expect(lightBlock).toContain("--surface-sunken: 220 20% 94%");
+    expect(lightBlock).toContain("--muted-foreground: 220 10% 36%");
     expect(lightBlock).toContain("--input: 215 16% 58%");
-    expect(lightBlock).toContain("--surface-sunken: 220 18% 91%");
+  });
+
+  it("defines the control kit tokens in both modes", () => {
+    expect(lightBlock).toContain("--control-edge: 214 16% 72%");
+    expect(lightBlock).toContain("--control-edge-hover: 214 16% 62%");
+    expect(lightBlock).toContain("--field-bg: 220 25% 98.5%");
+    expect(lightBlock).toContain("--control-h-sm: 2rem");
+    expect(lightBlock).toContain("--control-h: 2.25rem");
+    expect(lightBlock).toContain("--control-h-lg: 2.5rem");
+    expect(lightBlock).toContain("--control-radius: var(--radius-control)");
+    expect(lightBlock).toContain("--shadow-card: 0 1px 2px hsl(222 47% 11% / 0.06), 0 1px 3px hsl(222 47% 11% / 0.04)");
+    expect(lightBlock).toContain("--shadow-pop:");
+    expect(darkBlock).toContain("--control-edge:");
+    expect(darkBlock).toContain("--control-edge-hover:");
+    expect(darkBlock).toContain("--field-bg:");
+    expect(darkBlock).toContain("--shadow-card:");
+    expect(darkBlock).toContain("--shadow-pop:");
+    // Coarse pointers get the larger default control height.
+    expect(cssNoComments).toMatch(/@media \(pointer: coarse\)\s*\{\s*:root\s*\{\s*--control-h: 2\.75rem/);
   });
 
   it("keeps tone-danger in the red family (2026-09-20 refinement)", () => {
@@ -181,5 +203,14 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     const surface = [0.12 * sr + 0.88, 0.12 * sg + 0.88, 0.12 * sb + 0.88].map(lin);
     const surfaceLum = 0.2126 * surface[0] + 0.7152 * surface[1] + 0.0722 * surface[2];
     expect(ratio(luminance(201, 90, 27), surfaceLum)).toBeGreaterThanOrEqual(4.5);
+    // Light layering (decision D1): numbers quoted in the comment above.
+    const page = luminance(220, 20, 96.5);
+    expect(ratio(white, luminance(214, 20, 81))).toBeGreaterThanOrEqual(1.6);
+    expect(ratio(white, luminance(214, 16, 72))).toBeGreaterThanOrEqual(2);
+    expect(ratio(white, luminance(221, 83, 53))).toBeGreaterThanOrEqual(3);
+    expect(ratio(luminance(220, 10, 36), white)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(luminance(220, 10, 36), page)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(luminance(220, 10, 36), luminance(220, 25, 98.5))).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(luminance(220, 10, 36), luminance(220, 20, 94))).toBeGreaterThanOrEqual(4.5);
   });
 });

@@ -325,7 +325,7 @@ export const EPRSection: React.FC<EPRSectionProps> = ({
   const shown = matching.slice(0, visible);
 
   return (
-    <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+    <GlassCard animateOnMount={false} className="p-4">
       <h2 className="text-sm font-semibold">EPR cycles</h2>
       {cycles.length === 0 ? (
         <EmptyState icon={ClipboardCheck} title="No EPR cycles started" className="py-6" />

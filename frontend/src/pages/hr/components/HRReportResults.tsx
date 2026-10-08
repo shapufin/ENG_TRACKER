@@ -79,7 +79,7 @@ export const HRReportResults: React.FC<HRReportResultsProps> = ({
 }) => {
   if (!hasGenerated) {
     return (
-      <GlassCard isHoverLift={false}>
+      <GlassCard>
         <EmptyState
           icon={TrendingUp}
           title="HR Strategic Analysis"

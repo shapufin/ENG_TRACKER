@@ -6,7 +6,7 @@ describe("ImportFileDropzone modernization", () => {
   it("uses a GlassCard upload surface and semantic dropzone styling", () => {
     const { container } = render(<ImportFileDropzone file={null} onFileAccepted={() => {}} />);
 
-    expect(container.querySelector(".shadow-glass")).toBeInTheDocument();
+    expect(container.querySelector(".shadow-card")).toBeInTheDocument();
     expect(container.querySelector('[class*="border-muted-foreground"]')).toBeNull();
   });
 });

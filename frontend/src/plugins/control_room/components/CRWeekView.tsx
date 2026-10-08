@@ -172,7 +172,7 @@ export const CRWeekView: React.FC<Props> = ({ roster }) => {
   const weekEnd = weekDays[6]?.date ?? endOfWeek(new Date(), { weekStartsOn: 1 });
 
   return (
-    <GlassCard isHoverLift={false} delay={0} className="space-y-4 p-4">
+    <GlassCard delay={0} className="space-y-4 p-4">
       {/* Week summary header */}
       <div className="flex items-center justify-between">
         <div>

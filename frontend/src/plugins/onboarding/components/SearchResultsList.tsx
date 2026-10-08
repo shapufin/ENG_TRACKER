@@ -36,7 +36,6 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = ({
         <GlassCard
           key={`folder-${folder.id}`}
           animateOnMount={false}
-          isHoverLift={false}
           className="flex cursor-pointer items-center gap-3 p-3"
           onClick={() => onOpenFolder(folder)}
           role="button"
@@ -62,7 +61,6 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = ({
         <GlassCard
           key={`document-${document.id}`}
           animateOnMount={false}
-          isHoverLift={false}
           className="flex cursor-pointer items-center gap-3 p-3"
           onClick={() => onOpenDocument(document)}
           role="button"

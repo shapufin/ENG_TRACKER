@@ -16,7 +16,7 @@ export const CalendarGroupStatsCard: React.FC<CalendarGroupStatsCardProps> = ({
   icon: Icon,
 }) => {
   return (
-    <GlassCard isHoverLift={false} className="p-4">
+    <GlassCard className="p-4">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{title}</p>

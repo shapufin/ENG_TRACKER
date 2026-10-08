@@ -44,7 +44,7 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({
     filteredTeams.length > 0 && filteredTeams.every((t) => selectedTeams.has(t.id));
 
   return (
-    <GlassCard isHoverLift={false}>
+    <GlassCard>
       <TeamsTableToolbar searchQuery={searchQuery} onSearchChange={onSearchChange} />
       <TeamsTableHeader allSelected={allSelected} onSelectAll={handleSelectAll} />
 

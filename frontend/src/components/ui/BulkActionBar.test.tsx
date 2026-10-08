@@ -29,13 +29,13 @@ describe("BulkActionBar mobile responsiveness", () => {
 
 describe("BulkActionBar surface", () => {
   it("renders on a non-hover-lift GlassCard surface", () => {
-    // A selection bar must sit flat (isHoverLift={false}): no hover translate
+    // A selection bar must sit flat (no `interactive`): no hover translate
     // or lift shadow, matching the filter-bar convention.
     const { container } = renderBar();
 
     const glassSurface = container.querySelector(".mb-4");
     expect(glassSurface).toBeInTheDocument();
-    expect(glassSurface?.className).toContain("shadow-glass");
+    expect(glassSurface?.className).toContain("shadow-card");
     expect(glassSurface?.className).not.toContain("hover:-translate-y-1");
   });
 

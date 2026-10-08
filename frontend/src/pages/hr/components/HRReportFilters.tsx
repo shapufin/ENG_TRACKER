@@ -49,7 +49,7 @@ export const HRReportFilters: React.FC<HRReportFiltersProps> = ({
   onGenerate,
 }) => {
   return (
-    <GlassCard isHoverLift={false} className="p-4">
+    <GlassCard className="p-4">
       <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-12">
         <div className="space-y-2 lg:col-span-3">
           <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">

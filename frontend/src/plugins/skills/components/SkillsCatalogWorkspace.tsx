@@ -98,7 +98,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
   return (
     <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
       {/* ─── Category sidebar ─── */}
-      <GlassCard isHoverLift={false} className="h-fit p-3 lg:sticky lg:top-4">
+      <GlassCard className="h-fit p-3 lg:sticky lg:top-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-lg">
@@ -191,7 +191,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
       </GlassCard>
 
       {/* ─── Skill list panel ─── */}
-      <GlassCard isHoverLift={false} className="min-w-0 p-0">
+      <GlassCard className="min-w-0 p-0">
         {/* Header with title + actions */}
         <div className="border-border/70 flex flex-wrap items-start justify-between gap-3 border-b p-4">
           <div className="min-w-0">

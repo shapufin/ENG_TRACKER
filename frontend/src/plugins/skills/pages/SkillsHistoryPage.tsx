@@ -79,7 +79,6 @@ export const SkillsHistoryPage: React.FC = () => {
     <PageShell title="Skill History" subtitle="Audit log of all rating changes" category="Skills">
       {/* Filters */}
       <GlassCard
-        isHoverLift={false}
         className="mb-4 flex flex-col gap-4 p-4 sm:flex-row sm:flex-wrap sm:items-end"
       >
         <div className="flex-1">

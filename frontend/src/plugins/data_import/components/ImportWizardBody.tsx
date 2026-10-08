@@ -123,7 +123,7 @@ export const ImportWizardBody: React.FC<ImportWizardBodyProps> = ({
       <div className="space-y-4">
         <ImportSummaryCards summary={commit.summary} mode="commit" />
         {commit.row_errors.length > 0 && (
-          <GlassCard isHoverLift={false}>
+          <GlassCard>
             <CardHeader>
               <CardTitle>{commit.row_errors.length} row(s) could not be imported</CardTitle>
             </CardHeader>

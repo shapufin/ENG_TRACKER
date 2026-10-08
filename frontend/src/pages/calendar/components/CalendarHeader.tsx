@@ -58,7 +58,6 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 }) => (
   <header className="pb-3 pt-1.5" aria-label="Calendar controls">
     <GlassCard
-      isHoverLift={false}
       className="flex flex-wrap items-center gap-2 border-b-0 p-3 min-[1440px]:flex-nowrap min-[1440px]:justify-between"
     >
       <WorkspaceSelector className="w-full max-w-xs shrink-0 sm:w-auto sm:max-w-none" />

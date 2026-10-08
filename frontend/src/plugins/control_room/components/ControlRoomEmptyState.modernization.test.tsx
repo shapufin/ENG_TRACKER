@@ -7,7 +7,7 @@ describe("ControlRoomEmptyState modernization", () => {
     const { container } = render(<ControlRoomEmptyState reason="no_data" />);
 
     expect(screen.getByText("No Standby Data")).toBeInTheDocument();
-    expect(container.querySelector(".shadow-glass")).toBeInTheDocument();
+    expect(container.querySelector(".shadow-card")).toBeInTheDocument();
     expect(container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
 });

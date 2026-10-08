@@ -4,7 +4,7 @@ import { HRDashboardStats } from "./HRDashboardStats";
 
 const getValueByTitle = (title: string) => {
   const titleEl = screen.getByText(title);
-  const card = titleEl.closest("[class*='shadow-glass']");
+  const card = titleEl.closest("[class*='shadow-card']");
   return card?.textContent;
 };
 

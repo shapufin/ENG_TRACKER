@@ -68,7 +68,7 @@ export const SkillsTeamFilters: React.FC<SkillsTeamFiltersProps> = ({
   return (
     <>
       {/* Desktop filters */}
-      <GlassCard isHoverLift={false} className="space-y-3 p-3.5">
+      <GlassCard className="space-y-3 p-3.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Filters

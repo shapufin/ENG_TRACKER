@@ -72,7 +72,7 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
   };
 
   return (
-    <GlassCard isHoverLift={false}>
+    <GlassCard>
       <CardHeader>
         <CardTitle>Column Mapping</CardTitle>
       </CardHeader>

@@ -153,7 +153,7 @@ export function ResourceAccessPage() {
       }
     >
       {/* Summary metrics */}
-      <GlassCard className="overflow-visible p-0" isHoverLift={false} glow="primary">
+      <GlassCard className="overflow-visible p-0" glow="primary">
         <div className="grid gap-0 md:grid-cols-[1.4fr_1fr]">
           <div className="border-border/60 border-b p-6 md:border-r md:border-b-0 md:p-8">
             <div className="flex items-start gap-4">
@@ -194,7 +194,7 @@ export function ResourceAccessPage() {
       </GlassCard>
 
       {/* Toolbar */}
-      <GlassCard className="p-4" isHoverLift={false}>
+      <GlassCard className="p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-md flex-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
@@ -274,7 +274,7 @@ export function ResourceAccessPage() {
           }
         />
       ) : (
-        <GlassCard className="p-0" isHoverLift={false}>
+        <GlassCard className="p-0">
           {/* Desktop table */}
           <div className="hidden overflow-hidden md:block">
             <table className="w-full text-sm">

@@ -188,7 +188,7 @@ export const CalendarManagementPage: React.FC = () => {
               </div>
             )}
 
-            <GlassCard isHoverLift={false} className="p-4">
+            <GlassCard className="p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="text-sm font-medium">
                   {selectedTeams.size} team{selectedTeams.size === 1 ? "" : "s"} selected
@@ -225,7 +225,7 @@ export const CalendarManagementPage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="workspaces" className="space-y-4">
-            <GlassCard isHoverLift={false} className="p-5">
+            <GlassCard className="p-5">
               <h2 className="text-lg font-semibold">Calendar Workspaces</h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 Advanced calendar workspaces with fine-grained permissions. For simple team sharing,
@@ -240,7 +240,7 @@ export const CalendarManagementPage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="holidays" className="space-y-4">
-            <GlassCard isHoverLift={false} className="p-5">
+            <GlassCard className="p-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase text-muted-foreground">

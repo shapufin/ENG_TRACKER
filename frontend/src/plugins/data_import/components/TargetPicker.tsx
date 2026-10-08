@@ -28,7 +28,6 @@ export const TargetPicker: React.FC<TargetPickerProps> = ({
         return (
           <GlassCard
             key={target.target_key}
-            isHoverLift={false}
             className={`cursor-pointer ${isSelected ? "ring-1 ring-primary/20" : ""}`}
             onClick={() => onSelect(target.target_key)}
           >

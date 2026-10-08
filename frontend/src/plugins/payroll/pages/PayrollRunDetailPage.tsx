@@ -167,7 +167,6 @@ export const PayrollRunDetailPage: React.FC = () => {
 
       {isDraft && (
         <GlassCard
-          isHoverLift={false}
           role="status"
           aria-label="Payroll closure status"
           className={`mb-6 p-4 ${

@@ -127,7 +127,7 @@ const LeaveRequestsContent: React.FC = () => {
         }
       />
 
-      <GlassCard isHoverLift={false} className="p-4">
+      <GlassCard className="p-4">
         <LeaveFilterBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}

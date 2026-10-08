@@ -61,7 +61,6 @@ const CalendarPageContent: React.FC = () => {
   if (!data.hasWorkspaceSelection) {
     return (
       <GlassCard
-        isHoverLift={false}
         className="flex min-h-[calc(100vh-4rem)] items-center justify-center"
       >
         <EmptyState

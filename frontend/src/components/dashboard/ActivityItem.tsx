@@ -20,7 +20,7 @@ export const ActivityItem: React.FC<ActivityItemProps> = ({
   iconColorClass = "text-primary",
 }) => {
   return (
-    <GlassCard className="p-4" isHoverLift={false}>
+    <GlassCard className="p-4">
       <div className="flex items-center gap-4">
         <div
           className={cn(

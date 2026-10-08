@@ -27,7 +27,7 @@ export const TeamBulkOperationsPanel: React.FC<TeamBulkOperationsPanelProps> = (
   isDeleting = false,
 }) => {
   return (
-    <GlassCard isHoverLift={false} className="mb-4 border-l-4 border-l-primary">
+    <GlassCard className="mb-4 border-l-4 border-l-primary">
       <div className="flex flex-wrap items-center justify-between gap-3 p-4">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-1.5">

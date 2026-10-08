@@ -22,7 +22,7 @@ interface AssignedLeaderCardProps {
 
 /** One assigned Albanian TL as a mobile summary card (the table is desktop-only). */
 export const AssignedLeaderCard: React.FC<AssignedLeaderCardProps> = ({ leader, year }) => (
-  <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+  <GlassCard animateOnMount={false} className="p-4">
     <div className="flex items-start justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2.5">
         <UserAvatar name={leader.name} size="sm" colorSeed={avatarSeed(leader.name)} />

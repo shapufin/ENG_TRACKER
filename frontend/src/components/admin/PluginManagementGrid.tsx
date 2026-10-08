@@ -56,7 +56,7 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3">
       {/* fallow-ignore-next-line complexity */}
       {plugins.map((plugin) => (
-        <GlassCard key={plugin.id} className="relative overflow-hidden" isHoverLift={true}>
+        <GlassCard key={plugin.id} className="relative overflow-hidden">
           <div className="p-6 pb-3">
             <div className="flex items-start justify-between">
               <div className="space-y-1">

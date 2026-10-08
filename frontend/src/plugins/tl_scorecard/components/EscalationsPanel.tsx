@@ -20,7 +20,7 @@ interface EscalationsPanelProps {
  * tracked elsewhere (leave SLA, idle flags, PIP approval, absences). No
  * manual escalation entry exists; this list IS the "0 escalations" KPI. */
 export const EscalationsPanel: React.FC<EscalationsPanelProps> = ({ candidates }) => (
-  <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+  <GlassCard animateOnMount={false} className="p-4">
     <h2 className="text-sm font-semibold">Escalation risks</h2>
     <p className="mt-1 text-xs text-muted-foreground">
       Computed live from breaches already tracked — nothing here was manually logged.

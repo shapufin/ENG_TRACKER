@@ -45,6 +45,7 @@ export const TLApprovalStats: React.FC<TLApprovalStatsProps> = ({
     return (
       <GlassCard
         delay={0}
+        interactive={isClickable}
         className={cn(
           "flex items-center gap-4 p-4",
           isClickable && "cursor-pointer hover:border-primary/50"

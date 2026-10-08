@@ -50,7 +50,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
   availableTeams,
 }) => {
   return (
-    <GlassCard isHoverLift={false} className="space-y-4 p-4">
+    <GlassCard className="space-y-4 p-4">
       <div className="flex flex-wrap items-center gap-4">
         <div className="min-w-[200px] flex-1">
           <div className="relative">

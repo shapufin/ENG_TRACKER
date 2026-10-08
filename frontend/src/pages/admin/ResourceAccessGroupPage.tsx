@@ -179,7 +179,7 @@ export function ResourceAccessGroupPage() {
       </nav>
 
       {/* Group header */}
-      <GlassCard className="p-6" isHoverLift={false}>
+      <GlassCard className="p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -216,7 +216,7 @@ export function ResourceAccessGroupPage() {
       </GlassCard>
 
       {/* Member toolbar */}
-      <GlassCard className="p-4" isHoverLift={false}>
+      <GlassCard className="p-4">
         <div className="flex items-center gap-3">
           <div className="relative max-w-md flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

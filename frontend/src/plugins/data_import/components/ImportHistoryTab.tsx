@@ -56,7 +56,7 @@ export const ImportHistoryTab: React.FC<ImportHistoryTabProps> = ({ batches }) =
 
   return (
     <>
-      <GlassCard isHoverLift={false}>
+      <GlassCard>
         <CardHeader>
           <CardTitle>Import History</CardTitle>
         </CardHeader>

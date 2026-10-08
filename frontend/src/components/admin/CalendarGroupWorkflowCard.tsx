@@ -16,7 +16,7 @@ export const CalendarGroupWorkflowCard: React.FC<CalendarGroupWorkflowCardProps>
   steps,
 }) => {
   return (
-    <GlassCard isHoverLift={false} className="p-5">
+    <GlassCard className="p-5">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
           <Icon className="h-5 w-5 text-primary" />

@@ -313,7 +313,7 @@ export const SkillsTeamPage: React.FC = () => {
         <SkillsMemberList rows={rows} onRate={setRateTarget} />
       )}
       {!isLoading && rows.length > 0 && !isMobile && viewMode !== "list" && (
-        <GlassCard isHoverLift={false} className="mt-1 overflow-hidden p-0">
+        <GlassCard className="mt-1 overflow-hidden p-0">
           {viewMode === "matrix" && (
             <SkillsMatrixTable
               rows={rows}

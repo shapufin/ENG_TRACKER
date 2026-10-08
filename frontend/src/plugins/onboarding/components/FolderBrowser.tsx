@@ -96,7 +96,6 @@ const FolderTile: React.FC<{
         setDropRef(node);
       }}
       animateOnMount={false}
-      isHoverLift={false}
       glow={isOver ? "primary" : "none"}
       className={cn(
         "group flex cursor-pointer items-center gap-3 p-4 transition-all",
@@ -182,7 +181,6 @@ const DocumentTile: React.FC<{
     <GlassCard
       ref={setNodeRef}
       animateOnMount={false}
-      isHoverLift={false}
       className={cn(
         "group flex cursor-pointer items-center gap-3 p-4 transition-all",
         isDragging && "opacity-40"

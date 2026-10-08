@@ -26,7 +26,7 @@ export const SkillsMemberCard: React.FC<SkillsMemberCardProps> = ({
     {rows.map((row) => {
       const isExpanded = expandedUserId === row.user_id;
       return (
-        <GlassCard key={row.user_id} isHoverLift={false}>
+        <GlassCard key={row.user_id}>
           <button
             type="button"
             onClick={() => onExpandedUserIdChange(isExpanded ? null : row.user_id)}

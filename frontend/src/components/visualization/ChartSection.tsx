@@ -31,7 +31,6 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   <motion.div id={id} data-chart-section={id} variants={staggerItem} className={className}>
     <GlassCard
       animateOnMount={false}
-      isHoverLift={false}
       className={cn("relative overflow-hidden p-5")}
     >
       {(title || description || action) && (

@@ -19,7 +19,7 @@ export const CalendarGroupCard: React.FC<CalendarGroupCardProps> = ({
   onManageTeams,
 }) => {
   return (
-    <GlassCard isHoverLift={false} glow="primary" className="p-4">
+    <GlassCard glow="primary" className="p-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">

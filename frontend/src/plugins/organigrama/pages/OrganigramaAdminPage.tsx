@@ -246,7 +246,7 @@ export const OrganigramaAdminPage: React.FC = () => {
         </Button>
       }
     >
-      <GlassCard isHoverLift={false} className="mb-4 p-4">
+      <GlassCard className="mb-4 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[12rem] flex-1">
             <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -272,7 +272,7 @@ export const OrganigramaAdminPage: React.FC = () => {
         </div>
       </GlassCard>
 
-      <GlassCard isHoverLift={false} className="p-4">
+      <GlassCard className="p-4">
         <div className="space-y-2">
           {charts && charts.length > 0 ? (
             charts.map((chart) => (

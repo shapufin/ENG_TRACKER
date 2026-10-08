@@ -193,7 +193,7 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
   return (
     <div className="space-y-6">
       {/* Filter toolbar */}
-      <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+      <GlassCard animateOnMount={false} className="p-4">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <Label
@@ -298,7 +298,7 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
                 </SelectContent>
               </Select>
             </div>
-            <GlassCard animateOnMount={false} isHoverLift={false} className="hidden p-3 lg:block">
+            <GlassCard animateOnMount={false} className="hidden p-3 lg:block">
               <p className="text-muted-foreground px-3 py-2 text-xs font-bold tracking-wider uppercase">
                 Record Categories
               </p>

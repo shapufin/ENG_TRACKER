@@ -80,7 +80,7 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
           : "Approved Overtime and Standby records with per-Italian TL sheet separation.";
 
   return (
-    <GlassCard isHoverLift={false} className="flex flex-col justify-center gap-1.5 p-3">
+    <GlassCard className="flex flex-col justify-center gap-1.5 p-3">
       <Button
         variant="outline"
         size="sm"

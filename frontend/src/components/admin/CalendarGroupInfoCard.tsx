@@ -22,7 +22,7 @@ export const CalendarGroupInfoCard: React.FC<CalendarGroupInfoCardProps> = ({
   gradient = false,
 }) => {
   return (
-    <GlassCard isHoverLift={false} glow={gradient ? "primary" : "none"} className="p-5">
+    <GlassCard glow={gradient ? "primary" : "none"} className="p-5">
       <div className="flex gap-4">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
           <Icon className="h-5 w-5 text-primary" />

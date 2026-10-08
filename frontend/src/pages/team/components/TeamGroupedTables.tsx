@@ -70,7 +70,7 @@ export const TeamGroupedTables = <T extends GroupableRow>({
 
   if (!rows.length) {
     return (
-      <GlassCard isHoverLift={false}>
+      <GlassCard>
         <EmptyState icon={Inbox} title="No results" description={emptyCopy} />
       </GlassCard>
     );

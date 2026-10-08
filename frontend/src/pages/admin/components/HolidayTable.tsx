@@ -90,7 +90,7 @@ export const HolidayTable: React.FC<HolidayTableProps> = ({
   }
 
   return (
-    <GlassCard isHoverLift={false} className="p-4">
+    <GlassCard className="p-4">
       <DataTable columns={columns} data={holidays} emptyMessage="No holidays defined yet." />
     </GlassCard>
   );

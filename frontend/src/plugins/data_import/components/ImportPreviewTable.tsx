@@ -92,7 +92,7 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({ rows }) 
   );
 
   return (
-    <GlassCard isHoverLift={false} className="p-4">
+    <GlassCard className="p-4">
       <DataTable columns={columns} data={rows} pageSize={10} emptyMessage="No rows to preview." />
     </GlassCard>
   );

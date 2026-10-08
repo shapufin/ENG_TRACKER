@@ -112,7 +112,6 @@ export const HbprAttentionSummary: React.FC<HbprAttentionSummaryProps> = ({
             <li key={key}>
               <GlassCard
                 animateOnMount={false}
-                isHoverLift={false}
                 className={cn(
                   "flex h-full flex-col gap-3 border-l-4 p-4",
                   key === "cadence_overdue" ? "border-l-tone-danger-text" : "border-l-transparent"

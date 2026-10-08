@@ -28,14 +28,14 @@ export const ChartCard: React.FC<ChartCardProps> = ({
       data-chart-section={sectionId}
       className={cn("flex flex-col overflow-hidden", className)}
     >
-      <div className="border-border/60 flex items-center justify-between border-b px-5 py-4">
+      <div className="border-line-subtle flex items-center justify-between gap-2 border-b px-4 py-3">
         <div>
           <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-          {description && <p className="text-muted-foreground mt-1 text-xs">{description}</p>}
+          {description && <p className="text-muted-foreground mt-0.5 text-xs">{description}</p>}
         </div>
         {action}
       </div>
-      <div className="min-h-[220px] flex-1 p-5">{children}</div>
+      <div className="min-h-0 flex-1 p-4">{children}</div>
     </GlassCard>
   );
 };

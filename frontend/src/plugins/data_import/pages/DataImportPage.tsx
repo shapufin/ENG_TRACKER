@@ -183,7 +183,7 @@ export const DataImportPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="import" className="space-y-6">
-          <GlassCard isHoverLift={false} className="p-4">
+          <GlassCard className="p-4">
             <div className="flex flex-wrap items-center gap-2">
               {STEPS.map((s) => (
                 <div

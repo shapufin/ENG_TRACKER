@@ -220,7 +220,7 @@ const MonthBlock: React.FC<{
   grid: MonthGrid;
   rowsByDate: Map<string, ControlRoomRosterRow[]>;
 }> = ({ grid, rowsByDate }) => (
-  <GlassCard isHoverLift={false} className="p-4 md:p-5">
+  <GlassCard className="p-4 md:p-5">
     <h3 className="mb-3 text-sm font-semibold text-muted-foreground">{grid.monthLabel}</h3>
     <div className="mb-1 grid grid-cols-7 gap-1">
       {WEEKDAYS.map((day) => (

@@ -187,7 +187,7 @@ export const MySkillsPage: React.FC = () => {
     >
       {!isLoading && !error && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <GlassCard isHoverLift={false} className="flex flex-col gap-2 p-4">
+          <GlassCard className="flex flex-col gap-2 p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <TrendingUp className="h-4 w-4" aria-hidden="true" />
               <span className="text-xs font-semibold uppercase tracking-wider">Rated skills</span>
@@ -196,7 +196,7 @@ export const MySkillsPage: React.FC = () => {
               {userSkills.length}
             </p>
           </GlassCard>
-          <GlassCard isHoverLift={false} className="flex flex-col gap-2 p-4">
+          <GlassCard className="flex flex-col gap-2 p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <TrendingUp className="h-4 w-4" aria-hidden="true" />
               <span className="text-xs font-semibold uppercase tracking-wider">Categories</span>
@@ -205,7 +205,7 @@ export const MySkillsPage: React.FC = () => {
               {categoryCount}
             </p>
           </GlassCard>
-          <GlassCard isHoverLift={false} className="flex flex-col gap-2 p-4">
+          <GlassCard className="flex flex-col gap-2 p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Gauge className="h-4 w-4" aria-hidden="true" />
               <span className="text-xs font-semibold uppercase tracking-wider">Average level</span>
@@ -214,7 +214,7 @@ export const MySkillsPage: React.FC = () => {
               {avgLevel !== null ? `L${avgLevel}` : "—"}
             </p>
           </GlassCard>
-          <GlassCard isHoverLift={false} className="flex flex-col gap-2 p-4">
+          <GlassCard className="flex flex-col gap-2 p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Trophy className="h-4 w-4" aria-hidden="true" />
               <span className="text-xs font-semibold uppercase tracking-wider">

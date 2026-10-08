@@ -122,7 +122,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           aria-label="Item details"
           className="fixed inset-y-0 right-0 z-40 w-full max-w-xs sm:static sm:z-auto sm:w-72 sm:max-w-none sm:shrink-0"
         >
-          <GlassCard animateOnMount={false} isHoverLift={false} className="h-full overflow-y-auto p-4 sm:h-auto">
+          <GlassCard animateOnMount={false} className="h-full overflow-y-auto p-4 sm:h-auto">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Details

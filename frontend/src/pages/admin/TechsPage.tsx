@@ -82,7 +82,7 @@ export const TechsPage: React.FC = () => {
       title="Tech"
       actions={<PluginImportButton targetKey="techs" invalidateKeys={[["admin", "techs"]]} />}
     >
-      <GlassCard isHoverLift={false} className="p-4">
+      <GlassCard className="p-4">
         <h2 className="mb-3 font-semibold">{editing ? `Edit ${editing.name}` : "Add Tech"}</h2>
         <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto] sm:items-end">
           <div className="space-y-2">
@@ -131,7 +131,7 @@ export const TechsPage: React.FC = () => {
       <div className="space-y-2">
         {isLoading && <LoadingCard title="Loading Techs..." rows={4} className="min-h-[200px]" />}
         {!isLoading && (data?.results ?? []).length === 0 && (
-          <GlassCard isHoverLift={false}>
+          <GlassCard>
             <EmptyState
               icon={Wrench}
               title="No Techs yet"

@@ -161,7 +161,7 @@ export const TicketKPITeamPage: React.FC = () => {
             gradientId="teamTicketsGrad"
           />
 
-          <GlassCard isHoverLift={false}>
+          <GlassCard>
             <CardHeader>
               <CardTitle>Member Breakdown</CardTitle>
             </CardHeader>

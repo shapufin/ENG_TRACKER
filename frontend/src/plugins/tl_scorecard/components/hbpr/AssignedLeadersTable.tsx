@@ -48,7 +48,7 @@ interface AssignedLeadersTableProps {
 export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ leaders, year }) => {
   if (leaders.length === 0) {
     return (
-      <GlassCard animateOnMount={false} isHoverLift={false} className="p-0">
+      <GlassCard animateOnMount={false} className="p-0">
         <EmptyState
           icon={UsersRound}
           title="No Albanian team leaders assigned yet"
@@ -71,7 +71,6 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
 
       <GlassCard
         animateOnMount={false}
-        isHoverLift={false}
         className="hidden overflow-hidden p-0 md:block"
       >
         <div className="border-line-subtle flex items-center justify-between gap-3 border-b px-5 py-3.5">

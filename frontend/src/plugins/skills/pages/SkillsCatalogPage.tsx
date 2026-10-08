@@ -232,7 +232,6 @@ export const SkillsCatalogPage: React.FC = () => {
 
       {/* Filter bar */}
       <GlassCard
-        isHoverLift={false}
         className="mb-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-end"
       >
         <div className="min-w-0 flex-1">

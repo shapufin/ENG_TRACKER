@@ -42,7 +42,6 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
           transition={transition}
         >
           <GlassCard
-            isHoverLift={false}
             className="mb-4 overflow-hidden border-l-4 border-l-primary"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 bg-primary/5 px-4 py-3">

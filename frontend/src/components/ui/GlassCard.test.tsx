@@ -50,3 +50,29 @@ describe("GlassCard reduced-motion accessibility", () => {
     expect(getByText("Animated content")).toBeInTheDocument();
   });
 });
+
+describe("GlassCard surface", () => {
+  afterEach(cleanup);
+
+  it("is a static elevated surface by default (no blur, no hover lift)", () => {
+    const { container } = render(<GlassCard>x</GlassCard>);
+    const cls = (container.firstElementChild as HTMLElement).className;
+    expect(cls).toContain("border-border");
+    expect(cls).toContain("bg-card");
+    expect(cls).toContain("shadow-card");
+    expect(cls).not.toContain("backdrop-blur");
+    expect(cls).not.toContain("hover:-translate-y-1");
+  });
+
+  it("lifts on hover only when interactive", () => {
+    const { container } = render(<GlassCard interactive>x</GlassCard>);
+    expect((container.firstElementChild as HTMLElement).className).toContain("hover:-translate-y-1");
+  });
+
+  it("flat variant drops the shadow for a hairline", () => {
+    const { container } = render(<GlassCard variant="flat">x</GlassCard>);
+    const cls = (container.firstElementChild as HTMLElement).className;
+    expect(cls).toContain("border-line-subtle");
+    expect(cls).not.toContain("shadow-card");
+  });
+});

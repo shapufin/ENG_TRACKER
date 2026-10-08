@@ -200,7 +200,7 @@ describe("TicketKPITeamPage", () => {
       </MemoryRouter>
     );
 
-    expect(container.querySelector(".shadow-glass")).toBeInTheDocument();
+    expect(container.querySelector(".shadow-card")).toBeInTheDocument();
   });
 
   it("renders Avg Resolution bar in mockup blue (not amber)", () => {

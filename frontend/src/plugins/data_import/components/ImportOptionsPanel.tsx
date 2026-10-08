@@ -62,7 +62,7 @@ export const ImportOptionsPanel: React.FC<ImportOptionsPanelProps> = ({
   if (visibleOptions.length === 0 && !needsPasswordColumn) return null;
 
   return (
-    <GlassCard isHoverLift={false}>
+    <GlassCard>
       <CardHeader>
         <CardTitle>Import Options</CardTitle>
       </CardHeader>

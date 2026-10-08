@@ -440,7 +440,7 @@ export const MemberTicketRecordsTable: React.FC<MemberTicketRecordsTableProps> =
       />
 
       {/* Table */}
-      <GlassCard isHoverLift={false} className="p-0">
+      <GlassCard className="p-0">
         <div className="overflow-x-auto">
           <table className="w-full min-w-max text-sm">
             <thead>

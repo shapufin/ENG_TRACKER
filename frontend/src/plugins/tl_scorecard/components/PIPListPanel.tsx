@@ -14,7 +14,7 @@ interface PIPListPanelProps {
 }
 
 export const PIPListPanel: React.FC<PIPListPanelProps> = ({ records, canApprove, onApprove, isApproving }) => (
-  <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+  <GlassCard animateOnMount={false} className="p-4">
     <h2 className="text-sm font-semibold">PIPs</h2>
     {records.length === 0 ? (
       <EmptyState icon={ShieldCheck} title="No PIPs open" className="py-6" />

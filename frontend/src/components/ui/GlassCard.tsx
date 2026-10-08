@@ -4,7 +4,10 @@ import { cn } from "@/lib/utils";
 import { fadeSlideUp, DURATION, EASE } from "@/lib/motion";
 
 interface GlassCardProps extends React.ComponentPropsWithoutRef<typeof motion.div> {
-  isHoverLift?: boolean;
+  /** Hover lift + border change. Only for cards that are actually clickable. */
+  interactive?: boolean;
+  /** `flat` = no shadow, hairline border (rare nested surfaces). */
+  variant?: "default" | "flat";
   glow?: "primary" | "success" | "warning" | "destructive" | "none";
   delay?: number;
   /** Skip this card's own mount fade/slide — use when a parent already
@@ -18,7 +21,8 @@ const GlassCardComponent = React.forwardRef<HTMLDivElement, GlassCardProps>(
     {
       children,
       className,
-      isHoverLift = true,
+      interactive = false,
+      variant = "default",
       glow = "none",
       delay = 0,
       animateOnMount = true,
@@ -47,11 +51,12 @@ const GlassCardComponent = React.forwardRef<HTMLDivElement, GlassCardProps>(
             : { duration: DURATION.base, delay, ease: EASE.inOut }
         }
         className={cn(
-          "relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-glass backdrop-blur-xl",
+          "relative overflow-hidden rounded-xl border bg-card",
+          variant === "flat" ? "border-line-subtle" : "border-border shadow-card",
           "before:absolute before:inset-x-0 before:top-0 before:h-px before:content-['']",
           glowMap[glow],
-          isHoverLift &&
-            "transition-all duration-300 hover:-translate-y-1 hover:border-border-focus hover:shadow-glass-lg",
+          interactive &&
+            "transition-all duration-300 hover:-translate-y-1 hover:border-border-focus hover:shadow-pop",
           className
         )}
         {...props}

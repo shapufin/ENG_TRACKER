@@ -84,7 +84,7 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ year, onYearChan
 
   return (
     <div className="space-y-4">
-      <GlassCard isHoverLift={false}>
+      <GlassCard>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <BarChart3 className="h-5 w-5 text-primary" /> Yearly KPI Report
@@ -179,7 +179,7 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ year, onYearChan
             gradientId="reportTrendGrad"
           />
 
-          <GlassCard isHoverLift={false}>
+          <GlassCard>
             <CardHeader>
               <CardTitle>Per-User Summary</CardTitle>
             </CardHeader>

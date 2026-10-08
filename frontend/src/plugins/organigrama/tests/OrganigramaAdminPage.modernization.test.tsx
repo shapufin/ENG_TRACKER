@@ -26,8 +26,8 @@ describe("OrganigramaAdminPage modernization", () => {
     );
 
     const search = screen.getByPlaceholderText("Search by name, slug, or description...");
-    expect(search.closest("[class*='shadow-glass']")?.className).toContain("p-4");
-    expect(search.closest("[class*='shadow-glass']")?.className).not.toContain(
+    expect(search.closest("[class*='shadow-card']")?.className).toContain("p-4");
+    expect(search.closest("[class*='shadow-card']")?.className).not.toContain(
       "hover:-translate-y-1"
     );
     expect(container).toBeTruthy();

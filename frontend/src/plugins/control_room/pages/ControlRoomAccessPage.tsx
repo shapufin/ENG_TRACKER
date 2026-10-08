@@ -264,7 +264,6 @@ export const ControlRoomAccessPage: React.FC = () => {
     >
       <div className="space-y-6">
         <GlassCard
-          isHoverLift={false}
           role="status"
           aria-label="Control Room visibility warning"
           className="border-warning/40 bg-warning/10 p-4"

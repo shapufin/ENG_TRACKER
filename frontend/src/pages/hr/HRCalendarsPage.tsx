@@ -34,7 +34,7 @@ export const HRCalendarsPage: React.FC = () => {
 
   return (
     <PageShell title="Company Holidays" subtitle="Manage global and workspace holidays.">
-      <GlassCard isHoverLift={false} className="p-5">
+      <GlassCard className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase text-muted-foreground">

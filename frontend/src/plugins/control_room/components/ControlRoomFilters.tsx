@@ -63,7 +63,7 @@ export const ControlRoomFilters: React.FC<Props> = ({
   );
 
   return (
-    <GlassCard isHoverLift={false} className="space-y-4 p-4">
+    <GlassCard className="space-y-4 p-4">
       <div className="flex flex-wrap items-center gap-4">
         {isWeekView ? (
           <p className="text-xs text-muted-foreground">Showing current week (Mon–Sun)</p>
