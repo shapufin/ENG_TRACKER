@@ -18,7 +18,6 @@ interface DashboardContextValue {
   resetLayout: () => Promise<void>;
   addWidget: (widgetId: string) => void;
   removeWidget: (widgetId: string) => void;
-  reorderWidgets: (fromIndex: number, toIndex: number) => void;
 }
 
 const DashboardContext = createContext<DashboardContextValue | undefined>(undefined);
@@ -126,18 +125,6 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
     [dashboardType]
   );
 
-  const reorderWidgets = useCallback((fromIndex: number, toIndex: number) => {
-    setLayout((prev) => {
-      const newWidgets = [...prev.widgets];
-      const [removed] = newWidgets.splice(fromIndex, 1);
-      newWidgets.splice(toIndex, 0, removed);
-      return {
-        ...prev,
-        widgets: newWidgets,
-      };
-    });
-  }, []);
-
   const value: DashboardContextValue = {
     layout,
     isLoading,
@@ -145,7 +132,6 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
     resetLayout,
     addWidget,
     removeWidget,
-    reorderWidgets,
   };
 
   return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;

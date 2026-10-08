@@ -1,6 +1,4 @@
 import React from "react";
-import { DndContext, closestCenter } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageShell } from "@/components/layout/PageShell";
 import { DashboardProvider } from "@/context/DashboardContext";
@@ -45,12 +43,10 @@ const AdminDashboardContent: React.FC = () => {
   };
   const {
     resetLayout,
-    sensors,
     customizeModalOpen,
     setCustomizeModalOpen,
     isWidgetActive: isLayoutWidgetActive,
     handleToggleWidget,
-    handleDragEnd,
     activeWidgetIds,
     totalUsers,
     totalTeams,
@@ -101,23 +97,19 @@ const AdminDashboardContent: React.FC = () => {
           ))}
         </TabsList>
       </Tabs>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={activeWidgetIds} strategy={verticalListSortingStrategy}>
-          <AdminDashboardWidgets
-            isWidgetActive={isWidgetActive}
-            totalUsers={totalUsers}
-            totalTeams={totalTeams}
-            totalPending={totalPending}
-            overtimeSummary={overtimeSummary}
-            hoursData={hoursData}
-            statusData={statusData}
-            auditLogs={auditLogs}
-            statsLoading={statsLoading}
-            auditLogsLoading={auditLogsLoading}
-            isSuperuser={isSuperuser}
-          />
-        </SortableContext>
-      </DndContext>
+      <AdminDashboardWidgets
+        isWidgetActive={isWidgetActive}
+        totalUsers={totalUsers}
+        totalTeams={totalTeams}
+        totalPending={totalPending}
+        overtimeSummary={overtimeSummary}
+        hoursData={hoursData}
+        statusData={statusData}
+        auditLogs={auditLogs}
+        statsLoading={statsLoading}
+        auditLogsLoading={auditLogsLoading}
+        isSuperuser={isSuperuser}
+      />
       <CustomizeDashboardModal
         open={customizeModalOpen}
         onOpenChange={setCustomizeModalOpen}

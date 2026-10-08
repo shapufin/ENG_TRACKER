@@ -23,12 +23,10 @@ vi.mock("./components/AdminInsightsStrip", () => ({ AdminInsightsStrip: () => nu
 vi.mock("./hooks/useAdminDashboardPage", () => ({
   useAdminDashboardPage: () => ({
     resetLayout: vi.fn(),
-    sensors: [],
     customizeModalOpen: false,
     setCustomizeModalOpen: vi.fn(),
     isWidgetActive: () => false,
     handleToggleWidget: vi.fn(),
-    handleDragEnd: vi.fn(),
     activeWidgetIds: [],
     totalUsers: 0,
     totalTeams: 0,
