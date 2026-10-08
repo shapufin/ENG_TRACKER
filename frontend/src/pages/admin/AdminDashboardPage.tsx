@@ -1,14 +1,19 @@
 import React from "react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageShell } from "@/components/layout/PageShell";
 import { DashboardProvider } from "@/context/DashboardContext";
 import { usePermissions } from "@/context/PermissionContext";
 import type { DashboardType } from "@/context/permission-context-base";
 import { DashboardSwitcher } from "@/components/dashboard/DashboardSwitcher";
 import { CustomizeDashboardModal } from "@/components/admin/CustomizeDashboardModal";
-import { AVAILABLE_WIDGETS } from "@/config/dashboardWidgets";
+import {
+  ADMIN_DASHBOARD_SECTIONS,
+  AVAILABLE_WIDGETS,
+  widgetSection,
+} from "@/config/dashboardWidgets";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminDashboardWidgets } from "./components/AdminDashboardWidgets";
 import { AdminInsightsStrip } from "./components/AdminInsightsStrip";
 import { useAdminDashboardPage } from "./hooks/useAdminDashboardPage";
@@ -18,6 +23,15 @@ import { Button } from "@/components/ui/button";
 const AdminDashboardContent: React.FC = () => {
   const { availableDashboards, isSuperuser } = usePermissions();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requested = searchParams.get("section");
+  const section = ADMIN_DASHBOARD_SECTIONS.some((s) => s.id === requested) ? requested! : "all";
+  const handleSectionChange = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === "all") params.delete("section");
+    else params.set("section", next);
+    setSearchParams(params, { replace: true });
+  };
   // The admin dashboard lives at /admin; every other dashboard lives at /.
   // Persist the choice (DashboardPage hydrates from the same key) then go.
   const handleDashboardChange = (dashboard: DashboardType) => {
@@ -34,7 +48,7 @@ const AdminDashboardContent: React.FC = () => {
     sensors,
     customizeModalOpen,
     setCustomizeModalOpen,
-    isWidgetActive,
+    isWidgetActive: isLayoutWidgetActive,
     handleToggleWidget,
     handleDragEnd,
     activeWidgetIds,
@@ -48,6 +62,10 @@ const AdminDashboardContent: React.FC = () => {
     statsLoading,
     auditLogsLoading,
   } = useAdminDashboardPage();
+  // A view filter only: the saved layout is untouched, hidden sections just stop rendering
+  // (and OverviewSection mounts its request only while one of its widgets is visible).
+  const isWidgetActive = (id: string) =>
+    isLayoutWidgetActive(id) && (section === "all" || widgetSection(id) === section);
 
   return (
     <PageShell
@@ -70,6 +88,19 @@ const AdminDashboardContent: React.FC = () => {
       }
     >
       <AdminInsightsStrip />
+      <Tabs value={section} onValueChange={handleSectionChange}>
+        <TabsList
+          aria-label="Dashboard sections"
+          className="h-auto max-w-full flex-nowrap justify-start overflow-x-auto"
+        >
+          <TabsTrigger value="all">All</TabsTrigger>
+          {ADMIN_DASHBOARD_SECTIONS.map((s) => (
+            <TabsTrigger key={s.id} value={s.id}>
+              {s.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={activeWidgetIds} strategy={verticalListSortingStrategy}>
           <AdminDashboardWidgets

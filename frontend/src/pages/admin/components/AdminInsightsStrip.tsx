@@ -77,7 +77,7 @@ export const AdminInsightsStrip: React.FC = () => {
           <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           <div className="min-w-0 space-y-0.5">
             <p className="text-sm font-semibold">
-              <span className="font-mono text-micro-lg uppercase tracking-wider">{label}</span>
+              <span className="text-micro-lg font-mono tracking-wider uppercase">{label}</span>
               <span className="mx-2 opacity-60" aria-hidden>
                 ·
               </span>
@@ -88,14 +88,24 @@ export const AdminInsightsStrip: React.FC = () => {
         </div>
         <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
           {insights.length > 1 && (
-            <div className="flex items-center gap-1 font-mono text-micro-lg">
-              <button type="button" className={pagerButton} onClick={() => step(-1)} aria-label="Previous insight">
+            <div className="text-micro-lg flex items-center gap-1 font-mono">
+              <button
+                type="button"
+                className={pagerButton}
+                onClick={() => step(-1)}
+                aria-label="Previous insight"
+              >
                 <ChevronLeft className="h-3.5 w-3.5" />
               </button>
               <span>
                 {Math.min(index, insights.length - 1) + 1} / {insights.length}
               </span>
-              <button type="button" className={pagerButton} onClick={() => step(1)} aria-label="Next insight">
+              <button
+                type="button"
+                className={pagerButton}
+                onClick={() => step(1)}
+                aria-label="Next insight"
+              >
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </div>

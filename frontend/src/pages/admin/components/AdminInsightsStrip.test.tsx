@@ -24,7 +24,13 @@ vi.mock("@/hooks/useAuth", () => ({
 }));
 
 const base = (): AdminOverview => ({
-  headcount: { total_users: 1, active_users: 1, inactive_users: 0, new_hires_30d: 0, never_logged_in: 0 },
+  headcount: {
+    total_users: 1,
+    active_users: 1,
+    inactive_users: 0,
+    new_hires_30d: 0,
+    never_logged_in: 0,
+  },
   coverage_gaps: {
     teams_without_leader: 0,
     users_without_team: 0,
@@ -37,8 +43,20 @@ const base = (): AdminOverview => ({
     standby: { count: 0, hours: 0 },
     leave: { count: 0, days: 0 },
   },
-  approval_aging: { buckets: [], overtime: [0, 0, 0, 3], standby: [0, 0, 0, 0], leave: [0, 0, 0, 0] },
-  leave_utilization: { year: 2026, total_days: 0, used_days: 0, pending_days: 0, available_days: 0, utilization_pct: null },
+  approval_aging: {
+    buckets: [],
+    overtime: [0, 0, 0, 3],
+    standby: [0, 0, 0, 0],
+    leave: [0, 0, 0, 0],
+  },
+  leave_utilization: {
+    year: 2026,
+    total_days: 0,
+    used_days: 0,
+    pending_days: 0,
+    available_days: 0,
+    utilization_pct: null,
+  },
   carryover_expiry: { window_days: 60, days_at_risk: 0, users_affected: 0 },
   period_close: { period: "2026-09", tls_total: 4, tls_closed: 4, tls_open: 0, open_tls: [] },
   backup: null,

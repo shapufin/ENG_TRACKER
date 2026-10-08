@@ -22,7 +22,10 @@ const read = (userId: number | undefined): string[] => {
 export function useDismissedInsights(userId: number | undefined) {
   const [dismissed, setDismissed] = useState<string[]>(() => read(userId));
 
-  const isDismissed = useCallback((signature: string) => dismissed.includes(signature), [dismissed]);
+  const isDismissed = useCallback(
+    (signature: string) => dismissed.includes(signature),
+    [dismissed]
+  );
 
   const dismiss = useCallback(
     (signature: string) => {

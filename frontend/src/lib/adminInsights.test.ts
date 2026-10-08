@@ -53,7 +53,11 @@ describe("deriveAdminInsights", () => {
     const o = clean();
     o.approval_aging.standby = [0, 0, 0, 4];
     let out = deriveAdminInsights(o);
-    expect(out[0]).toMatchObject({ id: "aging-stale", severity: "warning", to: "/admin/standby-logs" });
+    expect(out[0]).toMatchObject({
+      id: "aging-stale",
+      severity: "warning",
+      to: "/admin/standby-logs",
+    });
     o.approval_aging.leave = [0, 0, 0, 1];
     out = deriveAdminInsights(o);
     expect(out[0]).toMatchObject({ severity: "critical", to: "/admin/standby-logs" });
@@ -100,7 +104,11 @@ describe("deriveAdminInsights", () => {
   it("flags no backups and stale backups as critical", () => {
     const o = clean();
     o.backup = { count: 0, last_created_at: null, age_hours: null, size_mb: null, stale: true };
-    expect(deriveAdminInsights(o)[0]).toMatchObject({ id: "backup-stale", severity: "critical", to: "/admin/backup-restore" });
+    expect(deriveAdminInsights(o)[0]).toMatchObject({
+      id: "backup-stale",
+      severity: "critical",
+      to: "/admin/backup-restore",
+    });
     o.backup = { count: 2, last_created_at: "x", age_hours: 300, size_mb: 1, stale: false };
     expect(deriveAdminInsights(o)[0].id).toBe("all-clear");
   });
