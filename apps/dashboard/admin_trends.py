@@ -22,7 +22,9 @@ from apps.users.models.core import TeamMembership
 
 User = get_user_model()
 
-MONTHS = 12
+MONTHS = 12  # default window
+MIN_MONTHS = 3
+MAX_MONTHS = 24
 CLIENT_LIMIT = 6
 WHO_IS_OUT_LIMIT = 20
 UPCOMING_LEAVE_DAYS = 14
@@ -41,10 +43,10 @@ def _add_months(d: date, n: int) -> date:
     return date(idx // 12, idx % 12 + 1, 1)
 
 
-def _window(today: date):
-    """Twelve month-start dates, oldest first, current month last."""
+def _window(today: date, months: int = MONTHS):
+    """``months`` month-start dates, oldest first, current month last."""
     current = _month_start(today)
-    return [_add_months(current, -(MONTHS - 1) + i) for i in range(MONTHS)]
+    return [_add_months(current, -(months - 1) + i) for i in range(months)]
 
 
 def _monthly_hours(model, starts, **filters):
@@ -60,7 +62,7 @@ def _monthly_hours(model, starts, **filters):
 
 def _leave_days(starts):
     """Business days per month by type; a request is clipped to each month it overlaps."""
-    series = {"vacation": [0.0] * MONTHS, "sick": [0.0] * MONTHS}
+    series = {"vacation": [0.0] * len(starts), "sick": [0.0] * len(starts)}
     end_of_window = _add_months(starts[-1], 1) - timedelta(days=1)
     rows = LeaveRequest.objects.filter(
         status="approved", end_date__gte=starts[0], start_date__lte=end_of_window
@@ -199,9 +201,10 @@ def _who_is_out(today):
     }
 
 
-def build_admin_trends(user, today: date | None = None) -> dict:
+def build_admin_trends(user, today: date | None = None, months: int = MONTHS) -> dict:
+    """``months`` (3-24) sets the series window; the client/team/who-is-out blocks stay current-month."""
     today = today or timezone.localdate()
-    starts = _window(today)
+    starts = _window(today, months)
     leave = _leave_days(starts)
     return {
         "months": [s.strftime("%Y-%m") for s in starts],

@@ -35,6 +35,12 @@ describe("AdminDashboardFreshness", () => {
     expect(screen.getByText("Updated 2m ago")).toBeInTheDocument();
   });
 
+  it("counts a trends query that carries the period in its key", () => {
+    qc.setQueryData(["admin", "trends", 6], {});
+    renderIt();
+    expect(screen.getByText("Updated just now")).toBeInTheDocument();
+  });
+
   it("ignores queries that are not dashboard queries", () => {
     qc.setQueryData(["admin", "users"], {});
     renderIt();

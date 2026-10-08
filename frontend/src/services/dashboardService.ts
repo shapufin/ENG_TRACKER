@@ -29,8 +29,10 @@ export const dashboardService = {
     return data;
   },
 
-  async getAdminTrends(): Promise<AdminTrends> {
-    const { data } = await api.get<AdminTrends>("/dashboard/widgets/admin_trends/");
+  async getAdminTrends(months = 12): Promise<AdminTrends> {
+    const { data } = await api.get<AdminTrends>("/dashboard/widgets/admin_trends/", {
+      params: { months },
+    });
     return data;
   },
 
