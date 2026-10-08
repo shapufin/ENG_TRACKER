@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { userService } from "@/services/userService";
-import type { PaletteItem } from "./paletteItems";
+import { userRoleTab, type PaletteItem } from "./paletteItems";
+import type { TLFilter } from "@/types";
 import { pushRecent, readRecents } from "./paletteRecents";
 
 interface CommandPaletteProps {
@@ -41,7 +42,7 @@ interface FoundUser {
   label: string;
   username: string;
   /** Users-page role tab that contains this person (the default tab is plain employees). */
-  role: "employee" | "italian_tl" | "albanian_tl" | "hr";
+  role: TLFilter;
 }
 
 const LISTBOX_ID = "command-palette-list";
@@ -69,13 +70,7 @@ const useUserSearch = (query: string, enabled: boolean): FoundUser[] => {
               id: p.user.id,
               username: p.user.username,
               label: p.user.full_name || p.user.username,
-              role: p.is_albanian_tl_role
-                ? "albanian_tl"
-                : p.is_italian_tl_role
-                  ? "italian_tl"
-                  : p.is_hr_user
-                    ? "hr"
-                    : "employee",
+              role: userRoleTab(p),
             })),
           });
         })
