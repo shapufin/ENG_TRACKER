@@ -126,7 +126,10 @@ describe("AdminSidebar", () => {
 
   it("renders the site name and logo once branding resolves", async () => {
     vi.mocked(dashboardService.getBranding).mockResolvedValue({
-      id: 1, site_name: "Acme Tracker", logo: "branding/logo.png", logo_url: "/media/branding/logo.png",
+      id: 1,
+      site_name: "Acme Tracker",
+      logo: "branding/logo.png",
+      logo_url: "/media/branding/logo.png",
     });
     mockGetInjected([]);
     renderSidebar();
@@ -139,7 +142,10 @@ describe("AdminSidebar", () => {
 
   it("falls back to the gradient tile when the branding logo fails to load", async () => {
     vi.mocked(dashboardService.getBranding).mockResolvedValue({
-      id: 1, site_name: "Acme Tracker", logo: "branding/logo.png", logo_url: "/media/branding/logo.png",
+      id: 1,
+      site_name: "Acme Tracker",
+      logo: "branding/logo.png",
+      logo_url: "/media/branding/logo.png",
     });
     mockGetInjected([]);
     renderSidebar();
@@ -211,5 +217,38 @@ describe("AdminSidebar", () => {
     const subtitle = screen.getByText("Enterprise");
     expect(subtitle.className).toContain("text-foreground");
     expect(subtitle.className).not.toMatch(/(^|\s)text-primary(\s|$)/);
+  });
+});
+
+describe("AdminSidebar palette trigger", () => {
+  const renderTrigger = (onOpenPalette?: () => void, collapsed = false) =>
+    renderWithQuery(
+      <MemoryRouter initialEntries={["/admin/users"]}>
+        <AdminSidebar
+          items={items}
+          collapsed={collapsed}
+          mobileOpen={false}
+          onToggleCollapse={vi.fn()}
+          onCloseMobile={vi.fn()}
+          onLogout={vi.fn()}
+          onOpenPalette={onOpenPalette}
+        />
+      </MemoryRouter>
+    );
+
+  it("renders no trigger unless onOpenPalette is provided", () => {
+    renderTrigger();
+    expect(screen.queryByRole("button", { name: /search pages/i })).not.toBeInTheDocument();
+  });
+
+  it("opens the palette from the trigger, expanded and collapsed", () => {
+    const open = vi.fn();
+    const { unmount } = renderTrigger(open);
+    fireEvent.click(screen.getByRole("button", { name: /search pages/i }));
+    expect(open).toHaveBeenCalledTimes(1);
+    unmount();
+    renderTrigger(open, true);
+    fireEvent.click(screen.getByRole("button", { name: /search pages/i }));
+    expect(open).toHaveBeenCalledTimes(2);
   });
 });

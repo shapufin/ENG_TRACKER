@@ -10,6 +10,7 @@ import { MobileOverlay } from "./MobileOverlay";
 import { MainContentTransition } from "./MainContentTransition";
 import { useAdminNavItems } from "./hooks/useAdminNavItems";
 import { isAllowedCRAdminPath } from "./adminRouteGuards";
+import { AdminCommandPalette } from "./AdminCommandPalette";
 
 export const AdminShell = React.memo(() => {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ export const AdminShell = React.memo(() => {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const { isAdmin, isHR, isTeamLeader, isSuperuser, isCRAdmin } = usePermissions();
   const { activePlugins } = usePlugins();
@@ -40,8 +42,21 @@ export const AdminShell = React.memo(() => {
     }
   }, [isCROnlyAdmin, location.pathname, navigate]);
 
+  // Ctrl/Cmd+K toggles the page palette. preventDefault stops the browser's own
+  // Ctrl+K (focus the address/search bar) from winning.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="bg-background text-foreground flex h-screen">
       <MobileOverlay isOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <AdminSidebar
@@ -53,15 +68,17 @@ export const AdminShell = React.memo(() => {
         onCloseMobile={() => setMobileOpen(false)}
         user={user}
         onLogout={handleLogout}
+        onOpenPalette={() => setPaletteOpen(true)}
       />
+      <AdminCommandPalette items={adminNavItems} open={paletteOpen} onOpenChange={setPaletteOpen} />
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex items-center gap-3 border-b border-border/30 bg-card/30 px-3 pb-3 pt-[calc(0.75rem+var(--safe-area-top))] backdrop-blur-sm md:hidden">
+        <div className="border-border/30 bg-card/30 flex items-center gap-3 border-b px-3 pt-[calc(0.75rem+var(--safe-area-top))] pb-3 backdrop-blur-sm md:hidden">
           <button
             ref={mobileMenuButtonRef}
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="flex h-11 w-11 items-center justify-center rounded-md hover:bg-accent"
+            className="hover:bg-accent flex h-11 w-11 items-center justify-center rounded-md"
             aria-label="Open menu"
             aria-expanded={mobileOpen}
             aria-controls="admin-mobile-sidebar"
@@ -69,7 +86,7 @@ export const AdminShell = React.memo(() => {
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-primary" />
+            <Shield className="text-primary h-4 w-4" />
             <span className="font-semibold">Admin Panel</span>
           </div>
         </div>

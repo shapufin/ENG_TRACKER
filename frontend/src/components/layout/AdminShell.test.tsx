@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AdminShell } from "./AdminShell";
 import type { PermissionContextType } from "@/context/permission-context-base";
@@ -121,5 +121,37 @@ describe("AdminShell CR admin routing", () => {
       expect(screen.getByTestId("admin-sidebar")).toBeInTheDocument();
     });
     expect(screen.queryByText("Users Page")).not.toBeInTheDocument();
+  });
+});
+
+describe("AdminShell command palette", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(usePermissions).mockReturnValue({ ...basePerms, isAdmin: true });
+  });
+
+  it.each([
+    ["Ctrl", { ctrlKey: true }],
+    ["Meta", { metaKey: true }],
+  ])("%s+K opens the palette and prevents the browser default", async (_name, mods) => {
+    renderShell("/admin/overtime-logs");
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    const notPrevented = fireEvent.keyDown(document, { key: "k", ...mods });
+    expect(notPrevented).toBe(false);
+    expect(await screen.findByRole("combobox")).toBeInTheDocument();
+  });
+
+  it("plain K does not open it", () => {
+    renderShell("/admin/overtime-logs");
+    fireEvent.keyDown(document, { key: "k" });
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  });
+
+  it("Escape closes it", async () => {
+    renderShell("/admin/overtime-logs");
+    fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+    await screen.findByRole("combobox");
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("combobox")).not.toBeInTheDocument());
   });
 });

@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { PluginSlot } from "@/components/plugins/PluginSlot";
 import { usePlugins } from "@/context/PluginContext";
 import { useSiteBranding } from "@/hooks/useSiteBranding";
-import { ChevronLeft, ChevronRight, LogOut, Shield, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, Search, Shield, X } from "lucide-react";
 import { SidebarUserProfile } from "./SidebarUserProfile";
 import { SidebarInstallButton } from "./SidebarInstallButton";
 import { useMobileSidebarFocus } from "./useMobileSidebarFocus";
@@ -30,6 +30,8 @@ interface AdminSidebarProps {
     email?: string;
   } | null;
   onLogout: () => void;
+  /** Renders the "Search pages" trigger when provided (Ctrl/Cmd+K palette). */
+  onOpenPalette?: () => void;
 }
 
 const ADMIN_NAV_GROUPS = [
@@ -52,6 +54,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   onCloseMobile,
   user,
   onLogout,
+  onOpenPalette,
 }) => {
   const location = useLocation();
   const { getInjectedComponents } = usePlugins();
@@ -98,10 +101,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       initial={false}
       animate={{ width: collapsed ? 76 : 264 }}
       transition={collapseTransition}
-      className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border/60 bg-surface-sunken backdrop-blur-xl md:static ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+      className={`border-border/60 bg-surface-sunken fixed inset-y-0 left-0 z-50 flex flex-col border-r backdrop-blur-xl md:static ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
     >
       <div
-        className={`flex items-center border-b border-border/30 p-4 ${collapsed ? "flex-col gap-2" : "justify-between"}`}
+        className={`border-border/30 flex items-center border-b p-4 ${collapsed ? "flex-col gap-2" : "justify-between"}`}
       >
         <div
           className={`flex items-center gap-2.5 text-lg font-bold ${collapsed ? "justify-center" : ""}`}
@@ -110,18 +113,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <img
               src={branding.logo_url}
               alt=""
-              className="h-8 w-8 shrink-0 rounded-xl object-contain shadow-md shadow-primary/30"
+              className="shadow-primary/30 h-8 w-8 shrink-0 rounded-xl object-contain shadow-md"
               onError={() => setFailedLogoUrl(branding?.logo_url ?? null)}
             />
           ) : (
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-tr from-primary to-info text-white shadow-md shadow-primary/30">
+            <div className="from-primary to-info shadow-primary/30 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-tr text-white shadow-md">
               <Shield className="h-5 w-5" />
             </div>
           )}
           {!collapsed && (
             <div className="leading-tight">
               <span className="md:inline">{branding?.site_name || "Admin Panel"}</span>
-              <div className="font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
+              <div className="text-foreground font-mono text-[10px] font-semibold tracking-wider uppercase">
                 Enterprise
               </div>
             </div>
@@ -132,14 +135,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           <button
             ref={closeButtonRef}
             onClick={onCloseMobile}
-            className="flex h-11 w-11 items-center justify-center rounded-md hover:bg-accent md:hidden"
+            className="hover:bg-accent flex h-11 w-11 items-center justify-center rounded-md md:hidden"
             aria-label="Close menu"
           >
             <X className="h-5 w-5" />
           </button>
           <button
             onClick={onToggleCollapse}
-            className="hidden rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground md:block"
+            className="text-muted-foreground hover:bg-accent hover:text-foreground hidden rounded-md p-1 md:block"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -147,6 +150,25 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </div>
       </div>
 
+      {onOpenPalette && (
+        <div className={`px-3 pt-3 ${collapsed ? "flex justify-center" : ""}`}>
+          <button
+            type="button"
+            onClick={onOpenPalette}
+            aria-label="Search pages"
+            title="Search pages (Ctrl+K)"
+            className={`border-border bg-card text-muted-foreground hover:text-foreground flex h-9 items-center gap-2 rounded-lg border text-sm transition-colors ${collapsed ? "w-9 justify-center" : "w-full px-3"}`}
+          >
+            <Search className="h-4 w-4 shrink-0" aria-hidden />
+            {!collapsed && (
+              <>
+                <span className="flex-1 text-left">Search pages</span>
+                <kbd className="text-micro-lg font-mono">Ctrl K</kbd>
+              </>
+            )}
+          </button>
+        </div>
+      )}
       <nav className="flex-1 overflow-y-auto p-3" aria-label="Admin navigation">
         <ul className="space-y-1">
           {ADMIN_NAV_GROUPS.map((group) => {
@@ -171,7 +193,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </ul>
       </nav>
 
-      <div className="space-y-3 border-t border-border/30 px-3 pb-[calc(0.75rem+var(--safe-area-bottom))] pt-3">
+      <div className="border-border/30 space-y-3 border-t px-3 pt-3 pb-[calc(0.75rem+var(--safe-area-bottom))]">
         <ThemeToggle isCollapsed={collapsed} />
         <SidebarInstallButton collapsed={collapsed} />
         <SidebarUserProfile user={user} collapsed={collapsed} />
