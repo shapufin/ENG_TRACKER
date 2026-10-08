@@ -127,13 +127,17 @@ describe("EPRSection", () => {
     expect(screen.getAllByText("Locked until the previous step is done")).toHaveLength(2);
   });
 
-  it("explains a step blocked by a later completed step", () => {
+  it("lets a stranded Goal Setting be repaired with a Workday PDF", () => {
     renderSection([{ ...cycleWithFewGoals, mid_year_completed_at: "2026-07-01T00:00:00Z" }]);
     fireEvent.click(screen.getByRole("button", { expanded: false }));
 
-    expect(screen.queryByRole("button", { name: /Complete Goal Setting/ })).not.toBeInTheDocument();
     expect(screen.getByText("Needs attention")).toBeInTheDocument();
-    expect(screen.getByText("Blocked — a later step is already complete")).toBeInTheDocument();
+    expect(screen.getAllByText(/confirm the goals to repair this cycle/).length).toBeGreaterThan(0);
+    const button = screen.getByRole("button", { name: /Complete Goal Setting/ });
+    expect(button).toHaveTextContent("Repair goals");
+    fireEvent.click(button);
+    expect(screen.getByLabelText("Workday PDF")).toBeInTheDocument();
+    expect(screen.queryByText(/the goals are locked/)).not.toBeInTheDocument();
   });
 
   it("lets an out-of-order step record evidence when goals are already confirmed", () => {

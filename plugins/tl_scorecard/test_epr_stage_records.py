@@ -197,6 +197,62 @@ class CompleteStageTests(TestCase):
         # The dead-end is gone: Goal Setting is still reachable afterwards.
         self._complete_goal_setting()
 
+    def _strand(self, final=False):
+        """A legacy cycle: a later stage done before Goal Setting existed."""
+        self.cycle.mid_year_completed_at = timezone.now()
+        if final:
+            self.cycle.final_review_completed_at = timezone.now()
+        self.cycle.save(update_fields=['mid_year_completed_at', 'final_review_completed_at'])
+
+    def test_stranded_goal_setting_is_recoverable_with_goal_titles(self):
+        for final in (False, True):
+            with self.subTest(final=final):
+                cycle = EPRCycle.objects.create(user=self.member, year=2030 + final)
+                cycle.mid_year_completed_at = timezone.now()
+                if final:
+                    cycle.final_review_completed_at = timezone.now()
+                cycle.save()
+                resp = self._complete(self.leader, cycle.id, {
+                    'stage': 'goal_setting', 'summary': 'Goals repaired.',
+                    'goal_titles': [f'Goal {i}' for i in range(5)],
+                })
+                self.assertEqual(resp.status_code, 200, resp.data)
+                cycle.refresh_from_db()
+                self.assertIsNotNone(cycle.goal_setting_completed_at)
+                self.assertEqual(cycle.goals.count(), 5)
+
+    def test_stranded_goal_setting_still_needs_five_titles(self):
+        self._strand()
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'goal_setting', 'summary': 'x', 'goal_titles': ['a', 'b'],
+        })
+        self.assertEqual(resp.status_code, 400)
+        self.cycle.refresh_from_db()
+        self.assertIsNone(self.cycle.goal_setting_completed_at)
+
+    def test_recovery_after_final_review_leaves_final_review_closed(self):
+        self._strand(final=True)
+        resp = self._complete(self.leader, self.cycle.id, {
+            'stage': 'goal_setting', 'summary': 'x',
+            'goal_titles': [f'Goal {i}' for i in range(5)],
+        })
+        self.assertEqual(resp.status_code, 200, resp.data)
+        again = self._complete(self.leader, self.cycle.id, {
+            'stage': 'final_review', 'summary': 'x', 'goal_titles': ['a'] * 5,
+        })
+        self.assertEqual(again.status_code, 409)
+
+    def test_parse_goal_pdf_allowed_for_stranded_goal_setting(self):
+        self._strand()
+        request = self.factory.post(
+            f'/x/{self.cycle.id}/parse_goal_pdf/', {'stage': 'goal_setting'},
+            format='multipart')
+        force_authenticate(request, user=self.leader)
+        resp = EPRCycleViewSet.as_view({'post': 'parse_goal_pdf'})(request, pk=self.cycle.id)
+        # Past the lock check: it now fails only for the missing file.
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('file', resp.data)
+
     def test_final_review_needs_no_goal_titles_once_ordered(self):
         self._complete_mid_year()
         old_ids = list(self.cycle.goals.values_list('id', flat=True))

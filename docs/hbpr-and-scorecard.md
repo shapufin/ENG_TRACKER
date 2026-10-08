@@ -147,7 +147,7 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   Completing a stage can no longer be a bare click, and each completed stage
   renders its recorded evidence inline. Stages complete strictly in order
   (Goal Setting → Mid-year → Final Review): `complete_stage` returns 400 while an
-  earlier stage is open, and the UI disables the later buttons.
+  earlier stage is open, and the UI disables the later buttons. One repair exception: a legacy cycle with Goal Setting still open after a later stage was completed may confirm its goals through `complete_stage`/`parse_goal_pdf` with `goal_titles` (UI: "Repair goals"); Mid-year/Final keep the order guard.
 - `/tl-scorecard?tab=records` — the TL's record table (`components/records/*`). Row
   click / Enter / the row's eye button opens `RecordDetailDialog` (`DialogContent
   size="lg"`): every serialized field of that record, full untruncated text, and a
