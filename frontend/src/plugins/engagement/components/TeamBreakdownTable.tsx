@@ -4,26 +4,48 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
-import { CalendarDays, HeartHandshake, Users2 } from "lucide-react";
+import { HeartHandshake, Users2 } from "lucide-react";
 import type { EngagementTeamBreakdownRow } from "../types/engagement";
 
 interface TeamBreakdownTableProps {
   rows: EngagementTeamBreakdownRow[];
 }
 
-const sumMetric = (
-  row: EngagementTeamBreakdownRow,
-  key: "pending_past_deadline" | "breaches"
-): number =>
-  (row.metrics.leave?.[key] ?? 0) +
-  (row.metrics.overtime?.[key] ?? 0) +
-  (row.metrics.standby?.[key] ?? 0);
+const pendingOver48h = (row: EngagementTeamBreakdownRow): number =>
+  (row.metrics.leave?.pending_over_48h ?? 0) +
+  (row.metrics.overtime?.pending_over_48h ?? 0) +
+  (row.metrics.standby?.pending_over_48h ?? 0);
 
 const score = (value: number | null, suffix = ""): string =>
   value !== null ? `${value.toFixed(0)}${suffix}` : "—";
 
 const StatusCell: React.FC<{ row: EngagementTeamBreakdownRow }> = ({ row }) => (
   <div className="flex items-center gap-1.5">
+    {row.is_stale ? (
+      <span
+        role="status"
+        aria-label="Stale snapshot"
+        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${toneSurfaceClass.warning}`}
+      >
+        <span
+          className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--tone-warning-text))]"
+          aria-hidden="true"
+        />
+        Stale
+      </span>
+    ) : (
+      <span
+        role="status"
+        aria-label="Fresh snapshot"
+        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${toneSurfaceClass.success}`}
+      >
+        <span
+          className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--tone-success-text))]"
+          aria-hidden="true"
+        />
+        Fresh
+      </span>
+    )}
     {row.decisions_during_leave > 0 && (
       <span
         role="status"
@@ -33,17 +55,6 @@ const StatusCell: React.FC<{ row: EngagementTeamBreakdownRow }> = ({ row }) => (
       >
         <HeartHandshake className="h-3 w-3" aria-hidden="true" />
         {row.decisions_during_leave}
-      </span>
-    )}
-    {row.decisions_on_holidays > 0 && (
-      <span
-        role="status"
-        aria-label={`Decided ${row.decisions_on_holidays} request(s) on public holidays`}
-        title={`Decided ${row.decisions_on_holidays} request(s) on public holidays (evidence, not scored)`}
-        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${toneSurfaceClass.success}`}
-      >
-        <CalendarDays className="h-3 w-3" aria-hidden="true" />
-        {row.decisions_on_holidays}
       </span>
     )}
   </div>
@@ -89,18 +100,9 @@ export const TeamBreakdownTable: React.FC<TeamBreakdownTableProps> = ({ rows }) 
         ),
       },
       {
-        id: "breaches",
-        header: "Breaches",
-        cell: ({ row }) => (
-          <span className="tabular-nums">{sumMetric(row.original, "breaches")}</span>
-        ),
-      },
-      {
         id: "pending",
-        header: "Pending past deadline",
-        cell: ({ row }) => (
-          <span className="tabular-nums">{sumMetric(row.original, "pending_past_deadline")}</span>
-        ),
+        header: "Pending >48h",
+        cell: ({ row }) => <span className="tabular-nums">{pendingOver48h(row.original)}</span>,
       },
       {
         id: "resubmissions",

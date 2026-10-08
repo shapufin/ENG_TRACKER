@@ -21,27 +21,9 @@ const ROW = {
   team_name: "E2E Team A",
   month: "2026-10-01",
   metrics: {
-    leave: {
-      pending_past_deadline: 2,
-      judgeable: 0,
-      on_time: 0,
-      breaches: 0,
-      median_fraction: null,
-    },
-    overtime: {
-      pending_past_deadline: 3,
-      judgeable: 0,
-      on_time: 0,
-      breaches: 0,
-      median_fraction: null,
-    },
-    standby: {
-      pending_past_deadline: 4,
-      judgeable: 0,
-      on_time: 0,
-      breaches: 0,
-      median_fraction: null,
-    },
+    leave: { pending_over_48h: 2 },
+    overtime: { pending_over_48h: 3 },
+    standby: { pending_over_48h: 4 },
   },
   team_size: 5,
   active_submitters: 4,
@@ -50,12 +32,18 @@ const ROW = {
   engagement_score: 71.6,
   score_speed: null,
   score_approval_rate: null,
-  score_responsiveness: null,
+  score_activity: null,
   score_consistency: null,
   decisions_during_leave: 2,
   computed_at: "2026-10-05T10:00:00Z",
-  decisions_on_holidays: 0,
-  next_deadline_at: null,
+  is_stale: false,
+} as unknown as EngagementTeamBreakdownRow;
+
+const STALE_ROW = {
+  ...ROW,
+  id: 2,
+  team_name: "E2E Team B",
+  is_stale: true,
 } as unknown as EngagementTeamBreakdownRow;
 
 describe("TeamBreakdownTable", () => {
@@ -69,19 +57,18 @@ describe("TeamBreakdownTable", () => {
     expect(within(table).getByText("72")).toBeInTheDocument();
     expect(within(table).getByText("82%")).toBeInTheDocument();
     expect(within(table).getByText("6")).toBeInTheDocument();
-    // Pending past deadline is the sum across leave + overtime + standby.
+    // Pending >48h is the sum across leave + overtime + standby.
     expect(within(table).getByText("9")).toBeInTheDocument();
   });
 
-  it("shows the decisions-during-leave and holiday evidence pills", () => {
-    render(<TeamBreakdownTable rows={[{ ...ROW, decisions_on_holidays: 1 }]} />);
+  it("shows the snapshot-freshness and decisions-during-leave status pills", () => {
+    render(<TeamBreakdownTable rows={[ROW, STALE_ROW]} />);
 
+    expect(screen.getByRole("status", { name: "Fresh snapshot" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Stale snapshot" })).toBeInTheDocument();
     expect(
-      screen.getByRole("status", { name: /approved 2 request\(s\) while on leave/i })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("status", { name: /decided 1 request\(s\) on public holidays/i })
-    ).toBeInTheDocument();
+      screen.getAllByRole("status", { name: /approved 2 request\(s\) while on leave/i })
+    ).toHaveLength(2);
   });
 
   it("omits the decisions pill when there were none", () => {
