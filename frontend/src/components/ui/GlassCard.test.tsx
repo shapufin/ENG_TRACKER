@@ -66,7 +66,9 @@ describe("GlassCard surface", () => {
 
   it("lifts on hover only when interactive", () => {
     const { container } = render(<GlassCard interactive>x</GlassCard>);
-    expect((container.firstElementChild as HTMLElement).className).toContain("hover:-translate-y-1");
+    expect((container.firstElementChild as HTMLElement).className).toContain(
+      "hover:-translate-y-1"
+    );
   });
 
   it("flat variant drops the shadow for a hairline", () => {

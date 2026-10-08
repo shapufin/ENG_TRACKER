@@ -22,7 +22,7 @@ interface EscalationsPanelProps {
 export const EscalationsPanel: React.FC<EscalationsPanelProps> = ({ candidates }) => (
   <GlassCard animateOnMount={false} className="p-4">
     <h2 className="text-sm font-semibold">Escalation risks</h2>
-    <p className="mt-1 text-xs text-muted-foreground">
+    <p className="text-muted-foreground mt-1 text-xs">
       Computed live from breaches already tracked — nothing here was manually logged.
     </p>
     {candidates.length === 0 ? (
@@ -33,12 +33,15 @@ export const EscalationsPanel: React.FC<EscalationsPanelProps> = ({ candidates }
         className="py-6"
       />
     ) : (
-      <ul className="mt-3 divide-y divide-border/50">
+      <ul className="divide-border/50 mt-3 divide-y">
         {candidates.map((c, idx) => (
-          <li key={`${c.kind}-${c.subject_id}-${idx}`} className="flex items-center justify-between gap-3 py-2.5">
+          <li
+            key={`${c.kind}-${c.subject_id}-${idx}`}
+            className="flex items-center justify-between gap-3 py-2.5"
+          >
             <div className="min-w-0">
               <p className="text-sm font-medium">{c.subject_name}</p>
-              <p className="text-xs text-muted-foreground">{c.detail}</p>
+              <p className="text-muted-foreground text-xs">{c.detail}</p>
             </div>
             <span
               className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${toneSurfaceClass.danger}`}

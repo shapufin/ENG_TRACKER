@@ -48,7 +48,7 @@ export const TLApprovalStats: React.FC<TLApprovalStatsProps> = ({
         interactive={isClickable}
         className={cn(
           "flex items-center gap-4 p-4",
-          isClickable && "cursor-pointer hover:border-primary/50"
+          isClickable && "hover:border-primary/50 cursor-pointer"
         )}
         onClick={isClickable ? () => onCardClick!(type) : undefined}
         role={isClickable ? "button" : undefined}
@@ -59,11 +59,11 @@ export const TLApprovalStats: React.FC<TLApprovalStatsProps> = ({
           {icon}
         </div>
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
             {label}
           </p>
           <p className="text-xl font-bold">{loading ? "..." : count}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {hasPendingMonths ? "Pending · click to jump" : "Pending"}
           </p>
         </div>

@@ -16,7 +16,11 @@ const ok = (name, src, path = P) =>
   test(`allows: ${name}`, () => assert.deepEqual(findViolations(src, path), []));
 
 bad("Search icon beside Input", `<div><Search className="a" /><Input /></div>`, "SEARCH-ICON");
-bad("Search icon, multi-line tag", `<Search\n className="a" />\n<Input value={v} />`, "SEARCH-ICON");
+bad(
+  "Search icon, multi-line tag",
+  `<Search\n className="a" />\n<Input value={v} />`,
+  "SEARCH-ICON"
+);
 ok("Search icon with no Input in the file", `<Search className="a" />`);
 ok("SearchField usage is not the icon", `<SearchField aria-label="x" /><Input />`);
 ok(
@@ -26,7 +30,12 @@ ok(
 );
 
 bad("pl-9 on Input", `<Input className="pl-9" />`, "INPUT-PAD");
-bad("pl-11 on raw input", `<input type="text" className="pl-11" />`, "INPUT-PAD", "src/components/ui/x.tsx");
+bad(
+  "pl-11 on raw input",
+  `<input type="text" className="pl-11" />`,
+  "INPUT-PAD",
+  "src/components/ui/x.tsx"
+);
 bad("variant-prefixed pl-10", `<Input className="sm:pl-10" />`, "INPUT-PAD");
 bad(
   "pl-9 inside cn() after a => handler",
@@ -58,9 +67,17 @@ ok("CommandPalette", `<input />`, "src/components/CommandPalette.tsx");
 ok("HeaderSearch", `<input />`, "src/components/layout/HeaderSearch.tsx");
 ok("a component whose name starts with Input", `<InputGroup />`);
 
-bad("max-w-sm flex-1 wrapper", `<div className="relative w-full max-w-sm flex-1 sm:w-auto">`, "TOOLBAR-WRAPPER");
+bad(
+  "max-w-sm flex-1 wrapper",
+  `<div className="relative w-full max-w-sm flex-1 sm:w-auto">`,
+  "TOOLBAR-WRAPPER"
+);
 bad("reversed order", `<div className="flex-1 max-w-sm">`, "TOOLBAR-WRAPPER");
-bad("with a class in between", `<div className="max-w-sm min-w-[12rem] flex-1">`, "TOOLBAR-WRAPPER");
+bad(
+  "with a class in between",
+  `<div className="max-w-sm min-w-[12rem] flex-1">`,
+  "TOOLBAR-WRAPPER"
+);
 ok(
   "wrapper inside FilterToolbar.tsx",
   `<div className="max-w-sm flex-1">`,

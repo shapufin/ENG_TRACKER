@@ -77,7 +77,7 @@ const ChartRow: React.FC<{
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 hover:bg-table-hover">
+    <div className="hover:bg-table-hover flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate font-medium" title={chart.name}>
@@ -90,11 +90,11 @@ const ChartRow: React.FC<{
             {chart.status}
           </Badge>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           {chart.node_count} nodes · rev {chart.revision_number} · {audienceSummary(chart)}
         </p>
         {chart.updated_at && (
-          <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <p className="text-muted-foreground flex items-center gap-1 text-[10px]">
             <Clock className="h-3 w-3" /> Updated {formatUpdated(chart.updated_at)}
           </p>
         )}
@@ -219,7 +219,7 @@ export const OrganigramaAdminPage: React.FC = () => {
     return (
       <PageShell title="Organigrama Admin">
         <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
         </div>
       </PageShell>
     );
@@ -228,7 +228,7 @@ export const OrganigramaAdminPage: React.FC = () => {
   if (isError) {
     return (
       <PageShell title="Organigrama Admin">
-        <div className="flex h-64 flex-col items-center justify-center gap-2 text-destructive">
+        <div className="text-destructive flex h-64 flex-col items-center justify-center gap-2">
           <AlertCircle className="h-8 w-8" />
           <p>Failed to load charts.</p>
         </div>
@@ -249,7 +249,7 @@ export const OrganigramaAdminPage: React.FC = () => {
       <GlassCard className="mb-4 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[12rem] flex-1">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
             <Input
               placeholder="Search by name, slug, or description..."
               value={search}

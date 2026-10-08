@@ -26,7 +26,11 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = ({
 }) => {
   if (folders.length === 0 && documents.length === 0) {
     return (
-      <EmptyState icon={SearchX} title="No matches" description="Try a different name or keyword." />
+      <EmptyState
+        icon={SearchX}
+        title="No matches"
+        description="Try a different name or keyword."
+      />
     );
   }
 
@@ -49,11 +53,11 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = ({
                 "linear-gradient(135deg, hsl(var(--chart-1) / 0.28), hsl(var(--chart-1) / 0.08))",
             }}
           >
-            <FolderIcon className="h-4 w-4 text-chart-1" aria-hidden="true" />
+            <FolderIcon className="text-chart-1 h-4 w-4" aria-hidden="true" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{folder.name}</p>
-            {folder.path && <p className="truncate text-xs text-muted-foreground">{folder.path}</p>}
+            {folder.path && <p className="text-muted-foreground truncate text-xs">{folder.path}</p>}
           </div>
         </GlassCard>
       ))}
@@ -74,12 +78,12 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = ({
                 "linear-gradient(135deg, hsl(var(--chart-2) / 0.28), hsl(var(--chart-2) / 0.08))",
             }}
           >
-            <FileIcon className="h-4 w-4 text-chart-2" aria-hidden="true" />
+            <FileIcon className="text-chart-2 h-4 w-4" aria-hidden="true" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{document.name}</p>
             {document.path && (
-              <p className="truncate text-xs text-muted-foreground">{document.path}</p>
+              <p className="text-muted-foreground truncate text-xs">{document.path}</p>
             )}
           </div>
         </GlassCard>

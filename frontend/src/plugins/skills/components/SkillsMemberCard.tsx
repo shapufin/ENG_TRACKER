@@ -34,9 +34,9 @@ export const SkillsMemberCard: React.FC<SkillsMemberCardProps> = ({
             aria-expanded={isExpanded}
           >
             {isExpanded ? (
-              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <ChevronDown className="text-muted-foreground h-4 w-4 shrink-0" />
             ) : (
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
             )}
             <SkillsMemberCell row={row} className="min-w-0" />
           </button>

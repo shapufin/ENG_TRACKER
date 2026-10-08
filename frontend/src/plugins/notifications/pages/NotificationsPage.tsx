@@ -38,7 +38,7 @@ export const NotificationsPage: React.FC = () => {
       <GlassCard>
         <CardHeader className="pb-3">
           <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
             <Input
               placeholder="Search notifications..."
               className="pl-9"
@@ -51,7 +51,7 @@ export const NotificationsPage: React.FC = () => {
           <div className="divide-y">
             {isLoading ? (
               <div className="flex h-40 items-center justify-center">
-                <Clock className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Clock className="text-muted-foreground h-8 w-8 animate-spin" />
               </div>
             ) : filteredNotifications.length === 0 ? (
               <EmptyState icon={Bell} title="No notifications found." className="p-6" />

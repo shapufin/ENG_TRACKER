@@ -29,19 +29,14 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   className,
 }) => (
   <motion.div id={id} data-chart-section={id} variants={staggerItem} className={className}>
-    <GlassCard
-      animateOnMount={false}
-      className={cn("relative overflow-hidden p-5")}
-    >
+    <GlassCard animateOnMount={false} className={cn("relative overflow-hidden p-5")}>
       {(title || description || action) && (
         <div className="flex items-center justify-between gap-3">
           <div>
             {title && (
-              <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>
+              <h3 className="text-foreground text-sm font-semibold tracking-tight">{title}</h3>
             )}
-            {description && (
-              <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
-            )}
+            {description && <p className="text-muted-foreground mt-0.5 text-xs">{description}</p>}
           </div>
           {action}
         </div>

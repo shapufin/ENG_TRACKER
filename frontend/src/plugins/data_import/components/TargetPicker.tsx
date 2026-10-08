@@ -28,7 +28,7 @@ export const TargetPicker: React.FC<TargetPickerProps> = ({
         return (
           <GlassCard
             key={target.target_key}
-            className={`cursor-pointer ${isSelected ? "ring-1 ring-primary/20" : ""}`}
+            className={`cursor-pointer ${isSelected ? "ring-primary/20 ring-1" : ""}`}
             onClick={() => onSelect(target.target_key)}
           >
             <CardHeader className="flex flex-row items-center gap-3 pb-2">
@@ -38,8 +38,8 @@ export const TargetPicker: React.FC<TargetPickerProps> = ({
               <CardTitle className="text-lg">{target.display_name}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{target.description}</p>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-sm">{target.description}</p>
+              <p className="text-muted-foreground mt-2 text-xs">
                 {target.fields.length} fields available
               </p>
             </CardContent>

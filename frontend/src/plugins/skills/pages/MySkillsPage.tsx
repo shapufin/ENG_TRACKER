@@ -175,7 +175,7 @@ export const MySkillsPage: React.FC = () => {
       actions={
         <>
           {lastUpdatedLabel && (
-            <span className="mr-1 font-mono text-xs text-muted-foreground">
+            <span className="text-muted-foreground mr-1 font-mono text-xs">
               Last updated: {lastUpdatedLabel}
             </span>
           )}
@@ -188,41 +188,41 @@ export const MySkillsPage: React.FC = () => {
       {!isLoading && !error && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <GlassCard className="flex flex-col gap-2 p-4">
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-2">
               <TrendingUp className="h-4 w-4" aria-hidden="true" />
-              <span className="text-xs font-semibold uppercase tracking-wider">Rated skills</span>
+              <span className="text-xs font-semibold tracking-wider uppercase">Rated skills</span>
             </div>
-            <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
+            <p className="text-foreground font-mono text-2xl font-bold tabular-nums">
               {userSkills.length}
             </p>
           </GlassCard>
           <GlassCard className="flex flex-col gap-2 p-4">
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-2">
               <TrendingUp className="h-4 w-4" aria-hidden="true" />
-              <span className="text-xs font-semibold uppercase tracking-wider">Categories</span>
+              <span className="text-xs font-semibold tracking-wider uppercase">Categories</span>
             </div>
-            <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
+            <p className="text-foreground font-mono text-2xl font-bold tabular-nums">
               {categoryCount}
             </p>
           </GlassCard>
           <GlassCard className="flex flex-col gap-2 p-4">
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-2">
               <Gauge className="h-4 w-4" aria-hidden="true" />
-              <span className="text-xs font-semibold uppercase tracking-wider">Average level</span>
+              <span className="text-xs font-semibold tracking-wider uppercase">Average level</span>
             </div>
-            <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
+            <p className="text-foreground font-mono text-2xl font-bold tabular-nums">
               {avgLevel !== null ? `L${avgLevel}` : "—"}
             </p>
           </GlassCard>
           <GlassCard className="flex flex-col gap-2 p-4">
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-2">
               <Trophy className="h-4 w-4" aria-hidden="true" />
-              <span className="text-xs font-semibold uppercase tracking-wider">
+              <span className="text-xs font-semibold tracking-wider uppercase">
                 Strongest skill
               </span>
             </div>
             <p
-              className="truncate font-mono text-lg font-bold text-foreground"
+              className="text-foreground truncate font-mono text-lg font-bold"
               title={strongestSkill?.skill_name}
             >
               {strongestSkill ? `${strongestSkill.skill_name} · L${strongestSkill.level}` : "—"}
@@ -232,7 +232,7 @@ export const MySkillsPage: React.FC = () => {
       )}
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
         </div>
       )}
       {!isLoading && error && !data && (
@@ -243,8 +243,8 @@ export const MySkillsPage: React.FC = () => {
         />
       )}
       {!isLoading && !error && userSkills.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border p-8 text-center">
-          <p className="text-sm text-muted-foreground">
+        <div className="border-border rounded-lg border border-dashed p-8 text-center">
+          <p className="text-muted-foreground text-sm">
             No skills yet. Click "Add Skill" to get started.
           </p>
         </div>
@@ -254,15 +254,15 @@ export const MySkillsPage: React.FC = () => {
           {grouped.map((group) => {
             return (
               <section key={group.name}>
-                <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
+                <h3 className="text-muted-foreground mb-2 text-sm font-semibold">
                   {group.name} ({group.skills.length} skill{group.skills.length !== 1 ? "s" : ""})
                 </h3>
-                <div className="divide-y divide-border rounded-lg border border-border">
+                <div className="divide-border border-border divide-y rounded-lg border">
                   {group.skills.map((us) => {
                     return (
                       <div
                         key={us.id}
-                        className="grid gap-3 bg-card p-4 transition-colors duration-150 hover:bg-table-hover sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                        className="bg-card hover:bg-table-hover grid gap-3 p-4 transition-colors duration-150 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           <ProficiencyBadge level={us.level} showLabel />
@@ -271,7 +271,7 @@ export const MySkillsPage: React.FC = () => {
                             <p className="truncate font-medium" title={us.skill_name}>
                               {us.skill_name}
                             </p>
-                            <p className="text-xs text-muted-foreground" title={us.category_name}>
+                            <p className="text-muted-foreground text-xs" title={us.category_name}>
                               {us.category_name}
                             </p>
                           </div>
@@ -312,7 +312,7 @@ export const MySkillsPage: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-11 w-11 text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive h-11 w-11"
                             onClick={() => setRemoveTarget(us)}
                             disabled={deletingId === us.id}
                             aria-label={`Remove ${us.skill_name}`}
