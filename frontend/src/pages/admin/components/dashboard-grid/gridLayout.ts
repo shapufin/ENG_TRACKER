@@ -4,8 +4,8 @@ import {
   type StoredDashboardLayout,
 } from "@/components/dashboard/widgetRegistry";
 
-export const GRID_LAYOUT_VERSION = 2;
-export const GRID_COLUMNS = 12;
+const GRID_LAYOUT_VERSION = 2;
+const GRID_COLUMNS = 12;
 
 /**
  * Every id the dashboard has ever stored, mapped to the widget that shows it now.
@@ -312,7 +312,7 @@ export function applyKeyboardAction(
 /** Container width from which the grid uses 12 columns (the sidebar takes ~260px of the viewport). */
 export const LG_MIN_WIDTH = 900;
 /** Narrower than this a grid is pointless (also what an unmeasured container reports). */
-export const MIN_GRID_WIDTH = 320;
+const MIN_GRID_WIDTH = 320;
 
 /**
  * Grid breakpoint for the container: 12 columns at `lg`, 6 at `md`. `null` means a plain
