@@ -63,18 +63,8 @@ const parseFilenameFromDisposition = (
 };
 
 export const EngagementMetricsPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const month = searchParams.get("month") ?? undefined;
-  const setMonth = (value: string | undefined) =>
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (value) next.set("month", value);
-        else next.delete("month");
-        return next;
-      },
-      { replace: true }
-    );
+  const [searchParams] = useSearchParams();
+  const [month, setMonth] = useState<string | undefined>(searchParams.get("month") ?? undefined);
   const [teamFilter, setTeamFilter] = useState("");
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -96,9 +86,9 @@ export const EngagementMetricsPage: React.FC = () => {
       teamBreakdown.reduce(
         (acc, r) =>
           acc +
-          (r.metrics.leave?.pending_past_deadline ?? 0) +
-          (r.metrics.overtime?.pending_past_deadline ?? 0) +
-          (r.metrics.standby?.pending_past_deadline ?? 0),
+          (r.metrics.leave?.pending_over_48h ?? 0) +
+          (r.metrics.overtime?.pending_over_48h ?? 0) +
+          (r.metrics.standby?.pending_over_48h ?? 0),
         0
       ),
     [teamBreakdown]
@@ -168,7 +158,7 @@ export const EngagementMetricsPage: React.FC = () => {
 
   const subtitle = `${formatMonthLabel(summary.month)} · ${summary.team_count} team(s)${
     summary.computed_at ? ` · computed ${new Date(summary.computed_at).toLocaleDateString()}` : ""
-  }${summary.refreshed_on_read ? " · just refreshed" : ""}`;
+  }${summary.is_stale ? " · stale" : ""}`;
 
   const status = statusForScore(summary.engagement_score);
 
@@ -264,10 +254,17 @@ export const EngagementMetricsPage: React.FC = () => {
           />
         )}
         <SummaryCards summary={summary} scoreDelta={scoreDelta} />
+        {summary.is_stale && (
+          <InfoCallout
+            tone="warning"
+            label="This snapshot is stale — newer requests arrived after it was computed. Monthly recompute refreshes it."
+            icon={<TriangleAlert className="h-4 w-4" aria-hidden="true" />}
+          />
+        )}
         {pendingTotal > 0 && (
           <InfoCallout
             tone="danger"
-            label={`${pendingTotal} request(s) past their deadline — each counts as a breach until it is decided.`}
+            label={`${pendingTotal} request(s) waiting over 48h — clear these first, they hurt your score most.`}
             value={pendingTotal}
           />
         )}
