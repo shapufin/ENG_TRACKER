@@ -2,6 +2,8 @@ import api from "@/lib/api";
 import { normalizeList } from "@/lib/api-utils";
 import type {
   AdminOverview,
+  AdminPeople,
+  AdminTrends,
   DashboardStats,
   TeamDashboardStats,
   CalendarWorkspace,
@@ -24,6 +26,16 @@ export const dashboardService = {
 
   async getAdminOverview(): Promise<AdminOverview> {
     const { data } = await api.get<AdminOverview>("/dashboard/widgets/admin_overview/");
+    return data;
+  },
+
+  async getAdminTrends(): Promise<AdminTrends> {
+    const { data } = await api.get<AdminTrends>("/dashboard/widgets/admin_trends/");
+    return data;
+  },
+
+  async getAdminPeople(): Promise<AdminPeople> {
+    const { data } = await api.get<AdminPeople>("/dashboard/widgets/admin_people/");
     return data;
   },
 

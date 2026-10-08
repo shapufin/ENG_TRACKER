@@ -667,3 +667,70 @@ export interface BlockedRevocation {
   dependents: TlDependent[];
   assignment_count?: number;
 }
+
+/** Response of GET /dashboard/widgets/admin_trends/ (staff/superuser only). */
+export interface AdminTrends {
+  /** "YYYY-MM", oldest first, current month last (always 12). */
+  months: string[];
+  hours: { overtime: number[]; standby: number[]; pending_overtime: number[] };
+  /** Business days per month. */
+  leave_days: { vacation: number[]; sick: number[] };
+  overtime_by_client: {
+    client_id: number | null;
+    name: string;
+    hours: number;
+    share_pct: number;
+  }[];
+  team_comparison: {
+    team_id: number;
+    name: string;
+    team_size: number;
+    overtime_hours: number;
+    standby_hours: number;
+    leave_days: number;
+    overtime_per_capita: number | null;
+  }[];
+  who_is_out: {
+    date: string;
+    on_leave: {
+      user_id: number;
+      name: string;
+      team: string | null;
+      request_type: string;
+      until: string;
+    }[];
+    on_standby: { user_id: number; name: string; team: string | null }[];
+    upcoming_leave_14d: number;
+  };
+}
+
+/** Response of GET /dashboard/widgets/admin_people/ (staff/superuser only). */
+export interface AdminPeople {
+  roles: {
+    italian_tl: number;
+    albanian_tl: number;
+    hr: number;
+    hbpr: number;
+    staff: number;
+    employees: number;
+    employees_without_tl: number;
+  };
+  techs: {
+    tech_id: number;
+    name: string;
+    count: number;
+    levels: { code: string | null; name: string; rank: number; count: number }[];
+  }[];
+  approver_sla: {
+    user_id: number;
+    name: string;
+    decisions_30d: number;
+    approval_rate_pct: number;
+    avg_decision_hours: number;
+  }[];
+  rejections: {
+    month: string;
+    by_type: { overtime: number; standby: number; leave: number };
+    top_reasons: { reason: string; count: number }[];
+  };
+}

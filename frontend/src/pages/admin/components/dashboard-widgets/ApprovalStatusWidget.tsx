@@ -16,11 +16,11 @@ interface ApprovalStatusWidgetProps {
 const StatusSkeleton: React.FC = () => (
   <div className="flex flex-col gap-7">
     <div className="flex justify-center">
-      <div className="h-40 w-40 animate-pulse rounded-full bg-muted/40" />
+      <div className="bg-muted/40 h-40 w-40 animate-pulse rounded-full" />
     </div>
     <div className="space-y-2.5">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="h-12 animate-pulse rounded-xl bg-muted/40" />
+        <div key={i} className="bg-muted/40 h-12 animate-pulse rounded-xl" />
       ))}
     </div>
   </div>
