@@ -188,6 +188,26 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
 
         return Response(build_admin_overview(request.user))
 
+    @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
+    def admin_trends(self, request):
+        """12-month hours/leave trends, client and team splits, and who is out today.
+
+        Staff/superuser only, like ``admin_overview``.
+        """
+        from .admin_trends import build_admin_trends
+
+        return Response(build_admin_trends(request.user))
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
+    def admin_people(self, request):
+        """Role/tech distribution, approver speed and rejection analysis.
+
+        Staff/superuser only: it names individual approvers.
+        """
+        from .admin_people import build_admin_people
+
+        return Response(build_admin_people(request.user))
+
     @action(detail=False, methods=['get'])
     def team_stats(self, request):
         """
