@@ -52,7 +52,9 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
     # An EPR cycle is a fixed sequence. Without this guard a TL can complete
     # Final Review first on a cycle with <5 goals, which permanently strands
     # Goal Setting: it needs 5 confirmed goals, and goal rows can no longer be
-    # written once a later stage is complete.
+    # written once a later stage is complete. The one out-of-order write allowed
+    # is repair: a legacy cycle whose Goal Setting is still open may confirm its
+    # goals (`goal_titles`) after a later stage was completed.
     STAGE_ORDER = ('goal_setting', 'mid_year', 'final_review')
     STAGE_LABEL = {
         'goal_setting': 'Goal Setting',
@@ -104,12 +106,6 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
             raise ValidationError({
                 'goal_titles': 'Goals cannot be changed during Final Review.',
             })
-        if stage == 'goal_setting' and (
-                cycle.mid_year_completed_at is not None
-                or cycle.final_review_completed_at is not None):
-            raise ValidationError({
-                'goal_titles': 'Goal Setting cannot change goals after later stages are complete.',
-            })
         if stage == 'mid_year' and cycle.final_review_completed_at is not None:
             raise ValidationError({
                 'goal_titles': 'Goals cannot be changed after Final Review is complete.',
@@ -132,10 +128,6 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
             raise ValidationError({'stage': 'PDF goal import is available only for Goal Setting or Mid-year.'})
         if getattr(cycle, self.STAGE_FIELD[stage]) is not None:
             raise ValidationError({'stage': 'This stage is already completed.'})
-        if stage == 'goal_setting' and (
-                cycle.mid_year_completed_at is not None
-                or cycle.final_review_completed_at is not None):
-            raise ValidationError({'stage': 'Goal Setting is locked by a later completed stage.'})
         if stage == 'mid_year' and cycle.final_review_completed_at is not None:
             raise ValidationError({'stage': 'Mid-year is locked by Final Review.'})
 

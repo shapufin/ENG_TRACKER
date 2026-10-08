@@ -3,6 +3,11 @@ import { describe, it, expect, vi } from "vitest";
 import { LogReviewDeliveryDialog } from "./LogReviewDeliveryDialog";
 
 describe("LogReviewDeliveryDialog", () => {
+  it("says what a management review delivery counts toward", () => {
+    render(<LogReviewDeliveryDialog open onOpenChange={() => {}} onCreate={vi.fn()} />);
+    expect(screen.getByText(/12-per-year target/)).toBeInTheDocument();
+  });
+
   it("disables submit until a recipient is entered", () => {
     render(<LogReviewDeliveryDialog open onOpenChange={() => {}} onCreate={vi.fn()} />);
     expect(screen.getByRole("button", { name: /log delivery/i })).toBeDisabled();

@@ -121,8 +121,13 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
           <Button variant="outline" size="sm" onClick={onLogMeeting}>
             <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Log meeting
           </Button>
-          <Button variant="default" size="sm" onClick={onLogReview}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Log review
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onLogReview}
+            title="Record a delivered management review (counts toward the 12-per-year target)"
+          >
+            <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Log management review
           </Button>
         </ModuleHeader>
         <div className={STAT_GRID}>

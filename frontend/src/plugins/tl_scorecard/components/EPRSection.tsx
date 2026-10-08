@@ -77,7 +77,7 @@ const SHORT_LABEL: Record<EPRStage, string> = {
   final_review: "Final",
 };
 
-type StepState = "done" | "current" | "locked" | "blocked" | "evidence-only";
+type StepState = "done" | "current" | "locked" | "recover" | "evidence-only";
 
 interface StepInfo {
   field: EPRStage;
@@ -95,8 +95,9 @@ const describeCycle = (cycle: EPRCycle) => {
     const done = completedAt(field);
     const earlierOpen = STAGES.slice(0, index).some((earlier) => !completedAt(earlier.field));
     const laterDone = STAGES.slice(index + 1).some((later) => completedAt(later.field));
-    // Completed out of order before the sequence was enforced: the backend
-    // locks goals once a later stage is done, so only evidence remains.
+    // Completed out of order before the sequence was enforced. With 5 goals
+    // already stored only evidence is missing; otherwise the goals themselves
+    // are repaired (the backend lets an open Goal Setting confirm them).
     const stranded = !done && laterDone;
     let state: StepState = "locked";
     let status = "Locked until the previous step is done";
@@ -107,8 +108,8 @@ const describeCycle = (cycle: EPRCycle) => {
       state = "evidence-only";
       status = "Out of order — record evidence only; goals are locked";
     } else if (stranded) {
-      state = "blocked";
-      status = "Blocked — a later step is already complete";
+      state = "recover";
+      status = "Out of order — confirm the goals to repair this cycle";
     } else if (!earlierOpen) {
       state = "current";
       status = "Ready to complete";
@@ -117,7 +118,7 @@ const describeCycle = (cycle: EPRCycle) => {
   });
   const open = firstOpenIndex === -1 ? null : steps[firstOpenIndex];
   const attention = steps.some(
-    (step) => step.state === "blocked" || step.state === "evidence-only"
+    (step) => step.state === "recover" || step.state === "evidence-only"
   );
   return { steps, open, firstOpenIndex, attention };
 };
@@ -134,7 +135,7 @@ const SEGMENT_CLASS: Record<StepState, string> = {
   done: "bg-tone-success-text",
   current: "bg-primary",
   locked: "bg-border",
-  blocked: "bg-tone-warning-text",
+  recover: "bg-tone-warning-text",
   "evidence-only": "bg-tone-warning-text",
 };
 
@@ -146,12 +147,11 @@ const CycleRow: React.FC<{
   const [completing, setCompleting] = useState<EPRStage | null>(null);
   const [expanded, setExpanded] = useState(false);
   const { steps, open, attention } = describeCycle(cycle);
-  const completedAt = (field: EPRStage) => cycle[`${field}_completed_at` as const];
   const recordsFor = (field: EPRStage) =>
     (cycle.stage_records ?? []).filter((record) => record.stage === field);
   // The one step the TL can act on now; completed and locked steps have none.
   const actionable = steps.find(
-    (step) => step.state === "current" || step.state === "evidence-only"
+    (step) => step.state === "current" || step.state === "evidence-only" || step.state === "recover"
   );
   const phaseBadge = !open ? (
     <Badge variant="success">Complete</Badge>
@@ -218,7 +218,7 @@ const CycleRow: React.FC<{
               onClick={() => setCompleting(actionable.field)}
               aria-label={`Complete ${actionable.label}`}
             >
-              Complete step
+              {actionable.state === "recover" ? "Repair goals" : "Complete step"}
             </Button>
           )}
         </div>
@@ -235,7 +235,7 @@ const CycleRow: React.FC<{
                 </p>
                 <p
                   className={`text-xs ${
-                    step.state === "blocked" || step.state === "evidence-only"
+                    step.state === "recover" || step.state === "evidence-only"
                       ? toneTextClass.warning
                       : "text-muted-foreground"
                   }`}
@@ -281,12 +281,7 @@ const CycleRow: React.FC<{
           stageLabel={stageLabel(completing)}
           stepNumber={STAGES.findIndex((stage) => stage.field === completing) + 1}
           stepCount={STAGES.length}
-          goalsLocked={
-            completing !== "final_review" &&
-            STAGES.slice(STAGES.findIndex((stage) => stage.field === completing) + 1).some(
-              (later) => completedAt(later.field)
-            )
-          }
+          goalsLocked={actionable?.field === completing && actionable.state === "evidence-only"}
           initialGoalTitles={cycle.goals.map((goal) => goal.description)}
           onParseGoals={(file) => onParseGoals(cycle.id, completing, file)}
           onSave={async (values) => {
