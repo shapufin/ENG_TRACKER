@@ -11,7 +11,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center gap-0.5 rounded-[var(--control-radius)] bg-surface-sunken p-0.5 text-muted-foreground",
+      "bg-surface-sunken text-muted-foreground inline-flex items-center justify-center gap-0.5 rounded-[var(--control-radius)] p-0.5",
       className
     )}
     {...props}
@@ -26,7 +26,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex h-[var(--control-h-sm)] items-center justify-center whitespace-nowrap rounded-[calc(var(--control-radius)-2px)] px-3 text-sm font-medium text-muted-foreground transition-[background-color,color,box-shadow] duration-150 motion-reduce:transition-none touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus disabled:pointer-events-none disabled:opacity-50 data-[state=inactive]:hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-card",
+      "text-muted-foreground focus-visible:ring-focus data-[state=inactive]:hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-card inline-flex h-[var(--control-h-sm)] touch-manipulation items-center justify-center rounded-[calc(var(--control-radius)-2px)] px-3 text-sm font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-150 focus-visible:ring-2 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none",
       className
     )}
     {...props}
@@ -41,7 +41,7 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "ring-offset-background focus-visible:ring-ring mt-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden",
       className
     )}
     {...props}

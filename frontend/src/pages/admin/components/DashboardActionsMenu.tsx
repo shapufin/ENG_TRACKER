@@ -44,7 +44,9 @@ export const DashboardActionsMenu: React.FC<DashboardActionsMenuProps> = ({
   const { exporting, exportPdf } = useDashboardPdfExport(containerRef);
 
   const items = () =>
-    Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not(:disabled)') ?? []);
+    Array.from(
+      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not(:disabled)') ?? []
+    );
 
   const onMenuKeyDown = (e: React.KeyboardEvent) => {
     const list = items();
@@ -87,12 +89,7 @@ export const DashboardActionsMenu: React.FC<DashboardActionsMenuProps> = ({
             items()[0]?.focus();
           }}
         >
-          <div
-            ref={menuRef}
-            role="menu"
-            aria-label="Dashboard actions"
-            onKeyDown={onMenuKeyDown}
-          >
+          <div ref={menuRef} role="menu" aria-label="Dashboard actions" onKeyDown={onMenuKeyDown}>
             <button
               type="button"
               role="menuitem"

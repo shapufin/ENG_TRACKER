@@ -75,10 +75,10 @@ export const AdminInsightsStrip: React.FC = () => {
       >
         <Icon className="h-4 w-4 shrink-0" aria-hidden />
         <div className="flex min-w-0 flex-1 flex-col md:flex-row md:items-baseline md:gap-2">
-          <p className="truncate text-sm font-semibold md:shrink-0 md:max-w-[55%]">
+          <p className="truncate text-sm font-semibold md:max-w-[55%] md:shrink-0">
             <span className="text-micro-lg font-mono tracking-wider uppercase">{label}</span>
             <span className="mx-2 opacity-60" aria-hidden>
-              ·
+              ï¿½
             </span>
             {current.title}
           </p>
