@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageShell } from "@/components/layout/PageShell";
 import { DashboardProvider, useDashboard } from "@/context/DashboardContext";
@@ -16,6 +16,7 @@ import { AdminDashboardWidgets } from "./components/AdminDashboardWidgets";
 import { AdminInsightsStrip } from "./components/AdminInsightsStrip";
 import { DashboardPresetMenu } from "./components/DashboardPresetMenu";
 import { presetLayout } from "@/config/dashboardPresets";
+import { ExportDashboardPdfButton } from "./components/ExportDashboardPdfButton";
 import { AdminDashboardFreshness } from "./components/AdminDashboardFreshness";
 import { useAdminDashboardPage } from "./hooks/useAdminDashboardPage";
 import { Settings } from "lucide-react";
@@ -25,6 +26,7 @@ const AdminDashboardContent: React.FC = () => {
   const { availableDashboards, isSuperuser } = usePermissions();
   const { updateLayout } = useDashboard();
   const navigate = useNavigate();
+  const widgetsRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get("section");
   const section = ADMIN_DASHBOARD_SECTIONS.some((s) => s.id === requested) ? requested! : "all";
@@ -84,6 +86,7 @@ const AdminDashboardContent: React.FC = () => {
             isSuperuser={isSuperuser}
             onApply={(ids) => void updateLayout(presetLayout(ids))}
           />
+          <ExportDashboardPdfButton containerRef={widgetsRef} />
           <Button variant="outline" size="sm" onClick={() => resetLayout()}>
             Reset to Default
           </Button>
@@ -107,19 +110,21 @@ const AdminDashboardContent: React.FC = () => {
           ))}
         </TabsList>
       </Tabs>
-      <AdminDashboardWidgets
-        isWidgetActive={isWidgetActive}
-        totalUsers={totalUsers}
-        totalTeams={totalTeams}
-        totalPending={totalPending}
-        overtimeSummary={overtimeSummary}
-        hoursData={hoursData}
-        statusData={statusData}
-        auditLogs={auditLogs}
-        statsLoading={statsLoading}
-        auditLogsLoading={auditLogsLoading}
-        isSuperuser={isSuperuser}
-      />
+      <div ref={widgetsRef} className="space-y-6">
+        <AdminDashboardWidgets
+          isWidgetActive={isWidgetActive}
+          totalUsers={totalUsers}
+          totalTeams={totalTeams}
+          totalPending={totalPending}
+          overtimeSummary={overtimeSummary}
+          hoursData={hoursData}
+          statusData={statusData}
+          auditLogs={auditLogs}
+          statsLoading={statsLoading}
+          auditLogsLoading={auditLogsLoading}
+          isSuperuser={isSuperuser}
+        />
+      </div>
       <CustomizeDashboardModal
         open={customizeModalOpen}
         onOpenChange={setCustomizeModalOpen}

@@ -54,7 +54,12 @@ export const ApprovalStatusWidget: React.FC<ApprovalStatusWidgetProps> = ({
   const approvedPct = total > 0 ? Math.round((approved / total) * 100) : 0;
 
   return (
-    <ChartCard title="Approval Status" description="All request types" delay={0.25}>
+    <ChartCard
+      sectionId="approval-status"
+      title="Approval Status"
+      description="All request types"
+      delay={0.25}
+    >
       <div className="flex flex-col gap-7">
         <div className="flex justify-center">
           <CircularProgress percentage={approvedPct} label="Approved" />

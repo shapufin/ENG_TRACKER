@@ -42,6 +42,7 @@ const ChartSkeleton: React.FC = () => (
 
 export const HoursChartWidget: React.FC<HoursChartWidgetProps> = ({ hoursData, isLoading }) => (
   <ChartCard
+    sectionId={isLoading ? undefined : "hours-overview"}
     title="Hours Overview"
     description="Overtime vs Standby this month"
     delay={0.2}

@@ -13,6 +13,7 @@ export const OtByClientWidget: React.FC<TrendWidgetProps> = ({
   const rows = data?.overtime_by_client ?? [];
   return (
     <WidgetFrame
+      sectionId="ot-by-client"
       title="Overtime by Client"
       description="Approved hours this month"
       isLoading={isLoading}

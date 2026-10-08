@@ -15,6 +15,7 @@ export const ApproverSlaWidget: React.FC<PeopleWidgetProps> = ({
   const rows = data?.approver_sla ?? [];
   return (
     <WidgetFrame
+      sectionId="approver-sla"
       title="Approver Speed"
       description="Decisions in the last 30 days, most active first"
       className="lg:col-span-2"

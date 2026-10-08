@@ -27,6 +27,21 @@ describe("WidgetFrame", () => {
     expect(screen.getByRole("status", { name: /loading my widget/i })).toBeInTheDocument();
   });
 
+  it("only marks the card for PDF export once data has loaded", () => {
+    const { container, rerender } = render(
+      <WidgetFrame {...base} sectionId="w" isLoading empty={null}>
+        <p>content</p>
+      </WidgetFrame>
+    );
+    expect(container.querySelector("[data-chart-section]")).toBeNull();
+    rerender(
+      <WidgetFrame {...base} sectionId="w" empty={null}>
+        <p>content</p>
+      </WidgetFrame>
+    );
+    expect(container.querySelector("[data-chart-section='w']")).not.toBeNull();
+  });
+
   it("shows an error with a working retry", () => {
     const onRetry = vi.fn();
     render(

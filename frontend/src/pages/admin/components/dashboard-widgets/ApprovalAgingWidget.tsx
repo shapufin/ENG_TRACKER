@@ -45,6 +45,7 @@ export const ApprovalAgingWidget: React.FC<ApprovalAgingWidgetProps> = ({ aging 
 
   return (
     <ChartCard
+      sectionId="approval-aging"
       title="Approval Aging"
       description={
         total === 0

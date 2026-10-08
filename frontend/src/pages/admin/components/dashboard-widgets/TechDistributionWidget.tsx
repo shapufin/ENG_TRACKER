@@ -12,6 +12,7 @@ export const TechDistributionWidget: React.FC<PeopleWidgetProps> = ({
   const techs = data?.techs ?? [];
   return (
     <WidgetFrame
+      sectionId="tech-distribution"
       title="Tech Distribution"
       description="Active members per tech and level"
       isLoading={isLoading}
