@@ -51,12 +51,12 @@ const GlassCardComponent = React.forwardRef<HTMLDivElement, GlassCardProps>(
             : { duration: DURATION.base, delay, ease: EASE.inOut }
         }
         className={cn(
-          "relative overflow-hidden rounded-xl border bg-card",
+          "bg-card relative overflow-hidden rounded-xl border",
           variant === "flat" ? "border-line-subtle" : "border-border shadow-card",
           "before:absolute before:inset-x-0 before:top-0 before:h-px before:content-['']",
           glowMap[glow],
           interactive &&
-            "transition-all duration-300 hover:-translate-y-1 hover:border-border-focus hover:shadow-pop",
+            "hover:border-border-focus hover:shadow-pop transition-all duration-300 hover:-translate-y-1",
           className
         )}
         {...props}

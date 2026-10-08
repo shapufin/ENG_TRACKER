@@ -341,10 +341,7 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
                 ))}
               </ul>
 
-              <GlassCard
-                animateOnMount={false}
-                className="hidden overflow-hidden p-0 md:block"
-              >
+              <GlassCard animateOnMount={false} className="hidden overflow-hidden p-0 md:block">
                 <div className="border-line-subtle flex items-center justify-between gap-3 border-b px-5 py-3.5">
                   <h2 className="text-foreground flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
                     {cardTitle}

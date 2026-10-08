@@ -121,7 +121,9 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     expect(lightBlock).toContain("--control-h: 2.25rem");
     expect(lightBlock).toContain("--control-h-lg: 2.5rem");
     expect(lightBlock).toContain("--control-radius: var(--radius-control)");
-    expect(lightBlock).toContain("--shadow-card: 0 1px 2px hsl(222 47% 11% / 0.06), 0 1px 3px hsl(222 47% 11% / 0.04)");
+    expect(lightBlock).toContain(
+      "--shadow-card: 0 1px 2px hsl(222 47% 11% / 0.06), 0 1px 3px hsl(222 47% 11% / 0.04)"
+    );
     expect(lightBlock).toContain("--shadow-pop:");
     expect(darkBlock).toContain("--control-edge:");
     expect(darkBlock).toContain("--control-edge-hover:");
@@ -129,7 +131,9 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     expect(darkBlock).toContain("--shadow-card:");
     expect(darkBlock).toContain("--shadow-pop:");
     // Coarse pointers get the larger default control height.
-    expect(cssNoComments).toMatch(/@media \(pointer: coarse\)\s*\{\s*:root\s*\{\s*--control-h: 2\.75rem/);
+    expect(cssNoComments).toMatch(
+      /@media \(pointer: coarse\)\s*\{\s*:root\s*\{\s*--control-h: 2\.75rem/
+    );
   });
 
   it("keeps tone-danger in the red family (2026-09-20 refinement)", () => {

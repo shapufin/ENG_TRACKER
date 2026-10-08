@@ -54,7 +54,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
       <div className="flex flex-wrap items-center gap-4">
         <div className="min-w-[200px] flex-1">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
               className="min-h-11 pl-10"
               placeholder="Search employee or description..."
@@ -71,7 +71,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
         >
           <SelectTrigger className="h-11 min-h-11 w-full px-3 sm:w-[140px]">
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Filter className="text-muted-foreground h-4 w-4" />
               <SelectValue placeholder="Status" />
             </div>
           </SelectTrigger>
@@ -86,7 +86,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
           <Select value={filterTeam} onValueChange={onFilterTeamChange}>
             <SelectTrigger className="h-11 min-h-11 w-full px-3 sm:w-[160px]">
               <div className="flex items-center gap-2 text-left">
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <Users className="text-muted-foreground h-4 w-4" />
                 <SelectValue placeholder="All Teams" />
               </div>
             </SelectTrigger>
@@ -101,7 +101,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
           </Select>
         )}
         <div className="flex flex-wrap items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <Calendar className="text-muted-foreground h-4 w-4" />
           <DateRangePicker
             id="team-date-range"
             from={dateFrom}
@@ -116,7 +116,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Grouping mode</p>
+        <p className="text-muted-foreground text-xs tracking-wide uppercase">Grouping mode</p>
         <div className="flex flex-wrap gap-2">
           {groupOptions.map((option) => (
             <Button

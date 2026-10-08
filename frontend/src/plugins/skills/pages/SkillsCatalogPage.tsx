@@ -231,14 +231,12 @@ export const SkillsCatalogPage: React.FC = () => {
       </div>
 
       {/* Filter bar */}
-      <GlassCard
-        className="mb-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-end"
-      >
+      <GlassCard className="mb-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1">
           <Label htmlFor="catalog-search">Search catalog</Label>
           <div className="relative mt-1">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
               aria-hidden="true"
             />
             <Input

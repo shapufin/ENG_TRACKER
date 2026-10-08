@@ -97,17 +97,17 @@ export const TeamGroupedTables = <T extends GroupableRow>({
         const entryLabel = `${section.rows.length} ${section.rows.length === 1 ? "entry" : "entries"}`;
         return (
           <GlassCard key={section.key} className="space-y-4 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
+            <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
               <div className="space-y-1">
                 <Badge
                   variant="secondary"
-                  className="w-fit rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide"
+                  className="w-fit rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase"
                 >
                   {memberGroupMode === "team" ? "Team" : "Italian TL"}
                 </Badge>
                 <p className="text-lg font-semibold tracking-tight">
                   {section.title}
-                  <span className="ml-2 text-sm font-medium text-muted-foreground">
+                  <span className="text-muted-foreground ml-2 text-sm font-medium">
                     — {memberLabel}
                   </span>
                 </p>

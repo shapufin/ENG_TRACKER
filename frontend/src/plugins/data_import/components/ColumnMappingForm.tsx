@@ -78,7 +78,7 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         {missingRequired.length > 0 && (
-          <p className="text-sm text-destructive">
+          <p className="text-destructive text-sm">
             Missing required fields:{" "}
             {missingRequired.map((k) => fields.find((f) => f.key === k)?.label).join(", ")}
           </p>
@@ -104,7 +104,7 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
                       {field.required && <span className="text-destructive">*</span>}
                     </Label>
                     {field.help_text && (
-                      <p className="text-xs text-muted-foreground">{field.help_text}</p>
+                      <p className="text-muted-foreground text-xs">{field.help_text}</p>
                     )}
                   </div>
                   <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-[2fr_1fr]">
@@ -127,7 +127,7 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
                       </SelectContent>
                     </Select>
                     <div className="flex flex-col gap-1">
-                      <Label className="text-xs text-muted-foreground">Default value</Label>
+                      <Label className="text-muted-foreground text-xs">Default value</Label>
                       {renderDefaultInput(field)}
                     </div>
                   </div>

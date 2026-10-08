@@ -32,7 +32,7 @@ export const ActivityItem: React.FC<ActivityItemProps> = ({
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{title}</div>
-          <div className="truncate text-xs text-muted-foreground">{subtitle}</div>
+          <div className="text-muted-foreground truncate text-xs">{subtitle}</div>
         </div>
       </div>
     </GlassCard>

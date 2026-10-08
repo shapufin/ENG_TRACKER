@@ -119,10 +119,7 @@ export const SkillsTeamPage: React.FC = () => {
   // Both exports carry the page's own category + search filters, so the file
   // matches what is on screen. CSV is the long one-row-per-rating format; XLSX
   // is the wide person-by-skill workbook.
-  const downloadExport = (
-    mutation: typeof exportMutation,
-    filename: string
-  ) => {
+  const downloadExport = (mutation: typeof exportMutation, filename: string) => {
     mutation.mutate(
       {
         category: categoryCode !== "all" ? categoryCode : undefined,
@@ -236,10 +233,10 @@ export const SkillsTeamPage: React.FC = () => {
     >
       {/* Eyebrow pill (mockup header) */}
       <div className="mb-1 flex items-center gap-2">
-        <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-widest text-foreground">
+        <span className="border-primary/20 bg-primary/10 text-foreground rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-widest uppercase">
           Skills Matrix
         </span>
-        <span className="text-xs font-medium text-muted-foreground">Q3 Team Competency</span>
+        <span className="text-muted-foreground text-xs font-medium">Q3 Team Competency</span>
       </div>
 
       <SkillsKpiCards coverage={coverage} gaps={gaps} memberCount={matrixData?.count ?? 0} />
@@ -283,7 +280,7 @@ export const SkillsTeamPage: React.FC = () => {
       {/* Matrix workspace panel — mobile card list or desktop 2D sticky grid */}
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
         </div>
       )}
       {!isLoading && matrixError && !matrixData && (
@@ -348,15 +345,15 @@ export const SkillsTeamPage: React.FC = () => {
             />
           )}
           {/* Footer stats bar (mockup lines 267–276) */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/50 px-3.5 py-2.5 text-xs text-muted-foreground">
+          <div className="border-border bg-muted/50 text-muted-foreground flex flex-wrap items-center justify-between gap-2 border-t px-3.5 py-2.5 text-xs">
             <div className="flex items-center gap-3">
-              <span className="font-semibold text-foreground">
+              <span className="text-foreground font-semibold">
                 {matrixData?.count ?? 0} Team Members Loaded
               </span>
               <span aria-hidden="true">•</span>
               <span>Click any cell to rate · arrow keys to navigate</span>
             </div>
-            <span className="rounded border border-primary/20 bg-primary/10 px-2 py-0.5 font-mono text-[11px] text-foreground">
+            <span className="border-primary/20 bg-primary/10 text-foreground rounded border px-2 py-0.5 font-mono text-[11px]">
               {viewMode === "matrix" ? "Matrix" : viewMode === "dense" ? "Dense" : "Heatmap"} view
             </span>
           </div>

@@ -80,7 +80,7 @@ export const ImportOptionsPanel: React.FC<ImportOptionsPanelProps> = ({
                 <div className="space-y-0.5">
                   <Label htmlFor={id}>{option.label}</Label>
                   {option.help_text && (
-                    <p className="text-xs text-muted-foreground">{option.help_text}</p>
+                    <p className="text-muted-foreground text-xs">{option.help_text}</p>
                   )}
                 </div>
                 <Switch
@@ -112,7 +112,7 @@ export const ImportOptionsPanel: React.FC<ImportOptionsPanelProps> = ({
                   </SelectContent>
                 </Select>
                 {option.help_text && (
-                  <p className="text-xs text-muted-foreground">{option.help_text}</p>
+                  <p className="text-muted-foreground text-xs">{option.help_text}</p>
                 )}
               </div>
             );
@@ -128,7 +128,7 @@ export const ImportOptionsPanel: React.FC<ImportOptionsPanelProps> = ({
                 onChange={(e) => onChange(option.key, e.target.value)}
               />
               {option.help_text && (
-                <p className="text-xs text-muted-foreground">{option.help_text}</p>
+                <p className="text-muted-foreground text-xs">{option.help_text}</p>
               )}
             </div>
           );

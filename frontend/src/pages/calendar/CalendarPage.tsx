@@ -60,9 +60,7 @@ const CalendarPageContent: React.FC = () => {
 
   if (!data.hasWorkspaceSelection) {
     return (
-      <GlassCard
-        className="flex min-h-[calc(100vh-4rem)] items-center justify-center"
-      >
+      <GlassCard className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
         <EmptyState
           icon={CalendarDays}
           title="Select a workspace to view the calendar"

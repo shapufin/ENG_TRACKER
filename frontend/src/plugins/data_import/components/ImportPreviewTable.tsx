@@ -65,7 +65,7 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({ rows }) 
         cell: ({ row }: { row: { original: PreviewRow } }) => {
           if (!row.original.errors.length) return null;
           return (
-            <ul className="list-disc pl-4 text-xs text-destructive">
+            <ul className="text-destructive list-disc pl-4 text-xs">
               {row.original.errors.map((e, i) => (
                 <li key={i}>{e}</li>
               ))}
@@ -79,7 +79,7 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({ rows }) 
         cell: ({ row }: { row: { original: PreviewRow } }) => {
           if (!row.original.warnings.length) return null;
           return (
-            <ul className="list-disc pl-4 text-xs text-warning">
+            <ul className="text-warning list-disc pl-4 text-xs">
               {row.original.warnings.map((w, i) => (
                 <li key={i}>{w}</li>
               ))}

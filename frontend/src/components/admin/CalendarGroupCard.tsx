@@ -22,9 +22,9 @@ export const CalendarGroupCard: React.FC<CalendarGroupCardProps> = ({
     <GlassCard glow="primary" className="p-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+          <div className="bg-primary/10 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
             <svg
-              className="h-5 w-5 text-primary"
+              className="text-primary h-5 w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -39,13 +39,13 @@ export const CalendarGroupCard: React.FC<CalendarGroupCardProps> = ({
           </div>
 
           <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
               Shared Calendar
             </p>
 
             <h3 className="mt-0.5 text-lg font-semibold">{groupName}</h3>
 
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-xs">
               {teamCount} team{teamCount !== 1 ? "s" : ""} currently connected
             </p>
           </div>
@@ -55,7 +55,7 @@ export const CalendarGroupCard: React.FC<CalendarGroupCardProps> = ({
           <Button
             size="icon"
             variant="outline"
-            className="h-9 w-9 rounded-lg border-border bg-muted/30"
+            className="border-border bg-muted/30 h-9 w-9 rounded-lg"
             onClick={onManageTeams}
             title="Manage teams in this group"
           >
@@ -65,7 +65,7 @@ export const CalendarGroupCard: React.FC<CalendarGroupCardProps> = ({
           <Button
             size="icon"
             variant="outline"
-            className="h-9 w-9 rounded-lg border-border bg-muted/30"
+            className="border-border bg-muted/30 h-9 w-9 rounded-lg"
             onClick={onEdit}
             title="Rename group"
           >
@@ -75,7 +75,7 @@ export const CalendarGroupCard: React.FC<CalendarGroupCardProps> = ({
           <Button
             size="icon"
             variant="outline"
-            className="h-9 w-9 rounded-lg border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
+            className="border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 h-9 w-9 rounded-lg"
             onClick={onDelete}
             title="Delete group"
           >

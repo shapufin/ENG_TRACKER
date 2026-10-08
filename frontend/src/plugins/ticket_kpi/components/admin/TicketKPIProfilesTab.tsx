@@ -32,7 +32,7 @@ export const TicketKPIProfilesTab: React.FC<TicketKPIProfilesTabProps> = ({
 
     {!profiles || profiles.length === 0 ? (
       <GlassCard>
-        <CardContent className="py-8 text-center text-muted-foreground">
+        <CardContent className="text-muted-foreground py-8 text-center">
           No profiles yet.
         </CardContent>
       </GlassCard>

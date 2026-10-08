@@ -47,7 +47,7 @@ export const ImportWizardBody: React.FC<ImportWizardBodyProps> = ({
   const progressBar = isWorking ? (
     <div className="space-y-1" role="status" aria-live="polite">
       <Progress value={state.uploadProgress ?? 0} aria-label="Import upload progress" />
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         {state.uploadProgress !== null && state.uploadProgress < 100
           ? `Uploading file… ${state.uploadProgress}%`
           : "Processing on the server…"}

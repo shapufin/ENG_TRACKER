@@ -37,7 +37,7 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="text-primary h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -61,16 +61,16 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <h3 className="text-xl font-semibold">{plugin.verbose_name}</h3>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="text-muted-foreground flex items-center gap-2 text-sm">
                   <Badge variant="outline" className="text-[10px] uppercase">
                     v{plugin.version}
                   </Badge>
                   {plugin.is_enabled ? (
-                    <span className="flex items-center gap-1 text-[10px] text-success">
+                    <span className="text-success flex items-center gap-1 text-[10px]">
                       <CheckCircle2 className="h-3 w-3" /> Active
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <span className="text-muted-foreground flex items-center gap-1 text-[10px]">
                       <XCircle className="h-3 w-3" /> Inactive
                     </span>
                   )}
@@ -84,11 +84,11 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
             </div>
           </div>
           <div className="px-6 pb-4">
-            <p className="line-clamp-3 text-sm text-muted-foreground">
+            <p className="text-muted-foreground line-clamp-3 text-sm">
               {plugin.description || "No description provided."}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 border-t bg-muted/50 px-6 py-3">
+          <div className="bg-muted/50 flex flex-wrap gap-2 border-t px-6 py-3">
             <Button
               variant="outline"
               size="sm"
@@ -117,7 +117,7 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 gap-1 text-xs text-primary"
+                className="text-primary h-8 gap-1 text-xs"
                 onClick={() => onLink(plugin)}
                 aria-label={`Open ${plugin.verbose_name} page`}
               >

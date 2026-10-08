@@ -65,7 +65,8 @@ export function findViolations(src, path = "src/x.tsx") {
 
   if (!isToolbar) {
     src.split("\n").forEach((l, i) => {
-      if (WRAPPER.test(l)) out.push({ line: i + 1, rule: "TOOLBAR-WRAPPER", text: l.trim().slice(0, 100) });
+      if (WRAPPER.test(l))
+        out.push({ line: i + 1, rule: "TOOLBAR-WRAPPER", text: l.trim().slice(0, 100) });
     });
   }
   return out;

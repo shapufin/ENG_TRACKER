@@ -27,14 +27,14 @@ export const TeamBulkOperationsPanel: React.FC<TeamBulkOperationsPanelProps> = (
   isDeleting = false,
 }) => {
   return (
-    <GlassCard className="mb-4 border-l-4 border-l-primary">
+    <GlassCard className="border-l-primary mb-4 border-l-4">
       <div className="flex flex-wrap items-center justify-between gap-3 p-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-1.5">
-            <CheckSquare className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">{selectedCount}</span>
+          <div className="bg-primary/10 flex items-center gap-2 rounded-md px-3 py-1.5">
+            <CheckSquare className="text-primary h-4 w-4" />
+            <span className="text-foreground text-sm font-medium">{selectedCount}</span>
           </div>
-          <span className="text-sm text-muted-foreground">selected</span>
+          <span className="text-muted-foreground text-sm">selected</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {canManage && (
