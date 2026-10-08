@@ -4,10 +4,9 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ADMIN_DASHBOARD_QUERY_KEYS, invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
+/** A dashboard query's key starts with one of the dashboard keys (trends adds the period). */
 const isDashboardKey = (key: readonly unknown[]) =>
-  ADMIN_DASHBOARD_QUERY_KEYS.some(
-    (k) => k.length === key.length && k.every((p, i) => p === key[i])
-  );
+  ADMIN_DASHBOARD_QUERY_KEYS.some((k) => key.length >= k.length && k.every((p, i) => p === key[i]));
 
 const label = (since: number | null, now: number) => {
   if (since === null) return "Updated —";

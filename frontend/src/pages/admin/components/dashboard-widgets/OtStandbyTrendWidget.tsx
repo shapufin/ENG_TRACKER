@@ -35,7 +35,7 @@ export const OtStandbyTrendWidget: React.FC<TrendWidgetProps> = ({
   return (
     <WidgetFrame
       title="Overtime & Standby Trend"
-      description="Approved hours per month, last 12 months"
+      description={`Approved hours per month, last ${rows.length || 12} months`}
       className="lg:col-span-2"
       isLoading={isLoading}
       isError={isError}
@@ -52,7 +52,7 @@ export const OtStandbyTrendWidget: React.FC<TrendWidgetProps> = ({
     >
       <div
         role="img"
-        aria-label={`Overtime and standby hours for the last 12 months. Latest month: ${fmt1(last?.overtime ?? 0)} hours overtime, ${fmt1(last?.standby ?? 0)} hours standby.`}
+        aria-label={`Overtime and standby hours for the last ${rows.length || 12} months. Latest month: ${fmt1(last?.overtime ?? 0)} hours overtime, ${fmt1(last?.standby ?? 0)} hours standby.`}
         className="h-[240px] w-full min-w-0"
       >
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>

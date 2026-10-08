@@ -15,10 +15,11 @@ export const useAdminOverview = (enabled: boolean) =>
   });
 
 /** Same staleness policy as the overview; fires only while a trends widget is on. */
-export const useAdminTrends = (enabled: boolean) =>
+export const useAdminTrends = (enabled: boolean, months = 12) =>
   useQuery({
-    queryKey: ["admin", "trends"],
-    queryFn: dashboardService.getAdminTrends,
+    // months is part of the key; ["admin","trends"] still prefix-matches for invalidation.
+    queryKey: ["admin", "trends", months],
+    queryFn: () => dashboardService.getAdminTrends(months),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
     enabled,

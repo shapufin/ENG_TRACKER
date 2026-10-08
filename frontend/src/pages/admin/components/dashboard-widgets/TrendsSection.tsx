@@ -1,6 +1,9 @@
 import React from "react";
 import { TRENDS_WIDGET_IDS } from "@/config/dashboardWidgets";
 import { useAdminTrends } from "@/hooks/useAdminDashboardQueries";
+import { useUrlParamState } from "@/hooks/useUrlParamState";
+import { TrendPeriodSelect } from "./TrendPeriodSelect";
+import { TREND_PERIODS } from "./trendTypes";
 import { LeaveTrendWidget } from "./LeaveTrendWidget";
 import { OtByClientWidget } from "./OtByClientWidget";
 import { OtStandbyTrendWidget } from "./OtStandbyTrendWidget";
@@ -12,7 +15,8 @@ interface TrendsSectionProps {
 }
 
 const Fetching: React.FC<TrendsSectionProps> = ({ isWidgetActive }) => {
-  const q = useAdminTrends(true);
+  const [period, setPeriod] = useUrlParamState("months", TREND_PERIODS, "12");
+  const q = useAdminTrends(true, Number(period));
   const props = {
     data: q.data,
     isLoading: q.isLoading,
@@ -21,6 +25,9 @@ const Fetching: React.FC<TrendsSectionProps> = ({ isWidgetActive }) => {
   };
   return (
     <div className="grid gap-4 lg:grid-cols-4">
+      <div className="flex justify-end lg:col-span-4">
+        <TrendPeriodSelect value={period} onChange={setPeriod} />
+      </div>
       {isWidgetActive("ot-standby-trend") && <OtStandbyTrendWidget {...props} />}
       {isWidgetActive("leave-trend") && <LeaveTrendWidget {...props} />}
       {isWidgetActive("ot-by-client") && <OtByClientWidget {...props} />}
