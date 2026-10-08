@@ -83,7 +83,7 @@ export const OpenPIPDialog: React.FC<OpenPIPDialogProps> = ({
       isSubmitting={isSubmitting}
       submitLabel={isEdit ? "Save changes" : "Open PIP"}
       submitDisabled={!canSubmit}
-      size="sm"
+      size="md"
     >
       <div className="space-y-4">
         {isEdit ? (

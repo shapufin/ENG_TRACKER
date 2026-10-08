@@ -39,6 +39,20 @@ export const EVIDENCE_KIND_TONE: Record<HbprEvidenceKind, "info" | "accent" | "s
   epr_year_end: "success",
 };
 
+/** Display order of the kinds wherever evidence is separated by type. */
+export const EVIDENCE_KIND_ORDER: readonly HbprEvidenceKind[] = [
+  "cadence_meeting",
+  "epr_mid_year",
+  "epr_year_end",
+];
+
+/** Plural section/filter names (the singular labels above name one row). */
+export const EVIDENCE_KIND_GROUP_LABELS: Record<HbprEvidenceKind, string> = {
+  cadence_meeting: "Cadence meetings",
+  epr_mid_year: "Mid-year EPR",
+  epr_year_end: "Year-end EPR",
+};
+
 /** `Intl` date, so a locale never gets a hand-rolled dd/mm/yyyy. */
 export const formatDate = (iso: string | null): string =>
   iso

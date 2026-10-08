@@ -75,7 +75,7 @@ export const LogReviewDeliveryDialog: React.FC<LogReviewDeliveryDialogProps> = (
       isSubmitting={isSubmitting}
       submitLabel={isEdit ? "Save changes" : "Log delivery"}
       submitDisabled={!canSubmit}
-      size="sm"
+      size="md"
     >
       <div className="space-y-4">
         <div className="space-y-2">

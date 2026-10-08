@@ -3,6 +3,7 @@ import { tlScorecardService } from "../services/tlScorecardService";
 import type {
   Absence,
   HbprEvidence,
+  HbprEvidenceKind,
   HbprOverview,
   IdleFlag,
   Meeting,
@@ -229,6 +230,7 @@ export function useHbprWorkspaceQueries({
   leaderParam,
   record,
   evidencePage,
+  evidenceKind,
 }: {
   year: number;
   view: string;
@@ -236,6 +238,8 @@ export function useHbprWorkspaceQueries({
   leaderParam: number | null;
   record: Omit<HbprRecordQuery, "leader">;
   evidencePage: number;
+  /** One meeting type, or undefined for all (the API filters `?kind=`). */
+  evidenceKind?: HbprEvidenceKind;
 }): HbprWorkspaceQueries {
   const overview = useQuery({
     queryKey: ["tl-scorecard", "hbpr-overview", year],
@@ -253,12 +257,13 @@ export function useHbprWorkspaceQueries({
   // only once we know the viewer is an HBPR — otherwise a non-HBPR deep link
   // fires doomed 403 requests first.
   const evidence = useQuery({
-    queryKey: ["tl-scorecard", "hbpr-evidence", year, leader, evidencePage],
+    queryKey: ["tl-scorecard", "hbpr-evidence", year, leader, evidencePage, evidenceKind],
     queryFn: async (): Promise<HbprEvidencePage> => {
       const { data } = await tlScorecardService.listHbprEvidencePage({
         period_year: year,
         page: evidencePage,
         ...(leader !== null && { leader }),
+        ...(evidenceKind && { kind: evidenceKind }),
       });
       return { count: data.count, rows: data.results };
     },

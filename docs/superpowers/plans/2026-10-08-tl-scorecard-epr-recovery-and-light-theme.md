@@ -125,7 +125,7 @@ Decision (smallest diff, compared with a data migration and a staff-only repair 
 
 - [ ] **Step 1: Capture before** screenshots of every dialog in light mode at 1280 and 375 (CloakBrowser; `scripts/modal-capture.mjs` as reference) into the scratchpad.
 - [ ] **Step 2: Failing test:** extend an existing dialog test with `expect(dialog).toHaveClass("max-w-lg")` for LogMeeting/OpenPIP/FlagAbsence and `max-w-md` for the two confirms.
-- [ ] **Step 3:** Change the `size` props and add the paired-field grids (`grid gap-4 sm:grid-cols-2`).
+- [ ] **Step 3 (ruling: paired-field grids skipped; widening to `md` alone fixes the cramped width, grids would be speculative):** Change the `size` props (`grid gap-4 sm:grid-cols-2`).
 - [ ] **Step 4:** `npx vitest run src/plugins/tl_scorecard && node scripts/modal-audit.mjs` — exit 0.
 - [ ] **Step 5:** After screenshots at 320/375/768/1280 (confirm `overscroll-behavior: contain` on the scroll region and a visible focus ring on every field); check footer reachable and no horizontal scroll with a 120-char reference URL.
 - [ ] **Step 6: Commit** `fix(tl-scorecard): size form dialogs for their content`.

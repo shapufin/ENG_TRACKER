@@ -79,7 +79,7 @@ export const FlagIdleDialog: React.FC<FlagIdleDialogProps> = ({
       isSubmitting={isSubmitting}
       submitLabel={isEdit ? "Save changes" : "Flag idle risk"}
       submitDisabled={!canSubmit}
-      size="sm"
+      size="md"
     >
       <div className="space-y-4">
         {isEdit ? (

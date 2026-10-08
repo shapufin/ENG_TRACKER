@@ -15,11 +15,24 @@ import {
 import { UserAvatar } from "@/components/calendar/UserAvatar";
 import { ExportButton } from "../ExportButton";
 import { avatarSeed } from "../avatarSeed";
-import type { HbprEvidence, HbprLeaderRow } from "../../types/tlScorecard";
-import { EVIDENCE_KIND_LABELS, EVIDENCE_KIND_TONE, formatDate } from "./hbprMeta";
+import type { HbprEvidence, HbprEvidenceKind, HbprLeaderRow } from "../../types/tlScorecard";
+import { EvidenceKindFilter, type EvidenceKindValue } from "./EvidenceKindFilter";
+import {
+  EVIDENCE_KIND_GROUP_LABELS,
+  EVIDENCE_KIND_LABELS,
+  EVIDENCE_KIND_TONE,
+  formatDate,
+} from "./hbprMeta";
 import { PageNav } from "./PageNav";
 
 const ALL = "all";
+
+/** Timeline dot per kind, so the unfiltered log still reads as three streams. */
+const KIND_DOT_CLASS: Record<HbprEvidenceKind, string> = {
+  cadence_meeting: "bg-tone-info-text",
+  epr_mid_year: "bg-tone-accent-text",
+  epr_year_end: "bg-tone-success-text",
+};
 
 interface HbprEvidenceTimelineProps {
   /** The current server page, already filtered by year and leader. */
@@ -30,6 +43,8 @@ interface HbprEvidenceTimelineProps {
   onPageChange: (page: number) => void;
   leaders: HbprLeaderRow[];
   year: number;
+  kindFilter: EvidenceKindValue;
+  onKindFilterChange: (kind: EvidenceKindValue) => void;
   leaderFilter: number | null;
   onLeaderFilterChange: (leaderId: number | null) => void;
   isLoading: boolean;
@@ -46,6 +61,8 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
   onPageChange,
   leaders,
   year,
+  kindFilter,
+  onKindFilterChange,
   leaderFilter,
   onLeaderFilterChange,
   isLoading,
@@ -83,6 +100,9 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
           </div>
           {leaderFilter !== null && <ExportButton leaderId={leaderFilter} />}
         </div>
+        <div className="mt-4">
+          <EvidenceKindFilter value={kindFilter} onChange={onKindFilterChange} />
+        </div>
       </GlassCard>
 
       {isError ? (
@@ -98,7 +118,11 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
         <GlassCard animateOnMount={false} isHoverLift={false} className="p-0">
           <EmptyState
             icon={History}
-            title={`No governance evidence recorded in ${year}`}
+            title={
+              kindFilter === "all"
+                ? `No governance evidence recorded in ${year}`
+                : `No ${EVIDENCE_KIND_GROUP_LABELS[kindFilter]} entries in ${year}`
+            }
             description="The assigned Albanian team leader logs their cadence meetings and EPR participation here."
             className="py-10"
           />
@@ -117,7 +141,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
               <li key={row.id} className="relative">
                 <span
                   aria-hidden="true"
-                  className="bg-primary border-background absolute top-6 -left-[1.72rem] h-3 w-3 rounded-full border-2"
+                  className={`${KIND_DOT_CLASS[row.kind]} border-background absolute top-6 -left-[1.72rem] h-3 w-3 rounded-full border-2`}
                 />
                 <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
