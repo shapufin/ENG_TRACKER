@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { HoursLogsPage } from "./HoursLogsPage";
 
 beforeEach(() => {
@@ -17,7 +17,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderPage() {
+function renderPage(onExport?: () => void | Promise<void>) {
   return render(
     <HoursLogsPage
       title="Overtime Logs"
@@ -38,6 +38,7 @@ function renderPage() {
       onApprove={() => {}}
       onReject={() => {}}
       storageKey="test-storage"
+      onExport={onExport}
     />
   );
 }
@@ -49,5 +50,31 @@ describe("HoursLogsPage", () => {
     // The filter bar and table GlassCards converge to the base rounded-xl
     // surface; no ad-hoc rounded-3xl wrappers.
     expect(container.querySelector(".rounded-3xl")).toBeNull();
+  });
+
+  it("shows no export button unless onExport is provided", () => {
+    renderPage();
+    expect(screen.queryByRole("button", { name: /export csv/i })).not.toBeInTheDocument();
+  });
+
+  it("runs onExport once and disables the button while it is pending", async () => {
+    let finish: () => void = () => {};
+    const onExport = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+    renderPage(onExport);
+    const button = screen.getByRole("button", { name: /export csv/i });
+    fireEvent.click(button);
+    expect(onExport).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(button).toBeDisabled());
+    finish();
+    await waitFor(() => expect(button).not.toBeDisabled());
+  });
+
+  it("re-enables the button when the export fails", async () => {
+    const onExport = vi.fn().mockRejectedValue(new Error("boom"));
+    renderPage(onExport);
+    const button = screen.getByRole("button", { name: /export csv/i });
+    fireEvent.click(button);
+    await waitFor(() => expect(onExport).toHaveBeenCalled());
+    await waitFor(() => expect(button).not.toBeDisabled());
   });
 });

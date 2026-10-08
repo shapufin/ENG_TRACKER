@@ -4,6 +4,9 @@ import { timeRangeColumn } from "./components/standbyColumns";
 import { useStandbyLogsPage } from "./hooks/useStandbyLogsPage";
 import type { StandbyLog } from "@/types";
 import { usePermissions } from "@/context/PermissionContext";
+import { standbyService } from "@/services/standbyService";
+import { handleApiError } from "@/lib/error-handler";
+import { buildHoursExportParams } from "./hooks/hoursLogsExport";
 
 export const StandbyLogsPage: React.FC = () => {
   const {
@@ -44,6 +47,13 @@ export const StandbyLogsPage: React.FC = () => {
       onDelete={(id) => deleteMutation.mutate(id)}
       canDelete={isSuperuser}
       extraColumns={[timeRangeColumn]}
+      onExport={() =>
+        standbyService
+          .exportCsv(buildHoursExportParams(filterStatus, dateFrom, dateTo))
+          .catch((err: unknown) => {
+            handleApiError(err);
+          })
+      }
       storageKey="table-visibility-standby-logs"
     />
   );
