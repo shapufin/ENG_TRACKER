@@ -311,6 +311,7 @@ class StandbyLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermis
         rendering whole numbers without a decimal point.
         """
         import csv
+        from core.utils.csv_safe import csv_safe
         import io
         from django.http import StreamingHttpResponse
 
@@ -333,14 +334,14 @@ class StandbyLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermis
             buffer.seek(0)
             buffer.truncate()
             for sb in queryset.iterator(chunk_size=1000):
-                writer.writerow([
+                writer.writerow([csv_safe(v) for v in (
                     sb.user.get_full_name() if sb.user else '',
                     sb.date.strftime('%d/%m/%Y') if sb.date else '',
                     _format_hours(sb.hours) if sb.hours else '0',
                     sb.status,
                     sb.description or '',
                     sb.evidence or '',
-                ])
+                )])
                 yield buffer.getvalue()
                 buffer.seek(0)
                 buffer.truncate()
