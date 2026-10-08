@@ -96,8 +96,18 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     // white cards AND on the 96%-tinted app background (PageShell header),
     // where #F1F5F9 vanishes. Track backgrounds on sunken surfaces read as
     // a groove either way; divider function wins over track framing.
-    expect(lightBlock).toContain("--border: 214 32% 88%");
-    expect(lightBlock).toContain("--line-subtle: 220 18% 92%");
+    expect(lightBlock).toContain("--border: 214 22% 78%");
+    expect(lightBlock).toContain("--line-subtle: 220 18% 90%");
+  });
+
+  // Non-text contrast (WCAG 1.4.11). Measured 2026-10-08 against a white card:
+  // the old values gave card/page 1.10:1, card border 1.34:1 and input border
+  // 1.34:1, so cards, outline buttons and inputs dissolved into the page.
+  it("keeps light-mode boundaries visible", () => {
+    expect(lightBlock).toContain("--background: 220 18% 94%");
+    // Input and outline-button borders must reach 3:1 on a card (3.2:1).
+    expect(lightBlock).toContain("--input: 215 16% 58%");
+    expect(lightBlock).toContain("--surface-sunken: 220 18% 91%");
   });
 
   it("keeps tone-danger in the red family (2026-09-20 refinement)", () => {

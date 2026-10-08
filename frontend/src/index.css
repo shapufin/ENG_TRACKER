@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 220 20% 96%;
+    --background: 220 18% 94%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
@@ -24,8 +24,8 @@
     --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 214 32% 88%;
-    --input: 214 32% 88%;
+    --border: 214 22% 78%;
+    --input: 215 16% 58%;
     --ring: 221 83% 53%;
     --radius: 0.625rem;
     --safe-area-top: env(safe-area-inset-top, 0px);
@@ -37,8 +37,8 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     --card-raised: 0 0% 100%;
-    --surface-sunken: 220 18% 93%;
-    --line-subtle: 220 18% 92%;
+    --surface-sunken: 220 18% 91%;
+    --line-subtle: 220 18% 90%;
     --table-hover: 220 25% 95%;
     --input-bg: 0 0% 100%;
     --border-focus: 221 70% 65%;
