@@ -18,7 +18,7 @@ describe("NotificationsPage modernization", () => {
   it("uses a GlassCard notification surface and icon-centered empty state", () => {
     const { container } = render(<NotificationsPage />);
 
-    expect(container.querySelector(".shadow-glass")).toBeInTheDocument();
+    expect(container.querySelector(".shadow-card")).toBeInTheDocument();
     expect(screen.getByText("No notifications found.")).toBeInTheDocument();
     expect(container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });

@@ -79,7 +79,7 @@ const DayColumn: React.FC<{ day: DayData }> = ({ day }) => (
     )}
   >
     {/* Header: weekday + date */}
-    <div className="mb-3 flex items-center justify-between border-b border-border/30 pb-2">
+    <div className="border-border/30 mb-3 flex items-center justify-between border-b pb-2">
       <div className="flex items-center gap-2">
         <span
           className={cn("text-sm font-semibold", day.isToday ? "text-primary" : "text-foreground")}
@@ -105,7 +105,7 @@ const DayColumn: React.FC<{ day: DayData }> = ({ day }) => (
     {/* People on standby */}
     <div className="flex-1 space-y-2">
       {day.rows.length === 0 ? (
-        <p className="py-4 text-center text-xs text-muted-foreground/50">No standby</p>
+        <p className="text-muted-foreground/50 py-4 text-center text-xs">No standby</p>
       ) : (
         day.rows.map((row) => (
           <div
@@ -118,7 +118,7 @@ const DayColumn: React.FC<{ day: DayData }> = ({ day }) => (
             )}
           >
             <div className="flex items-center gap-1.5">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-foreground">
+              <span className="bg-primary/10 text-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold">
                 {initialsOf(row.user_name)}
               </span>
               <span
@@ -131,11 +131,11 @@ const DayColumn: React.FC<{ day: DayData }> = ({ day }) => (
             </div>
             <TeamChipList teamNames={row.team_names} className="mt-1" />
             {(row.tech_levels?.length ?? 0) > 0 && (
-              <p className="mt-1 truncate text-micro text-muted-foreground">
+              <p className="text-micro text-muted-foreground mt-1 truncate">
                 {row.tech_levels!.join(" · ")}
               </p>
             )}
-            <div className="mt-1.5 text-xs tabular-nums text-muted-foreground">
+            <div className="text-muted-foreground mt-1.5 text-xs tabular-nums">
               {formatTime(row.start_time)} – {formatTime(row.end_time)}
             </div>
           </div>
@@ -172,14 +172,14 @@ export const CRWeekView: React.FC<Props> = ({ roster }) => {
   const weekEnd = weekDays[6]?.date ?? endOfWeek(new Date(), { weekStartsOn: 1 });
 
   return (
-    <GlassCard isHoverLift={false} delay={0} className="space-y-4 p-4">
+    <GlassCard delay={0} className="space-y-4 p-4">
       {/* Week summary header */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">
             {format(weekStart, "MMM d")} – {format(weekEnd, "MMM d, yyyy")}
           </h3>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {totalPeople} {totalPeople === 1 ? "person" : "people"} on standby this week
           </p>
         </div>
@@ -187,7 +187,7 @@ export const CRWeekView: React.FC<Props> = ({ roster }) => {
 
       {/* 7-column grid — horizontal scroll on small screens */}
       {weekRoster.length === 0 ? (
-        <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+        <div className="text-muted-foreground flex h-40 items-center justify-center text-sm">
           No standby scheduled this week.
         </div>
       ) : (

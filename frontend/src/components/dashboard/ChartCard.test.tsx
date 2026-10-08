@@ -13,4 +13,16 @@ describe("ChartCard", () => {
     );
     expect(container.querySelector("[data-chart-section='ot-trend']")).not.toBeNull();
   });
+
+  it("lets the grid own the height and renders the action slot", () => {
+    const { getByText } = render(
+      <ChartCard title="A" action={<button>go</button>}>
+        body
+      </ChartCard>
+    );
+    expect(getByText("go")).toBeInTheDocument();
+    const body = getByText("body");
+    expect(body.className).toContain("min-h-0");
+    expect(body.className).not.toContain("min-h-[220px]");
+  });
 });

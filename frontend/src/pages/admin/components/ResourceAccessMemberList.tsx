@@ -53,7 +53,7 @@ export function ResourceAccessMemberList({
   }
   if (members.length === 0) {
     return (
-      <GlassCard isHoverLift={false}>
+      <GlassCard>
         <EmptyState
           icon={UserPlus}
           title={memberSearch ? "No members match your search" : "No members yet"}
@@ -81,7 +81,7 @@ export function ResourceAccessMemberList({
   }
 
   return (
-    <GlassCard className="p-0" isHoverLift={false}>
+    <GlassCard className="p-0">
       <div className="hidden overflow-hidden md:block">
         <table className="w-full text-sm">
           <thead>

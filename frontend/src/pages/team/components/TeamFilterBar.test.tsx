@@ -26,7 +26,7 @@ describe("TeamFilterBar", () => {
   it("renders on a flat non-hover-lift GlassCard", () => {
     const { container } = renderBar();
 
-    const card = container.querySelector("[class*='shadow-glass']");
+    const card = container.querySelector("[class*='shadow-card']");
     expect(card).toBeInTheDocument();
     expect(card?.className).not.toContain("hover:-translate-y-1");
   });

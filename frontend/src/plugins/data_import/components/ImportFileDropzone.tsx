@@ -42,7 +42,7 @@ export const ImportFileDropzone: React.FC<ImportFileDropzoneProps> = ({
   };
 
   return (
-    <GlassCard isHoverLift={false} className="p-4">
+    <GlassCard className="p-4">
       <div>
         <div
           onDrop={handleDrop}
@@ -53,23 +53,23 @@ export const ImportFileDropzone: React.FC<ImportFileDropzoneProps> = ({
         >
           {file ? (
             <>
-              <FileSpreadsheet className="h-10 w-10 text-primary" />
+              <FileSpreadsheet className="text-primary h-10 w-10" />
               <div className="text-center">
                 <p className="font-medium">{file.name}</p>
-                <p className="text-sm text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
+                <p className="text-muted-foreground text-sm">{(file.size / 1024).toFixed(1)} KB</p>
               </div>
               {!isValidType(file.name) && (
-                <p className="text-sm text-destructive">
+                <p className="text-destructive text-sm">
                   Only CSV, XLSX, or XLS files are supported.
                 </p>
               )}
             </>
           ) : (
             <>
-              <Upload className="h-10 w-10 text-muted-foreground" />
+              <Upload className="text-muted-foreground h-10 w-10" />
               <div className="text-center">
                 <p className="font-medium">Drag & drop a file here, or click to browse</p>
-                <p className="text-sm text-muted-foreground">Supports CSV, XLSX, and XLS</p>
+                <p className="text-muted-foreground text-sm">Supports CSV, XLSX, and XLS</p>
               </div>
             </>
           )}

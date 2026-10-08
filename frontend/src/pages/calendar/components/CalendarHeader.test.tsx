@@ -48,7 +48,7 @@ describe("CalendarHeader", () => {
     render(<CalendarHeader {...baseProps} />);
 
     expect(
-      screen.getByRole("banner", { name: "Calendar controls" }).querySelector(".shadow-glass")
+      screen.getByRole("banner", { name: "Calendar controls" }).querySelector(".shadow-card")
     ).toBeInTheDocument();
   });
 

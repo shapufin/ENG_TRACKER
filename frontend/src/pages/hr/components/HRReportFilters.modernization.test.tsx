@@ -23,7 +23,7 @@ describe("HRReportFilters modernization", () => {
       />
     );
 
-    const surface = container.querySelector("[class*='shadow-glass']");
+    const surface = container.querySelector("[class*='shadow-card']");
     expect(surface?.className).toContain("p-4");
     expect(surface?.className).not.toContain("hover:-translate-y-1");
   });

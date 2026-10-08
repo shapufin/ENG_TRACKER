@@ -193,7 +193,7 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
         >
           Attrition &amp; Engagement
         </h2>
-        <GlassCard animateOnMount={false} isHoverLift={false} className="mt-2">
+        <GlassCard animateOnMount={false} className="mt-2">
           <div className="divide-line-subtle grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
             <div className="p-5">
               <div className="flex items-center justify-between gap-3">

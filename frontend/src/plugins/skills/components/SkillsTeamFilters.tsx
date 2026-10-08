@@ -68,9 +68,9 @@ export const SkillsTeamFilters: React.FC<SkillsTeamFiltersProps> = ({
   return (
     <>
       {/* Desktop filters */}
-      <GlassCard isHoverLift={false} className="space-y-3 p-3.5">
+      <GlassCard className="space-y-3 p-3.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <h2 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
             Filters
           </h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -87,7 +87,7 @@ export const SkillsTeamFilters: React.FC<SkillsTeamFiltersProps> = ({
             <Label htmlFor="team-search">Search</Label>
             <div className="relative mt-1">
               <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
                 aria-hidden="true"
               />
               <Input
@@ -159,7 +159,7 @@ export const SkillsTeamFilters: React.FC<SkillsTeamFiltersProps> = ({
           </div>
         </div>
         {gaps.length > 0 && (
-          <div className="border-t border-border/70 pt-3">
+          <div className="border-border/70 border-t pt-3">
             <SkillsGapSummary gaps={gaps} />
           </div>
         )}
@@ -173,7 +173,7 @@ export const SkillsTeamFilters: React.FC<SkillsTeamFiltersProps> = ({
               <DialogDescription>Narrow the team view by proficiency level.</DialogDescription>
             </DialogHeader>
             <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto">
-              <SkillsLevelLegend className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" />
+              <SkillsLevelLegend className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" />
               <div>
                 <Label htmlFor="team-mobile-min-level">Minimum level</Label>
                 <Select

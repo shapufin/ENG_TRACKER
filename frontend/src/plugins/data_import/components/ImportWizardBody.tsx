@@ -47,7 +47,7 @@ export const ImportWizardBody: React.FC<ImportWizardBodyProps> = ({
   const progressBar = isWorking ? (
     <div className="space-y-1" role="status" aria-live="polite">
       <Progress value={state.uploadProgress ?? 0} aria-label="Import upload progress" />
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         {state.uploadProgress !== null && state.uploadProgress < 100
           ? `Uploading file… ${state.uploadProgress}%`
           : "Processing on the server…"}
@@ -123,7 +123,7 @@ export const ImportWizardBody: React.FC<ImportWizardBodyProps> = ({
       <div className="space-y-4">
         <ImportSummaryCards summary={commit.summary} mode="commit" />
         {commit.row_errors.length > 0 && (
-          <GlassCard isHoverLift={false}>
+          <GlassCard>
             <CardHeader>
               <CardTitle>{commit.row_errors.length} row(s) could not be imported</CardTitle>
             </CardHeader>

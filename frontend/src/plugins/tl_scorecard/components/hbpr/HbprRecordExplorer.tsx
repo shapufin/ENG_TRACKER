@@ -115,7 +115,7 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
 
   return (
     <section aria-label="Governance records" className="space-y-4">
-      <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+      <GlassCard animateOnMount={false} className="p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div className="grid grow gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
@@ -229,7 +229,7 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
           </div>
           {/* Per-kind totals would cost one request per kind; the API pages a
               single kind at a time, so only the active kind shows its server total. */}
-          <GlassCard animateOnMount={false} isHoverLift={false} className="hidden p-3 lg:block">
+          <GlassCard animateOnMount={false} className="hidden p-3 lg:block">
             <p className="text-muted-foreground px-3 py-2 text-xs font-bold tracking-wider uppercase">
               Record types
             </p>
@@ -289,7 +289,7 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
               ))}
             </div>
           ) : rows.length === 0 ? (
-            <GlassCard animateOnMount={false} isHoverLift={false} className="overflow-hidden p-0">
+            <GlassCard animateOnMount={false} className="overflow-hidden p-0">
               <div className="border-line-subtle flex items-center justify-between gap-3 border-b px-5 py-3.5">
                 <h2 className="text-foreground flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
                   {cardTitle}
@@ -316,7 +316,7 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
               <ul className="grid gap-3 md:hidden">
                 {rows.map((row) => (
                   <li key={row.key}>
-                    <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+                    <GlassCard animateOnMount={false} className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-2.5">
                           <UserAvatar
@@ -341,11 +341,7 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
                 ))}
               </ul>
 
-              <GlassCard
-                animateOnMount={false}
-                isHoverLift={false}
-                className="hidden overflow-hidden p-0 md:block"
-              >
+              <GlassCard animateOnMount={false} className="hidden overflow-hidden p-0 md:block">
                 <div className="border-line-subtle flex items-center justify-between gap-3 border-b px-5 py-3.5">
                   <h2 className="text-foreground flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
                     {cardTitle}

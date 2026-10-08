@@ -18,7 +18,8 @@ import {
 } from "./tableStyles";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
-import { Input } from "./input";
+import { FilterToolbar } from "./FilterToolbar";
+import { SearchField } from "./SearchField";
 import {
   ChevronLeft,
   ChevronRight,
@@ -297,18 +298,16 @@ export const DataTable = function DataTable<TData extends RowData>({
   return (
     <div className="space-y-4">
       {(searchPaths.length > 0 || enableColumnVisibility) && (
-        <div className="flex flex-wrap items-center gap-3 pb-1">
+        <FilterToolbar className="pb-1">
           {searchPaths.length > 0 && (
-            <div className="relative w-full max-w-sm flex-1 sm:w-auto">
-              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              <Input
+            <FilterToolbar.Search>
+              <SearchField
                 placeholder={searchPlaceholder}
                 value={globalFilter}
-                onChange={(e) => setGlobalFilter(e.target.value)}
+                onChange={setGlobalFilter}
                 aria-label={searchPlaceholder}
-                className="h-11 pl-9 sm:h-9"
               />
-            </div>
+            </FilterToolbar.Search>
           )}
           {enableColumnVisibility && (
             <ColumnVisibilityMenu
@@ -317,7 +316,7 @@ export const DataTable = function DataTable<TData extends RowData>({
               onVisibilityChange={(v) => handleColumnVisibilityChange(v)}
             />
           )}
-        </div>
+        </FilterToolbar>
       )}
 
       {/* Scroll wrapper with shadow indicators */}

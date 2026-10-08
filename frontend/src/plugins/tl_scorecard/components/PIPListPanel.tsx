@@ -13,31 +13,46 @@ interface PIPListPanelProps {
   isApproving: boolean;
 }
 
-export const PIPListPanel: React.FC<PIPListPanelProps> = ({ records, canApprove, onApprove, isApproving }) => (
-  <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+export const PIPListPanel: React.FC<PIPListPanelProps> = ({
+  records,
+  canApprove,
+  onApprove,
+  isApproving,
+}) => (
+  <GlassCard animateOnMount={false} className="p-4">
     <h2 className="text-sm font-semibold">PIPs</h2>
     {records.length === 0 ? (
       <EmptyState icon={ShieldCheck} title="No PIPs open" className="py-6" />
     ) : (
-      <ul className="mt-3 divide-y divide-border/50">
+      <ul className="divide-border/50 mt-3 divide-y">
         {records.map((r) => (
           <li key={r.id} className="flex items-center justify-between gap-3 py-2.5">
             <div className="min-w-0">
               <p className="text-sm font-medium">{r.employee_name}</p>
-              <p className="text-xs text-muted-foreground">
-                Started {r.start_date} · {r.approved_at ? `Approved by ${r.approved_by_name}` : "Pending HR approval"}
+              <p className="text-muted-foreground text-xs">
+                Started {r.start_date} ·{" "}
+                {r.approved_at ? `Approved by ${r.approved_by_name}` : "Pending HR approval"}
               </p>
             </div>
             {r.approved_at ? (
-              <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${toneSurfaceClass.success}`}>
+              <span
+                className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${toneSurfaceClass.success}`}
+              >
                 Approved
               </span>
             ) : canApprove ? (
-              <Button size="sm" variant="outline" disabled={isApproving} onClick={() => onApprove(r.id)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isApproving}
+                onClick={() => onApprove(r.id)}
+              >
                 Approve
               </Button>
             ) : (
-              <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${toneSurfaceClass.warning}`}>
+              <span
+                className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${toneSurfaceClass.warning}`}
+              >
                 Pending
               </span>
             )}

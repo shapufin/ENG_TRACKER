@@ -46,12 +46,12 @@ export const ValueTransformPanel: React.FC<ValueTransformPanelProps> = ({
   }
 
   return (
-    <GlassCard isHoverLift={false}>
+    <GlassCard>
       <CardHeader>
         <CardTitle>Value Transforms</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Map raw spreadsheet values to the canonical values recognised by the system.
         </p>
         {mappedChoiceFields.map(({ field, column }) => {
@@ -61,12 +61,12 @@ export const ValueTransformPanel: React.FC<ValueTransformPanelProps> = ({
             <div key={field.key} className="space-y-3 rounded-lg border p-4">
               <div className="space-y-1">
                 <Label className="text-base">{field.label}</Label>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Column: <span className="font-medium">{column}</span>
                 </p>
               </div>
               {rawValues.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No values detected for this column.</p>
+                <p className="text-muted-foreground text-sm">No values detected for this column.</p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
                   {rawValues.map((rawValue) => {

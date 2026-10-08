@@ -33,10 +33,10 @@ const TeamCard: React.FC<{
   const [open, setOpen] = useState(true);
 
   return (
-    <GlassCard delay={0} isHoverLift={false}>
-      <div className="flex flex-row items-center justify-between gap-2 border-b border-border/40 p-4">
+    <GlassCard delay={0}>
+      <div className="border-border/40 flex flex-row items-center justify-between gap-2 border-b p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-full">
             <Users className="h-4 w-4" />
           </div>
           <div>
@@ -44,7 +44,7 @@ const TeamCard: React.FC<{
               <span className={cn("h-2.5 w-2.5 rounded-full", teamColorFor(group.team_name))} />
               <h3 className="text-base font-semibold">{group.team_name}</h3>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {group.users.length} {group.users.length === 1 ? "person" : "people"} on standby
               {coverage && ` · ${formatHours(coverage.planned_hours)} planned`}
             </p>
@@ -63,14 +63,14 @@ const TeamCard: React.FC<{
       {open && (
         <div className="p-4 pt-0">
           {group.users.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
+            <p className="text-muted-foreground py-4 text-center text-sm">
               No standby scheduled in this range.
             </p>
           ) : (
-            <ul className="divide-y divide-border/40">
+            <ul className="divide-border/40 divide-y">
               {group.users.map((user) => (
                 <li key={user.user_id} className="flex items-center gap-3 py-2.5">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                  <span className="bg-primary/10 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold">
                     {initialsOf(user.user_name)}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -80,7 +80,7 @@ const TeamCard: React.FC<{
                         <Moon className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400" />
                       )}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                       {formatDate(user.first_date)} – {formatDate(user.last_date)}
                     </div>
                   </div>
@@ -101,7 +101,7 @@ export const CRByTeamView: React.FC<Props> = ({ coverage, roster }) => {
   if (groups.length === 0) {
     return (
       <GlassCard delay={0}>
-        <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+        <div className="text-muted-foreground flex h-40 items-center justify-center text-sm">
           No teams in scope for this range.
         </div>
       </GlassCard>

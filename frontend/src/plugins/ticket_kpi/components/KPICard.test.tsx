@@ -10,7 +10,7 @@ describe("KPICard", () => {
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText("This month")).toBeInTheDocument();
     expect(document.querySelector("svg")).toBeInTheDocument();
-    expect(document.querySelector(".shadow-glass")).toBeInTheDocument();
+    expect(document.querySelector(".shadow-card")).toBeInTheDocument();
     expect(screen.getByText("42")).toHaveClass("tabular-nums");
   });
 

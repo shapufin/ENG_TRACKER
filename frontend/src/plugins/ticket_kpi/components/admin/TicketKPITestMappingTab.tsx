@@ -37,10 +37,10 @@ export const TicketKPITestMappingTab: React.FC<TicketKPITestMappingTabProps> = (
   const [isDragging, setIsDragging] = useState(false);
 
   return (
-    <GlassCard isHoverLift={false}>
+    <GlassCard>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
-          <TestTube className="h-5 w-5 text-primary" /> Test Mapping
+          <TestTube className="text-primary h-5 w-5" /> Test Mapping
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

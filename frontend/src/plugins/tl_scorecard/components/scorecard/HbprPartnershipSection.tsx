@@ -115,7 +115,7 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
           <div className="bg-muted/40 h-20 animate-pulse rounded-xl border" />
         </div>
       ) : !assignment ? (
-        <GlassCard animateOnMount={false} isHoverLift={false} className="p-0">
+        <GlassCard animateOnMount={false} className="p-0">
           <EmptyState
             icon={Handshake}
             title="No HR business partner assigned yet"
@@ -125,7 +125,7 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
         </GlassCard>
       ) : (
         <>
-          <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+          <GlassCard animateOnMount={false} className="p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-muted-foreground text-xs">HR business partner</p>
@@ -189,7 +189,7 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
               rows={evidence}
               renderRow={(row) => (
                 <>
-                  <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+                  <GlassCard animateOnMount={false} className="p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">

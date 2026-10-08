@@ -37,7 +37,12 @@ import { extractApiErrorMessage } from "@/lib/apiFormError";
 import { staggerContainer, staggerItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { onboardingService } from "../services/onboardingService";
-import type { Document, Folder, SearchDocumentResult, SearchFolderResult } from "../types/onboarding";
+import type {
+  Document,
+  Folder,
+  SearchDocumentResult,
+  SearchFolderResult,
+} from "../types/onboarding";
 import { CreateFolderDialog } from "./CreateFolderDialog";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { RenameDialog } from "./RenameDialog";
@@ -80,7 +85,12 @@ const FolderTile: React.FC<{
   onDelete: () => void;
   onInfo: () => void;
 }> = ({ folder, onOpen, onRename, onDelete, onInfo }) => {
-  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({
     id: `folder-${folder.id}`,
     data: { kind: "folder", id: folder.id },
   });
@@ -96,11 +106,10 @@ const FolderTile: React.FC<{
         setDropRef(node);
       }}
       animateOnMount={false}
-      isHoverLift={false}
       glow={isOver ? "primary" : "none"}
       className={cn(
         "group flex cursor-pointer items-center gap-3 p-4 transition-all",
-        isOver && "scale-[1.02] ring-2 ring-primary",
+        isOver && "ring-primary scale-[1.02] ring-2",
         isDragging && "opacity-40"
       )}
       onClick={onOpen}
@@ -115,16 +124,16 @@ const FolderTile: React.FC<{
             "linear-gradient(135deg, hsl(var(--chart-1) / 0.28), hsl(var(--chart-1) / 0.08))",
         }}
       >
-        <FolderIcon className="h-5 w-5 text-chart-1" aria-hidden="true" />
+        <FolderIcon className="text-chart-1 h-5 w-5" aria-hidden="true" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{folder.name}</p>
-        <p className="text-xs text-muted-foreground">
-          {folder.child_count} folder{folder.child_count === 1 ? "" : "s"} ·{" "}
-          {folder.document_count} file{folder.document_count === 1 ? "" : "s"}
+        <p className="text-muted-foreground text-xs">
+          {folder.child_count} folder{folder.child_count === 1 ? "" : "s"} · {folder.document_count}{" "}
+          file{folder.document_count === 1 ? "" : "s"}
         </p>
       </div>
-      <div className="flex shrink-0 gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+      <div className="flex shrink-0 gap-1 opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
         <Button
           variant="ghost"
           size="icon"
@@ -152,7 +161,7 @@ const FolderTile: React.FC<{
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-destructive hover:text-destructive"
+          className="text-destructive hover:text-destructive h-8 w-8"
           aria-label={`Delete ${folder.name}`}
           onClick={(e) => {
             e.stopPropagation();
@@ -182,7 +191,6 @@ const DocumentTile: React.FC<{
     <GlassCard
       ref={setNodeRef}
       animateOnMount={false}
-      isHoverLift={false}
       className={cn(
         "group flex cursor-pointer items-center gap-3 p-4 transition-all",
         isDragging && "opacity-40"
@@ -199,13 +207,13 @@ const DocumentTile: React.FC<{
             "linear-gradient(135deg, hsl(var(--chart-2) / 0.28), hsl(var(--chart-2) / 0.08))",
         }}
       >
-        <FileIcon className="h-5 w-5 text-chart-2" aria-hidden="true" />
+        <FileIcon className="text-chart-2 h-5 w-5" aria-hidden="true" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{document.name}</p>
-        <p className="text-xs text-muted-foreground">{formatBytes(document.size_bytes)}</p>
+        <p className="text-muted-foreground text-xs">{formatBytes(document.size_bytes)}</p>
       </div>
-      <div className="flex shrink-0 gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+      <div className="flex shrink-0 gap-1 opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
         <Button
           variant="ghost"
           size="icon"
@@ -233,7 +241,7 @@ const DocumentTile: React.FC<{
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-destructive hover:text-destructive"
+          className="text-destructive hover:text-destructive h-8 w-8"
           aria-label={`Delete ${document.name}`}
           onClick={(e) => {
             e.stopPropagation();
@@ -262,9 +270,10 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
   const [renameTarget, setRenameTarget] = useState<RenameTarget>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [activeDragLabel, setActiveDragLabel] = useState<string | null>(null);
-  const [selectedKey, setSelectedKey] = useState<{ kind: "folder" | "document"; id: number } | null>(
-    null
-  );
+  const [selectedKey, setSelectedKey] = useState<{
+    kind: "folder" | "document";
+    id: number;
+  } | null>(null);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebouncedValue(searchInput, 300);
@@ -315,7 +324,8 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
   }
 
   const createFolderMutation = useInvalidatingMutation(
-    (name: string) => onboardingService.createFolder({ client: clientId, parent: currentFolderId, name }),
+    (name: string) =>
+      onboardingService.createFolder({ client: clientId, parent: currentFolderId, name }),
     "Could not create folder."
   );
   const renameFolderMutation = useInvalidatingMutation(
@@ -480,7 +490,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
             trail.length === 0
               ? "bg-primary/10 text-foreground"
               : "text-muted-foreground hover:bg-accent",
-            isRootOver && "ring-2 ring-primary"
+            isRootOver && "ring-primary ring-2"
           )}
         >
           <Home className="h-4 w-4" aria-hidden="true" />
@@ -488,7 +498,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
         </button>
         {trail.map((crumb, idx) => (
           <React.Fragment key={crumb.id}>
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" aria-hidden="true" />
+            <ChevronRight className="text-muted-foreground/60 h-3.5 w-3.5" aria-hidden="true" />
             <button
               type="button"
               onClick={() => setTrail(trail.slice(0, idx + 1))}
@@ -513,7 +523,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
         </div>
         <div className="relative w-full sm:w-64">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
             aria-hidden="true"
           />
           <Input
@@ -521,14 +531,14 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder={`Search ${clientName}...`}
             aria-label="Search folders and files"
-            className="pl-9 pr-9"
+            className="pr-9 pl-9"
           />
           {searchInput && (
             <button
               type="button"
               onClick={() => setSearchInput("")}
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
             >
               <X className="h-4 w-4" />
             </button>
@@ -540,7 +550,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
         <div className="min-w-0 flex-1">
           {isSearching ? (
             searchQuery.isLoading ? (
-              <p className="p-6 text-center text-sm text-muted-foreground">Searching...</p>
+              <p className="text-muted-foreground p-6 text-center text-sm">Searching...</p>
             ) : (
               <SearchResultsList
                 folders={searchQuery.data?.folders ?? []}
@@ -596,7 +606,9 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
                           onRename={() =>
                             setRenameTarget({ kind: "document", id: doc.id, name: doc.name })
                           }
-                          onDelete={() => setDeleteTarget({ kind: "document", id: doc.id, name: doc.name })}
+                          onDelete={() =>
+                            setDeleteTarget({ kind: "document", id: doc.id, name: doc.name })
+                          }
                           onInfo={() => setSelectedKey({ kind: "document", id: doc.id })}
                         />
                       </motion.div>
@@ -605,7 +617,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
                 )}
                 <DragOverlay>
                   {activeDragLabel ? (
-                    <div className="-rotate-2 rounded-lg border border-primary bg-card px-4 py-2 text-sm font-medium shadow-glass-lg backdrop-blur-xl">
+                    <div className="border-primary bg-card shadow-glass-lg -rotate-2 rounded-lg border px-4 py-2 text-sm font-medium backdrop-blur-xl">
                       {activeDragLabel}
                     </div>
                   ) : null}
@@ -622,14 +634,10 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
             onToggleCollapsed={() => setPanelCollapsed((c) => !c)}
             onClose={() => setSelectedKey(null)}
             onDownload={
-              selectedItem.kind === "document"
-                ? () => handleDownload(selectedItem.data)
-                : undefined
+              selectedItem.kind === "document" ? () => handleDownload(selectedItem.data) : undefined
             }
             onPreview={
-              selectedItem.kind === "document"
-                ? () => handlePreview(selectedItem.data)
-                : undefined
+              selectedItem.kind === "document" ? () => handlePreview(selectedItem.data) : undefined
             }
             onEdit={
               selectedItem.kind === "document" &&

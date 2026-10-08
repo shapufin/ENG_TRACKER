@@ -78,10 +78,7 @@ export const SkillsHistoryPage: React.FC = () => {
   return (
     <PageShell title="Skill History" subtitle="Audit log of all rating changes" category="Skills">
       {/* Filters */}
-      <GlassCard
-        isHoverLift={false}
-        className="mb-4 flex flex-col gap-4 p-4 sm:flex-row sm:flex-wrap sm:items-end"
-      >
+      <GlassCard className="mb-4 flex flex-col gap-4 p-4 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="flex-1">
           <Label htmlFor="history-skill-filter">Skill</Label>
           <Select
@@ -112,7 +109,7 @@ export const SkillsHistoryPage: React.FC = () => {
                   variant="outline"
                   className="min-h-11 w-full justify-start font-normal sm:w-[200px]"
                 >
-                  <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <UserIcon className="text-muted-foreground mr-2 h-4 w-4" />
                   {selectedUsername ? (
                     <span className="truncate" title={selectedUsername}>
                       {selectedUsername}
@@ -124,7 +121,7 @@ export const SkillsHistoryPage: React.FC = () => {
               </PopoverTrigger>
               <PopoverContent className="w-72 p-2" align="start">
                 <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
                   <Input
                     autoFocus
                     value={userQuery}
@@ -135,15 +132,15 @@ export const SkillsHistoryPage: React.FC = () => {
                 </div>
                 <div className="mt-2 max-h-60 overflow-y-auto">
                   {userQuery.length < 2 ? (
-                    <div className="px-2 py-4 text-center text-xs text-muted-foreground">
+                    <div className="text-muted-foreground px-2 py-4 text-center text-xs">
                       Type at least 2 characters to search.
                     </div>
                   ) : usersFetching ? (
-                    <div className="px-2 py-4 text-center text-xs text-muted-foreground">
+                    <div className="text-muted-foreground px-2 py-4 text-center text-xs">
                       Searching...
                     </div>
                   ) : userCandidates.length === 0 ? (
-                    <div className="px-2 py-4 text-center text-xs text-muted-foreground">
+                    <div className="text-muted-foreground px-2 py-4 text-center text-xs">
                       No users found. User search may be limited based on your role.
                     </div>
                   ) : (
@@ -152,11 +149,11 @@ export const SkillsHistoryPage: React.FC = () => {
                         key={u.id}
                         type="button"
                         onClick={() => handleUserSelect(u.id, u.username)}
-                        className="flex min-h-11 w-full items-center rounded px-2 py-1.5 text-left text-sm hover:bg-muted"
+                        className="hover:bg-muted flex min-h-11 w-full items-center rounded px-2 py-1.5 text-left text-sm"
                       >
                         <span className="truncate font-medium">{u.username}</span>
                         {u.email && (
-                          <span className="ml-2 truncate text-xs text-muted-foreground">
+                          <span className="text-muted-foreground ml-2 truncate text-xs">
                             {u.email}
                           </span>
                         )}
@@ -195,7 +192,7 @@ export const SkillsHistoryPage: React.FC = () => {
             className="mt-1 min-h-11 w-full sm:w-[220px]"
           />
         </div>
-        <span className="text-sm text-muted-foreground" role="status">
+        <span className="text-muted-foreground text-sm" role="status">
           {data?.count ?? 0} {(data?.count ?? 0) === 1 ? "result" : "results"}
         </span>
         {hasFilters && (
@@ -207,7 +204,7 @@ export const SkillsHistoryPage: React.FC = () => {
 
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
         </div>
       )}
       {!isLoading && historyError && !data && (
@@ -218,8 +215,8 @@ export const SkillsHistoryPage: React.FC = () => {
         />
       )}
       {!isLoading && !historyError && entries.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border p-8 text-center">
-          <p className="text-sm text-muted-foreground">No history yet.</p>
+        <div className="border-border rounded-lg border border-dashed p-8 text-center">
+          <p className="text-muted-foreground text-sm">No history yet.</p>
         </div>
       )}
       {!isLoading && entries.length > 0 && (
@@ -227,27 +224,27 @@ export const SkillsHistoryPage: React.FC = () => {
           {entries.map((entry) => (
             <div
               key={entry.id}
-              className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3"
+              className="border-border bg-card flex flex-wrap items-center gap-3 rounded-lg border p-3"
             >
               <div className="flex items-center gap-2">
                 {entry.old_level !== null && <ProficiencyBadge level={entry.old_level} size="sm" />}
                 {entry.old_level === null && entry.new_level !== null && (
-                  <span className="text-sm text-muted-foreground">Created</span>
+                  <span className="text-muted-foreground text-sm">Created</span>
                 )}
                 <span className="text-muted-foreground">→</span>
                 {entry.new_level !== null && <ProficiencyBadge level={entry.new_level} size="sm" />}
                 {entry.new_level === null && (
-                  <span className="text-sm text-muted-foreground">Removed</span>
+                  <span className="text-muted-foreground text-sm">Removed</span>
                 )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{entry.skill_name ?? "Unknown skill"}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {entry.username ?? "Unknown user"} · by {entry.changed_by_name ?? "system"} ·{" "}
                   {entry.source}
                 </p>
               </div>
-              <span className="shrink-0 text-xs text-muted-foreground">
+              <span className="text-muted-foreground shrink-0 text-xs">
                 {new Date(entry.changed_at).toLocaleDateString()}
               </span>
             </div>
@@ -264,7 +261,7 @@ export const SkillsHistoryPage: React.FC = () => {
           >
             Previous
           </Button>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-muted-foreground text-sm">
             Page {page} of {totalPages}
           </span>
           <Button

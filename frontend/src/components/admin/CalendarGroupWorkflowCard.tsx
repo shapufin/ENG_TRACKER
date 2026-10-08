@@ -16,27 +16,27 @@ export const CalendarGroupWorkflowCard: React.FC<CalendarGroupWorkflowCardProps>
   steps,
 }) => {
   return (
-    <GlassCard isHoverLift={false} className="p-5">
+    <GlassCard className="p-5">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-          <Icon className="h-5 w-5 text-primary" />
+        <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+          <Icon className="text-primary h-5 w-5" />
         </div>
 
         <div>
           <h3 className="text-sm font-semibold">{title}</h3>
 
-          <p className="text-xs text-muted-foreground">{subtitle}</p>
+          <p className="text-muted-foreground text-xs">{subtitle}</p>
         </div>
       </div>
 
       <div className="mt-4 space-y-3">
         {steps.map((step, index) => (
           <div key={step} className="flex gap-3">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+            <div className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
               {index + 1}
             </div>
 
-            <p className="pt-0.5 text-xs text-foreground/80">{step}</p>
+            <p className="text-foreground/80 pt-0.5 text-xs">{step}</p>
           </div>
         ))}
       </div>

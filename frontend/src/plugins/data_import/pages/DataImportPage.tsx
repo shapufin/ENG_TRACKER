@@ -183,12 +183,12 @@ export const DataImportPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="import" className="space-y-6">
-          <GlassCard isHoverLift={false} className="p-4">
+          <GlassCard className="p-4">
             <div className="flex flex-wrap items-center gap-2">
               {STEPS.map((s) => (
                 <div
                   key={s}
-                  className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${
+                  className={`rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap ${
                     state.step === s
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground"

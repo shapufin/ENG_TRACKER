@@ -120,7 +120,7 @@ export const HoursLogsPage = <T extends HoursLog>({
         rejected={stats.rejected}
       />
 
-      <GlassCard isHoverLift={false} className="p-4">
+      <GlassCard className="p-4">
         <FilterBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}

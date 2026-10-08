@@ -63,24 +63,24 @@ export const ControlRoomFilters: React.FC<Props> = ({
   );
 
   return (
-    <GlassCard isHoverLift={false} className="space-y-4 p-4">
+    <GlassCard className="space-y-4 p-4">
       <div className="flex flex-wrap items-center gap-4">
         {isWeekView ? (
-          <p className="text-xs text-muted-foreground">Showing current week (Mon–Sun)</p>
+          <p className="text-muted-foreground text-xs">Showing current week (Mon–Sun)</p>
         ) : (
           <>
             <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted-foreground">From</Label>
+              <Label className="text-muted-foreground text-xs">From</Label>
               <DatePicker value={dateFrom} onChange={onDateFromChange} className="w-[140px]" />
             </div>
             <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted-foreground">To</Label>
+              <Label className="text-muted-foreground text-xs">To</Label>
               <DatePicker value={dateTo} onChange={onDateToChange} className="w-[140px]" />
             </div>
           </>
         )}
         <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground">Teams</Label>
+          <Label className="text-muted-foreground text-xs">Teams</Label>
           <div className="w-[220px]">
             <TeamMultiSelect
               teams={teamOptions}
@@ -91,7 +91,7 @@ export const ControlRoomFilters: React.FC<Props> = ({
           </div>
         </div>
         <div className="relative ml-auto">
-          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="Search people..."
             value={search}
@@ -104,7 +104,7 @@ export const ControlRoomFilters: React.FC<Props> = ({
             variant="ghost"
             size="sm"
             onClick={onClearFilters}
-            className="gap-1.5 text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground gap-1.5"
           >
             <X className="h-4 w-4" />
             Clear

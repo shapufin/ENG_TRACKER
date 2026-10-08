@@ -22,6 +22,6 @@ describe("Data import panel modernization", () => {
       />
     );
 
-    expect(container.querySelector(".shadow-glass")).toBeInTheDocument();
+    expect(container.querySelector(".shadow-card")).toBeInTheDocument();
   });
 });

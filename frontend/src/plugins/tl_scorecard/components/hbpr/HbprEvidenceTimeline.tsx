@@ -77,7 +77,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
       <h2 className="text-foreground text-base font-bold tracking-tight">
         Partnership log · {year}
       </h2>
-      <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+      <GlassCard animateOnMount={false} className="p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div className="w-full sm:max-w-xs">
             <Label htmlFor="hbpr-evidence-leader">Albanian team leader</Label>
@@ -115,7 +115,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <GlassCard animateOnMount={false} isHoverLift={false} className="p-0">
+        <GlassCard animateOnMount={false} className="p-0">
           <EmptyState
             icon={History}
             title={
@@ -143,7 +143,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
                   aria-hidden="true"
                   className={`${KIND_DOT_CLASS[row.kind]} border-background absolute top-6 -left-[1.72rem] h-3 w-3 rounded-full border-2`}
                 />
-                <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+                <GlassCard animateOnMount={false} className="p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">

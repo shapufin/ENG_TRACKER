@@ -60,7 +60,7 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
   return (
     <div
       className={cn(
-        "min-h-screen bg-background font-sans text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground",
+        "bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground min-h-screen font-sans antialiased",
         data.isFullscreen && "fixed inset-0 z-50 overflow-y-auto"
       )}
     >
@@ -80,11 +80,11 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
       />
 
       {isMobile && (
-        <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2">
+        <div className="border-border/60 flex items-center gap-2 border-b px-3 py-2">
           <button
             type="button"
             onClick={() => setMobileSidebarOpen(true)}
-            className="inline-flex h-11 items-center gap-2 rounded-lg border border-border/60 bg-background/50 px-3 text-sm font-medium text-foreground hover:bg-muted"
+            className="border-border/60 bg-background/50 text-foreground hover:bg-muted inline-flex h-11 items-center gap-2 rounded-lg border px-3 text-sm font-medium"
             aria-label="Open filters"
             aria-expanded={mobileSidebarOpen}
             aria-controls="calendar-mobile-sidebar"
@@ -114,12 +114,11 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
           {data.workspaceUsersPartial && (
             <GlassCard
-              isHoverLift={false}
               role="status"
               aria-label="Partial workspace data warning"
               className="border-warning/40 bg-warning/10 px-3 py-2"
             >
-              <div className="text-xs text-foreground">
+              <div className="text-foreground text-xs">
                 Some workspace members could not be loaded. The calendar may be incomplete.
               </div>
             </GlassCard>
@@ -145,16 +144,16 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
           />
           <div
             id="calendar-mobile-sidebar"
-            className="fixed inset-y-0 left-0 z-50 flex w-[280px] max-w-[85vw] flex-col bg-card shadow-xl"
+            className="bg-card fixed inset-y-0 left-0 z-50 flex w-[280px] max-w-[85vw] flex-col shadow-xl"
             role="dialog"
             aria-label="Calendar filters"
           >
-            <div className="flex items-center justify-between border-b border-border/60 p-3">
+            <div className="border-border/60 flex items-center justify-between border-b p-3">
               <h2 className="text-sm font-semibold">Filters</h2>
               <button
                 type="button"
                 onClick={() => setMobileSidebarOpen(false)}
-                className="flex h-11 w-11 items-center justify-center rounded-md hover:bg-accent"
+                className="hover:bg-accent flex h-11 w-11 items-center justify-center rounded-md"
                 aria-label="Close filters"
               >
                 <X className="h-5 w-5" />

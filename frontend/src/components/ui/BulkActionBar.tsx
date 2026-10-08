@@ -41,14 +41,11 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
           variants={bulkBarEnter}
           transition={transition}
         >
-          <GlassCard
-            isHoverLift={false}
-            className="mb-4 overflow-hidden border-l-4 border-l-primary"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2 bg-primary/5 px-4 py-3">
+          <GlassCard className="border-l-primary mb-4 overflow-hidden border-l-4">
+            <div className="bg-primary/5 flex flex-wrap items-center justify-between gap-2 px-4 py-3">
               <div className="flex items-center gap-3">
                 <div
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-linear-to-br from-accent-violet to-primary text-xs font-bold text-primary-foreground shadow-sm shadow-accent-violet/25"
+                  className="from-accent-violet to-primary text-primary-foreground shadow-accent-violet/25 flex h-6 w-6 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold shadow-sm"
                   aria-label={`${selectedCount} selected`}
                 >
                   <span aria-hidden="true">
@@ -76,7 +73,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
                     {action.label}
                   </Button>
                 ))}
-                <div className="mx-1 h-4 w-px bg-border" />
+                <div className="bg-border mx-1 h-4 w-px" />
                 <Button size="sm" variant="ghost" onClick={onClear} className="h-7 px-2 text-xs">
                   <X className="mr-1 h-3.5 w-3.5" />
                   Clear

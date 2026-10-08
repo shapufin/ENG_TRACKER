@@ -42,7 +42,7 @@ const MetaRow: React.FC<{ label: string; value: React.ReactNode }> = ({ label, v
 
 const NamedValue: React.FC<{ name: string }> = ({ name }) => (
   <span className="inline-flex items-center gap-1">
-    <User className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+    <User className="text-muted-foreground h-3.5 w-3.5" aria-hidden="true" />
     {name}
   </span>
 );
@@ -122,9 +122,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           aria-label="Item details"
           className="fixed inset-y-0 right-0 z-40 w-full max-w-xs sm:static sm:z-auto sm:w-72 sm:max-w-none sm:shrink-0"
         >
-          <GlassCard animateOnMount={false} isHoverLift={false} className="h-full overflow-y-auto p-4 sm:h-auto">
+          <GlassCard animateOnMount={false} className="h-full overflow-y-auto p-4 sm:h-auto">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                 Details
               </span>
               <div className="flex gap-1">
@@ -159,15 +159,15 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                 }}
               >
                 {isFolder ? (
-                  <FolderIcon className="h-5 w-5 text-chart-1" aria-hidden="true" />
+                  <FolderIcon className="text-chart-1 h-5 w-5" aria-hidden="true" />
                 ) : (
-                  <FileIcon className="h-5 w-5 text-chart-2" aria-hidden="true" />
+                  <FileIcon className="text-chart-2 h-5 w-5" aria-hidden="true" />
                 )}
               </div>
               <p className="min-w-0 truncate text-sm font-semibold">{name}</p>
             </div>
 
-            <div className="divide-y divide-border/50">
+            <div className="divide-border/50 divide-y">
               {item.kind === "folder" ? (
                 <>
                   <MetaRow
@@ -176,7 +176,13 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   />
                   <MetaRow
                     label="Created by"
-                    value={item.data.created_by_name ? <NamedValue name={item.data.created_by_name} /> : "—"}
+                    value={
+                      item.data.created_by_name ? (
+                        <NamedValue name={item.data.created_by_name} />
+                      ) : (
+                        "—"
+                      )
+                    }
                   />
                   <MetaRow label="Created" value={formatDateTime(item.data.created_at) || "—"} />
                   <LastModifiedRows
@@ -189,7 +195,13 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   <MetaRow label="Size" value={formatBytes(item.data.size_bytes)} />
                   <MetaRow
                     label="Uploaded by"
-                    value={item.data.uploaded_by_name ? <NamedValue name={item.data.uploaded_by_name} /> : "—"}
+                    value={
+                      item.data.uploaded_by_name ? (
+                        <NamedValue name={item.data.uploaded_by_name} />
+                      ) : (
+                        "—"
+                      )
+                    }
                   />
                   <MetaRow label="Uploaded" value={formatDateTime(item.data.created_at) || "—"} />
                   <LastModifiedRows

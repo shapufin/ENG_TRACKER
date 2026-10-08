@@ -84,10 +84,10 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ year, onYearChan
 
   return (
     <div className="space-y-4">
-      <GlassCard isHoverLift={false}>
+      <GlassCard>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <BarChart3 className="h-5 w-5 text-primary" /> Yearly KPI Report
+            <BarChart3 className="text-primary h-5 w-5" /> Yearly KPI Report
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -117,7 +117,7 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ year, onYearChan
                 </Button>
               </div>
               {reportFormat === "csv" && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   CSV includes per-user rows only. Excel includes summary and monthly breakdown.
                 </p>
               )}
@@ -136,11 +136,11 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ year, onYearChan
           <span className="sr-only">Loading report...</span>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-lg border bg-muted/40" />
+              <div key={i} className="bg-muted/40 h-28 animate-pulse rounded-lg border" />
             ))}
           </div>
-          <div className="h-80 animate-pulse rounded-lg border bg-muted/40" />
-          <div className="h-64 animate-pulse rounded-lg border bg-muted/40" />
+          <div className="bg-muted/40 h-80 animate-pulse rounded-lg border" />
+          <div className="bg-muted/40 h-64 animate-pulse rounded-lg border" />
         </div>
       )}
 
@@ -179,7 +179,7 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ year, onYearChan
             gradientId="reportTrendGrad"
           />
 
-          <GlassCard isHoverLift={false}>
+          <GlassCard>
             <CardHeader>
               <CardTitle>Per-User Summary</CardTitle>
             </CardHeader>

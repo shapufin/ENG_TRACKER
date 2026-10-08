@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 220 18% 94%;
+    --background: 220 20% 96.5%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
@@ -19,12 +19,12 @@
     --secondary: 220 18% 95%;
     --secondary-foreground: 222 47% 11%;
     --muted: 220 16% 93%;
-    --muted-foreground: 220 10% 40%;
+    --muted-foreground: 220 10% 36%;
     --accent: 220 16% 92%;
     --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 214 22% 78%;
+    --border: 214 20% 81%;
     --input: 215 16% 58%;
     --ring: 221 83% 53%;
     --radius: 0.625rem;
@@ -37,7 +37,7 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     --card-raised: 0 0% 100%;
-    --surface-sunken: 220 18% 91%;
+    --surface-sunken: 220 20% 94%;
     --line-subtle: 220 18% 90%;
     --table-hover: 220 25% 95%;
     --input-bg: 0 0% 100%;
@@ -84,6 +84,15 @@
     --tone-neutral-surface: 220 14% 95% / 0.6;
     --tone-neutral-border: 220 14% 88%;
     --tone-neutral-text: 220 9% 43%;
+    --control-edge: 214 16% 72%;
+    --control-edge-hover: 214 16% 62%;
+    --field-bg: 220 25% 98.5%;
+    --control-h-sm: 2rem;
+    --control-h: 2.25rem;
+    --control-h-lg: 2.5rem;
+    --control-radius: var(--radius-control);
+    --shadow-card: 0 1px 2px hsl(222 47% 11% / 0.06), 0 1px 3px hsl(222 47% 11% / 0.04);
+    --shadow-pop: 0 8px 24px -6px hsl(222 47% 11% / 0.16), 0 2px 6px hsl(222 47% 11% / 0.08);
   }
 
   .dark {
@@ -164,6 +173,24 @@
     --tone-neutral-surface: 221 33% 14% / 0.6;
     --tone-neutral-border: 219 30% 17%;
     --tone-neutral-text: 220 9% 60%;
+    --control-edge: 219 24% 27%;
+    --control-edge-hover: 219 24% 36%;
+    --field-bg: 221 38% 6.5%;
+    --control-h-sm: 2rem;
+    --control-h: 2.25rem;
+    --control-h-lg: 2.5rem;
+    --control-radius: var(--radius-control);
+    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.4), 0 1px 3px hsl(0 0% 0% / 0.3);
+    --shadow-pop: 0 8px 24px -6px hsl(0 0% 0% / 0.6), 0 2px 6px hsl(0 0% 0% / 0.4);
+  }
+}
+
+@layer base {
+  /* Touch targets: one place decides the larger default control height. */
+  @media (pointer: coarse) {
+    :root {
+      --control-h: 2.75rem;
+    }
   }
 }
 

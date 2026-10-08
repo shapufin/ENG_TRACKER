@@ -56,11 +56,8 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onClearWorkspaceSelection,
   onRequestTimeOff,
 }) => (
-  <header className="pb-3 pt-1.5" aria-label="Calendar controls">
-    <GlassCard
-      isHoverLift={false}
-      className="flex flex-wrap items-center gap-2 border-b-0 p-3 min-[1440px]:flex-nowrap min-[1440px]:justify-between"
-    >
+  <header className="pt-1.5 pb-3" aria-label="Calendar controls">
+    <GlassCard className="flex flex-wrap items-center gap-2 border-b-0 p-3 min-[1440px]:flex-nowrap min-[1440px]:justify-between">
       <WorkspaceSelector className="w-full max-w-xs shrink-0 sm:w-auto sm:max-w-none" />
       <div className="flex shrink-0 items-center gap-1">
         <Button
@@ -95,7 +92,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       <h1 className="w-full shrink-0 text-base font-semibold tracking-tight sm:w-auto 2xl:text-xl">
         {format(currentMonth, "MMMM yyyy")}
       </h1>
-      <div className="hidden basis-full sm:block min-[1440px]:hidden" aria-hidden="true" />
+      <div className="hidden basis-full min-[1440px]:hidden sm:block" aria-hidden="true" />
       <Button
         size="sm"
         variant="default"
@@ -107,7 +104,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       </Button>
 
       <div
-        className="flex shrink-0 rounded-xl border border-border/60 bg-muted/40 p-0.5"
+        className="border-border/60 bg-muted/40 flex shrink-0 rounded-xl border p-0.5"
         role="group"
         aria-label="Calendar view"
       >

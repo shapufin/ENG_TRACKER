@@ -56,7 +56,7 @@ export function ColumnVisibilityMenu<TData extends RowData>({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 gap-2">
+        <Button variant="outline" size="control" className="gap-2">
           <Settings2 className="h-4 w-4" />
           <span className="hidden sm:inline">
             Columns ({visibleCount}/{totalCount})

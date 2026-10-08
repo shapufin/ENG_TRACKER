@@ -86,7 +86,7 @@ export const AdminQuickLinks: React.FC<AdminQuickLinksProps> = ({ isWidgetActive
         <GlassCard
           key={item.to}
           delay={0.3}
-          isHoverLift
+          interactive
           glow={item.color}
           className="group cursor-pointer active:scale-[0.98]"
           onClick={() => navigate(item.to)}

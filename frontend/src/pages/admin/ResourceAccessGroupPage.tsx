@@ -165,11 +165,11 @@ export function ResourceAccessGroupPage() {
     >
       {/* Breadcrumb */}
       <nav
-        className="flex items-center gap-1 text-sm text-muted-foreground"
+        className="text-muted-foreground flex items-center gap-1 text-sm"
         aria-label="Breadcrumb"
       >
         <button
-          className="transition-colors hover:text-foreground"
+          className="hover:text-foreground transition-colors"
           onClick={() => navigate("/admin/resource-access")}
         >
           Resource access
@@ -179,10 +179,10 @@ export function ResourceAccessGroupPage() {
       </nav>
 
       {/* Group header */}
-      <GlassCard className="p-6" isHoverLift={false}>
+      <GlassCard className="p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <div className="bg-primary/10 text-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl">
               <UsersRound className="h-6 w-6" />
             </div>
             <div className="space-y-1">
@@ -196,7 +196,7 @@ export function ResourceAccessGroupPage() {
                 </Badge>
               </div>
               {groupData?.description && (
-                <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                <p className="text-muted-foreground max-w-2xl text-sm leading-6">
                   {groupData.description}
                 </p>
               )}
@@ -216,10 +216,10 @@ export function ResourceAccessGroupPage() {
       </GlassCard>
 
       {/* Member toolbar */}
-      <GlassCard className="p-4" isHoverLift={false}>
+      <GlassCard className="p-4">
         <div className="flex items-center gap-3">
           <div className="relative max-w-md flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
               type="search"
               placeholder="Search members by name or username..."
@@ -232,7 +232,7 @@ export function ResourceAccessGroupPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
+                className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
                 onClick={clearMemberSearch}
                 aria-label="Clear member search"
               >
@@ -240,7 +240,7 @@ export function ResourceAccessGroupPage() {
               </Button>
             )}
           </div>
-          <span className="shrink-0 text-xs text-muted-foreground">
+          <span className="text-muted-foreground shrink-0 text-xs">
             {memberTotal} {memberTotal === 1 ? "member" : "members"}
           </span>
         </div>

@@ -46,6 +46,9 @@ export default {
         "line-subtle": "hsl(var(--line-subtle))",
         "table-hover": "hsl(var(--table-hover))",
         "input-bg": "hsl(var(--input-bg))",
+        "control-edge": "hsl(var(--control-edge))",
+        "control-edge-hover": "hsl(var(--control-edge-hover))",
+        "field-bg": "hsl(var(--field-bg))",
         "border-focus": "hsl(var(--border-focus))",
         focus: "hsl(var(--focus))",
         info: {
@@ -146,6 +149,8 @@ export default {
       },
       boxShadow: {
         glass: "var(--glass-shadow)",
+        card: "var(--shadow-card)",
+        pop: "var(--shadow-pop)",
         "glass-lg": "0 8px 32px -8px rgb(0 0 0 / 0.25)",
       },
       backgroundImage: {

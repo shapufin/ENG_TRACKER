@@ -167,7 +167,6 @@ export const PayrollRunDetailPage: React.FC = () => {
 
       {isDraft && (
         <GlassCard
-          isHoverLift={false}
           role="status"
           aria-label="Payroll closure status"
           className={`mb-6 p-4 ${
@@ -177,10 +176,10 @@ export const PayrollRunDetailPage: React.FC = () => {
           }`}
         >
           {closureStatusLoading && (
-            <p className="text-sm text-muted-foreground">Checking team-leader closure status...</p>
+            <p className="text-muted-foreground text-sm">Checking team-leader closure status...</p>
           )}
           {closureStatusError && (
-            <p className="text-sm text-foreground">
+            <p className="text-foreground text-sm">
               Team-leader closure status is unavailable. Finalization readiness could not be
               verified.
             </p>
@@ -197,12 +196,12 @@ export const PayrollRunDetailPage: React.FC = () => {
                 >
                   {closureStatus.all_closed ? "All TL scopes closed" : "TL scopes unclosed"}
                 </Badge>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-muted-foreground text-sm">
                   {closureStatus.closed_users} of {closureStatus.total_users} users closed
                 </span>
               </div>
               {!closureStatus.all_closed && closureStatus.unclosed_users.length > 0 && (
-                <p className="mt-2 text-sm text-foreground">
+                <p className="text-foreground mt-2 text-sm">
                   Unclosed users:{" "}
                   {closureStatus.unclosed_users.map((user) => user.username).join(", ")}
                 </p>

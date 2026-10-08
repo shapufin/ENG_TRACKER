@@ -25,6 +25,6 @@ describe("TargetPicker modernization", () => {
       />
     );
 
-    expect(container.querySelector(".shadow-glass")).toBeInTheDocument();
+    expect(container.querySelector(".shadow-card")).toBeInTheDocument();
   });
 });

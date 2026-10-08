@@ -49,10 +49,10 @@ export const HRReportFilters: React.FC<HRReportFiltersProps> = ({
   onGenerate,
 }) => {
   return (
-    <GlassCard isHoverLift={false} className="p-4">
+    <GlassCard className="p-4">
       <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-12">
         <div className="space-y-2 lg:col-span-3">
-          <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
             <Calendar className="h-3 w-3" /> Date Range
           </Label>
           <DateRangePicker
@@ -117,7 +117,7 @@ export const HRReportFilters: React.FC<HRReportFiltersProps> = ({
         </div>
         <div className="lg:col-span-1">
           <Button
-            className="w-full whitespace-nowrap px-2 shadow-lg shadow-primary/20"
+            className="shadow-primary/20 w-full px-2 whitespace-nowrap shadow-lg"
             onClick={onGenerate}
             disabled={isLoading}
           >

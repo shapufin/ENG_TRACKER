@@ -150,7 +150,7 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
   }
 
   return (
-    <GlassCard animateOnMount={false} isHoverLift={false} className="overflow-hidden p-0">
+    <GlassCard animateOnMount={false} className="overflow-hidden p-0">
       <div className="border-line-subtle flex items-center justify-between gap-3 border-b px-5 py-3.5">
         <h2 className="text-foreground flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
           {config.label} Records

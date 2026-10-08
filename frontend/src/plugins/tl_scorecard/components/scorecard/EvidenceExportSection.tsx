@@ -21,7 +21,7 @@ export const EvidenceExportSection: React.FC<EvidenceExportSectionProps> = ({
     <h2 id="tl-evidence-export" className="text-muted-foreground text-sm font-semibold">
       Report export
     </h2>
-    <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
+    <GlassCard animateOnMount={false} className="p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-2 font-medium">

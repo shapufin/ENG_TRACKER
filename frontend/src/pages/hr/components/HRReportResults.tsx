@@ -79,7 +79,7 @@ export const HRReportResults: React.FC<HRReportResultsProps> = ({
 }) => {
   if (!hasGenerated) {
     return (
-      <GlassCard isHoverLift={false}>
+      <GlassCard>
         <EmptyState
           icon={TrendingUp}
           title="HR Strategic Analysis"
@@ -97,20 +97,20 @@ export const HRReportResults: React.FC<HRReportResultsProps> = ({
           {[0, 1, 2].map((i) => (
             <GlassCard key={i} delay={i * 0.05}>
               <div className="p-4">
-                <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-                <div className="mt-3 h-8 w-16 animate-pulse rounded bg-muted" />
+                <div className="bg-muted h-4 w-24 animate-pulse rounded" />
+                <div className="bg-muted mt-3 h-8 w-16 animate-pulse rounded" />
               </div>
             </GlassCard>
           ))}
         </div>
         {/* Skeleton table */}
         <GlassCard className="overflow-hidden p-0">
-          <div className="border-b bg-muted/20 p-4">
-            <div className="h-5 w-48 animate-pulse rounded bg-muted" />
+          <div className="bg-muted/20 border-b p-4">
+            <div className="bg-muted h-5 w-48 animate-pulse rounded" />
           </div>
           <div className="space-y-3 p-6">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-10 w-full animate-pulse rounded bg-muted/60" />
+              <div key={i} className="bg-muted/60 h-10 w-full animate-pulse rounded" />
             ))}
           </div>
         </GlassCard>

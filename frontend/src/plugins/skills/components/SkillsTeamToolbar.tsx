@@ -26,15 +26,15 @@ export const SkillsTeamToolbar: React.FC<SkillsTeamToolbarProps> = ({
   visibleSkillIds,
   onVisibleSkillIdsChange,
 }) => (
-  <GlassCard isHoverLift={false} className="p-3">
+  <GlassCard className="p-3">
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
             View
           </span>
           <div
-            className="flex flex-wrap rounded-xl border border-border bg-muted/30 p-1 shadow-inner"
+            className="border-border bg-muted/30 flex flex-wrap rounded-xl border p-1 shadow-inner"
             role="group"
             aria-label="Skills view"
           >

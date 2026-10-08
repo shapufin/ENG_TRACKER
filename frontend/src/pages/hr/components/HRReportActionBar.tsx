@@ -80,12 +80,12 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
           : "Approved Overtime and Standby records with per-Italian TL sheet separation.";
 
   return (
-    <GlassCard isHoverLift={false} className="flex flex-col justify-center gap-1.5 p-3">
+    <GlassCard className="flex flex-col justify-center gap-1.5 p-3">
       <Button
         variant="outline"
         size="sm"
         onClick={() => openExport("ot-standby", "approved")}
-        className="w-full justify-start gap-2 border-primary/50 text-foreground hover:bg-primary/10"
+        className="border-primary/50 text-foreground hover:bg-primary/10 w-full justify-start gap-2"
       >
         <FileSpreadsheet className="h-4 w-4" /> Export by Work Date
       </Button>
@@ -121,7 +121,7 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
           <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               Using current filter settings:
               <ul className="mt-2 list-inside list-disc space-y-1">
                 <li>

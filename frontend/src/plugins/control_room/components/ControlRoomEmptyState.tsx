@@ -46,7 +46,7 @@ const config: Record<EmptyReason, { icon: LucideIcon; title: string; message: st
 export const ControlRoomEmptyState: React.FC<Props> = ({ reason }) => {
   const { icon, title, message } = config[reason];
   return (
-    <GlassCard isHoverLift={false}>
+    <GlassCard>
       <EmptyState icon={icon} title={title} description={message} />
     </GlassCard>
   );

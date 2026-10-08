@@ -64,11 +64,11 @@ const AccessTableSkeleton: React.FC = () => (
   <div className="space-y-3" aria-label="Loading access records">
     {Array.from({ length: 5 }, (_, index) => (
       <div key={index} className="flex animate-pulse items-center gap-4 rounded-lg border p-4">
-        <div className="h-4 w-4 rounded bg-muted" />
-        <div className="h-4 w-1/4 rounded bg-muted" />
-        <div className="h-4 w-2/5 rounded bg-muted" />
-        <div className="h-4 w-16 rounded bg-muted" />
-        <div className="ml-auto h-4 w-20 rounded bg-muted" />
+        <div className="bg-muted h-4 w-4 rounded" />
+        <div className="bg-muted h-4 w-1/4 rounded" />
+        <div className="bg-muted h-4 w-2/5 rounded" />
+        <div className="bg-muted h-4 w-16 rounded" />
+        <div className="bg-muted ml-auto h-4 w-20 rounded" />
       </div>
     ))}
   </div>
@@ -154,7 +154,7 @@ export const ControlRoomAccessPage: React.FC = () => {
                 )}
               </div>
               <div
-                className="truncate text-xs text-muted-foreground"
+                className="text-muted-foreground truncate text-xs"
                 title={access.email || `@${access.username}`}
               >
                 {access.email || `@${access.username}`}
@@ -184,7 +184,7 @@ export const ControlRoomAccessPage: React.FC = () => {
         accessorKey: "created_at",
         header: "Added",
         cell: ({ row }) => (
-          <div className="whitespace-nowrap text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs whitespace-nowrap">
             {formatDateDDMMYYYY(row.original.created_at)}
             {row.original.created_by_name && <div>by {row.original.created_by_name}</div>}
           </div>
@@ -222,14 +222,14 @@ export const ControlRoomAccessPage: React.FC = () => {
                 {access.is_active ? (
                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
                 ) : (
-                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  <Shield className="text-muted-foreground h-4 w-4" />
                 )}
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
+                className="text-destructive hover:text-destructive h-8 w-8"
                 onClick={() => state.setRevokeAccess(access)}
                 disabled={state.deleteMutation.isPending}
                 aria-label={`Revoke ${access.username}`}
@@ -264,14 +264,13 @@ export const ControlRoomAccessPage: React.FC = () => {
     >
       <div className="space-y-6">
         <GlassCard
-          isHoverLift={false}
           role="status"
           aria-label="Control Room visibility warning"
           className="border-warning/40 bg-warning/10 p-4"
         >
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-            <div className="text-sm text-foreground">
+            <AlertTriangle className="text-warning mt-0.5 h-5 w-5 shrink-0" />
+            <div className="text-foreground text-sm">
               <strong className="font-semibold">Visibility is always explicit.</strong> A non-admin
               with no assigned teams sees no standby data. Staff and admins retain global access.
             </div>
@@ -281,9 +280,9 @@ export const ControlRoomAccessPage: React.FC = () => {
         {state.teamsError && (
           <div
             role="alert"
-            className="flex flex-col items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+            className="border-destructive/30 bg-destructive/5 flex flex-col items-start gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
           >
-            <p className="text-sm text-destructive">
+            <p className="text-destructive text-sm">
               Teams could not be loaded. Team visibility selectors may be incomplete.
             </p>
             <Button type="button" variant="outline" size="sm" onClick={() => state.retryTeams()}>
@@ -311,11 +310,11 @@ export const ControlRoomAccessPage: React.FC = () => {
           <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Access records</h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Select records to update together. Edit a user to manage profile details and scope.
               </p>
             </div>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {state.isLoading
                 ? "Loading records…"
                 : `${state.accessList.length} record${state.accessList.length === 1 ? "" : "s"}`}
@@ -326,9 +325,9 @@ export const ControlRoomAccessPage: React.FC = () => {
           ) : state.isError ? (
             <div
               role="alert"
-              className="flex flex-col items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="border-destructive/30 bg-destructive/5 flex flex-col items-start gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
             >
-              <p className="text-sm text-destructive">
+              <p className="text-destructive text-sm">
                 {extractApiErrorMessage(state.accessError, "Unable to load access records.")}
               </p>
               <Button type="button" variant="outline" size="sm" onClick={() => state.retryAccess()}>

@@ -70,7 +70,7 @@ export const TicketKPITeamPage: React.FC = () => {
   if (summaryLoading && !teamSummary && activeTab === "monthly") {
     return (
       <PageShell title="Team KPI">
-        <div className="flex h-96 items-center justify-center text-muted-foreground">
+        <div className="text-muted-foreground flex h-96 items-center justify-center">
           Loading...
         </div>
       </PageShell>
@@ -104,7 +104,7 @@ export const TicketKPITeamPage: React.FC = () => {
         <TabsContent value="monthly" className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-3">
-              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <Calendar className="text-muted-foreground h-5 w-5" />
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue />
@@ -161,7 +161,7 @@ export const TicketKPITeamPage: React.FC = () => {
             gradientId="teamTicketsGrad"
           />
 
-          <GlassCard isHoverLift={false}>
+          <GlassCard>
             <CardHeader>
               <CardTitle>Member Breakdown</CardTitle>
             </CardHeader>
@@ -180,7 +180,7 @@ export const TicketKPITeamPage: React.FC = () => {
         <TabsContent value="yearly" className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-3">
-              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <Calendar className="text-muted-foreground h-5 w-5" />
               <Select
                 value={String(selectedYear)}
                 onValueChange={(v) => setSelectedYear(Number(v))}

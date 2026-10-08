@@ -98,26 +98,26 @@ const DayDetailPopover: React.FC<{
 
   return (
     <div className="w-72">
-      <div className="mb-2 border-b border-border/40 pb-2">
+      <div className="border-border/40 mb-2 border-b pb-2">
         <p className="text-sm font-semibold">{format(day, "EEEE, MMM d")}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           {rows.length} {rows.length === 1 ? "person" : "people"} on standby
         </p>
       </div>
       <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
         {sorted.map((row) => (
-          <div key={row.id} className="rounded-lg border border-border/30 bg-muted/30 p-2">
+          <div key={row.id} className="border-border/30 bg-muted/30 rounded-lg border p-2">
             <div className="flex items-center gap-2">
               <span className="truncate text-sm font-medium">{row.user_name}</span>
               {row.is_overnight && <OvernightIcon />}
             </div>
             <TeamChipList teamNames={row.team_names} className="mt-1" />
             {(row.tech_levels?.length ?? 0) > 0 && (
-              <p className="mt-1 truncate text-micro text-muted-foreground">
+              <p className="text-micro text-muted-foreground mt-1 truncate">
                 {row.tech_levels!.join(" · ")}
               </p>
             )}
-            <div className="mt-1 text-xs tabular-nums text-muted-foreground">
+            <div className="text-muted-foreground mt-1 text-xs tabular-nums">
               {formatTime(row.start_time)} – {formatTime(row.end_time)}
             </div>
           </div>
@@ -146,10 +146,10 @@ const DayCell: React.FC<{
     <div
       className={cn(
         "min-h-[88px] rounded-lg border p-1.5 text-left transition-colors",
-        inMonth ? "border-border/50 bg-card/40" : "border-transparent bg-muted/10",
+        inMonth ? "border-border/50 bg-card/40" : "bg-muted/10 border-transparent",
         today && "border-primary/60 bg-primary/5",
         hasPeople && "border-primary/30 bg-primary/5",
-        hasPeople && "cursor-pointer hover:border-primary/50 hover:bg-primary/10"
+        hasPeople && "hover:border-primary/50 hover:bg-primary/10 cursor-pointer"
       )}
     >
       <div className="mb-1 flex items-center justify-between">
@@ -163,7 +163,7 @@ const DayCell: React.FC<{
           {format(day, "d")}
         </span>
         {hasPeople && (
-          <span className="text-[10px] font-medium tabular-nums text-muted-foreground">
+          <span className="text-muted-foreground text-[10px] font-medium tabular-nums">
             {sortedRows.length}
           </span>
         )}
@@ -173,7 +173,7 @@ const DayCell: React.FC<{
           {visible.map((row) => (
             <div
               key={row.id}
-              className="flex items-center gap-0.5 rounded bg-background/80 px-1 py-0.5 text-[9px] font-medium leading-none"
+              className="bg-background/80 flex items-center gap-0.5 rounded px-1 py-0.5 text-[9px] leading-none font-medium"
               title={row.user_name}
             >
               {row.team_names[0] && (
@@ -189,7 +189,7 @@ const DayCell: React.FC<{
             </div>
           ))}
           {overflow > 0 && (
-            <span className="flex items-center rounded bg-muted px-1 py-0.5 text-[9px] font-medium leading-none text-muted-foreground">
+            <span className="bg-muted text-muted-foreground flex items-center rounded px-1 py-0.5 text-[9px] leading-none font-medium">
               +{overflow}
             </span>
           )}
@@ -220,13 +220,13 @@ const MonthBlock: React.FC<{
   grid: MonthGrid;
   rowsByDate: Map<string, ControlRoomRosterRow[]>;
 }> = ({ grid, rowsByDate }) => (
-  <GlassCard isHoverLift={false} className="p-4 md:p-5">
-    <h3 className="mb-3 text-sm font-semibold text-muted-foreground">{grid.monthLabel}</h3>
+  <GlassCard className="p-4 md:p-5">
+    <h3 className="text-muted-foreground mb-3 text-sm font-semibold">{grid.monthLabel}</h3>
     <div className="mb-1 grid grid-cols-7 gap-1">
       {WEEKDAYS.map((day) => (
         <div
           key={day}
-          className="text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+          className="text-muted-foreground text-center text-[10px] font-medium tracking-wide uppercase"
         >
           {day}
         </div>
@@ -256,7 +256,7 @@ export const CRByDayView: React.FC<Props> = ({ roster }) => {
   if (grids.length === 0) {
     return (
       <GlassCard delay={0}>
-        <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+        <div className="text-muted-foreground flex h-40 items-center justify-center text-sm">
           No standby scheduled in this range.
         </div>
       </GlassCard>
