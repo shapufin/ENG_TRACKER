@@ -1,4 +1,8 @@
-import { defaultAdminLayout } from "@/components/dashboard/widgetRegistry";
+import {
+  defaultAdminLayout,
+  type StoredDashboardLayout,
+} from "@/components/dashboard/widgetRegistry";
+import { AVAILABLE_WIDGETS } from "@/config/dashboardWidgets";
 
 export interface DashboardPreset {
   id: string;
@@ -16,43 +20,20 @@ export const DASHBOARD_PRESETS: DashboardPreset[] = [
   {
     id: "approver",
     label: "Approver view",
-    description: "Pending queue, aging, approver speed and rejections",
-    widgetIds: [
-      "pending-approvals",
-      "pending-backlog",
-      "approval-aging",
-      "approver-sla",
-      "rejection-analysis",
-      "period-close",
-      "approval-status",
-    ],
+    description: "Approval queue, rejections and period close",
+    widgetIds: ["approval-queue", "rejection-analysis", "period-close"],
   },
   {
     id: "workforce",
     label: "Workforce view",
-    description: "Headcount, coverage gaps, roles and tech",
-    widgetIds: [
-      "total-users",
-      "total-teams",
-      "org-headcount",
-      "coverage-gaps",
-      "role-distribution",
-      "tech-distribution",
-    ],
+    description: "Key figures, coverage gaps and people mix",
+    widgetIds: ["kpi-strip", "coverage-gaps", "people-mix"],
   },
   {
     id: "trends",
     label: "Trends view",
     description: "Hours, leave, clients, teams and who is out",
-    widgetIds: [
-      "overtime-hours",
-      "hours-overview",
-      "ot-standby-trend",
-      "leave-trend",
-      "ot-by-client",
-      "team-comparison",
-      "who-is-out",
-    ],
+    widgetIds: ["hours-trend", "leave-trend", "ot-by-client", "team-comparison", "who-is-out"],
   },
   {
     id: "default",
@@ -75,14 +56,25 @@ export function resolvePresetWidgets(
   });
 }
 
-/** Four-column grid layout in the stored format, one cell per widget in order. */
-export function presetLayout(widgetIds: string[]) {
-  return {
-    columns: 4,
-    widgets: widgetIds.map((id, i) => ({
-      id,
-      position: { x: i % 4, y: Math.floor(i / 4) },
-      size: { w: 1, h: 1 },
-    })),
-  };
+/**
+ * 12-column layout in the stored format: widgets keep the given order and are packed
+ * left to right at their default size, wrapping to a new row when the next one won't fit.
+ */
+export function presetLayout(widgetIds: string[]): StoredDashboardLayout {
+  let x = 0;
+  let y = 0;
+  let rowHeight = 0;
+  const widgets = widgetIds.map((id) => {
+    const { w, h } = AVAILABLE_WIDGETS.find((c) => c.id === id)?.defaultSize ?? { w: 4, h: 4 };
+    if (x + w > 12) {
+      x = 0;
+      y += rowHeight;
+      rowHeight = 0;
+    }
+    const placed = { id, position: { x, y }, size: { w, h } };
+    x += w;
+    rowHeight = Math.max(rowHeight, h);
+    return placed;
+  });
+  return { version: 2, columns: 12, widgets };
 }

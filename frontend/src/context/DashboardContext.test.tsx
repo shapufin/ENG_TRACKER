@@ -36,8 +36,41 @@ describe("DashboardProvider layout restore", () => {
         <Probe />
       </DashboardProvider>
     );
+    // A legacy (4-column, unversioned) admin layout is migrated to the merged widgets.
+    await waitFor(() => expect(screen.getByTestId("ids")).toHaveTextContent("kpi-strip"));
+    expect(screen.getByTestId("ids").textContent).toBe("kpi-strip");
+  });
+
+  it("keeps a version-2 admin layout as saved", async () => {
+    const v2 = {
+      version: 2,
+      columns: 12,
+      widgets: [{ id: "who-is-out", position: { x: 3, y: 4 }, size: { w: 6, h: 5 } }],
+    };
+    vi.mocked(dashboardService.getDashboardLayout).mockResolvedValue({
+      count: 1,
+      results: [{ id: 1, dashboard_type: "admin", layout: v2 }],
+    });
+    render(
+      <DashboardProvider dashboardType="admin">
+        <Probe />
+      </DashboardProvider>
+    );
+    await waitFor(() => expect(screen.getByTestId("ids")).toHaveTextContent("who-is-out"));
+    expect(dashboardService.saveDashboardLayout).not.toHaveBeenCalled();
+  });
+
+  it("does not migrate the layout of a non-admin dashboard", async () => {
+    vi.mocked(dashboardService.getDashboardLayout).mockResolvedValue({
+      count: 1,
+      results: [{ id: 1, dashboard_type: "employee", layout: saved }],
+    });
+    render(
+      <DashboardProvider dashboardType="employee">
+        <Probe />
+      </DashboardProvider>
+    );
     await waitFor(() => expect(screen.getByTestId("ids")).toHaveTextContent("org-headcount"));
-    expect(screen.getByTestId("ids").textContent).toBe("org-headcount");
   });
 
   it("falls back to the default layout when nothing is saved", async () => {
@@ -48,7 +81,7 @@ describe("DashboardProvider layout restore", () => {
       </DashboardProvider>
     );
     await waitFor(() => expect(screen.getByTestId("ids")).not.toHaveTextContent("loading"));
-    expect(screen.getByTestId("ids").textContent).toContain("total-users");
+    expect(screen.getByTestId("ids").textContent).toContain("kpi-strip");
   });
 });
 

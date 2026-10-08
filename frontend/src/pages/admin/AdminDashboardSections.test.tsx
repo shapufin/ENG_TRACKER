@@ -24,8 +24,8 @@ vi.mock("./components/AdminDashboardWidgets", () => ({
     widgetProbe(props.isWidgetActive);
     return (
       <div>
-        <span>{props.isWidgetActive("total-users") ? "users-on" : "users-off"}</span>
-        <span>{props.isWidgetActive("pending-backlog") ? "backlog-on" : "backlog-off"}</span>
+        <span>{props.isWidgetActive("kpi-strip") ? "kpi-on" : "kpi-off"}</span>
+        <span>{props.isWidgetActive("approval-queue") ? "queue-on" : "queue-off"}</span>
         <span>{props.isWidgetActive("removed-widget") ? "ghost-on" : "ghost-off"}</span>
       </div>
     );
@@ -38,7 +38,7 @@ vi.mock("./hooks/useAdminDashboardPage", () => ({
     setCustomizeModalOpen: vi.fn(),
     isWidgetActive: () => true,
     handleToggleWidget: mutate.handleToggleWidget,
-    activeWidgetIds: ["total-users", "pending-backlog", "removed-widget"],
+    activeWidgetIds: ["kpi-strip", "approval-queue", "removed-widget"],
   }),
 }));
 
@@ -62,19 +62,19 @@ beforeEach(() => {
 describe("admin dashboard section tabs", () => {
   it("shows every active widget on All", () => {
     renderAt("/admin");
-    expect(screen.getByText("users-on")).toBeInTheDocument();
-    expect(screen.getByText("backlog-on")).toBeInTheDocument();
+    expect(screen.getByText("kpi-on")).toBeInTheDocument();
+    expect(screen.getByText("queue-on")).toBeInTheDocument();
   });
 
   it("filters to the section named in ?section=", () => {
     renderAt("/admin?section=approvals");
-    expect(screen.getByText("users-off")).toBeInTheDocument();
-    expect(screen.getByText("backlog-on")).toBeInTheDocument();
+    expect(screen.getByText("kpi-off")).toBeInTheDocument();
+    expect(screen.getByText("queue-on")).toBeInTheDocument();
   });
 
   it("falls back to All for an unknown section", () => {
     renderAt("/admin?section=nonsense");
-    expect(screen.getByText("users-on")).toBeInTheDocument();
+    expect(screen.getByText("kpi-on")).toBeInTheDocument();
   });
 
   it("writes ?section= when a tab is chosen and keeps other params", () => {

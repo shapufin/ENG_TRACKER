@@ -1,10 +1,9 @@
 import React from "react";
 import { PEOPLE_WIDGET_IDS } from "@/config/dashboardWidgets";
 import { useAdminPeople } from "@/hooks/useAdminDashboardQueries";
-import { ApproverSlaWidget } from "./ApproverSlaWidget";
+import { GridCell } from "../dashboard-grid/GridCell";
+import { PeopleMixWidget } from "./PeopleMixWidget";
 import { RejectionAnalysisWidget } from "./RejectionAnalysisWidget";
-import { RoleDistributionWidget } from "./RoleDistributionWidget";
-import { TechDistributionWidget } from "./TechDistributionWidget";
 
 interface PeopleSectionProps {
   isWidgetActive: (id: string) => boolean;
@@ -19,12 +18,18 @@ const Fetching: React.FC<PeopleSectionProps> = ({ isWidgetActive }) => {
     onRetry: () => void q.refetch(),
   };
   return (
-    <div className="grid gap-4 lg:grid-cols-4">
-      {isWidgetActive("role-distribution") && <RoleDistributionWidget {...props} />}
-      {isWidgetActive("tech-distribution") && <TechDistributionWidget {...props} />}
-      {isWidgetActive("rejection-analysis") && <RejectionAnalysisWidget {...props} />}
-      {isWidgetActive("approver-sla") && <ApproverSlaWidget {...props} />}
-    </div>
+    <>
+      {isWidgetActive("people-mix") && (
+        <GridCell id="people-mix">
+          <PeopleMixWidget {...props} />
+        </GridCell>
+      )}
+      {isWidgetActive("rejection-analysis") && (
+        <GridCell id="rejection-analysis">
+          <RejectionAnalysisWidget {...props} />
+        </GridCell>
+      )}
+    </>
   );
 };
 

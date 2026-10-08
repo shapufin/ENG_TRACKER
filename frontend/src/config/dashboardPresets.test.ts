@@ -43,11 +43,41 @@ describe("resolvePresetWidgets", () => {
 });
 
 describe("presetLayout", () => {
-  it("lays widgets out in a 4-column grid in order", () => {
-    const layout = presetLayout(["a", "b", "c", "d", "e"]);
-    expect(layout.columns).toBe(4);
-    expect(layout.widgets.map((w) => w.id)).toEqual(["a", "b", "c", "d", "e"]);
-    expect(layout.widgets[4].position).toEqual({ x: 0, y: 1 });
-    expect(layout.widgets[1].size).toEqual({ w: 1, h: 1 });
+  it("packs widgets left to right at their default size and wraps rows", () => {
+    const layout = presetLayout(["coverage-gaps", "people-mix", "period-close", "approval-queue"]);
+    expect(layout.version).toBe(2);
+    expect(layout.columns).toBe(12);
+    expect(layout.widgets.map((w) => w.id)).toEqual([
+      "coverage-gaps",
+      "people-mix",
+      "period-close",
+      "approval-queue",
+    ]);
+    // 4 + 4 + 4 fills the first row; the 6-wide queue starts the next, below the tallest (5).
+    expect(layout.widgets[2].position).toEqual({ x: 8, y: 0 });
+    expect(layout.widgets[3].position).toEqual({ x: 0, y: 5 });
+    expect(layout.widgets[3].size).toEqual({ w: 6, h: 5 });
+  });
+
+  it("falls back to a 4x4 cell for an unknown id", () => {
+    expect(presetLayout(["mystery"]).widgets[0].size).toEqual({ w: 4, h: 4 });
+  });
+
+  it("every preset lays out without overlap or overflow", () => {
+    for (const p of DASHBOARD_PRESETS) {
+      const { widgets } = presetLayout(p.widgetIds);
+      for (const w of widgets) expect(w.position.x + w.size.w).toBeLessThanOrEqual(12);
+      for (const a of widgets) {
+        for (const b of widgets) {
+          if (a === b) continue;
+          const apart =
+            a.position.x + a.size.w <= b.position.x ||
+            b.position.x + b.size.w <= a.position.x ||
+            a.position.y + a.size.h <= b.position.y ||
+            b.position.y + b.size.h <= a.position.y;
+          expect(apart, `${p.id}: ${a.id} vs ${b.id}`).toBe(true);
+        }
+      }
+    }
   });
 });

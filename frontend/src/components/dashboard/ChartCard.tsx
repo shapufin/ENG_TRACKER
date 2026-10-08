@@ -28,7 +28,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
       data-chart-section={sectionId}
       className={cn("flex flex-col overflow-hidden", className)}
     >
-      <div className="border-line-subtle flex items-center justify-between gap-2 border-b px-4 py-3">
+      <div className="border-line-subtle flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
         <div>
           <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
           {description && <p className="text-muted-foreground mt-0.5 text-xs">{description}</p>}

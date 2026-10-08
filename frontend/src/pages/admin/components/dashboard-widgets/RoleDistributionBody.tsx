@@ -1,10 +1,10 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { toneSurfaceClass } from "@/components/ui/tone";
-import { WidgetFrame } from "./WidgetFrame";
+import { WidgetBody } from "./WidgetBody";
 import type { PeopleWidgetProps } from "./trendTypes";
 
-export const RoleDistributionWidget: React.FC<PeopleWidgetProps> = ({
+export const RoleDistributionBody: React.FC<PeopleWidgetProps> = ({
   data,
   isLoading,
   isError,
@@ -23,15 +23,16 @@ export const RoleDistributionWidget: React.FC<PeopleWidgetProps> = ({
       ]
     : [];
   return (
-    <WidgetFrame
-      sectionId="role-distribution"
-      title="Role Distribution"
-      description="Active users by role; a person can hold several"
+    <WidgetBody
+      title="Role distribution"
       isLoading={isLoading}
       isError={isError}
       onRetry={onRetry}
       empty={null}
     >
+      <p className="text-muted-foreground mb-2 text-xs">
+        Active users by role; a person can hold several
+      </p>
       <ul className="space-y-1.5 text-xs">
         {rows.map(([label, n, warn]) => (
           <li
@@ -46,6 +47,6 @@ export const RoleDistributionWidget: React.FC<PeopleWidgetProps> = ({
           </li>
         ))}
       </ul>
-    </WidgetFrame>
+    </WidgetBody>
   );
 };

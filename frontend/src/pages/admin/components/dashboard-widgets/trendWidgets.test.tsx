@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { OtStandbyTrendWidget } from "./OtStandbyTrendWidget";
+import { OtStandbyTrendBody } from "./OtStandbyTrendBody";
 import { LeaveTrendWidget } from "./LeaveTrendWidget";
 import { OtByClientWidget } from "./OtByClientWidget";
 import { TeamComparisonWidget } from "./TeamComparisonWidget";
@@ -18,7 +18,7 @@ vi.mock("recharts", async () => {
 });
 
 const widgets = [
-  ["OtStandbyTrendWidget", OtStandbyTrendWidget],
+  ["OtStandbyTrendBody", OtStandbyTrendBody],
   ["LeaveTrendWidget", LeaveTrendWidget],
   ["OtByClientWidget", OtByClientWidget],
   ["TeamComparisonWidget", TeamComparisonWidget],
@@ -39,9 +39,9 @@ describe.each(widgets)("%s shared states", (_name, Widget) => {
   });
 });
 
-describe("OtStandbyTrendWidget", () => {
+describe("OtStandbyTrendBody", () => {
   it("summarises the latest month for assistive tech", () => {
-    render(<OtStandbyTrendWidget data={makeTrends()} />);
+    render(<OtStandbyTrendBody data={makeTrends()} />);
     expect(
       screen.getByRole("img", { name: /latest month: 12\.5 hours overtime, 16 hours standby/i })
     ).toBeInTheDocument();
@@ -50,7 +50,7 @@ describe("OtStandbyTrendWidget", () => {
   it("shows an empty state when every month is zero", () => {
     const zero = Array(12).fill(0);
     render(
-      <OtStandbyTrendWidget
+      <OtStandbyTrendBody
         data={makeTrends({ hours: { overtime: zero, standby: zero, pending_overtime: zero } })}
       />
     );

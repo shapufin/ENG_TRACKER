@@ -16,10 +16,11 @@ import { DashboardActionsMenu } from "./components/DashboardActionsMenu";
 import { presetLayout } from "@/config/dashboardPresets";
 import { AdminDashboardFreshness } from "./components/AdminDashboardFreshness";
 import { useAdminDashboardPage } from "./hooks/useAdminDashboardPage";
+import { sortedWidgetIds } from "./components/dashboard-grid/gridLayout";
 
 const AdminDashboardContent: React.FC = () => {
   const { isSuperuser } = usePermissions();
-  const { updateLayout } = useDashboard();
+  const { layout, updateLayout } = useDashboard();
   const widgetsRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get("section");
@@ -97,6 +98,7 @@ const AdminDashboardContent: React.FC = () => {
           statsLoading={statsLoading}
           auditLogsLoading={auditLogsLoading}
           isSuperuser={isSuperuser}
+          order={sortedWidgetIds(layout)}
         />
       </div>
       <CustomizeDashboardModal

@@ -1,4 +1,4 @@
-import type { AdminPeople, AdminTrends } from "@/types";
+import type { AdminOverview, AdminPeople, AdminTrends } from "@/types";
 
 const zeros = () => Array(12).fill(0) as number[];
 
@@ -94,6 +94,62 @@ export const makePeople = (over: Partial<AdminPeople> = {}): AdminPeople => ({
     month: "2026-10",
     by_type: { overtime: 2, standby: 0, leave: 1 },
     top_reasons: [{ reason: "missing ticket", count: 2 }],
+  },
+  ...over,
+});
+
+/** Test fixture: a plausible overview payload. */
+export const makeOverview = (over: Partial<AdminOverview> = {}): AdminOverview => ({
+  headcount: {
+    total_users: 40,
+    active_users: 36,
+    inactive_users: 4,
+    new_hires_30d: 3,
+    never_logged_in: 5,
+  },
+  coverage_gaps: {
+    teams_without_leader: 2,
+    users_without_team: 1,
+    users_without_tech: 0,
+    employees_without_tl: 3,
+    al_tls_without_hbpr_assignment: 1,
+  },
+  pending_backlog: {
+    overtime: { count: 4, hours: 12.5 },
+    standby: { count: 2, hours: 16 },
+    leave: { count: 3, days: 9 },
+  },
+  approval_aging: {
+    buckets: ["0-3d", "4-7d", "8-14d", "15d+"],
+    overtime: [1, 1, 1, 1],
+    standby: [0, 0, 0, 2],
+    leave: [1, 1, 1, 0],
+  },
+  leave_utilization: {
+    year: 2026,
+    total_days: 200,
+    used_days: 50,
+    pending_days: 10,
+    available_days: 140,
+    utilization_pct: 25,
+  },
+  carryover_expiry: { window_days: 60, days_at_risk: 11.5, users_affected: 4 },
+  period_close: {
+    period: "2026-09",
+    tls_total: 6,
+    tls_closed: 4,
+    tls_open: 2,
+    open_tls: [
+      { id: 1, name: "Ana TL" },
+      { id: 2, name: "Beni TL" },
+    ],
+  },
+  backup: {
+    count: 3,
+    last_created_at: "2026-09-20T10:00:00Z",
+    age_hours: 400,
+    size_mb: 12.5,
+    stale: true,
   },
   ...over,
 });

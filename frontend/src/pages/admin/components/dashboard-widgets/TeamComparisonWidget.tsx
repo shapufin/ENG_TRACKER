@@ -18,7 +18,6 @@ export const TeamComparisonWidget: React.FC<TrendWidgetProps> = ({
       sectionId="team-comparison"
       title="Team Comparison"
       description="This month, approved hours and business days"
-      className="lg:col-span-2"
       isLoading={isLoading}
       isError={isError}
       onRetry={onRetry}

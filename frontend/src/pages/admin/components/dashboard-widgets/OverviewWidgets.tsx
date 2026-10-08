@@ -1,19 +1,20 @@
 import React from "react";
-import {
-  AlertCircle,
-  CalendarClock,
-  CalendarDays,
-  CheckCircle,
-  Clock,
-  HardDrive,
-  Users,
-} from "lucide-react";
+import { AlertCircle, CheckCircle, HardDrive } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { OVERVIEW_WIDGET_IDS } from "@/config/dashboardWidgets";
 import type { AdminOverview } from "@/types";
-import { ApprovalAgingWidget } from "./ApprovalAgingWidget";
+import { GridCell } from "../dashboard-grid/GridCell";
+import { KpiStripWidget } from "./KpiStripWidget";
+
+export interface OverviewStats {
+  totalUsers: number;
+  totalTeams: number;
+  totalPending: number;
+  overtimeHours: number;
+  statsLoading?: boolean;
+}
 
 interface OverviewWidgetsProps {
   isWidgetActive: (id: string) => boolean;
@@ -22,22 +23,24 @@ interface OverviewWidgetsProps {
   isError?: boolean;
   onRetry?: () => void;
   isSuperuser: boolean;
+  stats: OverviewStats;
 }
 
 /** Whole numbers stay whole, fractions keep one decimal (12.5, 16). */
 const fmt = (n: number) => String(Math.round(n * 10) / 10);
 
-const GRID = "grid gap-4 sm:grid-cols-2 lg:grid-cols-4";
-
-const Skeleton: React.FC = () => (
-  <div className={GRID}>
-    {Array.from({ length: 4 }).map((_, i) => (
-      <div key={i} className="border-border/70 bg-card h-24 animate-pulse rounded-xl border" />
-    ))}
-  </div>
+const CardSkeleton: React.FC<{ label: string }> = ({ label }) => (
+  <div
+    role="status"
+    aria-label={`Loading ${label}`}
+    className="border-border bg-card h-24 animate-pulse rounded-xl border"
+  />
 );
 
-const CoverageGapsCard: React.FC<{ gaps: AdminOverview["coverage_gaps"] }> = ({ gaps }) => {
+const CoverageGapsCard: React.FC<{
+  gaps: AdminOverview["coverage_gaps"];
+  headcount: AdminOverview["headcount"];
+}> = ({ gaps, headcount }) => {
   const rows: [string, number][] = [
     ["Teams without a leader", gaps.teams_without_leader],
     ["Users without a team", gaps.users_without_team],
@@ -47,10 +50,10 @@ const CoverageGapsCard: React.FC<{ gaps: AdminOverview["coverage_gaps"] }> = ({ 
   ];
   const total = rows.reduce((sum, [, n]) => sum + n, 0);
   return (
-    <GlassCard delay={0.05} glow={total > 0 ? "warning" : "success"}>
+    <GlassCard glow={total > 0 ? "warning" : "success"}>
       <div className="p-4">
         <div className="flex items-center justify-between">
-          <p className="text-muted-foreground text-xs">Coverage Gaps</p>
+          <p className="text-sm font-semibold tracking-tight">Coverage Gaps</p>
           <AlertCircle
             className={`h-5 w-5 ${total > 0 ? "text-warning" : "text-success"}`}
             aria-hidden
@@ -67,6 +70,16 @@ const CoverageGapsCard: React.FC<{ gaps: AdminOverview["coverage_gaps"] }> = ({ 
               </span>
             </li>
           ))}
+        </ul>
+        <ul className="border-line-subtle mt-3 space-y-1 border-t pt-3 text-xs">
+          <li className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">New in 30 days</span>
+            <span className="font-mono tabular-nums">{headcount.new_hires_30d}</span>
+          </li>
+          <li className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Never logged in</span>
+            <span className="font-mono tabular-nums">{headcount.never_logged_in}</span>
+          </li>
         </ul>
       </div>
     </GlassCard>
@@ -91,7 +104,6 @@ const BackupCard: React.FC<{ backup: NonNullable<AdminOverview["backup"]> }> = (
             ? "Stale — over 7 days old"
             : `${fmt(backup.size_mb ?? 0)} MB · ${backup.count} backups`
       }
-      delay={0.3}
     />
   );
 };
@@ -103,109 +115,78 @@ export const OverviewWidgets: React.FC<OverviewWidgetsProps> = ({
   isError,
   onRetry,
   isSuperuser,
+  stats,
 }) => {
   const on = (id: (typeof OVERVIEW_WIDGET_IDS)[number]) =>
     isWidgetActive(id) && (id !== "backup-status" || isSuperuser);
   if (!OVERVIEW_WIDGET_IDS.some(on)) return null;
 
-  if (isLoading) return <Skeleton />;
-  if (isError || !data) {
-    return (
-      <ErrorCard
-        title="Couldn't load the overview"
-        message="The admin overview request failed."
-        onRetry={onRetry}
-      />
-    );
-  }
-
-  const { headcount, pending_backlog: backlog, leave_utilization: leave } = data;
-  const carry = data.carryover_expiry;
-  const close = data.period_close;
-  const pendingTotal = backlog.overtime.count + backlog.standby.count + backlog.leave.count;
-  const moreTls = close.tls_open - close.open_tls.length;
+  // One request feeds these cards: until it lands each card shows its own placeholder, and a
+  // failure shows one retry card per widget instead of replacing the whole grid.
+  const failed = !isLoading && (isError || !data);
+  const state = (label: string, render: (d: AdminOverview) => React.ReactNode) => {
+    if (isLoading) return <CardSkeleton label={label} />;
+    if (failed || !data) {
+      return (
+        <ErrorCard
+          title={`Couldn't load ${label.toLowerCase()}`}
+          message="The admin overview request failed."
+          onRetry={onRetry}
+        />
+      );
+    }
+    return render(data);
+  };
 
   return (
-    <div className="space-y-4">
-      <div className={GRID}>
-        {on("org-headcount") && (
-          <StatCard
-            label="Headcount"
-            value={headcount.total_users}
-            icon={Users}
-            glow="primary"
-            iconColorClass="text-primary"
-            iconWellClass="bg-primary/10"
-            trend={`${headcount.active_users} active`}
-            footer={
-              <>
-                <span className="text-muted-foreground">{headcount.new_hires_30d} new in 30d</span>
-                <span className="text-muted-foreground">
-                  {headcount.never_logged_in} never logged in
-                </span>
-              </>
-            }
+    <>
+      {on("kpi-strip") && (
+        <GridCell id="kpi-strip">
+          <KpiStripWidget
+            totalUsers={stats.totalUsers}
+            totalTeams={stats.totalTeams}
+            totalPending={stats.totalPending}
+            overtimeHours={stats.overtimeHours}
+            statsLoading={stats.statsLoading}
+            overview={{ data, isLoading, isError: failed, onRetry }}
           />
-        )}
-        {on("coverage-gaps") && <CoverageGapsCard gaps={data.coverage_gaps} />}
-        {on("pending-backlog") && (
-          <StatCard
-            label="Pending Backlog"
-            value={pendingTotal}
-            icon={Clock}
-            glow={pendingTotal > 0 ? "warning" : "success"}
-            iconColorClass="text-warning"
-            iconWellClass="bg-warning/10"
-            delay={0.1}
-            trend={`${fmt(backlog.overtime.hours)}h overtime · ${fmt(backlog.standby.hours)}h standby · ${backlog.leave.days}d leave`}
-          />
-        )}
-        {on("leave-utilization") && (
-          <StatCard
-            label="Leave Utilization"
-            value={leave.utilization_pct === null ? "—" : `${fmt(leave.utilization_pct)}%`}
-            icon={CalendarDays}
-            iconColorClass="text-accent-violet"
-            iconWellClass="bg-accent-violet/10"
-            delay={0.15}
-            progressPercent={leave.utilization_pct ?? 0}
-            trend={`${fmt(leave.used_days)} used · ${fmt(leave.pending_days)} pending of ${fmt(leave.total_days)}d (${leave.year})`}
-          />
-        )}
-      </div>
-      <div className="grid gap-4 lg:grid-cols-4">
-        {on("approval-aging") && <ApprovalAgingWidget aging={data.approval_aging} />}
-        {on("carryover-expiry") && (
-          <StatCard
-            label="Carryover Expiry"
-            value={`${fmt(carry.days_at_risk)}d`}
-            icon={CalendarClock}
-            glow={carry.days_at_risk > 0 ? "warning" : "none"}
-            iconColorClass="text-warning"
-            iconWellClass="bg-warning/10"
-            delay={0.25}
-            trend={`${carry.users_affected} users · expiring within ${carry.window_days} days`}
-          />
-        )}
-        {on("period-close") && (
-          <StatCard
-            label={`Period Close (${close.period})`}
-            value={`${close.tls_closed}/${close.tls_total}`}
-            icon={CheckCircle}
-            glow={close.tls_open > 0 ? "warning" : "success"}
-            iconColorClass={close.tls_open > 0 ? "text-warning" : "text-success"}
-            iconWellClass={close.tls_open > 0 ? "bg-warning/10" : "bg-success/10"}
-            delay={0.3}
-            trend={
-              close.tls_open === 0
-                ? "All TLs closed"
-                : close.open_tls.map((t) => t.name).join(", ") +
-                  (moreTls > 0 ? ` +${moreTls} more` : "")
-            }
-          />
-        )}
-        {on("backup-status") && data.backup && <BackupCard backup={data.backup} />}
-      </div>
-    </div>
+        </GridCell>
+      )}
+      {on("coverage-gaps") && (
+        <GridCell id="coverage-gaps">
+          {state("Coverage gaps", (d) => (
+            <CoverageGapsCard gaps={d.coverage_gaps} headcount={d.headcount} />
+          ))}
+        </GridCell>
+      )}
+      {on("period-close") && (
+        <GridCell id="period-close">
+          {state("Period close", ({ period_close: close }) => {
+            const moreTls = close.tls_open - close.open_tls.length;
+            return (
+              <StatCard
+                label={`Period Close (${close.period})`}
+                value={`${close.tls_closed}/${close.tls_total}`}
+                icon={CheckCircle}
+                glow={close.tls_open > 0 ? "warning" : "success"}
+                iconColorClass={close.tls_open > 0 ? "text-warning" : "text-success"}
+                iconWellClass={close.tls_open > 0 ? "bg-warning/10" : "bg-success/10"}
+                trend={
+                  close.tls_open === 0
+                    ? "All TLs closed"
+                    : close.open_tls.map((t) => t.name).join(", ") +
+                      (moreTls > 0 ? ` +${moreTls} more` : "")
+                }
+              />
+            );
+          })}
+        </GridCell>
+      )}
+      {on("backup-status") && (isLoading || failed || data?.backup) && (
+        <GridCell id="backup-status">
+          {state("Backup status", (d) => (d.backup ? <BackupCard backup={d.backup} /> : null))}
+        </GridCell>
+      )}
+    </>
   );
 };

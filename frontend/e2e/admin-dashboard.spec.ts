@@ -37,8 +37,8 @@ test.describe("Admin dashboard", () => {
       "aria-selected",
       "true"
     );
-    await expect(page.getByText("Pending Approvals").first()).toBeVisible();
-    await expect(page.getByText("Total Users")).toHaveCount(0);
+    await expect(page.getByText("Approval Queue").first()).toBeVisible();
+    await expect(page.getByRole("group", { name: "Key figures" })).toHaveCount(0);
   });
 
   test("Ctrl+K opens the palette and Enter navigates", async ({ page, isMobile }) => {
@@ -98,16 +98,16 @@ test.describe("Admin dashboard follow-ups", () => {
     await page.getByRole("button", { name: "Dashboard actions" }).click();
     await page.getByRole("menuitem", { name: /Approver view/ }).click();
     await page.getByRole("button", { name: "Apply preset" }).click();
-    await expect(page.getByText("Approver Speed")).toBeVisible();
-    await expect(page.getByText("Total Users")).toHaveCount(0);
+    await expect(page.getByText("Rejection Analysis")).toBeVisible();
+    await expect(page.getByRole("group", { name: "Key figures" })).toHaveCount(0);
     await page.reload();
-    await expect(page.getByText("Approver Speed")).toBeVisible();
-    await expect(page.getByText("Total Users")).toHaveCount(0);
+    await expect(page.getByText("Rejection Analysis")).toBeVisible();
+    await expect(page.getByRole("group", { name: "Key figures" })).toHaveCount(0);
     // restore the default so later specs see the standard dashboard
     await page.getByRole("button", { name: "Dashboard actions" }).click();
     await page.getByRole("menuitem", { name: /Default layout/ }).click();
     await page.getByRole("button", { name: "Apply preset" }).click();
-    await expect(page.getByText("Total Users").first()).toBeVisible();
+    await expect(page.getByRole("group", { name: "Key figures" })).toBeVisible();
   });
 
   test("the trend period is selectable, kept in the URL, and validated by the API", async ({
@@ -115,10 +115,8 @@ test.describe("Admin dashboard follow-ups", () => {
   }) => {
     await loginAsUser(page, E2E_CREDENTIALS.admin);
     await page.goto("/admin?months=6");
-    await page.getByRole("button", { name: "Dashboard actions" }).click();
-    await page.getByRole("menuitem", { name: /customize dashboard/i }).click();
-    await page.getByRole("checkbox", { name: "Overtime & Standby Trend" }).check();
-    await page.getByRole("button", { name: "Done" }).click();
+    // The period selector lives on the Trend tab of the Hours widget.
+    await page.getByRole("tab", { name: "Trend" }).click();
     await expect(page.getByRole("button", { name: "6 months" })).toHaveAttribute(
       "aria-pressed",
       "true"
@@ -136,7 +134,7 @@ test.describe("Admin dashboard follow-ups", () => {
   test("Export PDF downloads a dated pdf", async ({ page }) => {
     await loginAsUser(page, E2E_CREDENTIALS.admin);
     await page.goto("/admin?section=approvals");
-    await expect(page.getByText("Approval Status")).toBeVisible();
+    await expect(page.getByText("Approval Queue").first()).toBeVisible();
     const download = page.waitForEvent("download", { timeout: 30_000 });
     await page.getByRole("button", { name: "Dashboard actions" }).click();
     await page.getByRole("menuitem", { name: /export pdf/i }).click();

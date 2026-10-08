@@ -1,10 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { ApprovalStatusWidget } from "./ApprovalStatusWidget";
+import { ApprovalStatusBody } from "./ApprovalStatusBody";
 
-vi.mock("@/components/dashboard/ChartCard", () => ({
-  ChartCard: ({ children }: any) => <div>{children}</div>,
-}));
 vi.mock("@/components/dashboard/CircularProgress", () => ({
   CircularProgress: ({ percentage, label }: any) => (
     <div data-testid="progress">
@@ -25,9 +22,14 @@ const REAL_STATUS_DATA = [
   { name: "Rejected", value: 1 },
 ];
 
-describe("ApprovalStatusWidget", () => {
+describe("ApprovalStatusBody", () => {
+  it("shows a busy placeholder while loading", () => {
+    render(<ApprovalStatusBody statusData={[]} isLoading />);
+    expect(screen.getByRole("status", { name: /loading approval status/i })).toBeInTheDocument();
+  });
+
   it("reads the canonical 5-element statusData by name", () => {
-    render(<ApprovalStatusWidget statusData={REAL_STATUS_DATA} />);
+    render(<ApprovalStatusBody statusData={REAL_STATUS_DATA} />);
     expect(screen.getByTestId("Approved")).toHaveTextContent("5");
     // Pending = Pending OT + Pending SB + Pending Leave = 2 + 3 + 1
     expect(screen.getByTestId("Pending")).toHaveTextContent("6");
@@ -36,12 +38,12 @@ describe("ApprovalStatusWidget", () => {
 
   it("computes approved percentage from total", () => {
     // approved=5, pending=6, rejected=1 -> total=12 -> 5/12 = 42%
-    render(<ApprovalStatusWidget statusData={REAL_STATUS_DATA} />);
+    render(<ApprovalStatusBody statusData={REAL_STATUS_DATA} />);
     expect(screen.getByTestId("progress")).toHaveTextContent("42-Approved");
   });
 
   it("renders zeros when statusData is empty", () => {
-    render(<ApprovalStatusWidget statusData={[]} />);
+    render(<ApprovalStatusBody statusData={[]} />);
     expect(screen.getByTestId("Approved")).toHaveTextContent("0");
     expect(screen.getByTestId("Pending")).toHaveTextContent("0");
     expect(screen.getByTestId("Rejected")).toHaveTextContent("0");
@@ -50,7 +52,7 @@ describe("ApprovalStatusWidget", () => {
 
   it("handles 100% approved", () => {
     render(
-      <ApprovalStatusWidget
+      <ApprovalStatusBody
         statusData={[
           { name: "Pending OT", value: 0 },
           { name: "Pending SB", value: 0 },
