@@ -4,6 +4,7 @@ import { userService } from "@/services/userService";
 import { handleApiError } from "@/lib/error-handler";
 import { toast } from "sonner";
 import type { LeaveBalance } from "@/types";
+import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
 interface UseLeaveBalancesOptions {
   onCreateSuccess?: () => void;
@@ -38,6 +39,7 @@ export const useLeaveBalances = (options?: UseLeaveBalancesOptions) => {
     mutationFn: leaveService.createBalance,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "balances"] });
+      void invalidateAdminDashboard(qc);
       toast.success("Balance created");
       options?.onCreateSuccess?.();
     },
@@ -49,6 +51,7 @@ export const useLeaveBalances = (options?: UseLeaveBalancesOptions) => {
       leaveService.updateBalance(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "balances"] });
+      void invalidateAdminDashboard(qc);
       toast.success("Updated");
       options?.onUpdateSuccess?.();
     },
@@ -59,6 +62,7 @@ export const useLeaveBalances = (options?: UseLeaveBalancesOptions) => {
     mutationFn: leaveService.deleteBalance,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "balances"] });
+      void invalidateAdminDashboard(qc);
       toast.success("Balance deleted");
       options?.onDeleteSuccess?.();
     },

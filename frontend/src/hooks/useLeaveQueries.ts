@@ -7,6 +7,7 @@ import {
   createApprovalHandlers,
   createRejectionHandlers,
 } from "./useMutationHandlers";
+import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
 interface UseLeaveQueriesOptions {
   userId: string | number;
@@ -32,6 +33,7 @@ export const useLeaveQueries = (options: UseLeaveQueriesOptions) => {
     await qc.invalidateQueries({ queryKey: ["dashboard"], refetchType: "active" });
     await qc.invalidateQueries({ queryKey: ["team", "leave"], refetchType: "active" });
     await qc.invalidateQueries({ queryKey: ["admin", "leave"], refetchType: "active" });
+    await invalidateAdminDashboard(qc);
     await qc.invalidateQueries({ queryKey: ["vacations", "calendar"], refetchType: "active" });
     await qc.invalidateQueries({ queryKey: ["vacations", "team-balances"], refetchType: "active" });
   };

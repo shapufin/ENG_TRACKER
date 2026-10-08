@@ -21,6 +21,7 @@ import { hbprAssignmentService } from "@/services/hbprAssignmentService";
 import { handleApiError } from "@/lib/error-handler";
 import type { HbprAssignment, HbprPersonRef } from "@/types/hbprAssignment";
 import type { PaginatedResponse } from "@/types";
+import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
 const QUERY_KEY = ["admin", "hbpr-assignments"];
 
@@ -95,7 +96,10 @@ export const HbprAssignmentsPage: React.FC = () => {
     [usersQuery.data]
   );
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    void invalidateAdminDashboard(queryClient);
+  };
 
   const createMutation = useMutation({
     mutationFn: hbprAssignmentService.create,

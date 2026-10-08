@@ -6,6 +6,7 @@ import { useAdminRejectMutation } from "@/hooks/useAdminRejectMutation";
 import { toast } from "sonner";
 import { useHoursLogsFilterState, useHoursLogsData } from "./hoursLogsFilter";
 import type { OvertimeLog } from "@/types";
+import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
 export const useOvertimeLogsPage = () => {
   const qc = useQueryClient();
@@ -38,6 +39,7 @@ export const useOvertimeLogsPage = () => {
     mutationFn: (id: number) => overtimeService.approve(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "overtime", "admin_logs"] });
+      void invalidateAdminDashboard(qc);
       toast.success("Approved");
     },
     onError: (err: unknown) => handleApiError(err),
@@ -51,6 +53,7 @@ export const useOvertimeLogsPage = () => {
     mutationFn: (id: number) => overtimeService.deleteLog(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "overtime", "admin_logs"] });
+      void invalidateAdminDashboard(qc);
       toast.success("Overtime record deleted");
     },
     onError: (err: unknown) => handleApiError(err),

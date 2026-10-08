@@ -149,3 +149,50 @@ export const AVAILABLE_WIDGETS: WidgetConfig[] = [
     icon: CalendarDays,
   },
 ];
+
+export type AdminDashboardSection =
+  | "overview"
+  | "approvals"
+  | "trends"
+  | "leave"
+  | "system"
+  | "shortcuts";
+
+/** Tab order on the admin dashboard; also the group order in the customize modal. */
+export const ADMIN_DASHBOARD_SECTIONS: { id: AdminDashboardSection; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "approvals", label: "Approvals" },
+  { id: "trends", label: "Hours & Trends" },
+  { id: "leave", label: "Leave" },
+  { id: "system", label: "System" },
+  { id: "shortcuts", label: "Shortcuts" },
+];
+
+const WIDGET_SECTION: Record<string, AdminDashboardSection> = {
+  "total-users": "overview",
+  "total-teams": "overview",
+  "org-headcount": "overview",
+  "coverage-gaps": "overview",
+  "pending-approvals": "approvals",
+  "pending-backlog": "approvals",
+  "approval-aging": "approvals",
+  "approval-status": "approvals",
+  "period-close": "approvals",
+  "overtime-hours": "trends",
+  "hours-overview": "trends",
+  "leave-utilization": "leave",
+  "carryover-expiry": "leave",
+  "holiday-balances": "shortcuts",
+  "recent-activity": "system",
+  "backup-status": "system",
+  users: "shortcuts",
+  teams: "shortcuts",
+  clients: "shortcuts",
+  permissions: "shortcuts",
+  "calendar-mgmt": "shortcuts",
+  reports: "shortcuts",
+};
+
+/** Section a widget belongs to; undefined for ids that no longer exist. */
+export const widgetSection = (widgetId: string): AdminDashboardSection | undefined =>
+  WIDGET_SECTION[widgetId];

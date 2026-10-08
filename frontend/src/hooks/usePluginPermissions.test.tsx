@@ -25,7 +25,12 @@ describe("usePluginPermissions", () => {
 
   it("exposes hasPermission/canView derived from fetched permissions", async () => {
     vi.mocked(pluginService.getUserPermissions).mockResolvedValue([
-      { plugin_name: "engagement", verbose_name: "Engagement", permissions: ["view"], has_access: true },
+      {
+        plugin_name: "engagement",
+        verbose_name: "Engagement",
+        permissions: ["view"],
+        has_access: true,
+      },
     ]);
     const { result } = renderHook(() => usePluginPermissions(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -39,7 +44,12 @@ describe("usePluginPermissions", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     vi.mocked(pluginService.getUserPermissions).mockResolvedValue([
-      { plugin_name: "tl_scorecard", verbose_name: "TL Scorecard", permissions: ["view"], has_access: true },
+      {
+        plugin_name: "tl_scorecard",
+        verbose_name: "TL Scorecard",
+        permissions: ["view"],
+        has_access: true,
+      },
     ]);
     act(() => {
       focusManager.setFocused(false);
