@@ -48,7 +48,7 @@ export const AdminInsightsStrip: React.FC = () => {
     return (
       <div className="text-muted-foreground flex items-center gap-2 text-xs" role="status">
         Insights unavailable.
-        <Button variant="outline" size="sm" onClick={() => void refetch()}>
+        <Button variant="outline" size="control-sm" onClick={() => void refetch()}>
           Retry
         </Button>
       </div>
@@ -69,24 +69,24 @@ export const AdminInsightsStrip: React.FC = () => {
         animate="visible"
         transition={transition}
         className={cn(
-          "flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between sm:px-4",
+          "flex min-h-10 items-center gap-3 rounded-lg border px-3 py-1",
           toneSurfaceClass[tone]
         )}
       >
-        <div className="flex items-start gap-3">
-          <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          <div className="min-w-0 space-y-0.5">
-            <p className="text-sm font-semibold">
-              <span className="text-micro-lg font-mono tracking-wider uppercase">{label}</span>
-              <span className="mx-2 opacity-60" aria-hidden>
-                Â·
-              </span>
-              {current.title}
-            </p>
-            <p className="text-xs opacity-90">{current.message}</p>
-          </div>
+        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+        <div className="flex min-w-0 flex-1 flex-col md:flex-row md:items-baseline md:gap-2">
+          <p className="truncate text-sm font-semibold md:shrink-0 md:max-w-[55%]">
+            <span className="text-micro-lg font-mono tracking-wider uppercase">{label}</span>
+            <span className="mx-2 opacity-60" aria-hidden>
+              ·
+            </span>
+            {current.title}
+          </p>
+          <p className="min-w-0 truncate text-xs opacity-90" title={current.message}>
+            {current.message}
+          </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+        <div className="flex shrink-0 items-center gap-2">
           {insights.length > 1 && (
             <div className="text-micro-lg flex items-center gap-1 font-mono">
               <button
@@ -97,8 +97,8 @@ export const AdminInsightsStrip: React.FC = () => {
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
               </button>
-              <span>
-                {Math.min(index, insights.length - 1) + 1} / {insights.length}
+              <span className="tabular-nums">
+                {Math.min(index, insights.length - 1) + 1} of {insights.length}
               </span>
               <button
                 type="button"
@@ -111,7 +111,7 @@ export const AdminInsightsStrip: React.FC = () => {
             </div>
           )}
           {current.to && (
-            <Button variant="outline" size="sm" onClick={() => navigate(current.to!)}>
+            <Button variant="outline" size="control-sm" onClick={() => navigate(current.to!)}>
               {current.actionLabel ?? "Open"}
             </Button>
           )}

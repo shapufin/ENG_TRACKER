@@ -16,7 +16,7 @@ vi.mock("@/context/PermissionContext", () => ({
     isSuperuser: false,
   }),
 }));
-vi.mock("./components/ExportDashboardPdfButton", () => ({ ExportDashboardPdfButton: () => null }));
+vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: { id: 1, username: "admin" } }) }));
 vi.mock("./components/AdminInsightsStrip", () => ({ AdminInsightsStrip: () => null }));
 vi.mock("./components/AdminDashboardFreshness", () => ({ AdminDashboardFreshness: () => null }));
 vi.mock("./components/AdminDashboardWidgets", () => ({
