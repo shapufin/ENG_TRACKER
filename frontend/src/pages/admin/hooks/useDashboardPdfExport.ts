@@ -1,24 +1,18 @@
-import React, { useState } from "react";
-import { FileDown } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-
-interface ExportDashboardPdfButtonProps {
-  /** Element holding the dashboard widgets; chart cards inside it carry `data-chart-section`. */
-  containerRef: React.RefObject<HTMLElement | null>;
-}
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-/** One-page-per-chart PDF of the visible chart widgets. The PDF libraries load on click only. */
-export const ExportDashboardPdfButton: React.FC<ExportDashboardPdfButtonProps> = ({
-  containerRef,
-}) => {
+/**
+ * One-page-per-chart PDF of the visible chart widgets (cards inside `containerRef` carry
+ * `data-chart-section`). The PDF libraries load on first use only.
+ */
+export function useDashboardPdfExport(containerRef: React.RefObject<HTMLElement | null>) {
   const { user } = useAuth();
   const [exporting, setExporting] = useState(false);
 
-  const handleExport = async () => {
+  const exportPdf = async () => {
     const container = containerRef.current;
     if (!container || !container.querySelector("[data-chart-section]")) {
       toast.info("Nothing to export: turn on a chart widget first.");
@@ -39,15 +33,5 @@ export const ExportDashboardPdfButton: React.FC<ExportDashboardPdfButtonProps> =
     }
   };
 
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => void handleExport()}
-      disabled={exporting}
-      aria-busy={exporting}
-    >
-      <FileDown className="mr-2 h-4 w-4" aria-hidden /> Export PDF
-    </Button>
-  );
-};
+  return { exporting, exportPdf };
+}

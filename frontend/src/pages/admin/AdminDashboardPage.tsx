@@ -1,10 +1,8 @@
 import React, { useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { PageShell } from "@/components/layout/PageShell";
 import { DashboardProvider, useDashboard } from "@/context/DashboardContext";
 import { usePermissions } from "@/context/PermissionContext";
-import type { DashboardType } from "@/context/permission-context-base";
-import { DashboardSwitcher } from "@/components/dashboard/DashboardSwitcher";
 import { CustomizeDashboardModal } from "@/components/admin/CustomizeDashboardModal";
 import {
   ADMIN_DASHBOARD_SECTIONS,
@@ -14,18 +12,14 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminDashboardWidgets } from "./components/AdminDashboardWidgets";
 import { AdminInsightsStrip } from "./components/AdminInsightsStrip";
-import { DashboardPresetMenu } from "./components/DashboardPresetMenu";
+import { DashboardActionsMenu } from "./components/DashboardActionsMenu";
 import { presetLayout } from "@/config/dashboardPresets";
-import { ExportDashboardPdfButton } from "./components/ExportDashboardPdfButton";
 import { AdminDashboardFreshness } from "./components/AdminDashboardFreshness";
 import { useAdminDashboardPage } from "./hooks/useAdminDashboardPage";
-import { Settings } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 const AdminDashboardContent: React.FC = () => {
-  const { availableDashboards, isSuperuser } = usePermissions();
+  const { isSuperuser } = usePermissions();
   const { updateLayout } = useDashboard();
-  const navigate = useNavigate();
   const widgetsRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get("section");
@@ -35,17 +29,6 @@ const AdminDashboardContent: React.FC = () => {
     if (next === "all") params.delete("section");
     else params.set("section", next);
     setSearchParams(params, { replace: true });
-  };
-  // The admin dashboard lives at /admin; every other dashboard lives at /.
-  // Persist the choice (DashboardPage hydrates from the same key) then go.
-  const handleDashboardChange = (dashboard: DashboardType) => {
-    if (dashboard === "admin") return;
-    try {
-      localStorage.setItem("selectedDashboard", dashboard);
-    } catch {
-      /* ignore */
-    }
-    navigate("/");
   };
   const {
     resetLayout,
@@ -74,25 +57,16 @@ const AdminDashboardContent: React.FC = () => {
       title="Admin Dashboard"
       subtitle="Overview of system metrics and pending actions."
       actions={
-        <div className="flex flex-wrap items-center gap-3">
-          <DashboardSwitcher
-            availableDashboards={availableDashboards}
-            selectedDashboard="admin"
-            onDashboardChange={handleDashboardChange}
-          />
+        <div className="flex flex-wrap items-center gap-2">
           <AdminDashboardFreshness />
-          <DashboardPresetMenu
+          <DashboardActionsMenu
+            containerRef={widgetsRef}
             availableWidgets={AVAILABLE_WIDGETS}
             isSuperuser={isSuperuser}
-            onApply={(ids) => void updateLayout(presetLayout(ids))}
+            onApplyPreset={(ids) => void updateLayout(presetLayout(ids))}
+            onReset={() => resetLayout()}
+            onCustomize={() => setCustomizeModalOpen(true)}
           />
-          <ExportDashboardPdfButton containerRef={widgetsRef} />
-          <Button variant="outline" size="sm" onClick={() => resetLayout()}>
-            Reset to Default
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setCustomizeModalOpen(true)}>
-            <Settings className="mr-2 h-4 w-4" /> Customize Dashboard
-          </Button>
         </div>
       }
     >
@@ -100,7 +74,7 @@ const AdminDashboardContent: React.FC = () => {
       <Tabs value={section} onValueChange={handleSectionChange}>
         <TabsList
           aria-label="Dashboard sections"
-          className="h-auto max-w-full flex-nowrap justify-start overflow-x-auto"
+          className="max-w-full flex-nowrap justify-start overflow-x-auto"
         >
           <TabsTrigger value="all">All</TabsTrigger>
           {ADMIN_DASHBOARD_SECTIONS.map((s) => (

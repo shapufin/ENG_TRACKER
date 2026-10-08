@@ -94,10 +94,10 @@ describe("AdminInsightsStrip", () => {
   it("pages through several insights", () => {
     state.data!.coverage_gaps.teams_without_leader = 2;
     renderStrip();
-    expect(screen.getByText("1 / 2")).toBeInTheDocument();
+    expect(screen.getByText("1 of 2")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Next insight" }));
     expect(screen.getByText("Teams without a leader")).toBeInTheDocument();
-    expect(screen.getByText("2 / 2")).toBeInTheDocument();
+    expect(screen.getByText("2 of 2")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Previous insight" }));
     expect(screen.getByText("Approvals waiting over 15 days")).toBeInTheDocument();
   });

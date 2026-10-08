@@ -14,11 +14,10 @@ vi.mock("@/context/PermissionContext", () => ({
   }),
 }));
 
-vi.mock("@/context/AuthContext", () => ({
+vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({ user: { id: 1, username: "admin" } }),
 }));
 
-vi.mock("./components/ExportDashboardPdfButton", () => ({ ExportDashboardPdfButton: () => null }));
 vi.mock("./components/AdminInsightsStrip", () => ({ AdminInsightsStrip: () => null }));
 vi.mock("./components/AdminDashboardFreshness", () => ({ AdminDashboardFreshness: () => null }));
 
@@ -54,12 +53,21 @@ const renderPage = () => {
 };
 
 describe("AdminDashboardPage header", () => {
-  it("renders the shared dashboard switcher with Admin active", () => {
+  it("has no Personal/Admin dashboard switcher (C2)", () => {
     renderPage();
 
     expect(screen.getByText("Admin Dashboard")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Admin" })).toHaveAttribute("data-state", "active");
-    expect(screen.getByRole("tab", { name: "Team Leader" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Personal" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Personal" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Team Leader" })).not.toBeInTheDocument();
+  });
+
+  it("keeps a single actions menu button next to the freshness control", () => {
+    renderPage();
+
+    const trigger = screen.getByRole("button", { name: "Dashboard actions" });
+    expect(trigger).toHaveAttribute("aria-haspopup", "menu");
+    for (const name of [/presets/i, /export pdf/i, /reset to default/i, /customize/i]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    }
   });
 });

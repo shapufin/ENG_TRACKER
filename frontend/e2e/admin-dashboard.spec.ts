@@ -95,7 +95,7 @@ test.describe("Admin dashboard follow-ups", () => {
   test("a preset replaces the layout and survives a reload", async ({ page }) => {
     await loginAsUser(page, E2E_CREDENTIALS.admin);
     await page.goto("/admin");
-    await page.getByRole("button", { name: /presets/i }).click();
+    await page.getByRole("button", { name: "Dashboard actions" }).click();
     await page.getByRole("menuitem", { name: /Approver view/ }).click();
     await page.getByRole("button", { name: "Apply preset" }).click();
     await expect(page.getByText("Approver Speed")).toBeVisible();
@@ -104,7 +104,7 @@ test.describe("Admin dashboard follow-ups", () => {
     await expect(page.getByText("Approver Speed")).toBeVisible();
     await expect(page.getByText("Total Users")).toHaveCount(0);
     // restore the default so later specs see the standard dashboard
-    await page.getByRole("button", { name: /presets/i }).click();
+    await page.getByRole("button", { name: "Dashboard actions" }).click();
     await page.getByRole("menuitem", { name: /Default layout/ }).click();
     await page.getByRole("button", { name: "Apply preset" }).click();
     await expect(page.getByText("Total Users").first()).toBeVisible();
@@ -115,7 +115,8 @@ test.describe("Admin dashboard follow-ups", () => {
   }) => {
     await loginAsUser(page, E2E_CREDENTIALS.admin);
     await page.goto("/admin?months=6");
-    await page.getByRole("button", { name: "Customize Dashboard" }).click();
+    await page.getByRole("button", { name: "Dashboard actions" }).click();
+    await page.getByRole("menuitem", { name: /customize dashboard/i }).click();
     await page.getByRole("checkbox", { name: "Overtime & Standby Trend" }).check();
     await page.getByRole("button", { name: "Done" }).click();
     await expect(page.getByRole("button", { name: "6 months" })).toHaveAttribute(
@@ -137,7 +138,8 @@ test.describe("Admin dashboard follow-ups", () => {
     await page.goto("/admin?section=approvals");
     await expect(page.getByText("Approval Status")).toBeVisible();
     const download = page.waitForEvent("download", { timeout: 30_000 });
-    await page.getByRole("button", { name: /export pdf/i }).click();
+    await page.getByRole("button", { name: "Dashboard actions" }).click();
+    await page.getByRole("menuitem", { name: /export pdf/i }).click();
     expect((await download).suggestedFilename()).toMatch(
       /^admin-dashboard-\d{4}-\d{2}-\d{2}\.pdf$/
     );

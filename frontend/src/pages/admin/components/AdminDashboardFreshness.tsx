@@ -48,7 +48,8 @@ export const AdminDashboardFreshness: React.FC = () => {
       </span>
       <Button
         variant="outline"
-        size="sm"
+        size="control"
+        className="px-2.5"
         aria-label="Refresh dashboard"
         aria-busy={fetching}
         disabled={fetching}
