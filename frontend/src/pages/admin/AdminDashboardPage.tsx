@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageShell } from "@/components/layout/PageShell";
-import { DashboardProvider } from "@/context/DashboardContext";
+import { DashboardProvider, useDashboard } from "@/context/DashboardContext";
 import { usePermissions } from "@/context/PermissionContext";
 import type { DashboardType } from "@/context/permission-context-base";
 import { DashboardSwitcher } from "@/components/dashboard/DashboardSwitcher";
@@ -14,6 +14,8 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminDashboardWidgets } from "./components/AdminDashboardWidgets";
 import { AdminInsightsStrip } from "./components/AdminInsightsStrip";
+import { DashboardPresetMenu } from "./components/DashboardPresetMenu";
+import { presetLayout } from "@/config/dashboardPresets";
 import { AdminDashboardFreshness } from "./components/AdminDashboardFreshness";
 import { useAdminDashboardPage } from "./hooks/useAdminDashboardPage";
 import { Settings } from "lucide-react";
@@ -21,6 +23,7 @@ import { Button } from "@/components/ui/button";
 
 const AdminDashboardContent: React.FC = () => {
   const { availableDashboards, isSuperuser } = usePermissions();
+  const { updateLayout } = useDashboard();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get("section");
@@ -76,6 +79,11 @@ const AdminDashboardContent: React.FC = () => {
             onDashboardChange={handleDashboardChange}
           />
           <AdminDashboardFreshness />
+          <DashboardPresetMenu
+            availableWidgets={AVAILABLE_WIDGETS}
+            isSuperuser={isSuperuser}
+            onApply={(ids) => void updateLayout(presetLayout(ids))}
+          />
           <Button variant="outline" size="sm" onClick={() => resetLayout()}>
             Reset to Default
           </Button>
