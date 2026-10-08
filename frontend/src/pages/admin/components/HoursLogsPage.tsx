@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
+import { Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
@@ -39,6 +41,8 @@ interface HoursLogsPageProps<T extends HoursLog> {
   canDelete?: boolean;
   extraColumns?: AppColumnDef<T>[];
   storageKey: string;
+  /** Server-side CSV export of the current status/date filters; the button is hidden when omitted. */
+  onExport?: () => void | Promise<void>;
   children?: React.ReactNode;
 }
 
@@ -64,18 +68,51 @@ export const HoursLogsPage = <T extends HoursLog>({
   canDelete,
   extraColumns,
   storageKey,
+  onExport,
   children,
 }: HoursLogsPageProps<T>) => {
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async () => {
+    if (!onExport) return;
+    setExporting(true);
+    try {
+      await onExport();
+    } catch {
+      /* the caller reports the failure (api error handler / toast) */
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (isLoading) return <LoadingCard rows={5} className="min-h-[300px]" />;
   if (error)
     return (
-      <div className="p-4 text-destructive">
+      <div className="text-destructive p-4">
         {errorMessage}: {String(error)}
       </div>
     );
 
   return (
-    <PageShell title={title} subtitle={subtitle} category="Workforce Management">
+    <PageShell
+      title={title}
+      subtitle={subtitle}
+      category="Workforce Management"
+      actions={
+        onExport && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleExport()}
+            disabled={exporting}
+            aria-busy={exporting}
+            title="Exports the current status and date filters"
+          >
+            <Download className="mr-2 h-4 w-4" aria-hidden />
+            Export CSV
+          </Button>
+        )
+      }
+    >
       <StatsCards
         total={stats.total}
         pending={stats.pending}

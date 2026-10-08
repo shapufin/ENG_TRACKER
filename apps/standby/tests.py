@@ -619,6 +619,19 @@ class StandbyLogExportTests(TestCase):
         # StandbyLogSerializer uses user.get_full_name() for user_name.
         self.assertIn('Export Employee', body)
 
+    def test_export_neutralises_spreadsheet_formulas(self):
+        StandbyLog.objects.create(
+            user=self.employee, date=date(2026, 6, 1),
+            hours=4, status='approved', description='=1+1', evidence='@SUM(A1)',
+        )
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.get(
+            '/api/standby/logs/export/', {'ignore_date_filter': 'true'},
+        )
+        body = _streaming_body(response)
+        self.assertIn("'=1+1", body)
+        self.assertIn("'@SUM(A1)", body)
+
     def test_export_respects_status_filter(self):
         StandbyLog.objects.create(
             user=self.employee, date=date(2026, 6, 1),

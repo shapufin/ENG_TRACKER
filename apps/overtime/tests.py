@@ -615,6 +615,21 @@ class OvertimeLogExportTests(TestCase):
         self.assertIn('Hours', header)
         self.assertIn('export-emp', body)
 
+    def test_export_neutralises_spreadsheet_formulas(self):
+        OvertimeLog.objects.create(
+            user=self.employee, client=self.client_obj,
+            date=date(2026, 6, 1), hours=4, status='approved',
+            description='=HYPERLINK("http://evil","x")', evidence='+cmd',
+        )
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.get(
+            '/api/overtime/logs/export/', {'ignore_date_filter': 'true'},
+        )
+        body = _streaming_body(response)
+        self.assertIn("'=HYPERLINK", body)
+        self.assertIn("'+cmd", body)
+        self.assertNotRegex(body, r'(^|,)"?=HYPERLINK')
+
     def test_export_respects_status_filter(self):
         OvertimeLog.objects.create(
             user=self.employee, client=self.client_obj,

@@ -387,6 +387,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermi
         import csv
         import io
         from django.http import StreamingHttpResponse
+        from core.utils.csv_safe import csv_safe
 
         queryset = self.filter_queryset(self.get_queryset()).select_related('user', 'client')
 
@@ -410,7 +411,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermi
                 else:
                     evidence_col = ot.evidence or ''
                     ref_code_col = ot.reference_code or ''
-                writer.writerow([
+                writer.writerow([csv_safe(v) for v in (
                     ot.user.username if ot.user else '',
                     ot.date.strftime('%d/%m/%Y') if ot.date else '',
                     ot.client.name if ot.client else '',
@@ -420,7 +421,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermi
                     evidence_col,
                     ref_code_col,
                     ot.description or '',
-                ])
+                )])
                 yield buffer.getvalue()
                 buffer.seek(0)
                 buffer.truncate()
