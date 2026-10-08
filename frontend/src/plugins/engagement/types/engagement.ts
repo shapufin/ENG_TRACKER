@@ -10,15 +10,11 @@ export interface EngagementTypeMetrics {
   decided: number;
   approved: number;
   rejected: number;
-  judgeable: number;
-  on_time: number;
-  breaches: number;
-  pending_past_deadline: number;
   avg_tta_hours: number | null;
   p50_tta_hours: number | null;
   p90_tta_hours: number | null;
-  median_fraction: number | null;
   aging: EngagementAgingBuckets;
+  pending_over_48h: number;
   resubmission_count: number;
 }
 
@@ -33,15 +29,10 @@ export interface EngagementSummary {
   avg_tta_hours: number | null;
   score_speed: number | null;
   score_approval_rate: number | null;
-  score_responsiveness: number | null;
+  score_activity: number | null;
   score_consistency: number | null;
-  judgeable: number;
-  on_time: number;
-  breaches: number;
-  pending_past_deadline: number;
   decisions_during_leave: number;
-  decisions_on_holidays: number;
-  refreshed_on_read: boolean;
+  is_stale: boolean;
   computed_at: string | null;
 }
 
@@ -50,10 +41,9 @@ export interface EngagementTrendPoint {
   engagement_score: number | null;
   avg_tta_hours: number | null;
   decisions_during_leave: number;
-  decisions_on_holidays: number;
   score_speed: number | null;
   score_approval_rate: number | null;
-  score_responsiveness: number | null;
+  score_activity: number | null;
   score_consistency: number | null;
 }
 
@@ -72,17 +62,16 @@ export interface EngagementTeamBreakdownRow {
   engagement_score: number | null;
   score_speed: number | null;
   score_approval_rate: number | null;
-  score_responsiveness: number | null;
+  score_activity: number | null;
   score_consistency: number | null;
   decisions_during_leave: number;
-  decisions_on_holidays: number;
-  next_deadline_at: string | null;
   computed_at: string | null;
+  is_stale: boolean;
 }
 
 export interface EngagementStatus {
   has_data: boolean;
   month?: string;
-  refreshed_on_read?: boolean;
+  is_stale: boolean;
   computed_at: string | null;
 }

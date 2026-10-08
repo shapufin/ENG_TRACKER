@@ -12,11 +12,7 @@ const emptyType = (): EngagementTypeMetrics => ({
   p50_tta_hours: null,
   p90_tta_hours: null,
   aging: { "<4h": 0, "4-24h": 0, "1-3d": 0, ">3d": 0 },
-  pending_past_deadline: 0,
-  judgeable: 0,
-  on_time: 0,
-  breaches: 0,
-  median_fraction: null,
+  pending_over_48h: 0,
   resubmission_count: 0,
 });
 
@@ -35,12 +31,11 @@ const row = (overrides: Partial<EngagementTeamBreakdownRow> = {}): EngagementTea
   engagement_score: 78,
   score_speed: 90,
   score_approval_rate: 90,
-  score_responsiveness: 60,
+  score_activity: 60,
   score_consistency: 80,
   decisions_during_leave: 0,
   computed_at: "2026-09-20T00:00:00Z",
-  decisions_on_holidays: 0,
-  next_deadline_at: null,
+  is_stale: false,
   ...overrides,
 });
 
@@ -53,10 +48,7 @@ describe("TeamComparisonChart", () => {
   it("renders the chart instead of the empty state with rows present", () => {
     render(
       <TeamComparisonChart
-        rows={[
-          row({ team_name: "Team A" }),
-          row({ id: 2, team_name: "Team B", engagement_score: 60 }),
-        ]}
+        rows={[row({ team_name: "Team A" }), row({ id: 2, team_name: "Team B", engagement_score: 60 })]}
       />
     );
     expect(screen.queryByText("No team data yet")).not.toBeInTheDocument();

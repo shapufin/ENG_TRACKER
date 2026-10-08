@@ -20,18 +20,20 @@ interface ScoreCompositionTrendChartProps {
 const config: ChartConfig = {
   score_speed: { label: "Speed", color: "hsl(var(--chart-1))" },
   score_approval_rate: { label: "Approval rate", color: "hsl(var(--chart-2))" },
-  score_responsiveness: { label: "Responsiveness", color: "hsl(var(--chart-3))" },
+  score_activity: { label: "Activity", color: "hsl(var(--chart-3))" },
   score_consistency: { label: "Consistency", color: "hsl(var(--chart-4))" },
 };
 
 /** Which of the 4 composite-score components moved, and since when — the
  * composite trend line alone can't answer that, this breaks it apart. */
-export const ScoreCompositionTrendChart: React.FC<ScoreCompositionTrendChartProps> = ({ data }) => {
+export const ScoreCompositionTrendChart: React.FC<ScoreCompositionTrendChartProps> = ({
+  data,
+}) => {
   const hasData = data.some(
     (d) =>
       d.score_speed !== null ||
       d.score_approval_rate !== null ||
-      d.score_responsiveness !== null ||
+      d.score_activity !== null ||
       d.score_consistency !== null
   );
 
