@@ -51,3 +51,29 @@ describe("AdminDashboardFreshness", () => {
     expect(keys).not.toContainEqual(["admin"]);
   });
 });
+
+describe("AdminDashboardFreshness render safety", () => {
+  it("does not update state while another component is rendering", async () => {
+    const errors: unknown[][] = [];
+    const spy = vi.spyOn(console, "error").mockImplementation((...a) => {
+      errors.push(a);
+    });
+    const { useQuery } = await import("@tanstack/react-query");
+    const Fetching = () => {
+      useQuery({ queryKey: ["admin", "overview"], queryFn: () => Promise.resolve({}) });
+      return null;
+    };
+    vi.useRealTimers();
+    const tree = (withFetching: boolean) => (
+      <QueryClientProvider client={qc}>
+        <AdminDashboardFreshness />
+        {withFetching && <Fetching />}
+      </QueryClientProvider>
+    );
+    // Freshness is already subscribed when a (lazy) widget mounts later.
+    const { rerender } = render(tree(false));
+    rerender(tree(true));
+    spy.mockRestore();
+    expect(errors.filter((a) => String(a[0]).includes("Cannot update a component"))).toEqual([]);
+  });
+});
