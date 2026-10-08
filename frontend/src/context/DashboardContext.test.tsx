@@ -113,3 +113,51 @@ describe("DashboardProvider rapid toggles", () => {
     expect(ids).not.toContain("b");
   });
 });
+
+describe("DashboardProvider updateLayout ordering", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const Mixed = () => {
+    const { updateLayout, addWidget, isLoading } = useDashboard();
+    return (
+      <div>
+        <span data-testid="loading">{String(isLoading)}</span>
+        <button
+          onClick={() => {
+            void updateLayout({
+              columns: 4,
+              widgets: [{ id: "p1", position: { x: 0, y: 0 }, size: { w: 1, h: 1 } }],
+            });
+            addWidget("later");
+          }}
+        >
+          preset then add
+        </button>
+      </div>
+    );
+  };
+
+  it("queues updateLayout with toggles: one save at a time, last save has both", async () => {
+    vi.mocked(dashboardService.getDashboardLayout).mockResolvedValue({ count: 0, results: [] });
+    let inFlight = 0;
+    let maxInFlight = 0;
+    vi.mocked(dashboardService.saveDashboardLayout).mockImplementation(async () => {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight--;
+    });
+    render(
+      <DashboardProvider dashboardType="admin">
+        <Mixed />
+      </DashboardProvider>
+    );
+    await waitFor(() => expect(screen.getByTestId("loading")).toHaveTextContent("false"));
+    act(() => screen.getByText("preset then add").click());
+    await waitFor(() => expect(dashboardService.saveDashboardLayout).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(inFlight).toBe(0));
+    expect(maxInFlight).toBe(1);
+    const last = vi.mocked(dashboardService.saveDashboardLayout).mock.calls[1][0];
+    expect(last.widgets.map((w: { id: string }) => w.id)).toEqual(["p1", "later"]);
+  });
+});

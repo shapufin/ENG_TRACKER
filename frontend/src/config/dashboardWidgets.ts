@@ -16,7 +16,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
-export interface WidgetConfig {
+interface WidgetConfig {
   id: string;
   title: string;
   description: string;

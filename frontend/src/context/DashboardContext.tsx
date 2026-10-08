@@ -48,12 +48,14 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
   const layoutRef = useRef<DashboardLayout>(defaultAdminLayout);
   const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
   const commit = useCallback(
-    (next: DashboardLayout, failure: string) => {
+    (next: DashboardLayout, failure: string): Promise<unknown> => {
       layoutRef.current = next;
       setLayout(next);
-      saveQueue.current = saveQueue.current
+      const saved = saveQueue.current
         .then(() => dashboardService.saveDashboardLayout(next, dashboardType))
         .catch((error) => console.error(failure, error));
+      saveQueue.current = saved;
+      return saved;
     },
     [dashboardType]
   );
@@ -82,16 +84,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
 
   const updateLayout = useCallback(
     async (newLayout: DashboardLayout) => {
-      layoutRef.current = newLayout;
-      setLayout(newLayout);
-      try {
-        await dashboardService.saveDashboardLayout(newLayout, dashboardType);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (error: any) {
-        console.error("Failed to save dashboard layout:", error);
-      }
+      await commit(newLayout, "Failed to save dashboard layout:");
     },
-    [dashboardType]
+    [commit]
   );
 
   const resetLayout = useCallback(async () => {
