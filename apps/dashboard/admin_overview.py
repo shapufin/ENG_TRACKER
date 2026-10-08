@@ -49,6 +49,22 @@ def _plain_employees():
     return User.objects.filter(is_active=True, is_staff=False, is_superuser=False)
 
 
+def employees_without_tl():
+    """Same definition as users/stats `no_tl_count`: not a TL and none assigned."""
+    return (
+        _plain_employees()
+        .filter(
+            profile__is_italian_tl_role=False,
+            profile__is_albanian_tl_role=False,
+            profile__italian_tl__isnull=True,
+            profile__albanian_tl__isnull=True,
+        )
+        .exclude(profile__role_codes__icontains="italian_tl")
+        .exclude(profile__role_codes__icontains="albanian_tl")
+        .count()
+    )
+
+
 def coverage_gaps(today):
     employees = _plain_employees()
     al_tls = employees.filter(
@@ -59,16 +75,7 @@ def coverage_gaps(today):
         "teams_without_leader": Team.objects.filter(team_leader__isnull=True).count(),
         "users_without_team": employees.filter(profile__teams__isnull=True).count(),
         "users_without_tech": employees.filter(profile__techs__isnull=True).count(),
-        # Same definition as users/stats `no_tl_count`: not a TL and none assigned.
-        "employees_without_tl": employees.filter(
-            profile__is_italian_tl_role=False,
-            profile__is_albanian_tl_role=False,
-            profile__italian_tl__isnull=True,
-            profile__albanian_tl__isnull=True,
-        )
-        .exclude(profile__role_codes__icontains="italian_tl")
-        .exclude(profile__role_codes__icontains="albanian_tl")
-        .count(),
+        "employees_without_tl": employees_without_tl(),
         "al_tls_without_hbpr_assignment": al_tls.exclude(pk__in=covered).distinct().count(),
     }
 
