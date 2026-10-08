@@ -104,11 +104,6 @@ describe("TrendsSection period", () => {
     expect(screen.queryByRole("group", { name: "Trend period" })).not.toBeInTheDocument();
   });
 
-  it("keeps the selector on its own when other trend widgets are on without Hours", async () => {
-    renderWith(<TrendsSection isWidgetActive={(id) => id === "leave-trend"} />);
-    expect(await screen.findByRole("group", { name: "Trend period" })).toBeInTheDocument();
-  });
-
   it("puts the selector inside the Hours widget instead when it is on", async () => {
     renderWith(
       <TrendsSection isWidgetActive={(id) => id === "hours-trend" || id === "leave-trend"} />

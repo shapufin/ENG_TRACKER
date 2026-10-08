@@ -30,10 +30,10 @@ export const HoursOverviewBody: React.FC<HoursOverviewBodyProps> = ({ hoursData,
     <div
       role="status"
       aria-label="Loading hours overview"
-      className="bg-muted/40 h-[240px] w-full animate-pulse rounded-lg"
+      className="bg-muted/40 h-full min-h-[200px] w-full animate-pulse rounded-lg"
     />
   ) : (
-    <div className="h-[240px] min-h-[200px] w-full min-w-0">
+    <div className="h-full min-h-[200px] w-full min-w-0">
       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <BarChart data={hoursData} barSize={56} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />

@@ -42,7 +42,7 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({
   statusData,
   statsLoading,
 }) => (
-  <Tabs defaultValue="status">
+  <Tabs defaultValue="status" className="h-full">
     <ChartCard
       sectionId="approval-queue"
       title="Approval Queue"
@@ -55,13 +55,13 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({
         </TabsList>
       }
     >
-      <TabsContent value="status" className="mt-0">
+      <TabsContent value="status" className="mt-0 h-full">
         <ApprovalStatusBody statusData={statusData} isLoading={statsLoading} />
       </TabsContent>
-      <TabsContent value="aging" className="mt-0">
+      <TabsContent value="aging" className="mt-0 h-full">
         <AgingTab />
       </TabsContent>
-      <TabsContent value="speed" className="mt-0">
+      <TabsContent value="speed" className="mt-0 h-full">
         <SpeedTab />
       </TabsContent>
     </ChartCard>

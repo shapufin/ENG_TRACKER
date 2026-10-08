@@ -5,7 +5,6 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { OVERVIEW_WIDGET_IDS } from "@/config/dashboardWidgets";
 import type { AdminOverview } from "@/types";
-import { GridCell } from "../dashboard-grid/GridCell";
 import { KpiStripWidget } from "./KpiStripWidget";
 
 export interface OverviewStats {
@@ -141,52 +140,42 @@ export const OverviewWidgets: React.FC<OverviewWidgetsProps> = ({
   return (
     <>
       {on("kpi-strip") && (
-        <GridCell id="kpi-strip">
-          <KpiStripWidget
-            totalUsers={stats.totalUsers}
-            totalTeams={stats.totalTeams}
-            totalPending={stats.totalPending}
-            overtimeHours={stats.overtimeHours}
-            statsLoading={stats.statsLoading}
-            overview={{ data, isLoading, isError: failed, onRetry }}
-          />
-        </GridCell>
+        <KpiStripWidget
+          totalUsers={stats.totalUsers}
+          totalTeams={stats.totalTeams}
+          totalPending={stats.totalPending}
+          overtimeHours={stats.overtimeHours}
+          statsLoading={stats.statsLoading}
+          overview={{ data, isLoading, isError: failed, onRetry }}
+        />
       )}
-      {on("coverage-gaps") && (
-        <GridCell id="coverage-gaps">
-          {state("Coverage gaps", (d) => (
-            <CoverageGapsCard gaps={d.coverage_gaps} headcount={d.headcount} />
-          ))}
-        </GridCell>
-      )}
-      {on("period-close") && (
-        <GridCell id="period-close">
-          {state("Period close", ({ period_close: close }) => {
-            const moreTls = close.tls_open - close.open_tls.length;
-            return (
-              <StatCard
-                label={`Period Close (${close.period})`}
-                value={`${close.tls_closed}/${close.tls_total}`}
-                icon={CheckCircle}
-                glow={close.tls_open > 0 ? "warning" : "success"}
-                iconColorClass={close.tls_open > 0 ? "text-warning" : "text-success"}
-                iconWellClass={close.tls_open > 0 ? "bg-warning/10" : "bg-success/10"}
-                trend={
-                  close.tls_open === 0
-                    ? "All TLs closed"
-                    : close.open_tls.map((t) => t.name).join(", ") +
-                      (moreTls > 0 ? ` +${moreTls} more` : "")
-                }
-              />
-            );
-          })}
-        </GridCell>
-      )}
-      {on("backup-status") && (isLoading || failed || data?.backup) && (
-        <GridCell id="backup-status">
-          {state("Backup status", (d) => (d.backup ? <BackupCard backup={d.backup} /> : null))}
-        </GridCell>
-      )}
+      {on("coverage-gaps") &&
+        state("Coverage gaps", (d) => (
+          <CoverageGapsCard gaps={d.coverage_gaps} headcount={d.headcount} />
+        ))}
+      {on("period-close") &&
+        state("Period close", ({ period_close: close }) => {
+          const moreTls = close.tls_open - close.open_tls.length;
+          return (
+            <StatCard
+              label={`Period Close (${close.period})`}
+              value={`${close.tls_closed}/${close.tls_total}`}
+              icon={CheckCircle}
+              glow={close.tls_open > 0 ? "warning" : "success"}
+              iconColorClass={close.tls_open > 0 ? "text-warning" : "text-success"}
+              iconWellClass={close.tls_open > 0 ? "bg-warning/10" : "bg-success/10"}
+              trend={
+                close.tls_open === 0
+                  ? "All TLs closed"
+                  : close.open_tls.map((t) => t.name).join(", ") +
+                    (moreTls > 0 ? ` +${moreTls} more` : "")
+              }
+            />
+          );
+        })}
+      {on("backup-status") &&
+        (isLoading || failed || data?.backup) &&
+        state("Backup status", (d) => (d.backup ? <BackupCard backup={d.backup} /> : null))}
     </>
   );
 };

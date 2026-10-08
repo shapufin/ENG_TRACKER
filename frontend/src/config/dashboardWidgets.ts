@@ -27,6 +27,8 @@ interface WidgetConfig {
   /** Smallest footprint the grid may shrink this widget to. */
   minW: number;
   minH: number;
+  /** Tallest the grid may stretch it (self-scrolling lists); unset = unbounded. */
+  maxH?: number;
 }
 
 /** Widgets fed by the single admin_overview request. */
@@ -64,6 +66,7 @@ export const AVAILABLE_WIDGETS: WidgetConfig[] = [
     defaultSize: { w: 12, h: 2 },
     minW: 6,
     minH: 2,
+    maxH: 3,
   },
   {
     id: "coverage-gaps",
@@ -73,6 +76,7 @@ export const AVAILABLE_WIDGETS: WidgetConfig[] = [
     defaultSize: { w: 4, h: 4 },
     minW: 3,
     minH: 3,
+    maxH: 6,
   },
   {
     id: "people-mix",
@@ -145,6 +149,7 @@ export const AVAILABLE_WIDGETS: WidgetConfig[] = [
     defaultSize: { w: 4, h: 5 },
     minW: 3,
     minH: 3,
+    maxH: 8,
   },
   {
     id: "period-close",
@@ -154,6 +159,7 @@ export const AVAILABLE_WIDGETS: WidgetConfig[] = [
     defaultSize: { w: 4, h: 3 },
     minW: 3,
     minH: 2,
+    maxH: 4,
   },
   {
     id: "backup-status",
@@ -164,6 +170,7 @@ export const AVAILABLE_WIDGETS: WidgetConfig[] = [
     defaultSize: { w: 4, h: 3 },
     minW: 3,
     minH: 2,
+    maxH: 4,
   },
   {
     id: "recent-activity",
@@ -173,6 +180,7 @@ export const AVAILABLE_WIDGETS: WidgetConfig[] = [
     defaultSize: { w: 4, h: 5 },
     minW: 3,
     minH: 3,
+    maxH: 8,
   },
   {
     id: "shortcuts",
@@ -182,6 +190,7 @@ export const AVAILABLE_WIDGETS: WidgetConfig[] = [
     defaultSize: { w: 12, h: 1 },
     minW: 6,
     minH: 1,
+    maxH: 2,
   },
 ];
 

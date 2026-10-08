@@ -192,10 +192,6 @@ export const dashboardService = {
     return data;
   },
 
-  async resetDashboardLayout(dashboardType: string = "admin"): Promise<void> {
-    await api.delete("/dashboard/preferences/", { params: { dashboard_type: dashboardType } });
-  },
-
   // Site Branding — `current` action auto-creates the singleton on first
   // read (mirrors the GlobalSettings fix: a plain list() on an empty DB
   // never creates the row, so this endpoint is used instead).

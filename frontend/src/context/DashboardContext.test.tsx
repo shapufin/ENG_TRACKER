@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import { DashboardProvider, useDashboard } from "./DashboardContext";
 import { dashboardService } from "@/services/dashboardService";
+import { defaultAdminLayout } from "@/components/dashboard/widgetRegistry";
 
 vi.mock("@/services/dashboardService", () => ({
   dashboardService: {
     getDashboardLayout: vi.fn(),
     saveDashboardLayout: vi.fn(),
-    resetDashboardLayout: vi.fn(),
   },
 }));
 
@@ -192,5 +192,94 @@ describe("DashboardProvider updateLayout ordering", () => {
     expect(maxInFlight).toBe(1);
     const last = vi.mocked(dashboardService.saveDashboardLayout).mock.calls[1][0];
     expect(last.widgets.map((w: { id: string }) => w.id)).toEqual(["p1", "later"]);
+  });
+});
+
+describe("DashboardProvider save status", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const Status = () => {
+    const { saveStatus, retrySave, updateLayout, isLoading, layout } = useDashboard();
+    return (
+      <div>
+        <span data-testid="loading">{String(isLoading)}</span>
+        <span data-testid="status">{saveStatus}</span>
+        <button onClick={() => void updateLayout(layout)}>save</button>
+        <button onClick={() => void retrySave()}>retry</button>
+      </div>
+    );
+  };
+
+  const setup = async () => {
+    vi.mocked(dashboardService.getDashboardLayout).mockResolvedValue({ count: 0, results: [] });
+    render(
+      <DashboardProvider dashboardType="admin">
+        <Status />
+      </DashboardProvider>
+    );
+    await waitFor(() => expect(screen.getByTestId("loading")).toHaveTextContent("false"));
+  };
+
+  it("goes idle -> saving -> saved", async () => {
+    vi.mocked(dashboardService.saveDashboardLayout).mockImplementation(
+      () => new Promise((r) => setTimeout(r, 10))
+    );
+    await setup();
+    expect(screen.getByTestId("status")).toHaveTextContent("idle");
+    act(() => screen.getByText("save").click());
+    expect(screen.getByTestId("status")).toHaveTextContent("saving");
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("saved"));
+  });
+
+  it("reports a failed save and recovers on retry", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(dashboardService.saveDashboardLayout).mockRejectedValueOnce(new Error("boom"));
+    await setup();
+    act(() => screen.getByText("save").click());
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("error"));
+    vi.mocked(dashboardService.saveDashboardLayout).mockResolvedValue(undefined);
+    act(() => screen.getByText("retry").click());
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("saved"));
+    expect(dashboardService.saveDashboardLayout).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("DashboardProvider resetLayout", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const Reset = () => {
+    const { resetLayout, isLoading, layout } = useDashboard();
+    return (
+      <div>
+        <span data-testid="loading">{String(isLoading)}</span>
+        <span data-testid="ids">{layout.widgets.map((w) => w.id).join(",")}</span>
+        <button onClick={() => void resetLayout()}>reset</button>
+      </div>
+    );
+  };
+
+  it("saves the default layout through the ordered queue, so it survives a reload", async () => {
+    const custom = {
+      version: 2,
+      columns: 12,
+      widgets: [{ id: "who-is-out", position: { x: 0, y: 0 }, size: { w: 4, h: 5 } }],
+    };
+    vi.mocked(dashboardService.getDashboardLayout).mockResolvedValue({
+      count: 1,
+      results: [{ id: 1, dashboard_type: "admin", layout: custom }],
+    });
+    vi.mocked(dashboardService.saveDashboardLayout).mockResolvedValue(undefined);
+    render(
+      <DashboardProvider dashboardType="admin">
+        <Reset />
+      </DashboardProvider>
+    );
+    await waitFor(() => expect(screen.getByTestId("ids")).toHaveTextContent("who-is-out"));
+    act(() => screen.getByText("reset").click());
+    await waitFor(() => expect(dashboardService.saveDashboardLayout).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(dashboardService.saveDashboardLayout).mock.calls[0][0]).toEqual(
+      defaultAdminLayout
+    );
+    expect(screen.getByTestId("ids").textContent).toContain("kpi-strip");
   });
 });

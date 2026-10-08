@@ -1,11 +1,28 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useCallback, useMemo } from "react";
+import { LayoutDashboard } from "lucide-react";
 import { AdminQuickLinks } from "./AdminQuickLinks";
 import { ApprovalQueueWidget } from "./dashboard-widgets/ApprovalQueueWidget";
 import { RecentActivityWidget } from "./dashboard-widgets/RecentActivityWidget";
 import { OverviewSection } from "./dashboard-widgets/OverviewSection";
-import { GridCell, GridOrderProvider } from "./dashboard-grid/GridCell";
+import { TrendPeriodSelect } from "./dashboard-widgets/TrendPeriodSelect";
+import { TREND_PERIODS } from "./dashboard-widgets/trendTypes";
+import { DashboardGrid } from "./dashboard-grid/DashboardGrid";
+import { sortedWidgetIds } from "./dashboard-grid/gridLayout";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import {
+  defaultAdminLayout,
+  type StoredDashboardLayout,
+} from "@/components/dashboard/widgetRegistry";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
-import { PEOPLE_WIDGET_IDS, TRENDS_WIDGET_IDS } from "@/config/dashboardWidgets";
+import { useAdminOverview } from "@/hooks/useAdminDashboardQueries";
+import { useUrlParamState } from "@/hooks/useUrlParamState";
+import {
+  AVAILABLE_WIDGETS,
+  OVERVIEW_WIDGET_IDS,
+  PEOPLE_WIDGET_IDS,
+  TRENDS_WIDGET_IDS,
+} from "@/config/dashboardWidgets";
 
 // Chart-heavy sections load only when one of their widgets is switched on.
 const TrendsSection = React.lazy(() =>
@@ -15,12 +32,15 @@ const PeopleSection = React.lazy(() =>
   import("./dashboard-widgets/PeopleSection").then((m) => ({ default: m.PeopleSection }))
 );
 
-const SectionFallback: React.FC = () => (
+/** Same footprint as the widget it stands in for (the cell owns the height). */
+const CellFallback: React.FC = () => (
   <div
     aria-hidden
-    className="border-border bg-card h-56 animate-pulse rounded-xl border md:col-span-6 lg:col-span-12"
+    className="border-border bg-card h-full min-h-24 animate-pulse rounded-xl border"
   />
 );
+
+const widgetTitle = (id: string) => AVAILABLE_WIDGETS.find((w) => w.id === id)?.title ?? id;
 
 interface AuditLog {
   id: number;
@@ -40,13 +60,33 @@ interface AdminDashboardWidgetsProps {
   statsLoading?: boolean;
   auditLogsLoading?: boolean;
   isSuperuser?: boolean;
-  /** Widget ids in saved reading order; without it the cells keep their DOM order. */
-  order?: string[];
+  /** Saved layout: reading order and, in the grid, every widget's cell. */
+  layout?: StoredDashboardLayout;
+  /** Edit mode (grip, resize handles, remove buttons). */
+  editing?: boolean;
+  /** The saved layout is still loading: do not claim the dashboard is empty yet. */
+  isLoading?: boolean;
+  /** A section tab (not "All") is selected, so an empty grid is not the user's doing. */
+  sectionFiltered?: boolean;
+  onLayoutChange?: (next: StoredDashboardLayout) => void;
+  onRemoveWidget?: (id: string) => void;
+  onAddWidgets?: () => void;
 }
 
+/** The trend period applies to every trend chart; without the Hours widget it sits alone. */
+const StandalonePeriod: React.FC = () => {
+  const [period, setPeriod] = useUrlParamState("months", TREND_PERIODS, "12");
+  return (
+    <div className="mb-4 flex justify-end">
+      <TrendPeriodSelect value={period} onChange={setPeriod} />
+    </div>
+  );
+};
+
 /**
- * Every active widget in ONE responsive grid (12 columns at lg, 6 at md, 1 below), so
- * rows pack without holes. Sections still own their lazy request; they only render cells.
+ * Every visible widget as one cell of the dashboard grid. Each cell mounts the section that
+ * owns its request with only its own id switched on; the sections share one query per
+ * aggregate (same query key), so this still makes one request each.
  */
 export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
   isWidgetActive,
@@ -60,7 +100,13 @@ export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
   statsLoading,
   auditLogsLoading,
   isSuperuser = false,
-  order = [],
+  layout = defaultAdminLayout,
+  editing = false,
+  isLoading = false,
+  sectionFiltered = false,
+  onLayoutChange,
+  onRemoveWidget,
+  onAddWidgets,
 }) => {
   // The recent-activity widget reads audit_log data the viewer may not be
   // permitted to see (plugin permission is fail-secure server-side) — hide
@@ -68,50 +114,120 @@ export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
   const { canView } = usePluginPermissions();
   const canViewAudit = canView("audit_log");
 
-  return (
-    <GridOrderProvider order={order}>
-      <div className="grid grid-flow-dense grid-cols-1 gap-4 md:grid-cols-6 lg:grid-cols-12">
-        <OverviewSection
-          isWidgetActive={isWidgetActive}
-          isSuperuser={isSuperuser}
-          stats={{
-            totalUsers,
-            totalTeams,
-            totalPending,
-            overtimeHours: overtimeSummary?.total_hours ?? 0,
-            statsLoading,
-          }}
-        />
-        {isWidgetActive("approval-queue") && (
-          <GridCell id="approval-queue">
-            <ApprovalQueueWidget statusData={statusData} statsLoading={statsLoading} />
-          </GridCell>
-        )}
-        {PEOPLE_WIDGET_IDS.some(isWidgetActive) && (
-          <Suspense fallback={<SectionFallback />}>
-            <PeopleSection isWidgetActive={isWidgetActive} />
-          </Suspense>
-        )}
-        {TRENDS_WIDGET_IDS.some(isWidgetActive) && (
-          <Suspense fallback={<SectionFallback />}>
+  // backup-status is superuser-only and has no card at all when the site has no backup data,
+  // so it must not hold an empty cell in the grid.
+  const backupWanted = isSuperuser && isWidgetActive("backup-status");
+  const overview = useAdminOverview(backupWanted);
+  const noBackupData = backupWanted && overview.isSuccess && !overview.data?.backup;
+
+  const allowed = (id: string) =>
+    isWidgetActive(id) &&
+    (id !== "recent-activity" || canViewAudit) &&
+    (id !== "backup-status" || (isSuperuser && !noBackupData));
+  const visible = sortedWidgetIds(layout).filter(allowed);
+  // A stable identity, so the grid does not re-lay itself out on every parent render.
+  const visibleKey = visible.join(",");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const widgetIds = useMemo(() => visible, [visibleKey]);
+
+  const renderWidget = useCallback(
+    (id: string) => {
+      const only = (x: string) => x === id;
+      if ((OVERVIEW_WIDGET_IDS as readonly string[]).includes(id)) {
+        return (
+          <OverviewSection
+            isWidgetActive={only}
+            isSuperuser={isSuperuser}
+            stats={{
+              totalUsers,
+              totalTeams,
+              totalPending,
+              overtimeHours: overtimeSummary?.total_hours ?? 0,
+              statsLoading,
+            }}
+          />
+        );
+      }
+      if ((TRENDS_WIDGET_IDS as readonly string[]).includes(id)) {
+        return (
+          <Suspense fallback={<CellFallback />}>
             <TrendsSection
-              isWidgetActive={isWidgetActive}
+              isWidgetActive={only}
               hoursData={hoursData}
               statsLoading={statsLoading}
             />
           </Suspense>
-        )}
-        {isWidgetActive("recent-activity") && canViewAudit && (
-          <GridCell id="recent-activity">
-            <RecentActivityWidget auditLogs={auditLogs} isLoading={auditLogsLoading} />
-          </GridCell>
-        )}
-        {isWidgetActive("shortcuts") && (
-          <GridCell id="shortcuts">
-            <AdminQuickLinks />
-          </GridCell>
-        )}
-      </div>
-    </GridOrderProvider>
+        );
+      }
+      if ((PEOPLE_WIDGET_IDS as readonly string[]).includes(id)) {
+        return (
+          <Suspense fallback={<CellFallback />}>
+            <PeopleSection isWidgetActive={only} />
+          </Suspense>
+        );
+      }
+      switch (id) {
+        case "approval-queue":
+          return <ApprovalQueueWidget statusData={statusData} statsLoading={statsLoading} />;
+        case "recent-activity":
+          return <RecentActivityWidget auditLogs={auditLogs} isLoading={auditLogsLoading} />;
+        case "shortcuts":
+          return <AdminQuickLinks />;
+        default:
+          return null;
+      }
+    },
+    [
+      isSuperuser,
+      totalUsers,
+      totalTeams,
+      totalPending,
+      overtimeSummary?.total_hours,
+      statsLoading,
+      hoursData,
+      statusData,
+      auditLogs,
+      auditLogsLoading,
+    ]
+  );
+
+  if (widgetIds.length === 0) {
+    if (isLoading) return null;
+    return sectionFiltered ? (
+      <EmptyState
+        icon={LayoutDashboard}
+        title="No widgets in this section"
+        description="Switch to All, or turn widgets on in Customize."
+      />
+    ) : (
+      <EmptyState
+        icon={LayoutDashboard}
+        title="Your dashboard is empty"
+        description="Add widgets to see your admin metrics here."
+        action={
+          onAddWidgets && (
+            <Button size="control" onClick={onAddWidgets}>
+              Add widgets
+            </Button>
+          )
+        }
+      />
+    );
+  }
+
+  const hasTrends = widgetIds.some((id) => (TRENDS_WIDGET_IDS as readonly string[]).includes(id));
+  return (
+    <>
+      {hasTrends && !widgetIds.includes("hours-trend") && <StandalonePeriod />}
+      <DashboardGrid
+        layout={layout}
+        widgetIds={widgetIds}
+        editing={editing}
+        titleOf={widgetTitle}
+        renderWidget={renderWidget}
+        onLayoutChange={onLayoutChange ?? (() => {})}
+        onRemove={onRemoveWidget ?? (() => {})}
+      />
+    </>
   );
 };

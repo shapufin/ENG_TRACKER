@@ -67,15 +67,22 @@ export const getAccessibleWidgets = (userPermissions: Record<string, string[]>):
   });
 };
 
-/** Stored dashboard layout (12-column grid, `version: 2`). */
+/** One widget's cell: top-left corner and footprint in grid units. */
+export interface WidgetPlacement {
+  id: string;
+  position: { x: number; y: number };
+  size: { w: number; h: number };
+}
+
+/**
+ * Stored dashboard layout (`version: 2`). `widgets` holds the 12-column (`lg`) placements;
+ * `layouts.md` optionally holds the 6-column ones and is derived from `lg` while absent.
+ */
 export interface StoredDashboardLayout {
   version?: number;
   columns: number;
-  widgets: Array<{
-    id: string;
-    position: { x: number; y: number };
-    size: { w: number; h: number };
-  }>;
+  widgets: WidgetPlacement[];
+  layouts?: { lg?: WidgetPlacement[]; md?: WidgetPlacement[] };
 }
 
 /** Top-left cell of every admin widget on the 12-column grid, in reading order. */
