@@ -1,4 +1,4 @@
-const FORMULA_START = /^[=+\-@\t\r]/;
+const FORMULA_START = /^ *[=+\-@\t\r]/;
 
 /**
  * One RFC-4180 CSV cell. Free text that starts with `= + - @`, tab or CR is

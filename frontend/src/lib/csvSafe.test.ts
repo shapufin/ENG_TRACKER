@@ -11,6 +11,7 @@ describe("csvCell", () => {
     ["@a", "'@a"],
     ["\tx", "'\tx"],
     ["\rx", `"'\rx"`],
+    ["  =1+1", "'  =1+1"],
   ])("neutralises a leading formula character: %j", (input, expected) => {
     expect(csvCell(input)).toBe(expected);
   });
