@@ -138,7 +138,7 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
       isSubmitting={isSubmitting}
       submitLabel={isEdit ? "Save changes" : "Log meeting"}
       submitDisabled={!canSubmit}
-      size="sm"
+      size="md"
     >
       <div className="space-y-4">
         {isEdit ? (

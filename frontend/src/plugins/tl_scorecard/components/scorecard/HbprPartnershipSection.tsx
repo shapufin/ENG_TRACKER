@@ -25,9 +25,9 @@ import {
   CADENCE_STATUS_LABELS,
   CADENCE_STATUS_TONE,
   EVIDENCE_KIND_LABELS,
-  EVIDENCE_KIND_TONE,
   formatDate,
 } from "../hbpr/hbprMeta";
+import { GroupedEvidenceList } from "../partnership/GroupedEvidenceList";
 import { EvidencePackDialog } from "./EvidencePackDialog";
 import { HbprEvidenceDialog } from "./HbprEvidenceDialog";
 
@@ -185,16 +185,14 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
               }
             />
           ) : (
-            <ol className="space-y-3">
-              {evidence.map((row) => (
-                <li key={row.id}>
+            <GroupedEvidenceList
+              rows={evidence}
+              renderRow={(row) => (
+                <>
                   <GlassCard animateOnMount={false} isHoverLift={false} className="p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={EVIDENCE_KIND_TONE[row.kind]}>
-                            {EVIDENCE_KIND_LABELS[row.kind]}
-                          </Badge>
                           <span className="text-sm font-medium tabular-nums">
                             {formatDate(row.occurred_on)}
                           </span>
@@ -243,9 +241,9 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
                       </a>
                     )}
                   </GlassCard>
-                </li>
-              ))}
-            </ol>
+                </>
+              )}
+            />
           )}
 
           {canAuthor && dialogOpen && (
