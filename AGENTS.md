@@ -190,3 +190,6 @@ You are on Windows. Emit PowerShell-compatible commands, never bash:
 - Light `--border/--input/--background/--surface-sunken/--line-subtle` raised for non-text contrast (see CLAUDE.md "Light boundaries"); `tokens.test.ts` pins them.
 ## 2026-10-08 — Partnership log types + dialog width
 - TL partnership log grouped by meeting type; HBPR evidence view has a `?evidence_kind=` filter (server-side `?kind=`). TL-scorecard form dialogs moved sm to md.
+
+## 2026-10-08 — UI primitive guideline fixes
+- `button.tsx`: explicit transition properties + touch-manipulation; `dialog.tsx` DialogBody overscroll-contain.

@@ -20,7 +20,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-overlay data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-safe:supports-[backdrop-filter]:backdrop-blur-md",
+      "bg-overlay data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 motion-safe:supports-[backdrop-filter]:backdrop-blur-md",
       className
     )}
     {...props}
@@ -80,14 +80,14 @@ const DialogContent = React.forwardRef<
         aria-describedby={undefined}
         className={cn(
           // Positioning + motion
-          "no-scrollbar fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+          "no-scrollbar data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed top-[50%] left-[50%] z-50 translate-x-[-50%] translate-y-[-50%] duration-200",
           // Sizing. `w-[calc(100%-1rem)]` is unprefixed so it still caps width
           // below the `sm` breakpoint regardless of the chosen size.
           "max-h-[calc(100dvh-var(--safe-area-top)-var(--safe-area-bottom)-1rem)] w-[calc(100%-1rem)] sm:max-h-[90vh] sm:w-full",
           // Surface
-          "rounded-2xl border bg-popover text-popover-foreground shadow-2xl sm:rounded-3xl",
+          "bg-popover text-popover-foreground rounded-2xl border shadow-2xl sm:rounded-3xl",
           padded &&
-            "gap-4 px-4 pb-[calc(1rem+var(--safe-area-bottom))] pt-[calc(1.5rem+var(--safe-area-top))] sm:p-6",
+            "gap-4 px-4 pt-[calc(1.5rem+var(--safe-area-top))] pb-[calc(1rem+var(--safe-area-bottom))] sm:p-6",
           // Scroll contract. Never emit `overflow-y-*` here: it is a different
           // tailwind-merge group from `overflow-hidden` and both would survive.
           scroll ? "flex flex-col overflow-hidden" : "grid overflow-y-auto sm:overflow-visible",
@@ -98,7 +98,7 @@ const DialogContent = React.forwardRef<
       >
         {children}
         {!hideClose && (
-          <DialogPrimitive.Close className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-xl opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground sm:right-4 sm:top-4">
+          <DialogPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-2 right-2 flex h-11 w-11 items-center justify-center rounded-xl opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none sm:top-4 sm:right-4">
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
@@ -132,7 +132,10 @@ DialogHeader.displayName = "DialogHeader";
  */
 const DialogBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4", className)}
+    className={cn(
+      "no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-1 py-4",
+      className
+    )}
     {...props}
   />
 );
@@ -168,7 +171,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-muted-foreground text-sm", className)}
     {...props}
   />
 ));
