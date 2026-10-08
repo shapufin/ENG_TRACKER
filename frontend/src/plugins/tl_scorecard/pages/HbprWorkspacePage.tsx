@@ -6,6 +6,9 @@ import { NoAccess } from "../components/hbpr/NoAccess";
 import { isForbidden } from "../components/hbpr/isForbidden";
 import { AssignedLeadersTable } from "../components/hbpr/AssignedLeadersTable";
 import { HbprAttentionSummary } from "../components/hbpr/HbprAttentionSummary";
+import type { EvidenceKindValue } from "../components/hbpr/EvidenceKindFilter";
+import { EVIDENCE_KIND_ORDER } from "../components/hbpr/hbprMeta";
+import type { HbprEvidenceKind } from "../types/tlScorecard";
 import { HbprEvidenceTimeline } from "../components/hbpr/HbprEvidenceTimeline";
 import { HbprRecordExplorer, type HbprRecordFilters } from "../components/hbpr/HbprRecordExplorer";
 import { HbprWorkspaceEmptyState } from "../components/hbpr/HbprWorkspaceEmptyState";
@@ -48,6 +51,12 @@ export const HbprWorkspacePage: React.FC = () => {
       ? yearParam
       : new Date().getFullYear();
   const leaderParam = Number(params.get("leader")) || null;
+  const kindParam = params.get("evidence_kind");
+  const evidenceKind: EvidenceKindValue = EVIDENCE_KIND_ORDER.includes(
+    kindParam as HbprEvidenceKind
+  )
+    ? (kindParam as HbprEvidenceKind)
+    : "all";
   const page = Math.max(1, Math.trunc(Number(params.get("page"))) || 1);
 
   // Changing anything but the page itself returns to page one.
@@ -78,6 +87,7 @@ export const HbprWorkspacePage: React.FC = () => {
     leaderParam,
     record: { ...filters, page },
     evidencePage: page,
+    evidenceKind: evidenceKind === "all" ? undefined : evidenceKind,
   });
 
   const leaders = overview.data?.leaders ?? [];
@@ -192,6 +202,8 @@ export const HbprWorkspacePage: React.FC = () => {
           onPageChange={(next) => setParam("page", next > 1 ? String(next) : null)}
           leaders={leaders}
           year={year}
+          kindFilter={evidenceKind}
+          onKindFilterChange={(next) => setParam("evidence_kind", next === "all" ? null : next)}
           leaderFilter={leader}
           onLeaderFilterChange={(id) => setParam("leader", id === null ? null : String(id))}
           isLoading={evidence.isLoading}

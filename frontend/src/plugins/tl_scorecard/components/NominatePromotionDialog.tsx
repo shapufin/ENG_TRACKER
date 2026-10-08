@@ -65,7 +65,7 @@ export const NominatePromotionDialog: React.FC<NominatePromotionDialogProps> = (
       isSubmitting={isSubmitting}
       submitLabel={isEdit ? "Save changes" : "Nominate"}
       submitDisabled={!canSubmit}
-      size="sm"
+      size="md"
     >
       <div className="space-y-4">
         {isEdit ? (

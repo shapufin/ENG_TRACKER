@@ -79,7 +79,7 @@ export const FlagAbsenceDialog: React.FC<FlagAbsenceDialogProps> = ({
       isSubmitting={isSubmitting}
       submitLabel={isEdit ? "Save changes" : "Flag absence"}
       submitDisabled={!canSubmit}
-      size="sm"
+      size="md"
     >
       <div className="space-y-4">
         {isEdit ? (

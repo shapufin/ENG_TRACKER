@@ -293,7 +293,10 @@ describe("HbprWorkspacePage", () => {
   it("restores the active view from the URL and switches views via the tabs", async () => {
     renderPage(`/hbpr?view=evidence&year=${YEAR}`);
     expect(await screen.findByText(`Partnership log · ${YEAR}`)).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Partnership log" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Partnership log" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
 
     selectView("Records");
     expect(await screen.findByRole("heading", { name: /meetings records/i })).toBeInTheDocument();
@@ -398,6 +401,21 @@ describe("HbprWorkspacePage", () => {
     expect(screen.getByText("Mid-year participation.")).toBeInTheDocument();
     expect(svc.listHbprEvidencePage).toHaveBeenCalledWith(
       expect.objectContaining({ period_year: YEAR, page: 1 })
+    );
+  });
+
+  it("asks the API for one meeting type and returns to page one when it changes", async () => {
+    renderPage(`/hbpr?view=evidence&year=${YEAR}&evidence_kind=epr_mid_year&page=2`);
+    await screen.findByRole("button", { name: "Mid-year EPR", pressed: true });
+    expect(svc.listHbprEvidencePage).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "epr_mid_year", page: 2 })
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Cadence meetings" }));
+    await waitFor(() =>
+      expect(svc.listHbprEvidencePage).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "cadence_meeting", page: 1 })
+      )
     );
   });
 
