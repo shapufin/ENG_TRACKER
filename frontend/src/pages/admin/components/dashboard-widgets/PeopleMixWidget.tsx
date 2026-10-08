@@ -7,7 +7,7 @@ import type { PeopleWidgetProps } from "./trendTypes";
 
 /** Active users by role, and members per tech and level, as two tabs of one card. */
 export const PeopleMixWidget: React.FC<PeopleWidgetProps> = (props) => (
-  <Tabs defaultValue="roles">
+  <Tabs defaultValue="roles" className="h-full">
     <ChartCard
       sectionId="people-mix"
       title="People Mix"

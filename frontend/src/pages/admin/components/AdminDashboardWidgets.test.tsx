@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { adminWidgetPlacement } from "@/components/dashboard/widgetRegistry";
+import { AVAILABLE_WIDGETS } from "@/config/dashboardWidgets";
 import { dashboardService } from "@/services/dashboardService";
 import { AdminDashboardWidgets } from "./AdminDashboardWidgets";
 import { makeOverview, makePeople, makeTrends } from "./dashboard-widgets/adminFixtures";
@@ -44,6 +46,12 @@ const baseProps = {
   auditLogsLoading: false,
 };
 
+const withClient = (ui: React.ReactElement) => (
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    {ui}
+  </QueryClientProvider>
+);
+
 describe("AdminDashboardWidgets recent-activity gating", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -51,21 +59,13 @@ describe("AdminDashboardWidgets recent-activity gating", () => {
   });
 
   it("renders recent activity when audit_log view is permitted", () => {
-    render(
-      <MemoryRouter>
-        <AdminDashboardWidgets {...baseProps} />
-      </MemoryRouter>
-    );
+    render(<MemoryRouter>{withClient(<AdminDashboardWidgets {...baseProps} />)}</MemoryRouter>);
     expect(screen.getByTestId("recent-activity-widget")).toBeInTheDocument();
   });
 
   it("hides recent activity when audit_log view is denied", () => {
     mockCanView.mockReturnValue(false);
-    render(
-      <MemoryRouter>
-        <AdminDashboardWidgets {...baseProps} />
-      </MemoryRouter>
-    );
+    render(<MemoryRouter>{withClient(<AdminDashboardWidgets {...baseProps} />)}</MemoryRouter>);
     expect(screen.queryByTestId("recent-activity-widget")).not.toBeInTheDocument();
   });
 });
@@ -79,6 +79,13 @@ describe("AdminDashboardWidgets single grid", () => {
     vi.mocked(dashboardService.getAdminPeople).mockResolvedValue(makePeople());
   });
 
+  // The default layout leaves opt-in backup-status out; these tests want every widget placed.
+  const everyWidget = {
+    version: 2,
+    columns: 12,
+    widgets: AVAILABLE_WIDGETS.map((w) => adminWidgetPlacement(w.id)!),
+  };
+
   const renderAll = (props: Partial<React.ComponentProps<typeof AdminDashboardWidgets>> = {}) =>
     render(
       <MemoryRouter>
@@ -88,6 +95,7 @@ describe("AdminDashboardWidgets single grid", () => {
           <AdminDashboardWidgets
             {...baseProps}
             isWidgetActive={() => true}
+            layout={everyWidget}
             isSuperuser
             {...props}
           />
@@ -121,9 +129,9 @@ describe("AdminDashboardWidgets single grid", () => {
         "who-is-out",
       ].sort()
     );
-    // One grid, no per-section grids.
-    expect(container.querySelectorAll('[class~="lg:grid-cols-12"]')).toHaveLength(1);
+    // Every widget is its own grid child; sections no longer own a grid.
     expect(container.querySelectorAll("[data-grid-cell]").length).toBe(cells.length);
+    expect(container.querySelectorAll("[data-grid-mode]")).toHaveLength(1);
   });
 
   it("makes one request per aggregate for the whole dashboard", async () => {
@@ -152,13 +160,78 @@ describe("AdminDashboardWidgets single grid", () => {
     expect(container.querySelector("[data-grid-cell='backup-status']")).toBeNull();
   });
 
-  it("orders cells by the saved layout", async () => {
+  it("orders cells by the saved layout (reading order, row then column)", async () => {
     const { container } = renderAll({
       isWidgetActive: (id) => id === "shortcuts" || id === "recent-activity",
-      order: ["shortcuts", "recent-activity"],
+      layout: {
+        version: 2,
+        columns: 12,
+        widgets: [
+          { id: "shortcuts", position: { x: 0, y: 9 }, size: { w: 12, h: 1 } },
+          { id: "recent-activity", position: { x: 0, y: 0 }, size: { w: 4, h: 5 } },
+        ],
+      },
     });
-    const cell = (id: string) => container.querySelector<HTMLElement>(`[data-grid-cell='${id}']`)!;
-    expect(cell("shortcuts").style.order).toBe("0");
-    expect(cell("recent-activity").style.order).toBe("1");
+    const ids = [...container.querySelectorAll<HTMLElement>("[data-grid-cell]")].map(
+      (c) => c.dataset.gridCell
+    );
+    expect(ids).toEqual(["recent-activity", "shortcuts"]);
+  });
+
+  it("keeps exactly one [data-chart-section] per widget root, so PDF capture finds each card once", async () => {
+    const { container } = renderAll({ editing: true });
+    await screen.findByText("Coverage Gaps");
+    await screen.findByRole("tab", { name: "Trend" });
+    await screen.findByRole("tab", { name: "Roles" });
+    const sections = [...container.querySelectorAll<HTMLElement>("[data-chart-section]")].map(
+      (el) => el.dataset.chartSection
+    );
+    expect(new Set(sections).size).toBe(sections.length);
+    for (const id of ["kpi-strip", "hours-trend", "approval-queue", "shortcuts"]) {
+      expect(sections).toContain(id);
+    }
+    // Each section node sits inside its own grid cell, never wrapped by edit chrome.
+    for (const el of container.querySelectorAll<HTMLElement>("[data-chart-section]")) {
+      expect(el.closest("[data-grid-cell]")).not.toBeNull();
+    }
+  });
+
+  it("keeps the trend period selector on its own when trend widgets are on without Hours", async () => {
+    renderAll({ isWidgetActive: (id) => id === "leave-trend" });
+    expect(await screen.findByRole("group", { name: "Trend period" })).toBeInTheDocument();
+  });
+
+  it("shows no selector row when the Hours widget carries it", async () => {
+    renderAll({ isWidgetActive: (id) => id === "hours-trend" || id === "leave-trend" });
+    await screen.findByRole("tab", { name: "Trend" });
+    expect(screen.queryByRole("group", { name: "Trend period" })).not.toBeInTheDocument();
+  });
+
+  it("drops backup-status from the grid when the site has no backup data", async () => {
+    vi.mocked(dashboardService.getAdminOverview).mockResolvedValue(makeOverview({ backup: null }));
+    const { container } = renderAll({ isWidgetActive: (id) => id === "backup-status" });
+    await vi.waitFor(() => expect(dashboardService.getAdminOverview).toHaveBeenCalled());
+    await vi.waitFor(() =>
+      expect(container.querySelector("[data-grid-cell='backup-status']")).toBeNull()
+    );
+  });
+
+  it("shows an empty state with an Add widgets action when nothing is on", () => {
+    const onAddWidgets = vi.fn();
+    renderAll({ isWidgetActive: () => false, onAddWidgets });
+    expect(screen.getByText("Your dashboard is empty")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add widgets" }));
+    expect(onAddWidgets).toHaveBeenCalled();
+  });
+
+  it("does not claim the dashboard is empty while the layout loads", () => {
+    renderAll({ isWidgetActive: () => false, isLoading: true });
+    expect(screen.queryByText("Your dashboard is empty")).not.toBeInTheDocument();
+  });
+
+  it("explains an empty section instead of offering to add widgets", () => {
+    renderAll({ isWidgetActive: () => false, sectionFiltered: true });
+    expect(screen.getByText("No widgets in this section")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add widgets" })).not.toBeInTheDocument();
   });
 });

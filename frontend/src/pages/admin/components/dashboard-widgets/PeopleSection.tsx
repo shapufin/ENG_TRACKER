@@ -1,7 +1,6 @@
 import React from "react";
 import { PEOPLE_WIDGET_IDS } from "@/config/dashboardWidgets";
 import { useAdminPeople } from "@/hooks/useAdminDashboardQueries";
-import { GridCell } from "../dashboard-grid/GridCell";
 import { PeopleMixWidget } from "./PeopleMixWidget";
 import { RejectionAnalysisWidget } from "./RejectionAnalysisWidget";
 
@@ -19,16 +18,8 @@ const Fetching: React.FC<PeopleSectionProps> = ({ isWidgetActive }) => {
   };
   return (
     <>
-      {isWidgetActive("people-mix") && (
-        <GridCell id="people-mix">
-          <PeopleMixWidget {...props} />
-        </GridCell>
-      )}
-      {isWidgetActive("rejection-analysis") && (
-        <GridCell id="rejection-analysis">
-          <RejectionAnalysisWidget {...props} />
-        </GridCell>
-      )}
+      {isWidgetActive("people-mix") && <PeopleMixWidget {...props} />}
+      {isWidgetActive("rejection-analysis") && <RejectionAnalysisWidget {...props} />}
     </>
   );
 };

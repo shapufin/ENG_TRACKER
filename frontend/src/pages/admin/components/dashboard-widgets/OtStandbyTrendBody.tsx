@@ -54,7 +54,7 @@ export const OtStandbyTrendBody: React.FC<TrendWidgetProps> = ({
       <div
         role="img"
         aria-label={`Overtime and standby hours for the last ${rows.length || 12} months. Latest month: ${fmt1(last?.overtime ?? 0)} hours overtime, ${fmt1(last?.standby ?? 0)} hours standby.`}
-        className="h-[240px] w-full min-w-0"
+        className="h-full min-h-[200px] w-full min-w-0"
       >
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <LineChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>

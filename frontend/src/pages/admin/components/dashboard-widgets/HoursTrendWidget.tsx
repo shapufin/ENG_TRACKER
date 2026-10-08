@@ -24,7 +24,7 @@ export const HoursTrendWidget: React.FC<HoursTrendWidgetProps> = ({
 }) => {
   const [tab, setTab] = useState("month");
   return (
-    <Tabs value={tab} onValueChange={setTab}>
+    <Tabs value={tab} onValueChange={setTab} className="h-full">
       <ChartCard
         sectionId="hours-trend"
         title="Hours"
@@ -39,10 +39,10 @@ export const HoursTrendWidget: React.FC<HoursTrendWidgetProps> = ({
           </div>
         }
       >
-        <TabsContent value="month" className="mt-0">
+        <TabsContent value="month" className="mt-0 h-full">
           <HoursOverviewBody hoursData={hoursData} isLoading={statsLoading} />
         </TabsContent>
-        <TabsContent value="trend" className="mt-0">
+        <TabsContent value="trend" className="mt-0 h-full">
           <OtStandbyTrendBody {...trend} />
         </TabsContent>
       </ChartCard>

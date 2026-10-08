@@ -2,12 +2,10 @@ import React from "react";
 import { TRENDS_WIDGET_IDS } from "@/config/dashboardWidgets";
 import { useAdminTrends } from "@/hooks/useAdminDashboardQueries";
 import { useUrlParamState } from "@/hooks/useUrlParamState";
-import { TrendPeriodSelect } from "./TrendPeriodSelect";
 import { TREND_PERIODS } from "./trendTypes";
 import { LeaveTrendWidget } from "./LeaveTrendWidget";
 import { OtByClientWidget } from "./OtByClientWidget";
 import { HoursTrendWidget } from "./HoursTrendWidget";
-import { GridCell } from "../dashboard-grid/GridCell";
 import { TeamComparisonWidget } from "./TeamComparisonWidget";
 import { WhoIsOutWidget } from "./WhoIsOutWidget";
 
@@ -33,43 +31,19 @@ const Fetching: React.FC<TrendsSectionProps> = ({
   };
   return (
     <>
-      {!isWidgetActive("hours-trend") && (
-        // The period also drives the other trend charts; without the Hours widget it sits alone.
-        <div className="flex justify-end md:col-span-6 lg:col-span-12">
-          <TrendPeriodSelect value={period} onChange={setPeriod} />
-        </div>
-      )}
       {isWidgetActive("hours-trend") && (
-        <GridCell id="hours-trend">
-          <HoursTrendWidget
-            {...props}
-            hoursData={hoursData}
-            statsLoading={statsLoading}
-            period={period}
-            onPeriodChange={setPeriod}
-          />
-        </GridCell>
+        <HoursTrendWidget
+          {...props}
+          hoursData={hoursData}
+          statsLoading={statsLoading}
+          period={period}
+          onPeriodChange={setPeriod}
+        />
       )}
-      {isWidgetActive("leave-trend") && (
-        <GridCell id="leave-trend">
-          <LeaveTrendWidget {...props} />
-        </GridCell>
-      )}
-      {isWidgetActive("ot-by-client") && (
-        <GridCell id="ot-by-client">
-          <OtByClientWidget {...props} />
-        </GridCell>
-      )}
-      {isWidgetActive("who-is-out") && (
-        <GridCell id="who-is-out">
-          <WhoIsOutWidget {...props} />
-        </GridCell>
-      )}
-      {isWidgetActive("team-comparison") && (
-        <GridCell id="team-comparison">
-          <TeamComparisonWidget {...props} />
-        </GridCell>
-      )}
+      {isWidgetActive("leave-trend") && <LeaveTrendWidget {...props} />}
+      {isWidgetActive("ot-by-client") && <OtByClientWidget {...props} />}
+      {isWidgetActive("who-is-out") && <WhoIsOutWidget {...props} />}
+      {isWidgetActive("team-comparison") && <TeamComparisonWidget {...props} />}
     </>
   );
 };

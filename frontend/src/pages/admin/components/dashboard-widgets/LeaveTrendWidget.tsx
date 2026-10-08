@@ -44,7 +44,7 @@ export const LeaveTrendWidget: React.FC<TrendWidgetProps> = ({
       <div
         role="img"
         aria-label={`Approved leave in business days for the last ${rows.length || 12} months. Latest month: ${fmt1(last?.vacation ?? 0)} vacation, ${fmt1(last?.sick ?? 0)} sick.`}
-        className="h-[240px] w-full min-w-0"
+        className="h-full min-h-[200px] w-full min-w-0"
       >
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <BarChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>

@@ -1,0 +1,17 @@
+/* Theme the react-grid-layout chrome with the app tokens. Reduced motion needs no rule here:
+   the global prefers-reduced-motion override in index.css already zeroes every transition,
+   including the grid items' transform transition. */
+.react-grid-item.react-grid-placeholder {
+  background: hsl(var(--primary));
+  border-radius: 0.75rem;
+}
+
+.react-grid-item > .react-resizable-handle::after {
+  border-color: hsl(var(--muted-foreground));
+}
+
+.react-grid-item > .react-resizable-handle {
+  /* A bigger hit area than the default 20px square (WCAG 2.5.8 target size). */
+  width: 24px;
+  height: 24px;
+}
