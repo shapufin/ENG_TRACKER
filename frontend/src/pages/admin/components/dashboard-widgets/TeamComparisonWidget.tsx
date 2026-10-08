@@ -1,10 +1,10 @@
 import React from "react";
 import { Building2 } from "lucide-react";
 import { fmt1 } from "./chartStyle";
+import { cn } from "@/lib/utils";
+import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
 import { WidgetFrame } from "./WidgetFrame";
 import type { TrendWidgetProps } from "./trendTypes";
-
-const TH = "pb-2 text-right font-semibold";
 
 export const TeamComparisonWidget: React.FC<TrendWidgetProps> = ({
   data,
@@ -26,23 +26,23 @@ export const TeamComparisonWidget: React.FC<TrendWidgetProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-muted-foreground text-left">
-              <th scope="col" className="pb-2 font-semibold">
+            <tr className={TABLE_HEAD_ROW_CLASS}>
+              <th scope="col" className={TABLE_HEAD_CELL_CLASS}>
                 Team
               </th>
-              <th scope="col" className={TH}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
                 Size
               </th>
-              <th scope="col" className={TH}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
                 OT h
               </th>
-              <th scope="col" className={TH}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
                 OT / person
               </th>
-              <th scope="col" className={TH}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
                 Standby h
               </th>
-              <th scope="col" className={TH}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
                 Leave d
               </th>
             </tr>

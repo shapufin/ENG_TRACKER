@@ -1,10 +1,10 @@
 import React from "react";
 import { Gauge } from "lucide-react";
 import { fmt1 } from "./chartStyle";
+import { cn } from "@/lib/utils";
+import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
 import { WidgetFrame } from "./WidgetFrame";
 import type { PeopleWidgetProps } from "./trendTypes";
-
-const TH = "pb-2 text-right font-semibold";
 
 export const ApproverSlaWidget: React.FC<PeopleWidgetProps> = ({
   data,
@@ -26,17 +26,17 @@ export const ApproverSlaWidget: React.FC<PeopleWidgetProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-muted-foreground text-left">
-              <th scope="col" className="pb-2 font-semibold">
+            <tr className={TABLE_HEAD_ROW_CLASS}>
+              <th scope="col" className={TABLE_HEAD_CELL_CLASS}>
                 Approver
               </th>
-              <th scope="col" className={TH}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
                 Decisions
               </th>
-              <th scope="col" className={TH}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
                 Approved
               </th>
-              <th scope="col" className={TH}>
+              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>
                 Avg time
               </th>
             </tr>
