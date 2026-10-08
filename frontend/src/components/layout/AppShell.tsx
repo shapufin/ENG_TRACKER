@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
@@ -10,6 +10,8 @@ import { TeamContextPill } from "./TeamContextPill";
 import { MobileOverlay } from "./MobileOverlay";
 import { MainContentTransition } from "./MainContentTransition";
 import { HeaderSearch } from "./HeaderSearch";
+import { CommandPalette } from "./CommandPalette";
+import { navItemToPaletteItem } from "./paletteItems";
 import { HeaderProfileMenu } from "./HeaderProfileMenu";
 import { useVisibleNavItems } from "./hooks/useVisibleNavItems";
 import { usePendingApprovalCount } from "@/hooks/usePendingApprovalCount";
@@ -45,6 +47,7 @@ export const AppShell = React.memo(() => {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const visibleItems = useVisibleNavItems(
     isAdmin,
@@ -57,12 +60,25 @@ export const AppShell = React.memo(() => {
     isHBPROnly
   );
   const handleLogout = useLogout();
+  const paletteItems = useMemo(() => visibleItems.map(navItemToPaletteItem), [visibleItems]);
+
+  // Ctrl/Cmd+K toggles the page palette; preventDefault beats the browser's own Ctrl+K.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
   // Pending-approvals nav badge (mockup: amber count pill). Reuses the
   // approval dashboard's pending-months cache; 0 renders no badge.
   const { total: pendingApprovalTotal } = usePendingApprovalCount(isTeamLeader);
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="bg-background text-foreground flex h-screen">
       <MobileOverlay isOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <Sidebar
@@ -79,13 +95,13 @@ export const AppShell = React.memo(() => {
       />
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border/30 bg-card/30 px-3 pb-3 pt-[calc(0.75rem+var(--safe-area-top))] backdrop-blur-sm md:hidden">
+        <div className="border-border/30 bg-card/30 flex items-center justify-between border-b px-3 pt-[calc(0.75rem+var(--safe-area-top))] pb-3 backdrop-blur-sm md:hidden">
           <div className="flex items-center gap-3">
             <button
               ref={mobileMenuButtonRef}
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="flex h-11 w-11 items-center justify-center rounded-md hover:bg-accent"
+              className="hover:bg-accent flex h-11 w-11 items-center justify-center rounded-md"
               aria-label="Open menu"
               aria-expanded={mobileOpen}
               aria-controls="app-mobile-sidebar"
@@ -98,7 +114,7 @@ export const AppShell = React.memo(() => {
             <PluginSlot slot="header-mobile" />
           </div>
         </div>
-        <div className="hidden border-b border-border/60 bg-card/10 px-8 py-3 backdrop-blur-sm md:flex md:items-center md:justify-between md:gap-4">
+        <div className="border-border/60 bg-card/10 hidden border-b px-8 py-3 backdrop-blur-sm md:flex md:items-center md:justify-between md:gap-4">
           <div className="flex min-w-0 items-center gap-2">
             <TeamContextPill />
           </div>
@@ -118,6 +134,12 @@ export const AppShell = React.memo(() => {
           </div>
         </MainContentTransition>
       </main>
+      <CommandPalette
+        items={paletteItems}
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        userId={user?.id}
+      />
     </div>
   );
 });

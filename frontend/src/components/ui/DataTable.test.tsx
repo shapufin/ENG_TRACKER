@@ -299,6 +299,23 @@ describe("DataTable", () => {
       expect(bodyNames(container)).toEqual(["Bob"]);
     });
 
+    it("starts filtered when initialSearch is given and the box shows it", () => {
+      const { container } = render(
+        <DataTable
+          columns={columns}
+          data={[
+            { id: 1, name: "Alice", email: "alice@test.com" },
+            { id: 2, name: "Bob", email: "bob@test.com" },
+          ]}
+          searchColumn={["name", "email"]}
+          searchPlaceholder="Search people..."
+          initialSearch="bob"
+        />
+      );
+      expect(bodyNames(container)).toEqual(["Bob"]);
+      expect(screen.getByLabelText("Search people...")).toHaveValue("bob");
+    });
+
     it("searches ONLY the listed paths when searchColumn is an array", () => {
       const richColumns: AppColumnDef<Item & { role: string }>[] = [
         { accessorKey: "name", header: "Name" },

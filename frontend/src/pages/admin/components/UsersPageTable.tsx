@@ -10,6 +10,8 @@ interface UsersPageTableProps {
   data: UserProfile[];
   rowSelection: RowSelectionState;
   onRowSelectionChange: OnChangeFn<RowSelectionState>;
+  /** Seeds the search box (from ?q=, e.g. the command palette's user result). */
+  initialSearch?: string;
 }
 
 export const UsersPageTable: React.FC<UsersPageTableProps> = ({
@@ -17,6 +19,7 @@ export const UsersPageTable: React.FC<UsersPageTableProps> = ({
   data,
   rowSelection,
   onRowSelectionChange,
+  initialSearch,
 }) => (
   <GlassCard delay={0} className="p-4">
     <DataTable
@@ -24,6 +27,7 @@ export const UsersPageTable: React.FC<UsersPageTableProps> = ({
       data={data}
       searchColumn="user.username"
       searchPlaceholder="Search users..."
+      initialSearch={initialSearch}
       enableColumnVisibility
       storageKey="table-visibility-users-page"
       enableRowSelection

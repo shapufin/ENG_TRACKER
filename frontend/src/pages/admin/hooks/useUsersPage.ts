@@ -7,6 +7,16 @@ import api from "@/lib/api";
 import type { TechAssignmentInput, UserProfile } from "@/types";
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
 import type { TLFilter } from "@/types";
+import { useUrlParamState } from "@/hooks/useUrlParamState";
+
+const TL_FILTERS: readonly TLFilter[] = [
+  "employee",
+  "italian_tl",
+  "albanian_tl",
+  "hbpr",
+  "hr",
+  "cr_admin",
+];
 
 /** Local mirror of the control_room plugin's ControlRoomAccess fields
  * actually consumed here and downstream (useUserColumns, PluginCRUserDialogs),
@@ -122,7 +132,8 @@ export const useUsersPage = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState<UserProfile | null>(null);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [tlFilter, setTlFilter] = useState<TLFilter>("employee");
+  // ?role= so the command palette can open the tab that contains a given person.
+  const [tlFilter, setTlFilter] = useUrlParamState("role", TL_FILTERS, "employee");
   const [techIds, setTechIds] = useState<number[]>([]);
   const [techLevelIds, setTechLevelIds] = useState<number[]>([]);
   const [noTechOnly, setNoTechOnly] = useState(false);

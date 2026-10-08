@@ -41,6 +41,8 @@ interface DataTableProps<TData extends RowData> {
    * primitive cell value. */
   searchColumn?: string | string[];
   searchPlaceholder?: string;
+  /** Seeds the search box once on mount (e.g. from a ?q= deep link). */
+  initialSearch?: string;
   enableRowSelection?: boolean;
   rowSelection?: RowSelectionState;
   onRowSelectionChange?: OnChangeFn<RowSelectionState>;
@@ -63,6 +65,7 @@ export const DataTable = function DataTable<TData extends RowData>({
   data,
   searchColumn,
   searchPlaceholder = "Search...",
+  initialSearch,
   enableRowSelection,
   rowSelection,
   onRowSelectionChange,
@@ -79,7 +82,7 @@ export const DataTable = function DataTable<TData extends RowData>({
   getRowId,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = React.useState("");
+  const [globalFilter, setGlobalFilter] = React.useState(initialSearch ?? "");
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [showLeftShadow, setShowLeftShadow] = React.useState(false);
   const [showRightShadow, setShowRightShadow] = React.useState(false);
