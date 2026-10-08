@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
+import { useUrlParamState } from "@/hooks/useUrlParamState";
 
 export type HoursLogStatus = "all" | "pending" | "approved" | "rejected";
+
+const HOURS_STATUSES: readonly HoursLogStatus[] = ["all", "pending", "approved", "rejected"];
 
 interface HoursLog {
   id: number;
@@ -11,7 +14,8 @@ interface HoursLog {
 }
 
 export const useHoursLogsFilterState = () => {
-  const [filterStatus, setFilterStatus] = useState<HoursLogStatus>("all");
+  // ?status= so dashboard insights can deep-link to the pending queue.
+  const [filterStatus, setFilterStatus] = useUrlParamState("status", HOURS_STATUSES, "all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [searchQuery, setSearchQuery] = useState("");

@@ -18,9 +18,9 @@ const RANK: Record<InsightSeverity, number> = { critical: 0, warning: 1, info: 2
 const STALE_CRITICAL_AT = 5;
 
 const AGING_ROUTES = {
-  overtime: "/admin/overtime-logs",
-  standby: "/admin/standby-logs",
-  leave: "/admin/leave-requests",
+  overtime: "/admin/overtime-logs?status=pending",
+  standby: "/admin/standby-logs?status=pending",
+  leave: "/admin/leave-requests?status=pending",
 } as const;
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;

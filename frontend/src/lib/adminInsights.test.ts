@@ -56,13 +56,16 @@ describe("deriveAdminInsights", () => {
     expect(out[0]).toMatchObject({
       id: "aging-stale",
       severity: "warning",
-      to: "/admin/standby-logs",
+      to: "/admin/standby-logs?status=pending",
     });
     o.approval_aging.leave = [0, 0, 0, 1];
     out = deriveAdminInsights(o);
-    expect(out[0]).toMatchObject({ severity: "critical", to: "/admin/standby-logs" });
+    expect(out[0]).toMatchObject({
+      severity: "critical",
+      to: "/admin/standby-logs?status=pending",
+    });
     o.approval_aging.leave = [0, 0, 0, 9];
-    expect(deriveAdminInsights(o)[0].to).toBe("/admin/leave-requests");
+    expect(deriveAdminInsights(o)[0].to).toBe("/admin/leave-requests?status=pending");
   });
 
   it("emits one insight per rule, ordered critical, warning, info", () => {

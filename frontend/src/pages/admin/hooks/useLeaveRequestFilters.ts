@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import type { LeaveRequest } from "@/types";
+import { useUrlParamState } from "@/hooks/useUrlParamState";
 import { matchesLeaveRequestFilter, sortLeaveRequests } from "./leaveRequestFilterHelpers";
+
+const LEAVE_STATUSES = ["all", "pending", "approved", "rejected"] as const;
 
 export const useLeaveRequestFilters = (
   requests: LeaveRequest[] | { results: LeaveRequest[] } | undefined
 ) => {
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">(
-    "all"
-  );
+  // ?status= so dashboard insights can deep-link to the pending queue.
+  const [filterStatus, setFilterStatus] = useUrlParamState("status", LEAVE_STATUSES, "all");
   const [filterUser, setFilterUser] = useState<string>("all");
   const [filterType, setFilterType] = useState<"all" | "vacation">("all");
   const [dateFrom, setDateFrom] = useState("");
