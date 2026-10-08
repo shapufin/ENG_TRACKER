@@ -8,13 +8,15 @@ import { useAdminDashboardQueries } from "@/hooks/useAdminDashboardQueries";
  * AdminDashboardPage a thin composition root.
  */
 export const useAdminDashboardPage = () => {
-  const { layout, resetLayout, addWidget, removeWidget } = useDashboard();
+  const { layout, isLoading, resetLayout, addWidget, removeWidget } = useDashboard();
   const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
 
   const queries = useAdminDashboardQueries();
 
   const activeWidgetIds = layout.widgets.map((w) => w.id);
-  const isWidgetActive = (widgetId: string) => activeWidgetIds.includes(widgetId);
+  // Nothing is active until the saved layout has loaded: the provisional default layout would
+  // otherwise mount widgets (and fire their section requests) that the saved one then removes.
+  const isWidgetActive = (widgetId: string) => !isLoading && activeWidgetIds.includes(widgetId);
 
   const handleToggleWidget = (widgetId: string) => {
     if (activeWidgetIds.includes(widgetId)) {

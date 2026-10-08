@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { GlassCard } from "@/components/ui/GlassCard";
 import {
   Users,
@@ -8,101 +8,33 @@ import {
   CalendarDays,
   TrendingUp,
   CheckCircle,
-  ArrowRight,
+  Wallet,
 } from "lucide-react";
 
 const LINKS = [
-  {
-    id: "users",
-    title: "Users",
-    desc: "Manage users, profiles, bulk import",
-    icon: Users,
-    color: "primary" as const,
-    to: "/admin/users",
-  },
-  {
-    id: "teams",
-    title: "Teams",
-    desc: "Manage teams, hierarchy, assignments",
-    icon: Building2,
-    color: "success" as const,
-    to: "/admin/teams",
-  },
-  {
-    id: "clients",
-    title: "Clients",
-    desc: "Manage client codes and active status",
-    icon: Briefcase,
-    color: "warning" as const,
-    to: "/admin/clients",
-  },
-  {
-    id: "permissions",
-    title: "Resource Access",
-    desc: "Manage groups, roles, assignments",
-    icon: CheckCircle,
-    color: "primary" as const,
-    to: "/admin/resource-access",
-  },
-  {
-    id: "calendar-mgmt",
-    title: "Calendar Mgmt",
-    desc: "Assign teams to shared calendar groups",
-    icon: CalendarDays,
-    color: "success" as const,
-    to: "/admin/calendars",
-  },
-  {
-    id: "reports",
-    title: "Reports",
-    desc: "Generate overtime, standby, vacation reports",
-    icon: TrendingUp,
-    color: "success" as const,
-    to: "/admin/reports",
-  },
-  {
-    id: "holiday-balances",
-    title: "Leave Balances",
-    desc: "Adjust vacation leave balances",
-    icon: CalendarDays,
-    color: "warning" as const,
-    to: "/admin/leave-balances",
-  },
+  { title: "Users", icon: Users, to: "/admin/users" },
+  { title: "Teams", icon: Building2, to: "/admin/teams" },
+  { title: "Clients", icon: Briefcase, to: "/admin/clients" },
+  { title: "Resource Access", icon: CheckCircle, to: "/admin/resource-access" },
+  { title: "Calendar Mgmt", icon: CalendarDays, to: "/admin/calendars" },
+  { title: "Reports", icon: TrendingUp, to: "/admin/reports" },
+  { title: "Leave Balances", icon: Wallet, to: "/admin/leave-balances" },
 ];
 
-interface AdminQuickLinksProps {
-  isWidgetActive: (id: string) => boolean;
-}
-
-export const AdminQuickLinks: React.FC<AdminQuickLinksProps> = ({ isWidgetActive }) => {
-  const navigate = useNavigate();
-
-  return (
-    // Auto-fit (rather than a fixed 2/3-column breakpoint) so a 7-item set
-    // never strands a lone orphan card at tablet widths — each row reflows
-    // to fill the available width instead of leaving a dangling gap.
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
-      {LINKS.filter((item) => isWidgetActive(item.id)).map((item) => (
-        <GlassCard
+/** The `shortcuts` widget: seven admin destinations as one compact row of links. */
+export const AdminQuickLinks: React.FC = () => (
+  <GlassCard data-chart-section="shortcuts">
+    <nav aria-label="Admin shortcuts" className="flex flex-wrap gap-1 p-2">
+      {LINKS.map((item) => (
+        <Link
           key={item.to}
-          delay={0.3}
-          interactive
-          glow={item.color}
-          className="group cursor-pointer active:scale-[0.98]"
-          onClick={() => navigate(item.to)}
+          to={item.to}
+          className="text-foreground hover:bg-accent focus-visible:ring-focus inline-flex min-h-8 touch-manipulation items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-hidden motion-reduce:transition-none"
         >
-          <div className="flex items-center gap-3 p-5">
-            <div className="from-primary/20 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br to-transparent">
-              <item.icon className="text-primary h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-semibold">{item.title}</h3>
-              <p className="text-muted-foreground text-xs">{item.desc}</p>
-            </div>
-            <ArrowRight className="text-muted-foreground h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
-          </div>
-        </GlassCard>
+          <item.icon className="text-primary h-4 w-4 shrink-0" aria-hidden />
+          {item.title}
+        </Link>
       ))}
-    </div>
-  );
-};
+    </nav>
+  </GlassCard>
+);

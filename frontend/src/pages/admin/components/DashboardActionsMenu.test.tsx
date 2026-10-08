@@ -98,20 +98,16 @@ describe("DashboardActionsMenu", () => {
   it("lists presets with descriptions and asks before applying one", () => {
     const { onApplyPreset } = setup();
     openMenu();
-    expect(screen.getByText(/Pending queue, aging/)).toBeInTheDocument();
+    expect(screen.getByText(/Approval queue, rejections/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("menuitem", { name: /Approver view/ }));
     expect(screen.getByText(/Switch to “Approver view”\?/)).toBeInTheDocument();
     expect(onApplyPreset).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Apply preset" }));
     expect(onApplyPreset).toHaveBeenCalledTimes(1);
     expect(onApplyPreset.mock.calls[0][0]).toEqual([
-      "pending-approvals",
-      "pending-backlog",
-      "approval-aging",
-      "approver-sla",
+      "approval-queue",
       "rejection-analysis",
       "period-close",
-      "approval-status",
     ]);
   });
 

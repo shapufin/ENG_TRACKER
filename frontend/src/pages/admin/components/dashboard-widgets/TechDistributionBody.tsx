@@ -1,9 +1,9 @@
 import React from "react";
 import { Cpu } from "lucide-react";
-import { WidgetFrame } from "./WidgetFrame";
+import { WidgetBody } from "./WidgetBody";
 import type { PeopleWidgetProps } from "./trendTypes";
 
-export const TechDistributionWidget: React.FC<PeopleWidgetProps> = ({
+export const TechDistributionBody: React.FC<PeopleWidgetProps> = ({
   data,
   isLoading,
   isError,
@@ -11,15 +11,14 @@ export const TechDistributionWidget: React.FC<PeopleWidgetProps> = ({
 }) => {
   const techs = data?.techs ?? [];
   return (
-    <WidgetFrame
-      sectionId="tech-distribution"
-      title="Tech Distribution"
-      description="Active members per tech and level"
+    <WidgetBody
+      title="Tech distribution"
       isLoading={isLoading}
       isError={isError}
       onRetry={onRetry}
       empty={techs.length === 0 ? { icon: Cpu, title: "No tech assignments yet" } : null}
     >
+      <p className="text-muted-foreground mb-2 text-xs">Active members per tech and level</p>
       <div className="space-y-3 text-xs">
         {techs.map((t) => (
           <div key={t.tech_id} role="group" aria-label={t.name} className="space-y-1">
@@ -40,6 +39,6 @@ export const TechDistributionWidget: React.FC<PeopleWidgetProps> = ({
           </div>
         ))}
       </div>
-    </WidgetFrame>
+    </WidgetBody>
   );
 };

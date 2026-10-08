@@ -12,10 +12,10 @@ import {
   YAxis,
 } from "recharts";
 import { axisTickStyle, chartTooltipStyle, fmt1, monthLabel } from "./chartStyle";
-import { WidgetFrame } from "./WidgetFrame";
+import { WidgetBody } from "./WidgetBody";
 import type { TrendWidgetProps } from "./trendTypes";
 
-export const OtStandbyTrendWidget: React.FC<TrendWidgetProps> = ({
+export const OtStandbyTrendBody: React.FC<TrendWidgetProps> = ({
   data,
   isLoading,
   isError,
@@ -33,11 +33,8 @@ export const OtStandbyTrendWidget: React.FC<TrendWidgetProps> = ({
   const total = rows.reduce((s, r) => s + r.overtime + r.standby + r.pending, 0);
   const last = rows[rows.length - 1];
   return (
-    <WidgetFrame
-      sectionId="ot-standby-trend"
-      title="Overtime & Standby Trend"
-      description={`Approved hours per month, last ${rows.length || 12} months`}
-      className="lg:col-span-2"
+    <WidgetBody
+      title="Overtime & standby trend"
       isLoading={isLoading}
       isError={isError}
       onRetry={onRetry}
@@ -51,6 +48,9 @@ export const OtStandbyTrendWidget: React.FC<TrendWidgetProps> = ({
           : null
       }
     >
+      <p className="text-muted-foreground mb-2 text-xs">
+        {`Approved hours per month, last ${rows.length || 12} months`}
+      </p>
       <div
         role="img"
         aria-label={`Overtime and standby hours for the last ${rows.length || 12} months. Latest month: ${fmt1(last?.overtime ?? 0)} hours overtime, ${fmt1(last?.standby ?? 0)} hours standby.`}
@@ -100,6 +100,6 @@ export const OtStandbyTrendWidget: React.FC<TrendWidgetProps> = ({
           </LineChart>
         </ResponsiveContainer>
       </div>
-    </WidgetFrame>
+    </WidgetBody>
   );
 };

@@ -1,10 +1,9 @@
 import React, { Suspense } from "react";
 import { AdminQuickLinks } from "./AdminQuickLinks";
-import { StatsWidgets } from "./dashboard-widgets/StatsWidgets";
-import { HoursChartWidget } from "./dashboard-widgets/HoursChartWidget";
-import { ApprovalStatusWidget } from "./dashboard-widgets/ApprovalStatusWidget";
+import { ApprovalQueueWidget } from "./dashboard-widgets/ApprovalQueueWidget";
 import { RecentActivityWidget } from "./dashboard-widgets/RecentActivityWidget";
 import { OverviewSection } from "./dashboard-widgets/OverviewSection";
+import { GridCell, GridOrderProvider } from "./dashboard-grid/GridCell";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { PEOPLE_WIDGET_IDS, TRENDS_WIDGET_IDS } from "@/config/dashboardWidgets";
 
@@ -17,14 +16,10 @@ const PeopleSection = React.lazy(() =>
 );
 
 const SectionFallback: React.FC = () => (
-  <div className="grid gap-4 lg:grid-cols-4" aria-hidden>
-    {Array.from({ length: 2 }).map((_, i) => (
-      <div
-        key={i}
-        className="border-border/70 bg-card h-56 animate-pulse rounded-xl border lg:col-span-2"
-      />
-    ))}
-  </div>
+  <div
+    aria-hidden
+    className="border-border bg-card h-56 animate-pulse rounded-xl border md:col-span-6 lg:col-span-12"
+  />
 );
 
 interface AuditLog {
@@ -45,8 +40,14 @@ interface AdminDashboardWidgetsProps {
   statsLoading?: boolean;
   auditLogsLoading?: boolean;
   isSuperuser?: boolean;
+  /** Widget ids in saved reading order; without it the cells keep their DOM order. */
+  order?: string[];
 }
 
+/**
+ * Every active widget in ONE responsive grid (12 columns at lg, 6 at md, 1 below), so
+ * rows pack without holes. Sections still own their lazy request; they only render cells.
+ */
 export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
   isWidgetActive,
   totalUsers,
@@ -59,6 +60,7 @@ export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
   statsLoading,
   auditLogsLoading,
   isSuperuser = false,
+  order = [],
 }) => {
   // The recent-activity widget reads audit_log data the viewer may not be
   // permitted to see (plugin permission is fail-secure server-side) — hide
@@ -67,38 +69,49 @@ export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
   const canViewAudit = canView("audit_log");
 
   return (
-    <>
-      <StatsWidgets
-        isWidgetActive={isWidgetActive}
-        totalUsers={totalUsers}
-        totalTeams={totalTeams}
-        totalPending={totalPending}
-        overtimeSummary={overtimeSummary}
-        isLoading={statsLoading}
-      />
-      <OverviewSection isWidgetActive={isWidgetActive} isSuperuser={isSuperuser} />
-      {PEOPLE_WIDGET_IDS.some(isWidgetActive) && (
-        <Suspense fallback={<SectionFallback />}>
-          <PeopleSection isWidgetActive={isWidgetActive} />
-        </Suspense>
-      )}
-      {TRENDS_WIDGET_IDS.some(isWidgetActive) && (
-        <Suspense fallback={<SectionFallback />}>
-          <TrendsSection isWidgetActive={isWidgetActive} />
-        </Suspense>
-      )}
-      <div className="grid gap-4 lg:grid-cols-3">
-        {isWidgetActive("hours-overview") && (
-          <HoursChartWidget hoursData={hoursData} isLoading={statsLoading} />
+    <GridOrderProvider order={order}>
+      <div className="grid grid-flow-dense grid-cols-1 gap-4 md:grid-cols-6 lg:grid-cols-12">
+        <OverviewSection
+          isWidgetActive={isWidgetActive}
+          isSuperuser={isSuperuser}
+          stats={{
+            totalUsers,
+            totalTeams,
+            totalPending,
+            overtimeHours: overtimeSummary?.total_hours ?? 0,
+            statsLoading,
+          }}
+        />
+        {isWidgetActive("approval-queue") && (
+          <GridCell id="approval-queue">
+            <ApprovalQueueWidget statusData={statusData} statsLoading={statsLoading} />
+          </GridCell>
         )}
-        {isWidgetActive("approval-status") && (
-          <ApprovalStatusWidget statusData={statusData} isLoading={statsLoading} />
+        {PEOPLE_WIDGET_IDS.some(isWidgetActive) && (
+          <Suspense fallback={<SectionFallback />}>
+            <PeopleSection isWidgetActive={isWidgetActive} />
+          </Suspense>
+        )}
+        {TRENDS_WIDGET_IDS.some(isWidgetActive) && (
+          <Suspense fallback={<SectionFallback />}>
+            <TrendsSection
+              isWidgetActive={isWidgetActive}
+              hoursData={hoursData}
+              statsLoading={statsLoading}
+            />
+          </Suspense>
+        )}
+        {isWidgetActive("recent-activity") && canViewAudit && (
+          <GridCell id="recent-activity">
+            <RecentActivityWidget auditLogs={auditLogs} isLoading={auditLogsLoading} />
+          </GridCell>
+        )}
+        {isWidgetActive("shortcuts") && (
+          <GridCell id="shortcuts">
+            <AdminQuickLinks />
+          </GridCell>
         )}
       </div>
-      <AdminQuickLinks isWidgetActive={isWidgetActive} />
-      {isWidgetActive("recent-activity") && canViewAudit && (
-        <RecentActivityWidget auditLogs={auditLogs} isLoading={auditLogsLoading} />
-      )}
-    </>
+    </GridOrderProvider>
   );
 };

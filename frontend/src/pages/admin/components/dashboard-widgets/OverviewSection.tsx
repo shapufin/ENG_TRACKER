@@ -1,11 +1,12 @@
 import React from "react";
 import { OVERVIEW_WIDGET_IDS } from "@/config/dashboardWidgets";
 import { useAdminOverview } from "@/hooks/useAdminDashboardQueries";
-import { OverviewWidgets } from "./OverviewWidgets";
+import { OverviewWidgets, type OverviewStats } from "./OverviewWidgets";
 
 interface OverviewSectionProps {
   isWidgetActive: (id: string) => boolean;
   isSuperuser: boolean;
+  stats: OverviewStats;
 }
 
 const Fetching: React.FC<OverviewSectionProps> = (props) => {

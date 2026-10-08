@@ -1,89 +1,51 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { AdminOverview } from "@/types";
 import { OverviewWidgets } from "./OverviewWidgets";
+import { makeOverview } from "./adminFixtures";
 
-const data: AdminOverview = {
-  headcount: {
-    total_users: 40,
-    active_users: 36,
-    inactive_users: 4,
-    new_hires_30d: 3,
-    never_logged_in: 5,
-  },
-  coverage_gaps: {
-    teams_without_leader: 2,
-    users_without_team: 1,
-    users_without_tech: 0,
-    employees_without_tl: 3,
-    al_tls_without_hbpr_assignment: 1,
-  },
-  pending_backlog: {
-    overtime: { count: 4, hours: 12.5 },
-    standby: { count: 2, hours: 16 },
-    leave: { count: 3, days: 9 },
-  },
-  approval_aging: {
-    buckets: ["0-3d", "4-7d", "8-14d", "15d+"],
-    overtime: [1, 1, 1, 1],
-    standby: [0, 0, 0, 2],
-    leave: [1, 1, 1, 0],
-  },
-  leave_utilization: {
-    year: 2026,
-    total_days: 200,
-    used_days: 50,
-    pending_days: 10,
-    available_days: 140,
-    utilization_pct: 25,
-  },
-  carryover_expiry: { window_days: 60, days_at_risk: 11.5, users_affected: 4 },
-  period_close: {
-    period: "2026-09",
-    tls_total: 6,
-    tls_closed: 4,
-    tls_open: 2,
-    open_tls: [
-      { id: 1, name: "Ana TL" },
-      { id: 2, name: "Beni TL" },
-    ],
-  },
-  backup: {
-    count: 3,
-    last_created_at: "2026-09-20T10:00:00Z",
-    age_hours: 400,
-    size_mb: 12.5,
-    stale: true,
-  },
-};
+const data: AdminOverview = makeOverview();
+
+const stats = { totalUsers: 40, totalTeams: 5, totalPending: 3, overtimeHours: 20 };
 
 const renderAll = (overrides: Partial<React.ComponentProps<typeof OverviewWidgets>> = {}) =>
-  render(<OverviewWidgets isWidgetActive={() => true} data={data} isSuperuser {...overrides} />);
+  render(
+    <OverviewWidgets
+      isWidgetActive={() => true}
+      data={data}
+      isSuperuser
+      stats={stats}
+      {...overrides}
+    />
+  );
 
 describe("OverviewWidgets", () => {
-  it("renders every active widget with real values", () => {
+  it("renders every overview widget with real values", () => {
     renderAll();
-    expect(screen.getByText("Headcount")).toBeInTheDocument();
-    expect(screen.getByText("36 active")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Key figures" })).toBeInTheDocument();
+    expect(screen.getByText("25%")).toBeInTheDocument();
+    expect(screen.getByText("11.5d")).toBeInTheDocument();
     expect(screen.getByText("Coverage Gaps")).toBeInTheDocument();
     expect(screen.getByText("Teams without a leader")).toBeInTheDocument();
-    expect(screen.getByText("Pending Backlog")).toBeInTheDocument();
-    expect(screen.getByText("12.5h overtime · 16h standby · 9d leave")).toBeInTheDocument();
-    expect(screen.getByText("Approval Aging")).toBeInTheDocument();
-    expect(screen.getByText("Leave Utilization")).toBeInTheDocument();
-    expect(screen.getByText("25%")).toBeInTheDocument();
-    expect(screen.getByText("Carryover Expiry")).toBeInTheDocument();
-    expect(screen.getByText("11.5d")).toBeInTheDocument();
     expect(screen.getByText("Period Close (2026-09)")).toBeInTheDocument();
     expect(screen.getByText("Ana TL, Beni TL")).toBeInTheDocument();
     expect(screen.getByText("Backup Status")).toBeInTheDocument();
   });
 
+  it("coverage gaps absorbs the headcount extras without counting them as gaps", () => {
+    renderAll();
+    expect(screen.getByText("New in 30 days").nextElementSibling).toHaveTextContent("3");
+    expect(screen.getByText("Never logged in").nextElementSibling).toHaveTextContent("5");
+    expect(screen.getByText("Never logged in").nextElementSibling?.className).not.toMatch(
+      /text-warning/
+    );
+  });
+
   it("renders nothing for inactive widgets", () => {
-    renderAll({ isWidgetActive: (id) => id === "org-headcount" });
-    expect(screen.getByText("Headcount")).toBeInTheDocument();
+    renderAll({ isWidgetActive: (id) => id === "kpi-strip" });
+    expect(screen.getByRole("group", { name: "Key figures" })).toBeInTheDocument();
     expect(screen.queryByText("Coverage Gaps")).toBeNull();
-    expect(screen.queryByText("Approval Aging")).toBeNull();
+    expect(screen.queryByText(/Period Close/)).toBeNull();
   });
 
   it("never shows the backup card to a non-superuser, even with data present", () => {
@@ -110,15 +72,20 @@ describe("OverviewWidgets", () => {
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 
-  it("shows skeletons while loading", () => {
-    const { container } = renderAll({ data: undefined, isLoading: true });
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+  it("shows a placeholder per card while loading", () => {
+    renderAll({ data: undefined, isLoading: true });
+    expect(screen.getByRole("status", { name: /loading coverage gaps/i })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: /loading period close/i })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Key figures" })).toHaveAttribute("aria-busy", "true");
   });
 
-  it("shows an error card with retry when the request fails", () => {
-    renderAll({ data: undefined, isError: true, onRetry: () => {} });
-    expect(screen.getByText(/couldn't load/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+  it("shows a retry card per widget when the request fails", () => {
+    const onRetry = vi.fn();
+    renderAll({ data: undefined, isError: true, onRetry });
+    expect(screen.getByText(/couldn't load coverage gaps/i)).toBeInTheDocument();
+    expect(screen.getByText(/couldn't load period close/i)).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: /retry/i })[0]);
+    expect(onRetry).toHaveBeenCalled();
   });
 
   it("renders nothing when no overview widget is active", () => {

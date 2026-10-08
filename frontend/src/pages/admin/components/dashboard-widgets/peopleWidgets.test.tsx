@@ -1,15 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
-import { RoleDistributionWidget } from "./RoleDistributionWidget";
-import { TechDistributionWidget } from "./TechDistributionWidget";
-import { ApproverSlaWidget } from "./ApproverSlaWidget";
+import { RoleDistributionBody } from "./RoleDistributionBody";
+import { TechDistributionBody } from "./TechDistributionBody";
+import { ApproverSlaBody } from "./ApproverSlaBody";
 import { RejectionAnalysisWidget } from "./RejectionAnalysisWidget";
 import { makePeople } from "./adminFixtures";
 
 const widgets = [
-  ["RoleDistributionWidget", RoleDistributionWidget],
-  ["TechDistributionWidget", TechDistributionWidget],
-  ["ApproverSlaWidget", ApproverSlaWidget],
+  ["RoleDistributionBody", RoleDistributionBody],
+  ["TechDistributionBody", TechDistributionBody],
+  ["ApproverSlaBody", ApproverSlaBody],
   ["RejectionAnalysisWidget", RejectionAnalysisWidget],
 ] as const;
 
@@ -27,9 +27,9 @@ describe.each(widgets)("%s shared states", (_name, Widget) => {
   });
 });
 
-describe("RoleDistributionWidget", () => {
+describe("RoleDistributionBody", () => {
   it("lists the role counts and warns on employees without a TL", () => {
-    render(<RoleDistributionWidget data={makePeople()} />);
+    render(<RoleDistributionBody data={makePeople()} />);
     const row = (name: string) => screen.getByText(name).closest("li")!;
     expect(row("Italian TLs")).toHaveTextContent("3");
     expect(row("HR")).toHaveTextContent("1");
@@ -40,7 +40,7 @@ describe("RoleDistributionWidget", () => {
   it("does not warn when everyone has a TL", () => {
     const base = makePeople();
     render(
-      <RoleDistributionWidget
+      <RoleDistributionBody
         data={makePeople({ roles: { ...base.roles, employees_without_tl: 0 } })}
       />
     );
@@ -50,10 +50,10 @@ describe("RoleDistributionWidget", () => {
   });
 });
 
-describe("TechDistributionWidget", () => {
+describe("TechDistributionBody", () => {
   it("shows each tech with its own levels, Ungraded last", () => {
     render(
-      <TechDistributionWidget
+      <TechDistributionBody
         data={makePeople({
           techs: [
             ...makePeople().techs,
@@ -77,14 +77,14 @@ describe("TechDistributionWidget", () => {
   });
 
   it("shows an empty state with no tech assignments", () => {
-    render(<TechDistributionWidget data={makePeople({ techs: [] })} />);
+    render(<TechDistributionBody data={makePeople({ techs: [] })} />);
     expect(screen.getByText("No tech assignments yet")).toBeInTheDocument();
   });
 });
 
-describe("ApproverSlaWidget", () => {
+describe("ApproverSlaBody", () => {
   it("shows decisions, rate and average hours", () => {
-    render(<ApproverSlaWidget data={makePeople()} />);
+    render(<ApproverSlaBody data={makePeople()} />);
     const row = screen.getByRole("row", { name: /Ana Lee/ });
     expect(row).toHaveTextContent("21");
     expect(row).toHaveTextContent("90.5%");
@@ -92,7 +92,7 @@ describe("ApproverSlaWidget", () => {
   });
 
   it("shows an empty state with no recent decisions", () => {
-    render(<ApproverSlaWidget data={makePeople({ approver_sla: [] })} />);
+    render(<ApproverSlaBody data={makePeople({ approver_sla: [] })} />);
     expect(screen.getByText("No decisions in the last 30 days")).toBeInTheDocument();
   });
 });

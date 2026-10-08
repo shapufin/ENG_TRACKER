@@ -15,7 +15,7 @@ interface RecentActivityWidgetProps {
 }
 
 const ActivitySkeleton: React.FC = () => (
-  <div className="grid gap-4 p-5 lg:grid-cols-2">
+  <div className="grid gap-3 p-4">
     {Array.from({ length: 4 }).map((_, i) => (
       <div key={i} className="bg-muted/40 h-16 animate-pulse rounded-xl" />
     ))}
@@ -39,14 +39,14 @@ export const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({
   isLoading,
 }) => (
   <GlassCard data-testid="recent-activity-widget">
-    <div className="border-border/60 border-b px-5 py-4">
+    <div className="border-line-subtle border-b px-4 py-3">
       <h3 className="text-sm font-semibold tracking-tight">Recent Activity</h3>
       <p className="text-muted-foreground mt-1 text-xs">Latest system events</p>
     </div>
     {isLoading ? (
       <ActivitySkeleton />
     ) : auditLogs?.length ? (
-      <div className="grid gap-4 p-5 lg:grid-cols-2">
+      <div className="grid gap-3 p-4">
         {auditLogs.map((log) => {
           const { icon, iconWellClass, iconColorClass } = activityVisual(log.action);
           return (

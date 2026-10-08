@@ -3,10 +3,10 @@ import { Gauge } from "lucide-react";
 import { fmt1 } from "./chartStyle";
 import { cn } from "@/lib/utils";
 import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
-import { WidgetFrame } from "./WidgetFrame";
+import { WidgetBody } from "./WidgetBody";
 import type { PeopleWidgetProps } from "./trendTypes";
 
-export const ApproverSlaWidget: React.FC<PeopleWidgetProps> = ({
+export const ApproverSlaBody: React.FC<PeopleWidgetProps> = ({
   data,
   isLoading,
   isError,
@@ -14,16 +14,16 @@ export const ApproverSlaWidget: React.FC<PeopleWidgetProps> = ({
 }) => {
   const rows = data?.approver_sla ?? [];
   return (
-    <WidgetFrame
-      sectionId="approver-sla"
-      title="Approver Speed"
-      description="Decisions in the last 30 days, most active first"
-      className="lg:col-span-2"
+    <WidgetBody
+      title="Approver speed"
       isLoading={isLoading}
       isError={isError}
       onRetry={onRetry}
       empty={rows.length === 0 ? { icon: Gauge, title: "No decisions in the last 30 days" } : null}
     >
+      <p className="text-muted-foreground mb-2 text-xs">
+        Decisions in the last 30 days, most active first
+      </p>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -56,6 +56,6 @@ export const ApproverSlaWidget: React.FC<PeopleWidgetProps> = ({
           </tbody>
         </table>
       </div>
-    </WidgetFrame>
+    </WidgetBody>
   );
 };

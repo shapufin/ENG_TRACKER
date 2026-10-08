@@ -61,25 +61,24 @@ describe("TrendsSection", () => {
 });
 
 describe("TrendsSection period", () => {
-  const active = (id: string) => id === "ot-standby-trend";
+  const active = (id: string) => id === "hours-trend";
+  const openTrend = () => fireEvent.mouseDown(screen.getByRole("tab", { name: "Trend" }));
 
   it("requests 12 months by default", async () => {
     renderWith(<TrendsSection isWidgetActive={active} />);
-    await screen.findByText("Overtime & Standby Trend");
-    expect(dashboardService.getAdminTrends).toHaveBeenCalledWith(12);
+    await vi.waitFor(() => expect(dashboardService.getAdminTrends).toHaveBeenCalledWith(12));
   });
 
   it("uses ?months= from the URL", async () => {
     renderWith(<TrendsSection isWidgetActive={active} />, "/admin?months=6");
-    await screen.findByText("Overtime & Standby Trend");
-    expect(dashboardService.getAdminTrends).toHaveBeenCalledWith(6);
+    await vi.waitFor(() => expect(dashboardService.getAdminTrends).toHaveBeenCalledWith(6));
     expect(dashboardService.getAdminTrends).not.toHaveBeenCalledWith(12);
   });
 
   it("ignores an invalid ?months= and refetches when the selector changes", async () => {
     renderWith(<TrendsSection isWidgetActive={active} />, "/admin?months=99");
-    await screen.findByText("Overtime & Standby Trend");
-    expect(dashboardService.getAdminTrends).toHaveBeenCalledWith(12);
+    await vi.waitFor(() => expect(dashboardService.getAdminTrends).toHaveBeenCalledWith(12));
+    openTrend();
     fireEvent.click(screen.getByRole("button", { name: "6 months" }));
     await vi.waitFor(() => expect(dashboardService.getAdminTrends).toHaveBeenCalledWith(6));
   });
@@ -95,6 +94,8 @@ describe("TrendsSection period", () => {
     });
     vi.mocked(dashboardService.getAdminTrends).mockResolvedValue(six);
     renderWith(<TrendsSection isWidgetActive={active} />, "/admin?months=6");
+    await vi.waitFor(() => expect(dashboardService.getAdminTrends).toHaveBeenCalledWith(6));
+    openTrend();
     expect(await screen.findByText(/last 6 months/i)).toBeInTheDocument();
   });
 
@@ -102,9 +103,27 @@ describe("TrendsSection period", () => {
     renderWith(<TrendsSection isWidgetActive={() => false} />);
     expect(screen.queryByRole("group", { name: "Trend period" })).not.toBeInTheDocument();
   });
+
+  it("keeps the selector on its own when other trend widgets are on without Hours", async () => {
+    renderWith(<TrendsSection isWidgetActive={(id) => id === "leave-trend"} />);
+    expect(await screen.findByRole("group", { name: "Trend period" })).toBeInTheDocument();
+  });
+
+  it("puts the selector inside the Hours widget instead when it is on", async () => {
+    renderWith(
+      <TrendsSection isWidgetActive={(id) => id === "hours-trend" || id === "leave-trend"} />
+    );
+    await screen.findByRole("tab", { name: "Trend" });
+    expect(screen.queryByRole("group", { name: "Trend period" })).not.toBeInTheDocument();
+  });
 });
 
 describe("PeopleSection", () => {
+  it("does not call the endpoint when only a widget of another section is on", () => {
+    renderWith(<PeopleSection isWidgetActive={(id) => id === "approval-queue"} />);
+    expect(dashboardService.getAdminPeople).not.toHaveBeenCalled();
+  });
+
   it("does not call the endpoint when no people widget is active", () => {
     renderWith(<PeopleSection isWidgetActive={() => false} />);
     expect(dashboardService.getAdminPeople).not.toHaveBeenCalled();
@@ -112,11 +131,11 @@ describe("PeopleSection", () => {
 
   it("fetches once and renders the active widgets", async () => {
     renderWith(
-      <PeopleSection isWidgetActive={(id) => id === "role-distribution" || id === "approver-sla"} />
+      <PeopleSection isWidgetActive={(id) => id === "people-mix" || id === "rejection-analysis"} />
     );
-    expect(await screen.findByText("Role Distribution")).toBeInTheDocument();
-    expect(screen.getByText("Approver Speed")).toBeInTheDocument();
-    expect(screen.queryByText("Tech Distribution")).not.toBeInTheDocument();
+    expect(await screen.findByText("People Mix")).toBeInTheDocument();
+    expect(screen.getByText("Rejection Analysis")).toBeInTheDocument();
+    expect(await screen.findByText("Italian TLs")).toBeInTheDocument();
     expect(dashboardService.getAdminPeople).toHaveBeenCalledTimes(1);
   });
 });

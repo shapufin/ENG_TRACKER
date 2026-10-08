@@ -1,4 +1,5 @@
 import React from "react";
+import { AVAILABLE_WIDGETS } from "@/config/dashboardWidgets";
 
 export interface WidgetConfig {
   id: string;
@@ -66,23 +67,50 @@ export const getAccessibleWidgets = (userPermissions: Record<string, string[]>):
   });
 };
 
-// Default widget layout for admin dashboard
-export const defaultAdminLayout = {
-  columns: 4,
-  widgets: [
-    { id: "total-users", position: { x: 0, y: 0 }, size: { w: 1, h: 1 } },
-    { id: "total-teams", position: { x: 1, y: 0 }, size: { w: 1, h: 1 } },
-    { id: "pending-approvals", position: { x: 2, y: 0 }, size: { w: 1, h: 1 } },
-    { id: "overtime-hours", position: { x: 3, y: 0 }, size: { w: 1, h: 1 } },
-    { id: "hours-overview", position: { x: 0, y: 1 }, size: { w: 2, h: 1 } },
-    { id: "approval-status", position: { x: 2, y: 1 }, size: { w: 1, h: 1 } },
-    { id: "recent-activity", position: { x: 3, y: 1 }, size: { w: 1, h: 1 } },
-    { id: "users", position: { x: 0, y: 2 }, size: { w: 1, h: 1 } },
-    { id: "teams", position: { x: 1, y: 2 }, size: { w: 1, h: 1 } },
-    { id: "clients", position: { x: 2, y: 2 }, size: { w: 1, h: 1 } },
-    { id: "permissions", position: { x: 3, y: 2 }, size: { w: 1, h: 1 } },
-    { id: "calendar-mgmt", position: { x: 0, y: 3 }, size: { w: 1, h: 1 } },
-    { id: "reports", position: { x: 1, y: 3 }, size: { w: 1, h: 1 } },
-    { id: "holiday-balances", position: { x: 2, y: 3 }, size: { w: 1, h: 1 } },
-  ],
+/** Stored dashboard layout (12-column grid, `version: 2`). */
+export interface StoredDashboardLayout {
+  version?: number;
+  columns: number;
+  widgets: Array<{
+    id: string;
+    position: { x: number; y: number };
+    size: { w: number; h: number };
+  }>;
+}
+
+/** Top-left cell of every admin widget on the 12-column grid, in reading order. */
+const ADMIN_POSITIONS: Record<string, { x: number; y: number }> = {
+  "kpi-strip": { x: 0, y: 0 },
+  "coverage-gaps": { x: 0, y: 2 },
+  "people-mix": { x: 4, y: 2 },
+  "period-close": { x: 8, y: 2 },
+  "backup-status": { x: 8, y: 5 },
+  "approval-queue": { x: 0, y: 7 },
+  "rejection-analysis": { x: 6, y: 7 },
+  "hours-trend": { x: 0, y: 12 },
+  "ot-by-client": { x: 8, y: 12 },
+  "team-comparison": { x: 0, y: 17 },
+  "leave-trend": { x: 6, y: 17 },
+  "who-is-out": { x: 0, y: 22 },
+  "recent-activity": { x: 4, y: 22 },
+  shortcuts: { x: 0, y: 27 },
+};
+
+/** Default cell for a widget id (position from the table above, size from its config). */
+export const adminWidgetPlacement = (id: string) => {
+  const config = AVAILABLE_WIDGETS.find((w) => w.id === id);
+  const position = ADMIN_POSITIONS[id];
+  return config && position ? { id, position, size: { ...config.defaultSize } } : undefined;
+};
+
+/**
+ * Default widget layout for the admin dashboard. `backup-status` is superuser-only and
+ * opt-in, so it stays out of the default; it keeps a placement for when it is switched on.
+ */
+export const defaultAdminLayout: StoredDashboardLayout = {
+  version: 2,
+  columns: 12,
+  widgets: AVAILABLE_WIDGETS.filter((w) => w.id !== "backup-status")
+    .map((w) => adminWidgetPlacement(w.id)!)
+    .sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x),
 };

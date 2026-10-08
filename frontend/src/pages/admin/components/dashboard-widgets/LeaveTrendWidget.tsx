@@ -36,7 +36,6 @@ export const LeaveTrendWidget: React.FC<TrendWidgetProps> = ({
       sectionId="leave-trend"
       title="Leave Trend"
       description="Approved business days per month"
-      className="lg:col-span-2"
       isLoading={isLoading}
       isError={isError}
       onRetry={onRetry}

@@ -2,11 +2,12 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { Users } from "lucide-react";
 import { CustomizeDashboardModal } from "./CustomizeDashboardModal";
+import { AVAILABLE_WIDGETS } from "@/config/dashboardWidgets";
 
 const widgets = [
-  { id: "total-users", title: "Total Users", description: "d1", icon: Users },
-  { id: "pending-backlog", title: "Pending Backlog", description: "d2", icon: Users },
-  { id: "users", title: "Users Management", description: "d3", icon: Users },
+  { id: "kpi-strip", title: "Key Figures", description: "d1", icon: Users },
+  { id: "approval-queue", title: "Approval Queue", description: "d2", icon: Users },
+  { id: "shortcuts", title: "Shortcuts", description: "d3", icon: Users },
   { id: "unmapped-thing", title: "Unmapped", description: "d4", icon: Users },
 ];
 
@@ -16,7 +17,7 @@ const setup = (onToggleWidget = vi.fn(), onOpenChange = vi.fn()) => {
       open
       onOpenChange={onOpenChange}
       availableWidgets={widgets}
-      activeWidgets={["total-users"]}
+      activeWidgets={["kpi-strip"]}
       onToggleWidget={onToggleWidget}
     />
   );
@@ -27,9 +28,9 @@ describe("CustomizeDashboardModal", () => {
   it("groups widgets under their section heading, unknown ones under Other", () => {
     setup();
     const overview = screen.getByRole("group", { name: "Overview" });
-    expect(within(overview).getByText("Total Users")).toBeInTheDocument();
+    expect(within(overview).getByText("Key Figures")).toBeInTheDocument();
     const approvals = screen.getByRole("group", { name: "Approvals" });
-    expect(within(approvals).getByText("Pending Backlog")).toBeInTheDocument();
+    expect(within(approvals).getByText("Approval Queue")).toBeInTheDocument();
     const other = screen.getByRole("group", { name: "Other" });
     expect(within(other).getByText("Unmapped")).toBeInTheDocument();
   });
@@ -41,8 +42,8 @@ describe("CustomizeDashboardModal", () => {
 
   it("toggling a checkbox only calls onToggleWidget", () => {
     const { onToggleWidget, onOpenChange } = setup();
-    fireEvent.click(screen.getByRole("checkbox", { name: "Pending Backlog" }));
-    expect(onToggleWidget).toHaveBeenCalledWith("pending-backlog");
+    fireEvent.click(screen.getByRole("checkbox", { name: "Approval Queue" }));
+    expect(onToggleWidget).toHaveBeenCalledWith("approval-queue");
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
@@ -57,5 +58,28 @@ describe("CustomizeDashboardModal", () => {
   it("does not promise drag and drop", () => {
     setup();
     expect(screen.queryByText(/drag/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("CustomizeDashboardModal with the real widget list", () => {
+  it("shows every merged widget under its section and nothing under Other", () => {
+    render(
+      <CustomizeDashboardModal
+        open
+        onOpenChange={vi.fn()}
+        availableWidgets={AVAILABLE_WIDGETS}
+        activeWidgets={["kpi-strip"]}
+        onToggleWidget={vi.fn()}
+      />
+    );
+    const inGroup = (group: string, title: string) =>
+      within(screen.getByRole("group", { name: group })).getByRole("checkbox", { name: title });
+    expect(inGroup("Overview", "Key Figures")).toBeChecked();
+    expect(inGroup("Overview", "People Mix")).not.toBeChecked();
+    expect(inGroup("Approvals", "Approval Queue")).toBeInTheDocument();
+    expect(inGroup("Hours & Trends", "Hours")).toBeInTheDocument();
+    expect(inGroup("Shortcuts", "Shortcuts")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Other" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(AVAILABLE_WIDGETS.length);
   });
 });

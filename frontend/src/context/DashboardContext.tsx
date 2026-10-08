@@ -1,15 +1,13 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { dashboardService } from "@/services/dashboardService";
-import { defaultAdminLayout } from "@/components/dashboard/widgetRegistry";
+import {
+  adminWidgetPlacement,
+  defaultAdminLayout,
+  type StoredDashboardLayout,
+} from "@/components/dashboard/widgetRegistry";
+import { migrateLayout } from "@/pages/admin/components/dashboard-grid/gridLayout";
 
-interface DashboardLayout {
-  widgets: Array<{
-    id: string;
-    position: { x: number; y: number };
-    size: { w: number; h: number };
-  }>;
-  columns: number;
-}
+type DashboardLayout = StoredDashboardLayout;
 
 interface DashboardContextValue {
   layout: DashboardLayout;
@@ -68,8 +66,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
         // The preferences endpoint is paginated: the saved row is results[0].
         const saved = savedLayout?.results?.[0]?.layout ?? savedLayout?.layout;
         if (saved) {
-          layoutRef.current = saved;
-          setLayout(saved);
+          // Only the admin dashboard moved to the merged 12-column widgets; the others
+          // keep whatever they stored.
+          const loaded = dashboardType === "admin" ? migrateLayout(saved) : saved;
+          layoutRef.current = loaded;
+          setLayout(loaded);
         }
       } catch (error) {
         console.error("Failed to load dashboard layout:", error);
@@ -107,13 +108,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
           ...prev,
           widgets: [
             ...prev.widgets,
-            { id: widgetId, position: { x: 0, y: prev.widgets.length }, size: { w: 1, h: 1 } },
+            (dashboardType === "admin" ? adminWidgetPlacement(widgetId) : undefined) ?? {
+              id: widgetId,
+              position: { x: 0, y: prev.widgets.length },
+              size: { w: 1, h: 1 },
+            },
           ],
         },
         "Failed to save widget addition:"
       );
     },
-    [commit]
+    [commit, dashboardType]
   );
 
   const removeWidget = useCallback(
