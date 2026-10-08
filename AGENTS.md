@@ -193,3 +193,9 @@ You are on Windows. Emit PowerShell-compatible commands, never bash:
 
 ## 2026-10-08 — UI primitive guideline fixes
 - `button.tsx`: explicit transition properties + touch-manipulation; `dialog.tsx` DialogBody overscroll-contain.
+
+## 2026-10-08 — Admin dashboard mockup adoption
+- Plan: `docs/superpowers/plans/2026-10-08-admin-gui-mockup-adoption.md`. Admin dashboard has an insights strip (`lib/adminInsights.ts`, per-user dismissals), `?section=` tabs (`config/dashboardWidgets.ts` `widgetSection`), a grouped Customize modal (no drag-and-drop: it never worked), and a Refresh control. Admin mutations call `invalidateAdminDashboard` (`lib/adminDashboardKeys.ts`) so aggregates do not stay stale.
+- New staff-only aggregates `admin_trends` / `admin_people` (`apps/dashboard/admin_trends.py`, `admin_people.py`); nine opt-in widgets (never in `defaultAdminLayout`), lazy-loaded, one request per section while a widget is on.
+- Ctrl/Cmd+K admin palette (`components/layout/AdminCommandPalette.tsx`) lists only `useAdminNavItems` results. CSV exports neutralise formulas: `core/utils/csv_safe.py` (server), `lib/csvSafe.ts` (client).
+- Not done / deferred: `approved_at` index (no EXPLAIN evidence), period selector, table-cards switcher, payroll/audit/plugin widgets.
