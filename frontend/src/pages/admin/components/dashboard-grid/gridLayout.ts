@@ -3,8 +3,8 @@ import {
   type StoredDashboardLayout,
 } from "@/components/dashboard/widgetRegistry";
 
-export const GRID_LAYOUT_VERSION = 2;
-export const GRID_COLUMNS = 12;
+const GRID_LAYOUT_VERSION = 2;
+const GRID_COLUMNS = 12;
 
 /**
  * Every id the dashboard has ever stored, mapped to the widget that shows it now.
