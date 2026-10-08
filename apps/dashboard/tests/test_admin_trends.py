@@ -212,3 +212,58 @@ class QueryCountTests(TrendsBase):
         small = self._count()
         self._seed(30)
         self.assertEqual(self._count(), small)
+
+
+class MonthsParamTests(TrendsBase):
+    def get_months(self, value, user=None):
+        self.api.force_authenticate(user or self.admin)
+        return self.api.get(URL, {"months": value})
+
+    def test_default_is_twelve(self):
+        self.assertEqual(len(self.get().data["months"]), 12)
+
+    def test_requested_period_sets_every_series_length(self):
+        for n in (3, 6, 24):
+            data = build_admin_trends(self.admin, today=TODAY, months=n)
+            self.assertEqual(len(data["months"]), n)
+            self.assertEqual(data["months"][-1], "2026-10")
+            for series in (*data["hours"].values(), *data["leave_days"].values()):
+                self.assertEqual(len(series), n)
+
+    def test_six_months_starts_in_may(self):
+        data = build_admin_trends(self.admin, today=TODAY, months=6)
+        self.assertEqual(data["months"][0], "2026-05")
+
+    def test_view_accepts_a_valid_period(self):
+        res = self.get_months("6")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data["months"]), 6)
+
+    def test_invalid_period_is_a_400_not_a_500(self):
+        for bad in ("2", "25", "0", "-1", "abc", "3.5", ""):
+            res = self.get_months(bad)
+            self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST, bad)
+            self.assertIn("months", res.data)
+
+    def test_period_does_not_change_current_month_blocks(self):
+        self.ot(4, TODAY)
+        a = build_admin_trends(self.admin, today=TODAY, months=3)
+        b = build_admin_trends(self.admin, today=TODAY, months=24)
+        for key in ("overtime_by_client", "team_comparison", "who_is_out"):
+            self.assertEqual(a[key], b[key], key)
+
+    def test_older_data_appears_only_when_the_window_reaches_it(self):
+        self.ot(7, date(2026, 3, 10))
+        self.assertEqual(sum(build_admin_trends(self.admin, today=TODAY, months=6)["hours"]["overtime"]), 0.0)
+        self.assertEqual(sum(build_admin_trends(self.admin, today=TODAY, months=12)["hours"]["overtime"]), 7.0)
+
+    def test_still_staff_only_with_a_period(self):
+        self.assertEqual(self.get_months("6", user=self.emp).status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_query_count_independent_of_period(self):
+        def count(n):
+            with CaptureQueriesContext(connection) as ctx:
+                build_admin_trends(self.admin, today=TODAY, months=n)
+            return len(ctx)
+
+        self.assertEqual(count(3), count(24))

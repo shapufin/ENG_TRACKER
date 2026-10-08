@@ -190,13 +190,26 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
     def admin_trends(self, request):
-        """12-month hours/leave trends, client and team splits, and who is out today.
+        """Hours/leave trends (``?months=3..24``, default 12), client and team splits, who is out today.
 
-        Staff/superuser only, like ``admin_overview``.
+        Staff/superuser only, like ``admin_overview``. A bad ``months`` is a 400.
         """
-        from .admin_trends import build_admin_trends
+        from .admin_trends import MAX_MONTHS, MIN_MONTHS, MONTHS, build_admin_trends
 
-        return Response(build_admin_trends(request.user))
+        raw = request.query_params.get('months')
+        months = MONTHS
+        if raw is not None:
+            try:
+                months = int(raw)
+            except ValueError:
+                months = 0
+            if not MIN_MONTHS <= months <= MAX_MONTHS:
+                return Response(
+                    {'months': f'must be an integer between {MIN_MONTHS} and {MAX_MONTHS}'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        return Response(build_admin_trends(request.user, months=months))
 
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
     def admin_people(self, request):
