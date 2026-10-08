@@ -14,6 +14,7 @@ import {
   createRejectionHandlers,
 } from "./useMutationHandlers";
 import type { StandbyLog } from "@/types";
+import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
 interface UseStandbyQueriesOptions {
   userId?: number;
@@ -70,6 +71,7 @@ export const useStandbyQueries = (options: UseStandbyQueriesOptions) => {
     await qc.invalidateQueries({ queryKey: ["dashboard"], refetchType: "active" });
     await qc.invalidateQueries({ queryKey: ["team", "standby"], refetchType: "active" });
     await qc.invalidateQueries({ queryKey: ["admin", "standby"], refetchType: "active" });
+    await invalidateAdminDashboard(qc);
   };
 
   const createMutation = useMutation({

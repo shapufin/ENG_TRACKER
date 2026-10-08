@@ -16,7 +16,10 @@ describe("useSiteBranding", () => {
 
   it("syncs document.title to the resolved site_name", async () => {
     vi.mocked(dashboardService.getBranding).mockResolvedValue({
-      id: 1, site_name: "Acme Tracker", logo: null, logo_url: null,
+      id: 1,
+      site_name: "Acme Tracker",
+      logo: null,
+      logo_url: null,
     });
     const queryClient = new QueryClient();
     renderHook(() => useSiteBranding(), { wrapper: createWrapper(queryClient) });

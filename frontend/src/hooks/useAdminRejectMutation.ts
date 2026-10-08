@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { handleApiError } from "@/lib/error-handler";
+import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
 export interface UseAdminRejectMutationOptions {
   onSuccess?: () => void;
@@ -36,6 +37,7 @@ export const useAdminRejectMutation = (
     onSuccess: () => {
       const keysToInvalidate = options?.invalidateKeys ?? defaultInvalidateKeys;
       keysToInvalidate.forEach((key) => queryClient.invalidateQueries({ queryKey: key }));
+      void invalidateAdminDashboard(queryClient);
       toast.success("Rejected");
       options?.onSuccess?.();
     },

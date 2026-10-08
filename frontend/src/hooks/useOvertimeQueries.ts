@@ -12,6 +12,7 @@ import {
   createRejectionHandlers,
 } from "./useMutationHandlers";
 import type { OvertimeLog } from "@/types";
+import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
 interface UseOvertimeQueriesOptions {
   userId?: number;
@@ -77,6 +78,7 @@ export const useOvertimeQueries = (options: UseOvertimeQueriesOptions) => {
     await qc.invalidateQueries({ queryKey: ["dashboard"], refetchType: "active" });
     await qc.invalidateQueries({ queryKey: ["team", "overtime"], refetchType: "active" });
     await qc.invalidateQueries({ queryKey: ["admin", "overtime"], refetchType: "active" });
+    await invalidateAdminDashboard(qc);
   };
 
   const createMutation = useMutation({

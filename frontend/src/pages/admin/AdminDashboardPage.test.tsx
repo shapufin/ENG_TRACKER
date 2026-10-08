@@ -19,6 +19,7 @@ vi.mock("@/context/AuthContext", () => ({
 }));
 
 vi.mock("./components/AdminInsightsStrip", () => ({ AdminInsightsStrip: () => null }));
+vi.mock("./components/AdminDashboardFreshness", () => ({ AdminDashboardFreshness: () => null }));
 
 vi.mock("./hooks/useAdminDashboardPage", () => ({
   useAdminDashboardPage: () => ({

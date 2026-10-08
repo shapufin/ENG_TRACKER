@@ -17,6 +17,7 @@ vi.mock("@/context/PermissionContext", () => ({
   }),
 }));
 vi.mock("./components/AdminInsightsStrip", () => ({ AdminInsightsStrip: () => null }));
+vi.mock("./components/AdminDashboardFreshness", () => ({ AdminDashboardFreshness: () => null }));
 vi.mock("./components/AdminDashboardWidgets", () => ({
   AdminDashboardWidgets: (props: { isWidgetActive: (id: string) => boolean }) => {
     widgetProbe(props.isWidgetActive);

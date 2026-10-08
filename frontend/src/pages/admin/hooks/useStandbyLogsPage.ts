@@ -6,6 +6,7 @@ import { useAdminRejectMutation } from "@/hooks/useAdminRejectMutation";
 import { toast } from "sonner";
 import { useHoursLogsFilterState, useHoursLogsData } from "./hoursLogsFilter";
 import type { StandbyLog } from "@/types";
+import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
 export const useStandbyLogsPage = () => {
   const qc = useQueryClient();
@@ -32,6 +33,7 @@ export const useStandbyLogsPage = () => {
     mutationFn: (id: number) => standbyService.approve(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "standby", "admin_logs"] });
+      void invalidateAdminDashboard(qc);
       toast.success("Approved");
     },
     onError: (err: unknown) => handleApiError(err),
@@ -45,6 +47,7 @@ export const useStandbyLogsPage = () => {
     mutationFn: (id: number) => standbyService.deleteLog(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "standby", "admin_logs"] });
+      void invalidateAdminDashboard(qc);
       toast.success("Standby record deleted");
     },
     onError: (err: unknown) => handleApiError(err),

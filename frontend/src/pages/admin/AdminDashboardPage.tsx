@@ -14,6 +14,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminDashboardWidgets } from "./components/AdminDashboardWidgets";
 import { AdminInsightsStrip } from "./components/AdminInsightsStrip";
+import { AdminDashboardFreshness } from "./components/AdminDashboardFreshness";
 import { useAdminDashboardPage } from "./hooks/useAdminDashboardPage";
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -74,6 +75,7 @@ const AdminDashboardContent: React.FC = () => {
             selectedDashboard="admin"
             onDashboardChange={handleDashboardChange}
           />
+          <AdminDashboardFreshness />
           <Button variant="outline" size="sm" onClick={() => resetLayout()}>
             Reset to Default
           </Button>
