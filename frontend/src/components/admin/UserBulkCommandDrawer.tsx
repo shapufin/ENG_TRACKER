@@ -48,17 +48,12 @@ const SectionCard: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ icon, title, description, children, className }) => (
-  <section
-    className={cn(
-      "rounded-xl border border-border/60 bg-background/40 p-3.5",
-      className
-    )}
-  >
+  <section className={cn("border-border/60 bg-background/40 rounded-xl border p-3.5", className)}>
     <div className="mb-3 flex items-center gap-2">
-      <div className="rounded-md bg-primary/10 p-1.5 text-primary">{icon}</div>
+      <div className="bg-primary/10 text-primary rounded-md p-1.5">{icon}</div>
       <div>
         <h3 className="text-sm font-semibold">{title}</h3>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground text-xs">{description}</p>
       </div>
     </div>
     {children}
@@ -97,7 +92,7 @@ const ToggleSectionCard: React.FC<{
           <Label htmlFor={applyId} className="cursor-pointer text-sm font-semibold">
             {title}
           </Label>
-          <p className="text-xs text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground text-xs">{description}</p>
         </div>
       </div>
       <Switch id={applyId} checked={applied} onCheckedChange={onAppliedChange} />
@@ -108,7 +103,7 @@ const ToggleSectionCard: React.FC<{
         !applied && "pointer-events-none opacity-40"
       )}
     >
-      <p className="text-xs text-muted-foreground">{hint}</p>
+      <p className="text-muted-foreground text-xs">{hint}</p>
       {children}
     </div>
   </section>
@@ -157,20 +152,23 @@ const RoleToggle: React.FC<{
   onChange: (value: TriStateValue) => void;
 }> = ({ id, label, value, onChange }) => {
   const state = value === "indeterminate" ? "unchanged" : value === true ? "on" : "off";
-  const stateLabel = state === "unchanged" ? "Unchanged" : state === "on" ? "Will enable" : "Will disable";
+  const stateLabel =
+    state === "unchanged" ? "Unchanged" : state === "on" ? "Will enable" : "Will disable";
   return (
     <label
       htmlFor={id}
       className={cn(
         "flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition-colors",
-        state === "unchanged" ? "border-border/60 bg-background/40" : "border-primary/25 bg-primary/[0.04]"
+        state === "unchanged"
+          ? "border-border/60 bg-background/40"
+          : "border-primary/25 bg-primary/[0.04]"
       )}
     >
       <TriStateCheckbox id={id} checked={value} onCheckedChange={onChange} />
       <span className="flex-1 font-medium">{label}</span>
       <span
         className={cn(
-          "shrink-0 rounded-full border px-2 py-0.5 text-micro font-semibold uppercase tracking-wide",
+          "shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold tracking-wide uppercase",
           ROLE_STATE_STYLES[state]
         )}
       >
@@ -207,8 +205,7 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
   // HBPR-only users have no team/tech/TL surface — when the whole selection
   // is HBPR, hide those sections and offer only the role toggles that apply.
   const allHbpr =
-    selectedCount > 0 &&
-    selectedProfiles.every((profile) => profile.user?.roles?.includes("hbpr"));
+    selectedCount > 0 && selectedProfiles.every((profile) => profile.user?.roles?.includes("hbpr"));
   const selectedNames = selectedProfiles
     .slice(0, 3)
     .map((profile) => profile.user?.username)
@@ -284,8 +281,8 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
         </div>
 
         <div className="no-scrollbar mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto px-1">
-          <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+          <div className="border-primary/20 bg-primary/5 text-muted-foreground flex items-start gap-2 rounded-lg border px-3 py-2 text-xs">
+            <Sparkles className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>
               Changes apply to all {selectedCount} selected user{selectedCount === 1 ? "" : "s"}.
               Turn on a section to edit it — everything else is left unchanged.
@@ -398,8 +395,8 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-xs text-muted-foreground">
+        <div className="border-border/60 flex shrink-0 flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-muted-foreground text-xs">
             {hasChanges
               ? `${changeCount} field${changeCount === 1 ? "" : "s"} will change`
               : "No changes staged yet"}
@@ -408,7 +405,10 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
             <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isMutating}>
               Cancel
             </Button>
-            <Button onClick={handleApply} disabled={!hasChanges || selectedCount === 0 || isMutating}>
+            <Button
+              onClick={handleApply}
+              disabled={!hasChanges || selectedCount === 0 || isMutating}
+            >
               {isMutating ? (
                 "Applying changes..."
               ) : (

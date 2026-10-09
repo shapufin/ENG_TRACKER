@@ -38,15 +38,13 @@ const VacationBalanceCard: React.FC<{
   <div className="border-border/70 bg-card rounded-2xl border p-2">
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-muted-foreground text-[9px] tracking-[0.3em] uppercase">
-          Vacation balance
-        </p>
+        <p className="text-muted-foreground text-xs tracking-widest uppercase">Vacation balance</p>
         <div className="flex items-end gap-1">
           <h3 className="text-foreground text-xl font-semibold">{formatDays(remainingDays)}d</h3>
           <span className={`text-xs ${toneTextClass.success}`}>remaining</span>
         </div>
       </div>
-      <div className={`rounded-full px-2 py-0.5 text-[9px] ${toneSurfaceClass.success}`}>
+      <div className={`rounded-full px-2 py-0.5 text-xs ${toneSurfaceClass.success}`}>
         {formatDays(totalDays)}d total
       </div>
     </div>
@@ -74,7 +72,7 @@ const CarryOverCard: React.FC<{
   return (
     <div className={`rounded-2xl border p-2 ${toneSurfaceClass.success}`}>
       <div
-        className={`flex items-center justify-between text-[9px] tracking-[0.3em] uppercase ${toneTextClass.success}`}
+        className={`flex items-center justify-between text-xs tracking-widest uppercase ${toneTextClass.success}`}
       >
         <p>Carryover</p>
         <span>from {year}</span>
@@ -102,13 +100,11 @@ const ConflictsCard: React.FC<{
 }> = ({ conflictEntries, onViewAllConflicts }) => (
   <div className="border-border/70 bg-card rounded-2xl border p-2">
     <div className="flex items-center justify-between">
-      <p className="text-muted-foreground text-[9px] tracking-[0.3em] uppercase">
-        Upcoming conflicts
-      </p>
+      <p className="text-muted-foreground text-xs tracking-widest uppercase">Upcoming conflicts</p>
       <div
         role="status"
         aria-label={`${conflictEntries.length} upcoming conflicts`}
-        className={`rounded-full px-2 py-0.5 text-[9px] ${
+        className={`rounded-full px-2 py-0.5 text-xs ${
           conflictEntries.length > 0 ? toneSurfaceClass.danger : toneSurfaceClass.neutral
         }`}
       >

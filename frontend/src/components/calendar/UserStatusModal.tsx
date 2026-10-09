@@ -88,7 +88,7 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                   <p className="text-muted-foreground truncate text-xs">{user.email}</p>
                 </div>
                 {primaryTeam && (
-                  <Badge className="bg-tone-accent-surface text-micro-lg text-tone-accent-text hover:bg-tone-accent-surface shrink-0 rounded-full border-0 px-2.5 py-0.5">
+                  <Badge className="bg-tone-accent-surface text-tone-accent-text hover:bg-tone-accent-surface shrink-0 rounded-full border-0 px-2.5 py-0.5 text-xs">
                     {primaryTeam}
                   </Badge>
                 )}
@@ -133,7 +133,7 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                         style={{ width: `${barShare(usedDays)}%` }}
                       />
                     </div>
-                    <div className="text-micro-lg text-muted-foreground mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <div className="text-muted-foreground mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                       <span className="inline-flex items-center gap-1.5">
                         <span
                           className={cn("inline-flex", toneTextClass.success)}
@@ -162,7 +162,7 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                         Used {formatCompactDays(usedDays)}
                       </span>
                     </div>
-                    <p className="text-micro-lg text-muted-foreground mt-2.5">
+                    <p className="text-muted-foreground mt-2.5 text-xs">
                       {vacationYear} allowance · resets 1 Jan · carry-over expires 31 Mar
                     </p>
                   </div>

@@ -335,8 +335,7 @@ const TicketRecordsPagination: React.FC<PaginationProps> = ({
       </Select>
       <Button
         variant="outline"
-        size="sm"
-        className="h-8"
+        size="control-sm"
         aria-label="Previous page"
         disabled={page <= 1}
         onClick={() => setPage(page - 1)}
@@ -348,8 +347,7 @@ const TicketRecordsPagination: React.FC<PaginationProps> = ({
       </span>
       <Button
         variant="outline"
-        size="sm"
-        className="h-8"
+        size="control-sm"
         aria-label="Next page"
         disabled={page >= totalPages}
         onClick={() => setPage(page + 1)}

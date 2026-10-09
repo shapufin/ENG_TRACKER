@@ -308,7 +308,7 @@ export const DataTable = function DataTable<TData extends RowData>({
                 placeholder={searchPlaceholder}
                 value={globalFilter}
                 onChange={setGlobalFilter}
-                aria-label={searchPlaceholder}
+                aria-label={searchPlaceholder.replace(/[.…\s]+$/, "")}
               />
             </FilterToolbar.Search>
           )}

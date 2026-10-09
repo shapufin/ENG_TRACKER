@@ -61,7 +61,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
         </div>
         <p className="text-muted-foreground text-sm">{notification.message}</p>
         {!notification.is_read && (
-          <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={handleMarkRead}>
+          <Button
+            variant="ghost"
+            size="control-sm"
+            className="px-2 text-xs"
+            onClick={handleMarkRead}
+          >
             Mark as read
           </Button>
         )}

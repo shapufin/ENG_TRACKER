@@ -96,7 +96,7 @@ export const AdminInsightsStrip: React.FC = () => {
                 !expanded && "truncate"
               )}
             >
-              <span className="text-micro-lg font-mono tracking-wider uppercase">{label}</span>
+              <span className="font-mono text-xs tracking-wider uppercase">{label}</span>
               <span className="mx-2 opacity-60" aria-hidden>
                 ·
               </span>
@@ -117,7 +117,7 @@ export const AdminInsightsStrip: React.FC = () => {
         </motion.div>
         <div className="flex shrink-0 items-center gap-2">
           {insights.length > 1 && (
-            <div className="text-micro-lg flex items-center gap-1 font-mono">
+            <div className="flex items-center gap-1 font-mono text-xs">
               <button
                 type="button"
                 className={pagerButton}

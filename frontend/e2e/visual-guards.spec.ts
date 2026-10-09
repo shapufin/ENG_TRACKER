@@ -75,3 +75,52 @@ test("HBPR-only guard redirects (scorecard authoring, calendar, leave)", async (
   await page.waitForURL((url) => url.pathname === "/hbpr", { timeout: 15_000 });
   expect(new URL(page.url()).pathname).toBe("/hbpr");
 });
+
+// Runtime guard for the control-kit contract (docs/ui-control-kit.md): in every FilterToolbar the search
+// field, selects, date pickers and buttons share ONE height. Static audits cannot see a class that
+// resolves differently at runtime (a token override, a `size` prop that does not reach the DOM).
+// Toggle chips (aria-pressed), icon-only squares and the in-field Clear button are intentionally excluded.
+const TOOLBAR_PAGES = [
+  "/admin/users",
+  "/admin/leave-requests",
+  "/admin/leave-balances",
+  "/admin/overtime-logs",
+  "/admin/audit-logs",
+  "/admin/resource-access",
+];
+
+for (const path of TOOLBAR_PAGES) {
+  test(`filter toolbar controls share one height on ${path}`, async ({ page }) => {
+    await loginAsRole(page, "admin");
+    await page.goto(path);
+    await page.waitForURL((url) => url.pathname === path, { timeout: 15_000 });
+    await page.locator("[data-filter-toolbar]").first().waitFor({ state: "visible" });
+
+    const toolbars = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("[data-filter-toolbar]")).map((toolbar) => {
+        const controls = Array.from(
+          toolbar.querySelectorAll<HTMLElement>(
+            'input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), button, [role="combobox"]'
+          )
+        ).filter((el) => {
+          if (el.matches('[aria-pressed], [aria-label="Clear search"]')) return false;
+          const box = el.getBoundingClientRect();
+          // Skip hidden controls and icon-only squares (width === height).
+          return box.width > 0 && box.height > 0 && Math.abs(box.width - box.height) > 1;
+        });
+        return controls.map((el) => ({
+          name: el.getAttribute("aria-label") || el.textContent?.trim().slice(0, 24) || el.tagName,
+          height: el.getBoundingClientRect().height,
+        }));
+      })
+    );
+
+    expect(toolbars.length).toBeGreaterThan(0);
+    for (const controls of toolbars) {
+      if (controls.length < 2) continue;
+      const heights = controls.map((c) => c.height);
+      const spread = Math.max(...heights) - Math.min(...heights);
+      expect(spread, JSON.stringify(controls)).toBeLessThanOrEqual(1);
+    }
+  });
+}

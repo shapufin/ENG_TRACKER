@@ -389,12 +389,12 @@ export const PayrollCalendarPage: React.FC = () => {
                 </div>
               </div>
               {summaryFetching && (
-                <p className="mt-2 text-xs text-muted-foreground">Updating summary…</p>
+                <p className="text-muted-foreground mt-2 text-xs">Updating summary…</p>
               )}
 
               {/* Visual month grid */}
               <div className="mt-6">
-                <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground">
+                <div className="text-muted-foreground grid grid-cols-7 gap-1 text-center text-xs font-medium">
                   {WEEKDAY_HEADERS.map((d) => (
                     <div key={d} className="py-1">
                       {d}
@@ -417,13 +417,13 @@ export const PayrollCalendarPage: React.FC = () => {
                         key={idx}
                         title={isHoliday ? cell.workday?.holiday_name : undefined}
                         className={`min-h-[64px] rounded-md p-1 ${cellBg} ${
-                          cell.isToday ? "ring-2 ring-primary" : ""
+                          cell.isToday ? "ring-primary ring-2" : ""
                         }`}
                       >
                         <div className="text-xs font-semibold">{cell.day}</div>
                         {isHoliday && cell.workday?.holiday_name && (
                           <div
-                            className="mt-0.5 truncate text-micro text-destructive"
+                            className="text-destructive mt-0.5 truncate text-xs"
                             title={cell.workday.holiday_name}
                           >
                             {cell.workday.holiday_name}
@@ -436,7 +436,7 @@ export const PayrollCalendarPage: React.FC = () => {
               </div>
 
               {selectedCalendar.source && (
-                <p className="mt-4 text-xs text-muted-foreground">
+                <p className="text-muted-foreground mt-4 text-xs">
                   Source: {selectedCalendar.source}
                 </p>
               )}
@@ -464,14 +464,14 @@ export const PayrollCalendarPage: React.FC = () => {
                   emptyMessage="No holidays this month."
                 />
               ) : (
-                <p className="py-6 text-center text-muted-foreground">No holidays this month.</p>
+                <p className="text-muted-foreground py-6 text-center">No holidays this month.</p>
               )}
             </GlassCard>
           )}
         </div>
       ) : (
         <GlassCard className="p-6">
-          <p className="py-8 text-center text-muted-foreground">
+          <p className="text-muted-foreground py-8 text-center">
             No work calendars found. Run the seed_payroll_calendar management command to create the
             Albania 2026 calendar.
           </p>
@@ -542,7 +542,7 @@ export const PayrollCalendarPage: React.FC = () => {
           </DialogHeader>
           <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
             {editHoliday && (
-              <p className="text-sm text-muted-foreground">Date: {editHoliday.date}</p>
+              <p className="text-muted-foreground text-sm">Date: {editHoliday.date}</p>
             )}
             <div>
               <Label htmlFor="edit-holiday-name">Holiday Name</Label>

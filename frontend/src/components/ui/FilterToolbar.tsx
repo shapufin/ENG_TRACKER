@@ -5,7 +5,14 @@ type DivProps = React.HTMLAttributes<HTMLDivElement>;
 
 /** Pure layout for a filter row. Colours/heights belong to the controls inside (controlSurface.ts). */
 function FilterToolbar({ className, ...props }: DivProps) {
-  return <div className={cn("flex flex-wrap items-center gap-2", className)} {...props} />;
+  // data-filter-toolbar: hook for the e2e probe that every field and button in a toolbar is the same height.
+  return (
+    <div
+      data-filter-toolbar=""
+      className={cn("flex flex-wrap items-center gap-2", className)}
+      {...props}
+    />
+  );
 }
 
 function FilterToolbarSearch({ className, ...props }: DivProps) {

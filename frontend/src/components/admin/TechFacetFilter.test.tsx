@@ -195,4 +195,38 @@ describe("TechFacetFilter", () => {
     );
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("titles a level chip with the tech and level name joined by an em dash", () => {
+    render(
+      <TechFacetFilter
+        facets={facets}
+        noTechCount={25}
+        selectedTechIds={[1]}
+        selectedLevelIds={[]}
+        noTechOnly={false}
+        onTechIdsChange={vi.fn()}
+        onLevelIdsChange={vi.fn()}
+        onNoTechOnlyChange={vi.fn()}
+      />
+    );
+    expect(screen.getByTitle("Kubernetes — Level 1")).toBeInTheDocument();
+  });
+
+  it("renders counts at full opacity so they keep the chip's contrast", () => {
+    render(
+      <TechFacetFilter
+        facets={facets}
+        noTechCount={25}
+        selectedTechIds={[1]}
+        selectedLevelIds={[]}
+        noTechOnly={false}
+        onTechIdsChange={vi.fn()}
+        onLevelIdsChange={vi.fn()}
+        onNoTechOnlyChange={vi.fn()}
+      />
+    );
+    for (const count of ["12", "9", "25", "7"]) {
+      expect(screen.getByText(count).className).not.toMatch(/opacity-/);
+    }
+  });
 });

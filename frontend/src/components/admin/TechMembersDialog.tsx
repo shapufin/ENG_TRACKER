@@ -193,6 +193,11 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
                                 {level.name}
                               </SelectItem>
                             ))}
+                            {m.level?.id && !activeLevels.some((l) => l.id === m.level?.id) && (
+                              <SelectItem value={String(m.level.id)}>
+                                {m.level.name} (inactive)
+                              </SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       )}

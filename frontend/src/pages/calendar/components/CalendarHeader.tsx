@@ -94,9 +94,9 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       </h1>
       <div className="hidden basis-full min-[1440px]:hidden sm:block" aria-hidden="true" />
       <Button
-        size="sm"
+        size="control"
         variant="default"
-        className="h-9 shrink-0 rounded-xl px-3 text-[13px] min-[1440px]:ml-auto"
+        className="shrink-0 rounded-xl px-3 text-[13px] min-[1440px]:ml-auto"
         onClick={onRequestTimeOff}
       >
         <Plus className="mr-1.5 h-3.5 w-3.5" />

@@ -120,7 +120,7 @@ export const TechLevelEditor: React.FC<TechLevelEditorProps> = ({ tech }) => {
         <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
           Levels
         </h3>
-        <span className="text-micro text-muted-foreground">
+        <span className="text-muted-foreground text-xs">
           Lowest rank first. Order sets seniority.
         </span>
       </div>
@@ -138,7 +138,7 @@ export const TechLevelEditor: React.FC<TechLevelEditorProps> = ({ tech }) => {
               key={level.id}
               className="border-border bg-card flex items-center gap-2 rounded-md border px-2 py-1.5"
             >
-              <span className="text-micro text-muted-foreground w-6 shrink-0 text-center font-mono">
+              <span className="text-muted-foreground w-6 shrink-0 text-center font-mono text-xs">
                 {level.rank}
               </span>
               {renaming?.id === level.id ? (
@@ -189,12 +189,12 @@ export const TechLevelEditor: React.FC<TechLevelEditorProps> = ({ tech }) => {
                   <span className="flex-1 truncate text-sm">
                     {level.name}
                     {!level.is_active && (
-                      <Badge variant="secondary" className="text-micro ml-2">
+                      <Badge variant="secondary" className="ml-2 text-xs">
                         Inactive
                       </Badge>
                     )}
                   </span>
-                  <span className="text-micro text-muted-foreground shrink-0 font-mono">
+                  <span className="text-muted-foreground shrink-0 font-mono text-xs">
                     {level.code}
                   </span>
                   <Button

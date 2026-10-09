@@ -113,6 +113,20 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     expect(lightBlock).toContain("--input: 215 16% 58%");
   });
 
+  // Tone-text contrast (2026-10-09), WCAG ratio of the text over the tone surface (15% fill composited
+  // over the card / the page), tightest case first:
+  //   light warning 26 90% 34%: 4.78:1 on its surface over the page, 5.15 over a card, 5.31 on the bare page
+  //   light success 163 94% 22%: 5.16:1 on its surface over the page, 5.56 over a card, 5.86 on the bare page
+  //   dark accent  258 90% 70%: 4.72:1 on its surface over a card, 5.08 over the page
+  //   dark control-edge 219 24% 31%: 2.09:1 on a card, 2.21 on the page (hover 36% = 2.51 on a card)
+  it("keeps tone text at 4.5:1 on its own surface in both themes", () => {
+    expect(lightBlock).toContain("--tone-warning-text: 26 90% 34%");
+    expect(lightBlock).toContain("--tone-success-text: 163 94% 22%");
+    expect(darkBlock).toContain("--tone-accent-text: 258 90% 70%");
+    expect(darkBlock).toContain("--control-edge: 219 24% 31%");
+    expect(darkBlock).toContain("--control-edge-hover: 219 24% 36%");
+  });
+
   it("defines the control kit tokens in both modes", () => {
     expect(lightBlock).toContain("--control-edge: 214 16% 72%");
     expect(lightBlock).toContain("--control-edge-hover: 214 16% 62%");
@@ -133,6 +147,10 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     // Coarse pointers get the larger default control height.
     expect(cssNoComments).toMatch(
       /@media \(pointer: coarse\)\s*\{\s*:root\s*\{\s*--control-h: 2\.75rem/
+    );
+    // Chips and sm buttons: 32px on a mouse, 40px on a touch screen.
+    expect(cssNoComments).toMatch(
+      /@media \(pointer: coarse\)\s*\{\s*:root\s*\{[^}]*--control-h-sm: 2\.5rem/
     );
   });
 

@@ -3,7 +3,7 @@ import { SearchX } from "lucide-react";
 import { UserAvatar } from "@/components/calendar/UserAvatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { avatarSeed } from "../avatarSeed";
 import type { MyOneOnOne } from "../../types/myRecords";
@@ -30,12 +30,11 @@ export const OneOnOneTimeline: React.FC<{ items: MyOneOnOne[] }> = ({ items }) =
         </p>
       ) : (
         <>
-          <Input
-            type="search"
+          <SearchField
             aria-label="Search 1-on-1s"
             placeholder="Search by keyword or date"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={setQuery}
           />
           {sorted.length === 0 ? (
             <EmptyState

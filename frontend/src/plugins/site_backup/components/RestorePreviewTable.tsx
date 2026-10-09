@@ -78,7 +78,7 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
                   <div className="font-mono text-xs">{group.model}</div>
                   {isForced && (
                     <span
-                      className="text-micro text-muted-foreground mt-1 inline-block"
+                      className="text-muted-foreground mt-1 inline-block text-xs"
                       title={`Required because it references an approved model's rows.`}
                     >
                       Required by an approved model
@@ -86,7 +86,7 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
                   )}
                   {hasDependents && (
                     <span
-                      className="text-micro text-muted-foreground mt-1 block"
+                      className="text-muted-foreground mt-1 block text-xs"
                       title={group.forced_dependents.join(", ")}
                     >
                       Forces {group.forced_dependents.length} dependent model
@@ -111,7 +111,7 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
                       )}
                     </label>
                   ) : (
-                    <span className="text-micro text-muted-foreground/60 font-mono tracking-wider uppercase">
+                    <span className="text-muted-foreground/60 font-mono text-xs tracking-wider uppercase">
                       n/a
                     </span>
                   )}

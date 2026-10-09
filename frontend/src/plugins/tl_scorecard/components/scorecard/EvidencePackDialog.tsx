@@ -144,7 +144,7 @@ const PackBody: React.FC<{ pack: YearEndEvidencePack }> = ({ pack }) => (
 
     {pack.meetings.length > 0 && (
       <div>
-        <h3 className="text-micro text-muted-foreground flex items-center gap-1.5 font-mono font-semibold tracking-wider uppercase">
+        <h3 className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs font-semibold tracking-wider uppercase">
           Cadence meetings ({pack.meetings.length})
         </h3>
         <ul className="mt-2 space-y-2">
@@ -157,7 +157,7 @@ const PackBody: React.FC<{ pack: YearEndEvidencePack }> = ({ pack }) => (
 
     {[pack.epr_mid_year, pack.epr_year_end].some(Boolean) && (
       <div>
-        <h3 className="text-micro text-muted-foreground flex items-center gap-1.5 font-mono font-semibold tracking-wider uppercase">
+        <h3 className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs font-semibold tracking-wider uppercase">
           EPR participation
         </h3>
         <ul className="mt-2 space-y-2">

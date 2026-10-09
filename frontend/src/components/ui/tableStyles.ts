@@ -40,7 +40,7 @@ export const TABLE_ROW_HOVER_CLASS = "hover:bg-table-hover transition-colors";
 /**
  * Header row of a div-grid "table" (no `<table>`, so no `<thead>`): same typography
  * and bottom border as `TABLE_HEAD_CELL_CLASS`. Compose it with the grid template:
- * `cn("grid grid-cols-[�]", TABLE_HEAD_GRID_CLASS)`.
+ * `cn("grid grid-cols-[...]", TABLE_HEAD_GRID_CLASS)`.
  */
 export const TABLE_HEAD_GRID_CLASS =
   "border-border/70 text-foreground gap-4 border-b px-6 py-3 text-sm font-medium";

@@ -2,14 +2,20 @@
 // Text-based on purpose: a tag-level regex is truncated by the `>` in `=>` / `[&>span]:` inside a className,
 // so tags are scanned with a small brace-aware walker instead.
 
-const OPEN_TAG = /<(Input|input|Textarea|SelectTrigger)(?=[\s/>])/g;
+const OPEN_TAG =
+  /<(Input|input|Textarea|SelectTrigger|Button|DateRangePicker|DatePicker)(?=[\s/>])/g;
 const RAW_FIELD = /<(input|textarea|select)(?=[\s/>])/g;
 const ICON = /<Search(?![A-Za-z0-9_])/g;
 const HAS_INPUT = /<Input(?=[\s/>])/;
 const PL = /(?<![\w-])pl-(?:8|9|10|11)(?![\w.-])/;
 const H = /(?<![\w-])h-(?:8|9|10|11|12)(?![\w.-])/;
 const WRAPPER = /max-w-sm[^"'`\n]*\bflex-1\b|\bflex-1\b[^"'`\n]*max-w-sm/;
+const SEARCH_TYPE = /type\s*=\s*(?:"|'|\{\s*["'`])search\b/;
 const NON_TEXT_TYPE = /type\s*=\s*(?:"|'|\{\s*["'`])(?:file|checkbox|radio|hidden)\b/;
+
+const isSquareButton = (tag, n) =>
+  new RegExp(String.raw`(?<![\w-])(?:w|size)-${n}(?![\w.-])`).test(tag) ||
+  /size\s*=\s*(?:"|'|\{\s*["'`])icon/.test(tag);
 
 const norm = (p) => p.replace(/\\/g, "/");
 const lineOf = (src, idx) => src.slice(0, idx).split("\n").length;
@@ -55,8 +61,14 @@ export function findViolations(src, path = "src/x.tsx") {
       const t = tag.match(PL);
       if (t) push(m.index, "INPUT-PAD", t[0]);
     }
+    // A search box is SearchField (icon slot, clear button, Esc), never a bare <Input type="search">.
+    if (!isSearchField && name === "Input" && SEARCH_TYPE.test(tag))
+      push(m.index, "SEARCH-TYPE", `Input type="search"`);
     const h = tag.match(H);
-    if (h) push(m.index, "CONTROL-HEIGHT", `${name} ${h[0]}`);
+    // A Button may carry h-N when it is an icon-only square (w-N pair, size-N or size="icon");
+    // anything else beside a field takes size="control|control-sm|control-lg".
+    if (h && !(name === "Button" && isSquareButton(tag, h[0].slice(2))))
+      push(m.index, "CONTROL-HEIGHT", `${name} ${h[0]}`);
   }
 
   if (!isRawAllowed) {

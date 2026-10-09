@@ -163,7 +163,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             {!collapsed && (
               <>
                 <span className="flex-1 text-left">Search pages</span>
-                <kbd className="text-micro-lg font-mono">Ctrl K</kbd>
+                <kbd className="font-mono text-xs">Ctrl K</kbd>
               </>
             )}
           </button>

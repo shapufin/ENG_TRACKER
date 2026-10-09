@@ -95,7 +95,7 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
       <div className="flex w-full items-center justify-between">
         <span
           className={cn(
-            "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold",
+            "flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold",
             isSelected
               ? "bg-primary text-primary-foreground"
               : today
@@ -108,7 +108,7 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
           {format(date, "d")}
         </span>
         {today && (
-          <span className="border-info/20 bg-info/10 text-info hidden rounded border px-1.5 py-0.5 text-[9px] font-bold tracking-widest uppercase sm:inline">
+          <span className="border-info/20 bg-info/10 text-info hidden rounded border px-1.5 py-0.5 text-xs font-bold tracking-widest uppercase sm:inline">
             Today
           </span>
         )}
@@ -135,7 +135,7 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
         ))}
       </div>
       {overflowEvents > 0 && (
-        <span className="text-muted-foreground pl-0.5 text-[9px] font-medium tracking-wide uppercase">
+        <span className="text-muted-foreground pl-0.5 text-xs font-medium tracking-wide uppercase">
           +{overflowEvents} more
         </span>
       )}

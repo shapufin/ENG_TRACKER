@@ -74,9 +74,10 @@ export const MyClientsSection: React.FC<MyClientsSectionProps> = ({
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
+                  size="control-lg"
                   role="combobox"
                   aria-expanded={open}
-                  className="h-10 w-full justify-between font-normal"
+                  className="w-full justify-between font-normal"
                 >
                   <span className="flex items-center gap-2 truncate">
                     <Building2 className="text-muted-foreground h-4 w-4 shrink-0" />

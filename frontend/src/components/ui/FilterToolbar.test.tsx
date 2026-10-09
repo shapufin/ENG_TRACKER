@@ -16,6 +16,11 @@ describe("FilterToolbar", () => {
     expect(screen.getByTestId("g")).toHaveClass("ml-auto");
     expect(screen.getByText("G")).toBeInTheDocument();
   });
+
+  it("carries the data-filter-toolbar hook used by the e2e height probe", () => {
+    render(<FilterToolbar data-testid="bar" />);
+    expect(screen.getByTestId("bar")).toHaveAttribute("data-filter-toolbar");
+  });
 });
 
 describe("Chip", () => {

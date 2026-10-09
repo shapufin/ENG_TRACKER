@@ -62,13 +62,81 @@ bad(
 ok(
   "allow-listed count badge",
   `<i className="text-[10px]" />`,
-  "src/components/layout/SidebarNavLink.tsx"
+  "src/plugins/notifications/components/NotificationBell.tsx"
 );
 ok(
   "Windows path separators still match the allow-list",
   `<i className="text-[10px]" />`,
-  "src\\components\\layout\\SidebarNavLink.tsx"
+  "src\\plugins\\notifications\\components\\NotificationBell.tsx"
 );
+
+bad("text-[9px]", `<span className="text-[9px]" />`, "MICRO-TEXT");
+bad("text-[8.5px]", `<span className="text-[8.5px]" />`, "MICRO-TEXT");
+bad(
+  "text-[9.5px] behind a variant chain",
+  `<span className="md:hover:text-[9.5px]" />`,
+  "MICRO-TEXT"
+);
+bad("text-[0.6rem]", `<span className="text-[0.6rem]" />`, "MICRO-TEXT");
+bad("text-[0.7rem]", `<span className="text-[0.7rem]" />`, "MICRO-TEXT");
+bad("text-[0.625rem]", `<span className="text-[0.625rem]" />`, "MICRO-TEXT");
+bad("text-micro", `<span className="text-micro text-muted-foreground" />`, "MICRO-TEXT");
+bad("text-micro-lg", `<span className="font-mono text-micro-lg" />`, "MICRO-TEXT");
+bad("sm:text-micro", `<span className="sm:text-micro" />`, "MICRO-TEXT");
+bad("text-micro inside cn()", `cn("a", flag && "text-micro")`, "MICRO-TEXT");
+ok("text-[0.75rem]", `<span className="text-[0.75rem]" />`);
+ok("text-[12px]", `<span className="text-[12px]" />`);
+ok("text-microscope is not the token", `<span className="text-microscope" />`);
+
+bad("dark:ring", `<div className="ring-1 dark:ring-white/10" />`, "DARK-EXTRA");
+bad("dark:from gradient", `<div className="dark:from-slate-900" />`, "DARK-EXTRA");
+bad("dark:stroke behind a variant", `<path className="dark:hover:stroke-white" />`, "DARK-EXTRA");
+bad("dark:shadow-lg", `<div className="dark:shadow-lg" />`, "DARK-EXTRA");
+bad("dark:divide", `<div className="dark:divide-white/5" />`, "DARK-EXTRA");
+ok("dark:shadow-none", `<div className="dark:shadow-none" />`);
+ok(
+  "allow-listed identity ring",
+  `x("dark:ring-white/10")`,
+  "src/components/calendar/CalendarDayCell.tsx"
+);
+
+test("RAW-PALETTE is opt-in", () => {
+  const src = `<div className="bg-amber-500/10 text-emerald-400 border-sky-300 hover:bg-rose-500" />`;
+  assert.deepEqual(findViolations(src, P), []);
+  const v = findViolations(src, P, undefined, { rawPalette: true });
+  assert.equal(v.filter((x) => x.rule === "RAW-PALETTE").length, 1); // one finding per line
+});
+test("RAW-PALETTE flags each palette family when enabled", () => {
+  for (const c of [
+    "red",
+    "blue",
+    "green",
+    "orange",
+    "yellow",
+    "purple",
+    "violet",
+    "indigo",
+    "teal",
+    "cyan",
+    "pink",
+    "fuchsia",
+    "lime",
+    "stone",
+    "neutral",
+  ]) {
+    const v = findViolations(`<i className="sm:text-${c}-600" />`, P, undefined, {
+      rawPalette: true,
+    });
+    assert.ok(
+      v.some((x) => x.rule === "RAW-PALETTE"),
+      c
+    );
+  }
+});
+test("RAW-PALETTE ignores tone tokens", () => {
+  const src = `<i className="bg-tone-warning-surface text-red text-primary border-border" />`;
+  assert.deepEqual(findViolations(src, P, undefined, { rawPalette: true }), []);
+});
 
 test("isExcluded prefix match", () => {
   assert.equal(isExcluded("src/plugins/engagement/a.tsx", ["src/plugins/engagement"]), true);

@@ -50,32 +50,32 @@ const MetricTile: React.FC<{
   tone: Tone;
   footer: React.ReactNode;
 }> = ({ label, value, icon, tone, footer }) => (
-  <div className="flex flex-col justify-between rounded-xl border border-border bg-card p-3.5 transition-colors hover:border-border-focus/60">
+  <div className="border-border bg-card hover:border-border-focus/60 flex flex-col justify-between rounded-xl border p-3.5 transition-colors">
     <div>
       <div className="flex items-start justify-between gap-2">
-        <span className="text-micro-lg font-bold uppercase leading-tight tracking-wider text-muted-foreground">
+        <span className="text-muted-foreground text-xs leading-tight font-bold tracking-wider uppercase">
           {label}
         </span>
         <IconWell tone={tone} size="sm">
           {icon}
         </IconWell>
       </div>
-      <div className="mt-2 font-mono text-xl font-bold tabular-nums tracking-tight">{value}</div>
+      <div className="mt-2 font-mono text-xl font-bold tracking-tight tabular-nums">{value}</div>
     </div>
-    <div className="mt-2.5 border-t border-border pt-2">{footer}</div>
+    <div className="border-border mt-2.5 border-t pt-2">{footer}</div>
   </div>
 );
 
 const MagnitudeBar: React.FC<{ percent: number; caption: string }> = ({ percent, caption }) => (
   <div>
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-line-subtle">
+    <div className="bg-line-subtle h-1.5 w-full overflow-hidden rounded-full">
       <div
         data-testid="metric-tile-progress-fill"
-        className="h-full rounded-full bg-primary"
+        className="bg-primary h-full rounded-full"
         style={{ width: `${Math.round(Math.min(100, Math.max(0, percent)))}%` }}
       />
     </div>
-    <p className="mt-1.5 text-micro font-medium text-muted-foreground">{caption}</p>
+    <p className="text-muted-foreground mt-1.5 text-xs font-medium">{caption}</p>
   </div>
 );
 
@@ -110,10 +110,10 @@ const LeaveGauge: React.FC<{ progress: number }> = ({ progress }) => {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-xl font-bold tabular-nums tracking-tight">
+        <span className="text-xl font-bold tracking-tight tabular-nums">
           {Math.round(clamped)}%
         </span>
-        <span className="text-micro font-bold uppercase tracking-widest text-muted-foreground">
+        <span className="text-muted-foreground text-xs font-bold tracking-widest uppercase">
           Goal
         </span>
       </div>
@@ -171,7 +171,7 @@ export const PersonalDashboardProgressCard: React.FC<PersonalDashboardProgressCa
           <Badge variant="warning">{`${pendingLeaveDays}d pending approval`}</Badge>
         ) : (
           <Badge variant="success" className="gap-1.5">
-            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-success" />
+            <span aria-hidden="true" className="bg-success h-1.5 w-1.5 rounded-full" />
             On track
           </Badge>
         )
@@ -181,9 +181,9 @@ export const PersonalDashboardProgressCard: React.FC<PersonalDashboardProgressCa
           <div
             role="group"
             aria-label="Week period"
-            className="flex items-center gap-1 rounded-lg border border-border bg-card p-0.5"
+            className="border-border bg-card flex items-center gap-1 rounded-lg border p-0.5"
           >
-            <CalendarDays className="ml-1.5 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <CalendarDays className="text-muted-foreground ml-1.5 h-3.5 w-3.5" aria-hidden="true" />
             {([0, 1] as const).map((option) => (
               <Button
                 key={option}
@@ -203,27 +203,25 @@ export const PersonalDashboardProgressCard: React.FC<PersonalDashboardProgressCa
       bodyClassName="flex flex-col gap-4"
     >
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-12">
-        <div className="flex flex-col justify-between rounded-xl border border-border bg-card p-3.5 lg:col-span-5">
+        <div className="border-border bg-card flex flex-col justify-between rounded-xl border p-3.5 lg:col-span-5">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-micro-lg font-bold uppercase tracking-wider text-muted-foreground">
+            <span className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
               Leave Utilization
             </span>
             <Badge variant="warning">Target: 100%</Badge>
           </div>
           <LeaveGauge progress={leaveProgress} />
-          <div className="flex items-center justify-between border-t border-border pt-2 text-xs">
+          <div className="border-border flex items-center justify-between border-t pt-2 text-xs">
             {allowanceTotal !== undefined && allowanceTotal > 0 ? (
               <>
-                <span className="font-medium text-muted-foreground">Days Utilized</span>
+                <span className="text-muted-foreground font-medium">Days Utilized</span>
                 <span className="font-bold">
                   <span>{leaveUsedDays}</span>{" "}
-                  <span className="font-normal text-muted-foreground">
-                    / {allowanceTotal} Days
-                  </span>
+                  <span className="text-muted-foreground font-normal">/ {allowanceTotal} Days</span>
                 </span>
               </>
             ) : (
-              <span className="font-medium text-muted-foreground">No leave allowance set</span>
+              <span className="text-muted-foreground font-medium">No leave allowance set</span>
             )}
           </div>
         </div>
@@ -263,11 +261,11 @@ export const PersonalDashboardProgressCard: React.FC<PersonalDashboardProgressCa
             tone="success"
             footer={
               pendingLeaveDays > 0 ? (
-                <Badge variant="warning" className="text-micro">
+                <Badge variant="warning" className="text-xs">
                   {`${pendingLeaveDays}d awaiting approval`}
                 </Badge>
               ) : (
-                <Badge variant="success" className="text-micro">
+                <Badge variant="success" className="text-xs">
                   No pending requests
                 </Badge>
               )
@@ -305,24 +303,34 @@ export const PersonalDashboardProgressCard: React.FC<PersonalDashboardProgressCa
                   boxShadow: "0 10px 15px -3px rgba(0,0,0,0.5)",
                 }}
               />
-              <Bar dataKey="overtime" name="Overtime" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="standby" name="Standby" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="overtime"
+                name="Overtime"
+                fill="hsl(var(--primary))"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                dataKey="standby"
+                name="Standby"
+                fill="hsl(var(--success))"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
       ) : (
-        <p className="mt-4 text-sm text-muted-foreground" data-testid="weekly-hours-chart-empty">
+        <p className="text-muted-foreground mt-4 text-sm" data-testid="weekly-hours-chart-empty">
           {`No overtime or standby hours logged ${weekLabel}.`}
         </p>
       )}
 
       <div
         className={cn(
-          "-mx-5 -mb-5 mt-2 flex flex-col gap-3 border-t border-border bg-muted/40 px-5 py-3",
+          "border-border bg-muted/40 -mx-5 mt-2 -mb-5 flex flex-col gap-3 border-t px-5 py-3",
           "sm:flex-row sm:items-center sm:justify-between"
         )}
       >
-        <p className="text-xs font-medium text-muted-foreground">
+        <p className="text-muted-foreground text-xs font-medium">
           {`${weekOvertimeSum}h overtime · ${weekStandbySum}h standby ${weekLabel}`}
         </p>
         <Button type="button" size="sm" asChild className="self-end sm:self-auto">

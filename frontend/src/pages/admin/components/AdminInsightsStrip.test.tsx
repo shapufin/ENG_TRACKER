@@ -170,7 +170,7 @@ describe("AdminInsightsStrip", () => {
   it("separates severity and title with a middle dot, never a replacement character", () => {
     renderStrip();
     const region = screen.getByRole("region", { name: "Automated insights" });
-    expect(region.textContent).not.toContain("�");
+    expect(region.textContent).not.toContain("\uFFFD");
     expect(region.textContent).toContain("Warning·Approvals waiting over 15 days");
   });
 

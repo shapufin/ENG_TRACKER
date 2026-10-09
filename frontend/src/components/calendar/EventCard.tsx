@@ -50,7 +50,7 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
         <div className="flex items-center gap-1.5">
           <span
             className={cn(
-              "flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-bold",
+              "flex h-4 w-4 shrink-0 items-center justify-center rounded text-xs font-bold",
               styles.chip
             )}
           >
@@ -65,7 +65,7 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
           )}
         </div>
         <p
-          className={cn("mt-0.5 truncate text-[9.5px]", styles.meta)}
+          className={cn("mt-0.5 truncate text-xs", styles.meta)}
           title={event.compactLabel ?? event.title}
         >
           {event.compactLabel ?? event.title}

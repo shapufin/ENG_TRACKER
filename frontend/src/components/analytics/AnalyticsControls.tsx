@@ -65,7 +65,8 @@ export const AnalyticsControls: React.FC<AnalyticsControlsProps> = ({
             from={dateRange.from}
             to={dateRange.to}
             onChange={onDateRangeChange}
-            className="h-8 w-auto text-xs"
+            controlSize="sm"
+            className="w-auto text-xs"
           />
         </div>
       )}
@@ -99,14 +100,14 @@ export const AnalyticsControls: React.FC<AnalyticsControlsProps> = ({
               <SelectItem value="csv">CSV</SelectItem>
             </SelectContent>
           </Select>
-          <Button className="h-8 gap-2" size="sm" onClick={onExport}>
+          <Button className="gap-2" size="control-sm" onClick={onExport}>
             <Download className="h-4 w-4" />
             Export
           </Button>
         </>
       )}
       {onOpenSettings && (
-        <Button variant="outline" size="sm" className="h-8 gap-2" onClick={onOpenSettings}>
+        <Button variant="outline" size="control-sm" className="gap-2" onClick={onOpenSettings}>
           <Settings className="h-4 w-4" />
           Settings
         </Button>

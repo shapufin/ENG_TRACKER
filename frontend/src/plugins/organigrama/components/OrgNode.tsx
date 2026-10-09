@@ -86,7 +86,7 @@ export const OrgNode: React.FC<NodeProps> = React.memo(function OrgNode({ data }
             {nodeData.techLevels.map((level) => (
               <span
                 key={level}
-                className="bg-secondary text-micro text-secondary-foreground rounded-full px-2 py-0.5 font-medium"
+                className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs font-medium"
                 title={`Tech grade: ${level}`}
               >
                 {level}

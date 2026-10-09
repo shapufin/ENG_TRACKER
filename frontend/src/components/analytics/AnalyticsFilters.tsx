@@ -53,11 +53,11 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
   }));
 
   return (
-    <GlassCard className="p-4 animate-in fade-in slide-in-from-top-2">
+    <GlassCard className="animate-in fade-in slide-in-from-top-2 p-4">
       <div className="flex flex-wrap items-end gap-4">
         {/* Teams Filter — Popover combobox */}
         <div className="min-w-[180px] flex-1 space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
             Teams
           </Label>
           <FilterMultiSelect
@@ -71,7 +71,7 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
 
         {/* Users Filter — Popover combobox with search */}
         <div className="min-w-[180px] flex-1 space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
             Users
           </Label>
           <FilterMultiSelect
@@ -85,7 +85,7 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
 
         {/* Categories — compact toggle buttons */}
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
             Categories
           </Label>
           <div className="flex gap-1">
@@ -95,8 +95,8 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
                 <Button
                   key={cat}
                   variant={active ? "default" : "outline"}
-                  size="sm"
-                  className="h-8 capitalize"
+                  size="control-sm"
+                  className="capitalize"
                   onClick={() => onCategoryToggle(cat, !active)}
                 >
                   {cat}
@@ -108,7 +108,7 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
 
         {/* Status — compact toggle buttons */}
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
             Status
           </Label>
           <div className="flex gap-1">
@@ -118,8 +118,8 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
                 <Button
                   key={status}
                   variant={active ? "default" : "outline"}
-                  size="sm"
-                  className="h-8 capitalize"
+                  size="control-sm"
+                  className="capitalize"
                   onClick={() => onStatusToggle(status, !active)}
                 >
                   {status}
@@ -131,10 +131,10 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
 
         {/* Actions */}
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="h-8" onClick={onClear}>
+          <Button variant="outline" size="control-sm" onClick={onClear}>
             Clear All
           </Button>
-          <Button variant="secondary" size="sm" className="h-8" onClick={onClose}>
+          <Button variant="secondary" size="control-sm" onClick={onClose}>
             Close
           </Button>
         </div>

@@ -216,7 +216,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
               <div
                 className={cn(
                   "flex h-12 w-12 items-center justify-center rounded-xl",
-                  "border border-accent-violet/20",
+                  "border-accent-violet/20 border",
                   "bg-accent-violet/10 backdrop-blur-xl",
                   "shadow-[0_0_15px_rgba(139,92,246,0.25)]"
                 )}
@@ -225,10 +225,10 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
               </div>
 
               <div>
-                <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                <h2 className="text-foreground text-xl font-semibold tracking-tight">
                   {recordType}
                 </h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">{userName}</p>
+                <p className="text-muted-foreground mt-0.5 text-xs">{userName}</p>
               </div>
             </div>
 
@@ -247,7 +247,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
               <button
                 onClick={() => onOpenChange(false)}
                 aria-label="Close"
-                className="flex h-11 w-11 items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+                className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground flex h-11 w-11 items-center justify-center rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
               >
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
@@ -266,7 +266,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
                   key={index}
                   className={cn(
                     "group relative overflow-hidden rounded-xl",
-                    "border border-border",
+                    "border-border border",
                     "bg-muted/40",
                     "transition-all duration-300",
                     "hover:border-accent-violet/30 hover:bg-accent"
@@ -276,24 +276,24 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
                     <div
                       className={cn(
                         "flex h-8 w-8 items-center justify-center rounded-lg",
-                        "border border-accent-violet/10",
+                        "border-accent-violet/10 border",
                         "bg-accent-violet/10",
                         "transition-all duration-300",
-                        "group-hover:scale-105 group-hover:bg-accent-violet/15"
+                        "group-hover:bg-accent-violet/15 group-hover:scale-105"
                       )}
                     >
-                      <Icon className="h-4 w-4 text-accent-violet" />
+                      <Icon className="text-accent-violet h-4 w-4" />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="mb-0.5 text-micro font-medium uppercase tracking-wide text-muted-foreground">
+                      <p className="text-muted-foreground mb-0.5 text-xs font-medium tracking-wide uppercase">
                         {field.label}
                       </p>
                       <p
                         className={
                           isLongText
-                            ? "break-words text-sm font-medium text-foreground"
-                            : "truncate text-sm font-medium text-foreground"
+                            ? "text-foreground text-sm font-medium break-words"
+                            : "text-foreground truncate text-sm font-medium"
                         }
                         title={String(field.value ?? "-")}
                       >
@@ -303,7 +303,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
                   </div>
 
                   <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                    <div className="absolute inset-y-0 left-0 w-[1.5px] bg-accent-violet" />
+                    <div className="bg-accent-violet absolute inset-y-0 left-0 w-[1.5px]" />
                   </div>
                 </div>
               );

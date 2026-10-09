@@ -84,8 +84,8 @@ export const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
         <Button
           type="button"
           variant={isMultiSelect ? "default" : "outline"}
-          size="sm"
-          className={cn("h-9 gap-1.5 text-xs font-semibold", isMultiSelect ? "shadow-sm" : "")}
+          size="control"
+          className={cn("gap-1.5 text-xs font-semibold", isMultiSelect ? "shadow-sm" : "")}
           onClick={onToggleMultiSelect}
           title={
             isMultiSelect

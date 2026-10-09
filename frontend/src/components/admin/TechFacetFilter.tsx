@@ -83,7 +83,7 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
             onClick={() => toggleTech(facet.id)}
           >
             {facet.name}{" "}
-            <span className="font-mono text-xs tabular-nums opacity-70">{facet.count}</span>
+            <span className="font-mono text-xs font-normal tabular-nums">{facet.count}</span>
           </Chip>
         ))}
         <Chip
@@ -91,7 +91,7 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
           onClick={() => onNoTechOnlyChange(!noTechOnly)}
           className={noTechOnly ? undefined : "border-dashed"}
         >
-          No tech <span className="font-mono text-xs tabular-nums opacity-70">{noTechCount}</span>
+          No tech <span className="font-mono text-xs font-normal tabular-nums">{noTechCount}</span>
         </Chip>
       </FacetRow>
       {levelRows.map((facet) => (
@@ -101,10 +101,10 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
               key={level.id}
               pressed={selectedLevelIds.includes(level.id)}
               onClick={() => toggleLevel(level.id)}
-              title={`${facet.name} � ${level.name}`}
+              title={`${facet.name} — ${level.name}`}
             >
               {level.code}{" "}
-              <span className="font-mono text-xs tabular-nums opacity-70">{level.count}</span>
+              <span className="font-mono text-xs font-normal tabular-nums">{level.count}</span>
             </Chip>
           ))}
           {facet.no_level_count > 0 && (

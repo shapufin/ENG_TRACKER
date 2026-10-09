@@ -60,7 +60,7 @@ export const SidebarNavLink: React.FC<SidebarNavLinkProps> = ({
       {isActive && !collapsed && (
         <motion.div
           layoutId={LAYOUT_ID.sidebarActive}
-          className="absolute inset-y-1 left-0 w-[3px] rounded-full bg-primary"
+          className="bg-primary absolute inset-y-1 left-0 w-[3px] rounded-full"
           transition={activeBarTransition}
         />
       )}
@@ -70,7 +70,7 @@ export const SidebarNavLink: React.FC<SidebarNavLinkProps> = ({
         <span
           role="status"
           aria-label={`${badge} pending approvals`}
-          className="ml-auto rounded-full border border-tone-warning-border bg-tone-warning-surface px-1.5 font-mono text-[10px] font-bold text-tone-warning-text"
+          className="border-tone-warning-border bg-tone-warning-surface text-tone-warning-text ml-auto rounded-full border px-1.5 font-mono text-xs font-bold"
         >
           {badge}
         </span>
@@ -99,7 +99,7 @@ export const SidebarNavLink: React.FC<SidebarNavLinkProps> = ({
           </TooltipTrigger>
           <TooltipContent
             side="right"
-            className="rounded-md border-border bg-popover px-2 py-1 text-xs font-medium text-popover-foreground shadow-md"
+            className="border-border bg-popover text-popover-foreground rounded-md px-2 py-1 text-xs font-medium shadow-md"
           >
             {label}
           </TooltipContent>

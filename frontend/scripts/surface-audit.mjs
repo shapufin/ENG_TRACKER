@@ -5,11 +5,13 @@
 // surface-audit-lib.mjs and are pinned by surface-audit.test.mjs (`node --test scripts/surface-audit.test.mjs`).
 //
 // WARN-ONLY by default (exit 0). `--strict` exits 1; `--exclude=<dir>` skips a directory.
+// `--warn-raw-palette` also reports RAW-PALETTE (bg/text/border-<colour>-N); that rule never fails the run.
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { findViolations, isExcluded } from "./surface-audit-lib.mjs";
 
 const strict = process.argv.includes("--strict");
+const rawPalette = process.argv.includes("--warn-raw-palette");
 // --exclude=src/some/dir (repeatable) skips a directory, e.g. work in flight on another branch.
 const excludes = process.argv.filter((a) => a.startsWith("--exclude=")).map((a) => a.slice(10));
 const files = execSync("git ls-files -co --exclude-standard -- src", { encoding: "utf8" })
@@ -22,10 +24,10 @@ const files = execSync("git ls-files -co --exclude-standard -- src", { encoding:
 const byRule = {};
 let bad = 0;
 for (const f of files) {
-  for (const v of findViolations(readFileSync(f, "utf8"), f)) {
+  for (const v of findViolations(readFileSync(f, "utf8"), f, undefined, { rawPalette })) {
     console.log(`${f}:${v.line}  ${v.rule}  ${v.text}`);
     byRule[v.rule] = (byRule[v.rule] ?? 0) + 1;
-    bad++;
+    if (v.rule !== "RAW-PALETTE") bad++;
   }
 }
 console.log(

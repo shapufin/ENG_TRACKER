@@ -87,7 +87,12 @@ export function ColumnVisibilityMenu<TData extends RowData>({
               </div>
             ))}
           </div>
-          <Button variant="ghost" size="sm" className="h-8 w-full text-xs" onClick={handleReset}>
+          <Button
+            variant="ghost"
+            size="control-sm"
+            className="w-full text-xs"
+            onClick={handleReset}
+          >
             Reset to Defaults
           </Button>
         </div>

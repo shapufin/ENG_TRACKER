@@ -52,7 +52,33 @@ bad("h-12 on Textarea", `<Textarea className="h-12" />`, "CONTROL-HEIGHT");
 bad("h-10 on SelectTrigger", `<SelectTrigger className={cn("w-40", "h-10")}>`, "CONTROL-HEIGHT");
 ok("min-h-24 on Textarea", `<Textarea className="min-h-24" />`);
 ok("token height", `<Input className="h-[var(--control-h-sm)]" />`);
-ok("h-9 on a Button", `<Button className="h-9" />`);
+bad("h-9 on a Button", `<Button className="h-9" />`, "CONTROL-HEIGHT");
+bad("sm:h-10 on a Button", `<Button className="px-2 sm:h-10" />`, "CONTROL-HEIGHT");
+bad(
+  "h-12 inside cn() on a Button",
+  `<Button className={cn("a", flag && "h-12")}>`,
+  "CONTROL-HEIGHT"
+);
+bad(
+  "h-8 on a multi-line Button after a => handler",
+  `<Button
+ onClick={() => go()}
+ className="h-8 gap-2"
+>`,
+  "CONTROL-HEIGHT"
+);
+bad("h-8 on DateRangePicker", `<DateRangePicker className="h-8 w-auto" />`, "CONTROL-HEIGHT");
+bad("h-12 on DatePicker", `<DatePicker className={cn("h-12")} />`, "CONTROL-HEIGHT");
+bad(
+  "h-9 w-full is not a square icon button",
+  `<Button className="h-9 w-full" />`,
+  "CONTROL-HEIGHT"
+);
+ok("icon-only square h-8 w-8 Button", `<Button className="h-8 w-8 p-0" />`);
+ok("icon-only size-9 Button", `<Button className="size-9 h-9" />`);
+ok("size=icon Button with an explicit h-8", `<Button size="icon" className="h-8" />`);
+ok("Button on a control size", `<Button size="control-sm" className="gap-2" />`);
+ok("DateRangePicker on controlSize", `<DateRangePicker controlSize="sm" className="w-auto" />`);
 
 bad("raw input", `<input className="x" />`, "RAW-CONTROL");
 bad("raw textarea", `<textarea />`, "RAW-CONTROL");
@@ -100,3 +126,20 @@ ok(
   "src/components/ui/FilterToolbar.tsx"
 );
 ok("max-w-sm alone", `<div className="max-w-sm">`);
+
+bad("Input type=search", `<Input type="search" value={v} />`, "SEARCH-TYPE");
+bad("Input type={'search'}", `<Input type={'search'} />`, "SEARCH-TYPE");
+bad(
+  "multi-line Input type=search after a => handler",
+  `<Input
+ onChange={(e) => go(e)}
+ type="search"
+/>`,
+  "SEARCH-TYPE"
+);
+ok(
+  "SearchField.tsx may render type=search",
+  `<Input type="search" />`,
+  "src/components/ui/SearchField.tsx"
+);
+ok("Input type=text", `<Input type="text" />`);

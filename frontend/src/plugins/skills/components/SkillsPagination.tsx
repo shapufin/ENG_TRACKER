@@ -19,18 +19,18 @@ export const SkillsPagination: React.FC<SkillsPaginationProps> = ({
     <div className="flex items-center justify-between">
       <Button
         variant="outline"
-        className="h-11"
+        size="lg"
         onClick={() => onPageChange(Math.max(1, page - 1))}
         disabled={page === 1}
       >
         Previous
       </Button>
-      <span className="text-sm text-muted-foreground">
+      <span className="text-muted-foreground text-sm">
         Page {page} of {totalPages}
       </span>
       <Button
         variant="outline"
-        className="h-11"
+        size="lg"
         onClick={() => onPageChange(Math.min(totalPages, page + 1))}
         disabled={page >= totalPages}
       >
