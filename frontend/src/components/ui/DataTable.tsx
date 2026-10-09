@@ -367,7 +367,7 @@ export const DataTable = function DataTable<TData extends RowData>({
                       {header.isPlaceholder ? null : header.column.getCanSort() ? (
                         <button
                           type="button"
-                          className="flex min-h-11 items-center gap-1 transition-colors hover:opacity-80"
+                          className="focus-visible:ring-focus flex min-h-11 items-center gap-1 rounded-sm transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:outline-hidden"
                           onClick={header.column.getToggleSortingHandler()}
                           aria-label={`Sort by ${header.column.id}`}
                           title={`Sort by ${header.column.id}`}

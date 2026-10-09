@@ -181,7 +181,7 @@ export const HbprAssignmentsPage: React.FC = () => {
       title="HBPR assignments"
       subtitle="Pair HR Business Partners with the Albanian team leaders they support."
       actions={
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button size="sm" onClick={() => setDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New assignment
         </Button>

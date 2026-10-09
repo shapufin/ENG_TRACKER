@@ -111,6 +111,7 @@ export const TechsPage: React.FC = () => {
             />
           </div>
           <Button
+            size="control"
             onClick={() => (editing ? update.mutate() : create.mutate())}
             disabled={
               !form.name.trim() || !form.code.trim() || create.isPending || update.isPending
@@ -127,6 +128,7 @@ export const TechsPage: React.FC = () => {
           {editing && (
             <Button
               variant="ghost"
+              size="control"
               onClick={() => {
                 setEditing(null);
                 setForm({ name: "", code: "" });

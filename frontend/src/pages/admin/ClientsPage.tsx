@@ -40,7 +40,7 @@ export const ClientsPage: React.FC = () => {
       actions={
         <div className="flex flex-wrap gap-2">
           <PluginImportButton targetKey="clients" invalidateKeys={[["overtime", "clients"]]} />
-          <Button onClick={openCreate}>
+          <Button size="sm" onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
             Add Client
           </Button>

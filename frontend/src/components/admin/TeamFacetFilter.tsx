@@ -5,8 +5,8 @@
  * `team` query param (see useUserManagement / apps/users/viewsets.py).
  */
 import React from "react";
-import { cn } from "@/lib/utils";
-import { toneSurfaceClass } from "@/components/ui/tone";
+import { Chip } from "@/components/ui/Chip";
+import { FacetRow } from "./FacetRow";
 import type { Team } from "@/types";
 
 interface TeamFacetFilterProps {
@@ -33,41 +33,19 @@ export const TeamFacetFilter: React.FC<TeamFacetFilterProps> = ({
   if (teams.length === 0) return null;
 
   return (
-    <div className="border-border/70 flex flex-wrap items-center gap-2 border-t pt-2">
-      <span className="text-muted-foreground mr-1 font-mono text-xs font-bold tracking-wider uppercase">
-        Team filter
-      </span>
-      <button
-        type="button"
-        onClick={() => onTeamIdsChange([])}
-        className={cn(
-          "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-          isAllActive
-            ? toneSurfaceClass.accent
-            : "border-border bg-background text-muted-foreground hover:border-primary/30"
-        )}
-      >
+    <FacetRow label="Team">
+      <Chip pressed={isAllActive} onClick={() => onTeamIdsChange([])}>
         All teams
-      </button>
-      {teams.map((team) => {
-        const isActive = selectedTeamIds.includes(team.id);
-        return (
-          <button
-            key={team.id}
-            type="button"
-            onClick={() => toggleTeam(team.id)}
-            aria-pressed={isActive}
-            className={cn(
-              "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-              isActive
-                ? toneSurfaceClass.info
-                : "border-border bg-background text-foreground/80 hover:border-primary/30"
-            )}
-          >
-            {team.name}
-          </button>
-        );
-      })}
-    </div>
+      </Chip>
+      {teams.map((team) => (
+        <Chip
+          key={team.id}
+          pressed={selectedTeamIds.includes(team.id)}
+          onClick={() => toggleTeam(team.id)}
+        >
+          {team.name}
+        </Chip>
+      ))}
+    </FacetRow>
   );
 };

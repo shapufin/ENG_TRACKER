@@ -15,8 +15,6 @@ export const EASE = { standard: [0.4, 0, 0.2, 1], out: "easeOut", inOut: "easeIn
 export const LAYOUT_ID = {
   sidebarActive: "sidebar-active",
   adminPluginSidebarActive: "admin-plugin-sidebar-active",
-  crUsersFilterTab: "cr-filter-tab",
-  userFilterTab: "user-filter-tab",
 } as const;
 
 /** GlassCard-style mount fade/slide-up. */

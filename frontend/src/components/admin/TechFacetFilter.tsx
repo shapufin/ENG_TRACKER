@@ -7,8 +7,8 @@
  * always-visible chip row, and tech lists are short enough to render flat.
  */
 import React from "react";
-import { cn } from "@/lib/utils";
-import { toneSurfaceClass } from "@/components/ui/tone";
+import { Chip } from "@/components/ui/Chip";
+import { FacetRow } from "./FacetRow";
 import type { TechFacet } from "@/types";
 
 interface TechFacetFilterProps {
@@ -65,92 +65,52 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
   if (facets.length === 0 && noTechCount === 0) return null;
 
   return (
-    <div className="border-border/70 space-y-2 border-t pt-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-muted-foreground mr-1 font-mono text-xs font-bold tracking-wider uppercase">
-          Tech filter
-        </span>
-        <button
-          type="button"
+    <div className="space-y-2">
+      <FacetRow label="Tech">
+        <Chip
+          pressed={isAllActive}
           onClick={() => {
             onTechIdsChange([]);
             onNoTechOnlyChange(false);
           }}
-          className={cn(
-            "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-            isAllActive
-              ? // Accent token, not text-primary: #7c3bed on the dark chip
-                // surface measures 3.32:1 — below AA for 11px text.
-                toneSurfaceClass.accent
-              : "border-border bg-background text-muted-foreground hover:border-primary/30"
-          )}
         >
           All tech
-        </button>
-        {facets.map((facet) => {
-          const isActive = selectedTechIds.includes(facet.id);
-          return (
-            <button
-              key={facet.id}
-              type="button"
-              onClick={() => toggleTech(facet.id)}
-              aria-pressed={isActive}
-              className={cn(
-                "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                isActive
-                  ? toneSurfaceClass.info
-                  : "border-border bg-background text-foreground/80 hover:border-primary/30"
-              )}
-            >
-              {facet.name}{" "}
-              <span className="text-muted-foreground ml-1 font-mono">{facet.count}</span>
-            </button>
-          );
-        })}
-        <button
-          type="button"
+        </Chip>
+        {facets.map((facet) => (
+          <Chip
+            key={facet.id}
+            pressed={selectedTechIds.includes(facet.id)}
+            onClick={() => toggleTech(facet.id)}
+          >
+            {facet.name}{" "}
+            <span className="font-mono text-xs tabular-nums opacity-70">{facet.count}</span>
+          </Chip>
+        ))}
+        <Chip
+          pressed={noTechOnly}
           onClick={() => onNoTechOnlyChange(!noTechOnly)}
-          aria-pressed={noTechOnly}
-          className={cn(
-            "rounded-lg border border-dashed px-3 py-1.5 text-xs font-semibold transition-colors",
-            noTechOnly
-              ? toneSurfaceClass.accent
-              : "border-border text-muted-foreground hover:border-primary/30"
-          )}
+          className={noTechOnly ? undefined : "border-dashed"}
         >
-          No tech <span className="ml-1 font-mono">{noTechCount}</span>
-        </button>
-      </div>
+          No tech <span className="font-mono text-xs tabular-nums opacity-70">{noTechCount}</span>
+        </Chip>
+      </FacetRow>
       {levelRows.map((facet) => (
-        <div key={facet.id} className="flex flex-wrap items-center gap-2 pl-1">
-          <span className="text-muted-foreground mr-1 font-mono text-xs font-bold tracking-wider uppercase">
-            {facet.code} level
-          </span>
-          {facet.levels.map((level) => {
-            const isActive = selectedLevelIds.includes(level.id);
-            return (
-              <button
-                key={level.id}
-                type="button"
-                onClick={() => toggleLevel(level.id)}
-                aria-pressed={isActive}
-                title={`${facet.name} — ${level.name}`}
-                className={cn(
-                  "rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors",
-                  isActive
-                    ? toneSurfaceClass.info
-                    : "border-border bg-background text-foreground/80 hover:border-primary/30"
-                )}
-              >
-                {level.code}{" "}
-                <span className="text-muted-foreground ml-0.5 font-mono">{level.count}</span>
-              </button>
-            );
-          })}
+        <FacetRow key={facet.id} label={`${facet.code} levels`}>
+          {facet.levels.map((level) => (
+            <Chip
+              key={level.id}
+              pressed={selectedLevelIds.includes(level.id)}
+              onClick={() => toggleLevel(level.id)}
+              title={`${facet.name} � ${level.name}`}
+            >
+              {level.code}{" "}
+              <span className="font-mono text-xs tabular-nums opacity-70">{level.count}</span>
+            </Chip>
+          ))}
           {facet.no_level_count > 0 && (
             <span className="text-muted-foreground text-xs">{facet.no_level_count} ungraded</span>
           )}
-        </div>
+        </FacetRow>
       ))}
     </div>
   );
