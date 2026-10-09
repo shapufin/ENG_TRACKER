@@ -11,20 +11,26 @@ const ctx = vi.hoisted(() => ({
   retrySave: vi.fn(),
   saveStatus: "idle" as string,
   toast: vi.fn(),
+  toastError: vi.fn(),
+  isLoading: false,
+  mobile: false,
 }));
 
-vi.mock("sonner", () => ({ toast: Object.assign(ctx.toast, { info: vi.fn(), error: vi.fn() }) }));
+vi.mock("sonner", () => ({
+  toast: Object.assign(ctx.toast, { info: vi.fn(), error: ctx.toastError }),
+}));
 vi.mock("@/context/DashboardContext", () => ({
   DashboardProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useDashboard: () => ({
     layout: defaultAdminLayout,
-    isLoading: false,
+    isLoading: ctx.isLoading,
     saveStatus: ctx.saveStatus,
     retrySave: ctx.retrySave,
     updateLayout: ctx.updateLayout,
     resetLayout: ctx.resetLayout,
   }),
 }));
+vi.mock("@/hooks/useIsMobile", () => ({ useIsMobile: () => ctx.mobile }));
 vi.mock("@/context/PermissionContext", () => ({ usePermissions: () => ({ isSuperuser: false }) }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: { id: 1, username: "admin" } }) }));
 vi.mock("./components/AdminInsightsStrip", () => ({ AdminInsightsStrip: () => null }));
@@ -57,19 +63,22 @@ vi.mock("./components/AdminDashboardWidgets", () => ({
   ),
 }));
 
-const renderPage = (url = "/admin") =>
-  render(
-    <MemoryRouter initialEntries={[url]}>
-      <QueryClientProvider client={new QueryClient()}>
-        <AdminDashboardPage />
-      </QueryClientProvider>
-    </MemoryRouter>
-  );
+const client = new QueryClient();
+const pageTree = (url = "/admin") => (
+  <MemoryRouter initialEntries={[url]}>
+    <QueryClientProvider client={client}>
+      <AdminDashboardPage />
+    </QueryClientProvider>
+  </MemoryRouter>
+);
+const renderPage = (url = "/admin") => render(pageTree(url));
 
 beforeEach(() => {
   vi.clearAllMocks();
   ctx.saveStatus = "idle";
-  ctx.resetLayout.mockResolvedValue(undefined);
+  ctx.isLoading = false;
+  ctx.mobile = false;
+  ctx.resetLayout.mockResolvedValue(true);
 });
 
 describe("Edit layout toggle", () => {
@@ -90,6 +99,43 @@ describe("Edit layout toggle", () => {
     expect(button).toHaveAttribute("title", "Switch to All to rearrange widgets");
     fireEvent.click(button);
     expect(screen.getByTestId("widgets")).toHaveTextContent("editing:false filtered:true");
+  });
+
+  it("returns focus to the toggle when Esc ends edit mode", () => {
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Edit layout" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.getByRole("button", { name: "Edit layout" })).toHaveFocus();
+  });
+
+  it("does not leave edit mode on an Escape a widget already handled", () => {
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Edit layout" }));
+    const handled = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
+    handled.preventDefault();
+    window.dispatchEvent(handled);
+    expect(screen.getByTestId("widgets")).toHaveTextContent("editing:true");
+  });
+
+  it("is off while the saved layout loads, with that reason", () => {
+    ctx.isLoading = true;
+    renderPage();
+    const button = screen.getByRole("button", { name: "Edit layout" });
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(button).toHaveAccessibleDescription("Loading your layout…");
+    expect(screen.getByRole("button", { name: "Dashboard actions" })).toBeDisabled();
+  });
+
+  it("does not resume edit mode when the user comes back to the All tab", () => {
+    const { rerender } = renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Edit layout" }));
+    expect(screen.getByTestId("widgets")).toHaveTextContent("editing:true");
+    ctx.mobile = true;
+    rerender(pageTree());
+    expect(screen.getByTestId("widgets")).toHaveTextContent("editing:false");
+    ctx.mobile = false;
+    rerender(pageTree());
+    expect(screen.getByTestId("widgets")).toHaveTextContent("editing:false");
   });
 
   it("leaves edit mode when the section tab changes", () => {
@@ -121,5 +167,15 @@ describe("Reset to default", () => {
     expect(options.action.label).toBe("Undo");
     options.action.onClick();
     expect(ctx.updateLayout).toHaveBeenCalledWith(defaultAdminLayout);
+  });
+
+  it("does not claim success when the reset failed to save", async () => {
+    ctx.resetLayout.mockResolvedValue(false);
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Dashboard actions" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /reset to default/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "Reset layout" }));
+    await waitFor(() => expect(ctx.toastError).toHaveBeenCalled());
+    expect(ctx.toast).not.toHaveBeenCalled();
   });
 });

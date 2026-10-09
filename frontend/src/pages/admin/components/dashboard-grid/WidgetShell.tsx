@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 import { GripVertical, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,9 @@ interface WidgetShellProps {
   editing: boolean;
   onRemove: () => void;
   onGripKeyDown: (e: React.KeyboardEvent) => void;
+  onGripBlur?: () => void;
+  /** Keyboard grab mode is on: arrows move this widget. */
+  grabbed?: boolean;
   children: React.ReactNode;
 }
 
@@ -31,37 +34,57 @@ export const WidgetShell: React.FC<WidgetShellProps> = ({
   editing,
   onRemove,
   onGripKeyDown,
+  onGripBlur,
+  grabbed = false,
   children,
-}) => (
-  <div data-widget-shell={id} className="relative h-full min-h-0">
-    {editing && (
-      <div className="border-border bg-card shadow-card absolute -top-3 right-3 z-10 flex items-center gap-0.5 rounded-full border p-0.5">
-        <button
-          type="button"
-          aria-label={`Move ${title}`}
-          title="Drag to move. Alt+Arrow moves, Alt+Shift+Arrow resizes."
-          onKeyDown={onGripKeyDown}
-          className={cn(iconButton, GRIP_CLASS, "cursor-grab touch-none active:cursor-grabbing")}
-        >
-          <GripVertical className="h-4 w-4" aria-hidden />
-        </button>
-        <button
-          type="button"
-          aria-label={`Remove ${title}`}
-          onClick={onRemove}
-          className={cn(iconButton, NO_DRAG_CLASS)}
-        >
-          <X className="h-4 w-4" aria-hidden />
-        </button>
-      </div>
-    )}
-    <div
-      className={cn(
-        "h-full min-h-0 *:h-full",
-        editing && "ring-primary/40 rounded-xl ring-2 ring-offset-0"
+}) => {
+  const hintId = useId();
+  return (
+    <div data-widget-shell={id} className="relative h-full min-h-0">
+      {editing && (
+        <div className="border-border bg-card shadow-card absolute -top-3 right-3 z-10 flex items-center gap-0.5 rounded-full border p-0.5">
+          <button
+            type="button"
+            aria-label={`Move ${title}`}
+            title="Drag to move. Enter grabs it for the arrow keys; Alt+Arrow moves, Alt+Shift+Arrow resizes."
+            aria-keyshortcuts="Enter Space Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight"
+            aria-describedby={hintId}
+            aria-pressed={grabbed}
+            onKeyDown={onGripKeyDown}
+            onBlur={onGripBlur}
+            className={cn(
+              iconButton,
+              GRIP_CLASS,
+              "cursor-grab touch-none active:cursor-grabbing",
+              grabbed &&
+                "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+            )}
+          >
+            <GripVertical className="h-4 w-4" aria-hidden />
+          </button>
+          <span id={hintId} className="sr-only">
+            Press Enter to grab, then use the arrow keys to move and Shift plus arrows to resize.
+            Enter or Escape drops it. Alt plus the arrow keys works without grabbing.
+          </span>
+          <button
+            type="button"
+            aria-label={`Remove ${title}`}
+            onClick={onRemove}
+            className={cn(iconButton, NO_DRAG_CLASS)}
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
       )}
-    >
-      {children}
+      <div
+        data-edit-frame={editing || undefined}
+        className={cn(
+          "h-full min-h-0 *:h-full",
+          editing && "ring-primary/40 rounded-xl ring-2 ring-offset-0"
+        )}
+      >
+        {children}
+      </div>
     </div>
-  </div>
-);
+  );
+};

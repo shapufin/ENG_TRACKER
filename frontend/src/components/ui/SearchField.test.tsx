@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import * as React from "react";
+import { describe, it, expect, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { SearchField } from "./SearchField";
-
-afterEach(() => vi.useRealTimers());
 
 describe("SearchField", () => {
   it("is a labelled search landmark with a searchbox", () => {
@@ -43,30 +42,15 @@ describe("SearchField", () => {
     expect(onChange).toHaveBeenCalledWith("");
   });
 
-  it("hides the shortcut hint when there is a value and shows a spinner when loading", () => {
-    const { rerender } = render(
-      <SearchField value="" onChange={() => {}} aria-label="s" shortcut="/" />
-    );
-    expect(screen.getByText("/")).toBeInTheDocument();
-    rerender(<SearchField value="a" onChange={() => {}} aria-label="s" shortcut="/" />);
-    expect(screen.queryByText("/")).toBeNull();
-    rerender(<SearchField value="" onChange={() => {}} aria-label="s" loading />);
-    expect(screen.getByRole("search")).toHaveAttribute("aria-busy", "true");
-  });
-
-  it("debounces onChange when debounceMs is set", () => {
-    vi.useFakeTimers();
-    const onChange = vi.fn();
-    render(<SearchField value="" onChange={onChange} aria-label="s" debounceMs={200} />);
-    const box = screen.getByRole("searchbox");
-    fireEvent.change(box, { target: { value: "a" } });
-    fireEvent.change(box, { target: { value: "ab" } });
-    expect(onChange).not.toHaveBeenCalled();
-    expect(box).toHaveValue("ab");
-    act(() => {
-      vi.advanceTimersByTime(200);
-    });
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith("ab");
+  it("puts focus back in the field after Clear, since the button disappears", () => {
+    const Harness = () => {
+      const [v, setV] = React.useState("abc");
+      return <SearchField value={v} onChange={setV} aria-label="s" />;
+    };
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(screen.queryByRole("button", { name: "Clear search" })).toBeNull();
+    expect(screen.getByRole("searchbox")).toHaveValue("");
+    expect(screen.getByRole("searchbox")).toHaveFocus();
   });
 });

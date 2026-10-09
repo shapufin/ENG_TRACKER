@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -37,12 +37,22 @@ export const AdminInsightsStrip: React.FC = () => {
   const navigate = useNavigate();
   const { isDismissed, dismiss } = useDismissedInsights(user?.id);
   const [index, setIndex] = useState(0);
+  // Signature of the insight whose full message is open (resets when paging).
+  const [expandedSig, setExpandedSig] = useState<string | null>(null);
+  const dismissedLast = useRef(false);
   const transition = useMotionTransition({ duration: 0.2 });
 
   const insights = useMemo(
     () => (data ? deriveAdminInsights(data).filter((i) => !isDismissed(i.signature)) : []),
     [data, isDismissed]
   );
+
+  // Dismissing the last insight removes the whole strip, and with it the focused button.
+  useEffect(() => {
+    if (insights.length > 0 || !dismissedLast.current) return;
+    dismissedLast.current = false;
+    document.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus();
+  }, [insights.length]);
 
   if (isError) {
     return (
@@ -58,34 +68,53 @@ export const AdminInsightsStrip: React.FC = () => {
 
   const current = insights[Math.min(index, insights.length - 1)];
   const { tone, label, Icon } = SEVERITY[current.severity];
+  const expanded = expandedSig === current.signature;
   const step = (delta: number) => setIndex((i) => (i + delta + insights.length) % insights.length);
 
   return (
     <section aria-label="Automated insights">
-      <motion.div
-        key={current.signature}
-        variants={fadeSlideUp}
-        initial="hidden"
-        animate="visible"
-        transition={transition}
+      <div
         className={cn(
           "flex min-h-10 items-center gap-3 rounded-lg border px-3 py-1",
           toneSurfaceClass[tone]
         )}
       >
-        <Icon className="h-4 w-4 shrink-0" aria-hidden />
-        <div className="flex min-w-0 flex-1 flex-col md:flex-row md:items-baseline md:gap-2">
-          <p className="truncate text-sm font-semibold md:max-w-[55%] md:shrink-0">
-            <span className="text-micro-lg font-mono tracking-wider uppercase">{label}</span>
-            <span className="mx-2 opacity-60" aria-hidden>
-              �
-            </span>
-            {current.title}
-          </p>
-          <p className="min-w-0 truncate text-xs opacity-90" title={current.message}>
-            {current.message}
-          </p>
-        </div>
+        {/* Only the text is keyed: the pager and dismiss buttons keep focus while paging. */}
+        <motion.div
+          key={current.signature}
+          variants={fadeSlideUp}
+          initial="hidden"
+          animate="visible"
+          transition={transition}
+          className="flex min-w-0 flex-1 items-center gap-3"
+        >
+          <Icon className="h-4 w-4 shrink-0" aria-hidden />
+          <div className="flex min-w-0 flex-1 flex-col md:flex-row md:items-baseline md:gap-2">
+            <p
+              className={cn(
+                "text-sm font-semibold md:max-w-[55%] md:shrink-0",
+                !expanded && "truncate"
+              )}
+            >
+              <span className="text-micro-lg font-mono tracking-wider uppercase">{label}</span>
+              <span className="mx-2 opacity-60" aria-hidden>
+                ·
+              </span>
+              {current.title}
+            </p>
+            <button
+              type="button"
+              aria-expanded={expanded}
+              onClick={() => setExpandedSig(expanded ? null : current.signature)}
+              className={cn(
+                "focus-visible:outline-focus min-w-0 rounded-sm text-left text-xs opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2",
+                !expanded && "truncate"
+              )}
+            >
+              {current.message}
+            </button>
+          </div>
+        </motion.div>
         <div className="flex shrink-0 items-center gap-2">
           {insights.length > 1 && (
             <div className="text-micro-lg flex items-center gap-1 font-mono">
@@ -118,13 +147,16 @@ export const AdminInsightsStrip: React.FC = () => {
           <button
             type="button"
             className={pagerButton}
-            onClick={() => dismiss(current.signature)}
+            onClick={() => {
+              dismissedLast.current = insights.length === 1;
+              dismiss(current.signature);
+            }}
             aria-label="Dismiss insight"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
-      </motion.div>
+      </div>
     </section>
   );
 };

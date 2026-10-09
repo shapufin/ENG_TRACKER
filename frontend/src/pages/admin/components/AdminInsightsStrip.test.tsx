@@ -166,4 +166,47 @@ describe("AdminInsightsStrip", () => {
     renderStrip();
     expect(screen.getByText("Warning")).toBeInTheDocument();
   });
+
+  it("separates severity and title with a middle dot, never a replacement character", () => {
+    renderStrip();
+    const region = screen.getByRole("region", { name: "Automated insights" });
+    expect(region.textContent).not.toContain("�");
+    expect(region.textContent).toContain("Warning·Approvals waiting over 15 days");
+  });
+
+  it("opens and closes the full message from a button", () => {
+    renderStrip();
+    const message = screen.getByRole("button", { expanded: false, name: /15 days|over|waiting/i });
+    expect(message).toHaveClass("truncate");
+    fireEvent.click(message);
+    expect(message).toHaveAttribute("aria-expanded", "true");
+    expect(message).not.toHaveClass("truncate");
+    fireEvent.click(message);
+    expect(message).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("keeps focus on the pager while paging", () => {
+    state.data!.coverage_gaps.teams_without_leader = 2;
+    renderStrip();
+    const next = screen.getByRole("button", { name: "Next insight" });
+    next.focus();
+    fireEvent.click(next);
+    expect(screen.getByRole("button", { name: "Next insight" })).toBe(next);
+    expect(next).toHaveFocus();
+  });
+
+  it("moves focus to the active section tab when the last insight is dismissed", () => {
+    render(
+      <MemoryRouter>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">
+            All
+          </button>
+        </div>
+        <AdminInsightsStrip />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss insight" }));
+    expect(screen.getByRole("tab", { name: "All" })).toHaveFocus();
+  });
 });

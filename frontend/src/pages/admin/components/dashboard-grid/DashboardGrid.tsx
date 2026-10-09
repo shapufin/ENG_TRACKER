@@ -11,6 +11,7 @@ import {
   LG_MIN_WIDTH,
   breakpointFor,
   fromGridItems,
+  packVertical,
   sameItems,
   toGridItems,
   type Breakpoint,
@@ -65,13 +66,14 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
 
   const commit = useCallback(
     (next: readonly GridItem[]) => {
-      if (sameItems(next, items)) return;
+      // Compare what is on screen: the grid compacts, a stored layout may not be.
+      if (sameItems(packVertical(next), packVertical(items))) return;
       onLayoutChange(fromGridItems(layout, gridBp, next));
     },
     [items, layout, gridBp, onLayoutChange]
   );
 
-  const { announcement, onGripKeyDown } = useGridKeyboard({
+  const { announcement, grabbedId, onGripKeyDown, onGripBlur } = useGridKeyboard({
     items,
     cols,
     titleOf,
@@ -84,13 +86,29 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
     [lgItems]
   );
 
+  // The Remove button is about to unmount with its widget: keep the keyboard user in edit
+  // mode, on the next widget's grip, else the previous one, else the Edit layout toggle.
+  const removeWithFocus = (id: string) => {
+    const order = [...items].sort((a, b) => a.y - b.y || a.x - b.x).map((it) => it.i);
+    const at = order.indexOf(id);
+    const neighbour = order[at + 1] ?? order[at - 1];
+    const target =
+      (neighbour &&
+        document.querySelector<HTMLElement>(`[data-widget-shell="${neighbour}"] .${GRIP_CLASS}`)) ||
+      document.querySelector<HTMLElement>("[data-dashboard-edit-toggle]");
+    target?.focus();
+    onRemove(id);
+  };
+
   const shell = (id: string) => (
     <WidgetShell
       id={id}
       title={titleOf(id)}
       editing={canEdit}
-      onRemove={() => onRemove(id)}
+      onRemove={() => removeWithFocus(id)}
       onGripKeyDown={onGripKeyDown(id)}
+      onGripBlur={onGripBlur(id)}
+      grabbed={grabbedId === id}
     >
       {renderWidget(id)}
     </WidgetShell>
@@ -101,7 +119,14 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
       <p role="status" aria-live="polite" className="sr-only">
         {announcement}
       </p>
-      {!mounted ? null : bp === null ? (
+      {!mounted ? (
+        <div
+          aria-hidden
+          data-grid-skeleton
+          style={{ minHeight: heightFor(Math.max(1, ...items.map((it) => it.y + it.h))) }}
+          className="bg-muted/40 rounded-xl motion-safe:animate-pulse"
+        />
+      ) : bp === null ? (
         <div className="flex flex-col gap-4">
           {stackOrder.map(({ id, h }) => (
             <div

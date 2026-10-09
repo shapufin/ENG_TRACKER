@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import html2canvas from "html2canvas-pro";
-import { captureChartsToPdf } from "./pdfExport";
+import { captureChartsToPdf, expandScrollRegions, hiddenScrollExtent } from "./pdfExport";
 
 const addImage = vi.fn();
 const addPage = vi.fn();
@@ -103,5 +103,57 @@ describe("captureChartsToPdf", () => {
     const savesBefore2 = save.mock.calls.length;
     await captureChartsToPdf(makeContainer(1), { title: "t", filename: "f.pdf" });
     expect(save.mock.calls.length - savesBefore2).toBe(0);
+  });
+});
+
+const scrollingCard = () => {
+  const section = document.createElement("div");
+  section.setAttribute("data-chart-section", "card");
+  section.style.height = "200px";
+  section.style.overflow = "hidden";
+  const body = document.createElement("div");
+  body.style.overflowY = "auto";
+  body.style.height = "150px";
+  body.style.maxHeight = "150px";
+  section.appendChild(body);
+  document.body.appendChild(section);
+  // jsdom does no layout: stand in for a 600px list inside a 150px body.
+  Object.defineProperty(body, "scrollHeight", { configurable: true, value: 600 });
+  Object.defineProperty(body, "clientHeight", { configurable: true, value: 150 });
+  return { section, body };
+};
+
+describe("scrolling card bodies in the capture", () => {
+  it("measures how much a section hides behind its scroll regions", () => {
+    const { section } = scrollingCard();
+    expect(hiddenScrollExtent(section)).toBe(450);
+    expect(hiddenScrollExtent(makeContainer(1))).toBe(0);
+  });
+
+  it("onclone expands the section and its scroll regions so nothing is clipped", () => {
+    const { section, body } = scrollingCard();
+    expandScrollRegions(section);
+    expect(section.style.height).toBe("auto");
+    expect(section.style.overflow).toBe("hidden"); // rounded corners keep clipping
+    expect(body.style.overflow).toBe("visible");
+    expect(body.style.height).toBe("auto");
+    expect(body.style.maxHeight).toBe("none");
+  });
+
+  it("hands html2canvas the onclone hook and room for the hidden rows", async () => {
+    const { section } = scrollingCard();
+    section.getBoundingClientRect = () => ({ height: 200 }) as DOMRect;
+    const container = document.createElement("div");
+    container.appendChild(section);
+    const mockedCapture = vi.mocked(html2canvas);
+    mockedCapture.mockClear();
+    await captureChartsToPdf(container, { title: "t", filename: "f.pdf" });
+    const options = mockedCapture.mock.calls[0][1] as {
+      onclone: (d: Document, el: HTMLElement) => void;
+      height: number;
+    };
+    expect(options.height).toBe(650);
+    options.onclone(document, section);
+    expect(section.style.height).toBe("auto");
   });
 });

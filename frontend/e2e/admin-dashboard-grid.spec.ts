@@ -3,10 +3,37 @@ import { loginAsRole } from "./helpers";
 
 const cell = (page: Page, id: string) => page.locator(`[data-grid-cell="${id}"]`);
 
+/**
+ * Viewport box of an element, scrolled into view first: a widget low on the page has no
+ * usable mouse coordinates until it is on screen, and scrolling changes them.
+ */
 async function box(locator: Locator) {
+  await locator.scrollIntoViewIfNeeded();
   const b = await locator.boundingBox();
   if (!b) throw new Error("element has no bounding box");
   return b;
+}
+
+/** Document-relative top edge: comparable across scrolling and reloads. */
+async function docTop(page: Page, locator: Locator) {
+  const b = await box(locator);
+  return b.y + (await page.evaluate(() => window.scrollY));
+}
+
+/** Drags from the centre of `handle` to the same x, `dy` pixels away (kept inside the viewport). */
+async function dragBy(page: Page, handle: Locator, dy: number) {
+  const g = await box(handle);
+  const startX = g.x + g.width / 2;
+  const startY = g.y + g.height / 2;
+  const endY = Math.max(8, startY + dy);
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX, endY, { steps: 12 });
+  await page.mouse.up();
+}
+
+async function expectSaved(page: Page) {
+  await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
 }
 
 async function enterEditMode(page: Page) {
@@ -38,6 +65,8 @@ test.describe("Admin dashboard grid", () => {
     await page.getByRole("button", { name: "Dashboard actions" }).click();
     await page.getByRole("menuitem", { name: /reset to default/i }).click();
     await page.getByRole("button", { name: "Reset layout" }).click();
+    // Do not leave before the reset reached the server, or the next spec starts on a stale layout.
+    await expectSaved(page);
   });
 
   test("handles exist only in edit mode", async ({ page }) => {
@@ -54,21 +83,16 @@ test.describe("Admin dashboard grid", () => {
 
   test("drag by the grip moves a widget and the position survives a reload", async ({ page }) => {
     await enterEditMode(page);
-    const before = await box(cell(page, "shortcuts"));
-    const grip = page.getByRole("button", { name: "Move Shortcuts" });
-    const g = await box(grip);
-    await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(g.x + g.width / 2, g.y - 400, { steps: 12 });
-    await page.mouse.up();
-    await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
-    const moved = await box(cell(page, "shortcuts"));
-    expect(moved.y).toBeLessThan(before.y);
+    const before = await docTop(page, cell(page, "shortcuts"));
+    await dragBy(page, page.getByRole("button", { name: "Move Shortcuts" }), -400);
+    await expectSaved(page);
+    const moved = await docTop(page, cell(page, "shortcuts"));
+    expect(moved).toBeLessThan(before);
 
     await page.reload();
     await expect(cell(page, "shortcuts")).toBeVisible();
-    const reloaded = await box(cell(page, "shortcuts"));
-    expect(Math.abs(reloaded.y - moved.y)).toBeLessThan(4);
+    const reloaded = await docTop(page, cell(page, "shortcuts"));
+    expect(Math.abs(reloaded - moved)).toBeLessThan(4);
   });
 
   test("resizing with the corner handle changes the widget height and persists", async ({
@@ -77,13 +101,8 @@ test.describe("Admin dashboard grid", () => {
     await enterEditMode(page);
     const target = cell(page, "approval-queue");
     const before = await box(target);
-    const handle = target.locator(".react-resizable-handle");
-    const h = await box(handle);
-    await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(h.x + h.width / 2, h.y + 160, { steps: 12 });
-    await page.mouse.up();
-    await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+    await dragBy(page, target.locator(".react-resizable-handle"), 160);
+    await expectSaved(page);
     const after = await box(target);
     expect(after.height).toBeGreaterThan(before.height + 40);
 
@@ -103,20 +122,15 @@ test.describe("Admin dashboard grid", () => {
 
   test("reset restores the default layout and Undo brings the edit back", async ({ page }) => {
     await enterEditMode(page);
-    const grip = page.getByRole("button", { name: "Move Shortcuts" });
-    const g = await box(grip);
-    await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(g.x + g.width / 2, g.y - 400, { steps: 12 });
-    await page.mouse.up();
-    await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
-    const edited = await box(cell(page, "shortcuts"));
+    await dragBy(page, page.getByRole("button", { name: "Move Shortcuts" }), -400);
+    await expectSaved(page);
+    const edited = await docTop(page, cell(page, "shortcuts"));
 
     await resetToDefault(page);
-    await expect.poll(async () => (await box(cell(page, "shortcuts"))).y).toBeGreaterThan(edited.y);
+    await expect.poll(async () => docTop(page, cell(page, "shortcuts"))).toBeGreaterThan(edited);
     await page.getByRole("button", { name: "Undo" }).click();
     await expect
-      .poll(async () => Math.abs((await box(cell(page, "shortcuts"))).y - edited.y))
+      .poll(async () => Math.abs((await docTop(page, cell(page, "shortcuts"))) - edited))
       .toBeLessThan(4);
   });
 
@@ -125,6 +139,7 @@ test.describe("Admin dashboard grid", () => {
     const button = page.getByRole("button", { name: "Edit layout" });
     await expect(button).toHaveAttribute("aria-disabled", "true");
     await expect(button).toHaveAttribute("title", "Switch to All to rearrange widgets");
+    await expect(button).toHaveAccessibleDescription("Switch to All to rearrange widgets");
   });
 });
 
