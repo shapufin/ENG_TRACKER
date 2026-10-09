@@ -15,11 +15,11 @@ interface AuditLogStatsCardsProps {
 }
 
 const StatSkeleton: React.FC = () => (
-  <div className="h-8 w-16 animate-pulse rounded bg-muted" aria-hidden="true" />
+  <div className="bg-muted h-8 w-16 animate-pulse rounded" aria-hidden="true" />
 );
 
 export const AuditLogStatsCards: React.FC<AuditLogStatsCardsProps> = ({ stats, isLoading }) => (
-  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
     <StatCard
       label="Total Logs"
       value={isLoading ? <StatSkeleton /> : (stats?.total_logs?.toLocaleString() ?? 0)}

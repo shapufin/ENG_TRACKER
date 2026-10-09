@@ -22,7 +22,7 @@ export const CalendarGroupInfoCard: React.FC<CalendarGroupInfoCardProps> = ({
   gradient = false,
 }) => {
   return (
-    <GlassCard glow={gradient ? "primary" : "none"} className="p-5">
+    <GlassCard glow={gradient ? "primary" : "none"} className="p-4">
       <div className="flex gap-4">
         <div className="bg-primary/10 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
           <Icon className="text-primary h-5 w-5" />
@@ -38,11 +38,9 @@ export const CalendarGroupInfoCard: React.FC<CalendarGroupInfoCardProps> = ({
           <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">{description}</p>
 
           {exampleTitle && exampleText && (
-            <div className="border-primary/20 bg-primary/5 mt-4 rounded-xl border p-3">
-              <p className="text-foreground mb-1 text-xs font-semibold">{exampleTitle}</p>
-
-              <p className="text-foreground/80 text-xs leading-6">{exampleText}</p>
-            </div>
+            <p className="border-line-subtle text-muted-foreground mt-3 border-l-2 pl-3 text-xs leading-6">
+              <span className="text-foreground font-semibold">{exampleTitle}</span> {exampleText}
+            </p>
           )}
         </div>
       </div>

@@ -7,8 +7,11 @@ vi.mock("@/hooks/useLeaveBalances", () => ({ useLeaveBalances: vi.fn() }));
 vi.mock("./hooks/useLeaveBalanceForm", () => ({ useLeaveBalanceForm: vi.fn() }));
 vi.mock("./hooks/useLeaveBalanceColumns", () => ({ useLeaveBalanceColumns: vi.fn() }));
 vi.mock("@/components/ui/DataTable", () => ({
-  DataTable: ({ data }: { data: unknown[] }) => (
-    <div data-testid="data-table" data-rows={data.length} />
+  DataTable: ({ data, toolbarActions }: { data: unknown[]; toolbarActions?: React.ReactNode }) => (
+    <div>
+      {toolbarActions}
+      <div data-testid="data-table" data-rows={data.length} />
+    </div>
   ),
 }));
 vi.mock("@/components/ui/LoadingCard", () => ({

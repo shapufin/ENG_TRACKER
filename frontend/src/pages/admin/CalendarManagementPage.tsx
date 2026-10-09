@@ -100,7 +100,7 @@ export const CalendarManagementPage: React.FC = () => {
       actions={
         <Button
           variant="outline"
-          className="border-border bg-muted/50 h-9 rounded-xl"
+          size="control"
           onClick={() => queryClient.invalidateQueries({ queryKey: ["admin"] })}
         >
           <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
@@ -109,7 +109,7 @@ export const CalendarManagementPage: React.FC = () => {
     >
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
-        <TabsList className="bg-card">
+        <TabsList>
           <TabsTrigger value="team-groups">Team Calendar Groups</TabsTrigger>
           <TabsTrigger value="workspaces">Calendar Workspaces</TabsTrigger>
           <TabsTrigger value="holidays">Holidays</TabsTrigger>
@@ -198,12 +198,13 @@ export const CalendarManagementPage: React.FC = () => {
                   value={bulkGroup}
                   onChange={(e) => setBulkGroup(e.target.value)}
                   placeholder="Enter group name (e.g., msc-siae-shared)"
-                  className="border-border bg-muted/50 w-full max-w-[280px] rounded-xl"
+                  aria-label="Calendar group name"
+                  className="w-full max-w-[280px]"
                 />
                 <Button
+                  size="control"
                   onClick={handleBulkApplyIntent}
                   disabled={!bulkGroup.trim() || selectedTeams.size === 0}
-                  className="bg-primary hover:bg-primary-hover h-9 rounded-xl"
                 >
                   <Plus className="mr-2 h-4 w-4" /> Apply to selected
                 </Button>
@@ -225,7 +226,7 @@ export const CalendarManagementPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="workspaces" className="space-y-4">
-          <GlassCard className="p-5">
+          <GlassCard className="p-4">
             <h2 className="text-lg font-semibold">Calendar Workspaces</h2>
             <p className="text-muted-foreground mt-1.5 text-sm">
               Advanced calendar workspaces with fine-grained permissions. For simple team sharing,
@@ -240,7 +241,7 @@ export const CalendarManagementPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="holidays" className="space-y-4">
-          <GlassCard className="p-5">
+          <GlassCard className="p-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-muted-foreground text-xs font-semibold uppercase">
@@ -254,7 +255,7 @@ export const CalendarManagementPage: React.FC = () => {
                   label="Import holidays"
                   invalidateKeys={[["admin"]]}
                 />
-                <Button onClick={() => openHolidayForm()}>
+                <Button size="control" onClick={() => openHolidayForm()}>
                   <CalendarDays className="mr-2 h-4 w-4" /> Add Holiday
                 </Button>
               </div>

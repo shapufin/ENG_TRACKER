@@ -19,7 +19,7 @@ export const CalendarGroupCard: React.FC<CalendarGroupCardProps> = ({
   onManageTeams,
 }) => {
   return (
-    <GlassCard glow="primary" className="p-4">
+    <GlassCard className="p-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
           <div className="bg-primary/10 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
@@ -55,7 +55,7 @@ export const CalendarGroupCard: React.FC<CalendarGroupCardProps> = ({
           <Button
             size="icon"
             variant="outline"
-            className="border-border bg-muted/30 h-9 w-9 rounded-lg"
+            className="h-[var(--control-h)] w-[var(--control-h)]"
             onClick={onManageTeams}
             title="Manage teams in this group"
           >
@@ -65,7 +65,7 @@ export const CalendarGroupCard: React.FC<CalendarGroupCardProps> = ({
           <Button
             size="icon"
             variant="outline"
-            className="border-border bg-muted/30 h-9 w-9 rounded-lg"
+            className="h-[var(--control-h)] w-[var(--control-h)]"
             onClick={onEdit}
             title="Rename group"
           >
@@ -75,7 +75,7 @@ export const CalendarGroupCard: React.FC<CalendarGroupCardProps> = ({
           <Button
             size="icon"
             variant="outline"
-            className="border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 h-9 w-9 rounded-lg"
+            className="text-destructive h-[var(--control-h)] w-[var(--control-h)]"
             onClick={onDelete}
             title="Delete group"
           >

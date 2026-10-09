@@ -1,6 +1,7 @@
 import React from "react";
 import { Users, Clock3, CheckCircle2, XCircle } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
+import { cn } from "@/lib/utils";
 
 interface BaseStats {
   total: number;
@@ -30,7 +31,12 @@ export const StatsCards: React.FC<StatsCardsProps> = ({
   additionalCards,
 }) => {
   return (
-    <div className="grid gap-4 lg:grid-cols-6">
+    <div
+      className={cn(
+        "grid grid-cols-2 gap-3 lg:grid-cols-4",
+        additionalCards && "md:grid-cols-3 lg:grid-cols-6"
+      )}
+    >
       <StatCard label="Total" value={total} icon={Users} glow="primary" />
       <StatCard
         label="Pending"

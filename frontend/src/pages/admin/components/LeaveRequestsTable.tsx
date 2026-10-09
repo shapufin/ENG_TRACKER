@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { LeaveBalanceBadge } from "@/components/ui/LeaveBalanceBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Sun, Stethoscope, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
@@ -23,6 +24,8 @@ interface LeaveRequestsTableProps {
   onReject: (id: number, reason: string) => void;
   onDelete?: (id: number) => void;
   canDelete?: boolean;
+  /** Filter controls rendered in the table's own toolbar row (one card, one toolbar). */
+  filters?: React.ReactNode;
 }
 
 const DeleteLeaveRequestButton = ({
@@ -38,7 +41,7 @@ const DeleteLeaveRequestButton = ({
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-destructive"
+        className="text-destructive h-8 w-8"
         title="Delete leave request"
         aria-label="Delete leave request"
         onClick={() => setOpen(true)}
@@ -72,6 +75,7 @@ const RejectLeaveRequestAction = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const reasonId = useId();
   return (
     <>
       <ApprovalActionsColumn
@@ -95,8 +99,11 @@ const RejectLeaveRequestAction = ({
         confirmLabel="Reject"
         variant="destructive"
       >
-        <div className="pt-2">
-          <Input
+        <div className="space-y-2 pt-2">
+          <Label htmlFor={reasonId}>Rejection reason</Label>
+          <Textarea
+            id={reasonId}
+            rows={3}
             placeholder="Rejection reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -113,6 +120,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
   onReject,
   onDelete,
   canDelete = false,
+  filters,
 }) => {
   const columns = useMemo<AppColumnDef<LeaveRequest>[]>(
     () => [
@@ -154,7 +162,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
               <span className="text-sm">
                 {start} → {end}
               </span>
-              <span className="text-xs text-muted-foreground">{days} days</span>
+              <span className="text-muted-foreground text-xs">{days} days</span>
             </div>
           );
         },
@@ -211,6 +219,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         columns={columns}
         enableColumnVisibility
         storageKey="table-visibility-leave-requests"
+        toolbarActions={filters}
         getRowId={(row) => row.id.toString()}
       />
     </GlassCard>

@@ -14,6 +14,10 @@ Fix a look in the token or the primitive, never per call site.
 - `FilterToolbar` (+ `.Search`, `.Group`): layout only; the `max-w-sm flex-1` wrapper lives here once.
 - `Chip` (`pressed` -> `aria-pressed`): toggle chip at `--control-h-sm`. `FacetRow` (`components/admin`)
   puts a quiet 12px label in front of a wrapping chip row.
+- `DateRangePicker` uses the same surface (`controlSize`), so it aligns with fields and buttons.
+  `DataTable` takes `toolbarActions` (filters, chips) so search, filters and Columns share ONE toolbar row.
+- `FormField`: label, `helper` (12px muted), `error` (`aria-invalid` + `aria-describedby`), required marker
+  (CSS, not in the label text). Use it instead of Label + Input + hand-written error `<p>`.
 - Tokens (`index.css`, light and dark): `--control-h-sm/-h/-h-lg` (2 / 2.25 / 2.5rem, 2.75rem default
   height under `pointer: coarse`), `--control-radius`, `--control-edge`, `--control-edge-hover`, `--field-bg`.
 - Decision D1 (soft edge): the field edge is about 2:1 on a card; the focus ring (>= 3:1) and the

@@ -43,7 +43,8 @@ export const StatusFilterButton: React.FC<StatusFilterButtonProps> = ({
 }) => (
   <Button
     variant="outline"
-    className="h-12 justify-start"
+    size="control"
+    className="min-w-36 justify-start"
     onClick={() => {
       const statuses: StatusFilter[] = ["all", "pending", "approved", "rejected"];
       const currentIndex = statuses.indexOf(filterStatus);
@@ -76,7 +77,7 @@ export const DateRangePickers: React.FC<DateRangePickersProps> = ({
       onDateFromChange(from);
       onDateToChange(to);
     }}
-    className="h-12"
+    className="sm:w-64"
     placeholder="Select date range"
   />
 );

@@ -68,8 +68,9 @@ export const AuditLogsEnhancedPage: React.FC = () => {
       <PageShell
         title="Audit Logs"
         subtitle="Monitor system activity and user actions"
+        category="Governance"
         actions={
-          <Button className="gap-2" onClick={handleExport} disabled={isExporting}>
+          <Button size="control" className="gap-2" onClick={handleExport} disabled={isExporting}>
             {isExporting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -80,25 +81,23 @@ export const AuditLogsEnhancedPage: React.FC = () => {
         }
       >
         <AuditLogStatsCards stats={stats} isLoading={statsLoading} />
-        <AuditLogFilters
-          filterAction={filterAction}
-          onFilterActionChange={setFilterAction}
-          filterModel={filterModel}
-          onFilterModelChange={setFilterModel}
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-        />
         <GlassCard>
-          <div className="border-b border-border/60 p-4">
-            <h3 className="text-sm font-semibold">Audit Logs</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Detailed record of all system activities
-            </p>
+          <div className="border-line-subtle border-b p-4">
+            <AuditLogFilters
+              filterAction={filterAction}
+              onFilterActionChange={setFilterAction}
+              filterModel={filterModel}
+              onFilterModelChange={setFilterModel}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+            />
           </div>
           <div className="p-4">
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-r-transparent" />
+              <div role="status" aria-label="Loading audit logs" className="space-y-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="bg-muted h-9 animate-pulse rounded" />
+                ))}
               </div>
             ) : logs.length === 0 ? (
               <EmptyState icon={Clock} title="No audit logs found" />
@@ -107,19 +106,10 @@ export const AuditLogsEnhancedPage: React.FC = () => {
             )}
           </div>
         </GlassCard>
-        <GlassCard>
-          <div className="border-b border-border/60 p-4">
-            <h3 className="text-sm font-semibold">Configuration</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Audit log settings are managed at the system level
-            </p>
-          </div>
-          <div className="p-4">
-            <p className="text-sm text-muted-foreground">
-              Contact your system administrator to modify audit log configuration settings.
-            </p>
-          </div>
-        </GlassCard>
+        <p className="text-muted-foreground text-xs">
+          Audit log settings are managed at the system level. Contact your system administrator to
+          modify audit log configuration.
+        </p>
         <AuditLogDetailDialog log={selectedLog} onClose={() => setSelectedLog(null)} />
       </PageShell>
     </PluginPermissionGuard>

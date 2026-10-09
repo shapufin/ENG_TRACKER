@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingCard } from "@/components/ui/LoadingCard";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -35,11 +36,7 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
   onLink,
 }) => {
   if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="text-primary h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <LoadingCard title="Loading plugins" rows={4} />;
   }
 
   if (plugins.length === 0) {
@@ -53,14 +50,14 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3">
       {/* fallow-ignore-next-line complexity */}
       {plugins.map((plugin) => (
-        <GlassCard key={plugin.id} className="relative overflow-hidden">
-          <div className="p-6 pb-3">
+        <GlassCard key={plugin.id} className="flex h-full flex-col">
+          <div className="p-4 pb-2">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
-                <h3 className="text-xl font-semibold">{plugin.verbose_name}</h3>
+                <h3 className="text-base font-semibold">{plugin.verbose_name}</h3>
                 <div className="text-muted-foreground flex items-center gap-2 text-sm">
                   <Badge variant="outline" className="text-xs uppercase">
                     v{plugin.version}
@@ -83,16 +80,16 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
               />
             </div>
           </div>
-          <div className="px-6 pb-4">
+          <div className="px-4 pb-4">
             <p className="text-muted-foreground line-clamp-3 text-sm">
               {plugin.description || "No description provided."}
             </p>
           </div>
-          <div className="bg-muted/50 flex flex-wrap gap-2 border-t px-6 py-3">
+          <div className="border-line-subtle mt-auto flex flex-wrap gap-2 border-t px-4 py-3">
             <Button
               variant="outline"
-              size="sm"
-              className="h-8 gap-1 text-xs"
+              size="control-sm"
+              className="gap-1"
               onClick={() => onInitialize(plugin.id)}
               disabled={initializingId === plugin.id}
               aria-label={`Initialize tables for ${plugin.verbose_name}`}
@@ -106,8 +103,8 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
             </Button>
             <Button
               variant="ghost"
-              size="sm"
-              className="h-8 gap-1 text-xs"
+              size="control-sm"
+              className="gap-1"
               onClick={() => onConfigure(plugin)}
               aria-label={`Configure ${plugin.verbose_name}`}
             >
@@ -116,8 +113,8 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
             {plugin.is_enabled && (
               <Button
                 variant="ghost"
-                size="sm"
-                className="text-primary h-8 gap-1 text-xs"
+                size="control-sm"
+                className="text-primary gap-1"
                 onClick={() => onLink(plugin)}
                 aria-label={`Open ${plugin.verbose_name} page`}
               >

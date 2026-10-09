@@ -58,6 +58,8 @@ interface DataTableProps<TData extends RowData> {
   onColumnVisibilityChange?: (visibility: Record<string, boolean>) => void;
   storageKey?: string;
   getRowId?: (row: TData, index: number) => string;
+  /** Extra toolbar controls (e.g. a filter Chip) rendered between the search and Columns. */
+  toolbarActions?: React.ReactNode;
 }
 
 // fallow-ignore-next-line complexity
@@ -81,6 +83,7 @@ export const DataTable = function DataTable<TData extends RowData>({
   onColumnVisibilityChange,
   storageKey,
   getRowId,
+  toolbarActions,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState(initialSearch ?? "");
@@ -297,7 +300,7 @@ export const DataTable = function DataTable<TData extends RowData>({
 
   return (
     <div className="space-y-4">
-      {(searchPaths.length > 0 || enableColumnVisibility) && (
+      {(searchPaths.length > 0 || enableColumnVisibility || toolbarActions) && (
         <FilterToolbar className="pb-1">
           {searchPaths.length > 0 && (
             <FilterToolbar.Search>
@@ -309,6 +312,7 @@ export const DataTable = function DataTable<TData extends RowData>({
               />
             </FilterToolbar.Search>
           )}
+          {toolbarActions}
           {enableColumnVisibility && (
             <ColumnVisibilityMenu
               columns={columns}

@@ -3,6 +3,7 @@ import { useLeaveBalances } from "@/hooks/useLeaveBalances";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/Chip";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageShell } from "@/components/layout/PageShell";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
@@ -93,34 +94,18 @@ const LeaveBalancesContent: React.FC = () => {
   return (
     <PageShell
       title="Leave Balances"
+      subtitle="Review, adjust and import employee leave balances."
+      category="Workforce Management"
       actions={
         <div className="flex flex-wrap gap-2">
           <PluginImportButton targetKey="leave_balances" invalidateKeys={[["admin", "balances"]]} />
-          <Button onClick={openCreate}>
+          <Button size="control" onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" /> Add Balance
           </Button>
         </div>
       }
     >
       <GlassCard delay={0} className="p-4">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            aria-pressed={expiringOnly}
-            onClick={toggleExpiring}
-            className={expiringOnly ? "border-primary text-primary" : undefined}
-          >
-            <CalendarClock className="mr-2 h-4 w-4" aria-hidden />
-            Expiring ≤ {CARRYOVER_WINDOW_DAYS} days
-          </Button>
-          {expiringOnly && (
-            <span className="text-muted-foreground text-xs">
-              {visibleBalances.length} carry-over balance{visibleBalances.length === 1 ? "" : "s"}{" "}
-              about to expire
-            </span>
-          )}
-        </div>
         <DataTable
           columns={columns}
           data={visibleBalances}
@@ -128,6 +113,24 @@ const LeaveBalancesContent: React.FC = () => {
           storageKey="table-visibility-leave-balances"
           searchColumn="user_name"
           searchPlaceholder="Search balances..."
+          toolbarActions={
+            <>
+              <Chip
+                pressed={expiringOnly}
+                onClick={toggleExpiring}
+                className="h-[var(--control-h)]"
+              >
+                <CalendarClock className="h-4 w-4" aria-hidden />
+                Expiring ≤ {CARRYOVER_WINDOW_DAYS} days
+              </Chip>
+              {expiringOnly && (
+                <span className="text-muted-foreground text-xs" role="status">
+                  {visibleBalances.length} carry-over balance
+                  {visibleBalances.length === 1 ? "" : "s"} about to expire
+                </span>
+              )}
+            </>
+          }
         />
       </GlassCard>
       <LeaveBalanceFormDialog

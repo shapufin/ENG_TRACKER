@@ -61,7 +61,7 @@ export const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
       isSubmitting={isSubmitting}
     >
       <ModalSection columns={2}>
-        <div className="space-y-1">
+        <div className="space-y-2">
           <Label htmlFor="holiday-name">Name</Label>
           <Input
             id="holiday-name"
@@ -69,7 +69,7 @@ export const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
             onChange={(e) => updateField("name", e.target.value)}
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-2">
           <Label htmlFor="holiday-date">Date</Label>
           <Input
             id="holiday-date"
@@ -78,7 +78,7 @@ export const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
             onChange={(e) => updateField("date", e.target.value)}
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-2">
           <Label htmlFor="holiday-country">Country Code</Label>
           <Input
             id="holiday-country"
@@ -88,7 +88,7 @@ export const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
             placeholder="e.g. US"
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-2">
           <Label htmlFor="holiday-description">Description</Label>
           <Input
             id="holiday-description"
@@ -107,7 +107,7 @@ export const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
           />
         </div>
         {!form.is_global && (
-          <div className="space-y-1 sm:col-span-2">
+          <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="holiday-workspace">Workspace</Label>
             <Select value={form.calendar} onValueChange={(value) => updateField("calendar", value)}>
               <SelectTrigger id="holiday-workspace">
