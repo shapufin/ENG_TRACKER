@@ -20,11 +20,11 @@ export function OfflineIndicator() {
   if (isOnline && pendingCount === 0 && showingStaleData) {
     return (
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-amber-500/10 px-4 pb-[calc(0.5rem+var(--safe-area-bottom))] pt-2 backdrop-blur"
+        className="border-border fixed right-0 bottom-0 left-0 z-50 border-t bg-amber-500/10 px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur"
         role="status"
         aria-live="polite"
       >
-        <div className="mx-auto max-w-4xl text-sm text-amber-700 dark:text-amber-300">
+        <div className="text-tone-warning-text mx-auto max-w-4xl text-sm">
           Showing saved data from your last connection. Reconnect to refresh.
         </div>
       </div>
@@ -35,12 +35,12 @@ export function OfflineIndicator() {
   if (isOnline && pendingCount > 0) {
     return (
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 px-4 pb-[calc(0.5rem+var(--safe-area-bottom))] pt-2 backdrop-blur"
+        className="border-border bg-card/95 fixed right-0 bottom-0 left-0 z-50 border-t px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur"
         role="status"
         aria-live="polite"
       >
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex items-center gap-2 text-sm">
             {isFlushing ? (
               <>
                 <RefreshCw className="h-4 w-4 animate-spin" />
@@ -58,7 +58,7 @@ export function OfflineIndicator() {
             )}
           </div>
           {!isFlushing && (
-            <button onClick={flush} className="text-xs font-medium text-primary hover:underline">
+            <button onClick={flush} className="text-primary text-xs font-medium hover:underline">
               Sync now
             </button>
           )}
@@ -71,13 +71,13 @@ export function OfflineIndicator() {
   return (
     <div
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-destructive/10 px-4 pb-[calc(0.5rem+var(--safe-area-bottom))] pt-2 backdrop-blur"
+        "border-border bg-destructive/10 fixed right-0 bottom-0 left-0 z-50 border-t px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur"
       )}
       role="status"
       aria-live="polite"
     >
       <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-destructive">
+        <div className="text-destructive flex items-center gap-2 text-sm">
           <CloudOff className="h-4 w-4" />
           <span>
             {showingStaleData
@@ -100,7 +100,7 @@ export function InlineOfflineBadge() {
   if (isOnline) return null;
 
   return (
-    <span className="ml-2 inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+    <span className="bg-muted text-muted-foreground ml-2 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs">
       <CloudOff className="h-3 w-3" />
       Queued
     </span>

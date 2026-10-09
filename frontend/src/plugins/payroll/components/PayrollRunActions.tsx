@@ -112,7 +112,7 @@ export const PayrollRunActions: React.FC<PayrollRunActionsProps> = ({
       </div>
 
       {closureBlocksFinalize && (
-        <p className="mt-2 text-right text-xs text-amber-700 dark:text-amber-300">
+        <p className="text-tone-warning-text mt-2 text-right text-xs">
           Finalize is disabled until all team-leader scopes are closed.
         </p>
       )}

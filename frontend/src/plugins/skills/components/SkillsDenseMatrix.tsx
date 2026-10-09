@@ -113,7 +113,7 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
     <div>
       <div
         ref={scrollRef}
-        className="skills-scroll max-h-[calc(100vh-280px)] min-h-[300px] overflow-auto rounded-lg border border-border"
+        className="skills-scroll border-border max-h-[calc(100vh-280px)] min-h-[300px] overflow-auto rounded-lg border"
         aria-label="Skills dense matrix — scroll horizontally to see more skills"
       >
         <div
@@ -125,10 +125,10 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
           {/* Header strip — NOT virtualized. Sticky top. Contains all N skill
               headers as flex labels. Sibling of the body, not inside the
               virtualizer. */}
-          <div className="sticky top-0 z-20 flex flex-col bg-muted shadow-sm backdrop-blur-sm">
+          <div className="bg-muted sticky top-0 z-20 flex flex-col shadow-sm backdrop-blur-sm">
             {/* Category super-header row */}
             <div className="flex">
-              <div className="sticky left-0 z-30 flex h-6 w-44 shrink-0 items-center border-b border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+              <div className="border-border bg-muted text-muted-foreground sticky left-0 z-30 flex h-6 w-44 shrink-0 items-center border-b px-3 py-1 text-xs font-medium">
                 Member
               </div>
               <div className="flex" style={{ minWidth: `calc(100% - ${MEMBER_COL_WIDTH}px)` }}>
@@ -139,7 +139,7 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
                   return (
                     <div
                       key={range.name}
-                      className={`flex h-6 shrink-0 items-center justify-center border-b border-l bg-muted px-1 py-1 text-center text-xs font-semibold transition-colors ${
+                      className={`bg-muted flex h-6 shrink-0 items-center justify-center border-b border-l px-1 py-1 text-center text-xs font-semibold transition-colors ${
                         isHovered ? "bg-foreground/5 dark:bg-foreground/10" : ""
                       } ${accent.text} ${accent.border}`}
                       style={{ width: (range.end - range.start + 1) * skillColWidth }}
@@ -152,9 +152,9 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
             </div>
             {/* Skill sub-header row */}
             <div className="flex h-10">
-              <div className="sticky left-0 z-30 flex h-10 w-44 shrink-0 items-center border-b border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground" />
+              <div className="border-border bg-muted text-muted-foreground sticky left-0 z-30 flex h-10 w-44 shrink-0 items-center border-b px-3 py-1 text-xs font-medium" />
               <div
-                className="relative h-10 bg-muted"
+                className="bg-muted relative h-10"
                 style={{
                   width: renderedCoverage.length * skillColWidth,
                   minWidth: `calc(100% - ${MEMBER_COL_WIDTH}px)`,
@@ -169,7 +169,7 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
                       key={c.skill_id}
                       role="columnheader"
                       aria-colindex={colIndex + 2}
-                      className={`absolute top-0 flex h-10 flex-col justify-center truncate border-b border-border bg-muted px-1 py-1 text-center text-xs font-medium ${
+                      className={`border-border bg-muted absolute top-0 flex h-10 flex-col justify-center truncate border-b px-1 py-1 text-center text-xs font-medium ${
                         hoveredCol === colIndex ? "bg-foreground/10" : ""
                       }`}
                       style={{ left: colIndex * skillColWidth, width: skillColWidth }}
@@ -178,7 +178,7 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
                       <div className="truncate" title={c.skill_name}>
                         {c.skill_name}
                       </div>
-                      <div className="text-[10px] text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         Avg{" "}
                         <span className={`font-semibold ${avgTone(c.avg_level)}`}>
                           {c.avg_level}
@@ -203,7 +203,7 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
 
             {/* Skill columns area — virtualized horizontally */}
             <div
-              className="relative bg-card"
+              className="bg-card relative"
               style={{
                 width: renderedCoverage.length * skillColWidth,
                 minWidth: `calc(100% - ${MEMBER_COL_WIDTH}px)`,
@@ -233,7 +233,7 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
                             role="gridcell"
                             aria-rowindex={firstBodyRowIndex + rowIndex}
                             aria-colindex={virtualItem.index + 2}
-                            className={`flex items-center justify-center border-t border-border/40 py-1.5 transition-colors ${CELL_HEIGHT} ${
+                            className={`border-border/40 flex items-center justify-center border-t py-1.5 transition-colors ${CELL_HEIGHT} ${
                               hoveredRow === rowIndex || hoveredCol === virtualItem.index
                                 ? HOVER_HIGHLIGHT
                                 : ""
@@ -252,13 +252,13 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
                                 setHoveredRow(rowIndex);
                                 setHoveredCol(virtualItem.index);
                               }}
-                              className={`inline-flex w-full items-center justify-center rounded-sm border border-transparent px-1 text-xs text-muted-foreground transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${CELL_HEIGHT}`}
+                              className={`text-muted-foreground focus-visible:ring-ring inline-flex w-full items-center justify-center rounded-sm border border-transparent px-1 text-xs transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:ring-offset-2 ${CELL_HEIGHT}`}
                               aria-label={`${row.username} ${colData.skill_name} — no rating`}
                               title={`${row.username} ${colData.skill_name}: no rating`}
                             >
                               <span
                                 aria-hidden="true"
-                                className="h-2.5 w-2.5 rounded-full border border-border/70 bg-transparent"
+                                className="border-border/70 h-2.5 w-2.5 rounded-full border bg-transparent"
                               />
                             </button>
                           </div>
@@ -271,7 +271,7 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
                           role="gridcell"
                           aria-rowindex={firstBodyRowIndex + rowIndex}
                           aria-colindex={virtualItem.index + 2}
-                          className={`flex items-center justify-center border-t border-border/40 py-1.5 transition-colors ${CELL_HEIGHT} ${
+                          className={`border-border/40 flex items-center justify-center border-t py-1.5 transition-colors ${CELL_HEIGHT} ${
                             hoveredRow === rowIndex || hoveredCol === virtualItem.index
                               ? HOVER_HIGHLIGHT
                               : ""
@@ -296,7 +296,7 @@ export const SkillsDenseMatrix: React.FC<SkillsDenseMatrixProps> = ({
                               setHoveredRow(rowIndex);
                               setHoveredCol(virtualItem.index);
                             }}
-                            className={`inline-flex w-full items-center justify-center gap-1.5 rounded-sm border px-1 text-xs font-semibold transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${CELL_HEIGHT} ${levelColor(skillData.level)}`}
+                            className={`focus-visible:ring-ring inline-flex w-full items-center justify-center gap-1.5 rounded-sm border px-1 text-xs font-semibold transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:ring-offset-2 ${CELL_HEIGHT} ${levelColor(skillData.level)}`}
                             aria-label={label}
                             title={`${row.username} ${colData.skill_name}: L${skillData.level} — ${resolveLevelLabel(skillData.level, levelLabels)}`}
                           >

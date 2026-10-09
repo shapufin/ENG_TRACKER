@@ -19,12 +19,12 @@ export const CollapsedCalendarSidebar: React.FC<CollapsedCalendarSidebarProps> =
   onToggleUser,
   onExpand,
 }) => (
-  <aside className="flex h-full min-h-0 flex-col items-center gap-3 rounded-2xl border border-border/70 bg-card/60 p-2 text-foreground">
+  <aside className="border-border/70 bg-card/60 text-foreground flex h-full min-h-0 flex-col items-center gap-3 rounded-2xl border p-2">
     <Button
       type="button"
       size="icon"
       variant="ghost"
-      className="h-8 w-8 rounded-lg border border-border/60 bg-background/40"
+      className="border-border/60 bg-background/40 h-8 w-8 rounded-lg border"
       onClick={onExpand}
       aria-label="Expand team sidebar"
     >
@@ -50,6 +50,6 @@ export const CollapsedCalendarSidebar: React.FC<CollapsedCalendarSidebarProps> =
         );
       })}
     </div>
-    <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Team</div>
+    <div className="text-muted-foreground text-xs tracking-[0.3em] uppercase">Team</div>
   </aside>
 );

@@ -28,6 +28,7 @@ export const TargetPicker: React.FC<TargetPickerProps> = ({
         return (
           <GlassCard
             key={target.target_key}
+            interactive
             className={`cursor-pointer ${isSelected ? "ring-primary/20 ring-1" : ""}`}
             onClick={() => onSelect(target.target_key)}
           >

@@ -17,8 +17,8 @@ export const SidebarUserProfile: React.FC<SidebarUserProfileProps> = ({ user, co
   const displayName = getUserDisplayName(user);
   return (
     <div className={`flex items-center gap-3 ${collapsed ? "md:justify-center" : ""}`}>
-      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-        <User className="h-4 w-4 text-primary" />
+      <div className="bg-primary/10 relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+        <User className="text-primary h-4 w-4" />
       </div>
       {!collapsed && (
         <div className="min-w-0 flex-1">
@@ -26,7 +26,7 @@ export const SidebarUserProfile: React.FC<SidebarUserProfileProps> = ({ user, co
             {displayName}
           </p>
           {user?.email && (
-            <p className="truncate text-[10px] text-muted-foreground" title={user.email}>
+            <p className="text-muted-foreground truncate text-xs" title={user.email}>
               {user.email}
             </p>
           )}

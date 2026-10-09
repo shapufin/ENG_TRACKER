@@ -209,7 +209,7 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
                     <td className="px-3 py-1 whitespace-nowrap">
                       {formatDateDDMMYYYY(day.date)}
                       {day.isWeekend && (
-                        <span className="ml-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+                        <span className="text-tone-warning-text ml-1 text-xs font-medium">
                           (weekend)
                         </span>
                       )}

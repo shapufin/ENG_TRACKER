@@ -29,35 +29,35 @@ export const VacationReport: React.FC<VacationReportProps> = ({
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-3">
-        <GlassCard className="overflow-hidden border-t-4 border-t-success p-0 md:col-span-2">
+        <GlassCard className="border-t-success overflow-hidden border-t-4 p-0 md:col-span-2">
           <CardHeader className="bg-success/5 pb-4">
             <div className="flex items-start justify-between">
               <div>
-                <CardTitle className="text-base text-emerald-800 dark:text-emerald-400">
+                <CardTitle className="text-tone-success-text text-base">
                   Leave Utilization
                 </CardTitle>
                 <CardDescription>Aggregate vacation and sick leave patterns</CardDescription>
               </div>
-              <CalendarDays className="h-5 w-5 text-success" />
+              <CalendarDays className="text-success h-5 w-5" />
             </div>
           </CardHeader>
           <CardContent className="p-6">
             <div className="grid grid-cols-2 gap-8">
               <div className="space-y-1">
-                <p className="font-mono text-4xl font-bold tabular-nums tracking-tighter">
+                <p className="font-mono text-4xl font-bold tracking-tighter tabular-nums">
                   <AnimatedNumber value={summaryData?.leave?.total_days || 0} />
-                  <span className="ml-1 text-lg text-muted-foreground">Days</span>
+                  <span className="text-muted-foreground ml-1 text-lg">Days</span>
                 </p>
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                   Total Leave Impact
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="font-mono text-4xl font-bold tabular-nums tracking-tighter text-emerald-700 dark:text-emerald-400">
+                <p className="text-tone-success-text font-mono text-4xl font-bold tracking-tighter tabular-nums">
                   <AnimatedNumber value={summaryData?.leave?.approved_days || 0} />
-                  <span className="ml-1 text-lg text-muted-foreground">Days</span>
+                  <span className="text-muted-foreground ml-1 text-lg">Days</span>
                 </p>
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                   Approved Absence
                 </p>
               </div>
@@ -65,23 +65,21 @@ export const VacationReport: React.FC<VacationReportProps> = ({
           </CardContent>
         </GlassCard>
 
-        <GlassCard className="flex flex-col justify-center border-l-4 border-l-warning p-6">
+        <GlassCard className="border-l-warning flex flex-col justify-center border-l-4 p-6">
           <div className="space-y-4">
             <div>
-              <p className="mb-1 text-sm font-medium text-muted-foreground">Queue Status</p>
+              <p className="text-muted-foreground mb-1 text-sm font-medium">Queue Status</p>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-3xl font-bold tabular-nums text-amber-700 dark:text-amber-400">
+                <span className="text-tone-warning-text font-mono text-3xl font-bold tabular-nums">
                   {summaryData?.leave?.pending_count || 0}
                 </span>
-                <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                  Pending Requests
-                </span>
+                <span className="text-tone-warning-text text-sm font-medium">Pending Requests</span>
               </div>
             </div>
             <div className="border-t pt-4">
-              <p className="text-xs leading-relaxed text-muted-foreground">
+              <p className="text-muted-foreground text-xs leading-relaxed">
                 Total of{" "}
-                <span className="font-bold tabular-nums text-foreground">
+                <span className="text-foreground font-bold tabular-nums">
                   {summaryData?.leave?.total_requests || 0}
                 </span>{" "}
                 requests submitted within the selected period.
@@ -94,7 +92,7 @@ export const VacationReport: React.FC<VacationReportProps> = ({
       {detailedData && groupBy !== "user" && (
         <GlassCard className="p-6">
           <div className="mb-6 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
+            <TrendingUp className="text-primary h-5 w-5" />
             <CardTitle className="text-base">Absence Trend Analysis</CardTitle>
           </div>
           <div className="h-[350px]">

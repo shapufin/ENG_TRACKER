@@ -62,15 +62,15 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
               <div className="space-y-1">
                 <h3 className="text-xl font-semibold">{plugin.verbose_name}</h3>
                 <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                  <Badge variant="outline" className="text-[10px] uppercase">
+                  <Badge variant="outline" className="text-xs uppercase">
                     v{plugin.version}
                   </Badge>
                   {plugin.is_enabled ? (
-                    <span className="text-success flex items-center gap-1 text-[10px]">
+                    <span className="text-success flex items-center gap-1 text-xs">
                       <CheckCircle2 className="h-3 w-3" /> Active
                     </span>
                   ) : (
-                    <span className="text-muted-foreground flex items-center gap-1 text-[10px]">
+                    <span className="text-muted-foreground flex items-center gap-1 text-xs">
                       <XCircle className="h-3 w-3" /> Inactive
                     </span>
                   )}

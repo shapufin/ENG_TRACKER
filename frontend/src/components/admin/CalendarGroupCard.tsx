@@ -39,7 +39,7 @@ export const CalendarGroupCard: React.FC<CalendarGroupCardProps> = ({
           </div>
 
           <div>
-            <p className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
+            <p className="text-muted-foreground text-xs tracking-[0.2em] uppercase">
               Shared Calendar
             </p>
 

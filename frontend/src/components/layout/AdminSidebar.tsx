@@ -124,7 +124,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           {!collapsed && (
             <div className="leading-tight">
               <span className="md:inline">{branding?.site_name || "Admin Panel"}</span>
-              <div className="text-foreground font-mono text-[10px] font-semibold tracking-wider uppercase">
+              <div className="text-foreground font-mono text-xs font-semibold tracking-wider uppercase">
                 Enterprise
               </div>
             </div>

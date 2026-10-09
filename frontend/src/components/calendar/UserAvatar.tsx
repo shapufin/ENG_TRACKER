@@ -12,8 +12,8 @@ interface UserAvatarProps {
 }
 
 const sizeMap: Record<NonNullable<UserAvatarProps["size"]>, string> = {
-  xs: "h-6 w-6 text-[10px]",
-  sm: "h-7 w-7 text-[11px]",
+  xs: "h-6 w-6 text-xs",
+  sm: "h-7 w-7 text-xs",
   md: "h-9 w-9 text-sm",
   lg: "h-12 w-12 text-base",
 };
@@ -53,7 +53,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   const content = (
     <div
       className={cn(
-        "flex items-center justify-center rounded-full font-semibold uppercase shadow-sm ring-1 ring-border/30",
+        "ring-border/30 flex items-center justify-center rounded-full font-semibold uppercase shadow-sm ring-1",
         sizeMap[size],
         colorClass,
         onClick && "cursor-pointer transition hover:scale-[1.02]",

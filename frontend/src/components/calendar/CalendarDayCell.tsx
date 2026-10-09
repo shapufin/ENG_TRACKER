@@ -80,15 +80,15 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
       onTouchStart={handlePointerDown}
       onTouchEnd={handlePointerUp}
       className={cn(
-        "group relative flex h-full min-h-[100px] flex-col gap-1 bg-card p-2 text-foreground transition duration-200 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring/60 xl:min-h-[110px] 2xl:min-h-[130px]",
+        "group bg-card text-foreground focus-visible:ring-ring/60 relative flex h-full min-h-[100px] flex-col gap-1 p-2 transition duration-200 focus-visible:ring-1 focus-visible:ring-inset xl:min-h-[110px] 2xl:min-h-[130px]",
         isPlainCell && "hover:bg-card-raised",
         !isCurrentMonth && "bg-card text-muted-foreground/60",
-        today && "calendar-today-glow border border-info/40",
-        isSelected && "border border-primary/80 bg-primary/15 dark:bg-primary/[0.12]",
-        isRangeStart && "ring-2 ring-inset ring-primary/70 dark:ring-primary/50",
-        isRangeEnd && "ring-2 ring-inset ring-primary/70 dark:ring-primary/50",
+        today && "calendar-today-glow border-info/40 border",
+        isSelected && "border-primary/80 bg-primary/15 dark:bg-primary/[0.12] border",
+        isRangeStart && "ring-primary/70 dark:ring-primary/50 ring-2 ring-inset",
+        isRangeEnd && "ring-primary/70 dark:ring-primary/50 ring-2 ring-inset",
         isInRange &&
-          "border border-primary/30 bg-primary/10 dark:border-primary/20 dark:bg-primary/[0.06]",
+          "border-primary/30 bg-primary/10 dark:border-primary/20 dark:bg-primary/[0.06] border",
         isRangeSelecting && "cursor-crosshair"
       )}
     >
@@ -108,14 +108,14 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
           {format(date, "d")}
         </span>
         {today && (
-          <span className="hidden rounded border border-info/20 bg-info/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-info sm:inline">
+          <span className="border-info/20 bg-info/10 text-info hidden rounded border px-1.5 py-0.5 text-[9px] font-bold tracking-widest uppercase sm:inline">
             Today
           </span>
         )}
         {isCurrentMonth && !today && (
           <span
             aria-hidden="true"
-            className="pointer-events-none hidden text-[10px] font-semibold text-blue-700 opacity-0 transition-opacity duration-150 group-hover:opacity-100 dark:text-blue-400 md:inline"
+            className="text-tone-info-text pointer-events-none hidden text-xs font-semibold opacity-0 transition-opacity duration-150 group-hover:opacity-100 md:inline"
           >
             + Book
           </span>
@@ -135,7 +135,7 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
         ))}
       </div>
       {overflowEvents > 0 && (
-        <span className="pl-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+        <span className="text-muted-foreground pl-0.5 text-[9px] font-medium tracking-wide uppercase">
           +{overflowEvents} more
         </span>
       )}

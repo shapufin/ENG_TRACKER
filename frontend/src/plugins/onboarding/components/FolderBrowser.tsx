@@ -188,6 +188,7 @@ const DocumentTile: React.FC<{
   return (
     <GlassCard
       ref={setNodeRef}
+      interactive
       animateOnMount={false}
       className={cn(
         "group flex cursor-pointer items-center gap-3 p-4 transition-all",

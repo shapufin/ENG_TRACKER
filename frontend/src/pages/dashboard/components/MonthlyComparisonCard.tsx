@@ -22,16 +22,16 @@ const BarChart: React.FC<{
   return (
     <div className="flex items-end justify-center gap-8 py-4">
       <div className="flex flex-col items-center gap-2">
-        <div className="w-24 rounded-t-xl bg-muted/30" style={{ height: `${prevHeight}px` }} />
+        <div className="bg-muted/30 w-24 rounded-t-xl" style={{ height: `${prevHeight}px` }} />
         <span className="text-base font-semibold tabular-nums">{previous}</span>
         <span className="text-muted-foreground">{previousLabel}</span>
       </div>
       <div className="flex flex-col items-center gap-2">
         <div
-          className="relative flex w-24 items-end overflow-hidden rounded-t-2xl bg-primary/20"
+          className="bg-primary/20 relative flex w-24 items-end overflow-hidden rounded-t-2xl"
           style={{ height: `${currHeight}px` }}
         >
-          <div className="h-full w-full rounded-t-2xl bg-linear-to-t from-primary to-primary/60 shadow-[0_0_40px_hsl(var(--primary)/0.45)]" />
+          <div className="from-primary to-primary/60 h-full w-full rounded-t-2xl bg-linear-to-t shadow-[0_0_40px_hsl(var(--primary)/0.45)]" />
         </div>
         <span className="text-base font-semibold tabular-nums">{current}</span>
         <span className="text-muted-foreground">{currentLabel}</span>
@@ -52,7 +52,7 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
         <p className="text-muted-foreground">Current vs previous month pending approvals</p>
       </div>
       {onGranularityChange && (
-        <div className="flex shrink-0 items-center gap-1 rounded-full border border-border/60 p-1">
+        <div className="border-border/60 flex shrink-0 items-center gap-1 rounded-full border p-1">
           <button
             type="button"
             onClick={() => onGranularityChange("month")}
@@ -86,19 +86,19 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
         previousLabel={data?.previous_month.month_name}
       />
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-border/30 bg-card p-4">
-          <p className="text-sm text-muted-foreground">
+        <div className="border-border bg-card rounded-xl border p-4">
+          <p className="text-muted-foreground text-sm">
             {data?.previous_month.month_name ?? "Prev"} daily avg
           </p>
           <div className="mt-1 font-mono text-2xl font-semibold tabular-nums">
             {data?.previous_month.daily_average ?? 0}
           </div>
         </div>
-        <div className="rounded-xl border border-primary/10 bg-primary/[0.04] p-4">
-          <p className="text-sm text-muted-foreground">
+        <div className="border-primary/10 bg-primary/[0.04] rounded-xl border p-4">
+          <p className="text-muted-foreground text-sm">
             {data?.current_month.month_name ?? "Curr"} daily avg
           </p>
-          <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-primary">
+          <div className="text-primary mt-1 font-mono text-2xl font-semibold tabular-nums">
             {data?.current_month.daily_average ?? 0}
           </div>
         </div>

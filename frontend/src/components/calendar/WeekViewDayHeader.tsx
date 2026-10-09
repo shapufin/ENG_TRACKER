@@ -7,20 +7,20 @@ interface WeekViewDayHeaderProps {
 }
 
 export const WeekViewDayHeader: React.FC<WeekViewDayHeaderProps> = ({ days }) => (
-  <div className="grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b border-border/70 bg-surface-sunken">
-    <div className="border-r border-border/60 px-5 py-3" />
+  <div className="border-border/70 bg-surface-sunken grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b">
+    <div className="border-border/60 border-r px-5 py-3" />
     {days.map((day) => (
       <div
         key={day.toISOString()}
-        className="border-r border-border/60 px-4 py-3 text-center last:border-r-0"
+        className="border-border/60 border-r px-4 py-3 text-center last:border-r-0"
       >
-        <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+        <p className="text-muted-foreground text-xs tracking-[0.3em] uppercase">
           {format(day, "EEE")}
         </p>
         <h3
           className={cn(
             "mt-1 text-lg font-semibold",
-            isSameDay(day, new Date()) && "text-blue-700 dark:text-blue-400"
+            isSameDay(day, new Date()) && "text-tone-info-text"
           )}
         >
           {format(day, "d")}

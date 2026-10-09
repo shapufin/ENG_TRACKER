@@ -17,13 +17,13 @@ export const rosterColumns: AppColumnDef<AggregatedUserRow>[] = [
     header: "Person",
     cell: ({ row }) => (
       <span className="flex items-center gap-2 font-medium">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-foreground">
+        <span className="bg-primary/10 text-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
           {initialsOf(row.original.user_name)}
         </span>
         <span className="flex min-w-0 items-center gap-1.5 truncate" title={row.original.user_name}>
           {row.original.user_name}
           {row.original.has_overnight && (
-            <Moon className="h-3.5 w-3.5 shrink-0 text-indigo-500 dark:text-indigo-400" />
+            <Moon className="text-tone-accent-text h-3.5 w-3.5 shrink-0" />
           )}
         </span>
       </span>
@@ -57,7 +57,7 @@ export const rosterColumns: AppColumnDef<AggregatedUserRow>[] = [
     id: "date_range",
     header: "Date Range",
     cell: ({ row }) => (
-      <span className="text-sm text-muted-foreground">
+      <span className="text-muted-foreground text-sm">
         {formatDate(row.original.first_date)} – {formatDate(row.original.last_date)}
       </span>
     ),

@@ -63,8 +63,8 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
             <div className="shrink-0 p-5 pb-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-tone-accent-surface">
-                    <Plane className="h-5 w-5 text-tone-accent-text" />
+                  <div className="bg-tone-accent-surface flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+                    <Plane className="text-tone-accent-text h-5 w-5" />
                   </div>
                   <h2 className="truncate text-xl font-semibold tracking-tight">
                     Vacation balance
@@ -73,7 +73,7 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                 <button
                   onClick={() => onOpenChange(false)}
                   aria-label="Close"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+                  className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground flex h-11 w-11 shrink-0 items-center justify-center rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
                 >
                   <X className="h-4 w-4" />
                   <span className="sr-only">Close</span>
@@ -81,33 +81,33 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
               </div>
             </div>
             <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-5 pb-5">
-              <div className="flex items-center gap-3 rounded-2xl border border-line-subtle bg-card p-3">
+              <div className="border-line-subtle bg-card flex items-center gap-3 rounded-2xl border p-3">
                 <UserAvatar size="md" name={userName} email={user.email} colorSeed={user.id} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-semibold text-foreground">{userName}</p>
-                  <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                  <p className="text-foreground truncate text-base font-semibold">{userName}</p>
+                  <p className="text-muted-foreground truncate text-xs">{user.email}</p>
                 </div>
                 {primaryTeam && (
-                  <Badge className="shrink-0 rounded-full border-0 bg-tone-accent-surface px-2.5 py-0.5 text-micro-lg text-tone-accent-text hover:bg-tone-accent-surface">
+                  <Badge className="bg-tone-accent-surface text-micro-lg text-tone-accent-text hover:bg-tone-accent-surface shrink-0 rounded-full border-0 px-2.5 py-0.5">
                     {primaryTeam}
                   </Badge>
                 )}
               </div>
 
               {!hasBalanceData ? (
-                <div className="mt-3 flex items-center gap-3 rounded-2xl border border-dashed border-border bg-muted p-5 text-muted-foreground dark:text-muted-foreground">
+                <div className="border-border bg-muted text-muted-foreground mt-3 flex items-center gap-3 rounded-2xl border border-dashed p-5">
                   <Info className="h-5 w-5" />
                   <span>No balance data available for this user.</span>
                 </div>
               ) : (
                 <>
-                  <div className="mt-3 rounded-2xl border border-line-subtle bg-card p-4">
+                  <div className="border-line-subtle bg-card mt-3 rounded-2xl border p-4">
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="font-mono tabular-nums">
-                        <span className="text-2xl font-bold text-foreground">
+                        <span className="text-foreground text-2xl font-bold">
                           {formatCompactDays(remainingDays)}
                         </span>{" "}
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-muted-foreground text-sm">
                           of {formatCompactDays(totalDays)} d remaining
                         </span>
                       </p>
@@ -118,22 +118,22 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                     <div
                       role="img"
                       aria-label={`Vacation balance: ${formatCompactDays(remainingDays)} of ${formatCompactDays(totalDays)} days remaining`}
-                      className="mt-3 flex h-2 w-full overflow-hidden rounded-full border border-line-subtle bg-surface-sunken"
+                      className="border-line-subtle bg-surface-sunken mt-3 flex h-2 w-full overflow-hidden rounded-full border"
                     >
                       <div
-                        className="h-full bg-success"
+                        className="bg-success h-full"
                         style={{ width: `${barShare(remainingDays)}%` }}
                       />
                       <div
-                        className="h-full bg-warning"
+                        className="bg-warning h-full"
                         style={{ width: `${barShare(pendingDays)}%` }}
                       />
                       <div
-                        className="h-full bg-destructive"
+                        className="bg-destructive h-full"
                         style={{ width: `${barShare(usedDays)}%` }}
                       />
                     </div>
-                    <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-micro-lg text-muted-foreground">
+                    <div className="text-micro-lg text-muted-foreground mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1">
                       <span className="inline-flex items-center gap-1.5">
                         <span
                           className={cn("inline-flex", toneTextClass.success)}
@@ -162,11 +162,11 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                         Used {formatCompactDays(usedDays)}
                       </span>
                     </div>
-                    <p className="mt-2.5 text-micro-lg text-muted-foreground">
+                    <p className="text-micro-lg text-muted-foreground mt-2.5">
                       {vacationYear} allowance · resets 1 Jan · carry-over expires 31 Mar
                     </p>
                   </div>
-                  <div className="mb-8 mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="mt-3 mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <StatCard
                       label="Remaining"
                       value={formatCompactDays(remainingDays)}

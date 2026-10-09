@@ -189,7 +189,7 @@ export const OrganigramaPublishPage: React.FC = () => {
     return (
       <PageShell title="Publish & Audience">
         <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
         </div>
       </PageShell>
     );
@@ -198,7 +198,7 @@ export const OrganigramaPublishPage: React.FC = () => {
   if (chartError || !chart) {
     return (
       <PageShell title="Publish & Audience">
-        <div className="flex h-64 flex-col items-center justify-center gap-2 text-destructive">
+        <div className="text-destructive flex h-64 flex-col items-center justify-center gap-2">
           <AlertCircle className="h-8 w-8" />
           <p>Failed to load chart.</p>
         </div>
@@ -216,9 +216,9 @@ export const OrganigramaPublishPage: React.FC = () => {
       }
     >
       <div className="mb-4 flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Target chart:</span>
+        <span className="text-muted-foreground text-xs">Target chart:</span>
         <span
-          className="rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5 font-mono text-xs text-foreground"
+          className="border-primary/20 bg-primary/10 text-foreground rounded-md border px-2 py-0.5 font-mono text-xs"
           title={chart.name}
         >
           {chart.name}
@@ -289,16 +289,16 @@ export const OrganigramaPublishPage: React.FC = () => {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-[10px]">
+                    <Badge variant="secondary" className="text-xs">
                       v{rev.version}
                     </Badge>
                     {rev.change_summary && (
-                      <span className="truncate text-muted-foreground" title={rev.change_summary}>
+                      <span className="text-muted-foreground truncate" title={rev.change_summary}>
                         {rev.change_summary}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {rev.published_by_name ?? "Unknown"} · {formatTimestamp(rev.published_at)}
                   </p>
                 </div>

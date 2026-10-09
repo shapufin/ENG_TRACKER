@@ -29,12 +29,12 @@ interface ActivityTimelineProps {
 export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ items, delay = 0 }) => {
   return (
     <GlassCard delay={delay} className="flex flex-col overflow-hidden">
-      <div className="border-b border-border/60 p-4">
+      <div className="border-border/60 border-b p-4">
         <h3 className="text-sm font-semibold">Recent Activity</h3>
       </div>
       <div className="flex-1 overflow-auto p-4">
         <div className="relative space-y-4 pl-2">
-          <div className="absolute bottom-2 left-[19px] top-2 w-px bg-border/60" />
+          <div className="bg-border/60 absolute top-2 bottom-2 left-[19px] w-px" />
           {items.map((item, i) => {
             const { icon: Icon, color } = statusConfig[item.status];
             return (
@@ -47,7 +47,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ items, delay
               >
                 <div
                   className={cn(
-                    "z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-background",
+                    "border-background z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
                     color
                   )}
                 >
@@ -59,7 +59,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ items, delay
                     <span className="text-muted-foreground">{item.action}</span>{" "}
                     <span className="font-medium">{item.target}</span>
                   </p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground/70">
+                  <p className="text-muted-foreground/70 mt-0.5 text-xs">
                     {formatDateTime(item.timestamp) || item.timestamp}
                   </p>
                 </div>

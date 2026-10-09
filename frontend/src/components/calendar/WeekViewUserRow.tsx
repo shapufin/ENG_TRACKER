@@ -36,19 +36,19 @@ export const WeekViewUserRow: React.FC<WeekViewUserRowProps> = ({
 }) => {
   const userName = userDisplayName(user);
   return (
-    <div className="grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b border-border/50">
+    <div className="border-border/50 grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b">
       <button
         type="button"
         onClick={() => onUserClick?.(user.id)}
-        className="flex items-center gap-3 border-r border-border/60 px-4 py-3 text-left transition hover:bg-table-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
+        className="border-border/60 hover:bg-table-hover focus-visible:ring-ring/60 flex items-center gap-3 border-r px-4 py-3 text-left transition focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-inset"
       >
         <UserAvatar name={userName} email={user.email} colorSeed={user.id} />
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground" title={userName}>
+          <p className="text-foreground truncate text-sm font-medium" title={userName}>
             {userName}
           </p>
           <p
-            className="truncate text-[11px] text-muted-foreground"
+            className="text-muted-foreground truncate text-xs"
             title={user.teams?.[0]?.name || "NO TEAM"}
           >
             {user.teams?.[0]?.name || "NO TEAM"}
@@ -113,9 +113,9 @@ export const WeekViewUserRow: React.FC<WeekViewUserRowProps> = ({
               onRangeDragEnd(day);
             }}
             className={cn(
-              "min-h-[92px] border-r border-border/60 p-2 transition last:border-r-0 hover:bg-table-hover",
+              "border-border/60 hover:bg-table-hover min-h-[92px] border-r p-2 transition last:border-r-0",
               isRangeStart || isRangeEnd
-                ? "bg-primary/15 ring-2 ring-inset ring-primary/60"
+                ? "bg-primary/15 ring-primary/60 ring-2 ring-inset"
                 : isInRange && "bg-primary/10"
             )}
           >
@@ -124,14 +124,14 @@ export const WeekViewUserRow: React.FC<WeekViewUserRowProps> = ({
                 <EventTooltip key={event.id} event={event} onUserClick={onUserClick}>
                   <div
                     className={cn(
-                      "cursor-pointer rounded-xl border px-2 py-1.5 text-[11px] font-medium shadow-sm transition hover:scale-[1.02]",
+                      "cursor-pointer rounded-xl border px-2 py-1.5 text-xs font-medium shadow-sm transition hover:scale-[1.02]",
                       eventColors[event.type]
                     )}
                   >
                     <div className="truncate" title={event.compactLabel}>
                       {event.compactLabel}
                     </div>
-                    <div className="mt-0.5 text-[10px] opacity-70">
+                    <div className="mt-0.5 text-xs opacity-70">
                       {event.start !== event.end
                         ? `${format(parseISOToLocal(event.start), "MMM d")} → ${format(parseISOToLocal(event.end), "MMM d")}`
                         : format(parseISOToLocal(event.start), "MMM d")}

@@ -65,9 +65,9 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
   if (facets.length === 0 && noTechCount === 0) return null;
 
   return (
-    <div className="space-y-2 border-t border-border/70 pt-2">
+    <div className="border-border/70 space-y-2 border-t pt-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        <span className="text-muted-foreground mr-1 font-mono text-xs font-bold tracking-wider uppercase">
           Tech filter
         </span>
         <button
@@ -77,7 +77,7 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
             onNoTechOnlyChange(false);
           }}
           className={cn(
-            "rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors",
+            "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
             isAllActive
               ? // Accent token, not text-primary: #7c3bed on the dark chip
                 // surface measures 3.32:1 — below AA for 11px text.
@@ -96,14 +96,14 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
               onClick={() => toggleTech(facet.id)}
               aria-pressed={isActive}
               className={cn(
-                "rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors",
+                "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
                 isActive
                   ? toneSurfaceClass.info
                   : "border-border bg-background text-foreground/80 hover:border-primary/30"
               )}
             >
               {facet.name}{" "}
-              <span className="ml-1 font-mono text-muted-foreground">{facet.count}</span>
+              <span className="text-muted-foreground ml-1 font-mono">{facet.count}</span>
             </button>
           );
         })}
@@ -112,7 +112,7 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
           onClick={() => onNoTechOnlyChange(!noTechOnly)}
           aria-pressed={noTechOnly}
           className={cn(
-            "rounded-lg border border-dashed px-3 py-1.5 text-[11px] font-semibold transition-colors",
+            "rounded-lg border border-dashed px-3 py-1.5 text-xs font-semibold transition-colors",
             noTechOnly
               ? toneSurfaceClass.accent
               : "border-border text-muted-foreground hover:border-primary/30"
@@ -123,7 +123,7 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
       </div>
       {levelRows.map((facet) => (
         <div key={facet.id} className="flex flex-wrap items-center gap-2 pl-1">
-          <span className="mr-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <span className="text-muted-foreground mr-1 font-mono text-xs font-bold tracking-wider uppercase">
             {facet.code} level
           </span>
           {facet.levels.map((level) => {
@@ -136,21 +136,19 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
                 aria-pressed={isActive}
                 title={`${facet.name} — ${level.name}`}
                 className={cn(
-                  "rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-colors",
+                  "rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors",
                   isActive
                     ? toneSurfaceClass.info
                     : "border-border bg-background text-foreground/80 hover:border-primary/30"
                 )}
               >
                 {level.code}{" "}
-                <span className="ml-0.5 font-mono text-muted-foreground">{level.count}</span>
+                <span className="text-muted-foreground ml-0.5 font-mono">{level.count}</span>
               </button>
             );
           })}
           {facet.no_level_count > 0 && (
-            <span className="text-[10px] text-muted-foreground">
-              {facet.no_level_count} ungraded
-            </span>
+            <span className="text-muted-foreground text-xs">{facet.no_level_count} ungraded</span>
           )}
         </div>
       ))}

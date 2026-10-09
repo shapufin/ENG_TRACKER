@@ -304,7 +304,7 @@ export const MySkillsPage: React.FC = () => {
                             <span
                               role="status"
                               aria-live="polite"
-                              className="shrink-0 text-xs text-emerald-600 dark:text-emerald-400"
+                              className="text-tone-success-text shrink-0 text-xs"
                             >
                               ✓ Saved
                             </span>

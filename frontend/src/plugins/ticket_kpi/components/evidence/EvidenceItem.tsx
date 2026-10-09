@@ -183,7 +183,7 @@ export const EvidenceItem = memo(function EvidenceItem({
                 disabled={isProcessing}
                 aria-label="Reject evidence"
               >
-                <XCircle className="h-4 w-4 text-destructive" />
+                <XCircle className="text-destructive h-4 w-4" />
               </Button>
             )}
             {canReview && item.status !== "pending" && (
@@ -206,21 +206,21 @@ export const EvidenceItem = memo(function EvidenceItem({
               disabled={isProcessing}
               aria-label="Delete evidence"
             >
-              <Trash2 className="h-4 w-4 text-destructive" />
+              <Trash2 className="text-destructive h-4 w-4" />
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-2 pb-3">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           {formatMonthLabel(item.month)} · {item.username || "Unknown"}
           {item.reviewed_by_username && ` · reviewed by ${item.reviewed_by_username}`}
         </p>
-        {item.description && <p className="text-sm text-foreground">{item.description}</p>}
+        {item.description && <p className="text-foreground text-sm">{item.description}</p>}
         {item.clients && item.clients.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {item.clients.map((client) => (
-              <Badge key={client.id} variant="outline" className="text-[10px]">
+              <Badge key={client.id} variant="outline" className="text-xs">
                 {client.name}
               </Badge>
             ))}

@@ -86,7 +86,7 @@ const ChartRow: React.FC<{
           </p>
           <Badge
             variant={chart.status === "published" ? "default" : "secondary"}
-            className="text-[10px]"
+            className="text-xs"
           >
             {chart.status}
           </Badge>
@@ -95,7 +95,7 @@ const ChartRow: React.FC<{
           {chart.node_count} nodes · rev {chart.revision_number} · {audienceSummary(chart)}
         </p>
         {chart.updated_at && (
-          <p className="text-muted-foreground flex items-center gap-1 text-[10px]">
+          <p className="text-muted-foreground flex items-center gap-1 text-xs">
             <Clock className="h-3 w-3" /> Updated {formatUpdated(chart.updated_at)}
           </p>
         )}

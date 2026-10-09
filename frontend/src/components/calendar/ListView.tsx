@@ -62,12 +62,12 @@ export const ListView: React.FC<ListViewProps> = ({ events, users, onUserClick }
 
       <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full min-w-0 border-collapse md:min-w-[720px]">
-          <thead className="sticky top-0 z-20 bg-card/95 backdrop-blur-xl">
-            <tr className="border-b border-border/70">
+          <thead className="bg-card/95 sticky top-0 z-20 backdrop-blur-xl">
+            <tr className="border-border/70 border-b">
               {HEADERS.map((header) => (
                 <th
                   key={header}
-                  className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+                  className="text-muted-foreground px-5 py-4 text-left text-xs font-semibold tracking-[0.2em] uppercase"
                 >
                   {header}
                 </th>

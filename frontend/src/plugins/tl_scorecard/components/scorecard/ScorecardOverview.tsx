@@ -63,9 +63,7 @@ const EngagementRing: React.FC<{ score: number | null | undefined }> = ({ score 
           strokeDashoffset={C * (1 - pct / 100)}
         />
       </svg>
-      <span className="text-muted-foreground absolute text-[11px] font-bold">
-        {Math.round(pct)}%
-      </span>
+      <span className="text-muted-foreground absolute text-xs font-bold">{Math.round(pct)}%</span>
     </div>
   );
 };

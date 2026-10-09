@@ -43,7 +43,7 @@ export const CalendarSidebarHeader: React.FC<CalendarSidebarHeaderProps> = ({
       </div>
     </div>
     {calendarGroup && (
-      <p className="text-muted-foreground mt-1 text-[10px] font-medium tracking-wider uppercase">
+      <p className="text-muted-foreground mt-1 text-xs font-medium tracking-wider uppercase">
         {calendarGroup}
       </p>
     )}

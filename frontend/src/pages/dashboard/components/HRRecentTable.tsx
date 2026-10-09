@@ -19,7 +19,7 @@ export const HRRecentTable: React.FC<HRRecentTableProps> = ({ title, data }) => 
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-muted-foreground"
+        className="text-muted-foreground h-8 w-8"
         aria-label={`More options for ${title}`}
       >
         <MoreHorizontal className="h-4 w-4" />
@@ -35,12 +35,12 @@ export const HRRecentTable: React.FC<HRRecentTableProps> = ({ title, data }) => 
           header: "Employee",
           cell: (info) => (
             <div className="flex items-center gap-3">
-              <Avatar className="h-8 w-8 border border-border">
-                <AvatarFallback className="bg-muted text-[10px] text-muted-foreground">
+              <Avatar className="border-border h-8 w-8 border">
+                <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                   {info.row.original.userInitials}
                 </AvatarFallback>
               </Avatar>
-              <span className="font-medium text-foreground">{info.getValue() as string}</span>
+              <span className="text-foreground font-medium">{info.getValue() as string}</span>
             </div>
           ),
         },
@@ -48,7 +48,7 @@ export const HRRecentTable: React.FC<HRRecentTableProps> = ({ title, data }) => 
           accessorKey: "duration",
           header: "Amount",
           cell: (info) => (
-            <span className="font-mono text-muted-foreground">{info.getValue() as string}</span>
+            <span className="text-muted-foreground font-mono">{info.getValue() as string}</span>
           ),
         },
         {

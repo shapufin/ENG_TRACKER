@@ -24,7 +24,7 @@ export const OvernightIcon: React.FC<OvernightIconProps> = ({ size = "sm", class
   <Moon
     className={cn(
       size === "sm" ? "h-3.5 w-3.5" : "h-2 w-2",
-      "shrink-0 text-indigo-500 dark:text-indigo-400",
+      "text-tone-accent-text shrink-0",
       className
     )}
   />
@@ -52,7 +52,7 @@ export const TeamChipList: React.FC<TeamChipListProps> = ({ teamNames, className
       {teamNames.map((t) => (
         <span
           key={t}
-          className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+          className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs"
         >
           <span className={cn("h-1.5 w-1.5 rounded-full", teamColorFor(t))} />
           {t}

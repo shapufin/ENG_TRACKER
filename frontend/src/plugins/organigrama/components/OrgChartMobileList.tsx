@@ -42,7 +42,7 @@ const MobileNode: React.FC<{ node: TreeNode; depth: number }> = ({ node, depth }
           <button
             type="button"
             onClick={toggle}
-            className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground shrink-0 rounded p-0.5"
             aria-label={expanded ? "Collapse" : "Expand"}
           >
             {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -51,16 +51,16 @@ const MobileNode: React.FC<{ node: TreeNode; depth: number }> = ({ node, depth }
           <span className="w-5 shrink-0" />
         )}
         {isTech ? (
-          <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Users className="text-muted-foreground h-4 w-4 shrink-0" />
         ) : (
-          <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <User className="text-muted-foreground h-4 w-4 shrink-0" />
         )}
         <span className="flex-1 text-sm">{label}</span>
-        {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
+        {subtitle && <span className="text-muted-foreground text-xs">{subtitle}</span>}
         {node.role_badge && ROLE_BADGE_LABELS[node.role_badge] && (
           <span
             className={cn(
-              "rounded-full px-2 py-0.5 text-[10px] font-medium",
+              "rounded-full px-2 py-0.5 text-xs font-medium",
               ROLE_BADGE_STYLES[node.role_badge]
             )}
             aria-label={`Role: ${ROLE_BADGE_LABELS[node.role_badge]}`}
@@ -83,7 +83,7 @@ const MobileNode: React.FC<{ node: TreeNode; depth: number }> = ({ node, depth }
 export const OrgChartMobileList: React.FC<{ roots: TreeNode[] }> = ({ roots }) => {
   if (roots.length === 0) {
     return (
-      <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+      <div className="text-muted-foreground px-4 py-8 text-center text-sm">
         No organizational data available.
       </div>
     );

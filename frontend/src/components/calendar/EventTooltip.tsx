@@ -43,9 +43,9 @@ export const EventTooltip: React.FC<EventTooltipProps> = ({
       <TooltipContent
         side="top"
         align="center"
-        className="w-72 border border-line-subtle bg-popover/95 p-0 text-popover-foreground backdrop-blur-xl"
+        className="border-line-subtle bg-popover/95 text-popover-foreground w-72 border p-0 backdrop-blur-xl"
       >
-        <div className="relative overflow-hidden rounded-xl border border-line-subtle bg-linear-to-br from-muted/50 to-transparent p-3">
+        <div className="border-line-subtle from-muted/50 relative overflow-hidden rounded-xl border bg-linear-to-br to-transparent p-3">
           <div
             className={cn(
               "pointer-events-none absolute inset-0 opacity-60",
@@ -54,11 +54,11 @@ export const EventTooltip: React.FC<EventTooltipProps> = ({
           />
           <div className="relative space-y-2 text-left">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-foreground">{event.title}</p>
+              <p className="text-foreground text-sm font-semibold">{event.title}</p>
               {typeof event.days === "number" && (
                 <span
                   className={cn(
-                    "shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold",
+                    "shrink-0 rounded-full border px-2 py-0.5 font-mono text-xs font-bold",
                     calendarEventTypeStyles[event.type].badge
                   )}
                 >
@@ -66,7 +66,7 @@ export const EventTooltip: React.FC<EventTooltipProps> = ({
                 </span>
               )}
             </div>
-            <div className="space-y-1.5 text-[11px] text-foreground">
+            <div className="text-foreground space-y-1.5 text-xs">
               <div className="flex items-center gap-2">
                 <Calendar className="h-3.5 w-3.5" />
                 <span>{dateDisplay}</span>
@@ -86,7 +86,7 @@ export const EventTooltip: React.FC<EventTooltipProps> = ({
               {event.userName && (
                 <button
                   type="button"
-                  className="flex items-center gap-2 text-foreground transition hover:text-primary dark:hover:text-primary/80"
+                  className="text-foreground hover:text-primary flex items-center gap-2 transition"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (event.userId) onUserClick?.(event.userId);
@@ -109,11 +109,9 @@ export const EventTooltip: React.FC<EventTooltipProps> = ({
                 </div>
               )}
               {event.description && (
-                <div className="flex gap-2 rounded-lg border border-line-subtle bg-surface-sunken p-2">
-                  <MessageSquare className="mt-0.5 h-3.5 w-3.5 text-muted-foreground" />
-                  <p className="text-[10px] text-foreground">
-                    {event.description}
-                  </p>
+                <div className="border-line-subtle bg-surface-sunken flex gap-2 rounded-lg border p-2">
+                  <MessageSquare className="text-muted-foreground mt-0.5 h-3.5 w-3.5" />
+                  <p className="text-foreground text-xs">{event.description}</p>
                 </div>
               )}
             </div>

@@ -28,7 +28,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="text-base">{profile.name}</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-xs">
               {profile.description || "No description"}
             </p>
           </div>
@@ -43,13 +43,13 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="space-y-1 text-xs text-muted-foreground">
+        <div className="text-muted-foreground space-y-1 text-xs">
           <p>Mapped fields: {Object.keys(profile.field_mapping || {}).length}</p>
           <p>Required: {(profile.required_fields || []).length}</p>
           {profile.assigned_client_ids && profile.assigned_client_ids.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
               {profile.assigned_client_ids.map((id) => (
-                <Badge key={id} variant="outline" className="px-1 py-0 text-[10px]">
+                <Badge key={id} variant="outline" className="px-1 py-0 text-xs">
                   {clientNameById.get(id) ?? `Client ${id}`}
                 </Badge>
               ))}
@@ -61,7 +61,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             <Edit className="mr-1 h-3 w-3" /> Edit
           </Button>
           <Button variant="ghost" size="sm" onClick={() => onDelete(profile.id)}>
-            <Trash2 className="mr-1 h-3 w-3 text-destructive" /> Delete
+            <Trash2 className="text-destructive mr-1 h-3 w-3" /> Delete
           </Button>
         </div>
       </CardContent>

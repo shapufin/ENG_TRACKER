@@ -318,7 +318,7 @@ export function ResourceAccessPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant="outline" className="text-[11px]">
+                      <Badge variant="outline" className="text-xs">
                         {group.code}
                       </Badge>
                     </td>
@@ -378,7 +378,7 @@ export function ResourceAccessPage() {
                       )}
                     </div>
                   </div>
-                  <Badge variant="outline" className="shrink-0 text-[11px]">
+                  <Badge variant="outline" className="shrink-0 text-xs">
                     {group.member_count ?? 0} members
                   </Badge>
                 </div>

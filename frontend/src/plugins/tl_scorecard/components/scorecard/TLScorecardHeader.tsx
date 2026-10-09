@@ -62,7 +62,7 @@ const DirectReportStack: React.FC = () => {
         {overflow > 0 && (
           <span
             aria-label={`${overflow} more team members`}
-            className="bg-muted text-muted-foreground ring-card -ml-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold ring-2"
+            className="bg-muted text-muted-foreground ring-card -ml-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ring-2"
           >
             +{overflow}
           </span>

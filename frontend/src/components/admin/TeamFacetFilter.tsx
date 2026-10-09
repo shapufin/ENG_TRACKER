@@ -33,15 +33,15 @@ export const TeamFacetFilter: React.FC<TeamFacetFilterProps> = ({
   if (teams.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-border/70 pt-2">
-      <span className="mr-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+    <div className="border-border/70 flex flex-wrap items-center gap-2 border-t pt-2">
+      <span className="text-muted-foreground mr-1 font-mono text-xs font-bold tracking-wider uppercase">
         Team filter
       </span>
       <button
         type="button"
         onClick={() => onTeamIdsChange([])}
         className={cn(
-          "rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors",
+          "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
           isAllActive
             ? toneSurfaceClass.accent
             : "border-border bg-background text-muted-foreground hover:border-primary/30"
@@ -58,7 +58,7 @@ export const TeamFacetFilter: React.FC<TeamFacetFilterProps> = ({
             onClick={() => toggleTeam(team.id)}
             aria-pressed={isActive}
             className={cn(
-              "rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors",
+              "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
               isActive
                 ? toneSurfaceClass.info
                 : "border-border bg-background text-foreground/80 hover:border-primary/30"

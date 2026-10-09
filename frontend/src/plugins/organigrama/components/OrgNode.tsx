@@ -52,8 +52,8 @@ export const OrgNode: React.FC<NodeProps> = React.memo(function OrgNode({ data }
       className={cn(
         "cursor-pointer rounded-lg border px-4 py-2 transition-shadow",
         isTech
-          ? "border-dashed border-muted-foreground/40 bg-muted/50 shadow-sm hover:shadow-md"
-          : "border-border bg-card shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20",
+          ? "border-muted-foreground/40 bg-muted/50 border-dashed shadow-sm hover:shadow-md"
+          : "border-border bg-card shadow-primary/10 hover:shadow-primary/20 shadow-md hover:shadow-lg",
         highlighted && "ring-2 ring-yellow-400 ring-offset-1"
       )}
       role="treeitem"
@@ -79,14 +79,14 @@ export const OrgNode: React.FC<NodeProps> = React.memo(function OrgNode({ data }
           <span className="text-sm font-medium">{nodeData.label}</span>
         </div>
         {nodeData.subtitle && (
-          <span className="text-xs text-muted-foreground">{nodeData.subtitle}</span>
+          <span className="text-muted-foreground text-xs">{nodeData.subtitle}</span>
         )}
         {nodeData.techLevels && nodeData.techLevels.length > 0 && (
           <div className="flex max-w-[180px] flex-wrap justify-center gap-1">
             {nodeData.techLevels.map((level) => (
               <span
                 key={level}
-                className="rounded-full bg-secondary px-2 py-0.5 text-micro font-medium text-secondary-foreground"
+                className="bg-secondary text-micro text-secondary-foreground rounded-full px-2 py-0.5 font-medium"
                 title={`Tech grade: ${level}`}
               >
                 {level}
@@ -97,7 +97,7 @@ export const OrgNode: React.FC<NodeProps> = React.memo(function OrgNode({ data }
         {nodeData.roleBadge && (
           <span
             className={cn(
-              "rounded-full px-2 py-0.5 text-[10px] font-medium",
+              "rounded-full px-2 py-0.5 text-xs font-medium",
               ROLE_BADGE_STYLES[nodeData.roleBadge]
             )}
             aria-label={`Role: ${ROLE_BADGE_LABELS[nodeData.roleBadge]}`}

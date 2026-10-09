@@ -51,7 +51,7 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
           ))}
         </SelectContent>
       </Select>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         Select a profile, or leave empty to auto-detect from your file columns.
       </p>
       {selectedProfile?.assigned_client_ids && selectedProfile.assigned_client_ids.length > 0 && (
@@ -61,7 +61,7 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
           {selectedProfile.assigned_client_ids.map((id) => {
             const client = clients?.find((c) => c.id === id);
             return (
-              <Badge key={id} variant="outline" className="text-[10px]">
+              <Badge key={id} variant="outline" className="text-xs">
                 {client ? client.name : `Client ${id}`}
               </Badge>
             );

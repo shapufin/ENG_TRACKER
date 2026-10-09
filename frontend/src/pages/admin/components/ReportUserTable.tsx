@@ -19,14 +19,11 @@ const ReportUserRow: React.FC<{ activeTab: ReportUserTableProps["activeTab"]; us
     <td className="px-6 py-4">
       <div className="flex flex-col">
         <span className="text-foreground font-semibold">{u.full_name}</span>
-        <span className="text-muted-foreground font-mono text-[10px]">@{u.username}</span>
+        <span className="text-muted-foreground font-mono text-xs">@{u.username}</span>
       </div>
     </td>
     <td className="px-6 py-4">
-      <Badge
-        variant="secondary"
-        className="bg-muted text-[10px] font-bold tracking-tighter uppercase"
-      >
+      <Badge variant="secondary" className="bg-muted text-xs font-bold tracking-tighter uppercase">
         {u.team || "Unassigned"}
       </Badge>
     </td>

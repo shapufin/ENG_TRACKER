@@ -32,7 +32,7 @@ export const FieldsPopulatedBadges: React.FC<FieldsPopulatedBadgesProps> = ({
   max = 4,
 }) => {
   if (!fields || fields.length === 0) {
-    return <span className="text-xs text-muted-foreground">No fields</span>;
+    return <span className="text-muted-foreground text-xs">No fields</span>;
   }
 
   const visible = fields.slice(0, max);
@@ -45,14 +45,14 @@ export const FieldsPopulatedBadges: React.FC<FieldsPopulatedBadgesProps> = ({
         const cfg = fieldConfig[key] ?? { label: rawKey, icon: fallbackIcon };
         const Icon = cfg.icon;
         return (
-          <Badge key={rawKey} variant="outline" className="gap-1 text-[10px] font-normal">
+          <Badge key={rawKey} variant="outline" className="gap-1 text-xs font-normal">
             <Icon className="h-3 w-3" />
             {cfg.label}
           </Badge>
         );
       })}
       {overflow > 0 && (
-        <Badge variant="outline" className="text-[10px] font-normal">
+        <Badge variant="outline" className="text-xs font-normal">
           +{overflow}
         </Badge>
       )}

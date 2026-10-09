@@ -189,10 +189,10 @@ export function ResourceAccessGroupPage() {
             <div className="space-y-1">
               <h2 className="text-xl font-semibold tracking-tight">{groupData?.name}</h2>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[11px]">
+                <Badge variant="outline" className="text-xs">
                   {groupData?.code}
                 </Badge>
-                <Badge variant="secondary" className="text-[11px]">
+                <Badge variant="secondary" className="text-xs">
                   {groupData?.member_count ?? 0} members
                 </Badge>
               </div>

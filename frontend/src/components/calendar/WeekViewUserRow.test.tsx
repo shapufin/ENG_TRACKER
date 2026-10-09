@@ -51,7 +51,7 @@ describe("WeekViewUserRow", () => {
     );
     const nameEl = container.querySelector(".truncate.text-sm") as HTMLElement;
     expect(nameEl).toHaveAttribute("title");
-    const teamEl = container.querySelector(".truncate.text-\\[11px\\]") as HTMLElement;
+    const teamEl = container.querySelector(".truncate.text-xs") as HTMLElement;
     expect(teamEl).toHaveAttribute("title", "Engineering Platform Operations");
   });
 });

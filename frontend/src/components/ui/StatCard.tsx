@@ -103,7 +103,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       {footer && (
         <div
           data-testid="stat-card-footer"
-          className="border-line-subtle mt-2.5 flex items-center justify-between gap-2 border-t pt-2 text-[11px]"
+          className="border-line-subtle mt-2.5 flex items-center justify-between gap-2 border-t pt-2 text-xs"
         >
           {footer}
         </div>
