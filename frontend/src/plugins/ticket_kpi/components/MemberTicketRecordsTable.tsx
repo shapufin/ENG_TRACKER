@@ -6,11 +6,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { SearchField } from "@/components/ui/SearchField";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/badge";
-import { Search, RotateCcw, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
+import { RotateCcw, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
 import { useTicketKPITickets } from "../pages/hooks/useTicketKPITickets";
@@ -150,7 +151,7 @@ const FilterSelect: React.FC<{
   onChange: (v: string) => void;
 }> = ({ label, value, options, onChange }) => (
   <Select value={value || ALL} onValueChange={(v) => onChange(v === ALL ? "" : v)}>
-    <SelectTrigger className="h-9 w-[150px]">
+    <SelectTrigger className="w-[150px]">
       <SelectValue placeholder={label} />
     </SelectTrigger>
     <SelectContent>
@@ -183,16 +184,15 @@ const TicketRecordsFilterBar: React.FC<FilterBarProps> = ({
   updateDynamicField,
   resetFilters,
 }) => (
-  <div className="flex flex-wrap items-center gap-2">
-    <div className="relative max-w-xs flex-1">
-      <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-      <Input
+  <FilterToolbar>
+    <FilterToolbar.Search className="max-w-xs">
+      <SearchField
         placeholder="Search ticket id, title, assignee…"
+        aria-label="Search tickets"
         value={filters.search ?? ""}
-        onChange={(e) => updateFilter("search", e.target.value)}
-        className="h-9 pl-9"
+        onChange={(v) => updateFilter("search", v)}
       />
-    </div>
+    </FilterToolbar.Search>
     {(["status", "priority", "category", "assignee", "requester"] as const).map((field) => (
       <FilterSelect
         key={field}
@@ -206,7 +206,7 @@ const TicketRecordsFilterBar: React.FC<FilterBarProps> = ({
       value={filters.sla_breached === undefined ? ALL : String(filters.sla_breached)}
       onValueChange={(v) => updateFilter("sla_breached", v === ALL ? undefined : v === "true")}
     >
-      <SelectTrigger className="h-9 w-[150px]">
+      <SelectTrigger className="w-[150px]">
         <SelectValue placeholder="SLA" />
       </SelectTrigger>
       <SelectContent>
@@ -226,11 +226,11 @@ const TicketRecordsFilterBar: React.FC<FilterBarProps> = ({
       />
     ))}
     {hasActiveFilters && (
-      <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9">
+      <Button variant="ghost" size="control" onClick={resetFilters}>
         <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset
       </Button>
     )}
-  </div>
+  </FilterToolbar>
 );
 
 type TableBodyProps = {
@@ -322,7 +322,7 @@ const TicketRecordsPagination: React.FC<PaginationProps> = ({
     </p>
     <div className="flex items-center gap-2">
       <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
-        <SelectTrigger className="h-8 w-[110px]">
+        <SelectTrigger controlSize="sm" className="w-[110px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

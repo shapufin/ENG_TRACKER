@@ -8,7 +8,6 @@ import {
   Pencil,
   Plus,
   Rocket,
-  Search,
   Star,
   Trash2,
   Network,
@@ -16,6 +15,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { SearchField } from "@/components/ui/SearchField";
 import { Label } from "@/components/ui/label";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -247,16 +248,15 @@ export const OrganigramaAdminPage: React.FC = () => {
       }
     >
       <GlassCard className="mb-4 p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[12rem] flex-1">
-            <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
-            <Input
+        <FilterToolbar>
+          <FilterToolbar.Search>
+            <SearchField
               placeholder="Search by name, slug, or description..."
+              aria-label="Search charts"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
+              onChange={setSearch}
             />
-          </div>
+          </FilterToolbar.Search>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[10rem]">
               <SelectValue />
@@ -269,7 +269,7 @@ export const OrganigramaAdminPage: React.FC = () => {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FilterToolbar>
       </GlassCard>
 
       <GlassCard className="p-4">

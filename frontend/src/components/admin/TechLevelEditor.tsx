@@ -115,9 +115,9 @@ export const TechLevelEditor: React.FC<TechLevelEditorProps> = ({ tech }) => {
       renameForm.code.trim().toUpperCase() !== renaming?.code);
 
   return (
-    <div className="mt-3 space-y-3 rounded-lg border border-border/70 bg-muted/30 p-3">
+    <div className="border-border/70 bg-muted/30 mt-3 space-y-3 rounded-lg border p-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
           Levels
         </h3>
         <span className="text-micro text-muted-foreground">
@@ -126,7 +126,7 @@ export const TechLevelEditor: React.FC<TechLevelEditorProps> = ({ tech }) => {
       </div>
 
       {levels.length === 0 && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           No levels yet. Add one below to grade people inside {tech.name}.
         </p>
       )}
@@ -136,9 +136,9 @@ export const TechLevelEditor: React.FC<TechLevelEditorProps> = ({ tech }) => {
           {levels.map((level, index) => (
             <li
               key={level.id}
-              className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5"
+              className="border-border bg-card flex items-center gap-2 rounded-md border px-2 py-1.5"
             >
-              <span className="w-6 shrink-0 text-center font-mono text-micro text-muted-foreground">
+              <span className="text-micro text-muted-foreground w-6 shrink-0 text-center font-mono">
                 {level.rank}
               </span>
               {renaming?.id === level.id ? (
@@ -148,9 +148,7 @@ export const TechLevelEditor: React.FC<TechLevelEditorProps> = ({ tech }) => {
                     className="h-7 flex-1 text-sm"
                     value={renameForm.name}
                     autoFocus
-                    onChange={(event) =>
-                      setRenameForm({ ...renameForm, name: event.target.value })
-                    }
+                    onChange={(event) => setRenameForm({ ...renameForm, name: event.target.value })}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" && renameValid) rename.mutate();
                       if (event.key === "Escape") setRenaming(null);
@@ -160,9 +158,7 @@ export const TechLevelEditor: React.FC<TechLevelEditorProps> = ({ tech }) => {
                     aria-label={`Code for ${level.code}`}
                     className="h-7 w-20 shrink-0 text-sm"
                     value={renameForm.code}
-                    onChange={(event) =>
-                      setRenameForm({ ...renameForm, code: event.target.value })
-                    }
+                    onChange={(event) => setRenameForm({ ...renameForm, code: event.target.value })}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" && renameValid) rename.mutate();
                       if (event.key === "Escape") setRenaming(null);
@@ -193,12 +189,12 @@ export const TechLevelEditor: React.FC<TechLevelEditorProps> = ({ tech }) => {
                   <span className="flex-1 truncate text-sm">
                     {level.name}
                     {!level.is_active && (
-                      <Badge variant="secondary" className="ml-2 text-micro">
+                      <Badge variant="secondary" className="text-micro ml-2">
                         Inactive
                       </Badge>
                     )}
                   </span>
-                  <span className="shrink-0 font-mono text-micro text-muted-foreground">
+                  <span className="text-micro text-muted-foreground shrink-0 font-mono">
                     {level.code}
                   </span>
                   <Button
@@ -240,9 +236,7 @@ export const TechLevelEditor: React.FC<TechLevelEditorProps> = ({ tech }) => {
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                aria-label={
-                  level.is_active ? `Deactivate ${level.name}` : `Activate ${level.name}`
-                }
+                aria-label={level.is_active ? `Deactivate ${level.name}` : `Activate ${level.name}`}
                 disabled={toggleActive.isPending}
                 onClick={() => toggleActive.mutate(level)}
               >
@@ -270,8 +264,9 @@ export const TechLevelEditor: React.FC<TechLevelEditorProps> = ({ tech }) => {
             Level name
           </Label>
           <Input
+            controlSize="sm"
             id={`level-name-${tech.id}`}
-            className="h-8 text-sm"
+            className="text-sm"
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
           />
@@ -281,14 +276,15 @@ export const TechLevelEditor: React.FC<TechLevelEditorProps> = ({ tech }) => {
             Code
           </Label>
           <Input
+            controlSize="sm"
             id={`level-code-${tech.id}`}
-            className="h-8 text-sm"
+            className="text-sm"
             value={form.code}
             onChange={(event) => setForm({ ...form, code: event.target.value })}
           />
         </div>
         <Button
-          size="sm"
+          size="control-sm"
           onClick={() => create.mutate()}
           disabled={!form.name.trim() || !form.code.trim() || create.isPending}
         >

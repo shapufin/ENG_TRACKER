@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { Label } from "@/components/ui/label";
 import { StatCard } from "@/components/ui/StatCard";
 import {
@@ -234,19 +234,14 @@ export const SkillsCatalogPage: React.FC = () => {
       <GlassCard className="mb-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1">
           <Label htmlFor="catalog-search">Search catalog</Label>
-          <div className="relative mt-1">
-            <Search
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Input
-              id="catalog-search"
-              value={skillSearch}
-              onChange={(event) => setSkillSearch(event.target.value)}
-              placeholder="Search by skill name or code..."
-              className="pl-9"
-            />
-          </div>
+          <SearchField
+            id="catalog-search"
+            className="mt-1"
+            aria-label="Search catalog"
+            value={skillSearch}
+            onChange={setSkillSearch}
+            placeholder="Search by skill name or code..."
+          />
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <div className="w-full sm:w-[160px]">

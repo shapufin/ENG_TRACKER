@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
-import { FileSpreadsheet, Plus, Search } from "lucide-react";
+import { FileSpreadsheet, Plus } from "lucide-react";
+import { SearchField } from "@/components/ui/SearchField";
 import { useSearchParams } from "react-router-dom";
 import { useQueries } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -236,21 +237,14 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-full sm:w-64 sm:flex-none">
-              <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2"
-                aria-hidden="true"
-              />
-              <Input
-                id="records-search"
-                type="search"
-                aria-label="Search records or members"
-                placeholder="Search records or members…"
-                className="pl-8"
-                value={params.get("q") ?? ""}
-                onChange={(e) => setParam("q", e.target.value || null)}
-              />
-            </div>
+            <SearchField
+              id="records-search"
+              className="sm:w-64 sm:flex-none"
+              aria-label="Search records or members"
+              placeholder="Search records or members…"
+              value={params.get("q") ?? ""}
+              onChange={(v) => setParam("q", v || null)}
+            />
             {onCreateRecord && (
               <Button onClick={() => onCreateRecord(kind)} className="shrink-0">
                 <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />

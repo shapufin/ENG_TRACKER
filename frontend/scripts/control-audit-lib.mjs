@@ -36,8 +36,10 @@ export function findViolations(src, path = "src/x.tsx") {
   const inUi = p.includes("components/ui/");
   const isSearchField = p.endsWith("components/ui/SearchField.tsx");
   const isToolbar = p.endsWith("components/ui/FilterToolbar.tsx");
-  const isRawAllowed =
-    inUi || /(?:^|\/)(CommandPalette|HeaderSearch)\.tsx$/.test(p) || /Dropzone/i.test(p);
+  // CommandPalette / HeaderSearch own their bespoke chrome (modal input, header pill): the raw input
+  // and its h-/pl- classes are allowed there until they migrate to SearchField.
+  const isBespokeInput = /(?:^|\/)(CommandPalette|HeaderSearch)\.tsx$/.test(p);
+  const isRawAllowed = inUi || isBespokeInput || /Dropzone/i.test(p);
   const push = (idx, rule, text) =>
     out.push({ line: lineOf(src, idx), rule, text: text.replace(/\s+/g, " ").slice(0, 100) });
 
@@ -48,6 +50,7 @@ export function findViolations(src, path = "src/x.tsx") {
   for (const m of src.matchAll(OPEN_TAG)) {
     const tag = tagText(src, m.index);
     const name = m[1];
+    if (isBespokeInput && name === "input") continue;
     if (!isSearchField && (name === "Input" || name === "input")) {
       const t = tag.match(PL);
       if (t) push(m.index, "INPUT-PAD", t[0]);
@@ -70,4 +73,10 @@ export function findViolations(src, path = "src/x.tsx") {
     });
   }
   return out;
+}
+
+/** True when `path` is under one of the `--exclude=<dir>` prefixes (another team's in-flight work). */
+export function isExcluded(path, prefixes) {
+  const p = norm(path);
+  return prefixes.some((x) => p.startsWith(norm(x).replace(/\/?$/, "/")));
 }

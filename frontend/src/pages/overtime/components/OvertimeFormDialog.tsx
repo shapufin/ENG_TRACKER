@@ -130,11 +130,11 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
           />
         )}
         <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
             Client
           </Label>
           <Select value={form.client} onValueChange={(v) => updateField("client", v)}>
-            <SelectTrigger className={`h-10 px-3 ${formErrors.client ? "border-destructive" : ""}`}>
+            <SelectTrigger className={`px-3 ${formErrors.client ? "border-destructive" : ""}`}>
               <SelectValue placeholder="Select client" />
             </SelectTrigger>
             <SelectContent>
@@ -145,7 +145,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
               ))}
             </SelectContent>
           </Select>
-          {formErrors.client && <p className="text-xs text-destructive">{formErrors.client}</p>}
+          {formErrors.client && <p className="text-destructive text-xs">{formErrors.client}</p>}
         </div>
         <div className="space-y-2">
           <Label>Date (DD/MM/YYYY)</Label>
@@ -154,7 +154,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
             onChange={(v) => updateField("date", v)}
             placeholder="DD/MM/YYYY"
           />
-          {formErrors.date && <p className="text-xs text-destructive">{formErrors.date}</p>}
+          {formErrors.date && <p className="text-destructive text-xs">{formErrors.date}</p>}
         </div>
       </div>
       <TimeHoursGrid
@@ -168,7 +168,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
         onEndTimeChange={(v) => updateField("end_time", v)}
       />
       <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
           Evidence type
         </Label>
         <Select
@@ -177,7 +177,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
             updateField("evidence_type", v as "ticket" | "email" | "call" | "other")
           }
         >
-          <SelectTrigger className="h-10 px-3">
+          <SelectTrigger className="px-3">
             <SelectValue placeholder="Select evidence type" />
           </SelectTrigger>
           <SelectContent>
@@ -228,7 +228,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
               ))}
             </div>
           )}
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Up to 20 references. Click a reference to remove it.
           </p>
         </div>

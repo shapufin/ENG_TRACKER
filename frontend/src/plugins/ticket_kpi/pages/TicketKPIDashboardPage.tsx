@@ -37,13 +37,13 @@ const LoadingState: React.FC = () => (
       <span className="sr-only">Loading...</span>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-28 animate-pulse rounded-lg border bg-muted/40" />
+          <div key={i} className="bg-muted/40 h-28 animate-pulse rounded-lg border" />
         ))}
       </div>
-      <div className="h-80 animate-pulse rounded-lg border bg-muted/40" />
+      <div className="bg-muted/40 h-80 animate-pulse rounded-lg border" />
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="h-64 animate-pulse rounded-lg border bg-muted/40" />
-        <div className="h-64 animate-pulse rounded-lg border bg-muted/40" />
+        <div className="bg-muted/40 h-64 animate-pulse rounded-lg border" />
+        <div className="bg-muted/40 h-64 animate-pulse rounded-lg border" />
       </div>
     </div>
   </PageShell>
@@ -157,7 +157,7 @@ export const TicketKPIDashboardPage: React.FC = () => {
                   value={String(selectedYear)}
                   onValueChange={(v) => setSelectedYear(Number(v))}
                 >
-                  <SelectTrigger className="h-9 w-[120px]">
+                  <SelectTrigger className="w-[120px]">
                     <SelectValue>{String(selectedYear)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>

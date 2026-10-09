@@ -12,8 +12,9 @@
  * their defaults.
  */
 import React, { useMemo } from "react";
-import { Search, RefreshCw, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { RefreshCw, X } from "lucide-react";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { SearchField } from "@/components/ui/SearchField";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/DatePicker";
@@ -64,7 +65,7 @@ export const ControlRoomFilters: React.FC<Props> = ({
 
   return (
     <GlassCard className="space-y-4 p-4">
-      <div className="flex flex-wrap items-center gap-4">
+      <FilterToolbar className="gap-4">
         {isWeekView ? (
           <p className="text-muted-foreground text-xs">Showing current week (Mon–Sun)</p>
         ) : (
@@ -90,15 +91,14 @@ export const ControlRoomFilters: React.FC<Props> = ({
             />
           </div>
         </div>
-        <div className="relative ml-auto">
-          <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
-          <Input
+        <FilterToolbar.Search className="ml-auto max-w-48">
+          <SearchField
             placeholder="Search people..."
+            aria-label="Search people"
             value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-48 pl-8"
+            onChange={onSearchChange}
           />
-        </div>
+        </FilterToolbar.Search>
         {hasActiveFilters && (
           <Button
             variant="ghost"
@@ -113,7 +113,7 @@ export const ControlRoomFilters: React.FC<Props> = ({
         <Button variant="outline" size="icon" onClick={onRefresh} disabled={isFetching}>
           <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
         </Button>
-      </div>
+      </FilterToolbar>
     </GlassCard>
   );
 };

@@ -26,7 +26,8 @@ import {
   TABLE_HEAD_ROW_CLASS,
 } from "@/components/ui/tableStyles";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { SearchField } from "@/components/ui/SearchField";
 import { ResourceAccessGroupDialog } from "./components/ResourceAccessGroupDialog";
 import { useResourceAccessDirectory } from "./hooks/useResourceAccessDirectory";
 import { extractApiErrorMessage } from "@/lib/apiFormError";
@@ -195,33 +196,21 @@ export function ResourceAccessPage() {
 
       {/* Toolbar */}
       <GlassCard className="p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative max-w-md flex-1">
-            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-            <Input
-              type="search"
+        <FilterToolbar>
+          <FilterToolbar.Search>
+            <SearchField
               placeholder="Search by name or code..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              onChange={setSearch}
+              onClear={clearSearch}
               aria-label="Search groups"
             />
-            {search && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
-                onClick={clearSearch}
-                aria-label="Clear search"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <div className="flex shrink-0 gap-2">
+          </FilterToolbar.Search>
+          <FilterToolbar.Group>
             {selectedCount > 0 && (
               <Button
                 variant="destructive"
+                size="control"
                 onClick={() => setBulkDeleteOpen(true)}
                 aria-label={`Delete ${selectedCount} selected group${selectedCount === 1 ? "" : "s"}`}
               >
@@ -229,12 +218,12 @@ export function ResourceAccessPage() {
                 Delete selected ({selectedCount})
               </Button>
             )}
-            <Button onClick={() => setDialogOpen(true)}>
+            <Button size="control" onClick={() => setDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Create group
             </Button>
-          </div>
-        </div>
+          </FilterToolbar.Group>
+        </FilterToolbar>
       </GlassCard>
 
       {/* Directory table / states */}

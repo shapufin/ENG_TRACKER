@@ -41,18 +41,18 @@ export const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
           if (!isNaN(id)) onChange(id);
         }}
       >
-        <SelectTrigger className="h-9 min-w-0 flex-1 border-border/60 bg-background/50 backdrop-blur-sm sm:w-[180px] sm:flex-none">
+        <SelectTrigger className="border-border/60 bg-background/50 min-w-0 flex-1 backdrop-blur-sm sm:w-[180px] sm:flex-none">
           <div className="flex items-center gap-2 truncate">
-            <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <Filter className="text-muted-foreground h-4 w-4 shrink-0" />
             <SelectValue placeholder="Select workspace">
               {selectedIds.length > 1 ? (
                 <span className="flex items-center gap-1.5">
-                  <span className="inline-flex h-2 w-2 rounded-full bg-primary" />
+                  <span className="bg-primary inline-flex h-2 w-2 rounded-full" />
                   <span>{selectedIds.length} Workspaces</span>
                 </span>
               ) : (
                 <span className="flex items-center gap-1.5">
-                  <span className="inline-flex h-2 w-2 rounded-full bg-primary" />
+                  <span className="bg-primary inline-flex h-2 w-2 rounded-full" />
                   <span className="truncate">{selectedWorkspace?.name || "Select workspace"}</span>
                 </span>
               )}
@@ -68,12 +68,12 @@ export const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
                 value={w.id.toString()}
                 className={cn(
                   "cursor-pointer",
-                  isSelected && "border-l-2 border-l-primary bg-primary/5 font-medium"
+                  isSelected && "border-l-primary bg-primary/5 border-l-2 font-medium"
                 )}
               >
                 <div className="flex w-full items-center justify-between gap-3">
                   <span className={cn(isSelected && "text-foreground")}>{w.name}</span>
-                  {isSelected && <Check className="h-4 w-4 font-bold text-primary" />}
+                  {isSelected && <Check className="text-primary h-4 w-4 font-bold" />}
                 </div>
               </SelectItem>
             );

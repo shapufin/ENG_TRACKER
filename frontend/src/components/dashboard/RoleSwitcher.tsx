@@ -82,7 +82,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
   return (
     <div className="flex items-center gap-2">
       <Select value={selected} onValueChange={handleChange}>
-        <SelectTrigger className="h-9 w-[200px]">
+        <SelectTrigger className="w-[200px]">
           <SelectValue placeholder="Select dashboard" />
         </SelectTrigger>
         <SelectContent>
@@ -94,7 +94,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
                   {option.icon}
                   <div className="flex flex-col">
                     <span className="font-medium">{option.label}</span>
-                    <span className="text-xs text-muted-foreground">{option.description}</span>
+                    <span className="text-muted-foreground text-xs">{option.description}</span>
                   </div>
                 </div>
               </SelectItem>

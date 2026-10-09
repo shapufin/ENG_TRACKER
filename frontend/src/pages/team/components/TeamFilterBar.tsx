@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { SearchField } from "@/components/ui/SearchField";
 import {
   Select,
   SelectContent,
@@ -10,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
-import { Search, Filter, Users, Calendar } from "lucide-react";
+import { Filter, Users, Calendar } from "lucide-react";
 
 interface TeamFilterBarProps {
   searchQuery: string;
@@ -51,25 +52,23 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
 }) => {
   return (
     <GlassCard className="space-y-4 p-4">
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="min-w-[200px] flex-1">
-          <div className="relative">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-            <Input
-              className="min-h-11 pl-10"
-              placeholder="Search employee or description..."
-              value={searchQuery}
-              onChange={(e) => onSearchQueryChange(e.target.value)}
-            />
-          </div>
-        </div>
+      <FilterToolbar className="gap-4">
+        <FilterToolbar.Search>
+          <SearchField
+            controlSize="lg"
+            placeholder="Search employee or description..."
+            aria-label="Search employee or description"
+            value={searchQuery}
+            onChange={onSearchQueryChange}
+          />
+        </FilterToolbar.Search>
         <Select
           value={filterStatus}
           onValueChange={(v) =>
             onFilterStatusChange(v as "all" | "pending" | "approved" | "rejected")
           }
         >
-          <SelectTrigger className="h-11 min-h-11 w-full px-3 sm:w-[140px]">
+          <SelectTrigger controlSize="lg" className="w-full px-3 sm:w-[140px]">
             <div className="flex items-center gap-2">
               <Filter className="text-muted-foreground h-4 w-4" />
               <SelectValue placeholder="Status" />
@@ -84,7 +83,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
         </Select>
         {availableTeams.length > 0 && (
           <Select value={filterTeam} onValueChange={onFilterTeamChange}>
-            <SelectTrigger className="h-11 min-h-11 w-full px-3 sm:w-[160px]">
+            <SelectTrigger controlSize="lg" className="w-full px-3 sm:w-[160px]">
               <div className="flex items-center gap-2 text-left">
                 <Users className="text-muted-foreground h-4 w-4" />
                 <SelectValue placeholder="All Teams" />
@@ -114,7 +113,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
             className="w-auto min-w-[220px]"
           />
         </div>
-      </div>
+      </FilterToolbar>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-muted-foreground text-xs tracking-wide uppercase">Grouping mode</p>
         <div className="flex flex-wrap gap-2">

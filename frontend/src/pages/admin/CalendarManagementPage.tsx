@@ -198,7 +198,7 @@ export const CalendarManagementPage: React.FC = () => {
                   value={bulkGroup}
                   onChange={(e) => setBulkGroup(e.target.value)}
                   placeholder="Enter group name (e.g., msc-siae-shared)"
-                  className="border-border bg-muted/50 h-9 w-full max-w-[280px] rounded-xl"
+                  className="border-border bg-muted/50 w-full max-w-[280px] rounded-xl"
                 />
                 <Button
                   onClick={handleBulkApplyIntent}

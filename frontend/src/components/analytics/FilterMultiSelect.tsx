@@ -7,10 +7,10 @@
  * generic (accepts any `{ id, label, sublabel? }` option shape).
  */
 import React, { useMemo, useState } from "react";
-import { ChevronsUpDown, Search, X } from "lucide-react";
+import { ChevronsUpDown, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
@@ -103,23 +103,20 @@ export const FilterMultiSelect: React.FC<FilterMultiSelectProps> = ({
                 `${selectedOptions.length} selected`
               )}
             </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
+            <ChevronsUpDown className="text-muted-foreground ml-2 h-4 w-4 shrink-0" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-72 p-2" align="start">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search..."
-              className="pl-8"
-            />
-          </div>
+          <SearchField
+            autoFocus
+            value={query}
+            onChange={setQuery}
+            placeholder="Search..."
+            aria-label="Search options"
+          />
           <div className="thin-scrollbar mt-2 max-h-60 overflow-y-auto">
             {filtered.length === 0 ? (
-              <div className="px-2 py-6 text-center text-xs text-muted-foreground">
+              <div className="text-muted-foreground px-2 py-6 text-center text-xs">
                 No results found.
               </div>
             ) : (
@@ -140,7 +137,7 @@ export const FilterMultiSelect: React.FC<FilterMultiSelectProps> = ({
                         }
                       }}
                       className={cn(
-                        "flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+                        "hover:bg-muted focus-visible:ring-ring flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm focus-visible:ring-2 focus-visible:outline-hidden",
                         checked && "bg-primary/5"
                       )}
                     >
@@ -149,13 +146,13 @@ export const FilterMultiSelect: React.FC<FilterMultiSelectProps> = ({
                         {o.label}
                       </span>
                       {o.sublabel && (
-                        <span className="shrink-0 text-xs text-muted-foreground">{o.sublabel}</span>
+                        <span className="text-muted-foreground shrink-0 text-xs">{o.sublabel}</span>
                       )}
                     </div>
                   );
                 })}
                 {hiddenCount > 0 && (
-                  <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">
+                  <div className="text-muted-foreground px-2 py-1.5 text-center text-xs">
                     Showing {visible.length} of {filtered.length}. Refine search to see more.
                   </div>
                 )}
@@ -166,7 +163,7 @@ export const FilterMultiSelect: React.FC<FilterMultiSelectProps> = ({
             <button
               type="button"
               onClick={handleClear}
-              className="mt-2 w-full text-center text-xs text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground mt-2 w-full text-center text-xs"
             >
               Clear all
             </button>
@@ -179,14 +176,14 @@ export const FilterMultiSelect: React.FC<FilterMultiSelectProps> = ({
           {selectedOptions.map((o) => (
             <span
               key={o.id}
-              className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-xs text-foreground"
+              className="bg-primary/10 text-foreground inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs"
             >
               {o.label}
               {!disabled && (
                 <button
                   type="button"
                   onClick={() => toggle(String(o.id))}
-                  className="ml-0.5 text-foreground/60 hover:text-foreground"
+                  className="text-foreground/60 hover:text-foreground ml-0.5"
                   aria-label={`Remove ${o.label}`}
                 >
                   <X className="h-3 w-3" />

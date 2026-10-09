@@ -1,13 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ChevronRight, Pencil, Search, UserPlus, UsersRound, X } from "lucide-react";
+import { ChevronRight, Pencil, UserPlus, UsersRound } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { SearchField } from "@/components/ui/SearchField";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ResourceAccessGroupDialog } from "./components/ResourceAccessGroupDialog";
 import { ResourceAccessMemberDialog } from "./components/ResourceAccessMemberDialog";
@@ -217,33 +218,20 @@ export function ResourceAccessGroupPage() {
 
       {/* Member toolbar */}
       <GlassCard className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="relative max-w-md flex-1">
-            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-            <Input
-              type="search"
+        <FilterToolbar>
+          <FilterToolbar.Search>
+            <SearchField
               placeholder="Search members by name or username..."
               value={memberSearch}
-              onChange={(e) => setMemberSearch(e.target.value)}
-              className="pl-9"
+              onChange={setMemberSearch}
+              onClear={clearMemberSearch}
               aria-label="Search members"
             />
-            {memberSearch && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
-                onClick={clearMemberSearch}
-                aria-label="Clear member search"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+          </FilterToolbar.Search>
           <span className="text-muted-foreground shrink-0 text-xs">
             {memberTotal} {memberTotal === 1 ? "member" : "members"}
           </span>
-        </div>
+        </FilterToolbar>
       </GlassCard>
 
       {/* Member list */}

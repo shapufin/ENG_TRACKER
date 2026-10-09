@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { FilterX, ScrollText, Search } from "lucide-react";
+import { FilterX, ScrollText } from "lucide-react";
+import { SearchField } from "@/components/ui/SearchField";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -172,21 +173,14 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
             </div>
             <div>
               <Label htmlFor="hbpr-filter-search">Search</Label>
-              <div className="relative mt-1.5">
-                <Search
-                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2"
-                  aria-hidden="true"
-                />
-                <Input
-                  id="hbpr-filter-search"
-                  type="search"
-                  aria-label="Search records"
-                  placeholder="Search all records…"
-                  className="pl-8"
-                  value={draftQ ?? filters.q}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                />
-              </div>
+              <SearchField
+                id="hbpr-filter-search"
+                className="mt-1.5"
+                aria-label="Search records"
+                placeholder="Search all records…"
+                value={draftQ ?? filters.q}
+                onChange={onSearchChange}
+              />
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">

@@ -15,6 +15,9 @@ interface SearchFieldProps {
   shortcut?: string;
   loading?: boolean;
   controlSize?: ControlSize;
+  autoFocus?: boolean;
+  /** Lets a visible <Label htmlFor> point at the input. */
+  id?: string;
   className?: string;
   /** 0 (default) = immediate. */
   debounceMs?: number;
@@ -30,6 +33,8 @@ export const SearchField = ({
   shortcut,
   loading,
   controlSize,
+  autoFocus,
+  id,
   className,
   debounceMs = 0,
 }: SearchFieldProps) => {
@@ -77,6 +82,8 @@ export const SearchField = ({
         placeholder={placeholder}
         aria-label={ariaLabel}
         controlSize={controlSize}
+        autoFocus={autoFocus}
+        id={id}
         value={local}
         onChange={(e) => emit(e.target.value)}
         onKeyDown={(e) => {

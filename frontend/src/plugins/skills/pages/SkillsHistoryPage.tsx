@@ -4,7 +4,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { Label } from "@/components/ui/label";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import {
@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Search, X, User as UserIcon } from "lucide-react";
+import { Loader2, X, User as UserIcon } from "lucide-react";
 import { useHistory, useSkills, useUsersSearch } from "../hooks/useSkillsQueries";
 import { ProficiencyBadge } from "../components/ProficiencyBadge";
 
@@ -120,16 +120,13 @@ export const SkillsHistoryPage: React.FC = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-72 p-2" align="start">
-                <div className="relative">
-                  <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
-                  <Input
-                    autoFocus
-                    value={userQuery}
-                    onChange={(e) => setUserQuery(e.target.value)}
-                    placeholder="Search by username or email..."
-                    className="pl-8"
-                  />
-                </div>
+                <SearchField
+                  autoFocus
+                  value={userQuery}
+                  onChange={setUserQuery}
+                  placeholder="Search by username or email..."
+                  aria-label="Search users"
+                />
                 <div className="mt-2 max-h-60 overflow-y-auto">
                   {userQuery.length < 2 ? (
                     <div className="text-muted-foreground px-2 py-4 text-center text-xs">

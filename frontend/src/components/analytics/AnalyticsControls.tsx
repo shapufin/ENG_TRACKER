@@ -45,7 +45,7 @@ export const AnalyticsControls: React.FC<AnalyticsControlsProps> = ({
   <div className="flex flex-wrap items-center justify-between gap-4">
     <div className="flex items-center gap-4">
       <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-muted-foreground" />
+        <Filter className="text-muted-foreground h-4 w-4" />
         {periods.map((period) => (
           <Button
             key={period}
@@ -60,7 +60,7 @@ export const AnalyticsControls: React.FC<AnalyticsControlsProps> = ({
       </div>
 
       {selectedPeriod === "custom" && (
-        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
+        <div className="animate-in fade-in slide-in-from-left-2 flex items-center gap-2">
           <DateRangePicker
             from={dateRange.from}
             to={dateRange.to}
@@ -91,7 +91,7 @@ export const AnalyticsControls: React.FC<AnalyticsControlsProps> = ({
             value={exportFormat}
             onValueChange={(v) => onExportFormatChange(v as "excel" | "csv")}
           >
-            <SelectTrigger className="h-8 w-24">
+            <SelectTrigger controlSize="sm" className="w-24">
               <SelectValue placeholder="Format" />
             </SelectTrigger>
             <SelectContent>

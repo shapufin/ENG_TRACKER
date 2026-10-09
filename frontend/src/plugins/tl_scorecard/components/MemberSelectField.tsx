@@ -33,7 +33,7 @@ export const OptionSelect: React.FC<OptionSelectProps> = ({
     value={value === null ? undefined : String(value)}
     onValueChange={(v) => onChange(Number(v))}
   >
-    <SelectTrigger id={id} className="h-9 w-full">
+    <SelectTrigger id={id} className="w-full">
       <SelectValue placeholder={placeholder} />
     </SelectTrigger>
     <SelectContent>

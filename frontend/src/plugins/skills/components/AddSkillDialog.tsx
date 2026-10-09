@@ -1,7 +1,7 @@
 /** Dialog for adding skills from the admin-managed catalog. */
 import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -23,7 +23,7 @@ import {
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InfoCallout } from "@/components/ui/InfoCallout";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { Check, Loader2, Search, SearchX } from "lucide-react";
+import { Check, Loader2, SearchX } from "lucide-react";
 import {
   useSkills,
   useSkillCategories,
@@ -139,20 +139,17 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <DialogBody className="grid gap-6 space-y-0 sm:grid-cols-2 sm:divide-x sm:divide-border">
+        <DialogBody className="sm:divide-border grid gap-6 space-y-0 sm:grid-cols-2 sm:divide-x">
           <div className="min-w-0 space-y-3">
-            <div className="relative">
+            <div>
               <Label htmlFor="skill-search">Search skills</Label>
-              <Search
-                className="pointer-events-none absolute left-3 top-[2.15rem] h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
+              <SearchField
                 id="skill-search"
+                className="mt-1"
+                aria-label="Search skills"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={setSearch}
                 placeholder="Search by skill name or code..."
-                className="mt-1 pl-9"
               />
             </div>
             <div>
@@ -172,7 +169,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
               </Select>
             </div>
 
-            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex items-center justify-between gap-2 text-xs">
               <span>
                 {availableSkills.length} available
                 {selectedSkills.length > 0 && ` · ${selectedSkills.length} selected`}
@@ -201,19 +198,19 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
             </div>
 
             {skillsLoading && (
-              <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+              <p role="status" className="text-muted-foreground flex items-center gap-2 text-sm">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 Loading skills...
               </p>
             )}
             {skillsError && !skillsLoading && (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="text-destructive text-sm">
                 Could not load available skills.
               </p>
             )}
             {!skillsLoading && !skillsError && availableSkills.length > 0 && (
               <div
-                className="no-scrollbar max-h-64 overflow-y-auto rounded-lg border border-border"
+                className="no-scrollbar border-border max-h-64 overflow-y-auto rounded-lg border"
                 aria-label="Available skills"
               >
                 {visibleSkills.map((skill) => {
@@ -224,21 +221,21 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
                       type="button"
                       onClick={() => toggleSkill(skill.id)}
                       aria-pressed={selected}
-                      className={`flex min-h-[44px] w-full items-center justify-between gap-3 border-b border-border/70 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-accent ${hoverLiftClass} ${selected ? "bg-primary/10" : ""}`}
+                      className={`border-border/70 hover:bg-accent flex min-h-[44px] w-full items-center justify-between gap-3 border-b px-3 py-2 text-left text-sm last:border-b-0 ${hoverLiftClass} ${selected ? "bg-primary/10" : ""}`}
                     >
                       <span className="min-w-0">
                         <span className="block truncate font-medium" title={skill.name}>
                           {skill.name}
                         </span>
                         <span
-                          className="block truncate text-xs text-muted-foreground"
+                          className="text-muted-foreground block truncate text-xs"
                           title={`${skill.category_name ?? ""} · ${skill.code}`}
                         >
                           {skill.category_name} · {skill.code}
                         </span>
                       </span>
                       {selected && (
-                        <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                        <Check className="text-primary h-4 w-4 shrink-0" aria-hidden="true" />
                       )}
                     </button>
                   );
@@ -246,7 +243,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
               </div>
             )}
             {!skillsLoading && !skillsError && availableSkills.length > MAX_VISIBLE_RESULTS && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Refine your search to see more than {MAX_VISIBLE_RESULTS} matches.
               </p>
             )}
@@ -276,11 +273,11 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
 
           <div className="min-w-0 space-y-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                 Selected
               </p>
               {selectedSkills.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">Choose skills from the list.</p>
+                <p className="text-muted-foreground mt-2 text-sm">Choose skills from the list.</p>
               ) : (
                 <>
                   {selectedSkills.length === 1 && (
@@ -299,7 +296,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
                         </span>
                         <button
                           type="button"
-                          className="min-h-11 min-w-11 rounded text-xs text-muted-foreground hover:bg-accent"
+                          className="text-muted-foreground hover:bg-accent min-h-11 min-w-11 rounded text-xs"
                           onClick={() => toggleSkill(skill.id)}
                           aria-label={`Remove ${skill.name}`}
                         >

@@ -69,7 +69,7 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
         {typeLabels[filterType]}
       </Button>
       <Select value={filterUser} onValueChange={onUserChange}>
-        <SelectTrigger className="h-12">
+        <SelectTrigger controlSize="lg">
           <SelectValue placeholder="All Users" />
         </SelectTrigger>
         <SelectContent>

@@ -7,10 +7,10 @@
  * existing Popover + Input primitives (theme-aware).
  */
 import React, { useMemo, useState } from "react";
-import { Search, X, User as UserIcon } from "lucide-react";
+import { X, User as UserIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { userService } from "@/services/userService";
@@ -72,7 +72,7 @@ export const UserPicker: React.FC<UserPickerProps> = ({
             className="w-full justify-start font-normal"
             disabled={disabled}
           >
-            <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+            <UserIcon className="text-muted-foreground mr-2 h-4 w-4" />
             {selectedUser ? (
               <span className="truncate">
                 {selectedUser.username}{" "}
@@ -86,27 +86,24 @@ export const UserPicker: React.FC<UserPickerProps> = ({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-2" align="start">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Type at least 2 characters..."
-              className="pl-8"
-            />
-          </div>
+          <SearchField
+            autoFocus
+            value={query}
+            onChange={setQuery}
+            placeholder="Type at least 2 characters..."
+            aria-label="Search users"
+          />
           <div className="mt-2 max-h-60 overflow-y-auto">
             {query.length < 2 ? (
-              <div className="px-2 py-6 text-center text-xs text-muted-foreground">
+              <div className="text-muted-foreground px-2 py-6 text-center text-xs">
                 Start typing to search users.
               </div>
             ) : isFetching ? (
-              <div className="px-2 py-6 text-center text-xs text-muted-foreground">
+              <div className="text-muted-foreground px-2 py-6 text-center text-xs">
                 Searching...
               </div>
             ) : candidates.length === 0 ? (
-              <div className="px-2 py-6 text-center text-xs text-muted-foreground">
+              <div className="text-muted-foreground px-2 py-6 text-center text-xs">
                 No users found.
               </div>
             ) : (
@@ -120,7 +117,7 @@ export const UserPicker: React.FC<UserPickerProps> = ({
                     setQuery("");
                   }}
                   className={cn(
-                    "flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm hover:bg-muted",
+                    "hover:bg-muted flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm",
                     value === u.id && "bg-muted"
                   )}
                 >
@@ -129,7 +126,7 @@ export const UserPicker: React.FC<UserPickerProps> = ({
                     <span className="text-muted-foreground">· {u.email}</span>
                   </span>
                   {u.full_name && (
-                    <span className="ml-2 shrink-0 text-xs text-muted-foreground">
+                    <span className="text-muted-foreground ml-2 shrink-0 text-xs">
                       {u.full_name}
                     </span>
                   )}

@@ -147,10 +147,10 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
       <GlassCard className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-primary" />
+            <Clock className="text-primary h-4 w-4" />
             <h3 className="text-sm font-semibold">Scheduled Reports</h3>
             {reports.length > 0 && (
-              <span className="text-xs text-muted-foreground">{reports.length} scheduled</span>
+              <span className="text-muted-foreground text-xs">{reports.length} scheduled</span>
             )}
           </div>
           <Button
@@ -169,7 +169,8 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
             <div className="space-y-1">
               <Label className="text-xs">Report Name</Label>
               <Input
-                className="h-8 text-sm"
+                controlSize="sm"
+                className="text-sm"
                 value={newReport.name}
                 onChange={(e) => setNewReport({ ...newReport, name: e.target.value })}
                 placeholder="Weekly OT Summary"
@@ -184,7 +185,7 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
                     setNewReport({ ...newReport, schedule_type: v })
                   }
                 >
-                  <SelectTrigger className="h-8 text-sm">
+                  <SelectTrigger controlSize="sm" className="text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -202,7 +203,7 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
                     setNewReport({ ...newReport, report_format: v })
                   }
                 >
-                  <SelectTrigger className="h-8 text-sm">
+                  <SelectTrigger controlSize="sm" className="text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -215,7 +216,8 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
             <div className="space-y-1">
               <Label className="text-xs">Recipients (comma-separated emails)</Label>
               <Input
-                className="h-8 text-sm"
+                controlSize="sm"
+                className="text-sm"
                 value={newReport.recipients}
                 onChange={(e) => setNewReport({ ...newReport, recipients: e.target.value })}
                 placeholder="alice@company.com, bob@company.com"
@@ -223,24 +225,24 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
             </div>
             <div className="flex gap-2">
               <Button
-                size="sm"
-                className="h-7 text-xs"
+                size="control-sm"
+                className="text-xs"
                 onClick={handleCreate}
                 disabled={createMutation.isPending}
               >
                 {createMutation.isPending ? "Creating..." : "Create"}
               </Button>
               <Button
-                size="sm"
+                size="control-sm"
                 variant="outline"
-                className="h-7 text-xs"
+                className="text-xs"
                 onClick={() => setShowForm(false)}
               >
                 Cancel
               </Button>
             </div>
             {createMutation.isError && (
-              <p className="text-xs text-destructive">
+              <p className="text-destructive text-xs">
                 Failed to create report. Check permissions.
               </p>
             )}
@@ -248,7 +250,7 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
         )}
 
         {reports.length === 0 && !showForm ? (
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-3 text-xs">
             No scheduled reports. Create one to automate report delivery via email.
           </p>
         ) : (
@@ -263,14 +265,14 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
                     <span className="truncate text-sm font-medium" title={report.name}>
                       {report.name}
                     </span>
-                    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                    <span className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 text-xs">
                       {report.schedule_type_display || report.schedule_type}
                     </span>
                     {!report.is_active && (
-                      <span className="shrink-0 text-xs text-muted-foreground">inactive</span>
+                      <span className="text-muted-foreground shrink-0 text-xs">inactive</span>
                     )}
                   </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
                     <Mail className="h-3 w-3" />
                     <span className="truncate">
                       {report.recipients.length} recipient
@@ -302,7 +304,7 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 w-7 p-0 text-destructive"
+                    className="text-destructive h-7 w-7 p-0"
                     onClick={() => setPendingDelete(report)}
                     title="Delete"
                     aria-label={`Delete scheduled report ${report.name}`}
@@ -327,9 +329,9 @@ export const ScheduledReportsPanel: React.FC<ScheduledReportsPanelProps> = ({ cu
           </div>
         )}
 
-        <div className="mt-3 border-t pt-2 text-xs text-muted-foreground">
+        <div className="text-muted-foreground mt-3 border-t pt-2 text-xs">
           Automated delivery requires a cron job:{" "}
-          <code className="rounded bg-muted px-1 py-0.5">
+          <code className="bg-muted rounded px-1 py-0.5">
             python manage.py run_scheduled_reports
           </code>
         </div>
