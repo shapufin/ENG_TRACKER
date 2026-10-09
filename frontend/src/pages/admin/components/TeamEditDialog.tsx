@@ -46,7 +46,7 @@ export const TeamEditDialog: React.FC<TeamEditDialogProps> = ({
         <div className="space-y-2">
           <Label
             htmlFor="team-edit-name"
-            className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
           >
             Team
           </Label>
@@ -55,12 +55,12 @@ export const TeamEditDialog: React.FC<TeamEditDialogProps> = ({
         <div className="space-y-2">
           <Label
             htmlFor="team-edit-group"
-            className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
           >
             Calendar Group
           </Label>
           <Select value={formValue || "none"} onValueChange={onFormChange}>
-            <SelectTrigger id="team-edit-group" className="h-10 px-3">
+            <SelectTrigger id="team-edit-group" className="px-3">
               <SelectValue placeholder="No shared group" />
             </SelectTrigger>
             <SelectContent>
@@ -72,7 +72,7 @@ export const TeamEditDialog: React.FC<TeamEditDialogProps> = ({
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Use the same group value on teams that should share calendar visibility.
           </p>
         </div>

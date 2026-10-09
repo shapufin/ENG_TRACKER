@@ -8,7 +8,7 @@
  */
 import React, { useMemo, useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { UserPlus, UserMinus, Search, X, Loader2 } from "lucide-react";
+import { UserPlus, UserMinus, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,11 +17,20 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { userService } from "@/services/userService";
 import type { Tech, TechMember } from "@/types";
 import { toast } from "sonner";
+
+const NO_LEVEL = "none";
 
 interface TechMembersDialogProps {
   tech: Tech | null;
@@ -139,60 +148,64 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-semibold">Members ({members.length})</h4>
             </div>
-            <div className="no-scrollbar max-h-[min(400px,50vh)] space-y-1 overflow-y-auto rounded-md border border-border p-2">
+            <div className="no-scrollbar border-border max-h-[min(400px,50vh)] space-y-1 overflow-y-auto rounded-md border p-2">
               {membersLoading ? (
-                <p className="p-4 text-center text-xs text-muted-foreground">Loading...</p>
+                <p className="text-muted-foreground p-4 text-center text-xs">Loading...</p>
               ) : members.length === 0 ? (
-                <p className="p-4 text-center text-xs text-muted-foreground">No members yet.</p>
+                <p className="text-muted-foreground p-4 text-center text-xs">No members yet.</p>
               ) : (
                 members.map((m: TechMember) => (
                   <div
                     key={m.id}
-                    className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-muted/50"
+                    className="hover:bg-muted/50 flex items-center justify-between rounded px-2 py-1.5"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium" title={m.full_name}>
                         {m.full_name}
                       </p>
                       <p
-                        className="truncate text-xs text-muted-foreground"
+                        className="text-muted-foreground truncate text-xs"
                         title={`@${m.username}`}
                       >
                         @{m.username}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center">
-                    {activeLevels.length > 0 && (
-                      <select
-                        value={m.level?.id ?? ""}
-                        onChange={(event) =>
-                          handleSetLevel(
-                            m.id,
-                            event.target.value === "" ? null : Number(event.target.value)
-                          )
-                        }
-                        disabled={addMutation.isPending}
-                        aria-label={`Level for ${m.username} in ${tech?.name}`}
-                        className="mr-2 h-7 rounded-md border border-input bg-background px-1.5 text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                      {activeLevels.length > 0 && (
+                        <Select
+                          value={m.level?.id ? String(m.level.id) : NO_LEVEL}
+                          onValueChange={(v) =>
+                            handleSetLevel(m.id, v === NO_LEVEL ? null : Number(v))
+                          }
+                          disabled={addMutation.isPending}
+                        >
+                          <SelectTrigger
+                            controlSize="sm"
+                            className="mr-2 w-36 text-xs"
+                            aria-label={`Level for ${m.username} in ${tech?.name}`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NO_LEVEL}>No level</SelectItem>
+                            {activeLevels.map((level) => (
+                              <SelectItem key={level.id} value={String(level.id)}>
+                                {level.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/10 h-7 w-7 p-0"
+                        onClick={() => handleRemove(m.id)}
+                        disabled={removeMutation.isPending}
+                        aria-label={`Remove ${m.username} from ${tech?.name}`}
                       >
-                        <option value="">No level</option>
-                        {activeLevels.map((level) => (
-                          <option key={level.id} value={level.id}>
-                            {level.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
-                      onClick={() => handleRemove(m.id)}
-                      disabled={removeMutation.isPending}
-                      aria-label={`Remove ${m.username} from ${tech?.name}`}
-                    >
-                      <UserMinus className="h-4 w-4" />
-                    </Button>
+                        <UserMinus className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))
@@ -205,45 +218,31 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-semibold">Add Users</h4>
             </div>
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, username, email..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8"
-              />
-              {search && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 p-0"
-                  onClick={() => setSearch("")}
-                  aria-label="Clear search"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-            <div className="no-scrollbar max-h-[min(360px,50vh)] space-y-1 overflow-y-auto rounded-md border border-border p-2">
+            <SearchField
+              placeholder="Search by name, username, email..."
+              aria-label="Search users to add"
+              value={search}
+              onChange={setSearch}
+            />
+            <div className="no-scrollbar border-border max-h-[min(360px,50vh)] space-y-1 overflow-y-auto rounded-md border p-2">
               {candidatesLoading ? (
-                <div className="flex items-center justify-center gap-2 p-4 text-xs text-muted-foreground">
+                <div className="text-muted-foreground flex items-center justify-center gap-2 p-4 text-xs">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Searching...
                 </div>
               ) : candidatesError ? (
-                <p className="p-4 text-center text-xs text-destructive">
+                <p className="text-destructive p-4 text-center text-xs">
                   Failed to load users. Try again.
                 </p>
               ) : candidates.length === 0 ? (
-                <p className="p-4 text-center text-xs text-muted-foreground">
+                <p className="text-muted-foreground p-4 text-center text-xs">
                   {debouncedSearch ? "No matching users." : "No users available to add."}
                 </p>
               ) : (
                 candidates.map((u) => (
                   <div
                     key={u.id}
-                    className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-muted/50"
+                    className="hover:bg-muted/50 flex items-center justify-between rounded px-2 py-1.5"
                   >
                     <div className="min-w-0">
                       <p
@@ -259,7 +258,7 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
                           : u.username}
                       </p>
                       <p
-                        className="truncate text-xs text-muted-foreground"
+                        className="text-muted-foreground truncate text-xs"
                         title={`@${u.username}`}
                       >
                         @{u.username}
@@ -268,7 +267,7 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 w-7 p-0 text-tone-success-text hover:bg-tone-success-surface"
+                      className="text-tone-success-text hover:bg-tone-success-surface h-7 w-7 p-0"
                       onClick={() => handleAdd(u.id)}
                       disabled={addMutation.isPending}
                       aria-label={`Add ${u.username} to ${tech?.name}`}
@@ -280,7 +279,7 @@ export const TechMembersDialog: React.FC<TechMembersDialogProps> = ({
               )}
             </div>
             {candidatesData && candidatesData.count > 50 && !debouncedSearch && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Showing first 50 of {candidatesData.count} users. Use search to find others.
               </p>
             )}

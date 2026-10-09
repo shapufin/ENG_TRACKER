@@ -3,6 +3,14 @@ import { Link } from "react-router-dom";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { DashboardSectionShell } from "@/components/dashboard/DashboardSectionShell";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/Chip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -87,7 +95,7 @@ export const QueueHighlightsSection: React.FC<QueueHighlightsSectionProps> = ({
           return (
             <div className="flex min-w-0 items-center gap-3">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/10 text-xs text-primary">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs">
                   {item.userName
                     .split(" ")
                     .map((n) => n[0])
@@ -139,7 +147,7 @@ export const QueueHighlightsSection: React.FC<QueueHighlightsSectionProps> = ({
         header: "Requested",
         enableSorting: false,
         cell: (info) => (
-          <span className="whitespace-nowrap text-muted-foreground">
+          <span className="text-muted-foreground whitespace-nowrap">
             {format(parseISO(info.getValue<string>()), "dd MMM, yyyy")}
           </span>
         ),
@@ -150,7 +158,7 @@ export const QueueHighlightsSection: React.FC<QueueHighlightsSectionProps> = ({
         enableSorting: false,
         cell: (info) => (
           <span
-            className="block max-w-64 truncate text-muted-foreground"
+            className="text-muted-foreground block max-w-64 truncate"
             title={info.getValue<string>()}
           >
             {info.getValue<string>()}
@@ -179,7 +187,7 @@ export const QueueHighlightsSection: React.FC<QueueHighlightsSectionProps> = ({
             <div className="flex items-center justify-end gap-2">
               <Link
                 to={`/team/approvals?highlight=${item.id}&type=${item.type}`}
-                className="whitespace-nowrap text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+                className="text-muted-foreground hover:text-foreground text-xs font-medium whitespace-nowrap hover:underline"
               >
                 Details & Audit
               </Link>
@@ -219,32 +227,30 @@ export const QueueHighlightsSection: React.FC<QueueHighlightsSectionProps> = ({
       controls={
         <>
           {FILTER_CHIPS.map((chip) => (
-            <button
+            <Chip
               key={chip.key}
-              type="button"
+              pressed={filter === chip.key}
               onClick={() => onFilterChange(chip.key)}
-              aria-pressed={filter === chip.key}
-              className={cn(
-                "rounded-full px-3 py-1 text-xs font-medium",
-                filter === chip.key
-                  ? toneSurfaceClass.accent
-                  : "border border-border/60 text-muted-foreground"
-              )}
+              className="text-xs"
             >
               {chip.label} ({typeCounts[chip.key]})
-            </button>
+            </Chip>
           ))}
-          <select
-            value={sort}
-            onChange={(e) => onSortChange(e.target.value as HighlightSort)}
-            className="h-8 rounded-full border border-border/60 bg-input-bg px-3 text-xs font-medium text-muted-foreground"
-            aria-label="Sort queue highlights"
-          >
-            <option value="recent">Sort: Most recent</option>
-            <option value="oldest">Sort: Oldest</option>
-          </select>
+          <Select value={sort} onValueChange={(v) => onSortChange(v as HighlightSort)}>
+            <SelectTrigger
+              controlSize="sm"
+              className="w-44 text-xs"
+              aria-label="Sort queue highlights"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Sort: Most recent</SelectItem>
+              <SelectItem value="oldest">Sort: Oldest</SelectItem>
+            </SelectContent>
+          </Select>
           <Button
-            size="sm"
+            size="control-sm"
             onClick={onBatchApprove}
             disabled={isBatchApproving || highlights.length === 0}
           >
@@ -256,12 +262,12 @@ export const QueueHighlightsSection: React.FC<QueueHighlightsSectionProps> = ({
     >
       {isLoading ? (
         <div className="flex animate-pulse items-center gap-3 p-2" aria-label="Loading highlights">
-          <div className="h-8 w-8 rounded-full bg-muted" />
-          <div className="h-4 w-40 rounded bg-muted" />
-          <div className="h-4 w-24 rounded bg-muted" />
+          <div className="bg-muted h-8 w-8 rounded-full" />
+          <div className="bg-muted h-4 w-40 rounded" />
+          <div className="bg-muted h-4 w-24 rounded" />
         </div>
       ) : isError ? (
-        <p className="text-sm text-destructive">Failed to load highlights.</p>
+        <p className="text-destructive text-sm">Failed to load highlights.</p>
       ) : (
         <DataTable
           columns={columns}

@@ -41,7 +41,7 @@ export const BuilderCanvasInspector: React.FC<BuilderCanvasInspectorProps> = ({
             value={selectedNodeData.shape_type}
             onValueChange={(v: string) => updateSelectedNode("shape_type", v as ShapeType)}
           >
-            <SelectTrigger className="h-9 text-xs">
+            <SelectTrigger className="text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -80,7 +80,7 @@ export const BuilderCanvasInspector: React.FC<BuilderCanvasInspectorProps> = ({
             value={selectedNodeData.status}
             onValueChange={(v: string) => updateSelectedNode("status", v as NodeStatus)}
           >
-            <SelectTrigger className="h-9 text-xs">
+            <SelectTrigger className="text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -109,7 +109,7 @@ export const BuilderCanvasInspector: React.FC<BuilderCanvasInspectorProps> = ({
             value={selectedEdgeData?.edge_type ?? "reports_to"}
             onValueChange={(v: string) => updateSelectedEdgeType(v as EdgeType)}
           >
-            <SelectTrigger className="h-9 text-xs">
+            <SelectTrigger className="text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -123,7 +123,7 @@ export const BuilderCanvasInspector: React.FC<BuilderCanvasInspectorProps> = ({
         </div>
       </div>
     ) : (
-      <p className="text-sm text-muted-foreground">Select a node or edge to edit its properties.</p>
+      <p className="text-muted-foreground text-sm">Select a node or edge to edit its properties.</p>
     )}
 
     {validation && (
@@ -132,7 +132,7 @@ export const BuilderCanvasInspector: React.FC<BuilderCanvasInspectorProps> = ({
         {validation.is_valid ? (
           <p className="text-sm text-green-600">No issues found.</p>
         ) : (
-          <ul className="max-h-32 overflow-y-auto text-xs text-destructive">
+          <ul className="text-destructive max-h-32 overflow-y-auto text-xs">
             {validation.errors?.map((err, i) => (
               <li key={i}>{err.message}</li>
             ))}

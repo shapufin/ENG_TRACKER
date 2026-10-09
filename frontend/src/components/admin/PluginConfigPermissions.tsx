@@ -4,8 +4,8 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Shield, Users, LockKeyhole, Info, UserCog, Plus, X, Search } from "lucide-react";
+import { SearchField } from "@/components/ui/SearchField";
+import { Shield, Users, LockKeyhole, Info, UserCog, Plus, X } from "lucide-react";
 import type { PluginConfigPermissionsProps, PluginPermissionRecord } from "./pluginConfigTypes";
 import type { Group } from "@/types";
 
@@ -147,14 +147,12 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
 
   return (
     <div className="space-y-5 pt-4">
-      <div className="rounded-lg border border-tone-info-border bg-tone-info-surface p-4">
+      <div className="border-tone-info-border bg-tone-info-surface rounded-lg border p-4">
         <div className="flex gap-3">
-          <Shield className="h-5 w-5 shrink-0 text-tone-info-text" />
+          <Shield className="text-tone-info-text h-5 w-5 shrink-0" />
           <div className="space-y-1">
-            <p className="text-sm font-medium text-tone-info-text">
-              Who can use this plugin?
-            </p>
-            <p className="text-xs leading-relaxed text-tone-info-text">
+            <p className="text-tone-info-text text-sm font-medium">Who can use this plugin?</p>
+            <p className="text-tone-info-text text-xs leading-relaxed">
               Select access by functional user category. Admins and superusers always have full
               access and are managed by the application admin role, not by this matrix.
             </p>
@@ -163,30 +161,30 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
       </div>
 
       {isAdminOnly && (
-        <div className="flex items-start gap-2 rounded-lg border border-tone-warning-border bg-tone-warning-surface p-3">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-tone-warning-text" />
-          <p className="text-xs leading-relaxed text-tone-warning-text">
+        <div className="border-tone-warning-border bg-tone-warning-surface flex items-start gap-2 rounded-lg border p-3">
+          <Info className="text-tone-warning-text mt-0.5 h-4 w-4 shrink-0" />
+          <p className="text-tone-warning-text text-xs leading-relaxed">
             This plugin is admin-only — all its pages are under{" "}
-            <code className="rounded bg-tone-warning-surface px-1">/admin/*</code> and
-            protected by the admin route guard. Granting access to Employee, Team Leader, HR, or
-            Control Room Admin roles below has no effect; those users cannot reach the plugin pages
-            regardless of this permission.
+            <code className="bg-tone-warning-surface rounded px-1">/admin/*</code> and protected by
+            the admin route guard. Granting access to Employee, Team Leader, HR, or Control Room
+            Admin roles below has no effect; those users cannot reach the plugin pages regardless of
+            this permission.
           </p>
         </div>
       )}
 
       <div className="overflow-hidden rounded-lg border">
         <div
-          className="grid grid-cols-[minmax(0,1fr)_repeat(var(--permission-columns),minmax(5.5rem,0.7fr))] items-center gap-3 border-b bg-muted/40 px-4 py-3"
+          className="bg-muted/40 grid grid-cols-[minmax(0,1fr)_repeat(var(--permission-columns),minmax(5.5rem,0.7fr))] items-center gap-3 border-b px-4 py-3"
           style={{ "--permission-columns": actions.length } as React.CSSProperties}
         >
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
             User category
           </div>
           {actions.map((action) => (
             <div
               key={action}
-              className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+              className="text-muted-foreground text-center text-xs font-semibold tracking-wide uppercase"
             >
               {ACTION_LABELS[action].label}
             </div>
@@ -200,7 +198,7 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
           >
             <div className="min-w-0">
               <p className="text-sm font-medium">{category.label}</p>
-              <p className="truncate text-xs text-muted-foreground" title={category.description}>
+              <p className="text-muted-foreground truncate text-xs" title={category.description}>
                 {category.description}
               </p>
             </div>
@@ -228,10 +226,10 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-dashed p-3">
           <div className="flex gap-2">
-            <Users className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <Users className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
             <div>
               <p className="text-sm font-medium">Control Room users</p>
-              <p className="text-xs leading-relaxed text-muted-foreground">
+              <p className="text-muted-foreground text-xs leading-relaxed">
                 Regular Control Room users are granted access through their team scope, not this
                 role matrix.
               </p>
@@ -240,11 +238,11 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
         </div>
         <div className="rounded-lg border border-dashed p-3">
           <div className="flex gap-2">
-            <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <LockKeyhole className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
             <div className="flex-1 space-y-2">
               <div>
                 <p className="text-sm font-medium">Public access</p>
-                <p className="text-xs leading-relaxed text-muted-foreground">
+                <p className="text-muted-foreground text-xs leading-relaxed">
                   Allow every authenticated user. This overrides role selection for that action.
                 </p>
               </div>
@@ -270,22 +268,22 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
 
       <div className="rounded-lg border p-4">
         <div className="flex gap-2">
-          <UserCog className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <UserCog className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
           <div className="flex-1 space-y-3">
             <div>
               <p className="text-sm font-medium">Group access</p>
-              <p className="text-xs leading-relaxed text-muted-foreground">
+              <p className="text-muted-foreground text-xs leading-relaxed">
                 Grant plugin actions to resource-access groups. Create groups and assign users on
                 the Resource Access page. Only superusers can modify group grants.
                 {!isSuperuser && (
-                  <span className="ml-1 font-medium text-tone-warning-text">
+                  <span className="text-tone-warning-text ml-1 font-medium">
                     (Read-only — superuser required to edit.)
                   </span>
                 )}
               </p>
             </div>
             {groups.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 No groups created yet. Visit{" "}
                 <a href="/admin/resource-access" className="underline">
                   Resource Access
@@ -309,40 +307,37 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
                       onOpenAutoFocus={(e) => e.preventDefault()}
                     >
                       <div className="border-b p-2">
-                        <div className="relative">
-                          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            value={groupSearch}
-                            onChange={(e) => setGroupSearch(e.target.value)}
-                            placeholder="Search groups..."
-                            className="pl-8"
-                            autoFocus
-                          />
-                        </div>
+                        <SearchField
+                          value={groupSearch}
+                          onChange={setGroupSearch}
+                          placeholder="Search groups..."
+                          aria-label="Search groups"
+                          autoFocus
+                        />
                       </div>
                       <div className="max-h-60 overflow-y-auto">
                         {availableGroups.length === 0 ? (
-                          <p className="p-3 text-xs text-muted-foreground">No groups match.</p>
+                          <p className="text-muted-foreground p-3 text-xs">No groups match.</p>
                         ) : (
                           availableGroups.map((group) => (
                             <button
                               key={group.id}
                               type="button"
                               onClick={() => handleAddGroup(group)}
-                              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent"
+                              className="hover:bg-accent flex w-full items-center justify-between px-3 py-2 text-left text-sm"
                             >
                               <span className="min-w-0">
                                 <span className="block truncate font-medium" title={group.name}>
                                   {group.name}
                                 </span>
                                 <span
-                                  className="block truncate text-xs text-muted-foreground"
+                                  className="text-muted-foreground block truncate text-xs"
                                   title={group.code}
                                 >
                                   {group.code}
                                 </span>
                               </span>
-                              <Plus className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                              <Plus className="text-muted-foreground ml-2 h-4 w-4 shrink-0" />
                             </button>
                           ))
                         )}
@@ -353,23 +348,23 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
 
                 {/* Granted groups table — only groups with grants or locally added. */}
                 {visibleGroups.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     No groups granted yet. Click <span className="font-medium">Add group</span> to
                     grant access to a group.
                   </p>
                 ) : (
                   <div className="overflow-hidden rounded-lg border">
                     <div
-                      className="grid grid-cols-[minmax(0,1fr)_repeat(var(--permission-columns),minmax(5.5rem,0.7fr))_2rem] items-center gap-3 border-b bg-muted/40 px-4 py-3"
+                      className="bg-muted/40 grid grid-cols-[minmax(0,1fr)_repeat(var(--permission-columns),minmax(5.5rem,0.7fr))_2rem] items-center gap-3 border-b px-4 py-3"
                       style={{ "--permission-columns": actions.length } as React.CSSProperties}
                     >
-                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                         Group
                       </div>
                       {actions.map((action) => (
                         <div
                           key={action}
-                          className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                          className="text-muted-foreground text-center text-xs font-semibold tracking-wide uppercase"
                         >
                           {ACTION_LABELS[action].label}
                         </div>
@@ -385,7 +380,7 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
                         <div className="min-w-0">
                           <p className="text-sm font-medium">{group.name}</p>
                           <p
-                            className="truncate text-xs text-muted-foreground"
+                            className="text-muted-foreground truncate text-xs"
                             title={`(${group.code})`}
                           >
                             ({group.code})
@@ -415,7 +410,7 @@ export const PluginConfigPermissions: React.FC<PluginConfigPermissionsProps> = (
                             onClick={() => handleRemoveGroup(group.id)}
                             disabled={groupControlsDisabled}
                             aria-label={`Remove ${group.name}`}
-                            className="rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                            className="text-muted-foreground hover:bg-accent hover:text-foreground rounded-sm p-1 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <X className="h-4 w-4" />
                           </button>

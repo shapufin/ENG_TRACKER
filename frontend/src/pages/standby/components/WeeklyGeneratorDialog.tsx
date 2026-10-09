@@ -102,7 +102,7 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
               User (optional - defaults to self)
             </Label>
             <Select value={weeklyForm.user} onValueChange={(v) => onPatchWeeklyForm({ user: v })}>
-              <SelectTrigger className="h-10 px-3">
+              <SelectTrigger className="px-3">
                 <SelectValue placeholder="Self (current user)" />
               </SelectTrigger>
               <SelectContent>

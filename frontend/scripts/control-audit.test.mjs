@@ -1,7 +1,7 @@
 // node --test scripts/control-audit.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { findViolations } from "./control-audit-lib.mjs";
+import { findViolations, isExcluded } from "./control-audit-lib.mjs";
 
 const P = "src/pages/X.tsx";
 const bad = (name, src, rule, path = P) =>
@@ -65,6 +65,22 @@ ok("hidden input", `<input type="hidden" />`);
 ok("raw input inside components/ui", `<input />`, "src/components/ui/x.tsx");
 ok("CommandPalette", `<input />`, "src/components/CommandPalette.tsx");
 ok("HeaderSearch", `<input />`, "src/components/layout/HeaderSearch.tsx");
+ok(
+  "bespoke raw input may carry its own height and padding",
+  `<input className="h-9 pl-9" />`,
+  "src/components/layout/HeaderSearch.tsx"
+);
+bad(
+  "bespoke exemption does not cover the shared Input",
+  `<Input className="h-9" />`,
+  "CONTROL-HEIGHT",
+  "src/components/layout/HeaderSearch.tsx"
+);
+test("isExcluded matches a directory prefix only", () => {
+  assert.equal(isExcluded("src/plugins/engagement/a.tsx", ["src/plugins/engagement"]), true);
+  assert.equal(isExcluded("src/plugins/engagement2/a.tsx", ["src/plugins/engagement"]), false);
+  assert.equal(isExcluded("src/plugins/x/a.tsx", []), false);
+});
 ok("a component whose name starts with Input", `<InputGroup />`);
 
 bad(

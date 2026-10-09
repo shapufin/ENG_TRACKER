@@ -388,7 +388,7 @@ describe("ResourceAccessGroupPage (detail)", () => {
     setup();
     render(<ResourceAccessGroupPage />);
 
-    expect(screen.getByRole("button", { name: "Clear member search" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear search" })).toBeInTheDocument();
   });
 
   it("shows members loading state", () => {

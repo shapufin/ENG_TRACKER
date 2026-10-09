@@ -9,10 +9,10 @@
  * pages can use it without importing plugin code (plugin boundary rule).
  */
 import React, { useMemo, useState } from "react";
-import { ChevronsUpDown, Search, X } from "lucide-react";
+import { ChevronsUpDown, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
@@ -133,7 +133,7 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
             }
           }}
           className={cn(
-            "flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+            "hover:bg-muted focus-visible:ring-ring flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm focus-visible:ring-2 focus-visible:outline-hidden",
             DEPTH_PADDING[Math.min(depth, DEPTH_PADDING.length - 1)],
             checked && "bg-primary/5"
           )}
@@ -142,7 +142,7 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
           <span className="flex-1 truncate" title={team.name}>
             {team.name}
           </span>
-          <span className="shrink-0 text-xs text-muted-foreground">{team.code}</span>
+          <span className="text-muted-foreground shrink-0 text-xs">{team.code}</span>
         </div>
         {children.map((child) => renderTeamNode(child, depth + 1))}
       </React.Fragment>
@@ -177,32 +177,29 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
                 `${selectedTeams.length} teams selected`
               )}
             </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
+            <ChevronsUpDown className="text-muted-foreground ml-2 h-4 w-4 shrink-0" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-2" align="start">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter teams..."
-              className="pl-8"
-            />
-          </div>
-          <div className="mt-2 max-h-60 overflow-y-auto overflow-x-hidden">
+          <SearchField
+            autoFocus
+            value={query}
+            onChange={setQuery}
+            placeholder="Filter teams..."
+            aria-label="Filter teams"
+          />
+          <div className="mt-2 max-h-60 overflow-x-hidden overflow-y-auto">
             {filtered === null ? (
               // Tree mode (no search) — render hierarchy with indentation.
               roots.length === 0 ? (
-                <div className="px-2 py-6 text-center text-xs text-muted-foreground">
+                <div className="text-muted-foreground px-2 py-6 text-center text-xs">
                   No teams found.
                 </div>
               ) : (
                 roots.map((t) => renderTeamNode(t, 0))
               )
             ) : filtered.length === 0 ? (
-              <div className="px-2 py-6 text-center text-xs text-muted-foreground">
+              <div className="text-muted-foreground px-2 py-6 text-center text-xs">
                 No teams found.
               </div>
             ) : (
@@ -223,7 +220,7 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
                       }
                     }}
                     className={cn(
-                      "flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+                      "hover:bg-muted focus-visible:ring-ring flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm focus-visible:ring-2 focus-visible:outline-hidden",
                       checked && "bg-primary/5"
                     )}
                   >
@@ -231,7 +228,7 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
                     <span className="flex-1 truncate" title={t.name}>
                       {t.name}
                     </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{t.code}</span>
+                    <span className="text-muted-foreground shrink-0 text-xs">{t.code}</span>
                   </div>
                 );
               })
@@ -245,14 +242,14 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
           {selectedTeams.map((t) => (
             <span
               key={t.id}
-              className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-xs text-foreground"
+              className="bg-primary/10 text-foreground inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs"
             >
               {t.name}
               {!disabled && (
                 <button
                   type="button"
                   onClick={() => toggle(t.id)}
-                  className="ml-0.5 text-foreground/60 hover:text-foreground"
+                  className="text-foreground/60 hover:text-foreground ml-0.5"
                   aria-label={`Remove ${t.name}`}
                 >
                   <X className="h-3 w-3" />
@@ -264,7 +261,7 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
             <button
               type="button"
               onClick={handleClear}
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground text-xs"
             >
               Clear all
             </button>

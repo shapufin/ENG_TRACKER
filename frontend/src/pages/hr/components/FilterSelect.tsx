@@ -32,11 +32,11 @@ export const FilterSelect = <T extends { id: number | string }>({
   renderOption,
 }: FilterSelectProps<T>) => (
   <div className="space-y-2">
-    <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+    <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
       {icon} {label}
     </Label>
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="h-10 bg-background/50 px-3">
+      <SelectTrigger className="bg-background/50 px-3">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

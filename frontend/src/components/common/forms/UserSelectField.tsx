@@ -24,12 +24,12 @@ export const UserSelectField: React.FC<UserSelectFieldProps> = ({ value, users, 
   <div className="space-y-2">
     <Label
       htmlFor="user-select-field"
-      className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+      className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
     >
       User
     </Label>
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger id="user-select-field" className="h-10 px-3">
+      <SelectTrigger id="user-select-field" className="px-3">
         <SelectValue placeholder="Self (current user)" />
       </SelectTrigger>
       <SelectContent>

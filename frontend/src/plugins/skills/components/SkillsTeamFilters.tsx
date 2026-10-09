@@ -1,8 +1,8 @@
 import React from "react";
-import { Filter, Search } from "lucide-react";
+import { Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -85,19 +85,14 @@ export const SkillsTeamFilters: React.FC<SkillsTeamFiltersProps> = ({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1.5fr)_repeat(3,minmax(140px,1fr))]">
           <div>
             <Label htmlFor="team-search">Search</Label>
-            <div className="relative mt-1">
-              <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
-                aria-hidden="true"
-              />
-              <Input
-                id="team-search"
-                value={search}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search members or skills..."
-                className="w-full pl-9"
-              />
-            </div>
+            <SearchField
+              id="team-search"
+              className="mt-1"
+              aria-label="Search members or skills"
+              value={search}
+              onChange={onSearchChange}
+              placeholder="Search members or skills..."
+            />
           </div>
           <div>
             <Label htmlFor="team-category">Category</Label>

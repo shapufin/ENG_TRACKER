@@ -4,17 +4,20 @@
 // src/components/ui/{controlSurface.ts,SearchField.tsx,FilterToolbar.tsx}. Detection lives in
 // control-audit-lib.mjs and is pinned by control-audit.test.mjs (`node --test scripts/control-audit.test.mjs`).
 //
-// WARN-ONLY by default (exit 0): Phase 5 migrates the remaining call sites. `--strict` exits 1.
+// WARN-ONLY by default (exit 0): Phase 5 migrates the remaining call sites. `--strict` exits 1; `--exclude=<dir>` skips a directory.
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { findViolations } from "./control-audit-lib.mjs";
+import { findViolations, isExcluded } from "./control-audit-lib.mjs";
 
 const strict = process.argv.includes("--strict");
+// --exclude=src/some/dir (repeatable) skips a directory, e.g. work in flight on another branch.
+const excludes = process.argv.filter((a) => a.startsWith("--exclude=")).map((a) => a.slice(10));
 const files = execSync("git ls-files -co --exclude-standard -- src", { encoding: "utf8" })
   .split("\n")
   .map((s) => s.trim())
   .filter((f) => /\.(tsx|jsx)$/.test(f))
-  .filter((f) => !/\.(test|spec)\./.test(f));
+  .filter((f) => !/\.(test|spec)\./.test(f))
+  .filter((f) => !isExcluded(f, excludes));
 
 const byRule = {};
 let bad = 0;

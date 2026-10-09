@@ -2,11 +2,11 @@ import React, { useMemo, useState } from "react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Building2, Check, ChevronsUpDown, Save, Search, X } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMyClients } from "../hooks/useMyClients";
 import { hoverLiftClass } from "@/lib/motion";
@@ -57,15 +57,15 @@ export const MyClientsSection: React.FC<MyClientsSectionProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Select the clients you work for. Overtime and KPI upload forms will only show these
           clients when you add entries.
         </p>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading clients…</p>
+          <p className="text-muted-foreground text-sm">Loading clients…</p>
         ) : available.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             No active clients are available yet. An administrator must create clients first.
           </p>
         ) : (
@@ -80,7 +80,7 @@ export const MyClientsSection: React.FC<MyClientsSectionProps> = ({
                   className="h-10 w-full justify-between font-normal"
                 >
                   <span className="flex items-center gap-2 truncate">
-                    <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <Building2 className="text-muted-foreground h-4 w-4 shrink-0" />
                     <span className={cn(selected.length === 0 && "text-muted-foreground")}>
                       {triggerLabel}
                     </span>
@@ -90,29 +90,18 @@ export const MyClientsSection: React.FC<MyClientsSectionProps> = ({
               </PopoverTrigger>
               <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
                 {/* Search input — sticky at top of the popover */}
-                <div className="flex items-center border-b px-3">
-                  <Search className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <Input
+                <div className="border-b p-2">
+                  <SearchField
                     placeholder="Search clients…"
+                    aria-label="Search clients"
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    className="h-9 border-0 px-0 focus-visible:ring-0"
+                    onChange={setQuery}
                   />
-                  {query && (
-                    <button
-                      type="button"
-                      onClick={() => setQuery("")}
-                      className="ml-1 shrink-0 rounded-sm p-1 text-muted-foreground hover:bg-muted"
-                      aria-label="Clear search"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
                 </div>
                 {/* Scrollable option list */}
                 <div className="max-h-[260px] overflow-y-auto p-1">
                   {filtered.length === 0 ? (
-                    <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                    <p className="text-muted-foreground px-3 py-6 text-center text-sm">
                       No clients match “{query}”.
                     </p>
                   ) : (
@@ -122,7 +111,7 @@ export const MyClientsSection: React.FC<MyClientsSectionProps> = ({
                         <label
                           key={client.id}
                           className={cn(
-                            "flex cursor-pointer items-center gap-3 rounded-sm px-2 py-2 text-sm transition-colors hover:bg-muted/60",
+                            "hover:bg-muted/60 flex cursor-pointer items-center gap-3 rounded-sm px-2 py-2 text-sm transition-colors",
                             checked && "bg-primary/5"
                           )}
                         >
@@ -130,17 +119,17 @@ export const MyClientsSection: React.FC<MyClientsSectionProps> = ({
                           <span className="flex flex-1 flex-col">
                             <span className="font-medium">{client.name}</span>
                             {client.code && (
-                              <span className="text-xs text-muted-foreground">{client.code}</span>
+                              <span className="text-muted-foreground text-xs">{client.code}</span>
                             )}
                           </span>
-                          {checked && <Check className="h-4 w-4 text-primary" />}
+                          {checked && <Check className="text-primary h-4 w-4" />}
                         </label>
                       );
                     })
                   )}
                 </div>
                 {available.length > 0 && (
-                  <div className="border-t px-3 py-2 text-xs text-muted-foreground">
+                  <div className="text-muted-foreground border-t px-3 py-2 text-xs">
                     {selected.length} of {available.length} selected
                   </div>
                 )}
@@ -160,7 +149,7 @@ export const MyClientsSection: React.FC<MyClientsSectionProps> = ({
                     <button
                       type="button"
                       onClick={() => toggle(c.id)}
-                      className="rounded-full p-0.5 hover:bg-muted-foreground/20"
+                      className="hover:bg-muted-foreground/20 rounded-full p-0.5"
                       aria-label={`Remove ${c.name}`}
                     >
                       <X className="h-3 w-3" />
@@ -178,7 +167,7 @@ export const MyClientsSection: React.FC<MyClientsSectionProps> = ({
             {isSaving ? "Saving…" : "Save Clients"}
           </Button>
           {isDirty && !isSaving && (
-            <span className="text-xs text-muted-foreground">Unsaved changes</span>
+            <span className="text-muted-foreground text-xs">Unsaved changes</span>
           )}
         </div>
       </CardContent>

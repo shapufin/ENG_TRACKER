@@ -8,6 +8,13 @@ import { TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { LoadingStateWrapper } from "@/components/ui/LoadingStateWrapper";
@@ -19,6 +26,8 @@ import { handleApiError } from "@/lib/error-handler";
 import { siteBackupService } from "../services/siteBackupService";
 import { RestorePreviewTable } from "../components/RestorePreviewTable";
 import type { ArchiveSource, BackupRecord, RestoreCommitResult } from "../types/siteBackup";
+
+const NO_BACKUP = "none";
 
 const formatBytes = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
@@ -293,23 +302,26 @@ const RestoreTab: React.FC = () => {
             <label htmlFor="restore-backup" className="text-muted-foreground mb-1 block text-xs">
               Pick a stored backup
             </label>
-            <select
-              id="restore-backup"
-              className="border-input bg-background h-9 rounded-md border px-2 text-sm"
-              value={selectedBackupId}
-              onChange={(e) => {
-                setSelectedBackupId(e.target.value ? Number(e.target.value) : "");
+            <Select
+              value={selectedBackupId === "" ? NO_BACKUP : String(selectedBackupId)}
+              onValueChange={(v) => {
+                setSelectedBackupId(v === NO_BACKUP ? "" : Number(v));
                 setFile(null);
                 setCommitResult(null);
               }}
             >
-              <option value="">Select…</option>
-              {(backups ?? []).map((record) => (
-                <option key={record.id} value={record.id}>
-                  {record.filename}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="restore-backup" className="w-64 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_BACKUP}>Select…</SelectItem>
+                {(backups ?? []).map((record) => (
+                  <SelectItem key={record.id} value={String(record.id)}>
+                    {record.filename}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Button
             onClick={() => previewMutation.mutate()}

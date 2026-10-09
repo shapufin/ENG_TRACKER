@@ -23,15 +23,13 @@ import {
   Home,
   Info,
   Pencil,
-  Search,
   Trash2,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { extractApiErrorMessage } from "@/lib/apiFormError";
 import { staggerContainer, staggerItem } from "@/lib/motion";
@@ -521,29 +519,13 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
             <FolderPlus className="mr-2 h-4 w-4" /> New folder
           </Button>
         </div>
-        <div className="relative w-full sm:w-64">
-          <Search
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
-            aria-hidden="true"
-          />
-          <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={`Search ${clientName}...`}
-            aria-label="Search folders and files"
-            className="pr-9 pl-9"
-          />
-          {searchInput && (
-            <button
-              type="button"
-              onClick={() => setSearchInput("")}
-              aria-label="Clear search"
-              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+        <SearchField
+          className="sm:w-64"
+          value={searchInput}
+          onChange={setSearchInput}
+          placeholder={`Search ${clientName}...`}
+          aria-label="Search folders and files"
+        />
       </div>
 
       <div className="flex items-start gap-4">

@@ -71,7 +71,7 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
             value={requestType}
             onValueChange={(value) => onRequestTypeChange(value as LeaveRequest["request_type"])}
           >
-            <SelectTrigger className="mt-1 h-9 rounded-md border border-input bg-transparent text-sm focus:ring-2 focus:ring-primary">
+            <SelectTrigger className="border-input focus:ring-primary mt-1 rounded-md border bg-transparent text-sm focus:ring-2">
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
@@ -97,7 +97,7 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
           />
         </div>
         {requestType === "vacation" ? (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Balance:{" "}
             {carryOverAndBalance.carryOver
               ? `${carryOverAndBalance.carryOver.effective_available_days ?? carryOverAndBalance.carryOver.available_days} carry-over + `
@@ -110,7 +110,7 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
         <div>
           <Label className="text-xs font-medium">Reason / Notes</Label>
           <Textarea
-            className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
+            className="border-input focus:ring-primary mt-1 w-full rounded-md border bg-transparent px-3 py-2 text-sm focus:ring-2 focus:outline-hidden"
             rows={3}
             value={reason}
             onChange={(e) => onReasonChange(e.target.value)}
@@ -118,7 +118,7 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
           />
         </div>
         {isError && (
-          <div className="text-xs text-destructive">
+          <div className="text-destructive text-xs">
             {error?.message || "Failed to create request"}
           </div>
         )}

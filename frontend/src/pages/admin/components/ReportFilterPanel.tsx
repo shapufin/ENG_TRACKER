@@ -43,7 +43,7 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
     <GlassCard className="p-6">
       <div className="flex flex-wrap items-end gap-4">
         <div className="min-w-[200px] flex-1 space-y-2">
-          <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
             <Calendar className="h-3 w-3" /> Date Range
           </Label>
           <DateRangePicker
@@ -58,11 +58,11 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
         </div>
 
         <div className="min-w-[150px] space-y-2">
-          <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
             <Users className="h-3 w-3" /> Team
           </Label>
           <Select value={selectedTeam} onValueChange={onTeamChange}>
-            <SelectTrigger className="h-10 bg-background/50 px-3">
+            <SelectTrigger className="bg-background/50 px-3">
               <SelectValue placeholder="All Teams" />
             </SelectTrigger>
             <SelectContent>
@@ -77,14 +77,14 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
         </div>
 
         <div className="min-w-[150px] space-y-2">
-          <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
             <Filter className="h-3 w-3" /> View Mode
           </Label>
           <Select
             value={groupBy}
             onValueChange={(v) => onGroupByChange(v as "user" | "month" | "year")}
           >
-            <SelectTrigger className="h-10 bg-background/50 px-3">
+            <SelectTrigger className="bg-background/50 px-3">
               <SelectValue placeholder="Group by..." />
             </SelectTrigger>
             <SelectContent>
@@ -96,7 +96,7 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
         </div>
 
         <Button
-          className="px-8 shadow-lg shadow-primary/20"
+          className="shadow-primary/20 px-8 shadow-lg"
           onClick={onGenerate}
           disabled={isLoading}
         >

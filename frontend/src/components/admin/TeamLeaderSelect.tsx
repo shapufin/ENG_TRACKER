@@ -43,7 +43,7 @@ export const TeamLeaderSelect: React.FC<TeamLeaderSelectProps> = ({
       onValueChange={(v) => onChange(v === "none" ? null : Number(v))}
       disabled={disabled}
     >
-      <SelectTrigger aria-label={ariaLabel} className="h-9 w-full">
+      <SelectTrigger aria-label={ariaLabel} className="w-full">
         <SelectValue placeholder="No TL" />
       </SelectTrigger>
       <SelectContent>

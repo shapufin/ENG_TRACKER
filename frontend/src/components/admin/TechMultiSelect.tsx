@@ -1,12 +1,21 @@
 /** Multi-select for independent user technology assignments. */
 import React, { useMemo, useState } from "react";
-import { ChevronsUpDown, Search, X } from "lucide-react";
+import { ChevronsUpDown, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { Tech } from "@/types";
+
+const NO_LEVEL = "none";
 
 interface TechMultiSelectProps {
   techs: Tech[];
@@ -90,23 +99,20 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
                 `${selected.length} Tech selected`
               )}
             </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
+            <ChevronsUpDown className="text-muted-foreground ml-2 h-4 w-4 shrink-0" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-2" align="start">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              autoFocus
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Filter Tech..."
-              className="pl-8"
-            />
-          </div>
+          <SearchField
+            autoFocus
+            value={query}
+            onChange={setQuery}
+            placeholder="Filter Tech..."
+            aria-label="Filter Tech"
+          />
           <div className="mt-2 max-h-60 overflow-y-auto">
             {filtered.length === 0 ? (
-              <div className="px-2 py-6 text-center text-xs text-muted-foreground">
+              <div className="text-muted-foreground px-2 py-6 text-center text-xs">
                 No Tech found.
               </div>
             ) : (
@@ -126,7 +132,7 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
                       }
                     }}
                     className={cn(
-                      "flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+                      "hover:bg-muted focus-visible:ring-ring flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm focus-visible:ring-2 focus-visible:outline-hidden",
                       checked && "bg-primary/5"
                     )}
                   >
@@ -134,7 +140,7 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
                     <span className="flex-1 truncate" title={tech.name}>
                       {tech.name}
                     </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{tech.code}</span>
+                    <span className="text-muted-foreground shrink-0 text-xs">{tech.code}</span>
                   </div>
                 );
               })
@@ -153,25 +159,23 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
                 <label htmlFor={selectId} className="w-32 shrink-0 truncate text-xs">
                   {tech.name}
                 </label>
-                <select
-                  id={selectId}
+                <Select
                   disabled={disabled}
-                  value={levelByTech?.[tech.id] ?? ""}
-                  onChange={(event) =>
-                    onLevelChange?.(
-                      tech.id,
-                      event.target.value === "" ? null : Number(event.target.value)
-                    )
-                  }
-                  className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                  value={levelByTech?.[tech.id] ? String(levelByTech[tech.id]) : NO_LEVEL}
+                  onValueChange={(v) => onLevelChange?.(tech.id, v === NO_LEVEL ? null : Number(v))}
                 >
-                  <option value="">No level</option>
-                  {levels.map((level) => (
-                    <option key={level.id} value={level.id}>
-                      {level.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id={selectId} controlSize="sm" className="flex-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_LEVEL}>No level</SelectItem>
+                    {levels.map((level) => (
+                      <SelectItem key={level.id} value={String(level.id)}>
+                        {level.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             );
           })}
@@ -182,7 +186,7 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
           {selected.map((tech) => (
             <span
               key={tech.id}
-              className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-xs text-foreground"
+              className="bg-primary/10 text-foreground inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs"
             >
               {tech.name}
               {!disabled && (
@@ -199,7 +203,7 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
           {inactiveSelected.map((tech) => (
             <span
               key={tech.id}
-              className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+              className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs"
               title="Inactive Tech — manage via Tech member dialog"
             >
               {tech.name}

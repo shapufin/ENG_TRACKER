@@ -1,7 +1,7 @@
 import React from "react";
-import { ChevronLeft, ChevronDown, Search, Users } from "lucide-react";
+import { ChevronLeft, ChevronDown, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 
 interface CalendarSidebarHeaderProps {
   userCount: number;
@@ -20,51 +20,50 @@ export const CalendarSidebarHeader: React.FC<CalendarSidebarHeaderProps> = ({
   onCollapse,
   onClearUsers,
 }) => (
-  <div className="border-b border-border/60 p-3">
+  <div className="border-border/60 border-b p-3">
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-2">
-        <Users className="h-4 w-4 text-primary" />
+        <Users className="text-primary h-4 w-4" />
         <h2 className="text-sm font-semibold">Members</h2>
       </div>
       <div className="flex items-center gap-2">
-        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+        <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-semibold">
           {userCount}
         </span>
         <Button
           type="button"
           size="icon"
           variant="ghost"
-          className="h-9 w-9 rounded-lg border border-border/60 bg-background/30 md:h-7 md:w-7"
+          className="border-border/60 bg-background/30 h-9 w-9 rounded-lg border md:h-7 md:w-7"
           onClick={onCollapse}
           aria-label="Collapse team sidebar"
         >
-          <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
+          <ChevronLeft className="text-muted-foreground h-3.5 w-3.5" />
         </Button>
       </div>
     </div>
     {calendarGroup && (
-      <p className="mt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+      <p className="text-muted-foreground mt-1 text-[10px] font-medium tracking-wider uppercase">
         {calendarGroup}
       </p>
     )}
-    <div className="relative mt-3">
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        value={query}
-        onChange={(event) => onQueryChange(event.target.value)}
-        placeholder="Search member..."
-        className="h-8 border-border/60 bg-surface-sunken pl-9 text-xs"
-      />
-    </div>
+    <SearchField
+      className="mt-3"
+      controlSize="sm"
+      value={query}
+      onChange={onQueryChange}
+      placeholder="Search member..."
+      aria-label="Search member"
+    />
     <Button
       type="button"
       variant="outline"
-      size="sm"
-      className="mt-3 h-8 w-full justify-between rounded-lg border-border/60 bg-background/30 px-3 text-xs"
+      size="control-sm"
+      className="mt-3 w-full justify-between text-xs"
       onClick={onClearUsers}
     >
       All members
-      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+      <ChevronDown className="text-muted-foreground h-3.5 w-3.5" />
     </Button>
   </div>
 );

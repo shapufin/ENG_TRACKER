@@ -43,7 +43,7 @@ const PersonSelect: React.FC<{
   <div className="space-y-2">
     <Label htmlFor={id}>{label}</Label>
     <Select value={value ? String(value) : undefined} onValueChange={(v) => onChange(Number(v))}>
-      <SelectTrigger id={id} aria-label={label} className="h-9 w-full">
+      <SelectTrigger id={id} aria-label={label} className="w-full">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
@@ -113,7 +113,7 @@ export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
           <SelectTrigger
             id="hbpr-assignment-cadence"
             aria-label="Meeting cadence"
-            className="h-9 w-full"
+            className="w-full"
           >
             <SelectValue />
           </SelectTrigger>
