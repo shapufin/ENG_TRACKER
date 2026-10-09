@@ -35,7 +35,7 @@ const TeamListItem: React.FC<TeamListItemProps> = ({
   onAction,
   isPending,
 }) => (
-  <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
+  <div className="border-border bg-muted/30 flex items-center justify-between rounded-lg border p-3">
     <div className="flex items-center gap-3">
       <div
         className={`flex h-10 w-10 items-center justify-center rounded-xl ${avatarClasses[actionVariant]}`}
@@ -44,13 +44,13 @@ const TeamListItem: React.FC<TeamListItemProps> = ({
       </div>
       <div>
         <p className="font-medium">{team.name}</p>
-        <p className="text-xs text-muted-foreground">{team.code}</p>
+        <p className="text-muted-foreground text-xs">{team.code}</p>
       </div>
     </div>
     <Button
-      size="sm"
+      size="control-sm"
       variant="outline"
-      className={`h-8 ${buttonClasses[actionVariant]}`}
+      className={buttonClasses[actionVariant]}
       onClick={onAction}
       disabled={isPending}
     >
@@ -104,7 +104,7 @@ export const ManageTeamsDialog: React.FC<ManageTeamsDialogProps> = ({
                 />
               ))}
               {inGroup.length === 0 && (
-                <p className="text-sm text-muted-foreground">No teams in this group yet.</p>
+                <p className="text-muted-foreground text-sm">No teams in this group yet.</p>
               )}
             </div>
           </div>
@@ -122,7 +122,7 @@ export const ManageTeamsDialog: React.FC<ManageTeamsDialogProps> = ({
                 />
               ))}
               {available.length === 0 && (
-                <p className="text-sm text-muted-foreground">No available teams.</p>
+                <p className="text-muted-foreground text-sm">No available teams.</p>
               )}
             </div>
           </div>

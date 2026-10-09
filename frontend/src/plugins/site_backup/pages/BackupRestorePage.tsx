@@ -206,6 +206,8 @@ const RestoreTab: React.FC = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [commitResult, setCommitResult] = useState<RestoreCommitResult | null>(null);
 
+  const selectedRecord = (backups ?? []).find((record) => record.id === selectedBackupId);
+
   const source: ArchiveSource | null = file
     ? { file }
     : selectedBackupId
@@ -303,14 +305,18 @@ const RestoreTab: React.FC = () => {
               Pick a stored backup
             </label>
             <Select
-              value={selectedBackupId === "" ? NO_BACKUP : String(selectedBackupId)}
+              value={selectedRecord ? String(selectedRecord.id) : NO_BACKUP}
               onValueChange={(v) => {
                 setSelectedBackupId(v === NO_BACKUP ? "" : Number(v));
                 setFile(null);
                 setCommitResult(null);
               }}
             >
-              <SelectTrigger id="restore-backup" className="w-64 text-sm">
+              <SelectTrigger
+                id="restore-backup"
+                className="w-64 text-sm sm:w-96"
+                title={selectedRecord?.filename}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

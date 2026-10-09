@@ -82,7 +82,8 @@ export const FilterMultiSelect: React.FC<FilterMultiSelectProps> = ({
           <Button
             type="button"
             variant="outline"
-            className={cn("justify-between font-normal", compact ? "h-8 w-full" : "w-full")}
+            size={compact ? "control-sm" : undefined}
+            className="w-full justify-between font-normal"
             disabled={disabled}
           >
             <span

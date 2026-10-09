@@ -46,6 +46,7 @@ export const UsersPageFilters: React.FC<UsersPageFiltersProps> = ({ state, teams
     state.tlFilter !== "employee" ||
     activeTechLabels.length > 0 ||
     state.noTechOnly ||
+    state.crOnly ||
     activeTeamLabels.length > 0;
   // profilesCount is the server-side total for the active role/tech filters
   // (accurate even past the page cap); once CR-only narrows the page
@@ -93,6 +94,9 @@ export const UsersPageFilters: React.FC<UsersPageFiltersProps> = ({ state, teams
               role: {ROLE_LABELS[state.tlFilter] ?? state.tlFilter}
             </span>
           )}
+          {state.crOnly && (
+            <span className={cn(ACTIVE_CHIP, toneSurfaceClass.accent)}>CR only</span>
+          )}
           {state.noTechOnly && (
             <span className={cn(ACTIVE_CHIP, toneSurfaceClass.info)}>tech: No tech</span>
           )}
@@ -115,12 +119,13 @@ export const UsersPageFilters: React.FC<UsersPageFiltersProps> = ({ state, teams
               state.setTechLevelIds([]);
               state.setNoTechOnly(false);
               state.setTeamIds([]);
+              state.setCrOnly(false);
             }}
           >
             Clear all
           </button>
           <span className="text-muted-foreground ml-auto font-mono">
-            · {matchCount} users match
+            · {matchCount} {matchCount === 1 ? "user matches" : "users match"}
           </span>
         </div>
       )}

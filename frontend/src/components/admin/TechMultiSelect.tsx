@@ -154,6 +154,9 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
             const levels = (tech.levels ?? []).filter((level) => level.is_active);
             if (levels.length === 0) return null;
             const selectId = `tech-level-${tech.id}`;
+            const currentInactive = (tech.levels ?? []).find(
+              (level) => !level.is_active && level.id === levelByTech?.[tech.id]
+            );
             return (
               <div key={tech.id} className="flex items-center gap-2">
                 <label htmlFor={selectId} className="w-32 shrink-0 truncate text-xs">
@@ -174,6 +177,11 @@ export const TechMultiSelect: React.FC<TechMultiSelectProps> = ({
                         {level.name}
                       </SelectItem>
                     ))}
+                    {currentInactive && (
+                      <SelectItem value={String(currentInactive.id)}>
+                        {currentInactive.name} (inactive)
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

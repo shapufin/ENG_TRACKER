@@ -17,14 +17,14 @@ export const UserCell: React.FC<UserCellProps> = ({ name, techLevels }) => {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-medium">
+      <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium">
         {initials}
       </div>
       <div className="min-w-0">
         <span className="block truncate">{name || "Unknown"}</span>
         {(techLevels?.length ?? 0) > 0 && (
           <span
-            className="block truncate text-micro text-muted-foreground"
+            className="text-muted-foreground block truncate text-xs"
             title={techLevels!.join(" · ")}
           >
             {techLevels!.join(" · ")}

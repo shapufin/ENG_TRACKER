@@ -22,18 +22,18 @@ const toneMap = {
  */
 export const StatCard: React.FC<MiniStatCardProps> = ({ label, value, suffix, sub, tone }) => {
   return (
-    <div className="rounded-2xl border border-line-subtle bg-card p-4">
+    <div className="border-line-subtle bg-card rounded-2xl border p-4">
       <div className="flex items-center gap-1.5">
         <span className={cn("inline-flex", toneMap[tone])} aria-hidden="true">
           <span className="h-1.5 w-1.5 rounded-full bg-current" />
         </span>
-        <span className="truncate text-xs font-medium text-muted-foreground">{label}</span>
+        <span className="text-muted-foreground truncate text-xs font-medium">{label}</span>
       </div>
       <div className="mt-2 flex items-baseline gap-1">
-        <span className="font-mono text-2xl font-bold tabular-nums text-foreground">{value}</span>
-        <span className="text-xs text-muted-foreground">{suffix}</span>
+        <span className="text-foreground font-mono text-2xl font-bold tabular-nums">{value}</span>
+        <span className="text-muted-foreground text-xs">{suffix}</span>
       </div>
-      <p className="mt-1 font-mono text-micro-lg tabular-nums text-muted-foreground">{sub}</p>
+      <p className="text-muted-foreground mt-1 font-mono text-xs tabular-nums">{sub}</p>
     </div>
   );
 };

@@ -29,7 +29,7 @@ interface RecordDetailDialogProps {
 const VisibilityChip: React.FC<{ item: DetailItem }> = ({ item }) => {
   if (item.visibility === "private") {
     return (
-      <span className="bg-tone-warning-surface text-tone-warning-text text-micro-lg inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold">
+      <span className="bg-tone-warning-surface text-tone-warning-text inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold">
         <Lock className="h-3 w-3" aria-hidden="true" />
         Private — {item.sharedWith ?? "only you and staff"}
       </span>
@@ -37,7 +37,7 @@ const VisibilityChip: React.FC<{ item: DetailItem }> = ({ item }) => {
   }
   if (item.visibility === "shared") {
     return (
-      <span className="bg-tone-info-surface text-tone-info-text text-micro-lg inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold">
+      <span className="bg-tone-info-surface text-tone-info-text inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold">
         <Users className="h-3 w-3" aria-hidden="true" />
         Shared with {item.sharedWith}
       </span>
@@ -49,7 +49,7 @@ const VisibilityChip: React.FC<{ item: DetailItem }> = ({ item }) => {
 const DetailBlock: React.FC<{ item: DetailItem }> = ({ item }) => (
   <section>
     <div className="flex flex-wrap items-center gap-2">
-      <h3 className="text-micro text-muted-foreground flex items-center gap-1.5 font-mono font-semibold tracking-wider uppercase">
+      <h3 className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs font-semibold tracking-wider uppercase">
         {item.label}
       </h3>
       <VisibilityChip item={item} />

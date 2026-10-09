@@ -36,7 +36,7 @@ export const FilterSelect = <T extends { id: number | string }>({
       {icon} {label}
     </Label>
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="bg-background/50 px-3">
+      <SelectTrigger className="px-3">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

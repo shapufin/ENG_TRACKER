@@ -118,7 +118,7 @@ const DayColumn: React.FC<{ day: DayData }> = ({ day }) => (
             )}
           >
             <div className="flex items-center gap-1.5">
-              <span className="bg-primary/10 text-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold">
+              <span className="bg-primary/10 text-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                 {initialsOf(row.user_name)}
               </span>
               <span
@@ -131,7 +131,7 @@ const DayColumn: React.FC<{ day: DayData }> = ({ day }) => (
             </div>
             <TeamChipList teamNames={row.team_names} className="mt-1" />
             {(row.tech_levels?.length ?? 0) > 0 && (
-              <p className="text-micro text-muted-foreground mt-1 truncate">
+              <p className="text-muted-foreground mt-1 truncate text-xs">
                 {row.tech_levels!.join(" · ")}
               </p>
             )}

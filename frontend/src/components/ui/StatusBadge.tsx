@@ -71,7 +71,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
         cfg.base,
         cfg.text,
         cfg.border,
-        isCompact && "gap-1 px-1.5 py-0 text-micro",
+        isCompact && "gap-1 px-1.5 py-0 text-xs",
         className
       )}
     >

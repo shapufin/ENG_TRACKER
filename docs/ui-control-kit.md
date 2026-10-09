@@ -18,10 +18,17 @@ Fix a look in the token or the primitive, never per call site.
   `DataTable` takes `toolbarActions` (filters, chips) so search, filters and Columns share ONE toolbar row.
 - `FormField`: label, `helper` (12px muted), `error` (`aria-invalid` + `aria-describedby`), required marker
   (CSS, not in the label text). Use it instead of Label + Input + hand-written error `<p>`.
-- Tokens (`index.css`, light and dark): `--control-h-sm/-h/-h-lg` (2 / 2.25 / 2.5rem, 2.75rem default
-  height under `pointer: coarse`), `--control-radius`, `--control-edge`, `--control-edge-hover`, `--field-bg`.
-- Decision D1 (soft edge): the field edge is about 2:1 on a card; the focus ring (>= 3:1) and the
+- Tokens (`index.css`, light and dark): `--control-h-sm/-h/-h-lg` (2 / 2.25 / 2.5rem; under `pointer: coarse`
+  `-h` is 2.75rem and `-h-sm` 2.5rem, so chips and `control-sm` buttons grow on touch), `--control-radius`,
+  `--control-edge`, `--control-edge-hover`, `--field-bg`. Contrast values are pinned in `theme/tokens.test.ts`.
+- Decision D1 (soft edge): the field edge is about 2:1 on a card (dark and light); the focus ring (>= 3:1) and the
   always-visible icon/placeholder carry the rest. Controls keep a real `border` (forced-colors safe).
+- `Chip`: a pressed chip gets Highlight colours and a check glyph under `forced-colors`. Counts inside a chip
+  inherit its text colour at full opacity (never `opacity-70`). `SearchField`: no `role="search"` wrapper; Esc
+  clears a non-empty field and is swallowed before a surrounding Dialog/Popover sees it (second Esc closes).
+- A toolbar `Button` takes `size="control-sm|control|control-lg"`, never `h-N` (icon-only `h-N w-N` squares and
+  `size="icon"` are fine). A Radix `Select` whose value can be missing from its items (an inactive level, a
+  deleted record) must render that value as an extra item, e.g. `Retired (inactive)`, or the trigger goes blank.
 
 ## Two surface levels
 
@@ -32,19 +39,44 @@ A toolbar and the table it filters live in ONE card (example: `UsersPageTable` +
 
 ## Admin page chrome
 
-- `PageShell`: title `text-2xl font-semibold`, subtitle muted `text-sm`, actions right-aligned and wrapping.
+- `PageShell` (used app-wide, not only in admin): title `text-2xl font-semibold`, subtitle muted `text-sm`,
+  actions right-aligned and wrapping.
   One primary action per header; the others are `outline`/`ghost`. Header and form buttons use
   `size="sm"` or `size="control"` (36px), never the 40px default beside 36px fields.
-- Stat rows: `StatCard` (p-4, 12px label, `tabular-nums` value, 24px icon); grid is 2 columns on phones
+- Stat rows: `StatCard` (p-4, 12px label, `tabular-nums` value, 24px `shrink-0` icon, `min-w-0` text); grid is 2 columns on phones
   (an odd last card spans both), 5 on `xl`, no hole.
-- Empty/loading/error: `EmptyState`, `LoadingCard`, `ErrorCard`. Text is never below 12px.
-- Colours come from tone tokens only (no `dark:` colour classes). Table headers: `tableStyles.ts` (do not edit).
+- Empty/loading/error: `EmptyState`, `LoadingCard`, `ErrorCard`.
+- Text is never below 12px (`text-xs`); `text-micro`/`text-micro-lg` and any `text-[<12px]` are audit violations,
+  except the ALLOW list below. Colours come from tone tokens and `dark:` colour classes are banned outside that list.
+  Raw palette steps (`bg-amber-500`, `text-emerald-400`) still exist in 33 files (progress bars, status icons,
+  identity systems): `surface-audit.mjs --warn-raw-palette` lists them (warn-only, never fails). Do not add more.
+- Table headers: `tableStyles.ts` (do not edit).
 
 ## Audits (all run in CI, `frontend/`)
+
+Control audit rules: SEARCH-ICON, SEARCH-TYPE (`<Input type="search">`), INPUT-PAD, CONTROL-HEIGHT (`h-8..12` on
+Input/Textarea/SelectTrigger/Button/DatePicker/DateRangePicker), RAW-CONTROL, TOOLBAR-WRAPPER. The e2e probe in
+`e2e/visual-guards.spec.ts` checks every `[data-filter-toolbar]` on six admin pages has equal-height controls.
 
 - `node --test scripts/control-audit.test.mjs && node scripts/control-audit.mjs --strict`
 - `node --test scripts/surface-audit.test.mjs && node scripts/surface-audit.mjs --strict`
 - `node scripts/modal-audit.mjs`, `node scripts/table-header-audit.mjs`
+
+## Surface audit ALLOW list (`scripts/surface-audit-lib.mjs`)
+
+Keep it short; each entry names a rule a token cannot express. Anything else is a violation.
+
+- Identity colour systems (a person, skill category, org node is not a status): `calendarStyles.ts`, `UserAvatar`,
+  `proficiencyLevels.ts`, `categoryAccents.ts`, organigrama `OrgNode`/`BuilderNode`/`CustomChartViewer`/
+  `OrgChartMobileList` (DARK-OVERRIDE; the org nodes also STRAY-FILL; `proficiencyLevels` and `CalendarDayCell`
+  also DARK-EXTRA).
+- Light and dark use different steps of one token (border vs line-subtle, 5% vs 10% foreground): `ConflictCard`,
+  `EventActionButtons`, `CalendarDayCell`, `EventCard`, `SkillsDenseMatrix`, `SkillsHeatmapGrid`,
+  `SkillsMemberColumn` (DARK-OVERRIDE).
+- MICRO-TEXT, fixed boxes where 12px does not fit: `NotificationBell` (16px count circle), `ProgressRing`
+  (ring centre), `ProficiencyBadge` `size="sm"` (pinned by its test).
+- Control audit bespoke inputs: `CommandPalette`, `HeaderSearch` (own chrome) and file Dropzones may use a raw
+  `<input>`; `HeaderSearch` is the one remaining `type="search"` outside `SearchField`.
 
 ## Admin dashboard grid
 

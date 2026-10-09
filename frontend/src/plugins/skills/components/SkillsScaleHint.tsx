@@ -38,7 +38,7 @@ export const SkillsScaleHint: React.FC<SkillsScaleHintProps> = ({
   return (
     <div
       role="status"
-      className="flex flex-col gap-2 rounded-md bg-muted/30 px-3 py-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
+      className="bg-muted/30 text-muted-foreground flex flex-col gap-2 rounded-md px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between"
     >
       <p>
         30+ skills visible — Dense or Heatmap mode performs better at this scale. Use the column
@@ -48,9 +48,9 @@ export const SkillsScaleHint: React.FC<SkillsScaleHintProps> = ({
         {onSwitchToDense && (
           <Button
             type="button"
-            size="sm"
+            size="control-sm"
             variant="ghost"
-            className="h-8 gap-1.5"
+            className="gap-1.5"
             aria-label="Switch to Dense view"
             onClick={onSwitchToDense}
           >
@@ -61,9 +61,9 @@ export const SkillsScaleHint: React.FC<SkillsScaleHintProps> = ({
         {onSwitchToHeatmap && (
           <Button
             type="button"
-            size="sm"
+            size="control-sm"
             variant="ghost"
-            className="h-8 gap-1.5"
+            className="gap-1.5"
             aria-label="Switch to Heatmap view"
             onClick={onSwitchToHeatmap}
           >

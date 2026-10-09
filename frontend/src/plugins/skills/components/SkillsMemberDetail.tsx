@@ -35,17 +35,17 @@ export const SkillsMemberDetail: React.FC<SkillsMemberDetailProps> = ({
   const hasMore = categoryGroups.some((group) => group.skills.length > INITIAL_SKILLS_PER_CATEGORY);
 
   return (
-    <div className="divide-y divide-border border-t border-border">
+    <div className="divide-border border-border divide-y border-t">
       {categoryGroups.map((group) => {
         const visibleSkills = showAll
           ? group.skills
           : group.skills.slice(0, INITIAL_SKILLS_PER_CATEGORY);
         return (
           <section key={group.name} aria-label={`${group.name} skills`}>
-            <h3 className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <h3 className="text-muted-foreground px-3 py-2 text-xs font-semibold tracking-wide uppercase">
               {group.name} ({group.skills.length})
             </h3>
-            <div className="divide-y divide-border/70">
+            <div className="divide-border/70 divide-y">
               {visibleSkills.map((coverageSkill) => {
                 const skill = row.skills.find(
                   (candidate) => candidate.skill_id === coverageSkill.skill_id
@@ -57,10 +57,10 @@ export const SkillsMemberDetail: React.FC<SkillsMemberDetailProps> = ({
                         <p className="text-sm font-medium" title={coverageSkill.skill_name}>
                           {coverageSkill.skill_name}
                         </p>
-                        <p className="text-xs text-muted-foreground">No rating available</p>
+                        <p className="text-muted-foreground text-xs">No rating available</p>
                       </div>
                       <span
-                        className="inline-flex min-h-[44px] items-center justify-center rounded border border-border px-3 text-sm text-muted-foreground"
+                        className="border-border text-muted-foreground inline-flex min-h-[44px] items-center justify-center rounded border px-3 text-sm"
                         aria-label={`${row.username} ${coverageSkill.skill_name} — not rated`}
                       >
                         Not rated
@@ -75,7 +75,7 @@ export const SkillsMemberDetail: React.FC<SkillsMemberDetailProps> = ({
                       <p className="text-sm font-medium" title={coverageSkill.skill_name}>
                         {coverageSkill.skill_name}
                       </p>
-                      <p className="text-xs text-muted-foreground">L{skill.level}</p>
+                      <p className="text-muted-foreground text-xs">L{skill.level}</p>
                     </div>
                     <button
                       type="button"
@@ -104,7 +104,8 @@ export const SkillsMemberDetail: React.FC<SkillsMemberDetailProps> = ({
           <Button
             type="button"
             variant="ghost"
-            className="h-11 w-full"
+            size="lg"
+            className="w-full"
             onClick={() => setShowAll(true)}
           >
             Show all {totalSkills} skills

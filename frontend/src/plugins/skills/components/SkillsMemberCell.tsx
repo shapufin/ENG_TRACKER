@@ -42,7 +42,7 @@ export const SkillsMemberCell: React.FC<SkillsMemberCellProps> = ({
         aria-hidden="true"
         className={cn(
           "flex shrink-0 items-center justify-center bg-linear-to-br font-bold text-white uppercase shadow-sm ring-1 ring-white/10",
-          compact ? "h-6 w-6 rounded-md text-[9px]" : "h-7 w-7 rounded-lg text-xs",
+          compact ? "h-6 w-6 rounded-md text-xs" : "h-7 w-7 rounded-lg text-xs",
           gradient
         )}
       >

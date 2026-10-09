@@ -110,4 +110,11 @@ describe("StatCard", () => {
     expect(footerEl?.textContent).toContain("70% queue mix");
     expect(footerEl?.textContent).toContain("On-call shifts");
   });
+
+  it("never squeezes the icon or lets the text column push it out (2-column phone grid)", () => {
+    const { container } = render(<StatCard label="Pending requests" value={3} icon={Clock} />);
+
+    expect(container.querySelector("svg")?.getAttribute("class")).toContain("shrink-0");
+    expect(screen.getByText("Pending requests").parentElement?.className).toContain("min-w-0");
+  });
 });

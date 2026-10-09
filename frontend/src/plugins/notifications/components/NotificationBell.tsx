@@ -79,8 +79,8 @@ const NotificationBell: React.FC = () => {
           {unreadCount > 0 && (
             <Button
               variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-xs"
+              size="control-sm"
+              className="px-2 text-xs"
               onClick={handleMarkAllRead}
             >
               Mark all as read

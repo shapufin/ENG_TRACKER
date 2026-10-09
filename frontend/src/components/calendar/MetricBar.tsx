@@ -15,11 +15,11 @@ export const MetricBar: React.FC<MetricBarProps> = ({
   colorClass = "bg-primary",
 }) => (
   <div className="space-y-1">
-    <div className="flex items-center justify-between text-[9px] text-muted-foreground">
+    <div className="text-muted-foreground flex items-center justify-between text-xs">
       <span>{label}</span>
-      <span className="text-[8.5px] text-muted-foreground">{value}</span>
+      <span className="text-muted-foreground text-xs">{value}</span>
     </div>
-    <div className="h-1 overflow-hidden rounded-full bg-line-subtle">
+    <div className="bg-line-subtle h-1 overflow-hidden rounded-full">
       <div
         className={cn("h-full rounded-full transition-all", colorClass)}
         style={{ width: `${progress}%` }}

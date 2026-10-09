@@ -45,14 +45,14 @@ const UserRow: React.FC<{
             {name}
           </span>
           <span
-            className="text-muted-foreground block truncate text-[9px] font-medium tracking-wide uppercase"
+            className="text-muted-foreground block truncate text-xs font-medium tracking-wide uppercase"
             title={teamLabel(user)}
           >
             {teamLabel(user)}
           </span>
           {remainingDaysByUser?.has(user.id) && (
             <span
-              className="text-tone-success-text block truncate font-mono text-[9px] font-medium"
+              className="text-tone-success-text block truncate font-mono text-xs font-medium"
               title={`${remainingDaysByUser.get(user.id)} days remaining`}
             >
               {remainingDaysByUser.get(user.id)}d remaining

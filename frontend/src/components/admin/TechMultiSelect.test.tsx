@@ -54,4 +54,29 @@ describe("TechMultiSelect", () => {
     expect(screen.getByText("(inactive)")).toBeInTheDocument();
     expect(screen.queryByLabelText("Remove Legacy")).toBeNull();
   });
+
+  it("keeps an inactive current level visible in the level select instead of a blank trigger", () => {
+    const withLevels = [
+      {
+        id: 1,
+        name: "Infrastructure",
+        code: "INFRA",
+        is_active: true,
+        levels: [
+          { id: 10, name: "Junior", is_active: true },
+          { id: 11, name: "Retired", is_active: false },
+        ],
+      },
+    ] as never;
+    render(
+      <TechMultiSelect
+        techs={withLevels}
+        value={[1]}
+        onChange={vi.fn()}
+        levelByTech={{ 1: 11 }}
+        onLevelChange={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("combobox")).toHaveTextContent("Retired (inactive)");
+  });
 });

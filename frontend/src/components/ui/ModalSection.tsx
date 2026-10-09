@@ -30,11 +30,11 @@ export const ModalSection = ({
     {(title || description) && (
       <legend className="mb-1 space-y-0.5 p-0">
         {title && (
-          <span className="block font-mono text-micro font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className="text-muted-foreground block font-mono text-xs font-semibold tracking-wider uppercase">
             {title}
           </span>
         )}
-        {description && <span className="block text-sm text-muted-foreground">{description}</span>}
+        {description && <span className="text-muted-foreground block text-sm">{description}</span>}
       </legend>
     )}
     <div className={cn("grid gap-4", columnClass[columns])}>{children}</div>

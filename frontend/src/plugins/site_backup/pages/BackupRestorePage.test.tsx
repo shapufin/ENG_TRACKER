@@ -1,3 +1,4 @@
+import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -23,6 +24,34 @@ vi.mock("../services/siteBackupService", () => ({
 }));
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+
+// Radix Select is unreliable to drive via fireEvent in JSDOM: render it flat (same pattern as
+// TeamLeaderSelect.test.tsx) and expose the value it was handed.
+vi.mock("@/components/ui/select", () => {
+  const Ctx = React.createContext<{ onValueChange?: (value: string) => void }>({});
+  return {
+    Select: ({ children, onValueChange, value }: any) => (
+      <Ctx.Provider value={{ onValueChange }}>
+        <div data-value={value}>{children}</div>
+      </Ctx.Provider>
+    ),
+    SelectContent: ({ children }: any) => <div>{children}</div>,
+    SelectItem: ({ value, children }: any) => {
+      const ctx = React.useContext(Ctx);
+      return (
+        <button type="button" role="option" onClick={() => ctx.onValueChange?.(value)}>
+          {children}
+        </button>
+      );
+    },
+    SelectTrigger: ({ children, id, title }: any) => (
+      <button type="button" role="combobox" id={id} title={title}>
+        {children}
+      </button>
+    ),
+    SelectValue: () => <span />,
+  };
+});
 
 const renderPage = () =>
   render(
@@ -94,5 +123,31 @@ describe("BackupRestorePage", () => {
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: /create backup/i }));
     await waitFor(() => expect(createBackup).toHaveBeenCalledWith("", true));
+  });
+
+  it("titles the restore picker with the full filename so long names are not silently clipped", async () => {
+    usePermissions.mockReturnValue({ isSuperuser: true });
+    const filename = "backup_20260101_000000_with_a_very_long_descriptive_suffix.zip";
+    listBackups.mockResolvedValue([
+      {
+        id: 7,
+        filename,
+        size_bytes: 1,
+        checksum: "a",
+        migration_state_hash: "b",
+        db_row_count: 1,
+        media_file_count: 0,
+        note: "",
+        created_by_username: "root",
+        created_at: "2026-01-01T00:00:00Z",
+      },
+    ]);
+    renderPage();
+    await screen.findAllByText(filename);
+    fireEvent.mouseDown(screen.getByRole("tab", { name: /restore/i }), { button: 0 });
+    const trigger = await screen.findByRole("combobox");
+    expect(trigger).not.toHaveAttribute("title");
+    fireEvent.click(screen.getByRole("option", { name: filename }));
+    expect(screen.getByRole("combobox")).toHaveAttribute("title", filename);
   });
 });

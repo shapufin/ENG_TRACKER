@@ -202,7 +202,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   {(index === 0 || options[index - 1].section !== o.section) && (
                     <li
                       role="presentation"
-                      className="text-muted-foreground text-micro-lg px-2 pt-2 pb-1 font-mono font-semibold tracking-wider uppercase"
+                      className="text-muted-foreground px-2 pt-2 pb-1 font-mono text-xs font-semibold tracking-wider uppercase"
                     >
                       {o.section}
                     </li>

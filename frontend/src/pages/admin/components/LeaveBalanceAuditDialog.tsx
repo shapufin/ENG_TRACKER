@@ -57,81 +57,81 @@ export const LeaveBalanceAuditDialog: React.FC<LeaveBalanceAuditDialogProps> = (
         </DialogHeader>
         {balance && (
           <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
-            <div className="flex items-center justify-between rounded-2xl border border-border bg-card p-3.5">
+            <div className="border-border bg-card flex items-center justify-between rounded-2xl border p-3.5">
               <div className="flex items-center gap-3">
                 <span
                   aria-hidden="true"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-bold text-primary-foreground"
+                  className="bg-primary text-primary-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-bold"
                 >
                   {initials(name)}
                 </span>
                 <div>
                   <div className="text-sm font-bold">{name}</div>
-                  <div className="font-mono text-xs text-muted-foreground">
+                  <div className="text-muted-foreground font-mono text-xs">
                     {balance.leave_type} · {balance.year}
                   </div>
                 </div>
               </div>
               {balance.is_carry_over && (
-                <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 font-mono text-xs font-semibold text-primary">
+                <span className="border-primary/25 bg-primary/10 text-primary rounded-full border px-2.5 py-1 font-mono text-xs font-semibold">
                   carry-over
                 </span>
               )}
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-border bg-surface-sunken p-3.5">
-                <span className="text-micro-lg text-muted-foreground">Remaining</span>
+              <div className="border-border bg-surface-sunken rounded-2xl border p-3.5">
+                <span className="text-muted-foreground text-xs">Remaining</span>
                 <div className="mt-0.5 font-mono text-2xl font-black">
                   {fmt(remaining)}
-                  <span className="text-xs font-normal text-muted-foreground"> d</span>
+                  <span className="text-muted-foreground text-xs font-normal"> d</span>
                 </div>
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-input-bg">
+                <div className="bg-input-bg mt-2 h-1.5 w-full overflow-hidden rounded-full">
                   <div
                     data-testid="audit-progress-remaining"
-                    className="h-full rounded-full bg-primary"
+                    className="bg-primary h-full rounded-full"
                     style={{ width: `${pct(remaining, total)}%` }}
                   />
                 </div>
-                <div className="mt-1 font-mono text-micro text-muted-foreground">
+                <div className="text-muted-foreground mt-1 font-mono text-xs">
                   {pct(remaining, total)}% of {fmt(total)}d
                 </div>
               </div>
-              <div className="rounded-2xl border border-border bg-surface-sunken p-3.5">
-                <span className="text-micro-lg text-muted-foreground">Used</span>
-                <div className="mt-0.5 font-mono text-2xl font-black text-tone-danger-text">
+              <div className="border-border bg-surface-sunken rounded-2xl border p-3.5">
+                <span className="text-muted-foreground text-xs">Used</span>
+                <div className="text-tone-danger-text mt-0.5 font-mono text-2xl font-black">
                   {fmt(used)}
-                  <span className="text-xs font-normal text-muted-foreground"> d</span>
+                  <span className="text-muted-foreground text-xs font-normal"> d</span>
                 </div>
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-input-bg">
+                <div className="bg-input-bg mt-2 h-1.5 w-full overflow-hidden rounded-full">
                   <div
                     data-testid="audit-progress-used"
-                    className="h-full rounded-full bg-tone-danger-text"
+                    className="bg-tone-danger-text h-full rounded-full"
                     style={{ width: `${pct(used, total)}%` }}
                   />
                 </div>
-                <div className="mt-1 font-mono text-micro text-muted-foreground">
+                <div className="text-muted-foreground mt-1 font-mono text-xs">
                   {pct(used, total)}% of {fmt(total)}d
                 </div>
               </div>
-              <div className="rounded-2xl border border-border bg-surface-sunken p-3.5">
-                <span className="text-micro-lg text-muted-foreground">Pending review</span>
-                <div className="mt-0.5 font-mono text-2xl font-black text-tone-warning-text">
+              <div className="border-border bg-surface-sunken rounded-2xl border p-3.5">
+                <span className="text-muted-foreground text-xs">Pending review</span>
+                <div className="text-tone-warning-text mt-0.5 font-mono text-2xl font-black">
                   {fmt(pending)}
-                  <span className="text-xs font-normal text-muted-foreground"> d</span>
+                  <span className="text-muted-foreground text-xs font-normal"> d</span>
                 </div>
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-input-bg">
+                <div className="bg-input-bg mt-2 h-1.5 w-full overflow-hidden rounded-full">
                   <div
                     data-testid="audit-progress-pending"
-                    className="h-full rounded-full bg-tone-warning-text"
+                    className="bg-tone-warning-text h-full rounded-full"
                     style={{ width: `${pct(pending, total)}%` }}
                   />
                 </div>
-                <div className="mt-1 font-mono text-micro text-muted-foreground">
+                <div className="text-muted-foreground mt-1 font-mono text-xs">
                   {pct(pending, total)}% in review
                 </div>
               </div>
             </div>
-            <div className="rounded-2xl border border-line-subtle bg-surface-sunken p-3.5 text-xs text-muted-foreground">
+            <div className="border-line-subtle bg-surface-sunken text-muted-foreground rounded-2xl border p-3.5 text-xs">
               {balance.is_carry_over ? (
                 <>
                   <strong className="text-foreground">Carry-over balance.</strong>{" "}

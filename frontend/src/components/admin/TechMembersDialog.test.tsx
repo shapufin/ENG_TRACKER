@@ -153,4 +153,27 @@ describe("TechMembersDialog", () => {
       expect(screen.getByText("Searching...")).toBeInTheDocument();
     });
   });
+
+  it("shows a member's inactive current level in the level select instead of a blank trigger", async () => {
+    vi.mocked(userService.getTechMembers).mockResolvedValue({
+      count: 1,
+      results: [
+        {
+          ...members[0],
+          level: { id: 21, name: "Retired", code: "R", rank: 1 },
+        },
+      ],
+    } as never);
+    const leveledTech = {
+      ...tech,
+      levels: [
+        { id: 20, name: "Junior", code: "J", rank: 2, is_active: true },
+        { id: 21, name: "Retired", code: "R", rank: 1, is_active: false },
+      ],
+    } as Tech;
+    renderWithProvider(<TechMembersDialog tech={leveledTech} open={true} onOpenChange={vi.fn()} />);
+
+    const trigger = await screen.findByRole("combobox", { name: /Level for alice/ });
+    expect(trigger).toHaveTextContent("Retired (inactive)");
+  });
 });

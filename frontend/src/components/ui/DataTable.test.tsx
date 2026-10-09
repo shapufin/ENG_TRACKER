@@ -184,7 +184,7 @@ describe("DataTable", () => {
       />
     );
 
-    expect(screen.getByRole("searchbox", { name: "Search people..." })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search people" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "First page" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Previous page" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next page" })).toBeInTheDocument();
@@ -295,7 +295,7 @@ describe("DataTable", () => {
         />
       );
 
-      fireEvent.change(screen.getByLabelText("Search people..."), { target: { value: "bob@" } });
+      fireEvent.change(screen.getByLabelText("Search people"), { target: { value: "bob@" } });
       expect(bodyNames(container)).toEqual(["Bob"]);
     });
 
@@ -313,7 +313,7 @@ describe("DataTable", () => {
         />
       );
       expect(bodyNames(container)).toEqual(["Bob"]);
-      expect(screen.getByLabelText("Search people...")).toHaveValue("bob");
+      expect(screen.getByLabelText("Search people")).toHaveValue("bob");
     });
 
     it("searches ONLY the listed paths when searchColumn is an array", () => {
@@ -333,7 +333,7 @@ describe("DataTable", () => {
 
       // "admin" exists only in the unlisted `role` column — an all-cells
       // fallback would match it, the listed-path filter must not.
-      fireEvent.change(screen.getByLabelText("Search people..."), { target: { value: "admin" } });
+      fireEvent.change(screen.getByLabelText("Search people"), { target: { value: "admin" } });
       expect(bodyNames(container)).not.toContain("Alice");
       expect(screen.getByText("No results found.")).toBeInTheDocument();
     });
@@ -347,7 +347,7 @@ describe("DataTable", () => {
           searchPlaceholder="Search..."
         />
       );
-      fireEvent.change(screen.getByLabelText("Search..."), { target: { value: "bo" } });
+      fireEvent.change(screen.getByLabelText("Search"), { target: { value: "bo" } });
       expect(bodyNames(container)).toEqual(["Bob"]);
       expect(screen.getByText("1 result")).toBeInTheDocument();
     });

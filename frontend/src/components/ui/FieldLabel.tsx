@@ -21,7 +21,7 @@ export const FieldLabel = ({
 }: FieldLabelProps) => (
   <label
     className={cn(
-      "flex items-center gap-1.5 font-mono text-micro font-semibold uppercase tracking-wider text-muted-foreground",
+      "text-muted-foreground flex items-center gap-1.5 font-mono text-xs font-semibold tracking-wider uppercase",
       className
     )}
     {...props}

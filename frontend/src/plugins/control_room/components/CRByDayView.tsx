@@ -113,7 +113,7 @@ const DayDetailPopover: React.FC<{
             </div>
             <TeamChipList teamNames={row.team_names} className="mt-1" />
             {(row.tech_levels?.length ?? 0) > 0 && (
-              <p className="text-micro text-muted-foreground mt-1 truncate">
+              <p className="text-muted-foreground mt-1 truncate text-xs">
                 {row.tech_levels!.join(" · ")}
               </p>
             )}
@@ -173,7 +173,7 @@ const DayCell: React.FC<{
           {visible.map((row) => (
             <div
               key={row.id}
-              className="bg-background/80 flex items-center gap-0.5 rounded px-1 py-0.5 text-[9px] leading-none font-medium"
+              className="bg-background/80 flex items-center gap-0.5 rounded px-1 py-0.5 text-xs leading-none font-medium"
               title={row.user_name}
             >
               {row.team_names[0] && (
@@ -189,7 +189,7 @@ const DayCell: React.FC<{
             </div>
           ))}
           {overflow > 0 && (
-            <span className="bg-muted text-muted-foreground flex items-center rounded px-1 py-0.5 text-[9px] leading-none font-medium">
+            <span className="bg-muted text-muted-foreground flex items-center rounded px-1 py-0.5 text-xs leading-none font-medium">
               +{overflow}
             </span>
           )}

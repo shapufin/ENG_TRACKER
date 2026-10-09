@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { toneTextClass } from "@/components/ui/tone";
 import { CompleteEprStageDialog } from "./CompleteEprStageDialog";
 import type {
@@ -201,7 +201,7 @@ const CycleRow: React.FC<{
               title={`${step.label}: ${step.status}`}
             >
               <span className={`block h-1.5 rounded-full ${SEGMENT_CLASS[step.state]}`} />
-              <span className="text-muted-foreground text-micro mt-0.5 block truncate">
+              <span className="text-muted-foreground mt-0.5 block truncate text-xs">
                 {SHORT_LABEL[step.field]}
                 <span className="sr-only"> — {step.status}</span>
               </span>
@@ -333,11 +333,10 @@ export const EPRSection: React.FC<EPRSectionProps> = ({
         <>
           {cycles.length > 3 && (
             <div className="mt-3 space-y-2">
-              <Input
-                type="search"
+              <SearchField
                 value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
+                onChange={(next) => {
+                  setQuery(next);
                   setVisible(PAGE_SIZE);
                 }}
                 placeholder="Search by name"

@@ -40,8 +40,7 @@ export const ImportHistoryTab: React.FC<ImportHistoryTabProps> = ({ batches }) =
           return (
             <Button
               variant="outline"
-              size="sm"
-              className="h-11 sm:h-9"
+              size="control-sm"
               onClick={() => setErrorBatch(batch)}
               aria-label={`View ${batch.error_count} error(s) for ${batch.original_filename}`}
             >
