@@ -23,11 +23,11 @@ describe("NotificationsPage modernization", () => {
     expect(container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("uses the mockup page-header treatment (font-black title, bottom border)", () => {
+  it("uses the mockup page-header treatment (font-semibold title, bottom border)", () => {
     render(<NotificationsPage />);
 
     const title = screen.getByRole("heading", { level: 1, name: "Notifications" });
-    expect(title.className).toContain("font-black");
+    expect(title.className).toContain("font-semibold");
     expect(title.className).not.toContain("sm:text-3xl");
 
     const headerRow = title.closest(".border-b");

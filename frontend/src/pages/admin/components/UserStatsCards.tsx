@@ -67,7 +67,7 @@ const CARDS: {
 
 export const UserStatsCards: React.FC<UserStatsCardsProps> = ({ stats }) => {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-5 [&>:last-child:nth-child(odd)]:col-span-2 xl:[&>:last-child:nth-child(odd)]:col-span-1">
       {CARDS.map((c, i) => (
         <StatCard
           key={c.key}

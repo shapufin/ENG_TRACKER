@@ -12,6 +12,8 @@ interface UsersPageTableProps {
   onRowSelectionChange: OnChangeFn<RowSelectionState>;
   /** Seeds the search box (from ?q=, e.g. the command palette's user result). */
   initialSearch?: string;
+  /** Filter strip rendered above the table, inside the same card. */
+  filters?: React.ReactNode;
 }
 
 export const UsersPageTable: React.FC<UsersPageTableProps> = ({
@@ -20,8 +22,10 @@ export const UsersPageTable: React.FC<UsersPageTableProps> = ({
   rowSelection,
   onRowSelectionChange,
   initialSearch,
+  filters,
 }) => (
   <GlassCard delay={0} className="p-4">
+    {filters && <div className="mb-4">{filters}</div>}
     <DataTable
       columns={columns}
       data={data}

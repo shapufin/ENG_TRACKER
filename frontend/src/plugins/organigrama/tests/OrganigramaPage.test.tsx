@@ -135,11 +135,11 @@ describe("OrganigramaPage", () => {
     expect(combobox).toHaveTextContent("Live company chart");
   });
 
-  it("uses the mockup page-header treatment (font-black title, bottom border)", async () => {
+  it("uses the mockup page-header treatment (font-semibold title, bottom border)", async () => {
     vi.mocked(organigramaService.getTree).mockResolvedValue(mockTree);
     renderPage();
     const title = await screen.findByRole("heading", { level: 1, name: "Organigrama" });
-    expect(title.className).toContain("font-black");
+    expect(title.className).toContain("font-semibold");
     expect(title.className).toContain("tracking-tight");
     const headerRow = title.closest(".border-b");
     expect(headerRow).toBeTruthy();

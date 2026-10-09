@@ -1,15 +1,11 @@
 import React from "react";
 import { useSearchParams } from "react-router-dom";
-import { UserFilterTabs } from "@/components/admin/UserFilterTabs";
-import { TechFacetFilter } from "@/components/admin/TechFacetFilter";
-import { TeamFacetFilter } from "@/components/admin/TeamFacetFilter";
 import { UserBulkCommandDrawer } from "@/components/admin/UserBulkCommandDrawer";
-import { toneSurfaceClass } from "@/components/ui/tone";
-import { cn } from "@/lib/utils";
 import { PluginCRBulkCommandDrawer } from "@/components/admin/PluginCRUserDialogs";
 import { UserStatsCards } from "./UserStatsCards";
 import { UsersPageBulkBar } from "./UsersPageBulkBar";
 import { UsersPageTable } from "./UsersPageTable";
+import { UsersPageFilters } from "./UsersPageFilters";
 import { CRUsersFilterButton } from "./CRUsersFilterButton";
 import type { Team } from "@/types";
 import type { useUsersPage } from "../hooks/useUsersPage";
@@ -70,132 +66,9 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
     );
   }
 
-  const roleLabels: Record<string, string> = {
-    employee: "Employees",
-    italian_tl: "Italian TL",
-    albanian_tl: "Albanian TL",
-    hbpr: "HBPR",
-    hr: "HR",
-    cr_admin: "CR Admin",
-  };
-  const activeTechLabels = state.techFacets
-    .filter((f) => state.techIds.includes(f.id))
-    .map((f) => {
-      const levels = (f.levels ?? [])
-        .filter((level) => state.techLevelIds.includes(level.id))
-        .map((level) => level.code);
-      return levels.length > 0 ? `${f.name} (${levels.join(", ")})` : f.name;
-    });
-  const activeTeamLabels = teams.filter((t) => state.teamIds.includes(t.id)).map((t) => t.name);
-  const hasActiveFilters =
-    state.tlFilter !== "employee" ||
-    activeTechLabels.length > 0 ||
-    state.noTechOnly ||
-    activeTeamLabels.length > 0;
-  // profilesCount is the server-side total for the active role/tech filters
-  // (accurate even past the page cap); once CR-only narrows the page
-  // client-side, fall back to the actually-displayed row count.
-  const matchCount = state.crOnly ? state.filteredData.length : state.profilesCount;
-
   return (
     <div className="space-y-4 pb-8">
       {state.stats && <UserStatsCards stats={state.stats} />}
-      <div className="border-border/70 space-y-3 rounded-2xl border p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <UserFilterTabs
-            filter={state.tlFilter}
-            onFilterChange={state.setTlFilter}
-            showCRAdmin={state.crActive}
-          />
-          {state.crActive && (
-            <CRUsersFilterButton
-              active={state.crOnly}
-              onToggle={() => state.setCrOnly(!state.crOnly)}
-            />
-          )}
-        </div>
-
-        <TechFacetFilter
-          facets={state.techFacets}
-          noTechCount={state.noTechCount}
-          selectedTechIds={state.techIds}
-          selectedLevelIds={state.techLevelIds}
-          noTechOnly={state.noTechOnly}
-          onTechIdsChange={state.setTechIds}
-          onLevelIdsChange={state.setTechLevelIds}
-          onNoTechOnlyChange={state.setNoTechOnly}
-        />
-
-        <TeamFacetFilter
-          teams={teams}
-          selectedTeamIds={state.teamIds}
-          onTeamIdsChange={state.setTeamIds}
-        />
-
-        {hasActiveFilters && (
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-muted-foreground">Active:</span>
-            {state.tlFilter !== "employee" && (
-              <span
-                className={cn(
-                  "rounded-md border px-2 py-0.5 font-mono font-semibold",
-                  toneSurfaceClass.accent
-                )}
-              >
-                role: {roleLabels[state.tlFilter] ?? state.tlFilter}
-              </span>
-            )}
-            {state.noTechOnly && (
-              <span
-                className={cn(
-                  "rounded-md border px-2 py-0.5 font-mono font-semibold",
-                  toneSurfaceClass.info
-                )}
-              >
-                tech: No tech
-              </span>
-            )}
-            {activeTechLabels.map((label) => (
-              <span
-                key={label}
-                className={cn(
-                  "rounded-md border px-2 py-0.5 font-mono font-semibold",
-                  toneSurfaceClass.info
-                )}
-              >
-                tech: {label}
-              </span>
-            ))}
-            {activeTeamLabels.map((label) => (
-              <span
-                key={label}
-                className={cn(
-                  "rounded-md border px-2 py-0.5 font-mono font-semibold",
-                  toneSurfaceClass.info
-                )}
-              >
-                team: {label}
-              </span>
-            ))}
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-destructive underline"
-              onClick={() => {
-                state.setTlFilter("employee");
-                state.setTechIds([]);
-                state.setTechLevelIds([]);
-                state.setNoTechOnly(false);
-                state.setTeamIds([]);
-              }}
-            >
-              Clear all
-            </button>
-            <span className="text-muted-foreground ml-auto font-mono">
-              · {matchCount} users match
-            </span>
-          </div>
-        )}
-      </div>
 
       <UsersPageBulkBar
         selectedCount={state.selectedProfiles.length}
@@ -218,6 +91,7 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
       />
 
       <UsersPageTable
+        filters={<UsersPageFilters state={state} teams={teams} />}
         initialSearch={initialSearch}
         columns={columns}
         data={state.filteredData}

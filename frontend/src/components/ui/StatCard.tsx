@@ -88,7 +88,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             <Icon className={`h-5 w-5 ${iconColorClass}`} />
           </div>
         ) : (
-          <Icon className={`h-8 w-8 ${iconColorClass}`} />
+          <Icon className={`h-6 w-6 ${iconColorClass}`} />
         )}
       </div>
       {typeof progressPercent === "number" && (

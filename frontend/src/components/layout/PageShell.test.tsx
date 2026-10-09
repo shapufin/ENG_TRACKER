@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { PageShell } from "./PageShell";
 
 describe("PageShell mockup header treatment", () => {
-  it("uses the mockup title style (text-2xl font-black, no responsive upsize)", () => {
+  it("uses the compact title style (text-2xl font-semibold, no responsive upsize)", () => {
     render(
       <PageShell title="Overtime" subtitle="Showing current month">
         <div data-testid="content" />
@@ -12,7 +12,7 @@ describe("PageShell mockup header treatment", () => {
 
     const title = screen.getByRole("heading", { level: 1, name: "Overtime" });
     expect(title.className).toContain("text-2xl");
-    expect(title.className).toContain("font-black");
+    expect(title.className).toContain("font-semibold");
     expect(title.className).not.toContain("sm:text-4xl");
   });
 
