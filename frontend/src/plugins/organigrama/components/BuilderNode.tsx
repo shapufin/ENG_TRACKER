@@ -114,13 +114,13 @@ const CardLayout: React.FC<{
   nodeData: BuilderNodeData;
 }> = ({ config, nodeData }) => (
   <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-2 py-1">
-    <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase text-muted-foreground">
+    <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium uppercase">
       {config.icon}
       <span>{config.label}</span>
     </div>
-    <span className="text-center text-sm font-semibold leading-tight">{nodeData.display_name}</span>
+    <span className="text-center text-sm leading-tight font-semibold">{nodeData.display_name}</span>
     {nodeData.role_title && (
-      <span className="text-xs text-muted-foreground">{nodeData.role_title}</span>
+      <span className="text-muted-foreground text-xs">{nodeData.role_title}</span>
     )}
   </div>
 );
@@ -130,16 +130,14 @@ const WideLayout: React.FC<{
   nodeData: BuilderNodeData;
 }> = ({ config, nodeData }) => (
   <div className="flex h-full w-full items-center gap-2 px-3">
-    <span className="shrink-0 text-muted-foreground">{config.icon}</span>
+    <span className="text-muted-foreground shrink-0">{config.icon}</span>
     <div className="flex min-w-0 flex-1 flex-col">
-      <span className="text-[10px] font-medium uppercase text-muted-foreground">
-        {config.label}
-      </span>
+      <span className="text-muted-foreground text-xs font-medium uppercase">{config.label}</span>
       <span className="truncate text-sm font-semibold" title={nodeData.display_name}>
         {nodeData.display_name}
       </span>
       {nodeData.role_title && (
-        <span className="truncate text-xs text-muted-foreground" title={nodeData.role_title}>
+        <span className="text-muted-foreground truncate text-xs" title={nodeData.role_title}>
           {nodeData.role_title}
         </span>
       )}
@@ -162,7 +160,7 @@ const GroupLayout: React.FC<{
   nodeData: BuilderNodeData;
 }> = ({ config, nodeData }) => (
   <div className="flex h-full w-full flex-col">
-    <div className="builder-group-drag-handle flex h-8 w-full cursor-move items-center gap-1.5 border-b border-slate-300 px-2 text-[10px] font-semibold uppercase text-slate-700 dark:border-slate-600 dark:text-slate-300">
+    <div className="builder-group-drag-handle flex h-8 w-full cursor-move items-center gap-1.5 border-b border-slate-300 px-2 text-xs font-semibold text-slate-700 uppercase dark:border-slate-600 dark:text-slate-300">
       {config.icon}
       <span className="truncate" title={nodeData.display_name}>
         {nodeData.display_name}
@@ -201,7 +199,7 @@ export const BuilderNode: React.FC<NodeProps> = (props) => {
       className={cn(
         "rounded-lg border px-1 py-1 shadow-sm transition-shadow",
         styleClass,
-        selected && "ring-2 ring-primary ring-offset-1"
+        selected && "ring-primary ring-2 ring-offset-1"
       )}
       style={{ width: resolvedWidth, height: resolvedHeight }}
       role="treeitem"

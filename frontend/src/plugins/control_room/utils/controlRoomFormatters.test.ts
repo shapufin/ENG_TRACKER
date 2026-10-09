@@ -72,20 +72,20 @@ describe("controlRoomFormatters", () => {
   });
 
   describe("statusColor", () => {
-    it("returns green for approved", () => {
-      expect(statusColor("approved")).toContain("green");
+    it("returns the success tone for approved", () => {
+      expect(statusColor("approved")).toContain("tone-success");
     });
-    it("returns yellow for pending", () => {
-      expect(statusColor("pending")).toContain("yellow");
+    it("returns the warning tone for pending", () => {
+      expect(statusColor("pending")).toContain("tone-warning");
     });
-    it("returns red for rejected", () => {
-      expect(statusColor("rejected")).toContain("red");
+    it("returns the danger tone for rejected", () => {
+      expect(statusColor("rejected")).toContain("tone-danger");
     });
   });
 
   describe("statusBadgeClass", () => {
     it("returns badge classes for approved", () => {
-      expect(statusBadgeClass("approved")).toContain("bg-green");
+      expect(statusBadgeClass("approved")).toContain("bg-tone-success-surface");
     });
   });
 });

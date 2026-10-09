@@ -148,7 +148,7 @@ export const ControlRoomAccessPage: React.FC = () => {
                   {access.user_name || access.display_name || access.username}
                 </span>
                 {!access.is_active && (
-                  <Badge variant="outline" className="shrink-0 text-[10px]">
+                  <Badge variant="outline" className="shrink-0 text-xs">
                     Inactive
                   </Badge>
                 )}

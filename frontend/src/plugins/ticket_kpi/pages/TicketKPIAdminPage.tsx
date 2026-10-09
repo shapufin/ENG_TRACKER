@@ -42,7 +42,7 @@ export const TicketKPIAdminPage: React.FC = () => {
             <TabsTrigger value="profiles">
               <Settings className="mr-2 h-4 w-4" /> Profiles
               {profiles && profiles.length > 0 && (
-                <Badge variant="secondary" className="ml-2 text-[10px]">
+                <Badge variant="secondary" className="ml-2 text-xs">
                   {profiles.length}
                 </Badge>
               )}

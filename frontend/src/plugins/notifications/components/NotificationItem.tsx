@@ -15,13 +15,13 @@ interface NotificationItemProps {
 const getTypeIcon = (type: string) => {
   switch (type) {
     case "success":
-      return <CheckCircle2 className="h-5 w-5 text-success" />;
+      return <CheckCircle2 className="text-success h-5 w-5" />;
     case "warning":
-      return <AlertCircle className="h-5 w-5 text-warning" />;
+      return <AlertCircle className="text-warning h-5 w-5" />;
     case "error":
-      return <XCircle className="h-5 w-5 text-destructive" />;
+      return <XCircle className="text-destructive h-5 w-5" />;
     default:
-      return <Bell className="h-5 w-5 text-primary" />;
+      return <Bell className="text-primary h-5 w-5" />;
   }
 };
 
@@ -41,7 +41,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
     <div
       onClick={handleClick}
       className={cn(
-        "flex gap-4 p-4 transition-colors hover:bg-muted/50",
+        "hover:bg-muted/50 flex gap-4 p-4 transition-colors",
         !notification.is_read && "bg-primary/5",
         notification.link && "cursor-pointer"
       )}
@@ -53,13 +53,13 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
             <h4 className={cn("text-sm font-semibold", !notification.is_read && "text-primary")}>
               {notification.title}
             </h4>
-            {!notification.is_read && <Badge className="h-4 px-1 text-[10px] uppercase">New</Badge>}
+            {!notification.is_read && <Badge className="h-4 px-1 text-xs uppercase">New</Badge>}
           </div>
-          <span className="whitespace-nowrap text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs whitespace-nowrap">
             {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">{notification.message}</p>
+        <p className="text-muted-foreground text-sm">{notification.message}</p>
         {!notification.is_read && (
           <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={handleMarkRead}>
             Mark as read

@@ -2,7 +2,7 @@ import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { hoverLiftClass, staggerContainer, staggerItem } from "@/lib/motion";
+import { staggerContainer, staggerItem } from "@/lib/motion";
 
 interface LeaderItem {
   id: number;
@@ -33,23 +33,19 @@ export const HRTeamLeaderBarList: React.FC<HRTeamLeaderBarListProps> = ({ leader
           variants={staggerContainer}
         >
           {sorted.map((leader, index) => (
-            <motion.div
-              key={leader.id}
-              variants={staggerItem}
-              className={`rounded-lg p-1 ${hoverLiftClass}`}
-            >
+            <motion.div key={leader.id} variants={staggerItem} className="rounded-lg p-1">
               <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="font-semibold text-foreground">{leader.name}</span>
-                <span className="font-mono font-bold tabular-nums text-foreground">
+                <span className="text-foreground font-semibold">{leader.name}</span>
+                <span className="text-foreground font-mono font-bold tabular-nums">
                   {leader.total_hours.toFixed(1)}h
                 </span>
               </div>
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-input-bg">
+              <div className="bg-input-bg h-2.5 w-full overflow-hidden rounded-full">
                 <div
                   className={
                     index === 0
-                      ? "h-full rounded-full bg-primary"
-                      : "h-full rounded-full bg-primary/50"
+                      ? "bg-primary h-full rounded-full"
+                      : "bg-primary/50 h-full rounded-full"
                   }
                   style={{
                     width: `${Math.min(100, Math.round((leader.total_hours / maxHours) * 100))}%`,

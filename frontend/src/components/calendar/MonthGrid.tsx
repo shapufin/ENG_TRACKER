@@ -48,7 +48,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
 
   return (
     <div
-      className="min-w-0 overflow-hidden rounded-xl border border-border/60 bg-card md:min-w-[720px]"
+      className="border-border/60 bg-card min-w-0 overflow-hidden rounded-xl border md:min-w-[720px]"
       role="grid"
       aria-label={format(currentMonth, "MMMM yyyy")}
     >
@@ -56,7 +56,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
         {weekDays.map((wd) => (
           <div
             key={wd}
-            className="py-2.5 text-center font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground"
+            className="text-muted-foreground py-2.5 text-center font-mono text-xs font-bold tracking-[0.3em] uppercase"
           >
             {wd}
           </div>
@@ -66,7 +66,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
       {displayRows.map((week, weekIdx) => (
         <div
           key={weekIdx}
-          className="grid grid-cols-7 gap-px border-b border-border/50 bg-border/50 last:border-b-0"
+          className="border-border/50 bg-border/50 grid grid-cols-7 gap-px border-b last:border-b-0"
           role="row"
         >
           {week.map((date, dayIdx) => {

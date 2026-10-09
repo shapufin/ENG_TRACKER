@@ -233,7 +233,7 @@ export const SkillsTeamPage: React.FC = () => {
     >
       {/* Eyebrow pill (mockup header) */}
       <div className="mb-1 flex items-center gap-2">
-        <span className="border-primary/20 bg-primary/10 text-foreground rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-widest uppercase">
+        <span className="border-primary/20 bg-primary/10 text-foreground rounded-full border px-2.5 py-0.5 text-xs font-semibold tracking-widest uppercase">
           Skills Matrix
         </span>
         <span className="text-muted-foreground text-xs font-medium">Q3 Team Competency</span>
@@ -353,7 +353,7 @@ export const SkillsTeamPage: React.FC = () => {
               <span aria-hidden="true">•</span>
               <span>Click any cell to rate · arrow keys to navigate</span>
             </div>
-            <span className="border-primary/20 bg-primary/10 text-foreground rounded border px-2 py-0.5 font-mono text-[11px]">
+            <span className="border-primary/20 bg-primary/10 text-foreground rounded border px-2 py-0.5 font-mono text-xs">
               {viewMode === "matrix" ? "Matrix" : viewMode === "dense" ? "Dense" : "Heatmap"} view
             </span>
           </div>

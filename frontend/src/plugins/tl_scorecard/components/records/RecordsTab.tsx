@@ -340,7 +340,7 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
                     style={{ width: `${summary.pct}%` }}
                   />
                 </div>
-                <p className="text-muted-foreground mt-2 text-[11px]">
+                <p className="text-muted-foreground mt-2 text-xs">
                   Share of completed records across all categories.
                 </p>
               </div>

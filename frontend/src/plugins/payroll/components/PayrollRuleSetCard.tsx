@@ -44,11 +44,11 @@ export const PayrollRuleSetCard: React.FC<PayrollRuleSetCardProps> = ({
   onEdit,
   onCreateVersion,
 }) => (
-  <div className="rounded-lg border border-border/50 p-4">
+  <div className="border-border rounded-lg border p-4">
     <div className="mb-2 flex items-center justify-between">
       <div>
         <span className="font-semibold">{rs.name}</span>
-        <span className="ml-2 text-sm text-muted-foreground">
+        <span className="text-muted-foreground ml-2 text-sm">
           v{rs.version} · {rs.code}
         </span>
       </div>
@@ -62,7 +62,7 @@ export const PayrollRuleSetCard: React.FC<PayrollRuleSetCardProps> = ({
         </Badge>
         <Badge variant="outline">{rs.validation_status}</Badge>
         {rs.has_payroll_runs && (
-          <span className="text-xs text-muted-foreground">Locked — used in payroll runs</span>
+          <span className="text-muted-foreground text-xs">Locked — used in payroll runs</span>
         )}
         {canConfigurePayroll && (
           <div className="flex flex-wrap gap-2">
@@ -91,12 +91,12 @@ export const PayrollRuleSetCard: React.FC<PayrollRuleSetCardProps> = ({
       </div>
     </div>
     {rs.has_payroll_runs && (
-      <p className="mb-3 text-xs text-muted-foreground">
+      <p className="text-muted-foreground mb-3 text-xs">
         This calculation is locked to protect historical payroll results. Create an updated version
         for future payroll periods.
       </p>
     )}
-    <div className="grid grid-cols-3 gap-4 text-sm text-muted-foreground">
+    <div className="text-muted-foreground grid grid-cols-3 gap-4 text-sm">
       <div>
         <span className="font-medium">Effective:</span> {rs.effective_from} →{" "}
         {rs.effective_to ?? "ongoing"}
@@ -108,7 +108,7 @@ export const PayrollRuleSetCard: React.FC<PayrollRuleSetCardProps> = ({
         <span className="font-medium">Contributions:</span> {rs.contribution_rates?.length ?? 0}
       </div>
     </div>
-    {rs.source && <p className="mt-2 text-xs text-muted-foreground">Source: {rs.source}</p>}
-    {rs.notes && <p className="mt-1 text-xs text-muted-foreground">{rs.notes}</p>}
+    {rs.source && <p className="text-muted-foreground mt-2 text-xs">Source: {rs.source}</p>}
+    {rs.notes && <p className="text-muted-foreground mt-1 text-xs">{rs.notes}</p>}
   </div>
 );

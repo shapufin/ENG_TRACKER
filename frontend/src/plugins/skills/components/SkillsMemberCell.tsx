@@ -41,8 +41,8 @@ export const SkillsMemberCell: React.FC<SkillsMemberCellProps> = ({
       <span
         aria-hidden="true"
         className={cn(
-          "flex shrink-0 items-center justify-center bg-linear-to-br font-bold uppercase text-white shadow-sm ring-1 ring-white/10",
-          compact ? "h-6 w-6 rounded-md text-[9px]" : "h-7 w-7 rounded-lg text-[10px]",
+          "flex shrink-0 items-center justify-center bg-linear-to-br font-bold text-white uppercase shadow-sm ring-1 ring-white/10",
+          compact ? "h-6 w-6 rounded-md text-[9px]" : "h-7 w-7 rounded-lg text-xs",
           gradient
         )}
       >
@@ -54,12 +54,12 @@ export const SkillsMemberCell: React.FC<SkillsMemberCellProps> = ({
         </span>
       ) : (
         <span className="min-w-0">
-          <span className="block truncate text-sm font-medium leading-tight" title={displayName}>
+          <span className="block truncate text-sm leading-tight font-medium" title={displayName}>
             {displayName}
           </span>
           {displayName !== row.username && (
             <span
-              className="block truncate text-[10px] leading-tight text-muted-foreground"
+              className="text-muted-foreground block truncate text-xs leading-tight"
               title={row.username}
             >
               @{row.username}

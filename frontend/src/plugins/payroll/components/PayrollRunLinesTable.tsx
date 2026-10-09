@@ -68,7 +68,7 @@ export const PayrollRunLinesTable: React.FC<PayrollRunLinesTableProps> = ({
                     {Number(line.overtime_hours) > 0 ? `${Number(line.overtime_hours)}h` : "—"}
                   </div>
                   {(line.carryover_breakdown?.carried_over?.length ?? 0) > 0 && (
-                    <Badge variant="outline" className="mt-1 text-[10px]">
+                    <Badge variant="outline" className="mt-1 text-xs">
                       Carryover
                     </Badge>
                   )}

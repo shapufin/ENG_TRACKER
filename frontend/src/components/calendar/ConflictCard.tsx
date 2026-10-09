@@ -33,41 +33,41 @@ const getTypeColor = (type: string) => {
 };
 
 export const ConflictCard: React.FC<ConflictCardProps> = ({ conflict }) => (
-  <div className="relative overflow-hidden rounded-2xl border border-line-subtle bg-surface-sunken p-4">
-    <div className="absolute right-0 top-0 h-full w-[30%] bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.1),transparent_70%)]" />
+  <div className="border-line-subtle bg-surface-sunken relative overflow-hidden rounded-2xl border p-4">
+    <div className="absolute top-0 right-0 h-full w-[30%] bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.1),transparent_70%)]" />
     <div className="relative">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <Calendar className="text-muted-foreground h-4 w-4" />
           <span className="font-medium">{conflict.date}</span>
         </div>
         <Badge variant="outline" className={toneSurfaceClass.danger}>
           {conflict.users.length} member{conflict.users.length !== 1 ? "s" : ""}
         </Badge>
       </div>
-      <Separator className="mb-3 bg-border dark:bg-line-subtle" />
+      <Separator className="bg-border dark:bg-line-subtle mb-3" />
       <div className="space-y-2">
         {conflict.users.map((user) => (
           <div
             key={user.id}
-            className="flex items-center justify-between rounded-lg bg-surface-sunken p-3"
+            className="bg-surface-sunken flex items-center justify-between rounded-lg p-3"
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                <User className="h-4 w-4 text-muted-foreground" />
+              <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-full">
+                <User className="text-muted-foreground h-4 w-4" />
               </div>
               <div>
                 <p className="text-sm font-medium">{user.name}</p>
                 <div className="mt-0.5 flex items-center gap-2">
                   <Badge
                     variant="outline"
-                    className={`px-1.5 py-0.5 text-[10px] ${getTypeColor(user.type)}`}
+                    className={`px-1.5 py-0.5 text-xs ${getTypeColor(user.type)}`}
                   >
                     {user.type}
                   </Badge>
                   <Badge
                     variant="outline"
-                    className={`px-1.5 py-0.5 text-[10px] ${getStatusColor(user.status)}`}
+                    className={`px-1.5 py-0.5 text-xs ${getStatusColor(user.status)}`}
                   >
                     {user.status}
                   </Badge>

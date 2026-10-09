@@ -24,18 +24,18 @@ export const ListViewRow: React.FC<ListViewRowProps> = ({
   const name = user?.full_name || event.userName || "Unknown User";
 
   return (
-    <tr className="border-b border-border/50 transition-colors hover:bg-table-hover">
+    <tr className="border-border/50 hover:bg-table-hover border-b transition-colors">
       {/* DATE */}
       <td className="px-5 py-4">
         <div className="flex items-start gap-3">
-          <div className="rounded-lg border border-border/50 bg-muted/40 p-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+          <div className="border-border/50 bg-muted/40 rounded-lg border p-2">
+            <Calendar className="text-muted-foreground h-4 w-4" />
           </div>
           <div>
-            <p className="text-sm font-medium text-foreground">
+            <p className="text-foreground text-sm font-medium">
               {format(parseISO(event.start), "MMM d, yyyy")}
             </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-0.5 text-xs">
               {event.start === event.end
                 ? "1 day"
                 : `${format(parseISO(event.start), "MMM d")} → ${format(parseISO(event.end), "MMM d")}`}
@@ -49,14 +49,12 @@ export const ListViewRow: React.FC<ListViewRowProps> = ({
         <button
           type="button"
           onClick={() => event.userId && onUserClick?.(event.userId)}
-          className="flex items-center gap-3 rounded-lg text-left transition hover:opacity-80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/60"
+          className="focus-visible:ring-ring/60 flex items-center gap-3 rounded-lg text-left transition hover:opacity-80 focus-visible:ring-2 focus-visible:outline-hidden"
         >
           <UserAvatar name={name} email={user?.email} colorSeed={event.userId} />
           <div className="text-left">
-            <p className="text-sm font-medium text-foreground">{name}</p>
-            <p className="text-[11px] text-muted-foreground">
-              {user?.teams?.[0]?.name || "NO TEAM"}
-            </p>
+            <p className="text-foreground text-sm font-medium">{name}</p>
+            <p className="text-muted-foreground text-xs">{user?.teams?.[0]?.name || "NO TEAM"}</p>
           </div>
         </button>
       </td>
@@ -77,9 +75,9 @@ export const ListViewRow: React.FC<ListViewRowProps> = ({
       {/* DETAILS */}
       <td className="px-5 py-4">
         <div className="space-y-1">
-          <p className="text-sm text-foreground">{event.description || event.compactLabel}</p>
+          <p className="text-foreground text-sm">{event.description || event.compactLabel}</p>
           {(event.hours || event.days) && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-1 text-xs">
               <Clock3 className="h-3 w-3" />
               {event.hours ? `${event.hours}h logged` : `${event.days} day(s)`}
             </div>

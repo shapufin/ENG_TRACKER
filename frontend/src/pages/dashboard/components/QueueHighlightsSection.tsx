@@ -108,7 +108,7 @@ export const QueueHighlightsSection: React.FC<QueueHighlightsSectionProps> = ({
                 {item.tag && (
                   <span
                     className={cn(
-                      "mt-0.5 inline-block rounded-full border px-2 py-px text-[11px] font-medium",
+                      "mt-0.5 inline-block rounded-full border px-2 py-px text-xs font-medium",
                       toneSurfaceClass[TAG_TONE[item.type] ?? "neutral"]
                     )}
                   >

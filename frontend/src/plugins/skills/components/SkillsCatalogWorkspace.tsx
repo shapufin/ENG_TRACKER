@@ -386,7 +386,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
                             variant={skill.is_active ? "default" : "secondary"}
                             className={
                               skill.is_active
-                                ? "border-emerald-600/30 bg-emerald-600/15 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/15 dark:text-emerald-300"
+                                ? "border-tone-success-border bg-tone-success-surface text-tone-success-text"
                                 : ""
                             }
                           >
@@ -477,7 +477,7 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
                         variant={skill.is_active ? "default" : "secondary"}
                         className={
                           skill.is_active
-                            ? "border-emerald-600/30 bg-emerald-600/15 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/15 dark:text-emerald-300"
+                            ? "border-tone-success-border bg-tone-success-surface text-tone-success-text"
                             : ""
                         }
                       >

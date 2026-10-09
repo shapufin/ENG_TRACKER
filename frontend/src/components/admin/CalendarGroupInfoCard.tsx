@@ -29,7 +29,7 @@ export const CalendarGroupInfoCard: React.FC<CalendarGroupInfoCardProps> = ({
         </div>
 
         <div className="flex-1">
-          <p className="text-muted-foreground mb-1 text-[11px] tracking-[0.2em] uppercase">
+          <p className="text-muted-foreground mb-1 text-xs tracking-[0.2em] uppercase">
             {trackingLabel}
           </p>
 

@@ -35,15 +35,15 @@ const VacationBalanceCard: React.FC<{
   metricBars: Metric[];
   formatDays: (value: number) => string;
 }> = ({ remainingDays, totalDays, metricBars, formatDays }) => (
-  <div className="rounded-2xl border border-border/70 bg-card p-2">
+  <div className="border-border/70 bg-card rounded-2xl border p-2">
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
+        <p className="text-muted-foreground text-[9px] tracking-[0.3em] uppercase">
           Vacation balance
         </p>
         <div className="flex items-end gap-1">
-          <h3 className="text-xl font-semibold text-foreground">{formatDays(remainingDays)}d</h3>
-          <span className={`text-[11px] ${toneTextClass.success}`}>remaining</span>
+          <h3 className="text-foreground text-xl font-semibold">{formatDays(remainingDays)}d</h3>
+          <span className={`text-xs ${toneTextClass.success}`}>remaining</span>
         </div>
       </div>
       <div className={`rounded-full px-2 py-0.5 text-[9px] ${toneSurfaceClass.success}`}>
@@ -74,22 +74,22 @@ const CarryOverCard: React.FC<{
   return (
     <div className={`rounded-2xl border p-2 ${toneSurfaceClass.success}`}>
       <div
-        className={`flex items-center justify-between text-[9px] uppercase tracking-[0.3em] ${toneTextClass.success}`}
+        className={`flex items-center justify-between text-[9px] tracking-[0.3em] uppercase ${toneTextClass.success}`}
       >
         <p>Carryover</p>
         <span>from {year}</span>
       </div>
       <div className="mt-2 flex items-end gap-2">
-        <h3 className="text-xl font-semibold text-foreground">{formatDays(availableDays)}d</h3>
-        <p className={`text-[11px] ${toneTextClass.success}`}>available</p>
+        <h3 className="text-foreground text-xl font-semibold">{formatDays(availableDays)}d</h3>
+        <p className={`text-xs ${toneTextClass.success}`}>available</p>
       </div>
-      <div className="mt-2 h-1 overflow-hidden rounded-full bg-tone-success-surface">
+      <div className="bg-tone-success-surface mt-2 h-1 overflow-hidden rounded-full">
         <div
-          className="h-full rounded-full bg-tone-success-text"
+          className="bg-tone-success-text h-full rounded-full"
           style={{ width: `${availableDays > 0 ? 100 : 0}%` }}
         />
       </div>
-      <div className={`mt-2 text-[10px] ${toneTextClass.success}`}>
+      <div className={`mt-2 text-xs ${toneTextClass.success}`}>
         <p>Expires Mar 31, {year + 1}</p>
       </div>
     </div>
@@ -100,9 +100,9 @@ const ConflictsCard: React.FC<{
   conflictEntries: ConflictEntry[];
   onViewAllConflicts: () => void;
 }> = ({ conflictEntries, onViewAllConflicts }) => (
-  <div className="rounded-2xl border border-border/70 bg-card p-2">
+  <div className="border-border/70 bg-card rounded-2xl border p-2">
     <div className="flex items-center justify-between">
-      <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
+      <p className="text-muted-foreground text-[9px] tracking-[0.3em] uppercase">
         Upcoming conflicts
       </p>
       <div
@@ -117,7 +117,7 @@ const ConflictsCard: React.FC<{
     </div>
     <div className="mt-2 space-y-1.5">
       {conflictEntries.length === 0 && (
-        <p className="text-xs text-muted-foreground">No conflicts this month.</p>
+        <p className="text-muted-foreground text-xs">No conflicts this month.</p>
       )}
       {conflictEntries.map((conflict) => (
         <ConflictItem key={conflict.date} date={conflict.date} description={conflict.description} />
@@ -125,7 +125,7 @@ const ConflictsCard: React.FC<{
     </div>
     <button
       onClick={onViewAllConflicts}
-      className="mt-2 text-[11px] font-medium text-primary transition hover:text-primary/80"
+      className="text-primary hover:text-primary/80 mt-2 text-xs font-medium transition"
     >
       View all conflicts →
     </button>

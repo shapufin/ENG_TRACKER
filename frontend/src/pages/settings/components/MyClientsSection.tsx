@@ -9,7 +9,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Building2, Check, ChevronsUpDown, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMyClients } from "../hooks/useMyClients";
-import { hoverLiftClass } from "@/lib/motion";
 
 interface MyClientsSectionProps {
   assignedClientIds: number[];
@@ -140,11 +139,7 @@ export const MyClientsSection: React.FC<MyClientsSectionProps> = ({
             {selectedClients.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {selectedClients.map((c) => (
-                  <Badge
-                    key={c.id}
-                    variant="secondary"
-                    className={cn("gap-1 pr-1.5", hoverLiftClass)}
-                  >
+                  <Badge key={c.id} variant="secondary" className="gap-1 pr-1.5">
                     {c.name}
                     <button
                       type="button"

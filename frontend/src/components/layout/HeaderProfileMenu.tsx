@@ -31,14 +31,14 @@ export const HeaderProfileMenu: React.FC<HeaderProfileMenuProps> = ({
         <button
           type="button"
           aria-label="Account menu"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+          className="bg-primary/10 text-primary hover:bg-primary/20 flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-colors"
         >
           {initials}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0" align="end">
         <div className="flex items-center gap-3 border-b p-4">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+          <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
             {initials}
           </div>
           <div className="min-w-0 flex-1">
@@ -46,7 +46,7 @@ export const HeaderProfileMenu: React.FC<HeaderProfileMenuProps> = ({
               {displayName}
             </p>
             {roleSubtitle && (
-              <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-muted-foreground truncate text-xs font-semibold tracking-wider uppercase">
                 {roleSubtitle}
               </p>
             )}
@@ -56,14 +56,14 @@ export const HeaderProfileMenu: React.FC<HeaderProfileMenuProps> = ({
           <button
             type="button"
             onClick={() => navigate("/settings")}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
+            className="hover:bg-accent flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm"
           >
             <Settings className="h-4 w-4" /> Settings
           </button>
           <button
             type="button"
             onClick={onLogout}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-destructive hover:bg-accent"
+            className="text-destructive hover:bg-accent flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm"
           >
             <LogOut className="h-4 w-4" /> Logout
           </button>

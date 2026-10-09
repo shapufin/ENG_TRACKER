@@ -39,6 +39,7 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = ({
       {folders.map((folder) => (
         <GlassCard
           key={`folder-${folder.id}`}
+          interactive
           animateOnMount={false}
           className="flex cursor-pointer items-center gap-3 p-3"
           onClick={() => onOpenFolder(folder)}
@@ -64,6 +65,7 @@ export const SearchResultsList: React.FC<SearchResultsListProps> = ({
       {documents.map((document) => (
         <GlassCard
           key={`document-${document.id}`}
+          interactive
           animateOnMount={false}
           className="flex cursor-pointer items-center gap-3 p-3"
           onClick={() => onOpenDocument(document)}

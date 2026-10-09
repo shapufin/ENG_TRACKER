@@ -70,15 +70,13 @@ const TeamCard: React.FC<{
             <ul className="divide-border/40 divide-y">
               {group.users.map((user) => (
                 <li key={user.user_id} className="flex items-center gap-3 py-2.5">
-                  <span className="bg-primary/10 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold">
+                  <span className="bg-primary/10 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                     {initialsOf(user.user_name)}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className="truncate text-sm font-medium">{user.user_name}</span>
-                      {user.has_overnight && (
-                        <Moon className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400" />
-                      )}
+                      {user.has_overnight && <Moon className="text-tone-accent-text h-3.5 w-3.5" />}
                     </div>
                     <div className="text-muted-foreground text-xs">
                       {formatDate(user.first_date)} – {formatDate(user.last_date)}

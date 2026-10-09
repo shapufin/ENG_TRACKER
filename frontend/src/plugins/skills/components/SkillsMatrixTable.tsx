@@ -59,7 +59,7 @@ export const SkillsMatrixTable: React.FC<SkillsMatrixTableProps> = ({
   return (
     <div
       ref={scrollRef}
-      className="skills-scroll max-h-[calc(100vh-280px)] min-h-[300px] overflow-auto rounded-lg border border-border"
+      className="skills-scroll border-border max-h-[calc(100vh-280px)] min-h-[300px] overflow-auto rounded-lg border"
       style={{ "--matrix-header-h": `${headerHeight}px` } as React.CSSProperties}
     >
       <table
@@ -73,7 +73,7 @@ export const SkillsMatrixTable: React.FC<SkillsMatrixTableProps> = ({
           <tr ref={headerRowRef}>
             <th
               scope="col"
-              className="sticky left-0 top-0 z-30 bg-muted px-3 py-2 text-left font-medium"
+              className="bg-muted sticky top-0 left-0 z-30 px-3 py-2 text-left font-medium"
             >
               Member
             </th>
@@ -84,7 +84,7 @@ export const SkillsMatrixTable: React.FC<SkillsMatrixTableProps> = ({
                   key={group.name}
                   scope="colgroup"
                   colSpan={group.skills.length}
-                  className={`sticky top-0 z-20 border-l bg-muted px-3 py-1 text-center text-xs font-semibold ${accent.text} ${accent.border}`}
+                  className={`bg-muted sticky top-0 z-20 border-l px-3 py-1 text-center text-xs font-semibold ${accent.text} ${accent.border}`}
                 >
                   {group.name}
                 </th>
@@ -98,13 +98,13 @@ export const SkillsMatrixTable: React.FC<SkillsMatrixTableProps> = ({
             <th
               scope="col"
               aria-hidden="true"
-              className="sticky left-0 top-[var(--matrix-header-h,33px)] z-20 bg-muted"
+              className="bg-muted sticky top-[var(--matrix-header-h,33px)] left-0 z-20"
             />
             {renderedCoverage.map((c, colIndex) => (
               <th
                 key={c.skill_id}
                 scope="col"
-                className={`sticky top-[var(--matrix-header-h,33px)] z-20 max-w-[90px] truncate whitespace-nowrap bg-muted px-2 py-1 text-center text-xs font-medium ${
+                className={`bg-muted sticky top-[var(--matrix-header-h,33px)] z-20 max-w-[90px] truncate px-2 py-1 text-center text-xs font-medium whitespace-nowrap ${
                   hovered?.col === colIndex ? "bg-foreground/10" : ""
                 }`}
                 title={c.skill_name}
@@ -112,7 +112,7 @@ export const SkillsMatrixTable: React.FC<SkillsMatrixTableProps> = ({
                 <div className="truncate" title={c.skill_name}>
                   {c.skill_name}
                 </div>
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-muted-foreground text-xs">
                   Avg{" "}
                   <span className={`font-mono font-semibold ${avgTone(c.avg_level)}`}>
                     {c.avg_level}
@@ -128,7 +128,7 @@ export const SkillsMatrixTable: React.FC<SkillsMatrixTableProps> = ({
             return (
               <tr
                 key={row.user_id}
-                className={`border-t border-border ${
+                className={`border-border border-t ${
                   hovered?.row === rowIndex ? "bg-foreground/5" : ""
                 }`}
                 aria-rowindex={firstBodyRowIndex + rowIndex}
@@ -136,7 +136,7 @@ export const SkillsMatrixTable: React.FC<SkillsMatrixTableProps> = ({
                 onMouseLeave={() => setHovered(null)}
               >
                 <td
-                  className={`sticky left-0 z-10 whitespace-nowrap px-3 py-2 font-medium ${
+                  className={`sticky left-0 z-10 px-3 py-2 font-medium whitespace-nowrap ${
                     hovered?.row === rowIndex ? "bg-foreground/5" : "bg-card"
                   }`}
                 >
@@ -160,12 +160,12 @@ export const SkillsMatrixTable: React.FC<SkillsMatrixTableProps> = ({
                           onKeyDown={(e) => handleCellKeyDown(e, rowIndex, colIndex)}
                           onClick={() => onFocusedCellChange({ row: rowIndex, col: colIndex })}
                           onMouseEnter={() => setHovered({ row: rowIndex, col: colIndex })}
-                          className="inline-flex h-7 items-center justify-center rounded border border-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                          className="text-muted-foreground focus-visible:ring-ring inline-flex h-7 items-center justify-center rounded border border-transparent px-1.5 text-xs focus-visible:ring-2 focus-visible:ring-offset-1"
                           aria-label={`${row.username} ${c.skill_name} — no rating`}
                         >
                           <span
                             aria-hidden="true"
-                            className="h-2.5 w-2.5 rounded-full border border-border/70 bg-transparent"
+                            className="border-border/70 h-2.5 w-2.5 rounded-full border bg-transparent"
                           />
                         </button>
                       </td>
@@ -190,7 +190,7 @@ export const SkillsMatrixTable: React.FC<SkillsMatrixTableProps> = ({
                             });
                           }}
                           onMouseEnter={() => setHovered({ row: rowIndex, col: colIndex })}
-                          className={`inline-flex h-7 items-center justify-center rounded border px-1.5 text-xs font-semibold transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${levelColor(skillData.level)}`}
+                          className={`focus-visible:ring-ring inline-flex h-7 items-center justify-center rounded border px-1.5 text-xs font-semibold transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:ring-offset-1 ${levelColor(skillData.level)}`}
                           aria-label={`${row.username} ${c.skill_name} L${skillData.level}`}
                         >
                           L{skillData.level}

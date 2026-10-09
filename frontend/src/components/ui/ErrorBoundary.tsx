@@ -49,12 +49,12 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
             </div>
             <h2 className="mb-2 text-xl font-bold tracking-tight">Something went wrong</h2>
-            <p className="mb-6 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mb-6 text-sm">
               An unexpected error occurred in this component. We've been notified and are looking
               into it.
             </p>
             {isDev && this.state.error && (
-              <pre className="mb-6 max-h-40 overflow-auto rounded bg-muted p-3 text-left font-mono text-[10px] text-muted-foreground">
+              <pre className="bg-muted text-muted-foreground mb-6 max-h-40 overflow-auto rounded p-3 text-left font-mono text-xs">
                 {this.state.error.toString()}
               </pre>
             )}

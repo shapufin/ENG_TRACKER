@@ -133,7 +133,7 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
         />
 
         {hasActiveFilters && (
-          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="text-muted-foreground">Active:</span>
             {state.tlFilter !== "employee" && (
               <span

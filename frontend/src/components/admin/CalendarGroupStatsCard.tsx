@@ -19,7 +19,7 @@ export const CalendarGroupStatsCard: React.FC<CalendarGroupStatsCardProps> = ({
     <GlassCard className="p-4">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-muted-foreground text-[11px] tracking-[0.18em] uppercase">{title}</p>
+          <p className="text-muted-foreground text-xs tracking-[0.18em] uppercase">{title}</p>
 
           <div className="mt-1.5 flex items-end gap-2">
             <h3 className="font-mono text-2xl font-bold tabular-nums">{value}</h3>

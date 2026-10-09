@@ -29,7 +29,7 @@ const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
       <Badge
         key="it"
         variant="default"
-        className="h-5 shrink-0 border-blue-500/30 bg-blue-500/15 px-1.5 py-0 text-[10px] text-blue-700 hover:bg-blue-500/30 dark:text-blue-400"
+        className="text-tone-info-text h-5 shrink-0 border-blue-500/30 bg-blue-500/15 px-1.5 py-0 text-xs hover:bg-blue-500/30"
       >
         {compact ? "IT" : "IT TL"}
       </Badge>
@@ -40,7 +40,7 @@ const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
       <Badge
         key="al"
         variant="default"
-        className="h-5 shrink-0 border-emerald-600/30 bg-emerald-600/15 px-1.5 py-0 text-[10px] text-emerald-800 hover:bg-emerald-600/25 dark:text-emerald-400"
+        className="text-tone-success-text h-5 shrink-0 border-emerald-600/30 bg-emerald-600/15 px-1.5 py-0 text-xs hover:bg-emerald-600/25"
       >
         {compact ? "AL" : "AL TL"}
       </Badge>
@@ -51,14 +51,14 @@ const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
       <Badge
         key="hbpr"
         variant="default"
-        className={`${toneSurfaceClass.accent} h-5 shrink-0 px-1.5 py-0 text-[10px] font-normal`}
+        className={`${toneSurfaceClass.accent} h-5 shrink-0 px-1.5 py-0 text-xs font-normal`}
       >
         HBPR
       </Badge>
     );
   }
   if (badges.length === 0) {
-    return <span className="text-muted-foreground text-[10px]">—</span>;
+    return <span className="text-muted-foreground text-xs">—</span>;
   }
   return <div className="flex gap-1">{badges}</div>;
 };
@@ -93,13 +93,13 @@ const renderCRAccessCell = ({
   accessUserIds.has(profile.user?.id) ? (
     <Badge
       variant="default"
-      className="border-primary/30 bg-primary/15 text-foreground hover:bg-primary/20 h-5 shrink-0 px-1.5 py-0 text-[10px]"
+      className="border-primary/30 bg-primary/15 text-foreground hover:bg-primary/20 h-5 shrink-0 px-1.5 py-0 text-xs"
       title="Control Room access granted"
     >
       CR
     </Badge>
   ) : (
-    <span className="text-muted-foreground text-[10px]">—</span>
+    <span className="text-muted-foreground text-xs">—</span>
   );
 
 export const useUserColumns = (
@@ -158,7 +158,7 @@ export const useUserColumns = (
                   return (
                     <div className="flex flex-wrap gap-1">
                       {teams.map((t) => (
-                        <Badge key={t.id} variant="secondary" className="text-[10px] font-normal">
+                        <Badge key={t.id} variant="secondary" className="text-xs font-normal">
                           {t.name}
                         </Badge>
                       ))}
@@ -205,7 +205,7 @@ export const useUserColumns = (
                   <Badge
                     key={t.id}
                     variant="outline"
-                    className="border-violet-500/30 bg-violet-500/10 text-[10px] font-normal text-violet-400 hover:bg-violet-500/20"
+                    className="border-violet-500/30 bg-violet-500/10 text-xs font-normal text-violet-400 hover:bg-violet-500/20"
                   >
                     {t.name}
                     {t.level && (
@@ -218,7 +218,7 @@ export const useUserColumns = (
               </div>
             );
           }
-          return <span className="text-muted-foreground text-[10px]">—</span>;
+          return <span className="text-muted-foreground text-xs">—</span>;
         },
         enableSorting: false,
       },
@@ -261,7 +261,7 @@ export const useUserColumns = (
           row.original.italian_tl_name ? (
             <span className="text-xs font-medium">{row.original.italian_tl_name}</span>
           ) : (
-            <span className="text-muted-foreground text-[10px]">—</span>
+            <span className="text-muted-foreground text-xs">—</span>
           ),
       },
       {
@@ -273,7 +273,7 @@ export const useUserColumns = (
           row.original.albanian_tl_name ? (
             <span className="text-xs font-medium">{row.original.albanian_tl_name}</span>
           ) : (
-            <span className="text-muted-foreground text-[10px]">—</span>
+            <span className="text-muted-foreground text-xs">—</span>
           ),
       },
       {

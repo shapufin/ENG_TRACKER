@@ -55,10 +55,10 @@ export const AssignWageDialog: React.FC<AssignWageDialogProps> = ({
     size="md"
   >
     <ModalSection title="Employee" columns={1}>
-      <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 px-3 py-2 text-sm">
+      <div className="border-border bg-muted/30 flex items-center gap-3 rounded-2xl border px-3 py-2 text-sm">
         <span
           aria-hidden="true"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-bold text-primary-foreground"
+          className="bg-primary text-primary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-bold"
         >
           {(formUser?.full_name ?? form.user)
             .split(" ")
@@ -68,7 +68,7 @@ export const AssignWageDialog: React.FC<AssignWageDialogProps> = ({
         <div>
           <div className="text-xs font-bold">{formUser?.full_name ?? form.user}</div>
           {formUser && (
-            <div className="font-mono text-[10px] text-muted-foreground">@{formUser.username}</div>
+            <div className="text-muted-foreground font-mono text-xs">@{formUser.username}</div>
           )}
         </div>
       </div>
@@ -88,7 +88,7 @@ export const AssignWageDialog: React.FC<AssignWageDialogProps> = ({
           />
           <span
             aria-hidden="true"
-            className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-primary"
+            className="text-primary absolute top-1/2 right-3 -translate-y-1/2 font-mono text-xs font-bold"
           >
             Lek / mo
           </span>

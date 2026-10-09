@@ -1,7 +1,6 @@
 import React from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { hoverLiftClass } from "@/lib/motion";
 
 interface LeaderItem {
   id: number;
@@ -31,10 +30,7 @@ export const HRTopLeadersCard: React.FC<HRTopLeadersCardProps> = ({ leaders }) =
     <CardContent>
       <div className="space-y-3">
         {leaders.slice(0, 5).map((l) => (
-          <div
-            key={l.id}
-            className={`flex items-center justify-between rounded-lg bg-muted/50 p-3 ${hoverLiftClass}`}
-          >
+          <div key={l.id} className="bg-muted/50 flex items-center justify-between rounded-lg p-3">
             <div className="flex items-center gap-3">
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${rankClass(l.rank)}`}
@@ -43,10 +39,10 @@ export const HRTopLeadersCard: React.FC<HRTopLeadersCardProps> = ({ leaders }) =
               </div>
               <div>
                 <p className="font-semibold">{l.name}</p>
-                <p className="text-xs text-muted-foreground">{l.team_name || "No Team"}</p>
+                <p className="text-muted-foreground text-xs">{l.team_name || "No Team"}</p>
               </div>
             </div>
-            <p className="font-mono font-bold tabular-nums text-foreground">
+            <p className="text-foreground font-mono font-bold tabular-nums">
               {l.total_hours.toFixed(1)}h
             </p>
           </div>

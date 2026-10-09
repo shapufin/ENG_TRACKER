@@ -96,7 +96,7 @@ const DayColumn: React.FC<{ day: DayData }> = ({ day }) => (
         </span>
       </div>
       {day.rows.length > 0 && (
-        <Badge variant="secondary" className="text-[10px] tabular-nums">
+        <Badge variant="secondary" className="text-xs tabular-nums">
           {day.rows.length}
         </Badge>
       )}

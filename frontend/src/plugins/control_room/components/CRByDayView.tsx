@@ -163,7 +163,7 @@ const DayCell: React.FC<{
           {format(day, "d")}
         </span>
         {hasPeople && (
-          <span className="text-muted-foreground text-[10px] font-medium tabular-nums">
+          <span className="text-muted-foreground text-xs font-medium tabular-nums">
             {sortedRows.length}
           </span>
         )}
@@ -226,7 +226,7 @@ const MonthBlock: React.FC<{
       {WEEKDAYS.map((day) => (
         <div
           key={day}
-          className="text-muted-foreground text-center text-[10px] font-medium tracking-wide uppercase"
+          className="text-muted-foreground text-center text-xs font-medium tracking-wide uppercase"
         >
           {day}
         </div>

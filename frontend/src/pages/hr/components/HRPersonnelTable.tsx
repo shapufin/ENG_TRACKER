@@ -10,18 +10,15 @@ interface HRPersonnelTableProps {
 
 // fallow-ignore-next-line complexity
 const HRPersonnelRow: React.FC<{ user: DetailedUserReport }> = ({ user: u }) => (
-  <tr key={u.user_id} className="group transition-colors hover:bg-primary/[0.02]">
+  <tr key={u.user_id} className="group hover:bg-primary/[0.02] transition-colors">
     <td className="px-6 py-4">
       <div className="flex flex-col">
         <span className="font-semibold">{u.full_name}</span>
-        <span className="font-mono text-[10px] text-muted-foreground">@{u.username}</span>
+        <span className="text-muted-foreground font-mono text-xs">@{u.username}</span>
       </div>
     </td>
     <td className="px-6 py-4">
-      <Badge
-        variant="secondary"
-        className="bg-muted text-[10px] font-bold uppercase tracking-tighter"
-      >
+      <Badge variant="secondary" className="bg-muted text-xs font-bold tracking-tighter uppercase">
         {u.team || "Unassigned"}
       </Badge>
     </td>
@@ -57,7 +54,7 @@ export const HRPersonnelTable: React.FC<HRPersonnelTableProps> = ({ users }) => 
       users.map((u) => <HRPersonnelRow key={u.user_id} user={u} />)
     ) : (
       <tr>
-        <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
+        <td colSpan={6} className="text-muted-foreground px-6 py-8 text-center">
           No users found.
         </td>
       </tr>

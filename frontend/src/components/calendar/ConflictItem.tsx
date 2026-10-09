@@ -12,8 +12,8 @@ export const ConflictItem: React.FC<ConflictItemProps> = ({ date, description })
       <AlertTriangle className="h-4 w-4 text-red-400" />
     </div>
     <div>
-      <p className="font-medium text-foreground">{date}</p>
-      <p className="mt-1 text-sm text-muted-foreground dark:text-muted-foreground">{description}</p>
+      <p className="text-foreground font-medium">{date}</p>
+      <p className="text-muted-foreground mt-1 text-sm">{description}</p>
     </div>
   </div>
 );

@@ -59,11 +59,11 @@ export const formatTime = (isoTime: string | null): string => {
 export const statusColor = (status: string): string => {
   switch (status) {
     case "approved":
-      return "text-green-600 dark:text-green-400";
+      return "text-tone-success-text";
     case "pending":
-      return "text-yellow-600 dark:text-yellow-400";
+      return "text-tone-warning-text";
     case "rejected":
-      return "text-red-600 dark:text-red-400";
+      return "text-tone-danger-text";
     default:
       return "text-muted-foreground";
   }
@@ -72,11 +72,11 @@ export const statusColor = (status: string): string => {
 export const statusBadgeClass = (status: string): string => {
   switch (status) {
     case "approved":
-      return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+      return "bg-tone-success-surface text-tone-success-text";
     case "pending":
-      return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
+      return "bg-tone-warning-surface text-tone-warning-text";
     case "rejected":
-      return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+      return "bg-tone-danger-surface text-tone-danger-text";
     default:
       return "bg-muted text-muted-foreground";
   }

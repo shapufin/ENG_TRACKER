@@ -41,9 +41,9 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
         }}
         {...props}
         className={cn(
-          "w-full rounded-lg border px-1.5 py-1 text-left text-[10px] leading-tight transition focus-visible:ring-1 focus-visible:ring-ring/30",
+          "focus-visible:ring-ring/30 w-full rounded-lg border px-1.5 py-1 text-left text-xs leading-tight transition focus-visible:ring-1",
           styles.surface,
-          "hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-md dark:hover:border-foreground/40",
+          "hover:border-foreground/30 dark:hover:border-foreground/40 hover:-translate-y-0.5 hover:shadow-md",
           className
         )}
       >
@@ -58,7 +58,7 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
           </span>
           {event.status === "pending" && (
             <span
-              className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500 dark:bg-orange-400"
+              className="bg-warning ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
               title="Pending approval"
               aria-hidden
             />

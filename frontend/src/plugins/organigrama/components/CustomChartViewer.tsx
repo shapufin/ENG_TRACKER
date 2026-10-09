@@ -146,7 +146,7 @@ const ViewerNode: React.FC<NodeProps> = ({ data }) => {
       <Handle type="target" position={Position.Top} className="opacity-0" />
       {isContainer ? (
         <>
-          <div className="border-current/20 flex h-8 w-full items-center gap-1.5 border-b px-2 text-[10px] font-semibold uppercase">
+          <div className="flex h-8 w-full items-center gap-1.5 border-b border-current/20 px-2 text-xs font-semibold uppercase">
             {SHAPE_ICONS[nodeData.shape_type]}
             <span className="truncate" title={nodeData.display_name}>
               {nodeData.display_name}
@@ -156,7 +156,7 @@ const ViewerNode: React.FC<NodeProps> = ({ data }) => {
         </>
       ) : (
         <>
-          <div className="flex items-center gap-1 text-[10px] font-medium uppercase text-muted-foreground">
+          <div className="text-muted-foreground flex items-center gap-1 text-xs font-medium uppercase">
             {hasChildren && (
               <span className="shrink-0" aria-hidden="true">
                 {isExpanded ? (
@@ -168,18 +168,18 @@ const ViewerNode: React.FC<NodeProps> = ({ data }) => {
             )}
             <span>{SHAPE_LABELS[nodeData.shape_type]}</span>
           </div>
-          <span className="text-center text-sm font-semibold leading-tight">
+          <span className="text-center text-sm leading-tight font-semibold">
             {nodeData.display_name}
           </span>
           {nodeData.role_title && (
-            <span className="text-xs text-muted-foreground">{nodeData.role_title}</span>
+            <span className="text-muted-foreground text-xs">{nodeData.role_title}</span>
           )}
           {nodeData.department_label && (
-            <span className="text-xs text-muted-foreground">{nodeData.department_label}</span>
+            <span className="text-muted-foreground text-xs">{nodeData.department_label}</span>
           )}
           <span
             className={cn(
-              "mt-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+              "mt-1 rounded-full px-2 py-0.5 text-xs font-medium",
               STATUS_STYLES[nodeData.status] || STATUS_STYLES.active
             )}
           >
@@ -258,7 +258,7 @@ const MobileNode: React.FC<{
               e.stopPropagation();
               setExpanded((prev) => !prev);
             }}
-            className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground shrink-0 rounded p-0.5"
             aria-label={expanded ? "Collapse" : "Expand"}
           >
             {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -266,16 +266,16 @@ const MobileNode: React.FC<{
         ) : (
           <span className="w-5 shrink-0" />
         )}
-        <span className="shrink-0 text-muted-foreground" aria-hidden="true">
+        <span className="text-muted-foreground shrink-0" aria-hidden="true">
           {SHAPE_ICONS[node.shape_type]}
         </span>
         <span className="flex-1 text-sm">{node.display_name}</span>
         {node.role_title && (
-          <span className="text-xs text-muted-foreground">{node.role_title}</span>
+          <span className="text-muted-foreground text-xs">{node.role_title}</span>
         )}
         <span
           className={cn(
-            "rounded-full px-2 py-0.5 text-[10px] font-medium",
+            "rounded-full px-2 py-0.5 text-xs font-medium",
             STATUS_STYLES[node.status] || STATUS_STYLES.active
           )}
         >
@@ -317,7 +317,7 @@ const CustomChartMobileList: React.FC<{ payload: DraftPayload }> = ({ payload })
 
   if (fullHierarchy.roots.length === 0) {
     return (
-      <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+      <div className="text-muted-foreground px-4 py-8 text-center text-sm">
         No chart data available.
       </div>
     );
@@ -333,7 +333,7 @@ const CustomChartMobileList: React.FC<{ payload: DraftPayload }> = ({ payload })
         aria-label="Search chart"
       />
       {roots.length === 0 ? (
-        <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+        <div className="text-muted-foreground px-4 py-8 text-center text-sm">
           No matching nodes found.
         </div>
       ) : (

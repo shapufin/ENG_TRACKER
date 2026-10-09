@@ -16,7 +16,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ isCollapsed = false, c
       <div className={cn("flex justify-center", className)}>
         <button
           onClick={() => setTheme(resolved === "dark" ? "light" : "dark")}
-          className="rounded-lg p-2 transition-colors hover:bg-accent"
+          className="hover:bg-accent rounded-lg p-2 transition-colors"
           aria-label="Toggle theme"
           title={`Switch to ${resolved === "dark" ? "light" : "dark"} mode`}
         >
@@ -28,10 +28,10 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ isCollapsed = false, c
 
   return (
     <div className={cn("flex items-center justify-between", className)}>
-      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+      <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
         Theme
       </span>
-      <div className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-muted/30 p-0.5">
+      <div className="border-border/60 bg-muted/30 flex items-center gap-0.5 rounded-lg border p-0.5">
         <button
           onClick={() => setTheme("light")}
           className={cn(
