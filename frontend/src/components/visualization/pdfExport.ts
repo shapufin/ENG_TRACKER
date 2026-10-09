@@ -10,6 +10,38 @@ interface CaptureToPdfOptions {
   periodLabel?: string;
 }
 
+const scrolls = (el: HTMLElement) => {
+  const overflowY = el.ownerDocument.defaultView?.getComputedStyle(el).overflowY;
+  return overflowY === "auto" || overflowY === "scroll";
+};
+
+/**
+ * Pixels a section's scrolling regions hide (card bodies have a fixed height and scroll).
+ * Measured on the live node: html2canvas sizes the canvas from it, not from the clone.
+ */
+export function hiddenScrollExtent(section: HTMLElement): number {
+  let extra = 0;
+  for (const el of section.querySelectorAll<HTMLElement>("*")) {
+    if (scrolls(el)) extra += Math.max(0, el.scrollHeight - el.clientHeight);
+  }
+  return extra;
+}
+
+/**
+ * `onclone` hook: lets the cloned section grow to its content, so scrolled-away rows are
+ * drawn instead of cut off. The section keeps its own overflow (rounded corners stay).
+ */
+export function expandScrollRegions(section: HTMLElement): void {
+  section.style.height = "auto";
+  section.style.maxHeight = "none";
+  for (const el of section.querySelectorAll<HTMLElement>("*")) {
+    if (!scrolls(el)) continue;
+    el.style.overflow = "visible";
+    el.style.height = "auto";
+    el.style.maxHeight = "none";
+  }
+}
+
 /** Captures every `[data-chart-section]` node inside `container`, in DOM
  * order, into a single portrait A4 PDF — one section per page. WYSIWYG:
  * this snapshots what's actually on screen (colors, gradients, final
@@ -38,7 +70,16 @@ export async function captureChartsToPdf(
 
   let rendered = 0;
   for (let i = 0; i < sections.length; i++) {
-    const canvas = await html2canvas(sections[i], { scale: 2, backgroundColor: null });
+    const extra = hiddenScrollExtent(sections[i]);
+    const canvas = await html2canvas(sections[i], {
+      scale: 2,
+      backgroundColor: null,
+      onclone: (_doc, cloned) => expandScrollRegions(cloned),
+      // The canvas is sized from the live node, so make room for what the clone reveals.
+      ...(extra > 0 && {
+        height: Math.ceil(sections[i].getBoundingClientRect().height + extra),
+      }),
+    });
 
     // Zero-area sections (hidden/collapsed) would produce Infinity/NaN
     // dimensions below — skip them instead of throwing inside addImage.

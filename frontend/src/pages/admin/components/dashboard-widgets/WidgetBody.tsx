@@ -45,7 +45,7 @@ export const WidgetBody: React.FC<WidgetBodyProps> = ({
       <div
         role="status"
         aria-label={`Loading ${title}`}
-        className="bg-muted/40 h-full min-h-[180px] w-full animate-pulse rounded-lg"
+        className="bg-muted/40 h-full min-h-0 w-full animate-pulse rounded-lg"
       />
     );
   }

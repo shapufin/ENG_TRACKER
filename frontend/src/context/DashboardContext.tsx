@@ -5,7 +5,11 @@ import {
   defaultAdminLayout,
   type StoredDashboardLayout,
 } from "@/components/dashboard/widgetRegistry";
-import { migrateLayout } from "@/pages/admin/components/dashboard-grid/gridLayout";
+import {
+  isStoredLayout,
+  migrateLayout,
+  pruneLayouts,
+} from "@/pages/admin/components/dashboard-grid/gridLayout";
 
 type DashboardLayout = StoredDashboardLayout;
 
@@ -19,7 +23,8 @@ interface DashboardContextValue {
   /** Saves the current layout again (after a failed save). */
   retrySave: () => Promise<void>;
   updateLayout: (layout: DashboardLayout) => Promise<void>;
-  resetLayout: () => Promise<void>;
+  /** Resolves true when the default layout was saved, false when the save failed. */
+  resetLayout: () => Promise<boolean>;
   addWidget: (widgetId: string) => void;
   removeWidget: (widgetId: string) => void;
 }
@@ -35,6 +40,10 @@ export const useDashboard = () => {
   return context;
 };
 
+/** The layout a dashboard type starts with and resets to. Only the admin one has widgets today. */
+const defaultLayoutFor = (dashboardType: string): DashboardLayout =>
+  dashboardType === "admin" ? defaultAdminLayout : { columns: 12, widgets: [] };
+
 interface DashboardProviderProps {
   dashboardType: string;
   children: React.ReactNode;
@@ -44,33 +53,36 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
   dashboardType,
   children,
 }) => {
-  const [layout, setLayout] = useState<DashboardLayout>(defaultAdminLayout);
+  const [layout, setLayout] = useState<DashboardLayout>(() => defaultLayoutFor(dashboardType));
   const [isLoading, setIsLoading] = useState(true);
   // Latest layout, readable synchronously so back-to-back toggles build on each
   // other instead of on a stale render, and saves queue up (each save is a
   // GET + PUT, so overlapping ones would race and drop the last toggles).
-  const layoutRef = useRef<DashboardLayout>(defaultAdminLayout);
+  const layoutRef = useRef<DashboardLayout>(layout);
   const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const pendingSaves = useRef(0);
-  const saveFailed = useRef(false);
+  // Saves run in commit order, so the newest commit finishes last and decides the status:
+  // an earlier failure is superseded by a later success, and the other way round.
+  const commitSeq = useRef(0);
+  // Edits before the saved layout has arrived would be overwritten by it (or overwrite it).
+  const loaded = useRef(false);
   const commit = useCallback(
-    (next: DashboardLayout, failure: string): Promise<unknown> => {
+    (next: DashboardLayout, failure: string): Promise<boolean> => {
+      if (!loaded.current) return Promise.resolve(false);
       layoutRef.current = next;
       setLayout(next);
-      pendingSaves.current += 1;
-      // A newer layout supersedes an earlier failure.
-      saveFailed.current = false;
+      const seq = (commitSeq.current += 1);
       setSaveStatus("saving");
       const saved = saveQueue.current
         .then(() => dashboardService.saveDashboardLayout(next, dashboardType))
+        .then(() => true)
         .catch((error) => {
-          saveFailed.current = true;
           console.error(failure, error);
+          return false;
         })
-        .finally(() => {
-          pendingSaves.current -= 1;
-          if (pendingSaves.current === 0) setSaveStatus(saveFailed.current ? "error" : "saved");
+        .then((ok) => {
+          if (seq === commitSeq.current) setSaveStatus(ok ? "saved" : "error");
+          return ok;
         });
       saveQueue.current = saved;
       return saved;
@@ -80,22 +92,25 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
 
   // Load layout from backend on mount
   useEffect(() => {
+    loaded.current = false;
     const loadLayout = async () => {
       try {
         const savedLayout = await dashboardService.getDashboardLayout(dashboardType);
         // The preferences endpoint is paginated: the saved row is results[0].
         const saved = savedLayout?.results?.[0]?.layout ?? savedLayout?.layout;
-        if (saved) {
+        // `{}` or a layout without a widgets list is "nothing saved": keep the default.
+        if (isStoredLayout(saved)) {
           // Only the admin dashboard moved to the merged 12-column widgets; the others
           // keep whatever they stored.
-          const loaded = dashboardType === "admin" ? migrateLayout(saved) : saved;
-          layoutRef.current = loaded;
-          setLayout(loaded);
+          const restored = dashboardType === "admin" ? migrateLayout(saved) : saved;
+          layoutRef.current = restored;
+          setLayout(restored);
         }
       } catch (error) {
         console.error("Failed to load dashboard layout:", error);
         // Use default layout on error
       } finally {
+        loaded.current = true;
         setIsLoading(false);
       }
     };
@@ -116,9 +131,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
 
   // Saved as the default layout (not deleted): the preferences endpoint has no list-level
   // DELETE, so a reset has to overwrite the stored row to survive a reload.
-  const resetLayout = useCallback(async () => {
-    await commit(defaultAdminLayout, "Failed to reset dashboard layout:");
-  }, [commit]);
+  const resetLayout = useCallback(
+    () => commit(defaultLayoutFor(dashboardType), "Failed to reset dashboard layout:"),
+    [commit, dashboardType]
+  );
 
   const addWidget = useCallback(
     (widgetId: string) => {
@@ -145,7 +161,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
     (widgetId: string) => {
       const prev = layoutRef.current;
       commit(
-        { ...prev, widgets: prev.widgets.filter((w) => w.id !== widgetId) },
+        pruneLayouts({ ...prev, widgets: prev.widgets.filter((w) => w.id !== widgetId) }),
         "Failed to save widget removal:"
       );
     },

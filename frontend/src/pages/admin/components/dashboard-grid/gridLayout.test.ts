@@ -1,7 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { defaultAdminLayout } from "@/components/dashboard/widgetRegistry";
 import { AVAILABLE_WIDGETS } from "@/config/dashboardWidgets";
-import { LEGACY_WIDGET_MAP, migrateLayout, sortedWidgetIds } from "./gridLayout";
+import {
+  LEGACY_WIDGET_MAP,
+  isStoredLayout,
+  migrateLayout,
+  pruneLayouts,
+  sortedWidgetIds,
+} from "./gridLayout";
 
 const OLD_IDS = [
   "total-users",
@@ -195,5 +201,38 @@ describe("sortedWidgetIds", () => {
         ],
       })
     ).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("isStoredLayout", () => {
+  it("accepts an object with a widgets list and rejects an empty or malformed one", () => {
+    expect(isStoredLayout({ columns: 12, widgets: [] })).toBe(true);
+    expect(isStoredLayout({})).toBe(false);
+    expect(isStoredLayout({ widgets: "nope" })).toBe(false);
+    expect(isStoredLayout(null)).toBe(false);
+    expect(isStoredLayout("x")).toBe(false);
+  });
+});
+
+describe("migrateLayout on a malformed legacy layout", () => {
+  it("does not throw on a non-array widgets value", () => {
+    const out = migrateLayout({ columns: 4, widgets: "nope" } as never);
+    expect(out.widgets).toEqual([]);
+  });
+});
+
+describe("pruneLayouts", () => {
+  it("drops md placements of widgets that are gone", () => {
+    const md = (id: string) => ({ id, position: { x: 0, y: 0 }, size: { w: 6, h: 2 } });
+    const layout = {
+      ...defaultAdminLayout,
+      widgets: defaultAdminLayout.widgets.filter((w) => w.id !== "shortcuts"),
+      layouts: { md: [md("shortcuts"), md("kpi-strip")] },
+    };
+    expect(pruneLayouts(layout).layouts?.md?.map((p) => p.id)).toEqual(["kpi-strip"]);
+  });
+
+  it("returns the same object when there is nothing to prune", () => {
+    expect(pruneLayouts(defaultAdminLayout)).toBe(defaultAdminLayout);
   });
 });

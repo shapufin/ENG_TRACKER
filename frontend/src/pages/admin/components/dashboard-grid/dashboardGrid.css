@@ -15,3 +15,21 @@
   width: 24px;
   height: 24px;
 }
+
+/* Windows high contrast: box-shadows (the edit ring) and background fills are dropped, so
+   edit mode and the drop placeholder get real outlines in system colors. */
+@media (forced-colors: active) {
+  [data-edit-frame] {
+    outline: 2px solid CanvasText;
+  }
+
+  .react-grid-item.react-grid-placeholder {
+    background: Canvas;
+    outline: 2px dashed Highlight;
+    outline-offset: -2px;
+  }
+
+  .react-grid-item > .react-resizable-handle::after {
+    border-color: CanvasText;
+  }
+}

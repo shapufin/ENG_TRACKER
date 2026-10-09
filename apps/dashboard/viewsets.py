@@ -629,12 +629,13 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
 class UserDashboardPreferenceViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
     queryset = UserDashboardPreference.objects.all()
     serializer_class = UserDashboardPreferenceSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['dashboard_type']
 
     def get_queryset(self):
-        # Superusers and staff can see all dashboard preferences
-        if self.request.user.is_superuser or self.request.user.is_staff:
-            return super().get_queryset()
-        return super().get_queryset().filter(user=self.request.user)
+        # Personal data for everyone, staff included: the client loads results[0] and then PUTs
+        # to it, so seeing another user's row would mean overwriting their layout.
+        return super().get_queryset().filter(user=self.request.user).order_by('id')
 
     def perform_create(self, serializer):
         # Use get_or_create to handle existing preferences gracefully

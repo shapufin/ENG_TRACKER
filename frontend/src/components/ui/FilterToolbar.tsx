@@ -21,21 +21,7 @@ function FilterToolbarGroup({ className, ...props }: DivProps) {
   return <div className={cn("ml-auto flex items-center gap-2", className)} {...props} />;
 }
 
-/** One scrollable snap row on phones; wraps from md. */
-function FilterToolbarChips({ className, ...props }: DivProps) {
-  return (
-    <div
-      className={cn(
-        "flex snap-x items-center gap-2 overflow-x-auto md:flex-wrap md:overflow-visible",
-        className
-      )}
-      {...props}
-    />
-  );
-}
-
 FilterToolbar.Search = FilterToolbarSearch;
 FilterToolbar.Group = FilterToolbarGroup;
-FilterToolbar.Chips = FilterToolbarChips;
 
 export { FilterToolbar };

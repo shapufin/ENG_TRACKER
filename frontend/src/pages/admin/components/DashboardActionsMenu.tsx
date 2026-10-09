@@ -16,6 +16,8 @@ interface DashboardActionsMenuProps {
   containerRef: React.RefObject<HTMLElement | null>;
   availableWidgets: { id: string; superuserOnly?: boolean }[];
   isSuperuser: boolean;
+  /** The saved layout is still loading: nothing here can safely replace it yet. */
+  disabled?: boolean;
   /** Receives the resolved, access-filtered widget ids in order. */
   onApplyPreset: (widgetIds: string[]) => void;
   onReset: () => void;
@@ -33,6 +35,7 @@ export const DashboardActionsMenu: React.FC<DashboardActionsMenuProps> = ({
   containerRef,
   availableWidgets,
   isSuperuser,
+  disabled = false,
   onApplyPreset,
   onReset,
   onCustomize,
@@ -77,6 +80,7 @@ export const DashboardActionsMenu: React.FC<DashboardActionsMenuProps> = ({
             className="px-2.5"
             aria-label="Dashboard actions"
             aria-haspopup="menu"
+            disabled={disabled}
           >
             <MoreHorizontal className="h-4 w-4" aria-hidden />
           </Button>

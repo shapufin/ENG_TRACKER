@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Loader2, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "./input";
 import type { ControlSize } from "./controlSurface";
@@ -11,16 +11,11 @@ interface SearchFieldProps {
   /** Required: a placeholder is not an accessible name. */
   "aria-label": string;
   onClear?: () => void;
-  /** Hint such as "/" shown while empty, hidden on narrow screens. */
-  shortcut?: string;
-  loading?: boolean;
   controlSize?: ControlSize;
   autoFocus?: boolean;
   /** Lets a visible <Label htmlFor> point at the input. */
   id?: string;
   className?: string;
-  /** 0 (default) = immediate. */
-  debounceMs?: number;
 }
 
 /** The one search field: icon slot, clear button, Esc-to-clear. Padding lives here, never at call sites. */
@@ -30,16 +25,13 @@ export const SearchField = ({
   placeholder,
   "aria-label": ariaLabel,
   onClear,
-  shortcut,
-  loading,
   controlSize,
   autoFocus,
   id,
   className,
-  debounceMs = 0,
 }: SearchFieldProps) => {
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const [local, setLocal] = React.useState(value);
-  const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Follow external value changes (reset, URL state) without an effect.
   const [seen, setSeen] = React.useState(value);
@@ -47,34 +39,27 @@ export const SearchField = ({
     setSeen(value);
     setLocal(value);
   }
-  React.useEffect(() => () => clearTimeout(timer.current), []);
 
   const emit = (next: string) => {
     setLocal(next);
-    clearTimeout(timer.current);
-    if (debounceMs > 0 && next !== "") {
-      timer.current = setTimeout(() => onChange(next), debounceMs);
-    } else {
-      onChange(next);
-    }
+    onChange(next);
   };
 
   const clear = () => {
     emit("");
     onClear?.();
+    // The button unmounts with the text; keep the keyboard user in the field.
+    inputRef.current?.focus();
   };
 
   return (
-    <div
-      role="search"
-      aria-busy={loading ? true : undefined}
-      className={cn("relative w-full", className)}
-    >
+    <div role="search" className={cn("relative w-full", className)}>
       <Search
         aria-hidden="true"
         className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
       />
       <Input
+        ref={inputRef}
         type="search"
         autoComplete="off"
         spellCheck={false}
@@ -95,13 +80,7 @@ export const SearchField = ({
         className="pr-9 pl-9 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
       />
       <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-1">
-        {loading && (
-          <Loader2
-            aria-hidden="true"
-            className="text-muted-foreground h-4 w-4 animate-spin motion-reduce:animate-none"
-          />
-        )}
-        {local ? (
+        {local && (
           <button
             type="button"
             aria-label="Clear search"
@@ -110,12 +89,6 @@ export const SearchField = ({
           >
             <X aria-hidden="true" className="h-4 w-4" />
           </button>
-        ) : (
-          shortcut && (
-            <kbd className="text-muted-foreground border-control-edge hidden rounded border px-1.5 text-xs sm:inline">
-              {shortcut}
-            </kbd>
-          )
         )}
       </div>
     </div>

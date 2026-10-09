@@ -8,13 +8,11 @@ describe("FilterToolbar", () => {
     render(
       <FilterToolbar data-testid="bar">
         <FilterToolbar.Search data-testid="s">S</FilterToolbar.Search>
-        <FilterToolbar.Chips data-testid="c">C</FilterToolbar.Chips>
         <FilterToolbar.Group data-testid="g">G</FilterToolbar.Group>
       </FilterToolbar>
     );
     expect(screen.getByTestId("bar")).toHaveClass("flex", "flex-wrap", "gap-2");
     expect(screen.getByTestId("s")).toHaveClass("max-w-sm", "flex-1");
-    expect(screen.getByTestId("c")).toHaveClass("overflow-x-auto", "snap-x");
     expect(screen.getByTestId("g")).toHaveClass("ml-auto");
     expect(screen.getByText("G")).toBeInTheDocument();
   });

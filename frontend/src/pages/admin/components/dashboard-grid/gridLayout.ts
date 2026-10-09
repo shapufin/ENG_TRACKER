@@ -51,6 +51,23 @@ export const LEGACY_WIDGET_MAP: Record<string, string> = {
   shortcuts: "shortcuts",
 };
 
+/** True for something usable as a layout: an object whose `widgets` is a list. `{}` is not. */
+export const isStoredLayout = (value: unknown): value is StoredDashboardLayout =>
+  typeof value === "object" &&
+  value !== null &&
+  Array.isArray((value as { widgets?: unknown }).widgets);
+
+/** Drops 6-column placements of widgets that are no longer in the layout, so none resurrect. */
+export function pruneLayouts(layout: StoredDashboardLayout): StoredDashboardLayout {
+  const md = layout.layouts?.md;
+  if (!md) return layout;
+  const ids = new Set(layout.widgets.map((w) => w.id));
+  const kept = md.filter((p) => ids.has(p.id));
+  return kept.length === md.length
+    ? layout
+    : { ...layout, layouts: { ...layout.layouts, md: kept } };
+}
+
 /**
  * Brings a saved admin layout to version 2. A version-2 layout is returned as is.
  * A legacy one keeps exactly the widgets it had (merged ids collapse into one,
@@ -61,8 +78,8 @@ export function migrateLayout(saved: StoredDashboardLayout): StoredDashboardLayo
   if (saved.version === GRID_LAYOUT_VERSION) return saved;
   const seen = new Set<string>();
   const widgets: StoredDashboardLayout["widgets"] = [];
-  for (const w of saved.widgets ?? []) {
-    const id = LEGACY_WIDGET_MAP[w.id];
+  for (const w of Array.isArray(saved.widgets) ? saved.widgets : []) {
+    const id = LEGACY_WIDGET_MAP[w?.id];
     if (!id || seen.has(id)) continue;
     const placement = adminWidgetPlacement(id);
     if (!placement) continue;
@@ -207,7 +224,7 @@ export function fromGridItems(
 ): StoredDashboardLayout {
   const byId = new Map(items.map((it) => [it.i, it]));
   if (bp === "lg") {
-    return {
+    return pruneLayouts({
       ...layout,
       version: GRID_LAYOUT_VERSION,
       columns: GRID_COLUMNS,
@@ -215,15 +232,15 @@ export function fromGridItems(
         const it = byId.get(w.id);
         return it ? toPlacement(it) : w;
       }),
-    };
+    });
   }
   const kept = (layout.layouts?.md ?? []).filter((p) => !byId.has(p.id));
-  return {
+  return pruneLayouts({
     ...layout,
     version: GRID_LAYOUT_VERSION,
     columns: GRID_COLUMNS,
     layouts: { ...layout.layouts, md: [...kept, ...items.map(toPlacement)] },
-  };
+  });
 }
 
 /** True when both lists place the same ids at the same cells (limits are ignored). */
@@ -294,11 +311,25 @@ export function applyKeyboardAction(
     next.x = current.x + dx;
     next.y = current.y + dy;
     if (next.x < 0 || next.y < 0 || next.x + next.w > cols) return null;
+    if (dy !== 0) {
+      // A vertical step into another widget swaps with it instead of hovering half-way.
+      const hit = items.filter((it) => it.i !== id && overlaps(it, next));
+      if (hit.length) {
+        next.y =
+          dy > 0 ? Math.max(...hit.map((it) => it.y + it.h)) : Math.min(...hit.map((it) => it.y));
+      }
+    }
   }
+  // Pack around the moved item, then compact it too, so the result (and what is announced)
+  // is the row the grid really shows. A step that compacts back to where it started is not
+  // a move: that is the bottom of the grid.
   const packed = packVertical(
-    items.map((it) => (it.i === id ? next : it)),
-    id
+    packVertical(
+      items.map((it) => (it.i === id ? next : it)),
+      id
+    )
   );
+  if (sameItems(packed, items)) return null;
   const final = packed.find((it) => it.i === id)!;
   const title = titleOf(id);
   return {

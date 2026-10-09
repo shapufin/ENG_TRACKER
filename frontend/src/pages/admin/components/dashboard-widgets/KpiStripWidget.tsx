@@ -71,8 +71,10 @@ export const KpiStripWidget: React.FC<KpiStripWidgetProps> = ({
       aria-label="Key figures"
       aria-busy={statsLoading || loadingOverview}
       data-chart-section="kpi-strip"
+      className="@container"
     >
-      <dl className="divide-border/60 grid grid-cols-2 sm:grid-cols-3 sm:divide-x lg:grid-cols-6">
+      {/* Columns follow the card width (it can be resized to 4 grid columns), not the viewport. */}
+      <dl className="divide-border/60 grid grid-cols-2 @sm:grid-cols-3 @sm:divide-x @3xl:grid-cols-6">
         <Kpi label="Users" value={stat(totalUsers)} />
         <Kpi label="Teams" value={stat(totalTeams)} />
         <Kpi

@@ -118,6 +118,18 @@ describe("fromGridItems", () => {
     expect(next.layouts?.md?.map((p) => p.id).sort()).toEqual(["kpi-strip", "shortcuts"]);
   });
 
+  it("drops stale md placements of removed widgets so they cannot resurrect", () => {
+    const base = {
+      ...defaultAdminLayout,
+      widgets: defaultAdminLayout.widgets.filter((w) => w.id !== "shortcuts"),
+      layouts: { md: [{ id: "shortcuts", position: { x: 0, y: 8 }, size: { w: 6, h: 1 } }] },
+    };
+    const lg = fromGridItems(base, "lg", [{ i: "kpi-strip", x: 0, y: 0, w: 12, h: 2 }]);
+    expect(lg.layouts?.md).toEqual([]);
+    const md = fromGridItems(base, "md", [{ i: "kpi-strip", x: 0, y: 0, w: 6, h: 2 }]);
+    expect(md.layouts?.md?.map((p) => p.id)).toEqual(["kpi-strip"]);
+  });
+
   it("round-trips lg", () => {
     const items = toGridItems(defaultAdminLayout, "lg", IDS);
     expect(fromGridItems(defaultAdminLayout, "lg", items)).toEqual(defaultAdminLayout);
@@ -181,10 +193,37 @@ describe("applyKeyboardAction", () => {
     expect(applyKeyboardAction(edge, "a", move("right"), 12, title)).toBeNull();
   });
 
-  it("moves down freely", () => {
-    const r = applyKeyboardAction(items, "b", move("down"), 12, title)!;
-    expect(r.items.find((i) => i.i === "b")!.y).toBe(1);
-    expect(r.announcement).toBe("Moved B to column 5, row 2");
+  it("does not grow y without bound: Alt+Down on the bottom-most widget is a no-op", () => {
+    expect(applyKeyboardAction(items, "b", move("down"), 12, title)).toBeNull();
+    const stacked: GridItem[] = [
+      { i: "a", x: 0, y: 0, w: 4, h: 3 },
+      { i: "b", x: 0, y: 3, w: 4, h: 3 },
+    ];
+    expect(applyKeyboardAction(stacked, "b", move("down"), 12, title)).toBeNull();
+  });
+
+  it("swaps with the widget below on a vertical step and announces the visible row", () => {
+    const stacked: GridItem[] = [
+      { i: "a", x: 0, y: 0, w: 4, h: 3 },
+      { i: "b", x: 0, y: 3, w: 4, h: 3 },
+    ];
+    const down = applyKeyboardAction(stacked, "a", move("down"), 12, title)!;
+    expect(down.items.find((i) => i.i === "a")!.y).toBe(3);
+    expect(down.items.find((i) => i.i === "b")!.y).toBe(0);
+    expect(down.announcement).toBe("Moved A to column 1, row 4");
+    const up = applyKeyboardAction(stacked, "b", move("up"), 12, title)!;
+    expect(up.items.find((i) => i.i === "b")!.y).toBe(0);
+    expect(up.announcement).toBe("Moved B to column 1, row 1");
+  });
+
+  it("announces the compacted row, not the requested one", () => {
+    const gap: GridItem[] = [
+      { i: "a", x: 0, y: 0, w: 4, h: 2 },
+      { i: "b", x: 4, y: 3, w: 4, h: 2 },
+    ];
+    const r = applyKeyboardAction(gap, "b", move("right"), 12, title)!;
+    expect(r.items.find((i) => i.i === "b")!.y).toBe(0);
+    expect(r.announcement).toBe("Moved B to column 6, row 1");
   });
 
   it("resizes by one cell and announces width by height", () => {

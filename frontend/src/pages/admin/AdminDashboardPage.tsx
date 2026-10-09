@@ -11,6 +11,7 @@ import {
   widgetSection,
 } from "@/config/dashboardWidgets";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { DashboardEditToggle } from "./components/DashboardEditToggle";
 import { AdminDashboardWidgets } from "./components/AdminDashboardWidgets";
 import { AdminInsightsStrip } from "./components/AdminInsightsStrip";
@@ -24,18 +25,31 @@ const AdminDashboardContent: React.FC = () => {
   const { layout, updateLayout, isLoading, saveStatus, retrySave } = useDashboard();
   const [editing, setEditing] = useState(false);
   const widgetsRef = useRef<HTMLDivElement>(null);
+  const editToggleRef = useRef<HTMLButtonElement>(null);
+  const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get("section");
   const section = ADMIN_DASHBOARD_SECTIONS.some((s) => s.id === requested) ? requested! : "all";
   // Rearranging only makes sense with every widget on screen, so it is an All-tab feature.
   const canEdit = section === "all";
-  const editActive = editing && canEdit;
+  // There is no grid to edit on a phone either (the toggle is hidden there).
+  const editable = canEdit && !isLoading && !isMobile;
+  // A tab change from outside (history, a link) or a narrow viewport ends edit mode too.
+  if (editing && !editable) setEditing(false);
+  const editActive = editing && editable;
   useEffect(() => {
     if (!editing) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      // Esc inside a dialog or menu closes that, not edit mode.
-      if (e.key === "Escape" && !document.querySelector('[role="dialog"],[role="menu"]')) {
+      // Esc inside a dialog or menu closes that, and one a widget handled (dropping a grabbed
+      // widget) is not meant for edit mode.
+      if (
+        e.key === "Escape" &&
+        !e.defaultPrevented &&
+        !document.querySelector('[role="dialog"],[role="menu"]')
+      ) {
         setEditing(false);
+        // The grip that had focus is about to unmount: hand focus to the toggle.
+        editToggleRef.current?.focus();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -67,7 +81,10 @@ const AdminDashboardContent: React.FC = () => {
   } = useAdminDashboardPage();
   const handleReset = async () => {
     const previous = layout;
-    await resetLayout();
+    if (!(await resetLayout())) {
+      toast.error("Couldn't reset the dashboard. Try again.");
+      return;
+    }
     toast("Dashboard reset to default", {
       duration: 8000,
       action: { label: "Undo", onClick: () => void updateLayout(previous) },
@@ -87,8 +104,10 @@ const AdminDashboardContent: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           <AdminDashboardFreshness />
           <DashboardEditToggle
+            buttonRef={editToggleRef}
             editing={editActive}
-            disabled={!canEdit}
+            disabled={!canEdit || isLoading}
+            disabledReason={canEdit ? "Loading your layout…" : undefined}
             onToggle={() => setEditing((on) => !on)}
             saveStatus={saveStatus}
             onRetry={() => void retrySave()}
@@ -97,6 +116,7 @@ const AdminDashboardContent: React.FC = () => {
             containerRef={widgetsRef}
             availableWidgets={AVAILABLE_WIDGETS}
             isSuperuser={isSuperuser}
+            disabled={isLoading}
             onApplyPreset={(ids) => void updateLayout(presetLayout(ids))}
             onReset={() => void handleReset()}
             onCustomize={() => setCustomizeModalOpen(true)}
