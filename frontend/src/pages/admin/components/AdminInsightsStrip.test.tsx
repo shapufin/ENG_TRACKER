@@ -177,10 +177,10 @@ describe("AdminInsightsStrip", () => {
   it("opens and closes the full message from a button", () => {
     renderStrip();
     const message = screen.getByRole("button", { expanded: false, name: /15 days|over|waiting/i });
-    expect(message).toHaveClass("truncate");
+    expect(message).toHaveClass("sm:truncate");
     fireEvent.click(message);
     expect(message).toHaveAttribute("aria-expanded", "true");
-    expect(message).not.toHaveClass("truncate");
+    expect(message).not.toHaveClass("sm:truncate");
     fireEvent.click(message);
     expect(message).toHaveAttribute("aria-expanded", "false");
   });

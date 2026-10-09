@@ -56,7 +56,7 @@ const GlassCardComponent = React.forwardRef<HTMLDivElement, GlassCardProps>(
           "before:absolute before:inset-x-0 before:top-0 before:h-px before:content-['']",
           glowMap[glow],
           interactive &&
-            "hover:border-border-focus hover:shadow-pop transition-all duration-300 hover:-translate-y-1",
+            "hover:border-border-focus hover:shadow-pop transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1",
           className
         )}
         {...props}

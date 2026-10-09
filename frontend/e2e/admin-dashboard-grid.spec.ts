@@ -84,7 +84,7 @@ test.describe("Admin dashboard grid", () => {
   test("drag by the grip moves a widget and the position survives a reload", async ({ page }) => {
     await enterEditMode(page);
     const before = await docTop(page, cell(page, "shortcuts"));
-    await dragBy(page, page.getByRole("button", { name: "Move Shortcuts" }), -400);
+    await dragBy(page, page.getByRole("button", { name: "Move Shortcuts", exact: true }), -400);
     await expectSaved(page);
     const moved = await docTop(page, cell(page, "shortcuts"));
     expect(moved).toBeLessThan(before);
@@ -113,7 +113,7 @@ test.describe("Admin dashboard grid", () => {
 
   test("keyboard: Alt+Arrow on the grip moves a widget and announces it", async ({ page }) => {
     await enterEditMode(page);
-    await page.getByRole("button", { name: "Move Hours" }).focus();
+    await page.getByRole("button", { name: "Move Hours", exact: true }).focus();
     await page.keyboard.press("Alt+ArrowDown");
     await expect(
       page.getByRole("status").filter({ hasText: /Moved Hours to column/ })
@@ -122,7 +122,7 @@ test.describe("Admin dashboard grid", () => {
 
   test("reset restores the default layout and Undo brings the edit back", async ({ page }) => {
     await enterEditMode(page);
-    await dragBy(page, page.getByRole("button", { name: "Move Shortcuts" }), -400);
+    await dragBy(page, page.getByRole("button", { name: "Move Shortcuts", exact: true }), -400);
     await expectSaved(page);
     const edited = await docTop(page, cell(page, "shortcuts"));
 
