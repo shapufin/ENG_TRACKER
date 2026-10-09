@@ -75,7 +75,7 @@ export const AdminInsightsStrip: React.FC = () => {
     <section aria-label="Automated insights">
       <div
         className={cn(
-          "flex min-h-10 items-center gap-3 rounded-lg border px-3 py-1",
+          "flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-1 sm:flex-nowrap",
           toneSurfaceClass[tone]
         )}
       >
@@ -86,14 +86,14 @@ export const AdminInsightsStrip: React.FC = () => {
           initial="hidden"
           animate="visible"
           transition={transition}
-          className="flex min-w-0 flex-1 items-center gap-3"
+          className="flex min-w-0 basis-full items-center gap-3 sm:flex-1 sm:basis-0"
         >
           <Icon className="h-4 w-4 shrink-0" aria-hidden />
           <div className="flex min-w-0 flex-1 flex-col md:flex-row md:items-baseline md:gap-2">
             <p
               className={cn(
                 "text-sm font-semibold md:max-w-[55%] md:shrink-0",
-                !expanded && "truncate"
+                !expanded && "sm:truncate"
               )}
             >
               <span className="font-mono text-xs tracking-wider uppercase">{label}</span>
@@ -108,7 +108,7 @@ export const AdminInsightsStrip: React.FC = () => {
               onClick={() => setExpandedSig(expanded ? null : current.signature)}
               className={cn(
                 "focus-visible:outline-focus min-w-0 rounded-sm text-left text-xs opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2",
-                !expanded && "truncate"
+                !expanded && "sm:truncate"
               )}
             >
               {current.message}
@@ -124,7 +124,7 @@ export const AdminInsightsStrip: React.FC = () => {
                 onClick={() => step(-1)}
                 aria-label="Previous insight"
               >
-                <ChevronLeft className="h-3.5 w-3.5" />
+                <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
               </button>
               <span className="tabular-nums">
                 {Math.min(index, insights.length - 1) + 1} of {insights.length}
@@ -135,7 +135,7 @@ export const AdminInsightsStrip: React.FC = () => {
                 onClick={() => step(1)}
                 aria-label="Next insight"
               >
-                <ChevronRight className="h-3.5 w-3.5" />
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden />
               </button>
             </div>
           )}
@@ -153,7 +153,7 @@ export const AdminInsightsStrip: React.FC = () => {
             }}
             aria-label="Dismiss insight"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" aria-hidden />
           </button>
         </div>
       </div>

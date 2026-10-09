@@ -116,7 +116,7 @@ test.describe("Admin dashboard follow-ups", () => {
     await loginAsUser(page, E2E_CREDENTIALS.admin);
     await page.goto("/admin?months=6");
     // The period selector lives on the Trend tab of the Hours widget.
-    await page.getByRole("tab", { name: "Trend" }).click();
+    await page.getByRole("tab", { name: "Trend", exact: true }).click();
     await expect(page.getByRole("button", { name: "6 months" })).toHaveAttribute(
       "aria-pressed",
       "true"
