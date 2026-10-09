@@ -8,6 +8,7 @@ import React, { useState } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { cn } from "@/lib/utils";
+import { controlSurface, type ControlSize } from "./controlSurface";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { DEFAULT_QUICK_RANGES, type QuickRangePreset } from "@/lib/quickDateRanges";
 import { DateRangePickerPopoverContent } from "./DateRangePickerPopoverContent";
@@ -28,6 +29,8 @@ interface DateRangePickerProps {
   presets?: QuickRangePreset[];
   /** Accessible name for the trigger button. Defaults to "Open date range picker". */
   ariaLabel?: string;
+  /** Height token, same scale as Input/SelectTrigger so a toolbar aligns. */
+  controlSize?: ControlSize;
 }
 
 export const DateRangePicker: React.FC<DateRangePickerProps> = ({
@@ -40,6 +43,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   id,
   presets = DEFAULT_QUICK_RANGES,
   ariaLabel = "Open date range picker",
+  controlSize,
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -64,16 +68,15 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
           disabled={disabled}
           aria-label={ariaLabel}
           className={cn(
-            "flex h-10 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm",
-            "ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            "disabled:cursor-not-allowed disabled:opacity-50",
+            "flex items-center justify-between gap-2",
+            controlSurface({ controlSize }),
             className
           )}
         >
           <span className={cn("truncate text-left", !label && "text-muted-foreground")}>
             {label || placeholder}
           </span>
-          <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <CalendarIcon className="text-muted-foreground h-4 w-4 shrink-0" />
         </button>
       </Popover.Trigger>
 

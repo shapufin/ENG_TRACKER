@@ -1,6 +1,6 @@
 import React from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
-import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/FormField";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -73,16 +73,13 @@ export const LeaveBalanceFormDialog: React.FC<LeaveBalanceFormDialogProps> = ({
     >
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label
-            htmlFor="leave-balance-user"
-            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-          >
-            User
-          </Label>
+          <Label htmlFor="leave-balance-user">User</Label>
           <Select value={form.user} onValueChange={(v) => updateField("user", v)}>
             <SelectTrigger
               id="leave-balance-user"
-              className={cn("px-3", formErrors.user ? "border-destructive" : "")}
+              aria-invalid={formErrors.user ? true : undefined}
+              aria-describedby={formErrors.user ? "leave-balance-user-error" : undefined}
+              className={cn(formErrors.user ? "border-destructive" : "")}
             >
               <SelectValue placeholder="Select user" />
             </SelectTrigger>
@@ -94,19 +91,20 @@ export const LeaveBalanceFormDialog: React.FC<LeaveBalanceFormDialogProps> = ({
               ))}
             </SelectContent>
           </Select>
-          {formErrors.user && <p className="text-destructive text-xs">{formErrors.user}</p>}
+          {formErrors.user && (
+            <p id="leave-balance-user-error" className="text-destructive text-xs">
+              {formErrors.user}
+            </p>
+          )}
         </div>
         <div className="space-y-2">
-          <Label
-            htmlFor="leave-balance-type"
-            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-          >
-            Leave Type
-          </Label>
+          <Label htmlFor="leave-balance-type">Leave Type</Label>
           <Select value={form.leave_type} onValueChange={(v) => updateField("leave_type", v)}>
             <SelectTrigger
               id="leave-balance-type"
-              className={cn("px-3", formErrors.leave_type ? "border-destructive" : "")}
+              aria-invalid={formErrors.leave_type ? true : undefined}
+              aria-describedby={formErrors.leave_type ? "leave-balance-type-error" : undefined}
+              className={cn(formErrors.leave_type ? "border-destructive" : "")}
             >
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
@@ -115,50 +113,44 @@ export const LeaveBalanceFormDialog: React.FC<LeaveBalanceFormDialogProps> = ({
             </SelectContent>
           </Select>
           {formErrors.leave_type && (
-            <p className="text-destructive text-xs">{formErrors.leave_type}</p>
+            <p id="leave-balance-type-error" className="text-destructive text-xs">
+              {formErrors.leave_type}
+            </p>
           )}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="leave-balance-year">Year</Label>
-          <Input
-            id="leave-balance-year"
-            type="number"
-            value={form.year}
-            onChange={(e) => updateField("year", e.target.value)}
-            required
-            className={formErrors.year ? "border-destructive" : ""}
-          />
-          {formErrors.year && <p className="text-destructive text-xs">{formErrors.year}</p>}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="leave-balance-total">Total Days</Label>
-          <Input
-            id="leave-balance-total"
-            type="number"
-            value={form.total_days}
-            onChange={(e) => updateField("total_days", e.target.value)}
-            required
-            className={formErrors.total_days ? "border-destructive" : ""}
-          />
-          {formErrors.total_days && (
-            <p className="text-destructive text-xs">{formErrors.total_days}</p>
-          )}
-        </div>
-      </div>
-      <div className="mt-4 space-y-2">
-        <Label htmlFor="leave-balance-used">Used Days</Label>
-        <Input
-          id="leave-balance-used"
+        <FormField
+          id="leave-balance-year"
+          label="Year"
           type="number"
-          value={form.used_days}
-          onChange={(e) => updateField("used_days", e.target.value)}
+          value={form.year}
+          onChange={(v) => updateField("year", v)}
+          error={formErrors.year}
           required
-          className={formErrors.used_days ? "border-destructive" : ""}
         />
-        {formErrors.used_days && <p className="text-destructive text-xs">{formErrors.used_days}</p>}
+        <FormField
+          id="leave-balance-total"
+          label="Total Days"
+          type="number"
+          value={form.total_days}
+          onChange={(v) => updateField("total_days", v)}
+          error={formErrors.total_days}
+          required
+        />
       </div>
+      <FormField
+        className="mt-4"
+        id="leave-balance-used"
+        label="Used Days"
+        type="number"
+        value={form.used_days}
+        onChange={(v) => updateField("used_days", v)}
+        error={formErrors.used_days}
+        required
+      />
       {formErrors.non_field_errors && (
-        <p className="text-destructive text-xs">{formErrors.non_field_errors}</p>
+        <p className="text-destructive text-xs" role="alert">
+          {formErrors.non_field_errors}
+        </p>
       )}
     </FormDialog>
   );

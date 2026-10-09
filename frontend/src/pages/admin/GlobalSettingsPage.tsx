@@ -6,6 +6,7 @@ import { useSiteBranding, SITE_BRANDING_QUERY_KEY } from "@/hooks/useSiteBrandin
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/FormField";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
@@ -47,41 +48,36 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="settings-yearly-days">Default Yearly Vacation Days</Label>
-        <Input
-          id="settings-yearly-days"
-          type="number"
-          value={form.default_yearly_leave_days}
-          onChange={(e) => setForm((f) => ({ ...f, default_yearly_leave_days: e.target.value }))}
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="settings-carryover-month">Carry-over Expiry Month</Label>
-        <Input
-          id="settings-carryover-month"
-          type="number"
-          min={1}
-          max={12}
-          value={form.carry_over_expiry_month}
-          onChange={(e) => setForm((f) => ({ ...f, carry_over_expiry_month: e.target.value }))}
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="settings-carryover-day">Carry-over Expiry Day</Label>
-        <Input
-          id="settings-carryover-day"
-          type="number"
-          min={1}
-          max={31}
-          value={form.carry_over_expiry_day}
-          onChange={(e) => setForm((f) => ({ ...f, carry_over_expiry_day: e.target.value }))}
-          required
-        />
-      </div>
-      <Button type="submit" disabled={update.isPending}>
+      <FormField
+        id="settings-yearly-days"
+        label="Default Yearly Vacation Days"
+        type="number"
+        value={form.default_yearly_leave_days}
+        onChange={(v) => setForm((f) => ({ ...f, default_yearly_leave_days: v }))}
+        required
+      />
+      <FormField
+        id="settings-carryover-month"
+        label="Carry-over Expiry Month"
+        type="number"
+        min={1}
+        max={12}
+        helper="1 (January) to 12 (December)."
+        value={form.carry_over_expiry_month}
+        onChange={(v) => setForm((f) => ({ ...f, carry_over_expiry_month: v }))}
+        required
+      />
+      <FormField
+        id="settings-carryover-day"
+        label="Carry-over Expiry Day"
+        type="number"
+        min={1}
+        max={31}
+        value={form.carry_over_expiry_day}
+        onChange={(v) => setForm((f) => ({ ...f, carry_over_expiry_day: v }))}
+        required
+      />
+      <Button type="submit" size="control" disabled={update.isPending}>
         <Save className="mr-2 h-4 w-4" />
         {update.isPending ? "Saving..." : "Save Settings"}
       </Button>
@@ -111,30 +107,35 @@ const SiteBrandingForm: React.FC<{ branding: SiteBranding }> = ({ branding }) =>
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="branding-site-name">Site Name</Label>
-        <Input
-          id="branding-site-name"
-          value={siteName}
-          onChange={(e) => setSiteName(e.target.value)}
-          required
-        />
-        <p className="text-xs text-muted-foreground">Shown in the sidebar and header.</p>
-      </div>
+      <FormField
+        id="branding-site-name"
+        label="Site Name"
+        helper="Shown in the sidebar and header."
+        value={siteName}
+        onChange={setSiteName}
+        required
+      />
       <div className="space-y-2">
         <Label htmlFor="branding-logo">Logo</Label>
         {branding.logo_url && !logo && (
-          <img src={branding.logo_url} alt="Current logo" className="h-10 w-10 rounded object-contain" />
+          <img
+            src={branding.logo_url}
+            alt="Current logo"
+            className="h-10 w-10 rounded object-contain"
+          />
         )}
         <Input
           id="branding-logo"
           type="file"
           accept="image/png,image/jpeg,image/svg+xml,image/webp"
+          aria-describedby="branding-logo-helper"
           onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
         />
-        <p className="text-xs text-muted-foreground">PNG, JPG, SVG or WebP. Leave empty to keep the current logo.</p>
+        <p id="branding-logo-helper" className="text-muted-foreground text-xs">
+          PNG, JPG, SVG or WebP. Leave empty to keep the current logo.
+        </p>
       </div>
-      <Button type="submit" disabled={update.isPending}>
+      <Button type="submit" size="control" disabled={update.isPending}>
         <Upload className="mr-2 h-4 w-4" />
         {update.isPending ? "Saving..." : "Save Branding"}
       </Button>
@@ -163,13 +164,14 @@ export const GlobalSettingsPage: React.FC = () => {
 
   return (
     <PageShell title="Global Vacation Settings" subtitle="Configure default vacation policies.">
-      <div className="flex flex-col gap-6">
-        <GlassCard delay={0} className="max-w-md p-6">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <GlassCard delay={0} className="p-4">
+          <h2 className="mb-4 text-base font-semibold">Vacation policy</h2>
           <GlobalSettingsForm key={settingsKey} settings={data} />
         </GlassCard>
 
-        <GlassCard delay={0.05} className="max-w-md p-6">
-          <h2 className="mb-4 text-lg font-semibold">Site Branding</h2>
+        <GlassCard delay={0.05} className="p-4">
+          <h2 className="mb-4 text-base font-semibold">Site Branding</h2>
           {brandingLoading && <LoadingCard rows={2} />}
           {!brandingLoading && !branding && (
             <ErrorCard

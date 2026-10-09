@@ -31,6 +31,8 @@ interface HoursLogsTableProps<T extends HoursLog> {
   onDelete?: (id: number) => void;
   canDelete?: boolean;
   storageKey: string;
+  /** Filter controls rendered in the table's own toolbar row (one card, one toolbar). */
+  filters?: React.ReactNode;
 }
 
 const DeleteLogButton = ({ id, onDelete }: { id: number; onDelete: (id: number) => void }) => {
@@ -40,7 +42,7 @@ const DeleteLogButton = ({ id, onDelete }: { id: number; onDelete: (id: number) 
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-destructive"
+        className="text-destructive h-8 w-8"
         title="Delete record"
         aria-label="Delete record"
         onClick={() => setOpen(true)}
@@ -71,6 +73,7 @@ export const HoursLogsTable = <T extends HoursLog>({
   onDelete,
   canDelete = false,
   storageKey,
+  filters,
 }: HoursLogsTableProps<T>) => {
   const columns = useMemo<AppColumnDef<T>[]>(
     () => [
@@ -136,6 +139,7 @@ export const HoursLogsTable = <T extends HoursLog>({
         columns={columns}
         enableColumnVisibility
         storageKey={storageKey}
+        toolbarActions={filters}
         getRowId={(row) => row.id.toString()}
       />
     </GlassCard>

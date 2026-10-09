@@ -2,6 +2,7 @@ import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { PageShell } from "@/components/layout/PageShell";
 import { LoadingCard } from "@/components/ui/LoadingCard";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, CalendarDays, TrendingUp } from "lucide-react";
@@ -73,29 +74,24 @@ export const ReportsPage: React.FC = () => {
           onValueChange={(v) => setActiveTab(v as "overtime_standby" | "vacation")}
           className="w-full"
         >
-          <TabsList className="grid h-11 w-full max-w-[400px] grid-cols-2 border bg-muted/50 p-1">
-            <TabsTrigger
-              value="overtime_standby"
-              className="data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
+          <TabsList>
+            <TabsTrigger value="overtime_standby">
               <Clock className="mr-2 h-4 w-4" /> OT & Standby
             </TabsTrigger>
-            <TabsTrigger
-              value="vacation"
-              className="data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
+            <TabsTrigger value="vacation">
               <CalendarDays className="mr-2 h-4 w-4" /> Vacations
             </TabsTrigger>
           </TabsList>
           <div className="mt-6 space-y-6">
             {!hasGenerated ? (
-              <GlassCard className="flex flex-col items-center justify-center p-20 text-center">
-                <TrendingUp className="mb-4 h-12 w-12 text-muted-foreground" />
-                <h3 className="text-lg font-semibold">Ready for Analysis</h3>
-                <p className="max-w-sm text-sm text-muted-foreground">
-                  Configure your parameters above and click "Generate Intelligence" to populate the
-                  reports.
-                </p>
+              <GlassCard>
+                <EmptyState
+                  icon={TrendingUp}
+                  title="Ready for Analysis"
+                  description={
+                    'Configure your parameters above and click "Generate Intelligence" to populate the reports.'
+                  }
+                />
               </GlassCard>
             ) : isLoading ? (
               <LoadingCard rows={4} />
@@ -129,8 +125,8 @@ export const ReportsPage: React.FC = () => {
                   />
                 </TabsContent>
                 {groupBy === "user" && (
-                  <GlassCard className="overflow-hidden border-border/70 p-0 shadow-xl">
-                    <CardHeader className="border-b bg-muted/30 p-6">
+                  <GlassCard className="overflow-hidden p-0">
+                    <CardHeader className="border-line-subtle border-b p-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <CardTitle className="text-lg">Detailed Personnel Breakdown</CardTitle>
@@ -140,7 +136,7 @@ export const ReportsPage: React.FC = () => {
                         </div>
                       </div>
                     </CardHeader>
-                    <div className="p-6">
+                    <div className="p-4">
                       <ReportUserTable activeTab={activeTab} data={filteredUsersData} />
                     </div>
                   </GlassCard>

@@ -1,4 +1,5 @@
 import React from "react";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
 import { SearchInput, StatusFilterButton, DateRangePickers } from "./filterBarParts";
 
 interface FilterBarProps {
@@ -23,8 +24,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onDateToChange,
 }) => {
   return (
-    <div className="grid gap-4 xl:grid-cols-[1fr_220px_260px]">
-      <SearchInput value={searchQuery} onChange={onSearchChange} />
+    <>
+      <FilterToolbar.Search>
+        <SearchInput value={searchQuery} onChange={onSearchChange} />
+      </FilterToolbar.Search>
       <StatusFilterButton filterStatus={filterStatus} onStatusChange={onStatusChange} />
       <DateRangePickers
         dateFrom={dateFrom}
@@ -32,6 +35,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         dateTo={dateTo}
         onDateToChange={onDateToChange}
       />
-    </div>
+    </>
   );
 };

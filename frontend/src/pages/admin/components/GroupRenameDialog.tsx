@@ -43,11 +43,11 @@ export const GroupRenameDialog: React.FC<GroupRenameDialogProps> = ({
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-1 py-1">
             <ModalSection columns={2}>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="group-rename-current">Current Group Name</Label>
                 <Input id="group-rename-current" value={editingGroup || ""} disabled />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="group-rename-new">New Group Name</Label>
                 <Input
                   id="group-rename-new"

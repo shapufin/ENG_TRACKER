@@ -31,10 +31,12 @@ export const PluginManagementPage: React.FC = () => {
 
   return (
     <PageShell
+      category="Tools"
       title="Plugin Management"
       subtitle="Manage and extend application functionality through plugins."
       actions={
         <Button
+          size="control"
           onClick={handleDiscover}
           disabled={isDiscovering || isLoading}
           className="flex items-center gap-2"

@@ -1,8 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ChevronRight, Pencil, UserPlus, UsersRound } from "lucide-react";
+import { ChevronRight, Pencil, UserPlus } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Badge } from "@/components/ui/badge";
@@ -163,6 +162,28 @@ export function ResourceAccessGroupPage() {
       category="Governance"
       title={groupData?.name ?? "Group"}
       subtitle={groupData?.description || "Manage group membership"}
+      titleBadge={
+        <>
+          <Badge variant="outline" className="text-xs">
+            {groupData?.code}
+          </Badge>
+          <Badge variant="secondary" className="text-xs">
+            {groupData?.member_count ?? 0} members
+          </Badge>
+        </>
+      }
+      actions={
+        <>
+          <Button variant="outline" size="control" onClick={() => setEditDialogOpen(true)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit group
+          </Button>
+          <Button size="control" onClick={() => setAddDialogOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add member
+          </Button>
+        </>
+      }
     >
       {/* Breadcrumb */}
       <nav
@@ -179,63 +200,24 @@ export function ResourceAccessGroupPage() {
         <span className="text-foreground">{groupData?.name}</span>
       </nav>
 
-      {/* Group header */}
-      <GlassCard className="p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="bg-primary/10 text-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl">
-              <UsersRound className="h-6 w-6" />
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-xl font-semibold tracking-tight">{groupData?.name}</h2>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  {groupData?.code}
-                </Badge>
-                <Badge variant="secondary" className="text-xs">
-                  {groupData?.member_count ?? 0} members
-                </Badge>
-              </div>
-              {groupData?.description && (
-                <p className="text-muted-foreground max-w-2xl text-sm leading-6">
-                  {groupData.description}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit group
-            </Button>
-            <Button onClick={() => setAddDialogOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add member
-            </Button>
-          </div>
-        </div>
-      </GlassCard>
-
-      {/* Member toolbar */}
-      <GlassCard className="p-4">
-        <FilterToolbar>
-          <FilterToolbar.Search>
-            <SearchField
-              placeholder="Search members by name or username..."
-              value={memberSearch}
-              onChange={setMemberSearch}
-              onClear={clearMemberSearch}
-              aria-label="Search members"
-            />
-          </FilterToolbar.Search>
-          <span className="text-muted-foreground shrink-0 text-xs">
-            {memberTotal} {memberTotal === 1 ? "member" : "members"}
-          </span>
-        </FilterToolbar>
-      </GlassCard>
-
       {/* Member list */}
       <ResourceAccessMemberList
+        toolbar={
+          <FilterToolbar>
+            <FilterToolbar.Search>
+              <SearchField
+                placeholder="Search members by name or username..."
+                value={memberSearch}
+                onChange={setMemberSearch}
+                onClear={clearMemberSearch}
+                aria-label="Search members"
+              />
+            </FilterToolbar.Search>
+            <span className="text-muted-foreground shrink-0 text-xs">
+              {memberTotal} {memberTotal === 1 ? "member" : "members"}
+            </span>
+          </FilterToolbar>
+        }
         members={memberList}
         isLoading={members.isLoading && !members.data}
         isFetching={members.isFetching}

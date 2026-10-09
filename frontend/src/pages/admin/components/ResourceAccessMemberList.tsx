@@ -1,3 +1,4 @@
+import type React from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
@@ -9,6 +10,8 @@ import { UserPlus, Trash2, X } from "lucide-react";
 import type { UserGroup } from "@/types";
 
 interface ResourceAccessMemberListProps {
+  /** Search/count strip, rendered as the header of the list card. */
+  toolbar?: React.ReactNode;
   members: UserGroup[];
   isLoading: boolean;
   isFetching: boolean;
@@ -26,6 +29,7 @@ interface ResourceAccessMemberListProps {
 }
 
 export function ResourceAccessMemberList({
+  toolbar,
   members,
   isLoading,
   isFetching,
@@ -41,19 +45,31 @@ export function ResourceAccessMemberList({
   onPageChange,
   onRemove,
 }: ResourceAccessMemberListProps) {
-  if (isLoading) return <LoadingCard title="Loading members" rows={4} className="min-h-[160px]" />;
+  const toolbarCard = toolbar ? <GlassCard className="p-4">{toolbar}</GlassCard> : null;
+  if (isLoading) {
+    return (
+      <>
+        {toolbarCard}
+        <LoadingCard title="Loading members" rows={4} className="min-h-[160px]" />
+      </>
+    );
+  }
   if (isError) {
     return (
-      <ErrorCard
-        title="Couldn't load members"
-        message="Refresh the page and try again."
-        onRetry={onRetry}
-      />
+      <>
+        {toolbarCard}
+        <ErrorCard
+          title="Couldn't load members"
+          message="Refresh the page and try again."
+          onRetry={onRetry}
+        />
+      </>
     );
   }
   if (members.length === 0) {
     return (
-      <GlassCard>
+      <GlassCard className="p-0">
+        <div className="border-line-subtle border-b p-4">{toolbar}</div>
         <EmptyState
           icon={UserPlus}
           title={memberSearch ? "No members match your search" : "No members yet"}
@@ -82,6 +98,7 @@ export function ResourceAccessMemberList({
 
   return (
     <GlassCard className="p-0">
+      <div className="border-line-subtle border-b p-4">{toolbar}</div>
       <div className="hidden overflow-hidden md:block">
         <table className="w-full text-sm">
           <thead>

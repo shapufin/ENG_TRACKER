@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Filter, Sun } from "lucide-react";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
 import { SearchInput, StatusFilterButton, DateRangePickers } from "./filterBarParts";
 import {
   Select,
@@ -48,12 +49,15 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
   onDateToChange,
 }) => {
   return (
-    <div className="grid gap-4 xl:grid-cols-[1fr_160px_160px_180px_260px]">
-      <SearchInput value={searchQuery} onChange={onSearchChange} />
+    <>
+      <FilterToolbar.Search className="sm:max-w-56">
+        <SearchInput value={searchQuery} onChange={onSearchChange} />
+      </FilterToolbar.Search>
       <StatusFilterButton filterStatus={filterStatus} onStatusChange={onStatusChange} />
       <Button
         variant="outline"
-        className="h-12 justify-start"
+        size="control"
+        className="min-w-32 justify-start"
         onClick={() => {
           const types: Array<"all" | "vacation"> = ["all", "vacation"];
           const currentIndex = types.indexOf(filterType);
@@ -69,7 +73,7 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
         {typeLabels[filterType]}
       </Button>
       <Select value={filterUser} onValueChange={onUserChange}>
-        <SelectTrigger controlSize="lg">
+        <SelectTrigger aria-label="Filter by user" className="sm:w-44">
           <SelectValue placeholder="All Users" />
         </SelectTrigger>
         <SelectContent>
@@ -87,6 +91,6 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
         dateTo={dateTo}
         onDateToChange={onDateToChange}
       />
-    </div>
+    </>
   );
 };

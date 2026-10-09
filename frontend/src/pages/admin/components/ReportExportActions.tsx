@@ -20,15 +20,15 @@ export const ReportExportActions: React.FC<ReportExportActionsProps> = ({
       {activeTab === "overtime_standby" ? (
         <>
           <Button variant="outline" size="sm" onClick={onExportOvertime}>
-            <FileSpreadsheet className="mr-2 h-4 w-4 text-blue-500" /> Export OT
+            <FileSpreadsheet className="text-muted-foreground mr-2 h-4 w-4" /> Export OT
           </Button>
           <Button variant="outline" size="sm" onClick={onExportStandby}>
-            <FileSpreadsheet className="mr-2 h-4 w-4 text-purple-500" /> Export Standby
+            <FileSpreadsheet className="text-muted-foreground mr-2 h-4 w-4" /> Export Standby
           </Button>
         </>
       ) : (
         <Button variant="outline" size="sm" onClick={onExportLeave}>
-          <FileSpreadsheet className="mr-2 h-4 w-4 text-green-500" /> Export Vacations
+          <FileSpreadsheet className="text-muted-foreground mr-2 h-4 w-4" /> Export Vacations
         </Button>
       )}
     </div>

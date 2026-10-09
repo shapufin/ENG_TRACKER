@@ -45,13 +45,19 @@ export const RejectionReasonDialog: React.FC<RejectionReasonDialogProps> = ({
         </DialogHeader>
         <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-1 py-1">
           <div className="space-y-2">
-            <Label htmlFor="rejection-reason">Rejection reason</Label>
+            <Label
+              htmlFor="rejection-reason"
+              className="after:text-tone-danger-text after:ml-0.5 after:content-['*']"
+            >
+              Rejection reason
+            </Label>
             <Textarea
               id="rejection-reason"
               placeholder="Enter rejection reason..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={4}
+              required
             />
           </div>
         </div>
