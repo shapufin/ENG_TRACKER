@@ -124,7 +124,7 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     expect(lightBlock).toContain("--control-h-lg: 2.5rem");
     expect(lightBlock).toContain("--control-radius: var(--radius-control)");
     expect(lightBlock).toContain(
-      "--shadow-card: 0 1px 2px hsl(222 47% 11% / 0.06), 0 1px 3px hsl(222 47% 11% / 0.04)"
+      "--shadow-card: inset 0 1px 0 hsl(0 0% 100% / 0.7), 0 1px 2px hsl(230 40% 20% / 0.06), 0 2px 6px -1px hsl(230 40% 20% / 0.06)"
     );
     expect(lightBlock).toContain("--shadow-pop:");
     expect(darkBlock).toContain("--control-edge:");
@@ -235,5 +235,13 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     expect(ratio(luminance(220, 10, 36), page)).toBeGreaterThanOrEqual(4.5);
     expect(ratio(luminance(220, 10, 36), luminance(220, 25, 98.5))).toBeGreaterThanOrEqual(4.5);
     expect(ratio(luminance(220, 10, 36), luminance(220, 20, 94))).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe("shadow tokens", () => {
+  it("declares --shadow-card once per theme block", () => {
+    const count = (s: string) => s.split("--shadow-card:").length - 1;
+    expect(count(lightBlock)).toBe(1);
+    expect(count(darkBlock)).toBe(1);
   });
 });
