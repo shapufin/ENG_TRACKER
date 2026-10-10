@@ -63,7 +63,7 @@ const CoverageGapsCard: React.FC<{
             <li key={label} className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">{label}</span>
               <span
-                className={`font-mono tabular-nums ${n > 0 ? "text-warning font-semibold" : ""}`}
+                className={`font-mono tabular-nums ${n > 0 ? "text-tone-warning-text font-semibold" : "text-muted-foreground"}`}
               >
                 {n}
               </span>
