@@ -119,7 +119,7 @@ export const KpiStripWidget: React.FC<KpiStripWidgetProps> = ({
           value={stat(totalUsers)}
           icon={Users}
           to="/admin/users"
-          hint={newHires === undefined ? undefined : `+${newHires} new � 30d`}
+          hint={newHires === undefined ? undefined : `+${newHires} new · 30d`}
         />
         <Kpi label="Teams" value={stat(totalTeams)} icon={Building2} to="/admin/teams" />
         <Kpi

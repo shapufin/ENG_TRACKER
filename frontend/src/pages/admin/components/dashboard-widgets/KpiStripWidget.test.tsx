@@ -101,7 +101,7 @@ describe("KpiStripWidget", () => {
 
   it("shows the real new-hire delta under Users", () => {
     render(<KpiStripWidget {...stats} overview={overview()} />);
-    expect(screen.getByText("+3 new � 30d")).toBeInTheDocument();
+    expect(screen.getByText("+3 new · 30d")).toBeInTheDocument();
   });
 
   it("shows a flat delta when nobody joined", () => {
@@ -112,6 +112,6 @@ describe("KpiStripWidget", () => {
         overview={overview({ ...base, headcount: { ...base.headcount, new_hires_30d: 0 } })}
       />
     );
-    expect(screen.getByText("+0 new � 30d")).toBeInTheDocument();
+    expect(screen.getByText("+0 new · 30d")).toBeInTheDocument();
   });
 });
