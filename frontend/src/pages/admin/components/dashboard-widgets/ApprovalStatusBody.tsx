@@ -56,9 +56,9 @@ export const ApprovalStatusBody: React.FC<ApprovalStatusBodyProps> = ({
     <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-around">
       <CircularProgress percentage={approvedPct} label="Approved" />
       <div className="w-full max-w-xs space-y-2.5">
-        <StatusRow label="Approved" value={approved} color="bg-emerald-600" />
-        <StatusRow label="Pending" value={pending} color="bg-amber-600" />
-        <StatusRow label="Rejected" value={rejected} color="bg-red-600" />
+        <StatusRow label="Approved" value={approved} color="bg-tone-success-text" />
+        <StatusRow label="Pending" value={pending} color="bg-tone-warning-text" />
+        <StatusRow label="Rejected" value={rejected} color="bg-tone-danger-text" />
       </div>
     </div>
   );

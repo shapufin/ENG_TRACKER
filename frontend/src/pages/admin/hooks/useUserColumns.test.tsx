@@ -168,4 +168,14 @@ describe("useUserColumns", () => {
     expect(screen.getByText("A")).toBeInTheDocument();
     expect(screen.getAllByText("alice@example.com").length).toBeGreaterThan(0);
   });
+
+  it("paints TL role badges with tone tokens, never raw palette classes", () => {
+    const { result } = renderHook(() => useUserColumns(vi.fn(), vi.fn(), vi.fn()));
+    const column = result.current.find((item) => item.id === "tl_role");
+    const cell = column?.cell as (context: { row: { original: UserProfile } }) => React.ReactNode;
+
+    render(<>{cell({ row: { original: profile({ is_italian_tl_role: true, is_albanian_tl_role: false }) } })}</>);
+    expect(screen.getByText("IT TL")).toHaveClass("bg-tone-info-surface");
+    expect(screen.getByText("IT TL").className).not.toMatch(/blue-|emerald-|violet-/);
+  });
 });
