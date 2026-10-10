@@ -28,16 +28,19 @@ export interface BalanceTotals {
   usedPct: number | null;
 }
 
+/** A balance with no day counts yet (the API sends null/undefined) adds nothing, never NaN. */
+const days = (n: number | null | undefined) => (Number.isFinite(n) ? (n as number) : 0);
+
 export function computeBalanceTotals(rows: LeaveBalance[], today: Date): BalanceTotals {
   let allocated = 0;
   let used = 0;
   let pending = 0;
   let atRisk = 0;
   for (const b of rows) {
-    allocated += b.total_days;
-    used += b.used_days;
-    pending += b.pending_days;
-    if (isExpiringSoon(b, today)) atRisk += b.available_days;
+    allocated += days(b.total_days);
+    used += days(b.used_days);
+    pending += days(b.pending_days);
+    if (isExpiringSoon(b, today)) atRisk += days(b.available_days);
   }
   return {
     allocated,
