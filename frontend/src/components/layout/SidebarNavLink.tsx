@@ -49,7 +49,7 @@ export const SidebarNavLink: React.FC<SidebarNavLinkProps> = ({
   const collapsed = collapsedProp ?? contextCollapsed;
   const activeBarTransition = useMotionTransition({ type: "spring", stiffness: 400, damping: 30 });
 
-  const className = `group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+  const className = `group relative flex items-center gap-3 rounded-lg px-3 py-2 pointer-coarse:py-2.5 text-sm font-medium transition-colors ${
     isActive
       ? "bg-primary/10 text-foreground"
       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -64,7 +64,7 @@ export const SidebarNavLink: React.FC<SidebarNavLinkProps> = ({
           transition={activeBarTransition}
         />
       )}
-      <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : ""}`} />
+      <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
       {!collapsed && <span className="md:inline">{label}</span>}
       {!collapsed && badge !== undefined && badge > 0 && (
         <span

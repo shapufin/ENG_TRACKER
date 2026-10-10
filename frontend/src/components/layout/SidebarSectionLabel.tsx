@@ -13,9 +13,9 @@ interface SidebarSectionLabelProps {
 export const SidebarSectionLabel: React.FC<SidebarSectionLabelProps> = ({ label }) => (
   <li
     aria-hidden="true"
-    className="mt-5 border-t border-border/70 pt-4 first:mt-0 first:border-t-0 first:pt-0"
+    className="mt-4 border-t border-border/70 pt-3 first:mt-0 first:border-t-0 first:pt-0"
   >
-    <span className="block px-3 pb-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+    <span className="block px-3 pb-1 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
       {label}
     </span>
   </li>

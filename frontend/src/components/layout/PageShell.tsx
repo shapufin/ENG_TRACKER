@@ -30,7 +30,7 @@ const PageShellComponent: React.FC<PageShellProps> = ({
             <p className="text-muted-foreground text-xs tracking-[0.25em] uppercase">{category}</p>
           )}
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl font-black tracking-tight">{title}</h1>
+            <h1 className="text-2xl font-black tracking-tight text-balance">{title}</h1>
             {titleBadge}
           </div>
           {subtitle && (

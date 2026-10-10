@@ -97,7 +97,7 @@ export const AdminShell = React.memo(() => {
           </div>
         </div>
         <MainContentTransition pathname={location.pathname} className="h-full">
-          <div className="mx-auto w-full max-w-screen-2xl p-4 md:p-6 lg:p-8">
+          <div className="mx-auto w-full max-w-screen-2xl px-4 py-4 md:px-6 md:py-5 lg:px-8 lg:py-6">
             <AdminBreadcrumbNav items={adminNavItems} />
             <Outlet />
           </div>

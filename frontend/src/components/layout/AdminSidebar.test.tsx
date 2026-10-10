@@ -116,6 +116,15 @@ describe("AdminSidebar", () => {
     expect(screen.getByText("Enterprise")).toBeInTheDocument();
   });
 
+  it("brand name is single-line truncated", () => {
+    mockGetInjected([]);
+    renderSidebar();
+
+    const name = screen.getByText("Admin Panel");
+    expect(name.className).toContain("truncate");
+    expect(name.className).toContain("text-base");
+  });
+
   it("falls back to the gradient tile and 'Admin Panel' while branding is loading/errored", () => {
     mockGetInjected([]);
     renderSidebar();
