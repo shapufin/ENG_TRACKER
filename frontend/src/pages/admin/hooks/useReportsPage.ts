@@ -26,6 +26,7 @@ export const useReportsPage = () => {
       activeTab,
       workspace_ids: workspaceParam,
       groupBy,
+      selectedTeam,
     });
 
   const handleGenerate = (e?: React.FormEvent) => {

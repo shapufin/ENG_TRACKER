@@ -8,6 +8,7 @@ interface UseReportManagementOptions {
   activeTab: "overtime_standby" | "vacation";
   workspace_ids?: string;
   groupBy: "user" | "month" | "year";
+  selectedTeam?: string;
 }
 
 /**
@@ -22,8 +23,10 @@ export const useReportManagement = ({
   activeTab,
   workspace_ids,
   groupBy,
+  selectedTeam = "all",
 }: UseReportManagementOptions) => {
   const currentType: "combined" | "leave" = activeTab === "overtime_standby" ? "combined" : "leave";
+  const teamIds = selectedTeam === "all" ? undefined : selectedTeam;
 
   const { data: teams } = useQuery({
     queryKey: ["admin", "teams"],
@@ -35,13 +38,14 @@ export const useReportManagement = ({
     isLoading: summaryLoading,
     refetch: refetchSummary,
   } = useQuery({
-    queryKey: ["reports", "summary", start_date, end_date, currentType, workspace_ids],
+    queryKey: ["reports", "summary", start_date, end_date, currentType, workspace_ids, teamIds],
     queryFn: () =>
       reportService.getSummary({
         start_date,
         end_date,
         report_type: currentType,
         workspace_ids,
+        team_ids: teamIds,
       }),
     enabled: false,
   });
@@ -51,7 +55,16 @@ export const useReportManagement = ({
     isLoading: detailedLoading,
     refetch: refetchDetailed,
   } = useQuery({
-    queryKey: ["reports", "detailed", start_date, end_date, currentType, groupBy, workspace_ids],
+    queryKey: [
+      "reports",
+      "detailed",
+      start_date,
+      end_date,
+      currentType,
+      groupBy,
+      workspace_ids,
+      teamIds,
+    ],
     queryFn: () =>
       reportService.getDetailed({
         start_date,
@@ -59,6 +72,7 @@ export const useReportManagement = ({
         report_type: currentType,
         group_by: groupBy,
         workspace_ids,
+        team_ids: teamIds,
       }),
     enabled: false,
   });
