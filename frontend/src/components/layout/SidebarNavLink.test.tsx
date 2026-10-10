@@ -58,7 +58,7 @@ describe("SidebarNavLink density", () => {
       </MemoryRouter>
     );
     const link = screen.getByRole("menuitem");
-    expect(link.className).toContain("py-2");
+    expect(link.className.split(/\s+/)).toContain("py-2");
     expect(link.className).toContain("pointer-coarse:py-2.5");
   });
 });
