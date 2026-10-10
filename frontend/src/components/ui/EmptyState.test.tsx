@@ -50,4 +50,35 @@ describe("EmptyState", () => {
     fireEvent.click(cta);
     expect(onClick).toHaveBeenCalledTimes(1);
   });
+  it("md is compact (p-8, not p-12)", () => {
+    const { container } = render(<EmptyState icon={Sparkles} title="T" />);
+    const root = container.firstElementChild as HTMLElement;
+    expect(root).toHaveClass("p-8");
+    expect(root).not.toHaveClass("p-12");
+  });
+
+  it("sm renders a left-aligned row", () => {
+    const { container } = render(<EmptyState icon={Sparkles} size="sm" title="T" />);
+    const root = container.firstElementChild as HTMLElement;
+    expect(root).toHaveClass("flex-row", "p-4", "text-left");
+    expect(root).not.toHaveClass("text-center");
+  });
+
+  it("preview is hidden from assistive tech", () => {
+    render(<EmptyState icon={Sparkles} title="T" preview={<div>Sample row</div>} />);
+    expect(screen.getByText("Sample row").closest('[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it("renders primary and secondary actions in order", () => {
+    render(
+      <EmptyState
+        icon={Sparkles}
+        title="T"
+        action={<button type="button">Primary</button>}
+        secondaryAction={<button type="button">Secondary</button>}
+      />
+    );
+    const names = screen.getAllByRole("button").map((b) => b.textContent);
+    expect(names).toEqual(["Primary", "Secondary"]);
+  });
 });

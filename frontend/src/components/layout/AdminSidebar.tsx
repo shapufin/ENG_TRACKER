@@ -107,7 +107,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         className={`border-border/30 flex items-center border-b p-4 ${collapsed ? "flex-col gap-2" : "justify-between"}`}
       >
         <div
-          className={`flex items-center gap-2.5 text-lg font-bold ${collapsed ? "justify-center" : ""}`}
+          className={`flex min-w-0 items-center gap-2.5 text-lg font-bold ${collapsed ? "justify-center" : ""}`}
         >
           {branding?.logo_url && !logoFailed ? (
             <img
@@ -122,8 +122,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             </div>
           )}
           {!collapsed && (
-            <div className="leading-tight">
-              <span className="md:inline">{branding?.site_name || "Admin Panel"}</span>
+            <div className="min-w-0 leading-tight">
+              <span className="block truncate text-base">{branding?.site_name || "Admin Panel"}</span>
               <div className="text-foreground font-mono text-xs font-semibold tracking-wider uppercase">
                 Enterprise
               </div>
@@ -163,7 +163,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             {!collapsed && (
               <>
                 <span className="flex-1 text-left">Search pages</span>
-                <kbd className="font-mono text-xs">Ctrl K</kbd>
+                <kbd className="text-xs font-mono">Ctrl K</kbd>
               </>
             )}
           </button>

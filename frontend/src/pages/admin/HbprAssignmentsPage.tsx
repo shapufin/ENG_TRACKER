@@ -29,6 +29,13 @@ const QUERY_KEY = ["admin", "hbpr-assignments"];
 // defeat DataTable's searchPaths memo.
 const SEARCH_PATHS = ["hbpr_detail.name", "albanian_tl_detail.name"];
 
+/** Count badge in the same style as the FilterChipRow chip counts. */
+const TabCount: React.FC<{ children: number }> = ({ children }) => (
+  <span className="bg-foreground/[0.06] ml-1.5 rounded-full px-1.5 text-xs tabular-nums">
+    {children}
+  </span>
+);
+
 // Local calendar date (en-CA formats as YYYY-MM-DD); `toISOString()` is UTC and
 // is a day off for an admin working just after local midnight.
 const todayIso = () => new Date().toLocaleDateString("en-CA");
@@ -198,8 +205,12 @@ export const HbprAssignmentsPage: React.FC = () => {
       ) : (
         <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
           <TabsList aria-label="Assignment groups">
-            <TabsTrigger value="active">Active ({activeRows.length})</TabsTrigger>
-            <TabsTrigger value="archive">Archive ({archivedRows.length})</TabsTrigger>
+            <TabsTrigger value="active">
+              Active <TabCount>{activeRows.length}</TabCount>
+            </TabsTrigger>
+            <TabsTrigger value="archive">
+              Archive <TabCount>{archivedRows.length}</TabCount>
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="active" className="mt-4">
             {table(activeRows, "No active assignments.")}

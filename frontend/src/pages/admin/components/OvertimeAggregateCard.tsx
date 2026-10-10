@@ -13,8 +13,7 @@ export const OvertimeAggregateCard: React.FC<OvertimeAggregateCardProps> = (prop
   <AggregateCard
     title="Overtime Aggregate"
     description="Total capacity utilization from additional hours"
-    color="blue"
-    icon={<Clock className="h-5 w-5 text-primary" />}
+    icon={Clock}
     totalLabel="Total Hours Generated"
     approvedLabel="Successfully Approved"
     pendingLabel="awaiting verification"

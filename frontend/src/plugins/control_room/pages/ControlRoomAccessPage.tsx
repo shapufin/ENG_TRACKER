@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import {
   AlertTriangle,
@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import { DataTable } from "@/components/ui/DataTable";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PageShell } from "@/components/layout/PageShell";
@@ -121,13 +122,19 @@ const AccessStats: React.FC<{
 
 export const ControlRoomAccessPage: React.FC = () => {
   const state = useControlRoomAccessPage();
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const activeTotal = state.accessList.filter((access) => access.is_active).length;
   const tableData = useMemo<AccessTableRow[]>(
     () =>
-      state.accessList.map((access) => ({
-        ...access,
-        search_text: `${access.user_name} ${access.display_name} ${access.username} ${access.email}`,
-      })),
-    [state.accessList]
+      state.accessList
+        .filter(
+          (access) => statusFilter === "all" || access.is_active === (statusFilter === "active")
+        )
+        .map((access) => ({
+          ...access,
+          search_text: `${access.user_name} ${access.display_name} ${access.username} ${access.email}`,
+        })),
+    [state.accessList, statusFilter]
   );
 
   const columns = useMemo<AppColumnDef<AccessTableRow>[]>(
@@ -335,21 +342,39 @@ export const ControlRoomAccessPage: React.FC = () => {
               </Button>
             </div>
           ) : (
-            <DataTable
-              columns={columns}
-              data={tableData}
-              searchColumn="search_text"
-              searchPlaceholder="Search name, username, or email..."
-              enableColumnVisibility
-              storageKey="table-visibility-control-room-access"
-              enableRowSelection
-              rowSelection={state.rowSelection}
-              onRowSelectionChange={state.setRowSelection}
-              getRowId={(access) => String(access.id)}
-              getRowClassName={(access) => (!access.is_active ? "opacity-70" : "")}
-              pageSize={25}
-              emptyMessage="No access records found."
-            />
+            <>
+              <div className="mb-3">
+                <FilterChipRow
+                  label="Status"
+                  selected={[statusFilter]}
+                  onToggle={setStatusFilter}
+                  options={[
+                    { value: "all", label: "All", count: state.accessList.length },
+                    { value: "active", label: "Active", count: activeTotal },
+                    {
+                      value: "inactive",
+                      label: "Inactive",
+                      count: state.accessList.length - activeTotal,
+                    },
+                  ]}
+                />
+              </div>
+              <DataTable
+                columns={columns}
+                data={tableData}
+                searchColumn="search_text"
+                searchPlaceholder="Search name, username, or email..."
+                enableColumnVisibility
+                storageKey="table-visibility-control-room-access"
+                enableRowSelection
+                rowSelection={state.rowSelection}
+                onRowSelectionChange={state.setRowSelection}
+                getRowId={(access) => String(access.id)}
+                getRowClassName={(access) => (!access.is_active ? "opacity-70" : "")}
+                pageSize={25}
+                emptyMessage="No access records found."
+              />
+            </>
           )}
         </GlassCard>
       </div>

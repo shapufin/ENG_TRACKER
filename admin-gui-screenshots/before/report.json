@@ -1,0 +1,222 @@
+{
+  "light": {
+    "dashboard": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "users": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "teams": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "techs": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "clients": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "hbpr-assignments": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "skills-catalog": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "skills-settings": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "calendars": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "overtime-logs": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "standby-logs": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "leave-requests": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "leave-balances": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "resource-access": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "reports": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "plugins": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "ticket-kpi-mappings": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "data-import": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "payroll-wages": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "payroll-runs": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "payroll-calendar": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "payroll-settings": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "analytics": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "control-room-access": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "global-settings": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "audit-logs": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "backup-restore": {
+      "consoleErrors": [],
+      "failedRequests": []
+    }
+  },
+  "dark": {
+    "dashboard": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "users": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "teams": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "techs": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "clients": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "hbpr-assignments": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "skills-catalog": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "skills-settings": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "calendars": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "overtime-logs": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "standby-logs": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "leave-requests": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "leave-balances": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "resource-access": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "reports": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "plugins": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "ticket-kpi-mappings": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "data-import": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "payroll-wages": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "payroll-runs": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "payroll-calendar": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "payroll-settings": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "analytics": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "control-room-access": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "global-settings": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "audit-logs": {
+      "consoleErrors": [],
+      "failedRequests": []
+    },
+    "backup-restore": {
+      "consoleErrors": [],
+      "failedRequests": []
+    }
+  }
+}

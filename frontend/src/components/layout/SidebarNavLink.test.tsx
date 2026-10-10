@@ -49,3 +49,16 @@ describe("SidebarNavLink badge", () => {
     expect(screen.queryByLabelText(/pending approvals/)).not.toBeInTheDocument();
   });
 });
+
+describe("SidebarNavLink density", () => {
+  it("uses the compact padding with a coarse-pointer fallback", () => {
+    render(
+      <MemoryRouter>
+        <SidebarNavLink {...base} />
+      </MemoryRouter>
+    );
+    const link = screen.getByRole("menuitem");
+    expect(link.className.split(/\s+/)).toContain("py-2");
+    expect(link.className).toContain("pointer-coarse:py-2.5");
+  });
+});

@@ -168,7 +168,6 @@ export const SkillsCatalogPage: React.FC = () => {
     <PageShell
       title="Skills Catalog"
       subtitle="Manage skill categories and catalog items"
-      category="Admin"
       actions={
         <div className="flex flex-wrap gap-2">
           <PluginImportButton

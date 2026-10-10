@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/layout/PageShell";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
-import { ErrorCard } from "@/components/ui/ErrorCard";
 import { StatsCards } from "@/components/admin/StatsCards";
 import { FilterBar } from "./FilterBar";
 import { HoursLogsTable } from "./HoursLogsTable";
@@ -85,18 +85,22 @@ export const HoursLogsPage = <T extends HoursLog>({
   };
 
   if (isLoading) return <LoadingCard rows={5} className="min-h-[300px]" />;
-  if (error) return <ErrorCard title={errorMessage} message={String(error)} />;
+  if (error)
+    return (
+      <div className="text-destructive p-4">
+        {errorMessage}: {String(error)}
+      </div>
+    );
 
   return (
     <PageShell
       title={title}
       subtitle={subtitle}
-      category="Workforce Management"
       actions={
         onExport && (
           <Button
             variant="outline"
-            size="control"
+            size="sm"
             onClick={() => void handleExport()}
             disabled={exporting}
             aria-busy={exporting}
@@ -115,6 +119,20 @@ export const HoursLogsPage = <T extends HoursLog>({
         rejected={stats.rejected}
       />
 
+      <GlassCard className="p-4">
+        <FilterBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          filterStatus={filterStatus}
+          onStatusChange={setFilterStatus}
+          dateFrom={dateFrom}
+          onDateFromChange={setDateFrom}
+          dateTo={dateTo}
+          onDateToChange={setDateTo}
+          statusCounts={stats}
+        />
+      </GlassCard>
+
       <HoursLogsTable
         logs={filteredLogs}
         extraColumns={extraColumns}
@@ -123,18 +141,6 @@ export const HoursLogsPage = <T extends HoursLog>({
         onDelete={onDelete}
         canDelete={canDelete}
         storageKey={storageKey}
-        filters={
-          <FilterBar
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            filterStatus={filterStatus}
-            onStatusChange={setFilterStatus}
-            dateFrom={dateFrom}
-            onDateFromChange={setDateFrom}
-            dateTo={dateTo}
-            onDateToChange={setDateTo}
-          />
-        }
       />
 
       {children}

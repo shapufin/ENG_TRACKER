@@ -15,6 +15,8 @@ import {
   TABLE_HEAD_CELL_CHECKBOX_CLASS,
   TABLE_HEAD_CELL_CLASS,
   TABLE_HEAD_ROW_CLASS,
+  TABLE_STICKY_ACTIONS_CELL_CLASS,
+  TABLE_STICKY_ACTIONS_HEAD_CLASS,
 } from "./tableStyles";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
@@ -55,6 +57,7 @@ interface DataTableProps<TData extends RowData> {
   emptyMessage?: string;
   enableColumnVisibility?: boolean;
   columnVisibility?: Record<string, boolean>;
+  defaultColumnVisibility?: Record<string, boolean>;
   onColumnVisibilityChange?: (visibility: Record<string, boolean>) => void;
   storageKey?: string;
   getRowId?: (row: TData, index: number) => string;
@@ -80,6 +83,7 @@ export const DataTable = function DataTable<TData extends RowData>({
   emptyMessage = "No results found.",
   enableColumnVisibility = false,
   columnVisibility: externalColumnVisibility,
+  defaultColumnVisibility,
   onColumnVisibilityChange,
   storageKey,
   getRowId,
@@ -104,18 +108,18 @@ export const DataTable = function DataTable<TData extends RowData>({
           if (!parsed._version) {
             // Clear old format visibility state
             localStorage.removeItem(storageKey);
-            return {};
+            return defaultColumnVisibility ?? {};
           }
           // Remove metadata before returning the column visibility map.
           const visibility = { ...parsed };
           delete (visibility as { _version?: unknown })._version;
           return visibility;
         } catch {
-          return {};
+          return defaultColumnVisibility ?? {};
         }
       }
     }
-    return {};
+    return defaultColumnVisibility ?? {};
   });
 
   const columnVisibility = externalColumnVisibility ?? internalColumnVisibility;
@@ -212,7 +216,7 @@ export const DataTable = function DataTable<TData extends RowData>({
           key={row.id}
           data-state={isSelected ? "selected" : undefined}
           className={cn(
-            "focus-visible:ring-ring/60 transition-colors focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-inset",
+            "group/row focus-visible:ring-ring/60 transition-colors focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-inset",
             isSelected && "bg-primary/10",
             onRowClick && "cursor-pointer",
             getRowClassName ? getRowClassName(row.original) : "hover:bg-table-hover"
@@ -240,7 +244,10 @@ export const DataTable = function DataTable<TData extends RowData>({
           {row.getVisibleCells().map((cell) => (
             <td
               key={cell.id}
-              className={TABLE_BODY_CELL_CLASS}
+              className={cn(
+                TABLE_BODY_CELL_CLASS,
+                cell.column.id === "actions" && TABLE_STICKY_ACTIONS_CELL_CLASS
+              )}
               style={
                 cell.column.columnDef.size
                   ? { width: cell.column.columnDef.size, maxWidth: cell.column.columnDef.size }
@@ -335,7 +342,7 @@ export const DataTable = function DataTable<TData extends RowData>({
           ref={scrollRef}
           className="border-border/70 bg-background/20 overflow-x-auto rounded-xl border"
         >
-          <table className="w-full min-w-max text-sm">
+          <table className="text-dense w-full min-w-max">
             <thead>
               <tr className={TABLE_HEAD_ROW_CLASS}>
                 {enableRowSelection && (
@@ -352,7 +359,10 @@ export const DataTable = function DataTable<TData extends RowData>({
                   hg.headers.map((header) => (
                     <th
                       key={header.id}
-                      className={TABLE_HEAD_CELL_CLASS}
+                      className={cn(
+                        TABLE_HEAD_CELL_CLASS,
+                        header.column.id === "actions" && TABLE_STICKY_ACTIONS_HEAD_CLASS
+                      )}
                       style={
                         header.column.columnDef.size
                           ? { width: header.column.columnDef.size }

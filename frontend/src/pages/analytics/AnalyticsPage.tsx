@@ -1,6 +1,6 @@
 import React from "react";
 import { PageShell } from "@/components/layout/PageShell";
-import { Button } from "@/components/ui/button";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { PluginPermissionGuard } from "@/components/auth/PluginPermissionGuard";
 import { AnalyticsConfigModal } from "@/components/analytics/AnalyticsConfigModal";
 import { AnalyticsFilters } from "@/components/analytics/AnalyticsFilters";
@@ -11,7 +11,6 @@ import { AnalyticsTrendCharts } from "@/components/analytics/AnalyticsTrendChart
 import { AnalyticsControls } from "@/components/analytics/AnalyticsControls";
 import { ScheduledReportsPanel } from "@/components/analytics/ScheduledReportsPanel";
 import { ReportsPanel } from "@/components/analytics/ReportsPanel";
-import { Download } from "lucide-react";
 import { useAnalyticsPage } from "./hooks/useAnalyticsPage";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { exportAnalytics } from "@/lib/export-analytics";
@@ -71,14 +70,6 @@ export const AnalyticsPage: React.FC = () => {
       <PageShell
         title="Analytics Dashboard"
         subtitle="Business Intelligence & Operational Insights"
-        actions={
-          handleExport ? (
-            <Button className="gap-2" onClick={handleExport}>
-              <Download className="h-4 w-4" />
-              Export Report
-            </Button>
-          ) : undefined
-        }
       >
         <div className="flex flex-col gap-6">
           <AnalyticsControls
@@ -120,6 +111,8 @@ export const AnalyticsPage: React.FC = () => {
             onClose={() => setShowFilters(false)}
           />
 
+          <SectionHeading eyebrow="Overview" title="Key metrics and insights" />
+
           <AnalyticsHotspots hotspots={hotspotsData} />
 
           <AnalyticsInsights insights={insights} isLoading={insightsLoading} />
@@ -130,7 +123,17 @@ export const AnalyticsPage: React.FC = () => {
             error={error as Error | null}
           />
 
-          <AnalyticsTrendCharts trends={trends} period={selectedPeriod} />
+          <SectionHeading eyebrow="Trends" title="Activity over time" />
+
+          <AnalyticsTrendCharts
+            trends={trends}
+            period={selectedPeriod}
+            onPeriodChange={setSelectedPeriod}
+          />
+
+          {(canExport("analytics") || canManage("analytics")) && (
+            <SectionHeading eyebrow="Exports & schedules" title="Reports and schedules" />
+          )}
 
           {canExport("analytics") && (
             <ReportsPanel

@@ -1,6 +1,7 @@
 ﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
+import { Eye } from "lucide-react";
+import { RowActions } from "@/components/ui/RowActions";
 import type { AuditLog } from "@/services/auditService";
 
 // fallow-ignore-next-line complexity
@@ -12,6 +13,11 @@ const getActionColor = (action: string) => {
   return "bg-primary/10 text-foreground";
 };
 
+const timestampFormat = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
 export const useAuditLogColumns = (onView: (log: AuditLog) => void) =>
   useMemo(
     () => [
@@ -19,8 +25,11 @@ export const useAuditLogColumns = (onView: (log: AuditLog) => void) =>
         header: "Timestamp",
         accessorKey: "timestamp",
         cell: (info: any) => (
-          <div className="text-sm text-muted-foreground">
-            {new Date(info.getValue()).toLocaleString()}
+          <div
+            className="text-muted-foreground text-sm whitespace-nowrap"
+            title={new Date(info.getValue()).toLocaleString()}
+          >
+            {timestampFormat.format(new Date(info.getValue()))}
           </div>
         ),
       },
@@ -44,14 +53,14 @@ export const useAuditLogColumns = (onView: (log: AuditLog) => void) =>
         header: "Resource",
         accessorKey: "model_name_display",
         cell: (info: any) => (
-          <div className="text-sm text-muted-foreground">{info.getValue() || "N/A"}</div>
+          <div className="text-muted-foreground text-sm">{info.getValue() || "N/A"}</div>
         ),
       },
       {
         header: "Object",
         accessorKey: "object_repr",
         cell: (info: any) => (
-          <div className="max-w-[200px] truncate text-sm text-muted-foreground">
+          <div className="text-muted-foreground max-w-[200px] truncate text-sm">
             {info.getValue() || "N/A"}
           </div>
         ),
@@ -60,16 +69,23 @@ export const useAuditLogColumns = (onView: (log: AuditLog) => void) =>
         header: "IP Address",
         accessorKey: "ip_address",
         cell: (info: any) => (
-          <div className="font-mono text-xs text-muted-foreground">{info.getValue() || "N/A"}</div>
+          <div className="text-muted-foreground font-mono text-xs">{info.getValue() || "N/A"}</div>
         ),
       },
       {
         header: "Details",
         id: "details",
         cell: (info: any) => (
-          <Button variant="ghost" size="sm" onClick={() => onView(info.row.original)}>
-            View
-          </Button>
+          <RowActions
+            reveal="always"
+            actions={[
+              {
+                label: "View log details",
+                icon: Eye,
+                onClick: () => onView(info.row.original),
+              },
+            ]}
+          />
         ),
       },
     ],

@@ -6,6 +6,7 @@ import React, { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Button } from "@/components/ui/button";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
@@ -350,9 +351,7 @@ export const PayrollCalendarPage: React.FC = () => {
             <GlassCard className="p-6">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="text-lg font-semibold">
-                    {selectedCalendar.country} {selectedCalendar.year}
-                  </h3>
+                  <SectionHeading title={`${selectedCalendar.country} ${selectedCalendar.year}`} />
                   <Badge variant={selectedCalendar.is_active ? "default" : "secondary"}>
                     {selectedCalendar.is_active ? "Active" : "Inactive"}
                   </Badge>
@@ -447,9 +446,9 @@ export const PayrollCalendarPage: React.FC = () => {
           {selectedCalendar && (
             <GlassCard className="p-6">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold">
-                  Holidays — {MONTH_NAMES[selectedMonth - 1]} {selectedCalendar.year}
-                </h3>
+                <SectionHeading
+                  title={`Holidays — ${MONTH_NAMES[selectedMonth - 1]} ${selectedCalendar.year}`}
+                />
                 {canConfigurePayroll && (
                   <Button size="sm" onClick={openAddHoliday}>
                     Add Holiday

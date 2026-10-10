@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { AreaChart, Area, BarChart, Bar, Legend, ResponsiveContainer, Tooltip } from "recharts";
 import { Button } from "@/components/ui/button";
+import { LineChart as LineChartIcon } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ChartCard } from "@/components/dashboard/ChartCard";
 import { ChartAxisGrid } from "@/pages/admin/components/ChartAxisGrid";
 import type { AnalyticsTrends } from "./types";
@@ -9,6 +11,7 @@ import type { Period } from "@/pages/analytics/hooks/useAnalyticsPage";
 interface AnalyticsTrendChartsProps {
   trends: AnalyticsTrends | undefined;
   period: Period;
+  onPeriodChange?: (period: Period) => void;
 }
 
 const formatDateLabel = (dateStr: string, period: Period): string => {
@@ -20,17 +23,33 @@ const formatDateLabel = (dateStr: string, period: Period): string => {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-const EmptyChartState: React.FC<{ message: string }> = ({ message }) => (
-  <div className="flex h-full min-h-[200px] items-center justify-center">
-    <p className="text-sm text-muted-foreground">{message}</p>
-  </div>
+const EmptyChartState: React.FC<{
+  message: string;
+  onPeriodChange?: (period: Period) => void;
+}> = ({ message, onPeriodChange }) => (
+  <EmptyState
+    size="sm"
+    icon={LineChartIcon}
+    title={message}
+    action={
+      onPeriodChange && (
+        <Button size="control-sm" variant="outline" onClick={() => onPeriodChange("year")}>
+          Show this year
+        </Button>
+      )
+    }
+  />
 );
 
 const ChartFrame: React.FC<React.PropsWithChildren> = ({ children }) => (
   <div className="h-[280px] min-h-[220px] w-full min-w-0">{children}</div>
 );
 
-export const AnalyticsTrendCharts: React.FC<AnalyticsTrendChartsProps> = ({ trends, period }) => {
+export const AnalyticsTrendCharts: React.FC<AnalyticsTrendChartsProps> = ({
+  trends,
+  period,
+  onPeriodChange,
+}) => {
   // Merge overtime and standby into a single dataset keyed by date for the
   // combined Hours Trends chart.
   const otByDate = new Map<string, number>();
@@ -144,7 +163,10 @@ export const AnalyticsTrendCharts: React.FC<AnalyticsTrendChartsProps> = ({ tren
             </ResponsiveContainer>
           </ChartFrame>
         ) : (
-          <EmptyChartState message="No overtime or standby data for this period" />
+          <EmptyChartState
+            message="No overtime or standby logged in this period"
+            onPeriodChange={onPeriodChange}
+          />
         )}
       </ChartCard>
 
@@ -288,7 +310,10 @@ export const AnalyticsTrendCharts: React.FC<AnalyticsTrendChartsProps> = ({ tren
             </ResponsiveContainer>
           </ChartFrame>
         ) : (
-          <EmptyChartState message="No leave data for this period" />
+          <EmptyChartState
+            message="No leave data for this period"
+            onPeriodChange={onPeriodChange}
+          />
         )}
       </ChartCard>
 
@@ -331,7 +356,7 @@ export const AnalyticsTrendCharts: React.FC<AnalyticsTrendChartsProps> = ({ tren
             </ResponsiveContainer>
           </ChartFrame>
         ) : (
-          <EmptyChartState message="No new users in this period" />
+          <EmptyChartState message="No new users in this period" onPeriodChange={onPeriodChange} />
         )}
       </ChartCard>
     </div>

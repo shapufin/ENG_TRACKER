@@ -1,4 +1,5 @@
 import React from "react";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -44,20 +45,15 @@ export const AnalyticsControls: React.FC<AnalyticsControlsProps> = ({
 }) => (
   <div className="flex flex-wrap items-center justify-between gap-4">
     <div className="flex items-center gap-4">
-      <div className="flex items-center gap-2">
-        <Filter className="text-muted-foreground h-4 w-4" />
-        {periods.map((period) => (
-          <Button
-            key={period}
-            variant={selectedPeriod === period ? "default" : "outline"}
-            size="sm"
-            onClick={() => onPeriodChange(period)}
-            className="capitalize"
-          >
-            {period}
-          </Button>
-        ))}
-      </div>
+      <FilterChipRow
+        label="Period"
+        options={periods.map((period) => ({
+          value: period,
+          label: period.charAt(0).toUpperCase() + period.slice(1),
+        }))}
+        selected={[selectedPeriod]}
+        onToggle={onPeriodChange}
+      />
 
       {selectedPeriod === "custom" && (
         <div className="animate-in fade-in slide-in-from-left-2 flex items-center gap-2">
@@ -65,7 +61,6 @@ export const AnalyticsControls: React.FC<AnalyticsControlsProps> = ({
             from={dateRange.from}
             to={dateRange.to}
             onChange={onDateRangeChange}
-            controlSize="sm"
             className="w-auto text-xs"
           />
         </div>
@@ -73,7 +68,7 @@ export const AnalyticsControls: React.FC<AnalyticsControlsProps> = ({
 
       <Button
         variant={showFilters ? "secondary" : "ghost"}
-        size="sm"
+        size="control-sm"
         onClick={onToggleFilters}
         className="gap-2"
       >

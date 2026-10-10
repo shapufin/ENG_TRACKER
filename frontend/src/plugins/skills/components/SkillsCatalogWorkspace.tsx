@@ -1,16 +1,8 @@
 import React, { useMemo, useState } from "react";
-import {
-  Check,
-  ChevronRight,
-  FolderTree,
-  Loader2,
-  Pencil,
-  Plus,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { Check, FolderTree, Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Switch } from "@/components/ui/switch";
@@ -121,73 +113,19 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
           </Button>
         </div>
 
-        <div className="space-y-1">
-          {/* "All skills" entry */}
-          <button
-            type="button"
-            aria-pressed={selectedCategory === "all"}
-            onClick={() => onCategoryChange("all")}
-            className={`flex min-h-11 w-full items-center justify-between rounded-lg px-3 text-left text-sm transition-all duration-150 ${
-              selectedCategory === "all"
-                ? "bg-primary/10 text-foreground ring-primary/20 font-medium ring-1"
-                : "hover:bg-accent"
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <span>All skills</span>
-            </span>
-            <Badge variant="secondary" className="shrink-0">
-              {skills.length}
-            </Badge>
-          </button>
-
-          {categories.map((category) => {
-            const isSelected = selectedCategory === category.code;
-            return (
-              <div
-                key={category.id}
-                className={`group flex items-center gap-1 rounded-lg transition-colors duration-150 ${
-                  isSelected ? "bg-primary/10 ring-primary/20 ring-1" : "hover:bg-accent/50"
-                }`}
-              >
-                <button
-                  type="button"
-                  aria-pressed={isSelected}
-                  onClick={() => onCategoryChange(category.code)}
-                  className={`flex min-h-11 min-w-0 flex-1 items-center justify-between px-3 text-left text-sm ${
-                    isSelected ? "text-foreground font-medium" : ""
-                  }`}
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <ChevronRight
-                      className={`h-3.5 w-3.5 shrink-0 transition-transform ${
-                        isSelected ? "text-primary rotate-90" : "text-muted-foreground"
-                      }`}
-                      aria-hidden="true"
-                    />
-                    <span className="truncate" title={category.name}>
-                      {category.name}
-                    </span>
-                  </span>
-                  <Badge variant={isSelected ? "default" : "secondary"} className="shrink-0">
-                    {category.skill_count ?? 0}
-                  </Badge>
-                </button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="mr-1 h-8 w-8 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                  onClick={() => onEditCategory(category)}
-                  aria-label={`Edit category ${category.name}`}
-                >
-                  <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                </Button>
-              </div>
-            );
-          })}
-        </div>
+        <FilterChipRow
+          label="Category"
+          selected={[selectedCategory]}
+          onToggle={onCategoryChange}
+          options={[
+            { value: "all", label: "All skills", count: skills.length, icon: Sparkles },
+            ...categories.map((category) => ({
+              value: category.code,
+              label: category.name,
+              count: category.skill_count ?? 0,
+            })),
+          ]}
+        />
       </GlassCard>
 
       {/* ─── Skill list panel ─── */}
@@ -209,6 +147,17 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
             )}
           </div>
           <div className="flex flex-wrap gap-2">
+            {selectedCategoryData && (
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11"
+                onClick={() => onEditCategory(selectedCategoryData)}
+                aria-label={`Edit category ${selectedCategoryData.name}`}
+              >
+                <Pencil className="mr-2 h-4 w-4" aria-hidden="true" /> Edit category
+              </Button>
+            )}
             {selectedCategoryData && (
               <Button
                 type="button"

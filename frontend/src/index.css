@@ -10,12 +10,12 @@
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 221 83% 53%;
+    --primary: 230 80% 55%;
     --primary-foreground: 210 40% 98%;
-    --primary-hover: 224 76% 48%;
+    --primary-hover: 232 74% 49%;
     /* Text role for primary. Light mode matches --primary (already AA on white),
        so nothing changes here; the dark theme needs a lighter value. */
-    --primary-text: 221 83% 53%;
+    --primary-text: 230 80% 55%;
     --secondary: 220 18% 95%;
     --secondary-foreground: 222 47% 11%;
     --muted: 220 16% 93%;
@@ -26,7 +26,7 @@
     --destructive-foreground: 0 0% 98%;
     --border: 214 20% 81%;
     --input: 215 16% 58%;
-    --ring: 221 83% 53%;
+    --ring: 230 80% 55%;
     --radius: 0.625rem;
     --safe-area-top: env(safe-area-inset-top, 0px);
     --safe-area-right: env(safe-area-inset-right, 0px);
@@ -41,10 +41,14 @@
     --line-subtle: 220 18% 90%;
     --table-hover: 220 25% 95%;
     --input-bg: 0 0% 100%;
-    --border-focus: 221 70% 65%;
-    --focus: 221 83% 53%;
+    --border-focus: 230 70% 66%;
+    --focus: 230 80% 55%;
     --info: 201 96% 32%;
     --info-foreground: 0 0% 100%;
+    --shadow-card: inset 0 1px 0 hsl(0 0% 100% / 0.7), 0 1px 2px hsl(230 40% 20% / 0.06), 0 2px 6px -1px hsl(230 40% 20% / 0.06);
+    --shadow-lift: 0 12px 28px -8px hsl(230 40% 20% / 0.16), 0 4px 10px -4px hsl(230 40% 20% / 0.08);
+    --canvas-glow-1: 230 80% 55% / 0.07;
+    --canvas-glow-2: 262 83% 58% / 0.05;
     --glass-bg: 220 20% 98% / 0.6;
     --glass-border: 220 13% 85% / 0.4;
     --glass-shadow: 0 4px 24px -4px rgb(0 0 0 / 0.08);
@@ -91,7 +95,6 @@
     --control-h: 2.25rem;
     --control-h-lg: 2.5rem;
     --control-radius: var(--radius-control);
-    --shadow-card: 0 1px 2px hsl(222 47% 11% / 0.06), 0 1px 3px hsl(222 47% 11% / 0.04);
     --shadow-pop: 0 8px 24px -6px hsl(222 47% 11% / 0.16), 0 2px 6px hsl(222 47% 11% / 0.08);
   }
 
@@ -134,6 +137,10 @@
     --focus: 217 91% 60%;
     --info: 213 94% 68%;
     --info-foreground: 0 0% 100%;
+    --shadow-card: inset 0 1px 0 hsl(220 40% 100% / 0.04), 0 1px 2px hsl(0 0% 0% / 0.4), 0 1px 3px hsl(0 0% 0% / 0.3);
+    --shadow-lift: 0 12px 28px -8px hsl(0 0% 0% / 0.7), 0 0 0 1px hsl(262 83% 68% / 0.18);
+    --canvas-glow-1: 262 83% 58% / 0.08;
+    --canvas-glow-2: 199 89% 48% / 0.05;
     --glass-bg: 221 38% 8% / 0.6;
     --glass-border: 219 30% 17% / 0.4;
     --glass-shadow: 0 4px 20px -2px rgb(0 0 0 / 0.5);
@@ -180,7 +187,6 @@
     --control-h: 2.25rem;
     --control-h-lg: 2.5rem;
     --control-radius: var(--radius-control);
-    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.4), 0 1px 3px hsl(0 0% 0% / 0.3);
     --shadow-pop: 0 8px 24px -6px hsl(0 0% 0% / 0.6), 0 2px 6px hsl(0 0% 0% / 0.4);
   }
 }
@@ -259,6 +265,42 @@
 }
 
 @layer components {
+  .admin-canvas {
+    background-image:
+      radial-gradient(60rem 22rem at 15% -6rem, hsl(var(--canvas-glow-1)), transparent 70%),
+      radial-gradient(40rem 18rem at 95% -4rem, hsl(var(--canvas-glow-2)), transparent 70%);
+    background-repeat: no-repeat;
+  }
+
+  .surface-lift {
+    position: relative;
+    transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .surface-lift::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: var(--shadow-lift), 0 0 0 1px hsl(var(--primary) / 0.28);
+    opacity: 0;
+    transition: opacity 200ms;
+    pointer-events: none;
+  }
+  .surface-lift:hover,
+  .surface-lift:focus-within {
+    transform: translateY(-2px);
+  }
+  .surface-lift:hover::after,
+  .surface-lift:focus-within::after {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .surface-lift:hover,
+    .surface-lift:focus-within {
+      transform: none;
+    }
+  }
+
   /* Today-cell radial glow (calendar plan §2.3). Token-based, layers over
      any background-color, adapts to both modes, static (reduced-motion safe). */
   .calendar-today-glow {

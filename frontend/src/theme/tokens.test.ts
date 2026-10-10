@@ -63,8 +63,8 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     expect(darkBlock).toContain("--border-focus: 219 45% 34%");
     expect(darkBlock).toContain("--focus: 217 91% 60%");
     expect(lightBlock).toContain("--input-bg: 0 0% 100%");
-    expect(lightBlock).toContain("--border-focus: 221 70% 65%");
-    expect(lightBlock).toContain("--focus: 221 83% 53%");
+    expect(lightBlock).toContain("--border-focus: 230 70% 66%");
+    expect(lightBlock).toContain("--focus: 230 80% 55%");
   });
 
   it("removes the pre-remap surface values", () => {
@@ -83,9 +83,11 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
   });
 
   it("matches the white-theme accent palette (2026-09-20 refinement)", () => {
-    // Primary CTA #2563EB: white text measures 5.17:1 (AA).
-    expect(lightBlock).toContain("--primary: 221 83% 53%");
-    expect(lightBlock).toContain("--primary-hover: 224 76% 48%");
+    // Indigo primary (D1, 2026-10-10): white text measures about 5.9:1 (AA).
+    expect(lightBlock).toContain("--primary: 230 80% 55%");
+    expect(lightBlock).toContain("--primary-text: 230 80% 55%");
+    expect(lightBlock).toContain("--ring: 230 80% 55%");
+    expect(lightBlock).toContain("--primary-hover: 232 74% 49%");
     // Solid info is sky-700 #0369A1 (5.93:1), NOT sky-600 #0284C7 (4.10:1,
     // fails AA for the white-text today badge). Tinted info surfaces still
     // use the sky-600 family with dark sky text.
@@ -136,7 +138,7 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     expect(lightBlock).toContain("--control-h-lg: 2.5rem");
     expect(lightBlock).toContain("--control-radius: var(--radius-control)");
     expect(lightBlock).toContain(
-      "--shadow-card: 0 1px 2px hsl(222 47% 11% / 0.06), 0 1px 3px hsl(222 47% 11% / 0.04)"
+      "--shadow-card: inset 0 1px 0 hsl(0 0% 100% / 0.7), 0 1px 2px hsl(230 40% 20% / 0.06), 0 2px 6px -1px hsl(230 40% 20% / 0.06)"
     );
     expect(lightBlock).toContain("--shadow-pop:");
     expect(darkBlock).toContain("--control-edge:");
@@ -182,6 +184,14 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     expect(darkBlock).toContain("--info: 213 94% 68%");
   });
 
+  it("keeps the light lift tokens", () => {
+    for (const block of [lightBlock, darkBlock]) {
+      for (const t of ["--shadow-card", "--shadow-lift", "--canvas-glow-1", "--canvas-glow-2"]) {
+        expect(block).toContain(`${t}:`);
+      }
+    }
+  });
+
   it("keeps --radius unchanged (drives rounded-lg/md/sm app-wide)", () => {
     expect(lightBlock).toContain("--radius: 0.625rem");
   });
@@ -217,7 +227,16 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     const ratio = (l1: number, l2: number) => (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
     const white = luminance(0, 0, 100);
     // Solid-button pairs: white text on primary / destructive / info.
-    expect(ratio(white, luminance(221, 83, 53))).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(white, luminance(230, 80, 55))).toBeGreaterThanOrEqual(4.5);
+    // --primary-text on --card, parsed from the light block.
+    const hsl = (block: string, token: string): [number, number, number] => {
+      const m = block.match(new RegExp(String.raw`${token}:\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%`));
+      if (!m) throw new Error(`missing ${token}`);
+      return [Number(m[1]), Number(m[2]), Number(m[3])];
+    };
+    expect(
+      ratio(luminance(...hsl(lightBlock, "--primary-text")), luminance(...hsl(lightBlock, "--card"))),
+    ).toBeGreaterThanOrEqual(4.5);
     expect(ratio(white, luminance(0, 72, 51))).toBeGreaterThanOrEqual(4.5);
     expect(ratio(white, luminance(201, 96, 32))).toBeGreaterThanOrEqual(4.5);
     // Tinted info surface: 12% sky-600 over a white card, dark sky text.
@@ -234,5 +253,13 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     expect(ratio(luminance(220, 10, 36), page)).toBeGreaterThanOrEqual(4.5);
     expect(ratio(luminance(220, 10, 36), luminance(220, 25, 98.5))).toBeGreaterThanOrEqual(4.5);
     expect(ratio(luminance(220, 10, 36), luminance(220, 20, 94))).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe("shadow tokens", () => {
+  it("declares --shadow-card once per theme block", () => {
+    const count = (s: string) => s.split("--shadow-card:").length - 1;
+    expect(count(lightBlock)).toBe(1);
+    expect(count(darkBlock)).toBe(1);
   });
 });

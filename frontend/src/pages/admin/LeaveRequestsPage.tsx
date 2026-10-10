@@ -6,7 +6,7 @@ import { userService } from "@/services/userService";
 import { useAdminRejectMutation } from "@/hooks/useAdminRejectMutation";
 import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/layout/PageShell";
-import { LoadingCard } from "@/components/ui/LoadingCard";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { Sun, Stethoscope, Download } from "lucide-react";
 import { handleApiError } from "@/lib/error-handler";
 import { toast } from "sonner";
@@ -89,7 +89,9 @@ const LeaveRequestsContent: React.FC = () => {
   if (isLoading) {
     return (
       <PageShell title="Leave Requests" subtitle="Manage vacation and sick leave">
-        <LoadingCard rows={5} />
+        <div className="flex h-64 items-center justify-center">
+          <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2" />
+        </div>
       </PageShell>
     );
   }
@@ -98,9 +100,8 @@ const LeaveRequestsContent: React.FC = () => {
     <PageShell
       title="Leave Requests"
       subtitle="Manage and review employee leave submissions."
-      category="Workforce Management"
       actions={
-        <Button variant="outline" size="control" onClick={handleExport} className="gap-2">
+        <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
           <Download className="h-4 w-4" />
           Export CSV
         </Button>
@@ -125,29 +126,31 @@ const LeaveRequestsContent: React.FC = () => {
         }
       />
 
+      <GlassCard className="p-4">
+        <LeaveFilterBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          filterStatus={filterStatus}
+          onStatusChange={setFilterStatus}
+          filterType={filterType}
+          onTypeChange={setFilterType}
+          filterUser={filterUser}
+          onUserChange={setFilterUser}
+          users={users?.results}
+          dateFrom={dateFrom}
+          onDateFromChange={setDateFrom}
+          dateTo={dateTo}
+          onDateToChange={setDateTo}
+          statusCounts={stats}
+        />
+      </GlassCard>
+
       <LeaveRequestsTable
         requests={filteredRequests}
         onApprove={(id) => approveMutation.mutate(id)}
         onReject={(id, reason) => rejectMutation.mutate({ id, reason })}
         onDelete={(id) => deleteMutation.mutate(id)}
         canDelete={isSuperuser}
-        filters={
-          <LeaveFilterBar
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            filterStatus={filterStatus}
-            onStatusChange={setFilterStatus}
-            filterType={filterType}
-            onTypeChange={setFilterType}
-            filterUser={filterUser}
-            onUserChange={setFilterUser}
-            users={users?.results}
-            dateFrom={dateFrom}
-            onDateFromChange={setDateFrom}
-            dateTo={dateTo}
-            onDateToChange={setDateTo}
-          />
-        }
       />
     </PageShell>
   );

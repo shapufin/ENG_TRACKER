@@ -21,18 +21,25 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { StatCard } from "@/components/ui/StatCard";
+import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
+import { CheckCircle2, FilePen, Wallet } from "lucide-react";
 import { payrollService } from "../services/payrollService";
 import type { PayrollRun } from "../types";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { handleApiError } from "@/lib/error-handler";
 import { toast } from "sonner";
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-primary/10 text-foreground",
-  finalized: "bg-success/10 text-foreground",
-  cancelled: "bg-muted text-foreground",
+const STATUS_VARIANT: Record<PayrollRun["status"], StatusVariant> = {
+  draft: "pending",
+  finalized: "approved",
+  cancelled: "cancelled",
+};
+
+const STATUS_LABEL: Record<PayrollRun["status"], string> = {
+  draft: "Draft",
+  finalized: "Finalized",
+  cancelled: "Cancelled",
 };
 
 export const PayrollRunsPage: React.FC = () => {
@@ -72,7 +79,7 @@ export const PayrollRunsPage: React.FC = () => {
         id: "period",
         header: "Period",
         cell: ({ row }) => (
-          <span className="text-base font-semibold">
+          <span className="font-mono text-base font-semibold">
             {row.original.year}-{String(row.original.month).padStart(2, "0")}
           </span>
         ),
@@ -81,9 +88,11 @@ export const PayrollRunsPage: React.FC = () => {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => (
-          <Badge className={cn(STATUS_COLORS[row.original.status] ?? "", "capitalize")}>
-            {row.original.status}
-          </Badge>
+          <StatusBadge
+            variant={STATUS_VARIANT[row.original.status] ?? "pending"}
+            label={STATUS_LABEL[row.original.status] ?? row.original.status}
+            isCompact
+          />
         ),
       },
       {
@@ -101,10 +110,25 @@ export const PayrollRunsPage: React.FC = () => {
       {
         accessorKey: "rule_set_name",
         header: "Rule Set",
+        cell: ({ row }) => (
+          <span className="block max-w-64 truncate" title={row.original.rule_set_name}>
+            {row.original.rule_set_name}
+          </span>
+        ),
       },
     ],
     []
   );
+
+  const draftCount = (runs ?? []).filter((run) => run.status === "draft").length;
+  const latestFinalized = (runs ?? [])
+    .filter((run) => run.status === "finalized")
+    .reduce<PayrollRun | null>(
+      (best, run) =>
+        !best || run.year * 12 + run.month > best.year * 12 + best.month ? run : best,
+      null
+    );
+  const latestNet = latestFinalized?.totals?.total_net;
 
   if (isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
   if (error) return <ErrorCard title="Failed to load payroll runs" onRetry={refetch} />;
@@ -119,6 +143,21 @@ export const PayrollRunsPage: React.FC = () => {
         ) : undefined
       }
     >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="Runs" value={runs?.length ?? 0} icon={Wallet} />
+        <StatCard label="Drafts" value={draftCount} icon={FilePen} />
+        <StatCard
+          label="Latest finalized net"
+          value={latestNet ? `${Number(latestNet).toLocaleString()} Lek` : "—"}
+          icon={CheckCircle2}
+          trend={
+            latestFinalized
+              ? `${latestFinalized.year}-${String(latestFinalized.month).padStart(2, "0")}`
+              : undefined
+          }
+        />
+      </div>
+
       <GlassCard className="p-6">
         <DataTable
           columns={columns}

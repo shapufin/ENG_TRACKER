@@ -64,10 +64,15 @@ describe("GlassCard surface", () => {
     expect(cls).not.toContain("hover:-translate-y-1");
   });
 
-  it("lifts on hover only when interactive", () => {
+  it("interactive cards lift via surface-lift and never transition box-shadow", () => {
     const { container } = render(<GlassCard interactive>x</GlassCard>);
-    expect((container.firstElementChild as HTMLElement).className).toContain(
-      "hover:-translate-y-1"
+    const cls = (container.firstElementChild as HTMLElement).className;
+    expect(cls).toContain("surface-lift");
+    expect(cls).not.toMatch(/transition-\[[^\]]*box-shadow/);
+    expect(cls).not.toContain("transition-all");
+    const { container: c2 } = render(<GlassCard>x</GlassCard>);
+    expect((c2.firstElementChild as HTMLElement).className).not.toContain(
+      "surface-lift"
     );
   });
 

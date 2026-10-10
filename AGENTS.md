@@ -218,3 +218,11 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## 2026-10-10 — Admin visual lift
+- Plan: `docs/superpowers/plans/2026-10-10-admin-visual-lift.md`. Mockup polish for the 27 admin routes: `.surface-lift` cards, `RowActions` (sticky actions column), `FilterChipRow`, `StatCard iconTone/delta/to`, `AdminBreadcrumbs` via `resolveAdminCrumbs` (`ADMIN_PLUGIN_CRUMBS` for plugin routes). Invariant is in CLAUDE.md Hot Invariants. Browser fingerprint/Playwright verification was not run in the worktree; report history needs a backend writer (F11, not done).
+
+## 2026-10-10 — Admin visual lift plan review (corrections)
+- Reviewed the plan line by line against source after the sweep landed on `main`; findings F1–F12 and every listed file target were accurate (verified with file:line).
+- Corrections now in the plan: Page-Gate stop rule (`wip(visual):` when G1–G5 cannot run, never a `feat:`/`fix:` that implies verification); D1 reframed as an identity/hue restoration (the replaced value was already AA at 5.19:1, so it is not an accessibility fix); sticky actions cells must compose with `TABLE_BODY_CELL_CLASS`/`TABLE_HEAD_CELL_CLASS`; `group/row` goes in `DataTable`'s base row class, not the `getRowClassName` ternary; `scopeLabel` = "All teams in your workspaces" while a workspace scope is active; Task 0 tabs are cross-checked against `admin-gui-screenshots/manifest.json`; F11 reworded (`GeneratedReportViewSet` does expose a REST create path — no producer calls it).
+- Traps (1)–(5) are appended to the CLAUDE.md "Admin visual lift (2026-10-10)" Hot Invariant, so they reach every agent without re-reading the plan.

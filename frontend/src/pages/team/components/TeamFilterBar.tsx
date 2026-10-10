@@ -55,6 +55,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
       <FilterToolbar className="gap-4">
         <FilterToolbar.Search>
           <SearchField
+            controlSize="lg"
             placeholder="Search employee or description..."
             aria-label="Search employee or description"
             value={searchQuery}
@@ -67,7 +68,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
             onFilterStatusChange(v as "all" | "pending" | "approved" | "rejected")
           }
         >
-          <SelectTrigger className="w-full px-3 sm:w-[140px]">
+          <SelectTrigger controlSize="lg" className="w-full px-3 sm:w-[140px]">
             <div className="flex items-center gap-2">
               <Filter className="text-muted-foreground h-4 w-4" />
               <SelectValue placeholder="Status" />
@@ -82,7 +83,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
         </Select>
         {availableTeams.length > 0 && (
           <Select value={filterTeam} onValueChange={onFilterTeamChange}>
-            <SelectTrigger className="w-full px-3 sm:w-[160px]">
+            <SelectTrigger controlSize="lg" className="w-full px-3 sm:w-[160px]">
               <div className="flex items-center gap-2 text-left">
                 <Users className="text-muted-foreground h-4 w-4" />
                 <SelectValue placeholder="All Teams" />

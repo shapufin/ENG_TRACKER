@@ -38,9 +38,9 @@ describe("LeaveRequestsTable action buttons", () => {
         canDelete
       />
     );
-    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reject" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete leave request" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete 1" })).toBeInTheDocument();
   });
 
   it("reject opens the reason ConfirmDialog instead of a native prompt()", () => {
@@ -51,7 +51,7 @@ describe("LeaveRequestsTable action buttons", () => {
     const onReject = vi.fn();
     render(<LeaveRequestsTable requests={[request]} onApprove={vi.fn()} onReject={onReject} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reject 1" }));
     expect(nativePrompt).not.toHaveBeenCalled();
 
     const dialog = screen.getByRole("dialog", { name: /reject request/i });
@@ -61,5 +61,31 @@ describe("LeaveRequestsTable action buttons", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: /reject/i }));
 
     expect(onReject).toHaveBeenCalledWith(1, "Understaffed that week");
+  });
+
+  it("delete asks for confirmation before calling onDelete", () => {
+    const onDelete = vi.fn();
+    render(
+      <LeaveRequestsTable
+        requests={[request]}
+        onApprove={vi.fn()}
+        onReject={vi.fn()}
+        onDelete={onDelete}
+        canDelete
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Delete 1" }));
+    expect(onDelete).not.toHaveBeenCalled();
+    const dialog = screen.getByRole("dialog", { name: /delete leave request/i });
+    fireEvent.click(within(dialog).getByRole("button", { name: /^delete$/i }));
+    expect(onDelete).toHaveBeenCalledWith(1);
+  });
+
+  it("offers approve/reject only for pending requests and hides delete without permission", () => {
+    const approved = { ...request, status: "approved" } as LeaveRequest;
+    render(<LeaveRequestsTable requests={[approved]} onApprove={vi.fn()} onReject={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Approve 1" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject 1" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete 1" })).not.toBeInTheDocument();
   });
 });

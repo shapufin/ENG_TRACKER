@@ -405,3 +405,73 @@ describe("DataTable", () => {
     });
   });
 });
+
+describe("DataTable row actions layout", () => {
+  const actionColumns: AppColumnDef<Item>[] = [
+    ...columns,
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: () => <button>Go</button>,
+    },
+  ];
+  const renderIt = () =>
+    render(
+      <DataTable
+        columns={actionColumns}
+        data={[{ id: 1, name: "Alice", email: "alice@test.com" }]}
+        getRowId={(row) => row.id.toString()}
+      />
+    );
+
+  it("rows carry group/row", () => {
+    renderIt();
+    expect(screen.getByText("Alice").closest("tr")!.className).toContain("group/row");
+  });
+
+  it("actions column cells are sticky", () => {
+    renderIt();
+    expect(screen.getByText("Go").closest("td")!.className).toContain("sticky");
+    expect(screen.getByText("Actions").closest("th")!.className).toContain("sticky");
+    expect(screen.getByText("Alice").closest("td")!.className).not.toContain("sticky");
+  });
+});
+
+describe("DataTable default column visibility", () => {
+  const rows: Item[] = [{ id: 1, name: "Alice", email: "alice@example.com" }];
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("hides columns from defaultColumnVisibility when nothing is saved", () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={rows}
+        enableColumnVisibility
+        storageKey="test-default-visibility"
+        defaultColumnVisibility={{ email: false }}
+      />
+    );
+    expect(screen.queryByRole("columnheader", { name: "Email" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Name" })).toBeInTheDocument();
+  });
+
+  it("prefers a saved visibility choice over the default", () => {
+    localStorage.setItem(
+      "test-default-visibility",
+      JSON.stringify({ _version: 1, email: true })
+    );
+    render(
+      <DataTable
+        columns={columns}
+        data={rows}
+        enableColumnVisibility
+        storageKey="test-default-visibility"
+        defaultColumnVisibility={{ email: false }}
+      />
+    );
+    expect(screen.getByRole("columnheader", { name: "Email" })).toBeInTheDocument();
+  });
+});

@@ -3,6 +3,7 @@ import { StatCard, type StatCardProps } from "@/components/ui/StatCard";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { Users, Clock, TrendingUp, Briefcase, CalendarDays } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { Tone } from "@/components/ui/tone";
 import type { AnalyticsMetric } from "./types";
 
 interface AnalyticsMetricsProps {
@@ -30,6 +31,14 @@ const getMetricConfig = (name: string): MetricConfig => {
   if (name.includes("Utilization"))
     return { icon: TrendingUp, glow: "success", iconColorClass: "text-success" };
   return { icon: Briefcase, glow: "primary" };
+};
+
+const GLOW_TONE: Record<MetricConfig["glow"], Tone> = {
+  primary: "info",
+  success: "success",
+  warning: "warning",
+  destructive: "danger",
+  none: "neutral",
 };
 
 const formatTrend = (metric: AnalyticsMetric): string => {
@@ -69,7 +78,7 @@ export const AnalyticsMetrics: React.FC<AnalyticsMetricsProps> = ({
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-4">
       {metrics.map((metric, index) => {
         const config = getMetricConfig(metric.name);
         return (
@@ -80,7 +89,16 @@ export const AnalyticsMetrics: React.FC<AnalyticsMetricsProps> = ({
             icon={config.icon}
             glow={config.glow}
             iconColorClass={config.iconColorClass}
-            trend={formatTrend(metric)}
+            iconTone={GLOW_TONE[config.glow]}
+            delta={
+              metric.change === 0
+                ? { text: "No change vs previous period", direction: "flat" }
+                : {
+                    text: formatTrend(metric),
+                    direction: metric.trend === "up" ? "up" : "down",
+                    tone: "neutral",
+                  }
+            }
             delay={index * 0.05}
           />
         );

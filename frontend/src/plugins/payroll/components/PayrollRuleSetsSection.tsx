@@ -5,6 +5,7 @@
  */
 import React from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SwitchField } from "@/components/common/forms/SwitchField";
 import { PayrollRuleSetCard } from "./PayrollRuleSetCard";
 import type { PayrollRuleSet } from "../types";
@@ -33,7 +34,7 @@ export const PayrollRuleSetsSection: React.FC<PayrollRuleSetsSectionProps> = ({
   <GlassCard className="p-6">
     <div className="mb-4 flex items-center justify-between">
       <div>
-        <h3 className="text-lg font-semibold">Payroll Calculations</h3>
+        <SectionHeading title="Payroll Calculations" />
         <p className="mt-1 text-xs text-muted-foreground">
           Status is based on today. Payroll runs use the rule set effective on the first day of the
           selected month.

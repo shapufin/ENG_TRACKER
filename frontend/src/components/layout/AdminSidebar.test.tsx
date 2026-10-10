@@ -116,6 +116,18 @@ describe("AdminSidebar", () => {
     expect(screen.getByText("Enterprise")).toBeInTheDocument();
   });
 
+  it("brand name is single-line truncated", () => {
+    mockGetInjected([]);
+    renderSidebar();
+
+    const name = screen.getByText("Admin Panel");
+    const classes = name.className.split(/\s+/);
+    expect(classes).toContain("truncate");
+    expect(classes).toContain("text-base");
+    expect(classes).not.toContain("md:inline");
+    expect(name.parentElement?.className.split(/\s+/)).toContain("min-w-0");
+  });
+
   it("falls back to the gradient tile and 'Admin Panel' while branding is loading/errored", () => {
     mockGetInjected([]);
     renderSidebar();

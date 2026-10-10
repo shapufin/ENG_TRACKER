@@ -17,14 +17,17 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderPage(onExport?: () => void | Promise<void>) {
+function renderPage(
+  onExport?: () => void | Promise<void>,
+  setFilterStatus: (v: string) => void = () => {}
+) {
   return render(
     <HoursLogsPage
       title="Overtime Logs"
       subtitle="Manage overtime entries"
       isLoading={false}
       filterStatus="all"
-      setFilterStatus={() => {}}
+      setFilterStatus={setFilterStatus}
       dateFrom=""
       setDateFrom={() => {}}
       dateTo=""
@@ -76,5 +79,21 @@ describe("HoursLogsPage", () => {
     fireEvent.click(button);
     await waitFor(() => expect(onExport).toHaveBeenCalled());
     await waitFor(() => expect(button).not.toBeDisabled());
+  });
+
+  it("filters status through count chips built from the loaded stats", () => {
+    const setFilterStatus = vi.fn();
+    renderPage(undefined, setFilterStatus);
+    const pending = screen.getByRole("button", { name: /pending/i });
+    expect(pending).toHaveTextContent("1");
+    fireEvent.click(pending);
+    expect(setFilterStatus).toHaveBeenCalledWith("pending");
+  });
+
+  it("names row actions per record: approve and reject for pending, no delete unless allowed", () => {
+    renderPage();
+    expect(screen.getByRole("button", { name: "Approve 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete 1" })).not.toBeInTheDocument();
   });
 });
