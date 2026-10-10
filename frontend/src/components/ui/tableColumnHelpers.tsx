@@ -18,6 +18,8 @@ import { Check, X, Pencil, Trash2, Eye, CheckCircle, XCircle } from "lucide-reac
 import { RowActions, type RowAction } from "@/components/ui/RowActions";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 
+const LOCKED_REASON = "Locked — ask a superuser to delete records from past months.";
+
 interface WithId {
   id: number;
 }
@@ -89,6 +91,7 @@ export const createCrudActionsColumn = <T extends WithIdAndStatus>(config: {
         label: `Edit ${id}`,
         icon: Pencil,
         disabled: config.canEdit ? !config.canEdit(row.original) : false,
+        disabledReason: LOCKED_REASON,
         onClick: () => config.onEdit(row.original),
       },
       {
@@ -96,6 +99,7 @@ export const createCrudActionsColumn = <T extends WithIdAndStatus>(config: {
         icon: Trash2,
         tone: "danger",
         disabled: config.canDelete ? !config.canDelete(row.original) : false,
+        disabledReason: LOCKED_REASON,
         onClick: () => config.onDelete(id),
       }
     );

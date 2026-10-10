@@ -11,6 +11,8 @@ export interface RowAction {
   onClick: () => void;
   tone?: "default" | "danger" | "warning" | "success";
   disabled?: boolean;
+  /** Why the action is disabled; shown in a tooltip and exposed as the button description. */
+  disabledReason?: string;
 }
 
 const TONE_CLASS: Record<NonNullable<RowAction["tone"]>, string> = {
@@ -24,6 +26,48 @@ const TONE_CLASS: Record<NonNullable<RowAction["tone"]>, string> = {
 const HOVER_REVEAL_CLASS =
   "pointer-fine:opacity-0 pointer-fine:group-hover/row:opacity-100 pointer-fine:group-focus-within/row:opacity-100 pointer-fine:group-data-[state=selected]/row:opacity-100 transition-opacity duration-150 motion-reduce:transition-none";
 
+const RowActionButton: React.FC<{ action: RowAction }> = ({ action }) => {
+  const { label, icon: Icon, onClick, tone = "default", disabled, disabledReason } = action;
+  const reasonId = React.useId();
+  const explained = Boolean(disabled && disabledReason);
+  const button = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="control-icon-sm"
+      className={TONE_CLASS[tone]}
+      aria-label={label}
+      aria-describedby={explained ? reasonId : undefined}
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+    </Button>
+  );
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {explained ? (
+          <span className="inline-flex" tabIndex={0}>
+            {button}
+          </span>
+        ) : (
+          button
+        )}
+      </TooltipTrigger>
+      <TooltipContent>{explained ? disabledReason : label}</TooltipContent>
+      {explained && (
+        <span id={reasonId} className="sr-only">
+          {disabledReason}
+        </span>
+      )}
+    </Tooltip>
+  );
+};
+
 export const RowActions: React.FC<{ actions: RowAction[]; reveal?: "hover" | "always" }> = ({
   actions,
   reveal = "hover",
@@ -35,26 +79,8 @@ export const RowActions: React.FC<{ actions: RowAction[]; reveal?: "hover" | "al
         reveal === "hover" && HOVER_REVEAL_CLASS
       )}
     >
-      {actions.map(({ label, icon: Icon, onClick, tone = "default", disabled }) => (
-        <Tooltip key={label}>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="control-icon-sm"
-              className={TONE_CLASS[tone]}
-              aria-label={label}
-              disabled={disabled}
-              onClick={(e) => {
-                e.stopPropagation();
-                onClick();
-              }}
-            >
-              <Icon className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{label}</TooltipContent>
-        </Tooltip>
+      {actions.map((action) => (
+        <RowActionButton key={action.label} action={action} />
       ))}
     </div>
   </TooltipProvider>

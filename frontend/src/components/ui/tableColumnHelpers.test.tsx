@@ -179,3 +179,22 @@ describe("action helper button sizing", () => {
     }
   });
 });
+
+describe("locked CRUD actions", () => {
+  it("locked Edit and Delete buttons are described by the lock reason", () => {
+    const { getByRole } = renderCell(
+      createCrudActionsColumn<Row>({
+        canApprove: false,
+        onApprove: vi.fn(),
+        onReject: vi.fn(),
+        onEdit: vi.fn(),
+        onDelete: vi.fn(),
+        canEdit: () => false,
+        canDelete: () => false,
+      })
+    );
+    const reason = "Locked — ask a superuser to delete records from past months.";
+    expect(getByRole("button", { name: "Edit 7" })).toHaveAccessibleDescription(reason);
+    expect(getByRole("button", { name: "Delete 7" })).toHaveAccessibleDescription(reason);
+  });
+});

@@ -50,4 +50,23 @@ describe("RowActions", () => {
     );
     expect(screen.getByRole("button", { name: "Edit" })).toBeDisabled();
   });
+
+  it("disabled action with disabledReason has an accessible description", () => {
+    render(
+      <RowActions
+        actions={[
+          {
+            label: "Edit 1",
+            icon: Pencil,
+            onClick: vi.fn(),
+            disabled: true,
+            disabledReason: "Locked reason",
+          },
+        ]}
+      />
+    );
+    const btn = screen.getByRole("button", { name: "Edit 1" });
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveAccessibleDescription("Locked reason");
+  });
 });
