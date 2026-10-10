@@ -1,5 +1,4 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -10,7 +9,8 @@ import {
 } from "@/components/ui/select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
-import { Calendar, Users, Filter, FileBarChart } from "lucide-react";
+import { Calendar, Users, Filter } from "lucide-react";
+import { ReportPeriodPresets } from "./ReportPeriodPresets";
 
 interface ReportFilterPanelProps {
   start: string;
@@ -18,12 +18,10 @@ interface ReportFilterPanelProps {
   selectedTeam: string;
   groupBy: "user" | "month" | "year";
   teams?: { id: number; name: string }[];
-  isLoading: boolean;
   onStartChange: (v: string) => void;
   onEndChange: (v: string) => void;
   onTeamChange: (v: string) => void;
   onGroupByChange: (v: "user" | "month" | "year") => void;
-  onGenerate: () => void;
 }
 
 export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
@@ -32,15 +30,21 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
   selectedTeam,
   groupBy,
   teams,
-  isLoading,
   onStartChange,
   onEndChange,
   onTeamChange,
   onGroupByChange,
-  onGenerate,
 }) => {
   return (
-    <GlassCard className="p-6">
+    <GlassCard className="space-y-4 p-6">
+      <ReportPeriodPresets
+        start={start}
+        end={end}
+        onSelect={(range) => {
+          onStartChange(range.start);
+          onEndChange(range.end);
+        }}
+      />
       <div className="flex flex-wrap items-end gap-4">
         <div className="min-w-[200px] flex-1 space-y-2">
           <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
@@ -94,15 +98,6 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
             </SelectContent>
           </Select>
         </div>
-
-        <Button
-          className="shadow-primary/20 px-8 shadow-lg"
-          onClick={onGenerate}
-          disabled={isLoading}
-        >
-          <FileBarChart className="mr-2 h-4 w-4" />
-          Generate Intelligence
-        </Button>
       </div>
     </GlassCard>
   );
