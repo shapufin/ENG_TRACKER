@@ -103,4 +103,52 @@ describe("filterBalances", () => {
       ids(filterBalances(rows, { year: 2026, type: "vacation", expiringOnly: true }, today))
     ).toEqual([4]);
   });
+
+  it("never totals to NaN when a balance has no day counts yet", () => {
+    const sparse = [
+      bal({
+        id: 1,
+        total_days: 20,
+        used_days: 5,
+        pending_days: 0,
+        available_days: 15,
+        is_carry_over: false,
+      }),
+      bal({
+        id: 2,
+        total_days: null as unknown as number,
+        used_days: null as unknown as number,
+        pending_days: null as unknown as number,
+        available_days: null as unknown as number,
+        is_carry_over: true,
+        expires_at: "2026-10-20",
+      }),
+    ];
+    const totals = computeBalanceTotals(sparse, today);
+    expect(totals.allocated).toBe(20);
+    expect(totals.used).toBe(5);
+    expect(totals.pending).toBe(0);
+    expect(totals.atRisk).toBe(0);
+    expect(totals.usedPct).toBe(25);
+    Object.values(totals).forEach((v) => {
+      if (typeof v === "number") expect(Number.isNaN(v)).toBe(false);
+    });
+  });
+
+  it("adds string day counts (DRF decimals) instead of concatenating them", () => {
+    const decimals = [
+      bal({
+        id: 1,
+        total_days: "20.0" as unknown as number,
+        used_days: "5.0" as unknown as number,
+        pending_days: "0.0" as unknown as number,
+        available_days: "15.0" as unknown as number,
+        is_carry_over: false,
+      }),
+    ];
+    const totals = computeBalanceTotals(decimals, today);
+    expect(totals.allocated).toBe(20);
+    expect(totals.used).toBe(5);
+    expect(totals.usedPct).toBe(25);
+  });
 });

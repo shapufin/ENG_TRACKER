@@ -16,6 +16,8 @@ interface UseUserColumnsOptions {
   crAccessUserIds?: Set<number>;
   crAccessByUserId?: Map<number, CRAccessRecord>;
   showCRScopeTeams?: boolean;
+  /** Opens the record detail panel for a row. Omit to render the name as plain text. */
+  onView?: (profile: UserProfile) => void;
 }
 
 const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
@@ -30,7 +32,7 @@ const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
       <Badge
         key="it"
         variant="default"
-        className="text-tone-info-text h-5 shrink-0 border-blue-500/30 bg-blue-500/15 px-1.5 py-0 text-xs hover:bg-blue-500/30"
+        className={`${toneSurfaceClass.info} h-5 shrink-0 px-1.5 py-0 text-xs font-normal`}
       >
         {compact ? "IT" : "IT TL"}
       </Badge>
@@ -41,7 +43,7 @@ const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
       <Badge
         key="al"
         variant="default"
-        className="text-tone-success-text h-5 shrink-0 border-emerald-600/30 bg-emerald-600/15 px-1.5 py-0 text-xs hover:bg-emerald-600/25"
+        className={`${toneSurfaceClass.success} h-5 shrink-0 px-1.5 py-0 text-xs font-normal`}
       >
         {compact ? "AL" : "AL TL"}
       </Badge>
@@ -114,6 +116,7 @@ export const useUserColumns = (
     crAccessUserIds = new Set<number>(),
     crAccessByUserId = new Map<number, CRAccessRecord>(),
     showCRScopeTeams = false,
+    onView,
   } = options;
   const navigate = useNavigate();
 
@@ -124,9 +127,24 @@ export const useUserColumns = (
         accessorKey: "user.username",
         header: "Username",
         size: 220,
-        cell: ({ row }) => (
-          <UserCell name={row.original.user?.username} subtitle={row.original.user?.email} />
-        ),
+        cell: ({ row }) => {
+          const username = row.original.user?.username;
+          const identity = <UserCell name={username} subtitle={row.original.user?.email} />;
+          if (!onView) return identity;
+          return (
+            <button
+              type="button"
+              aria-label={`View details for ${username}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onView(row.original);
+              }}
+              className="hover:text-primary focus-visible:ring-ring max-w-full rounded-md text-left transition-colors focus-visible:ring-2 focus-visible:outline-hidden motion-reduce:transition-none"
+            >
+              {identity}
+            </button>
+          );
+        },
       },
       {
         id: "email",
@@ -206,7 +224,7 @@ export const useUserColumns = (
                   <Badge
                     key={t.id}
                     variant="outline"
-                    className="border-violet-500/30 bg-violet-500/10 text-xs font-normal text-violet-400 hover:bg-violet-500/20"
+                    className={`${toneSurfaceClass.accent} text-xs font-normal`}
                   >
                     {t.name}
                     {t.level && (
@@ -330,5 +348,6 @@ export const useUserColumns = (
     crAccessByUserId,
     showCRScopeTeams,
     navigate,
+    onView,
   ]);
 };

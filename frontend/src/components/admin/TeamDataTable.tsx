@@ -55,7 +55,7 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
                     expanded.has(team.id) ? `Collapse ${team.name}` : `Expand ${team.name}`
                   }
                   onClick={() => onToggleExpand(team.id)}
-                  className="flex h-5 w-5 items-center justify-center rounded hover:bg-muted"
+                  className="hover:bg-muted flex h-5 w-5 items-center justify-center rounded"
                 >
                   {expanded.has(team.id) ? (
                     <ChevronDown className="h-4 w-4" />
@@ -106,7 +106,12 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
         id: "actions",
         header: "Actions",
         cell: ({ row }: { row: { original: TeamNode } }) => (
-          <DataTableActions item={row.original} onEdit={onEdit} onDelete={onDelete} />
+          <DataTableActions
+            item={row.original}
+            itemLabel={row.original.name}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
         ),
       },
     ],

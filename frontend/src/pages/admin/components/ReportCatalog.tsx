@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { Tone } from "@/components/ui/tone";
 import type { SummaryReport } from "@/services/reportService";
 
-export type ReportKind = "overtime" | "standby" | "leave";
+type ReportKind = "overtime" | "standby" | "leave";
 
 interface ReportCatalogProps {
   tab: "overtime_standby" | "vacation";

@@ -28,16 +28,27 @@ export interface BalanceTotals {
   usedPct: number | null;
 }
 
+/**
+ * The API sends DRF decimals as strings ("20.0"), so coerce once here. Missing,
+ * empty or non-numeric values come back as null, never NaN.
+ */
+export const toDays = (v: unknown): number | null => {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+};
+const days = (v: unknown) => toDays(v) ?? 0;
+
 export function computeBalanceTotals(rows: LeaveBalance[], today: Date): BalanceTotals {
   let allocated = 0;
   let used = 0;
   let pending = 0;
   let atRisk = 0;
   for (const b of rows) {
-    allocated += b.total_days;
-    used += b.used_days;
-    pending += b.pending_days;
-    if (isExpiringSoon(b, today)) atRisk += b.available_days;
+    allocated += days(b.total_days);
+    used += days(b.used_days);
+    pending += days(b.pending_days);
+    if (isExpiringSoon(b, today)) atRisk += days(b.available_days);
   }
   return {
     allocated,

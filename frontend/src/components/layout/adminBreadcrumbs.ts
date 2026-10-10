@@ -6,7 +6,7 @@ export interface Crumb {
 }
 
 /** Plugin admin routes that are injected via PluginSlot and so are not in AdminNavItem[]. Strings only: no plugin import. */
-export const ADMIN_PLUGIN_CRUMBS: Record<string, { group: string; label: string }> = {
+const ADMIN_PLUGIN_CRUMBS: Record<string, { group: string; label: string }> = {
   "/admin/analytics": { group: "Extensions", label: "Analytics" },
   "/admin/control-room": { group: "Extensions", label: "Control Room" },
   "/admin/audit-logs": { group: "System", label: "Audit Logs" },
@@ -33,7 +33,10 @@ export function resolveAdminCrumbs(pathname: string, items: AdminNavItem[]): Cru
   }
   if (!best) return [];
   const deeper = clean !== best.path;
-  const crumbs: Crumb[] = [{ label: best.group }, deeper ? { label: best.label, to: best.path } : { label: best.label }];
+  const crumbs: Crumb[] = [
+    { label: best.group },
+    deeper ? { label: best.label, to: best.path } : { label: best.label },
+  ];
   if (deeper) crumbs.push({ label: "Details" });
   return crumbs;
 }

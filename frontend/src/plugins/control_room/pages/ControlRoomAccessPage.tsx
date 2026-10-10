@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import { DataTable } from "@/components/ui/DataTable";
+import { RowActions } from "@/components/ui/RowActions";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PageShell } from "@/components/layout/PageShell";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
@@ -204,47 +205,29 @@ export const ControlRoomAccessPage: React.FC = () => {
         cell: ({ row }) => {
           const access = row.original;
           return (
-            <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => state.setEditingAccess(access)}
-                aria-label={`Edit ${access.username}`}
-                title="Edit access"
-              >
-                <Edit3 className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => state.handleToggleActive(access)}
-                disabled={state.updateMutation.isPending}
-                aria-label={`${access.is_active ? "Deactivate" : "Activate"} ${access.username}`}
-                title={access.is_active ? "Deactivate access" : "Activate access"}
-              >
-                {access.is_active ? (
-                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                ) : (
-                  <Shield className="text-muted-foreground h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="text-destructive hover:text-destructive h-8 w-8"
-                onClick={() => state.setRevokeAccess(access)}
-                disabled={state.deleteMutation.isPending}
-                aria-label={`Revoke ${access.username}`}
-                title="Revoke access"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+            <RowActions
+              actions={[
+                {
+                  label: `Edit ${access.username}`,
+                  icon: Edit3,
+                  onClick: () => state.setEditingAccess(access),
+                },
+                {
+                  label: `${access.is_active ? "Deactivate" : "Activate"} ${access.username}`,
+                  icon: access.is_active ? ShieldCheck : Shield,
+                  tone: access.is_active ? "success" : "default",
+                  disabled: state.updateMutation.isPending,
+                  onClick: () => state.handleToggleActive(access),
+                },
+                {
+                  label: `Revoke ${access.username}`,
+                  icon: Trash2,
+                  tone: "danger",
+                  disabled: state.deleteMutation.isPending,
+                  onClick: () => state.setRevokeAccess(access),
+                },
+              ]}
+            />
           );
         },
       },

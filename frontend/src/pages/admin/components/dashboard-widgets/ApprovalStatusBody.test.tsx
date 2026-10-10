@@ -10,7 +10,11 @@ vi.mock("@/components/dashboard/CircularProgress", () => ({
   ),
 }));
 vi.mock("@/components/dashboard/StatusRow", () => ({
-  StatusRow: ({ label, value }: any) => <div data-testid={label}>{value}</div>,
+  StatusRow: ({ label, value, color }: any) => (
+    <div data-testid={label} data-color={color}>
+      {value}
+    </div>
+  ),
 }));
 
 // Canonical 5-element contract produced by computeAdminDashboardSummary.
@@ -63,5 +67,12 @@ describe("ApprovalStatusBody", () => {
       />
     );
     expect(screen.getByTestId("progress")).toHaveTextContent("100-Approved");
+  });
+
+  it("colours status dots with tone tokens, never raw palette classes", () => {
+    render(<ApprovalStatusBody statusData={REAL_STATUS_DATA} />);
+    expect(screen.getByTestId("Approved")).toHaveAttribute("data-color", "bg-tone-success-text");
+    expect(screen.getByTestId("Pending")).toHaveAttribute("data-color", "bg-tone-warning-text");
+    expect(screen.getByTestId("Rejected")).toHaveAttribute("data-color", "bg-tone-danger-text");
   });
 });
