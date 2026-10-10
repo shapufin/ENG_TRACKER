@@ -52,11 +52,20 @@ describe("AnalyticsMetrics", () => {
     render(<AnalyticsMetrics metrics={metrics} isLoading={false} error={null} />);
     expect(screen.getByText("+5% vs prev")).toBeInTheDocument();
     expect(screen.getByText("-3% vs prev")).toBeInTheDocument();
-    expect(screen.getByText("0% vs prev")).toBeInTheDocument();
+    expect(screen.getByText("No change vs previous period")).toBeInTheDocument();
   });
 
   it("renders nothing when metrics array is empty", () => {
     const { container } = render(<AnalyticsMetrics metrics={[]} isLoading={false} error={null} />);
     expect(container.querySelectorAll(".grid > div").length).toBe(0);
+  });
+
+  it("lays metrics out in an auto-fit grid", () => {
+    const { container } = render(
+      <AnalyticsMetrics metrics={metrics} isLoading={false} error={null} />
+    );
+    expect(container.firstElementChild?.className).toContain(
+      "grid-cols-[repeat(auto-fit,minmax(13rem,1fr))]"
+    );
   });
 });

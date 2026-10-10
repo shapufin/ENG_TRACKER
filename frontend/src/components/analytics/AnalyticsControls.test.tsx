@@ -33,15 +33,15 @@ describe("AnalyticsControls", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders period buttons", () => {
+  it("renders period chips as pressed toggles", () => {
     render(<AnalyticsControls {...baseProps} />);
-    expect(screen.getByText("month")).toBeInTheDocument();
-    expect(screen.getByText("year")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Month" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Year" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("calls onPeriodChange when clicking a period", () => {
     render(<AnalyticsControls {...baseProps} />);
-    fireEvent.click(screen.getByText("year"));
+    fireEvent.click(screen.getByRole("button", { name: "Year" }));
     expect(baseProps.onPeriodChange).toHaveBeenCalledWith("year");
   });
 
