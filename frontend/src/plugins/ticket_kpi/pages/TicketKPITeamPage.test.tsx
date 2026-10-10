@@ -86,8 +86,8 @@ describe("TicketKPITeamPage", () => {
       </MemoryRouter>
     );
     expect(screen.getByText("You do not have team leader permissions.")).toBeInTheDocument();
-    // Icon-centered shared empty state (muted circle), not bare text.
-    expect(document.querySelector(".rounded-full.bg-muted svg.lucide-shield-alert")).not.toBeNull();
+    // Icon-centered shared empty state (IconWell tone well), not bare text.
+    expect(document.querySelector("svg.lucide-shield-alert")).not.toBeNull();
   });
 
   it("denial state guides admins/HR to HR Reports instead of a dead end", () => {
