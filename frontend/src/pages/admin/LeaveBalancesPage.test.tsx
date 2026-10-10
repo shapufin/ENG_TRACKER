@@ -164,4 +164,51 @@ describe("LeaveBalancesPage", () => {
       expect(next.get("foo")).toBe("1");
     });
   });
+
+  describe("year and type filters", () => {
+    const rows = [
+      { id: 1, user_name: "A", year: 2025, leave_type: "vacation", total_days: 20, used_days: 10, pending_days: 0, available_days: 10 },
+      { id: 2, user_name: "B", year: 2026, leave_type: "vacation", total_days: 8, used_days: 2, pending_days: 1, available_days: 5 },
+      { id: 3, user_name: "C", year: 2026, leave_type: "sick", total_days: 4, used_days: 0, pending_days: 0, available_days: 4 },
+    ];
+    const setup = () => {
+      vi.mocked(usePermissions).mockReturnValue({ isAdmin: true } as any);
+      vi.mocked(useLeaveBalanceForm).mockReturnValue(mockForm as any);
+      vi.mocked(useLeaveBalances).mockReturnValue({ ...mockBalances, balances: rows } as any);
+    };
+
+    it("KPIs cover all rows by default and the footer counts them", () => {
+      setup();
+      render(<LeaveBalancesPage />);
+      expect(screen.getByText("32d")).toBeInTheDocument();
+      expect(screen.getByText("3 balances")).toBeInTheDocument();
+    });
+
+    it("year chip writes ?year= with replace and keeps other params", () => {
+      setup();
+      currentParams = new URLSearchParams("foo=1");
+      render(<LeaveBalancesPage />);
+      fireEvent.click(screen.getByRole("button", { name: /^2026/ }));
+      const next = setParams.mock.calls[0][0] as URLSearchParams;
+      expect(next.get("year")).toBe("2026");
+      expect(next.get("foo")).toBe("1");
+      expect(setParams.mock.calls[0][1]).toEqual({ replace: true });
+    });
+
+    it("?year=2026 filters the table and recomputes the KPIs", () => {
+      setup();
+      currentParams = new URLSearchParams("year=2026");
+      render(<LeaveBalancesPage />);
+      expect(screen.getByTestId("data-table")).toHaveAttribute("data-rows", "2");
+      expect(screen.getByText("12d")).toBeInTheDocument();
+      expect(screen.getByText("2 balances")).toBeInTheDocument();
+    });
+
+    it("type chip writes ?type=sick and offers only present types", () => {
+      setup();
+      render(<LeaveBalancesPage />);
+      fireEvent.click(screen.getByRole("button", { name: /^Sick/ }));
+      expect((setParams.mock.calls[0][0] as URLSearchParams).get("type")).toBe("sick");
+    });
+  });
 });

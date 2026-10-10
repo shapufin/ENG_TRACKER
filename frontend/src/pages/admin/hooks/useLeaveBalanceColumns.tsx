@@ -3,6 +3,44 @@ import { RowActions } from "@/components/ui/RowActions";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import type { LeaveBalance } from "@/types";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
+import { UserCell } from "@/components/admin/UserCell";
+import { cn } from "@/lib/utils";
+import { isExpiringSoon } from "./leaveBalanceFilters";
+
+const numberFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+const num = (n: number | undefined | null) =>
+  typeof n === "number" ? numberFormat.format(n) : "—";
+const NUM_CELL = "block text-right tabular-nums";
+
+const utilizationBar = (used: number, total: number) => {
+  if (!(total > 0)) return <span className="text-muted-foreground">{"—"}</span>;
+  const pct = Math.round((used / total) * 100);
+  return (
+    <div
+      role="img"
+      aria-label={`${pct}% used`}
+      className="bg-tone-neutral-surface h-2 w-24 overflow-hidden rounded-full"
+    >
+      <div
+        className={cn("h-full rounded-full", pct >= 100 ? "bg-tone-warning-text" : "bg-primary")}
+        style={{ width: `${Math.min(pct, 100)}%` }}
+      />
+    </div>
+  );
+};
+
+const numCol = (
+  id: "total_days" | "used_days" | "pending_days" | "available_days" | "effective_available_days",
+  header: string,
+  bold = false
+): AppColumnDef<LeaveBalance> => ({
+  id,
+  accessorKey: id,
+  header,
+  cell: ({ row }) => (
+    <span className={cn(NUM_CELL, bold && "font-semibold")}>{num(row.original[id])}</span>
+  ),
+});
 
 export const useLeaveBalanceColumns = (
   onEdit: (b: LeaveBalance) => void,
@@ -11,7 +49,12 @@ export const useLeaveBalanceColumns = (
 ): AppColumnDef<LeaveBalance>[] =>
   useMemo(
     () => [
-      { id: "user_name", accessorKey: "user_name", header: "Employee" },
+      {
+        id: "user_name",
+        accessorKey: "user_name",
+        header: "Employee",
+        cell: ({ row }) => <UserCell name={row.original.user_name} />,
+      },
       {
         id: "leave_type",
         accessorKey: "leave_type",
@@ -19,22 +62,38 @@ export const useLeaveBalanceColumns = (
         cell: ({ row }) => <span className="capitalize">{row.original.leave_type}</span>,
       },
       { id: "year", accessorKey: "year", header: "Year" },
-      { id: "total_days", accessorKey: "total_days", header: "Total" },
-      { id: "used_days", accessorKey: "used_days", header: "Used" },
-      { id: "pending_days", accessorKey: "pending_days", header: "Pending" },
-      { id: "available_days", accessorKey: "available_days", header: "Available" },
+      numCol("total_days", "Total"),
+      numCol("used_days", "Used"),
       {
-        id: "effective_available_days",
-        accessorKey: "effective_available_days",
-        header: "Effective",
+        id: "utilization",
+        header: "Utilization",
+        enableSorting: false,
+        cell: ({ row }) => utilizationBar(row.original.used_days, row.original.total_days),
       },
+      numCol("pending_days", "Pending"),
+      numCol("available_days", "Available", true),
+      numCol("effective_available_days", "Effective"),
       {
         id: "is_carry_over",
         accessorKey: "is_carry_over",
         header: "Carry-over",
         cell: ({ row }) => (row.original.is_carry_over ? "Yes" : "No"),
       },
-      { id: "expires_at", accessorKey: "expires_at", header: "Expires" },
+      {
+        id: "expires_at",
+        accessorKey: "expires_at",
+        header: "Expires",
+        cell: ({ row }) => (
+          <span
+            className={cn(
+              "tabular-nums",
+              isExpiringSoon(row.original, new Date()) && "text-tone-warning-text font-medium"
+            )}
+          >
+            {row.original.expires_at ?? "—"}
+          </span>
+        ),
+      },
       {
         id: "actions",
         header: "Actions",
