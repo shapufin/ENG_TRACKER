@@ -63,7 +63,7 @@ off-direction — including anything copied from the AdminGUI mockup, which is a
   contrast on light backgrounds. A `dark:` variant is only a bug on a full
   tone-surface component (background+border+text bundled) — those must use
   `toneSurfaceClass` instead, which already encodes both modes.
-- **Dialogs**: `DialogContent size="sm|md|lg|xl|full"` (448/512/672/896/full),
+- **Dialogs**: `DialogContent size="sm|md|lg|xl|full|panel"` (448/512/672/896/full/480; `panel` + `side="right"` = record side panel),
   one `DialogBody` scroll region, `DialogFooter` divider. Gate:
   `node scripts/modal-audit.mjs` (structural) + `modal-visual-audit.mjs`
   (hex/slate/gradient/`bg-card`). Both pass app-wide except one pre-existing,
