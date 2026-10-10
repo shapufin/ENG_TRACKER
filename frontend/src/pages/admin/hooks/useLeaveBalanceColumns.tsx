@@ -5,16 +5,19 @@ import type { LeaveBalance } from "@/types";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { UserCell } from "@/components/admin/UserCell";
 import { cn } from "@/lib/utils";
-import { isExpiringSoon } from "./leaveBalanceFilters";
+import { isExpiringSoon, toDays } from "./leaveBalanceFilters";
 
 const numberFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
-const num = (n: number | undefined | null) =>
-  typeof n === "number" ? numberFormat.format(n) : "—";
+const num = (n: unknown) => {
+  const v = toDays(n);
+  return v === null ? "—" : numberFormat.format(v);
+};
 const NUM_CELL = "block text-right tabular-nums";
 
-const utilizationBar = (used: number, total: number) => {
-  if (!(total > 0)) return <span className="text-muted-foreground">{"—"}</span>;
-  const pct = Math.round((used / total) * 100);
+const utilizationBar = (used: unknown, total: unknown) => {
+  const totalDays = toDays(total) ?? 0;
+  if (!(totalDays > 0)) return <span className="text-muted-foreground">{"—"}</span>;
+  const pct = Math.round(((toDays(used) ?? 0) / totalDays) * 100);
   return (
     <div
       role="img"

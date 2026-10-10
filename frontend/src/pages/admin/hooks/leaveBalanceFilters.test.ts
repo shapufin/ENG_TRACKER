@@ -134,4 +134,21 @@ describe("filterBalances", () => {
       if (typeof v === "number") expect(Number.isNaN(v)).toBe(false);
     });
   });
+
+  it("adds string day counts (DRF decimals) instead of concatenating them", () => {
+    const decimals = [
+      bal({
+        id: 1,
+        total_days: "20.0" as unknown as number,
+        used_days: "5.0" as unknown as number,
+        pending_days: "0.0" as unknown as number,
+        available_days: "15.0" as unknown as number,
+        is_carry_over: false,
+      }),
+    ];
+    const totals = computeBalanceTotals(decimals, today);
+    expect(totals.allocated).toBe(20);
+    expect(totals.used).toBe(5);
+    expect(totals.usedPct).toBe(25);
+  });
 });

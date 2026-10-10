@@ -28,8 +28,16 @@ export interface BalanceTotals {
   usedPct: number | null;
 }
 
-/** A balance with no day counts yet (the API sends null/undefined) adds nothing, never NaN. */
-const days = (n: number | null | undefined) => (Number.isFinite(n) ? (n as number) : 0);
+/**
+ * The API sends DRF decimals as strings ("20.0"), so coerce once here. Missing,
+ * empty or non-numeric values come back as null, never NaN.
+ */
+export const toDays = (v: unknown): number | null => {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+};
+const days = (v: unknown) => toDays(v) ?? 0;
 
 export function computeBalanceTotals(rows: LeaveBalance[], today: Date): BalanceTotals {
   let allocated = 0;
