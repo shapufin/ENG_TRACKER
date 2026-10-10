@@ -212,7 +212,7 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     expect(ratio(white, luminance(230, 80, 55))).toBeGreaterThanOrEqual(4.5);
     // --primary-text on --card, parsed from the light block.
     const hsl = (block: string, token: string): [number, number, number] => {
-      const m = block.match(new RegExp(`${token}:\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%`));
+      const m = block.match(new RegExp(String.raw`${token}:\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%`));
       if (!m) throw new Error(`missing ${token}`);
       return [Number(m[1]), Number(m[2]), Number(m[3])];
     };
