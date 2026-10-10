@@ -146,12 +146,14 @@ export default {
         // so these also fit non-uppercase captions.
         micro: ["0.625rem", { lineHeight: "0.875rem" }],
         "micro-lg": ["0.6875rem", { lineHeight: "1rem" }],
+        dense: ["0.8125rem", { lineHeight: "1.25rem" }],
       },
       boxShadow: {
         glass: "var(--glass-shadow)",
         card: "var(--shadow-card)",
         pop: "var(--shadow-pop)",
         "glass-lg": "0 8px 32px -8px rgb(0 0 0 / 0.25)",
+        lift: "var(--shadow-lift)",
       },
       backgroundImage: {
         glass: "linear-gradient(180deg, hsl(var(--glass-bg)) 0%, hsl(var(--glass-bg)) 100%)",

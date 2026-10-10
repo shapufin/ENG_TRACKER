@@ -94,7 +94,7 @@ export const AppShell = React.memo(() => {
         onLogout={handleLogout}
       />
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="admin-canvas flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="border-border/30 bg-card/30 flex items-center justify-between border-b px-3 pt-[calc(0.75rem+var(--safe-area-top))] pb-3 backdrop-blur-sm md:hidden">
           <div className="flex items-center gap-3">
             <button
