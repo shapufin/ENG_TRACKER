@@ -3,31 +3,54 @@
 Persistent design memory. Read before any UI work. Source of truth order:
 1. This file.
 2. Theme tokens (`frontend/src/components/ui/tone.ts`, `frontend/src/theme/tokens.*`, `tailwind.config`).
-3. Approved mockups in `Time Tracker UI Project/extra/` (Settings, HR Reports,
-   Add Skills dialog, Admin Users — structural targets, already ported).
+3. Admin lift plan + invariants: `docs/superpowers/plans/2026-10-10-admin-visual-lift.md`,
+   CLAUDE.md Hot Invariant "Admin visual lift (2026-10-10)" (traps 1–5),
+   `docs/ui-control-kit.md`, `docs/table-header-contract.md`.
+4. Approved mockups in `Time Tracker UI Project/extra/` (Settings, HR Reports,
+   Add Skills dialog, Admin Users — structural targets, already ported) and the
+   `Downloads/AdminGUI` mockup (admin lift reference; its dark mode is broken
+   and its data is fake — see the lift section below). `Design System.md` was
+   merged into this file on 2026-10-10 — read this file, not that one.
 
 Full design pattern reference lives in `.devin/context/03-FRONTEND-PATTERNS.md`
 (§10 a11y, §11 layout contracts, §13 dialog contract, §14 checkbox/bulk, §15
-tone scale coverage) — this file does not repeat that content, only indexes it.
+tone scale coverage, §18 buttons/light tokens, §19 control kit) — this file
+does not repeat that content, only indexes it. CLAUDE.md's router also points
+at a §20 (lift anatomy) added with the lift; `.devin/` is untracked, so a
+checkout whose copy predates the lift won't have it — those sessions must
+rely on this file + CLAUDE.md.
 
-## Named direction: "Obsidian Enterprise"
+## Named direction: "Obsidian Enterprise" (+ admin lift, 2026-10-10)
 
-Deep-slate layered surfaces, muted slate dividers, single purple accent
-(`accent-violet` → `primary`), monospace numerics, no gradients except the
-primary CTA (`Button variant="gradient"`), no glassmorphism except `GlassCard`
-and modal backdrops. Any surface that reaches for raw palette classes
-(`slate-`/`zinc-`/`gray-`/hex) or a second gradient is off-direction.
+Deep-slate layered surfaces, muted slate dividers, single accent via the
+`primary` token — **light `230 80% 55%` (indigo, identity restoration: the
+`221 83% 53%` it replaced was already AA at 5.19:1, never "fix" contrast by
+darkening it again), dark `262 83% 58%` (violet)** — monospace numerics, no
+gradients except the primary CTA (`Button variant="gradient"`) and the
+`.admin-canvas` page glow, no glassmorphism except `GlassCard` and modal
+backdrops. Any surface that reaches for raw palette classes
+(`slate-`/`zinc-`/`gray-`/`blue-`/`emerald-`/hex) or a second accent is
+off-direction — including anything copied from the AdminGUI mockup, which is a
+*translation source* (see lift section), never a literal class spec.
 
-## Tokens (live, verified 2026-09-11)
+## Tokens (light values re-verified 2026-10-10 post-lift)
 
-- **Palette**: zero raw hex in any `.tsx` file (verified via repo-wide grep,
-  0 hits). All color goes through Tailwind theme classes or `tone.ts`.
-- **Elevation**: canvas → sidebar/panel → `card`/`card-raised` → `surface-sunken`
-  (wells) — 3-level ramp per §11, both light and dark defined.
-- **Typography**: Plus Jakarta Sans (UI), JetBrains Mono (numerics/codes).
-  Scale: `text-micro` (10px) / `text-micro-lg` (11px) / 12 / 14 / 16 / 20 / 24.
-  Arbitrary `text-[10px]`/`text-[11px]` is gated by `modal-audit.mjs` inside
-  dialogs; outside dialogs it still exists in a few places (see findings).
+- **Palette**: zero raw hex in any `.tsx` file. All color goes through Tailwind
+  theme classes or `tone.ts` (`toneSurfaceClass`/`toneTextClass` are Records —
+  index them, don't call them). This rule now explicitly covers mockup-ported
+  classes: `slate-*`, `blue-600`, `emerald-50`+`*-700` pairs all map to tokens
+  (`bg-muted`, `primary`, `toneSurfaceClass.*`), never literal classes.
+- **Elevation**: `.admin-canvas` page fill (`--canvas-glow-1/2` radial glows,
+  on `<main>` in both shells) → sidebar/panel → `card`/`card-raised` →
+  `surface-sunken` (wells). Interactive cards lift via `.surface-lift`
+  (`--shadow-lift`, transform/opacity only — never `transition-all`, never a
+  box-shadow transition).
+- **Typography**: Plus Jakarta Sans (UI — the mockup's Inter was rejected,
+  plan D2), JetBrains Mono (numerics/codes). Scale: `text-micro` (10px) /
+  `text-micro-lg` (11px) / `text-dense` (13px, `DataTable` body) / 12 / 14 /
+  16 / 20 / 24. Arbitrary `text-[10px]`/`text-[11px]` is gated by
+  `modal-audit.mjs` inside dialogs; outside dialogs it still exists in a few
+  places (see findings).
 - **Radius**: `--radius-control` (12px, buttons/inputs), `--radius-surface`
   (16px, cards), `--radius-dialog` (24px, modals).
 - **Tone scale** (`components/ui/tone.ts`): `success|warning|danger|info|accent|neutral`,
@@ -46,12 +69,59 @@ and modal backdrops. Any surface that reaches for raw palette classes
   (hex/slate/gradient/`bg-card`). Both pass app-wide except one pre-existing,
   unrelated hit (`UserBulkCommandDrawer.tsx:173`, arbitrary `text-[10px]`).
 
+## Admin visual lift (merged on `main` @ `8b9d377`, 2026-10-10)
+
+All 27 admin routes were visually lifted to the `Downloads/AdminGUI` mockup's
+density/polish. **If your checkout predates the merge, merge `main` first — do
+not rebuild these primitives.** Full spec:
+`docs/superpowers/plans/2026-10-10-admin-visual-lift.md` (findings F1–F12,
+decisions D1–D5, Page Gate G1–G5); traps (1)–(5) are pinned in CLAUDE.md's
+"Admin visual lift" Hot Invariant.
+
+| Mockup pattern | Primitive | Notes |
+|---|---|---|
+| KPI card: icon chip + value + delta + link | `StatCard` `iconTone`/`delta`/`to`/`onClick` | `GlassCard interactive` + `.surface-lift` when clickable; deltas only from real payloads |
+| Labelled filter chips w/ counts | `FilterChipRow` (`FacetRow`+`Chip`, `aria-pressed`) | |
+| Breadcrumbs | `AdminBreadcrumbNav` via `resolveAdminCrumbs`; plugin routes register in `ADMIN_PLUGIN_CRUMBS` | rendered by `AdminShell` |
+| Hover row actions + sticky actions column | `RowActions` + `Button size="control-icon-sm"` + `TABLE_STICKY_ACTIONS_*` | visible on coarse pointers/`:focus-within`/selected; sticky cells must `cn()`-compose with `TABLE_BODY_CELL_CLASS` (trap 1); `group/row` lives in `DataTable`'s base row class (trap 2) |
+| Two-line identity cell | `UserCell` (`components/admin/`) | |
+| Compact empty state w/ CTA + preview | `EmptyState` `size="sm"`/`tone`/`preview` | |
+| Severity banner (stackable) | `SeverityBanner` (from `AdminInsightsStrip`) | |
+| In-page section header | `SectionHeading` (eyebrow + title + meta) | |
+| Bulk-select bar + bulk edit | `BulkActionBar` → `UserBulkCommandDrawer` | §14 treatment; extend, don't hand-roll |
+| Ctrl/Cmd+K palette | `AdminCommandPalette` (AdminShell, `userSearch`); `CommandPalette` (AppShell, nav only) | already shipped |
+| Mockup `slate/blue/emerald` classes | tokens: `bg-muted`, `primary`, `toneSurfaceClass.*`, `.admin-canvas` | never raw classes |
+
+**Still open:** (1) **Page Gate debt** — the sweep merged with G1–G5 skipped;
+run `node scripts/admin-shots.mjs --tag=after --only=<slug>` (light+dark) +
+click-through before calling a page done, else commit `wip(visual):` naming
+the missing gates, never `feat:`. (2) **Record detail side panel** — mockup's
+"row opens in a side drawer" isn't built; one shared drawer on the
+`UserBulkCommandDrawer`/`Dialog` contract, then per-entity content. (3)
+`SUMMARY.md` leftovers — report history needs a backend writer
+(`GeneratedReport` REST create exists, no producer — F11); stray `h-8`+emerald
+classes on control-room access rows; `AdminDashboardWidgets` load flake.
+(4) Out of scope, undecided: sticky `thead`, grid/card view toggle.
+
+**Mockup data is fake — never port it.** "DMF Enterprise", "Mission Control",
+`v2.6-admin`, "44 users", "14,820 records", "+2.08 d/mo", Alice Bianchi /
+Ilir Hoxha / DOME_TEAM / NOC_SHIFT, "Article 2109" footnotes, "RSA-2048
+Signed" badges, Rome/Tirana hubs. Deltas render only from real payloads;
+otherwise omit.
+
 ## Surface inventory
 
 Role column: **A**dmin-only route, **TL** (team leader + admin), **All**
 (every authenticated role), **Emp** (employee-facing, no admin variant).
 State column: coverage confirmed this session (✓ = verified this audit,
 `—` = not individually re-verified, inherits whatever the page already had).
+
+**Note (2026-10-10):** the per-page "Notes" below predate the admin visual
+lift (§ above). Every `/admin/*` row now additionally uses the lift
+primitives (`AdminBreadcrumbNav`, `FilterChipRow`, `RowActions`+sticky
+actions, `SectionHeading`, `text-dense` table bodies, `.admin-canvas` shell)
+— treat "Verified this session" marks as 2026-09-11 evidence, and the lift's
+unverified Page Gate debt as the current verification baseline.
 
 ### Core app (`AppRoutes.tsx`)
 
@@ -190,6 +260,15 @@ This closes the "Batch B" item noted in the numeric-convention section below:
 table-cell typography is now decided once, app-wide, instead of per surface.
 
 ## Last Updated
+
+2026-10-10 — **Admin visual lift** merged on `main` (`8b9d377`): 27 admin
+routes lifted; new primitives (`FilterChipRow`, `RowActions`+sticky actions,
+`AdminBreadcrumbNav`, `SeverityBanner`, `SectionHeading`, `StatCard`
+iconTone/delta, `EmptyState` size/tone/preview, `text-dense`, `.admin-canvas`,
+`.surface-lift`); light `--primary` restored to indigo `230 80% 55%`. Page Gate
+G1–G5 was skipped in the first run — verification debt tracked above.
+**`Design System.md` merged into this file** (single source of truth); that
+file is now a redirect stub.
 
 2026-10-05 — **table header contract** added and an explicit **override of the
 `Time Tracker UI Project/` mockups** recorded (shadcn treatment chosen over the
