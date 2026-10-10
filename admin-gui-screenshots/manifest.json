@@ -1,0 +1,1095 @@
+[
+  {
+    "n": "01",
+    "route": "/admin",
+    "base": "01-dashboard",
+    "shot": "01-dashboard.jpg",
+    "title": "Admin Dashboard",
+    "headings": [
+      "Admin Dashboard",
+      "People Mix",
+      "Approval Queue",
+      "Rejection Analysis",
+      "Hours",
+      "Overtime by Client",
+      "Team Comparison",
+      "Leave Trend",
+      "Who's Out Today",
+      "Recent Activity"
+    ],
+    "tableHeaders": [
+      "Team",
+      "Size",
+      "OT h",
+      "OT / person",
+      "Standby h",
+      "Leave d",
+      "E2E Test Team",
+      "E2E Test Team B",
+      "SIAE Team"
+    ],
+    "buttons": [
+      "Refresh dashboard",
+      "Edit layout",
+      "Dashboard actions",
+      "No backup has been taken yet.",
+      "Previous insight",
+      "Next insight",
+      "Open backups",
+      "Dismiss insight",
+      "All",
+      "Overview",
+      "Approvals",
+      "Hours & Trends",
+      "Leave",
+      "System",
+      "Shortcuts",
+      "Roles",
+      "Tech",
+      "Status",
+      "Aging",
+      "Speed",
+      "This month",
+      "Trend"
+    ],
+    "tabs": [
+      {
+        "label": "All",
+        "shot": "01-dashboard--tab-all.jpg",
+        "text": "Admin Dashboard\nOverview of system metrics and pending actions.\nUpdated just now\nEdit layout\n\nCRITICAL·No site backup exists\n\nNo backup has been taken yet.\n1 of 4\nOpen backups\nAll\nOverview\nApprovals\nHours & Trends\nLeave\nSystem\nShortcuts\n\nUsers\n11\nTeams\n3\nPending\n30\n\nNeeds decision\n\nOvertime\n0h\n\nThis month\n\nLeave used\n0%\n\n0 of 242d (2026)\n\nCarryover\n0d\n\n0 users · 60d window\n\nCoverage Gaps\n\nTeams without a leader\n1\nUsers without a team\n3\nUsers without a tech\n6\nEmployees without a TL\n3\nAlbanian TLs without HBPR\n0\nNew in 30 days\n11\nNever logged in\n11\nPeople Mix\nRoles\nTech\n\nActive users by role; a person can hold several\n\nItalian TLs\n2\nAlbanian TLs\n1\nHR\n2\nHBPR\n1\nStaff\n2\nEmployees\n9\nEmployees without a TL\n3\n\nPeriod Close (2026-09)\n\n0/2\nE2E TeamLeader, E2E TeamLeaderB\nApproval Queue\nStatus\nAging\nSpeed\n0%\nApproved\nApproved\n0\nPending\n30\nRejected\n0\nRejection Analysis\n\nRejected in 2026-10\n\nNo rejections this month\n\nHours\nThis month\nTrend\nOvertime\nStandby\n0h\n1h\n2h\n3h\n4h\nOvertime by Client\n\nApproved hours this month\n\nNo overtime this month\n\nTeam Comparison\n\nThis month, approved hours and business days\n\nTeam\tSize\tOT h\tOT / person\tStandby h\tLeave d\nE2E Test Team\t4\t0\t0\t0\t0\nE2E Test Team B\t2\t0\t0\t0\t0\nSIAE Team\t0\t0\t—\t0\t0\nLeave Trend\n\nApproved business days per month\n\nNo approved leave yet\n\nWho's Out Today\n\n0 more starting leave in the next 14 days\n\nNobody is out today\n\nRecent Activity\n\nLatest system events\n\npayroll_export_pdf\nExported payroll run 2077-04 as PDF\npayroll_export_excel\nExported payroll run 2077-04 as Excel\npayroll_export_pdf\nExported payroll run 2077-04 as PDF\npayroll_payslip_pdf\nDownloaded payslip for e2e_employee_a (2077-04)\nUsers\nTeams\nClients\nResource Access\nCalendar Mgmt\nReports\nLeave Balances"
+      },
+      {
+        "label": "Overview",
+        "shot": "01-dashboard--tab-overview.jpg",
+        "text": "Admin Dashboard\nOverview of system metrics and pending actions.\nUpdated just now\nEdit layout\nSwitch to All to rearrange widgets\n\nCRITICAL·No site backup exists\n\nNo backup has been taken yet.\n1 of 4\nOpen backups\nAll\nOverview\nApprovals\nHours & Trends\nLeave\nSystem\nShortcuts\n\nUsers\n11\nTeams\n3\nPending\n30\n\nNeeds decision\n\nOvertime\n0h\n\nThis month\n\nLeave used\n0%\n\n0 of 242d (2026)\n\nCarryover\n0d\n\n0 users · 60d window\n\nCoverage Gaps\n\nTeams without a leader\n1\nUsers without a team\n3\nUsers without a tech\n6\nEmployees without a TL\n3\nAlbanian TLs without HBPR\n0\nNew in 30 days\n11\nNever logged in\n11\nPeople Mix\nRoles\nTech\n\nActive users by role; a person can hold several\n\nItalian TLs\n2\nAlbanian TLs\n1\nHR\n2\nHBPR\n1\nStaff\n2\nEmployees\n9\nEmployees without a TL\n3"
+      },
+      {
+        "label": "Approvals",
+        "shot": "01-dashboard--tab-approvals.jpg",
+        "text": "Admin Dashboard\nOverview of system metrics and pending actions.\nUpdated just now\nEdit layout\nSwitch to All to rearrange widgets\n\nCRITICAL·No site backup exists\n\nNo backup has been taken yet.\n1 of 4\nOpen backups\nAll\nOverview\nApprovals\nHours & Trends\nLeave\nSystem\nShortcuts\n\nApproval Queue\nStatus\nAging\nSpeed\n0%\nApproved\nApproved\n0\nPending\n30\nRejected\n0\nRejection Analysis\n\nRejected in 2026-10\n\nNo rejections this month"
+      },
+      {
+        "label": "Hours & Trends",
+        "shot": "01-dashboard--tab-hours-trends.jpg",
+        "text": "Admin Dashboard\nOverview of system metrics and pending actions.\nUpdated just now\nEdit layout\nSwitch to All to rearrange widgets\n\nCRITICAL·No site backup exists\n\nNo backup has been taken yet.\n1 of 4\nOpen backups\nAll\nOverview\nApprovals\nHours & Trends\nLeave\nSystem\nShortcuts\n\nHours\nThis month\nTrend\nOvertime\nStandby\n0h\n1h\n2h\n3h\n4h\nOvertime by Client\n\nApproved hours this month\n\nNo overtime this month\n\nTeam Comparison\n\nThis month, approved hours and business days\n\nTeam\tSize\tOT h\tOT / person\tStandby h\tLeave d\nE2E Test Team\t4\t0\t0\t0\t0\nE2E Test Team B\t2\t0\t0\t0\t0\nSIAE Team\t0\t0\t—\t0\t0"
+      },
+      {
+        "label": "Leave",
+        "shot": "01-dashboard--tab-leave.jpg",
+        "text": "Admin Dashboard\nOverview of system metrics and pending actions.\nUpdated just now\nEdit layout\nSwitch to All to rearrange widgets\n\nCRITICAL·No site backup exists\n\nNo backup has been taken yet.\n1 of 4\nOpen backups\nAll\nOverview\nApprovals\nHours & Trends\nLeave\nSystem\nShortcuts\nPeriod\n3m\n6m\n12m\n24m\n\nLeave Trend\n\nApproved business days per month\n\nNo approved leave yet\n\nWho's Out Today\n\n0 more starting leave in the next 14 days\n\nNobody is out today"
+      },
+      {
+        "label": "System",
+        "shot": "01-dashboard--tab-system.jpg",
+        "text": "Admin Dashboard\nOverview of system metrics and pending actions.\nUpdated just now\nEdit layout\nSwitch to All to rearrange widgets\n\nCRITICAL·No site backup exists\n\nNo backup has been taken yet.\n1 of 4\nOpen backups\nAll\nOverview\nApprovals\nHours & Trends\nLeave\nSystem\nShortcuts\n\nPeriod Close (2026-09)\n\n0/2\nE2E TeamLeader, E2E TeamLeaderB\nRecent Activity\n\nLatest system events\n\npayroll_export_pdf\nExported payroll run 2077-04 as PDF\npayroll_export_excel\nExported payroll run 2077-04 as Excel\npayroll_export_pdf\nExported payroll run 2077-04 as PDF\npayroll_payslip_pdf\nDownloaded payslip for e2e_employee_a (2077-04)"
+      },
+      {
+        "label": "Shortcuts",
+        "shot": "01-dashboard--tab-shortcuts.jpg",
+        "text": "Admin Dashboard\nOverview of system metrics and pending actions.\nUpdated just now\nEdit layout\nSwitch to All to rearrange widgets\n\nCRITICAL·No site backup exists\n\nNo backup has been taken yet.\n1 of 4\nOpen backups\nAll\nOverview\nApprovals\nHours & Trends\nLeave\nSystem\nShortcuts\n\nUsers\nTeams\nClients\nResource Access\nCalendar Mgmt\nReports\nLeave Balances"
+      },
+      {
+        "label": "Roles",
+        "shot": null,
+        "text": "(could not open: locator.click: Timeout 3000ms exceeded.)"
+      }
+    ],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "02",
+    "route": "/admin/users",
+    "base": "02-users",
+    "shot": "02-users.jpg",
+    "title": "Users",
+    "headings": [
+      "Users"
+    ],
+    "tableHeaders": [
+      "Username",
+      "Email",
+      "Teams",
+      "CR Teams",
+      "Tech",
+      "Hire Date",
+      "TL Role",
+      "CR",
+      "IT TL (Assigned)",
+      "AL TL (Assigned)"
+    ],
+    "buttons": [
+      "Import Users",
+      "Create User",
+      "Employees",
+      "Italian TL",
+      "Albanian TL",
+      "HBPR",
+      "HR",
+      "CR Admin",
+      "CR Users",
+      "All tech",
+      "E2E Tech 2",
+      "No tech 3",
+      "All teams",
+      "E2E Test Team",
+      "E2E Test Team B",
+      "SIAE Team",
+      "Columns (10/10)",
+      "Select all rows on this page",
+      "Username",
+      "Email",
+      "Hire Date",
+      "IT TL (Assigned)",
+      "AL TL (Assigned)",
+      "Select row",
+      "Edit user e2e_employee_c",
+      "Reset password for e2e_employee_c",
+      "Delete user e2e_employee_c",
+      "Grant Control Room access to e2e_employee_c",
+      "Edit user e2e_super",
+      "Reset password for e2e_super",
+      "Delete user e2e_super",
+      "Grant Control Room access to e2e_super",
+      "Edit user e2e_admin",
+      "Reset password for e2e_admin",
+      "Delete user e2e_admin",
+      "Grant Control Room access to e2e_admin",
+      "Edit user e2e_employee_b",
+      "Reset password for e2e_employee_b",
+      "Delete user e2e_employee_b",
+      "Grant Control Room access to e2e_employee_b",
+      "Edit user e2e_employee_a",
+      "Reset password for e2e_employee_a",
+      "Delete user e2e_employee_a",
+      "Grant Control Room access to e2e_employee_a"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "03",
+    "route": "/admin/teams",
+    "base": "03-teams",
+    "shot": "03-teams.jpg",
+    "title": "Teams",
+    "headings": [
+      "Teams"
+    ],
+    "tableHeaders": [
+      "Name",
+      "Code",
+      "Description",
+      "Leader",
+      "Members",
+      "Calendar Group",
+      "Sub-teams",
+      "Actions"
+    ],
+    "buttons": [
+      "Import",
+      "Add Team",
+      "Columns (8/8)",
+      "Name",
+      "Code",
+      "Description",
+      "Leader",
+      "Members",
+      "Calendar Group",
+      "Sub-teams"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "04",
+    "route": "/admin/techs",
+    "base": "04-techs",
+    "shot": "04-techs.jpg",
+    "title": "Tech",
+    "headings": [
+      "Tech",
+      "Add Tech"
+    ],
+    "tableHeaders": [],
+    "buttons": [
+      "Import",
+      "Add",
+      "Show levels for E2E Tech",
+      "Deactivate E2E Tech",
+      "Manage users in E2E Tech",
+      "Edit E2E Tech",
+      "Delete E2E Tech"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "05",
+    "route": "/admin/clients",
+    "base": "05-clients",
+    "shot": "05-clients.jpg",
+    "title": "Clients",
+    "headings": [
+      "Clients"
+    ],
+    "tableHeaders": [
+      "Name",
+      "Code",
+      "Description",
+      "Active",
+      "Actions"
+    ],
+    "buttons": [
+      "Import",
+      "Add Client",
+      "Columns (5/5)",
+      "Name",
+      "Code",
+      "Description",
+      "Active",
+      "Edit 1",
+      "Delete 1"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "06",
+    "route": "/admin/hbpr-assignments",
+    "base": "06-hbpr-assignments",
+    "shot": "06-hbpr-assignments.jpg",
+    "title": "HBPR assignments",
+    "headings": [
+      "HBPR assignments"
+    ],
+    "tableHeaders": [
+      "HBPR",
+      "Albanian TL",
+      "Cadence",
+      "Status",
+      "Next due",
+      "Effective from",
+      "Effective to",
+      "Log entries",
+      "Actions"
+    ],
+    "buttons": [
+      "New assignment",
+      "Active (1)",
+      "Archive (5)",
+      "HBPR",
+      "Albanian TL",
+      "Cadence",
+      "Status",
+      "Next due",
+      "Effective from",
+      "Effective to",
+      "Log entries",
+      "End"
+    ],
+    "tabs": [
+      {
+        "label": "Active (1)",
+        "shot": "06-hbpr-assignments--tab-active-1.jpg",
+        "text": "HBPR assignments\nPair HR Business Partners with the Albanian team leaders they support.\nNew assignment\nActive (1)\nArchive (5)\nHBPR\n\t\nAlbanian TL\n\t\nCadence\n\t\nStatus\n\t\nNext due\n\t\nEffective from\n\t\nEffective to\n\t\nLog entries\n\tActions\n\nEH\nE2E HBPR\n\t\nET\nE2E TeamLeaderB\n\tWeekly\tNot started\t2025-01-13\t2025-01-06\t—\t—\tEnd\n\n1 result"
+      },
+      {
+        "label": "Archive (5)",
+        "shot": "06-hbpr-assignments--tab-archive-5.jpg",
+        "text": "HBPR assignments\nPair HR Business Partners with the Albanian team leaders they support.\nNew assignment\nActive (1)\nArchive (5)\n\nEnded relationships are retained for their partnership log. Entries older than 6 months are removed automatically unless log entries reference them.\n\nHBPR\n\t\nAlbanian TL\n\t\nCadence\n\t\nStatus\n\t\nNext due\n\t\nEffective from\n\t\nEffective to\n\t\nLog entries\n\tActions\n\nEH\nE2E HBPR\n\t\nET\nE2E TeamLeaderB\n\tWeekly\tEnded\t2026-10-15\t2025-01-05\t2025-01-05\t1\t\n\nEH\nE2E HBPR\n\t\nET\nE2E TeamLeaderB\n\tWeekly\tEnded\t2026-10-13\t2025-01-04\t2025-01-04\t1\t\n\nEH\nE2E HBPR\n\t\nET\nE2E TeamLeaderB\n\tWeekly\tEnded\t2026-10-09\t2025-01-03\t2025-01-03\t1\t\n\nEH\nE2E HBPR\n\t\nET\nE2E TeamLeaderB\n\tWeekly\tEnded\t2026-10-09\t2025-01-02\t2025-01-02\t1\t\n\nEH\nE2E HBPR\n\t\nET\nE2E TeamLeaderB\n\tWeekly\tEnded\t2026-10-09\t2025-01-01\t2025-01-01\t1\t\n\n5 results"
+      }
+    ],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "07",
+    "route": "/admin/skills/catalog",
+    "base": "07-skills-catalog",
+    "shot": "07-skills-catalog.jpg",
+    "title": "Skills Catalog",
+    "headings": [
+      "Skills Catalog",
+      "All skills"
+    ],
+    "tableHeaders": [
+      "Select",
+      "Skill",
+      "Status",
+      "Actions"
+    ],
+    "buttons": [
+      "Import categories",
+      "Import skills",
+      "New skill",
+      "All statuses",
+      "Reset",
+      "New category",
+      "All skills 1",
+      "E2E BACKEND 1",
+      "Edit category E2E BACKEND",
+      "Add multiple",
+      "Add skill",
+      "Select all visible skills",
+      "Select E2E PYTHON",
+      "Deactivate E2E PYTHON",
+      "Edit skill E2E PYTHON",
+      "Delete skill E2E PYTHON"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "08",
+    "route": "/admin/skills/settings",
+    "base": "08-skills-settings",
+    "shot": "08-skills-settings.jpg",
+    "title": "Proficiency Level Names",
+    "headings": [
+      "Proficiency Level Names"
+    ],
+    "tableHeaders": [],
+    "buttons": [
+      "Reset to defaults",
+      "Save Changes"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "09",
+    "route": "/admin/calendars",
+    "base": "09-calendars",
+    "shot": "09-calendars.jpg",
+    "title": "Team Calendar Groups",
+    "headings": [
+      "Team Calendar Groups",
+      "Share calendar visibility across teams",
+      "Sharing workflow",
+      "1",
+      "1",
+      "2",
+      "SHARED CALENDAR GROUPS",
+      "it"
+    ],
+    "tableHeaders": [],
+    "buttons": [
+      "Refresh",
+      "Team Calendar Groups",
+      "Calendar Workspaces",
+      "Holidays",
+      "Manage teams in this group",
+      "Rename group",
+      "Delete group",
+      "Apply to selected",
+      "Columns (6/6)",
+      "Select team E2E Test Team",
+      "Select team E2E Test Team B",
+      "Select team SIAE Team"
+    ],
+    "tabs": [
+      {
+        "label": "Team Calendar Groups",
+        "shot": "09-calendars--tab-team-calendar-groups.jpg",
+        "text": "CALENDAR ADMINISTRATION\n\nTeam Calendar Groups\nAssign calendar groups to teams so they can view each other's leave, overtime, and standby entries\nRefresh\nTeam Calendar Groups\nCalendar Workspaces\nHolidays\n\nHOW CALENDAR SHARING WORKS\n\nShare calendar visibility across teams\n\nWhen you assign the same calendar group to multiple teams, they can see each other's leave, overtime, and standby entries in the Calendar page.\n\nExample Assign group 'Regional-Pod-A' to MSC_TEAM and SIAE_TEAM => Both teams see each other's calendar entries in the workspace selector.\n\nSharing workflow\n\nQuick setup guide\n\n1\n\nSelect teams from the table below\n\n2\n\nType a group name (e.g., msc-siae-shared)\n\n3\n\nClick 'Apply to selected'\n\n4\n\nTeams refresh their Calendar page to see shared entries\n\nACTIVE CALENDAR GROUPS\n\n1\n\nTEAMS GROUPED\n\n1\n\n33% of 3 teams\n\nUNGROUPED TEAMS\n\n2\n\nAssign them to activate sharing\n\nSHARED CALENDAR GROUPS\n\nSHARED CALENDAR\n\nit\n\n1 team currently connected\n\n0 teams selected\nApply to selected\nTeams in the same group can view each other's entries.\nColumns (6/6)\nTeam\nCode\nCalendar Group\nMembers\nLeader\nActions\nET\n\nE2E Test Team\n\nNo group\n\nE2E_TEAM\n—\n4\ne2e_tl\nET\n\nE2E Test Team B\n\nNo group\n\nE2E_TEAM_B\n—\n2\ne2e_tl_b\nST\n\nSIAE Team\n\nShared visibility enabled\n\nsiae\nit\n0\n—\n3 results"
+      },
+      {
+        "label": "Calendar Workspaces",
+        "shot": "09-calendars--tab-calendar-workspaces.jpg",
+        "text": "CALENDAR ADMINISTRATION\n\nTeam Calendar Groups\nAssign calendar groups to teams so they can view each other's leave, overtime, and standby entries\nRefresh\nTeam Calendar Groups\nCalendar Workspaces\nHolidays\nCalendar Workspaces\n\nAdvanced calendar workspaces with fine-grained permissions. For simple team sharing, use the Team Calendar Groups tab.\n\nComing Soon"
+      },
+      {
+        "label": "Holidays",
+        "shot": "09-calendars--tab-holidays.jpg",
+        "text": "CALENDAR ADMINISTRATION\n\nTeam Calendar Groups\nAssign calendar groups to teams so they can view each other's leave, overtime, and standby entries\nRefresh\nTeam Calendar Groups\nCalendar Workspaces\nHolidays\n\nHOLIDAY CATALOG\n\nGlobal & Workspace Holidays\nImport holidays\nAdd Holiday\n\nNo holidays defined yet.\n\nAdd the first company holiday to get started."
+      }
+    ],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "10",
+    "route": "/admin/overtime-logs",
+    "base": "10-overtime-logs",
+    "shot": "10-overtime-logs.jpg",
+    "title": "Overtime Logs",
+    "headings": [
+      "Overtime Logs"
+    ],
+    "tableHeaders": [
+      "User",
+      "Date",
+      "Hours",
+      "Description",
+      "Status",
+      "Actions"
+    ],
+    "buttons": [
+      "Export CSV",
+      "All Status",
+      "Select date range",
+      "Columns (6/6)",
+      "User",
+      "Date",
+      "Hours",
+      "Description",
+      "Status",
+      "Approve",
+      "Reject",
+      "Delete record"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "11",
+    "route": "/admin/standby-logs",
+    "base": "11-standby-logs",
+    "shot": "11-standby-logs.jpg",
+    "title": "Standby Logs",
+    "headings": [
+      "Standby Logs"
+    ],
+    "tableHeaders": [
+      "User",
+      "Date",
+      "Time",
+      "Hours",
+      "Description",
+      "Status",
+      "Actions"
+    ],
+    "buttons": [
+      "Export CSV",
+      "All Status",
+      "Select date range",
+      "Columns (7/7)",
+      "User",
+      "Date",
+      "Time",
+      "Hours",
+      "Description",
+      "Status",
+      "Approve",
+      "Reject",
+      "Delete record"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "12",
+    "route": "/admin/leave-requests",
+    "base": "12-leave-requests",
+    "shot": "12-leave-requests.jpg",
+    "title": "Leave Requests",
+    "headings": [
+      "Leave Requests"
+    ],
+    "tableHeaders": [
+      "User",
+      "Type",
+      "Period",
+      "Days",
+      "Balance Left",
+      "Reason",
+      "Status",
+      "Actions"
+    ],
+    "buttons": [
+      "Export CSV",
+      "All Status",
+      "All Types",
+      "All Users",
+      "Select date range",
+      "Columns (8/8)",
+      "User",
+      "Type",
+      "Period",
+      "Days",
+      "Balance Left",
+      "Reason",
+      "Status",
+      "Approve",
+      "Reject",
+      "Delete leave request"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "13",
+    "route": "/admin/leave-balances",
+    "base": "13-leave-balances",
+    "shot": "13-leave-balances.jpg",
+    "title": "Leave Balances",
+    "headings": [
+      "Leave Balances"
+    ],
+    "tableHeaders": [
+      "Employee",
+      "Type",
+      "Year",
+      "Total",
+      "Used",
+      "Pending",
+      "Available",
+      "Effective",
+      "Carry-over",
+      "Expires",
+      "Actions"
+    ],
+    "buttons": [
+      "Import",
+      "Add Balance",
+      "Expiring ≤ 60 days",
+      "Columns (11/11)",
+      "Employee",
+      "Type",
+      "Year",
+      "Total",
+      "Used",
+      "Pending",
+      "Available",
+      "Effective",
+      "Carry-over",
+      "Expires",
+      "View 11",
+      "Edit 11",
+      "Delete 11",
+      "View 1",
+      "Edit 1",
+      "Delete 1",
+      "View 2",
+      "Edit 2",
+      "Delete 2",
+      "View 3",
+      "Edit 3",
+      "Delete 3",
+      "View 4",
+      "Edit 4",
+      "Delete 4",
+      "View 5",
+      "Edit 5",
+      "Delete 5",
+      "View 6",
+      "Edit 6",
+      "Delete 6",
+      "View 7",
+      "Edit 7",
+      "Delete 7",
+      "View 8",
+      "Edit 8",
+      "Delete 8",
+      "View 9",
+      "Edit 9",
+      "Delete 9",
+      "View 12",
+      "Edit 12",
+      "Delete 12",
+      "View 10",
+      "Edit 10",
+      "Delete 10",
+      "View 13",
+      "Edit 13",
+      "Delete 13"
+    ],
+    "tabs": [],
+    "popups": [
+      {
+        "label": "View 11",
+        "shot": "13-leave-balances--popup-01-view-11.jpg",
+        "text": "Allowance Audit\n\nAnnual allowance, carry-over and scheduled-leave breakdown.\n\ne\ne2e_employee_a\nvacation · 2027\nRemaining\n2.00 d\n9% of 22.00d\nUsed\n0.00 d\n0% of 22.00d\nPending review\n0.00 d\n0% in review\n2027 vacation allowance. No expiry set.\nClose\nClose"
+      },
+      {
+        "label": "View 1",
+        "shot": "13-leave-balances--popup-02-view-1.jpg",
+        "text": "Allowance Audit\n\nAnnual allowance, carry-over and scheduled-leave breakdown.\n\ne\ne2e_employee_a\nvacation · 2026\nRemaining\n22.00 d\n100% of 22.00d\nUsed\n0.00 d\n0% of 22.00d\nPending review\n0.00 d\n0% in review\n2026 vacation allowance. No expiry set.\nClose\nClose"
+      },
+      {
+        "label": "View 2",
+        "shot": "13-leave-balances--popup-03-view-2.jpg",
+        "text": "Allowance Audit\n\nAnnual allowance, carry-over and scheduled-leave breakdown.\n\ne\ne2e_employee_b\nvacation · 2026\nRemaining\n22.00 d\n100% of 22.00d\nUsed\n0.00 d\n0% of 22.00d\nPending review\n0.00 d\n0% in review\n2026 vacation allowance. No expiry set.\nClose\nClose"
+      },
+      {
+        "label": "View 3",
+        "shot": "13-leave-balances--popup-04-view-3.jpg",
+        "text": "Allowance Audit\n\nAnnual allowance, carry-over and scheduled-leave breakdown.\n\ne\ne2e_tl\nvacation · 2026\nRemaining\n22.00 d\n100% of 22.00d\nUsed\n0.00 d\n0% of 22.00d\nPending review\n0.00 d\n0% in review\n2026 vacation allowance. No expiry set.\nClose\nClose"
+      },
+      {
+        "label": "View 4",
+        "shot": "13-leave-balances--popup-05-view-4.jpg",
+        "text": "Allowance Audit\n\nAnnual allowance, carry-over and scheduled-leave breakdown.\n\ne\ne2e_hr\nvacation · 2026\nRemaining\n22.00 d\n100% of 22.00d\nUsed\n0.00 d\n0% of 22.00d\nPending review\n0.00 d\n0% in review\n2026 vacation allowance. No expiry set.\nClose\nClose"
+      },
+      {
+        "label": "View 5",
+        "shot": "13-leave-balances--popup-06-view-5.jpg",
+        "text": "Allowance Audit\n\nAnnual allowance, carry-over and scheduled-leave breakdown.\n\ne\ne2e_admin\nvacation · 2026\nRemaining\n22.00 d\n100% of 22.00d\nUsed\n0.00 d\n0% of 22.00d\nPending review\n0.00 d\n0% in review\n2026 vacation allowance. No expiry set.\nClose\nClose"
+      },
+      {
+        "label": "View 6",
+        "shot": "13-leave-balances--popup-07-view-6.jpg",
+        "text": "Allowance Audit\n\nAnnual allowance, carry-over and scheduled-leave breakdown.\n\ne\ne2e_tl_hr\nvacation · 2026\nRemaining\n22.00 d\n100% of 22.00d\nUsed\n0.00 d\n0% of 22.00d\nPending review\n0.00 d\n0% in review\n2026 vacation allowance. No expiry set.\nClose\nClose"
+      },
+      {
+        "label": "View 7",
+        "shot": "13-leave-balances--popup-08-view-7.jpg",
+        "text": "Allowance Audit\n\nAnnual allowance, carry-over and scheduled-leave breakdown.\n\ne\ne2e_super\nvacation · 2026\nRemaining\n22.00 d\n100% of 22.00d\nUsed\n0.00 d\n0% of 22.00d\nPending review\n0.00 d\n0% in review\n2026 vacation allowance. No expiry set.\nClose\nClose"
+      },
+      {
+        "label": "View 8",
+        "shot": "13-leave-balances--popup-09-view-8.jpg",
+        "text": "Allowance Audit\n\nAnnual allowance, carry-over and scheduled-leave breakdown.\n\ne\ne2e_cr\nvacation · 2026\nRemaining\n22.00 d\n100% of 22.00d\nUsed\n0.00 d\n0% of 22.00d\nPending review\n0.00 d\n0% in review\n2026 vacation allowance. No expiry set.\nClose\nClose"
+      },
+      {
+        "label": "View 9",
+        "shot": "13-leave-balances--popup-10-view-9.jpg",
+        "text": "Allowance Audit\n\nAnnual allowance, carry-over and scheduled-leave breakdown.\n\ne\ne2e_tl_b\nvacation · 2026\nRemaining\n22.00 d\n100% of 22.00d\nUsed\n0.00 d\n0% of 22.00d\nPending review\n0.00 d\n0% in review\n2026 vacation allowance. No expiry set.\nClose\nClose"
+      }
+    ],
+    "apiErrors": []
+  },
+  {
+    "n": "14",
+    "route": "/admin/resource-access",
+    "base": "14-resource-access",
+    "shot": "14-resource-access.jpg",
+    "title": "Resource access",
+    "headings": [
+      "Resource access"
+    ],
+    "tableHeaders": [],
+    "buttons": [
+      "Create group",
+      "Create your first group"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "15",
+    "route": "/admin/reports",
+    "base": "15-reports",
+    "shot": "15-reports.jpg",
+    "title": "Intelligence & Reports",
+    "headings": [
+      "Intelligence & Reports"
+    ],
+    "tableHeaders": [],
+    "buttons": [
+      "Select date range",
+      "All Teams",
+      "Per User",
+      "Generate Intelligence",
+      "OT & Standby",
+      "Vacations"
+    ],
+    "tabs": [
+      {
+        "label": "OT & Standby",
+        "shot": "15-reports--tab-ot-standby.jpg",
+        "text": "Intelligence & Reports\nComprehensive insights into organizational performance and leave management.\nDate Range\nSelect date range\nTeam\nAll Teams\nView Mode\nPer User\nGenerate Intelligence\nOT & Standby\nVacations\n\nReady for Analysis\n\nConfigure your parameters above and click \"Generate Intelligence\" to populate the reports."
+      },
+      {
+        "label": "Vacations",
+        "shot": "15-reports--tab-vacations.jpg",
+        "text": "Intelligence & Reports\nComprehensive insights into organizational performance and leave management.\nDate Range\nSelect date range\nTeam\nAll Teams\nView Mode\nPer User\nGenerate Intelligence\nOT & Standby\nVacations\n\nReady for Analysis\n\nConfigure your parameters above and click \"Generate Intelligence\" to populate the reports."
+      }
+    ],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "16",
+    "route": "/admin/plugins",
+    "base": "16-plugins",
+    "shot": "16-plugins.jpg",
+    "title": "Plugin Management",
+    "headings": [
+      "Plugin Management",
+      "Analytics Plugin",
+      "Audit Log Plugin",
+      "Control Room",
+      "Notifications System",
+      "Onboarding",
+      "Organigrama",
+      "Payroll Plugin",
+      "Site Backup & Restore",
+      "Skills Matrix",
+      "TL Engagement Metrics",
+      "TL Scorecard",
+      "Ticket KPI Upload",
+      "Universal Data Import"
+    ],
+    "tableHeaders": [],
+    "buttons": [
+      "Discover Plugins",
+      "Toggle Analytics Plugin",
+      "Initialize",
+      "Config",
+      "Open",
+      "Toggle Audit Log Plugin",
+      "Toggle Control Room",
+      "Toggle Notifications System",
+      "Toggle Onboarding",
+      "Toggle Organigrama",
+      "Toggle Payroll Plugin",
+      "Toggle Site Backup & Restore",
+      "Toggle Skills Matrix",
+      "Toggle TL Engagement Metrics",
+      "Toggle TL Scorecard",
+      "Toggle Ticket KPI Upload",
+      "Toggle Universal Data Import"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "17",
+    "route": "/admin/ticket-kpi/mappings",
+    "base": "17-ticket-kpi-mappings",
+    "shot": "17-ticket-kpi-mappings.jpg",
+    "title": "Ticket KPI Admin",
+    "headings": [
+      "Ticket KPI Admin",
+      "Export Profiles",
+      "ServiceNow Default"
+    ],
+    "tableHeaders": [],
+    "buttons": [
+      "Profiles 1",
+      "Test Mapping",
+      "Reports",
+      "Create Profile",
+      "Edit",
+      "Delete"
+    ],
+    "tabs": [
+      {
+        "label": "Profiles 1",
+        "shot": "17-ticket-kpi-mappings--tab-profiles-1.jpg",
+        "text": "Ticket KPI Admin\nManage export profiles and generate reports.\nProfiles\n1\nTest Mapping\nReports\nExport Profiles\nCreate Profile\nServiceNow Default\n\nDefault mapping for ServiceNow incident exports. Maps Number, Short description, State, Opened, Resolved, Assigned to, Caller, Priority, Category.\n\nActive\nGlobal\n\nMapped fields: 0\n\nRequired: 0\n\nEdit\nDelete"
+      },
+      {
+        "label": "Test Mapping",
+        "shot": "17-ticket-kpi-mappings--tab-test-mapping.jpg",
+        "text": "Ticket KPI Admin\nManage export profiles and generate reports.\nProfiles\n1\nTest Mapping\nReports\nTest Mapping\nProfile\nSelect profile...\nFile (CSV / XLSX / XLS)\n\nDrag & drop or click to select CSV / XLSX / XLS\n\nTest Mapping"
+      },
+      {
+        "label": "Reports",
+        "shot": "17-ticket-kpi-mappings--tab-reports.jpg",
+        "text": "Ticket KPI Admin\nManage export profiles and generate reports.\nProfiles\n1\nTest Mapping\nReports\nYearly KPI Report\nYear\nFormat\nExcel\nCSV\nDownload Report\n\nUSERS WITH DATA\n\n0\nThis year\n\nTOTAL TICKETS\n\n0\nThis year\n\nAVG RESOLUTION\n\n0h\nPer ticket\n\nSLA COMPLIANCE\n\n0%\nTeam average\nMonthly Breakdown\nAvg HoursTickets\nPer-User Summary\nName\n\t\nUsername\n\t\nTickets\n\t\nAvg Resolution\n\t\nSLA %\n\n\n\nNo user data for this year.\n\n0 results"
+      }
+    ],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "18",
+    "route": "/admin/data-import",
+    "base": "18-data-import",
+    "shot": "18-data-import.jpg",
+    "title": "Universal Data Import",
+    "headings": [
+      "Universal Data Import",
+      "Clients",
+      "Control Room Access",
+      "Leave Balances",
+      "Leave Requests",
+      "Overtime Logs",
+      "Payroll Wages",
+      "Public Holidays",
+      "Skill Categories",
+      "Skills",
+      "Standby Logs",
+      "Teams",
+      "Techs",
+      "User Skills",
+      "Users"
+    ],
+    "tableHeaders": [],
+    "buttons": [
+      "Import",
+      "History"
+    ],
+    "tabs": [
+      {
+        "label": "Import",
+        "shot": "18-data-import--tab-import.jpg",
+        "text": "Universal Data Import\nBulk-import users, clients, teams, skills and more from CSV/Excel files.\nImport\nHistory\n1. Select target\n2. Upload file\n3. Map columns\n4. Preview\n5. Results\nClients\n\nImport or update the client catalog used to categorize overtime.\n\n4 fields available\n\nControl Room Access\n\nGrant existing users access to the Control Room dashboard and scope which teams they may observe. Users are not created.\n\n6 fields available\n\nLeave Balances\n\nImport or update leave balances per user per year. Existing users must already exist; this importer does not create users.\n\n10 fields available\n\nLeave Requests\n\nImport individual dated leave requests (e.g. historical vacation ranges from another system). Existing users must already exist; this importer does not create users. Import leave_balances separately for correct year totals — this importer does not touch LeaveBalance.\n\n7 fields available\n\nOvertime Logs\n\nImport historical overtime entries. Rows are created already approved (this importer is for finished, already-known-good months).\n\n10 fields available\n\nPayroll Wages\n\nSet gross monthly wage assignments for existing employees. Users are not created; a blank cell keeps the current value.\n\n5 fields available\n\nPublic Holidays\n\nImport or update public holidays, either global or scoped to one calendar workspace.\n\n6 fields available\n\nSkill Categories\n\nImport or update the categories that group the skill catalog.\n\n4 fields available\n\nSkills\n\nImport or update the skill catalog. Categories must already exist.\n\n5 fields available\n\nStandby Logs\n\nImport historical standby entries. Rows are created already approved (this importer is for finished, already-known-good months).\n\n9 fields available\n\nTeams\n\nImport or update teams, including the parent-team hierarchy and the assigned team l"
+      },
+      {
+        "label": "History",
+        "shot": "18-data-import--tab-history.jpg",
+        "text": "Universal Data Import\nBulk-import users, clients, teams, skills and more from CSV/Excel files.\nImport\nHistory\nImport History\nDate\n\t\nTarget\n\t\nFile\n\t\nRows\n\t\nCreated\n\t\nUpdated\n\t\nSkipped\n\t\nErrors\n\n\n\nNo imports have been committed yet.\n\n0 results"
+      }
+    ],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "19",
+    "route": "/admin/payroll/wages",
+    "base": "19-payroll-wages",
+    "shot": "19-payroll-wages.jpg",
+    "title": "Wage Assignments",
+    "headings": [
+      "Wage Assignments"
+    ],
+    "tableHeaders": [
+      "Employee / Team Leader",
+      "Wage Assignment",
+      "Status",
+      "Actions"
+    ],
+    "buttons": [
+      "Download CSV",
+      "Import",
+      "Employee / Team Leader",
+      "Assign Wage",
+      "Edit",
+      "Delete"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "20",
+    "route": "/admin/payroll/runs",
+    "base": "20-payroll-runs",
+    "shot": "20-payroll-runs.jpg",
+    "title": "Payroll Runs",
+    "headings": [
+      "Payroll Runs"
+    ],
+    "tableHeaders": [
+      "Period",
+      "Status",
+      "Employees",
+      "Net",
+      "Rule Set"
+    ],
+    "buttons": [
+      "New Payroll Run",
+      "Status",
+      "Employees",
+      "Rule Set"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "21",
+    "route": "/admin/payroll/calendar",
+    "base": "21-payroll-calendar",
+    "shot": "21-payroll-calendar.jpg",
+    "title": "Work Calendar",
+    "headings": [
+      "Work Calendar"
+    ],
+    "tableHeaders": [],
+    "buttons": [],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "22",
+    "route": "/admin/payroll/settings",
+    "base": "22-payroll-settings",
+    "shot": "22-payroll-settings.jpg",
+    "title": "Payroll Settings",
+    "headings": [
+      "Payroll Settings",
+      "Organization & Payroll Defaults",
+      "Payroll Calculations"
+    ],
+    "tableHeaders": [],
+    "buttons": [
+      "Save Changes",
+      "Albanian Lek",
+      "Albania",
+      "Round half up",
+      "Fixed 174 hours/month",
+      "Weekday daytime",
+      "Standard employee",
+      "Edit calculation",
+      "Create updated version"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "23",
+    "route": "/admin/analytics",
+    "base": "23-analytics",
+    "shot": "23-analytics.jpg",
+    "title": "Analytics Dashboard",
+    "headings": [
+      "Analytics Dashboard",
+      "Hours Trends",
+      "Leave Requests",
+      "User Growth",
+      "Background Exports",
+      "Scheduled Reports"
+    ],
+    "tableHeaders": [],
+    "buttons": [
+      "Export Report",
+      "Week",
+      "Month",
+      "Year",
+      "Custom",
+      "Advanced Filters",
+      "Excel",
+      "Export",
+      "Settings",
+      "Stacked",
+      "Trend",
+      "Generate",
+      "New"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "24",
+    "route": "/admin/control-room/access",
+    "base": "24-control-room-access",
+    "shot": "24-control-room-access.jpg",
+    "title": "Access management",
+    "headings": [
+      "Access management",
+      "Access records"
+    ],
+    "tableHeaders": [
+      "User",
+      "Team visibility",
+      "Status",
+      "Added",
+      "Actions"
+    ],
+    "buttons": [
+      "Import",
+      "Grant access",
+      "Create CR user",
+      "Columns (5/5)",
+      "Select all rows on this page",
+      "User",
+      "Team visibility",
+      "Status",
+      "Added"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "25",
+    "route": "/admin/global-settings",
+    "base": "25-global-settings",
+    "shot": "25-global-settings.jpg",
+    "title": "Global Vacation Settings",
+    "headings": [
+      "Global Vacation Settings",
+      "Vacation policy",
+      "Site Branding"
+    ],
+    "tableHeaders": [],
+    "buttons": [
+      "Save Settings",
+      "Save Branding"
+    ],
+    "tabs": [],
+    "popups": [],
+    "apiErrors": []
+  },
+  {
+    "n": "26",
+    "route": "/admin/audit-logs",
+    "base": "26-audit-logs",
+    "shot": "26-audit-logs.jpg",
+    "title": "Audit Logs",
+    "headings": [
+      "Audit Logs"
+    ],
+    "tableHeaders": [
+      "Timestamp",
+      "User",
+      "Action",
+      "Resource",
+      "Object",
+      "IP Address",
+      "Details"
+    ],
+    "buttons": [
+      "Export Logs",
+      "All Actions",
+      "All Models",
+      "Timestamp",
+      "User",
+      "Action",
+      "Resource",
+      "Object",
+      "IP Address",
+      "View"
+    ],
+    "tabs": [],
+    "popups": [
+      {
+        "label": "View",
+        "shot": "26-audit-logs--popup-01-view.jpg",
+        "text": "Audit Log Details\n\nDetailed information about this audit log entry\n\nTimestamp\n\n10/8/2026, 4:15:00 PM\n\nUser\n\nSystem\n\nAction\n\nDelete\n\nModel\n\nOvertime Log\n\nObject\n\nE2E EmployeeC - OvertimeLog #37\n\nChanges Summary\n\nDELETE overtimelog\n\nIP Address\n\nN/A\n\nUser Agent\n\nN/A\n\nClose"
+      }
+    ],
+    "apiErrors": []
+  },
+  {
+    "n": "27",
+    "route": "/admin/backup-restore",
+    "base": "27-backup-restore",
+    "shot": "27-backup-restore.jpg",
+    "title": "Backup & Restore",
+    "headings": [
+      "Backup & Restore",
+      "Create a new backup"
+    ],
+    "tableHeaders": [],
+    "buttons": [
+      "Backups",
+      "Restore",
+      "Include media files",
+      "Create backup"
+    ],
+    "tabs": [
+      {
+        "label": "Backups",
+        "shot": "27-backup-restore--tab-backups.jpg",
+        "text": "Backup & Restore\nManual full-site backups and a selective, preview-first restore.\nBackups\nRestore\nCreate a new backup\nNote (optional)\nInclude media files\nCreate backup\n\nNo backups yet."
+      },
+      {
+        "label": "Restore",
+        "shot": "27-backup-restore--tab-restore.jpg",
+        "text": "Backup & Restore\nManual full-site backups and a selective, preview-first restore.\nBackups\nRestore\nChoose a source\nUpload an archive\nor\nPick a stored backup\nSelect…\nPreview restore"
+      }
+    ],
+    "popups": [],
+    "apiErrors": []
+  }
+]
