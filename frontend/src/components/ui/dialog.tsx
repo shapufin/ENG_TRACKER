@@ -42,12 +42,26 @@ const dialogSizeVariants = cva("", {
       lg: "max-w-2xl", // 672px — audits, metric breakdowns, wide forms
       xl: "max-w-4xl", // 896px — multi-step wizards, tabular forms
       full: "max-w-[min(1100px,95vw)]", // command drawers
+      panel: "max-w-[min(480px,100vw)]", // record detail side panel (side="right")
     },
   },
   defaultVariants: { size: "md" },
 });
 
 export type DialogSize = NonNullable<VariantProps<typeof dialogSizeVariants>["size"]>;
+
+/**
+ * Placement. "center" (default) is the modal. "right" pins the content to the
+ * viewport edge as a full-height side panel (record detail). Both keep the
+ * same scroll, padding and close contracts; only position, motion and frame
+ * differ, so the two never share an animation class.
+ */
+const SHARED_MOTION =
+  "no-scrollbar data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200";
+const CENTER_FRAME =
+  "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed top-[50%] left-[50%] z-50 translate-x-[-50%] translate-y-[-50%] max-h-[calc(100dvh-var(--safe-area-top)-var(--safe-area-bottom)-1rem)] w-[calc(100%-1rem)] sm:max-h-[90vh] sm:w-full rounded-2xl border sm:rounded-3xl";
+const RIGHT_FRAME =
+  "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right fixed inset-y-0 right-0 left-auto top-0 z-50 h-dvh max-h-dvh w-full translate-x-0 translate-y-0 rounded-none border-y-0 border-r-0 border-l";
 
 interface DialogContentProps extends React.ComponentPropsWithoutRef<
   typeof DialogPrimitive.Content
@@ -63,6 +77,8 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<
   padded?: boolean;
   /** Hide the built-in close button (for dialogs with a custom header close). */
   hideClose?: boolean;
+  /** "center" (default) modal, or "right" full-height side panel. */
+  side?: "center" | "right";
 }
 
 const DialogContent = React.forwardRef<
@@ -70,7 +86,16 @@ const DialogContent = React.forwardRef<
   DialogContentProps
 >(
   (
-    { className, children, size, scroll = true, padded = true, hideClose = false, ...props },
+    {
+      className,
+      children,
+      size,
+      scroll = true,
+      padded = true,
+      hideClose = false,
+      side = "center",
+      ...props
+    },
     ref
   ) => (
     <DialogPortal>
@@ -79,13 +104,11 @@ const DialogContent = React.forwardRef<
         ref={ref}
         aria-describedby={undefined}
         className={cn(
-          // Positioning + motion
-          "no-scrollbar data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed top-[50%] left-[50%] z-50 translate-x-[-50%] translate-y-[-50%] duration-200",
-          // Sizing. `w-[calc(100%-1rem)]` is unprefixed so it still caps width
-          // below the `sm` breakpoint regardless of the chosen size.
-          "max-h-[calc(100dvh-var(--safe-area-top)-var(--safe-area-bottom)-1rem)] w-[calc(100%-1rem)] sm:max-h-[90vh] sm:w-full",
+          // Placement + motion (see CENTER_FRAME / RIGHT_FRAME)
+          SHARED_MOTION,
+          side === "right" ? RIGHT_FRAME : CENTER_FRAME,
           // Surface
-          "bg-popover text-popover-foreground rounded-2xl border shadow-2xl sm:rounded-3xl",
+          "bg-popover text-popover-foreground shadow-2xl",
           padded &&
             "gap-4 px-4 pt-[calc(1.5rem+var(--safe-area-top))] pb-[calc(1rem+var(--safe-area-bottom))] sm:p-6",
           // Scroll contract. Never emit `overflow-y-*` here: it is a different
