@@ -61,9 +61,7 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent side="right" size="panel">
         <DialogHeader className="pr-12">
-          <DialogTitle className="sr-only">
-            User {username}
-          </DialogTitle>
+          <DialogTitle className="sr-only">User {username}</DialogTitle>
           <UserCell name={username} subtitle={profile.user?.email} />
           <DialogDescription className="sr-only">
             Read-only details. Use the buttons below to change this user.
@@ -121,7 +119,7 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
           </dl>
         </DialogBody>
 
-        <DialogFooter className="justify-between gap-2 sm:space-x-0 sm:justify-between">
+        <DialogFooter className="justify-between gap-2 sm:justify-between sm:space-x-0">
           <Button
             type="button"
             variant="destructive"

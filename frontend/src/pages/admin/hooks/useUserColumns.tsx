@@ -129,9 +129,7 @@ export const useUserColumns = (
         size: 220,
         cell: ({ row }) => {
           const username = row.original.user?.username;
-          const identity = (
-            <UserCell name={username} subtitle={row.original.user?.email} />
-          );
+          const identity = <UserCell name={username} subtitle={row.original.user?.email} />;
           if (!onView) return identity;
           return (
             <button
@@ -141,7 +139,7 @@ export const useUserColumns = (
                 e.stopPropagation();
                 onView(row.original);
               }}
-              className="hover:text-primary focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-2 max-w-full rounded-md text-left transition-colors motion-reduce:transition-none"
+              className="hover:text-primary focus-visible:ring-ring max-w-full rounded-md text-left transition-colors focus-visible:ring-2 focus-visible:outline-hidden motion-reduce:transition-none"
             >
               {identity}
             </button>

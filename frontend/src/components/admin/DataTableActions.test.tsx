@@ -19,9 +19,7 @@ describe("DataTableActions", () => {
   });
 
   it("omits delete when no delete handler is given", () => {
-    render(
-      <DataTableActions item={{ id: 1 }} itemLabel="Ops" onEdit={vi.fn()} />
-    );
+    render(<DataTableActions item={{ id: 1 }} itemLabel="Ops" onEdit={vi.fn()} />);
     expect(screen.queryByRole("button", { name: /Delete/ })).not.toBeInTheDocument();
   });
 });

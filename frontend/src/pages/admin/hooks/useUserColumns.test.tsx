@@ -174,7 +174,13 @@ describe("useUserColumns", () => {
     const column = result.current.find((item) => item.id === "tl_role");
     const cell = column?.cell as (context: { row: { original: UserProfile } }) => React.ReactNode;
 
-    render(<>{cell({ row: { original: profile({ is_italian_tl_role: true, is_albanian_tl_role: false }) } })}</>);
+    render(
+      <>
+        {cell({
+          row: { original: profile({ is_italian_tl_role: true, is_albanian_tl_role: false }) },
+        })}
+      </>
+    );
     expect(screen.getByText("IT TL")).toHaveClass("bg-tone-info-surface");
     expect(screen.getByText("IT TL").className).not.toMatch(/blue-|emerald-|violet-/);
   });
