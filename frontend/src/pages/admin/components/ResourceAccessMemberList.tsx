@@ -2,6 +2,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Button } from "@/components/ui/button";
+import { RowActions } from "@/components/ui/RowActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
 import { cn } from "@/lib/utils";
@@ -181,14 +182,16 @@ function RemoveButton({
   onRemove: (membership: UserGroup) => void;
 }) {
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive shrink-0"
-      aria-label={`Remove ${membership.user_name || "this person"} from ${groupName}`}
-      onClick={() => onRemove(membership)}
-    >
-      <Trash2 className="h-4 w-4" />
-    </Button>
+    <RowActions
+      reveal="always"
+      actions={[
+        {
+          label: `Remove ${membership.user_name || "this person"} from ${groupName}`,
+          icon: Trash2,
+          tone: "danger",
+          onClick: () => onRemove(membership),
+        },
+      ]}
+    />
   );
 }

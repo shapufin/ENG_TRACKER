@@ -41,18 +41,6 @@ const renderGrid = (
   );
 
 describe("PluginManagementGrid", () => {
-  // Layout invariant: 2-col at lg, 3-col at 2xl. This is the guard against
-  // accidentally reverting to the cramped lg:grid-cols-3 that caused button
-  // wrap and description truncation at 1024–1535px.
-  it("uses lg:grid-cols-2 and 2xl:grid-cols-3 layout classes", () => {
-    const { container } = renderGrid([plugin()]);
-    const grid = container.querySelector(".grid");
-    expect(grid).toBeTruthy();
-    expect(grid?.className).toContain("lg:grid-cols-2");
-    expect(grid?.className).toContain("2xl:grid-cols-3");
-    expect(grid?.className).not.toContain("lg:grid-cols-3");
-  });
-
   it("renders one card per plugin", () => {
     renderGrid([
       plugin({ id: 1, verbose_name: "Analytics" }),
@@ -153,5 +141,26 @@ describe("PluginManagementGrid", () => {
   it("renders description or fallback text", () => {
     renderGrid([plugin({ description: "" })]);
     expect(screen.getByText("No description provided.")).toBeInTheDocument();
+  });
+
+  it("frames each card with a decorative icon well and a status badge", () => {
+    renderGrid([plugin({ is_enabled: true })]);
+    expect(screen.getByRole("status", { name: "Active" })).toBeInTheDocument();
+    const heading = screen.getByRole("heading", { name: "Analytics Plugin" });
+    const card = heading.closest("div.relative") as HTMLElement;
+    expect(card.querySelector('span[aria-hidden="true"] svg.lucide-puzzle')).toBeTruthy();
+  });
+
+  it("lays the cards out with an auto-fit grid so no column is left empty", () => {
+    renderGrid([plugin()]);
+    const heading = screen.getByRole("heading", { name: "Analytics Plugin" });
+    const grid = heading.closest("div.relative")!.parentElement as HTMLElement;
+    expect(grid.style.gridTemplateColumns).toBe("repeat(auto-fit, minmax(22rem, 1fr))");
+  });
+
+  it("explains Initialize in a tooltip on focus", async () => {
+    renderGrid([plugin()]);
+    screen.getByRole("button", { name: /Initialize tables for Analytics Plugin/i }).focus();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(/creates the database tables/i);
   });
 });

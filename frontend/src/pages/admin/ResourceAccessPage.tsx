@@ -19,6 +19,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { IconWell } from "@/components/ui/IconWell";
+import { RowActions } from "@/components/ui/RowActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
   TABLE_HEAD_CELL_CHECKBOX_CLASS,
@@ -296,9 +298,9 @@ export function ResourceAccessPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+                        <IconWell tone="accent" size="sm">
                           <UsersRound className="h-4 w-4" />
-                        </div>
+                        </IconWell>
                         <div className="min-w-0">
                           <p className="text-foreground truncate font-medium" title={group.name}>
                             {group.name}
@@ -323,16 +325,16 @@ export function ResourceAccessPage() {
                       <span className="font-medium tabular-nums">{group.member_count ?? 0}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1"
-                        onClick={() => navigate(`/admin/resource-access/groups/${group.id}`)}
-                        aria-label={`Manage ${group.name}`}
-                      >
-                        Manage
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Button>
+                      <RowActions
+                        reveal="always"
+                        actions={[
+                          {
+                            label: `Manage ${group.name}`,
+                            icon: ArrowRight,
+                            onClick: () => navigate(`/admin/resource-access/groups/${group.id}`),
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}

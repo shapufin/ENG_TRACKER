@@ -203,6 +203,14 @@ describe("ResourceAccessPage (directory)", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/admin/resource-access/groups/1");
   });
 
+  it("renders the desktop Manage action as an icon-only row action", () => {
+    setup();
+    render(<ResourceAccessPage />);
+
+    const [desktopManage] = screen.getAllByRole("button", { name: "Manage Analytics Viewers" });
+    expect(desktopManage).toHaveTextContent("");
+  });
+
   it("shows empty system state with create CTA when no groups exist", () => {
     setup({ empty: true });
     render(<ResourceAccessPage />);
