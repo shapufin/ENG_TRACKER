@@ -5,6 +5,7 @@
  */
 import React from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SwitchField } from "@/components/common/forms/SwitchField";
@@ -54,7 +55,9 @@ export const PayrollConfigurationForm: React.FC<PayrollConfigurationFormProps> =
   onSwitchChange,
 }) => (
   <GlassCard className="mb-6 p-6">
-    <h3 className="mb-4 text-lg font-semibold">Organization & Payroll Defaults</h3>
+    <div className="mb-4">
+      <SectionHeading title="Organization & Payroll Defaults" />
+    </div>
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div>
         <Label htmlFor="org">Organization Name</Label>

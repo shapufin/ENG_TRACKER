@@ -173,7 +173,7 @@ describe("PayrollWagesPage", () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText("John Doe")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Edit"));
+    fireEvent.click(screen.getByRole("button", { name: /^Edit wage for/ }));
 
     expect(screen.getByText("Edit Wage Assignment")).toBeInTheDocument();
     expect(screen.getByDisplayValue("100000")).toBeInTheDocument();
@@ -251,7 +251,7 @@ describe("PayrollWagesPage", () => {
 
     await waitFor(() => expect(screen.getByText("Alice Smith")).toBeInTheDocument());
     expect(screen.queryByText("Assign Wage")).not.toBeInTheDocument();
-    expect(screen.queryByText("Edit")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Edit wage for/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Download CSV")).not.toBeInTheDocument();
   });
 });

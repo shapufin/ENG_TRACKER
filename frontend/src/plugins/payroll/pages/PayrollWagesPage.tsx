@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { RowActions } from "@/components/ui/RowActions";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { Download, Trash2 } from "lucide-react";
+import { Download, Pencil, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { payrollService } from "../services/payrollService";
@@ -224,23 +225,22 @@ export const PayrollWagesPage: React.FC = () => {
               cell: ({ row }) => (
                 <div className="flex justify-end gap-1">
                   {row.original.wage ? (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditForm(row.original.wage!)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => setDeleteId(row.original.wage!.id)}
-                      >
-                        Delete
-                      </Button>
-                    </>
+                    <RowActions
+                      reveal="always"
+                      actions={[
+                        {
+                          label: `Edit wage for ${row.original.full_name}`,
+                          icon: Pencil,
+                          onClick: () => openEditForm(row.original.wage!),
+                        },
+                        {
+                          label: `Delete wage for ${row.original.full_name}`,
+                          icon: Trash2,
+                          tone: "danger",
+                          onClick: () => setDeleteId(row.original.wage!.id),
+                        },
+                      ]}
+                    />
                   ) : (
                     <Button size="sm" onClick={() => openAddForm(row.original)}>
                       Assign Wage
