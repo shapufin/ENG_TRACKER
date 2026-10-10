@@ -14,6 +14,27 @@
 - `admin-gui-screenshots/INDEX.md`, `pages/*.md`, `screenshots/*.jpg`: current app, 27 routes, light, 1440×900.
 - `admin-gui-screenshots/mockup/`: mockup at 1440×900: `01-dashboard.jpg`, `02-users.jpg` (row hover), `13-leave-balances.jpg`, `15-reports.jpg` (full page), `18-data-import.jpg`, `18-data-import-dark.jpg` (shows the mockup's dark mode is broken).
 
+## Review note (2026-10-10, after the first implementation run)
+
+Reviewed line by line against source once the sweep had already landed on `main`.
+Every measured finding F1–F12 and every listed file target was confirmed against
+the code (file:line anchors were accurate). Corrections from that review are
+applied in this revision and are flagged inline where they bite:
+
+- **The Page Gate is a gate, not a suggestion.** The first run implemented all 27
+  pages with G1–G5 skipped ("no running app") and merged it anyway. A page task
+  whose gate cannot run is `wip(visual):` with the missing gates named, never
+  `feat:`/`fix:`. See Global Constraints.
+- **D1 is an identity change, not a contrast fix** — see §1.
+- **Sticky cells compose with the standard cell classes, they never replace
+  them** — Task 7.
+- **`group/row` goes in the base row class list** — Task 7.
+- **`scopeLabel` must read "All teams in your workspaces" under a workspace
+  scope** — Task 10 / D5.
+- **Tabs come from `manifest.json`, cross-checked by the test** — Task 0.
+- **F11 wording**: `GeneratedReport` does expose a REST `create` path; nothing
+  calls it. Say that, not "no create exists".
+
 ---
 
 ## 0. Measured findings (why each task exists)
@@ -30,22 +51,23 @@
 | F8 | Data Import: 11 of 14 target cards show an empty icon slot (title indented); cards are clickable `div`s, not keyboard reachable | `TargetPicker.tsx` ignores `target.icon` (API already sends a lucide name) and uses a 3-entry map; `GlassCard onClick` | Task 13 |
 | F9 | Analytics: 5 KPI cards in a 4-col grid leave an orphan; "Hours Trends" empty state is a 230 px box with one sentence; two Export buttons do the same thing | fixed `grid-cols-4`; chart card `min-h` | Task 11 |
 | F10 | The mockup's own dark mode is broken (white cards on near-black, invisible headings) | mockup | Decision D3 |
-| F11 | `GeneratedReport` rows are never written anywhere (no `create` outside tests), so a "report history" list from core would always be empty | backend | Decision D4 (use analytics export-jobs instead) |
+| F11 | `GeneratedReport` has a REST `create` path (`GeneratedReportViewSet`, `apps/reports/viewsets.py:145`) but **no producer or UI caller** — only tests write rows | backend | Decision D4 (use analytics export-jobs instead) |
 | F12 | Reports summary/detail queries ignore the selected team (`useReportManagement` never passes `team_ids`, though `SummaryReportParams.team_ids` exists); only the per-user table is filtered client-side | pre-existing bug | Decision D5 |
 
 ## 1. Decisions (owner confirms before Phase 1; defaults are the recommendation)
 
 | ID | Question | Recommendation (default if not answered) |
 |---|---|---|
-| D1 | Light `--primary` back to indigo? | **Yes: `230 80% 55%`** (the original). Computed white-on-fill 6.2:1 and fill-as-text-on-white 6.2:1, both AA. Shift `--primary-hover`, `--primary-text`, `--ring`, `--focus`, `--border-focus` by the same hue. Dark `--primary` (violet) unchanged. |
+| D1 | Light `--primary` back to indigo? | **Yes: `230 80% 55%`** (the original). Computed white-on-fill 6.16:1 and fill-as-text-on-white 6.16:1, both AA. **This is an identity/hue restoration, not a contrast fix**: the value it replaces (`221 83% 53%`) already measured 5.19:1 white-on-fill, i.e. AA. Do not reopen D1 as an accessibility change, and do not "fix" a contrast complaint by darkening `--primary` again. Shift `--primary-hover`, `--primary-text`, `--ring`, `--focus`, `--border-focus` by the same hue. Dark `--primary` (violet) unchanged. |
 | D2 | Keep Plus Jakarta Sans (identity) or switch to the mockup's Inter? | **Keep Plus Jakarta.** Density comes from sizes (F1/F2), not the font. Only table body text drops to 13 px via a new `text-dense` token. |
 | D3 | Align dark tokens with the mockup's? | **No.** The mockup dark mode is broken (F10). Keep the Obsidian dark tokens; only add dark values for new tokens and verify every new component in dark. |
 | D4 | Reports "history / schedules / signed" structure | **Use real sources only:** analytics plugin `export-jobs` and `scheduled-reports` (when the plugin is active and the viewer has the grant). No "signed", no fake counts. Core `GeneratedReport` history is out of scope (needs a backend writer). |
-| D5 | Fix F12 (team filter ignored by report totals)? | **Yes, as its own small commit in Task 10**: pass `team_ids` to summary + detailed and add it to both query keys. It uses an existing API param, so it is not an API contract change; it is a behaviour fix, so it gets its own test and its own line in the summary. Say "no" to skip it and instead label the KPI scope "All teams". |
+| D5 | Fix F12 (team filter ignored by report totals)? | **Yes, as its own small commit in Task 10**: pass `team_ids` to summary + detailed and add it to both query keys. It uses an existing API param, so it is not an API contract change; it is a behaviour fix, so it gets its own test and its own line in the summary. Say "no" to skip it and instead label the KPI scope "All teams in your workspaces" (never a bare "All teams" while `useValidWorkspaceIds` can scope the query). |
 
 ## Global Constraints
 
 - **Presentation only.** No change to API contracts, serializers, models, migrations, URL route paths, permissions or query parameters sent to the backend (D5 is the single, explicitly approved exception). If a task seems to need one, stop and report it.
+- **The Page Gate is a gate, not a suggestion.** A page task is only done when G1–G5 actually ran. If the e2e servers/DB are unavailable, commit `wip(visual): <page> (gate not run: G1, G3, G4)` and say so in the summary — never a `feat:`/`fix:` commit that implies verification that did not happen. The first run of this plan merged 27 pages of visual change with every gate skipped; that is the failure mode this rule exists to prevent.
 - **Real data only.** Never port mockup data, names, hubs ("Italy/Tirana", "DMF Enterprise"), "RSA-2048 Signed", invented deltas or invented counts. A delta/trend line appears only where the payload has the numbers; otherwise omit it.
 - **Tokens, not colours.** No raw hex, no `slate-/gray-/zinc-` classes, no `bg-white`, no `dark:` colour overrides (surface-audit). Status colour only via `tone.ts` / `tone-*` tokens. Chart colour via `hsl(var(--chart-N))`.
 - **Fix in the primitive, never per call site** (CLAUDE.md "Button look is decided in `button.tsx`", control kit rule).
@@ -138,9 +160,9 @@ Prerequisites (once per session): backend `py -3.14 manage.py runserver 127.0.0.
 - Produces: `export const ADMIN_ROUTES: { n: string; slug: string; path: string; tabs?: string[] }[]` (27 entries, `n` = `"01"`…`"27"`, slug/path exactly as `admin-gui-screenshots/INDEX.md`). CLI `node scripts/admin-shots.mjs --tag=<name> [--only=slug,slug] [--themes=light,dark]` writes `admin-gui-screenshots/<tag>/<theme>/<n>-<slug>.jpg`, `.../<theme>/<n>-<slug>--tab-<k>.jpg` per tab, and `admin-gui-screenshots/<tag>/report.json` `{ [theme]: { [slug]: { consoleErrors: string[], failedRequests: string[] } } }`; exits 1 if any list is non-empty.
 - Consumes: `createCollectors`, `dismissToasts` from `scripts/visual-capture-helpers.mjs`.
 
-- [ ] **Step 1: Write `admin-routes.test.mjs`**: asserts `ADMIN_ROUTES.length === 27`, every `path` starts with `/admin`, slugs unique, `n` strictly increasing `"01"`…`"27"`, and the entries for `reports` (`/admin/reports`, tabs `["OT & Standby","Vacations"]`), `data-import` (tabs `["Import","History"]`) and `dashboard` (`/admin`) match `INDEX.md`.
+- [ ] **Step 1: Write `admin-routes.test.mjs`**: asserts `ADMIN_ROUTES.length === 27`, every `path` starts with `/admin`, slugs unique, `n` strictly increasing `"01"`…`"27"`, the entries for `reports` (`/admin/reports`, tabs `["OT & Standby","Vacations"]`), `data-import` (tabs `["Import","History"]`) and `dashboard` (`/admin`) match `INDEX.md`, and — when `admin-gui-screenshots/manifest.json` exists (untracked, so the test skips when it does not) — every `tabs` list equals the manifest's tab names for that route. That cross-check is what stops a hand-transcription drift.
 - [ ] **Step 2: Run** `node --test scripts/admin-routes.test.mjs`. Expected: FAIL (module missing).
-- [ ] **Step 3: Implement `admin-routes.mjs`** from `INDEX.md` (tabs taken from `pages/<n>-<slug>.md`).
+- [ ] **Step 3: Implement `admin-routes.mjs`** from `INDEX.md`, with `tabs` taken from `admin-gui-screenshots/manifest.json` (per-route tab names/popup counts) rather than re-read from `pages/<n>-<slug>.md`. The manifest is the same data the capture script will consume, so route list and capture stay in one contract.
 - [ ] **Step 4: Run** the test. Expected: PASS.
 - [ ] **Step 5: Implement `admin-shots.mjs`.** Chromium via `@playwright/test`'s `chromium`, viewport 1440×900, `colorScheme` = theme, `localStorage.theme` set by `addInitScript` before navigation (same as `visual-verify.mjs` `createAuthContext`). Log in once through the real `/login` form with the fixture user (read password from env `ADMIN_SHOTS_PASSWORD`, default the fixture value from `e2e/role-workflows.spec.ts`), reuse `storageState` per theme. Per route: `begin()` collectors, `goto`, wait for `networkidle` + `main h1` (dashboard: the "Admin Dashboard" heading), `dismissToasts`, full-viewport JPEG quality 85; then click each `tabs` entry by `getByRole("tab", { name })` and capture. Never click non-tab controls.
 - [ ] **Step 6: Capture the baseline**: `node scripts/admin-shots.mjs --tag=before`. Expected: 27 routes × 2 themes, `report.json` all empty lists (the 2026-10-10 light capture already had zero API errors; if dark shows any, record them in the commit body as pre-existing and continue).
@@ -329,11 +351,15 @@ export const RowActions: React.FC<{ actions: RowAction[]; reveal?: "hover" | "al
 export const TABLE_STICKY_ACTIONS_HEAD_CLASS = "sticky right-0 z-[1] bg-card shadow-[inset_1px_0_0_hsl(var(--line-subtle))]";
 export const TABLE_STICKY_ACTIONS_CELL_CLASS = "sticky right-0 z-[1] bg-card shadow-[inset_1px_0_0_hsl(var(--line-subtle))] group-hover/row:bg-table-hover group-data-[state=selected]/row:bg-primary/10";
 ```
-`RowActions` renders `div.flex.items-center.justify-end.gap-0.5`, each a ghost `Button size="control-icon-sm"` with `aria-label`, a Radix tooltip with the label, tone text (`text-destructive`, `text-tone-warning-text`, `text-tone-success-text`). `reveal="hover"` wrapper classes: `pointer-fine:opacity-0 pointer-fine:group-hover/row:opacity-100 pointer-fine:group-focus-within/row:opacity-100 pointer-fine:group-data-[state=selected]/row:opacity-100 transition-opacity duration-150 motion-reduce:transition-none` (coarse pointers: always visible). `DataTable`: `<tr>` gets `group/row`; the table gets `text-dense` instead of `text-sm`; a column whose `id === "actions"` gets the two sticky constants (header via `cn(TABLE_HEAD_CELL_CLASS, TABLE_STICKY_ACTIONS_HEAD_CLASS)`). The `actions` header text becomes `<span className="sr-only">Actions</span>` where it was `""`.
+`RowActions` renders `div.flex.items-center.justify-end.gap-0.5`, each a ghost `Button size="control-icon-sm"` with `aria-label`, a Radix tooltip with the label, tone text (`text-destructive`, `text-tone-warning-text`, `text-tone-success-text`). `reveal="hover"` wrapper classes: `pointer-fine:opacity-0 pointer-fine:group-hover/row:opacity-100 pointer-fine:group-focus-within/row:opacity-100 pointer-fine:group-data-[state=selected]/row:opacity-100 transition-opacity duration-150 motion-reduce:transition-none` (coarse pointers: always visible; `--control-h-sm` already grows 2rem → 2.5rem under `@media (pointer: coarse)` in `index.css`, so the 40 px touch target needs no extra class). `DataTable`: `<tr>` gets `group/row`; the table gets `text-dense` instead of `text-sm`; a column whose `id === "actions"` gets the two sticky constants. The `actions` header text becomes `<span className="sr-only">Actions</span>` where it was `""`.
+
+**Review traps (both cost a row of density when ignored):**
+1. **Sticky cells compose — they never replace.** `DataTable.tsx:243` wraps every `<td>` in `TABLE_BODY_CELL_CLASS`; the header cells are wrapped in `TABLE_HEAD_CELL_CLASS`. So the actions column renders `cn(TABLE_BODY_CELL_CLASS, TABLE_STICKY_ACTIONS_CELL_CLASS)` in the body and `cn(TABLE_HEAD_CELL_CLASS, TABLE_STICKY_ACTIONS_HEAD_CLASS)` in the header. Using the sticky constants alone drops the standard padding/typography and quietly undoes Task 9.
+2. **`group/row` belongs in the base row class list, not in the `getRowClassName` ternary.** `DataTable.tsx:214-219` computes the row class as `base + (isSelected && "bg-primary/10") + (onRowClick && "cursor-pointer") + (getRowClassName ? getRowClassName(row) : "hover:bg-table-hover")`. A page that passes `getRowClassName` **replaces** `hover:bg-table-hover`, so the sticky cell's `group-hover/row:bg-table-hover` shows an opaque hole against the row. Either mirror the hover fill in those page classes as a `group-hover/row:` variant, or make `getRowClassName` merge with the default instead of replacing it — decide once, in `DataTable`, and pin it with a test.
 
 - [ ] **Step 1: Tests**
   - `RowActions.test.tsx`: `each action is a labelled button`; `hover reveal classes include pointer-fine, focus-within and selected variants`; `reveal="always" has no opacity-0`; `danger tone uses text-destructive`; `disabled action is disabled`.
-  - `DataTable.test.tsx`: `rows carry group/row`; `actions column cells are sticky`; existing `select-all checks every row on the current page` still passes.
+   - `DataTable.test.tsx`: `rows carry group/row`; `actions column cells are sticky` **and still carry `TABLE_BODY_CELL_CLASS`** (compose, do not replace); `group/row is present when a page supplies getRowClassName`; existing `select-all checks every row on the current page` still passes.
   - `tableColumnHelpers.test.tsx`: no rendered button has class `h-11`; all have `h-[var(--control-h-sm)]`.
   - `button.test.tsx`: `control-icon-sm` produces equal height/width token classes.
 - [ ] **Step 2: Run** `npx vitest run src/components/ui/RowActions.test.tsx src/components/ui/DataTable.test.tsx src/components/ui/tableColumnHelpers.test.tsx src/components/ui/button.test.tsx` → FAIL.
@@ -441,11 +467,11 @@ Page layout (top to bottom), all on real data:
    - Vacations tab: Vacation days `{leave.total_days}d`, Approved `{leave.approved_days}d`, Pending `{leave.pending_count}` (link `/admin/leave-requests`), Requests `{leave.total_requests}`.
    - A missing summary key renders "—" with hint "Not included in this report", never `NaN`.
    - Numbers via `Intl.NumberFormat(undefined, { maximumFractionDigits: 1 })`.
-6. `ReportCatalog`: the real exports of the active tab as rich cards (OT tab: Overtime ledger + Standby ledger; Vacations tab: Vacation ledger). Each card: `IconWell`, title, one-line description, badges `XLSX` and scope (`scopeLabel` = team name or "All teams"), metadata row `Period {start – end via Intl.DateTimeFormat}` · `Records {entries}` · `Total {hours|days}`, actions `View` (ghost, scrolls to the results heading via `onView`) and `Export XLSX` (outline, calls existing `downloadExcel(kind)`; disabled with tooltip "Generate first" until `summaryData` exists). This replaces `ReportExportActions` (delete the file only if no other importer remains).
+6. `ReportCatalog`: the real exports of the active tab as rich cards (OT tab: Overtime ledger + Standby ledger; Vacations tab: Vacation ledger). Each card: `IconWell`, title, one-line description, badges `XLSX` and scope, metadata row `Period {start – end via Intl.DateTimeFormat}` · `Records {entries}` · `Total {hours|days}`, actions `View` (ghost, scrolls to the results heading via `onView`) and `Export XLSX` (outline, calls existing `downloadExcel(kind)`; disabled with tooltip "Generate first" until `summaryData` exists). This replaces `ReportExportActions` (delete the file only if no other importer remains). **Scope wording:** `scopeLabel` is the team name when one is selected, and `"All teams"` only when there is *no* filter at all. Reports are also workspace-scoped (`useValidWorkspaceIds`, `useReportsPage.ts:18-20`), so when a workspace scope is active with no team selected the label must read `"All teams in your workspaces"` — a bare "All teams" is a lie the totals do not support.
 7. Existing result sections (`OvertimeStandbyReport` / `VacationReport` / per-user table) under a `SectionHeading eyebrow="Results"`.
 8. `ReportArchivePanel` (right column at ≥ 1280 px, below at narrower widths): "Recent exports" = last 5 `ExportJob`s as rows (format badge, status tone + icon, `formatBytes`, created date), and "Active schedules: N" with the next `next_run_at`, plus a link "Manage in Analytics" → `/admin/analytics`. Empty lists use `EmptyState size="sm"`. Not rendered at all when `!enabled`.
 
-D5 (separate commit): `useReportManagement` passes `team_ids` (`selectedTeam === "all" ? undefined : selectedTeam`) to summary and detailed and adds it to both query keys; `useReportsPage` passes it through. `scopeLabel` is then truthful.
+D5 (separate commit): `useReportManagement` passes `team_ids` (`selectedTeam === "all" ? undefined : selectedTeam`) to summary and detailed and adds it to both query keys; `useReportsPage` passes it through. `scopeLabel` is then truthful **only if it also accounts for the workspace scope** — one team selected → the team name; no team but a workspace scope → `"All teams in your workspaces"`; nothing selected at all → `"All teams"`.
 
 - [ ] **Step 1: Tests**
   - `useReportArchive.test.ts`: plugin inactive → no request (`api.get` not called) and `enabled:false`; active + export only → exports query runs, schedules does not; active + manage → both.
@@ -585,7 +611,7 @@ For every row: Page Gate with `--only=<slugs>`; commit per task: `feat(<area>): 
   node scripts/admin-shots.mjs --tag=after
   ```
   Then the Playwright admin specs per the e2e runbook (`DJANGO_SETTINGS_MODULE=config.settings_e2e npx playwright test --project=chromium e2e/admin-dashboard.spec.ts e2e/visual-guards.spec.ts e2e/role-workflows.spec.ts`). Expected: all green; `after/report.json` empty lists for 27 × 2.
-- [ ] **Step 3: Docs.** CLAUDE.md Hot Invariant (one paragraph): "Admin visual lift (2026-10-10): cards lift only via `.surface-lift` (transform/opacity); row actions only via `RowActions` (32 px, hover-revealed on fine pointers, always on coarse, `focus-within`), `actions` column is sticky; KPI cards via `StatCard iconTone/delta/to` with real data only; filters via `FilterChipRow`; breadcrumbs come from `resolveAdminCrumbs` (add plugin admin routes to `ADMIN_PLUGIN_CRUMBS`); mockup dark mode is not a reference." Add a Task Router row for "breadcrumb, row actions, kpi card, empty state" → `03-FRONTEND-PATTERNS.md` §20.
+- [ ] **Step 3: Docs.** `CLAUDE.md` already carries the "Admin visual lift (2026-10-10)" Hot Invariant and the Task Router row for "breadcrumb, row actions, kpi card, empty state" → `03-FRONTEND-PATTERNS.md` §20 (written by the first run). **Update, never duplicate**: append the review traps (1)–(5) — sticky-cell composition, `group/row` in the base row class, D1 as identity not contrast, `scopeLabel` wording, and the Page-Gate stop rule — and add a dated `AGENTS.md` entry for what changed. `.devin/` is gitignored, so `CONTEXT.md`/`03-FRONTEND-PATTERNS.md` edits do not reach other agents; the tracked `CLAUDE.md` + `AGENTS.md` + `docs/*.md` are the ones that do.
 - [ ] **Step 4: `SUMMARY.md`.** Per page (27 rows): what changed, `before/light|dark/…` and `after/light|dark/…` paths, issues not fixed (with reason). Include F11 (report history needs a backend writer) and any pre-existing console/network errors.
 - [ ] **Step 5: Commit** `docs: admin visual lift invariants and patterns`.
 
