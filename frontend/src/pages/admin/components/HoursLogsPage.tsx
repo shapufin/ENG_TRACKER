@@ -96,7 +96,6 @@ export const HoursLogsPage = <T extends HoursLog>({
     <PageShell
       title={title}
       subtitle={subtitle}
-      category="Workforce Management"
       actions={
         onExport && (
           <Button

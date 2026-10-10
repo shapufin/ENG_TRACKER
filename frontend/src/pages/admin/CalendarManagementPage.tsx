@@ -94,7 +94,6 @@ export const CalendarManagementPage: React.FC = () => {
 
   return (
     <PageShell
-      category="Calendar Administration"
       title="Team Calendar Groups"
       subtitle="Assign calendar groups to teams so they can view each other's leave, overtime, and standby entries"
       actions={

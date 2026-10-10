@@ -116,7 +116,6 @@ export function ResourceAccessPage() {
   if (directoryState === "loading") {
     return (
       <PageShell
-        category="Governance"
         title="Resource access"
         subtitle="Manage groups used for plugin and resource access"
       >
@@ -128,7 +127,6 @@ export function ResourceAccessPage() {
   if (directoryState === "error") {
     return (
       <PageShell
-        category="Governance"
         title="Resource access"
         subtitle="Manage groups used for plugin and resource access"
       >
@@ -143,7 +141,6 @@ export function ResourceAccessPage() {
 
   return (
     <PageShell
-      category="Governance"
       title="Resource access"
       subtitle="Create focused access groups and assign people without changing their roles."
       actions={

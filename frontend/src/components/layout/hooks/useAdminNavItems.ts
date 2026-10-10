@@ -38,7 +38,7 @@ export interface AdminNavItem {
   roles?: ("admin" | "superuser" | "hr")[];
 }
 
-const allAdminNavItems: AdminNavItem[] = [
+export const allAdminNavItems: AdminNavItem[] = [
   {
     path: "/admin",
     label: "Dashboard",

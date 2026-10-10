@@ -100,7 +100,6 @@ const LeaveRequestsContent: React.FC = () => {
     <PageShell
       title="Leave Requests"
       subtitle="Manage and review employee leave submissions."
-      category="Workforce Management"
       actions={
         <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
           <Download className="h-4 w-4" />

@@ -9,6 +9,7 @@ import { AdminSidebar } from "./AdminSidebar";
 import { MobileOverlay } from "./MobileOverlay";
 import { MainContentTransition } from "./MainContentTransition";
 import { useAdminNavItems } from "./hooks/useAdminNavItems";
+import { AdminBreadcrumbNav } from "./AdminBreadcrumbNav";
 import { isAllowedCRAdminPath } from "./adminRouteGuards";
 import { AdminCommandPalette } from "./AdminCommandPalette";
 
@@ -97,6 +98,7 @@ export const AdminShell = React.memo(() => {
         </div>
         <MainContentTransition pathname={location.pathname} className="h-full">
           <div className="mx-auto w-full max-w-screen-2xl p-4 md:p-6 lg:p-8">
+            <AdminBreadcrumbNav items={adminNavItems} />
             <Outlet />
           </div>
         </MainContentTransition>

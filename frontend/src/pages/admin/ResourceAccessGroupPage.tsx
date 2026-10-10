@@ -160,7 +160,6 @@ export function ResourceAccessGroupPage() {
 
   return (
     <PageShell
-      category="Governance"
       title={groupData?.name ?? "Group"}
       subtitle={groupData?.description || "Manage group membership"}
     >
