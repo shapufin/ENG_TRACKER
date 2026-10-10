@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { configure, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { adminWidgetPlacement } from "@/components/dashboard/widgetRegistry";
@@ -7,6 +7,10 @@ import { AVAILABLE_WIDGETS } from "@/config/dashboardWidgets";
 import { dashboardService } from "@/services/dashboardService";
 import { AdminDashboardWidgets } from "./AdminDashboardWidgets";
 import { makeOverview, makePeople, makeTrends } from "./dashboard-widgets/adminFixtures";
+
+// The full-suite run shares CPU across ~240 files; the default 1s findBy budget
+// is too tight for a whole-dashboard render there (passes alone in ~1.5s).
+configure({ asyncUtilTimeout: 5000 });
 
 // Audit 2026-09-07: the recent-activity widget rendered (and its audit_log
 // query fired) for users without the audit_log plugin view permission —
