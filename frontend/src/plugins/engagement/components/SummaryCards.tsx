@@ -1,5 +1,13 @@
 import React from "react";
-import { Gauge, Users, UserCheck, CheckCircle2, RotateCcw, HeartHandshake } from "lucide-react";
+import {
+  CalendarDays,
+  Gauge,
+  Users,
+  UserCheck,
+  CheckCircle2,
+  RotateCcw,
+  HeartHandshake,
+} from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
 import { toneTextClass } from "@/components/ui/tone";
 import type { EngagementSummary } from "../types/engagement";
@@ -18,19 +26,17 @@ const scoreTone = (score: number | null) => {
 };
 
 export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, scoreDelta }) => (
-  <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+  <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
     <StatCard
       label="Engagement Score"
       value={summary.engagement_score !== null ? summary.engagement_score.toFixed(0) : "—"}
       icon={Gauge}
       valueColorClass={scoreTone(summary.engagement_score)}
-      statusDotLabel={summary.is_stale ? "Data is stale" : undefined}
-      statusDotClassName={summary.is_stale ? "bg-[hsl(var(--tone-warning-text))]" : undefined}
       trend={
         scoreDelta !== null && scoreDelta !== undefined
           ? `${scoreDelta >= 0 ? "+" : ""}${scoreDelta} pts vs last month`
-          : summary.is_stale
-            ? "Stale — recomputed monthly"
+          : summary.refreshed_on_read
+            ? "Just refreshed"
             : `${summary.team_count} team(s)`
       }
       progressPercent={summary.engagement_score ?? undefined}
@@ -65,5 +71,11 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, scoreDelta 
     ) : (
       <StatCard label="Resubmissions" value={summary.resubmission_count} icon={RotateCcw} />
     )}
+    <StatCard
+      label="Holiday Decisions"
+      value={summary.decisions_on_holidays}
+      icon={CalendarDays}
+      trend="Evidence only, not scored"
+    />
   </div>
 );

@@ -5,6 +5,7 @@ Uses APIRequestFactory + direct viewset calls (pattern shared with
 control_room/ticket_kpi tests) so permission seeding stays explicit.
 """
 from datetime import date, timedelta
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
@@ -60,21 +61,20 @@ def _make_overtime(user, day, submitted_at, hours=4, status='pending', approved_
 class EngagementServiceTests(TestCase):
     """Unit tests for the pure compute helpers."""
 
-    def test_speed_score_gives_overtime_standby_a_week_long_target(self):
+    def test_composite_weights_the_four_sla_components(self):
         from plugins.engagement.services import compute_engagement_score
 
         type_metrics = {
-            'leave': {'decided': 1, 'approved': 1, 'p90_tta_hours': 5 * 24},
-            'overtime': {'decided': 1, 'approved': 1, 'p90_tta_hours': 5 * 24},
-            'standby': {'decided': 0, 'approved': 0, 'p90_tta_hours': None},
+            'leave': {'decided': 2, 'approved': 2, 'judgeable': 2, 'on_time': 2, 'median_fraction': 0.1},
+            'overtime': {'decided': 2, 'approved': 1, 'judgeable': 2, 'on_time': 1, 'median_fraction': 0.8},
+            'standby': {'decided': 0, 'approved': 0, 'judgeable': 0, 'on_time': 0, 'median_fraction': None},
         }
-        _, sub_scores = compute_engagement_score(
-            type_metrics, [5 * 24, 5 * 24], team_size=2, active_submitters=2,
-        )
-        # Leave decided in 5 days is past its 72h ceiling -> 0.
-        # Overtime decided in 5 days is still inside its 7-day target -> 100.
-        # score_speed is the decided-weighted mean of the two: (0 + 100) / 2.
-        self.assertEqual(sub_scores['score_speed'], 50.0)
+        score, sub = compute_engagement_score(type_metrics, [0.1, 0.1, 0.8, 0.8])
+        self.assertEqual(sub['score_speed'], 75.0)  # 3 on time / 4 judgeable
+        self.assertEqual(sub['score_approval_rate'], 75.0)  # 3 approved / 4 decided
+        self.assertAlmostEqual(sub['score_responsiveness'], 63.34, places=1)
+        self.assertAlmostEqual(sub['score_consistency'], 22.22, places=1)
+        self.assertAlmostEqual(score, 62.11, delta=0.1)
 
     def test_weighted_mean_zero_weight_row_does_not_inflate_result(self):
         # A team_size=0 row alongside a team_size=10 row must not skew the
@@ -119,19 +119,19 @@ class EngagementServiceTests(TestCase):
             self.member, self.month, self.month_start, status='approved',
             approved_at=self.month_start + timedelta(hours=100), client=self.client_obj,
         )
-        # Pending, submitted over 48h ago.
+        # Pending, submitted in this month and now past its SLA deadline.
         _make_overtime(
-            self.member, self.month, timezone.now() - timedelta(hours=72),
-            status='pending', client=self.client_obj,
+            self.member, self.month, self.month_start, status='pending', client=self.client_obj,
         )
 
-        snapshot = compute_tl_metric(self.leader, self.team, self.month)
+        with patch('plugins.engagement.services._now', return_value=self.month_start + timedelta(days=30)):
+            snapshot = compute_tl_metric(self.leader, self.team, self.month)
         aging = snapshot.metrics['overtime']['aging']
         self.assertEqual(aging['<4h'], 1)
         self.assertEqual(aging['4-24h'], 1)
         self.assertEqual(aging['1-3d'], 1)
         self.assertEqual(aging['>3d'], 1)
-        self.assertEqual(snapshot.metrics['overtime']['pending_over_48h'], 1)
+        self.assertEqual(snapshot.metrics['overtime']['pending_past_deadline'], 1)
 
     def test_resubmission_after_rejection(self):
         rejected_at = self.month_start
@@ -346,13 +346,14 @@ class EngagementAPITests(TestCase):
         row = TLApprovalMetric.objects.get(leader=self.leader, team=self.team, month=self.month)
         self.assertEqual(point['score_speed'], row.score_speed)
         self.assertEqual(point['score_approval_rate'], row.score_approval_rate)
-        self.assertEqual(point['score_activity'], row.score_activity)
+        self.assertEqual(point['score_responsiveness'], row.score_responsiveness)
         self.assertEqual(point['score_consistency'], row.score_consistency)
 
     def test_summary_auto_recomputes_a_stale_snapshot(self):
         """No management command needed — a read should always reflect the
         latest data, since nothing in this repo schedules recompute_tl_metrics."""
         stale_cutoff = timezone.now() - timedelta(days=1)
+        compute_tl_metric(self.leader, self.team, self.month)
         TLApprovalMetric.objects.filter(leader=self.leader, team=self.team, month=self.month).update(
             computed_at=stale_cutoff
         )
@@ -360,7 +361,7 @@ class EngagementAPITests(TestCase):
 
         resp = self._call('summary', self.leader, month=self.month.isoformat())
         self.assertEqual(resp.status_code, 200)
-        self.assertFalse(resp.data['is_stale'])
+        self.assertTrue(resp.data['refreshed_on_read'])
 
         refreshed = TLApprovalMetric.objects.get(leader=self.leader, team=self.team, month=self.month)
         self.assertGreater(refreshed.computed_at, stale_cutoff)

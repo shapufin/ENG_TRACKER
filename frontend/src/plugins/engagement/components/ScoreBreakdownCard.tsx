@@ -7,21 +7,15 @@ interface ScoreBreakdownCardProps {
 }
 
 const COMPONENTS: Array<{
-  key: "score_speed" | "score_approval_rate" | "score_activity" | "score_consistency";
+  key: "score_speed" | "score_approval_rate" | "score_responsiveness" | "score_consistency";
   label: string;
   badge: (value: number | null) => string;
 }> = [
   {
     key: "score_speed",
-    label: "Speed",
+    label: "Within deadline",
     badge: (v) =>
-      v === null
-        ? "No data"
-        : v >= 90
-          ? "Instant SLA"
-          : v >= 50
-            ? "Keeping pace"
-            : "Slow to decide",
+      v === null ? "No data" : v >= 90 ? "Decided in time" : v >= 50 ? "Often late" : "Mostly late",
   },
   {
     key: "score_approval_rate",
@@ -36,16 +30,16 @@ const COMPONENTS: Array<{
             : "High rejection",
   },
   {
-    key: "score_activity",
-    label: "Activity",
+    key: "score_responsiveness",
+    label: "Responsiveness",
     badge: (v) =>
       v === null
         ? "No data"
         : v >= 90
-          ? "Fully active"
+          ? "Decides early"
           : v >= 50
-            ? "Partially active"
-            : "Mostly quiet",
+            ? "Decides near deadline"
+            : "Decides late",
   },
   {
     key: "score_consistency",
@@ -75,12 +69,12 @@ export const ScoreBreakdownCard: React.FC<ScoreBreakdownCardProps> = ({ summary 
   <GlassCard className="p-5">
     <div className="flex items-center justify-between">
       <h3 className="text-sm font-semibold tracking-tight">Score breakdown</h3>
-      <span className="font-mono text-xs font-bold text-primary">
+      <span className="text-primary font-mono text-xs font-bold">
         Composite: {summary.engagement_score !== null ? summary.engagement_score.toFixed(0) : "—"} /
         100
       </span>
     </div>
-    <p className="mt-1 text-xs text-muted-foreground">What drives the composite score</p>
+    <p className="text-muted-foreground mt-1 text-xs">What drives the composite score</p>
     <dl className="mt-4 space-y-3">
       {COMPONENTS.map(({ key, label, badge }) => {
         const value = summary[key];
@@ -89,7 +83,7 @@ export const ScoreBreakdownCard: React.FC<ScoreBreakdownCardProps> = ({ summary 
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <dt className="text-muted-foreground">{label}</dt>
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
                   {badge(value)}
                 </span>
               </div>
@@ -98,7 +92,7 @@ export const ScoreBreakdownCard: React.FC<ScoreBreakdownCardProps> = ({ summary 
               </dd>
             </div>
             <div
-              className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-input-bg"
+              className="bg-input-bg mt-1 h-1.5 w-full overflow-hidden rounded-full"
               role="progressbar"
               aria-label={`${label} score`}
               aria-valuemin={0}

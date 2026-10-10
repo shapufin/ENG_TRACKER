@@ -35,9 +35,10 @@ TYPE_COLORS = {"leave": PRIMARY, "overtime": SUCCESS, "standby": WARNING}
 def _group_by_month(rows):
     by_month = {}
     for row in rows:
-        bucket = by_month.setdefault(row.month, {"rows": [], "decisions_during_leave": 0})
+        bucket = by_month.setdefault(row.month, {"rows": [], "decisions_during_leave": 0, "decisions_on_holidays": 0})
         bucket["rows"].append(row)
         bucket["decisions_during_leave"] += row.decisions_during_leave
+        bucket["decisions_on_holidays"] += row.decisions_on_holidays
 
     results = []
     for month in sorted(by_month):
@@ -49,6 +50,7 @@ def _group_by_month(rows):
             ),
             "avg_tta_hours": weighted_avg_tta_hours(bucket["rows"]),
             "decisions_during_leave": bucket["decisions_during_leave"],
+            "decisions_on_holidays": bucket["decisions_on_holidays"],
         })
     return results
 
@@ -143,9 +145,14 @@ def _build_summary_sheet(wb, fmt, target_rows, scope, period_label):
         ("Avg time-to-approve", agg.get("avg_tta_hours"), "hours"),
         ("Resubmissions", agg.get("resubmission_count"), "int"),
         ("Decisions made while TL on leave", agg.get("decisions_during_leave"), "int"),
-        ("Speed score", agg.get("score_speed"), "score100"),
+        ("Requests judged against SLA", agg.get("judgeable"), "int"),
+        ("Decided within deadline", agg.get("on_time"), "int"),
+        ("Breaches (late or pending past deadline)", agg.get("breaches"), "int"),
+        ("Pending past deadline", agg.get("pending_past_deadline"), "int"),
+        ("Decisions made on public holidays (evidence)", agg.get("decisions_on_holidays"), "int"),
+        ("Within-deadline score", agg.get("score_speed"), "score100"),
         ("Approval-rate score", agg.get("score_approval_rate"), "score100"),
-        ("Activity score", agg.get("score_activity"), "score100"),
+        ("Responsiveness score", agg.get("score_responsiveness"), "score100"),
         ("Consistency score", agg.get("score_consistency"), "score100"),
     ]
 
