@@ -29,6 +29,8 @@ const buttonVariants = cva(
         "control-sm": "h-[var(--control-h-sm)] rounded-[var(--control-radius)] px-3",
         control: "h-[var(--control-h)] rounded-[var(--control-radius)] px-4",
         "control-lg": "h-[var(--control-h-lg)] rounded-[var(--control-radius)] px-5",
+        "control-icon-sm":
+          "h-[var(--control-h-sm)] w-[var(--control-h-sm)] rounded-[var(--control-radius)] p-0",
       },
     },
     defaultVariants: {

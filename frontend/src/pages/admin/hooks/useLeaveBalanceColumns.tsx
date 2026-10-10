@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
+import { RowActions } from "@/components/ui/RowActions";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import type { LeaveBalance } from "@/types";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
@@ -39,37 +39,30 @@ export const useLeaveBalanceColumns = (
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <div className="flex gap-1">
-            {onView && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-11 w-11 p-0"
-                aria-label={`View ${row.original.id}`}
-                onClick={() => onView(row.original)}
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-            )}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-11 w-11 p-0"
-              aria-label={`Edit ${row.original.id}`}
-              onClick={() => onEdit(row.original)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-11 w-11 p-0 text-destructive"
-              aria-label={`Delete ${row.original.id}`}
-              onClick={() => onDelete(row.original)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          <RowActions
+            actions={[
+              ...(onView
+                ? [
+                    {
+                      label: `View ${row.original.id}`,
+                      icon: Eye,
+                      onClick: () => onView(row.original),
+                    },
+                  ]
+                : []),
+              {
+                label: `Edit ${row.original.id}`,
+                icon: Pencil,
+                onClick: () => onEdit(row.original),
+              },
+              {
+                label: `Delete ${row.original.id}`,
+                icon: Trash2,
+                tone: "danger" as const,
+                onClick: () => onDelete(row.original),
+              },
+            ]}
+          />
         ),
       },
     ],

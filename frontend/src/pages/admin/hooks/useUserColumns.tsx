@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { RowActions } from "@/components/ui/RowActions";
 import { Pencil, KeyRound, Trash2, Shield } from "lucide-react";
 import type { UserProfile } from "@/types";
 import type { CRAccessRecord } from "./useUsersPage";
@@ -279,52 +279,43 @@ export const useUserColumns = (
       {
         id: "actions",
         size: 120,
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-0.5">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="hover:bg-primary/10 h-8 w-8 p-0"
-              onClick={() => onEdit(row.original)}
-              aria-label={`Edit user ${row.original.user?.username}`}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-warning hover:bg-warning/10 h-8 w-8 p-0"
-              onClick={() => onReset(row.original.user?.id)}
-              aria-label={`Reset password for ${row.original.user?.username}`}
-            >
-              <KeyRound className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-              onClick={() => onDelete(row.original)}
-              aria-label={`Delete user ${row.original.user?.username}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-            {crActive && !crAccessUserIds.has(row.original.user?.id) && row.original.user?.id && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="hover:bg-primary/10 h-8 w-8 p-0"
-                onClick={() =>
-                  navigate(`/admin/control-room/access?user_id=${row.original.user?.id}`)
-                }
-                aria-label={`Grant Control Room access to ${row.original.user?.username}`}
-                title="Grant Control Room access"
-              >
-                <Shield className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        ),
+        header: () => <span className="sr-only">Actions</span>,
+        cell: ({ row }) => {
+          const username = row.original.user?.username;
+          const userId = row.original.user?.id;
+          return (
+            <RowActions
+              actions={[
+                {
+                  label: `Edit user ${username}`,
+                  icon: Pencil,
+                  onClick: () => onEdit(row.original),
+                },
+                {
+                  label: `Reset password for ${username}`,
+                  icon: KeyRound,
+                  tone: "warning" as const,
+                  onClick: () => onReset(userId),
+                },
+                {
+                  label: `Delete user ${username}`,
+                  icon: Trash2,
+                  tone: "danger" as const,
+                  onClick: () => onDelete(row.original),
+                },
+                ...(crActive && !crAccessUserIds.has(userId) && userId
+                  ? [
+                      {
+                        label: `Grant Control Room access to ${username}`,
+                        icon: Shield,
+                        onClick: () => navigate(`/admin/control-room/access?user_id=${userId}`),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          );
+        },
       }
     );
 

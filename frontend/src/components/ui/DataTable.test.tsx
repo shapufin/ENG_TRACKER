@@ -405,3 +405,34 @@ describe("DataTable", () => {
     });
   });
 });
+
+describe("DataTable row actions layout", () => {
+  const actionColumns: AppColumnDef<Item>[] = [
+    ...columns,
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: () => <button>Go</button>,
+    },
+  ];
+  const renderIt = () =>
+    render(
+      <DataTable
+        columns={actionColumns}
+        data={[{ id: 1, name: "Alice", email: "alice@test.com" }]}
+        getRowId={(row) => row.id.toString()}
+      />
+    );
+
+  it("rows carry group/row", () => {
+    renderIt();
+    expect(screen.getByText("Alice").closest("tr")!.className).toContain("group/row");
+  });
+
+  it("actions column cells are sticky", () => {
+    renderIt();
+    expect(screen.getByText("Go").closest("td")!.className).toContain("sticky");
+    expect(screen.getByText("Actions").closest("th")!.className).toContain("sticky");
+    expect(screen.getByText("Alice").closest("td")!.className).not.toContain("sticky");
+  });
+});

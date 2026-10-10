@@ -44,3 +44,10 @@ export const TABLE_ROW_HOVER_CLASS = "hover:bg-table-hover transition-colors";
  */
 export const TABLE_HEAD_GRID_CLASS =
   "border-border/70 text-foreground gap-4 border-b px-6 py-3 text-sm font-medium";
+
+/** Sticky right-hand actions column (DataTable column `id === "actions"`). */
+export const TABLE_STICKY_ACTIONS_HEAD_CLASS =
+  "sticky right-0 z-[1] bg-card shadow-[inset_1px_0_0_hsl(var(--line-subtle))]";
+
+export const TABLE_STICKY_ACTIONS_CELL_CLASS =
+  "sticky right-0 z-[1] bg-card shadow-[inset_1px_0_0_hsl(var(--line-subtle))] group-hover/row:bg-table-hover group-data-[state=selected]/row:bg-primary/10";
