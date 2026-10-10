@@ -14,10 +14,11 @@
  * { status: string } for helpers that check pending status).
  */
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { Check, X, Pencil, Trash2, Eye, CheckCircle, XCircle } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { RowActions, type RowAction } from "@/components/ui/RowActions";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
+
+const LOCKED_REASON = "Locked — ask a superuser to delete records from past months.";
 
 interface WithId {
   id: number;
@@ -37,26 +38,17 @@ export const createEditDeleteActionsColumn = <T extends WithId>(
   id: "actions",
   header: "Actions",
   cell: ({ row }) => (
-    <div className="flex gap-1">
-      <Button
-        size="sm"
-        variant="ghost"
-        className="h-11 w-11 p-0"
-        aria-label={`Edit ${row.original.id}`}
-        onClick={() => onEdit(row.original)}
-      >
-        <Pencil className="h-4 w-4" />
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        className="h-11 w-11 p-0 text-destructive"
-        aria-label={`Delete ${row.original.id}`}
-        onClick={() => onDelete(row.original)}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
+    <RowActions
+      actions={[
+        { label: `Edit ${row.original.id}`, icon: Pencil, onClick: () => onEdit(row.original) },
+        {
+          label: `Delete ${row.original.id}`,
+          icon: Trash2,
+          tone: "danger",
+          onClick: () => onDelete(row.original),
+        },
+      ]}
+    />
   ),
 });
 
@@ -66,8 +58,8 @@ export const createEditDeleteActionsColumn = <T extends WithId>(
  * Used by useOvertimeColumns and useStandbyColumns.
  *
  * `canEdit`/`canDelete` are optional per-row predicates. When they return
- * false, the button is rendered disabled with a "Locked: past month" tooltip
- * (used by the monthly edit/delete lock on overtime/standby records).
+ * false, the button is rendered disabled (used by the monthly edit/delete
+ * lock on overtime/standby records).
  */
 export const createCrudActionsColumn = <T extends WithIdAndStatus>(config: {
   canApprove: boolean;
@@ -81,103 +73,44 @@ export const createCrudActionsColumn = <T extends WithIdAndStatus>(config: {
   id: "actions",
   header: "Actions",
   cell: ({ row }) => {
-    const editAllowed = config.canEdit ? config.canEdit(row.original) : true;
-    const deleteAllowed = config.canDelete ? config.canDelete(row.original) : true;
-    return (
-      <TooltipProvider delayDuration={200}>
-        <div className="flex items-center gap-1">
-          {row.original.status === "pending" && config.canApprove && (
-            <>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-11 w-11 p-0 text-success"
-                aria-label={`Approve ${row.original.id}`}
-                onClick={() => config.onApprove(row.original.id)}
-              >
-                <Check className="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-11 w-11 p-0 text-destructive"
-                aria-label={`Reject ${row.original.id}`}
-                onClick={() => config.onReject(row.original.id)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-          {editAllowed ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-11 w-11 p-0"
-              aria-label={`Edit ${row.original.id}`}
-              onClick={() => config.onEdit(row.original)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-11 w-11 p-0"
-                    aria-label={`Edit ${row.original.id}`}
-                    disabled
-                  >
-                    <Pencil className="h-4 w-4 opacity-40" />
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                Locked — ask a superuser to delete records from past months.
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {deleteAllowed ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-11 w-11 p-0 text-destructive"
-              aria-label={`Delete ${row.original.id}`}
-              onClick={() => config.onDelete(row.original.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-11 w-11 p-0 text-destructive"
-                    aria-label={`Delete ${row.original.id}`}
-                    disabled
-                  >
-                    <Trash2 className="h-4 w-4 opacity-40" />
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                Locked — ask a superuser to delete records from past months.
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      </TooltipProvider>
+    const { id, status } = row.original;
+    const actions: RowAction[] = [];
+    if (status === "pending" && config.canApprove) {
+      actions.push(
+        {
+          label: `Approve ${id}`,
+          icon: Check,
+          tone: "success",
+          onClick: () => config.onApprove(id),
+        },
+        { label: `Reject ${id}`, icon: X, tone: "danger", onClick: () => config.onReject(id) }
+      );
+    }
+    actions.push(
+      {
+        label: `Edit ${id}`,
+        icon: Pencil,
+        disabled: config.canEdit ? !config.canEdit(row.original) : false,
+        disabledReason: LOCKED_REASON,
+        onClick: () => config.onEdit(row.original),
+      },
+      {
+        label: `Delete ${id}`,
+        icon: Trash2,
+        tone: "danger",
+        disabled: config.canDelete ? !config.canDelete(row.original) : false,
+        disabledReason: LOCKED_REASON,
+        onClick: () => config.onDelete(id),
+      }
     );
+    return <RowActions actions={actions} />;
   },
 });
 
 /**
  * Actions column with view + approve/reject buttons.
- * Approve/reject are conditional on pending status, have stopPropagation,
- * and respect disabled state from pending mutations.
+ * Approve/reject are conditional on pending status and respect disabled
+ * state from pending mutations (RowActions stops click propagation).
  * Used by useTeamColumns (overtime, standby, leave variations).
  */
 export const createViewApproveRejectActionsColumn = <T extends WithIdAndStatus>(config: {
@@ -189,47 +122,29 @@ export const createViewApproveRejectActionsColumn = <T extends WithIdAndStatus>(
 }): AppColumnDef<T> => ({
   id: "actions",
   header: "Actions",
-  cell: ({ row }) => (
-    <div className="flex items-center gap-1">
-      <Button
-        size="sm"
-        variant="ghost"
-        className="h-11 w-11 p-0"
-        aria-label={`View ${row.original.id}`}
-        onClick={() => config.onView(row.original)}
-      >
-        <Eye className="h-4 w-4" />
-      </Button>
-      {row.original.status === "pending" && (
-        <>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-11 w-11 p-0 text-success"
-            aria-label={`Approve ${row.original.id}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              config.approveMutate(row.original.id);
-            }}
-            disabled={config.approvePending}
-          >
-            <CheckCircle className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-11 w-11 p-0 text-destructive"
-            aria-label={`Reject ${row.original.id}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              config.onReject(row.original.id);
-            }}
-            disabled={config.rejectPending}
-          >
-            <XCircle className="h-4 w-4" />
-          </Button>
-        </>
-      )}
-    </div>
-  ),
+  cell: ({ row }) => {
+    const { id, status } = row.original;
+    const actions: RowAction[] = [
+      { label: `View ${id}`, icon: Eye, onClick: () => config.onView(row.original) },
+    ];
+    if (status === "pending") {
+      actions.push(
+        {
+          label: `Approve ${id}`,
+          icon: CheckCircle,
+          tone: "success",
+          disabled: config.approvePending,
+          onClick: () => config.approveMutate(id),
+        },
+        {
+          label: `Reject ${id}`,
+          icon: XCircle,
+          tone: "danger",
+          disabled: config.rejectPending,
+          onClick: () => config.onReject(id),
+        }
+      );
+    }
+    return <RowActions actions={actions} />;
+  },
 });

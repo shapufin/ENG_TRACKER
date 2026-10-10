@@ -26,4 +26,25 @@ describe("UserStatsCards", () => {
     expect(container.querySelector(".bg-linear-to-br")).toBeNull();
     expect(container.querySelector('[class*="bg-black"]')).toBeNull();
   });
+
+  it("frames each icon in a tone well and invents no delta line", () => {
+    const { container } = render(
+      <UserStatsCards
+        stats={{
+          total_users: 12,
+          italian_tl_count: 3,
+          albanian_tl_count: 2,
+          no_tl_count: 1,
+          active_today_count: 9,
+        }}
+      />
+    );
+    // IconWell is the aria-hidden tinted square; one per card.
+    expect(container.querySelectorAll('span[aria-hidden="true"].rounded-xl')).toHaveLength(5);
+    // The users stats payload has no hires figure, so no delta is rendered.
+    expect(
+      container.querySelector(".lucide-arrow-up-right, .lucide-arrow-down-right, .lucide-minus")
+    ).toBeNull();
+    expect(screen.queryByText(/new hires/i)).toBeNull();
+  });
 });

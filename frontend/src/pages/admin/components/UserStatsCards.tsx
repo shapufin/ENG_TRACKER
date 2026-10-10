@@ -3,6 +3,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Users, Crown, UserX, Activity } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { StatCardProps } from "@/components/ui/StatCard";
+import type { Tone } from "@/components/ui/tone";
 
 interface UserStats {
   total_users: number;
@@ -22,7 +23,7 @@ const CARDS: {
   sub: string;
   icon: LucideIcon;
   glow: NonNullable<StatCardProps["glow"]>;
-  iconColorClass?: string;
+  iconTone: Tone;
 }[] = [
   {
     key: "total_users",
@@ -30,6 +31,7 @@ const CARDS: {
     sub: "All team members",
     icon: Users,
     glow: "primary",
+    iconTone: "accent",
   },
   {
     key: "italian_tl_count",
@@ -37,7 +39,7 @@ const CARDS: {
     sub: "Team leads",
     icon: Crown,
     glow: "warning",
-    iconColorClass: "text-icon-sick",
+    iconTone: "warning",
   },
   {
     key: "albanian_tl_count",
@@ -45,7 +47,7 @@ const CARDS: {
     sub: "Team leads",
     icon: Crown,
     glow: "primary",
-    iconColorClass: "text-primary/50",
+    iconTone: "info",
   },
   {
     key: "no_tl_count",
@@ -53,7 +55,7 @@ const CARDS: {
     sub: "Unassigned",
     icon: UserX,
     glow: "none",
-    iconColorClass: "text-muted-foreground",
+    iconTone: "neutral",
   },
   {
     key: "active_today_count",
@@ -61,7 +63,7 @@ const CARDS: {
     sub: "Active users",
     icon: Activity,
     glow: "success",
-    iconColorClass: "text-success",
+    iconTone: "success",
   },
 ];
 
@@ -75,7 +77,7 @@ export const UserStatsCards: React.FC<UserStatsCardsProps> = ({ stats }) => {
           value={stats[c.key]}
           icon={c.icon}
           glow={c.glow}
-          iconColorClass={c.iconColorClass}
+          iconTone={c.iconTone}
           delay={i * 0.05}
           trend={c.sub}
         />

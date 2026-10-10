@@ -5,7 +5,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -94,13 +94,13 @@ export const CalendarManagementPage: React.FC = () => {
 
   return (
     <PageShell
-      category="Calendar Administration"
       title="Team Calendar Groups"
       subtitle="Assign calendar groups to teams so they can view each other's leave, overtime, and standby entries"
       actions={
         <Button
           variant="outline"
           size="control"
+          className="border-border bg-muted/50 rounded-xl"
           onClick={() => queryClient.invalidateQueries({ queryKey: ["admin"] })}
         >
           <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
@@ -109,7 +109,7 @@ export const CalendarManagementPage: React.FC = () => {
     >
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
-        <TabsList>
+        <TabsList className="bg-card">
           <TabsTrigger value="team-groups">Team Calendar Groups</TabsTrigger>
           <TabsTrigger value="workspaces">Calendar Workspaces</TabsTrigger>
           <TabsTrigger value="holidays">Holidays</TabsTrigger>
@@ -161,6 +161,17 @@ export const CalendarManagementPage: React.FC = () => {
             </div>
           )}
 
+          {(calendarGroups?.length ?? 0) === 0 && (
+            <GlassCard>
+              <EmptyState
+                size="sm"
+                icon={Share2}
+                title="No shared calendar groups yet"
+                description="Select teams below and apply a group name to start sharing calendars."
+              />
+            </GlassCard>
+          )}
+
           {(calendarGroups?.length ?? 0) > 0 && (
             <div className="space-y-3">
               <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
@@ -198,13 +209,13 @@ export const CalendarManagementPage: React.FC = () => {
                   value={bulkGroup}
                   onChange={(e) => setBulkGroup(e.target.value)}
                   placeholder="Enter group name (e.g., msc-siae-shared)"
-                  aria-label="Calendar group name"
-                  className="w-full max-w-[280px]"
+                  className="border-border bg-muted/50 w-full max-w-[280px] rounded-xl"
                 />
                 <Button
-                  size="control"
                   onClick={handleBulkApplyIntent}
                   disabled={!bulkGroup.trim() || selectedTeams.size === 0}
+                  size="control"
+                  className="bg-primary hover:bg-primary-hover rounded-xl"
                 >
                   <Plus className="mr-2 h-4 w-4" /> Apply to selected
                 </Button>
@@ -226,22 +237,18 @@ export const CalendarManagementPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="workspaces" className="space-y-4">
-          <GlassCard className="p-4">
-            <h2 className="text-lg font-semibold">Calendar Workspaces</h2>
-            <p className="text-muted-foreground mt-1.5 text-sm">
-              Advanced calendar workspaces with fine-grained permissions. For simple team sharing,
-              use the Team Calendar Groups tab.
-            </p>
-            <div className="mt-3">
-              <Badge variant="outline" className="border-primary/30 text-primary">
-                Coming Soon
-              </Badge>
-            </div>
+          <GlassCard>
+            <EmptyState
+              size="sm"
+              icon={CalendarRange}
+              title="Calendar Workspaces are coming soon"
+              description="Advanced calendar workspaces with fine-grained permissions. For simple team sharing, use the Team Calendar Groups tab."
+            />
           </GlassCard>
         </TabsContent>
 
         <TabsContent value="holidays" className="space-y-4">
-          <GlassCard className="p-4">
+          <GlassCard className="p-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-muted-foreground text-xs font-semibold uppercase">
@@ -255,7 +262,7 @@ export const CalendarManagementPage: React.FC = () => {
                   label="Import holidays"
                   invalidateKeys={[["admin"]]}
                 />
-                <Button size="control" onClick={() => openHolidayForm()}>
+                <Button onClick={() => openHolidayForm()}>
                   <CalendarDays className="mr-2 h-4 w-4" /> Add Holiday
                 </Button>
               </div>

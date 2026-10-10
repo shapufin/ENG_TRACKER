@@ -3,7 +3,6 @@ import { useLeaveBalances } from "@/hooks/useLeaveBalances";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { DataTable } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/Chip";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageShell } from "@/components/layout/PageShell";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
@@ -11,11 +10,17 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { CalendarClock, Plus } from "lucide-react";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import type { LeaveBalance } from "@/types";
 import { usePermissions } from "@/context/PermissionContext";
 import { useLeaveBalanceForm } from "./hooks/useLeaveBalanceForm";
 import { useLeaveBalanceColumns } from "./hooks/useLeaveBalanceColumns";
-import { CARRYOVER_WINDOW_DAYS, isExpiringSoon } from "./hooks/leaveBalanceFilters";
+import {
+  CARRYOVER_WINDOW_DAYS,
+  computeBalanceTotals,
+  filterBalances,
+} from "./hooks/leaveBalanceFilters";
+import { LeaveBalanceKpis } from "./components/LeaveBalanceKpis";
 import { LeaveBalanceFormDialog } from "./components/LeaveBalanceFormDialog";
 import { LeaveBalanceAuditDialog } from "./components/LeaveBalanceAuditDialog";
 
@@ -36,12 +41,16 @@ const LeaveBalancesContent: React.FC = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const expiringOnly = searchParams.get("expiring") === "1";
-  const toggleExpiring = () => {
+  const yearParam = Number(searchParams.get("year")) || undefined;
+  const typeParam = searchParams.get("type");
+  const typeFilter = typeParam === "vacation" || typeParam === "sick" ? typeParam : undefined;
+  const writeParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(searchParams);
-    if (expiringOnly) next.delete("expiring");
-    else next.set("expiring", "1");
+    if (value === null) next.delete(key);
+    else next.set(key, value);
     setSearchParams(next, { replace: true });
   };
+  const toggleExpiring = () => writeParam("expiring", expiringOnly ? null : "1");
 
   const [confirmDelete, setConfirmDelete] = useState<LeaveBalance | null>(null);
   const [auditBalance, setAuditBalance] = useState<LeaveBalance | null>(null);
@@ -78,12 +87,27 @@ const LeaveBalancesContent: React.FC = () => {
     else createMutation.mutate(payload);
   };
 
-  const visibleBalances = useMemo(() => {
+  const { visibleBalances, totals, yearOptions, typeOptions } = useMemo(() => {
     const all = balances || [];
-    if (!expiringOnly) return all;
     const today = new Date();
-    return all.filter((b) => isExpiringSoon(b, today));
-  }, [balances, expiringOnly]);
+    const visible = filterBalances(all, { year: yearParam, type: typeFilter, expiringOnly }, today);
+    const years = [...new Set<number>(all.map((b) => b.year))].sort((x, y) => y - x);
+    const types = (["vacation", "sick"] as const).filter((t) =>
+      all.some((b) => b.leave_type === t)
+    );
+    return {
+      visibleBalances: visible,
+      totals: computeBalanceTotals(visible, today),
+      yearOptions: [
+        { value: "all", label: "All" },
+        ...years.map((y) => ({ value: String(y), label: String(y) })),
+      ],
+      typeOptions: [
+        { value: "all", label: "All" },
+        ...types.map((t) => ({ value: t, label: t === "sick" ? "Sick" : "Vacation" })),
+      ],
+    };
+  }, [balances, yearParam, typeFilter, expiringOnly]);
 
   const columns = useLeaveBalanceColumns(openEdit, setConfirmDelete, setAuditBalance);
 
@@ -94,18 +118,47 @@ const LeaveBalancesContent: React.FC = () => {
   return (
     <PageShell
       title="Leave Balances"
-      subtitle="Review, adjust and import employee leave balances."
-      category="Workforce Management"
       actions={
         <div className="flex flex-wrap gap-2">
           <PluginImportButton targetKey="leave_balances" invalidateKeys={[["admin", "balances"]]} />
-          <Button size="control" onClick={openCreate}>
+          <Button onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" /> Add Balance
           </Button>
         </div>
       }
     >
+      <LeaveBalanceKpis
+        totals={totals}
+        expiringOnly={expiringOnly}
+        onToggleExpiring={toggleExpiring}
+      />
       <GlassCard delay={0} className="p-4">
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <FilterChipRow
+            label="Year"
+            options={yearOptions}
+            selected={[yearParam ? String(yearParam) : "all"]}
+            onToggle={(v) => writeParam("year", v === "all" ? null : v)}
+          />
+          <FilterChipRow
+            label="Type"
+            options={typeOptions}
+            selected={[typeFilter ?? "all"]}
+            onToggle={(v) => writeParam("type", v === "all" ? null : v)}
+          />
+          <FilterChipRow
+            label="Carry-over"
+            options={[
+              {
+                value: "expiring",
+                label: `Expiring ≤ ${CARRYOVER_WINDOW_DAYS} days`,
+                icon: CalendarClock,
+              },
+            ]}
+            selected={expiringOnly ? ["expiring"] : []}
+            onToggle={toggleExpiring}
+          />
+        </div>
         <DataTable
           columns={columns}
           data={visibleBalances}
@@ -113,25 +166,10 @@ const LeaveBalancesContent: React.FC = () => {
           storageKey="table-visibility-leave-balances"
           searchColumn="user_name"
           searchPlaceholder="Search balances..."
-          toolbarActions={
-            <>
-              <Chip
-                pressed={expiringOnly}
-                onClick={toggleExpiring}
-                className="h-[var(--control-h)]"
-              >
-                <CalendarClock className="h-4 w-4" aria-hidden />
-                Expiring ≤ {CARRYOVER_WINDOW_DAYS} days
-              </Chip>
-              {expiringOnly && (
-                <span className="text-muted-foreground text-xs" role="status">
-                  {visibleBalances.length} carry-over balance
-                  {visibleBalances.length === 1 ? "" : "s"} about to expire
-                </span>
-              )}
-            </>
-          }
         />
+        <p aria-live="polite" className="text-muted-foreground mt-2 text-xs">
+          {visibleBalances.length} balance{visibleBalances.length === 1 ? "" : "s"}
+        </p>
       </GlassCard>
       <LeaveBalanceFormDialog
         open={formOpen}

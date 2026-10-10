@@ -1,8 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Filter, Sun } from "lucide-react";
-import { FilterToolbar } from "@/components/ui/FilterToolbar";
-import { SearchInput, StatusFilterButton, DateRangePickers } from "./filterBarParts";
+import { SearchInput, StatusChips, DateRangePickers, type StatusCounts } from "./filterBarParts";
 import {
   Select,
   SelectContent,
@@ -26,6 +25,7 @@ interface LeaveFilterBarProps {
   onDateFromChange: (val: string) => void;
   dateTo: string;
   onDateToChange: (val: string) => void;
+  statusCounts?: StatusCounts;
 }
 
 const typeLabels = {
@@ -47,17 +47,16 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
   onDateFromChange,
   dateTo,
   onDateToChange,
+  statusCounts,
 }) => {
   return (
-    <>
-      <FilterToolbar.Search className="sm:max-w-56">
-        <SearchInput value={searchQuery} onChange={onSearchChange} />
-      </FilterToolbar.Search>
-      <StatusFilterButton filterStatus={filterStatus} onStatusChange={onStatusChange} />
+    <div className="space-y-4">
+    <div className="grid gap-4 xl:grid-cols-[1fr_160px_180px_260px]">
+      <SearchInput value={searchQuery} onChange={onSearchChange} />
       <Button
         variant="outline"
-        size="control"
-        className="min-w-32 justify-start"
+        size="control-lg"
+        className="justify-start"
         onClick={() => {
           const types: Array<"all" | "vacation"> = ["all", "vacation"];
           const currentIndex = types.indexOf(filterType);
@@ -73,7 +72,7 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
         {typeLabels[filterType]}
       </Button>
       <Select value={filterUser} onValueChange={onUserChange}>
-        <SelectTrigger aria-label="Filter by user" className="sm:w-44">
+        <SelectTrigger controlSize="lg">
           <SelectValue placeholder="All Users" />
         </SelectTrigger>
         <SelectContent>
@@ -91,6 +90,8 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
         dateTo={dateTo}
         onDateToChange={onDateToChange}
       />
-    </>
+    </div>
+    <StatusChips filterStatus={filterStatus} onStatusChange={onStatusChange} counts={statusCounts} />
+    </div>
   );
 };

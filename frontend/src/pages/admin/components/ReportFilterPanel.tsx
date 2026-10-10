@@ -1,5 +1,4 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -10,7 +9,8 @@ import {
 } from "@/components/ui/select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
-import { Calendar, Users, Filter, FileBarChart } from "lucide-react";
+import { Calendar, Users, Filter } from "lucide-react";
+import { ReportPeriodPresets } from "./ReportPeriodPresets";
 
 interface ReportFilterPanelProps {
   start: string;
@@ -18,12 +18,10 @@ interface ReportFilterPanelProps {
   selectedTeam: string;
   groupBy: "user" | "month" | "year";
   teams?: { id: number; name: string }[];
-  isLoading: boolean;
   onStartChange: (v: string) => void;
   onEndChange: (v: string) => void;
   onTeamChange: (v: string) => void;
   onGroupByChange: (v: "user" | "month" | "year") => void;
-  onGenerate: () => void;
 }
 
 export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
@@ -32,19 +30,25 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
   selectedTeam,
   groupBy,
   teams,
-  isLoading,
   onStartChange,
   onEndChange,
   onTeamChange,
   onGroupByChange,
-  onGenerate,
 }) => {
   return (
-    <GlassCard className="p-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-[200px] flex-1 space-y-1.5">
-          <Label className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-            <Calendar className="h-3.5 w-3.5" /> Date Range
+    <GlassCard className="space-y-4 p-6">
+      <ReportPeriodPresets
+        start={start}
+        end={end}
+        onSelect={(range) => {
+          onStartChange(range.start);
+          onEndChange(range.end);
+        }}
+      />
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="min-w-[200px] flex-1 space-y-2">
+          <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
+            <Calendar className="h-3 w-3" /> Date Range
           </Label>
           <DateRangePicker
             from={start}
@@ -57,12 +61,12 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
           />
         </div>
 
-        <div className="min-w-[150px] space-y-1.5">
-          <Label className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-            <Users className="h-3.5 w-3.5" /> Team
+        <div className="min-w-[150px] space-y-2">
+          <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
+            <Users className="h-3 w-3" /> Team
           </Label>
           <Select value={selectedTeam} onValueChange={onTeamChange}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-background/50 px-3">
               <SelectValue placeholder="All Teams" />
             </SelectTrigger>
             <SelectContent>
@@ -76,15 +80,15 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
           </Select>
         </div>
 
-        <div className="min-w-[150px] space-y-1.5">
-          <Label className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-            <Filter className="h-3.5 w-3.5" /> View Mode
+        <div className="min-w-[150px] space-y-2">
+          <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
+            <Filter className="h-3 w-3" /> View Mode
           </Label>
           <Select
             value={groupBy}
             onValueChange={(v) => onGroupByChange(v as "user" | "month" | "year")}
           >
-            <SelectTrigger>
+            <SelectTrigger className="bg-background/50 px-3">
               <SelectValue placeholder="Group by..." />
             </SelectTrigger>
             <SelectContent>
@@ -94,11 +98,6 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
             </SelectContent>
           </Select>
         </div>
-
-        <Button size="control" onClick={onGenerate} disabled={isLoading}>
-          <FileBarChart className="mr-2 h-4 w-4" />
-          Generate Intelligence
-        </Button>
       </div>
     </GlassCard>
   );

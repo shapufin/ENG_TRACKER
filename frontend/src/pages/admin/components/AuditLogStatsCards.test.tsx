@@ -37,4 +37,11 @@ describe("AuditLogStatsCards", () => {
     );
     expect(container.querySelectorAll(".tabular-nums").length).toBeGreaterThanOrEqual(4);
   });
+
+  it("renders each icon in a tone well", () => {
+    const { container } = render(<AuditLogStatsCards stats={null} />);
+    const wells = container.querySelectorAll('[aria-hidden="true"].rounded-xl');
+    expect(wells.length).toBe(4);
+    expect(wells[3].className).toContain("tone-warning");
+  });
 });

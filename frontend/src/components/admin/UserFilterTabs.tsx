@@ -1,6 +1,6 @@
 import React from "react";
 import { Users2, Crown, Handshake, UserCog, Shield } from "lucide-react";
-import { Chip } from "@/components/ui/Chip";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 
 import type { TLFilter } from "@/types";
 
@@ -11,32 +11,21 @@ interface UserFilterTabsProps {
   showCRAdmin?: boolean;
 }
 
-/** Role chips (single choice). Rendered inside a `FacetRow` by the page. */
 export const UserFilterTabs: React.FC<UserFilterTabsProps> = ({
   filter,
   onFilterChange,
   showCRAdmin,
 }) => {
-  const filters = [
-    { key: "employee" as TLFilter, label: "Employees", icon: Users2 },
-    { key: "italian_tl" as TLFilter, label: "Italian TL", icon: Crown },
-    { key: "albanian_tl" as TLFilter, label: "Albanian TL", icon: Crown },
-    { key: "hbpr" as TLFilter, label: "HBPR", icon: Handshake },
-    { key: "hr" as TLFilter, label: "HR", icon: UserCog },
-    ...(showCRAdmin ? [{ key: "cr_admin" as TLFilter, label: "CR Admin", icon: Shield }] : []),
+  const options = [
+    { value: "employee" as TLFilter, label: "Employees", icon: Users2 },
+    { value: "italian_tl" as TLFilter, label: "Italian TL", icon: Crown },
+    { value: "albanian_tl" as TLFilter, label: "Albanian TL", icon: Crown },
+    { value: "hbpr" as TLFilter, label: "HBPR", icon: Handshake },
+    { value: "hr" as TLFilter, label: "HR", icon: UserCog },
+    ...(showCRAdmin ? [{ value: "cr_admin" as TLFilter, label: "CR Admin", icon: Shield }] : []),
   ];
 
   return (
-    <>
-      {filters.map((f) => {
-        const Icon = f.icon;
-        return (
-          <Chip key={f.key} pressed={filter === f.key} onClick={() => onFilterChange(f.key)}>
-            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-            {f.label}
-          </Chip>
-        );
-      })}
-    </>
+    <FilterChipRow label="Role" options={options} selected={[filter]} onToggle={onFilterChange} />
   );
 };

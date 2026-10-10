@@ -1,8 +1,8 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Plus } from "lucide-react";
+import { Plus, FileSpreadsheet } from "lucide-react";
 import { ProfileCard } from "../../components/ProfileCard";
 import type { ExportProfile } from "../../types/ticketKPI";
 import type { Client } from "@/types";
@@ -32,9 +32,7 @@ export const TicketKPIProfilesTab: React.FC<TicketKPIProfilesTabProps> = ({
 
     {!profiles || profiles.length === 0 ? (
       <GlassCard>
-        <CardContent className="text-muted-foreground py-8 text-center">
-          No profiles yet.
-        </CardContent>
+        <EmptyState size="sm" icon={FileSpreadsheet} title="No profiles yet." />
       </GlassCard>
     ) : (
       <div className="grid gap-4 md:grid-cols-2">

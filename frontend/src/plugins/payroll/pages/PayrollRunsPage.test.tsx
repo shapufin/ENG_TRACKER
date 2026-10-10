@@ -189,4 +189,47 @@ describe("PayrollRunsPage", () => {
     fireEvent.click(screen.getByText("2026-07"));
     expect(mockNavigate).toHaveBeenCalledWith("/hr/payroll/runs/1");
   });
+
+  it("shows KPI totals computed from the loaded runs", async () => {
+    const withNet = (id: number, month: number, status: "draft" | "finalized", net: string) => ({
+      ...mockRun,
+      id,
+      month,
+      status,
+      rule_set_name: `Rule ${id}`,
+      totals: { ...mockRun.totals, total_net: net },
+    });
+    vi.spyOn(payrollService.payrollService, "getRuns").mockResolvedValue([
+      withNet(1, 5, "finalized", "111000"),
+      withNet(2, 6, "finalized", "222000"),
+      withNet(3, 7, "draft", "333000"),
+    ]);
+    render(
+      <MemoryRouter>
+        <PayrollRunsPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    const card = async (label: string) =>
+      (await screen.findByText(label, { selector: "p" })).parentElement as HTMLElement;
+    expect(await card("Runs")).toHaveTextContent(/^Runs3$/);
+    expect(await card("Drafts")).toHaveTextContent(/^Drafts1$/);
+    expect(await card("Latest finalized net")).toHaveTextContent(
+      `${Number("222000").toLocaleString()} Lek`
+    );
+  });
+
+  it("renders status through StatusBadge and truncates the rule set with a title", async () => {
+    vi.spyOn(payrollService.payrollService, "getRuns").mockResolvedValue([mockRun]);
+    render(
+      <MemoryRouter>
+        <PayrollRunsPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    expect(await screen.findByRole("status", { name: "Draft" })).toBeInTheDocument();
+    const rule = screen.getByText("Boshti Reference");
+    expect(rule).toHaveAttribute("title", "Boshti Reference");
+    expect(rule.className).toContain("truncate");
+  });
 });

@@ -5,8 +5,7 @@
  * `team` query param (see useUserManagement / apps/users/viewsets.py).
  */
 import React from "react";
-import { Chip } from "@/components/ui/Chip";
-import { FacetRow } from "./FacetRow";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import type { Team } from "@/types";
 
 interface TeamFacetFilterProps {
@@ -15,12 +14,19 @@ interface TeamFacetFilterProps {
   onTeamIdsChange: (ids: number[]) => void;
 }
 
+const ALL = "all";
+
 export const TeamFacetFilter: React.FC<TeamFacetFilterProps> = ({
   teams,
   selectedTeamIds,
   onTeamIdsChange,
 }) => {
-  const toggleTeam = (id: number) => {
+  const toggleTeam = (value: string) => {
+    if (value === ALL) {
+      onTeamIdsChange([]);
+      return;
+    }
+    const id = Number(value);
     onTeamIdsChange(
       selectedTeamIds.includes(id)
         ? selectedTeamIds.filter((v) => v !== id)
@@ -28,24 +34,19 @@ export const TeamFacetFilter: React.FC<TeamFacetFilterProps> = ({
     );
   };
 
-  const isAllActive = selectedTeamIds.length === 0;
-
   if (teams.length === 0) return null;
 
   return (
-    <FacetRow label="Team">
-      <Chip pressed={isAllActive} onClick={() => onTeamIdsChange([])}>
-        All teams
-      </Chip>
-      {teams.map((team) => (
-        <Chip
-          key={team.id}
-          pressed={selectedTeamIds.includes(team.id)}
-          onClick={() => toggleTeam(team.id)}
-        >
-          {team.name}
-        </Chip>
-      ))}
-    </FacetRow>
+    <div className="border-border/70 border-t pt-2">
+      <FilterChipRow
+        label="Team"
+        options={[
+          { value: ALL, label: "All teams" },
+          ...teams.map((team) => ({ value: String(team.id), label: team.name })),
+        ]}
+        selected={selectedTeamIds.length === 0 ? [ALL] : selectedTeamIds.map(String)}
+        onToggle={toggleTeam}
+      />
+    </div>
   );
 };

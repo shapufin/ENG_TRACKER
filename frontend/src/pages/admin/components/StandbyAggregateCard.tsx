@@ -13,8 +13,7 @@ export const StandbyAggregateCard: React.FC<StandbyAggregateCardProps> = (props)
   <AggregateCard
     title="Standby Aggregate"
     description="Total on-call readiness capacity"
-    color="purple"
-    icon={<Briefcase className="h-5 w-5 text-accent-foreground" />}
+    icon={Briefcase}
     totalLabel="Total Hours Logged"
     approvedLabel="Verified & Approved"
     pendingLabel="pending review"

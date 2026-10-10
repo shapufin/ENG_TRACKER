@@ -12,16 +12,7 @@ import { Download, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2 } from "l
 import api from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-
-interface ExportJob {
-  job_id: number;
-  status: "pending" | "running" | "completed" | "failed";
-  format: "excel" | "csv";
-  file_size_bytes: number;
-  error_message: string | null;
-  created_at: string | null;
-  completed_at: string | null;
-}
+import { formatBytes, type ExportJob } from "@/lib/analyticsExports";
 
 interface ReportsPanelProps {
   /** Current filter state — used as the filter params for new export jobs. */
@@ -37,18 +28,11 @@ interface ReportsPanelProps {
 }
 
 const STATUS_ICONS: Record<ExportJob["status"], React.ReactNode> = {
-  pending: <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />,
-  running: <Loader2 className="h-3 w-3 animate-spin text-primary" />,
-  completed: <CheckCircle2 className="h-3 w-3 text-success" />,
-  failed: <AlertCircle className="h-3 w-3 text-destructive" />,
+  pending: <Loader2 className="text-muted-foreground h-3 w-3 animate-spin" />,
+  running: <Loader2 className="text-primary h-3 w-3 animate-spin" />,
+  completed: <CheckCircle2 className="text-success h-3 w-3" />,
+  failed: <AlertCircle className="text-destructive h-3 w-3" />,
 };
-
-function formatBytes(bytes: number): string {
-  if (!bytes || bytes === 0) return "—";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export const ReportsPanel: React.FC<ReportsPanelProps> = ({ currentFilters }) => {
   const queryClient = useQueryClient();
@@ -138,7 +122,7 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({ currentFilters }) =>
     <GlassCard className="p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <FileSpreadsheet className="h-4 w-4 text-primary" />
+          <FileSpreadsheet className="text-primary h-4 w-4" />
           <h3 className="text-sm font-semibold">Background Exports</h3>
         </div>
         <div className="flex items-center gap-2">
@@ -176,7 +160,7 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({ currentFilters }) =>
         </div>
       </div>
 
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="text-muted-foreground mt-2 text-xs">
         Generate large reports in the background. The file will download automatically when ready.
       </p>
 
@@ -191,7 +175,7 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({ currentFilters }) =>
                 {STATUS_ICONS[job.status]}
                 <div>
                   <div className="text-sm font-medium">Export #{job.job_id}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-muted-foreground text-xs">
                     {job.format.toUpperCase()} · {formatBytes(job.file_size_bytes)}
                     {job.error_message && ` · ${job.error_message}`}
                   </div>

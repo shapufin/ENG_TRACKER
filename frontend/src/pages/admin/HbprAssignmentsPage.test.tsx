@@ -109,7 +109,7 @@ describe("HbprAssignmentsPage", () => {
     } as never);
     renderPage();
     // The only row is ended, so the default Active tab is empty.
-    expect(await screen.findByText("Active (0)")).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "Active 0" })).toBeInTheDocument();
     expect(screen.queryByText("2026-06-30")).not.toBeInTheDocument();
     await openArchiveTab();
     expect(await screen.findByText("2026-06-30")).toBeInTheDocument();
@@ -140,8 +140,8 @@ describe("HbprAssignmentsPage", () => {
       data: [assignment, endedAssignment],
     } as never);
     renderPage();
-    expect(await screen.findByText("Active (1)")).toBeInTheDocument();
-    expect(screen.getByText("Archive (1)")).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "Active 1" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Archive 1" })).toBeInTheDocument();
     // Default view: the active row only.
     expect(screen.getByText("Enri Leader")).toBeInTheDocument();
     expect(screen.queryByText("Olsa Leader")).not.toBeInTheDocument();

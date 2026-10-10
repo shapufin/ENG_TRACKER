@@ -9,6 +9,7 @@ import { AdminSidebar } from "./AdminSidebar";
 import { MobileOverlay } from "./MobileOverlay";
 import { MainContentTransition } from "./MainContentTransition";
 import { useAdminNavItems } from "./hooks/useAdminNavItems";
+import { AdminBreadcrumbNav } from "./AdminBreadcrumbNav";
 import { isAllowedCRAdminPath } from "./adminRouteGuards";
 import { AdminCommandPalette } from "./AdminCommandPalette";
 
@@ -77,7 +78,7 @@ export const AdminShell = React.memo(() => {
         userId={user?.id}
       />
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="admin-canvas flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="border-border/30 bg-card/30 flex items-center gap-3 border-b px-3 pt-[calc(0.75rem+var(--safe-area-top))] pb-3 backdrop-blur-sm md:hidden">
           <button
             ref={mobileMenuButtonRef}
@@ -96,7 +97,8 @@ export const AdminShell = React.memo(() => {
           </div>
         </div>
         <MainContentTransition pathname={location.pathname} className="h-full">
-          <div className="mx-auto w-full max-w-screen-2xl p-4 md:p-6 lg:p-8">
+          <div className="mx-auto w-full max-w-screen-2xl px-4 py-4 md:px-6 md:py-5 lg:px-8 lg:py-6">
+            <AdminBreadcrumbNav items={adminNavItems} />
             <Outlet />
           </div>
         </MainContentTransition>

@@ -146,3 +146,55 @@ describe("table column action helpers", () => {
     expect(onDelete).toHaveBeenCalledWith(7);
   });
 });
+
+describe("action helper button sizing", () => {
+  it("no rendered button has h-11; all use the small control token", () => {
+    const columns = [
+      createEditDeleteActionsColumn<Row>(vi.fn(), vi.fn()),
+      createCrudActionsColumn<Row>({
+        canApprove: true,
+        onApprove: vi.fn(),
+        onReject: vi.fn(),
+        onEdit: vi.fn(),
+        onDelete: vi.fn(),
+        canEdit: () => false,
+      }),
+      createViewApproveRejectActionsColumn<Row>({
+        onView: vi.fn(),
+        approveMutate: vi.fn(),
+        approvePending: false,
+        onReject: vi.fn(),
+        rejectPending: false,
+      }),
+    ];
+    for (const column of columns) {
+      const { container, unmount } = renderCell(column);
+      const buttons = container.querySelectorAll("button");
+      expect(buttons.length).toBeGreaterThan(0);
+      buttons.forEach((b) => {
+        expect(b.className).not.toContain("h-11");
+        expect(b.className).toContain("h-[var(--control-h-sm)]");
+      });
+      unmount();
+    }
+  });
+});
+
+describe("locked CRUD actions", () => {
+  it("locked Edit and Delete buttons are described by the lock reason", () => {
+    const { getByRole } = renderCell(
+      createCrudActionsColumn<Row>({
+        canApprove: false,
+        onApprove: vi.fn(),
+        onReject: vi.fn(),
+        onEdit: vi.fn(),
+        onDelete: vi.fn(),
+        canEdit: () => false,
+        canDelete: () => false,
+      })
+    );
+    const reason = "Locked — ask a superuser to delete records from past months.";
+    expect(getByRole("button", { name: "Edit 7" })).toHaveAccessibleDescription(reason);
+    expect(getByRole("button", { name: "Delete 7" })).toHaveAccessibleDescription(reason);
+  });
+});

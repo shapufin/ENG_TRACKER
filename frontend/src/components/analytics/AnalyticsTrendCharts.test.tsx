@@ -45,14 +45,27 @@ describe("AnalyticsTrendCharts", () => {
         period="month"
       />
     );
-    expect(screen.getByText("No overtime or standby data for this period")).toBeInTheDocument();
+    expect(screen.getByText("No overtime or standby logged in this period")).toBeInTheDocument();
     expect(screen.getByText("No leave data for this period")).toBeInTheDocument();
     expect(screen.getByText("No new users in this period")).toBeInTheDocument();
   });
 
+  it("empty chart action requests the year period", () => {
+    const onPeriodChange = vi.fn();
+    render(
+      <AnalyticsTrendCharts
+        trends={{ overtime: [], standby: [], leave: [], user_activity: [] }}
+        period="month"
+        onPeriodChange={onPeriodChange}
+      />
+    );
+    fireEvent.click(screen.getAllByRole("button", { name: "Show this year" })[0]);
+    expect(onPeriodChange).toHaveBeenCalledWith("year");
+  });
+
   it("renders empty states when trends is undefined", () => {
     render(<AnalyticsTrendCharts trends={undefined} period="year" />);
-    expect(screen.getByText("No overtime or standby data for this period")).toBeInTheDocument();
+    expect(screen.getByText("No overtime or standby logged in this period")).toBeInTheDocument();
   });
 
   it("shows leave view toggle and switches to trend view", () => {

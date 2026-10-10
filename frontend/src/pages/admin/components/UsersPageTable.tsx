@@ -34,6 +34,7 @@ export const UsersPageTable: React.FC<UsersPageTableProps> = ({
       initialSearch={initialSearch}
       enableColumnVisibility
       storageKey="table-visibility-users-page"
+      defaultColumnVisibility={{ email: false }}
       enableRowSelection
       rowSelection={rowSelection}
       onRowSelectionChange={onRowSelectionChange}

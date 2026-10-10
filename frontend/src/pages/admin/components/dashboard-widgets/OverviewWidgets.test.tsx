@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import type { AdminOverview } from "@/types";
 import { OverviewWidgets } from "./OverviewWidgets";
 import { makeOverview } from "./adminFixtures";
@@ -7,6 +8,8 @@ import { makeOverview } from "./adminFixtures";
 const data: AdminOverview = makeOverview();
 
 const stats = { totalUsers: 40, totalTeams: 5, totalPending: 3, overtimeHours: 20 };
+
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 
 const renderAll = (overrides: Partial<React.ComponentProps<typeof OverviewWidgets>> = {}) =>
   render(
@@ -39,6 +42,21 @@ describe("OverviewWidgets", () => {
     expect(screen.getByText("Never logged in").nextElementSibling?.className).not.toMatch(
       /text-warning/
     );
+  });
+
+  it("coverage gaps tint non-zero counts with the warning tone and mute zeros", () => {
+    renderAll();
+    const counts = screen
+      .getAllByText(
+        /^(Teams without a leader|Users without a team|Users without a tech|Employees without a TL|Albanian TLs without HBPR)$/
+      )
+      .map((el) => el.nextElementSibling as HTMLElement);
+    expect(counts).toHaveLength(5);
+    for (const c of counts) {
+      expect(c.className).toMatch(
+        Number(c.textContent) > 0 ? /text-tone-warning-text/ : /text-muted-foreground/
+      );
+    }
   });
 
   it("renders nothing for inactive widgets", () => {
