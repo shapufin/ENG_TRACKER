@@ -5,8 +5,7 @@
  * `team` query param (see useUserManagement / apps/users/viewsets.py).
  */
 import React from "react";
-import { cn } from "@/lib/utils";
-import { toneSurfaceClass } from "@/components/ui/tone";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import type { Team } from "@/types";
 
 interface TeamFacetFilterProps {
@@ -15,12 +14,19 @@ interface TeamFacetFilterProps {
   onTeamIdsChange: (ids: number[]) => void;
 }
 
+const ALL = "all";
+
 export const TeamFacetFilter: React.FC<TeamFacetFilterProps> = ({
   teams,
   selectedTeamIds,
   onTeamIdsChange,
 }) => {
-  const toggleTeam = (id: number) => {
+  const toggleTeam = (value: string) => {
+    if (value === ALL) {
+      onTeamIdsChange([]);
+      return;
+    }
+    const id = Number(value);
     onTeamIdsChange(
       selectedTeamIds.includes(id)
         ? selectedTeamIds.filter((v) => v !== id)
@@ -28,46 +34,19 @@ export const TeamFacetFilter: React.FC<TeamFacetFilterProps> = ({
     );
   };
 
-  const isAllActive = selectedTeamIds.length === 0;
-
   if (teams.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-border/70 pt-2">
-      <span className="mr-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        Team filter
-      </span>
-      <button
-        type="button"
-        onClick={() => onTeamIdsChange([])}
-        className={cn(
-          "rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors",
-          isAllActive
-            ? toneSurfaceClass.accent
-            : "border-border bg-background text-muted-foreground hover:border-primary/30"
-        )}
-      >
-        All teams
-      </button>
-      {teams.map((team) => {
-        const isActive = selectedTeamIds.includes(team.id);
-        return (
-          <button
-            key={team.id}
-            type="button"
-            onClick={() => toggleTeam(team.id)}
-            aria-pressed={isActive}
-            className={cn(
-              "rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors",
-              isActive
-                ? toneSurfaceClass.info
-                : "border-border bg-background text-foreground/80 hover:border-primary/30"
-            )}
-          >
-            {team.name}
-          </button>
-        );
-      })}
+    <div className="border-border/70 border-t pt-2">
+      <FilterChipRow
+        label="Team"
+        options={[
+          { value: ALL, label: "All teams" },
+          ...teams.map((team) => ({ value: String(team.id), label: team.name })),
+        ]}
+        selected={selectedTeamIds.length === 0 ? [ALL] : selectedTeamIds.map(String)}
+        onToggle={toggleTeam}
+      />
     </div>
   );
 };

@@ -7,9 +7,11 @@
  * always-visible chip row, and tech lists are short enough to render flat.
  */
 import React from "react";
-import { cn } from "@/lib/utils";
-import { toneSurfaceClass } from "@/components/ui/tone";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import type { TechFacet } from "@/types";
+
+const ALL = "all";
+const NONE = "none";
 
 interface TechFacetFilterProps {
   facets: TechFacet[];
@@ -60,95 +62,55 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
     (facet) => selectedTechIds.includes(facet.id) && (facet.levels?.length ?? 0) > 0
   );
 
-  const isAllActive = selectedTechIds.length === 0 && !noTechOnly;
+  const selected: string[] = [
+    ...(selectedTechIds.length === 0 && !noTechOnly ? [ALL] : []),
+    ...selectedTechIds.map(String),
+    ...(noTechOnly ? [NONE] : []),
+  ];
+
+  const onToggle = (value: string) => {
+    if (value === ALL) {
+      onTechIdsChange([]);
+      onNoTechOnlyChange(false);
+    } else if (value === NONE) {
+      onNoTechOnlyChange(!noTechOnly);
+    } else {
+      toggleTech(Number(value));
+    }
+  };
 
   if (facets.length === 0 && noTechCount === 0) return null;
 
   return (
-    <div className="space-y-2 border-t border-border/70 pt-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-          Tech filter
-        </span>
-        <button
-          type="button"
-          onClick={() => {
-            onTechIdsChange([]);
-            onNoTechOnlyChange(false);
-          }}
-          className={cn(
-            "rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors",
-            isAllActive
-              ? // Accent token, not text-primary: #7c3bed on the dark chip
-                // surface measures 3.32:1 — below AA for 11px text.
-                toneSurfaceClass.accent
-              : "border-border bg-background text-muted-foreground hover:border-primary/30"
-          )}
-        >
-          All tech
-        </button>
-        {facets.map((facet) => {
-          const isActive = selectedTechIds.includes(facet.id);
-          return (
-            <button
-              key={facet.id}
-              type="button"
-              onClick={() => toggleTech(facet.id)}
-              aria-pressed={isActive}
-              className={cn(
-                "rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition-colors",
-                isActive
-                  ? toneSurfaceClass.info
-                  : "border-border bg-background text-foreground/80 hover:border-primary/30"
-              )}
-            >
-              {facet.name}{" "}
-              <span className="ml-1 font-mono text-muted-foreground">{facet.count}</span>
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => onNoTechOnlyChange(!noTechOnly)}
-          aria-pressed={noTechOnly}
-          className={cn(
-            "rounded-lg border border-dashed px-3 py-1.5 text-[11px] font-semibold transition-colors",
-            noTechOnly
-              ? toneSurfaceClass.accent
-              : "border-border text-muted-foreground hover:border-primary/30"
-          )}
-        >
-          No tech <span className="ml-1 font-mono">{noTechCount}</span>
-        </button>
-      </div>
+    <div className="border-border/70 space-y-2 border-t pt-2">
+      <FilterChipRow
+        label="Tech"
+        options={[
+          { value: ALL, label: "All tech" },
+          ...facets.map((facet) => ({
+            value: String(facet.id),
+            label: facet.name,
+            count: facet.count,
+          })),
+          { value: NONE, label: "No tech", count: noTechCount, emphasis: "missing" as const },
+        ]}
+        selected={selected}
+        onToggle={onToggle}
+      />
       {levelRows.map((facet) => (
-        <div key={facet.id} className="flex flex-wrap items-center gap-2 pl-1">
-          <span className="mr-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            {facet.code} level
-          </span>
-          {facet.levels.map((level) => {
-            const isActive = selectedLevelIds.includes(level.id);
-            return (
-              <button
-                key={level.id}
-                type="button"
-                onClick={() => toggleLevel(level.id)}
-                aria-pressed={isActive}
-                title={`${facet.name} — ${level.name}`}
-                className={cn(
-                  "rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-colors",
-                  isActive
-                    ? toneSurfaceClass.info
-                    : "border-border bg-background text-foreground/80 hover:border-primary/30"
-                )}
-              >
-                {level.code}{" "}
-                <span className="ml-0.5 font-mono text-muted-foreground">{level.count}</span>
-              </button>
-            );
-          })}
+        <div key={facet.id} className="space-y-1">
+          <FilterChipRow
+            label={`${facet.code} level`}
+            options={facet.levels.map((level) => ({
+              value: String(level.id),
+              label: level.code,
+              count: level.count,
+            }))}
+            selected={selectedLevelIds.map(String)}
+            onToggle={(value) => toggleLevel(Number(value))}
+          />
           {facet.no_level_count > 0 && (
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-muted-foreground block text-xs sm:pl-20">
               {facet.no_level_count} ungraded
             </span>
           )}
