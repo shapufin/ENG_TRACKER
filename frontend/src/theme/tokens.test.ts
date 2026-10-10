@@ -210,8 +210,15 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     const white = luminance(0, 0, 100);
     // Solid-button pairs: white text on primary / destructive / info.
     expect(ratio(white, luminance(230, 80, 55))).toBeGreaterThanOrEqual(4.5);
-    // Primary as text on a white card.
-    expect(ratio(luminance(0, 0, 100), luminance(230, 80, 55))).toBeGreaterThanOrEqual(4.5);
+    // --primary-text on --card, parsed from the light block.
+    const hsl = (block: string, token: string): [number, number, number] => {
+      const m = block.match(new RegExp(`${token}:\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%`));
+      if (!m) throw new Error(`missing ${token}`);
+      return [Number(m[1]), Number(m[2]), Number(m[3])];
+    };
+    expect(
+      ratio(luminance(...hsl(lightBlock, "--primary-text")), luminance(...hsl(lightBlock, "--card"))),
+    ).toBeGreaterThanOrEqual(4.5);
     expect(ratio(white, luminance(0, 72, 51))).toBeGreaterThanOrEqual(4.5);
     expect(ratio(white, luminance(201, 96, 32))).toBeGreaterThanOrEqual(4.5);
     // Tinted info surface: 12% sky-600 over a white card, dark sky text.
