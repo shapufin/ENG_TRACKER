@@ -1,35 +1,38 @@
 """
 Compute service for TL engagement metrics.
 
-Populates `TLApprovalMetric` snapshots. All aggregation happens here at
-compute time (via `recompute_tl_metrics`); read endpoints only serve the
-stored snapshot plus a freshness check.
+Populates `TLApprovalMetric` snapshots, one row per (leader, team, month).
+A request belongs to the month it was submitted in. Each request is judged
+against its SLA deadline (see `sla.py`): decided within the deadline is
+on time, decided later or still pending past the deadline is a breach.
+Read endpoints only serve the stored snapshot plus a freshness check.
 """
 from calendar import monthrange
-from datetime import date, timedelta
+from collections import defaultdict
+from datetime import datetime, time, timedelta
+import statistics
 
+from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Q
+from django.db.models import Q
+from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
+from apps.dashboard.models.calendar import PublicHoliday, UserCalendarPreference
 from apps.leave_management.models import LeaveRequest
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
-from apps.users.models import Team, UserProfile
+from apps.users.models import Team, TeamMembership, UserProfile
 
 from .models import TLApprovalMetric
+from .sla import TIRANA, deadline_for, responsiveness_score, today_local
 
 AGING_BUCKETS = ('<4h', '4-24h', '1-3d', '>3d')
 REQUEST_TYPES = ('leave', 'overtime', 'standby')
 RESUBMISSION_WINDOW_DAYS = 30
-PENDING_STALE_HOURS = 48
-
-# Per-type speed targets: leave needs a fast answer, but overtime/standby
-# usually require checking timesheets/logs against another system first, so
-# deciding within a week still counts as fully "good" instead of being
-# graded on the same same-day scale as leave.
-SPEED_TARGET_HOURS = {'leave': 4, 'overtime': 24 * 7, 'standby': 24 * 7}
-SPEED_MAX_HOURS = {'leave': 72, 'overtime': 24 * 14, 'standby': 24 * 14}
+HOLIDAY_WINDOW_DAYS = 14
+SLA_METRIC_KEYS = ('judgeable', 'on_time', 'breaches', 'pending_past_deadline', 'median_fraction')
+COMPONENT_WEIGHTS = {'speed': 0.4, 'approval': 0.2, 'responsiveness': 0.2, 'consistency': 0.2}
 
 _TYPE_CONFIG = {
     'leave': {'model': LeaveRequest, 'date_field': 'start_date'},
@@ -38,17 +41,20 @@ _TYPE_CONFIG = {
 }
 
 
+def _now():
+    """Single clock for freshness, deadlines and computed_at (patched in tests)."""
+    return timezone.now()
+
+
+def _local_midnight(day):
+    return datetime.combine(day, time.min, tzinfo=TIRANA)
+
+
 def month_bounds(month):
-    """Return tz-aware (first_instant, first_instant_of_next_month) for a month."""
+    """Return Tirana-local (first_instant, first_instant_of_next_month) for a month."""
     first_day = month.replace(day=1)
-    last_day = first_day.replace(day=monthrange(first_day.year, first_day.month)[1])
-    next_month_first_day = last_day + timedelta(days=1)
-    return (
-        timezone.make_aware(timezone.datetime(first_day.year, first_day.month, first_day.day)),
-        timezone.make_aware(timezone.datetime(
-            next_month_first_day.year, next_month_first_day.month, next_month_first_day.day
-        )),
-    )
+    next_month_first = first_day + timedelta(days=monthrange(first_day.year, first_day.month)[1])
+    return _local_midnight(first_day), _local_midnight(next_month_first)
 
 
 def weighted_mean(pairs):
@@ -56,14 +62,8 @@ def weighted_mean(pairs):
 
     None values are dropped before averaging; a zero/None weight falls back
     to 1 so a single unweighted value still contributes. Returns None for an
-    empty or all-None input. Shared by the `summary`/`trend` API actions and
-    the Excel export builder so the composite-score and avg-TTA math can't
-    drift between the three call sites.
+    empty or all-None input.
     """
-    # Normalize a zero/None weight to 1 before it touches either the
-    # numerator or the denominator — doing this only in the numerator let a
-    # zero-weight row's value inflate the result (full weight in the sum,
-    # zero weight in the divisor).
     scored = [(v, w or 1) for v, w in pairs if v is not None]
     if not scored:
         return None
@@ -90,53 +90,183 @@ def percentile(sorted_values, p):
     return round(sorted_values[idx], 2)
 
 
-def team_member_ids(leader, team):
-    """User IDs this leader manages who belong to this specific team."""
-    managed_ids = leader.profile.get_team_member_ids()
-    if not managed_ids:
-        return set()
+def _managed_map(leader_ids):
+    """{leader_id: active user ids the leader manages}, in a fixed number of queries.
+
+    A leader manages: FK-assigned staff (`italian_tl`/`albanian_tl`), members of
+    the teams they belong to, and members of the teams they lead. Soft-deleted
+    memberships are ignored everywhere. The leader is excluded: their own
+    requests are decided by someone else. This is the only definition of
+    scope in this plugin; per-leader callers must go through it too.
+    """
+    leader_ids = set(leader_ids)
+    managed = {lid: set() for lid in leader_ids}
+    if not leader_ids:
+        return managed
+
+    leader_teams = defaultdict(set)
+    for user_id, team_id in TeamMembership.objects.filter(
+        is_deleted=False, user_profile__user_id__in=leader_ids
+    ).values_list('user_profile__user_id', 'team_id'):
+        leader_teams[user_id].add(team_id)
+    for leader_id, team_id in Team.objects.filter(is_deleted=False, team_leader_id__in=leader_ids).values_list('team_leader_id', 'id'):
+        leader_teams[leader_id].add(team_id)
+
+    team_members = _team_members({t for teams in leader_teams.values() for t in teams})
+    for leader_id in leader_ids:
+        for team_id in leader_teams.get(leader_id, ()):
+            managed[leader_id] |= team_members[team_id]
+
+    for user_id, italian, albanian in UserProfile.objects.filter(
+        Q(italian_tl__in=leader_ids) | Q(albanian_tl__in=leader_ids)
+    ).values_list('user_id', 'italian_tl_id', 'albanian_tl_id'):
+        for leader_id in (italian, albanian):
+            if leader_id in managed:
+                managed[leader_id].add(user_id)
+
+    everyone = set().union(*managed.values())
+    active = set(User.objects.filter(id__in=everyone, is_active=True).values_list('id', flat=True))
+    return {lid: (members & active) - {lid} for lid, members in managed.items()}
+
+
+def _team_members(team_ids):
+    """{team_id: user ids with a live membership}, one query."""
+    members = defaultdict(set)
+    if team_ids:
+        for user_id, team_id in TeamMembership.objects.filter(
+            is_deleted=False, team_id__in=team_ids
+        ).values_list('user_profile__user_id', 'team_id'):
+            members[team_id].add(user_id)
+    return members
+
+
+class ReadScope:
+    """Scope and membership memo for one request.
+
+    Nothing writes membership during a read, so one instance is safe for the
+    whole request. Create one per request (the viewset does); functions accept
+    ``scope=None`` and create a throwaway one, so existing callers are unchanged.
+    """
+
+    def __init__(self):
+        self._managed = {}
+        self._team_members = {}
+
+    def managed(self, leader_ids):
+        missing = set(leader_ids) - self._managed.keys()
+        if missing:
+            self._managed.update(_managed_map(missing))
+        return {lid: self._managed[lid] for lid in leader_ids}
+
+    def team_members(self, team_ids):
+        missing = set(team_ids) - self._team_members.keys()
+        if missing:
+            members = _team_members(missing)
+            self._team_members.update({tid: members[tid] for tid in missing})
+        return {tid: self._team_members[tid] for tid in team_ids}
+
+
+def _scope(scope):
+    return ReadScope() if scope is None else scope
+
+
+def team_member_ids(leader, team, scope=None):
+    """Managed users who belong to this team. Staff in several teams count in each."""
+    scope = _scope(scope)
+    return scope.managed([leader.id])[leader.id] & scope.team_members([team.id])[team.id]
+
+
+def member_sets_for(rows, scope=None):
+    """{(leader_id, team_id): member ids} for snapshot rows, in a fixed number of queries."""
+    scope = _scope(scope)
+    managed = scope.managed({r.leader_id for r in rows})
+    members = scope.team_members({r.team_id for r in rows})
+    return {(r.leader_id, r.team_id): managed.get(r.leader_id, set()) & members[r.team_id] for r in rows}
+
+
+TL_ROLE_CODES = ('italian_tl', 'albanian_tl')
+
+
+def candidate_leader_ids():
+    """Users who may manage staff: team leaders, FK targets, and TL-role holders.
+
+    Filtered in SQL. `UserRole` is authoritative; `UserProfile.role_codes` is a
+    cache of it, so it is not scanned. Legacy flags are still honoured.
+    """
     return set(
-        UserProfile.objects.filter(user_id__in=managed_ids, teams=team)
-        .values_list('user_id', flat=True)
+        User.objects.filter(
+            Q(led_teams__isnull=False)
+            | Q(italian_team_members__isnull=False)
+            | Q(albanian_team_members__isnull=False)
+            | Q(profile__is_italian_tl_role=True)
+            | Q(profile__is_albanian_tl_role=True)
+            | Q(user_roles__is_active=True, user_roles__is_deleted=False, user_roles__role__code__in=TL_ROLE_CODES)
+        ).values_list('id', flat=True).distinct()
     )
 
 
-def leader_team_pairs():
-    """Every (leader, team) pair worth a snapshot: teams with a resolvable TL."""
-    pairs = []
-    for team in Team.objects.select_related('team_leader').all():
-        leaders = set()
-        if team.team_leader_id:
-            leaders.add(team.team_leader)
-        for profile in UserProfile.objects.filter(teams=team).select_related('user'):
-            if profile.is_team_leader:
-                leaders.add(profile.user)
-        for leader in leaders:
-            if hasattr(leader, 'profile'):
-                pairs.append((leader, team))
-    return pairs
+def leader_team_pairs(leader_ids=None, scope=None):
+    """(leader, team) pairs worth a snapshot: teams the leader leads, plus every
+    team that contains at least one managed user. Fixed number of queries."""
+    ids = candidate_leader_ids() if leader_ids is None else set(leader_ids)
+    leaders = {
+        u.id: u for u in User.objects.filter(id__in=ids, is_active=True).select_related('profile')
+        if hasattr(u, 'profile')
+    }
+    managed = _scope(scope).managed(leaders)
+    everyone_managed = set().union(*managed.values())
+    member_teams = defaultdict(set)
+    for user_id, team_id in TeamMembership.objects.filter(
+        is_deleted=False, user_profile__user_id__in=everyone_managed
+    ).values_list('user_profile__user_id', 'team_id'):
+        member_teams[user_id].add(team_id)
+    led = defaultdict(set)
+    for leader_id, team_id in Team.objects.filter(is_deleted=False, team_leader_id__in=leaders).values_list('team_leader_id', 'id'):
+        led[leader_id].add(team_id)
+
+    team_ids = set()
+    team_sets = {}
+    for leader_id in leaders:
+        team_sets[leader_id] = set(led[leader_id]) | {t for m in managed[leader_id] for t in member_teams[m]}
+        team_ids |= team_sets[leader_id]
+    teams = {t.id: t for t in Team.objects.filter(is_deleted=False, id__in=team_ids)}
+    return [(leaders[lid], teams[tid]) for lid in sorted(leaders) for tid in sorted(team_sets[lid]) if tid in teams]
 
 
-def ensure_current_month_snapshots(leader_ids):
-    """Create this month's snapshots for ``leader_ids`` that have none yet.
+def ensure_current_month_snapshots(leader_ids=None, scope=None):
+    """Create this month's snapshot for every (leader, team) pair that has none.
 
-    Snapshots otherwise exist only after ``recompute_tl_metrics`` runs, so a new
-    TL or a new month would read as empty. Existing rows are never touched
-    (staleness is handled separately on read)."""
-    month = date.today().replace(day=1)
-    missing = set(leader_ids) - set(
-        TLApprovalMetric.objects.filter(month=month, leader_id__in=leader_ids)
-        .values_list('leader_id', flat=True)
+    Existing rows are never touched here; staleness is handled on read.
+    Runs on every TL read, so a team that appears mid-month gets its row on the
+    next read without waiting for a recompute.
+    """
+    scope = _scope(scope)
+    month = today_local().replace(day=1)
+    pairs = leader_team_pairs(leader_ids, scope)
+    scope.team_members({team.id for _, team in pairs})  # one query for every team about to be computed
+    have = set(TLApprovalMetric.objects.filter(month=month).values_list('leader_id', 'team_id'))
+    for leader, team in pairs:
+        if (leader.id, team.id) in have:
+            continue
+        try:
+            with transaction.atomic():  # savepoint: keep the request's transaction usable
+                compute_tl_metric(leader, team, month, scope)
+        except IntegrityError:  # a concurrent read created the same row
+            pass
+
+
+def holiday_dates_for(leader, window_start, window_end):
+    """Public-holiday dates the leader's deadlines skip: global holidays plus
+    holidays of calendars the leader has active."""
+    calendar_ids = list(
+        UserCalendarPreference.objects.filter(user=leader, is_active=True, is_deleted=False)
+        .values_list('calendar_id', flat=True)
     )
-    if not missing:
-        return
-    for leader, team in leader_team_pairs():
-        if leader.id in missing:
-            try:
-                with transaction.atomic():  # savepoint: keep the request's transaction usable
-                    compute_tl_metric(leader, team, month)
-            except IntegrityError:  # a concurrent read created the same row
-                pass
+    return set(
+        PublicHoliday.objects.filter(is_deleted=False, date__gte=window_start, date__lte=window_end)
+        .filter(Q(calendar__isnull=True) | Q(calendar_id__in=calendar_ids))
+        .values_list('date', flat=True)
+    )
 
 
 def _resubmission_count(model, date_field, member_ids, month_start, month_end):
@@ -146,21 +276,18 @@ def _resubmission_count(model, date_field, member_ids, month_start, month_end):
         status='rejected',
         submitted_at__gte=month_start,
         submitted_at__lt=month_end,
+        is_deleted=False,
     ).values('user_id', date_field, 'submitted_at'))
 
     if not rejected:
         return 0
 
-    # Fetch every candidate resubmission once, instead of one .exists() query
-    # per rejected record — then match in Python against each record's own
-    # window (rejections in this batch can have different submitted_at
-    # times, so the per-row window boundary still has to be checked here).
-    earliest_submitted = min(r['submitted_at'] for r in rejected)
     latest_window_end = max(r['submitted_at'] for r in rejected) + timedelta(days=RESUBMISSION_WINDOW_DAYS)
     candidates = model.objects.filter(
         user_id__in={r['user_id'] for r in rejected},
-        submitted_at__gt=earliest_submitted,
+        submitted_at__gt=min(r['submitted_at'] for r in rejected),
         submitted_at__lte=latest_window_end,
+        is_deleted=False,
     ).exclude(status='rejected').values('user_id', date_field, 'submitted_at')
 
     candidates_by_key = {}
@@ -190,145 +317,129 @@ def _aging_bucket(hours):
     return '>3d'
 
 
-def compute_type_metrics(type_key, member_ids, month_start, month_end):
-    config = _TYPE_CONFIG[type_key]
-    model = config['model']
-    date_field = config['date_field']
+def _empty_type_metrics():
+    return {
+        'submitted': 0, 'decided': 0, 'approved': 0, 'rejected': 0,
+        'judgeable': 0, 'on_time': 0, 'breaches': 0, 'pending_past_deadline': 0,
+        'avg_tta_hours': None, 'p50_tta_hours': None, 'p90_tta_hours': None,
+        'median_fraction': None,
+        'aging': {bucket: 0 for bucket in AGING_BUCKETS},
+        'resubmission_count': 0,
+    }
 
+
+def compute_type_metrics(type_key, member_ids, month_start, month_end, holidays, now):
+    """Judge every request of one type submitted in the month against its SLA.
+
+    Returns (metrics, deadline_fractions, next_pending_deadline, submitter_ids).
+    `deadline_fractions` holds, per decided request, the share of its deadline
+    window that was used (0 = instant, 1 = at the deadline).
+    """
     if not member_ids:
-        submitted = decided = approved = rejected = 0
-    else:
-        base = model.objects.filter(
+        return _empty_type_metrics(), [], None, set()
+
+    model = _TYPE_CONFIG[type_key]['model']
+    date_field = _TYPE_CONFIG[type_key]['date_field']
+    rows = list(
+        model.objects.filter(
             user_id__in=member_ids,
             submitted_at__gte=month_start,
             submitted_at__lt=month_end,
-        )
-        submitted = base.count()
-        decided_qs = base.filter(status__in=('approved', 'rejected'), approved_at__isnull=False)
-        counts = decided_qs.aggregate(
-            decided=Count('id'),
-            approved=Count('id', filter=Q(status='approved')),
-            rejected=Count('id', filter=Q(status='rejected')),
-        )
-        decided = counts['decided']
-        approved = counts['approved']
-        rejected = counts['rejected']
+            is_deleted=False,
+        ).values_list('user_id', 'status', 'submitted_at', 'approved_at')
+    )
 
-    aging = {bucket: 0 for bucket in AGING_BUCKETS}
-    tta_hours = []
-    if member_ids:
-        for item in decided_qs.values_list('submitted_at', 'approved_at'):
-            submitted_at, approved_at = item
-            hours = (approved_at - submitted_at).total_seconds() / 3600
+    metrics = _empty_type_metrics()
+    fractions, tta_hours, submitters = [], [], set()
+    next_deadline = None
+    for user_id, status, submitted_at, approved_at in rows:
+        submitters.add(user_id)
+        deadline = deadline_for(type_key, submitted_at, holidays)
+        if status in ('approved', 'rejected') and approved_at is not None:
+            elapsed = max((approved_at - submitted_at).total_seconds(), 0)
+            hours = elapsed / 3600
+            metrics['decided'] += 1
+            metrics['approved'] += int(status == 'approved')
+            metrics['rejected'] += int(status == 'rejected')
+            metrics['aging'][_aging_bucket(hours)] += 1
             tta_hours.append(hours)
-            aging[_aging_bucket(hours)] += 1
+            fractions.append(elapsed / max((deadline - submitted_at).total_seconds(), 1))
+            metrics['judgeable'] += 1
+            metrics['on_time'] += int(approved_at <= deadline)
+        elif status == 'pending':
+            if now > deadline:
+                metrics['judgeable'] += 1
+                metrics['pending_past_deadline'] += 1
+            elif next_deadline is None or deadline < next_deadline:
+                next_deadline = deadline
 
     tta_hours.sort()
-    avg_tta = round(sum(tta_hours) / len(tta_hours), 2) if tta_hours else None
-    p50_tta = percentile(tta_hours, 0.50)
-    p90_tta = percentile(tta_hours, 0.90)
-
-    pending_over_48h = 0
-    if member_ids:
-        stale_cutoff = timezone.now() - timedelta(hours=PENDING_STALE_HOURS)
-        pending_over_48h = model.objects.filter(
-            user_id__in=member_ids,
-            status='pending',
-            submitted_at__lt=stale_cutoff,
-        ).count()
-
-    resubmissions = _resubmission_count(model, date_field, member_ids, month_start, month_end) if member_ids else 0
-
-    return {
-        'submitted': submitted,
-        'decided': decided,
-        'approved': approved,
-        'rejected': rejected,
-        'avg_tta_hours': avg_tta,
-        'p50_tta_hours': p50_tta,
-        'p90_tta_hours': p90_tta,
-        'aging': aging,
-        'pending_over_48h': pending_over_48h,
-        'resubmission_count': resubmissions,
-    }, tta_hours
+    metrics['submitted'] = len(rows)
+    metrics['breaches'] = metrics['judgeable'] - metrics['on_time']
+    metrics['avg_tta_hours'] = round(sum(tta_hours) / len(tta_hours), 2) if tta_hours else None
+    metrics['p50_tta_hours'] = percentile(tta_hours, 0.50)
+    metrics['p90_tta_hours'] = percentile(tta_hours, 0.90)
+    metrics['median_fraction'] = round(statistics.median(fractions), 4) if fractions else None
+    metrics['resubmission_count'] = _resubmission_count(model, date_field, member_ids, month_start, month_end)
+    return metrics, fractions, next_deadline, submitters
 
 
-def _type_speed_score(type_key, p90_hours):
-    """0-100 speed score for one request type, against that type's own target/ceiling."""
-    if p90_hours is None:
-        return None
-    # Fall back to leave's stricter same-day target for any future request
-    # type that hasn't been given its own entry yet.
-    target = SPEED_TARGET_HOURS.get(type_key, SPEED_TARGET_HOURS['leave'])
-    ceiling = SPEED_MAX_HOURS.get(type_key, SPEED_MAX_HOURS['leave'])
-    if p90_hours <= target:
-        return 100.0
-    if p90_hours >= ceiling:
-        return 0.0
-    return 100 - ((p90_hours - target) / (ceiling - target)) * 100
+def compute_engagement_score(type_metrics, all_fractions):
+    """0-100 composite: within-SLA 40% + approval rate 20% + responsiveness 20% + consistency 20%.
 
-
-def compute_engagement_score(type_metrics, all_tta_hours, team_size, active_submitters):
-    """0-100 composite: speed 40% + approval rate 20% + activity 20% + consistency 20%."""
+    Weights of components with no data are dropped and the rest renormalised.
+    """
+    judgeable = sum(m['judgeable'] for m in type_metrics.values())
+    on_time = sum(m['on_time'] for m in type_metrics.values())
     total_decided = sum(m['decided'] for m in type_metrics.values())
     total_approved = sum(m['approved'] for m in type_metrics.values())
 
-    speed_score = weighted_mean(
-        (_type_speed_score(type_key, m['p90_tta_hours']), m['decided'])
-        for type_key, m in type_metrics.items()
-        if m['p90_tta_hours'] is not None
+    speed = round(on_time / judgeable * 100, 2) if judgeable else None
+    approval = round(total_approved / total_decided * 100, 2) if total_decided else None
+    responsiveness = weighted_mean(
+        (responsiveness_score(m['median_fraction']), m['decided'])
+        for m in type_metrics.values()
+        if m['median_fraction'] is not None
     )
 
-    approval_score = round((total_approved / total_decided) * 100, 2) if total_decided else None
-    activity_score = round((active_submitters / team_size) * 100, 2) if team_size else None
-
-    consistency_score = None
-    if len(all_tta_hours) >= 2:
-        mean = sum(all_tta_hours) / len(all_tta_hours)
+    consistency = None
+    if len(all_fractions) >= 2:
+        mean = sum(all_fractions) / len(all_fractions)
         if mean > 0:
-            variance = sum((x - mean) ** 2 for x in all_tta_hours) / len(all_tta_hours)
-            std_dev = variance ** 0.5
-            consistency_score = round(max(0.0, 1 - std_dev / mean) * 100, 2)
+            variance = sum((x - mean) ** 2 for x in all_fractions) / len(all_fractions)
+            consistency = round(max(0.0, 1 - (variance ** 0.5) / mean) * 100, 2)
         else:
-            consistency_score = 100.0
+            consistency = 100.0
 
-    components = [speed_score, approval_score, activity_score, consistency_score]
-    weights = [0.4, 0.2, 0.2, 0.2]
-    known = [(c, w) for c, w in zip(components, weights) if c is not None]
-    if not known:
-        engagement_score = None
-    else:
-        weight_sum = sum(w for _, w in known)
-        engagement_score = round(sum(c * w for c, w in known) / weight_sum, 2)
+    components = {'speed': speed, 'approval': approval, 'responsiveness': responsiveness, 'consistency': consistency}
+    known = [(value, COMPONENT_WEIGHTS[key]) for key, value in components.items() if value is not None]
+    engagement_score = None
+    if known:
+        engagement_score = round(sum(v * w for v, w in known) / sum(w for _, w in known), 2)
 
     return engagement_score, {
-        'score_speed': speed_score,
-        'score_approval_rate': approval_score,
-        'score_activity': activity_score,
-        'score_consistency': consistency_score,
+        'score_speed': speed,
+        'score_approval_rate': approval,
+        'score_responsiveness': responsiveness,
+        'score_consistency': consistency,
     }
 
 
 def _decisions_during_leave(leader, member_ids, month_start, month_end):
     """Count team-member requests this leader decided while on their own approved leave.
 
-    Leave periods are clipped to this snapshot's own month before matching
-    decisions, so a leave spanning a month boundary is credited to each
-    month only for the slice of the leave that actually falls in it —
-    otherwise both months' snapshots would independently match the same
-    decisions from the shared, un-clipped leave range and double-count them.
-    The decided-items query is also bounded to the clipped leave window
-    instead of scanning the leader's full decision history on every
-    monthly recompute.
+    Leave periods are clipped to this snapshot's own month (Tirana-local dates)
+    so a leave spanning a month boundary is credited to each month only for the
+    slice that falls in it.
     """
     if not member_ids:
         return 0
 
-    month_start_date = month_start.date()
-    month_end_date = month_end.date()  # exclusive (first day of next month)
+    month_start_date = month_start.astimezone(TIRANA).date()
+    month_end_date = month_end.astimezone(TIRANA).date()  # exclusive
 
     leave_periods = list(
-        LeaveRequest.objects.filter(user=leader, status='approved')
+        LeaveRequest.objects.filter(user=leader, status='approved', is_deleted=False)
         .filter(start_date__lt=month_end_date, end_date__gte=month_start_date)
         .values_list('start_date', 'end_date')
     )
@@ -339,8 +450,8 @@ def _decisions_during_leave(leader, member_ids, month_start, month_end):
         (max(start, month_start_date), min(end, month_end_date - timedelta(days=1)))
         for start, end in leave_periods
     ]
-    decided_start = min(start for start, _ in clipped_periods)
-    decided_end = max(end for _, end in clipped_periods)
+    window_start = _local_midnight(min(start for start, _ in clipped_periods) - timedelta(days=1))
+    window_end = _local_midnight(max(end for _, end in clipped_periods) + timedelta(days=2))
 
     counted = set()
     for type_key in REQUEST_TYPES:
@@ -349,113 +460,179 @@ def _decisions_during_leave(leader, member_ids, month_start, month_end):
             user_id__in=member_ids,
             approved_by=leader,
             status__in=('approved', 'rejected'),
-            approved_at__date__gte=decided_start,
-            approved_at__date__lte=decided_end,
+            approved_at__gte=window_start,
+            approved_at__lt=window_end,
+            is_deleted=False,
         ).values_list('id', 'approved_at')
         for obj_id, approved_at in decided:
-            decided_date = approved_at.date()
+            decided_date = approved_at.astimezone(TIRANA).date()
             if any(start <= decided_date <= end for start, end in clipped_periods):
                 counted.add((type_key, obj_id))
     return len(counted)
 
 
-def compute_tl_metric(leader, team, month):
+def _decisions_on_holidays(leader, member_ids, month_start, month_end, holidays):
+    """Count team-member requests this leader decided on a public holiday (evidence only)."""
+    if not member_ids or not holidays:
+        return 0
+    counted = set()
+    for type_key in REQUEST_TYPES:
+        model = _TYPE_CONFIG[type_key]['model']
+        decided = model.objects.filter(
+            user_id__in=member_ids,
+            approved_by=leader,
+            status__in=('approved', 'rejected'),
+            approved_at__gte=month_start,
+            approved_at__lt=month_end,
+            is_deleted=False,
+        ).values_list('id', 'approved_at')
+        for obj_id, approved_at in decided:
+            if approved_at.astimezone(TIRANA).date() in holidays:
+                counted.add((type_key, obj_id))
+    return len(counted)
+
+
+def compute_tl_metric(leader, team, month, scope=None):
     """Compute (or refresh) one (leader, team, month) snapshot. Idempotent."""
     month_start, month_end = month_bounds(month)
-    member_ids = team_member_ids(leader, team)
-    team_size = len(member_ids)
+    member_ids = team_member_ids(leader, team, scope)
+    now = _now()
+    holidays = holiday_dates_for(
+        leader,
+        month_start.date() - timedelta(days=HOLIDAY_WINDOW_DAYS),
+        month_end.date() + timedelta(days=HOLIDAY_WINDOW_DAYS),
+    )
 
     metrics = {}
-    all_tta_hours = []
-    active_submitter_ids = set()
-    total_resubmissions = 0
+    all_fractions = []
+    submitter_ids = set()
+    next_deadline = None
     for type_key in REQUEST_TYPES:
-        type_metrics, tta_hours = compute_type_metrics(type_key, member_ids, month_start, month_end)
+        type_metrics, fractions, type_next, submitters = compute_type_metrics(
+            type_key, member_ids, month_start, month_end, holidays, now
+        )
         metrics[type_key] = type_metrics
-        all_tta_hours.extend(tta_hours)
-        total_resubmissions += type_metrics['resubmission_count']
-        if type_metrics['submitted']:
-            config = _TYPE_CONFIG[type_key]
-            active_submitter_ids |= set(
-                config['model'].objects.filter(
-                    user_id__in=member_ids,
-                    submitted_at__gte=month_start,
-                    submitted_at__lt=month_end,
-                ).values_list('user_id', flat=True)
-            )
+        all_fractions.extend(fractions)
+        submitter_ids |= submitters
+        if type_next and (next_deadline is None or type_next < next_deadline):
+            next_deadline = type_next
 
-    active_submitters = len(active_submitter_ids)
     total_decided = sum(m['decided'] for m in metrics.values())
     total_approved = sum(m['approved'] for m in metrics.values())
     approval_rate_pct = round((total_approved / total_decided) * 100, 2) if total_decided else None
 
-    engagement_score, sub_scores = compute_engagement_score(
-        metrics, all_tta_hours, team_size, active_submitters
-    )
-    decisions_during_leave = _decisions_during_leave(leader, member_ids, month_start, month_end)
+    engagement_score, sub_scores = compute_engagement_score(metrics, all_fractions)
 
     snapshot, _ = TLApprovalMetric.objects.update_or_create(
         leader=leader,
         team=team,
-        month=month_start,
+        month=month_start.date(),
         defaults={
             'metrics': metrics,
-            'team_size': team_size,
-            'active_submitters': active_submitters,
+            'team_size': len(member_ids),
+            'active_submitters': len(submitter_ids),
             'approval_rate_pct': approval_rate_pct,
-            'resubmission_count': total_resubmissions,
+            'resubmission_count': sum(m['resubmission_count'] for m in metrics.values()),
             'engagement_score': engagement_score,
-            'decisions_during_leave': decisions_during_leave,
-            'computed_at': timezone.now(),
+            'decisions_during_leave': _decisions_during_leave(leader, member_ids, month_start, month_end),
+            'decisions_on_holidays': _decisions_on_holidays(leader, member_ids, month_start, month_end, holidays),
+            'next_deadline_at': next_deadline,
+            'computed_at': now,
             **sub_scores,
         },
     )
     return snapshot
 
 
+def months_with_activity():
+    """Every month that has a snapshot or a submitted request, oldest first."""
+    months = set(TLApprovalMetric.objects.values_list('month', flat=True).distinct())
+    for model in (LeaveRequest, OvertimeLog, StandbyLog):
+        months |= {
+            value.date()
+            for value in model.objects.filter(is_deleted=False, submitted_at__isnull=False)
+            .annotate(month_start=TruncMonth('submitted_at', tzinfo=TIRANA))
+            .values_list('month_start', flat=True)
+            .distinct()
+        }
+    return sorted(months)
+
+
+def _sum_type_metric(rows, key):
+    return sum(m.get(key, 0) for r in rows for m in r.metrics.values())
+
+
 def aggregate_rows(rows):
-    """Aggregate a set of `TLApprovalMetric` rows (e.g. one leader's teams for
-    a month) into one summary dict. Shared by the `summary` API action and
-    the Excel export so the two can never silently disagree."""
+    """Aggregate a set of `TLApprovalMetric` rows into one summary dict. Shared by
+    the `summary` API action and the Excel export so the two can never disagree."""
     if not rows:
         return None
 
     team_size = sum(r.team_size for r in rows)
-    active_submitters = sum(r.active_submitters for r in rows)
-    resubmission_count = sum(r.resubmission_count for r in rows)
-    decisions_during_leave = sum(r.decisions_during_leave for r in rows)
-
-    total_decided = sum(sum(m.get('decided', 0) for m in r.metrics.values()) for r in rows)
-    total_approved = sum(sum(m.get('approved', 0) for m in r.metrics.values()) for r in rows)
-    approval_rate_pct = round((total_approved / total_decided) * 100, 2) if total_decided else None
+    total_decided = _sum_type_metric(rows, 'decided')
+    total_approved = _sum_type_metric(rows, 'approved')
 
     return {
         'team_size': team_size,
-        'active_submitters': active_submitters,
-        'approval_rate_pct': approval_rate_pct,
-        'resubmission_count': resubmission_count,
-        'decisions_during_leave': decisions_during_leave,
+        'active_submitters': sum(r.active_submitters for r in rows),
+        'approval_rate_pct': round((total_approved / total_decided) * 100, 2) if total_decided else None,
+        'resubmission_count': sum(r.resubmission_count for r in rows),
+        'decisions_during_leave': sum(r.decisions_during_leave for r in rows),
+        'decisions_on_holidays': sum(r.decisions_on_holidays for r in rows),
+        'judgeable': _sum_type_metric(rows, 'judgeable'),
+        'on_time': _sum_type_metric(rows, 'on_time'),
+        'breaches': _sum_type_metric(rows, 'breaches'),
+        'pending_past_deadline': _sum_type_metric(rows, 'pending_past_deadline'),
         'avg_tta_hours': weighted_avg_tta_hours(rows),
         'engagement_score': weighted_mean((r.engagement_score, r.team_size) for r in rows),
         'score_speed': weighted_mean((r.score_speed, r.team_size) for r in rows),
         'score_approval_rate': weighted_mean((r.score_approval_rate, r.team_size) for r in rows),
-        'score_activity': weighted_mean((r.score_activity, r.team_size) for r in rows),
+        'score_responsiveness': weighted_mean((r.score_responsiveness, r.team_size) for r in rows),
         'score_consistency': weighted_mean((r.score_consistency, r.team_size) for r in rows),
         'computed_at': max((r.computed_at for r in rows if r.computed_at), default=None),
     }
 
 
+def stale_snapshot_ids(rows, scope=None):
+    """Primary keys of the snapshots in ``rows`` that must be recomputed.
+
+    A snapshot is stale when it was never computed, has the pre-SLA metric
+    shape, a pending deadline has passed (time-based), the membership changed,
+    or any member's domain row was touched after computed_at. The domain check
+    is one query per request type for the whole batch, so the cost does not
+    grow with the number of rows.
+    """
+    rows = list(rows)
+    members = member_sets_for(rows, scope)
+    all_members = set().union(*members.values()) if members else set()
+    computed = [r.computed_at for r in rows if r.computed_at]
+    last_touched = {}
+    if computed and all_members:
+        earliest = min(computed)
+        # A snapshot only depends on requests submitted in its own month, so
+        # bound the scan by submitted_at (indexed) instead of each member's whole history.
+        first_month_start = _local_midnight(min(r.month for r in rows).replace(day=1))
+        for type_key in REQUEST_TYPES:
+            model = _TYPE_CONFIG[type_key]['model']
+            for user_id, updated_at in model.objects.filter(
+                user_id__in=all_members, updated_at__gt=earliest, submitted_at__gte=first_month_start
+            ).values_list('user_id', 'updated_at'):
+                last_touched[user_id] = max(last_touched.get(user_id, updated_at), updated_at)
+
+    now = _now()
+    stale = set()
+    for row in rows:
+        member_ids = members[(row.leader_id, row.team_id)]
+        if (
+            not row.computed_at
+            or any(key not in row.metrics.get(type_key, {}) for type_key in REQUEST_TYPES for key in SLA_METRIC_KEYS)
+            or (row.next_deadline_at and now >= row.next_deadline_at)
+            or len(member_ids) != row.team_size
+            or any(last_touched.get(user_id, row.computed_at) > row.computed_at for user_id in member_ids)
+        ):
+            stale.add(row.pk)
+    return stale
+
+
 def is_stale(snapshot):
-    """True if any domain record for this leader/team was touched after computed_at."""
-    if not snapshot.computed_at:
-        return True
-    member_ids = team_member_ids(snapshot.leader, snapshot.team)
-    if len(member_ids) != snapshot.team_size:
-        return True
-    if not member_ids:
-        return False
-    for type_key in REQUEST_TYPES:
-        model = _TYPE_CONFIG[type_key]['model']
-        if model.objects.filter(user_id__in=member_ids, updated_at__gt=snapshot.computed_at).exists():
-            return True
-    return False
+    return snapshot.pk in stale_snapshot_ids([snapshot])

@@ -40,13 +40,22 @@ class TLApprovalMetric(BaseModel):
         default=0,
         help_text='Team-member requests this leader decided while on their own approved leave.',
     )
+    decisions_on_holidays = models.PositiveIntegerField(
+        default=0,
+        help_text='Team-member requests this leader decided on a public holiday (evidence, not scored).',
+    )
 
     engagement_score = models.FloatField(null=True, blank=True)
     score_speed = models.FloatField(null=True, blank=True)
     score_approval_rate = models.FloatField(null=True, blank=True)
-    score_activity = models.FloatField(null=True, blank=True)
+    score_responsiveness = models.FloatField(null=True, blank=True)
     score_consistency = models.FloatField(null=True, blank=True)
 
+    next_deadline_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Earliest deadline among pending requests not yet past due; passing it makes the snapshot stale.',
+    )
     computed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
