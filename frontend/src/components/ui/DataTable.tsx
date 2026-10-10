@@ -57,6 +57,7 @@ interface DataTableProps<TData extends RowData> {
   emptyMessage?: string;
   enableColumnVisibility?: boolean;
   columnVisibility?: Record<string, boolean>;
+  defaultColumnVisibility?: Record<string, boolean>;
   onColumnVisibilityChange?: (visibility: Record<string, boolean>) => void;
   storageKey?: string;
   getRowId?: (row: TData, index: number) => string;
@@ -80,6 +81,7 @@ export const DataTable = function DataTable<TData extends RowData>({
   emptyMessage = "No results found.",
   enableColumnVisibility = false,
   columnVisibility: externalColumnVisibility,
+  defaultColumnVisibility,
   onColumnVisibilityChange,
   storageKey,
   getRowId,
@@ -103,18 +105,18 @@ export const DataTable = function DataTable<TData extends RowData>({
           if (!parsed._version) {
             // Clear old format visibility state
             localStorage.removeItem(storageKey);
-            return {};
+            return defaultColumnVisibility ?? {};
           }
           // Remove metadata before returning the column visibility map.
           const visibility = { ...parsed };
           delete (visibility as { _version?: unknown })._version;
           return visibility;
         } catch {
-          return {};
+          return defaultColumnVisibility ?? {};
         }
       }
     }
-    return {};
+    return defaultColumnVisibility ?? {};
   });
 
   const columnVisibility = externalColumnVisibility ?? internalColumnVisibility;

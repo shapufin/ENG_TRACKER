@@ -436,3 +436,42 @@ describe("DataTable row actions layout", () => {
     expect(screen.getByText("Alice").closest("td")!.className).not.toContain("sticky");
   });
 });
+
+describe("DataTable default column visibility", () => {
+  const rows: Item[] = [{ id: 1, name: "Alice", email: "alice@example.com" }];
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("hides columns from defaultColumnVisibility when nothing is saved", () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={rows}
+        enableColumnVisibility
+        storageKey="test-default-visibility"
+        defaultColumnVisibility={{ email: false }}
+      />
+    );
+    expect(screen.queryByRole("columnheader", { name: "Email" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Name" })).toBeInTheDocument();
+  });
+
+  it("prefers a saved visibility choice over the default", () => {
+    localStorage.setItem(
+      "test-default-visibility",
+      JSON.stringify({ _version: 1, email: true })
+    );
+    render(
+      <DataTable
+        columns={columns}
+        data={rows}
+        enableColumnVisibility
+        storageKey="test-default-visibility"
+        defaultColumnVisibility={{ email: false }}
+      />
+    );
+    expect(screen.getByRole("columnheader", { name: "Email" })).toBeInTheDocument();
+  });
+});

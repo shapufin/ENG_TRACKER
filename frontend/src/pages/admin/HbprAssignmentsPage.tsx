@@ -29,8 +29,6 @@ const QUERY_KEY = ["admin", "hbpr-assignments"];
 // defeat DataTable's searchPaths memo.
 const SEARCH_PATHS = ["hbpr_detail.name", "albanian_tl_detail.name"];
 
-// Local calendar date (en-CA formats as YYYY-MM-DD); `toISOString()` is UTC and
-// is a day off for an admin working just after local midnight.
 /** Count badge in the same style as the FilterChipRow chip counts. */
 const TabCount: React.FC<{ children: number }> = ({ children }) => (
   <span className="bg-foreground/[0.06] ml-1.5 rounded-full px-1.5 text-xs tabular-nums">
@@ -38,6 +36,8 @@ const TabCount: React.FC<{ children: number }> = ({ children }) => (
   </span>
 );
 
+// Local calendar date (en-CA formats as YYYY-MM-DD); `toISOString()` is UTC and
+// is a day off for an admin working just after local midnight.
 const todayIso = () => new Date().toLocaleDateString("en-CA");
 
 const emptyForm = (): HbprAssignmentForm => ({
