@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { UserCell } from "@/components/admin/UserCell";
 import { RowActions } from "@/components/ui/RowActions";
 import { Pencil, KeyRound, Trash2, Shield } from "lucide-react";
 import type { UserProfile } from "@/types";
@@ -122,9 +123,9 @@ export const useUserColumns = (
         id: "username",
         accessorKey: "user.username",
         header: "Username",
-        size: 140,
+        size: 220,
         cell: ({ row }) => (
-          <span className="text-foreground font-medium">{row.original.user?.username}</span>
+          <UserCell name={row.original.user?.username} subtitle={row.original.user?.email} />
         ),
       },
       {

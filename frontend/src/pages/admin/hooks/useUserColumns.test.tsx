@@ -156,4 +156,16 @@ describe("useUserColumns", () => {
 
     expect(screen.getByText("—")).toBeInTheDocument();
   });
+
+  it("renders the username as an initials avatar with the email underneath", () => {
+    const { result } = renderHook(() => useUserColumns(vi.fn(), vi.fn(), vi.fn()));
+    const column = result.current.find((item) => item.id === "username");
+    const cell = column?.cell as (context: { row: { original: UserProfile } }) => React.ReactNode;
+
+    render(<>{cell({ row: { original: profile() } })}</>);
+
+    expect(screen.getByText("alice")).toBeInTheDocument();
+    expect(screen.getByText("A")).toBeInTheDocument();
+    expect(screen.getAllByText("alice@example.com").length).toBeGreaterThan(0);
+  });
 });

@@ -45,3 +45,19 @@ describe("TeamsTableRow selection checkbox", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("TeamsTableRow member count", () => {
+  it("renders the member count with tabular figures", () => {
+    render(
+      <MemoryRouter>
+        <TeamsTableRow
+          team={{ ...team, members_count: 12 }}
+          isSelected={false}
+          onSelect={vi.fn()}
+          onEdit={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("12").className).toContain("tabular-nums");
+  });
+});

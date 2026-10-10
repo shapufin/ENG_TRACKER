@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SkillsCatalogPage } from "./SkillsCatalogPage";
@@ -152,6 +152,32 @@ describe("SkillsCatalogPage", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /Infrastructure/ })[0]);
     expect(screen.getByRole("heading", { name: "Infrastructure" })).toBeInTheDocument();
     expect(screen.getAllByText("Linux").length).toBeGreaterThan(0);
+  });
+
+  it("filters categories through pressed-state chips with counts", () => {
+    renderPage();
+    const group = within(screen.getByRole("group", { name: "Category" }));
+    const all = group.getByRole("button", { name: /^All skills/ });
+    expect(all).toHaveAttribute("aria-pressed", "true");
+    const infra = group.getByRole("button", { name: /^Infrastructure/ });
+    expect(infra).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(infra);
+    expect(screen.getByRole("button", { name: /^Infrastructure/ })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.getByRole("button", { name: /^All skills/ })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+  });
+
+  it("still lets the selected category be edited", () => {
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /^Infrastructure/ }));
+    expect(
+      screen.getByRole("button", { name: /Edit category Infrastructure/ })
+    ).toBeInTheDocument();
   });
 
   it("uses an accessible Switch status control and toggles on click", () => {

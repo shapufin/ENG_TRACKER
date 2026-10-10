@@ -61,7 +61,7 @@ export const TeamsTableRow: React.FC<TeamsTableRowProps> = ({
       )}
     </div>
 
-    <div className="font-medium">{team.members_count || 0}</div>
+    <div className="font-medium tabular-nums">{team.members_count || 0}</div>
 
     <div className="text-muted-foreground">{team.team_leader?.username || "—"}</div>
 
