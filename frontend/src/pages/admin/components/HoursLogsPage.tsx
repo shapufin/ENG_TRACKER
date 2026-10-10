@@ -129,6 +129,7 @@ export const HoursLogsPage = <T extends HoursLog>({
           onDateFromChange={setDateFrom}
           dateTo={dateTo}
           onDateToChange={setDateTo}
+          statusCounts={stats}
         />
       </GlassCard>
 

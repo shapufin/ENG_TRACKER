@@ -3,14 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { LeaveBalanceBadge } from "@/components/ui/LeaveBalanceBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Sun, Stethoscope, Trash2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check, Sun, Stethoscope, Trash2, X } from "lucide-react";
+import { RowActions, type RowAction } from "@/components/ui/RowActions";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { differenceInCalendarDays } from "date-fns";
-import { ApprovalActionsColumn } from "@/components/admin/ApprovalActionsColumn";
 import { DescriptionColumn } from "@/components/admin/DescriptionColumn";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UserCell } from "@/components/admin/UserCell";
@@ -25,72 +24,58 @@ interface LeaveRequestsTableProps {
   canDelete?: boolean;
 }
 
-const DeleteLeaveRequestButton = ({
+const LeaveRequestRowActions = ({
   id,
-  onDelete,
-}: {
-  id: number;
-  onDelete: (id: number) => void;
-}) => {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-destructive"
-        title="Delete leave request"
-        aria-label="Delete leave request"
-        onClick={() => setOpen(true)}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-      <ConfirmDialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Delete Leave Request"
-        description="Delete this leave request? Its balance will be restored."
-        confirmLabel="Delete"
-        variant="destructive"
-        onConfirm={() => {
-          setOpen(false);
-          onDelete(id);
-        }}
-      />
-    </>
-  );
-};
-
-const RejectLeaveRequestAction = ({
   status,
   onApprove,
   onReject,
+  onDelete,
 }: {
+  id: number;
   status: string;
-  onApprove: () => void;
-  onReject: (reason: string) => void;
+  onApprove: (id: number) => void;
+  onReject: (id: number, reason: string) => void;
+  onDelete?: (id: number) => void;
 }) => {
-  const [open, setOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const actions: RowAction[] = [];
+  if (status === "pending") {
+    actions.push(
+      { label: `Approve ${id}`, icon: Check, tone: "success", onClick: () => onApprove(id) },
+      {
+        label: `Reject ${id}`,
+        icon: X,
+        tone: "danger",
+        onClick: () => {
+          setReason("");
+          setRejectOpen(true);
+        },
+      }
+    );
+  }
+  if (onDelete) {
+    actions.push({
+      label: `Delete ${id}`,
+      icon: Trash2,
+      tone: "danger",
+      onClick: () => setDeleteOpen(true),
+    });
+  }
+  if (actions.length === 0) return <span className="text-muted-foreground">-</span>;
   return (
     <>
-      <ApprovalActionsColumn
-        status={status}
-        onApprove={onApprove}
-        onReject={() => {
-          setReason("");
-          setOpen(true);
-        }}
-      />
+      <RowActions actions={actions} />
       <ConfirmDialog
-        open={open}
-        onOpenChange={setOpen}
+        open={rejectOpen}
+        onOpenChange={setRejectOpen}
         title="Reject Request"
         description="Provide a reason for rejection:"
         icon={<X className="h-4 w-4" />}
         onConfirm={() => {
-          setOpen(false);
-          onReject(reason);
+          setRejectOpen(false);
+          onReject(id, reason);
         }}
         confirmLabel="Reject"
         variant="destructive"
@@ -103,6 +88,20 @@ const RejectLeaveRequestAction = ({
           />
         </div>
       </ConfirmDialog>
+      {onDelete && (
+        <ConfirmDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          title="Delete Leave Request"
+          description="Delete this leave request? Its balance will be restored."
+          confirmLabel="Delete"
+          variant="destructive"
+          onConfirm={() => {
+            setDeleteOpen(false);
+            onDelete(id);
+          }}
+        />
+      )}
     </>
   );
 };
@@ -188,16 +187,13 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <RejectLeaveRequestAction
-              status={row.original.status}
-              onApprove={() => onApprove(row.original.id)}
-              onReject={(reason) => onReject(row.original.id, reason)}
-            />
-            {canDelete && onDelete && (
-              <DeleteLeaveRequestButton id={row.original.id} onDelete={onDelete} />
-            )}
-          </div>
+          <LeaveRequestRowActions
+            id={row.original.id}
+            status={row.original.status}
+            onApprove={onApprove}
+            onReject={onReject}
+            onDelete={canDelete ? onDelete : undefined}
+          />
         ),
       },
     ],

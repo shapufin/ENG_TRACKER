@@ -5,7 +5,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -160,6 +160,17 @@ export const CalendarManagementPage: React.FC = () => {
             </div>
           )}
 
+          {(calendarGroups?.length ?? 0) === 0 && (
+            <GlassCard>
+              <EmptyState
+                size="sm"
+                icon={Share2}
+                title="No shared calendar groups yet"
+                description="Select teams below and apply a group name to start sharing calendars."
+              />
+            </GlassCard>
+          )}
+
           {(calendarGroups?.length ?? 0) > 0 && (
             <div className="space-y-3">
               <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
@@ -224,17 +235,13 @@ export const CalendarManagementPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="workspaces" className="space-y-4">
-          <GlassCard className="p-5">
-            <h2 className="text-lg font-semibold">Calendar Workspaces</h2>
-            <p className="text-muted-foreground mt-1.5 text-sm">
-              Advanced calendar workspaces with fine-grained permissions. For simple team sharing,
-              use the Team Calendar Groups tab.
-            </p>
-            <div className="mt-3">
-              <Badge variant="outline" className="border-primary/30 text-primary">
-                Coming Soon
-              </Badge>
-            </div>
+          <GlassCard>
+            <EmptyState
+              size="sm"
+              icon={CalendarRange}
+              title="Calendar Workspaces are coming soon"
+              description="Advanced calendar workspaces with fine-grained permissions. For simple team sharing, use the Team Calendar Groups tab."
+            />
           </GlassCard>
         </TabsContent>
 

@@ -3,10 +3,9 @@ import { DataTable } from "@/components/ui/DataTable";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { Trash2 } from "lucide-react";
-import { ApprovalActionsColumn } from "@/components/admin/ApprovalActionsColumn";
+import { Check, Trash2, X } from "lucide-react";
+import { RowActions, type RowAction } from "@/components/ui/RowActions";
 import { DescriptionColumn } from "@/components/admin/DescriptionColumn";
 import { UserCell } from "@/components/admin/UserCell";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
@@ -33,32 +32,53 @@ interface HoursLogsTableProps<T extends HoursLog> {
   storageKey: string;
 }
 
-const DeleteLogButton = ({ id, onDelete }: { id: number; onDelete: (id: number) => void }) => {
+const HoursLogRowActions = ({
+  id,
+  status,
+  onApprove,
+  onReject,
+  onDelete,
+}: {
+  id: number;
+  status: string;
+  onApprove: (id: number) => void;
+  onReject: (id: number) => void;
+  onDelete?: (id: number) => void;
+}) => {
   const [open, setOpen] = useState(false);
+  const actions: RowAction[] = [];
+  if (status === "pending") {
+    actions.push(
+      { label: `Approve ${id}`, icon: Check, tone: "success", onClick: () => onApprove(id) },
+      { label: `Reject ${id}`, icon: X, tone: "danger", onClick: () => onReject(id) }
+    );
+  }
+  if (onDelete) {
+    actions.push({
+      label: `Delete ${id}`,
+      icon: Trash2,
+      tone: "danger",
+      onClick: () => setOpen(true),
+    });
+  }
+  if (actions.length === 0) return <span className="text-muted-foreground">-</span>;
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-destructive"
-        title="Delete record"
-        aria-label="Delete record"
-        onClick={() => setOpen(true)}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-      <ConfirmDialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Delete Record"
-        description="Delete this record? Payroll and approval safeguards still apply."
-        confirmLabel="Delete"
-        variant="destructive"
-        onConfirm={() => {
-          setOpen(false);
-          onDelete(id);
-        }}
-      />
+      <RowActions actions={actions} />
+      {onDelete && (
+        <ConfirmDialog
+          open={open}
+          onOpenChange={setOpen}
+          title="Delete Record"
+          description="Delete this record? Payroll and approval safeguards still apply."
+          confirmLabel="Delete"
+          variant="destructive"
+          onConfirm={() => {
+            setOpen(false);
+            onDelete(id);
+          }}
+        />
+      )}
     </>
   );
 };
@@ -115,14 +135,13 @@ export const HoursLogsTable = <T extends HoursLog>({
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <ApprovalActionsColumn
-              status={row.original.status}
-              onApprove={() => onApprove(row.original.id)}
-              onReject={() => onReject(row.original.id)}
-            />
-            {canDelete && onDelete && <DeleteLogButton id={row.original.id} onDelete={onDelete} />}
-          </div>
+          <HoursLogRowActions
+            id={row.original.id}
+            status={row.original.status}
+            onApprove={onApprove}
+            onReject={onReject}
+            onDelete={canDelete ? onDelete : undefined}
+          />
         ),
       },
     ],

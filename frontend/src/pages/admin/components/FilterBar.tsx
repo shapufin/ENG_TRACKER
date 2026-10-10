@@ -1,5 +1,5 @@
 import React from "react";
-import { SearchInput, StatusFilterButton, DateRangePickers } from "./filterBarParts";
+import { SearchInput, StatusChips, DateRangePickers, type StatusCounts } from "./filterBarParts";
 
 interface FilterBarProps {
   searchQuery: string;
@@ -10,6 +10,7 @@ interface FilterBarProps {
   onDateFromChange: (val: string) => void;
   dateTo: string;
   onDateToChange: (val: string) => void;
+  statusCounts?: StatusCounts;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -21,16 +22,23 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onDateFromChange,
   dateTo,
   onDateToChange,
+  statusCounts,
 }) => {
   return (
-    <div className="grid gap-4 xl:grid-cols-[1fr_220px_260px]">
-      <SearchInput value={searchQuery} onChange={onSearchChange} />
-      <StatusFilterButton filterStatus={filterStatus} onStatusChange={onStatusChange} />
-      <DateRangePickers
-        dateFrom={dateFrom}
-        onDateFromChange={onDateFromChange}
-        dateTo={dateTo}
-        onDateToChange={onDateToChange}
+    <div className="space-y-4">
+      <div className="grid gap-4 xl:grid-cols-[1fr_260px]">
+        <SearchInput value={searchQuery} onChange={onSearchChange} />
+        <DateRangePickers
+          dateFrom={dateFrom}
+          onDateFromChange={onDateFromChange}
+          dateTo={dateTo}
+          onDateToChange={onDateToChange}
+        />
+      </div>
+      <StatusChips
+        filterStatus={filterStatus}
+        onStatusChange={onStatusChange}
+        counts={statusCounts}
       />
     </div>
   );

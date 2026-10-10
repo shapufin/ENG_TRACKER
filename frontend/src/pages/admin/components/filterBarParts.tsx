@@ -1,7 +1,6 @@
 import React from "react";
 import { SearchField } from "@/components/ui/SearchField";
-import { Button } from "@/components/ui/button";
-import { Filter } from "lucide-react";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 
 interface SearchInputProps {
@@ -11,7 +10,7 @@ interface SearchInputProps {
 }
 
 const statusLabels = {
-  all: "All Status",
+  all: "All",
   pending: "Pending",
   approved: "Approved",
   rejected: "Rejected",
@@ -32,28 +31,36 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   />
 );
 
-interface StatusFilterButtonProps {
-  filterStatus: StatusFilter;
-  onStatusChange: (val: StatusFilter) => void;
+export interface StatusCounts {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
 }
 
-export const StatusFilterButton: React.FC<StatusFilterButtonProps> = ({
+interface StatusChipsProps {
+  filterStatus: StatusFilter;
+  onStatusChange: (val: StatusFilter) => void;
+  /** Counts from the already-loaded list; chips show no count when omitted. */
+  counts?: StatusCounts;
+}
+
+export const StatusChips: React.FC<StatusChipsProps> = ({
   filterStatus,
   onStatusChange,
+  counts,
 }) => (
-  <Button
-    variant="outline"
-    className="h-12 justify-start"
-    onClick={() => {
-      const statuses: StatusFilter[] = ["all", "pending", "approved", "rejected"];
-      const currentIndex = statuses.indexOf(filterStatus);
-      const nextIndex = (currentIndex + 1) % statuses.length;
-      onStatusChange(statuses[nextIndex]);
-    }}
-  >
-    <Filter className="mr-2 h-4 w-4" />
-    {statusLabels[filterStatus]}
-  </Button>
+  <FilterChipRow<StatusFilter>
+    label="Status"
+    selected={[filterStatus]}
+    onToggle={onStatusChange}
+    options={[
+      { value: "all", label: statusLabels.all, count: counts?.total },
+      { value: "pending", label: statusLabels.pending, count: counts?.pending },
+      { value: "approved", label: statusLabels.approved, count: counts?.approved },
+      { value: "rejected", label: statusLabels.rejected, count: counts?.rejected },
+    ]}
+  />
 );
 
 interface DateRangePickersProps {

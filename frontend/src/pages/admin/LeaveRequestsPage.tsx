@@ -141,6 +141,7 @@ const LeaveRequestsContent: React.FC = () => {
           onDateFromChange={setDateFrom}
           dateTo={dateTo}
           onDateToChange={setDateTo}
+          statusCounts={stats}
         />
       </GlassCard>
 

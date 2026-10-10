@@ -52,6 +52,14 @@ describe("HolidayTable", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
+  it("uses the compact left-aligned empty state, not the centred block", () => {
+    const { container } = render(
+      <HolidayTable holidays={[]} isLoading={false} onEdit={noop} onDelete={noop} />
+    );
+
+    expect(container.querySelector(".text-center")).toBeNull();
+  });
+
   it("renders no table while loading", () => {
     render(<HolidayTable holidays={[]} isLoading onEdit={noop} onDelete={noop} />);
 

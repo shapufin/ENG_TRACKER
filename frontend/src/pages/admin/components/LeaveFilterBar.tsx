@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Filter, Sun } from "lucide-react";
-import { SearchInput, StatusFilterButton, DateRangePickers } from "./filterBarParts";
+import { SearchInput, StatusChips, DateRangePickers, type StatusCounts } from "./filterBarParts";
 import {
   Select,
   SelectContent,
@@ -25,6 +25,7 @@ interface LeaveFilterBarProps {
   onDateFromChange: (val: string) => void;
   dateTo: string;
   onDateToChange: (val: string) => void;
+  statusCounts?: StatusCounts;
 }
 
 const typeLabels = {
@@ -46,11 +47,12 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
   onDateFromChange,
   dateTo,
   onDateToChange,
+  statusCounts,
 }) => {
   return (
-    <div className="grid gap-4 xl:grid-cols-[1fr_160px_160px_180px_260px]">
+    <div className="space-y-4">
+    <div className="grid gap-4 xl:grid-cols-[1fr_160px_180px_260px]">
       <SearchInput value={searchQuery} onChange={onSearchChange} />
-      <StatusFilterButton filterStatus={filterStatus} onStatusChange={onStatusChange} />
       <Button
         variant="outline"
         className="h-12 justify-start"
@@ -87,6 +89,8 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
         dateTo={dateTo}
         onDateToChange={onDateToChange}
       />
+    </div>
+    <StatusChips filterStatus={filterStatus} onStatusChange={onStatusChange} counts={statusCounts} />
     </div>
   );
 };

@@ -82,6 +82,7 @@ export const HolidayTable: React.FC<HolidayTableProps> = ({
   if (holidays.length === 0) {
     return (
       <EmptyState
+        size="sm"
         icon={CalendarDays}
         title="No holidays defined yet."
         description="Add the first company holiday to get started."
