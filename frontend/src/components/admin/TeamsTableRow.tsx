@@ -31,7 +31,7 @@ export const TeamsTableRow: React.FC<TeamsTableRowProps> = ({
   columnVisibility = {},
 }) => (
   <div
-    className="hover:bg-table-hover grid items-center gap-4 px-6 py-5 transition-all"
+    className="hover:bg-table-hover grid items-center gap-4 px-6 py-5 transition-colors motion-reduce:transition-none"
     style={{ gridTemplateColumns: teamsGridTemplate(columnVisibility) }}
   >
     <div>

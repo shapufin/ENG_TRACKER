@@ -106,7 +106,12 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
         id: "actions",
         header: "Actions",
         cell: ({ row }: { row: { original: TeamNode } }) => (
-          <DataTableActions item={row.original} onEdit={onEdit} onDelete={onDelete} />
+          <DataTableActions
+            item={row.original}
+            itemLabel={row.original.name}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
         ),
       },
     ],
