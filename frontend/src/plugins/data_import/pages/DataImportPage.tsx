@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingStateWrapper } from "@/components/ui/LoadingStateWrapper";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { useQuery } from "@tanstack/react-query";
 import { usePermissions } from "@/context/PermissionContext";
 import { Upload, ArrowLeft, ArrowRight, Play, RotateCcw, History } from "lucide-react";
@@ -33,12 +34,33 @@ import { stepCanAdvance } from "../components/importStepGating";
 const STEPS: ImportStep[] = ["target", "upload", "map", "preview", "result"];
 
 const stepLabels: Record<string, string> = {
-  target: "1. Select target",
-  upload: "2. Upload file",
-  map: "3. Map columns",
-  preview: "4. Preview",
-  result: "5. Results",
+  target: "Select target",
+  upload: "Upload file",
+  map: "Map columns",
+  preview: "Preview",
+  result: "Results",
 };
+
+const relativeTime = (iso: string): string => {
+  const diffSec = Math.round((new Date(iso).getTime() - Date.now()) / 1000);
+  const units: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["day", 86400],
+    ["hour", 3600],
+    ["minute", 60],
+  ];
+  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  for (const [unit, secs] of units) {
+    if (Math.abs(diffSec) >= secs) return rtf.format(Math.round(diffSec / secs), unit);
+  }
+  return rtf.format(diffSec, "second");
+};
+
+const KpiTile: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+  <GlassCard className="p-4">
+    <p className="text-muted-foreground text-xs">{label}</p>
+    <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
+  </GlassCard>
+);
 
 /** Label for the primary action button on each step. */
 const nextButtonLabel = (step: string, isWorking: boolean): React.ReactNode => {
@@ -89,6 +111,20 @@ export const DataImportPage: React.FC = () => {
     queryFn: () => dataImportService.listBatches(state.targetKey ?? undefined),
     enabled: activeTab === "history",
   });
+
+  // KPI strip: same history query (and key) as the History tab with no target filter.
+  const { data: allBatches } = useQuery({
+    queryKey: ["data_import", "batches", "all"],
+    queryFn: () => dataImportService.listBatches(),
+  });
+  const rowsImported = (allBatches ?? []).reduce(
+    (sum, b) => sum + b.created_count + b.updated_count,
+    0
+  );
+  const lastImportAt = (allBatches ?? []).reduce<string | null>(
+    (latest, b) => (!latest || b.created_at > latest ? b.created_at : latest),
+    null
+  );
 
   // Allow deep-linking target from query param
   useEffect(() => {
@@ -183,22 +219,62 @@ export const DataImportPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="import" className="space-y-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <KpiTile label="Targets" value={targets.length} />
+            {allBatches && (
+              <>
+                <KpiTile label="Imports run" value={allBatches.length} />
+                <KpiTile label="Rows imported" value={rowsImported.toLocaleString()} />
+                <KpiTile
+                  label="Last import"
+                  value={lastImportAt ? relativeTime(lastImportAt) : "None yet"}
+                />
+              </>
+            )}
+          </div>
+
           <GlassCard className="p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {STEPS.map((s) => (
-                <div
-                  key={s}
-                  className={`rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap ${
-                    state.step === s
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {stepLabels[s]}
-                </div>
-              ))}
-            </div>
+            <ol className="flex flex-wrap items-center gap-x-2 gap-y-2" aria-label="Import steps">
+              {STEPS.map((s, i) => {
+                const current = state.step === s;
+                const done = i < STEPS.indexOf(state.step as ImportStep);
+                return (
+                  <li
+                    key={s}
+                    aria-current={current ? "step" : undefined}
+                    className="flex items-center gap-2"
+                  >
+                    <span
+                      className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                        current
+                          ? "bg-primary text-primary-foreground"
+                          : done
+                            ? "bg-tone-success-surface text-tone-success-text"
+                            : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    <span
+                      className={`text-xs whitespace-nowrap ${
+                        current ? "text-foreground font-medium" : "text-muted-foreground"
+                      }`}
+                    >
+                      {stepLabels[s]}
+                    </span>
+                    {i < STEPS.length - 1 && (
+                      <span aria-hidden="true" className="bg-border h-px w-6 sm:w-10" />
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
           </GlassCard>
+
+          <SectionHeading
+            eyebrow={`Step ${STEPS.indexOf(state.step as ImportStep) + 1} of ${STEPS.length}`}
+            title={stepLabels[state.step] ?? ""}
+          />
 
           {state.step === "target" ? (
             targetsError ? (
