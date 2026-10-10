@@ -77,6 +77,13 @@ describe("BackupRestorePage", () => {
     expect(await screen.findByText("backup_20260101_000000.zip")).toBeInTheDocument();
   });
 
+  it("shows a compact empty state when there are no backups", async () => {
+    usePermissions.mockReturnValue({ isSuperuser: true });
+    listBackups.mockResolvedValue([]);
+    renderPage();
+    expect(await screen.findByText("No backups yet")).toBeInTheDocument();
+  });
+
   it("creates a backup via the form", async () => {
     usePermissions.mockReturnValue({ isSuperuser: true });
     createBackup.mockResolvedValue({

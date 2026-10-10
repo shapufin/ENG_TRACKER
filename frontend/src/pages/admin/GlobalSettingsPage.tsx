@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { leaveService } from "@/services/leaveService";
 import { dashboardService } from "@/services/dashboardService";
@@ -6,6 +6,13 @@ import { useSiteBranding, SITE_BRANDING_QUERY_KEY } from "@/hooks/useSiteBrandin
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
@@ -14,6 +21,10 @@ import { handleApiError } from "@/lib/error-handler";
 import { Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 import type { SiteBranding } from "@/types";
+
+const MONTH_NAMES = Array.from({ length: 12 }, (_, i) =>
+  new Date(2000, i, 1).toLocaleString("en", { month: "long" })
+);
 
 type GlobalSettings = Awaited<ReturnType<typeof leaveService.getSettings>>;
 
@@ -59,15 +70,21 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
       </div>
       <div className="space-y-2">
         <Label htmlFor="settings-carryover-month">Carry-over Expiry Month</Label>
-        <Input
-          id="settings-carryover-month"
-          type="number"
-          min={1}
-          max={12}
+        <Select
           value={form.carry_over_expiry_month}
-          onChange={(e) => setForm((f) => ({ ...f, carry_over_expiry_month: e.target.value }))}
-          required
-        />
+          onValueChange={(v) => setForm((f) => ({ ...f, carry_over_expiry_month: v }))}
+        >
+          <SelectTrigger id="settings-carryover-month">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {MONTH_NAMES.map((name, i) => (
+              <SelectItem key={name} value={String(i + 1)}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="settings-carryover-day">Carry-over Expiry Day</Label>
@@ -93,6 +110,7 @@ const SiteBrandingForm: React.FC<{ branding: SiteBranding }> = ({ branding }) =>
   const queryClient = useQueryClient();
   const [siteName, setSiteName] = useState(branding.site_name);
   const [logo, setLogo] = useState<File | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const update = useMutation({
     mutationFn: () => dashboardService.updateBranding(branding.id, siteName, logo),
@@ -119,20 +137,42 @@ const SiteBrandingForm: React.FC<{ branding: SiteBranding }> = ({ branding }) =>
           onChange={(e) => setSiteName(e.target.value)}
           required
         />
-        <p className="text-xs text-muted-foreground">Shown in the sidebar and header.</p>
+        <p className="text-muted-foreground text-xs">Shown in the sidebar and header.</p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="branding-logo">Logo</Label>
         {branding.logo_url && !logo && (
-          <img src={branding.logo_url} alt="Current logo" className="h-10 w-10 rounded object-contain" />
+          <img
+            src={branding.logo_url}
+            alt="Current logo"
+            className="h-10 w-10 rounded object-contain"
+          />
         )}
-        <Input
-          id="branding-logo"
-          type="file"
-          accept="image/png,image/jpeg,image/svg+xml,image/webp"
-          onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
-        />
-        <p className="text-xs text-muted-foreground">PNG, JPG, SVG or WebP. Leave empty to keep the current logo.</p>
+        <div className="flex items-center gap-3">
+          <input
+            ref={logoInputRef}
+            id="branding-logo"
+            type="file"
+            className="sr-only"
+            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+            onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="control"
+            onClick={() => logoInputRef.current?.click()}
+          >
+            <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
+            Choose file
+          </Button>
+          <span className="text-muted-foreground truncate text-sm">
+            {logo?.name ?? "No file chosen"}
+          </span>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          PNG, JPG, SVG or WebP. Leave empty to keep the current logo.
+        </p>
       </div>
       <Button type="submit" disabled={update.isPending}>
         <Upload className="mr-2 h-4 w-4" />

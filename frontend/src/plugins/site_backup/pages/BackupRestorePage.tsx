@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { LoadingStateWrapper } from "@/components/ui/LoadingStateWrapper";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -116,7 +117,12 @@ const BackupsTab: React.FC = () => {
           {error ? (
             <ErrorCard title="Failed to load backups" message={(error as Error).message} />
           ) : !backups || backups.length === 0 ? (
-            <p className="text-muted-foreground py-6 text-center text-sm">No backups yet.</p>
+            <EmptyState
+              size="sm"
+              icon={DatabaseBackup}
+              title="No backups yet"
+              description="Create a backup above and it will be listed here."
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] text-sm">

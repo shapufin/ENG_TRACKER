@@ -15,7 +15,7 @@ interface AuditLogStatsCardsProps {
 }
 
 const StatSkeleton: React.FC = () => (
-  <div className="h-8 w-16 animate-pulse rounded bg-muted" aria-hidden="true" />
+  <div className="bg-muted h-8 w-16 animate-pulse rounded" aria-hidden="true" />
 );
 
 export const AuditLogStatsCards: React.FC<AuditLogStatsCardsProps> = ({ stats, isLoading }) => (
@@ -25,6 +25,7 @@ export const AuditLogStatsCards: React.FC<AuditLogStatsCardsProps> = ({ stats, i
       value={isLoading ? <StatSkeleton /> : (stats?.total_logs?.toLocaleString() ?? 0)}
       icon={Clock}
       glow="primary"
+      iconTone="info"
       delay={0}
     />
     <StatCard
@@ -32,6 +33,7 @@ export const AuditLogStatsCards: React.FC<AuditLogStatsCardsProps> = ({ stats, i
       value={isLoading ? <StatSkeleton /> : (stats?.logs_today ?? 0)}
       icon={Clock}
       glow="primary"
+      iconTone="info"
       delay={0.05}
     />
     <StatCard
@@ -39,6 +41,7 @@ export const AuditLogStatsCards: React.FC<AuditLogStatsCardsProps> = ({ stats, i
       value={isLoading ? <StatSkeleton /> : (stats?.unique_users ?? 0)}
       icon={User}
       glow="primary"
+      iconTone="accent"
       delay={0.1}
     />
     <StatCard
@@ -46,7 +49,7 @@ export const AuditLogStatsCards: React.FC<AuditLogStatsCardsProps> = ({ stats, i
       value={isLoading ? <StatSkeleton /> : (stats?.failed_actions ?? 0)}
       icon={AlertCircle}
       glow="warning"
-      iconColorClass="text-warning"
+      iconTone="warning"
       delay={0.15}
     />
   </div>
