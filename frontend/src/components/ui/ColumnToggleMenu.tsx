@@ -5,7 +5,7 @@ import { Checkbox } from "./checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./dialog";
 import { Label } from "./label";
 
-export interface ColumnToggleItem {
+interface ColumnToggleItem {
   id: string;
   label: string;
 }
