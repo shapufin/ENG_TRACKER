@@ -1,6 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import type { Team } from "@/types";
+import {
+  loadTeamsColumnVisibility,
+  saveTeamsColumnVisibility,
+} from "./teamsColumns";
 import { TeamsTableToolbar } from "./TeamsTableToolbar";
 import { TeamsTableHeader } from "./TeamsTableHeader";
 import { TeamsTableRow } from "./TeamsTableRow";
@@ -23,6 +27,15 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({
   searchQuery,
   onSearchChange,
 }) => {
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(
+    loadTeamsColumnVisibility
+  );
+
+  const handleColumnVisibilityChange = (visibility: Record<string, boolean>) => {
+    setColumnVisibility(visibility);
+    saveTeamsColumnVisibility(visibility);
+  };
+
   const handleSelectAll = (checked: boolean) => {
     onSelectionChange(checked ? new Set(teams.map((t) => t.id)) : new Set());
   };
@@ -45,8 +58,17 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({
 
   return (
     <GlassCard>
-      <TeamsTableToolbar searchQuery={searchQuery} onSearchChange={onSearchChange} />
-      <TeamsTableHeader allSelected={allSelected} onSelectAll={handleSelectAll} />
+      <TeamsTableToolbar
+        searchQuery={searchQuery}
+        onSearchChange={onSearchChange}
+        columnVisibility={columnVisibility}
+        onColumnVisibilityChange={handleColumnVisibilityChange}
+      />
+      <TeamsTableHeader
+        allSelected={allSelected}
+        onSelectAll={handleSelectAll}
+        columnVisibility={columnVisibility}
+      />
 
       <div className="divide-border/50 divide-y">
         {filteredTeams.map((team) => (
@@ -56,6 +78,7 @@ export const TeamsTable: React.FC<TeamsTableProps> = ({
             isSelected={selectedTeams.has(team.id)}
             onSelect={handleSelectTeam}
             onEdit={onEditTeam}
+            columnVisibility={columnVisibility}
           />
         ))}
       </div>

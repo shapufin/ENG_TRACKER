@@ -1,16 +1,21 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
+import { ColumnToggleMenu } from "@/components/ui/ColumnToggleMenu";
 import { FilterToolbar } from "@/components/ui/FilterToolbar";
 import { SearchField } from "@/components/ui/SearchField";
+import { TEAMS_COLUMNS } from "./teamsColumns";
 
 interface TeamsTableToolbarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  columnVisibility: Record<string, boolean>;
+  onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
 }
 
 export const TeamsTableToolbar: React.FC<TeamsTableToolbarProps> = ({
   searchQuery,
   onSearchChange,
+  columnVisibility,
+  onColumnVisibilityChange,
 }) => (
   <FilterToolbar className="border-border/50 border-b p-5">
     <FilterToolbar.Search>
@@ -22,9 +27,11 @@ export const TeamsTableToolbar: React.FC<TeamsTableToolbarProps> = ({
       />
     </FilterToolbar.Search>
     <FilterToolbar.Group>
-      <Button variant="outline" size="control">
-        Columns (6/6)
-      </Button>
+      <ColumnToggleMenu
+        columns={TEAMS_COLUMNS}
+        visibility={columnVisibility}
+        onVisibilityChange={onColumnVisibilityChange}
+      />
     </FilterToolbar.Group>
   </FilterToolbar>
 );
