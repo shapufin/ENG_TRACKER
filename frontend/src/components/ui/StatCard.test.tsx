@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { vi } from "vitest";
+import { toneSurfaceClass } from "./tone";
 import { Clock } from "lucide-react";
 import { StatCard } from "./StatCard";
 
@@ -109,5 +112,54 @@ describe("StatCard", () => {
     expect(footerEl?.className).toContain("border-t");
     expect(footerEl?.textContent).toContain("70% queue mix");
     expect(footerEl?.textContent).toContain("On-call shifts");
+  });
+  it("renders an icon well with the requested tone", () => {
+    const { container } = render(
+      <StatCard label="Users" value={11} icon={Clock} iconTone="info" />
+    );
+    const well = container.querySelector('[aria-hidden="true"].rounded-xl');
+    expect(well).not.toBeNull();
+    toneSurfaceClass.info.split(" ").forEach((c) => expect(well).toHaveClass(c));
+  });
+
+  it("renders a delta with direction icon and tone text", () => {
+    render(
+      <StatCard
+        label="Users"
+        value={11}
+        icon={Clock}
+        delta={{ text: "+4 new hires · 30d", direction: "up", tone: "success" }}
+      />
+    );
+    const el = screen.getByText("+4 new hires · 30d");
+    expect(el.closest("div")).toHaveClass("text-tone-success-text");
+  });
+
+  it("flat delta uses the neutral tone", () => {
+    render(
+      <StatCard
+        label="Users"
+        value={11}
+        icon={Clock}
+        delta={{ text: "No change", direction: "flat" }}
+      />
+    );
+    expect(screen.getByText("No change").closest("div")).toHaveClass("text-muted-foreground");
+  });
+
+  it("to makes the card a link with an accessible name", () => {
+    render(
+      <MemoryRouter>
+        <StatCard label="Users" value={11} icon={Clock} to="/admin/users" />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole("link", { name: "Users: 11" })).toHaveAttribute("href", "/admin/users");
+  });
+
+  it("onClick makes the card a button", () => {
+    const onClick = vi.fn();
+    render(<StatCard label="Users" value={11} icon={Clock} onClick={onClick} />);
+    fireEvent.click(screen.getByRole("button", { name: "Users: 11" }));
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 });

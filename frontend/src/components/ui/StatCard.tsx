@@ -1,10 +1,29 @@
 import React from "react";
 import { GlassCard } from "./GlassCard";
-import type { LucideIcon } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Minus, type LucideIcon } from "lucide-react";
+import { Link } from "react-router-dom";
+import { IconWell } from "./IconWell";
+import type { Tone } from "./tone";
 import { cn } from "@/lib/utils";
 
 /** Uppercase micro-label shared by every metric card (scorecard language). */
 export const STAT_CARD_MICRO_LABEL = "font-semibold uppercase tracking-wider";
+
+export interface StatDelta {
+  /** Display text, already formatted from real data, e.g. "+4 new hires · 30d". */
+  text: string;
+  direction: "up" | "down" | "flat";
+  /** Semantic colour; default "neutral". Only pass success/danger when the payload says which way is good. */
+  tone?: "success" | "danger" | "warning" | "neutral";
+}
+
+const DELTA_ICON = { up: ArrowUpRight, down: ArrowDownRight, flat: Minus } as const;
+const DELTA_TONE_CLASS = {
+  success: "text-tone-success-text",
+  danger: "text-tone-danger-text",
+  warning: "text-tone-warning-text",
+  neutral: "text-muted-foreground",
+} as const;
 
 export interface StatCardProps {
   label: string;
@@ -34,6 +53,14 @@ export interface StatCardProps {
   footer?: React.ReactNode;
   /** Optional extra label classes (e.g. scorecard micro-labels). Omit = default label. */
   labelClassName?: string;
+  /** Renders an IconWell with this tone (top-right) instead of the bare icon. */
+  iconTone?: Tone;
+  /** Delta line under the value (before `trend`). */
+  delta?: StatDelta;
+  /** Whole card becomes a react-router Link. */
+  to?: string;
+  /** Whole card becomes a button. Mutually exclusive with `to`. */
+  onClick?: () => void;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -52,8 +79,13 @@ export const StatCard: React.FC<StatCardProps> = ({
   progressColorClass = "bg-primary",
   footer,
   labelClassName,
-}) => (
-  <GlassCard delay={delay} glow={glow}>
+  iconTone,
+  delta,
+  to,
+  onClick,
+}) => {
+  const DeltaIcon = delta ? DELTA_ICON[delta.direction] : null;
+  const content = (
     <div className="p-4">
       <div className="flex items-center justify-between">
         <div>
@@ -76,9 +108,24 @@ export const StatCard: React.FC<StatCardProps> = ({
               />
             )}
           </div>
+          {delta && DeltaIcon && (
+            <div
+              className={cn(
+                "mt-1 flex items-center gap-1 text-xs",
+                DELTA_TONE_CLASS[delta.tone ?? "neutral"]
+              )}
+            >
+              <DeltaIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              {delta.text}
+            </div>
+          )}
           {trend && <div className="text-muted-foreground mt-1 text-xs">{trend}</div>}
         </div>
-        {iconWellClass ? (
+        {iconTone ? (
+          <IconWell tone={iconTone} size="md">
+            <Icon className="h-5 w-5" />
+          </IconWell>
+        ) : iconWellClass ? (
           <div
             className={cn(
               "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
@@ -109,5 +156,32 @@ export const StatCard: React.FC<StatCardProps> = ({
         </div>
       )}
     </div>
-  </GlassCard>
-);
+  );
+  const ariaLabel = `${label}: ${typeof value === "string" || typeof value === "number" ? value : ""}`;
+  const focus = "focus-visible:ring-focus focus-visible:outline-none focus-visible:ring-2";
+  const interactive = Boolean(to || onClick);
+  return (
+    <GlassCard delay={delay} glow={glow} interactive={interactive}>
+      {to ? (
+        <Link
+          to={to}
+          aria-label={ariaLabel}
+          className={cn("block h-full rounded-xl text-left", focus)}
+        >
+          {content}
+        </Link>
+      ) : onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={ariaLabel}
+          className={cn("block h-full w-full rounded-xl text-left", focus)}
+        >
+          {content}
+        </button>
+      ) : (
+        content
+      )}
+    </GlassCard>
+  );
+};
