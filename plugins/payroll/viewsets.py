@@ -97,6 +97,12 @@ def _allowed_payroll_user_ids(user):
     return allowed
 
 
+def _payroll_run_scope(user):
+    """'company' when the viewer may act on every team's payroll, else 'team'.
+    Derived from `_allowed_payroll_user_ids` so the UI and the API cannot disagree."""
+    return 'company' if _allowed_payroll_user_ids(user) is None else 'team'
+
+
 def _json_safe(value):
     """Convert audit payloads to values accepted by JSONField/JSONEncoder."""
     if isinstance(value, Decimal):
@@ -948,7 +954,13 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         'destroy': 'manage', 'generate': 'manage', 'generate_line': 'manage',
         'finalize': 'manage', 'cancel': 'manage',
         'export_excel': 'export', 'export_pdf': 'export', 'payslip': 'export',
+        'scope': 'view',
     }
+
+    @action(detail=False, methods=['get'])
+    def scope(self, request):
+        """The viewer's run-action scope (`company` or `team`) for the UI."""
+        return Response({'run_scope': _payroll_run_scope(request.user)})
 
     def get_queryset(self):
         queryset = super().get_queryset()

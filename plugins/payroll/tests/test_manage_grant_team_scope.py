@@ -360,3 +360,19 @@ class ManageGrantTeamScopeTests(TestCase):
         self.assertEqual(hit.status_code, 200)
         self.assertEqual(miss.status_code, 200)
         self.assertEqual(hit.data, miss.data)
+
+    # -- run_scope: the viewer's run-action scope, for the frontend ----------
+
+    def _run_scope(self, user):
+        response = self._call(PayrollRunViewSet, user, 'get', 'scope', f'{RUNS}scope/')
+        self.assertEqual(response.status_code, 200)
+        return response.data['run_scope']
+
+    def test_run_scope_is_company_for_staff_superuser_and_hr_only(self):
+        self.assertEqual(self._run_scope(self.admin), 'company')
+        self.assertEqual(self._run_scope(self.hr), 'company')
+
+    def test_run_scope_is_team_for_team_leader_manager_and_employee(self):
+        self.assertEqual(self._run_scope(self.tl), 'team')
+        self.assertEqual(self._run_scope(self.manager), 'team')
+        self.assertEqual(self._run_scope(self.employee), 'team')
