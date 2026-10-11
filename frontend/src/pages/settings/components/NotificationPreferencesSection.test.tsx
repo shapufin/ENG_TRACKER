@@ -191,4 +191,29 @@ describe("NotificationPreferencesSection", () => {
       await screen.findByText(/no notification preferences are available/i)
     ).toBeInTheDocument();
   });
+
+  it("refetches preferences when the window regains focus", async () => {
+    vi.mocked(notificationService.getPreferences)
+      .mockResolvedValueOnce(preferences)
+      .mockResolvedValueOnce([{ ...preferences[0], label: "Disabled elsewhere, now gone" }]);
+    render(<NotificationPreferencesSection />);
+    await screen.findByText("My leave approved or rejected");
+
+    fireEvent(window, new Event("focus"));
+
+    expect(await screen.findByText("Disabled elsewhere, now gone")).toBeInTheDocument();
+    expect(notificationService.getPreferences).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not refetch on focus while a toggle is still saving", async () => {
+    vi.mocked(notificationService.getPreferences).mockResolvedValue(preferences);
+    vi.mocked(notificationService.updatePreference).mockImplementation(() => new Promise(() => {}));
+    render(<NotificationPreferencesSection />);
+
+    const inApp = await screen.findByRole("switch", { name: /in-app notifications/i });
+    fireEvent.click(inApp);
+    fireEvent(window, new Event("focus"));
+
+    expect(notificationService.getPreferences).toHaveBeenCalledTimes(1);
+  });
 });

@@ -70,6 +70,13 @@ def _create_notification(
     notification = None
     pref_key = preference_key or event_type
 
+    # Plugin-level kill-switch: a disabled notifications plugin emits nothing,
+    # even when another plugin's dispatch reaches here directly. A missing row
+    # stays open (default-open, like the admin kill-switch below).
+    from apps.plugins.models import Plugin
+    if Plugin.objects.filter(name='notifications', is_enabled=False).exists():
+        return None
+
     # Admin kill-switch wins over per-user rows: a globally disabled type
     # emits nothing, even for users who never toggled it off themselves.
     if not NotificationEventTypeConfig.is_type_enabled(event_type):

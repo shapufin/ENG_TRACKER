@@ -108,8 +108,22 @@ class OfflineSubmissionIdempotency(models.Model):
         indexes = [models.Index(fields=['created_at'])]
 
 
+def config_event_type_choices():
+    """Core event types and plugin-registered types only (no preference groups).
+
+    The admin kill-switch is per real event type: a group key stored here would
+    be a row nothing checks, because emission looks up the event type.
+    """
+    from plugins.notifications.types.base import REGISTRY
+
+    known = dict(NotificationPreference.EVENT_TYPES)
+    for event_type, cls in REGISTRY.items():
+        known.setdefault(event_type, cls.label or event_type)
+    return sorted(known.items())
+
+
 def event_type_choices():
-    """Core event types, plugin-registered types, and preference groups.
+    """Event types plus preference groups, for ``NotificationPreference``.
 
     Callable so a plugin adding a notification type needs no migration. A
     plugin that is removed simply stops contributing; stored rows keep
@@ -119,11 +133,9 @@ def event_type_choices():
     key (several event types sharing one user-facing toggle — the HBPR
     governance groups) resolves a display label instead of the raw key.
     """
-    from plugins.notifications.types.base import REGISTRY, get_preference_groups
+    from plugins.notifications.types.base import get_preference_groups
 
-    known = dict(NotificationPreference.EVENT_TYPES)
-    for event_type, cls in REGISTRY.items():
-        known.setdefault(event_type, cls.label or event_type)
+    known = dict(config_event_type_choices())
     for group, label in get_preference_groups().items():
         known.setdefault(group, label or group)
     return sorted(known.items())
@@ -183,7 +195,7 @@ class NotificationEventTypeConfig(models.Model):
     """
 
     event_type = models.CharField(
-        max_length=40, choices=event_type_choices, unique=True
+        max_length=40, choices=config_event_type_choices, unique=True
     )
     is_enabled = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)

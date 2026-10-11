@@ -28,8 +28,8 @@ type StatusFilter = "on" | "off";
 // Copy mirrors the recipient rules in NotificationViewSet._available_preference_pairs.
 const AUDIENCES: { value: Audience; chip: string; title: string }[] = [
   { value: "own", chip: "Everyone", title: "Everyone (own requests)" },
-  { value: "team", chip: "Team leaders", title: "Team leaders, HR & admins" },
-  { value: "oversight", chip: "Oversight", title: "HR, HBPR & admins" },
+  { value: "team", chip: "Team leaders", title: "Team leaders" },
+  { value: "oversight", chip: "Oversight", title: "HR business partners" },
 ];
 
 const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [

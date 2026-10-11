@@ -236,3 +236,12 @@ Rules:
 - Tirane calendar day: `core/utils/timezone_local.tirana_today()` (Europe/Tirane) is the one helper. Engagement and the TL scorecard default-month, year and team-date selections use it; Django's UTC `date.today()` gave the previous month for the first hours of each Tirane month. Still on `date.today()` by design or not yet migrated: `services.absence_metrics` and `reporting_period`'s `date.today()` fallback, which only a caller passing `None` reaches (the viewset never does).
 - **Documented, not cached (item 13):** `NotificationEventTypeConfig.is_type_enabled` runs one query per call, and `_create_notification` calls it once per recipient, so a fan-out event costs one kill-switch query per recipient (plus the preference lookups). It is not cached: an admin toggle would need cache invalidation, and Django's TestCase does not clear cache between tests (see `disabled_event_types` docstring). Follow-up if fan-out grows: fetch `disabled_event_types()` once per batch.
 - **Follow-up, not built (item 14):** the TL scorecard Team tab always uses the caller's own team (`leader=self`). Letting staff pick another leader would be a feature (the endpoint already accepts `?leader_id=` for staff).
+
+## 2026-10-11 — Notification visibility + kill-switch lifecycle
+- Branch `feat/notification-visibility-lifecycle` (uncommitted; unrelated working-tree files untouched). Settings lists only types the user can receive: team types for team leaders (`is_team_leader`), oversight groups for assigned HBPRs (`is_hbpr`). HR/staff no longer see dead toggles.
+- Scorecard types unregister on `tl_scorecard` disable and re-register on enable (`notification_types.ALL_TYPES`). `_create_notification` returns early when `Plugin(name='notifications')` is explicitly disabled; a missing row stays open.
+- `NotificationEventTypeConfig.event_type` uses `config_event_type_choices()` (no preference-group keys). Migration `notifications/0011`, choices-only.
+- Settings refetches preferences on window focus, skipped while a save is in flight.
+- Gates: `py -3.14 manage.py test plugins.notifications plugins.tl_scorecard` 572 OK; `npx vitest run src/pages/settings src/plugins/notifications` 62 OK; eslint + prettier clean on touched files; ruff clean on both plugin dirs.
+- Not done: live browser check of the kill-switch (Phase 0 evidence); durable invariants not yet rotated into `.devin/context/` (no notifications context file exists).
+- Test isolation: tests that call `tl_scorecard.signals.disconnect()` must call `signals.connect()` in teardown.
