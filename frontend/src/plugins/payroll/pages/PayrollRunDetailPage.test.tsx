@@ -134,6 +134,7 @@ beforeEach(() => {
   vi.spyOn(payrollService.payrollService, "getPeriodClosureStatus").mockResolvedValue(
     mockClosureStatus
   );
+  vi.spyOn(payrollService.payrollService, "getRunScope").mockResolvedValue("company");
 });
 
 describe("PayrollRunDetailPage", () => {
@@ -408,5 +409,39 @@ describe("PayrollRunDetailPage", () => {
     const confirmButton = await screen.findByRole("button", { name: "Confirm" });
     fireEvent.click(confirmButton);
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/admin/payroll/runs"));
+  });
+
+  it("hides whole-run and per-line actions from a team-scoped viewer", async () => {
+    vi.spyOn(payrollService.payrollService, "getRunScope").mockResolvedValue("team");
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByText("Back")).toBeInTheDocument());
+    await waitFor(() => expect(payrollService.payrollService.getRunScope).toHaveBeenCalled());
+    expect(screen.queryByText("Regenerate")).not.toBeInTheDocument();
+    expect(screen.queryByText("Delete draft")).not.toBeInTheDocument();
+    expect(screen.queryByText("Finalize")).not.toBeInTheDocument();
+    expect(screen.queryByText("Export Excel")).not.toBeInTheDocument();
+    expect(screen.queryByText("Export PDF")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate" })).not.toBeInTheDocument();
+  });
+
+  it("shows whole-run actions to a company-scoped (HR) viewer", async () => {
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByText("Regenerate")).toBeInTheDocument());
+    expect(screen.getByText("Finalize")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate" })).toBeInTheDocument();
   });
 });

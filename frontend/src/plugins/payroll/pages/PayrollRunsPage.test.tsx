@@ -81,6 +81,7 @@ beforeEach(() => {
     error: null,
     isLoading: false,
   });
+  vi.spyOn(payrollService.payrollService, "getRunScope").mockResolvedValue("company");
 });
 
 describe("PayrollRunsPage", () => {
@@ -231,5 +232,29 @@ describe("PayrollRunsPage", () => {
     const rule = screen.getByText("Boshti Reference");
     expect(rule).toHaveAttribute("title", "Boshti Reference");
     expect(rule.className).toContain("truncate");
+  });
+
+  it("hides New Payroll Run from a team-scoped viewer", async () => {
+    vi.spyOn(payrollService.payrollService, "getRunScope").mockResolvedValue("team");
+    vi.spyOn(payrollService.payrollService, "getRuns").mockResolvedValue([]);
+    render(
+      <MemoryRouter>
+        <PayrollRunsPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    await waitFor(() => expect(payrollService.payrollService.getRunScope).toHaveBeenCalled());
+    expect(screen.queryByText("New Payroll Run")).not.toBeInTheDocument();
+  });
+
+  it("shows New Payroll Run to a company-scoped (HR) viewer", async () => {
+    vi.spyOn(payrollService.payrollService, "getRuns").mockResolvedValue([]);
+    render(
+      <MemoryRouter>
+        <PayrollRunsPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByText("New Payroll Run")).toBeInTheDocument());
   });
 });

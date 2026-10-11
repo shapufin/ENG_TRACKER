@@ -243,6 +243,9 @@ export interface ClosureStatus {
   requires_tl_closed_before_finalize: boolean;
 }
 
+/** Viewer scope for run actions: "company" = all teams (staff, superuser, HR); "team" = own team only. */
+export type PayrollRunScope = "company" | "team";
+
 export interface PayrollRun {
   id: number;
   year: number;
