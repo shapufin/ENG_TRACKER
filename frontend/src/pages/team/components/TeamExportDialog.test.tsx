@@ -101,7 +101,7 @@ describe("TeamExportDialog", () => {
 
     fireEvent.click(screen.getByRole("option", { name: "Leave" }));
 
-    expect(screen.queryByRole("option", { name: "Payroll period" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Filter dates by")).toBeNull();
   });
 
   it("exports Leave records when that record type is selected", async () => {

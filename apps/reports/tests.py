@@ -1018,15 +1018,12 @@ class PayrollSettlementColumnTests(TestCase):
 
     def test_tl_export_settlement_column_fails_closed_without_payroll(self):
         import sys
-        from unittest.mock import patch
         self._ot(15)
         with patch.dict(sys.modules, {'plugins.payroll.models': None}):
             ws = self._export()
         self.assertEqual(ws.cell(row=2, column=15).value, 'Not yet in a payroll run')
 
     def test_settlement_lookup_is_one_query_for_one_and_five_records(self):
-        from django.db import connection
-        from django.test.utils import CaptureQueriesContext
         self._ot(1)
 
         def count_queries():
