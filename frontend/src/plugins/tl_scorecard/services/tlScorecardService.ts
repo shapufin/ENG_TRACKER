@@ -267,8 +267,15 @@ export const tlScorecardService = {
   updateHbprEvidence: (id: number, data: Partial<HbprEvidencePayload>) =>
     api.patch<HbprEvidence>(`${BASE}/hbpr-evidence/${id}/`, data),
 
-  exportSummary: (month: string | undefined, leaderId: number | undefined, fileFormat: SummaryFileFormat) => {
-    const params: Record<string, string | number> = { ...leaderParams(leaderId), file_format: fileFormat };
+  exportSummary: (
+    month: string | undefined,
+    leaderId: number | undefined,
+    fileFormat: SummaryFileFormat
+  ) => {
+    const params: Record<string, string | number> = {
+      ...leaderParams(leaderId),
+      file_format: fileFormat,
+    };
     if (month) params.month = month;
     return api.get<Blob>(`${BASE}/export/`, { params, responseType: "blob" });
   },

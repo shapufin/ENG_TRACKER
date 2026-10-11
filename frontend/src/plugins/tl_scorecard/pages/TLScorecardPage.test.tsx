@@ -60,7 +60,8 @@ vi.mock("@/components/ui/select", () => {
   };
 });
 
-vi.mock("@/lib/download", () => ({
+vi.mock("@/lib/download", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/download")>()),
   downloadBlobResponse: vi.fn(),
 }));
 
@@ -233,9 +234,13 @@ describe("TLScorecardPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Excel workbook (.xlsx)" }));
 
     await waitFor(() =>
-      expect(tlScorecardService.exportSummary).toHaveBeenCalledWith(undefined, undefined, "xlsx")
+      expect(tlScorecardService.exportSummary).toHaveBeenCalledWith(
+        expect.any(String),
+        undefined,
+        "xlsx"
+      )
     );
-    expect(downloadBlobResponse).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(downloadBlobResponse).toHaveBeenCalledTimes(1));
   });
 
   it("shows a visible message, not silence, when the export fails", async () => {

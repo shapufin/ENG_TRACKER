@@ -44,9 +44,7 @@ describe("ExportButton", () => {
     expect(button).toHaveAttribute("title", "Export summary");
     fireEvent.click(button);
     fireEvent.click(await screen.findByRole("button", { name: "PDF report" }));
-    await waitFor(() =>
-      expect(exportSummary).toHaveBeenCalledWith("2026-10-01", undefined, "pdf")
-    );
+    await waitFor(() => expect(exportSummary).toHaveBeenCalledWith("2026-10-01", undefined, "pdf"));
   });
 
   it("names the download after the server's Content-Disposition filename", async () => {
