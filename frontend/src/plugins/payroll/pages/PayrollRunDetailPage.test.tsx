@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PayrollRunDetailPage } from "./PayrollRunDetailPage";
 import * as payrollService from "../services/payrollService";
 import * as usePluginPermissions from "@/hooks/usePluginPermissions";
+import { toast } from "sonner";
 
 const mockNavigate = vi.fn();
 let mockPathname = "/admin/payroll/runs/1";
@@ -25,7 +26,7 @@ vi.mock("@/hooks/usePluginPermissions", () => ({
 }));
 
 vi.mock("sonner", () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+  toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
 }));
 
 vi.mock("@/lib/error-handler", () => ({
@@ -177,6 +178,41 @@ describe("PayrollRunDetailPage", () => {
       expect(screen.getByText("Regenerate")).toBeInTheDocument();
       expect(screen.getByText("Finalize")).toBeInTheDocument();
     });
+  });
+
+  it("warns with the skipped users when regeneration skips someone without a wage", async () => {
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines);
+    vi.spyOn(payrollService.payrollService, "generateRun").mockResolvedValue({
+      status: "generated",
+      line_count: 2,
+      run: mockRun,
+      skipped_users: [
+        {
+          user_id: 9,
+          username: "latecomer",
+          reason: "No active wage assignment for latecomer in 2026-07.",
+        },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByText("Regenerate")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Regenerate"));
+
+    await waitFor(() => {
+      expect(toast.warning).toHaveBeenCalledWith(
+        "Regenerated — 1 employee(s) skipped",
+        {
+          description: "latecomer: No active wage assignment for latecomer in 2026-07.",
+        }
+      );
+    });
+    expect(toast.success).not.toHaveBeenCalledWith("Payroll draft regenerated");
   });
 
   it("shows TL closure readiness for a draft run", async () => {

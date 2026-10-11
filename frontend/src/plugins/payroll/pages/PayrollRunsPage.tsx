@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { CheckCircle2, FilePen, Wallet } from "lucide-react";
-import { payrollService } from "../services/payrollService";
+import { payrollService, describeSkippedUsers } from "../services/payrollService";
 import type { PayrollRun } from "../types";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { handleApiError } from "@/lib/error-handler";
@@ -67,7 +67,14 @@ export const PayrollRunsPage: React.FC = () => {
     onSuccess: (run) => {
       queryClient.invalidateQueries({ queryKey: ["payroll-runs"] });
       setCreateOpen(false);
-      toast.success("Payroll run created");
+      const skippedDetail = describeSkippedUsers(run.skipped_users);
+      if (skippedDetail) {
+        toast.warning(`Payroll run created — ${run.skipped_users?.length} employee(s) skipped`, {
+          description: skippedDetail,
+        });
+      } else {
+        toast.success("Payroll run created");
+      }
       navigate(`${location.pathname}/${run.id}`);
     },
     onError: (error) => handleApiError(error),

@@ -29,6 +29,21 @@ import type {
 
 const BASE = "/plugins/payroll";
 
+export interface SkippedUser {
+  user_id: number;
+  username: string;
+  reason: string;
+}
+
+/** Newline-joined "username: reason" lines (max 5 + "+K more"), or null when nothing was skipped. */
+export function describeSkippedUsers(skipped: SkippedUser[] | undefined): string | null {
+  if (!skipped?.length) return null;
+  const lines = skipped.slice(0, 5).map((row) => `${row.username}: ${row.reason}`);
+  const extra = skipped.length - lines.length;
+  if (extra > 0) lines.push(`+${extra} more`);
+  return lines.join("\n");
+}
+
 export const payrollService = {
   // --- Configuration ---
   async getConfiguration(): Promise<PayrollConfiguration> {
@@ -241,15 +256,20 @@ export const payrollService = {
     return data;
   },
 
-  async createRun(payload: PayrollRunCreatePayload): Promise<PayrollRun> {
-    const { data } = await api.post<PayrollRun>(`${BASE}/runs/`, payload);
+  async createRun(
+    payload: PayrollRunCreatePayload
+  ): Promise<PayrollRun & { skipped_users?: SkippedUser[] }> {
+    const { data } = await api.post<PayrollRun & { skipped_users?: SkippedUser[] }>(
+      `${BASE}/runs/`,
+      payload
+    );
     return data;
   },
 
   async generateRun(
     id: number,
     userIds?: number[]
-  ): Promise<{ status: string; line_count: number; run: PayrollRun }> {
+  ): Promise<{ status: string; line_count: number; run: PayrollRun; skipped_users: SkippedUser[] }> {
     const { data } = await api.post(`${BASE}/runs/${id}/generate/`, {
       user_ids: userIds ?? [],
     });
