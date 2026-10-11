@@ -519,6 +519,15 @@ class EngagementPdfExportTests(TestCase):
         resp = self._call('export', self.leader, month=self.july.isoformat(), scope='month', file_format='pdf')
         self.assertIn(f'{expected:.1f}', self._pdf_text(resp))
 
+    def test_export_pdf_on_time_matches_the_aggregate(self):
+        rows = list(TLApprovalMetric.objects.filter(leader=self.leader, month=self.july))
+        agg = aggregate_rows(rows)
+        self.assertIsNotNone(agg['judgeable'])
+        expected = agg['on_time_pct']
+        self.assertEqual(expected, round(agg['on_time'] / agg['judgeable'] * 100, 1))
+        resp = self._call('export', self.leader, month=self.july.isoformat(), scope='month', file_format='pdf')
+        self.assertIn(f'{expected:.1f}%', self._pdf_text(resp))
+
     def test_year_pdf_uses_same_queries_as_year_xlsx(self):
         params = dict(month=self.july.isoformat(), scope='year')
         self._call('export', self.leader, **params)  # settle any on-read refresh first
