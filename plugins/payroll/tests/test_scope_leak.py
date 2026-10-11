@@ -40,8 +40,9 @@ class PayrollRunLineScopeLeakTests(TestCase):
         )
 
         # A plain team leader: payroll 'view'+'export' grant (so they can
-        # reach these endpoints at all), but NOT 'manage' — the grant that
-        # makes `_allowed_payroll_user_ids` return None (unrestricted).
+        # reach these endpoints at all), and no 'manage' grant. Scope is
+        # self + team either way: `_allowed_payroll_user_ids` returns None
+        # (unrestricted) only for staff, superusers and HR.
         tl_role, _ = Role.objects.get_or_create(code='team_leader', defaults={'name': 'Team Leader'})
         for action in ('view', 'export'):
             perm, _ = PluginPermission.objects.get_or_create(plugin_name='payroll', action=action)
