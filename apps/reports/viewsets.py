@@ -675,7 +675,9 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
             ot_qs = OvertimeLog.objects.filter(status=status_filter)
             if processing_period_mode:
                 if start_date:
-                    ot_qs = ot_qs.filter(requested_processing_period__gte=start_date)
+                    # Periods are stored as the 1st of their month: floor the start so a
+                    # mid-month start still includes that month's period.
+                    ot_qs = ot_qs.filter(requested_processing_period__gte=start_date.replace(day=1))
                 if end_date:
                     ot_qs = ot_qs.filter(requested_processing_period__lte=end_date)
             else:
@@ -699,7 +701,9 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
             sb_qs = StandbyLog.objects.filter(status=status_filter)
             if processing_period_mode:
                 if start_date:
-                    sb_qs = sb_qs.filter(requested_processing_period__gte=start_date)
+                    # Periods are stored as the 1st of their month: floor the start so a
+                    # mid-month start still includes that month's period.
+                    sb_qs = sb_qs.filter(requested_processing_period__gte=start_date.replace(day=1))
                 if end_date:
                     sb_qs = sb_qs.filter(requested_processing_period__lte=end_date)
             else:
