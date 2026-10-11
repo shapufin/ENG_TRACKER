@@ -146,3 +146,17 @@ stitch_team_tracker_dashboard_layout/
 
 # Playwright MCP browser logs/snapshots
 .playwright-mcp/
+
+# graphify knowledge-graph output (regenerable — `graphify update .`)
+graphify-out/
+
+# Codex CLI local state + one-off installer
+.codex/
+Install-Graphify.ps1
+
+# Admin GUI verification screenshots — local artifacts (regenerable)
+# NOTE: admin-gui-screenshots/before|after + INDEX/README/SUMMARY and
+# admin-gui-screenshots.zip are already tracked on main; gitignore only
+# stops NEW files here. Untrack with: git rm -r --cached admin-gui-screenshots
+admin-gui-screenshots/
+admin-gui-screenshots.zip
