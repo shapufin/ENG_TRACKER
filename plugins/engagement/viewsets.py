@@ -10,6 +10,7 @@ only their own rows, staff see every TL.
 from datetime import date
 
 from dateutil.relativedelta import relativedelta
+from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -19,15 +20,15 @@ from core.mixins.permissions import PluginPermissionMixin
 
 from .excel_export import build_workbook_bytes
 from .models import TLApprovalMetric
+from .pdf_export import build_report_pdf
 from .serializers import TLApprovalMetricSerializer
 from .services import (
     ReadScope,
     aggregate_rows,
     compute_tl_metric,
     ensure_current_month_snapshots,
+    monthly_rollup,
     stale_snapshot_ids,
-    weighted_avg_tta_hours,
-    weighted_mean,
 )
 from .sla import today_local
 
@@ -135,24 +136,7 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
     @staticmethod
     def _trend_payload(rows):
-        by_month = {}
-        for row in rows:
-            by_month.setdefault(row.month, []).append(row)
-        results = []
-        for month in sorted(by_month):
-            month_rows = by_month[month]
-            results.append({
-                'month': month.isoformat(),
-                'engagement_score': weighted_mean((r.engagement_score, r.team_size) for r in month_rows),
-                'avg_tta_hours': weighted_avg_tta_hours(month_rows),
-                'decisions_during_leave': sum(r.decisions_during_leave for r in month_rows),
-                'decisions_on_holidays': sum(r.decisions_on_holidays for r in month_rows),
-                'score_speed': weighted_mean((r.score_speed, r.team_size) for r in month_rows),
-                'score_approval_rate': weighted_mean((r.score_approval_rate, r.team_size) for r in month_rows),
-                'score_responsiveness': weighted_mean((r.score_responsiveness, r.team_size) for r in month_rows),
-                'score_consistency': weighted_mean((r.score_consistency, r.team_size) for r in month_rows),
-            })
-        return results
+        return [{**point, 'month': point['month'].isoformat()} for point in monthly_rollup(rows)]
 
     @staticmethod
     def _breakdown_payload(rows):
@@ -221,7 +205,7 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def export(self, request):
-        """Download the KPI-evidence workbook. ?month=YYYY-MM-DD&scope=month|year."""
+        """Download the KPI-evidence report. ?month=YYYY-MM-DD&scope=month|year&file_format=xlsx|pdf."""
         try:
             month = _parse_month(request.query_params.get('month'))
         except ValueError as exc:
@@ -232,6 +216,10 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
         scope = request.query_params.get('scope', 'month')
         if scope not in ('month', 'year'):
             return Response({'error': 'scope must be "month" or "year"'}, status=status.HTTP_400_BAD_REQUEST)
+
+        file_format = request.query_params.get('file_format', 'xlsx')
+        if file_format not in ('xlsx', 'pdf'):
+            return Response({'error': 'file_format must be "xlsx" or "pdf"'}, status=status.HTTP_400_BAD_REQUEST)
 
         base_qs = self._base_queryset(request)
 
@@ -245,13 +233,24 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
             target_rows = [row for row in trend_rows if row.month == month]
             period_label = month.strftime('%B %Y')
 
-        workbook_bytes = build_workbook_bytes(target_rows, trend_rows, scope, period_label)
-
+        user = request.user
+        generated_by = user.get_full_name() or user.username
         filename_period = str(month.year) if scope == 'year' else month.strftime('%Y-%m')
-        filename = f'engagement_{scope}_{request.user.username}_{filename_period}.xlsx'
-        response = HttpResponse(
-            workbook_bytes,
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        )
+        filename = f'engagement_{scope}_{user.username}_{filename_period}.{file_format}'
+        if file_format == 'pdf':
+            leader_ids = {row.leader_id for row in target_rows}
+            if leader_ids == {user.pk}:
+                leader_name = generated_by
+            elif len(leader_ids) == 1:
+                leader = get_user_model().objects.get(pk=leader_ids.pop())
+                leader_name = leader.get_full_name() or leader.username
+            else:
+                leader_name = 'All team leaders in scope'
+            body = build_report_pdf(target_rows, trend_rows, scope, period_label, leader_name, generated_by)
+            content_type = 'application/pdf'
+        else:
+            body = build_workbook_bytes(target_rows, trend_rows, scope, period_label)
+            content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        response = HttpResponse(body, content_type=content_type)
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response

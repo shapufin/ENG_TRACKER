@@ -4,13 +4,18 @@ Tests for the TL Engagement Metrics plugin.
 Uses APIRequestFactory + direct viewset calls (pattern shared with
 control_room/ticket_kpi tests) so permission seeding stays explicit.
 """
-from datetime import date, timedelta
+import io
+from datetime import date, datetime, timedelta
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
+from pypdf import PdfReader
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.leave_management.models.core import LeaveRequest
@@ -19,7 +24,7 @@ from apps.permissions.models import Role, UserRole
 from apps.users.models.core import Team, TeamMembership, UserProfile
 
 from plugins.engagement.models import TLApprovalMetric
-from plugins.engagement.services import compute_tl_metric, percentile, is_stale, weighted_mean
+from plugins.engagement.services import aggregate_rows, compute_tl_metric, percentile, is_stale, weighted_mean
 from plugins.engagement.viewsets import TLEngagementMetricsViewSet
 
 
@@ -441,3 +446,84 @@ class EngagementAutoSnapshotTests(EngagementAPITests):
         stamp = TLApprovalMetric.objects.get(leader=self.leader).computed_at
         self._call('summary', self.leader)
         self.assertEqual(TLApprovalMetric.objects.get(leader=self.leader).computed_at, stamp)
+
+
+class EngagementPdfExportTests(TestCase):
+    """PDF variant of the export: same scoping and query budget as the workbook,
+    and the cover prints the same engagement score as the summary."""
+
+    def setUp(self):
+        EngagementAPITests.setUp(self)
+        self.year = date.today().year
+        self.june = date(self.year, 6, 1)
+        self.july = date(self.year, 7, 1)
+        tirana = ZoneInfo('Europe/Tirane')
+        submitted = datetime(self.year, 7, 6, 10, tzinfo=tirana)
+        _make_overtime(
+            self.member, date(self.year, 7, 6), submitted, status='approved',
+            approved_at=submitted + timedelta(hours=2), client=self.client_obj,
+        )
+        compute_tl_metric(self.leader, self.team, self.june)
+        compute_tl_metric(self.leader, self.team, self.july)
+        clock = patch(
+            'plugins.engagement.services._now',
+            return_value=datetime(self.year, 7, 20, 12, tzinfo=ZoneInfo('Europe/Tirane')),
+        )
+        clock.start()
+        self.addCleanup(clock.stop)
+
+    _call = EngagementAPITests._call
+
+    @staticmethod
+    def _pdf_text(response):
+        reader = PdfReader(io.BytesIO(response.content))
+        return '\n'.join(page.extract_text() or '' for page in reader.pages)
+
+    def test_export_month_scope_pdf(self):
+        resp = self._call('export', self.leader, month=self.july.isoformat(), scope='month', file_format='pdf')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertEqual(
+            resp['Content-Disposition'],
+            f'attachment; filename="engagement_month_{self.leader.username}_{self.year}-07.pdf"',
+        )
+        self.assertTrue(resp.content.startswith(b'%PDF'))
+
+    def test_export_year_scope_pdf_has_month_sections(self):
+        resp = self._call('export', self.leader, month=self.july.isoformat(), scope='year', file_format='pdf')
+        self.assertEqual(resp.status_code, 200)
+        text = self._pdf_text(resp)
+        snapshot_months = (
+            TLApprovalMetric.objects.filter(leader=self.leader, month__year=self.year)
+            .values_list('month', flat=True).distinct()
+        )
+        self.assertTrue(snapshot_months)
+        for month in snapshot_months:
+            self.assertIn(month.strftime('%B'), text)
+
+    def test_export_bad_file_format_400(self):
+        resp = self._call('export', self.leader, month=self.july.isoformat(), scope='month', file_format='csv')
+        self.assertEqual(resp.status_code, 400)
+
+    def test_export_default_format_is_still_xlsx(self):
+        resp = self._call('export', self.leader, month=self.july.isoformat(), scope='month')
+        self.assertEqual(
+            resp['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+    def test_export_pdf_numbers_match_summary(self):
+        rows = list(TLApprovalMetric.objects.filter(leader=self.leader, month=self.july))
+        expected = aggregate_rows(rows)['engagement_score']
+        self.assertIsNotNone(expected)
+        resp = self._call('export', self.leader, month=self.july.isoformat(), scope='month', file_format='pdf')
+        self.assertIn(f'{expected:.1f}', self._pdf_text(resp))
+
+    def test_year_pdf_uses_same_queries_as_year_xlsx(self):
+        params = dict(month=self.july.isoformat(), scope='year')
+        self._call('export', self.leader, **params)  # settle any on-read refresh first
+        with CaptureQueriesContext(connection) as xlsx:
+            self._call('export', self.leader, **params)
+        with CaptureQueriesContext(connection) as pdf:
+            self._call('export', self.leader, file_format='pdf', **params)
+        self.assertEqual(len(pdf.captured_queries), len(xlsx.captured_queries))

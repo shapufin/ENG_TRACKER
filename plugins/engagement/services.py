@@ -71,6 +71,29 @@ def weighted_mean(pairs):
     return round(sum(v * w for v, w in scored) / weight_sum, 2)
 
 
+def monthly_rollup(rows):
+    """One dict per month (oldest first): weighted score, sub-scores, TTA and
+    decision evidence. Shared by the trend API and the PDF report."""
+    by_month = {}
+    for row in rows:
+        by_month.setdefault(row.month, []).append(row)
+    results = []
+    for month in sorted(by_month):
+        month_rows = by_month[month]
+        results.append({
+            'month': month,
+            'engagement_score': weighted_mean((r.engagement_score, r.team_size) for r in month_rows),
+            'avg_tta_hours': weighted_avg_tta_hours(month_rows),
+            'decisions_during_leave': sum(r.decisions_during_leave for r in month_rows),
+            'decisions_on_holidays': sum(r.decisions_on_holidays for r in month_rows),
+            'score_speed': weighted_mean((r.score_speed, r.team_size) for r in month_rows),
+            'score_approval_rate': weighted_mean((r.score_approval_rate, r.team_size) for r in month_rows),
+            'score_responsiveness': weighted_mean((r.score_responsiveness, r.team_size) for r in month_rows),
+            'score_consistency': weighted_mean((r.score_consistency, r.team_size) for r in month_rows),
+        })
+    return results
+
+
 def weighted_avg_tta_hours(rows):
     """Average `avg_tta_hours` across every type's metrics in `rows`, weighted by decided count."""
     pairs = []

@@ -7,7 +7,16 @@ import { InfoCallout } from "@/components/ui/InfoCallout";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import { downloadBlobResponse, parseFilenameFromDisposition } from "@/lib/download";
-import { Gauge, LineChart, RefreshCw, Search, TriangleAlert, Upload } from "lucide-react";
+import {
+  FileSpreadsheet,
+  FileText,
+  Gauge,
+  LineChart,
+  RefreshCw,
+  Search,
+  TriangleAlert,
+  Upload,
+} from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { SummaryCards } from "../components/SummaryCards";
 import { ScoreBreakdownCard } from "../components/ScoreBreakdownCard";
@@ -113,16 +122,16 @@ export const EngagementMetricsPage: React.FC = () => {
     );
   }, [teamBreakdown, teamFilter]);
 
-  const handleExport = async (scope: "month" | "year") => {
+  const handleExport = async (scope: "month" | "year", fileFormat: "xlsx" | "pdf") => {
     const targetMonth = month ?? summary?.month;
     if (!targetMonth) return;
     setIsExporting(true);
     setExportError(null);
     try {
-      const response = await engagementService.exportReport(targetMonth, scope);
+      const response = await engagementService.exportReport(targetMonth, scope, fileFormat);
       const filename = parseFilenameFromDisposition(
         response.headers["content-disposition"],
-        `engagement_${scope}_${targetMonth}.xlsx`
+        `engagement_${scope}_${targetMonth}.${fileFormat}`
       );
       downloadBlobResponse(response.data, filename);
     } catch {
@@ -230,17 +239,36 @@ export const EngagementMetricsPage: React.FC = () => {
             <PopoverContent align="end" className="w-56 p-1.5">
               <button
                 type="button"
-                onClick={() => handleExport("month")}
-                className="hover:bg-muted block w-full rounded-lg px-3 py-2 text-left text-sm"
+                onClick={() => handleExport("month", "xlsx")}
+                className="hover:bg-muted flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm"
               >
-                Export this month
+                <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
+                Excel — this month
               </button>
               <button
                 type="button"
-                onClick={() => handleExport("year")}
-                className="hover:bg-muted block w-full rounded-lg px-3 py-2 text-left text-sm"
+                onClick={() => handleExport("year", "xlsx")}
+                className="hover:bg-muted flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm"
               >
-                Export full year
+                <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
+                Excel — full year
+              </button>
+              <div className="bg-border my-1 h-px" role="separator" />
+              <button
+                type="button"
+                onClick={() => handleExport("month", "pdf")}
+                className="hover:bg-muted flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm"
+              >
+                <FileText className="h-4 w-4" aria-hidden="true" />
+                PDF report — this month
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport("year", "pdf")}
+                className="hover:bg-muted flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm"
+              >
+                <FileText className="h-4 w-4" aria-hidden="true" />
+                PDF report — full year
               </button>
             </PopoverContent>
           </Popover>

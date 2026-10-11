@@ -37,9 +37,9 @@ export const engagementService = {
 
   getStatus: () => api.get<EngagementStatus>(`${BASE}/metrics/status/`),
 
-  exportReport: (month: string, scope: "month" | "year") =>
+  exportReport: (month: string, scope: "month" | "year", fileFormat: "xlsx" | "pdf" = "xlsx") =>
     api.get<Blob>(`${BASE}/metrics/export/`, {
-      params: { month, scope },
+      params: { month, scope, file_format: fileFormat },
       responseType: "blob",
     }),
 };
