@@ -152,6 +152,22 @@ class EventTypeConfigApiTests(TestCase):
         )
         self.assertEqual(Notification.objects.filter(user=self.employee).count(), 1)
 
+    @patch('plugins.notifications.signals.send_push_notification')
+    def test_disabled_type_sends_no_push(self, send_push):
+        _create_notification(
+            user=self.employee, title='t', message='m', event_type=ALWAYS_ON,
+        )
+        # Precondition: while enabled, the push path is attempted for this user.
+        self.assertEqual(send_push.call_count, 1)
+
+        self._admin_request('patch', {'enabled': False}, pk=ALWAYS_ON)
+        send_push.reset_mock()
+        _create_notification(
+            user=self.employee, title='t2', message='m2', event_type=ALWAYS_ON,
+        )
+        send_push.assert_not_called()
+        self.assertFalse(Notification.objects.filter(user=self.employee, title='t2').exists())
+
     def test_unknown_key_is_404_and_non_staff_patch_is_403(self):
         self.assertEqual(
             self._admin_request('patch', {'enabled': False}, pk='no_such_type').status_code,
