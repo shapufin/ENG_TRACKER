@@ -921,6 +921,16 @@ class PayrollWorkCalendarViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
 # Payroll runs
 # ---------------------------------------------------------------------------
 
+class PayrollRunSearchFilter(filters.SearchFilter):
+    """Run ``notes`` are company-wide free text that team scope cannot read,
+    so team scope must not search them either: a hit/miss would leak them."""
+
+    def get_search_fields(self, view, request):
+        if _allowed_payroll_user_ids(request.user) is None:
+            return view.search_fields
+        return None
+
+
 class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'payroll'
     queryset = PayrollRun.objects.all().select_related(
@@ -928,7 +938,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     )
     serializer_class = PayrollRunSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    filter_backends = [PayrollRunSearchFilter, DjangoFilterBackend]
     search_fields = ['notes']
     filterset_fields = ['year', 'month', 'status']
     permission_action_map = {

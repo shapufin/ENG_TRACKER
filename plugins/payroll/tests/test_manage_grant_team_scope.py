@@ -100,6 +100,7 @@ class ManageGrantTeamScopeTests(TestCase):
 
         cls.finalized = PayrollRun.objects.create(
             year=2026, month=4, status='draft', rule_set=rule_set, created_by=cls.admin,
+            notes='Company-wide note for every team',
         )
         generate_draft_run(cls.finalized, [cls.subordinate, cls.other_member])
         finalize_run(cls.finalized, cls.admin)
@@ -337,3 +338,25 @@ class ManageGrantTeamScopeTests(TestCase):
             f'/api/plugins/payroll/wages/history/?user_id={self.other_member.id}',
         )
         self.assertEqual(response.status_code, 403)
+
+    # -- run notes are whole-run free text: hidden and unsearchable for team scope
+
+    def test_team_scope_cannot_read_run_notes(self):
+        response = self._run_call(
+            self.tl, 'get', 'retrieve', f'{RUNS}{self.finalized.id}/', self.finalized,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['notes'], '')
+
+    def test_company_scope_still_reads_run_notes(self):
+        response = self._run_call(
+            self.hr, 'get', 'retrieve', f'{RUNS}{self.finalized.id}/', self.finalized,
+        )
+        self.assertEqual(response.data['notes'], 'Company-wide note for every team')
+
+    def test_team_scope_cannot_probe_run_notes_through_search(self):
+        hit = self._call(PayrollRunViewSet, self.tl, 'get', 'list', f'{RUNS}?search=Company-wide')
+        miss = self._call(PayrollRunViewSet, self.tl, 'get', 'list', f'{RUNS}?search=zzz-no-match')
+        self.assertEqual(hit.status_code, 200)
+        self.assertEqual(miss.status_code, 200)
+        self.assertEqual(hit.data, miss.data)

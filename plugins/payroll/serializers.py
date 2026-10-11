@@ -428,6 +428,8 @@ class PayrollRunSerializer(serializers.ModelSerializer):
         if self.context.get('scoped_user_ids') is not None:
             from .services.payroll_service import aggregate_line_totals
             data['totals'] = aggregate_line_totals(self._visible_lines(instance))
+            # Notes are whole-run text written by HR/staff; team scope never sees them.
+            data['notes'] = ''
         return data
 
 
