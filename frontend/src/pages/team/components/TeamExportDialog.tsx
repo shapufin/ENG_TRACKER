@@ -39,7 +39,7 @@ type DateMode = "work_date" | "processing_period";
 export const TeamExportDialog: React.FC<TeamExportDialogProps> = ({ open, onOpenChange }) => {
   const [exportType, setExportType] = useState<ExportType>("ot-standby");
   const [status, setStatus] = useState<ExportStatus>("approved");
-  const [dateMode, setDateMode] = useState<DateMode>("work_date");
+  const [dateMode, setDateMode] = useState<DateMode>("processing_period");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [isExporting, setIsExporting] = useState(false);
