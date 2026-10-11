@@ -436,7 +436,7 @@ class PayrollViewSetTests(TestCase):
         self.assertEqual(resp.data['status'], 'draft')
         self.assertEqual(resp.data['line_count'], 1)
 
-    def test_create_run_rolls_back_when_selected_user_has_no_wage(self):
+    def test_create_run_skips_selected_user_without_wage(self):
         employee_without_wage = User.objects.create_user(username='no_wage', password='pass')
         request = self.factory.post('/api/plugins/payroll/runs/', {
             'year': 2026, 'month': 2,
@@ -445,8 +445,11 @@ class PayrollViewSetTests(TestCase):
         force_authenticate(request, user=self.admin)
         response = PayrollRunViewSet.as_view({'post': 'create'})(request)
 
-        self.assertEqual(response.status_code, 400)
-        self.assertFalse(PayrollRun.objects.filter(year=2026, month=2).exists())
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual([row['user_id'] for row in response.data['skipped_users']],
+                         [employee_without_wage.id])
+        run = PayrollRun.objects.get(year=2026, month=2)
+        self.assertFalse(run.lines.filter(user=employee_without_wage).exists())
 
     def test_finalize_run(self):
         # Create run via service

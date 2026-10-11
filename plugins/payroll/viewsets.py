@@ -14,6 +14,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import (
     BooleanField,
@@ -70,6 +71,7 @@ from .services.payroll_service import (
     finalize_run,
     generate_draft_run,
     get_period_closure_status,
+    partition_payable_users,
 )
 from .services.calculator import calculate_payroll
 
@@ -1033,7 +1035,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                     rule_set=rule_set, notes=notes,
                     created_by=request.user,
                 )
-                users = self._resolve_users(user_ids)
+                users, skipped = partition_payable_users(self._resolve_users(user_ids), year, month)
                 if users:
                     generate_draft_run(run, users)
         except Exception as exc:
@@ -1045,10 +1047,11 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
 
         _log_audit(request.user, 'payroll_run_create',
                     f'Created payroll run {run.period_label}',
-                    new_values={'year': year, 'month': month, 'run_id': run.id})
+                    new_values={'year': year, 'month': month, 'run_id': run.id,
+                                'skipped_count': len(skipped)})
 
         return Response(
-            PayrollRunSerializer(run).data,
+            {**PayrollRunSerializer(run).data, 'skipped_users': skipped},
             status=status.HTTP_201_CREATED,
         )
 
@@ -1078,7 +1081,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         serializer = PayrollRunGenerateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user_ids = serializer.validated_data.get('user_ids', [])
-        users = self._resolve_users(user_ids)
+        users, skipped = partition_payable_users(self._resolve_users(user_ids), run.year, run.month)
         try:
             lines = generate_draft_run(run, users)
         except Exception as e:
@@ -1089,11 +1092,13 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             )
         _log_audit(request.user, 'payroll_run_generate',
                     f'Regenerated payroll run {run.period_label}',
-                    new_values={'run_id': run.id, 'line_count': len(lines)})
+                    new_values={'run_id': run.id, 'line_count': len(lines),
+                                'skipped_count': len(skipped)})
         return Response({
             'status': 'generated',
             'line_count': len(lines),
             'run': PayrollRunSerializer(run).data,
+            'skipped_users': skipped,
         })
 
     @action(detail=True, methods=['post'])
@@ -1119,10 +1124,17 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         allowed_ids = _allowed_payroll_user_ids(request.user)
         if allowed_ids is not None and user.id not in allowed_ids:
             raise PermissionDenied('You cannot generate payroll for this user.')
+        if user.is_superuser:
+            return Response(
+                {'detail': 'Superuser accounts are not payroll subjects.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         from .services.payroll_service import regenerate_single_line
         try:
             line = regenerate_single_line(run, user)
+        except DjangoValidationError as e:
+            return Response({'detail': e.messages[0]}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error('Single line generation failed: %s', e, exc_info=True)
             return Response(

@@ -10,7 +10,7 @@ import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { payrollService } from "../services/payrollService";
+import { payrollService, describeSkippedUsers } from "../services/payrollService";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { toast } from "sonner";
 import { handleApiError } from "@/lib/error-handler";
@@ -70,12 +70,19 @@ export const PayrollRunDetailPage: React.FC = () => {
 
   const generateMutation = useMutation({
     mutationFn: () => payrollService.generateRun(runId),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["payroll-run", runId] });
       queryClient.invalidateQueries({ queryKey: ["payroll-run-lines", runId] });
       queryClient.invalidateQueries({ queryKey: ["payroll-run-period-closure-status", runId] });
       queryClient.invalidateQueries({ queryKey: ["payroll-runs"] });
-      toast.success("Payroll draft regenerated");
+      const skippedDetail = describeSkippedUsers(data.skipped_users);
+      if (skippedDetail) {
+        toast.warning(`Regenerated — ${data.skipped_users.length} employee(s) skipped`, {
+          description: skippedDetail,
+        });
+      } else {
+        toast.success("Payroll draft regenerated");
+      }
     },
     onError: (error) => handleApiError(error),
   });

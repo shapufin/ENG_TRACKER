@@ -365,6 +365,26 @@ def _create_run_entries(run: PayrollRun, line: PayrollLine, result) -> None:
     PayrollRunEntry.objects.bulk_create(entries)
 
 
+def partition_payable_users(users, year: int, month: int):
+    """Split users into (payable, skipped) for a payroll month.
+
+    Superusers are never payroll subjects. A user whose wage does not
+    cover the month (or overlaps) is skipped with the model's own message,
+    instead of aborting the whole run.
+    """
+    payable, skipped = [], []
+    for user in users:
+        if user.is_superuser:
+            continue
+        try:
+            WageAssignment.resolve_for_month(user, year, month)
+        except ValidationError as exc:
+            skipped.append({'user_id': user.id, 'username': user.username, 'reason': exc.messages[0]})
+            continue
+        payable.append(user)
+    return payable, skipped
+
+
 def generate_draft_run(run: PayrollRun, users) -> list[PayrollLine]:
     """Generate (or regenerate) draft payroll lines for all users.
 
