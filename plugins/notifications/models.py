@@ -195,6 +195,17 @@ class NotificationEventTypeConfig(models.Model):
         return f"{self.event_type}: {'on' if self.is_enabled else 'off'}"
 
     @classmethod
+    def disabled_event_types(cls) -> frozenset[str]:
+        """Every admin-disabled event type, in one query.
+
+        Not cached: Django's TestCase rolls back rows without firing signals,
+        so a cached set would leak between tests. Callers that check many
+        types should call this once and test membership.
+        """
+        return frozenset(
+            cls.objects.filter(is_enabled=False).values_list('event_type', flat=True)
+        )
+
+    @classmethod
     def is_type_enabled(cls, event_type: str) -> bool:
-        row = cls.objects.filter(event_type=event_type).only('is_enabled').first()
-        return row.is_enabled if row is not None else True
+        return event_type not in cls.disabled_event_types()

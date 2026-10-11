@@ -1,5 +1,7 @@
+from django.db import transaction
 from rest_framework import viewsets, permissions, serializers, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from .models import (
     Notification,
@@ -8,7 +10,7 @@ from .models import (
     PushSubscription,
 )
 from core.mixins.permissions import is_hbpr_only
-from .types.base import REGISTRY
+from .types.base import REGISTRY, get_all_types
 from .vapid_utils import get_public_key
 
 
@@ -116,10 +118,11 @@ class NotificationViewSet(viewsets.ModelViewSet):
         core_labels = dict(NotificationPreference.EVENT_TYPES)
         labels: dict[str, str] = {}
         push_defaults: dict[str, bool] = {}
+        # Admin kill-switch: globally disabled types vanish from the
+        # preferences list (and PATCH) so user frontends stop showing them.
+        disabled = NotificationEventTypeConfig.disabled_event_types()
         for event_type in event_types:
-            # Admin kill-switch: globally disabled types vanish from the
-            # preferences list (and PATCH) so user frontends stop showing them.
-            if not NotificationEventTypeConfig.is_type_enabled(event_type):
+            if event_type in disabled:
                 continue
             registered = REGISTRY.get(event_type)
             if registered is not None and not registered.user_configurable:
@@ -251,3 +254,74 @@ class NotificationViewSet(viewsets.ModelViewSet):
         """List the current user's push subscriptions."""
         subs = PushSubscription.objects.filter(user=request.user)
         return Response(PushSubscriptionSerializer(subs, many=True).data)
+
+
+def _members_by_key():
+    """``preference_key -> [type classes]``: a bare type, or a group of several."""
+    groups: dict[str, list] = {}
+    for cls in sorted(get_all_types().values(), key=lambda c: c.event_type):
+        groups.setdefault(cls.preference_key, []).append(cls)
+    return groups
+
+
+def _event_type_catalogue():
+    """One row per preference key, the same granularity Settings shows.
+
+    ``audience`` is the registered ``category`` and mirrors the recipient
+    rules in ``NotificationViewSet._available_preference_pairs``: 'own' for
+    everyone, 'team' for team leaders/HR/staff, 'oversight' for HR/HBPR/staff.
+    ``enabled`` is True only when every member event type is on;
+    ``partially_enabled`` marks a mixed group (legacy rows from Django admin).
+    """
+    disabled = NotificationEventTypeConfig.disabled_event_types()
+    rows = []
+    for key, members in sorted(_members_by_key().items()):
+        event_types = [cls.event_type for cls in members]
+        enabled_count = sum(1 for event_type in event_types if event_type not in disabled)
+        if len(members) == 1:
+            description = members[0].description
+        else:
+            description = ', '.join(dict.fromkeys(cls.label for cls in members))
+        rows.append({
+            'key': key,
+            'label': next(
+                (cls.preference_group_label for cls in members if cls.preference_group_label),
+                '',
+            ) or members[0].label or key,
+            'description': description,
+            'audience': members[0].category,
+            'user_configurable': any(cls.user_configurable for cls in members),
+            'event_types': event_types,
+            'enabled': enabled_count == len(event_types),
+            'partially_enabled': 0 < enabled_count < len(event_types),
+        })
+    return rows
+
+
+class NotificationEventTypeConfigViewSet(viewsets.ViewSet):
+    """Staff kill-switch per notification type (edits NotificationEventTypeConfig)."""
+
+    permission_classes = [permissions.IsAdminUser]
+
+    def list(self, request):
+        return Response(_event_type_catalogue())
+
+    def partial_update(self, request, pk=None):
+        members = _members_by_key().get(pk)
+        if not members:
+            raise NotFound('Unknown notification type.')
+        enabled = request.data.get('enabled')
+        if not isinstance(enabled, bool):
+            return Response(
+                {'error': 'enabled must be a boolean.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Group keys never get rows of their own: every member type is written.
+        with transaction.atomic():
+            for cls in members:
+                NotificationEventTypeConfig.objects.update_or_create(
+                    event_type=cls.event_type,
+                    defaults={'is_enabled': enabled},
+                )
+        row = next(row for row in _event_type_catalogue() if row['key'] == pk)
+        return Response(row)

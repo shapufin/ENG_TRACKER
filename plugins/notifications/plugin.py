@@ -1,6 +1,6 @@
 from core.plugins.base import BasePlugin
 from django.urls import path, include
-from .viewsets import NotificationViewSet
+from .viewsets import NotificationEventTypeConfigViewSet, NotificationViewSet
 from rest_framework.routers import DefaultRouter
 
 class NotificationPlugin(BasePlugin):
@@ -23,6 +23,11 @@ class NotificationPlugin(BasePlugin):
     def get_urls(self):
         router = DefaultRouter()
         router.register(r'notifications', NotificationViewSet, basename='notification')
+        router.register(
+            r'event-type-config',
+            NotificationEventTypeConfigViewSet,
+            basename='notification-event-type-config',
+        )
         return [path('', include(router.urls))]
 
     def get_permission_actions(self):
@@ -48,9 +53,18 @@ class NotificationPlugin(BasePlugin):
                     "path": "/notifications",
                     "component": "NotificationsPage",
                     "layout": "app"
+                },
+                {
+                    "path": "/admin/notifications",
+                    "component": "NotificationSettingsAdminPage",
+                    "layout": "admin"
                 }
             ],
             "injection_slots": [
+                {
+                    "slot": "admin-sidebar-nav-system",
+                    "component": "NotificationSettingsAdminSidebarItem"
+                },
                 {
                     "slot": "header-desktop",
                     "component": "NotificationBell"

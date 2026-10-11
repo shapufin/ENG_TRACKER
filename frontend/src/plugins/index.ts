@@ -12,6 +12,14 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
         default: m.NotificationsPage,
       }))
     ),
+    NotificationSettingsAdminPage: lazy(() =>
+      import("./notifications/pages/NotificationSettingsAdminPage").then((m) => ({
+        default: m.NotificationSettingsAdminPage,
+      }))
+    ),
+    NotificationSettingsAdminSidebarItem: lazy(
+      () => import("./notifications/components/NotificationSettingsAdminSidebarItem")
+    ),
   },
   analytics: {
     AnalyticsPage: lazy(() =>
