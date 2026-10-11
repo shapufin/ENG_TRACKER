@@ -399,3 +399,18 @@ class ManageGrantTeamScopeTests(TestCase):
         from plugins.payroll.serializers import PayrollLineSerializer
         rows = PayrollLineSerializer(self.draft.lines.all(), many=True).data
         self.assertFalse(any(row['can_regenerate'] for row in rows))
+
+    def test_team_scoped_user_regenerates_own_team_line_but_not_another_teams(self):
+        own = self._run_call(
+            self.tl, 'post', 'generate_line', f'{RUNS}{self.draft.id}/generate_line/', self.draft,
+            body={'user_id': self.subordinate.id},
+        )
+        self.assertEqual(own.status_code, 200)
+        self.assertTrue(self.draft.lines.filter(user=self.subordinate).exists())
+
+        other = self._run_call(
+            self.tl, 'post', 'generate_line', f'{RUNS}{self.draft.id}/generate_line/', self.draft,
+            body={'user_id': self.other_member.id},
+        )
+        self.assertEqual(other.status_code, 403)
+        self.assertTrue(self.draft.lines.filter(user=self.other_member).exists())
