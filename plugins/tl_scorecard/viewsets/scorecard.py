@@ -239,12 +239,16 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             for row in evidence_qs.order_by('-occurred_on', '-id')
         ]
 
+        # Leave and overtime are denied to HBPR-only viewers (CLAUDE.md), so their
+        # export omits those KPI rows.
+        include_leave_overtime = not is_hbpr_only(request.user)
         if file_format == 'pdf':
             body = build_scorecard_pdf(
                 scorecard, trend, governance, epr_metrics(team_member_ids, month.year), period_label,
                 leader_name=leader.get_full_name() or leader.username,
                 generated_by=request.user.get_full_name() or request.user.username,
                 hbpr_evidence=evidence_rows,
+                include_leave_overtime=include_leave_overtime,
             )
             content_type = 'application/pdf'
             extension = 'pdf'
@@ -252,6 +256,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             body = build_workbook_bytes(
                 scorecard, governance, period_label,
                 hbpr_evidence=evidence_rows, trend=trend,
+                include_leave_overtime=include_leave_overtime,
             )
             content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             extension = 'xlsx'

@@ -445,7 +445,7 @@ def governance_records(leader, team_member_ids, year: int, subject_ids=None) -> 
             'final_review_done': c.final_review_completed_at is not None,
             'goal_count': len(c.goals.all()),
         }
-        for c in EPRCycle.objects.filter(user_id__in=team_member_ids, year=year)
+        for c in _limit(EPRCycle.objects.filter(user_id__in=team_member_ids, year=year), 'user_id')
         .select_related('user').prefetch_related('goals')
     ]
     return {
