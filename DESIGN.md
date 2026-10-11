@@ -83,7 +83,7 @@ decisions D1–D5, Page Gate G1–G5); traps (1)–(5) are pinned in CLAUDE.md's
 | KPI card: icon chip + value + delta + link | `StatCard` `iconTone`/`delta`/`to`/`onClick` | `GlassCard interactive` + `.surface-lift` when clickable; deltas only from real payloads |
 | Labelled filter chips w/ counts | `FilterChipRow` (`FacetRow`+`Chip`, `aria-pressed`) | |
 | Breadcrumbs | `AdminBreadcrumbNav` via `resolveAdminCrumbs`; plugin routes register in `ADMIN_PLUGIN_CRUMBS` | rendered by `AdminShell` |
-| Hover row actions + sticky actions column | `RowActions` + `Button size="control-icon-sm"` + `TABLE_STICKY_ACTIONS_*` | visible on coarse pointers/`:focus-within`/selected; sticky cells must `cn()`-compose with `TABLE_BODY_CELL_CLASS` (trap 1); `group/row` lives in `DataTable`'s base row class (trap 2) |
+| Hover row actions (plain right-aligned column) | `RowActions` + `Button size="control-icon-sm"` + `TABLE_ACTIONS_*` | hover/focus/selection revealed on fine pointers, always on coarse; the cells must `cn()`-compose with `TABLE_BODY_CELL_CLASS` (trap 1); `group/row` lives in `DataTable`'s base row class (trap 2). **Not a sticky panel** — removed in the 2026-10-10 refinement pass (see below) |
 | Two-line identity cell | `UserCell` (`components/admin/`) | |
 | Compact empty state w/ CTA + preview | `EmptyState` `size="sm"`/`tone`/`preview` | |
 | Severity banner (stackable) | `SeverityBanner` (from `AdminInsightsStrip`) | |
@@ -108,6 +108,40 @@ classes on control-room access rows; `AdminDashboardWidgets` load flake.
 Ilir Hoxha / DOME_TEAM / NOC_SHIFT, "Article 2109" footnotes, "RSA-2048
 Signed" badges, Rome/Tirana hubs. Deltas render only from real payloads;
 otherwise omit.
+
+## Admin refinement pass (2026-10-10)
+
+The lift above landed the mockup's *structure* but kept a few heavy treatments
+of its own. This pass re-measured `/admin/users` in a real browser and pulled the
+details back to the mockup. **Every change is in a shared primitive**, so all ~20
+admin tables inherit it; nothing below was edited per call site.
+
+| What | Before | After | Primitive |
+|---|---|---|---|
+| Actions column | 120px sticky panel: `position: sticky`, `bg-card`, inset shadow line — a permanent white block on every row's right edge | plain right-aligned column **sized by its icons** (~150px of 4 icons), transparent, `px-2`, no shadow — an idle row shows nothing there because `RowActions` stays hover/focus/selection revealed | `tableStyles.ts` (`TABLE_ACTIONS_*`), `DataTable.tsx`, `useUserColumns`, `teamsColumns` |
+| Row height | 61px (`py-3`) | **53px** (`py-2`) | `TABLE_BODY_CELL_CLASS` |
+| Filter chips | 32px, `rounded-full`, solid indigo fill, `text-sm` | **28px, `rounded-lg`, `text-xs`**, soft `bg-muted` at rest and soft `bg-primary/10` tint when pressed | `Chip.tsx`, `FilterChipRow.tsx` |
+| Row action icons | default ghost on hover | muted at rest, per-tone colour + matching tinted hover well (`tone-*-surface`) | `RowActions.tsx` |
+| Bulk selection bar | `rounded-2xl` + `border-primary/30` + `bg-primary/5` card, 32px badge | flat strip: `rounded-lg`, `bg-muted/40`, 24px gradient badge, *Clear selection* / *Bulk edit* / *Delete* | `BulkActionBar.tsx`, `UsersPageBulkBar.tsx` |
+| Identity cell avatar | `h-8 w-8` | `h-7 w-7` | `UserCell.tsx` |
+
+**Verified (Playwright, 1440×900, `e2e_super`, real data):** chips 28px/10px
+radius/12px, rows 53px, actions cell `position: static` + transparent + no
+shadow, bulk strip 10px radius with the mockup's three labels, and `docScrollX:
+0` (no page-level horizontal scroll) at 1440, 768 and 375px; light + dark
+captures with `consoleErrors: []` / `failedRequests: []`. Gates: table-header,
+control, surface and modal audits all exit 0, `tsc --noEmit` exit 0.
+
+**Intentionally unchanged:** the **table header** (band/fill/weight) — the
+2026-10-05 override of the mockup's `bg-slate-50` + weight-600 header is still in
+force (§Table header contract). Hover-reveal of row actions is also kept: the
+mockup reveals on hover too.
+
+**Known, measured, not fixed this pass:** the users table still needs ~467px of
+horizontal scroll at 1440 because it carries 10 columns (CR Teams, CR, IT TL and
+AL TL are all separate). That is a column-set decision (hide by default vs.
+narrow), not a styling one — propose it separately rather than silently dropping
+columns.
 
 ## Surface inventory
 
@@ -267,6 +301,12 @@ routes lifted; new primitives (`FilterChipRow`, `RowActions`+sticky actions,
 iconTone/delta, `EmptyState` size/tone/preview, `text-dense`, `.admin-canvas`,
 `.surface-lift`); light `--primary` restored to indigo `230 80% 55%`. Page Gate
 G1–G5 was skipped in the first run — verification debt tracked above.
+2026-10-10 — **Admin refinement pass**: the lift's own heavy treatments pulled
+back to the `Downloads/AdminGUI` mockup and re-measured in the browser — sticky
+actions panel removed (`TABLE_ACTIONS_*`, plain right-aligned icon-sized
+column), rows `py-2` (61px → 53px), `Chip` 28px `rounded-lg` soft-tint, flat
+`bg-muted/40` bulk bars, `UserCell` avatar `h-7`. Header treatment deliberately
+unchanged (§Table header contract). Details + measurements above.
 **`Design System.md` merged into this file** (single source of truth); that
 file is now a redirect stub.
 

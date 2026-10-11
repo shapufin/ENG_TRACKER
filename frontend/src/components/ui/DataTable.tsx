@@ -11,12 +11,12 @@ import {
 } from "@tanstack/react-table";
 import { appFeatures, type AppCell, type AppColumnDef, type AppRow } from "./tableTypes";
 import {
+  TABLE_ACTIONS_CELL_CLASS,
+  TABLE_ACTIONS_HEAD_CLASS,
   TABLE_BODY_CELL_CLASS,
   TABLE_HEAD_CELL_CHECKBOX_CLASS,
   TABLE_HEAD_CELL_CLASS,
   TABLE_HEAD_ROW_CLASS,
-  TABLE_STICKY_ACTIONS_CELL_CLASS,
-  TABLE_STICKY_ACTIONS_HEAD_CLASS,
 } from "./tableStyles";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
@@ -246,7 +246,7 @@ export const DataTable = function DataTable<TData extends RowData>({
               key={cell.id}
               className={cn(
                 TABLE_BODY_CELL_CLASS,
-                cell.column.id === "actions" && TABLE_STICKY_ACTIONS_CELL_CLASS
+                cell.column.id === "actions" && TABLE_ACTIONS_CELL_CLASS
               )}
               style={
                 cell.column.columnDef.size
@@ -361,7 +361,7 @@ export const DataTable = function DataTable<TData extends RowData>({
                       key={header.id}
                       className={cn(
                         TABLE_HEAD_CELL_CLASS,
-                        header.column.id === "actions" && TABLE_STICKY_ACTIONS_HEAD_CLASS
+                        header.column.id === "actions" && TABLE_ACTIONS_HEAD_CLASS
                       )}
                       style={
                         header.column.columnDef.size

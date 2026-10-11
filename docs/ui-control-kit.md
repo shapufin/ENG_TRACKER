@@ -12,7 +12,7 @@ Fix a look in the token or the primitive, never per call site.
 - `SearchField`: the one search box (icon slot, clear button, Esc clears, required `aria-label`).
   Never draw a `<Search>` icon next to an `<Input>` or add `pl-*` padding by hand.
 - `FilterToolbar` (+ `.Search`, `.Group`): layout only; the `max-w-sm flex-1` wrapper lives here once.
-- `Chip` (`pressed` -> `aria-pressed`): toggle chip at `--control-h-sm`. `FacetRow` (`components/admin`)
+- `Chip` (`pressed` -> `aria-pressed`): toggle chip, 28px (`h-7`), `rounded-lg`, `text-xs` — soft `bg-muted` at rest, soft `bg-primary/10` tint when pressed (2026-10-10 refinement; the lift's original 32px `rounded-full` solid-indigo pill was too loud for a filter row). `FacetRow` (`components/admin`)
   puts a quiet 12px label in front of a wrapping chip row.
 - `DateRangePicker` uses the same surface (`controlSize`), so it aligns with fields and buttons.
   `DataTable` takes `toolbarActions` (filters, chips) so search, filters and Columns share ONE toolbar row.

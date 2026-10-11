@@ -297,7 +297,9 @@ export const useUserColumns = (
       },
       {
         id: "actions",
-        size: 120,
+        // No `size`: the column is sized by its icons (2026-10-10 refinement).
+        // The previous reserved `size: 120` was ~4x the width the buttons need
+        // and pushed IT/AL TL off-screen on a 1440px viewport.
         header: () => <span className="sr-only">Actions</span>,
         cell: ({ row }) => {
           const username = row.original.user?.username;

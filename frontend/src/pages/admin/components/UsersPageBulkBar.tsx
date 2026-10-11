@@ -29,14 +29,18 @@ export const UsersPageBulkBar: React.FC<UsersPageBulkBarProps> = ({
           transition={transition}
           className="overflow-hidden"
         >
+          {/*
+            Same flat selection strip as the shared BulkActionBar (2026-10-10
+            refinement): one quiet band, not a tinted card floating above the table.
+          */}
           <div
-            className="flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            className="border-line-subtle flex flex-col gap-2 rounded-lg border bg-muted/40 px-4 py-2 sm:flex-row sm:items-center sm:justify-between"
             role="status"
             aria-live="polite"
           >
             <div className="flex items-center gap-3">
               <div
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-accent-violet to-primary text-sm font-bold text-primary-foreground shadow-lg shadow-accent-violet/25"
+                className="from-accent-violet to-primary text-primary-foreground shadow-accent-violet/25 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold shadow-sm"
                 aria-label={`${selectedCount} users selected`}
               >
                 <span aria-hidden="true">

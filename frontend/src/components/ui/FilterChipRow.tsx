@@ -48,7 +48,7 @@ export function FilterChipRow<V extends string>({
                 <span
                   className={cn(
                     "rounded-full px-1.5 text-xs tabular-nums",
-                    pressed ? "bg-primary-foreground/20" : "bg-foreground/[0.06]"
+                    pressed ? "bg-primary/15" : "bg-foreground/[0.06]"
                   )}
                 >
                   {option.count}

@@ -429,11 +429,19 @@ describe("DataTable row actions layout", () => {
     expect(screen.getByText("Alice").closest("tr")!.className).toContain("group/row");
   });
 
-  it("actions column cells are sticky", () => {
+  it("actions column is a plain right-aligned column, not a sticky panel", () => {
+    // The 2026-10-10 refinement replaced the lift's sticky opaque column with the
+    // mockup treatment: the column must be sized by its icons, carry no background
+    // of its own, and leave the row's hover/selection tint to show through.
     renderIt();
-    expect(screen.getByText("Go").closest("td")!.className).toContain("sticky");
-    expect(screen.getByText("Actions").closest("th")!.className).toContain("sticky");
-    expect(screen.getByText("Alice").closest("td")!.className).not.toContain("sticky");
+    const cell = screen.getByText("Go").closest("td")!;
+    expect(cell.className).toContain("text-right");
+    expect(cell.className).toContain("px-2");
+    expect(cell.className).toContain("py-2");
+    expect(cell.className).not.toContain("sticky");
+    expect(cell.className).not.toContain("bg-card");
+    expect(screen.getByText("Actions").closest("th")!.className).toContain("text-right");
+    expect(screen.getByText("Alice").closest("td")!.className).not.toContain("text-right");
   });
 });
 

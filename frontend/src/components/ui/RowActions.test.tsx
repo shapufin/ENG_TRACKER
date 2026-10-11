@@ -44,6 +44,25 @@ describe("RowActions", () => {
     expect(screen.getByRole("button", { name: "Delete" }).className).toContain("text-destructive");
   });
 
+  it("idles quiet and gives each tone a matching hover well", () => {
+    render(
+      <RowActions
+        actions={[
+          { label: "Edit", icon: Pencil, onClick: vi.fn() },
+          { label: "Delete", icon: Trash2, onClick: vi.fn(), tone: "danger" },
+          { label: "Rotate", icon: Pencil, onClick: vi.fn(), tone: "warning" },
+          { label: "Approve", icon: Pencil, onClick: vi.fn(), tone: "success" },
+        ]}
+      />
+    );
+    const cls = (name: string) => screen.getByRole("button", { name }).className;
+    expect(cls("Edit")).toContain("text-muted-foreground");
+    expect(cls("Edit")).toContain("hover:bg-muted");
+    expect(cls("Delete")).toContain("hover:bg-tone-danger-surface");
+    expect(cls("Rotate")).toContain("hover:bg-tone-warning-surface");
+    expect(cls("Approve")).toContain("hover:bg-tone-success-surface");
+  });
+
   it("disabled action is disabled", () => {
     render(
       <RowActions actions={[{ label: "Edit", icon: Pencil, onClick: vi.fn(), disabled: true }]} />

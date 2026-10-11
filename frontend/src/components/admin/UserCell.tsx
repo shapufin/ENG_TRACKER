@@ -19,7 +19,7 @@ export const UserCell: React.FC<UserCellProps> = ({ name, techLevels, subtitle }
 
   return (
     <div className="flex items-center gap-2">
-      <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium">
+      <div className="bg-primary/10 flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium">
         {initials}
       </div>
       <div className="min-w-0">

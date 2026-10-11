@@ -10,7 +10,8 @@ export const TEAMS_COLUMNS: TeamsColumn[] = [
   { id: "calendar_group", label: "Calendar Group", width: "1.5fr" },
   { id: "members", label: "Members", width: "1fr" },
   { id: "leader", label: "Leader", width: "1fr" },
-  { id: "actions", label: "Actions", width: "120px" },
+  // Sized by its icons (2026-10-10 refinement) — was a fixed 120px.
+  { id: "actions", label: "Actions", width: "minmax(0, auto)" },
 ];
 
 export const TEAMS_COLUMNS_STORAGE_KEY = "table-visibility-calendar-teams";

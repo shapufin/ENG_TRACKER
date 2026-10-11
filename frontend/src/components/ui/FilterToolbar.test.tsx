@@ -24,11 +24,13 @@ describe("FilterToolbar", () => {
 });
 
 describe("Chip", () => {
-  it("reflects pressed state and uses the small control height", () => {
+  it("reflects pressed state and uses the compact chip height", () => {
     const { rerender } = render(<Chip pressed={false}>Italian TL</Chip>);
     const el = screen.getByRole("button", { name: "Italian TL" });
     expect(el).toHaveAttribute("aria-pressed", "false");
-    expect(el).toHaveClass("h-[var(--control-h-sm)]");
+    // 28px (h-7) since the 2026-10-10 refinement: the lift's 32px token-height
+    // pill read as the loudest thing on the filter row.
+    expect(el).toHaveClass("h-7");
     rerender(<Chip pressed>Italian TL</Chip>);
     expect(screen.getByRole("button", { name: "Italian TL" })).toHaveAttribute(
       "aria-pressed",

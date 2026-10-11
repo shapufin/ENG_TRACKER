@@ -7,10 +7,14 @@ interface ChipProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 
 }
 
 /**
- * Toggle chip at `--control-h-sm`, soft control edge; pressed state uses the primary tone. In forced-colors
- * mode the fill is dropped by the browser, so a pressed chip gets Highlight colours and a check glyph.
- * A count inside the chip inherits the chip's text colour at full opacity (muted-foreground or
- * primary-foreground, both >= 4.5:1): never dim it with an opacity class.
+ * Toggle chip: 28px tall, soft fill. The AdminGUI mockup treatment — a quiet
+ * `bg-muted` chip with no border box at rest, and a soft primary tint (not a
+ * solid fill) when pressed; the lift's original version was a 32px solid-indigo
+ * pill, which read as the loudest thing on the filter row. In forced-colors mode
+ * the fill is dropped by the browser, so a pressed chip gets Highlight colours
+ * and a check glyph. A count inside the chip inherits the chip's text colour at
+ * full opacity (muted-foreground or primary, both >= 4.5:1): never dim it with
+ * an opacity class.
  */
 const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
   ({ pressed, className, type = "button", children, ...props }, ref) => (
@@ -19,10 +23,10 @@ const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
       type={type}
       aria-pressed={pressed}
       className={cn(
-        "focus-visible:ring-focus inline-flex h-[var(--control-h-sm)] shrink-0 cursor-pointer touch-manipulation items-center gap-1.5 rounded-full border px-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
+        "focus-visible:ring-focus inline-flex h-7 shrink-0 cursor-pointer touch-manipulation items-center gap-1 rounded-lg border border-transparent px-2.5 text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
         pressed
-          ? "border-primary bg-primary text-primary-foreground forced-colors:border-[Highlight] forced-colors:bg-[Highlight] forced-colors:text-[HighlightText] forced-colors:forced-color-adjust-none"
-          : "border-control-edge bg-card text-muted-foreground hover:border-control-edge-hover hover:text-foreground",
+          ? "border-primary/30 bg-primary/10 text-primary forced-colors:border-[Highlight] forced-colors:bg-[Highlight] forced-colors:text-[HighlightText] forced-colors:forced-color-adjust-none"
+          : "bg-muted text-muted-foreground hover:text-foreground",
         className
       )}
       {...props}

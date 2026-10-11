@@ -1,6 +1,5 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GlassCard } from "./GlassCard";
 import { Button } from "./button";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { X } from "lucide-react";
@@ -41,46 +40,49 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
           variants={bulkBarEnter}
           transition={transition}
         >
-          <GlassCard className="border-l-primary mb-4 overflow-hidden border-l-4">
-            <div className="bg-primary/5 flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div
-                  className="from-accent-violet to-primary text-primary-foreground shadow-accent-violet/25 flex h-6 w-6 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold shadow-sm"
-                  aria-label={`${selectedCount} selected`}
-                >
-                  <span aria-hidden="true">
-                    <AnimatedNumber value={selectedCount} duration={0.4} />
-                  </span>
-                </div>
-                <span className="text-sm font-medium">
-                  {selectedCount === 1
-                    ? `${entityName.replace(/s$/, "")} selected`
-                    : `${entityName} selected`}
+          {/*
+            Flat selection strip (AdminGUI mockup treatment, 2026-10-10). The
+            lift's original version was a GlassCard with an accent left border and
+            a tinted body, which read as a second card floating above the table;
+            this is one quiet band that sits in the page's flow.
+          */}
+          <div className="border-line-subtle mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/40 px-4 py-2.5">
+            <div className="flex items-center gap-3">
+              <div
+                className="from-accent-violet to-primary text-primary-foreground shadow-accent-violet/25 flex h-6 w-6 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold shadow-sm"
+                aria-label={`${selectedCount} selected`}
+              >
+                <span aria-hidden="true">
+                  <AnimatedNumber value={selectedCount} duration={0.4} />
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                {children}
-                {actions.map((action, idx) => (
-                  <Button
-                    key={idx}
-                    size="sm"
-                    variant={action.variant || "default"}
-                    onClick={action.onClick}
-                    className="h-7 px-2 text-xs"
-                    disabled={action.disabled}
-                  >
-                    <action.icon className="mr-1 h-3.5 w-3.5" />
-                    {action.label}
-                  </Button>
-                ))}
-                <div className="bg-border mx-1 h-4 w-px" />
-                <Button size="sm" variant="ghost" onClick={onClear} className="h-7 px-2 text-xs">
-                  <X className="mr-1 h-3.5 w-3.5" />
-                  Clear
-                </Button>
-              </div>
+              <span className="text-sm font-medium">
+                {selectedCount === 1
+                  ? `${entityName.replace(/s$/, "")} selected`
+                  : `${entityName} selected`}
+              </span>
             </div>
-          </GlassCard>
+            <div className="flex items-center gap-2">
+              {children}
+              {actions.map((action, idx) => (
+                <Button
+                  key={idx}
+                  size="sm"
+                  variant={action.variant || "default"}
+                  onClick={action.onClick}
+                  className="gap-1.5"
+                  disabled={action.disabled}
+                >
+                  <action.icon className="h-3.5 w-3.5" aria-hidden="true" />
+                  {action.label}
+                </Button>
+              ))}
+              <Button size="sm" variant="outline" onClick={onClear} className="gap-1.5">
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+                Clear selection
+              </Button>
+            </div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

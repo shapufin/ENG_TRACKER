@@ -15,11 +15,18 @@ export interface RowAction {
   disabledReason?: string;
 }
 
+/**
+ * Idle colour + hover treatment per tone. The default action sits quiet
+ * (`text-muted-foreground`, soft `bg-muted` hover — the AdminGUI mockup
+ * language); destructive/warning/success keep their status colour and gain a
+ * matching tinted hover well. The hover utilities override the ghost variant's
+ * `hover:bg-accent/70` because `className` is merged last.
+ */
 const TONE_CLASS: Record<NonNullable<RowAction["tone"]>, string> = {
-  default: "",
-  danger: "text-destructive",
-  warning: "text-tone-warning-text",
-  success: "text-tone-success-text",
+  default: "text-muted-foreground hover:bg-muted hover:text-foreground",
+  danger: "text-destructive hover:bg-tone-danger-surface",
+  warning: "text-tone-warning-text hover:bg-tone-warning-surface",
+  success: "text-tone-success-text hover:bg-tone-success-surface",
 };
 
 /** Hidden until the row is hovered/focused/selected, on fine pointers only. */
