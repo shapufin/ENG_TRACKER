@@ -145,6 +145,18 @@ Remaining cost, accepted:
 - Timings are noisy on SQLite (roughly 20–50 ms per read). Query counts are the
   stable signal.
 
+## PDF export (2026-10-11)
+
+`GET /api/plugins/engagement/metrics/export/?month=YYYY-MM-DD&scope=month|year&file_format=xlsx|pdf`.
+`xlsx` is the default; an unknown `scope` or `file_format` is a 400. `scope=month`
+covers the selected month, with the six-month trend window ending there. `scope=year`
+covers the calendar year of `month`. The PDF and the XLSX read the same rows: headline
+figures come from `aggregate_rows` and the monthly trend from `monthly_rollup`
+(`plugins/engagement/services.py`), so the two files cannot disagree. The PDF names the
+single leader in scope, or "All team leaders in scope" when there are several. The
+filename is `engagement_<scope>_<username>_<period>.<ext>`. The engagement metrics page's
+Export menu offers Excel and PDF for this month and for the full year.
+
 ## Known limits (accepted, not fixed)
 
 - Team totals sum across teams, so a person in two teams is counted twice in
