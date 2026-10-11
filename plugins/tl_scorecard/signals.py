@@ -197,12 +197,21 @@ _RECEIVERS = (
 
 
 def connect():
-    # Registers the types as a side effect of importing them.
-    from . import notification_types  # noqa: F401
+    # Registers the types as a side effect of importing them; the explicit write
+    # below restores them when the module was already imported before a disconnect.
+    from plugins.notifications.types.base import REGISTRY
+
+    from . import notification_types
+    for cls in notification_types.ALL_TYPES:
+        REGISTRY[cls.event_type] = cls
     for signal, sender, handler, suffix in _RECEIVERS:
         signal.connect(handler, sender=sender, dispatch_uid=f'{_UID}.{suffix}', weak=False)
 
 
 def disconnect():
+    from plugins.notifications.types.base import unregister_event_types
+
+    from . import notification_types
+    unregister_event_types(*(cls.event_type for cls in notification_types.ALL_TYPES))
     for signal, sender, _handler, suffix in _RECEIVERS:
         signal.disconnect(sender=sender, dispatch_uid=f'{_UID}.{suffix}')
