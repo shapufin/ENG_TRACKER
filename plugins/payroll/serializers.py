@@ -379,6 +379,7 @@ class PayrollWorkCalendarSerializer(serializers.ModelSerializer):
 class PayrollLineSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.username', read_only=True)
     user_full_name = serializers.SerializerMethodField()
+    can_regenerate = serializers.SerializerMethodField()
 
     class Meta:
         model = PayrollLine
@@ -397,6 +398,12 @@ class PayrollLineSerializer(serializers.ModelSerializer):
     def get_user_full_name(self, obj):
         full = f'{obj.user.first_name} {obj.user.last_name}'.strip()
         return full or obj.user.username
+
+    def get_can_regenerate(self, obj):
+        # `scoped_user_ids`: None = company scope (every line), a set = team scope.
+        # Missing context is no scope at all, so the flag fails closed.
+        scope = self.context.get('scoped_user_ids', set())
+        return scope is None or obj.user_id in scope
 
 
 class PayrollRunSerializer(serializers.ModelSerializer):

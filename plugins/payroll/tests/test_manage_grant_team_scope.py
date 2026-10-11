@@ -376,3 +376,26 @@ class ManageGrantTeamScopeTests(TestCase):
         self.assertEqual(self._run_scope(self.tl), 'team')
         self.assertEqual(self._run_scope(self.manager), 'team')
         self.assertEqual(self._run_scope(self.employee), 'team')
+
+    # -- can_regenerate: per-line flag the UI uses for the line Generate action --
+
+    def test_line_flags_regenerate_only_for_lines_in_the_viewers_team(self):
+        from plugins.payroll.serializers import PayrollLineSerializer
+        rows = PayrollLineSerializer(
+            self.draft.lines.all(), many=True,
+            context={'scoped_user_ids': {self.subordinate.id}},
+        ).data
+        flags = {row['user']: row['can_regenerate'] for row in rows}
+        self.assertEqual(flags, {self.subordinate.id: True, self.other_member.id: False})
+
+    def test_company_viewer_can_regenerate_every_line(self):
+        from plugins.payroll.serializers import PayrollLineSerializer
+        rows = PayrollLineSerializer(
+            self.draft.lines.all(), many=True, context={'scoped_user_ids': None},
+        ).data
+        self.assertTrue(all(row['can_regenerate'] for row in rows))
+
+    def test_line_without_scope_context_is_not_regenerable(self):
+        from plugins.payroll.serializers import PayrollLineSerializer
+        rows = PayrollLineSerializer(self.draft.lines.all(), many=True).data
+        self.assertFalse(any(row['can_regenerate'] for row in rows))

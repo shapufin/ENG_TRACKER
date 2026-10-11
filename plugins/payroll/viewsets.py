@@ -1260,7 +1260,9 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         """List payroll lines for a run, scoped to what this user may see."""
         run = self.get_object()
         lines = self._scoped_lines(run).order_by('user__username')
-        serializer = PayrollLineSerializer(lines, many=True)
+        serializer = PayrollLineSerializer(lines, many=True, context={
+            'scoped_user_ids': _allowed_payroll_user_ids(request.user),
+        })
         return Response(serializer.data)
 
     @action(detail=False, methods=['post'])
