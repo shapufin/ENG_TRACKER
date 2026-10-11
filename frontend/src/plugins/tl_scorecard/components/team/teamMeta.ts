@@ -18,6 +18,7 @@ export const wageUnavailableReason = (
   status: TeamMemberSummary["wage"]["status"]
 ): string | null => {
   if (status === "missing") return "No wage for this month";
+  if (status === "conflict") return "Conflicting wage records, check payroll";
   if (status === "unavailable") return "Payroll is not available";
   return null;
 };

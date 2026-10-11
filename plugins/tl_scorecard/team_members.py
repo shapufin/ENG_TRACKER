@@ -186,6 +186,8 @@ def team_member_summaries(leader, today: date, include_meetings: bool) -> list[d
                 'effective_from': member.wage_from,
                 'status': 'ok',
             }
+        elif member.wage_count > 1:
+            wage = {'gross_monthly': None, 'effective_from': None, 'status': 'conflict'}
         else:
             wage = {'gross_monthly': None, 'effective_from': None, 'status': 'missing'}
         epr_done = {

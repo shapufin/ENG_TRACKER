@@ -130,6 +130,14 @@ class TeamMemberWageTests(TeamMembersBase):
         self.assertEqual(wage['status'], 'missing')
         self.assertIsNone(wage['gross_monthly'])
 
+    def test_overlapping_wages_are_a_conflict_not_missing(self):
+        first_of_month = self.today.replace(day=1)
+        self._wage(self.member, '1000.00', first_of_month - timedelta(days=60))
+        self._wage(self.member, '2000.00', first_of_month - timedelta(days=20))
+        wage = self._member_row(self._get(self.tl))['wage']
+        self.assertEqual(wage['status'], 'conflict')
+        self.assertIsNone(wage['gross_monthly'])
+
     def test_wage_is_unavailable_when_payroll_is_not_importable(self):
         with mock.patch.dict(sys.modules, {'plugins.payroll.models': None}):
             wage = self._member_row(self._get(self.tl))['wage']
