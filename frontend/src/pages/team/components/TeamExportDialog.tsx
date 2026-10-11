@@ -11,7 +11,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { downloadBlobResponse } from "@/lib/download";
 import { toLocalISODate } from "@/lib/date-format-utils";
 import { extractApiErrorMessage } from "@/lib/apiFormError";
@@ -112,8 +118,9 @@ export const TeamExportDialog: React.FC<TeamExportDialogProps> = ({ open, onOpen
                   <SelectItem value="processing_period">Payroll period</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Payroll period matches HR&apos;s payroll export: records carried over to next month appear in the month they&apos;re paid.
+              <p className="text-muted-foreground text-xs">
+                Payroll period matches HR&apos;s payroll export: records carried over to next month
+                appear in the month they&apos;re paid.
               </p>
             </div>
           )}

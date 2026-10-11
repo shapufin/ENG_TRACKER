@@ -66,7 +66,10 @@ describe("TeamExportDialog", () => {
         date_mode: "work_date",
       });
     });
-    expect(downloadBlobResponse).toHaveBeenCalledWith(expect.any(Blob), expect.stringContaining("team_ot_standby_export_"));
+    expect(downloadBlobResponse).toHaveBeenCalledWith(
+      expect.any(Blob),
+      expect.stringContaining("team_ot_standby_export_")
+    );
   });
 
   it("filters OT & Standby by payroll period when that date mode is chosen", async () => {
@@ -77,8 +80,8 @@ describe("TeamExportDialog", () => {
     fireEvent.click(screen.getByRole("option", { name: "Payroll period" }));
     expect(
       screen.getByText(
-        "Payroll period matches HR's payroll export: records carried over to next month appear in the month they're paid.",
-      ),
+        "Payroll period matches HR's payroll export: records carried over to next month appear in the month they're paid."
+      )
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
 
@@ -92,7 +95,7 @@ describe("TeamExportDialog", () => {
     });
     expect(downloadBlobResponse).toHaveBeenCalledWith(
       expect.any(Blob),
-      expect.stringContaining("team_ot_standby_payroll_period_export_"),
+      expect.stringContaining("team_ot_standby_payroll_period_export_")
     );
   });
 
@@ -120,7 +123,9 @@ describe("TeamExportDialog", () => {
   });
 
   it("shows a toast and keeps the dialog open when the export request fails", async () => {
-    (reportService.exportOTStandby as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("boom"));
+    (reportService.exportOTStandby as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("boom")
+    );
     const onOpenChange = vi.fn();
     const { toast } = await import("sonner");
     render(<TeamExportDialog open={true} onOpenChange={onOpenChange} />);
