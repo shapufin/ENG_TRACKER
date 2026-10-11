@@ -12,6 +12,7 @@ from apps.users.services.hbpr_scope import get_hbpr_scope, is_hbpr
 from core.mixins.permissions import PluginPermissionMixin, is_hbpr_only
 
 from ..excel_export import build_workbook_bytes
+from ..pdf_export import build_scorecard_pdf
 
 from ..scope import scoreable_member_ids
 from ..models import (
@@ -192,7 +193,10 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
     @action(detail=False, methods=['get'], throttle_scope='export')
     def export(self, request):
-        """Download the evidence workbook. ?month=YYYY-MM-DD."""
+        """Download the summary: ?file_format=xlsx (default) or pdf. ?month=YYYY-MM-DD."""
+        file_format = request.query_params.get('file_format', 'xlsx')
+        if file_format not in ('xlsx', 'pdf'):
+            return Response({'error': 'file_format must be xlsx or pdf'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             month = _parse_month(request.query_params.get('month'))
         except ValueError as exc:
@@ -205,7 +209,8 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
         month = month or date.today()
         scorecard = build_scorecard(leader, month)
-        self._mask_one_on_one(request, leader, scorecard)
+        trend = scorecard_trend(leader, 6, month)
+        self._mask_one_on_one(request, leader, scorecard, *trend)
         team_member_ids = scoreable_member_ids(leader)
         subject_ids = None
         if not is_staff_user(request.user) and leader.id != request.user.id:
@@ -234,15 +239,24 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             for row in evidence_qs.order_by('-occurred_on', '-id')
         ]
 
-        workbook_bytes = build_workbook_bytes(
-            scorecard, governance, period_label,
-            hbpr_evidence=evidence_rows,
-        )
+        if file_format == 'pdf':
+            body = build_scorecard_pdf(
+                scorecard, trend, governance, epr_metrics(team_member_ids, month.year), period_label,
+                leader_name=leader.get_full_name() or leader.username,
+                generated_by=request.user.get_full_name() or request.user.username,
+                hbpr_evidence=evidence_rows,
+            )
+            content_type = 'application/pdf'
+            extension = 'pdf'
+        else:
+            body = build_workbook_bytes(
+                scorecard, governance, period_label,
+                hbpr_evidence=evidence_rows, trend=trend,
+            )
+            content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            extension = 'xlsx'
 
-        filename = f'tl_scorecard_{leader.username}_{scorecard["month"][:7]}.xlsx'
-        response = HttpResponse(
-            workbook_bytes,
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        )
+        filename = f'tl_scorecard_{leader.username}_{scorecard["month"][:7]}.{extension}'
+        response = HttpResponse(body, content_type=content_type)
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response

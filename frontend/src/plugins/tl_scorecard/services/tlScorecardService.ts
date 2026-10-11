@@ -67,6 +67,9 @@ interface HbprRecordsQuery {
   offset: number;
 }
 
+/** Summary export formats the backend `export` action accepts. */
+export type SummaryFileFormat = "xlsx" | "pdf";
+
 const leaderParams = (leaderId?: number): Record<string, number> =>
   leaderId ? { leader_id: leaderId } : {};
 
@@ -268,8 +271,15 @@ export const tlScorecardService = {
   updateHbprEvidence: (id: number, data: Partial<HbprEvidencePayload>) =>
     api.patch<HbprEvidence>(`${BASE}/hbpr-evidence/${id}/`, data),
 
-  exportWorkbook: (month?: string, leaderId?: number) => {
-    const params: Record<string, string | number> = leaderParams(leaderId);
+  exportSummary: (
+    month: string | undefined,
+    leaderId: number | undefined,
+    fileFormat: SummaryFileFormat
+  ) => {
+    const params: Record<string, string | number> = {
+      ...leaderParams(leaderId),
+      file_format: fileFormat,
+    };
     if (month) params.month = month;
     return api.get<Blob>(`${BASE}/export/`, { params, responseType: "blob" });
   },
