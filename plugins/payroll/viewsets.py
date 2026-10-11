@@ -81,22 +81,18 @@ User = get_user_model()
 
 
 def _allowed_payroll_user_ids(user):
-    """Return the salary-data scope: unrestricted (like staff) for anyone
-    holding the payroll plugin's 'manage' grant — e.g. HR, who is meant to
-    have full payroll access, not just their own led team. A plain
-    team-leader identity with no elevated grant stays scoped to self + team.
+    """Return the salary-data scope. ``None`` means unrestricted: staff,
+    superusers and HR only. Everyone else, including anyone holding the
+    payroll 'manage' grant, is scoped to themselves plus their own team.
+    The grant decides what a user may do, not whose data they may see.
     """
     if user.is_staff or user.is_superuser:
-        return None
-    from apps.plugins.models import PluginPermission
-    manage_perm = PluginPermission.objects.filter(
-        plugin_name='payroll', action='manage'
-    ).first()
-    if manage_perm and manage_perm.has_access(user):
         return None
     allowed = {user.id}
     profile = getattr(user, 'profile', None)
     if profile:
+        if profile.is_hr:
+            return None
         allowed.update(profile.get_team_member_ids())
     return allowed
 
@@ -970,19 +966,25 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         return None
 
     def update(self, request, *args, **kwargs):
-        blocked = self._ensure_draft_mutable(self.get_object())
+        run = self.get_object()
+        self._ensure_unrestricted()
+        blocked = self._ensure_draft_mutable(run)
         if blocked:
             return blocked
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
-        blocked = self._ensure_draft_mutable(self.get_object())
+        run = self.get_object()
+        self._ensure_unrestricted()
+        blocked = self._ensure_draft_mutable(run)
         if blocked:
             return blocked
         return super().partial_update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        blocked = self._ensure_draft_mutable(self.get_object())
+        run = self.get_object()
+        self._ensure_unrestricted()
+        blocked = self._ensure_draft_mutable(run)
         if blocked:
             return blocked
         return super().destroy(request, *args, **kwargs)
@@ -1007,6 +1009,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         )
 
     def create(self, request, *args, **kwargs):
+        self._ensure_unrestricted()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         year = serializer.validated_data['year']
@@ -1183,6 +1186,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def finalize(self, request, pk=None):
         run = self.get_object()
+        self._ensure_unrestricted()
         try:
             run = finalize_run(run, request.user)
         except Exception as e:
@@ -1199,6 +1203,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         run = self.get_object()
+        self._ensure_unrestricted()
         try:
             run = cancel_run(run, request.user)
         except Exception as e:
@@ -1300,10 +1305,11 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         })
 
     def _ensure_unrestricted(self):
-        """Whole-run exports build one file covering every team's lines and
-        cannot be filtered down (`export_service` takes the whole run) — so
-        unlike `lines()`/`payslip()`, a scoped team leader can't use these
-        at all, only staff/superuser/payroll-'manage'-grant holders."""
+        """Whole-run actions act on every team's lines at once: exports build
+        one file covering the whole run, and create/update/destroy/finalize/
+        cancel change the whole run. Unlike `lines()`/`payslip()`, a scoped
+        user (anyone but staff, superuser or HR, `manage` grant included) is
+        refused these outright (fail closed)."""
         if _allowed_payroll_user_ids(self.request.user) is not None:
             raise PermissionDenied(
                 'This whole-run action is limited to unrestricted payroll access. '
