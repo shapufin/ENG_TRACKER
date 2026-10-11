@@ -9,6 +9,7 @@ import { HbprPartnershipSection } from "../components/scorecard/HbprPartnershipS
 import { ScorecardOverview } from "../components/scorecard/ScorecardOverview";
 import { TeamGovernanceSection } from "../components/scorecard/TeamGovernanceSection";
 import { TLScorecardHeader, type TLScorecardTab } from "../components/scorecard/TLScorecardHeader";
+import { TeamTab } from "../components/team/TeamTab";
 import { FlagAbsenceDialog } from "../components/FlagAbsenceDialog";
 import { FlagIdleDialog } from "../components/FlagIdleDialog";
 import { LogMeetingDialog } from "../components/LogMeetingDialog";
@@ -46,7 +47,8 @@ const TLScorecardAuthoring: React.FC = () => {
   const isStaff = isAdmin || isSuperuser;
   const [params, setParams] = useSearchParams();
   const rawTab = params.get("tab");
-  const tab: TLScorecardTab = rawTab === "records" || rawTab === "evidence" ? rawTab : "overview";
+  const tab: TLScorecardTab =
+    rawTab === "records" || rawTab === "evidence" || rawTab === "team" ? rawTab : "overview";
   const year = new Date().getFullYear();
 
   const setTab = (next: TLScorecardTab) =>
@@ -257,6 +259,19 @@ const TLScorecardAuthoring: React.FC = () => {
       />
     </>
   );
+
+  // The Team tab fetches its own roster (mounted only on this tab).
+  if (tab === "team") {
+    return (
+      <TLScorecardHeader
+        subtitle="Your team's leave, EPR, governance and pay at a glance."
+        tab={tab}
+        onTabChange={setTab}
+      >
+        <TeamTab />
+      </TLScorecardHeader>
+    );
+  }
 
   if (tab === "records") {
     return (
