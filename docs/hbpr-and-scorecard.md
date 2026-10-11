@@ -134,8 +134,8 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   required (the mixed "all types" view was dropped).
 - `/tl-scorecard` is the AL-TL authoring workspace (`components/scorecard/*`); an
   HBPR-only viewer is redirected to `/hbpr` before any query fires. The page is
-  three URL-backed tabs — `?tab=` overview (default: scorecard metrics +
-  governance actions) / records / evidence — and each tab's queries are
+  four URL-backed tabs — `?tab=` overview (default: scorecard metrics +
+  governance actions) / team / records / evidence — and each tab's queries are
   `enabled`-gated on it, so no fetch fires for a surface that isn't rendered.
   The **Evidence** tab owns the HBPR partnership surface: the "HBPR
   partnership" section reads `GET /api/plugins/tl_scorecard/partnership/`; its
@@ -161,6 +161,14 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   `POST .../idle-status-updates/` (one entry per flag per week, server-enforced; the 400
   is surfaced verbatim). Meeting attendees remain **read-only** here — there is no
   TL-scoped member picker, so the UI never offers creating one.
+- `?tab=team` (`components/team/TeamTab`, `TeamMemberDetailPanel`): one row per
+  scoreable team member from `GET /api/plugins/tl_scorecard/team-members/`
+  (`team_member_summaries`): current wage, leave, EPR and governance figures. Opening a
+  row uses the loaded data and fires no request. **Wage visibility (decision D1,
+  2026-10-11):** a TL sees the current wage of their own scoreable team through this
+  endpoint only. Payroll `view` stays HR-only, and an HBPR-only account is refused with
+  403. Non-staff callers read only their own team; staff may name a leader with
+  `leader_id`. One-on-one dates are shown only to the leader and staff.
 - `/admin/hbpr-assignments` (`SuperuserRoute`): create and end assignments.
   The table splits into **Active** (`is_current` — no end date or end date not
   yet passed, the same split as `?current=`/`unfinished_q`) and **Archive**
@@ -173,6 +181,25 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
 - `HbprRestrictedRoute` guards Calendar and Leave; `isHBPROnly` is computed once in
   `computePermissions.ts`. Settings shows an "HBPR Governance" group with in-app and
   push switches per group.
+
+## Exports, visualize and EPR progress
+
+- **Scorecard export:** `GET /api/plugins/tl_scorecard/export/?leader_id=&month=YYYY-MM-DD&file_format=xlsx|pdf`.
+  `xlsx` is the default; any other value is a 400 (`throttle_scope='export'`). The
+  workbook has the sheets Summary, Trend, Governance and HBPR partnership log. The PDF has
+  Summary, Meetings & reviews, EPR progress, Team risks & seniority, Governance records,
+  and Partnership log (only when the leader has partnership records). Both formats are
+  built from the same `build_scorecard` and `governance_records` data. A caller who is
+  neither the leader nor staff gets only the governance and partnership rows of their own
+  assignments (HBPR scope), and one-on-one compliance stays masked.
+- **Visualize** (`/tl-scorecard/visualize`, `TLScorecardVisualizationPage`): governance
+  charts for the last six months: "This month at a glance" KPIs, Meeting cadence,
+  1:1 compliance, Meeting notes within 24h, Review deliveries vs target, Team risk
+  snapshot (now), and Seniority mix.
+- **EPR progress:** `GET /api/plugins/tl_scorecard/epr-progress/?year=` (2000–2100,
+  default current year) returns `stages`, `cycles_started`, `cycles_with_5plus_goals`,
+  `stages_completed` and `stages_with_evidence` for `scoreable_member_ids(leader)`.
+  Albanian TLs are excluded, as everywhere in the scorecard.
 
 ## Operations
 
