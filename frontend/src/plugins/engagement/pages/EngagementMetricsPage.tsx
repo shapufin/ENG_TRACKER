@@ -6,7 +6,7 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 import { InfoCallout } from "@/components/ui/InfoCallout";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toneSurfaceClass } from "@/components/ui/tone";
-import { downloadBlobResponse } from "@/lib/download";
+import { downloadBlobResponse, parseFilenameFromDisposition } from "@/lib/download";
 import { Gauge, LineChart, RefreshCw, Search, TriangleAlert, Upload } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { SummaryCards } from "../components/SummaryCards";
@@ -52,14 +52,6 @@ const statusForScore = (
   if (score >= 80) return { label: "Healthy · Above Benchmark", tone: "success" };
   if (score >= 50) return { label: "Watch", tone: "warning" };
   return { label: "At Risk", tone: "danger" };
-};
-
-const parseFilenameFromDisposition = (
-  disposition: string | undefined,
-  fallback: string
-): string => {
-  const match = disposition?.match(/filename="?([^"]+)"?/);
-  return match?.[1] ?? fallback;
 };
 
 export const EngagementMetricsPage: React.FC = () => {
