@@ -24,6 +24,7 @@ interface TeamExportDialogProps {
 
 type ExportType = "ot-standby" | "leave";
 type ExportStatus = "approved" | "pending";
+type DateMode = "work_date" | "processing_period";
 
 /** TL-scoped export — no team/TL selector, unlike the HR export dialog:
  * the backend already scopes to the caller's own team via
@@ -32,6 +33,7 @@ type ExportStatus = "approved" | "pending";
 export const TeamExportDialog: React.FC<TeamExportDialogProps> = ({ open, onOpenChange }) => {
   const [exportType, setExportType] = useState<ExportType>("ot-standby");
   const [status, setStatus] = useState<ExportStatus>("approved");
+  const [dateMode, setDateMode] = useState<DateMode>("work_date");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [isExporting, setIsExporting] = useState(false);
@@ -43,11 +45,14 @@ export const TeamExportDialog: React.FC<TeamExportDialogProps> = ({ open, onOpen
       const blob =
         exportType === "leave"
           ? await reportService.exportLeave(params)
-          : await reportService.exportOTStandby({ ...params, status });
+          : await reportService.exportOTStandby({ ...params, status, date_mode: dateMode });
 
       const date = toLocalISODate(new Date());
+      const payrollSuffix = dateMode === "processing_period" ? "_payroll_period" : "";
       const typeLabel =
-        exportType === "leave" ? "leave" : status === "pending" ? "ot_standby_pending" : "ot_standby";
+        exportType === "leave"
+          ? "leave"
+          : (status === "pending" ? "ot_standby_pending" : "ot_standby") + payrollSuffix;
       downloadBlobResponse(blob, `team_${typeLabel}_export_${date}.xlsx`);
       onOpenChange(false);
     } catch (error) {
@@ -92,6 +97,24 @@ export const TeamExportDialog: React.FC<TeamExportDialogProps> = ({ open, onOpen
                   <SelectItem value="pending">Pending only</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {exportType === "ot-standby" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="team-export-date-mode">Filter dates by</Label>
+              <Select value={dateMode} onValueChange={(v) => setDateMode(v as DateMode)}>
+                <SelectTrigger id="team-export-date-mode" controlSize="md">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="work_date">Work date</SelectItem>
+                  <SelectItem value="processing_period">Payroll period</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Payroll period matches HR&apos;s payroll export: records carried over to next month appear in the month they&apos;re paid.
+              </p>
             </div>
           )}
 

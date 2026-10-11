@@ -19,7 +19,8 @@ from collections import defaultdict
 
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from django.db.models import QuerySet
+from django.apps import apps
+from django.db.models import Q, QuerySet
 from django.contrib.auth.models import User
 
 from apps.leave_management.models import count_business_days
@@ -135,6 +136,33 @@ class ExportService:
         for col, width in widths.items():
             ws.column_dimensions[col].width = width
     
+    def _draft_settlement_periods(self, ot_ids: List[int], sb_ids: List[int]) -> Dict[Tuple[str, int], Any]:
+        """Map (source_kind, source_id) to resolved_period for draft payroll entries.
+
+        One query. Fails closed to {} when the payroll plugin is not installed.
+        """
+        if not apps.is_installed('plugins.payroll') or not (ot_ids or sb_ids):
+            return {}
+        try:
+            from plugins.payroll.models import PayrollRunEntry
+        except ImportError:
+            return {}
+        entries = PayrollRunEntry.objects.filter(status='draft').filter(
+            Q(source_kind='overtime', source_id__in=ot_ids)
+            | Q(source_kind='standby', source_id__in=sb_ids)
+        ).values_list('source_kind', 'source_id', 'resolved_period')
+        return {(kind, source_id): period for kind, source_id, period in entries}
+
+    def _settlement_label(self, log, draft_period) -> str:
+        """Payroll settlement cell text for one OT/standby record."""
+        if log.resolved_settlement_period:
+            return f"Paid · {log.resolved_settlement_period.strftime('%b %Y')}"
+        if draft_period:
+            return f"In draft run · {draft_period.strftime('%b %Y')}"
+        if log.status == 'pending':
+            return 'Pending approval'
+        return 'Not yet in a payroll run'
+
     def export_ot_standby_to_excel(
         self,
         ot_qs: QuerySet,
@@ -171,9 +199,17 @@ class ExportService:
             'user__profile__albanian_tl'
         )
 
+        ot_list = list(ot_qs)
+        sb_list = list(sb_qs)
+        draft_periods = (
+            self._draft_settlement_periods(
+                [ot.id for ot in ot_list], [sb.id for sb in sb_list],
+            ) if include_carryover else {}
+        )
+
         # Combine and sort records
         records = []
-        for ot in ot_qs:
+        for ot in ot_list:
             if ot.evidence_type == 'ticket' and ot.ticket_references:
                 refs = ', '.join(ot.ticket_references)
                 evidence_col = ot.evidence or refs
@@ -201,9 +237,10 @@ class ExportService:
                     ot.requested_processing_period
                     and ot.requested_processing_period != ot.date.replace(day=1)
                 )
+                rec['settlement'] = self._settlement_label(ot, draft_periods.get(('overtime', ot.id)))
             records.append(rec)
 
-        for sb in sb_qs:
+        for sb in sb_list:
             rec = {
                 'type': 'SB',
                 'user': sb.user,
@@ -224,6 +261,7 @@ class ExportService:
                     sb.requested_processing_period
                     and sb.requested_processing_period != sb.date.replace(day=1)
                 )
+                rec['settlement'] = self._settlement_label(sb, draft_periods.get(('standby', sb.id)))
             records.append(rec)
         
         # Sort by user, then category (OT before SB — 'OT' < 'SB'
@@ -260,7 +298,7 @@ class ExportService:
             # Headers
             headers = ['Name', 'Date', 'Day', 'Start Time', 'End Time', 'Total Hours', 'Type', 'Description', 'Evidence Type', 'Evidence', 'Reference Code', 'Status']
             if include_carryover:
-                headers += ['Processing Period', 'Carried Over']
+                headers += ['Processing Period', 'Carried Over', 'Payroll settlement']
             ws.append(headers)
             self._style_header_row(ws, header_fill, header_font, border)
 
@@ -296,6 +334,7 @@ class ExportService:
                     rpp = rec.get('requested_processing_period')
                     row.append(rpp.strftime('%m/%Y') if rpp else '')
                     row.append('Yes' if rec.get('is_carried_over') else 'No')
+                    row.append(rec['settlement'])
                 ws.append(row)
                 # Color-code the Type cell (column G = 7) by category
                 type_cell = ws.cell(row=ws.max_row, column=7)
@@ -320,6 +359,7 @@ class ExportService:
             if include_carryover:
                 col_widths['M'] = COLUMN_WIDTH_DEFAULT
                 col_widths['N'] = COLUMN_WIDTH_DEFAULT
+                col_widths['O'] = COLUMN_WIDTH_LARGE
             self._set_column_widths(ws, col_widths)
         
         # Save to bytes

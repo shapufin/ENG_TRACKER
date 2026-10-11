@@ -151,6 +151,7 @@ export const reportService = {
     albanian_tl_ids?: string;
     workspace_ids?: string;
     status?: "approved" | "pending";
+    date_mode?: "work_date" | "processing_period";
   }): Promise<Blob> {
     const { data } = await api.get<Blob>("/reports/export-ot-standby/", {
       params,

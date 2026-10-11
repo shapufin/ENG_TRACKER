@@ -63,9 +63,45 @@ describe("TeamExportDialog", () => {
         start_date: undefined,
         end_date: undefined,
         status: "approved",
+        date_mode: "work_date",
       });
     });
     expect(downloadBlobResponse).toHaveBeenCalledWith(expect.any(Blob), expect.stringContaining("team_ot_standby_export_"));
+  });
+
+  it("filters OT & Standby by payroll period when that date mode is chosen", async () => {
+    (reportService.exportOTStandby as ReturnType<typeof vi.fn>).mockResolvedValue(new Blob());
+    const { downloadBlobResponse } = await import("@/lib/download");
+    render(<TeamExportDialog open={true} onOpenChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("option", { name: "Payroll period" }));
+    expect(
+      screen.getByText(
+        "Payroll period matches HR's payroll export: records carried over to next month appear in the month they're paid.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
+
+    await waitFor(() => {
+      expect(reportService.exportOTStandby).toHaveBeenCalledWith({
+        start_date: undefined,
+        end_date: undefined,
+        status: "approved",
+        date_mode: "processing_period",
+      });
+    });
+    expect(downloadBlobResponse).toHaveBeenCalledWith(
+      expect.any(Blob),
+      expect.stringContaining("team_ot_standby_payroll_period_export_"),
+    );
+  });
+
+  it("hides the date-mode choice for leave exports", () => {
+    render(<TeamExportDialog open={true} onOpenChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("option", { name: "Leave" }));
+
+    expect(screen.queryByRole("option", { name: "Payroll period" })).not.toBeInTheDocument();
   });
 
   it("exports Leave records when that record type is selected", async () => {

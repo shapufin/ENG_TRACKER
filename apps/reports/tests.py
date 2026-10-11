@@ -950,3 +950,138 @@ class PayrollPeriodExportTests(TestCase):
         header_l = ws.cell(row=1, column=14).value
         self.assertEqual(header_l, 'Carried Over')
 
+
+class PayrollSettlementColumnTests(TestCase):
+    """TL /team export shows where each OT/standby record lands in payroll.
+
+    Column O ('Payroll settlement') is derived from resolved_settlement_period,
+    a draft PayrollRunEntry, or the approval status; see export_service.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.staff = User.objects.create_user(
+            username='settle-staff', password='testpass', is_staff=True,
+        )
+        self.employee = User.objects.create_user(
+            username='settle-emp', password='testpass', first_name='Settle',
+        )
+        self.client_model = Client.objects.create(name='Settle Client', code='SET')
+
+    def _ot(self, day, **kwargs):
+        kwargs.setdefault('status', 'approved')
+        return OvertimeLog.objects.create(
+            user=self.employee, client=self.client_model,
+            date=date(2026, 7, day), hours=2, **kwargs,
+        )
+
+    def _export(self, **params):
+        self.client.force_authenticate(user=self.staff)
+        query = {'start_date': '2026-07-01', 'end_date': '2026-07-31'}
+        query.update(params)
+        response = self.client.get('/api/reports/export-ot-standby/', query)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
+        return openpyxl.load_workbook(io.BytesIO(response.content)).active
+
+    def test_tl_export_settlement_column_paid(self):
+        self._ot(15, resolved_settlement_period=date(2026, 8, 1))
+        ws = self._export()
+        self.assertEqual(ws.cell(row=1, column=15).value, 'Payroll settlement')
+        self.assertEqual(ws.cell(row=2, column=15).value, 'Paid · Aug 2026')
+
+    def test_tl_export_settlement_column_in_draft(self):
+        from plugins.payroll.models import PayrollLine, PayrollRun, PayrollRunEntry, PayrollRuleSet
+        log = self._ot(15)
+        rule_set = PayrollRuleSet.objects.create(
+            code='SETTLE_2026_V1', name='Settle rules', version='1.0',
+            effective_from=date(2026, 1, 1),
+        )
+        run = PayrollRun.objects.create(year=2026, month=9, rule_set=rule_set)
+        line = PayrollLine.objects.create(run=run, user=self.employee)
+        PayrollRunEntry.objects.create(
+            run=run, line=line, source_kind='overtime', source_id=log.id,
+            user=self.employee, work_date=log.date,
+            requested_period=date(2026, 7, 1), resolved_period=date(2026, 9, 1),
+        )
+        ws = self._export()
+        self.assertEqual(ws.cell(row=2, column=15).value, 'In draft run · Sep 2026')
+
+    def test_tl_export_settlement_column_pending(self):
+        self._ot(15, status='pending')
+        ws = self._export(status='pending')
+        self.assertEqual(ws.cell(row=2, column=15).value, 'Pending approval')
+
+    def test_tl_export_settlement_column_not_in_run(self):
+        self._ot(15)
+        ws = self._export()
+        self.assertEqual(ws.cell(row=2, column=15).value, 'Not yet in a payroll run')
+
+    def test_tl_export_settlement_column_fails_closed_without_payroll(self):
+        import sys
+        from unittest.mock import patch
+        self._ot(15)
+        with patch.dict(sys.modules, {'plugins.payroll.models': None}):
+            ws = self._export()
+        self.assertEqual(ws.cell(row=2, column=15).value, 'Not yet in a payroll run')
+
+    def test_settlement_lookup_is_one_query_for_one_and_five_records(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        self._ot(1)
+
+        def count_queries():
+            self.client.force_authenticate(user=self.staff)
+            with CaptureQueriesContext(connection) as ctx:
+                response = self.client.get(
+                    '/api/reports/export-ot-standby/',
+                    {'start_date': '2026-07-01', 'end_date': '2026-07-31'},
+                )
+            self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
+            return len(ctx.captured_queries)
+
+        queries_for_one = count_queries()
+        for day in range(2, 6):
+            self._ot(day)
+        self.assertEqual(count_queries(), queries_for_one)
+
+    def test_tl_export_processing_period_mode_is_team_scoped(self):
+        from apps.users.models import UserProfile
+        tl = User.objects.create_user(
+            username='settle-tl', password='testpass', first_name='Lead',
+        )
+        tl_profile = UserProfile.objects.get(user=tl)
+        tl_profile.is_italian_tl_role = True
+        tl_profile.save(update_fields=['is_italian_tl_role'])
+        member = User.objects.create_user(
+            username='settle-member', password='testpass', first_name='Member',
+        )
+        member_profile = UserProfile.objects.get(user=member)
+        member_profile.italian_tl = tl
+        member_profile.save(update_fields=['italian_tl'])
+        outsider = User.objects.create_user(
+            username='settle-outsider', password='testpass', first_name='Outsider',
+        )
+        for user in (member, outsider):
+            log = OvertimeLog.objects.create(
+                user=user, client=self.client_model,
+                date=date(2026, 7, 10), hours=2, status='approved',
+            )
+            OvertimeLog.objects.filter(pk=log.pk).update(
+                requested_processing_period=date(2026, 7, 1),
+            )
+        self.client.force_authenticate(user=tl)
+        response = self.client.get(
+            '/api/reports/export-ot-standby/',
+            {'start_date': '2026-07-01', 'end_date': '2026-07-31',
+             'date_mode': 'processing_period'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
+        wb = openpyxl.load_workbook(io.BytesIO(response.content))
+        names = [
+            ws.cell(row=r, column=1).value
+            for ws in wb.worksheets
+            for r in range(2, ws.max_row + 1)
+        ]
+        self.assertIn('Member', names)
+        self.assertNotIn('Outsider', names)
+
