@@ -229,6 +229,7 @@ Rules:
 
 ## 2026-10-11 — TL scorecard / payroll review follow-ups (Phase 8)
 - Wage writes are HR or staff only (`plugins/payroll/services/wage_access.py`). The payroll `manage` grant alone no longer lets a team leader create, change or delete a wage, and the wages importer uses the same check. TLs keep read access to their scoreable team's wage through the TL scorecard.
+- Team-scoped payroll: only staff, superusers and HR are company-wide viewers; the payroll `manage` grant alone grants nothing. `GET /api/plugins/payroll/runs/scope/` returns `run_scope: company|team`, and `PayrollRun.notes` is hidden from and not searchable by team scope.
 - Scoped draft regenerate: `generate_draft_run(..., replace_user_ids=...)` replaces only the rebuilt users' lines and entries. Note: `_allowed_payroll_user_ids` is unrestricted only for staff, superusers and HR; a `manage` holder who is not HR is scoped to self + team (2026-10-11). `generate` requires `manage`, so a team leader does reach the scoped regenerate path, which replaces only their team's lines. The view test patches the scope.
 - Processing-period exports floor the start date to the first of its month (periods are stored as the 1st).
 - Export leave/overtime: `kpi_rows(..., include_leave_overtime=False)` drops those areas for HBPR-only viewers (XLSX summary and PDF cover/summary).
