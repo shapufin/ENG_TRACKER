@@ -119,8 +119,8 @@ export const TeamExportDialog: React.FC<TeamExportDialogProps> = ({ open, onOpen
                 </SelectContent>
               </Select>
               <p className="text-muted-foreground text-xs">
-                Payroll period matches HR&apos;s payroll export: records carried over to next month
-                appear in the month they&apos;re paid.
+                Payroll period groups each record by the payroll month it is requested for. Late
+                entries carried over to a later month appear under that month.
               </p>
             </div>
           )}
