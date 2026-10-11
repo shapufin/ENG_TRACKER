@@ -5,6 +5,8 @@ file and amber in the other.
 """
 from datetime import date
 
+from .services import PROMOTION_TARGET_PCT
+
 # Targets copied from the UI (the UI wins if they ever differ):
 # - ScorecardOverview.tsx: pending leave "Target: 0".
 # - TeamGovernanceSection.tsx: 1:1 "Target: 100%", reviews "Target: ≥12/year",
@@ -14,7 +16,7 @@ from datetime import date
 TARGETS = {
     'one_on_one_pct': 100.0,
     'reviews_per_year': 12,
-    'promotion_pct': 3.0,
+    'promotion_pct': PROMOTION_TARGET_PCT,
     'pip_pending': 0,
     'absences_breached': 0,
     'escalations': 0,
@@ -57,12 +59,14 @@ def reviews_target(month: str | None) -> int:
     return TARGETS['reviews_per_year'] * date.fromisoformat(month).month // 12
 
 
-def kpi_rows(scorecard) -> list[dict]:
+def kpi_rows(scorecard, *, include_leave_overtime=True) -> list[dict]:
     """Area | Metric | Value | Target | Status rows, in display order.
 
     ``kind`` tells the builders how to format ``value`` and ``target``:
     ``pct`` (a percentage already multiplied by 100), ``count`` or ``num``.
     Rows without a target carry ``target=None`` and status ``—``.
+    ``include_leave_overtime=False`` drops the Leave and Overtime areas for a
+    viewer the leave and overtime surfaces are denied to (HBPR-only).
     """
     leave = scorecard['leave']
     meetings = scorecard['meetings']
@@ -83,7 +87,7 @@ def kpi_rows(scorecard) -> list[dict]:
             'target': target, 'status': status,
         }
 
-    return [
+    rows = [
         row('Leave', 'Leave decided within 2 days', leave['pct_within_2_days'], 'pct'),
         row('Leave', 'Pending leave at month-end', leave['pending_at_month_end'], 'count'),
         row('Overtime', 'OT approval turnaround (days)', scorecard['overtime']['avg_turnaround_days'], 'num'),
@@ -102,6 +106,9 @@ def kpi_rows(scorecard) -> list[dict]:
             TARGETS['promotion_pct']),
         row('Risk', 'Escalation risks', escalations, 'count', TARGETS['escalations']),
     ]
+    if include_leave_overtime:
+        return rows
+    return [r for r in rows if r['area'] not in ('Leave', 'Overtime')]
 
 
 def format_value(value, kind) -> str:

@@ -151,7 +151,7 @@ def _governance_section(story, governance):
           for r in governance['open_absences']]),
         ('Pending promotion nominations', ['Employee', 'Nominated on'],
          [[r['employee'], r['nominated_on']] for r in governance['pending_promotions']]),
-        ('EPR cycles in progress', ['Employee', 'Goal setting', 'Mid-year', 'Final review', 'Goals'],
+        ('EPR cycles', ['Employee', 'Goal setting', 'Mid-year', 'Final review', 'Goals'],
          [[r['employee'],
            'Done' if r['goal_setting_done'] else 'Pending',
            'Done' if r['mid_year_done'] else 'Pending',
@@ -162,7 +162,7 @@ def _governance_section(story, governance):
     for title, headers, rows in tables:
         pdf.paragraph(story, title)
         pdf.data_table(story, headers, rows or [['None open'] + [''] * (len(headers) - 1)],
-                       numeric_cols=(len(headers) - 1,) if title == 'EPR cycles in progress' else ())
+                       numeric_cols=(len(headers) - 1,) if title == 'EPR cycles' else ())
 
 
 def _partnership_section(story, hbpr_evidence):
@@ -176,7 +176,7 @@ def _partnership_section(story, hbpr_evidence):
 
 
 def build_scorecard_pdf(scorecard, trend, governance, epr, period_label, leader_name,
-                        generated_by, hbpr_evidence=None) -> bytes:
+                        generated_by, hbpr_evidence=None, include_leave_overtime=True) -> bytes:
     """The TL scorecard PDF. `trend` and `scorecard` are already one-on-one masked
     for the viewer; `epr` is `services.epr_metrics` for the same team and year."""
     buffer = io.BytesIO()
@@ -187,7 +187,7 @@ def build_scorecard_pdf(scorecard, trend, governance, epr, period_label, leader_
         generated_by=generated_by,
         period_label=period_label,
     )
-    rows = kpi_rows(scorecard)
+    rows = kpi_rows(scorecard, include_leave_overtime=include_leave_overtime)
     _cover(story, scorecard, leader_name, period_label, rows)
     _meetings_section(story, trend)
     _epr_section(story, scorecard, epr)

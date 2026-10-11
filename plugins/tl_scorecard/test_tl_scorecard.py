@@ -1,5 +1,6 @@
 """Tests for the TL Scorecard plugin (Phase 1)."""
-from datetime import time, timedelta
+from datetime import datetime as _datetime, time, timedelta, timezone as _utc
+from unittest import mock
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -21,6 +22,7 @@ from .services import (
     review_delivery_count,
     seniority_ratio,
 )
+from core.utils import timezone_local
 from .viewsets import TLScorecardViewSet
 
 
@@ -190,6 +192,17 @@ class TLScorecardAPITests(TestCase):
         resp = self._scorecard(self.leader)
         self.assertEqual(resp.status_code, 200, resp.data)
         self.assertEqual(resp.data['team_size'], 1)
+
+    def test_default_month_follows_the_tirana_calendar_at_0030_on_the_first(self):
+        # 2026-11-01 00:30 in Europe/Tirane is still 2026-10-31 in UTC; the
+        # default month must be November, not the server's UTC month.
+        instant = _datetime(2026, 10, 31, 23, 30, tzinfo=_utc.utc)
+        fake = mock.MagicMock(wraps=_datetime)
+        fake.now.side_effect = lambda tz=None: instant.astimezone(tz)
+        with mock.patch.object(timezone_local, 'datetime', fake):
+            resp = self._scorecard(self.leader)
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(resp.data['month'][:7], '2026-11')
 
     def test_tl_cannot_view_another_leaders_scorecard(self):
         resp = self._scorecard(self.other_leader, leader_id=self.leader.id)

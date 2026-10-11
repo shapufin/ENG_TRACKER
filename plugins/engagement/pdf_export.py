@@ -68,8 +68,7 @@ def _metric_sum(rows, type_key, field):
 
 def _cover(story, scope, leader_name, period_label, rows):
     agg = aggregate_rows(rows) or {}
-    judged = agg.get('judgeable')
-    on_time_pct = round(agg['on_time'] / judged * 100, 1) if judged else None
+    on_time_pct = agg.get('on_time_pct')
     score = agg.get('engagement_score')
     pdf.cover_block(
         story,

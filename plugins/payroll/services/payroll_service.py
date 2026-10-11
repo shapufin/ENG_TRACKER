@@ -385,11 +385,13 @@ def partition_payable_users(users, year: int, month: int):
     return payable, skipped
 
 
-def generate_draft_run(run: PayrollRun, users) -> list[PayrollLine]:
-    """Generate (or regenerate) draft payroll lines for all users.
+def generate_draft_run(run: PayrollRun, users, replace_user_ids=None) -> list[PayrollLine]:
+    """Generate (or regenerate) draft payroll lines for ``users``.
 
-    Deletes existing draft lines for the run, then recalculates.
-    Raises unless the run is still a draft.
+    ``replace_user_ids=None`` replaces every draft line and entry of the run.
+    A set of user ids replaces only those users' draft lines and entries, so a
+    scoped regenerate leaves other users' lines untouched. Totals are always
+    recomputed from the lines that remain. Raises unless the run is a draft.
     """
     config = PayrollConfiguration.get_singleton()
 
@@ -402,8 +404,13 @@ def generate_draft_run(run: PayrollRun, users) -> list[PayrollLine]:
         rule_set = locked_run.rule_set
 
         # Clear existing draft source snapshots and lines together.
-        locked_run.source_entries.filter(status='draft').delete()
-        locked_run.lines.all().delete()
+        drafts = locked_run.source_entries.filter(status='draft')
+        existing_lines = locked_run.lines.all()
+        if replace_user_ids is not None:
+            drafts = drafts.filter(user_id__in=replace_user_ids)
+            existing_lines = existing_lines.filter(user_id__in=replace_user_ids)
+        drafts.delete()
+        existing_lines.delete()
 
         lines: list[PayrollLine] = []
         for user in users:

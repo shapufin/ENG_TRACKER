@@ -424,7 +424,7 @@ export interface HbprEvidencePayload {
   reference_url?: string;
 }
 
-export type TeamWageStatus = "ok" | "missing" | "unavailable";
+export type TeamWageStatus = "ok" | "missing" | "conflict" | "unavailable";
 
 /** One team member on the TL scorecard Team tab. Money and days arrive as DRF decimal strings. */
 export interface TeamMemberSummary {

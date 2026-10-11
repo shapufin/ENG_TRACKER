@@ -372,13 +372,24 @@ class WageImporterAuthorityTests(TestCase):
         )
         self.assertIsNotNone(self.importer.check_authority(user))
 
-    def test_payroll_manage_grant_allows_a_plain_user(self):
+    def test_payroll_manage_grant_does_not_allow_writing_wages(self):
         user = User.objects.create_user(
             username="granted", email="granted@example.com", password="password"
         )
         PluginPermission.objects.update_or_create(
             plugin_name="payroll", action="manage", defaults={"is_public": True}
         )
+        self.assertIsNotNone(self.importer.check_authority(user))
+
+    def test_hr_role_is_allowed(self):
+        from apps.permissions.models import Role
+        from apps.permissions.services.role_service import assign_role
+
+        Role.objects.get_or_create(code="hr", defaults={"name": "HR"})
+        user = User.objects.create_user(
+            username="hr_wages", email="hr_wages@example.com", password="password"
+        )
+        assign_role(user, "hr")
         self.assertIsNone(self.importer.check_authority(user))
 
     def test_missing_payroll_plugin_denies_even_staff(self):
@@ -430,14 +441,14 @@ class WagesTargetViewsetTests(TestCase):
         self.assertNotIn("wages", keys)
         self.assertEqual(self._analyze(self.plain).status_code, 403)
 
-    def test_payroll_manage_grant_exposes_the_wages_target(self):
+    def test_payroll_manage_grant_does_not_expose_the_wages_target(self):
         PluginPermission.objects.update_or_create(
             plugin_name="payroll", action="manage", defaults={"is_public": True}
         )
         response, keys = self._targets(self.plain)
         self.assertEqual(response.status_code, 200)
-        self.assertIn("wages", keys)
-        self.assertEqual(self._analyze(self.plain).status_code, 200)
+        self.assertNotIn("wages", keys)
+        self.assertEqual(self._analyze(self.plain).status_code, 403)
 
     def test_staff_see_the_wages_target(self):
         response, keys = self._targets(self.staff)

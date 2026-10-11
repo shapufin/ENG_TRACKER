@@ -236,6 +236,64 @@ class HbprExportScopeTests(HbprScorecardBase):
         # sanity: the workbook does list people (this team's own PIP)
         PIPRecord.objects.filter(employee=self.member).exists()
 
+    def _export_body(self, user, file_format):
+        request = self.factory.get('/x/', {'leader_id': self.tl.id, 'file_format': file_format})
+        force_authenticate(request, user=user)
+        response = TLScorecardViewSet.as_view({'get': 'export'})(request)
+        self.assertEqual(response.status_code, 200)
+        return response.content
+
+    @staticmethod
+    def _xlsx_text(body):
+        import io
+        import zipfile
+        with zipfile.ZipFile(io.BytesIO(body)) as zf:
+            return zf.read('xl/sharedStrings.xml').decode('utf-8')
+
+    @staticmethod
+    def _pdf_text(body):
+        import io
+        from pypdf import PdfReader
+        return '\n'.join(page.extract_text() for page in PdfReader(io.BytesIO(body)).pages)
+
+    def test_hbpr_xlsx_export_has_no_leave_or_overtime_kpis(self):
+        text = self._xlsx_text(self._export_body(self.hbpr, 'xlsx'))
+        self.assertIn('1:1 compliance', text)
+        self.assertNotIn('Leave decided within 2 days', text)
+        self.assertNotIn('Pending leave at month-end', text)
+        self.assertNotIn('OT approval turnaround', text)
+
+    def test_hbpr_pdf_export_has_no_leave_or_overtime_kpis(self):
+        text = self._pdf_text(self._export_body(self.hbpr, 'pdf'))
+        self.assertIn('1:1 compliance', text)
+        self.assertNotIn('Leave decided within 2 days', text)
+        self.assertNotIn('Pending leave at month-end', text)
+        self.assertNotIn('Overtime', text)
+
+    def test_tl_xlsx_export_keeps_leave_and_overtime_kpis(self):
+        text = self._xlsx_text(self._export_body(self.tl, 'xlsx'))
+        self.assertIn('Leave decided within 2 days', text)
+        self.assertIn('OT approval turnaround', text)
+
+    def test_epr_cycles_are_limited_to_the_subject_scope(self):
+        from datetime import date as _date
+        from .services import governance_records
+
+        extra = _make_user('extra_member_epr_sc')
+        extra.profile.albanian_tl = self.tl
+        extra.profile.save()
+        year = _date.today().year
+        EPRCycle.objects.create(user=extra, year=year)
+        rows = governance_records(
+            self.tl, [self.member.id, extra.id], year, subject_ids={self.member.id},
+        )['epr_cycles']
+        self.assertEqual([row['employee'] for row in rows], [str(self.member)])
+
+    def test_epr_table_is_not_labelled_in_progress_when_it_lists_all_cycles(self):
+        text = self._pdf_text(self._export_body(self.tl, 'pdf'))
+        self.assertNotIn('EPR cycles in progress', text)
+        self.assertIn('EPR cycles', text)
+
 
 class HbprReadOnlyTests(HbprScorecardBase):
     def test_hbpr_cannot_modify_or_delete_tl_records(self):
@@ -392,3 +450,12 @@ class HbprOneOnOneLeakTests(HbprScorecardBase):
         self.assertEqual(resp.status_code, 200)
         for point in resp.data:
             self.assertIsNone(point['meetings']['one_on_one_compliance_pct'])
+
+
+class ReportKpiTargetTests(TestCase):
+    def test_promotion_target_comes_from_the_service_constant(self):
+        from .report_kpis import TARGETS
+        from .services import PROMOTION_TARGET_PCT
+
+        self.assertEqual(TARGETS['promotion_pct'], PROMOTION_TARGET_PCT)
+        self.assertEqual(PROMOTION_TARGET_PCT, 3.0)
