@@ -47,7 +47,7 @@ vi.mock("sonner", () => ({
 }));
 
 describe("TeamExportDialog", () => {
-  it("exports OT & Standby (approved, the default) without any team/TL selector", async () => {
+  it("exports OT & Standby (approved, payroll period by default) without any team/TL selector", async () => {
     (reportService.exportOTStandby as ReturnType<typeof vi.fn>).mockResolvedValue(new Blob());
     const { downloadBlobResponse } = await import("@/lib/download");
     render(<TeamExportDialog open={true} onOpenChange={vi.fn()} />);
@@ -63,12 +63,12 @@ describe("TeamExportDialog", () => {
         start_date: undefined,
         end_date: undefined,
         status: "approved",
-        date_mode: "work_date",
+        date_mode: "processing_period",
       });
     });
     expect(downloadBlobResponse).toHaveBeenCalledWith(
       expect.any(Blob),
-      expect.stringContaining("team_ot_standby_export_")
+      expect.stringContaining("team_ot_standby_payroll_period_export_")
     );
   });
 
