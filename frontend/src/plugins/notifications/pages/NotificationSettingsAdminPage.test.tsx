@@ -88,8 +88,8 @@ describe("NotificationSettingsAdminPage", () => {
   it("renders the three audience groups with their types", async () => {
     renderPage();
     expect(await screen.findByText("Everyone (own requests)")).toBeInTheDocument();
-    expect(screen.getByText("Team leaders, HR & admins")).toBeInTheDocument();
-    expect(screen.getByText("HR, HBPR & admins")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Team leaders" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "HR business partners" })).toBeInTheDocument();
     expect(screen.getByText("My leave submitted")).toBeInTheDocument();
     expect(screen.getByText("Meetings & cadence")).toBeInTheDocument();
   });

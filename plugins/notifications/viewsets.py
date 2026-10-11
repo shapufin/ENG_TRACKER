@@ -92,18 +92,11 @@ class NotificationViewSet(viewsets.ModelViewSet):
         event types may share one group key (the HBPR governance groups), so
         Settings shows one row per group rather than one per event.
         """
+        # Mirrors delivery, not role breadth: team types reach team leaders only
+        # (signals._team_recipients) and oversight types reach assigned HBPRs only.
         profile = getattr(user, 'profile', None)
-        is_oversight_recipient = bool(
-            user.is_staff or user.is_superuser or
-            getattr(profile, 'is_hr', False) or
-            getattr(profile, 'is_hbpr', False)
-        )
-        is_team_recipient = bool(
-            user.is_staff or user.is_superuser or
-            getattr(profile, 'is_hr', False) or
-            getattr(profile, 'is_team_leader', False) or
-            (hasattr(user, 'led_teams') and user.led_teams.exists())
-        )
+        is_oversight_recipient = bool(getattr(profile, 'is_hbpr', False))
+        is_team_recipient = bool(getattr(profile, 'is_team_leader', False))
         event_types = _types_in_category('own')
         if is_team_recipient:
             event_types |= _types_in_category('team')
@@ -269,7 +262,7 @@ def _event_type_catalogue():
 
     ``audience`` is the registered ``category`` and mirrors the recipient
     rules in ``NotificationViewSet._available_preference_pairs``: 'own' for
-    everyone, 'team' for team leaders/HR/staff, 'oversight' for HR/HBPR/staff.
+    everyone, 'team' for team leaders, 'oversight' for assigned HBPRs.
     ``enabled`` is True only when every member event type is on;
     ``partially_enabled`` marks a mixed group (legacy rows from Django admin).
     """

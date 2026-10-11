@@ -438,3 +438,14 @@ class HbprMeetingChanged(NotificationType):
     def dedupe_key(self, context, user):
         meeting = context['instance']
         return f'hbpr-meeting:{meeting.pk}:{meeting.updated_at.isoformat()}:user:{user.id}'
+
+
+# Every type this plugin registers. signals.connect()/disconnect() use it to
+# re-register and unregister the set as a unit (class bodies only run once per
+# process, so REGISTRY must be restored explicitly after a disable/enable cycle).
+ALL_TYPES = (
+    RecordShared, PipStarted, EprStageShared, PipAwaitingApproval, PipDecided,
+    PipClosed, FlagRaised, PromotionNominated, HbprCadenceEvidenceRecorded,
+    HbprEprEvidenceRecorded, HbprReviewDelivered, PromotionDecided,
+    HbprAssignmentChanged, FlagResolved, EprStageCompleted, HbprMeetingChanged,
+)

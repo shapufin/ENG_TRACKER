@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { toast } from "sonner";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +27,9 @@ export const NotificationPreferencesSection: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [updatingKeys, setUpdatingKeys] = useState<Set<string>>(new Set());
+  // Saves in flight. A focus refetch replaces the whole list, so it must wait
+  // for these or it would overwrite an optimistic value with the server's old one.
+  const savesInFlight = useRef(0);
 
   // State is only ever set from the promise callbacks, never synchronously in
   // the effect body, so mounting cannot trigger a cascading render.
@@ -43,8 +46,15 @@ export const NotificationPreferencesSection: React.FC = () => {
     []
   );
 
+  // Settings stays open while an admin changes a type's kill-switch in another
+  // tab; refetching on focus makes the rows here match on return.
   useEffect(() => {
     void load();
+    const onFocus = () => {
+      if (savesInFlight.current === 0) void load();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, [load]);
 
   const retry = () => {
@@ -54,6 +64,7 @@ export const NotificationPreferencesSection: React.FC = () => {
 
   const update = async (eventType: string, channel: Channel, value: boolean) => {
     const previous = preferences.find((item) => item.event_type === eventType)?.[channel] ?? false;
+    savesInFlight.current += 1;
     setUpdatingKeys((prev) => new Set(prev).add(eventType));
     setPreferences((current) =>
       current.map((item) => (item.event_type === eventType ? { ...item, [channel]: value } : item))
@@ -76,6 +87,7 @@ export const NotificationPreferencesSection: React.FC = () => {
       );
       toast.error("Could not save notification preference");
     } finally {
+      savesInFlight.current -= 1;
       setUpdatingKeys((prev) => {
         const next = new Set(prev);
         next.delete(eventType);

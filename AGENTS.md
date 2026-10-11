@@ -226,3 +226,12 @@ Rules:
 - Reviewed the plan line by line against source after the sweep landed on `main`; findings F1–F12 and every listed file target were accurate (verified with file:line).
 - Corrections now in the plan: Page-Gate stop rule (`wip(visual):` when G1–G5 cannot run, never a `feat:`/`fix:` that implies verification); D1 reframed as an identity/hue restoration (the replaced value was already AA at 5.19:1, so it is not an accessibility fix); sticky actions cells must compose with `TABLE_BODY_CELL_CLASS`/`TABLE_HEAD_CELL_CLASS`; `group/row` goes in `DataTable`'s base row class, not the `getRowClassName` ternary; `scopeLabel` = "All teams in your workspaces" while a workspace scope is active; Task 0 tabs are cross-checked against `admin-gui-screenshots/manifest.json`; F11 reworded (`GeneratedReportViewSet` does expose a REST create path — no producer calls it).
 - Traps (1)–(5) are appended to the CLAUDE.md "Admin visual lift (2026-10-10)" Hot Invariant, so they reach every agent without re-reading the plan.
+
+## 2026-10-11 — Notification visibility + kill-switch lifecycle
+- Branch `feat/notification-visibility-lifecycle` (uncommitted; unrelated working-tree files untouched). Settings lists only types the user can receive: team types for team leaders (`is_team_leader`), oversight groups for assigned HBPRs (`is_hbpr`). HR/staff no longer see dead toggles.
+- Scorecard types unregister on `tl_scorecard` disable and re-register on enable (`notification_types.ALL_TYPES`). `_create_notification` returns early when `Plugin(name='notifications')` is explicitly disabled; a missing row stays open.
+- `NotificationEventTypeConfig.event_type` uses `config_event_type_choices()` (no preference-group keys). Migration `notifications/0011`, choices-only.
+- Settings refetches preferences on window focus, skipped while a save is in flight.
+- Gates: `py -3.14 manage.py test plugins.notifications plugins.tl_scorecard` 572 OK; `npx vitest run src/pages/settings src/plugins/notifications` 62 OK; eslint + prettier clean on touched files; ruff clean on both plugin dirs.
+- Not done: live browser check of the kill-switch (Phase 0 evidence); durable invariants not yet rotated into `.devin/context/` (no notifications context file exists).
+- Test isolation: tests that call `tl_scorecard.signals.disconnect()` must call `signals.connect()` in teardown.

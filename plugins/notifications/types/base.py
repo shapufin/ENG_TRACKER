@@ -103,6 +103,11 @@ def get_all_types() -> dict[str, type[NotificationType]]:
     return dict(REGISTRY)
 
 
+def unregister_event_types(*event_types: str) -> None:
+    for event_type in event_types:
+        REGISTRY.pop(event_type, None)
+
+
 def get_preference_groups() -> dict[str, str]:
     """``group_key -> label`` for every registered type that declares one."""
     groups: dict[str, str] = {}
