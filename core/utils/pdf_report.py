@@ -179,6 +179,19 @@ def cover_block(story, *, title, subtitle, kpis):
     story.append(Spacer(1, 4 * mm))
 
 
+def keep_together(story, flowables):
+    """Append ``flowables`` as one block that moves to the next page as a whole."""
+    from reportlab.platypus import KeepTogether
+
+    story.append(KeepTogether(flowables))
+
+
+def page_break(story):
+    from reportlab.platypus import PageBreak
+
+    story.append(PageBreak())
+
+
 def section_title(story, text):
     from reportlab.platypus import Paragraph
 
