@@ -48,20 +48,14 @@ class ControlRoomAuthority:
 
 
 class PayrollAuthority:
-    """Payroll wages, gated by the payroll plugin's ``manage`` grant."""
+    """Payroll wages: HR or administrators only (team leaders may read, never write)."""
 
     def check_authority(self, user) -> Optional[str]:
         try:
             import plugins.payroll.models  # noqa: F401
+            from plugins.payroll.services.wage_access import can_write_wages
         except ImportError:
             return f"Importing {self.display_name} requires the Payroll plugin."
-        if user and (user.is_staff or user.is_superuser):
+        if can_write_wages(user):
             return None
-        from apps.plugins.models import PluginPermission
-
-        permission = PluginPermission.objects.filter(
-            plugin_name="payroll", action="manage"
-        ).first()
-        if permission is not None and permission.has_access(user):
-            return None
-        return f"Importing {self.display_name} requires the Payroll manage permission."
+        return f"Importing {self.display_name} requires HR or administrator access."

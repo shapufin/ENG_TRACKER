@@ -74,6 +74,7 @@ from .services.payroll_service import (
     partition_payable_users,
 )
 from .services.calculator import calculate_payroll
+from .services.wage_access import can_write_wages
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -215,6 +216,13 @@ class WageAssignmentViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         'create': 'manage', 'update': 'manage', 'partial_update': 'manage',
         'destroy': 'manage', 'bulk_create': 'manage',
     }
+
+    WAGE_WRITE_ACTIONS = frozenset({'create', 'update', 'partial_update', 'destroy', 'bulk_create'})
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if self.action in self.WAGE_WRITE_ACTIONS and not can_write_wages(request.user):
+            raise PermissionDenied('Only HR or administrators can change wage assignments.')
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -1082,8 +1090,16 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         user_ids = serializer.validated_data.get('user_ids', [])
         users, skipped = partition_payable_users(self._resolve_users(user_ids), run.year, run.month)
+        if not users:
+            return Response(
+                {'detail': 'No payable users to generate. The draft was left unchanged.',
+                 'skipped_users': skipped},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        scope = _allowed_payroll_user_ids(request.user)
+        replace_user_ids = None if scope is None else {user.id for user in users}
         try:
-            lines = generate_draft_run(run, users)
+            lines = generate_draft_run(run, users, replace_user_ids=replace_user_ids)
         except Exception as e:
             logger.error('Payroll draft generation failed: %s', e, exc_info=True)
             return Response(
