@@ -181,6 +181,8 @@ export interface PayrollLine {
   user: number;
   user_name: string;
   user_full_name: string;
+  /** Whether this viewer may regenerate this line (company scope: all; team scope: own team). */
+  can_regenerate: boolean;
   run: number;
   wage_assignment: number | null;
   gross_monthly_wage: string;

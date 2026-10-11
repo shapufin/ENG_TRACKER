@@ -88,7 +88,7 @@ export const PayrollRunLinesTable: React.FC<PayrollRunLinesTableProps> = ({
                 </td>
                 <td className="py-2">
                   <div className="flex items-center gap-1">
-                    {isDraft && canManage && (
+                    {isDraft && canManage && line.can_regenerate && (
                       <Button
                         variant="ghost"
                         size="sm"

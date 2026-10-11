@@ -229,7 +229,7 @@ export const PayrollRunDetailPage: React.FC = () => {
         isLoading={linesLoading}
         isDraft={isDraft}
         canExport={canExportPayroll}
-        canManage={canManagePayroll}
+        canManage={canManage("payroll")}
         onPayslipDownload={(lineId) => payslipMutation.mutate(lineId)}
         payslipLoading={payslipMutation.isPending}
         payslipLoadingId={payslipMutation.variables ?? null}

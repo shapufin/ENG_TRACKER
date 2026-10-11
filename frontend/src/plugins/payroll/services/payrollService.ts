@@ -276,7 +276,12 @@ export const payrollService = {
   async generateRun(
     id: number,
     userIds?: number[]
-  ): Promise<{ status: string; line_count: number; run: PayrollRun; skipped_users: SkippedUser[] }> {
+  ): Promise<{
+    status: string;
+    line_count: number;
+    run: PayrollRun;
+    skipped_users: SkippedUser[];
+  }> {
     const { data } = await api.post(`${BASE}/runs/${id}/generate/`, {
       user_ids: userIds ?? [],
     });
