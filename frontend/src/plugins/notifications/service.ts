@@ -21,6 +21,18 @@ export interface NotificationPreference {
   updated_at?: string;
 }
 
+/** One Settings-level notification type; a group key covers several event types. */
+export interface NotificationTypeConfig {
+  key: string;
+  label: string;
+  description: string;
+  audience: "own" | "team" | "oversight";
+  user_configurable: boolean;
+  event_types: string[];
+  enabled: boolean;
+  partially_enabled: boolean;
+}
+
 export const notificationService = {
   getNotifications: async (): Promise<NotificationRecord[]> => {
     const response = await api.get<NotificationRecord[] | PaginatedResponse<NotificationRecord>>(
@@ -59,6 +71,21 @@ export const notificationService = {
     const response = await api.patch<NotificationPreference[]>(
       "/plugins/notifications/notifications/preferences/",
       { event_type: eventType, ...changes }
+    );
+    return response.data;
+  },
+
+  getEventTypeConfig: async (): Promise<NotificationTypeConfig[]> => {
+    const response = await api.get<NotificationTypeConfig[]>(
+      "/plugins/notifications/event-type-config/"
+    );
+    return response.data;
+  },
+
+  setEventTypeEnabled: async (key: string, enabled: boolean): Promise<NotificationTypeConfig> => {
+    const response = await api.patch<NotificationTypeConfig>(
+      `/plugins/notifications/event-type-config/${encodeURIComponent(key)}/`,
+      { enabled }
     );
     return response.data;
   },
