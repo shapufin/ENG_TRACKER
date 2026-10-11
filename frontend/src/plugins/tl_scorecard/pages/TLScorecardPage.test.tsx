@@ -16,7 +16,7 @@ vi.mock("../services/tlScorecardService", () => ({
     getEscalations: vi.fn(),
     listPIPRecords: vi.fn(),
     listEPRCycles: vi.fn(),
-    exportWorkbook: vi.fn(),
+    exportSummary: vi.fn(),
     getPartnership: vi.fn(),
     listHbprEvidence: vi.fn(),
     createHbprEvidence: vi.fn(),
@@ -115,7 +115,7 @@ const mockDefaults = () => {
   (tlScorecardService.getEscalations as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
   (tlScorecardService.listPIPRecords as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (tlScorecardService.listEPRCycles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-  (tlScorecardService.exportWorkbook as ReturnType<typeof vi.fn>).mockResolvedValue({
+  (tlScorecardService.exportSummary as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: new Blob(["fake xlsx"]),
   });
   (tlScorecardService.getPartnership as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -224,25 +224,29 @@ describe("TLScorecardPage", () => {
     );
   });
 
-  it("downloads the evidence workbook when Export Summary is clicked", async () => {
+  it("downloads the Excel workbook when it is picked from the Export Summary menu", async () => {
     mockDefaults();
     renderPage();
 
     const buttons = await screen.findAllByRole("button", { name: "Export Summary" });
     fireEvent.click(buttons[0]);
+    fireEvent.click(await screen.findByRole("button", { name: "Excel workbook (.xlsx)" }));
 
-    await waitFor(() => expect(tlScorecardService.exportWorkbook).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(tlScorecardService.exportSummary).toHaveBeenCalledWith(undefined, undefined, "xlsx")
+    );
     expect(downloadBlobResponse).toHaveBeenCalledTimes(1);
   });
 
   it("shows a visible message, not silence, when the export fails", async () => {
     mockDefaults();
-    (tlScorecardService.exportWorkbook as ReturnType<typeof vi.fn>).mockRejectedValue({
+    (tlScorecardService.exportSummary as ReturnType<typeof vi.fn>).mockRejectedValue({
       response: { status: 500 },
     });
     renderPage();
 
     fireEvent.click((await screen.findAllByRole("button", { name: "Export Summary" }))[0]);
+    fireEvent.click(await screen.findByRole("button", { name: "Excel workbook (.xlsx)" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/could not be exported/i);
     expect(downloadBlobResponse).not.toHaveBeenCalled();

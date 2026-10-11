@@ -31,6 +31,18 @@ export const downloadBlobResponse = (data: BlobPart, filename: string): void => 
 };
 
 /**
+ * Filename from a `Content-Disposition: attachment; filename="..."` header,
+ * or `fallback` when the header is missing or has no filename.
+ */
+export const parseFilenameFromDisposition = (
+  disposition: string | undefined,
+  fallback: string
+): string => {
+  const match = disposition?.match(/filename="?([^"]+)"?/);
+  return match?.[1] ?? fallback;
+};
+
+/**
  * Paginated fetch loop for DRF paginated list endpoints.
  *
  * Follows `next` links by incrementing `page` until the response has no
