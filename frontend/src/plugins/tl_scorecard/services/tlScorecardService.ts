@@ -5,6 +5,7 @@ import type {
   Absence,
   ApprovalEngagementScore,
   CompleteEprStagePayload,
+  EprProgress,
   EngagementSurveyTeamAverage,
   EPRCycle,
   EPRStage,
@@ -79,6 +80,9 @@ export const tlScorecardService = {
   },
 
   getTrend: (months = 6) => api.get<Scorecard[]>(`${BASE}/trend/`, { params: { months } }),
+
+  getEprProgress: (year: number) =>
+    api.get<EprProgress>(`${BASE}/epr-progress/`, { params: { year } }),
 
   // Hits the engagement plugin's own public REST endpoint directly rather
   // than importing its service module — see ApprovalEngagementScore's
