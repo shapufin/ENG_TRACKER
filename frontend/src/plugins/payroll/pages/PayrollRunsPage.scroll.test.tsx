@@ -45,6 +45,7 @@ beforeEach(() => {
     isLoading: false,
   });
   vi.spyOn(payrollService.payrollService, "getRuns").mockResolvedValue([]);
+  vi.spyOn(payrollService.payrollService, "getRunScope").mockResolvedValue("company");
 });
 
 // Phase 6 mechanical rollout: scroll contract + description on the create dialog.

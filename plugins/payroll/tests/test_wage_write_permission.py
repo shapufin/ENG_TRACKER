@@ -1,7 +1,8 @@
 """Wage assignments are written only by HR or staff (2026-10-11 decision).
 
-The payroll ``manage`` grant makes a user unrestricted for payroll *runs*
-(``_allowed_payroll_user_ids`` returns None), so before this guard a team
+The payroll ``manage`` grant lets a user act on payroll *runs*, but it does not
+make them unrestricted: only staff, superusers and HR get an unrestricted
+scope (``_allowed_payroll_user_ids`` returns None). Before this guard a team
 leader granted ``manage`` could create, change or delete any employee's wage.
 Team leaders may read the wage of their own scoreable team (TL scorecard);
 they may never write one. The wage importer applies the same rule.

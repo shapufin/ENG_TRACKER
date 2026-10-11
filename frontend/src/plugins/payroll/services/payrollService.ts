@@ -26,6 +26,7 @@ import type {
   WageBulkCreateResult,
   PayrollWorkday,
 } from "../types";
+import type { PayrollRunScope } from "../types";
 
 const BASE = "/plugins/payroll";
 
@@ -246,6 +247,12 @@ export const payrollService = {
     return normalizeList(data);
   },
 
+  /** Whether the viewer may act on every team's payroll ("company") or only their own team ("team"). */
+  async getRunScope(): Promise<PayrollRunScope> {
+    const { data } = await api.get<{ run_scope: PayrollRunScope }>(`${BASE}/runs/scope/`);
+    return data.run_scope;
+  },
+
   async getRun(id: number): Promise<PayrollRun> {
     const { data } = await api.get<PayrollRun>(`${BASE}/runs/${id}/`);
     return data;
@@ -269,7 +276,12 @@ export const payrollService = {
   async generateRun(
     id: number,
     userIds?: number[]
-  ): Promise<{ status: string; line_count: number; run: PayrollRun; skipped_users: SkippedUser[] }> {
+  ): Promise<{
+    status: string;
+    line_count: number;
+    run: PayrollRun;
+    skipped_users: SkippedUser[];
+  }> {
     const { data } = await api.post(`${BASE}/runs/${id}/generate/`, {
       user_ids: userIds ?? [],
     });

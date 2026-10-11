@@ -109,6 +109,7 @@ const mockLines = [
     calculation_trace: {},
     warnings: [],
     rule_set_version: "1.0",
+    can_regenerate: true,
     created_at: "2026-08-01",
     updated_at: "2026-08-01",
   },
@@ -134,6 +135,7 @@ beforeEach(() => {
   vi.spyOn(payrollService.payrollService, "getPeriodClosureStatus").mockResolvedValue(
     mockClosureStatus
   );
+  vi.spyOn(payrollService.payrollService, "getRunScope").mockResolvedValue("company");
 });
 
 describe("PayrollRunDetailPage", () => {
@@ -205,12 +207,9 @@ describe("PayrollRunDetailPage", () => {
     fireEvent.click(screen.getByText("Regenerate"));
 
     await waitFor(() => {
-      expect(toast.warning).toHaveBeenCalledWith(
-        "Regenerated — 1 employee(s) skipped",
-        {
-          description: "latecomer: No active wage assignment for latecomer in 2026-07.",
-        }
-      );
+      expect(toast.warning).toHaveBeenCalledWith("Regenerated — 1 employee(s) skipped", {
+        description: "latecomer: No active wage assignment for latecomer in 2026-07.",
+      });
     });
     expect(toast.success).not.toHaveBeenCalledWith("Payroll draft regenerated");
   });
@@ -408,5 +407,59 @@ describe("PayrollRunDetailPage", () => {
     const confirmButton = await screen.findByRole("button", { name: "Confirm" });
     fireEvent.click(confirmButton);
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/admin/payroll/runs"));
+  });
+
+  it("shows per-line Generate only for lines the team viewer may regenerate", async () => {
+    vi.spyOn(payrollService.payrollService, "getRunScope").mockResolvedValue("team");
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue([
+      mockLines[0],
+      { ...mockLines[0], id: 2, user: 3, user_name: "outsider", can_regenerate: false },
+    ] as any);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByText("Back")).toBeInTheDocument());
+    await waitFor(() => expect(payrollService.payrollService.getRunScope).toHaveBeenCalled());
+    expect(screen.queryByText("Regenerate")).not.toBeInTheDocument();
+    expect(screen.queryByText("Delete draft")).not.toBeInTheDocument();
+    expect(screen.queryByText("Finalize")).not.toBeInTheDocument();
+    expect(screen.queryByText("Export Excel")).not.toBeInTheDocument();
+    expect(screen.queryByText("Export PDF")).not.toBeInTheDocument();
+    // One Generate for the in-team line; none for the line outside the team.
+    expect(screen.getAllByRole("button", { name: "Generate" })).toHaveLength(1);
+  });
+
+  it("hides per-line Generate for a line the server marks not regenerable, even for company scope", async () => {
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue([
+      mockLines[0],
+      { ...mockLines[0], id: 2, user: 3, user_name: "locked", can_regenerate: false },
+    ] as any);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByText("Regenerate")).toBeInTheDocument());
+    expect(screen.getAllByRole("button", { name: "Generate" })).toHaveLength(1);
+  });
+
+  it("shows whole-run actions to a company-scoped (HR) viewer", async () => {
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    await waitFor(() => expect(screen.getByText("Regenerate")).toBeInTheDocument());
+    expect(screen.getByText("Finalize")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate" })).toBeInTheDocument();
   });
 });

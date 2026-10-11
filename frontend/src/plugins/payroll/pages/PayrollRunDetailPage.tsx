@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { payrollService, describeSkippedUsers } from "../services/payrollService";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
+import { usePayrollRunScope } from "../hooks/usePayrollRunScope";
 import { toast } from "sonner";
 import { handleApiError } from "@/lib/error-handler";
 import { PayrollRunSummary } from "../components/PayrollRunSummary";
@@ -37,8 +38,11 @@ export const PayrollRunDetailPage: React.FC = () => {
   const runsListPath = location.pathname.slice(0, location.pathname.lastIndexOf("/"));
   const queryClient = useQueryClient();
   const { canManage, canExport } = usePluginPermissions();
-  const canManagePayroll = canManage("payroll");
-  const canExportPayroll = canExport("payroll");
+  const { isCompanyScope } = usePayrollRunScope();
+  // Whole-run actions (regenerate, finalize, delete, exports) and per-line
+  // regenerate act on every team's lines, so team-scoped viewers never see them.
+  const canManagePayroll = canManage("payroll") && isCompanyScope;
+  const canExportPayroll = canExport("payroll") && isCompanyScope;
   const runId = Number(id);
 
   const {
@@ -225,7 +229,7 @@ export const PayrollRunDetailPage: React.FC = () => {
         isLoading={linesLoading}
         isDraft={isDraft}
         canExport={canExportPayroll}
-        canManage={canManagePayroll}
+        canManage={canManage("payroll")}
         onPayslipDownload={(lineId) => payslipMutation.mutate(lineId)}
         payslipLoading={payslipMutation.isPending}
         payslipLoadingId={payslipMutation.variables ?? null}
