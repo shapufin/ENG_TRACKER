@@ -27,7 +27,8 @@ from plugins.engagement.services import (
     leader_team_pairs,
     team_member_ids,
 )
-from plugins.engagement.sla import TIRANA, deadline_for, responsiveness_score, today_local
+from core.utils.timezone_local import TIRANA, tirana_today
+from plugins.engagement.sla import deadline_for, responsiveness_score
 from plugins.engagement.test_engagement import (
     _assign_tl_role,
     _make_client,
@@ -271,7 +272,7 @@ class StaffCoverageAPITests(TestCase):
         resp = TLEngagementMetricsViewSet.as_view({'get': 'summary'})(request)
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(
-            TLApprovalMetric.objects.filter(leader=self.leader, team=self.team, month=today_local().replace(day=1)).exists()
+            TLApprovalMetric.objects.filter(leader=self.leader, team=self.team, month=tirana_today().replace(day=1)).exists()
         )
 
 
@@ -295,7 +296,7 @@ class StaffReadScalingTests(TestCase):
         return leader
 
     def _read_query_count(self):
-        month = today_local().replace(day=1)  # staff reads create the current month's snapshots
+        month = tirana_today().replace(day=1)  # staff reads create the current month's snapshots
         request = self.factory.get('/api/plugins/engagement/metrics/team-breakdown/', {'month': month.isoformat()})
         force_authenticate(request, user=self.staff)
         with CaptureQueriesContext(connection) as ctx:
@@ -373,7 +374,7 @@ class SnapshotCreationQueryTests(TestCase):
         leader = _make_user('many_teams_leader')
         _assign_tl_role(leader, 'italian_tl')
         table = TeamMembership._meta.db_table
-        month = today_local().replace(day=1)
+        month = tirana_today().replace(day=1)
 
         def add_team(n):
             team = _make_team(f'Many Team {n}', f'MANY{n}', leader=leader)

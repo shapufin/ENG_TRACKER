@@ -25,7 +25,9 @@ from apps.standby.models import StandbyLog
 from apps.users.models import Team, TeamMembership, UserProfile
 
 from .models import TLApprovalMetric
-from .sla import TIRANA, deadline_for, responsiveness_score, today_local
+from core.utils.timezone_local import TIRANA, tirana_today
+
+from .sla import deadline_for, responsiveness_score
 
 AGING_BUCKETS = ('<4h', '4-24h', '1-3d', '>3d')
 REQUEST_TYPES = ('leave', 'overtime', 'standby')
@@ -264,7 +266,7 @@ def ensure_current_month_snapshots(leader_ids=None, scope=None):
     next read without waiting for a recompute.
     """
     scope = _scope(scope)
-    month = today_local().replace(day=1)
+    month = tirana_today().replace(day=1)
     pairs = leader_team_pairs(leader_ids, scope)
     scope.team_members({team.id for _, team in pairs})  # one query for every team about to be computed
     have = set(TLApprovalMetric.objects.filter(month=month).values_list('leader_id', 'team_id'))

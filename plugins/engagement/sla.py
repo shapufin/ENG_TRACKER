@@ -12,16 +12,11 @@ Deadline rules for TL engagement scoring.
 Pure functions only: no database access. The services layer loads holidays.
 """
 from datetime import datetime, time, timedelta
-from zoneinfo import ZoneInfo
 
-TIRANA = ZoneInfo('Europe/Tirane')  # canonical IANA name for Albania (tzdata 2026.2 pinned in requirements.txt)
+from core.utils.timezone_local import TIRANA
 SLA_WORKING_DAYS = {'overtime': 5, 'standby': 5}
 RESPONSIVENESS_FULL_CREDIT = 0.25
 RESPONSIVENESS_ZERO_CREDIT = 1.0
-
-
-def today_local():
-    return datetime.now(TIRANA).date()
 
 
 def is_working_day(day, holidays):

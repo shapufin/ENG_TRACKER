@@ -33,6 +33,7 @@ from ..services import (
     scorecard_trend,
 )
 from core.mixins.permissions import is_staff_user
+from core.utils.timezone_local import tirana_today
 
 
 def _parse_month(raw):
@@ -103,7 +104,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             return Response({'error': 'This user has no profile to resolve a team from.'},
                              status=status.HTTP_400_BAD_REQUEST)
 
-        data = build_scorecard(leader, month or date.today())
+        data = build_scorecard(leader, month or tirana_today())
         self._mask_one_on_one(request, leader, data)
         return Response(ScorecardSerializer(data).data)
 
@@ -128,7 +129,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             return Response({'error': 'This user has no profile to resolve a team from.'},
                              status=status.HTTP_400_BAD_REQUEST)
 
-        points = scorecard_trend(leader, months, month or date.today())
+        points = scorecard_trend(leader, months, month or tirana_today())
         self._mask_one_on_one(request, leader, *points)
         return Response(ScorecardSerializer(points, many=True).data)
 
@@ -150,7 +151,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             return Response({'error': 'This user has no profile to resolve a team from.'},
                              status=status.HTTP_400_BAD_REQUEST)
         rows = team_member_summaries(
-            leader, date.today(), include_meetings=is_staff_user(user) or leader.id == user.id,
+            leader, tirana_today(), include_meetings=is_staff_user(user) or leader.id == user.id,
         )
         return Response(TeamMemberSummarySerializer(rows, many=True).data)
 
@@ -158,7 +159,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
     def epr_progress(self, request):
         """On-time EPR stage completion for the leader's team in `?year=`."""
         try:
-            year = int(request.query_params.get('year', date.today().year))
+            year = int(request.query_params.get('year', tirana_today().year))
         except (TypeError, ValueError):
             raise ValidationError({'year': 'year must be an integer.'})
         if not (2000 <= year <= 2100):
@@ -207,7 +208,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             return Response({'error': 'This user has no profile to resolve a team from.'},
                              status=status.HTTP_400_BAD_REQUEST)
 
-        month = month or date.today()
+        month = month or tirana_today()
         scorecard = build_scorecard(leader, month)
         trend = scorecard_trend(leader, 6, month)
         self._mask_one_on_one(request, leader, scorecard, *trend)
