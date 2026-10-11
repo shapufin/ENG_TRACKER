@@ -81,6 +81,28 @@ class PromotionRatioSerializer(serializers.Serializer):
     target_pct = serializers.FloatField()
 
 
+class EprStageProgressSerializer(serializers.Serializer):
+    due_date = serializers.CharField()
+    completed_on_time = serializers.IntegerField()
+    team_size = serializers.IntegerField()
+    pct_on_time = serializers.FloatField(allow_null=True)
+
+
+class EprStagesSerializer(serializers.Serializer):
+    goal_setting = EprStageProgressSerializer()
+    mid_year = EprStageProgressSerializer()
+    final_review = EprStageProgressSerializer()
+
+
+class EprProgressSerializer(serializers.Serializer):
+    """Mirrors services.epr_metrics() field-for-field."""
+    stages = EprStagesSerializer()
+    cycles_with_5plus_goals = serializers.IntegerField()
+    cycles_started = serializers.IntegerField()
+    stages_completed = serializers.IntegerField()
+    stages_with_evidence = serializers.IntegerField()
+
+
 class ScorecardSerializer(serializers.Serializer):
     month = serializers.CharField()
     team_size = serializers.IntegerField()
