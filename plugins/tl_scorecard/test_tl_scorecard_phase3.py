@@ -9,6 +9,8 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.leave_management.models import LeaveRequest
 from apps.permissions.models import Role, UserRole
+from apps.permissions.services.role_service import assign_role
+from apps.plugins.models import PluginPermission
 
 from .testing import make_user as _make_user
 from .models import Absence, EPRCycle, EPRGoal, IdleFlag, PIPRecord, PromotionFlag
@@ -462,6 +464,63 @@ class ScorecardTrendTests(TestCase):
         request = factory.get('/api/plugins/tl_scorecard/trend/', {'months': '99'})
         force_authenticate(request, user=leader)
         resp = TLScorecardViewSet.as_view({'get': 'trend'})(request)
+        self.assertEqual(resp.status_code, 400)
+
+
+class EprProgressTests(TestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        call_command('seed_plugin_permissions')
+        self.year = date.today().year
+        self.leader = _make_user('leader_epr_progress')
+        _assign_tl_role(self.leader)
+        self.member = _make_user('member_epr_progress')
+        self.member.profile.italian_tl = self.leader
+        self.member.profile.save()
+        EPRCycle.objects.create(user=self.member, year=self.year)
+
+    def _get(self, user, params=None):
+        request = self.factory.get('/api/plugins/tl_scorecard/epr-progress/', params or {})
+        force_authenticate(request, user=user)
+        return TLScorecardViewSet.as_view({'get': 'epr_progress'})(request)
+
+    def test_tl_gets_progress_for_own_team(self):
+        resp = self._get(self.leader, {'year': str(self.year)})
+
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(resp.data['cycles_started'], 1)
+        self.assertEqual(resp.data['stages']['goal_setting']['team_size'], 1)
+        self.assertEqual(
+            set(resp.data['stages']),
+            {'goal_setting', 'mid_year', 'final_review'},
+        )
+
+    def test_staff_can_name_a_leader_with_leader_id(self):
+        staff = _make_user('staff_epr_progress', is_staff=True)
+
+        resp = self._get(staff, {'year': str(self.year), 'leader_id': str(self.leader.id)})
+
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(resp.data['cycles_started'], 1)
+
+    def test_hbpr_cannot_read_an_out_of_scope_leader(self):
+        hbpr = _make_user('hbpr_epr_progress')
+        assign_role(hbpr, 'hbpr')
+        PluginPermission.objects.get(plugin_name='tl_scorecard', action='view') \
+            .allowed_roles.add(Role.objects.get(code='hbpr'))
+
+        resp = self._get(hbpr, {'year': str(self.year), 'leader_id': str(self.leader.id)})
+
+        self.assertEqual(resp.status_code, 403)
+
+    def test_rejects_a_year_outside_the_allowed_range(self):
+        resp = self._get(self.leader, {'year': '1999'})
+
+        self.assertEqual(resp.status_code, 400)
+
+    def test_rejects_a_non_integer_year(self):
+        resp = self._get(self.leader, {'year': 'abc'})
+
         self.assertEqual(resp.status_code, 400)
 
 

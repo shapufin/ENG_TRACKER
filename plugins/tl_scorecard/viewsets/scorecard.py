@@ -18,10 +18,17 @@ from ..models import (
     HbprGovernanceEvidence,
 )
 from ..serializers import (
+    EprProgressSerializer,
     EscalationCandidateSerializer,
     ScorecardSerializer,
 )
-from ..services import build_scorecard, escalation_candidates, governance_records, scorecard_trend
+from ..services import (
+    build_scorecard,
+    epr_metrics,
+    escalation_candidates,
+    governance_records,
+    scorecard_trend,
+)
 from core.mixins.permissions import is_staff_user
 
 
@@ -121,6 +128,19 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         points = scorecard_trend(leader, months, month or date.today())
         self._mask_one_on_one(request, leader, *points)
         return Response(ScorecardSerializer(points, many=True).data)
+
+    @action(detail=False, methods=['get'], url_path='epr-progress')
+    def epr_progress(self, request):
+        """On-time EPR stage completion for the leader's team in `?year=`."""
+        try:
+            year = int(request.query_params.get('year', date.today().year))
+        except (TypeError, ValueError):
+            raise ValidationError({'year': 'year must be an integer.'})
+        if not (2000 <= year <= 2100):
+            raise ValidationError({'year': 'year must be between 2000 and 2100.'})
+
+        leader = self._resolve_leader(request)
+        return Response(EprProgressSerializer(epr_metrics(scoreable_member_ids(leader), year)).data)
 
     @action(detail=False, methods=['get'])
     def partnership(self, request):

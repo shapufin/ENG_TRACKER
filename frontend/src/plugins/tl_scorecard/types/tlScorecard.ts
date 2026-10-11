@@ -63,6 +63,26 @@ export interface Scorecard {
   escalation_count: number;
 }
 
+export interface EprStageProgress {
+  due_date: string;
+  completed_on_time: number;
+  team_size: number;
+  pct_on_time: number | null;
+}
+
+/** Mirrors the backend `EprProgressSerializer` (services.epr_metrics). */
+export interface EprProgress {
+  stages: {
+    goal_setting: EprStageProgress;
+    mid_year: EprStageProgress;
+    final_review: EprStageProgress;
+  };
+  cycles_with_5plus_goals: number;
+  cycles_started: number;
+  stages_completed: number;
+  stages_with_evidence: number;
+}
+
 export interface EscalationCandidate {
   kind: string;
   subject_id: number;
