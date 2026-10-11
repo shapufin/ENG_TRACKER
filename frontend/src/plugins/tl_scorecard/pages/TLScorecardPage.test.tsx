@@ -26,6 +26,7 @@ vi.mock("../services/tlScorecardService", () => ({
     listAbsences: vi.fn(),
     listReviewDeliveries: vi.fn(),
     listPromotionFlags: vi.fn(),
+    getTeamMembers: vi.fn(),
   },
 }));
 
@@ -345,6 +346,21 @@ describe("TLScorecardPage", () => {
     await waitFor(() => expect(screen.queryByText("TL Scorecard")).not.toBeInTheDocument());
     expect(tlScorecardService.getScorecard).not.toHaveBeenCalled();
     perms.value = { isAdmin: false };
+  });
+
+  it("offers a Team tab and renders the team roster from the URL", async () => {
+    mockDefaults();
+    (tlScorecardService.getTeamMembers as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: [],
+    });
+    renderPage("/tl-scorecard?tab=team");
+
+    expect(await screen.findByRole("tab", { name: "Team" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(await screen.findByText("No team members yet")).toBeInTheDocument();
+    expect(tlScorecardService.getScorecard).not.toHaveBeenCalled();
   });
 
   it("opens the create dialog from the records toolbar", async () => {

@@ -570,3 +570,58 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
                 {'occurred_on': 'Evidence cannot be recorded for a future date.'}
             )
         return attrs
+
+
+class TeamWageSerializer(serializers.Serializer):
+    gross_monthly = serializers.DecimalField(max_digits=12, decimal_places=2, allow_null=True)
+    effective_from = serializers.DateField(allow_null=True)
+    status = serializers.ChoiceField(choices=['ok', 'missing', 'unavailable'])
+
+
+class TeamLeaveUpcomingSerializer(serializers.Serializer):
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+    request_type = serializers.CharField()
+    business_days = serializers.IntegerField()
+
+
+class TeamLeaveSerializer(serializers.Serializer):
+    total_days = serializers.DecimalField(max_digits=6, decimal_places=1)
+    used_days = serializers.DecimalField(max_digits=6, decimal_places=1)
+    pending_days = serializers.DecimalField(max_digits=6, decimal_places=1)
+    available_days = serializers.DecimalField(max_digits=6, decimal_places=1)
+    upcoming = TeamLeaveUpcomingSerializer(many=True)
+
+
+class TeamEprSerializer(serializers.Serializer):
+    year = serializers.IntegerField()
+    goal_count = serializers.IntegerField()
+    goal_setting_done = serializers.BooleanField()
+    mid_year_done = serializers.BooleanField()
+    final_review_done = serializers.BooleanField()
+    next_stage = serializers.ChoiceField(choices=['goal_setting', 'mid_year', 'final_review'], allow_null=True)
+
+
+class TeamGovernanceSerializer(serializers.Serializer):
+    open_pip = serializers.BooleanField()
+    pip_status = serializers.CharField(allow_null=True)
+    open_idle_flags = serializers.IntegerField()
+    open_absences = serializers.IntegerField()
+    pending_promotion = serializers.BooleanField()
+
+
+class TeamMeetingsSerializer(serializers.Serializer):
+    last_one_on_one_on = serializers.DateField(allow_null=True)
+
+
+class TeamMemberSummarySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    full_name = serializers.CharField()
+    username = serializers.CharField()
+    email = serializers.CharField(allow_blank=True)
+    seniority_level = serializers.CharField(allow_null=True)
+    wage = TeamWageSerializer()
+    leave = TeamLeaveSerializer()
+    epr = TeamEprSerializer()
+    governance = TeamGovernanceSerializer()
+    meetings = TeamMeetingsSerializer()

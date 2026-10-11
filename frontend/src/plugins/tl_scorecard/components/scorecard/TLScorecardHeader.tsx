@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FolderArchive, LayoutDashboard, LineChart, ListChecks } from "lucide-react";
+import { FolderArchive, LayoutDashboard, LineChart, ListChecks, Users } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { UserAvatar } from "@/components/calendar/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { toneSurfaceClass } from "@/components/ui/tone";
 import { userService } from "@/services/userService";
 import { ExportButton } from "../ExportButton";
 
-export type TLScorecardTab = "overview" | "records" | "evidence";
+export type TLScorecardTab = "overview" | "team" | "records" | "evidence";
 
 /** Current calendar quarter, e.g. "Q4 Active" — the program runs every quarter. */
 const quarterLabel = (): string => `Q${Math.floor(new Date().getMonth() / 3) + 1} Active`;
@@ -19,6 +19,7 @@ const MAX_VISIBLE_AVATARS = 4;
 
 const TABS = [
   { value: "overview", label: "Overview", icon: LayoutDashboard },
+  { value: "team", label: "Team", icon: Users },
   { value: "records", label: "Records", icon: ListChecks },
   { value: "evidence", label: "Partnership log", icon: FolderArchive },
 ] as const;

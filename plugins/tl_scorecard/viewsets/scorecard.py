@@ -9,7 +9,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied, ValidationErro
 from rest_framework.response import Response
 
 from apps.users.services.hbpr_scope import get_hbpr_scope, is_hbpr
-from core.mixins.permissions import PluginPermissionMixin
+from core.mixins.permissions import PluginPermissionMixin, is_hbpr_only
 
 from ..excel_export import build_workbook_bytes
 from ..pdf_export import build_scorecard_pdf
@@ -22,7 +22,9 @@ from ..serializers import (
     EprProgressSerializer,
     EscalationCandidateSerializer,
     ScorecardSerializer,
+    TeamMemberSummarySerializer,
 )
+from ..team_members import team_member_summaries
 from ..services import (
     build_scorecard,
     epr_metrics,
@@ -129,6 +131,28 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         points = scorecard_trend(leader, months, month or date.today())
         self._mask_one_on_one(request, leader, *points)
         return Response(ScorecardSerializer(points, many=True).data)
+
+    @action(detail=False, methods=['get'], url_path='team-members')
+    def team_members(self, request):
+        """Per-member summary (wage, leave, EPR, governance) for the leader's team.
+
+        Carries pay and leave, so an HBPR is refused outright (even for an
+        in-scope Albanian TL), and anyone else may read only their own team
+        unless they are staff. One-on-one dates are the leader's or staff's only.
+        """
+        user = request.user
+        if is_hbpr_only(user):
+            raise PermissionDenied('The team view is not available to HBPR accounts.')
+        leader = self._resolve_leader(request)
+        if not is_staff_user(user) and leader.id != user.id:
+            raise PermissionDenied("You cannot view this team leader's team.")
+        if not hasattr(leader, 'profile'):
+            return Response({'error': 'This user has no profile to resolve a team from.'},
+                             status=status.HTTP_400_BAD_REQUEST)
+        rows = team_member_summaries(
+            leader, date.today(), include_meetings=is_staff_user(user) or leader.id == user.id,
+        )
+        return Response(TeamMemberSummarySerializer(rows, many=True).data)
 
     @action(detail=False, methods=['get'], url_path='epr-progress')
     def epr_progress(self, request):

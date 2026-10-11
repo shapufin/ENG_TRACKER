@@ -423,3 +423,49 @@ export interface HbprEvidencePayload {
   action_items?: string;
   reference_url?: string;
 }
+
+export type TeamWageStatus = "ok" | "missing" | "unavailable";
+
+/** One team member on the TL scorecard Team tab. Money and days arrive as DRF decimal strings. */
+export interface TeamMemberSummary {
+  id: number;
+  full_name: string;
+  username: string;
+  email: string;
+  seniority_level: string | null;
+  wage: {
+    gross_monthly: string | null;
+    effective_from: string | null;
+    status: TeamWageStatus;
+  };
+  leave: {
+    total_days: string;
+    used_days: string;
+    pending_days: string;
+    available_days: string;
+    upcoming: {
+      start_date: string;
+      end_date: string;
+      request_type: string;
+      business_days: number;
+    }[];
+  };
+  epr: {
+    year: number;
+    goal_count: number;
+    goal_setting_done: boolean;
+    mid_year_done: boolean;
+    final_review_done: boolean;
+    next_stage: EPRStage | null;
+  };
+  governance: {
+    open_pip: boolean;
+    pip_status: string | null;
+    open_idle_flags: number;
+    open_absences: number;
+    pending_promotion: boolean;
+  };
+  meetings: {
+    last_one_on_one_on: string | null;
+  };
+}

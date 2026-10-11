@@ -22,6 +22,7 @@ import type {
   PromotionFlag,
   ReviewDelivery,
   Scorecard,
+  TeamMemberSummary,
   YearEndEvidencePack,
 } from "../types/tlScorecard";
 
@@ -134,6 +135,9 @@ export const tlScorecardService = {
     notes?: string;
     reference_url?: string;
   }) => api.post(`${BASE}/review-deliveries/`, data),
+
+  getTeamMembers: (leaderId?: number) =>
+    api.get<TeamMemberSummary[]>(`${BASE}/team-members/`, { params: leaderParams(leaderId) }),
 
   getEscalations: (leaderId?: number) =>
     api.get<EscalationCandidate[]>(`${BASE}/escalations/`, { params: leaderParams(leaderId) }),
