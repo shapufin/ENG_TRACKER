@@ -33,6 +33,12 @@ class WageWritePermissionTests(TestCase):
             perm.allowed_roles.add(tl_role)
         hr_manage, _ = PluginPermission.objects.get_or_create(plugin_name='payroll', action='manage')
         hr_manage.allowed_roles.add(hr_role)
+        # A payroll manager who is not a team leader and not HR: holds the manage grant only.
+        manager_role, _ = Role.objects.get_or_create(code='payroll_manager', defaults={'name': 'Payroll manager'})
+        manage_perm, _ = PluginPermission.objects.get_or_create(plugin_name='payroll', action='manage')
+        manage_perm.allowed_roles.add(manager_role)
+        cls.payroll_manager = User.objects.create_user(username='wage_payroll_manager', password='pass')
+        assign_role(cls.payroll_manager, 'payroll_manager')
 
         # A team leader granted the payroll manage grant: the case the guard closes.
         cls.tl_manager = User.objects.create_user(username='wage_tl_manager', password='pass')
@@ -95,6 +101,38 @@ class WageWritePermissionTests(TestCase):
         force_authenticate(request, user=self.tl_manager)
         response = WageAssignmentViewSet.as_view({'post': 'bulk_create'})(request)
         self.assertEqual(response.status_code, 403)
+        self.assertFalse(WageAssignment.objects.filter(user=self.other).exists())
+
+    def test_manage_grant_holders_are_refused_every_wage_write(self):
+        """A team leader and a plain payroll manager, both holding only the
+        manage grant, may not create, change, delete or bulk-create a wage."""
+        for user in (self.tl_manager, self.payroll_manager):
+            with self.subTest(user=user.username):
+                response = self._post_create(user)
+                self.assertEqual(response.status_code, 403, 'create')
+
+                request = self.factory.patch(
+                    f'/api/plugins/payroll/wages/{self.wage.id}/', {'note': 'x'}, format='json',
+                )
+                force_authenticate(request, user=user)
+                response = WageAssignmentViewSet.as_view({'patch': 'partial_update'})(
+                    request, pk=self.wage.id)
+                self.assertEqual(response.status_code, 403, 'partial_update')
+
+                request = self.factory.delete(f'/api/plugins/payroll/wages/{self.wage.id}/')
+                force_authenticate(request, user=user)
+                response = WageAssignmentViewSet.as_view({'delete': 'destroy'})(request, pk=self.wage.id)
+                self.assertEqual(response.status_code, 403, 'destroy')
+
+                body = {'assignments': [{'user': self.other.id, 'gross_monthly_wage': '90000',
+                                         'effective_from': '2026-02-01'}]}
+                request = self.factory.post('/api/plugins/payroll/wages/bulk_create/', body, format='json')
+                force_authenticate(request, user=user)
+                response = WageAssignmentViewSet.as_view({'post': 'bulk_create'})(request)
+                self.assertEqual(response.status_code, 403, 'bulk_create')
+
+        self.wage.refresh_from_db()
+        self.assertEqual(self.wage.gross_monthly_wage, Decimal('100000'))
         self.assertFalse(WageAssignment.objects.filter(user=self.other).exists())
 
     def test_tl_with_manage_grant_can_still_read_wages(self):
