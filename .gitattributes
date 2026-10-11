@@ -25,4 +25,3 @@
 *.pdf binary
 *.xlsx binary
 *.zip binary
-graphify-out/graph.json merge=graphify

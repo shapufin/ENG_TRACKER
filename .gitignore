@@ -160,3 +160,6 @@ Install-Graphify.ps1
 # stops NEW files here. Untrack with: git rm -r --cached admin-gui-screenshots
 admin-gui-screenshots/
 admin-gui-screenshots.zip
+
+# Local design notes (not app source)
+/Design System.md
