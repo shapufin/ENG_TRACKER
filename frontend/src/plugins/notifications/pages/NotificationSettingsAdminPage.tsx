@@ -46,7 +46,12 @@ export const NotificationSettingsAdminPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter[]>([]);
   const [pendingOff, setPendingOff] = useState<NotificationTypeConfig | null>(null);
 
-  const { data: rows, isLoading, isError, refetch } = useQuery({
+  const {
+    data: rows,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: CONFIG_QUERY_KEY,
     queryFn: () => notificationService.getEventTypeConfig(),
   });

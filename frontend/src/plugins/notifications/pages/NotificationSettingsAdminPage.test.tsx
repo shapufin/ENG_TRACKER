@@ -110,7 +110,9 @@ describe("NotificationSettingsAdminPage", () => {
 
   it("turning a type on applies immediately without a confirm", async () => {
     renderPage();
-    const toggle = await screen.findByRole("switch", { name: "Enable Team submissions needing action" });
+    const toggle = await screen.findByRole("switch", {
+      name: "Enable Team submissions needing action",
+    });
     fireEvent.click(toggle);
     await waitFor(() =>
       expect(notificationService.setEventTypeEnabled).toHaveBeenCalledWith(
@@ -135,10 +137,7 @@ describe("NotificationSettingsAdminPage", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Disable for everyone" }));
 
     await waitFor(() =>
-      expect(notificationService.setEventTypeEnabled).toHaveBeenCalledWith(
-        "hbpr_meetings",
-        false
-      )
+      expect(notificationService.setEventTypeEnabled).toHaveBeenCalledWith("hbpr_meetings", false)
     );
     await waitFor(() =>
       expect(invalidate).toHaveBeenCalledWith(
