@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from plugins.payroll.models import PayrollRuleSet, PayrollRun, WageAssignment
+from plugins.payroll.models import PayrollConfiguration, PayrollRuleSet, PayrollRun, WageAssignment
 from plugins.payroll.services.export_service import (
     OVERTIME_CATEGORY_LABELS,
     _overtime_rows,
@@ -83,6 +83,7 @@ class PayrollExportPureHelperTests(TestCase):
 class PayrollAdditionalRegressionTests(TestCase):
     @classmethod
     def setUpTestData(cls):
+        PayrollConfiguration.objects.update_or_create(pk=1, defaults={'require_tl_closed_before_finalize': False})
         cls.admin = User.objects.create_superuser(
             username='audit_admin', email='audit@example.com', password='pass',
         )

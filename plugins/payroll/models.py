@@ -92,7 +92,7 @@ class PayrollConfiguration(models.Model):
         help_text=_('If true, only approved overtime/standby are included in payroll.'),
     )
     require_tl_closed_before_finalize = models.BooleanField(
-        _('Require TL Closure Before Finalize'), default=False,
+        _('Require TL Closure Before Finalize'), default=True,
         help_text=_('If true, all payroll users must have a TL-closed approval period.'),
     )
     overtime_is_taxable = models.BooleanField(

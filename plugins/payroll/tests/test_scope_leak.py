@@ -21,7 +21,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from plugins.payroll.models import PayrollRun, PayrollRuleSet, WageAssignment
+from plugins.payroll.models import PayrollConfiguration, PayrollRun, PayrollRuleSet, WageAssignment
 from plugins.payroll.services.payroll_service import finalize_run, generate_draft_run
 from plugins.payroll.viewsets import PayrollRunViewSet
 
@@ -31,6 +31,7 @@ User = get_user_model()
 class PayrollRunLineScopeLeakTests(TestCase):
     @classmethod
     def setUpTestData(cls):
+        PayrollConfiguration.objects.update_or_create(pk=1, defaults={'require_tl_closed_before_finalize': False})
         from apps.permissions.models import Role
         from apps.permissions.services.role_service import assign_role
         from apps.plugins.models import PluginPermission

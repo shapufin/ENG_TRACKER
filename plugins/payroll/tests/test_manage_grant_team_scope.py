@@ -15,7 +15,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from plugins.payroll.models import PayrollLine, PayrollRun, PayrollRuleSet, WageAssignment
+from plugins.payroll.models import PayrollConfiguration, PayrollLine, PayrollRun, PayrollRuleSet, WageAssignment
 from plugins.payroll.services.payroll_service import finalize_run, generate_draft_run
 from plugins.payroll.viewsets import PayrollRunViewSet, WageAssignmentViewSet
 
@@ -27,6 +27,7 @@ RUNS = '/api/plugins/payroll/runs/'
 class ManageGrantTeamScopeTests(TestCase):
     @classmethod
     def setUpTestData(cls):
+        PayrollConfiguration.objects.update_or_create(pk=1, defaults={'require_tl_closed_before_finalize': False})
         from apps.permissions.models import Role
         from apps.permissions.services.role_service import assign_role
         from apps.plugins.models import PluginPermission
