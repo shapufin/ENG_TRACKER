@@ -10,6 +10,7 @@ import {
   type Updater,
 } from "@tanstack/react-table";
 import { appFeatures, type AppCell, type AppColumnDef, type AppRow } from "./tableTypes";
+import { pillOffsetForEntry } from "./tableColumnHelpers";
 import {
   TABLE_ACTIONS_CELL_CLASS,
   TABLE_ACTIONS_HEAD_CLASS,
@@ -246,11 +247,17 @@ export const DataTable = function DataTable<TData extends RowData>({
           tabIndex={onRowClick ? 0 : undefined}
           onMouseEnter={(event) => {
             if (actionsInPill) {
-              // Entry-anchored like the mockup: place the pill at the cursor x, clamped so it stays inside the row.
-              const rect = event.currentTarget.getBoundingClientRect();
-              const margin = Math.min(140, rect.width * 0.3);
-              const x = Math.max(margin, Math.min(rect.width - margin, event.clientX - rect.left));
-              event.currentTarget.style.setProperty("--row-pill-offset", `${x - rect.width}px`);
+              // Entry-anchored like the mockup, clamped to the VIEWPORT (not
+              // the row): on a scrolled table the old row-relative guess let a
+              // wide pill bleed off-screen (pillOffsetForEntry).
+              const row = event.currentTarget;
+              const rect = row.getBoundingClientRect();
+              const pill = row.querySelector('[role="toolbar"][aria-label="Row actions"]');
+              const pillWidth = pill?.getBoundingClientRect().width ?? 280;
+              row.style.setProperty(
+                "--row-pill-offset",
+                pillOffsetForEntry(event.clientX, rect, pillWidth, window.innerWidth)
+              );
             }
             onRowMouseEnter?.(row.original);
           }}
