@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { Pencil, Trash2 } from "lucide-react";
 import { RowActions } from "./RowActions";
+import { RowActionsPill } from "./RowActionsPill";
 
 describe("RowActions", () => {
   it("each action is a labelled button", () => {
@@ -87,5 +91,32 @@ describe("RowActions", () => {
     const btn = screen.getByRole("button", { name: "Edit 1" });
     expect(btn).toBeDisabled();
     expect(btn).toHaveAccessibleDescription("Locked reason");
+  });
+
+  it("the pointer-fine variant is defined (hover-reveal is dead without it)", () => {
+    // Regression: Tailwind v4 drops unknown variants silently, so
+    // `pointer-fine:opacity-0` never applied and column-mode actions were
+    // always visible. The variant must exist in the stylesheet.
+    const cssPath = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "index.css");
+    expect(readFileSync(cssPath, "utf-8")).toContain("@custom-variant pointer-fine");
+  });
+
+  it("shortLabel renders only inside the pill, hidden below xl", () => {
+    // AdminTABLE mockup: the floating pill carries text labels on wide
+    // screens (icon-only below xl); the actions column stays icon-only.
+    const actions = [
+      { label: "Edit user alice", shortLabel: "Edit", icon: Pencil, onClick: vi.fn() },
+    ];
+    const { unmount } = render(
+      <RowActionsPill>
+        <RowActions actions={actions} />
+      </RowActionsPill>
+    );
+    const pillLabel = screen.getByText("Edit", { selector: "span" });
+    expect(pillLabel.className).toContain("hidden");
+    expect(pillLabel.className).toContain("xl:inline");
+    unmount();
+    render(<RowActions actions={actions} />);
+    expect(screen.queryByText("Edit", { selector: "span" })).not.toBeInTheDocument();
   });
 });

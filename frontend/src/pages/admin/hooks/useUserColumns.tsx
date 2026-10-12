@@ -309,17 +309,20 @@ export const useUserColumns = (
               actions={[
                 {
                   label: `Edit user ${username}`,
+                  shortLabel: "Edit",
                   icon: Pencil,
                   onClick: () => onEdit(row.original),
                 },
                 {
                   label: `Reset password for ${username}`,
+                  shortLabel: "Reset password",
                   icon: KeyRound,
                   tone: "warning" as const,
                   onClick: () => onReset(userId),
                 },
                 {
                   label: `Delete user ${username}`,
+                  shortLabel: "Delete",
                   icon: Trash2,
                   tone: "danger" as const,
                   onClick: () => onDelete(row.original),
@@ -328,6 +331,7 @@ export const useUserColumns = (
                   ? [
                       {
                         label: `Grant Control Room access to ${username}`,
+                        shortLabel: "Grant CR access",
                         icon: Shield,
                         onClick: () => navigate(`/admin/control-room/access?user_id=${userId}`),
                       },

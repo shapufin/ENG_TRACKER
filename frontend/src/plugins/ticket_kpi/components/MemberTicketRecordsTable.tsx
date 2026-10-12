@@ -133,7 +133,7 @@ const renderCell = (field: string, row: TicketRecord): React.ReactNode => {
         : "—";
     case "title":
       return (
-        <span className="max-w-[280px] truncate" title={row.title}>
+        <span className="block max-w-[280px] truncate" title={row.title}>
           {row.title || "—"}
         </span>
       );

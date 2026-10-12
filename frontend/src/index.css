@@ -2,6 +2,12 @@
 @import "tw-animate-css";
 @config "../tailwind.config.js";
 
+/* Custom pointer variants (Tailwind v4 drops unknown variants silently — a
+   missing declaration here disables every `pointer-fine:*` class, e.g. the
+   RowActions hover reveal, with no build error). */
+@custom-variant pointer-fine (@media (pointer: fine));
+@custom-variant pointer-coarse (@media (pointer: coarse));
+
 @layer base {
   :root {
     --background: 220 20% 96.5%;
@@ -45,8 +51,11 @@
     --focus: 230 80% 55%;
     --info: 201 96% 32%;
     --info-foreground: 0 0% 100%;
-    --shadow-card: inset 0 1px 0 hsl(0 0% 100% / 0.7), 0 1px 2px hsl(230 40% 20% / 0.06), 0 2px 6px -1px hsl(230 40% 20% / 0.06);
-    --shadow-lift: 0 12px 28px -8px hsl(230 40% 20% / 0.16), 0 4px 10px -4px hsl(230 40% 20% / 0.08);
+    --shadow-card:
+      inset 0 1px 0 hsl(0 0% 100% / 0.7), 0 1px 2px hsl(230 40% 20% / 0.06),
+      0 2px 6px -1px hsl(230 40% 20% / 0.06);
+    --shadow-lift:
+      0 12px 28px -8px hsl(230 40% 20% / 0.16), 0 4px 10px -4px hsl(230 40% 20% / 0.08);
     --canvas-glow-1: 230 80% 55% / 0.07;
     --canvas-glow-2: 262 83% 58% / 0.05;
     --glass-bg: 220 20% 98% / 0.6;
@@ -137,7 +146,9 @@
     --focus: 217 91% 60%;
     --info: 213 94% 68%;
     --info-foreground: 0 0% 100%;
-    --shadow-card: inset 0 1px 0 hsl(220 40% 100% / 0.04), 0 1px 2px hsl(0 0% 0% / 0.4), 0 1px 3px hsl(0 0% 0% / 0.3);
+    --shadow-card:
+      inset 0 1px 0 hsl(220 40% 100% / 0.04), 0 1px 2px hsl(0 0% 0% / 0.4),
+      0 1px 3px hsl(0 0% 0% / 0.3);
     --shadow-lift: 0 12px 28px -8px hsl(0 0% 0% / 0.7), 0 0 0 1px hsl(262 83% 68% / 0.18);
     --canvas-glow-1: 262 83% 58% / 0.08;
     --canvas-glow-2: 199 89% 48% / 0.05;
@@ -281,7 +292,9 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    box-shadow: var(--shadow-lift), 0 0 0 1px hsl(var(--primary) / 0.28);
+    box-shadow:
+      var(--shadow-lift),
+      0 0 0 1px hsl(var(--primary) / 0.28);
     opacity: 0;
     transition: opacity 200ms;
     pointer-events: none;

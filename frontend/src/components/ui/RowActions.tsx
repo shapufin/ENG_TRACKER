@@ -3,10 +3,15 @@ import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { RowActionsPillContext } from "./RowActionsPillContext";
 
 export interface RowAction {
   /** Full accessible name, e.g. "Edit user alice". Also the tooltip text. */
   label: string;
+  /** Short pill-only label, e.g. "Edit". Rendered next to the icon inside
+   * the floating RowActionsPill on wide screens (hidden below `xl`, like the
+   * AdminTABLE mockup); the actions column stays icon-only. */
+  shortLabel?: string;
   icon: LucideIcon;
   onClick: () => void;
   tone?: "default" | "danger" | "warning" | "success";
@@ -34,15 +39,26 @@ const HOVER_REVEAL_CLASS =
   "pointer-fine:opacity-0 pointer-fine:group-hover/row:opacity-100 pointer-fine:group-focus-within/row:opacity-100 pointer-fine:group-data-[state=selected]/row:opacity-100 transition-opacity duration-150 motion-reduce:transition-none";
 
 const RowActionButton: React.FC<{ action: RowAction }> = ({ action }) => {
-  const { label, icon: Icon, onClick, tone = "default", disabled, disabledReason } = action;
+  const {
+    label,
+    shortLabel,
+    icon: Icon,
+    onClick,
+    tone = "default",
+    disabled,
+    disabledReason,
+  } = action;
   const reasonId = React.useId();
   const explained = Boolean(disabled && disabledReason);
+  // Pill-only text labels: the fixed-square icon size cannot hold text, so a
+  // labelled pill action uses the auto-width control-sm size instead.
+  const showLabel = React.useContext(RowActionsPillContext) && Boolean(shortLabel);
   const button = (
     <Button
       type="button"
       variant="ghost"
-      size="control-icon-sm"
-      className={TONE_CLASS[tone]}
+      size={showLabel ? "control-sm" : "control-icon-sm"}
+      className={cn(TONE_CLASS[tone], showLabel && "gap-1 whitespace-nowrap")}
       aria-label={label}
       aria-describedby={explained ? reasonId : undefined}
       disabled={disabled}
@@ -51,7 +67,8 @@ const RowActionButton: React.FC<{ action: RowAction }> = ({ action }) => {
         onClick();
       }}
     >
-      <Icon className="h-4 w-4" aria-hidden="true" />
+      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+      {showLabel && <span className="hidden text-xs font-medium xl:inline">{shortLabel}</span>}
     </Button>
   );
   return (

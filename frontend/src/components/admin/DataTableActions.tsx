@@ -18,11 +18,12 @@ export const DataTableActions = <T,>({
 }: DataTableActionsProps<T>) => (
   <RowActions
     actions={[
-      { label: `Edit ${itemLabel}`, icon: Pencil, onClick: () => onEdit(item) },
+      { label: `Edit ${itemLabel}`, shortLabel: "Edit", icon: Pencil, onClick: () => onEdit(item) },
       ...(onDelete
         ? [
             {
               label: `Delete ${itemLabel}`,
+              shortLabel: "Delete",
               icon: Trash2,
               tone: "danger" as const,
               onClick: () => onDelete(item),
