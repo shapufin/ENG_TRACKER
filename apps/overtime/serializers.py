@@ -63,6 +63,14 @@ class OvertimeLogSerializer(serializers.ModelSerializer):
     def validate_ticket_references(self, value):
         return clean_ticket_references(value)
 
+    def validate(self, data):
+        from apps.users.services.approval_periods import assert_work_date_open
+        data = super().validate(data)
+        new_date = data.get('date')
+        if new_date and self.instance and new_date != self.instance.date:
+            assert_work_date_open(new_date)
+        return data
+
     def get_user_full_name(self, obj) -> str:
         """Return user's full name."""
         return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.username

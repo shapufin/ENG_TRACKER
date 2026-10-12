@@ -220,7 +220,11 @@ class StandbyLogUpdateSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
     def validate(self, data):
-        hours = data.get('hours')
+        from apps.users.services.approval_periods import assert_work_date_open
+        new_date = data.get('date')
+        if new_date and self.instance and new_date != self.instance.date:
+            assert_work_date_open(new_date)
+        hours = data.get('hours', self.instance.hours if self.instance else None)
         start_time = data.get('start_time')
         end_time = data.get('end_time')
         if hours is None:

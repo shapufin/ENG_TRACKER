@@ -50,7 +50,7 @@ class StandbyLogViewSetTests(TestCase):
     def test_create_standby_log(self):
         """Test creating a standby log."""
         data = {
-            'date': '2026-05-09',
+            'date': date.today().isoformat(),
             'hours': 8.0,
             'description': 'Test standby',
             'pattern': self.pattern.id
@@ -63,7 +63,7 @@ class StandbyLogViewSetTests(TestCase):
         """Test staff user can override user field."""
         self.client.force_authenticate(user=self.staff_user)
         data = {
-            'date': '2026-05-09',
+            'date': date.today().isoformat(),
             'hours': 8.0,
             'description': 'Test standby',
             'pattern': self.pattern.id,
@@ -762,6 +762,30 @@ class StandbyLogExportTests(TestCase):
         self.assertTrue(body.startswith('\ufeff'), 'CSV must start with UTF-8 BOM')
 
 
+class StandbyTLEditBlockTests(TestCase):
+    def setUp(self):
+        self.tl = User.objects.create_user(username='sb-guard-tl', password='pass')
+        self.tl.profile.is_albanian_tl_role = True
+        self.tl.profile.save(update_fields=['is_albanian_tl_role', 'updated_at'])
+        self.employee = User.objects.create_user(username='sb-guard-employee', password='pass')
+        self.team = Team.objects.create(name='SB Guard Team', code='SBGUARD', team_leader=self.tl)
+        TeamMembership.objects.create(user_profile=self.employee.profile, team=self.team, is_primary_team=True)
+        self.entry = StandbyLog.objects.create(user=self.employee, date=date.today(), hours=8)
+        self.api = APIClient()
+        self.api.force_authenticate(user=self.tl)
+
+    def test_tl_cannot_edit_team_member_standby(self):
+        response = self.api.patch(f'/api/standby/logs/{self.entry.id}/', {'description': 'tl edit'}, format='json')
+        self.assertIn(response.status_code, (403, 404), response.data)
+        self.entry.refresh_from_db()
+        self.assertEqual(self.entry.description, '')
+
+    def test_employee_can_still_edit_own_standby(self):
+        self.api.force_authenticate(user=self.employee)
+        response = self.api.patch(f'/api/standby/logs/{self.entry.id}/', {'description': 'own edit', 'hours': 8}, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+
+
 class StandbyOverlapValidationTests(TestCase):
     """Time-overlap validation replaces the old unique_standby_per_day
     constraint. A user can have multiple standby entries on the same date
@@ -775,12 +799,12 @@ class StandbyOverlapValidationTests(TestCase):
     def test_multiple_non_overlapping_same_date(self):
         """Two non-overlapping standby entries on the same date succeed."""
         r1 = self.client.post('/api/standby/logs/', {
-            'date': '2026-07-10',
+            'date': date.today().isoformat(),
             'start_time': '09:00', 'end_time': '10:00',
         })
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED, r1.content)
         r2 = self.client.post('/api/standby/logs/', {
-            'date': '2026-07-10',
+            'date': date.today().isoformat(),
             'start_time': '14:00', 'end_time': '15:00',
         })
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED, r2.content)
@@ -788,11 +812,11 @@ class StandbyOverlapValidationTests(TestCase):
     def test_overlapping_same_date_rejected(self):
         """Overlapping standby entries on the same date are rejected."""
         self.client.post('/api/standby/logs/', {
-            'date': '2026-07-10',
+            'date': date.today().isoformat(),
             'start_time': '09:00', 'end_time': '10:00',
         })
         r2 = self.client.post('/api/standby/logs/', {
-            'date': '2026-07-10',
+            'date': date.today().isoformat(),
             'start_time': '09:30', 'end_time': '10:30',
         })
         self.assertEqual(r2.status_code, status.HTTP_400_BAD_REQUEST)
@@ -801,7 +825,7 @@ class StandbyOverlapValidationTests(TestCase):
     def test_rejected_entry_does_not_block_same_time_slot(self):
         """A rejected standby entry releases its time slot."""
         r1 = self.client.post('/api/standby/logs/', {
-            'date': '2026-07-10',
+            'date': date.today().isoformat(),
             'start_time': '09:00', 'end_time': '10:00',
         })
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED, r1.content)
@@ -809,7 +833,7 @@ class StandbyOverlapValidationTests(TestCase):
         log.status = 'rejected'
         log.save()
         r2 = self.client.post('/api/standby/logs/', {
-            'date': '2026-07-10',
+            'date': date.today().isoformat(),
             'start_time': '09:00', 'end_time': '10:00',
         })
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED, r2.content)
@@ -828,7 +852,7 @@ class StandbyClientsM2MTests(TestCase):
     def test_create_with_multiple_clients(self):
         """Creating a standby entry with multiple client_ids attaches all clients."""
         r = self.client.post('/api/standby/logs/', {
-            'date': '2026-07-10',
+            'date': date.today().isoformat(),
             'start_time': '09:00', 'end_time': '17:00',
             'client_ids': [self.client_a.id, self.client_b.id],
         })
@@ -840,7 +864,7 @@ class StandbyClientsM2MTests(TestCase):
     def test_create_without_clients(self):
         """Creating a standby entry without client_ids leaves clients empty."""
         r = self.client.post('/api/standby/logs/', {
-            'date': '2026-07-10',
+            'date': date.today().isoformat(),
             'start_time': '09:00', 'end_time': '17:00',
         })
         self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.content)
@@ -850,7 +874,7 @@ class StandbyClientsM2MTests(TestCase):
     def test_create_with_nonexistent_client_id_rejected(self):
         """Passing a non-existent client ID returns 400, not 500."""
         r = self.client.post('/api/standby/logs/', {
-            'date': '2026-07-10',
+            'date': date.today().isoformat(),
             'start_time': '09:00', 'end_time': '17:00',
             'client_ids': [self.client_a.id, 99999],
         })

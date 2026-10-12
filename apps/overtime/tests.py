@@ -40,7 +40,7 @@ class OvertimeLogViewSetTests(TestCase):
     def test_create_overtime_log(self):
         """Test creating an overtime log."""
         data = {
-            'date': '2026-05-09',
+            'date': date.today().isoformat(),
             'hours': 8.5,
             'description': 'Test overtime',
             'client': self.client_obj.id
@@ -53,7 +53,7 @@ class OvertimeLogViewSetTests(TestCase):
         """Test staff user can override user field."""
         self.client.force_authenticate(user=self.staff_user)
         data = {
-            'date': '2026-05-09',
+            'date': date.today().isoformat(),
             'hours': 8.5,
             'description': 'Test overtime',
             'client': self.client_obj.id,
@@ -819,12 +819,12 @@ class OvertimeOverlapValidationTests(TestCase):
     def test_multiple_non_overlapping_same_client_same_date(self):
         """Two non-overlapping entries for the same client on the same date succeed."""
         r1 = self.client.post('/api/overtime/logs/', {
-            'date': '2026-07-10', 'client': self.client_a.id,
+            'date': date.today().isoformat(), 'client': self.client_a.id,
             'start_time': '09:00', 'end_time': '10:00',
         })
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED, r1.content)
         r2 = self.client.post('/api/overtime/logs/', {
-            'date': '2026-07-10', 'client': self.client_a.id,
+            'date': date.today().isoformat(), 'client': self.client_a.id,
             'start_time': '10:00', 'end_time': '11:00',
         })
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED, r2.content)
@@ -832,11 +832,11 @@ class OvertimeOverlapValidationTests(TestCase):
     def test_overlapping_same_client_same_date_rejected(self):
         """Overlapping entries for the same client on the same date are rejected."""
         self.client.post('/api/overtime/logs/', {
-            'date': '2026-07-10', 'client': self.client_a.id,
+            'date': date.today().isoformat(), 'client': self.client_a.id,
             'start_time': '09:00', 'end_time': '10:00',
         })
         r2 = self.client.post('/api/overtime/logs/', {
-            'date': '2026-07-10', 'client': self.client_a.id,
+            'date': date.today().isoformat(), 'client': self.client_a.id,
             'start_time': '09:30', 'end_time': '10:30',
         })
         self.assertEqual(r2.status_code, status.HTTP_400_BAD_REQUEST)
@@ -845,11 +845,11 @@ class OvertimeOverlapValidationTests(TestCase):
     def test_overlapping_different_client_same_date_rejected(self):
         """Overlapping entries for different clients on the same date are rejected."""
         self.client.post('/api/overtime/logs/', {
-            'date': '2026-07-10', 'client': self.client_a.id,
+            'date': date.today().isoformat(), 'client': self.client_a.id,
             'start_time': '09:00', 'end_time': '10:00',
         })
         r2 = self.client.post('/api/overtime/logs/', {
-            'date': '2026-07-10', 'client': self.client_b.id,
+            'date': date.today().isoformat(), 'client': self.client_b.id,
             'start_time': '09:30', 'end_time': '10:30',
         })
         self.assertEqual(r2.status_code, status.HTTP_400_BAD_REQUEST)
@@ -858,11 +858,11 @@ class OvertimeOverlapValidationTests(TestCase):
     def test_non_overlapping_different_client_same_date_allowed(self):
         """Non-overlapping entries for different clients on the same date are allowed."""
         self.client.post('/api/overtime/logs/', {
-            'date': '2026-07-10', 'client': self.client_a.id,
+            'date': date.today().isoformat(), 'client': self.client_a.id,
             'start_time': '09:00', 'end_time': '10:00',
         })
         r2 = self.client.post('/api/overtime/logs/', {
-            'date': '2026-07-10', 'client': self.client_b.id,
+            'date': date.today().isoformat(), 'client': self.client_b.id,
             'start_time': '14:00', 'end_time': '15:00',
         })
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED, r2.content)
@@ -870,10 +870,10 @@ class OvertimeOverlapValidationTests(TestCase):
     def test_entry_without_times_skips_overlap_check(self):
         """Entries without start_time/end_time skip overlap validation."""
         self.client.post('/api/overtime/logs/', {
-            'date': '2026-07-10', 'client': self.client_a.id, 'hours': 4,
+            'date': date.today().isoformat(), 'client': self.client_a.id, 'hours': 4,
         })
         r2 = self.client.post('/api/overtime/logs/', {
-            'date': '2026-07-10', 'client': self.client_a.id, 'hours': 3,
+            'date': date.today().isoformat(), 'client': self.client_a.id, 'hours': 3,
         })
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED, r2.content)
 
@@ -882,7 +882,7 @@ class OvertimeOverlapValidationTests(TestCase):
         same time range on the same date must be allowed."""
         # Create an entry, then reject it via the API
         r1 = self.client.post('/api/overtime/logs/', {
-            'date': '2026-07-10', 'client': self.client_a.id,
+            'date': date.today().isoformat(), 'client': self.client_a.id,
             'start_time': '09:00', 'end_time': '10:00',
         })
         self.assertEqual(r1.status_code, status.HTTP_201_CREATED, r1.content)
@@ -891,7 +891,7 @@ class OvertimeOverlapValidationTests(TestCase):
         log.save()
         # Now create a new entry with the same time range
         r2 = self.client.post('/api/overtime/logs/', {
-            'date': '2026-07-10', 'client': self.client_a.id,
+            'date': date.today().isoformat(), 'client': self.client_a.id,
             'start_time': '09:00', 'end_time': '10:00',
         })
         self.assertEqual(r2.status_code, status.HTTP_201_CREATED, r2.content)

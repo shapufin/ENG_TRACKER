@@ -2,7 +2,9 @@
 Permission mixins for DRF viewsets.
 """
 
-from django.db import IntegrityError
+from contextlib import contextmanager
+
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import permissions, status, decorators
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -13,6 +15,25 @@ from core.mixins.cache import CacheInvalidationMixin
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def actor_team_scope_cached(user):
+    """Cache the actor's team-member ids for one bulk action.
+
+    The lookup depends only on the actor, but the per-row permission checks
+    would otherwise repeat it for every record. The cache lives on the actor's
+    profile instance and is removed when the bulk action ends.
+    """
+    profile = getattr(user, 'profile', None)
+    if profile is None:
+        yield
+        return
+    profile._bulk_team_member_ids = profile.get_team_member_ids()
+    try:
+        yield
+    finally:
+        del profile._bulk_team_member_ids
 
 
 class SuperuserOnlyAdminMixin:
@@ -341,8 +362,6 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
     @decorators.action(detail=False, methods=['post'])
     def bulk_approve(self, request):
         """Approve multiple entries at once."""
-        from django.db import transaction
-
         ids = request.data.get('ids', [])
         if not ids:
             return Response({'error': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -350,7 +369,7 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
         approved_count = 0
         failed_ids = []
 
-        with transaction.atomic():
+        with transaction.atomic(), actor_team_scope_cached(request.user):
             queryset = self.get_queryset().filter(id__in=ids, status='pending').select_for_update()
 
             for obj in queryset:
@@ -372,8 +391,6 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
     @decorators.action(detail=False, methods=['post'])
     def bulk_reject(self, request):
         """Reject multiple entries at once."""
-        from django.db import transaction
-
         ids = request.data.get('ids', [])
         rejection_reason = request.data.get('rejection_reason', '')
         if not ids:
@@ -382,7 +399,7 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
         rejected_count = 0
         failed_ids = []
 
-        with transaction.atomic():
+        with transaction.atomic(), actor_team_scope_cached(request.user):
             queryset = self.get_queryset().filter(id__in=ids, status='pending').select_for_update()
 
             for obj in queryset:
@@ -412,8 +429,6 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
         adds the record to ``failed_ids`` instead of aborting the entire
         bulk operation.
         """
-        from django.db import transaction
-
         ids = request.data.get('ids', [])
         if not ids:
             return Response({'error': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -421,7 +436,7 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
         deleted_count = 0
         failed_ids = []
 
-        with transaction.atomic():
+        with transaction.atomic(), actor_team_scope_cached(request.user):
             queryset = self.get_queryset().filter(id__in=ids).select_for_update()
 
             for obj in queryset:

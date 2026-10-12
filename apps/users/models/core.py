@@ -493,6 +493,9 @@ class UserProfile(BaseModel):
         safe: if no UserProfile points to this user those conditions simply
         match zero rows — no .exists() pre-checks needed.
         """
+        cached = getattr(self, '_bulk_team_member_ids', None)
+        if cached is not None:
+            return set(cached)
         user = self.user
         membership_team_ids = set(self.teams.values_list('id', flat=True))
         led_team_ids = set(user.led_teams.values_list('id', flat=True))
