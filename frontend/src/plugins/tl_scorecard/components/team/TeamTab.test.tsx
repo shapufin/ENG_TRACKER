@@ -126,6 +126,29 @@ describe("TeamTab", () => {
     expect(within(otherRow).getByTitle("No wage for this month")).toBeInTheDocument();
   });
 
+  it("tells a conflicting wage apart from a missing one, in the row and the panel", async () => {
+    const conflicting: TeamMemberSummary = {
+      ...OTHER,
+      wage: { gross_monthly: null, effective_from: null, status: "conflict" },
+    };
+    (tlScorecardService.getTeamMembers as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: [MEMBER, conflicting],
+    });
+    renderTab();
+    await screen.findByText("Ilir Gjoka");
+
+    const conflictingRow = screen.getByText("Ilir Gjoka").closest("tr") as HTMLElement;
+    expect(
+      within(conflictingRow).getByTitle("Conflicting wage records, check payroll")
+    ).toBeInTheDocument();
+    expect(within(conflictingRow).queryByTitle("No wage for this month")).not.toBeInTheDocument();
+
+    // No Eye button anymore (single action duplicated row click) — the row opens the panel.
+    fireEvent.click(conflictingRow);
+    const panel = await screen.findByRole("dialog");
+    expect(within(panel).getByText("Conflicting wage records, check payroll")).toBeInTheDocument();
+  });
+
   it("opens the member detail panel from the row with wage, leave and EPR values", async () => {
     renderTab();
     await screen.findByText("Bora Zeta");

@@ -181,6 +181,8 @@ export interface PayrollLine {
   user: number;
   user_name: string;
   user_full_name: string;
+  /** Whether this viewer may regenerate this line (company scope: all; team scope: own team). */
+  can_regenerate: boolean;
   run: number;
   wage_assignment: number | null;
   gross_monthly_wage: string;
@@ -242,6 +244,9 @@ export interface ClosureStatus {
   }>;
   requires_tl_closed_before_finalize: boolean;
 }
+
+/** Viewer scope for run actions: "company" = all teams (staff, superuser, HR); "team" = own team only. */
+export type PayrollRunScope = "company" | "team";
 
 export interface PayrollRun {
   id: number;

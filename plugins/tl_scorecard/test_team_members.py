@@ -130,6 +130,14 @@ class TeamMemberWageTests(TeamMembersBase):
         self.assertEqual(wage['status'], 'missing')
         self.assertIsNone(wage['gross_monthly'])
 
+    def test_overlapping_wages_are_a_conflict_not_missing(self):
+        first_of_month = self.today.replace(day=1)
+        self._wage(self.member, '1000.00', first_of_month - timedelta(days=60))
+        self._wage(self.member, '2000.00', first_of_month - timedelta(days=20))
+        wage = self._member_row(self._get(self.tl))['wage']
+        self.assertEqual(wage['status'], 'conflict')
+        self.assertIsNone(wage['gross_monthly'])
+
     def test_wage_is_unavailable_when_payroll_is_not_importable(self):
         with mock.patch.dict(sys.modules, {'plugins.payroll.models': None}):
             wage = self._member_row(self._get(self.tl))['wage']
@@ -187,15 +195,20 @@ class TeamMemberDetailTests(TeamMembersBase):
 
 
 class TeamMemberQueryBudgetTests(TeamMembersBase):
+    # Tables the team action itself reads. Permission and team-scope lookups
+    # (plugin_permissions, user_roles, roles, teams, team_memberships,
+    # user_profiles) are shared with every scorecard endpoint and are not counted.
+    TEAM_TABLES = ('tl_scorecard_', 'leave_', 'payroll_wageassignment')
+
     def _add_members(self, count):
         for index in range(count):
             member = make_user(f'budget_member_{count}_{index}')
             member.profile.italian_tl = self.tl
             member.profile.save()
 
-    def _count(self):
-        """Queries for one request by a freshly loaded leader, so per-object
-        caches on the profile (scoreable member ids) cannot hide a cost."""
+    def _queries(self):
+        """SQL of one request by a freshly loaded leader, so per-object caches on
+        the profile (scoreable member ids) cannot hide a cost."""
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
         from django.contrib.auth.models import User
@@ -204,14 +217,28 @@ class TeamMemberQueryBudgetTests(TeamMembersBase):
         with CaptureQueriesContext(connection) as ctx:
             response = self._get(leader)
         self.assertEqual(response.status_code, 200)
-        return len(ctx.captured_queries)
+        return [q['sql'] for q in ctx.captured_queries]
+
+    def _team_owned(self, sqls):
+        return [sql for sql in sqls if any(table in sql for table in self.TEAM_TABLES)]
 
     def test_query_count_does_not_grow_with_member_count(self):
-        small = self._count()
+        small = self._queries()
         self._add_members(5)
-        large = self._count()
-        # Fixed cost: auth/role/team-scope lookups (~9) plus 10 bulk queries
-        # (members, wages, leave balances, leave requests, EPR, PIP, idle,
-        # absences, promotions, one-on-ones). None of them scale with members.
-        self.assertEqual(small, large)
-        self.assertLessEqual(large, 20)
+        large = self._queries()
+        self.assertEqual(len(small), len(large))
+        self.assertEqual(len(self._team_owned(small)), len(self._team_owned(large)))
+
+    def test_team_owned_queries_stay_within_spec_budget(self):
+        # Spec: <= ~10 queries. The team action itself uses 2: one member query
+        # carrying every per-member figure as a correlated subquery, and one
+        # list query for upcoming leave.
+        self._add_members(5)
+        owned = self._team_owned(self._queries())
+        self.assertLessEqual(len(owned), 10)
+        self.assertEqual(len(owned), 2)
+
+    def test_endpoint_total_is_eleven(self):
+        # 11 = 2 team-owned + 5 permission/role lookups + 4 team-scope lookups
+        # shared with the other scorecard endpoints.
+        self.assertEqual(len(self._queries()), 11)

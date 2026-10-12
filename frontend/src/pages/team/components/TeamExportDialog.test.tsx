@@ -80,7 +80,7 @@ describe("TeamExportDialog", () => {
     fireEvent.click(screen.getByRole("option", { name: "Payroll period" }));
     expect(
       screen.getByText(
-        "Payroll period matches HR's payroll export: records carried over to next month appear in the month they're paid."
+        "Payroll period groups each record by the payroll month it is requested for. Late entries carried over to a later month appear under that month."
       )
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Export" }));

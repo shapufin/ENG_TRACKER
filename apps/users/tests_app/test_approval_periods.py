@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -6,8 +7,146 @@ from rest_framework.test import APIClient
 
 from apps.overtime.models import Client, OvertimeLog
 from apps.users.models import Team, TeamMembership
+from apps.users.services.approval_periods import assert_work_date_open, is_work_date_open
 from plugins.notifications.models import Notification
 from plugins.notifications.plugin import NotificationPlugin
+
+TIRANE = ZoneInfo('Europe/Tirane')
+
+
+class WorkDateCutoffTests(TestCase):
+    def test_september_open_until_oct_1_end(self):
+        self.assertTrue(is_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 1, 23, 59, tzinfo=TIRANE)))
+
+    def test_september_closed_at_oct_2_midnight(self):
+        self.assertFalse(is_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE)))
+
+    def test_august_closed_from_sep_2_and_open_before(self):
+        self.assertFalse(is_work_date_open(date(2026, 8, 20), now=datetime(2026, 9, 2, 0, 0, tzinfo=TIRANE)))
+        self.assertTrue(is_work_date_open(date(2026, 8, 20), now=datetime(2026, 9, 1, 23, 59, tzinfo=TIRANE)))
+
+    def test_current_month_always_open(self):
+        self.assertTrue(is_work_date_open(date(2026, 10, 1), now=datetime(2026, 10, 20, 12, 0, tzinfo=TIRANE)))
+
+    def test_cutoff_uses_tirane_not_utc(self):
+        # 2026-10-01 23:30 UTC is 2026-10-02 01:30 Tirane (UTC+2 in October): closed.
+        now = datetime(2026, 10, 1, 23, 30, tzinfo=ZoneInfo('UTC'))
+        self.assertFalse(is_work_date_open(date(2026, 9, 15), now=now))
+
+    def test_december_rolls_to_january(self):
+        self.assertTrue(is_work_date_open(date(2026, 12, 5), now=datetime(2027, 1, 1, 23, 59, tzinfo=TIRANE)))
+        self.assertFalse(is_work_date_open(date(2026, 12, 5), now=datetime(2027, 1, 2, 0, 0, tzinfo=TIRANE)))
+
+    def test_assert_raises_with_month_message(self):
+        from rest_framework.exceptions import ValidationError
+        with self.assertRaises(ValidationError) as ctx:
+            assert_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE))
+        self.assertIn('September 2026', str(ctx.exception.detail[0]))
+
+
+class WorkDateCutoffApiTests(TestCase):
+    def setUp(self):
+        from unittest.mock import patch
+        self.employee = User.objects.create_user(username='cutoff-employee', password='pass')
+        self.staff = User.objects.create_user(username='cutoff-staff', password='pass', is_staff=True)
+        self.client_obj = Client.objects.create(name='Cutoff Client', code='CUTOFF-CLIENT')
+        self.api = APIClient()
+        self.api.force_authenticate(user=self.employee)
+        self._patch = patch('django.utils.timezone.now')
+        self.now = self._patch.start()
+        self.addCleanup(self._patch.stop)
+
+    def _at(self, when):
+        self.now.return_value = when
+
+    def _post_ot(self, work_date):
+        return self.api.post('/api/overtime/logs/', {
+            'client': self.client_obj.id, 'date': work_date, 'hours': 2,
+        }, format='json')
+
+    def _post_sb(self, work_date):
+        return self.api.post('/api/standby/logs/', {'date': work_date, 'hours': 8}, format='json')
+
+    def test_ot_september_accepted_before_oct_2(self):
+        self._at(datetime(2026, 10, 1, 23, 59, tzinfo=TIRANE))
+        self.assertEqual(self._post_ot('2026-09-30').status_code, 201)
+
+    def test_ot_september_rejected_from_oct_2(self):
+        self._at(datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE))
+        response = self._post_ot('2026-09-30')
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn('September 2026', str(response.data))
+
+    def test_ot_current_month_always_accepted(self):
+        self._at(datetime(2026, 10, 20, 12, 0, tzinfo=TIRANE))
+        self.assertEqual(self._post_ot('2026-10-15').status_code, 201)
+
+    def test_ot_cutoff_applies_to_staff_without_bypass(self):
+        self.api.force_authenticate(user=self.staff)
+        self._at(datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE))
+        self.assertEqual(self._post_ot('2026-09-30').status_code, 400)
+
+    def test_standby_august_rejected_from_sep_2(self):
+        self._at(datetime(2026, 9, 2, 0, 0, tzinfo=TIRANE))
+        response = self._post_sb('2026-08-20')
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn('August 2026', str(response.data))
+
+    def test_standby_september_accepted_before_oct_2(self):
+        self._at(datetime(2026, 10, 1, 23, 59, tzinfo=TIRANE))
+        self.assertEqual(self._post_sb('2026-09-30').status_code, 201)
+
+
+class TeamLeaderEditGuardTests(TestCase):
+    def setUp(self):
+        self.tl = User.objects.create_user(username='guard-tl', password='pass')
+        self.tl.profile.is_albanian_tl_role = True
+        self.tl.profile.save(update_fields=['is_albanian_tl_role', 'updated_at'])
+        self.employee = User.objects.create_user(username='guard-employee', password='pass')
+        self.team = Team.objects.create(name='Guard Team', code='GUARD', team_leader=self.tl)
+        TeamMembership.objects.create(user_profile=self.employee.profile, team=self.team, is_primary_team=True)
+        self.client_obj = Client.objects.create(name='Guard Client', code='GUARD-CLIENT')
+        self.entry = OvertimeLog.objects.create(
+            user=self.employee, client=self.client_obj, date=date.today().replace(day=1), hours=2,
+        )
+        self.api = APIClient()
+        self.api.force_authenticate(user=self.tl)
+
+    def test_tl_cannot_edit_team_member_overtime(self):
+        response = self.api.patch(
+            f'/api/overtime/logs/{self.entry.id}/', {'description': 'tl edit'}, format='json',
+        )
+        self.assertEqual(response.status_code, 403, response.data)
+        self.entry.refresh_from_db()
+        self.assertEqual(self.entry.description, '')
+
+    def test_tl_cannot_edit_team_member_overtime_with_workspace_param(self):
+        response = self.api.patch(
+            f'/api/overtime/logs/{self.entry.id}/?workspace_ids=1',
+            {'start_time': '09:00:00', 'end_time': '12:00:00'}, format='json',
+        )
+        self.assertIn(response.status_code, (403, 404), response.data)
+        self.entry.refresh_from_db()
+        self.assertIsNone(self.entry.start_time)
+
+    def test_tl_can_still_approve_team_member_overtime(self):
+        response = self.api.post(f'/api/overtime/logs/{self.entry.id}/approve/', format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+
+    def test_employee_can_still_edit_own_overtime(self):
+        self.api.force_authenticate(user=self.employee)
+        response = self.api.patch(
+            f'/api/overtime/logs/{self.entry.id}/', {'description': 'own edit'}, format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+
+    def test_staff_can_still_edit_team_member_overtime(self):
+        staff = User.objects.create_user(username='guard-staff', password='pass', is_staff=True)
+        self.api.force_authenticate(user=staff)
+        response = self.api.patch(
+            f'/api/overtime/logs/{self.entry.id}/', {'description': 'staff edit'}, format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.data)
 
 
 class ApprovalPeriodWorkflowTests(TestCase):

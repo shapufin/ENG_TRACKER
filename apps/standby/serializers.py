@@ -160,6 +160,9 @@ class StandbyLogCreateSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
     def validate(self, data):
+        from apps.users.services.approval_periods import assert_work_date_open
+        if data.get('date'):
+            assert_work_date_open(data['date'])
         hours = data.get('hours')
         start_time = data.get('start_time')
         end_time = data.get('end_time')

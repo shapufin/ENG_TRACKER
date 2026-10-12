@@ -446,6 +446,20 @@ const TLScorecardVisualization: React.FC = () => {
           </ChartContainer>
         </ChartSection>
 
+        {eprQuery.isError && (
+          <ChartSection
+            id="viz-epr"
+            title={`EPR stage progress (${year})`}
+            description="Share of team EPR stages completed by their due date"
+          >
+            <ErrorCard
+              title="Couldn't load EPR progress"
+              message="Check your connection and try again."
+              onRetry={eprQuery.refetch}
+            />
+          </ChartSection>
+        )}
+
         {eprStages && (
           <ChartSection
             id="viz-epr"

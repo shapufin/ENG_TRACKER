@@ -1,12 +1,13 @@
 """TL approval-period close and source processing-period assignment services."""
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from core.mixins.permissions import has_team_leader_role
 from apps.users.models import (
@@ -15,6 +16,8 @@ from apps.users.models import (
     ApprovalPeriodCloseMember,
     UserProfile,
 )
+
+WORK_DATE_TZ = ZoneInfo('Europe/Tirane')
 
 
 def normalize_period(value: date | str) -> date:
@@ -29,6 +32,26 @@ def next_period(period: date) -> date:
     if period.month == 12:
         return date(period.year + 1, 1, 1)
     return date(period.year, period.month + 1, 1)
+
+
+def work_date_cutoff(work_date: date) -> datetime:
+    """Start of the 2nd of the month after the work date's month, Europe/Tirane."""
+    following = next_period(normalize_period(work_date))
+    return datetime(following.year, following.month, 2, tzinfo=WORK_DATE_TZ)
+
+
+def is_work_date_open(work_date: date, now: datetime | None = None) -> bool:
+    """Whether OT/standby records may still be created for this work date."""
+    now = now or timezone.now()
+    return now.astimezone(WORK_DATE_TZ) < work_date_cutoff(work_date)
+
+
+def assert_work_date_open(work_date: date, now: datetime | None = None) -> None:
+    if not is_work_date_open(work_date, now=now):
+        raise ValidationError(
+            f'Entries for {normalize_period(work_date):%B %Y} are closed. Records for a month '
+            'can be added until the 1st of the following month (Europe/Tirane).'
+        )
 
 
 def _get_boundary_locked(period: date) -> ApprovalPeriodBoundary:

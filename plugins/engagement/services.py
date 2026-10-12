@@ -25,7 +25,9 @@ from apps.standby.models import StandbyLog
 from apps.users.models import Team, TeamMembership, UserProfile
 
 from .models import TLApprovalMetric
-from .sla import TIRANA, deadline_for, responsiveness_score, today_local
+from core.utils.timezone_local import TIRANA, tirana_today
+
+from .sla import deadline_for, responsiveness_score
 
 AGING_BUCKETS = ('<4h', '4-24h', '1-3d', '>3d')
 REQUEST_TYPES = ('leave', 'overtime', 'standby')
@@ -69,6 +71,29 @@ def weighted_mean(pairs):
         return None
     weight_sum = sum(w for _, w in scored)
     return round(sum(v * w for v, w in scored) / weight_sum, 2)
+
+
+def monthly_rollup(rows):
+    """One dict per month (oldest first): weighted score, sub-scores, TTA and
+    decision evidence. Shared by the trend API and the PDF report."""
+    by_month = {}
+    for row in rows:
+        by_month.setdefault(row.month, []).append(row)
+    results = []
+    for month in sorted(by_month):
+        month_rows = by_month[month]
+        results.append({
+            'month': month,
+            'engagement_score': weighted_mean((r.engagement_score, r.team_size) for r in month_rows),
+            'avg_tta_hours': weighted_avg_tta_hours(month_rows),
+            'decisions_during_leave': sum(r.decisions_during_leave for r in month_rows),
+            'decisions_on_holidays': sum(r.decisions_on_holidays for r in month_rows),
+            'score_speed': weighted_mean((r.score_speed, r.team_size) for r in month_rows),
+            'score_approval_rate': weighted_mean((r.score_approval_rate, r.team_size) for r in month_rows),
+            'score_responsiveness': weighted_mean((r.score_responsiveness, r.team_size) for r in month_rows),
+            'score_consistency': weighted_mean((r.score_consistency, r.team_size) for r in month_rows),
+        })
+    return results
 
 
 def weighted_avg_tta_hours(rows):
@@ -241,7 +266,7 @@ def ensure_current_month_snapshots(leader_ids=None, scope=None):
     next read without waiting for a recompute.
     """
     scope = _scope(scope)
-    month = today_local().replace(day=1)
+    month = tirana_today().replace(day=1)
     pairs = leader_team_pairs(leader_ids, scope)
     scope.team_members({team.id for _, team in pairs})  # one query for every team about to be computed
     have = set(TLApprovalMetric.objects.filter(month=month).values_list('leader_id', 'team_id'))
@@ -571,6 +596,8 @@ def aggregate_rows(rows):
     team_size = sum(r.team_size for r in rows)
     total_decided = _sum_type_metric(rows, 'decided')
     total_approved = _sum_type_metric(rows, 'approved')
+    judgeable = _sum_type_metric(rows, 'judgeable')
+    on_time = _sum_type_metric(rows, 'on_time')
 
     return {
         'team_size': team_size,
@@ -579,8 +606,9 @@ def aggregate_rows(rows):
         'resubmission_count': sum(r.resubmission_count for r in rows),
         'decisions_during_leave': sum(r.decisions_during_leave for r in rows),
         'decisions_on_holidays': sum(r.decisions_on_holidays for r in rows),
-        'judgeable': _sum_type_metric(rows, 'judgeable'),
-        'on_time': _sum_type_metric(rows, 'on_time'),
+        'judgeable': judgeable,
+        'on_time': on_time,
+        'on_time_pct': round(on_time / judgeable * 100, 1) if judgeable else None,
         'breaches': _sum_type_metric(rows, 'breaches'),
         'pending_past_deadline': _sum_type_metric(rows, 'pending_past_deadline'),
         'avg_tta_hours': weighted_avg_tta_hours(rows),

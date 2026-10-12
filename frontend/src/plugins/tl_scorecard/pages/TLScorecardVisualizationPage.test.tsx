@@ -132,6 +132,18 @@ describe("TLScorecardVisualizationPage", () => {
     expect(screen.queryByText("Escalation Risks")).not.toBeInTheDocument();
   });
 
+  it("shows an error inside the EPR section when its fetch fails, not a silent gap", async () => {
+    mockTrend([point("2026-04-01", 4), point("2026-05-01", 4)]);
+    (tlScorecardService.getEprProgress as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("boom")
+    );
+
+    renderPage();
+
+    expect(await screen.findByText("Couldn't load EPR progress")).toBeInTheDocument();
+    expect(screen.getByText(/EPR stage progress/)).toBeInTheDocument();
+  });
+
   it("omits the 1:1 compliance section when every point is masked", async () => {
     const masked = (month: string) => {
       const p = point(month, 4);

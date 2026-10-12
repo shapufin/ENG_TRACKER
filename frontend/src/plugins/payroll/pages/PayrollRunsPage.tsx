@@ -27,6 +27,7 @@ import { CheckCircle2, FilePen, Wallet } from "lucide-react";
 import { payrollService, describeSkippedUsers } from "../services/payrollService";
 import type { PayrollRun } from "../types";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
+import { usePayrollRunScope } from "../hooks/usePayrollRunScope";
 import { handleApiError } from "@/lib/error-handler";
 import { toast } from "sonner";
 
@@ -47,7 +48,8 @@ export const PayrollRunsPage: React.FC = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { canManage } = usePluginPermissions();
-  const canManagePayroll = canManage("payroll");
+  const { isCompanyScope } = usePayrollRunScope();
+  const canManagePayroll = canManage("payroll") && isCompanyScope;
   const [createOpen, setCreateOpen] = useState(false);
   const [newYear, setNewYear] = useState(new Date().getFullYear());
   const [newMonth, setNewMonth] = useState(new Date().getMonth() + 1);

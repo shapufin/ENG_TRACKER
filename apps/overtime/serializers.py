@@ -134,7 +134,10 @@ class OvertimeLogCreateSerializer(serializers.ModelSerializer):
         return clean_ticket_references(value)
 
     def validate(self, data):
+        from apps.users.services.approval_periods import assert_work_date_open
         data = super().validate(data)
+        if data.get('date'):
+            assert_work_date_open(data['date'])
         start_time = data.get('start_time')
         end_time = data.get('end_time')
         hours = data.get('hours')

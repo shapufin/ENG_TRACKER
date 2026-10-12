@@ -916,6 +916,24 @@ class PayrollPeriodExportTests(TestCase):
         # Filename should include _payroll suffix
         self.assertIn('_payroll', response['Content-Disposition'])
 
+    def test_processing_period_mode_mid_month_start_includes_that_month(self):
+        """A mid-month start date still covers its whole processing month:
+        periods are stored as the first of the month, so 15 May must include
+        the May period (not compare 1 May against 15 May and drop it)."""
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.get(
+            '/api/reports/export-ot-standby/',
+            {'start_date': '2026-05-15', 'end_date': '2026-05-31',
+             'date_mode': 'processing_period'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
+        wb = openpyxl.load_workbook(io.BytesIO(response.content))
+        ws = wb.active
+        dates = [ws.cell(row=r, column=2).value for r in range(2, ws.max_row + 1)]
+        dates = [d for d in dates if d]
+        self.assertEqual(len(dates), 1, 'May period must include the 15/05 entry')
+        self.assertIn('15/05/2026', dates[0])
+
     def test_processing_period_mode_excludes_carryover_from_may(self):
         """processing_period May export excludes entries carried to June."""
         self.client.force_authenticate(user=self.staff)

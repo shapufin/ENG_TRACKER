@@ -1,8 +1,14 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { EngagementMetricsPage } from "./EngagementMetricsPage";
 import * as useEngagementMetrics from "./hooks/useEngagementMetrics";
+import { engagementService } from "../services/engagementService";
+
+vi.mock("@/lib/download", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/download")>()),
+  downloadBlobResponse: vi.fn(),
+}));
 
 // TeamBreakdownTable renders a DataTable (TanStack), which needs ResizeObserver —
 // jsdom lacks it. Assertions below are unchanged.
@@ -216,5 +222,39 @@ describe("EngagementMetricsPage", () => {
     renderPage();
 
     expect(screen.getByRole("status", { name: /watch/i })).toBeInTheDocument();
+  });
+
+  describe("export menu", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it.each([
+      ["Excel — this month", "month", "xlsx"],
+      ["Excel — full year", "year", "xlsx"],
+      ["PDF report — this month", "month", "pdf"],
+      ["PDF report — full year", "year", "pdf"],
+    ] as const)("%s requests the %s scope as %s", async (label, scope, fileFormat) => {
+      const exportReport = vi
+        .spyOn(engagementService, "exportReport")
+        .mockResolvedValue({ data: new Blob(["x"]), headers: {} } as never);
+      vi.mocked(useEngagementMetrics.useEngagementMetrics).mockReturnValue({
+        summary: baseSummary,
+        trend: baseTrend,
+        teamBreakdown: baseTeamBreakdown,
+        isLoading: false,
+        isFetching: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: /export report/i }));
+      fireEvent.click(await screen.findByRole("button", { name: label }));
+
+      await waitFor(() =>
+        expect(exportReport).toHaveBeenCalledWith("2026-09-01", scope, fileFormat)
+      );
+    });
   });
 });

@@ -537,8 +537,8 @@ class PayrollViewSetTests(TestCase):
 
 
 class PayrollHRScopeTests(TestCase):
-    """HR holds the payroll plugin's 'manage' grant and is meant to have full
-    payroll access (not just their own led team). Regression: generating a
+    """HR holds the payroll plugin's 'manage' grant and, as HR (``profile.is_hr``),
+    is meant to have full payroll access (not just their own led team). Regression: generating a
     run with no explicit user_ids used to scope HR to self+team with no
     wage-assignment pre-filter (unlike the staff/superuser path), so any
     wageless team member crashed WageAssignment.resolve_for_month and the

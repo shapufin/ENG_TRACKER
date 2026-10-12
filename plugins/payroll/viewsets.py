@@ -74,30 +74,33 @@ from .services.payroll_service import (
     partition_payable_users,
 )
 from .services.calculator import calculate_payroll
+from .services.wage_access import can_write_wages
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
 def _allowed_payroll_user_ids(user):
-    """Return the salary-data scope: unrestricted (like staff) for anyone
-    holding the payroll plugin's 'manage' grant — e.g. HR, who is meant to
-    have full payroll access, not just their own led team. A plain
-    team-leader identity with no elevated grant stays scoped to self + team.
+    """Return the salary-data scope. ``None`` means unrestricted: staff,
+    superusers and HR only. Everyone else, including anyone holding the
+    payroll 'manage' grant, is scoped to themselves plus their own team.
+    The grant decides what a user may do, not whose data they may see.
     """
     if user.is_staff or user.is_superuser:
-        return None
-    from apps.plugins.models import PluginPermission
-    manage_perm = PluginPermission.objects.filter(
-        plugin_name='payroll', action='manage'
-    ).first()
-    if manage_perm and manage_perm.has_access(user):
         return None
     allowed = {user.id}
     profile = getattr(user, 'profile', None)
     if profile:
+        if profile.is_hr:
+            return None
         allowed.update(profile.get_team_member_ids())
     return allowed
+
+
+def _payroll_run_scope(user):
+    """'company' when the viewer may act on every team's payroll, else 'team'.
+    Derived from `_allowed_payroll_user_ids` so the UI and the API cannot disagree."""
+    return 'company' if _allowed_payroll_user_ids(user) is None else 'team'
 
 
 def _json_safe(value):
@@ -215,6 +218,13 @@ class WageAssignmentViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         'create': 'manage', 'update': 'manage', 'partial_update': 'manage',
         'destroy': 'manage', 'bulk_create': 'manage',
     }
+
+    WAGE_WRITE_ACTIONS = frozenset({'create', 'update', 'partial_update', 'destroy', 'bulk_create'})
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if self.action in self.WAGE_WRITE_ACTIONS and not can_write_wages(request.user):
+            raise PermissionDenied('Only HR or administrators can change wage assignments.')
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -917,6 +927,16 @@ class PayrollWorkCalendarViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
 # Payroll runs
 # ---------------------------------------------------------------------------
 
+class PayrollRunSearchFilter(filters.SearchFilter):
+    """Run ``notes`` are company-wide free text that team scope cannot read,
+    so team scope must not search them either: a hit/miss would leak them."""
+
+    def get_search_fields(self, view, request):
+        if _allowed_payroll_user_ids(request.user) is None:
+            return view.search_fields
+        return None
+
+
 class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     plugin_name = 'payroll'
     queryset = PayrollRun.objects.all().select_related(
@@ -924,7 +944,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     )
     serializer_class = PayrollRunSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    filter_backends = [PayrollRunSearchFilter, DjangoFilterBackend]
     search_fields = ['notes']
     filterset_fields = ['year', 'month', 'status']
     permission_action_map = {
@@ -934,7 +954,13 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         'destroy': 'manage', 'generate': 'manage', 'generate_line': 'manage',
         'finalize': 'manage', 'cancel': 'manage',
         'export_excel': 'export', 'export_pdf': 'export', 'payslip': 'export',
+        'scope': 'view',
     }
+
+    @action(detail=False, methods=['get'])
+    def scope(self, request):
+        """The viewer's run-action scope (`company` or `team`) for the UI."""
+        return Response({'run_scope': _payroll_run_scope(request.user)})
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -962,19 +988,25 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         return None
 
     def update(self, request, *args, **kwargs):
-        blocked = self._ensure_draft_mutable(self.get_object())
+        run = self.get_object()
+        self._ensure_unrestricted()
+        blocked = self._ensure_draft_mutable(run)
         if blocked:
             return blocked
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
-        blocked = self._ensure_draft_mutable(self.get_object())
+        run = self.get_object()
+        self._ensure_unrestricted()
+        blocked = self._ensure_draft_mutable(run)
         if blocked:
             return blocked
         return super().partial_update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        blocked = self._ensure_draft_mutable(self.get_object())
+        run = self.get_object()
+        self._ensure_unrestricted()
+        blocked = self._ensure_draft_mutable(run)
         if blocked:
             return blocked
         return super().destroy(request, *args, **kwargs)
@@ -999,6 +1031,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         )
 
     def create(self, request, *args, **kwargs):
+        self._ensure_unrestricted()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         year = serializer.validated_data['year']
@@ -1082,8 +1115,16 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         user_ids = serializer.validated_data.get('user_ids', [])
         users, skipped = partition_payable_users(self._resolve_users(user_ids), run.year, run.month)
+        if not users:
+            return Response(
+                {'detail': 'No payable users to generate. The draft was left unchanged.',
+                 'skipped_users': skipped},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        scope = _allowed_payroll_user_ids(request.user)
+        replace_user_ids = None if scope is None else {user.id for user in users}
         try:
-            lines = generate_draft_run(run, users)
+            lines = generate_draft_run(run, users, replace_user_ids=replace_user_ids)
         except Exception as e:
             logger.error('Payroll draft generation failed: %s', e, exc_info=True)
             return Response(
@@ -1167,6 +1208,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def finalize(self, request, pk=None):
         run = self.get_object()
+        self._ensure_unrestricted()
         try:
             run = finalize_run(run, request.user)
         except Exception as e:
@@ -1183,6 +1225,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         run = self.get_object()
+        self._ensure_unrestricted()
         try:
             run = cancel_run(run, request.user)
         except Exception as e:
@@ -1217,7 +1260,9 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         """List payroll lines for a run, scoped to what this user may see."""
         run = self.get_object()
         lines = self._scoped_lines(run).order_by('user__username')
-        serializer = PayrollLineSerializer(lines, many=True)
+        serializer = PayrollLineSerializer(lines, many=True, context={
+            'scoped_user_ids': _allowed_payroll_user_ids(request.user),
+        })
         return Response(serializer.data)
 
     @action(detail=False, methods=['post'])
@@ -1284,10 +1329,11 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         })
 
     def _ensure_unrestricted(self):
-        """Whole-run exports build one file covering every team's lines and
-        cannot be filtered down (`export_service` takes the whole run) — so
-        unlike `lines()`/`payslip()`, a scoped team leader can't use these
-        at all, only staff/superuser/payroll-'manage'-grant holders."""
+        """Whole-run actions act on every team's lines at once: exports build
+        one file covering the whole run, and create/update/destroy/finalize/
+        cancel change the whole run. Unlike `lines()`/`payslip()`, a scoped
+        user (anyone but staff, superuser or HR, `manage` grant included) is
+        refused these outright (fail closed)."""
         if _allowed_payroll_user_ids(self.request.user) is not None:
             raise PermissionDenied(
                 'This whole-run action is limited to unrestricted payroll access. '

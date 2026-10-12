@@ -1,9 +1,11 @@
 """Per-member summary for the TL scorecard Team tab.
 
-Every collection is loaded with one bulk query over the whole team and grouped
-in Python, so the query budget stays constant as the team grows (no per-member
-queries). "Open" means the same thing the scorecard headline counts mean:
-PIPs not completed/cancelled (`governance_records`), absences unaddressed
+The whole team is read by ONE member query: every per-member figure (wage,
+leave totals, EPR, governance counts, last one-on-one) is a correlated
+subquery annotated onto the member rows, so the query count does not grow with
+the team. Only the upcoming-leave list is a second query, because it returns
+rows rather than a figure. "Open" means what the scorecard headline counts
+mean: PIPs not completed/cancelled (`governance_records`), absences unaddressed
 (`absence_metrics`), idle flags still `open` (`idle_metrics`), promotion
 nominations still `nominated` (`governance_records`).
 """
@@ -13,11 +15,12 @@ from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth.models import User
-from django.db.models import Count, Max, Q
+from django.db.models import Count, DecimalField, Exists, IntegerField, Max, OuterRef, Q, Subquery, Sum
+from django.db.models.functions import Coalesce
 
 from apps.leave_management.models import LeaveBalance, LeaveRequest, count_business_days
 
-from .models import Absence, EPRCycle, IdleFlag, Meeting, PIPRecord, PromotionFlag
+from .models import Absence, EPRCycle, EPRGoal, IdleFlag, Meeting, PIPRecord, PromotionFlag
 from .scope import scoreable_member_ids
 
 ZERO = Decimal('0.0')
@@ -25,54 +28,98 @@ EPR_STAGES = ('goal_setting', 'mid_year', 'final_review')
 CLOSED_PIP_STATUSES = ('completed', 'cancelled')
 
 
-def _wages_for_month(member_ids, today):
-    """Wage per member for the current month, or None when payroll is not importable.
+def _count_for(queryset):
+    """Correlated COUNT of `queryset` for the outer member row; 0 when none."""
+    return Coalesce(
+        Subquery(
+            queryset.order_by().values('employee_id').annotate(n=Count('id')).values('n')[:1],
+            output_field=IntegerField(),
+        ),
+        0,
+    )
+
+
+def _wage_annotations(month_start, month_end):
+    """Current-month wage annotations, or None when payroll is not importable.
 
     Mirrors `WageAssignment.resolve_for_month` (plugins/payroll/models.py:227-263):
-    active assignments overlapping the month; exactly one is `ok`, none is
-    `missing`, several is `missing` (ambiguous, no value shown).
+    active assignments overlapping the month. Exactly one gives `ok`; none or
+    several give `missing`, so the count is annotated alongside the value.
     """
     try:
         from plugins.payroll.models import WageAssignment
     except ImportError:
         return None
 
-    month_start = today.replace(day=1)
-    month_end = today.replace(day=monthrange(today.year, today.month)[1])
-    candidates = defaultdict(list)
-    rows = WageAssignment.objects.filter(
-        user_id__in=member_ids, is_active=True, effective_from__lte=month_end,
+    applicable = WageAssignment.objects.filter(
+        user=OuterRef('pk'), is_active=True, effective_from__lte=month_end,
     ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=month_start))
-    for wage in rows.order_by('-effective_from'):
-        candidates[wage.user_id].append(wage)
-
-    summary = {}
-    for user_id in member_ids:
-        found = candidates.get(user_id, [])
-        if len(found) == 1:
-            wage = found[0]
-            summary[user_id] = {
-                'gross_monthly': wage.gross_monthly_wage,
-                'effective_from': wage.effective_from,
-                'status': 'ok',
-            }
-        else:
-            summary[user_id] = {
-                'gross_monthly': None,
-                'effective_from': None,
-                'status': 'missing',
-            }
-    return summary
+    return {
+        'wage_count': Coalesce(
+            Subquery(
+                applicable.order_by().values('user').annotate(n=Count('id')).values('n')[:1],
+                output_field=IntegerField(),
+            ),
+            0,
+        ),
+        'wage_amount': Subquery(applicable.order_by('-effective_from').values('gross_monthly_wage')[:1]),
+        'wage_from': Subquery(applicable.order_by('-effective_from').values('effective_from')[:1]),
+    }
 
 
-def _leave_for_year(member_ids, today):
-    totals = defaultdict(lambda: {'total_days': ZERO, 'used_days': ZERO, 'pending_days': ZERO})
-    for balance in LeaveBalance.objects.filter(user_id__in=member_ids, year=today.year):
-        bucket = totals[balance.user_id]
-        bucket['total_days'] += balance.total_days
-        bucket['used_days'] += balance.used_days
-        bucket['pending_days'] += balance.pending_days
+def _leave_annotations(year):
+    def _sum(field):
+        return Coalesce(
+            Subquery(
+                LeaveBalance.objects.filter(user=OuterRef('pk'), year=year)
+                .order_by().values('user').annotate(s=Sum(field)).values('s')[:1],
+                output_field=DecimalField(max_digits=6, decimal_places=1),
+            ),
+            ZERO,
+            output_field=DecimalField(max_digits=6, decimal_places=1),
+        )
 
+    return {
+        'leave_total': _sum('total_days'),
+        'leave_used': _sum('used_days'),
+        'leave_pending': _sum('pending_days'),
+    }
+
+
+def _epr_annotations(year):
+    cycles = EPRCycle.objects.filter(user=OuterRef('pk'), year=year)
+    return {
+        'epr_goal_count': Coalesce(
+            Subquery(
+                EPRGoal.objects.filter(cycle__user=OuterRef('pk'), cycle__year=year)
+                .order_by().values('cycle__user').annotate(n=Count('id')).values('n')[:1],
+                output_field=IntegerField(),
+            ),
+            0,
+        ),
+        'epr_goal_setting_done': Exists(cycles.filter(goal_setting_completed_at__isnull=False)),
+        'epr_mid_year_done': Exists(cycles.filter(mid_year_completed_at__isnull=False)),
+        'epr_final_review_done': Exists(cycles.filter(final_review_completed_at__isnull=False)),
+    }
+
+
+def _governance_annotations(leader):
+    # Same definitions as the scorecard's own counts (see module docstring).
+    return {
+        'pip_status': Subquery(
+            PIPRecord.objects.filter(employee=OuterRef('pk'), tl=leader)
+            .exclude(status__in=CLOSED_PIP_STATUSES).order_by('-id').values('status')[:1]
+        ),
+        'idle_open': _count_for(IdleFlag.objects.filter(
+            employee=OuterRef('pk'), flagged_by=leader, status='open')),
+        'absences_open': _count_for(Absence.objects.filter(
+            employee=OuterRef('pk'), addressed_on__isnull=True)),
+        'promotion_pending': Exists(PromotionFlag.objects.filter(
+            employee=OuterRef('pk'), nominated_by=leader, status='nominated')),
+    }
+
+
+def _upcoming_leave(member_ids, today):
     upcoming = defaultdict(list)
     approved = LeaveRequest.objects.filter(
         user_id__in=member_ids, status='approved',
@@ -86,122 +133,99 @@ def _leave_for_year(member_ids, today):
             # Same counting rule as the leave balance itself.
             'business_days': count_business_days(request.start_date, request.end_date),
         })
-
-    summary = {}
-    for user_id in member_ids:
-        bucket = totals[user_id]
-        summary[user_id] = {
-            **bucket,
-            'available_days': bucket['total_days'] - bucket['used_days'] - bucket['pending_days'],
-            'upcoming': upcoming.get(user_id, []),
-        }
-    return summary
-
-
-def _epr_for_year(member_ids, year):
-    cycles = {
-        cycle.user_id: cycle
-        for cycle in EPRCycle.objects.filter(user_id__in=member_ids, year=year).annotate(goal_count=Count('goals'))
-    }
-    summary = {}
-    for user_id in member_ids:
-        cycle = cycles.get(user_id)
-        done = {
-            'goal_setting': cycle is not None and cycle.goal_setting_completed_at is not None,
-            'mid_year': cycle is not None and cycle.mid_year_completed_at is not None,
-            'final_review': cycle is not None and cycle.final_review_completed_at is not None,
-        }
-        next_stage = next((stage for stage in EPR_STAGES if not done[stage]), None)
-        summary[user_id] = {
-            'year': year,
-            'goal_count': cycle.goal_count if cycle is not None else 0,
-            'goal_setting_done': done['goal_setting'],
-            'mid_year_done': done['mid_year'],
-            'final_review_done': done['final_review'],
-            'next_stage': next_stage,
-        }
-    return summary
-
-
-def _governance_for_members(leader, member_ids):
-    pip_status = {}
-    for employee_id, status in (
-        PIPRecord.objects.filter(employee_id__in=member_ids, tl=leader)
-        .exclude(status__in=CLOSED_PIP_STATUSES).order_by('-id').values_list('employee_id', 'status')
-    ):
-        pip_status.setdefault(employee_id, status)
-
-    idle = dict(
-        IdleFlag.objects.filter(employee_id__in=member_ids, flagged_by=leader, status='open')
-        .order_by().values('employee_id').annotate(n=Count('id')).values_list('employee_id', 'n')
-    )
-    absences = dict(
-        Absence.objects.filter(employee_id__in=member_ids, addressed_on__isnull=True)
-        .order_by().values('employee_id').annotate(n=Count('id')).values_list('employee_id', 'n')
-    )
-    promotions = set(
-        PromotionFlag.objects.filter(employee_id__in=member_ids, nominated_by=leader, status='nominated')
-        .values_list('employee_id', flat=True)
-    )
-
-    return {
-        user_id: {
-            'open_pip': user_id in pip_status,
-            'pip_status': pip_status.get(user_id),
-            'open_idle_flags': idle.get(user_id, 0),
-            'open_absences': absences.get(user_id, 0),
-            'pending_promotion': user_id in promotions,
-        }
-        for user_id in member_ids
-    }
-
-
-def _last_one_on_ones(leader, member_ids):
-    return dict(
-        Meeting.objects.filter(organizer=leader, meeting_type='one_on_one', counterparty_id__in=member_ids)
-        .order_by().values('counterparty_id').annotate(last=Max('occurred_on')).values_list('counterparty_id', 'last')
-    )
+    return upcoming
 
 
 def team_member_summaries(leader, today: date, include_meetings: bool) -> list[dict]:
     """One summary per scoreable member of `leader`'s team, ordered by name.
 
-    `include_meetings` is decided by the caller: one-on-ones are only ever
+    `include_meetings` is decided by the caller: one-on-one dates are only ever
     returned to the leader themself or to staff (see `_mask_one_on_one`).
     """
     member_ids = list(scoreable_member_ids(leader))
     if not member_ids:
         return []
 
+    month_start = today.replace(day=1)
+    month_end = today.replace(day=monthrange(today.year, today.month)[1])
+    wage_annotations = _wage_annotations(month_start, month_end)
+
+    annotations = {
+        **_leave_annotations(today.year),
+        **_epr_annotations(today.year),
+        **_governance_annotations(leader),
+    }
+    if wage_annotations is not None:
+        annotations.update(wage_annotations)
+    if include_meetings:
+        annotations['last_one_on_one'] = Subquery(
+            Meeting.objects.filter(
+                organizer=leader, meeting_type='one_on_one', counterparty=OuterRef('pk'),
+            ).order_by().values('counterparty').annotate(last=Max('occurred_on')).values('last')[:1]
+        )
+
     members = list(
         User.objects.filter(id__in=member_ids, is_active=True)
-        .select_related('profile').order_by('last_name', 'first_name', 'username')
+        .select_related('profile')
+        .annotate(**annotations)
+        .order_by('last_name', 'first_name', 'username')
     )
-    member_ids = [member.id for member in members]
-    wages = _wages_for_month(member_ids, today)
-    leave = _leave_for_year(member_ids, today)
-    epr = _epr_for_year(member_ids, today.year)
-    governance = _governance_for_members(leader, member_ids)
-    meetings = _last_one_on_ones(leader, member_ids) if include_meetings else {}
+    upcoming = _upcoming_leave([member.id for member in members], today)
 
     rows = []
     for member in members:
         profile = getattr(member, 'profile', None)
+        total = member.leave_total
+        used = member.leave_used
+        pending = member.leave_pending
+        if wage_annotations is None:
+            wage = {'gross_monthly': None, 'effective_from': None, 'status': 'unavailable'}
+        elif member.wage_count == 1:
+            wage = {
+                'gross_monthly': member.wage_amount,
+                'effective_from': member.wage_from,
+                'status': 'ok',
+            }
+        elif member.wage_count > 1:
+            wage = {'gross_monthly': None, 'effective_from': None, 'status': 'conflict'}
+        else:
+            wage = {'gross_monthly': None, 'effective_from': None, 'status': 'missing'}
+        epr_done = {
+            'goal_setting': member.epr_goal_setting_done,
+            'mid_year': member.epr_mid_year_done,
+            'final_review': member.epr_final_review_done,
+        }
         rows.append({
             'id': member.id,
             'full_name': member.get_full_name() or member.username,
             'username': member.username,
             'email': member.email,
             'seniority_level': profile.seniority_level if profile is not None else None,
-            'wage': (
-                {'gross_monthly': None, 'effective_from': None, 'status': 'unavailable'}
-                if wages is None else wages[member.id]
-            ),
-            'leave': leave[member.id],
-            'epr': epr[member.id],
-            'governance': governance[member.id],
+            'wage': wage,
+            'leave': {
+                'total_days': total,
+                'used_days': used,
+                'pending_days': pending,
+                'available_days': total - used - pending,
+                'upcoming': upcoming.get(member.id, []),
+            },
+            'epr': {
+                'year': today.year,
+                'goal_count': member.epr_goal_count,
+                'goal_setting_done': epr_done['goal_setting'],
+                'mid_year_done': epr_done['mid_year'],
+                'final_review_done': epr_done['final_review'],
+                'next_stage': next((stage for stage in EPR_STAGES if not epr_done[stage]), None),
+            },
+            'governance': {
+                'open_pip': member.pip_status is not None,
+                'pip_status': member.pip_status,
+                'open_idle_flags': member.idle_open,
+                'open_absences': member.absences_open,
+                'pending_promotion': member.promotion_pending,
+            },
             'meetings': {
-                'last_one_on_one_on': meetings.get(member.id) if include_meetings else None,
+                'last_one_on_one_on': member.last_one_on_one if include_meetings else None,
             },
         })
     return rows
