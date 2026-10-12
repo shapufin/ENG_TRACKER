@@ -10,6 +10,8 @@ import { Plus } from "lucide-react";
 import { TeamFormDialog } from "@/components/admin/TeamFormDialog";
 import { TeamDataTable } from "@/components/admin/TeamDataTable";
 import { CalendarGroupsSummary } from "@/components/admin/CalendarGroupsSummary";
+import { TeamStatsCards } from "./components/TeamStatsCards";
+import { TeamsPageFilters } from "./components/TeamsPageFilters";
 import { useTeamsPage } from "./hooks/useTeamsPage";
 
 // fallow-ignore-next-line complexity
@@ -40,6 +42,11 @@ export const TeamsPage: React.FC = () => {
     handleSubmit,
     setHoveredTeam,
     toggleExpand,
+    leaderFilter,
+    setLeaderFilter,
+    groupFilter,
+    setGroupFilter,
+    leaderCounts,
   } = useTeamsPage();
 
   if (isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
@@ -64,9 +71,26 @@ export const TeamsPage: React.FC = () => {
         </div>
       }
     >
+      <TeamStatsCards
+        total={data.results.length}
+        members={data.results.reduce((sum, t) => sum + (t.members_count ?? 0), 0)}
+        noLeader={leaderCounts.noLeader}
+        groups={groupsData?.length ?? 0}
+      />
+
       <CalendarGroupsSummary groups={groupsData} />
 
       <TeamDataTable
+        header={
+          <TeamsPageFilters
+            leaderFilter={leaderFilter}
+            onLeaderFilterChange={setLeaderFilter}
+            groups={(groupsData ?? []).map((g) => g.calendar_group)}
+            groupFilter={groupFilter}
+            onGroupFilterChange={setGroupFilter}
+            counts={leaderCounts}
+          />
+        }
         data={visibleData}
         profiles={profiles}
         expanded={expanded}

@@ -61,6 +61,7 @@ export const useTLApprovalColumns = ({
           return (
             <ApprovalActionsWithView
               status={row.status}
+              itemLabel={row.user_name ?? `overtime request ${row.id}`}
               onView={() => onView(row)}
               onApprove={() => onApprove("overtime", row.id)}
               onReject={() => onReject(row.id, "overtime")}
@@ -112,6 +113,7 @@ export const useTLApprovalColumns = ({
           return (
             <ApprovalActionsWithView
               status={row.status}
+              itemLabel={row.user_name ?? `standby request ${row.id}`}
               onView={() => onView(row)}
               onApprove={() => onApprove("standby", row.id)}
               onReject={() => onReject(row.id, "standby")}
@@ -135,6 +137,7 @@ export const useTLApprovalColumns = ({
           return (
             <ApprovalActionsWithView
               status={row.status}
+              itemLabel={row.user_name ?? `leave request ${row.id}`}
               onView={() => onView(row)}
               onApprove={() => onApprove("leave", row.id)}
               onReject={() => onReject(row.id, "leave")}

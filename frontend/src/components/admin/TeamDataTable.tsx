@@ -17,6 +17,8 @@ interface TeamDataTableProps {
   hoveredPath: Set<number>;
   onRowMouseEnter: (team: TeamNode) => void;
   onRowMouseLeave: () => void;
+  /** Header strip inside the table card (e.g. facet filters), not its own surface. */
+  header?: React.ReactNode;
 }
 
 export const TeamDataTable: React.FC<TeamDataTableProps> = ({
@@ -29,6 +31,7 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
   hoveredPath,
   onRowMouseEnter,
   onRowMouseLeave,
+  header,
 }) => {
   const hasChildren = useCallback(
     (id: number) => data.find((t) => t.id === id)?.children.length || 0 > 0,
@@ -120,6 +123,7 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
 
   return (
     <GlassCard delay={0} className="p-4">
+      {header}
       <DataTable
         columns={columns}
         data={data}

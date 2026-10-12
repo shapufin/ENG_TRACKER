@@ -1,10 +1,8 @@
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Pencil, Check, X } from "lucide-react";
 import type { LeaveRequest } from "@/types";
 import type { AppCellContext, AppColumnDef } from "@/components/ui/tableTypes";
 import { leaveRequestBaseColumns } from "./leaveColumnsBase";
-import { DeleteRequestButton } from "../components/DeleteRequestButton";
+import { EmployeeLeaveRowActions } from "../components/EmployeeLeaveRowActions";
 
 export const useLeaveColumns = (
   canApprove: boolean,
@@ -20,37 +18,17 @@ export const useLeaveColumns = (
       {
         id: "actions",
         header: "Actions",
-        cell: (info: AppCellContext<LeaveRequest, unknown>) => {
-          const row = info.row.original;
-          return (
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(row)}>
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              {canDelete(row) && <DeleteRequestButton id={row.id} onDelete={onDelete} />}
-              {canApprove && row.status === "pending" && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-success"
-                    onClick={() => onApprove(row.id)}
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive"
-                    onClick={() => onReject(row.id)}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </>
-              )}
-            </div>
-          );
-        },
+        cell: (info: AppCellContext<LeaveRequest, unknown>) => (
+          <EmployeeLeaveRowActions
+            request={info.row.original}
+            canApprove={canApprove}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            canDelete={canDelete}
+            onApprove={onApprove}
+            onReject={onReject}
+          />
+        ),
       },
     ],
     [canApprove, onEdit, onDelete, canDelete, onApprove, onReject]

@@ -4,6 +4,8 @@ import { Check, X, Eye } from "lucide-react";
 
 interface ApprovalActionsWithViewProps {
   status: string;
+  /** Row identity for accessible names, e.g. "Approve alice". */
+  itemLabel: string;
   onView: () => void;
   onApprove: () => void;
   onReject: () => void;
@@ -18,6 +20,7 @@ interface ApprovalActionsWithViewProps {
  */
 export const ApprovalActionsWithView: React.FC<ApprovalActionsWithViewProps> = ({
   status,
+  itemLabel,
   onView,
   onApprove,
   onReject,
@@ -27,33 +30,34 @@ export const ApprovalActionsWithView: React.FC<ApprovalActionsWithViewProps> = (
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       <Button
         variant="ghost"
         size="icon"
         className="h-11 w-11"
         onClick={onView}
-        aria-label="View details"
+        aria-label={`View details for ${itemLabel}`}
       >
         <Eye className="h-3.5 w-3.5" />
       </Button>
       <Button
-        variant="ghost"
-        size="icon"
-        className="h-11 w-11 text-success"
+        type="button"
+        size="sm"
         onClick={onApprove}
-        aria-label="Approve"
+        aria-label={`Approve ${itemLabel}`}
       >
-        <Check className="h-3.5 w-3.5" />
+        <Check className="h-4 w-4" aria-hidden="true" />
+        Approve
       </Button>
       <Button
-        variant="ghost"
-        size="icon"
-        className="h-11 w-11 text-destructive"
+        type="button"
+        size="sm"
+        variant="outline"
         onClick={onReject}
-        aria-label="Reject"
+        aria-label={`Reject ${itemLabel}`}
       >
-        <X className="h-3.5 w-3.5" />
+        <X className="h-4 w-4" aria-hidden="true" />
+        Reject
       </Button>
     </div>
   );
