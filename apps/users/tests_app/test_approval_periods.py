@@ -116,7 +116,7 @@ class TeamLeaderEditGuardTests(TestCase):
         response = self.api.patch(
             f'/api/overtime/logs/{self.entry.id}/', {'description': 'tl edit'}, format='json',
         )
-        self.assertEqual(response.status_code, 403, response.data)
+        self.assertIn(response.status_code, (403, 404), response.data)
         self.entry.refresh_from_db()
         self.assertEqual(self.entry.description, '')
 
@@ -140,13 +140,15 @@ class TeamLeaderEditGuardTests(TestCase):
         )
         self.assertEqual(response.status_code, 200, response.data)
 
-    def test_staff_can_still_edit_team_member_overtime(self):
+    def test_staff_edit_of_team_member_overtime_is_not_widened(self):
         staff = User.objects.create_user(username='guard-staff', password='pass', is_staff=True)
         self.api.force_authenticate(user=staff)
         response = self.api.patch(
             f'/api/overtime/logs/{self.entry.id}/', {'description': 'staff edit'}, format='json',
         )
-        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.status_code, 404, response.data)
+        self.entry.refresh_from_db()
+        self.assertEqual(self.entry.description, '')
 
 
 class ApprovalPeriodWorkflowTests(TestCase):

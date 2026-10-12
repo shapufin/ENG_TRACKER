@@ -159,6 +159,15 @@ class StandbyLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermis
                 'This standby entry belongs to finalized payroll and cannot be changed.'
             )
 
+    def check_object_permissions(self, request, obj):
+        super().check_object_permissions(request, obj)
+        if (
+            self.action in {'update', 'partial_update'}
+            and obj.user_id != request.user.id
+            and not (request.user.is_staff or request.user.is_superuser)
+        ):
+            raise PermissionDenied("Team leaders cannot edit a team member's standby entry.")
+
     def perform_update(self, serializer):
         """Reset status to pending if record was approved and is being modified."""
         from rest_framework.exceptions import ValidationError
