@@ -178,12 +178,14 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
               tone="info"
               icon={<History className="h-4 w-4" aria-hidden="true" />}
               label={`Nothing logged for ${year}`}
-              value={
-                canAuthor
-                  ? "Record your cadence meetings and EPR participation to start the log."
-                  : undefined
-              }
-            />
+            >
+              {/* Prose goes in children (sans): `value` renders mono/tabular for short emphasised values. */}
+              {canAuthor ? (
+                <span className="text-muted-foreground min-w-0">
+                  Record your cadence meetings and EPR participation to start the log.
+                </span>
+              ) : undefined}
+            </InfoCallout>
           ) : (
             <GroupedEvidenceList
               rows={evidence}

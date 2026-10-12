@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { useState } from "react";
+import { createCrudActionsColumn, pillOffsetForEntry } from "./tableColumnHelpers";
 import { DataTable } from "./DataTable";
 import type { RowSelectionState, ColumnVisibilityState } from "@tanstack/react-table";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
-import { createCrudActionsColumn } from "./tableColumnHelpers";
 
 interface Item {
   id: number;
@@ -674,5 +674,27 @@ describe("floating actions pill", () => {
     stubPointer(true);
     render(<DataTable columns={columns} data={data} />);
     expect(screen.queryByRole("toolbar")).not.toBeInTheDocument();
+  });
+});
+
+describe("pillOffsetForEntry", () => {
+  it("centers the pill on the entry point when nothing is near an edge", () => {
+    // clientX=800 on a row starting at viewport 300: offset is row-relative.
+    expect(pillOffsetForEntry(800, { left: 300, width: 1000 }, 400, 1600)).toBe("-500px");
+  });
+
+  it("clamps to the viewport right edge on a scrolled table (pill never bleeds off-screen)", () => {
+    // Regression: the old row-relative 140px guess parked a 444px pill at
+    // viewport 1426 on a 1600px screen (48px cut off). The clamp is
+    // viewport-relative now: center=1370, offset measured from the row box.
+    expect(pillOffsetForEntry(1528, { left: 176, width: 1390 }, 444, 1600)).toBe("-196px");
+  });
+
+  it("clamps to the viewport left edge", () => {
+    expect(pillOffsetForEntry(10, { left: -500, width: 1390 }, 444, 1600)).toBe("-660px");
+  });
+
+  it("stays finite when the pill is wider than the viewport", () => {
+    expect(pillOffsetForEntry(200, { left: 0, width: 300 }, 500, 400)).toBe("-158px");
   });
 });
