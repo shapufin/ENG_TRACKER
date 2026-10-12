@@ -1211,6 +1211,8 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         self._ensure_unrestricted()
         try:
             run = finalize_run(run, request.user)
+        except DjangoValidationError as e:
+            return Response({'detail': e.messages[0]}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error('Payroll finalization failed: %s', e, exc_info=True)
             return Response(

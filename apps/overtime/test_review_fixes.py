@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date
 from decimal import Decimal
 from uuid import uuid4
 
@@ -42,8 +42,7 @@ class ReviewFixesTests(TestCase):
         defaults.update(kwargs)
         return OvertimeLog.objects.create(**defaults)
 
-    # 1. Payroll must not finalize with hours that changed after generation.
-    def test_finalize_rejects_entry_changed_after_generation(self):
+    def _stale_run(self):
         call_command('seed_payroll_rules')
         WageAssignment.objects.create(user=self.emp, gross_monthly_wage=Decimal('100000'),
                                       effective_from=date(2020, 1, 1))
@@ -53,24 +52,23 @@ class ReviewFixesTests(TestCase):
                                         created_by=self.admin)
         generate_draft_run(run, [self.emp])
         OvertimeLog.objects.filter(pk=entry.pk).update(hours=Decimal('8'))
+        return run
+
+    # 1. Payroll must not finalize with hours that changed after generation.
+    def test_finalize_rejects_entry_changed_after_generation(self):
         with self.assertRaises(DjangoValidationError):
-            finalize_run(run, self.admin)
+            finalize_run(self._stale_run(), self.admin)
 
-    # 2. Same start and end time is rejected on create and on update.
-    def test_create_rejects_equal_start_and_end(self):
-        self.api.force_authenticate(self.emp)
-        response = self.api.post('/api/overtime/logs/', {
-            'client': self.client_obj.id, 'date': self.month.isoformat(),
-            'start_time': '09:00', 'end_time': '09:00', 'description': 'x',
-        }, format='json')
+    # 1b. The finalize endpoint must return the real reason, not a generic failure.
+    def test_finalize_endpoint_reports_stale_entry_reason(self):
+        from rest_framework.test import APIRequestFactory, force_authenticate
+        from plugins.payroll.viewsets import PayrollRunViewSet
+        run = self._stale_run()
+        request = APIRequestFactory().post(f'/api/plugins/payroll/runs/{run.id}/finalize/', {}, format='json')
+        force_authenticate(request, user=self.admin)
+        response = PayrollRunViewSet.as_view({'post': 'finalize'})(request, pk=run.id)
         self.assertEqual(response.status_code, 400)
-
-    def test_update_rejects_equal_start_and_end(self):
-        entry = self._entry(self.month, status='pending', start_time=time(9), end_time=time(10), hours=Decimal('1'))
-        self.api.force_authenticate(self.emp)
-        response = self.api.patch(f'/api/overtime/logs/{entry.id}/',
-                                  {'start_time': '09:00', 'end_time': '09:00'}, format='json')
-        self.assertEqual(response.status_code, 400)
+        self.assertIn('changed after this draft', str(response.data['detail']))
 
     # 3. Readiness must accept an entry closed under its own work-date period.
     def test_closure_readiness_accepts_carried_over_entry(self):

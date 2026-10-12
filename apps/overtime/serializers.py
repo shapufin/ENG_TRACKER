@@ -69,10 +69,6 @@ class OvertimeLogSerializer(serializers.ModelSerializer):
         new_date = data.get('date')
         if new_date and self.instance and new_date != self.instance.date:
             assert_work_date_open(new_date)
-        start_time = data.get('start_time', getattr(self.instance, 'start_time', None))
-        end_time = data.get('end_time', getattr(self.instance, 'end_time', None))
-        if start_time and start_time == end_time:
-            raise serializers.ValidationError({'end_time': 'End time must differ from start time.'})
         return data
 
     def get_user_full_name(self, obj) -> str:
@@ -153,8 +149,6 @@ class OvertimeLogCreateSerializer(serializers.ModelSerializer):
         start_time = data.get('start_time')
         end_time = data.get('end_time')
         hours = data.get('hours')
-        if start_time and start_time == end_time:
-            raise serializers.ValidationError({'end_time': 'End time must differ from start time.'})
 
         # Validate that both times are provided together
         if (start_time and not end_time) or (end_time and not start_time):
