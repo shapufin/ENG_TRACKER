@@ -295,6 +295,27 @@ table-cell typography is now decided once, app-wide, instead of per surface.
 
 ## Last Updated
 
+2026-10-12 — **Notification preferences matrix**: the settings card is now a
+Category × Channel matrix (rows = categories, columns = In-app/Push switches;
+channel meanings stated once in the intro, group sections kept). Fits 375px
+after squeezing body/header cell padding below sm and shortening headers to
+single words (`whitespace-nowrap` contract). All 11 existing tests pass
+unchanged; verified light/dark/375px with zero console errors.
+
+2026-10-11 — **AdminGUI adoption pass**: behaviours adopted from the mockup
+(Teams StatCards/filters/search; inline Approve/Reject on admin
+leave-requests; bulk-drawer Updating/Unchanged badges, impact banner, target
+chips; editable UserDetailPanel for phone/hire-date; import radio-cards for
+short choice lists). Mockup dark mode re-confirmed broken —
+translation-source rule stands.
+
+2026-10-11 — **App-wide table cleanup + review**: detached `DataTable`
+footer moved inside the bordered box (all tables inherit); redundant TeamTab
+Eye column removed; TL approvals, employee leave, and ticket-KPI batch cells
+converged on inline decisions + `RowActions`; `DeleteRequestButton.tsx`
+deleted. Follow-up review (fresh light/dark/375px shots + static sweep):
+no further defects.
+
 2026-10-10 — **Admin visual lift** merged on `main` (`8b9d377`): 27 admin
 routes lifted; new primitives (`FilterChipRow`, `RowActions`+sticky actions,
 `AdminBreadcrumbNav`, `SeverityBanner`, `SectionHeading`, `StatCard`

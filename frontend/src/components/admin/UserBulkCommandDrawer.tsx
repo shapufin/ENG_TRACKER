@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TriStateCheckbox, type TriStateValue } from "@/components/ui/TriStateCheckbox";
-import { Crown, ListChecks, Save, Shield, Sparkles, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Crown, Info, ListChecks, Save, Shield, Sparkles, Users, X } from "lucide-react";
 import type { Tech, UserProfile, Team } from "@/types";
 import { TechMultiSelect } from "@/components/admin/TechMultiSelect";
 import { BulkDrawerHeader } from "@/components/ui/BulkDrawerHeader";
@@ -39,6 +40,8 @@ interface UserBulkCommandDrawerProps {
   albanianTLs?: TeamLeader[];
   onBulkUpdate: (payload: Omit<BulkUserUpdatePayload, "user_ids">) => void;
   isMutating?: boolean;
+  /** Removes one profile from the bulk selection (target chip ×). */
+  onRemoveSelected?: (profileId: number) => void;
 }
 
 const SectionCard: React.FC<{
@@ -47,18 +50,41 @@ const SectionCard: React.FC<{
   description: string;
   children: React.ReactNode;
   className?: string;
-}> = ({ icon, title, description, children, className }) => (
-  <section className={cn("border-border/60 bg-background/40 rounded-xl border p-3.5", className)}>
-    <div className="mb-3 flex items-center gap-2">
-      <div className="bg-primary/10 text-primary rounded-md p-1.5">{icon}</div>
-      <div>
-        <h3 className="text-sm font-semibold">{title}</h3>
-        <p className="text-muted-foreground text-xs">{description}</p>
+  /** Tints the card and shows an Updating badge when the section stages a change. */
+  applied?: boolean;
+}> = ({ icon, title, description, children, className, applied = false }) => (
+  <section
+    className={cn(
+      "rounded-xl border p-3.5 transition-colors",
+      applied ? "border-primary/30 bg-primary/[0.03]" : "border-border/60 bg-background/40",
+      className
+    )}
+  >
+    <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <div className="bg-primary/10 text-primary rounded-md p-1.5">{icon}</div>
+        <div>
+          <h3 className="text-sm font-semibold">{title}</h3>
+          <p className="text-muted-foreground text-xs">{description}</p>
+        </div>
       </div>
+      <SectionStatusBadge applied={applied} />
     </div>
     {children}
   </section>
 );
+
+/** Updating/Unchanged status badge shared by both section card variants. */
+const SectionStatusBadge: React.FC<{ applied: boolean }> = ({ applied }) =>
+  applied ? (
+    <Badge variant="default" className="shrink-0">
+      Updating
+    </Badge>
+  ) : (
+    <Badge variant="outline" className="shrink-0">
+      Unchanged
+    </Badge>
+  );
 
 /** Section whose whole body is gated behind a header-level "apply" switch —
  * one header row instead of a header plus a duplicate checkbox block. */
@@ -95,7 +121,10 @@ const ToggleSectionCard: React.FC<{
           <p className="text-muted-foreground text-xs">{description}</p>
         </div>
       </div>
-      <Switch id={applyId} checked={applied} onCheckedChange={onAppliedChange} />
+      <div className="flex shrink-0 flex-col items-end gap-2">
+        <SectionStatusBadge applied={applied} />
+        <Switch id={applyId} checked={applied} onCheckedChange={onAppliedChange} />
+      </div>
     </div>
     <div
       className={cn(
@@ -188,6 +217,7 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
   albanianTLs,
   onBulkUpdate,
   isMutating = false,
+  onRemoveSelected,
 }) => {
   const [applyTeams, setApplyTeams] = useState(false);
   const [teamIds, setTeamIds] = useState<number[]>([]);
@@ -223,6 +253,12 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
     hbprRole !== "indeterminate",
   ].filter(Boolean).length;
   const hasChanges = changeCount > 0;
+  const tlApplied = italianTl !== "unchanged" || albanianTl !== "unchanged";
+  const rolesApplied =
+    hrRole !== "indeterminate" ||
+    italianRole !== "indeterminate" ||
+    albanianRole !== "indeterminate" ||
+    hbprRole !== "indeterminate";
 
   const resetForm = () => {
     setApplyTeams(false);
@@ -291,6 +327,51 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
             </span>
           </div>
 
+          {hasChanges && (
+            <div
+              role="status"
+              className="border-tone-info-border bg-tone-info-surface text-tone-info-text flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
+            >
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>
+                <strong className="font-semibold">Pending batch update:</strong> executing this
+                operation will update {changeCount} field{changeCount === 1 ? "" : "s"} across{" "}
+                {selectedCount} user{selectedCount === 1 ? "" : "s"} immediately. Other fields
+                remain completely intact.
+              </span>
+            </div>
+          )}
+
+          {onRemoveSelected && selectedCount > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                Target users ({selectedCount}) — select × to exclude from batch
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {selectedProfiles.map((profile) => {
+                  const username = profile.user?.username ?? `#${profile.id}`;
+                  return (
+                    <span
+                      key={profile.id}
+                      className="border-border/60 bg-card inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-medium shadow-xs"
+                    >
+                      <span className="font-mono text-xs">{username}</span>
+                      <button
+                        type="button"
+                        onClick={() => onRemoveSelected(profile.id)}
+                        aria-label={`Remove ${username} from selection`}
+                        title="Remove from selection"
+                        className="text-muted-foreground hover:text-destructive cursor-pointer rounded-sm p-0.5 transition-colors"
+                      >
+                        <X className="h-3 w-3" aria-hidden="true" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Teams — full width (TeamMultiSelect needs horizontal space) */}
           {!allHbpr && (
             <ToggleSectionCard
@@ -343,6 +424,7 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
                 icon={<Crown className="h-4 w-4" />}
                 title="Team leader assignments"
                 description="Assign or remove each language TL independently."
+                applied={tlApplied}
               >
                 <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
                   <AssignmentSelect
@@ -365,6 +447,7 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
               icon={<Shield className="h-4 w-4" />}
               title="Roles"
               description="Click a role to cycle: unchanged → enable → disable."
+              applied={rolesApplied}
             >
               <div className="space-y-2">
                 <RoleToggle id="bulk-role-hr" label="HR" value={hrRole} onChange={setHrRole} />

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { TicketKPITeamBatchesTable } from "./TicketKPITeamBatchesTable";
 import { TicketKPIRecentUploads } from "./TicketKPIRecentUploads";
@@ -50,5 +50,25 @@ describe("ticket KPI upload dates", () => {
     render(<TicketKPIRecentUploads batches={[{ ...ROW, id: 7 }]} />);
     expect(screen.getByText("29/06/2026")).toBeInTheDocument();
     expect(screen.queryByText("6/29/2026")).not.toBeInTheDocument();
+  });
+
+  it("routes batch actions through RowActions with unique names", () => {
+    const onDelete = vi.fn();
+    render(
+      <MemoryRouter>
+        <TicketKPITeamBatchesTable
+          rows={[{ ...ROW, id: 9 }]}
+          isLoading={false}
+          onDelete={onDelete}
+          rowSelection={{}}
+          onRowSelectionChange={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+    expect(
+      screen.getByRole("button", { name: "View member dashboard for enri.demnushi" })
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Delete upload for enri.demnushi" }));
+    expect(onDelete).toHaveBeenCalledTimes(1);
   });
 });

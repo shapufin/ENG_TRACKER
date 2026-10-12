@@ -88,4 +88,76 @@ describe("UserDetailPanel", () => {
     );
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("groups facts into labelled sections", () => {
+    render(
+      <UserDetailPanel
+        profile={profile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("heading", { name: "Contact" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Teams & tech" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Leadership & roles" })).toBeInTheDocument();
+  });
+
+  it("edits the phone number inline and saves through onSaveField", () => {
+    const onSaveField = vi.fn();
+    render(
+      <UserDetailPanel
+        profile={profile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveField={onSaveField}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit phone for alice" }));
+    const input = screen.getByLabelText("Phone");
+    fireEvent.change(input, { target: { value: "+355 69 111 1111" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save phone" }));
+    expect(onSaveField).toHaveBeenCalledWith(7, { phone: "+355 69 111 1111" });
+  });
+
+  it("edits the hire date inline and saves through onSaveField", () => {
+    const onSaveField = vi.fn();
+    render(
+      <UserDetailPanel
+        profile={profile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveField={onSaveField}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit hire date for alice" }));
+    const input = screen.getByLabelText("Hire date");
+    fireEvent.change(input, { target: { value: "2024-04-02" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save hire date" }));
+    expect(onSaveField).toHaveBeenCalledWith(7, { hire_date: "2024-04-02" });
+  });
+
+  it("cancels an inline edit without saving", () => {
+    const onSaveField = vi.fn();
+    render(
+      <UserDetailPanel
+        profile={profile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveField={onSaveField}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit phone for alice" }));
+    fireEvent.change(screen.getByLabelText("Phone"), { target: { value: "changed" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cancel editing phone" }));
+    expect(onSaveField).not.toHaveBeenCalled();
+    expect(screen.getByText("+355 69 000 0000")).toBeInTheDocument();
+  });
 });

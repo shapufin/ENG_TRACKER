@@ -88,4 +88,20 @@ describe("LeaveRequestsTable action buttons", () => {
     expect(screen.queryByRole("button", { name: "Reject 1" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete 1" })).not.toBeInTheDocument();
   });
+
+  it("renders pending approve/reject as always-visible inline buttons with text", () => {
+    // AdminGUI comparison 2026-10-11: approval decisions must be discoverable
+    // without hovering — icon-only hover-reveal actions hide the row's point.
+    render(<LeaveRequestsTable requests={[request]} onApprove={vi.fn()} onReject={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Approve 1" })).toHaveTextContent("Approve");
+    expect(screen.getByRole("button", { name: "Reject 1" })).toHaveTextContent("Reject");
+  });
+
+  it("calls onApprove immediately without a dialog", () => {
+    const onApprove = vi.fn();
+    render(<LeaveRequestsTable requests={[request]} onApprove={onApprove} onReject={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Approve 1" }));
+    expect(onApprove).toHaveBeenCalledWith(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
 });

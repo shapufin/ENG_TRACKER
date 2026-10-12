@@ -88,6 +88,13 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
         albanianTLs={state.albanianTLs}
         onBulkUpdate={state.handleBulkUpdate}
         isMutating={state.bulkUpdateMutation.isPending}
+        onRemoveSelected={(profileId) =>
+          state.setRowSelection((previous) => {
+            const next = { ...previous };
+            delete next[String(profileId)];
+            return next;
+          })
+        }
       />
 
       <UsersPageTable

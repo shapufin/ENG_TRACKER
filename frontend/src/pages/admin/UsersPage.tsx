@@ -9,12 +9,15 @@ import { UsersPageHeader } from "./components/UsersPageHeader";
 import { UsersPageContent } from "./components/UsersPageContent";
 import { UsersPageDialogs } from "./components/UsersPageDialogs";
 import { UserDetailPanel } from "@/components/admin/UserDetailPanel";
-import type { UserProfile } from "@/types";
 
 export const UsersPage: React.FC = () => {
   const queryClient = useQueryClient();
   const state = useUsersPage();
-  const [viewing, setViewing] = useState<UserProfile | null>(null);
+  const [viewingId, setViewingId] = useState<number | null>(null);
+  // Resolve the open panel from the live list so an inline save refreshes the
+  // panel through the normal ["admin"] invalidation — never a stale snapshot.
+  const viewing =
+    viewingId != null ? (state.profiles?.find((p) => p.id === viewingId) ?? null) : null;
   const columns = useUserColumns(
     state.openEdit,
     state.openReset,
@@ -24,7 +27,7 @@ export const UsersPage: React.FC = () => {
       crAccessUserIds: state.crAccessUserIds,
       crAccessByUserId: state.crAccessByUserId,
       showCRScopeTeams: state.isCROnlyAdmin,
-      onView: setViewing,
+      onView: (profile) => setViewingId(profile.id),
     }
   );
 
@@ -52,11 +55,13 @@ export const UsersPage: React.FC = () => {
       <UserDetailPanel
         profile={viewing}
         onOpenChange={(open) => {
-          if (!open) setViewing(null);
+          if (!open) setViewingId(null);
         }}
         onEdit={state.openEdit}
         onReset={state.openReset}
         onDelete={(profile) => state.setConfirmDelete(profile)}
+        onSaveField={(userId, payload) => state.updateMutation.mutate({ id: userId, payload })}
+        isSaving={state.updateMutation.isPending}
       />
     </PageShell>
   );

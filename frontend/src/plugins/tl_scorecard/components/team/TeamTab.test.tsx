@@ -126,11 +126,14 @@ describe("TeamTab", () => {
     expect(within(otherRow).getByTitle("No wage for this month")).toBeInTheDocument();
   });
 
-  it("opens the member detail panel from the eye button with wage, leave and EPR values", async () => {
+  it("opens the member detail panel from the row with wage, leave and EPR values", async () => {
     renderTab();
     await screen.findByText("Bora Zeta");
 
-    fireEvent.click(screen.getByRole("button", { name: "View details for Bora Zeta" }));
+    // The single Eye action duplicated row click, so the Actions column was
+    // removed — the row itself (mouse and keyboard) opens the panel.
+    const row = screen.getByText("Bora Zeta").closest("tr") as HTMLElement;
+    fireEvent.click(row);
 
     const panel = await screen.findByRole("dialog");
     expect(within(panel).getByText("Compensation")).toBeInTheDocument();
@@ -146,7 +149,8 @@ describe("TeamTab", () => {
     renderTab();
     await screen.findByText("Bora Zeta");
 
-    fireEvent.click(screen.getByRole("button", { name: "View details for Bora Zeta" }));
+    const row = screen.getByText("Bora Zeta").closest("tr") as HTMLElement;
+    fireEvent.keyDown(row, { key: "Enter" });
     await screen.findByRole("dialog");
 
     expect(tlScorecardService.getTeamMembers).toHaveBeenCalledTimes(1);
@@ -155,7 +159,8 @@ describe("TeamTab", () => {
   it("never shows a Restricted placeholder", async () => {
     renderTab();
     await screen.findByText("Bora Zeta");
-    fireEvent.click(screen.getByRole("button", { name: "View details for Bora Zeta" }));
+    const row = screen.getByText("Bora Zeta").closest("tr") as HTMLElement;
+    fireEvent.click(row);
     await screen.findByRole("dialog");
 
     expect(screen.queryByText(/restricted/i)).not.toBeInTheDocument();

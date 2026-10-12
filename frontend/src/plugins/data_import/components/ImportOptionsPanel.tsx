@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { ImportOption } from "../types/dataImport";
 
 const NO_COLUMN = "__skip__";
@@ -93,6 +94,43 @@ export const ImportOptionsPanel: React.FC<ImportOptionsPanelProps> = ({
           }
 
           if (option.option_type === "choice") {
+            const choices = option.choices ?? [];
+            // Short lists read better as selectable cards (conflict-strategy
+            // style) than a collapsed dropdown. Purely presentational: the
+            // schema still owns the choices, longer lists keep the Select.
+            if (choices.length <= 3) {
+              return (
+                <fieldset key={option.key} className="space-y-2 rounded-lg border p-4">
+                  <legend className="px-1 text-sm font-medium">{option.label}</legend>
+                  {choices.map(([code, label]) => {
+                    const checked = value === code;
+                    return (
+                      <label
+                        key={code}
+                        className={cn(
+                          "flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition-colors",
+                          checked
+                            ? "border-primary/40 bg-primary/[0.04]"
+                            : "border-border/60 bg-background/40 hover:border-border"
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name={id}
+                          checked={checked}
+                          onChange={() => onChange(option.key, code)}
+                          className="accent-primary h-4 w-4 shrink-0"
+                        />
+                        <span className="font-medium">{label}</span>
+                      </label>
+                    );
+                  })}
+                  {option.help_text && (
+                    <p className="text-muted-foreground text-xs">{option.help_text}</p>
+                  )}
+                </fieldset>
+              );
+            }
             return (
               <div key={option.key} className="space-y-2 rounded-lg border p-4">
                 <Label htmlFor={id}>{option.label}</Label>

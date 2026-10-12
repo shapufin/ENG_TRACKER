@@ -26,7 +26,13 @@ export const ImportHistoryTab: React.FC<ImportHistoryTabProps> = ({ batches }) =
     () => [
       { accessorKey: "created_at", header: "Date" },
       { accessorKey: "target_key", header: "Target" },
-      { accessorKey: "original_filename", header: "File" },
+      {
+        accessorKey: "original_filename",
+        header: "File",
+        cell: ({ row }: { row: { original: ImportBatch } }) => (
+          <span className="font-mono text-xs">{row.original.original_filename}</span>
+        ),
+      },
       { accessorKey: "total_rows", header: "Rows" },
       { accessorKey: "created_count", header: "Created" },
       { accessorKey: "updated_count", header: "Updated" },

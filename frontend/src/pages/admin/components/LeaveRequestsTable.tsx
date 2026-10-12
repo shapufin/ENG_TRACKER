@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { LeaveBalanceBadge } from "@/components/ui/LeaveBalanceBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { Button } from "@/components/ui/button";
 import { Check, Sun, Stethoscope, Trash2, X } from "lucide-react";
 import { RowActions, type RowAction } from "@/components/ui/RowActions";
 import { Input } from "@/components/ui/input";
@@ -40,33 +41,66 @@ const LeaveRequestRowActions = ({
   const [rejectOpen, setRejectOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [reason, setReason] = useState("");
-  const actions: RowAction[] = [];
-  if (status === "pending") {
-    actions.push(
-      { label: `Approve ${id}`, icon: Check, tone: "success", onClick: () => onApprove(id) },
-      {
-        label: `Reject ${id}`,
-        icon: X,
-        tone: "danger",
-        onClick: () => {
-          setReason("");
-          setRejectOpen(true);
+  // Approval decisions stay always-visible inline buttons (never hover-revealed
+  // icon actions): a pending decision is the row's whole point and must be
+  // discoverable without hovering. Only the destructive delete keeps the
+  // hover-reveal RowActions treatment.
+  const openReject = () => {
+    setReason("");
+    setRejectOpen(true);
+  };
+  const deleteAction: RowAction[] = onDelete
+    ? [
+        {
+          label: `Delete ${id}`,
+          icon: Trash2,
+          tone: "danger",
+          onClick: () => setDeleteOpen(true),
         },
-      }
+      ]
+    : [];
+  const deleteDialog = onDelete && (
+    <ConfirmDialog
+      open={deleteOpen}
+      onOpenChange={setDeleteOpen}
+      title="Delete Leave Request"
+      description="Delete this leave request? Its balance will be restored."
+      confirmLabel="Delete"
+      variant="destructive"
+      onConfirm={() => {
+        setDeleteOpen(false);
+        onDelete(id);
+      }}
+    />
+  );
+  if (status !== "pending") {
+    if (deleteAction.length === 0) return <span className="text-muted-foreground">-</span>;
+    return (
+      <>
+        <RowActions actions={deleteAction} />
+        {deleteDialog}
+      </>
     );
   }
-  if (onDelete) {
-    actions.push({
-      label: `Delete ${id}`,
-      icon: Trash2,
-      tone: "danger",
-      onClick: () => setDeleteOpen(true),
-    });
-  }
-  if (actions.length === 0) return <span className="text-muted-foreground">-</span>;
   return (
     <>
-      <RowActions actions={actions} />
+      <div className="flex items-center justify-end gap-2">
+        <Button type="button" size="sm" aria-label={`Approve ${id}`} onClick={() => onApprove(id)}>
+          <Check className="h-4 w-4" aria-hidden="true" />
+          Approve
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          aria-label={`Reject ${id}`}
+          onClick={openReject}
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+          Reject
+        </Button>
+        {deleteAction.length > 0 && <RowActions actions={deleteAction} />}
+      </div>
       <ConfirmDialog
         open={rejectOpen}
         onOpenChange={setRejectOpen}
@@ -88,20 +122,7 @@ const LeaveRequestRowActions = ({
           />
         </div>
       </ConfirmDialog>
-      {onDelete && (
-        <ConfirmDialog
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
-          title="Delete Leave Request"
-          description="Delete this leave request? Its balance will be restored."
-          confirmLabel="Delete"
-          variant="destructive"
-          onConfirm={() => {
-            setDeleteOpen(false);
-            onDelete(id);
-          }}
-        />
-      )}
+      {deleteDialog}
     </>
   );
 };
@@ -153,7 +174,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
               <span className="text-sm">
                 {start} → {end}
               </span>
-              <span className="text-xs text-muted-foreground">{days} days</span>
+              <span className="text-muted-foreground text-xs">{days} days</span>
             </div>
           );
         },

@@ -330,147 +330,147 @@ export const DataTable = function DataTable<TData extends RowData>({
         </FilterToolbar>
       )}
 
-      {/* Scroll wrapper with shadow indicators */}
-      <div className="relative">
-        {showLeftShadow && (
-          <div className="from-card pointer-events-none absolute inset-y-0 left-0 z-10 w-8 rounded-l-md bg-linear-to-r to-transparent" />
-        )}
-        {showRightShadow && (
-          <div className="from-card pointer-events-none absolute inset-y-0 right-0 z-10 w-8 rounded-r-md bg-linear-to-l to-transparent" />
-        )}
-        <div
-          ref={scrollRef}
-          className="border-border/70 bg-background/20 overflow-x-auto rounded-xl border"
-        >
-          <table className="text-dense w-full min-w-max">
-            <thead>
-              <tr className={TABLE_HEAD_ROW_CLASS}>
-                {enableRowSelection && (
-                  <th className={TABLE_HEAD_CELL_CHECKBOX_CLASS}>
-                    <Checkbox
-                      checked={table.getIsAllPageRowsSelected()}
-                      onCheckedChange={(value) => table.toggleAllPageRowsSelected(Boolean(value))}
-                      aria-label="Select all rows on this page"
-                    />
-                  </th>
-                )}
-                {table.getHeaderGroups().flatMap((hg) =>
-                  // fallow-ignore-next-line complexity
-                  hg.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className={cn(
-                        TABLE_HEAD_CELL_CLASS,
-                        header.column.id === "actions" && TABLE_ACTIONS_HEAD_CLASS
-                      )}
-                      style={
-                        header.column.columnDef.size
-                          ? { width: header.column.columnDef.size }
-                          : undefined
-                      }
-                      aria-sort={
-                        header.column.getCanSort()
-                          ? header.column.getIsSorted() === "asc"
-                            ? "ascending"
-                            : header.column.getIsSorted() === "desc"
-                              ? "descending"
-                              : "none"
-                          : undefined
-                      }
-                    >
-                      {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                        <button
-                          type="button"
-                          className="focus-visible:ring-focus flex min-h-11 items-center gap-1 rounded-sm transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:outline-hidden"
-                          onClick={header.column.getToggleSortingHandler()}
-                          aria-label={`Sort by ${header.column.id}`}
-                          title={`Sort by ${header.column.id}`}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          <span className="ml-0.5 shrink-0">
-                            {header.column.getIsSorted() === "asc" ? (
-                              <ArrowUp className="h-3 w-3" />
-                            ) : header.column.getIsSorted() === "desc" ? (
-                              <ArrowDown className="h-3 w-3" />
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 opacity-40" />
-                            )}
-                          </span>
-                        </button>
-                      ) : (
-                        flexRender(header.column.columnDef.header, header.getContext())
-                      )}
+      {/* Bordered table card: scroll region + attached result footer, so the
+      count never floats detached below the table. */}
+      <div className="border-border/70 bg-background/20 overflow-hidden rounded-xl border">
+        <div className="relative">
+          {showLeftShadow && (
+            <div className="from-card pointer-events-none absolute inset-y-0 left-0 z-10 w-8 rounded-l-md bg-linear-to-r to-transparent" />
+          )}
+          {showRightShadow && (
+            <div className="from-card pointer-events-none absolute inset-y-0 right-0 z-10 w-8 rounded-r-md bg-linear-to-l to-transparent" />
+          )}
+          <div ref={scrollRef} className="overflow-x-auto">
+            <table className="text-dense w-full min-w-max">
+              <thead>
+                <tr className={TABLE_HEAD_ROW_CLASS}>
+                  {enableRowSelection && (
+                    <th className={TABLE_HEAD_CELL_CHECKBOX_CLASS}>
+                      <Checkbox
+                        checked={table.getIsAllPageRowsSelected()}
+                        onCheckedChange={(value) => table.toggleAllPageRowsSelected(Boolean(value))}
+                        aria-label="Select all rows on this page"
+                      />
                     </th>
-                  ))
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-border/50 divide-y">
-              {rows.length ? (
-                renderedRows
-              ) : (
-                <tr>
-                  <td colSpan={totalCols}>
-                    <EmptyState icon={Search} title={emptyMessage} />
-                  </td>
+                  )}
+                  {table.getHeaderGroups().flatMap((hg) =>
+                    // fallow-ignore-next-line complexity
+                    hg.headers.map((header) => (
+                      <th
+                        key={header.id}
+                        className={cn(
+                          TABLE_HEAD_CELL_CLASS,
+                          header.column.id === "actions" && TABLE_ACTIONS_HEAD_CLASS
+                        )}
+                        style={
+                          header.column.columnDef.size
+                            ? { width: header.column.columnDef.size }
+                            : undefined
+                        }
+                        aria-sort={
+                          header.column.getCanSort()
+                            ? header.column.getIsSorted() === "asc"
+                              ? "ascending"
+                              : header.column.getIsSorted() === "desc"
+                                ? "descending"
+                                : "none"
+                            : undefined
+                        }
+                      >
+                        {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                          <button
+                            type="button"
+                            className="focus-visible:ring-focus flex min-h-11 items-center gap-1 rounded-sm transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:outline-hidden"
+                            onClick={header.column.getToggleSortingHandler()}
+                            aria-label={`Sort by ${header.column.id}`}
+                            title={`Sort by ${header.column.id}`}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            <span className="ml-0.5 shrink-0">
+                              {header.column.getIsSorted() === "asc" ? (
+                                <ArrowUp className="h-3 w-3" />
+                              ) : header.column.getIsSorted() === "desc" ? (
+                                <ArrowDown className="h-3 w-3" />
+                              ) : (
+                                <ArrowUpDown className="h-3 w-3 opacity-40" />
+                              )}
+                            </span>
+                          </button>
+                        ) : (
+                          flexRender(header.column.columnDef.header, header.getContext())
+                        )}
+                      </th>
+                    ))
+                  )}
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between px-1">
-        <p className="text-muted-foreground text-xs">
-          {table.getFilteredRowModel().rows.length} result
-          {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
-          {table.getPageCount() > 1 &&
-            ` · Page ${table.state.pagination.pageIndex + 1} of ${table.getPageCount()}`}
-        </p>
-        {table.getPageCount() > 1 && (
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-11 w-11 p-0"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
-              aria-label="First page"
-            >
-              <ChevronsLeft className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-11 w-11 p-0"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              aria-label="Previous page"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-11 w-11 p-0"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              aria-label="Next page"
-            >
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-11 w-11 p-0"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
-              aria-label="Last page"
-            >
-              <ChevronsRight className="h-3.5 w-3.5" />
-            </Button>
+              </thead>
+              <tbody className="divide-border/50 divide-y">
+                {rows.length ? (
+                  renderedRows
+                ) : (
+                  <tr>
+                    <td colSpan={totalCols}>
+                      <EmptyState icon={Search} title={emptyMessage} />
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+        </div>
+
+        <div className="border-border/70 bg-muted/30 flex items-center justify-between gap-2 border-t px-4 py-2">
+          <p className="text-muted-foreground text-xs">
+            {table.getFilteredRowModel().rows.length} result
+            {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
+            {table.getPageCount() > 1 &&
+              ` · Page ${table.state.pagination.pageIndex + 1} of ${table.getPageCount()}`}
+          </p>
+          {table.getPageCount() > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-11 w-11 p-0"
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+                aria-label="First page"
+              >
+                <ChevronsLeft className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-11 w-11 p-0"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-11 w-11 p-0"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                aria-label="Next page"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-11 w-11 p-0"
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+                aria-label="Last page"
+              >
+                <ChevronsRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

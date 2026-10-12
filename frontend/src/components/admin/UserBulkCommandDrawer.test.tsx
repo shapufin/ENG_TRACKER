@@ -23,7 +23,7 @@ const selectedProfiles = [
   { id: 2, user: { id: 12, username: "bob" } },
 ] as any;
 
-const renderDrawer = () =>
+const renderDrawer = (extra?: Record<string, unknown>) =>
   render(
     <UserBulkCommandDrawer
       open
@@ -33,6 +33,7 @@ const renderDrawer = () =>
       italianTLs={[]}
       albanianTLs={[]}
       onBulkUpdate={onBulkUpdate}
+      {...extra}
     />
   );
 
@@ -173,5 +174,32 @@ describe("UserBulkCommandDrawer", () => {
     expect(screen.getByText("Team leader assignments")).toBeInTheDocument();
     expect(screen.getByText("HBPR role")).toBeInTheDocument();
     expect(screen.getByText("Italian TL role")).toBeInTheDocument();
+  });
+
+  it("marks sections Unchanged until staged, then Updating", () => {
+    // AdminGUI comparison 2026-10-11: per-section status badges.
+    renderDrawer();
+    expect(screen.getAllByText("Unchanged").length).toBeGreaterThanOrEqual(4);
+
+    fireEvent.click(screen.getByRole("switch", { name: "Teams" }));
+    expect(screen.getByText("Updating")).toBeInTheDocument();
+  });
+
+  it("shows a pending-impact banner once a change is staged", () => {
+    renderDrawer();
+    expect(screen.queryByText(/pending batch update/i)).not.toBeInTheDocument();
+
+    clickRole("HR");
+    const banner = screen.getByText(/executing this operation/i).closest("div");
+    expect(banner?.textContent).toMatch(/pending batch update/i);
+    expect(banner?.textContent).toMatch(/1 field/);
+    expect(banner?.textContent).toMatch(/2 users/);
+  });
+
+  it("removes a target user through its chip", () => {
+    const onRemoveSelected = vi.fn();
+    renderDrawer({ onRemoveSelected });
+    fireEvent.click(screen.getByRole("button", { name: "Remove alice from selection" }));
+    expect(onRemoveSelected).toHaveBeenCalledWith(1);
   });
 });

@@ -34,6 +34,18 @@ const optionSchema: ImportOption[] = [
     depends_on: { password_strategy: "fixed" },
   },
   {
+    key: "request_status",
+    label: "Request status",
+    option_type: "choice",
+    default: "pending",
+    choices: [
+      ["pending", "Pending"],
+      ["approved", "Approved"],
+      ["rejected", "Rejected"],
+      ["cancelled", "Cancelled"],
+    ],
+  },
+  {
     key: "display_label",
     label: "Display label",
     option_type: "string",
@@ -112,8 +124,29 @@ describe("ImportOptionsPanel", () => {
     expect(screen.getByText("Password column")).toBeInTheDocument();
   });
 
-  it("renders one dropdown per choice option", () => {
+  it("renders short choice lists as radio cards instead of a dropdown", () => {
+    // AdminGUI comparison 2026-10-11: <=3 choices read better as selectable
+    // cards (conflict-strategy style) than a collapsed dropdown.
+    render(<ImportOptionsPanel {...baseProps} />);
+    const group = screen.getByRole("group", { name: "Password strategy" });
+    expect(group).toBeInTheDocument();
+    expect(
+      screen.getByRole("radio", { name: "Generate a random password per user" })
+    ).toBeChecked();
+  });
+
+  it("keeps a dropdown for choice lists longer than three", () => {
     render(<ImportOptionsPanel {...baseProps} />);
     expect(screen.getAllByRole("combobox")).toHaveLength(1);
+    expect(screen.getByRole("combobox", { name: "Request status" })).toBeInTheDocument();
+  });
+
+  it("reports a radio change under its option key", () => {
+    const onChange = vi.fn();
+    render(<ImportOptionsPanel {...baseProps} onChange={onChange} />);
+    fireEvent.click(
+      screen.getByRole("radio", { name: "Use a fixed default password for all users" })
+    );
+    expect(onChange).toHaveBeenCalledWith("password_strategy", "fixed");
   });
 });

@@ -1,13 +1,12 @@
 import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, ShieldAlert, Target, UserMinus, Users } from "lucide-react";
+import { ShieldAlert, Target, UserMinus, Users } from "lucide-react";
 import { UserCell } from "@/components/admin/UserCell";
 import { DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/badge";
-import { RowActions } from "@/components/ui/RowActions";
 import { StatCard } from "@/components/ui/StatCard";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
@@ -76,9 +75,7 @@ const EprStepper: React.FC<{ member: TeamMemberSummary }> = ({ member }) => {
   );
 };
 
-const buildColumns = (
-  onView: (member: TeamMemberSummary) => void
-): AppColumnDef<TeamMemberSummary>[] => [
+const buildColumns = (): AppColumnDef<TeamMemberSummary>[] => [
   {
     id: "full_name",
     accessorKey: "full_name",
@@ -126,21 +123,6 @@ const buildColumns = (
       );
     },
   },
-  {
-    id: "actions",
-    header: "Actions",
-    cell: ({ row }) => (
-      <RowActions
-        actions={[
-          {
-            label: `View details for ${row.original.full_name}`,
-            icon: Eye,
-            onClick: () => onView(row.original),
-          },
-        ]}
-      />
-    ),
-  },
 ];
 
 /**
@@ -153,7 +135,7 @@ export const TeamTab: React.FC = () => {
     queryKey: ["tl-scorecard", "team-members", "self"],
     queryFn: async () => (await tlScorecardService.getTeamMembers()).data,
   });
-  const columns = useMemo(() => buildColumns(setSelected), []);
+  const columns = useMemo(() => buildColumns(), []);
 
   if (teamQuery.isError) {
     return (

@@ -1,10 +1,9 @@
 import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { RowActions } from "@/components/ui/RowActions";
 import { Eye, Trash2, CheckCircle2 } from "lucide-react";
 import { formatMonthLabel } from "@/lib/monthOptions";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
@@ -73,54 +72,34 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
               {row.original.reviewed_by_username || "Yes"}
             </Badge>
           ) : (
-            <span className="text-xs text-muted-foreground">Not reviewed</span>
+            <span className="text-muted-foreground text-xs">Not reviewed</span>
           ),
       },
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => (
-          <TooltipProvider>
-            <div className="flex items-center justify-end gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    aria-label="View member dashboard"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(
-                        `/ticket-kpi/dashboard?user_id=${row.original.user}&month=${row.original.month}`
-                      );
-                    }}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>View</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    aria-label="Delete upload"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(row.original);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Delete</TooltipContent>
-              </Tooltip>
-            </div>
-          </TooltipProvider>
-        ),
+        cell: ({ row }) => {
+          const batch = row.original;
+          const who = batch.user_name || `user ${batch.user}`;
+          return (
+            <RowActions
+              actions={[
+                {
+                  label: `View member dashboard for ${who}`,
+                  icon: Eye,
+                  onClick: () =>
+                    navigate(`/ticket-kpi/dashboard?user_id=${batch.user}&month=${batch.month}`),
+                },
+                {
+                  label: `Delete upload for ${who}`,
+                  icon: Trash2,
+                  tone: "danger",
+                  onClick: () => onDelete(batch),
+                },
+              ]}
+            />
+          );
+        },
       },
     ],
     [navigate, onDelete]
