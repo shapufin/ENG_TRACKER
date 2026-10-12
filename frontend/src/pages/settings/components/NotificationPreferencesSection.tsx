@@ -4,7 +4,14 @@ import { toast } from "sonner";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { SwitchField } from "@/components/common/forms/SwitchField";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+import {
+  TABLE_BODY_CELL_CLASS,
+  TABLE_HEAD_CELL_CLASS,
+  TABLE_HEAD_ROW_CLASS,
+  TABLE_ROW_HOVER_CLASS,
+} from "@/components/ui/tableStyles";
 import { notificationService, type NotificationPreference } from "@/plugins/notifications/service";
 
 /**
@@ -18,9 +25,12 @@ const isHbprGroup = (key: string) => key.startsWith(HBPR_GROUP_PREFIX);
 type Channel = "in_app_enabled" | "push_enabled";
 
 /**
- * Per-category notification toggles, one row per preference key. An HBPR sees
- * their five governance groups under their own heading, each with independent
- * in-app and push switches; other roles see their existing categories.
+ * Per-category notification toggles as a Category × Channel matrix (the
+ * converged web pattern for multi-channel preference centers): one row per
+ * category, one column per channel. Channel descriptions live in the column
+ * headers, stated once instead of repeated on every row. An HBPR sees their
+ * five governance groups under their own section; other roles see their
+ * existing categories.
  */
 export const NotificationPreferencesSection: React.FC = () => {
   const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
@@ -96,34 +106,56 @@ export const NotificationPreferencesSection: React.FC = () => {
     }
   };
 
+  const renderChannelHeader = (channel: string) => (
+    <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-2 text-center sm:px-4")}>
+      {channel}
+    </th>
+  );
+
   const renderRow = (preference: NotificationPreference) => {
     const disabled = updatingKeys.has(preference.event_type);
-    return (
-      <div key={preference.event_type} className="border-border/70 rounded-lg border p-3">
-        <p className="text-sm font-medium">{preference.label}</p>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          <SwitchField
-            id={`${preference.event_type}-in-app`}
-            label="In-app"
-            description="Show in the notification centre."
-            checked={preference.in_app_enabled}
+    // Narrower side padding below sm so the matrix fits 375px viewports
+    // without horizontal scrolling; the shared constants still own the
+    // padding at sm and up (prefixed/unprefixed are separate merge groups).
+    const bodyCell = cn(TABLE_BODY_CELL_CLASS, "px-2 sm:px-4");
+    const channelCell = (channel: Channel, label: string) => (
+      <td className={cn(bodyCell, "text-center")}>
+        <div className="flex justify-center">
+          <Switch
+            id={`${preference.event_type}-${channel === "in_app_enabled" ? "in-app" : "push"}`}
+            checked={preference[channel]}
             disabled={disabled}
-            onCheckedChange={(value) => update(preference.event_type, "in_app_enabled", value)}
-            ariaLabel={`${preference.label}: in-app notifications`}
-            className="border-border/40"
-          />
-          <SwitchField
-            id={`${preference.event_type}-push`}
-            label="Push"
-            description="Send to your subscribed devices."
-            checked={preference.push_enabled}
-            disabled={disabled}
-            onCheckedChange={(value) => update(preference.event_type, "push_enabled", value)}
-            ariaLabel={`${preference.label}: push notifications`}
-            className="border-border/40"
+            onCheckedChange={(value) => update(preference.event_type, channel, value)}
+            aria-label={`${preference.label}: ${label}`}
           />
         </div>
-      </div>
+      </td>
+    );
+    return (
+      <tr key={preference.event_type} className={TABLE_ROW_HOVER_CLASS}>
+        <td className={cn(bodyCell, "text-sm font-medium")}>{preference.label}</td>
+        {channelCell("in_app_enabled", "in-app notifications")}
+        {channelCell("push_enabled", "push notifications")}
+      </tr>
+    );
+  };
+
+  const renderSection = (title: string | null, rows: NotificationPreference[]) => {
+    if (rows.length === 0) return null;
+    return (
+      <React.Fragment key={title ?? "main"}>
+        {title && (
+          <tr>
+            <td
+              colSpan={3}
+              className="bg-muted/30 text-muted-foreground px-4 py-1.5 text-xs font-semibold tracking-wide uppercase"
+            >
+              {title}
+            </td>
+          </tr>
+        )}
+        {rows.map(renderRow)}
+      </React.Fragment>
     );
   };
 
@@ -141,7 +173,10 @@ export const NotificationPreferencesSection: React.FC = () => {
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm">
           Choose which notifications you receive and how they reach you. Available options depend on
-          your role.
+          your role. <span className="text-foreground font-medium">In-app</span> notifications
+          appear in the notification centre;{" "}
+          <span className="text-foreground font-medium">Push</span> notifications go to your
+          subscribed devices.
         </p>
 
         {isLoading ? (
@@ -165,26 +200,23 @@ export const NotificationPreferencesSection: React.FC = () => {
             No notification preferences are available for your role.
           </p>
         ) : (
-          <>
-            {hbprRows.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                  HBPR Governance
-                </h3>
-                {hbprRows.map(renderRow)}
-              </div>
-            )}
-            {otherRows.length > 0 && (
-              <div className="space-y-3">
-                {hbprRows.length > 0 && (
-                  <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                    Other notifications
-                  </h3>
-                )}
-                {otherRows.map(renderRow)}
-              </div>
-            )}
-          </>
+          <div className="border-border/70 overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className={TABLE_HEAD_ROW_CLASS}>
+                <tr>
+                  <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-2 sm:px-4")}>
+                    Category
+                  </th>
+                  {renderChannelHeader("In-app")}
+                  {renderChannelHeader("Push")}
+                </tr>
+              </thead>
+              <tbody className="divide-border/40 divide-y">
+                {renderSection(hbprRows.length > 0 ? "HBPR Governance" : null, hbprRows)}
+                {renderSection(hbprRows.length > 0 ? "Other notifications" : null, otherRows)}
+              </tbody>
+            </table>
+          </div>
         )}
       </CardContent>
     </GlassCard>
