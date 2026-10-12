@@ -189,10 +189,11 @@ class StandbyLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermis
                     f'Time range overlaps an existing standby entry on {date} '
                     f'({overlap.start_time}–{overlap.end_time}).'
                 )
+        reassign = {'requested_processing_period': None} if date != obj.date else {}
         if obj.status == 'approved':
-            instance = serializer.save(status='pending', approved_by=None, approved_at=None)
+            instance = serializer.save(status='pending', approved_by=None, approved_at=None, **reassign)
         else:
-            instance = serializer.save()
+            instance = serializer.save(**reassign)
         # Update M2M clients if provided — read from serializer.validated_data
         # which has been validated by validate_client_ids (existence check).
         client_ids = serializer.validated_data.get('client_ids')

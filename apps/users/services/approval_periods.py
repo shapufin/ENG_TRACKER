@@ -95,6 +95,9 @@ def finalize_period(actor, period: date) -> tuple[ApprovalPeriodClose, bool]:
         if existing is not None:
             return existing, False
 
+        member_ids = _managed_user_ids(actor)
+        if not member_ids:
+            raise ValidationError('There are no team members in your scope to finalize.')
         close = ApprovalPeriodClose.objects.create(
             boundary=boundary,
             closed_at=timezone.now(),
@@ -103,7 +106,6 @@ def finalize_period(actor, period: date) -> tuple[ApprovalPeriodClose, bool]:
             scope_key=scope_key,
         )
 
-        member_ids = _managed_user_ids(actor)
         profiles = {
             profile.user_id: profile
             for profile in UserProfile.objects.filter(

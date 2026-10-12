@@ -519,16 +519,18 @@ def get_period_closure_status(run: PayrollRun) -> dict:
         if user_id not in closed_user_ids
     ]
 
+    sources = {}
+    for kind, model in (('overtime', OvertimeLog), ('standby', StandbyLog)):
+        ids = [entry.source_id for entry in entries if entry.source_kind == kind]
+        for source in model.objects.select_related('approval_period_close__boundary').filter(pk__in=ids):
+            sources[(kind, source.pk)] = source
+
     entries_without_source_closure = []
     for entry in entries:
-        source_model = OvertimeLog if entry.source_kind == 'overtime' else StandbyLog
-        source = source_model.objects.select_related(
-            'approval_period_close__boundary',
-        ).filter(pk=entry.source_id).first()
-        close_period = getattr(
-            getattr(source, 'approval_period_close', None), 'boundary', None,
-        )
-        if not source or not source.approval_period_close_id or not close_period or close_period.period != period:
+        source = sources.get((entry.source_kind, entry.source_id))
+        close = getattr(source, 'approval_period_close', None)
+        # A carried-over entry is closed under its work-date period, not the run's period.
+        if close is None or close.boundary.period != source.date.replace(day=1):
             entries_without_source_closure.append({
                 'source_kind': entry.source_kind,
                 'source_id': entry.source_id,
@@ -563,6 +565,11 @@ def _finalize_run_entries(locked_run: PayrollRun) -> None:
         if source.status != 'approved':
             raise ValidationError(
                 f'{entry.source_kind.title()} entry {entry.source_id} is not approved.'
+            )
+        if source.hours != entry.hours or source.date != entry.work_date:
+            raise ValidationError(
+                f'{entry.source_kind.title()} entry {entry.source_id} changed after this draft was '
+                'generated. Regenerate the payroll run before finalizing.'
             )
         source.resolved_settlement_period = entry.resolved_period
         source.save(update_fields=['resolved_settlement_period', 'updated_at'])
