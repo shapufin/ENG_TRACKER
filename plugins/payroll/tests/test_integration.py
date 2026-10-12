@@ -36,6 +36,7 @@ User = get_user_model()
 class PayrollServiceTests(TestCase):
     @classmethod
     def setUpTestData(cls):
+        PayrollConfiguration.objects.update_or_create(pk=1, defaults={'require_tl_closed_before_finalize': False})
         cls.admin = User.objects.create_superuser(
             username='payroll_admin', email='admin@test.com', password='pass',
         )
@@ -127,13 +128,14 @@ class PayrollServiceTests(TestCase):
         self.assertEqual(readiness['entries_without_source_closure'], [])
 
     def test_period_closure_status_endpoint_includes_configuration(self):
+        PayrollConfiguration.objects.all().delete()
         run, _ = self._run_with_source_entry(month=8)
         request = self.factory.get(f'/api/plugins/payroll/runs/{run.id}/period-closure-status/')
         force_authenticate(request, user=self.admin)
         response = PayrollRunViewSet.as_view({'get': 'period_closure_status'})(request, pk=run.id)
 
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.data['requires_tl_closed_before_finalize'])
+        self.assertTrue(response.data['requires_tl_closed_before_finalize'])
         self.assertEqual(response.data['period'], '2026-08-01')
 
     def test_finalize_flag_blocks_unclosed_user(self):
@@ -146,6 +148,10 @@ class PayrollServiceTests(TestCase):
             finalize_run(run, self.admin)
         run.refresh_from_db()
         self.assertEqual(run.status, 'draft')
+
+    def test_tl_closure_required_before_finalize_by_default(self):
+        PayrollConfiguration.objects.all().delete()
+        self.assertTrue(PayrollConfiguration.get_singleton().require_tl_closed_before_finalize)
 
     def test_finalize_flag_off_preserves_behavior_without_closure(self):
         run, _ = self._run_with_source_entry(month=10)
@@ -375,6 +381,7 @@ class PayrollViewSetTests(TestCase):
     """ViewSet tests using APIRequestFactory (avoids Python 3.14 test-client issue)."""
     @classmethod
     def setUpTestData(cls):
+        PayrollConfiguration.objects.update_or_create(pk=1, defaults={'require_tl_closed_before_finalize': False})
         cls.admin = User.objects.create_superuser(
             username='api_admin', email='apiadmin@test.com', password='pass',
         )

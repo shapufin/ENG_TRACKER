@@ -280,6 +280,7 @@ class PerUserGenerateTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
+        PayrollConfiguration.objects.update_or_create(pk=1, defaults={'require_tl_closed_before_finalize': False})
         cls.admin = User.objects.create_superuser(
             username='pgen_admin', email='pgen@example.com', password='pass',
         )
