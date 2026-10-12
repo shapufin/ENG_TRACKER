@@ -206,6 +206,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
       },
       {
         id: "actions",
+        meta: { actionsDisplay: "column" },
         header: "Actions",
         cell: ({ row }) => (
           <LeaveRequestRowActions

@@ -17,6 +17,7 @@ export const useLeaveColumns = (
       ...leaveRequestBaseColumns<LeaveRequest>(true),
       {
         id: "actions",
+        meta: { actionsDisplay: "column" },
         header: "Actions",
         cell: (info: AppCellContext<LeaveRequest, unknown>) => (
           <EmployeeLeaveRowActions

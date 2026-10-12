@@ -93,6 +93,11 @@ and serves framework-aware cross-stack queries.
 - Preserve API query keys and payload contracts unless explicitly changing them.
 - **Tables**: header typography and the header fill come from
   `frontend/src/components/ui/tableStyles.ts` — never inline in a `<thead>`.
+  Row actions (`id: "actions"`) float in a hover pill on fine pointers
+  (`RowActionsPill`). A column whose cells hold Approve/Reject or any other
+  decision control must set `meta: { actionsDisplay: "column" }`; the approval
+  helpers in `tableColumnHelpers.tsx` already do. Never hide a pending decision
+  behind hover.
   Gate: `cd frontend && node scripts/table-header-audit.mjs` exit 0 (state at
   handoff 2026-10-05: **PASS — 0 violations across 19 files**). Read the tracked
   `docs/table-header-contract.md` before touching any table: the rule, the
@@ -112,6 +117,14 @@ and serves framework-aware cross-stack queries.
 - Validate permissions again on the backend.
 - Reject invalid uploads and malformed input closed by default.
 - Stop and ask before changing authentication, authorization, migrations, or production configuration.
+
+## Shipping a scoped change (2026-10-12)
+
+- The working tree is shared. Before committing, run `git status` and stage explicit paths only (`git add <paths>`). Never `git add -A`, and never sweep in another worker's files.
+- Branch from `origin/main` for a new change (`git switch -c <type>/<slug> origin/main`, then carry only your own edits). Do not commit to a branch another workstream is using.
+- Push and open a PR with `gh pr create`. Merge only after the gates below are green. Do not merge a PR that contains files outside its stated scope.
+- Gates before push: targeted Vitest for touched areas, `npx tsc -b`, `npx eslint <touched>`, `npx prettier --check <touched>`, `node scripts/table-header-audit.mjs` when a table is touched, and `npm run build` for frontend changes.
+- Flaky-test rule: if a test fails only in the full suite and passes alone, record the test name and the suite result in the PR, then open a follow-up. Do not hide it.
 
 ## Concurrent Workers (2026-09-20)
 

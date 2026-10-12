@@ -115,6 +115,7 @@ export const useHbprAssignmentColumns = (
       },
       {
         id: "actions",
+        meta: { actionsDisplay: "column" },
         header: "Actions",
         size: 90,
         cell: ({ row }) =>

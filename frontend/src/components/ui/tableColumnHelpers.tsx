@@ -72,6 +72,7 @@ export const createCrudActionsColumn = <T extends WithIdAndStatus>(config: {
 }): AppColumnDef<T> => ({
   id: "actions",
   header: "Actions",
+  meta: { actionsDisplay: "column" },
   cell: ({ row }) => {
     const { id, status } = row.original;
     const actions: RowAction[] = [];
@@ -122,6 +123,7 @@ export const createViewApproveRejectActionsColumn = <T extends WithIdAndStatus>(
 }): AppColumnDef<T> => ({
   id: "actions",
   header: "Actions",
+  meta: { actionsDisplay: "column" },
   cell: ({ row }) => {
     const { id, status } = row.original;
     const actions: RowAction[] = [

@@ -26,6 +26,7 @@ export function ColumnVisibilityMenu<TData extends RowData>({
         if (
           !id ||
           id === "select" ||
+          id === "actions" ||
           header === undefined ||
           !headerText ||
           typeof headerText !== "string"
