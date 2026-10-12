@@ -133,6 +133,7 @@ export const HoursLogsTable = <T extends HoursLog>({
       },
       {
         id: "actions",
+        meta: { actionsDisplay: "column" },
         header: "Actions",
         cell: ({ row }) => (
           <HoursLogRowActions

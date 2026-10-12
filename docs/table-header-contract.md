@@ -229,6 +229,7 @@ mockup captures live in `design-screenshots/tables-plan/mocks/`.
   eslint / prettier / build clean. Browser-verified at `/engagement/metrics`: 8
   columns, 1 row, sortable headers, result count, transparent header
   (`design-screenshots/tables-plan/engagement/`).
+- **2026-10-12 (row-actions pill)** — `DataTable` moves `id: "actions"` cells into a hover-revealed floating pill (`RowActionsPill`) on fine pointers; coarse pointers keep the column. Approval-bearing columns opt out with `meta: { actionsDisplay: "column" }` (set in the approval helpers and on the approval columns). The actions column is no longer hideable. Browser verification of the pill is pending.
 - **2026-10-05 (review pass)** � independent review found the gate could be evaded and one
   real violation it could not see. Fixed: audit rewritten as a text-based detector with 24
   tests and wired into CI; `TeamsTableHeader` (div-grid, was `uppercase tracking-[0.2em]`)

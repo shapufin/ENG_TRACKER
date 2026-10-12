@@ -97,6 +97,35 @@ class WorkDateCutoffApiTests(TestCase):
         self.assertEqual(self._post_sb('2026-09-30').status_code, 201)
 
 
+class WorkDateCutoffUpdateTests(TestCase):
+    def setUp(self):
+        from unittest.mock import patch
+        from apps.standby.models import StandbyLog
+        self.employee = User.objects.create_user(username='upd-employee', password='pass')
+        self.client_obj = Client.objects.create(name='Upd Client', code='UPD-CLIENT')
+        self.api = APIClient()
+        self.api.force_authenticate(user=self.employee)
+        self._patch = patch('django.utils.timezone.now', return_value=datetime(2026, 10, 12, 12, 0, tzinfo=TIRANE))
+        self._patch.start()
+        self.addCleanup(self._patch.stop)
+        self.ot = OvertimeLog.objects.create(user=self.employee, client=self.client_obj, date=date(2026, 10, 5), hours=2)
+        self.sb = StandbyLog.objects.create(user=self.employee, date=date(2026, 10, 5), hours=8)
+
+    def test_overtime_cannot_be_moved_into_closed_month(self):
+        response = self.api.patch(f'/api/overtime/logs/{self.ot.id}/', {'date': '2026-09-15'}, format='json')
+        self.assertEqual(response.status_code, 400, response.data)
+        self.ot.refresh_from_db()
+        self.assertEqual(self.ot.date, date(2026, 10, 5))
+
+    def test_standby_cannot_be_moved_into_closed_month(self):
+        response = self.api.patch(f'/api/standby/logs/{self.sb.id}/', {'date': '2026-09-15', 'hours': 8}, format='json')
+        self.assertEqual(response.status_code, 400, response.data)
+
+    def test_standby_partial_update_without_hours_is_accepted(self):
+        response = self.api.patch(f'/api/standby/logs/{self.sb.id}/', {'description': 'note'}, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+
+
 class TeamLeaderEditGuardTests(TestCase):
     def setUp(self):
         self.tl = User.objects.create_user(username='guard-tl', password='pass')
@@ -263,3 +292,24 @@ class ApprovalPeriodWorkflowTests(TestCase):
             format='json',
         )
         self.assertEqual(response.status_code, 403)
+
+    def test_in_window_late_entry_carries_over(self):
+        from unittest.mock import patch
+        with patch('django.utils.timezone.now', return_value=datetime(2026, 9, 29, 12, 0, tzinfo=TIRANE)):
+            self._finalize('2026-09-01')
+        with patch('django.utils.timezone.now', return_value=datetime(2026, 10, 1, 10, 0, tzinfo=TIRANE)):
+            entry = OvertimeLog.objects.create(
+                user=self.employee, client=self.client_obj, date=date(2026, 9, 30), hours=2,
+            )
+        self.assertEqual(entry.requested_processing_period, date(2026, 10, 1))
+
+    def test_post_window_late_entry_rejected(self):
+        from unittest.mock import patch
+        with patch('django.utils.timezone.now', return_value=datetime(2026, 9, 29, 12, 0, tzinfo=TIRANE)):
+            self._finalize('2026-09-01')
+        self.client.force_authenticate(user=self.employee)
+        with patch('django.utils.timezone.now', return_value=datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE)):
+            response = self.client.post('/api/overtime/logs/', {
+                'client': self.client_obj.id, 'date': '2026-09-30', 'hours': 2,
+            }, format='json')
+        self.assertEqual(response.status_code, 400, response.data)

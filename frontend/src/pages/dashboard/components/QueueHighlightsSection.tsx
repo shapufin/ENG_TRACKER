@@ -173,6 +173,7 @@ export const QueueHighlightsSection: React.FC<QueueHighlightsSectionProps> = ({
       },
       {
         id: "actions",
+        meta: { actionsDisplay: "column" },
         header: () => <span className="block text-right">Actions</span>,
         enableSorting: false,
         cell: (info) => {

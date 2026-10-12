@@ -4,6 +4,7 @@ import { useState } from "react";
 import { DataTable } from "./DataTable";
 import type { RowSelectionState, ColumnVisibilityState } from "@tanstack/react-table";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
+import { createCrudActionsColumn } from "./tableColumnHelpers";
 
 interface Item {
   id: number;
@@ -467,10 +468,7 @@ describe("DataTable default column visibility", () => {
   });
 
   it("prefers a saved visibility choice over the default", () => {
-    localStorage.setItem(
-      "test-default-visibility",
-      JSON.stringify({ _version: 1, email: true })
-    );
+    localStorage.setItem("test-default-visibility", JSON.stringify({ _version: 1, email: true }));
     render(
       <DataTable
         columns={columns}
@@ -481,5 +479,200 @@ describe("DataTable default column visibility", () => {
       />
     );
     expect(screen.getByRole("columnheader", { name: "Email" })).toBeInTheDocument();
+  });
+});
+
+const stubPointer = (fine: boolean) =>
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: fine && query === "(pointer: fine)",
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }));
+
+describe("floating actions pill", () => {
+  const actionColumns: AppColumnDef<Item>[] = [
+    ...columns,
+    {
+      id: "actions",
+      header: "Actions",
+      cell: () => <button aria-label="Edit 1">Edit</button>,
+    },
+  ];
+  const data: Item[] = [{ id: 1, name: "Alice", email: "alice@test.com" }];
+
+  it("fine pointer renders the actions cell in a floating toolbar, not a column", () => {
+    stubPointer(true);
+    const { container } = render(
+      <DataTable columns={actionColumns} data={data} getRowId={(row) => row.id.toString()} />
+    );
+    const toolbar = screen.getByRole("toolbar", { name: "Row actions" });
+    expect(toolbar).toContainElement(screen.getByRole("button", { name: "Edit 1" }));
+    expect(screen.queryByRole("columnheader", { name: "Actions" })).not.toBeInTheDocument();
+    const phantomHead = container.querySelector("thead th:last-child");
+    expect(phantomHead?.className).toContain("w-0");
+    expect(phantomHead).toHaveAttribute("aria-hidden", "true");
+    expect(toolbar.closest("td")?.className).toContain("w-0");
+    expect(toolbar.closest("td")?.className).not.toContain("text-right");
+  });
+
+  it("coarse pointer keeps the actions column as today", () => {
+    stubPointer(false);
+    render(<DataTable columns={actionColumns} data={data} getRowId={(row) => row.id.toString()} />);
+    expect(screen.getByRole("columnheader", { name: "Actions" })).toBeInTheDocument();
+    expect(screen.queryByRole("toolbar")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit 1" }).closest("td")?.className).toContain(
+      "text-right"
+    );
+  });
+
+  it("a column-level actionsDisplay meta keeps the column on a fine pointer", () => {
+    stubPointer(true);
+    const withMeta: AppColumnDef<Item>[] = [
+      ...columns,
+      {
+        id: "actions",
+        header: "Actions",
+        meta: { actionsDisplay: "column" },
+        cell: () => <button>Approve</button>,
+      },
+    ];
+    render(<DataTable columns={withMeta} data={data} getRowId={(row) => row.id.toString()} />);
+    expect(screen.getByRole("columnheader", { name: "Actions" })).toBeInTheDocument();
+    expect(screen.queryByRole("toolbar")).not.toBeInTheDocument();
+  });
+
+  it("an approval helper column keeps its pending Approve button visible without hover", () => {
+    stubPointer(true);
+    type Pending = { id: number; status: string; name: string };
+    const pendingRows: Pending[] = [{ id: 7, status: "pending", name: "Dana" }];
+    const approvalColumns: AppColumnDef<Pending>[] = [
+      { accessorKey: "name", header: "Name" },
+      createCrudActionsColumn<Pending>({
+        canApprove: true,
+        onApprove: () => {},
+        onReject: () => {},
+        onEdit: () => {},
+        onDelete: () => {},
+      }),
+    ];
+    render(
+      <DataTable columns={approvalColumns} data={pendingRows} getRowId={(r) => r.id.toString()} />
+    );
+    expect(screen.getByRole("columnheader", { name: "Actions" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve 7" })).toBeVisible();
+    expect(screen.queryByRole("toolbar")).not.toBeInTheDocument();
+  });
+
+  it("pill reveal is hover/focus-only with a pointer-events guard", () => {
+    stubPointer(true);
+    render(<DataTable columns={actionColumns} data={data} getRowId={(row) => row.id.toString()} />);
+    const { className } = screen.getByRole("toolbar", { name: "Row actions" });
+    for (const token of [
+      "opacity-0",
+      "pointer-events-none",
+      "group-hover/row:opacity-100",
+      "group-focus-within/row:opacity-100",
+    ]) {
+      expect(className).toContain(token);
+    }
+  });
+
+  it("hides the pill chrome when the action cell renders nothing actionable", () => {
+    stubPointer(true);
+    const emptyCells: AppColumnDef<Item>[] = [
+      ...columns,
+      { id: "actions", header: "Actions", cell: () => <span>-</span> },
+    ];
+    render(<DataTable columns={emptyCells} data={data} getRowId={(row) => row.id.toString()} />);
+    expect(screen.getByRole("toolbar").className).toContain(
+      "[&:not(:has(button,a,[role=button]))]:hidden"
+    );
+  });
+
+  it("mouse enter stores the cursor offset on the row", () => {
+    stubPointer(true);
+    const { container } = render(
+      <DataTable columns={actionColumns} data={data} getRowId={(row) => row.id.toString()} />
+    );
+    const row = container.querySelector("tbody tr") as HTMLElement;
+    fireEvent.mouseEnter(row, { clientX: 50 });
+    expect(row.style.getPropertyValue("--row-pill-offset")).not.toBe("");
+  });
+
+  it("actions are never offered in the Columns menu", () => {
+    stubPointer(true);
+    render(
+      <DataTable
+        columns={actionColumns}
+        data={data}
+        enableColumnVisibility
+        getRowId={(row) => row.id.toString()}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Columns \(2\/2\)/ }));
+    expect(screen.queryByRole("checkbox", { name: "Actions" })).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Email" })).toBeInTheDocument();
+  });
+
+  it("a persisted actions:false visibility is ignored", () => {
+    stubPointer(false);
+    localStorage.setItem(
+      "table-visibility-pill-test",
+      JSON.stringify({ _version: 1, actions: false })
+    );
+    render(
+      <DataTable
+        columns={actionColumns}
+        data={data}
+        enableColumnVisibility
+        storageKey="table-visibility-pill-test"
+        getRowId={(row) => row.id.toString()}
+      />
+    );
+    expect(screen.getByRole("button", { name: "Edit 1" })).toBeInTheDocument();
+  });
+
+  it("Enter on a row checkbox does not fire onRowClick, but Enter on the row does", () => {
+    stubPointer(true);
+    const onRowClick = vi.fn();
+    const { container } = render(
+      <DataTable
+        columns={columns}
+        data={data}
+        enableRowSelection
+        rowSelection={{}}
+        onRowSelectionChange={() => {}}
+        onRowClick={onRowClick}
+        getRowId={(row) => row.id.toString()}
+      />
+    );
+    fireEvent.keyDown(screen.getByRole("checkbox", { name: "Select row" }), { key: "Enter" });
+    expect(onRowClick).not.toHaveBeenCalled();
+    fireEvent.keyDown(container.querySelector("tbody tr") as HTMLElement, { key: "Enter" });
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("pageSize prop updates pagination when it changes", () => {
+    stubPointer(false);
+    const many: Item[] = Array.from({ length: 3 }, (_, i) => ({
+      id: i + 1,
+      name: `P${i + 1}`,
+      email: `p${i + 1}@test.com`,
+    }));
+    const { rerender } = render(<DataTable columns={columns} data={many} pageSize={10} />);
+    expect(screen.queryByText(/Page 1 of/)).not.toBeInTheDocument();
+    rerender(<DataTable columns={columns} data={many} pageSize={1} />);
+    expect(screen.getByText(/Page 1 of 3/)).toBeInTheDocument();
+  });
+
+  it("renders no toolbar when there is no actions column", () => {
+    stubPointer(true);
+    render(<DataTable columns={columns} data={data} />);
+    expect(screen.queryByRole("toolbar")).not.toBeInTheDocument();
   });
 });

@@ -55,6 +55,7 @@ export const useTLApprovalColumns = ({
       },
       {
         id: "actions",
+        meta: { actionsDisplay: "column" },
         header: "Actions",
         cell: (info: { row: { original: OvertimeLog } }) => {
           const row = info.row.original;
@@ -107,6 +108,7 @@ export const useTLApprovalColumns = ({
       },
       {
         id: "actions",
+        meta: { actionsDisplay: "column" },
         header: "Actions",
         cell: (info: { row: { original: StandbyLog } }) => {
           const row = info.row.original;
@@ -131,6 +133,7 @@ export const useTLApprovalColumns = ({
       { accessorKey: "reason", header: "Reason" },
       {
         id: "actions",
+        meta: { actionsDisplay: "column" },
         header: "Actions",
         cell: (info: { row: { original: LeaveRequest } }) => {
           const row = info.row.original;

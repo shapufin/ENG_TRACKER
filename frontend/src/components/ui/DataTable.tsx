@@ -33,8 +33,14 @@ import {
   Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { ColumnVisibilityMenu } from "./ColumnVisibilityMenu";
 import { EmptyState } from "./EmptyState";
+import { RowActionsPill } from "./RowActionsPill";
+
+/** The actions column is never user-hideable; drop any persisted or emitted `actions` key. */
+const withoutActions = (visibility: ColumnVisibilityState): ColumnVisibilityState =>
+  Object.fromEntries(Object.entries(visibility).filter(([id]) => id !== "actions"));
 
 interface DataTableProps<TData extends RowData> {
   columns: AppColumnDef<TData, unknown>[];
@@ -122,12 +128,16 @@ export const DataTable = function DataTable<TData extends RowData>({
     return defaultColumnVisibility ?? {};
   });
 
-  const columnVisibility = externalColumnVisibility ?? internalColumnVisibility;
+  const columnVisibility = React.useMemo(
+    () => withoutActions(externalColumnVisibility ?? internalColumnVisibility),
+    [externalColumnVisibility, internalColumnVisibility]
+  );
 
   const handleColumnVisibilityChange = React.useCallback(
     (updaterOrValue: Updater<ColumnVisibilityState>) => {
-      const newVisibility =
-        typeof updaterOrValue === "function" ? updaterOrValue(columnVisibility) : updaterOrValue;
+      const newVisibility = withoutActions(
+        typeof updaterOrValue === "function" ? updaterOrValue(columnVisibility) : updaterOrValue
+      );
       if (onColumnVisibilityChange) {
         onColumnVisibilityChange(newVisibility);
       } else {
@@ -140,9 +150,12 @@ export const DataTable = function DataTable<TData extends RowData>({
     [onColumnVisibilityChange, storageKey, columnVisibility]
   );
 
+  // Key on the joined value: an inline array literal is a fresh identity each render.
+  const searchKey = Array.isArray(searchColumn) ? searchColumn.join(" ") : (searchColumn ?? "");
   const searchPaths = React.useMemo(
     () => (Array.isArray(searchColumn) ? searchColumn : searchColumn ? [searchColumn] : []),
-    [searchColumn]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- searchKey is the stable identity of searchColumn
+    [searchKey]
   );
 
   const globalFilterFn = React.useCallback(
@@ -197,7 +210,16 @@ export const DataTable = function DataTable<TData extends RowData>({
     initialState: { pagination: { pageIndex: 0, pageSize } },
   });
 
+  React.useEffect(() => {
+    if (table.state.pagination.pageSize !== pageSize) table.setPageSize(pageSize);
+  }, [table, pageSize]);
+
   const rows = table.getRowModel().rows;
+
+  // Fine pointers get the floating pill; coarse pointers (and environments without matchMedia) keep the column.
+  const isFinePointer = useMediaQuery("(pointer: fine)");
+  const actionsInPill =
+    isFinePointer && columns.some((c) => c.id === "actions" && c.meta?.actionsDisplay !== "column");
 
   // Memoize rendered rows; recompute when the row model, selection, OR column
   // visibility changes. `rows` reference is stable across pure selection and
@@ -222,10 +244,21 @@ export const DataTable = function DataTable<TData extends RowData>({
             getRowClassName ? getRowClassName(row.original) : "hover:bg-table-hover"
           )}
           tabIndex={onRowClick ? 0 : undefined}
-          onMouseEnter={() => onRowMouseEnter?.(row.original)}
+          onMouseEnter={(event) => {
+            if (actionsInPill) {
+              // Entry-anchored like the mockup: place the pill at the cursor x, clamped so it stays inside the row.
+              const rect = event.currentTarget.getBoundingClientRect();
+              const margin = Math.min(140, rect.width * 0.3);
+              const x = Math.max(margin, Math.min(rect.width - margin, event.clientX - rect.left));
+              event.currentTarget.style.setProperty("--row-pill-offset", `${x - rect.width}px`);
+            }
+            onRowMouseEnter?.(row.original);
+          }}
           onMouseLeave={() => onRowMouseLeave?.(row.original)}
           onClick={() => onRowClick?.(row.original)}
           onKeyDown={(event) => {
+            // Keys pressed on a checkbox or action button bubble here; only the row itself activates.
+            if (event.target !== event.currentTarget) return;
             if (onRowClick && (event.key === "Enter" || event.key === " ")) {
               event.preventDefault();
               onRowClick(row.original);
@@ -241,22 +274,30 @@ export const DataTable = function DataTable<TData extends RowData>({
               />
             </td>
           )}
-          {row.getVisibleCells().map((cell) => (
-            <td
-              key={cell.id}
-              className={cn(
-                TABLE_BODY_CELL_CLASS,
-                cell.column.id === "actions" && TABLE_ACTIONS_CELL_CLASS
-              )}
-              style={
-                cell.column.columnDef.size
-                  ? { width: cell.column.columnDef.size, maxWidth: cell.column.columnDef.size }
-                  : undefined
-              }
-            >
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </td>
-          ))}
+          {row.getVisibleCells().map((cell) =>
+            cell.column.id === "actions" && actionsInPill ? (
+              <td key={cell.id} className="relative w-0 px-0 py-0 align-middle">
+                <RowActionsPill>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </RowActionsPill>
+              </td>
+            ) : (
+              <td
+                key={cell.id}
+                className={cn(
+                  TABLE_BODY_CELL_CLASS,
+                  cell.column.id === "actions" && TABLE_ACTIONS_CELL_CLASS
+                )}
+                style={
+                  cell.column.columnDef.size
+                    ? { width: cell.column.columnDef.size, maxWidth: cell.column.columnDef.size }
+                    : undefined
+                }
+              >
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </td>
+            )
+          )}
         </tr>
       );
     });
@@ -280,6 +321,7 @@ export const DataTable = function DataTable<TData extends RowData>({
     onRowMouseLeave,
     onRowClick,
     enableRowSelection,
+    actionsInPill,
   ]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -355,52 +397,56 @@ export const DataTable = function DataTable<TData extends RowData>({
                   )}
                   {table.getHeaderGroups().flatMap((hg) =>
                     // fallow-ignore-next-line complexity
-                    hg.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        className={cn(
-                          TABLE_HEAD_CELL_CLASS,
-                          header.column.id === "actions" && TABLE_ACTIONS_HEAD_CLASS
-                        )}
-                        style={
-                          header.column.columnDef.size
-                            ? { width: header.column.columnDef.size }
-                            : undefined
-                        }
-                        aria-sort={
-                          header.column.getCanSort()
-                            ? header.column.getIsSorted() === "asc"
-                              ? "ascending"
-                              : header.column.getIsSorted() === "desc"
-                                ? "descending"
-                                : "none"
-                            : undefined
-                        }
-                      >
-                        {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                          <button
-                            type="button"
-                            className="focus-visible:ring-focus flex min-h-11 items-center gap-1 rounded-sm transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:outline-hidden"
-                            onClick={header.column.getToggleSortingHandler()}
-                            aria-label={`Sort by ${header.column.id}`}
-                            title={`Sort by ${header.column.id}`}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            <span className="ml-0.5 shrink-0">
-                              {header.column.getIsSorted() === "asc" ? (
-                                <ArrowUp className="h-3 w-3" />
-                              ) : header.column.getIsSorted() === "desc" ? (
-                                <ArrowDown className="h-3 w-3" />
-                              ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40" />
-                              )}
-                            </span>
-                          </button>
-                        ) : (
-                          flexRender(header.column.columnDef.header, header.getContext())
-                        )}
-                      </th>
-                    ))
+                    hg.headers.map((header) =>
+                      header.column.id === "actions" && actionsInPill ? (
+                        <th key={header.id} className="w-0 px-0 py-0" aria-hidden="true" />
+                      ) : (
+                        <th
+                          key={header.id}
+                          className={cn(
+                            TABLE_HEAD_CELL_CLASS,
+                            header.column.id === "actions" && TABLE_ACTIONS_HEAD_CLASS
+                          )}
+                          style={
+                            header.column.columnDef.size
+                              ? { width: header.column.columnDef.size }
+                              : undefined
+                          }
+                          aria-sort={
+                            header.column.getCanSort()
+                              ? header.column.getIsSorted() === "asc"
+                                ? "ascending"
+                                : header.column.getIsSorted() === "desc"
+                                  ? "descending"
+                                  : "none"
+                              : undefined
+                          }
+                        >
+                          {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                            <button
+                              type="button"
+                              className="focus-visible:ring-focus flex min-h-11 items-center gap-1 rounded-sm transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:outline-hidden"
+                              onClick={header.column.getToggleSortingHandler()}
+                              aria-label={`Sort by ${header.column.id}`}
+                              title={`Sort by ${header.column.id}`}
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              <span className="ml-0.5 shrink-0">
+                                {header.column.getIsSorted() === "asc" ? (
+                                  <ArrowUp className="h-3 w-3" />
+                                ) : header.column.getIsSorted() === "desc" ? (
+                                  <ArrowDown className="h-3 w-3" />
+                                ) : (
+                                  <ArrowUpDown className="h-3 w-3 opacity-40" />
+                                )}
+                              </span>
+                            </button>
+                          ) : (
+                            flexRender(header.column.columnDef.header, header.getContext())
+                          )}
+                        </th>
+                      )
+                    )
                   )}
                 </tr>
               </thead>

@@ -249,7 +249,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermi
             user = self.request.user
             pk = locked.pk
             record_date = getattr(locked, 'date', None)
-            was_locked_period = (
+            was_locked_period = user.is_superuser and (
                 not self._is_pending(locked)
                 and (self._is_approval_period_locked(locked) or self._is_month_locked(locked))
             )

@@ -187,7 +187,7 @@ export const PayrollWagesPage: React.FC = () => {
         cell: ({ row }) => (
           <div>
             <div className="font-medium">{row.original.full_name}</div>
-            <div className="text-xs text-muted-foreground">@{row.original.username}</div>
+            <div className="text-muted-foreground text-xs">@{row.original.username}</div>
           </div>
         ),
       },
@@ -221,6 +221,7 @@ export const PayrollWagesPage: React.FC = () => {
         ? [
             {
               id: "actions",
+              meta: { actionsDisplay: "column" },
               header: "Actions",
               cell: ({ row }) => (
                 <div className="flex justify-end gap-1">

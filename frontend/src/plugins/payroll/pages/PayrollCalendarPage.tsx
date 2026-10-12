@@ -276,6 +276,7 @@ export const PayrollCalendarPage: React.FC = () => {
     if (canConfigurePayroll) {
       columns.push({
         id: "actions",
+        meta: { actionsDisplay: "column" },
         header: "Actions",
         enableSorting: false,
         cell: ({ row }) => (

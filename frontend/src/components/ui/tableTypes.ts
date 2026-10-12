@@ -21,6 +21,7 @@ import {
   rowSortingFeature,
   sortFns,
   tableFeatures,
+  type CellData,
   type Cell,
   type CellContext,
   type Column,
@@ -28,6 +29,7 @@ import {
   type Row,
   type RowData,
   type Table,
+  type TableFeatures,
 } from "@tanstack/react-table";
 
 export const appFeatures = tableFeatures({
@@ -46,9 +48,30 @@ export const appFeatures = tableFeatures({
 });
 
 export type AppFeatures = typeof appFeatures;
-export type AppColumnDef<TData extends RowData, TValue = unknown> = ColumnDef<AppFeatures, TData, TValue>;
+export type AppColumnDef<TData extends RowData, TValue = unknown> = ColumnDef<
+  AppFeatures,
+  TData,
+  TValue
+>;
 export type AppColumn<TData extends RowData, TValue = unknown> = Column<AppFeatures, TData, TValue>;
 export type AppRow<TData extends RowData> = Row<AppFeatures, TData>;
 export type AppCell<TData extends RowData, TValue = unknown> = Cell<AppFeatures, TData, TValue>;
-export type AppCellContext<TData extends RowData, TValue = unknown> = CellContext<AppFeatures, TData, TValue>;
+export type AppCellContext<TData extends RowData, TValue = unknown> = CellContext<
+  AppFeatures,
+  TData,
+  TValue
+>;
 export type AppTable<TData extends RowData> = Table<AppFeatures, TData>;
+
+/* eslint-disable @typescript-eslint/no-unused-vars -- generics must mirror table-core's ColumnMeta declaration to merge */
+declare module "@tanstack/table-core" {
+  interface ColumnMeta<
+    in out TFeatures extends TableFeatures,
+    in out TData extends RowData,
+    TValue extends CellData = CellData,
+  > {
+    /** "column" keeps an `id: "actions"` column visible on fine pointers. Set it on any column whose cells hold Approve/Reject or other decision controls. */
+    actionsDisplay?: "pill" | "column";
+  }
+}
+/* eslint-enable @typescript-eslint/no-unused-vars */
