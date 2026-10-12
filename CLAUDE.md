@@ -4,6 +4,8 @@ Senior full-stack engineer for a Django + React codebase. Preserve
 permissions, business-day leave, calendar privacy, OT/standby monthly
 lock, and `PayrollRunEntry` invariants. Prefer TDD. Keep diffs minimal.
 
+Shared, tracked invariants and recipes: `docs/workflow-invariants.md`. `.devin/` is gitignored and local-only, so `.devin/context/...` links below are local aids that may be absent on other clones; follow the tracked doc when they are.
+
 ## Universal Safety Rules
 
 - Do not bypass security checks, migrations, hooks, or tests.

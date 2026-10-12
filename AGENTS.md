@@ -1,5 +1,9 @@
 # Project Instructions
 
+## Shared workflow invariants
+
+Read `docs/workflow-invariants.md` before changing payroll, overtime, standby, leave, notifications, or the e2e environment. It is the tracked source for the test gate, the month cutoff, approval transitions, leave balance rules, notification delivery, the TL-closure default, and the e2e and browser recipes. `.devin/` is local-only (gitignored), so any `.devin/...` reference below may be missing on a fresh clone.
+
 ## Restructuring — 2026-09-08
 
 Reduced AGENTS.md from 1,346 lines (92.7 KB) to 78 lines (3.8 KB) per
@@ -259,3 +263,15 @@ Rules:
 - Gates: `py -3.14 manage.py test plugins.notifications plugins.tl_scorecard` 572 OK; `npx vitest run src/pages/settings src/plugins/notifications` 62 OK; eslint + prettier clean on touched files; ruff clean on both plugin dirs.
 - Not done: live browser check of the kill-switch (Phase 0 evidence); durable invariants not yet rotated into `.devin/context/` (no notifications context file exists).
 - Test isolation: tests that call `tl_scorecard.signals.disconnect()` must call `signals.connect()` in teardown.
+
+## 2026-10-12 — OT/standby month cutoff, TL edit guard, bulk query budget
+- Month cutoff (`apps/users/services/approval_periods.py`: `work_date_cutoff`, `is_work_date_open`, `assert_work_date_open`): a work date in month M is accepted only before 00:00 on the 2nd of M+1, Europe/Tirane. Enforced on OT and standby create, and on update only when `date` actually changes. HTTP 400 for every user, staff and superuser included. Current-month dates are never blocked.
+- Carryover inside the window is unchanged (`resolve_processing_assignment`), pinned by `test_in_window_late_entry_carries_over`.
+- TL edit guard: `check_object_permissions` on `OvertimeLogViewSet` and `StandbyLogViewSet` returns 403 for update/partial_update on another user's record unless staff or superuser. Defense in depth: a TL's direct PATCH already returns 404 from the personal queryset.
+- Bulk actions: the actor's team-member ids are cached per bulk action via `actor_team_scope_cached` (`core/mixins/permissions.py`). The cache lives on the actor's profile only for the duration of the action. Overtime `perform_destroy` evaluates the approval-period lock only for superusers, where it is used for the audit log.
+- Query budgets: `apps/overtime/test_bulk_query_budget.py`. Bulk approve is at or under 8 queries per row. Bulk delete ceilings are 10 (approved) and 9 (pending). The delete ceilings are not the goal of 8: the remaining work is the payroll reference check (2, pinned by the finalized-payroll tests), the row lock, the cascade, the audit insert and a nested savepoint.
+- Known, not changed: `ProcessingPeriodManager.bulk_create` (overtime and standby) skips the cutoff; no production caller exists. The data importer uses `save()` and also skips the cutoff; this is intentional for HR back-office imports.
+- Known, decided: TLs can read team entries through a `workspace_ids` scope (workspaces are the calendar sharing model); writes are blocked by the edit guard. TLs can still bulk-delete team entries under `DeletePermissionMixin`; the edit guard does not cover deletion.
+- Gate: `python manage.py test apps.overtime apps.standby apps.users apps.reports apps.permissions apps.dashboard apps.leave_management plugins.payroll plugins.notifications plugins.data_import plugins.audit_log plugins.control_room` → 1428 OK (earlier subset gate, superseded by the full gate below).
+- Full gate as of 2026-10-12: `py -3.14 manage.py test` → 2737 OK, `ruff check` on changed files. See `docs/workflow-invariants.md`.
+- 2026-10-12 — merged: TL-closure gate ON by default (PR #105, migration 0011); leave balance follows approve/reject transitions and OT/standby approve/reject refuse non-pending entries (PR #106). Details and rules in `docs/workflow-invariants.md`.
