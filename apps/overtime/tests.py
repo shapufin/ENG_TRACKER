@@ -480,6 +480,7 @@ class OvertimeMonthlyLockTests(TestCase):
     def test_approve_past_month_record_is_exempt(self):
         """Approve on a past-month record is NOT locked (exempt action)."""
         self.client.force_authenticate(user=self.staff)
+        OvertimeLog.objects.filter(pk=self.past_log.id).update(status='pending')
         response = self.client.post(f'/api/overtime/logs/{self.past_log.id}/approve/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.past_log.refresh_from_db()

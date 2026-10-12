@@ -485,10 +485,10 @@ class StandbyMonthlyLockTests(TestCase):
 
     def test_approve_past_month_record_is_exempt(self):
         self.client.force_authenticate(user=self.staff)
-        response = self.client.post(f'/api/standby/logs/{self.past_log.id}/approve/')
+        response = self.client.post(f'/api/standby/logs/{self.past_pending_log.id}/approve/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.past_log.refresh_from_db()
-        self.assertEqual(self.past_log.status, 'approved')
+        self.past_pending_log.refresh_from_db()
+        self.assertEqual(self.past_pending_log.status, 'approved')
 
     def test_staff_cannot_delete_past_month_approved_record(self):
         """is_staff (non-superuser) cannot delete an approved past-month record.
