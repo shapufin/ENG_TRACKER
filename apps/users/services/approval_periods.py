@@ -50,7 +50,7 @@ def assert_work_date_open(work_date: date, now: datetime | None = None) -> None:
     if not is_work_date_open(work_date, now=now):
         raise ValidationError(
             f'Entries for {normalize_period(work_date):%B %Y} are closed. Records for a month '
-            'can be added until the 1st of the following month (Europe/Tirane).'
+            'can be added until the 2nd of the following month (Europe/Tirane).'
         )
 
 

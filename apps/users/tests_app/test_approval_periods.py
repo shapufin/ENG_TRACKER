@@ -25,6 +25,11 @@ class WorkDateCutoffTests(TestCase):
         self.assertFalse(is_work_date_open(date(2026, 8, 20), now=datetime(2026, 9, 2, 0, 0, tzinfo=TIRANE)))
         self.assertTrue(is_work_date_open(date(2026, 8, 20), now=datetime(2026, 9, 1, 23, 59, tzinfo=TIRANE)))
 
+    def test_closed_message_names_the_real_cutoff_day(self):
+        from rest_framework.exceptions import ValidationError
+        with self.assertRaisesMessage(ValidationError, 'until the 2nd of the following month'):
+            assert_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE))
+
     def test_current_month_always_open(self):
         self.assertTrue(is_work_date_open(date(2026, 10, 1), now=datetime(2026, 10, 20, 12, 0, tzinfo=TIRANE)))
 

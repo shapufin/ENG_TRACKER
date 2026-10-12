@@ -279,9 +279,11 @@ class StandbyLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermis
         with transaction.atomic():
             locked = type(obj).objects.select_for_update().get(pk=obj.pk)
             self._ensure_not_in_finalized_payroll(locked)
-            if locked.status == 'pending':
-                locked._skip_notifications = getattr(obj, '_skip_notifications', False)
-                super().perform_approve(locked, user)
+            if locked.status != 'pending':
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(f'Only pending entries can be approved (current status: {locked.status}).')
+            locked._skip_notifications = getattr(obj, '_skip_notifications', False)
+            super().perform_approve(locked, user)
         obj.refresh_from_db()
         self.invalidate_related_cache()
 
@@ -292,9 +294,11 @@ class StandbyLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermis
         with transaction.atomic():
             locked = type(obj).objects.select_for_update().get(pk=obj.pk)
             self._ensure_not_in_finalized_payroll(locked)
-            if locked.status == 'pending':
-                locked._skip_notifications = getattr(obj, '_skip_notifications', False)
-                super().perform_reject(locked, user, reason)
+            if locked.status != 'pending':
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(f'Only pending entries can be rejected (current status: {locked.status}).')
+            locked._skip_notifications = getattr(obj, '_skip_notifications', False)
+            super().perform_reject(locked, user, reason)
         obj.refresh_from_db()
         self.invalidate_related_cache()
 

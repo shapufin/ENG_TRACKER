@@ -515,6 +515,55 @@ class LeaveRequestViewSetTests(TestCase):
         self.assertEqual(leave.submitted_at, leave.created_at)
 
 
+class LeaveBalanceTransitionTests(TestCase):
+    """Balance must follow status transitions: pending -> approved -> rejected -> approved."""
+
+    def setUp(self):
+        self.api = APIClient()
+        self.user = User.objects.create_user(username='lv_transition_emp', password='x')
+        self.tl = User.objects.create_user(username='lv_transition_tl', password='x', is_staff=True)
+        settings = GlobalSettings.objects.get_or_create(pk=1)[0]
+        self.balance = LeaveBalance.objects.create(
+            user=self.user, leave_type='vacation', year=2026,
+            total_days=settings.default_yearly_leave_days, accrual_start_date=date(2000, 1, 1),
+        )
+        self.api.force_authenticate(user=self.user)
+        response = self.api.post('/api/leave-management/requests/', {
+            'start_date': '2026-12-07', 'end_date': '2026-12-08', 'request_type': 'vacation', 'reason': 't',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.leave_id = response.data['id']
+        self.api.force_authenticate(user=self.tl)
+
+    def _state(self):
+        self.balance.refresh_from_db()
+        return float(self.balance.pending_days), float(self.balance.used_days)
+
+    def test_approve_moves_pending_days_to_used(self):
+        self.assertEqual(self._state(), (2.0, 0.0))
+        self.api.post(f'/api/leave-management/requests/{self.leave_id}/approve/', {}, format='json')
+        self.assertEqual(self._state(), (0.0, 2.0))
+
+    def test_rejecting_an_approved_leave_restores_used_days(self):
+        self.api.post(f'/api/leave-management/requests/{self.leave_id}/approve/', {}, format='json')
+        response = self.api.post(
+            f'/api/leave-management/requests/{self.leave_id}/reject/', {'rejection_reason': 'x'}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(self._state(), (0.0, 0.0))
+
+    def test_approving_a_rejected_leave_deducts_used_days(self):
+        self.api.post(f'/api/leave-management/requests/{self.leave_id}/reject/', {'rejection_reason': 'x'}, format='json')
+        self.assertEqual(self._state(), (0.0, 0.0))
+        self.api.post(f'/api/leave-management/requests/{self.leave_id}/approve/', {}, format='json')
+        self.assertEqual(self._state(), (0.0, 2.0))
+
+    def test_reapproving_an_approved_leave_does_not_double_count(self):
+        self.api.post(f'/api/leave-management/requests/{self.leave_id}/approve/', {}, format='json')
+        self.api.post(f'/api/leave-management/requests/{self.leave_id}/approve/', {}, format='json')
+        self.assertEqual(self._state(), (0.0, 2.0))
+
+
 class GlobalSettingsViewSetTests(TestCase):
     """GlobalSettings singleton must be reachable via list() on a DB where
     no leave request has ever been submitted — nothing else creates the

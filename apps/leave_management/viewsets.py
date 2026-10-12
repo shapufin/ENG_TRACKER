@@ -609,11 +609,12 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
             locked.rejection_reason = ''
             locked.save(update_fields=['status', 'approved_by', 'approved_at', 'rejection_reason'])
 
-            if old_status == 'pending' and locked.balance_id:
+            if old_status in ('pending', 'rejected') and locked.balance_id:
                 from decimal import Decimal
                 balance = LeaveBalance.objects.select_for_update().get(pk=locked.balance_id)
                 days = Decimal(locked.days_requested)
-                balance.pending_days -= days
+                if old_status == 'pending':
+                    balance.pending_days -= days
                 balance.used_days += days
                 balance.save(update_fields=['pending_days', 'used_days'])
 
@@ -631,12 +632,15 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
             locked.rejection_reason = reason
             locked.save(update_fields=['status', 'approved_by', 'approved_at', 'rejection_reason'])
 
-            if old_status == 'pending' and locked.balance_id:
+            if old_status in ('pending', 'approved') and locked.balance_id:
                 from decimal import Decimal
                 balance = LeaveBalance.objects.select_for_update().get(pk=locked.balance_id)
                 days = Decimal(locked.days_requested)
-                balance.pending_days -= days
-                balance.save(update_fields=['pending_days'])
+                if old_status == 'pending':
+                    balance.pending_days -= days
+                else:
+                    balance.used_days -= days
+                balance.save(update_fields=['pending_days', 'used_days'])
 
         obj.refresh_from_db()
         self.invalidate_related_cache()
