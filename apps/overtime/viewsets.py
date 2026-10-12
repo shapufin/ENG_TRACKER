@@ -208,10 +208,11 @@ class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermi
                     f'Time range overlaps an existing overtime entry on {date} '
                     f'({overlap.start_time}–{overlap.end_time}).'
                 )
+        reassign = {'requested_processing_period': None} if date != obj.date else {}
         if obj.status == 'approved':
-            serializer.save(status='pending', approved_by=None, approved_at=None)
+            serializer.save(status='pending', approved_by=None, approved_at=None, **reassign)
         else:
-            serializer.save()
+            serializer.save(**reassign)
         self.invalidate_related_cache()
 
     def perform_destroy(self, instance):

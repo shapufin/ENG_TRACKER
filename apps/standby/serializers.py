@@ -166,6 +166,8 @@ class StandbyLogCreateSerializer(serializers.ModelSerializer):
         hours = data.get('hours')
         start_time = data.get('start_time')
         end_time = data.get('end_time')
+        if start_time and start_time == end_time:
+            raise serializers.ValidationError({'end_time': 'End time must differ from start time.'})
         if hours is None:
             if start_time and end_time:
                 hours = _calculate_hours_from_times(start_time, end_time)
@@ -227,6 +229,8 @@ class StandbyLogUpdateSerializer(serializers.ModelSerializer):
         hours = data.get('hours', self.instance.hours if self.instance else None)
         start_time = data.get('start_time')
         end_time = data.get('end_time')
+        if start_time and start_time == end_time:
+            raise serializers.ValidationError({'end_time': 'End time must differ from start time.'})
         if hours is None:
             if start_time and end_time:
                 hours = _calculate_hours_from_times(start_time, end_time)
