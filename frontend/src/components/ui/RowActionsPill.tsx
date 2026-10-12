@@ -13,6 +13,7 @@
  */
 import React from "react";
 import { cn } from "@/lib/utils";
+import { RowActionsPillContext } from "./RowActionsPillContext";
 
 export const RowActionsPill: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div
@@ -29,6 +30,6 @@ export const RowActionsPill: React.FC<{ children: React.ReactNode }> = ({ childr
       "[&:not(:has(button,a,[role=button]))]:hidden"
     )}
   >
-    {children}
+    <RowActionsPillContext.Provider value={true}>{children}</RowActionsPillContext.Provider>
   </div>
 );

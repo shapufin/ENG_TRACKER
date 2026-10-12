@@ -137,7 +137,9 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
     expect(lightBlock).toContain("--control-h: 2.25rem");
     expect(lightBlock).toContain("--control-h-lg: 2.5rem");
     expect(lightBlock).toContain("--control-radius: var(--radius-control)");
-    expect(lightBlock).toContain(
+    // Whitespace-normalized: Prettier reflows long declarations (e.g. wraps
+    // --shadow-card across lines), which must not break the value pin.
+    expect(lightBlock.replace(/\s+/g, " ")).toContain(
       "--shadow-card: inset 0 1px 0 hsl(0 0% 100% / 0.7), 0 1px 2px hsl(230 40% 20% / 0.06), 0 2px 6px -1px hsl(230 40% 20% / 0.06)"
     );
     expect(lightBlock).toContain("--shadow-pop:");
@@ -235,7 +237,10 @@ describe("theme tokens (Obsidian-Slate remap)", () => {
       return [Number(m[1]), Number(m[2]), Number(m[3])];
     };
     expect(
-      ratio(luminance(...hsl(lightBlock, "--primary-text")), luminance(...hsl(lightBlock, "--card"))),
+      ratio(
+        luminance(...hsl(lightBlock, "--primary-text")),
+        luminance(...hsl(lightBlock, "--card"))
+      )
     ).toBeGreaterThanOrEqual(4.5);
     expect(ratio(white, luminance(0, 72, 51))).toBeGreaterThanOrEqual(4.5);
     expect(ratio(white, luminance(201, 96, 32))).toBeGreaterThanOrEqual(4.5);

@@ -107,6 +107,7 @@ export const useLeaveBalanceColumns = (
                 ? [
                     {
                       label: `View ${row.original.id}`,
+                      shortLabel: "View",
                       icon: Eye,
                       onClick: () => onView(row.original),
                     },
@@ -114,11 +115,13 @@ export const useLeaveBalanceColumns = (
                 : []),
               {
                 label: `Edit ${row.original.id}`,
+                shortLabel: "Edit",
                 icon: Pencil,
                 onClick: () => onEdit(row.original),
               },
               {
                 label: `Delete ${row.original.id}`,
+                shortLabel: "Delete",
                 icon: Trash2,
                 tone: "danger" as const,
                 onClick: () => onDelete(row.original),
