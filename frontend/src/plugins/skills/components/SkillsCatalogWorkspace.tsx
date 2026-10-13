@@ -6,7 +6,9 @@ import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Switch } from "@/components/ui/switch";
+import { RowActions } from "@/components/ui/RowActions";
 import {
+  TABLE_BODY_DIVIDER_CLASS,
   TABLE_HEAD_CELL_CHECKBOX_CLASS,
   TABLE_HEAD_CELL_CLASS,
   TABLE_HEAD_ROW_CLASS,
@@ -284,11 +286,12 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
                     <th className={cn(TABLE_HEAD_CELL_CLASS, "px-3 text-right")}>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-border/50 divide-y">
+                <tbody className={TABLE_BODY_DIVIDER_CLASS}>
                   {visibleSkills.map((skill) => (
                     <tr
                       key={skill.id}
-                      className={`transition-colors duration-150 ${
+                      data-state={selectedIds.has(skill.id) ? "selected" : undefined}
+                      className={`group/row transition-colors duration-150 ${
                         selectedIds.has(skill.id) ? "bg-primary/5" : "hover:bg-table-hover"
                       }`}
                     >
@@ -344,29 +347,22 @@ export const SkillsCatalogWorkspace: React.FC<SkillsCatalogWorkspaceProps> = ({
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9"
-                            onClick={() => onEditSkill(skill)}
-                            aria-label={`Edit skill ${skill.name}`}
-                          >
-                            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive h-9 w-9"
-                            onClick={() => onDeleteSkills([skill])}
-                            aria-label={`Delete skill ${skill.name}`}
-                            disabled={isDeleting}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                          </Button>
-                        </div>
+                        <RowActions
+                          actions={[
+                            {
+                              label: `Edit skill ${skill.name}`,
+                              icon: Pencil,
+                              onClick: () => onEditSkill(skill),
+                            },
+                            {
+                              label: `Delete skill ${skill.name}`,
+                              icon: Trash2,
+                              tone: "danger",
+                              disabled: isDeleting,
+                              onClick: () => onDeleteSkills([skill]),
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}

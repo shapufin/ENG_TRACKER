@@ -41,6 +41,41 @@ bad(
   `const a=(<div className="grid grid-cols-[1fr_2fr] tracking-wider">x</div>);`
 );
 
+const bare = (name, src) =>
+  test(`BARE-HEADER: ${name}`, () =>
+    assert.ok(
+      findViolations(src).some((v) => v.rule === "BARE-HEADER"),
+      "expected BARE-HEADER"
+    ));
+
+bare("th with no contract class", thead('<th className="py-2 pr-4">x</th>'));
+bare("th with no className at all", thead("<th>x</th>"));
+bare(
+  "multi-line th with only local padding",
+  thead('<th\n  scope="col"\n  className="px-2 py-2"\n>x</th>')
+);
+bare("empty trailing th", thead('<th className="pb-2"></th>'));
+bare(
+  "th after an arrow inside a brace expression",
+  thead('<th onClick={() => 1} className="py-2">x</th>')
+);
+ok(
+  "th composed from a contract constant on a later line",
+  thead('<th\n  scope="col"\n  className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}\n>x</th>')
+);
+ok(
+  "th with a checkbox contract constant",
+  thead("<th className={TABLE_HEAD_CELL_CHECKBOX_CLASS}>x</th>")
+);
+ok(
+  "th composed via a local const that is itself a cn(TABLE_…) composition",
+  `const HEAD_CELL = cn(TABLE_HEAD_CELL_CLASS, "px-3");
+` + thead('<th className={cn(HEAD_CELL, "text-right")}>x</th>')
+);
+ok(
+  "aria-hidden zero-width spacer header",
+  thead('<th key={h.id} className="w-0 px-0 py-0" aria-hidden="true" />')
+);
 ok("contract constants", thead("<th className={TABLE_HEAD_CELL_CLASS}>x</th>"));
 ok(
   "composed contract + alignment",

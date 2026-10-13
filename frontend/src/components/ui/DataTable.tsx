@@ -222,6 +222,28 @@ export const DataTable = function DataTable<TData extends RowData>({
   const actionsInPill =
     isFinePointer && columns.some((c) => c.id === "actions" && c.meta?.actionsDisplay !== "column");
 
+  // Entry-anchored like the mockup, clamped to the table's scroll container
+  // (which clips the pill BEFORE the viewport — the card edge is ~50px inside
+  // it in the admin shell). The hovered row + entry x are remembered so the
+  // scroll listener can re-clamp while the row slides under the fixed offset.
+  const pillEntryRef = React.useRef<{ row: HTMLTableRowElement; clientX: number } | null>(null);
+  const applyPillOffset = React.useCallback((row: HTMLTableRowElement, clientX: number) => {
+    const rect = row.getBoundingClientRect();
+    const pill = row.querySelector<HTMLElement>('[role="toolbar"][aria-label="Row actions"]');
+    const pillWidth = pill?.getBoundingClientRect().width ?? 280;
+    const clip = scrollRef.current?.getBoundingClientRect();
+    row.style.setProperty(
+      "--row-pill-offset",
+      pillOffsetForEntry(
+        clientX,
+        rect,
+        pillWidth,
+        window.innerWidth,
+        clip ? { left: clip.left, right: clip.right } : undefined
+      )
+    );
+  }, []);
+
   // Memoize rendered rows; recompute when the row model, selection, OR column
   // visibility changes. `rows` reference is stable across pure selection and
   // pure visibility changes (data/sort/filter unchanged), so `rowSelection` and
@@ -247,21 +269,15 @@ export const DataTable = function DataTable<TData extends RowData>({
           tabIndex={onRowClick ? 0 : undefined}
           onMouseEnter={(event) => {
             if (actionsInPill) {
-              // Entry-anchored like the mockup, clamped to the VIEWPORT (not
-              // the row): on a scrolled table the old row-relative guess let a
-              // wide pill bleed off-screen (pillOffsetForEntry).
-              const row = event.currentTarget;
-              const rect = row.getBoundingClientRect();
-              const pill = row.querySelector('[role="toolbar"][aria-label="Row actions"]');
-              const pillWidth = pill?.getBoundingClientRect().width ?? 280;
-              row.style.setProperty(
-                "--row-pill-offset",
-                pillOffsetForEntry(event.clientX, rect, pillWidth, window.innerWidth)
-              );
+              pillEntryRef.current = { row: event.currentTarget, clientX: event.clientX };
+              applyPillOffset(event.currentTarget, event.clientX);
             }
             onRowMouseEnter?.(row.original);
           }}
-          onMouseLeave={() => onRowMouseLeave?.(row.original)}
+          onMouseLeave={() => {
+            pillEntryRef.current = null;
+            onRowMouseLeave?.(row.original);
+          }}
           onClick={() => onRowClick?.(row.original)}
           onKeyDown={(event) => {
             // Keys pressed on a checkbox or action button bubble here; only the row itself activates.
@@ -329,6 +345,7 @@ export const DataTable = function DataTable<TData extends RowData>({
     onRowClick,
     enableRowSelection,
     actionsInPill,
+    applyPillOffset,
   ]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -337,7 +354,11 @@ export const DataTable = function DataTable<TData extends RowData>({
     if (!el) return;
     setShowLeftShadow(el.scrollLeft > 8);
     setShowRightShadow(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
-  }, []);
+    // The pill is row-anchored: a scrolled row would carry it under the
+    // container's clip edge. Re-clamp it to the entry point's x.
+    const entry = pillEntryRef.current;
+    if (entry) applyPillOffset(entry.row, entry.clientX);
+  }, [applyPillOffset]);
 
   React.useEffect(() => {
     const el = scrollRef.current;

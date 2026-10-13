@@ -697,4 +697,19 @@ describe("pillOffsetForEntry", () => {
   it("stays finite when the pill is wider than the viewport", () => {
     expect(pillOffsetForEntry(200, { left: 0, width: 300 }, 500, 400)).toBe("-158px");
   });
+
+  it("clamps to the scroll container's clip rect, which is tighter than the viewport", () => {
+    // Regression: the pill renders inside the overflow-x-auto content, so the
+    // card edge clips it ~50px before the viewport edge in the admin shell.
+    // clip={left:314,right:1390} on a 1440 viewport: hi = 1390-230 = 1160.
+    expect(
+      pillOffsetForEntry(1380, { left: 314, width: 1393 }, 444, 1440, { left: 314, right: 1390 })
+    ).toBe("-547px");
+    // Same entry without the clip rect clamps to the viewport (hi=1440-230=1210).
+    expect(pillOffsetForEntry(1380, { left: 314, width: 1393 }, 444, 1440)).toBe("-497px");
+    // Clip left edge too: entry at clientX inside clip.left clamps rightward.
+    expect(
+      pillOffsetForEntry(300, { left: -500, width: 1390 }, 444, 1440, { left: 314, right: 1390 })
+    ).toBe(`${314 + 230 - -500 - 1390}px`);
+  });
 });

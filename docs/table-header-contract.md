@@ -21,8 +21,10 @@ Single source of truth: `frontend/src/components/ui/tableStyles.ts`.
 | `TABLE_HEAD_CELL_CLASS` | header cell: `text-foreground px-4 py-3 text-left font-medium whitespace-nowrap` |
 | `TABLE_HEAD_CELL_CHECKBOX_CLASS` | the selection cell: `w-10 px-4 py-3 text-left font-medium` (weight set so the cell does not fall back to the UA bold default) |
 | `TABLE_HEAD_GRID_CLASS` | header row of a div-grid table (compose with the grid template) |
-| `TABLE_BODY_CELL_CLASS` | body cell: `px-4 py-3 align-middle` |
+| `TABLE_BODY_CELL_CLASS` | body cell: `px-4 py-2 align-middle` |
 | `TABLE_ROW_HOVER_CLASS` | body row hover: `hover:bg-table-hover transition-colors` |
+| `TABLE_BODY_DIVIDER_CLASS` | hand-rolled `<tbody>` row separators (`divide-border/50 divide-y`, same as `DataTable`). Put it on the `<tbody>` and drop tr-level `border-b` / `last:border-0`, or the lines double. |
+| `TABLE_ACTIONS_HEAD_CLASS` / `TABLE_ACTIONS_CELL_CLASS` | actions column, icon-width (`px-2 text-right`). Compose with `cn`. |
 
 ### This is an explicit override of the mockups
 
@@ -39,7 +41,7 @@ reason the override survives.
 
 ```bash
 cd frontend
-node --test scripts/table-header-audit.test.mjs   # the detector's own tests (24)
+node --test scripts/table-header-audit.test.mjs   # the detector's own tests (33)
 node scripts/table-header-audit.mjs; echo $?      # the repo scan
 ```
 
@@ -52,6 +54,7 @@ untracked** `src/**/*.{ts,tsx,js,jsx}` (non-test).
 | `INLINE-HEADER` | inside any `<thead>` / `<TableHeader>` block: `uppercase`, `capitalize`, any `tracking-*`, `text-xs/sm/base/lg`, `text-[Npx]`, `font-light/normal/medium/semibold/bold`, `text-foreground/muted-foreground/muted`, `bg-muted/card/secondary/accent/background` |
 | `OPAQUE-CLASS` | `className={ident}` inside a header block, unless the same file defines `const ident = [cn(]TABLE_�` |
 | `GRID-HEADER` | a line with `grid-cols` plus `uppercase` or `tracking-*` (a div-grid "table" has no `<thead>`) |
+| `BARE-HEADER` | a `<th>` inside a header block that references no contract constant (directly, or via a local const composed from `TABLE_*`). Catches a header that forgot the typography entirely, which the three rules above cannot see (it renders UA-bold). Exempt: `aria-hidden` zero-width spacer cells. |
 
 The scan is **text-based on purpose**. The earlier tag-level regex was truncated by the
 `>` in variants such as `[&>span]:uppercase`, and listed only `tracking-wider|widest`, so
@@ -66,7 +69,7 @@ type � `DESIGN.md` "Known intentional token exceptions"):
 Div-grid headers use `TABLE_HEAD_GRID_CLASS`: `cn("grid grid-cols-[�]", TABLE_HEAD_GRID_CLASS)`
 (`TeamsTableHeader.tsx`).
 
-**Status: PASS, 0 violations; 24/24 detector tests.** If you change a pattern, add the
+**Status: PASS, 0 violations; 33/33 detector tests.** If you change a pattern, add the
 evasion as a test first.
 
 ## 3. Queue — COMPLETE (0 violations)
@@ -101,11 +104,12 @@ also counts `<thead`.
 Migrated so far (2 of the hand-rolled tables): `HolidayTable` (5 cols) and
 `TeamBreakdownTable` (8 cols). Both prove the recipe in §4.
 
-Not yet migrated (deliberate — they have custom cells, a mobile card mode, or a
-feature `DataTable` cannot express): `AssignedLeadersTable`, `RecordListPanel`,
-`SkillsCatalogWorkspace`, `HbprRecordExplorer`, `ResourceAccessPage`,
-`ResourceAccessMemberList`, `ReportUserTable`, `PayrollRunLinesTable`, the two
-site_backup tables, `TestMappingResult`, `UploadPreviewPanel`,
+Not yet migrated onto `DataTable` (deliberate — they have custom cells, a mobile card
+mode, or a feature `DataTable` cannot express). The admin-scope ones were converged
+in place on 2026-10-13 (§8): `ResourceAccessPage`, `ResourceAccessMemberList`,
+`ReportUserTable`, `PayrollRunLinesTable`, `RestorePreviewTable`, `BackupRestorePage`,
+`SkillsCatalogWorkspace`, `TeamsTableRow`. Still hand-rolled: `AssignedLeadersTable`,
+`RecordListPanel`, `HbprRecordExplorer`, `TestMappingResult`, `UploadPreviewPanel`,
 `ClientAssignmentSection`, `WeeklyGeneratorDialog`, `MemberTicketRecordsTable`
 (dynamic columns + its own server-side pagination).
 
@@ -185,9 +189,24 @@ migrate, and add the stub to each page test in the same diff.
   `overflow-x-auto` only. Tables needing a mobile card treatment implement it
   themselves (`AssignedLeadersTable`'s `md:hidden` list, `RecordListPanel`'s
   `max-md:sr-only`), which is why they are not migrated.
-- **`/admin/backup-restore` renders no table on its default tab**, so
-  `BackupRestorePage` / `RestorePreviewTable` are covered by tests only — no
-  screenshot evidence.
+- **`/admin/backup-restore` shows its table only when backups exist.** The
+  2026-10-13 browser check used a dev DB with one backup (7 headers, all
+  contract-weight).
+- **`RestorePreviewTable` cannot be browser-verified on the dev DB.** Picking a
+  stored backup and pressing "Preview restore" returns the schema guard
+  ("This backup was taken from a different database schema and cannot be safely
+  restored here"), so the preview grid never mounts. It stays covered by
+  `RestorePreviewTable.test.tsx`; re-check in a browser only against a backup
+  taken from the same schema.
+- **`/admin/reports` table is browser-verified (2026-10-13)** after clicking
+  "Generate Intelligence": 17 rows, 4 headers, no bold cells. `ReportUserTable` is
+  mocked in `ReportsPage.test.tsx`; `ReportUserTable.test.tsx` covers its columns
+  and the empty-state `colSpan`.
+- **`/admin/calendars` renders `TeamsTable` as a div grid**, not a `<table>`, so
+  the table-header audit's `thead` check does not see it. Its header is
+  `TABLE_HEAD_GRID_CLASS`; the grid's hover-reveal was browser-checked.
+- **`/admin/payroll/runs` uses pill mode** (`DataTable`), so the in-row reveal check
+  does not apply there; its header weights were checked.
 - **The mocked `HolidayTable` grid is not screenshot-verified** — the e2e database
   has no holidays, so that tab renders the empty state. Covered by 4 unit tests.
 - **The working tree carries several uncommitted workstreams** (a round-1 mockup
@@ -198,12 +217,14 @@ migrate, and add the stub to each page test in the same diff.
 
 ```bash
 cd frontend
+node --test scripts/table-header-audit.test.mjs   # 33 tests
 node scripts/table-header-audit.mjs            # expect PASS: 0 violations
 npx prettier --check src/components/ui/tableStyles.ts src/components/ui/DataTable.tsx
-npx vitest run src/components/ui/DataTable.test.tsx   # 20 tests
+npx vitest run src/components/ui/DataTable.test.tsx
 npx tsc -b
-npx vitest run                                 # 456 files / 2755 tests
+npx vitest run                                 # 542 files / 3474 tests (2026-10-13)
 npm run build
+node scripts/row-actions-pill-verify.mjs       # pill regression, 18/18 — needs Django :8000 + Vite :5173
 ```
 
 Visual check: `frontend/scripts/shot-tables.mjs` (app captures, 320+1280 ×
@@ -229,10 +250,50 @@ mockup captures live in `design-screenshots/tables-plan/mocks/`.
   eslint / prettier / build clean. Browser-verified at `/engagement/metrics`: 8
   columns, 1 row, sortable headers, result count, transparent header
   (`design-screenshots/tables-plan/engagement/`).
-- **2026-10-12 (row-actions pill)** — `DataTable` moves `id: "actions"` cells into a hover-revealed floating pill (`RowActionsPill`) on fine pointers; coarse pointers keep the column. Approval-bearing columns opt out with `meta: { actionsDisplay: "column" }` (set in the approval helpers and on the approval columns). The actions column is no longer hideable. Browser verification of the pill is pending.
+- **2026-10-12 (row-actions pill)** — `DataTable` moves `id: "actions"` cells into a hover-revealed floating pill (`RowActionsPill`) on fine pointers; coarse pointers keep the column. Approval-bearing columns opt out with `meta: { actionsDisplay: "column" }` (set in the approval helpers and on the approval columns). The actions column is no longer hideable. Browser-verified 2026-10-13 (`scripts/row-actions-pill-verify.mjs`, 18/18
+checks): hover/focus-within reveal, labeled actions at xl, Edit click
+through, opt-out columns unchanged, no pill on coarse pointers, dark theme OK.
+- **2026-10-13 (pill clip fix)** — the pill renders INSIDE the `overflow-x-auto`
+  scroll container, so its clip bound is the scroller's visible rect, not
+  `window.innerWidth`: the card edge is ~50px inside the viewport in the admin
+  shell and used to cut the last action on right-edge entry.
+  `pillOffsetForEntry(clientX, rowRect, pillWidth, viewportWidth, clip?)` takes
+  the scroller rect as `clip`; `DataTable` re-clamps the hovered row's pill on
+  every scroll event (`pillEntryRef`), so the pill stays put when the table
+  slides under a static cursor. Rerun `node scripts/row-actions-pill-verify.mjs`
+  after touching this path — it asserts pill bounds against the scroller clip,
+  incl. scrolled-right entry and scroll-back re-clamp.
 - **2026-10-05 (review pass)** � independent review found the gate could be evaded and one
   real violation it could not see. Fixed: audit rewritten as a text-based detector with 24
   tests and wired into CI; `TeamsTableHeader` (div-grid, was `uppercase tracking-[0.2em]`)
   moved onto `TABLE_HEAD_GRID_CLASS`; skills-catalog select cell and the checkbox constant
   now set a weight. Browser sweep (`shot-review`, 20 pages � light/dark � 1280/320): every
   `thead th` is 14px / 500 / no transform / no tracking, no page-level horizontal overflow.
+- **2026-10-13 (admin table convergence)** — the plan is
+  `.devin/plans/plan-admin-table-convergence-2026-10-13.md` (revised after review, R1–R9).
+  Found by the audit: `BackupRestorePage`, `RestorePreviewTable` and `PayrollRunLinesTable`
+  had bare `<th>` tags with no contract class, so their headers rendered UA-bold.
+  The three rules could not see it, so the `BARE-HEADER` rule was added and dry-run
+  first (it flagged exactly those tables, 22 headers, plus two false positives that
+  were fixed in the rule). Converged in place: those three headers and dividers;
+  `BackupRestorePage` Download/Delete and `SkillsCatalogWorkspace` Edit/Delete moved
+  onto `RowActions`; `ResourceAccessPage`, `ResourceAccessMemberList`, `TeamsTableRow`
+  and `SkillsCatalogWorkspace` moved from `reveal="always"` to hover-reveal with
+  `group/row` and `data-state="selected"`. `ResourceAccessMemberList`'s mobile card
+  list keeps `reveal="always"`, since it has no row ancestor. `ReportUserTable` got
+  contract padding and hover, and its empty-state `colSpan` now matches the tab's
+  column count (it was always 4, so the Vacation tab was wrong). The payroll
+  Generate/payslip buttons were kept (own disabled states, not `RowActions`).
+  **Exempt by decision:** `ApproverSlaBody`, `TeamComparisonWidget` (compact
+  `text-xs` widget tables), and the skills mobile card list.
+  **Verified:** audit PASS 0 violations, 33/33 gate tests, 12 touched test files
+  143/143, full suite 542 files / 3474 tests, `tsc -b` clean, eslint clean, build
+  clean, pill verifier 18/18. Browser (Playwright, 1440 light): no bold header cells
+  on `/admin/resource-access`, `/admin/backup-restore`, `/admin/skills/catalog`,
+  `/admin/payroll/runs`; no doubled row dividers; hover-reveal confirmed on
+  resource-access, backup-restore, skills-catalog and `/admin/calendars`; and
+  `/admin/reports` after "Generate Intelligence" (17 rows, 4 headers, no bold).
+  `RestorePreviewTable` stays unit-tested only — the dev DB's stored backup trips
+  the schema guard (§6).
+  **Not a DataTable pill:** hand-rolled tables keep a visible action column. The
+  floating pill remains `DataTable`-only.

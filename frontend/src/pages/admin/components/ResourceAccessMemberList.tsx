@@ -5,7 +5,12 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Button } from "@/components/ui/button";
 import { RowActions } from "@/components/ui/RowActions";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
+import {
+  TABLE_BODY_DIVIDER_CLASS,
+  TABLE_HEAD_CELL_CLASS,
+  TABLE_HEAD_ROW_CLASS,
+  TABLE_ROW_HOVER_CLASS,
+} from "@/components/ui/tableStyles";
 import { cn } from "@/lib/utils";
 import { UserPlus, Trash2, X } from "lucide-react";
 import type { UserGroup } from "@/types";
@@ -109,12 +114,9 @@ export function ResourceAccessMemberList({
               <th className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>Action</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className={TABLE_BODY_DIVIDER_CLASS}>
             {members.map((membership) => (
-              <tr
-                key={membership.id}
-                className="border-border/40 hover:bg-table-hover border-b transition-colors last:border-0"
-              >
+              <tr key={membership.id} className={cn("group/row", TABLE_ROW_HOVER_CLASS)}>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="bg-secondary text-secondary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
@@ -153,7 +155,12 @@ export function ResourceAccessMemberList({
                 </p>
               </div>
             </div>
-            <RemoveButton membership={membership} groupName={groupName} onRemove={onRemove} />
+            <RemoveButton
+              membership={membership}
+              groupName={groupName}
+              onRemove={onRemove}
+              reveal="always"
+            />
           </div>
         ))}
       </div>
@@ -193,14 +200,16 @@ function RemoveButton({
   membership,
   groupName,
   onRemove,
+  reveal = "hover",
 }: {
   membership: UserGroup;
   groupName?: string;
   onRemove: (membership: UserGroup) => void;
+  reveal?: "hover" | "always";
 }) {
   return (
     <RowActions
-      reveal="always"
+      reveal={reveal}
       actions={[
         {
           label: `Remove ${membership.user_name || "this person"} from ${groupName}`,

@@ -23,6 +23,29 @@ const GRID_TYPO = /\buppercase\b|\btracking-\S+/;
 
 const lineOf = (src, idx) => src.slice(0, idx).split("\n").length;
 
+const fromContractConst = (src, name) =>
+  name.startsWith("TABLE_") ||
+  new RegExp(String.raw`const\s+${name}\s*=\s*(?:cn\(\s*)?TABLE_`).test(src);
+
+// A `<th` tag's text up to its closing `>` at brace depth 0 (so `=>` and `>` inside
+// `{…}` expressions do not end it early).
+const thTags = (block) => {
+  const tags = [];
+  for (let i = block.indexOf("<th"); i !== -1; i = block.indexOf("<th", i + 1)) {
+    if (!/\s|>/.test(block[i + 3] ?? "")) continue;
+    let depth = 0;
+    let j = i + 3;
+    for (; j < block.length; j++) {
+      const ch = block[j];
+      if (ch === "{") depth++;
+      else if (ch === "}") depth--;
+      else if (ch === ">" && depth === 0) break;
+    }
+    tags.push({ start: i, text: block.slice(i, j + 1) });
+  }
+  return tags;
+};
+
 export function findViolations(src) {
   const out = [];
   let m;
@@ -43,14 +66,26 @@ export function findViolations(src) {
     IDENT_CLASS.lastIndex = 0;
     let c;
     while ((c = IDENT_CLASS.exec(block))) {
-      const fromContract = new RegExp(String.raw`const\s+${c[1]}\s*=\s*(?:cn\(\s*)?TABLE_`).test(
-        src
-      );
-      if (!c[1].startsWith("TABLE_") && !fromContract) {
+      if (!fromContractConst(src, c[1])) {
         out.push({
           line: lineOf(src, m.index + c.index),
           rule: "OPAQUE-CLASS",
           text: `className={${c[1]}}`,
+        });
+      }
+    }
+    for (const tag of thTags(block)) {
+      // aria-hidden cells are zero-width spacers (e.g. the pill-collapsed Actions header): no text.
+      if (/aria-hidden="true"/.test(tag.text)) continue;
+      const expr = /className=\{([^]*?)\}\s*(?=\w+=|>|\/>)/.exec(tag.text)?.[1] ?? "";
+      const contracted =
+        tag.text.includes("TABLE_") ||
+        [...expr.matchAll(/[A-Za-z_$][\w$]*/g)].some(([name]) => fromContractConst(src, name));
+      if (!contracted) {
+        out.push({
+          line: lineOf(src, m.index + tag.start),
+          rule: "BARE-HEADER",
+          text: tag.text.replace(/\s+/g, " ").slice(0, 100),
         });
       }
     }

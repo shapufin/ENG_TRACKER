@@ -23,9 +23,11 @@ import { IconWell } from "@/components/ui/IconWell";
 import { RowActions } from "@/components/ui/RowActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
+  TABLE_BODY_DIVIDER_CLASS,
   TABLE_HEAD_CELL_CHECKBOX_CLASS,
   TABLE_HEAD_CELL_CLASS,
   TABLE_HEAD_ROW_CLASS,
+  TABLE_ROW_HOVER_CLASS,
 } from "@/components/ui/tableStyles";
 import { cn } from "@/lib/utils";
 import { FilterToolbar } from "@/components/ui/FilterToolbar";
@@ -281,11 +283,12 @@ export function ResourceAccessPage() {
                   <th className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>Action</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className={TABLE_BODY_DIVIDER_CLASS}>
                 {groupList.map((group) => (
                   <tr
                     key={group.id}
-                    className={`border-border/40 hover:bg-table-hover border-b transition-colors last:border-0 ${
+                    data-state={selectedGroupIds.has(group.id) ? "selected" : undefined}
+                    className={`group/row ${TABLE_ROW_HOVER_CLASS} ${
                       selectedGroupIds.has(group.id) ? "ring-primary/20 ring-1" : ""
                     }`}
                   >
@@ -326,7 +329,6 @@ export function ResourceAccessPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <RowActions
-                        reveal="always"
                         actions={[
                           {
                             label: `Manage ${group.name}`,
