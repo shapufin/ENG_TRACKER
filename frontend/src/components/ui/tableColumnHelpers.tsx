@@ -153,19 +153,28 @@ export const createViewApproveRejectActionsColumn = <T extends WithIdAndStatus>(
 
 /**
  * Row-relative `--row-pill-offset` that centers the floating row-actions pill
- * on the cursor's viewport x while keeping the whole pill inside the viewport.
- * The clamp must be viewport-relative, not row-relative: on a horizontally
+ * on the cursor's x while keeping the whole pill inside the clip bounds.
+ * Two clamps apply (innermost wins): the viewport AND the table's scroll
+ * container — the pill renders inside `overflow-x-auto` content, so a
+ * viewport-only clamp still lets the card edge cut the last action (the
+ * container's right edge is ~50px inside the viewport in the admin shell).
+ * The clamp must be clip-relative, not row-relative: on a horizontally
  * scrolled table a row-relative guess parks wide pills off-screen (the pill
  * is centered on the offset via `-translate-x-1/2`, so `offset = center -
- * rowLeft - rowWidth`). Consumed by `DataTable`'s row `onMouseEnter`.
+ * rowLeft - rowWidth`). Consumed by `DataTable`'s row `onMouseEnter` and by
+ * its scroll listener (re-clamp while the hovered row slides under a fixed
+ * entry offset).
  */
 export const pillOffsetForEntry = (
   clientX: number,
   rowRect: { left: number; width: number },
   pillWidth: number,
-  viewportWidth: number
+  viewportWidth: number,
+  clip?: { left: number; right: number }
 ): string => {
   const half = pillWidth / 2 + 8;
-  const center = Math.min(Math.max(clientX, half), viewportWidth - half);
+  const lo = Math.max(0, clip?.left ?? 0) + half;
+  const hi = Math.min(viewportWidth, clip?.right ?? viewportWidth) - half;
+  const center = Math.min(Math.max(clientX, lo), hi);
   return `${center - rowRect.left - rowRect.width}px`;
 };

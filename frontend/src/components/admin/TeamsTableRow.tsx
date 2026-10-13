@@ -31,7 +31,8 @@ export const TeamsTableRow: React.FC<TeamsTableRowProps> = ({
   columnVisibility = {},
 }) => (
   <div
-    className="hover:bg-table-hover grid items-center gap-4 px-6 py-5 transition-colors motion-reduce:transition-none"
+    data-state={isSelected ? "selected" : undefined}
+    className="group/row hover:bg-table-hover grid items-center gap-4 px-6 py-5 transition-colors motion-reduce:transition-none"
     style={{ gridTemplateColumns: teamsGridTemplate(columnVisibility) }}
   >
     <div>
@@ -84,7 +85,6 @@ export const TeamsTableRow: React.FC<TeamsTableRowProps> = ({
     {isTeamsColumnVisible(columnVisibility, "actions") && (
       <div>
         <RowActions
-          reveal="always"
           actions={[{ label: `Edit team ${team.name}`, icon: Edit3, onClick: () => onEdit(team) }]}
         />
       </div>

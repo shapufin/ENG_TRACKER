@@ -4,7 +4,17 @@ import { toast } from "sonner";
 import { Download, Trash2, ShieldAlert, DatabaseBackup } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
+import {
+  TABLE_ACTIONS_CELL_CLASS,
+  TABLE_ACTIONS_HEAD_CLASS,
+  TABLE_BODY_CELL_CLASS,
+  TABLE_BODY_DIVIDER_CLASS,
+  TABLE_HEAD_CELL_CLASS,
+  TABLE_HEAD_ROW_CLASS,
+  TABLE_ROW_HOVER_CLASS,
+} from "@/components/ui/tableStyles";
+import { RowActions } from "@/components/ui/RowActions";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -128,47 +138,52 @@ const BackupsTab: React.FC = () => {
               <table className="w-full min-w-[720px] text-sm">
                 <thead>
                   <tr className={TABLE_HEAD_ROW_CLASS}>
-                    <th className="py-2 pr-4">Filename</th>
-                    <th className="py-2 pr-4">Created</th>
-                    <th className="py-2 pr-4 text-right">Size</th>
-                    <th className="py-2 pr-4 text-right">Rows</th>
-                    <th className="py-2 pr-4 text-right">Media</th>
-                    <th className="py-2 pr-4">Note</th>
-                    <th className="py-2 pr-2 text-right">Actions</th>
+                    <th className={TABLE_HEAD_CELL_CLASS}>Filename</th>
+                    <th className={TABLE_HEAD_CELL_CLASS}>Created</th>
+                    <th className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>Size</th>
+                    <th className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>Rows</th>
+                    <th className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>Media</th>
+                    <th className={TABLE_HEAD_CELL_CLASS}>Note</th>
+                    <th className={cn(TABLE_HEAD_CELL_CLASS, TABLE_ACTIONS_HEAD_CLASS)}>Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className={TABLE_BODY_DIVIDER_CLASS}>
                   {backups.map((record) => (
-                    <tr key={record.id} className="border-line-subtle border-b last:border-0">
-                      <td className="py-2 pr-4 font-mono text-xs">{record.filename}</td>
-                      <td className="py-2 pr-4">{new Date(record.created_at).toLocaleString()}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">
+                    <tr key={record.id} className={cn(TABLE_ROW_HOVER_CLASS, "group/row")}>
+                      <td className={cn(TABLE_BODY_CELL_CLASS, "font-mono text-xs")}>
+                        {record.filename}
+                      </td>
+                      <td className={TABLE_BODY_CELL_CLASS}>
+                        {new Date(record.created_at).toLocaleString()}
+                      </td>
+                      <td className={cn(TABLE_BODY_CELL_CLASS, "text-right tabular-nums")}>
                         {formatBytes(record.size_bytes)}
                       </td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{record.db_row_count}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">
+                      <td className={cn(TABLE_BODY_CELL_CLASS, "text-right tabular-nums")}>
+                        {record.db_row_count}
+                      </td>
+                      <td className={cn(TABLE_BODY_CELL_CLASS, "text-right tabular-nums")}>
                         {record.media_file_count}
                       </td>
-                      <td className="text-muted-foreground py-2 pr-4">{record.note || "—"}</td>
-                      <td className="py-2 pr-2">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Download ${record.filename}`}
-                            onClick={() => siteBackupService.downloadBackup(record)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Delete ${record.filename}`}
-                            onClick={() => setPendingDelete(record)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      <td className={cn(TABLE_BODY_CELL_CLASS, "text-muted-foreground")}>
+                        {record.note || "—"}
+                      </td>
+                      <td className={cn(TABLE_BODY_CELL_CLASS, TABLE_ACTIONS_CELL_CLASS)}>
+                        <RowActions
+                          actions={[
+                            {
+                              label: `Download ${record.filename}`,
+                              icon: Download,
+                              onClick: () => siteBackupService.downloadBackup(record),
+                            },
+                            {
+                              label: `Delete ${record.filename}`,
+                              icon: Trash2,
+                              tone: "danger",
+                              onClick: () => setPendingDelete(record),
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}

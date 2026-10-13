@@ -1,7 +1,15 @@
 import React, { useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
+import {
+  TABLE_BODY_CELL_CLASS,
+  TABLE_BODY_DIVIDER_CLASS,
+  TABLE_HEAD_CELL_CHECKBOX_CLASS,
+  TABLE_HEAD_CELL_CLASS,
+  TABLE_HEAD_ROW_CLASS,
+  TABLE_ROW_HOVER_CLASS,
+} from "@/components/ui/tableStyles";
+import { cn } from "@/lib/utils";
 import type { RestoreModelGroup } from "../types/siteBackup";
 
 interface RestorePreviewTableProps {
@@ -48,25 +56,25 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
       <table className="w-full min-w-[640px] text-sm">
         <thead>
           <tr className={TABLE_HEAD_ROW_CLASS}>
-            <th className="w-10 py-2 pr-2">
+            <th className={TABLE_HEAD_CELL_CHECKBOX_CLASS}>
               <span className="sr-only">Restore</span>
             </th>
-            <th className="py-2 pr-4">Model</th>
-            <th className="py-2 pr-4 text-right">New</th>
-            <th className="py-2 pr-4 text-right">Overwritten</th>
-            <th className="py-2 pr-4 text-right">Not in backup</th>
-            <th className="py-2 pr-2">Also delete missing</th>
+            <th className={TABLE_HEAD_CELL_CLASS}>Model</th>
+            <th className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>New</th>
+            <th className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>Overwritten</th>
+            <th className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>Not in backup</th>
+            <th className={TABLE_HEAD_CELL_CLASS}>Also delete missing</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className={TABLE_BODY_DIVIDER_CLASS}>
           {modelGroups.map((group) => {
             const isApproved = approvedModels.has(group.model);
             const isForced = !isApproved && forcedModels.has(group.model);
             const rowChecked = isApproved || isForced;
             const hasDependents = group.forced_dependents.length > 0;
             return (
-              <tr key={group.model} className="border-line-subtle border-b last:border-0">
-                <td className="py-2 pr-2 align-top">
+              <tr key={group.model} className={TABLE_ROW_HOVER_CLASS}>
+                <td className={cn(TABLE_BODY_CELL_CLASS, "align-top")}>
                   <Checkbox
                     checked={rowChecked}
                     disabled={isForced}
@@ -74,7 +82,7 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
                     onCheckedChange={() => onToggleApprove(group.model)}
                   />
                 </td>
-                <td className="py-2 pr-4 align-top">
+                <td className={cn(TABLE_BODY_CELL_CLASS, "align-top")}>
                   <div className="font-mono text-xs">{group.model}</div>
                   {isForced && (
                     <span
@@ -94,10 +102,16 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
                     </span>
                   )}
                 </td>
-                <td className="py-2 pr-4 text-right align-top tabular-nums">{group.new}</td>
-                <td className="py-2 pr-4 text-right align-top tabular-nums">{group.overwritten}</td>
-                <td className="py-2 pr-4 text-right align-top tabular-nums">{group.db_only}</td>
-                <td className="py-2 pr-2 align-top">
+                <td className={cn(TABLE_BODY_CELL_CLASS, "text-right align-top tabular-nums")}>
+                  {group.new}
+                </td>
+                <td className={cn(TABLE_BODY_CELL_CLASS, "text-right align-top tabular-nums")}>
+                  {group.overwritten}
+                </td>
+                <td className={cn(TABLE_BODY_CELL_CLASS, "text-right align-top tabular-nums")}>
+                  {group.db_only}
+                </td>
+                <td className={cn(TABLE_BODY_CELL_CLASS, "align-top")}>
                   {group.db_only > 0 ? (
                     <label className="flex items-center gap-2">
                       <Checkbox

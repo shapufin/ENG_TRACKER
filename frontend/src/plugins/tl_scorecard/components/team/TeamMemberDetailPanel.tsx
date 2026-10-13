@@ -33,10 +33,17 @@ interface TeamMemberDetailPanelProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Label / value / action columns. The third column stays reserved so the two
+ * detail drawers share one vertical rhythm, even though this panel is read-only.
+ */
+const ROW_GRID = "grid grid-cols-[7rem_minmax(0,1fr)_auto] items-start gap-3 py-2.5";
+
 const Fact: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-3 py-2.5">
+  <div className={ROW_GRID}>
     <dt className="text-muted-foreground text-xs font-medium">{label}</dt>
     <dd className="min-w-0 text-sm">{children}</dd>
+    <span aria-hidden="true" />
   </div>
 );
 
@@ -46,14 +53,18 @@ const Section: React.FC<{ id: string; title: string; children: React.ReactNode }
   children,
 }) => (
   <section aria-labelledby={id} className="space-y-2">
-    <h3 id={id} className="text-foreground text-sm font-semibold">
+    <h3
+      id={id}
+      className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wider uppercase"
+    >
+      <span aria-hidden="true" className="bg-primary h-1.5 w-1.5 shrink-0 rounded-[2px]" />
       {title}
     </h3>
     {children}
   </section>
 );
 
-const Dash: React.FC = () => <span className="text-muted-foreground">—</span>;
+const Dash: React.FC = () => <span className="text-muted-foreground text-sm italic">Not set</span>;
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 

@@ -38,6 +38,13 @@ export const TABLE_BODY_CELL_CLASS = "px-4 py-2 align-middle";
 export const TABLE_ROW_HOVER_CLASS = "hover:bg-table-hover transition-colors";
 
 /**
+ * Row separators for a hand-rolled `<tbody>`: the same `divide-y` rule `DataTable`
+ * uses. Put it on the `<tbody>` and drop any `border-b` / `last:border-0` on the `<tr>`
+ * — both together draw a double line.
+ */
+export const TABLE_BODY_DIVIDER_CLASS = "divide-border/50 divide-y";
+
+/**
  * Header row of a div-grid "table" (no `<table>`, so no `<thead>`): same typography
  * and bottom border as `TABLE_HEAD_CELL_CLASS`. Compose it with the grid template:
  * `cn("grid grid-cols-[...]", TABLE_HEAD_GRID_CLASS)`.
