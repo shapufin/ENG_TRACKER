@@ -18,7 +18,7 @@ from django.contrib.auth.models import User
 from django.db.models import Count, DecimalField, Exists, IntegerField, Max, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce
 
-from apps.leave_management.models import LeaveBalance, LeaveRequest, count_business_days
+from apps.leave_management.models import LeaveBalance, LeaveRequest
 
 from .models import Absence, EPRCycle, EPRGoal, IdleFlag, Meeting, PIPRecord, PromotionFlag
 from .scope import scoreable_member_ids
@@ -131,7 +131,7 @@ def _upcoming_leave(member_ids, today):
             'end_date': request.end_date,
             'request_type': request.request_type,
             # Same counting rule as the leave balance itself.
-            'business_days': count_business_days(request.start_date, request.end_date),
+            'business_days': request.days_requested,
         })
     return upcoming
 

@@ -6,6 +6,7 @@ import { useSiteBranding, SITE_BRANDING_QUERY_KEY } from "@/hooks/useSiteBrandin
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -32,7 +33,17 @@ const mapSettingsToForm = (settings: GlobalSettings) => ({
   default_yearly_leave_days: String(settings.default_yearly_leave_days),
   carry_over_expiry_month: String(settings.carry_over_expiry_month),
   carry_over_expiry_day: String(settings.carry_over_expiry_day),
+  carry_over_enabled: settings.carry_over_enabled,
 });
+
+// Carry from the year that is closing now expires on this date next year.
+// Clamps like the backend: 31 Feb becomes the last day of that month.
+const carryExpiryPreview = (month: number, day: number) => {
+  const nextYear = new Date().getFullYear() + 1;
+  const lastDay = new Date(nextYear, month, 0).getDate();
+  const expiry = new Date(nextYear, month - 1, Math.min(day, lastDay));
+  return expiry.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+};
 
 const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }) => {
   const queryClient = useQueryClient();
@@ -53,6 +64,7 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
       default_yearly_leave_days: Number(form.default_yearly_leave_days),
       carry_over_expiry_month: Number(form.carry_over_expiry_month),
       carry_over_expiry_day: Number(form.carry_over_expiry_day),
+      carry_over_enabled: form.carry_over_enabled,
     });
   };
 
@@ -96,6 +108,27 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
           value={form.carry_over_expiry_day}
           onChange={(e) => setForm((f) => ({ ...f, carry_over_expiry_day: e.target.value }))}
           required
+        />
+        <p className="text-muted-foreground text-xs" data-testid="carryover-expiry-preview">
+          Carry-over from {new Date().getFullYear()} expires{" "}
+          {carryExpiryPreview(
+            Number(form.carry_over_expiry_month),
+            Number(form.carry_over_expiry_day)
+          )}
+          . Changing this date also moves the expiry of carry-over already granted.
+        </p>
+      </div>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <Label htmlFor="settings-carryover-enabled">Carry unused vacation to next year</Label>
+          <p className="text-muted-foreground text-xs">
+            Off stops new carry-over at year end. Existing carry-over still runs to its expiry.
+          </p>
+        </div>
+        <Switch
+          id="settings-carryover-enabled"
+          checked={form.carry_over_enabled}
+          onCheckedChange={(checked) => setForm((f) => ({ ...f, carry_over_enabled: checked }))}
         />
       </div>
       <Button type="submit" disabled={update.isPending}>

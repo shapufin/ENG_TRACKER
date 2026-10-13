@@ -310,6 +310,8 @@ export interface GlobalSettings {
   default_yearly_leave_days: number;
   carry_over_expiry_month: number;
   carry_over_expiry_day: number;
+  carry_over_enabled: boolean;
+  carry_over_applied_year: number | null;
   created_at: string;
   updated_at: string;
 }

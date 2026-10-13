@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, PermissionDenied
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.db import transaction
 from django.db.models import Prefetch, Count
 from django.db.models.functions import TruncMonth
@@ -31,7 +32,15 @@ from core.mixins.permissions import (
     has_team_leader_role,
     resolve_target_user,
 )
-from .models import LeaveBalance, LeaveRequest, GlobalSettings, count_business_days
+from .models import LeaveBalance, LeaveRequest, GlobalSettings, count_leave_days
+from .services.carry_over import (
+    carry_over_expiry_for,
+    ensure_year_end_rollover,
+    find_carry_balance,
+    is_closed_year,
+    move_request_days,
+    plan_vacation_split,
+)
 from .filters import LeaveRequestFilter
 try:
     from plugins.notifications.idempotency import idempotency_scope, IdempotencyReplay
@@ -63,6 +72,7 @@ def ensure_current_year_balance(user, year):
     Previously only existed as a method on LeaveRequestViewSet while
     LeaveBalanceViewSet.user_balance_summary called ``self._ensure…`` → 500.
     """
+    ensure_year_end_rollover()
     profile = getattr(user, 'profile', None)
     today = timezone.now().date()
     hire_date = None
@@ -153,6 +163,7 @@ class LeaveBalanceViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserPer
         Only accessible by team leaders and above.
         workspace_ids is optional; when omitted, all team members' balances are returned.
         """
+        ensure_year_end_rollover()
         user = request.user
 
         queryset = LeaveBalance.objects.all().select_related('user')
@@ -285,7 +296,19 @@ class GlobalSettingsViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserP
         return response
 
     def perform_update(self, serializer):
-        serializer.save()
+        with transaction.atomic():
+            settings_obj = serializer.save()
+            # The rule governs the current carry cycle only. Older carry rows keep the
+            # expiry they were granted with, so an expired balance is never revived.
+            applied = settings_obj.carry_over_applied_year
+            cycle = LeaveBalance.objects.none() if applied is None else LeaveBalance.objects.filter(
+                is_carry_over=True, year=applied - 1,
+            )
+            for row in cycle.select_for_update():
+                row.expires_at = carry_over_expiry_for(
+                    row.year, settings_obj.carry_over_expiry_month, settings_obj.carry_over_expiry_day,
+                )
+                row.save(update_fields=['expires_at'])
         self.invalidate_related_cache()
 
     def perform_create(self, serializer):
@@ -344,13 +367,17 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         end_date = incoming.get('end_date', instance.end_date)
 
         self._ensure_no_overlap(target_user, start_date, end_date, exclude_request_id=instance.id)
-
-        if request_type == 'vacation':
-            self._validate_vacation_request(target_user, start_date, end_date)
+        self._ensure_year_open(instance.start_date, start_date)
 
         with transaction.atomic():
-            if instance.request_type == 'vacation' and instance.balance:
+            # Release the old reservation before validating the new dates, so the
+            # check sees the balance the edit really has. If validation fails, the
+            # release is rolled back with the rest of this transaction.
+            if instance.request_type == 'vacation':
                 self._release_balance(instance)
+
+            if request_type == 'vacation':
+                self._validate_vacation_request(target_user, start_date, end_date)
 
             update_kwargs = {}
             if instance.status == 'approved':
@@ -360,9 +387,23 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
 
             if updated_obj.request_type == 'vacation':
                 self._deduct_balance(updated_obj)
-            elif updated_obj.balance_id:
-                updated_obj.balance = None
-                updated_obj.save(update_fields=['balance'])
+            elif updated_obj.balance_id or updated_obj.carry_balance_id:
+                self._clear_balance_links(updated_obj)
+
+    def _ensure_year_open(self, *dates):
+        """Closed years are frozen: no request may be created or moved into one."""
+        settings_obj = GlobalSettings.objects.get_or_create(pk=1)[0]
+        for day in dates:
+            if day and is_closed_year(day.year, settings_obj):
+                raise ValidationError(
+                    f'Year {day.year} is closed. Its leave cannot be created or moved; contact HR.'
+                )
+
+    def _clear_balance_links(self, request_obj):
+        request_obj.balance = None
+        request_obj.carry_balance = None
+        request_obj.carry_days = Decimal('0')
+        request_obj.save(update_fields=['balance', 'carry_balance', 'carry_days'])
 
         # Invalidate cache for the affected user
         self.invalidate_related_cache()
@@ -506,6 +547,27 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
             for m in months
         ])
 
+    @action(detail=False, methods=['post'])
+    def preview_split(self, request):
+        """Counted days and the carry-over / current-year split for a prospective request.
+
+        Uses the same rule as validation and deduction, so the preview cannot disagree.
+        """
+        try:
+            start = parse_date(str(request.data.get('start_date', '')))
+            end = parse_date(str(request.data.get('end_date', '')))
+        except ValueError:  # well-formed but impossible date, e.g. 2026-02-30
+            start = end = None
+        if not start or not end or end < start:
+            raise ValidationError({'end_date': 'Provide a start_date and an end_date on or after it.'})
+        plan = plan_vacation_split(request.user.id, start, end)
+        return Response({
+            'days_counted': plan['counted'],
+            'carry_days': float(plan['carry_days']),
+            'current_days': float(plan['current_days']),
+            'carry_expires_at': plan['carry_expires_at'],
+        })
+
     def perform_create(self, serializer):
         from plugins.audit_log.signals import log_action
 
@@ -518,6 +580,7 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
 
         self._ensure_no_overlap(target_user, start_date, end_date)
         if request_type == 'vacation':
+            self._ensure_year_open(start_date)
             self._validate_vacation_request(target_user, start_date, end_date)
 
         with transaction.atomic():
@@ -542,40 +605,38 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         self.invalidate_related_cache()
 
     def _deduct_balance(self, request_obj):
-        """Deduct leave days from balance with carry-over priority.
+        """Reserve a vacation request's days: carry-over first, then the current year.
 
-        Non-expired carry-over balances are prioritized. After expiry, only current
-        year balance is used. This ensures proper balance rotation while respecting
-        each balance's own expiry date.
+        The split is by date (see plan_vacation_split): carry covers weekdays up to
+        its expiry, the rest comes from the current year. Both parts are reserved as
+        pending and recorded on the request, so later moves stay exact.
         """
-        year = request_obj.start_date.year
-        days = Decimal(request_obj.days_requested)
-        user = request_obj.user
-        today = timezone.localdate()
-
         with transaction.atomic():
-            # Prioritize non-expired carry-over for the previous year
-            carry_over = LeaveBalance.objects.filter(
-                user=user, leave_type='vacation', is_carry_over=True,
-                year=year - 1, expires_at__gte=today
-            ).select_for_update().first()
+            # Lock the carry row before planning, so the availability the plan reads is
+            # the committed value after any concurrent request has finished with it.
+            carry_lock = find_carry_balance(request_obj.user_id, request_obj.start_date)
+            if carry_lock is not None:
+                LeaveBalance.objects.select_for_update().filter(pk=carry_lock.pk).first()
+            plan = plan_vacation_split(request_obj.user_id, request_obj.start_date, request_obj.end_date)
+            carry_days = plan['carry_days']
+            carry_row = None
+            if carry_days > 0:
+                carry_row = LeaveBalance.objects.select_for_update().get(pk=plan['carry_balance'].pk)
+                carry_row.pending_days += carry_days
+                carry_row.save(update_fields=['pending_days'])
 
-            if carry_over and carry_over.get_effective_available_days() >= days:
-                carry_over.pending_days += days
-                carry_over.save(update_fields=['pending_days'])
-                request_obj.balance = carry_over
-                request_obj.save(update_fields=['balance'])
-                return
-
-            # After expiry or insufficient carry-over, use current year
             current = LeaveBalance.objects.filter(
-                user=user, leave_type='vacation', is_carry_over=False, year=year
+                user_id=request_obj.user_id, leave_type='vacation', is_carry_over=False,
+                year=request_obj.start_date.year,
             ).select_for_update().first()
-            if current:
-                current.pending_days += days
+            if current and plan['current_days'] > 0:
+                current.pending_days += plan['current_days']
                 current.save(update_fields=['pending_days'])
-                request_obj.balance = current
-                request_obj.save(update_fields=['balance'])
+
+            request_obj.carry_balance = carry_row
+            request_obj.carry_days = carry_days
+            request_obj.balance = current
+            request_obj.save(update_fields=['carry_balance', 'carry_days', 'balance'])
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -601,22 +662,18 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
     def perform_approve(self, obj, user):
         """Hook to perform the actual approval. Override for custom balance logic."""
         with transaction.atomic():
-            locked = LeaveRequest.objects.select_for_update().select_related('balance').get(pk=obj.pk)
+            locked = LeaveRequest.objects.select_for_update().get(pk=obj.pk)
             old_status = locked.status
+            if old_status == 'rejected' and locked.request_type == 'vacation' and is_closed_year(locked.start_date.year):
+                raise ValidationError(
+                    f'Year {locked.start_date.year} is closed: a rejected request cannot be re-approved.'
+                )
             locked.status = 'approved'
             locked.approved_by = user
             locked.approved_at = timezone.now()
             locked.rejection_reason = ''
             locked.save(update_fields=['status', 'approved_by', 'approved_at', 'rejection_reason'])
-
-            if old_status in ('pending', 'rejected') and locked.balance_id:
-                from decimal import Decimal
-                balance = LeaveBalance.objects.select_for_update().get(pk=locked.balance_id)
-                days = Decimal(locked.days_requested)
-                if old_status == 'pending':
-                    balance.pending_days -= days
-                balance.used_days += days
-                balance.save(update_fields=['pending_days', 'used_days'])
+            move_request_days(locked, old_status, 'approved')
 
         obj.refresh_from_db()
         self.invalidate_related_cache()
@@ -624,23 +681,14 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
     def perform_reject(self, obj, user, reason):
         """Hook to perform the actual rejection. Override for custom balance logic."""
         with transaction.atomic():
-            locked = LeaveRequest.objects.select_for_update().select_related('balance').get(pk=obj.pk)
+            locked = LeaveRequest.objects.select_for_update().get(pk=obj.pk)
             old_status = locked.status
             locked.status = 'rejected'
             locked.approved_by = user
             locked.approved_at = timezone.now()
             locked.rejection_reason = reason
             locked.save(update_fields=['status', 'approved_by', 'approved_at', 'rejection_reason'])
-
-            if old_status in ('pending', 'approved') and locked.balance_id:
-                from decimal import Decimal
-                balance = LeaveBalance.objects.select_for_update().get(pk=locked.balance_id)
-                days = Decimal(locked.days_requested)
-                if old_status == 'pending':
-                    balance.pending_days -= days
-                else:
-                    balance.used_days -= days
-                balance.save(update_fields=['pending_days', 'used_days'])
+            move_request_days(locked, old_status, 'rejected')
 
         obj.refresh_from_db()
         self.invalidate_related_cache()
@@ -651,34 +699,31 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         if end_date < start_date:
             raise ValidationError('End date must be after start date.')
 
-        # Must match LeaveRequest.days_requested (business days, not calendar span).
-        days_requested = count_business_days(start_date, end_date)
+        # Must match LeaveRequest.days_requested (holiday-aware business days).
+        days_requested = count_leave_days(start_date, end_date)
         if days_requested <= 0:
             raise ValidationError('Vacation requests must include at least one weekday.')
 
         year = start_date.year
         ensure_current_year_balance(user, year)
 
-        carry_over, current = self._fetch_vacation_balances(user, year)
-        carry_available = carry_over.get_effective_available_days() if carry_over else Decimal('0')
+        # Same split rule as deduction: carry covers weekdays up to its expiry.
+        plan = plan_vacation_split(user.id, start_date, end_date)
+        current = LeaveBalance.objects.filter(
+            user=user, leave_type='vacation', is_carry_over=False, year=year,
+        ).first()
         current_available = current.get_effective_available_days() if current else Decimal('0')
-
-        # Validate based on carry-over priority logic
-        if carry_over and not carry_over.is_expired and carry_available >= days_requested:
-            # Non-expired carry-over: prioritize it
-            usable = carry_available
-            source = 'carry-over'
-        else:
-            # Expired or insufficient carry-over: use current year
-            usable = current_available
-            source = 'current year'
-
-        if usable < days_requested:
+        if plan['current_days'] > current_available:
+            carry_part = ''
+            if plan['carry_days'] > 0:
+                carry_part = (
+                    f"{float(plan['carry_days'])}d from carry-over "
+                    f"(valid to {plan['carry_expires_at']}), "
+                )
             raise ValidationError(
-                f"Insufficient leave balance. Requested {days_requested}d, "
-                f"available: carry-over {float(carry_available)}d, "
-                f"current year {float(current_available)}d "
-                f"(using {source} balance; combined requests must fit a single balance)."
+                f"Insufficient leave balance. Requested {days_requested}d: {carry_part}"
+                f"{float(plan['current_days'])}d from the {year} balance, "
+                f"which has {float(current_available)}d available."
             )
 
     def _ensure_no_overlap(self, user, start_date, end_date, exclude_request_id=None):
@@ -697,61 +742,18 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         if conflicts.exists():
             raise ValidationError('Overlapping leave request already exists for the selected dates.')
 
-    def _fetch_vacation_balances(self, user, year):
-        today = timezone.localdate()
-        carry_over = LeaveBalance.objects.filter(
-            user=user,
-            leave_type='vacation',
-            is_carry_over=True,
-            year=year - 1,
-            expires_at__gte=today
-        ).first()
-        current = LeaveBalance.objects.filter(
-            user=user,
-            leave_type='vacation',
-            is_carry_over=False,
-            year=year
-        ).first()
-        return carry_over, current
-
     def _ensure_current_year_balance(self, user, year):
         """Compat wrapper — prefer module-level ensure_current_year_balance."""
         return ensure_current_year_balance(user, year)
 
     def _release_balance(self, request_obj, detach=True):
-        balance = request_obj.balance
-        if not balance:
-            return
+        """Undo a request's reservation (pending) or usage (approved) on both balances.
 
-        # Lock the balance row to prevent concurrent modifications from
-        # perform_destroy/perform_update losing updates. perform_approve
-        # and perform_reject already lock via select_for_update; this
-        # closes the gap for the release path.
-        balance = LeaveBalance.objects.select_for_update().get(pk=balance.pk)
-
-        days = Decimal(request_obj.days_requested)
-        zero = Decimal('0')
-        fields = []
-
-        if request_obj.status in ('pending', 'cancelled'):
-            new_pending = balance.pending_days - days
-            if new_pending < zero:
-                new_pending = zero
-            if new_pending != balance.pending_days:
-                balance.pending_days = new_pending
-                fields.append('pending_days')
-
-        if request_obj.status == 'approved':
-            new_used = balance.used_days - days
-            if new_used < zero:
-                new_used = zero
-            if new_used != balance.used_days:
-                balance.used_days = new_used
-                fields.append('used_days')
-
-        if fields:
-            balance.save(update_fields=fields)
-
+        Rows are locked inside move_request_days, so concurrent edits can't lose updates.
+        """
+        move_request_days(request_obj, request_obj.status, 'cancelled')
         if detach:
             request_obj.balance = None
-            request_obj.save(update_fields=['balance'])
+            request_obj.carry_balance = None
+            request_obj.carry_days = Decimal('0')
+            request_obj.save(update_fields=['balance', 'carry_balance', 'carry_days'])

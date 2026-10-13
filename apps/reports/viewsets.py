@@ -304,24 +304,26 @@ class DetailedReportView(HbprBlockedMixin, APIView):
         sb_total = {r['user']: r for r in sb_qs.values('user').annotate(total_hours=Sum('hours'), entries=Count('id'))}
         sb_approved = {r['user']: r['approved_hours'] for r in sb_qs.filter(status='approved').values('user').annotate(approved_hours=Sum('hours'))}
         
-        from apps.leave_management.models import count_business_days
+        from apps.leave_management.models import counted_days
 
         leave_total = {}
         leave_approved = {}
         # Business days only — must match LeaveRequest.days_requested / validation.
-        for v in leave_qs.values('user', 'start_date', 'end_date'):
-            days = count_business_days(v['start_date'], v['end_date'])
+        for v in leave_qs.values('user', 'start_date', 'end_date', 'request_type', 'days_counted'):
+            days = counted_days(v)
             uid = v['user']
             if uid not in leave_total:
                 leave_total[uid] = {'total_days': 0, 'entries': 0}
             leave_total[uid]['total_days'] += days
             leave_total[uid]['entries'] += 1
 
-        for v in leave_qs.filter(status='approved').values('user', 'start_date', 'end_date'):
-            days = count_business_days(v['start_date'], v['end_date'])
+        for v in leave_qs.filter(status='approved').values('user', 'start_date', 'end_date', 'request_type', 'days_counted'):
+            days = counted_days(v)
             uid = v['user']
             leave_approved[uid] = leave_approved.get(uid, 0) + days
 
+        from apps.leave_management.services.carry_over import ensure_year_end_rollover
+        ensure_year_end_rollover()
         current_year = params['start_date'].year if params['start_date'] else datetime.date.today().year
         balances = {b.user_id: b.get_effective_available_days() for b in LeaveBalance.objects.filter(year=current_year, leave_type='vacation', is_carry_over=False)}
 
@@ -362,12 +364,12 @@ class DetailedReportView(HbprBlockedMixin, APIView):
         if params['report_type'] in ('standby', 'combined'):
             result['standby'] = list(sb_qs.annotate(time_unit=trunc_func('date')).values('time_unit').annotate(total_hours=Sum('hours'), entries=Count('id')).order_by('time_unit'))
         if params['report_type'] in ('leave', 'combined'):
-            from apps.leave_management.models import count_business_days
+            from apps.leave_management.models import counted_days
 
             time_data = {}
-            for v in leave_qs.values('start_date', 'end_date'):
+            for v in leave_qs.values('start_date', 'end_date', 'request_type', 'days_counted'):
                 unit_key = v['start_date'].replace(day=1) if group_by == 'month' else v['start_date'].year
-                days = count_business_days(v['start_date'], v['end_date'])
+                days = counted_days(v)
                 if unit_key not in time_data:
                     time_data[unit_key] = {'total_days': 0, 'entries': 0}
                 time_data[unit_key]['total_days'] += days
@@ -428,20 +430,20 @@ class ExportExcelView(HbprBlockedMixin, APIView):
             sb_total = {rec['user']: rec for rec in standby_qs.values('user').annotate(total_hours=Sum('hours'), entries=Count('id'))}
             sb_approved = {rec['user']: rec['approved_hours'] for rec in standby_qs.filter(status='approved').values('user').annotate(approved_hours=Sum('hours'))}
 
-            from apps.leave_management.models import count_business_days
+            from apps.leave_management.models import counted_days
 
             leave_total = {}
             leave_approved = {}
             # Business days only — must match LeaveRequest.days_requested / validation.
-            for v in leave_qs.values('user', 'start_date', 'end_date'):
-                days = count_business_days(v['start_date'], v['end_date'])
+            for v in leave_qs.values('user', 'start_date', 'end_date', 'request_type', 'days_counted'):
+                days = counted_days(v)
                 user_id = v['user']
                 if user_id not in leave_total:
                     leave_total[user_id] = {'total_days': 0, 'entries': 0}
                 leave_total[user_id]['total_days'] += days
                 leave_total[user_id]['entries'] += 1
-            for v in leave_qs.filter(status='approved').values('user', 'start_date', 'end_date'):
-                days = count_business_days(v['start_date'], v['end_date'])
+            for v in leave_qs.filter(status='approved').values('user', 'start_date', 'end_date', 'request_type', 'days_counted'):
+                days = counted_days(v)
                 user_id = v['user']
                 if user_id not in leave_approved:
                     leave_approved[user_id] = 0
@@ -587,9 +589,9 @@ class ExportExcelView(HbprBlockedMixin, APIView):
             if report_type in ('leave', 'combined'):
                 # Aggregate by month using business days (match LeaveRequest.days_requested).
                 month_data = {}
-                for v in leave_qs.values('start_date', 'end_date', 'id'):
+                for v in leave_qs.values('start_date', 'end_date', 'id', 'request_type', 'days_counted'):
                     month_key = v['start_date'].replace(day=1)
-                    days = count_business_days(v['start_date'], v['end_date'])
+                    days = counted_days(v)
                     if month_key not in month_data:
                         month_data[month_key] = {'total_days': 0, 'entries': 0}
                     month_data[month_key]['total_days'] += days

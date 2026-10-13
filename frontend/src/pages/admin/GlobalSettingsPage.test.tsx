@@ -11,6 +11,8 @@ vi.mock("@/services/leaveService", () => ({
       default_yearly_leave_days: 21,
       carry_over_expiry_month: 3,
       carry_over_expiry_day: 31,
+      carry_over_enabled: true,
+      carry_over_applied_year: null,
     }),
     updateSettings: vi.fn(),
   },
@@ -19,11 +21,22 @@ vi.mock("@/services/leaveService", () => ({
 vi.mock("@/services/dashboardService", () => ({
   dashboardService: {
     getBranding: vi.fn().mockResolvedValue({
-      id: 1, site_name: "Engineering Tracker", logo: null, logo_url: null,
+      id: 1,
+      site_name: "Engineering Tracker",
+      logo: null,
+      logo_url: null,
     }),
     updateBranding: vi.fn(),
   },
 }));
+
+// Radix Switch measures itself with ResizeObserver, which jsdom does not provide.
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(window, "ResizeObserver", { value: ResizeObserverMock, writable: true });
 
 const renderPage = () => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -46,7 +59,10 @@ describe("GlobalSettingsPage", () => {
 
   it("renders and submits the site branding form", async () => {
     vi.mocked(dashboardService.updateBranding).mockResolvedValue({
-      id: 1, site_name: "New Name", logo: null, logo_url: null,
+      id: 1,
+      site_name: "New Name",
+      logo: null,
+      logo_url: null,
     });
     renderPage();
 
@@ -80,12 +96,16 @@ describe("GlobalSettingsPage", () => {
       default_yearly_leave_days: 21,
       carry_over_expiry_month: 3,
       carry_over_expiry_day: 31,
+      carry_over_enabled: true,
     });
   });
 
   it("opens the hidden logo input from a Choose file button and shows the file name", async () => {
     vi.mocked(dashboardService.updateBranding).mockResolvedValue({
-      id: 1, site_name: "Engineering Tracker", logo: null, logo_url: null,
+      id: 1,
+      site_name: "Engineering Tracker",
+      logo: null,
+      logo_url: null,
     });
     renderPage();
     const input = (await screen.findByLabelText("Logo")) as HTMLInputElement;

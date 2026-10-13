@@ -5,6 +5,7 @@ This module contains models for leave tracking including requests and balance.
 """
 
 from datetime import timedelta
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -36,6 +37,57 @@ def count_business_days(start_date, end_date) -> int:
     return total
 
 
+def global_holiday_dates(start_date, end_date) -> set:
+    """Dates of global holidays (``calendar IS NULL``) inside the range, one query.
+
+    Pass the result as ``holidays=`` when counting many rows over one window,
+    so the count stays one query per window instead of one per row.
+    """
+    from apps.dashboard.models.calendar import PublicHoliday
+
+    if start_date is None or end_date is None or end_date < start_date:
+        return set()
+    return set(
+        PublicHoliday.objects.filter(
+            is_deleted=False, calendar__isnull=True,
+            date__gte=start_date, date__lte=end_date,
+        ).values_list('date', flat=True)
+    )
+
+
+def count_leave_days(start_date, end_date, holidays=None) -> int:
+    """Vacation days: Mon–Fri inclusive, minus global public holidays in range.
+
+    Global = ``PublicHoliday.calendar IS NULL`` (HR-set, shown on every calendar).
+    Workspace-only holidays never reduce a vacation balance. Every vacation
+    count (validation, deduction, release, serializers, reports) uses this.
+    """
+    weekdays = count_business_days(start_date, end_date)
+    if weekdays == 0:
+        return 0
+    if holidays is None:
+        holidays = global_holiday_dates(start_date, end_date)
+    holiday_weekdays = sum(1 for day in holidays if start_date <= day <= end_date and day.weekday() < 5)
+    return weekdays - holiday_weekdays
+
+
+def count_request_days(request_type, start_date, end_date, holidays=None) -> int:
+    """Single source for a request's counted days: vacation is holiday-aware, sick is not."""
+    if request_type == 'vacation':
+        return count_leave_days(start_date, end_date, holidays)
+    return count_business_days(start_date, end_date)
+
+
+def counted_days(row, holidays=None) -> int:
+    """Counted days for a ``values()`` row (needs request_type, start/end, days_counted).
+
+    Prefers the frozen snapshot, so report totals match what balances moved.
+    """
+    if row.get('days_counted') is not None:
+        return int(row['days_counted'])
+    return count_request_days(row['request_type'], row['start_date'], row['end_date'], holidays)
+
+
 class GlobalSettings(BaseModel):
     """
     Global leave settings configurable by admin.
@@ -55,6 +107,14 @@ class GlobalSettings(BaseModel):
     carry_over_expiry_day = models.PositiveSmallIntegerField(
         default=DEFAULT_CARRY_OVER_DAY,
         help_text='Day of the month when carried-over days expire (default 31)'
+    )
+    carry_over_enabled = models.BooleanField(
+        default=True,
+        help_text='When off, no new carry-over is created at year end (existing carry runs to expiry)'
+    )
+    carry_over_applied_year = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text='Year the year-end carry-over was last applied for (rollover marker)'
     )
 
     class Meta:
@@ -177,6 +237,12 @@ class LeaveBalance(BaseModel):
         db_table = 'leave_balances'
         ordering = ['user', '-year', 'leave_type']
         unique_together = ['user', 'leave_type', 'year', 'is_carry_over']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(is_carry_over=False) | models.Q(expires_at__isnull=False),
+                name='leave_carry_over_requires_expiry',
+            ),
+        ]
         indexes = [
             models.Index(fields=['user', 'year']),
             models.Index(fields=['leave_type']),
@@ -218,11 +284,20 @@ class LeaveRequest(BaseModel):
     start_date = models.DateField()
     end_date = models.DateField()
     
-    # Calculated field — business days only (see count_business_days)
+    # Counted days, frozen when the request is created or its dates change.
+    # Balance moves (approve/reject/release) read this snapshot, so a holiday
+    # added later can never make a release subtract a different amount.
+    days_counted = models.DecimalField(
+        max_digits=5, decimal_places=1, null=True, blank=True,
+        help_text='Counted days snapshot (holiday-aware for vacation)',
+    )
+
     @property
     def days_requested(self):
-        return count_business_days(self.start_date, self.end_date)
-    
+        if self.days_counted is not None:
+            return int(self.days_counted)
+        return count_request_days(self.request_type, self.start_date, self.end_date)
+
     # Request details
     reason = models.TextField(blank=True)
 
@@ -237,7 +312,7 @@ class LeaveRequest(BaseModel):
         if start_date and end_date:
             if end_date < start_date:
                 raise ValidationError({'end_date': 'End date must not precede start date.'})
-            if count_business_days(start_date, end_date) == 0:
+            if count_request_days(self.request_type, start_date, end_date) == 0:
                 raise ValidationError({'end_date': 'Leave must include at least one business day.'})
     
     # Status and approval
@@ -258,7 +333,7 @@ class LeaveRequest(BaseModel):
     rejection_reason = models.TextField(blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
-    # Related balance record
+    # Related balance record (current-year row for vacation)
     balance = models.ForeignKey(
         LeaveBalance,
         null=True,
@@ -267,6 +342,17 @@ class LeaveRequest(BaseModel):
         related_name='requests',
         db_index=True
     )
+    # Carry-over part of the request: days up to the carry expiry, drawn first.
+    # Invariant: carry_days + current days == days_counted.
+    carry_balance = models.ForeignKey(
+        LeaveBalance,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='carry_requests',
+        db_index=True
+    )
+    carry_days = models.DecimalField(max_digits=5, decimal_places=1, default=Decimal('0'))
 
     class Meta:
         db_table = 'leave_requests'
@@ -282,9 +368,24 @@ class LeaveRequest(BaseModel):
     def __str__(self):
         return f"{self.user.username} - {self.start_date} to {self.end_date} ({self.status})"
     
+    def _parsed_dates(self):
+        start = parse_date(self.start_date) if isinstance(self.start_date, str) else self.start_date
+        end = parse_date(self.end_date) if isinstance(self.end_date, str) else self.end_date
+        return start, end
+
+    def _counted_inputs_changed(self):
+        """True when the stored dates or type differ from the in-memory ones."""
+        stored = LeaveRequest.objects.filter(pk=self.pk).values_list(
+            'start_date', 'end_date', 'request_type'
+        ).first()
+        return stored is None or stored != (*self._parsed_dates(), self.request_type)
+
     def save(self, *args, **kwargs):
         self.clean()
         is_new = self._state.adding
+        if self.days_counted is None or (not is_new and self._counted_inputs_changed()):
+            start, end = self._parsed_dates()
+            self.days_counted = Decimal(count_request_days(self.request_type, start, end))
         super().save(*args, **kwargs)
         if is_new and self.submitted_at is None:
             self.submitted_at = self.created_at
