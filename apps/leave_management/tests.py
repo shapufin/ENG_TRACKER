@@ -269,8 +269,8 @@ class LeaveRequestViewSetTests(TestCase):
         self.assertGreater(carry.pending_days, initial_carry_pending, "carry-over pending should increase")
         self.assertEqual(self.balance.pending_days, initial_balance_pending, "current year should be untouched")
 
-    def test_deduct_balance_uses_current_year_when_carry_over_insufficient(self):
-        """When carry-over cannot cover the full request, current year is used instead."""
+    def test_deduct_balance_spills_remainder_to_current_year(self):
+        """Carry-over is used first; the days it cannot cover come from the current year."""
         current_year = timezone.now().year
         future_expiry = date(current_year, 12, 31)
         carry = LeaveBalance.objects.create(
@@ -284,20 +284,28 @@ class LeaveRequestViewSetTests(TestCase):
         initial_carry_pending = carry.pending_days
         initial_balance_pending = self.balance.pending_days
 
+        start = timezone.now().date()
+        end = start + timezone.timedelta(days=4)
+        counted = count_business_days(start, end)
+
         self.client.force_authenticate(user=self.user)
         data = {
-            'start_date': timezone.now().date().isoformat(),
-            'end_date': (timezone.now().date() + timezone.timedelta(days=4)).isoformat(),
+            'start_date': start.isoformat(),
+            'end_date': end.isoformat(),
             'request_type': 'vacation',
             'reason': 'Requesting more than carry-over covers',
         }
         response = self.client.post('/api/leave-management/requests/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
 
+        carry_part = min(2, counted)
         carry.refresh_from_db()
         self.balance.refresh_from_db()
-        self.assertEqual(carry.pending_days, initial_carry_pending, "carry-over should be untouched")
-        self.assertGreater(self.balance.pending_days, initial_balance_pending, "current year pending should increase")
+        self.assertEqual(carry.pending_days - initial_carry_pending, carry_part, "carry-over used first")
+        self.assertEqual(
+            self.balance.pending_days - initial_balance_pending, counted - carry_part,
+            "remainder comes from the current year",
+        )
 
     def test_team_endpoints_workspace_scope(self):
         """Leave TL endpoints work with or without workspace_ids."""

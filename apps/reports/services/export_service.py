@@ -23,7 +23,7 @@ from django.apps import apps
 from django.db.models import Q, QuerySet
 from django.contrib.auth.models import User
 
-from apps.leave_management.models import count_business_days
+from apps.leave_management.models import counted_days
 
 logger = logging.getLogger(__name__)
 
@@ -390,6 +390,8 @@ class ExportService:
                 'user': leave.user,
                 'italian_tl': leave.user.profile.italian_tl if hasattr(leave.user, 'profile') else None,
                 'start_date': leave.start_date,
+                'request_type': leave.request_type,
+                'days_counted': leave.days_counted,
                 'end_date': leave.end_date,
                 'request_type': leave.request_type,
                 'status': leave.status,
@@ -435,7 +437,7 @@ class ExportService:
                 full_name = f"{user.first_name} {user.last_name}".strip() or user.username
                 start_date_str = rec['start_date'].strftime('%d/%m/%Y')
                 end_date_str = rec['end_date'].strftime('%d/%m/%Y')
-                days = count_business_days(rec['start_date'], rec['end_date'])
+                days = counted_days(rec)
 
                 row = [
                     full_name,

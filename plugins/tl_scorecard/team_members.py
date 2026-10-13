@@ -131,7 +131,7 @@ def _upcoming_leave(member_ids, today):
             'end_date': request.end_date,
             'request_type': request.request_type,
             # Same counting rule as the leave balance itself.
-            'business_days': count_business_days(request.start_date, request.end_date),
+            'business_days': request.days_requested,
         })
     return upcoming
 

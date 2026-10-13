@@ -14,7 +14,7 @@ from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
 from apps.leave_management.models import LeaveRequest
-from apps.leave_management.models.core import count_business_days
+from apps.leave_management.models.core import count_request_days, global_holiday_dates
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from apps.users.models import Team
@@ -67,6 +67,7 @@ def _leave_days(starts):
     rows = LeaveRequest.objects.filter(
         status="approved", end_date__gte=starts[0], start_date__lte=end_of_window
     ).values_list("request_type", "start_date", "end_date")
+    holidays = global_holiday_dates(starts[0], end_of_window)
     for kind, start, end in rows:
         if kind not in series:
             continue
@@ -74,7 +75,7 @@ def _leave_days(starts):
             m_end = _add_months(m_start, 1) - timedelta(days=1)
             lo, hi = max(start, m_start), min(end, m_end)
             if lo <= hi:
-                series[kind][i] += count_business_days(lo, hi)
+                series[kind][i] += count_request_days(kind, lo, hi, holidays)
     return series
 
 
@@ -116,21 +117,22 @@ def _team_comparison(month_start):
         }
     leave_rows = list(
         LeaveRequest.objects.filter(status="approved", end_date__gte=month_start).values_list(
-            "user_id", "start_date", "end_date"
+            "user_id", "start_date", "end_date", "request_type"
         )
     )
     members = defaultdict(list)
     if leave_rows:
         for uid, tid in TeamMembership.objects.filter(
-            user_profile__user_id__in={u for u, _, _ in leave_rows}
+            user_profile__user_id__in={u for u, _, _, _ in leave_rows}
         ).values_list("user_profile__user_id", "team_id"):
             members[uid].append(tid)
     month_end = _add_months(month_start, 1) - timedelta(days=1)
     leave = defaultdict(float)
-    for uid, start, end in leave_rows:
+    holidays = global_holiday_dates(month_start, month_end)
+    for uid, start, end, kind in leave_rows:
         lo, hi = max(start, month_start), min(end, month_end)
         if lo <= hi:
-            days = count_business_days(lo, hi)
+            days = count_request_days(kind, lo, hi, holidays)
             for tid in members.get(uid, ()):
                 leave[tid] += days
     out = []

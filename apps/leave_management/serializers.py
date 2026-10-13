@@ -3,7 +3,7 @@ Leave management app serializers.
 """
 
 from rest_framework import serializers
-from .models import LeaveBalance, LeaveRequest, GlobalSettings, count_business_days
+from .models import LeaveBalance, LeaveRequest, GlobalSettings, count_request_days
 
 
 class GlobalSettingsSerializer(serializers.ModelSerializer):
@@ -14,9 +14,23 @@ class GlobalSettingsSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'default_yearly_leave_days',
             'carry_over_expiry_month', 'carry_over_expiry_day',
+            'carry_over_enabled', 'carry_over_applied_year',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'carry_over_applied_year', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        # Reject days that never exist in the month (31 Feb). 29 Feb passes:
+        # carry_over_expiry_for clamps it in non-leap years.
+        month = attrs.get('carry_over_expiry_month', self.instance.carry_over_expiry_month if self.instance else None)
+        day = attrs.get('carry_over_expiry_day', self.instance.carry_over_expiry_day if self.instance else None)
+        if month is not None and day is not None:
+            import calendar
+            if day > calendar.monthrange(2000, month)[1]:  # 2000 is a leap year
+                raise serializers.ValidationError(
+                    {'carry_over_expiry_day': f'Day {day} does not exist in month {month}.'}
+                )
+        return attrs
 
 
 class LeaveBalanceSerializer(serializers.ModelSerializer):
@@ -154,7 +168,8 @@ class LeaveRequestCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data['end_date'] < data['start_date']:
             raise serializers.ValidationError("End date must be after start date.")
-        if count_business_days(data['start_date'], data['end_date']) == 0:
+        request_type = data.get('request_type', 'vacation')
+        if count_request_days(request_type, data['start_date'], data['end_date']) == 0:
             raise serializers.ValidationError("Leave must include at least one business day.")
 
         # Balance check will be done in viewset after user is injected

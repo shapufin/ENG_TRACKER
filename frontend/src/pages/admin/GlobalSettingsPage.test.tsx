@@ -11,6 +11,8 @@ vi.mock("@/services/leaveService", () => ({
       default_yearly_leave_days: 21,
       carry_over_expiry_month: 3,
       carry_over_expiry_day: 31,
+      carry_over_enabled: true,
+      carry_over_applied_year: null,
     }),
     updateSettings: vi.fn(),
   },
@@ -24,6 +26,14 @@ vi.mock("@/services/dashboardService", () => ({
     updateBranding: vi.fn(),
   },
 }));
+
+// Radix Switch measures itself with ResizeObserver, which jsdom does not provide.
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(window, "ResizeObserver", { value: ResizeObserverMock, writable: true });
 
 const renderPage = () => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -80,6 +90,7 @@ describe("GlobalSettingsPage", () => {
       default_yearly_leave_days: 21,
       carry_over_expiry_month: 3,
       carry_over_expiry_day: 31,
+      carry_over_enabled: true,
     });
   });
 

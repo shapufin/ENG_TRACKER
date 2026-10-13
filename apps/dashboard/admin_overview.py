@@ -13,7 +13,8 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.leave_management.models import LeaveBalance, LeaveRequest
-from apps.leave_management.models.core import count_business_days
+from apps.leave_management.models.core import counted_days
+from apps.leave_management.services.carry_over import ensure_year_end_rollover
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from apps.users.models import ApprovalPeriodClose, Team
@@ -83,14 +84,18 @@ def coverage_gaps(today):
 def pending_backlog():
     ot = OvertimeLog.objects.filter(status="pending").aggregate(count=Count("id"), hours=Sum("hours"))
     sb = StandbyLog.objects.filter(status="pending").aggregate(count=Count("id"), hours=Sum("hours"))
-    leave = list(LeaveRequest.objects.filter(status="pending").values_list("start_date", "end_date"))
+    leave = list(
+        LeaveRequest.objects.filter(status="pending").values(
+            "request_type", "start_date", "end_date", "days_counted"
+        )
+    )
     return {
         "overtime": {"count": ot["count"], "hours": _f(ot["hours"])},
         "standby": {"count": sb["count"], "hours": _f(sb["hours"])},
         "leave": {
             "count": len(leave),
-            # Business days, never (end - start).days
-            "days": sum(count_business_days(s, e) for s, e in leave),
+            # Counted days (snapshot / holiday-aware), never (end - start).days
+            "days": sum(counted_days(row) for row in leave),
         },
     }
 
@@ -120,6 +125,7 @@ def approval_aging(now):
 
 
 def leave_utilization(year):
+    ensure_year_end_rollover()
     t = LeaveBalance.objects.filter(year=year, leave_type="vacation").aggregate(
         total=Sum("total_days"), used=Sum("used_days"), pending=Sum("pending_days")
     )
@@ -135,6 +141,7 @@ def leave_utilization(year):
 
 
 def carryover_expiry(today):
+    ensure_year_end_rollover()
     rows = LeaveBalance.objects.filter(
         is_carry_over=True,
         expires_at__gte=today,

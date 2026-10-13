@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 
 from django.contrib.auth.models import User
 
-from apps.leave_management.models.core import LeaveRequest, count_business_days
+from apps.leave_management.models.core import LeaveRequest, count_request_days
 from .authority import StaffOnlyAuthority
 from .base import BaseImporter, ImportField, ImportOption, ImportRowResult, UPDATE_EXISTING_OPTION
 from .registry import register
@@ -142,7 +142,7 @@ class LeaveRequestImporter(StaffOnlyAuthority, BaseImporter):
                 row_index=row_index, status="error",
                 errors=["End date must not precede start date."],
             )
-        if count_business_days(start_date, end_date) == 0:
+        if count_request_days(mapped_row.get("request_type") or "vacation", start_date, end_date) == 0:
             return ImportRowResult(
                 row_index=row_index, status="error",
                 errors=["Leave must include at least one business day."],
