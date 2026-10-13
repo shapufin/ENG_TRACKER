@@ -111,8 +111,11 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
         />
         <p className="text-muted-foreground text-xs" data-testid="carryover-expiry-preview">
           Carry-over from {new Date().getFullYear()} expires{" "}
-          {carryExpiryPreview(Number(form.carry_over_expiry_month), Number(form.carry_over_expiry_day))}.
-          Changing this date also moves the expiry of carry-over already granted.
+          {carryExpiryPreview(
+            Number(form.carry_over_expiry_month),
+            Number(form.carry_over_expiry_day)
+          )}
+          . Changing this date also moves the expiry of carry-over already granted.
         </p>
       </div>
       <div className="flex items-center justify-between gap-4">

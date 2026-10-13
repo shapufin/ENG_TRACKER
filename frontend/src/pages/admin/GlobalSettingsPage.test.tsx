@@ -21,7 +21,10 @@ vi.mock("@/services/leaveService", () => ({
 vi.mock("@/services/dashboardService", () => ({
   dashboardService: {
     getBranding: vi.fn().mockResolvedValue({
-      id: 1, site_name: "Engineering Tracker", logo: null, logo_url: null,
+      id: 1,
+      site_name: "Engineering Tracker",
+      logo: null,
+      logo_url: null,
     }),
     updateBranding: vi.fn(),
   },
@@ -56,7 +59,10 @@ describe("GlobalSettingsPage", () => {
 
   it("renders and submits the site branding form", async () => {
     vi.mocked(dashboardService.updateBranding).mockResolvedValue({
-      id: 1, site_name: "New Name", logo: null, logo_url: null,
+      id: 1,
+      site_name: "New Name",
+      logo: null,
+      logo_url: null,
     });
     renderPage();
 
@@ -96,7 +102,10 @@ describe("GlobalSettingsPage", () => {
 
   it("opens the hidden logo input from a Choose file button and shows the file name", async () => {
     vi.mocked(dashboardService.updateBranding).mockResolvedValue({
-      id: 1, site_name: "Engineering Tracker", logo: null, logo_url: null,
+      id: 1,
+      site_name: "Engineering Tracker",
+      logo: null,
+      logo_url: null,
     });
     renderPage();
     const input = (await screen.findByLabelText("Logo")) as HTMLInputElement;

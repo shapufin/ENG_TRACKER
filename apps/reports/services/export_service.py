@@ -393,7 +393,6 @@ class ExportService:
                 'request_type': leave.request_type,
                 'days_counted': leave.days_counted,
                 'end_date': leave.end_date,
-                'request_type': leave.request_type,
                 'status': leave.status,
                 'reason': leave.reason or '',
             })
