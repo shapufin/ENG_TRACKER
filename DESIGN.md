@@ -95,9 +95,19 @@ decisions D1–D5, Page Gate G1–G5); traps (1)–(5) are pinned in CLAUDE.md's
 **Still open:** (1) **Page Gate debt** — the sweep merged with G1–G5 skipped;
 run `node scripts/admin-shots.mjs --tag=after --only=<slug>` (light+dark) +
 click-through before calling a page done, else commit `wip(visual):` naming
-the missing gates, never `feat:`. (2) **Record detail side panel** — mockup's
-"row opens in a side drawer" isn't built; one shared drawer on the
-`UserBulkCommandDrawer`/`Dialog` contract, then per-entity content. (3)
+the missing gates, never `feat:`. (2) **Record detail side panel** — shipped
+since this note: `UserDetailPanel` (Users, via "View details for …") and
+`TeamMemberDetailPanel` (TL scorecard → Team, row click). Both are
+`DialogContent side="right" size="panel"` on the shared Dialog contract; the
+per-entity content follows one detail-drawer pattern, restyled 2026-10-13:
+section = dot marker + `text-xs` uppercase label (**12px minimum** — the surface
+contract bans micro text outside the fixed-badge allowlist), rows =
+`grid-cols-[7rem_minmax(0,1fr)_auto]` so edit pencils share one column, unset
+fields read "Not set" (italic, muted), and the footer keeps the destructive
+action first/left as a quiet `text-tone-danger-text` ghost rather than a filled
+button. Footer buttons all carry `min-h-11`; `DialogFooter`'s
+`[&>button]:min-h-11` only reaches direct children, so buttons inside a wrapper
+need it explicitly. (3)
 `SUMMARY.md` leftovers — report history needs a backend writer
 (`GeneratedReport` REST create exists, no producer — F11); stray `h-8`+emerald
 classes on control-room access rows; `AdminDashboardWidgets` load flake.

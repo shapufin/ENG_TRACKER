@@ -32,18 +32,27 @@ interface UserDetailPanelProps {
   isSaving?: boolean;
 }
 
+/**
+ * Label / value / action columns. The third column is reserved on every row —
+ * including the read-only ones — so the edit pencils line up in one vertical
+ * track and the value column keeps a single width down the panel.
+ */
+const ROW_GRID = "grid grid-cols-[7rem_minmax(0,1fr)_auto] items-start gap-3 py-2.5";
+
 const Fact: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-3 py-2.5">
+  <div className={ROW_GRID}>
     <dt className="text-muted-foreground text-xs font-medium">{label}</dt>
     <dd className="min-w-0 text-sm">{children}</dd>
+    <span aria-hidden="true" />
   </div>
 );
 
-const Empty = () => <span className="text-muted-foreground">—</span>;
+const Empty = () => <span className="text-muted-foreground text-sm italic">Not set</span>;
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <section className="py-1">
-    <h3 className="text-muted-foreground px-0 pt-3 pb-1 text-xs font-semibold tracking-wider uppercase">
+    <h3 className="text-muted-foreground flex items-center gap-2 pt-3 pb-1 text-xs font-semibold tracking-wider uppercase">
+      <span aria-hidden="true" className="bg-primary h-1.5 w-1.5 shrink-0 rounded-[2px]" />
       {title}
     </h3>
     <dl className="divide-border/60 divide-y">{children}</dl>
@@ -88,32 +97,34 @@ const EditableFact: React.FC<{
   const isOpen = editing === field;
   if (!isOpen) {
     return (
-      <div className="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-3 py-2.5">
+      <div className={ROW_GRID}>
         <dt className="text-muted-foreground text-xs font-medium">{label}</dt>
-        <dd className="flex min-w-0 items-start justify-between gap-2 text-sm">
-          <span className="min-w-0">{display}</span>
-          {canEdit && (
-            <button
-              type="button"
-              onClick={() => onStart(field)}
-              aria-label={`Edit ${label.toLowerCase()} for ${username}`}
-              title={`Edit ${label.toLowerCase()}`}
-              className="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer rounded p-1 transition-colors"
-            >
-              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-          )}
-        </dd>
+        <dd className="min-w-0 text-sm">{display}</dd>
+        {canEdit ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="control-icon-sm"
+            onClick={() => onStart(field)}
+            aria-label={`Edit ${label.toLowerCase()} for ${username}`}
+            title={`Edit ${label.toLowerCase()}`}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+          </Button>
+        ) : (
+          <span aria-hidden="true" />
+        )}
       </div>
     );
   }
   const saveLabel = `Save ${label.toLowerCase()}`;
   return (
-    <div className="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-3 py-2.5">
+    <div className={ROW_GRID}>
       <dt className="text-muted-foreground pt-2 text-xs font-medium">
         <label htmlFor={`panel-${field}`}>{label}</label>
       </dt>
-      <dd className="min-w-0">
+      <dd className="col-span-2 min-w-0">
         <div className="flex items-center gap-1.5">
           <Input
             id={`panel-${field}`}
@@ -276,12 +287,16 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
               )}
             </Fact>
           </Section>
+          <p className="text-muted-foreground pt-1.5 text-xs italic">
+            Tip: assign roles from the team page, or edit them here.
+          </p>
         </DialogBody>
 
         <DialogFooter className="justify-between gap-2 sm:justify-between sm:space-x-0">
           <Button
             type="button"
-            variant="destructive"
+            variant="ghost"
+            className="text-tone-danger-text hover:bg-tone-danger-surface hover:text-tone-danger-text"
             onClick={act(() => onDelete(profile))}
             aria-label={`Delete user ${username}`}
           >
@@ -292,6 +307,7 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
             <Button
               type="button"
               variant="outline"
+              className="min-h-11"
               disabled={userId === undefined}
               onClick={act(() => userId !== undefined && onReset(userId))}
               aria-label={`Reset password for ${username}`}
@@ -301,6 +317,7 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
             </Button>
             <Button
               type="button"
+              className="min-h-11"
               onClick={act(() => onEdit(profile))}
               aria-label={`Edit user ${username}`}
             >
