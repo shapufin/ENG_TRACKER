@@ -78,7 +78,7 @@ export const OrgNode: React.FC<NodeProps> = React.memo(function OrgNode({ data }
             </span>
           )}
           {!isTech && (
-            <div className="bg-primary/10 text-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+            <div className="bg-primary/10 text-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
               {getInitials(nodeData.label)}
             </div>
           )}

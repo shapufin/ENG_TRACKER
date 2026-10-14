@@ -3,7 +3,7 @@ import dagre from "@dagrejs/dagre";
 import type { Node, Edge } from "@xyflow/react";
 import { nodeWidth, nodeHeight, orderNodesParentFirst } from "../pages/groupHelpers";
 
-export type LayoutDirection = "TB" | "LR";
+type LayoutDirection = "TB" | "LR";
 
 interface LayoutOptions {
   direction?: LayoutDirection;

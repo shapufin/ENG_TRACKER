@@ -151,7 +151,9 @@ class TeamMemberDetailTests(TeamMembersBase):
             user=self.member, leave_type='vacation', year=self.year,
             total_days=Decimal('20.0'), used_days=Decimal('5.0'), pending_days=Decimal('2.0'),
         )
-        start = self.today + timedelta(days=3)
+        # Advance to next Monday so the 2-day span reliably falls on business days
+        days_ahead = (7 - self.today.weekday()) % 7 or 7
+        start = self.today + timedelta(days=days_ahead)
         LeaveRequest.objects.create(
             user=self.member, request_type='vacation', start_date=start,
             end_date=start + timedelta(days=1), status='approved', reason='private',

@@ -116,7 +116,8 @@ const EditableFact: React.FC<{
             value={draft}
             disabled={isSaving}
             onChange={(e) => setDraft(e.target.value)}
-            className="h-8 text-xs"
+            controlSize="sm"
+            className="text-xs"
           />
           <Button
             type="button"

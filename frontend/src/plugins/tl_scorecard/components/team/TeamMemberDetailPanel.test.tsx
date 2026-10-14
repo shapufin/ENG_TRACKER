@@ -98,7 +98,7 @@ describe("TeamMemberDetailPanel", () => {
 
     // Upcoming leave
     expect(screen.getByText(/01\/11\/2026 – 05\/11\/2026/)).toBeInTheDocument();
-    expect(screen.getByText("5 days")).toBeInTheDocument();
+    expect(screen.getByText("5 business days")).toBeInTheDocument();
   });
 
   it("renders governance chips and open records link", () => {

@@ -137,7 +137,7 @@ export const DetailDrawerMetricCard: React.FC<DetailDrawerMetricCardProps> = ({
         className
       )}
     >
-      <span className="text-micro-lg text-muted-foreground font-medium tracking-wider uppercase">
+      <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
         {label}
       </span>
       <span className="text-foreground font-mono text-base font-semibold tabular-nums">
