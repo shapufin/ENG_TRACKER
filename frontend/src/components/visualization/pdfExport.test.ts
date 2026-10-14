@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import html2canvas from "html2canvas-pro";
-import { captureChartsToPdf, expandScrollRegions, hiddenScrollExtent } from "./pdfExport";
+import {
+  captureChartsToPdf,
+  expandScrollRegions,
+  hiddenScrollExtent,
+  isSectionFullWidth,
+  applyPrintStyles,
+} from "./pdfExport";
 
 const addImage = vi.fn();
 const addPage = vi.fn();
@@ -9,6 +15,9 @@ const setFontSize = vi.fn();
 const setTextColor = vi.fn();
 const setDrawColor = vi.fn();
 const setLineWidth = vi.fn();
+const setFillColor = vi.fn();
+const rect = vi.fn();
+const roundedRect = vi.fn();
 const line = vi.fn();
 const setPage = vi.fn();
 const save = vi.fn();
@@ -27,6 +36,9 @@ vi.mock("jspdf", () => ({
     setTextColor = setTextColor;
     setDrawColor = setDrawColor;
     setLineWidth = setLineWidth;
+    setFillColor = setFillColor;
+    rect = rect;
+    roundedRect = roundedRect;
     line = line;
     setPage = setPage;
     getNumberOfPages = vi.fn().mockImplementation(() => pageCount);
@@ -62,6 +74,9 @@ describe("captureChartsToPdf", () => {
     setTextColor.mockClear();
     setDrawColor.mockClear();
     setLineWidth.mockClear();
+    setFillColor.mockClear();
+    rect.mockClear();
+    roundedRect.mockClear();
     line.mockClear();
     setPage.mockClear();
     save.mockClear();
@@ -178,6 +193,107 @@ describe("captureChartsToPdf", () => {
     const savesBefore2 = save.mock.calls.length;
     await captureChartsToPdf(makeContainer(1), { title: "t", filename: "f.pdf" });
     expect(save.mock.calls.length - savesBefore2).toBe(0);
+  });
+
+  it("pairs consecutive half-width sections side-by-side in a 2-column row", async () => {
+    const container = document.createElement("div");
+    const s1 = document.createElement("div");
+    s1.setAttribute("data-chart-section", "s1");
+    s1.setAttribute("data-pdf-span", "half");
+    const s2 = document.createElement("div");
+    s2.setAttribute("data-chart-section", "s2");
+    s2.setAttribute("data-pdf-span", "half");
+    container.appendChild(s1);
+    container.appendChild(s2);
+
+    const mockedCapture = vi.mocked(html2canvas);
+    mockedCapture.mockResolvedValue({
+      width: 600,
+      height: 400,
+      toDataURL: () => "data:image/png;base64,fake",
+    } as unknown as HTMLCanvasElement);
+
+    await captureChartsToPdf(container, { title: "Dual Column", filename: "dual.pdf" });
+
+    expect(addImage).toHaveBeenCalledTimes(2);
+    // Left card at margin x=32
+    expect(addImage.mock.calls[0][2]).toBe(32);
+    // Right card at col2 x=304.5 (margin + colWidth + GAP = 32 + 258.5 + 14)
+    expect(addImage.mock.calls[1][2]).toBe(304.5);
+    // Both cards share the same Y coordinate on the same row!
+    expect(addImage.mock.calls[0][3]).toBe(addImage.mock.calls[1][3]);
+    // Both fit on page 1
+    expect(addPage).not.toHaveBeenCalled();
+    expect(save).toHaveBeenCalledWith("dual.pdf");
+  });
+
+  it("draws the executive masthead, accent line, and structured metadata card on page 1", async () => {
+    await captureChartsToPdf(makeContainer(1), {
+      title: "Executive Report",
+      filename: "exec.pdf",
+      generatedBy: "Senior Lead",
+      periodLabel: "October 2026",
+    });
+
+    // Check accent line and metadata panel
+    expect(rect).toHaveBeenCalled();
+    // Check eyebrow tag
+    const eyebrow = text.mock.calls.find(([t]) =>
+      String(t).includes("EXECUTIVE OPERATIONS REPORT")
+    );
+    expect(eyebrow).toBeDefined();
+
+    // Check classification
+    const classification = text.mock.calls.find(([t]) => String(t).includes("CONFIDENTIAL"));
+    expect(classification).toBeDefined();
+  });
+});
+
+describe("isSectionFullWidth", () => {
+  it("honors explicit data-pdf-span attribute", () => {
+    const container = document.createElement("div");
+    const fullEl = document.createElement("div");
+    fullEl.setAttribute("data-pdf-span", "full");
+    const halfEl = document.createElement("div");
+    halfEl.setAttribute("data-pdf-span", "half");
+
+    expect(isSectionFullWidth(fullEl, container)).toBe(true);
+    expect(isSectionFullWidth(halfEl, container)).toBe(false);
+  });
+
+  it("detects width ratio when container and section have dimensions", () => {
+    const container = document.createElement("div");
+    const wideEl = document.createElement("div");
+    const narrowEl = document.createElement("div");
+
+    container.getBoundingClientRect = () => ({ width: 1000 }) as DOMRect;
+    wideEl.getBoundingClientRect = () => ({ width: 800 }) as DOMRect;
+    narrowEl.getBoundingClientRect = () => ({ width: 450 }) as DOMRect;
+
+    expect(isSectionFullWidth(wideEl, container)).toBe(true);
+    expect(isSectionFullWidth(narrowEl, container)).toBe(false);
+  });
+});
+
+describe("applyPrintStyles", () => {
+  it("sets print background and hides export/edit action buttons", () => {
+    const clone = document.createElement("div");
+    const btn = document.createElement("button");
+    btn.innerText = "Export PDF";
+    const editBtn = document.createElement("button");
+    editBtn.innerText = "Edit layout";
+    const keepBtn = document.createElement("span");
+    keepBtn.innerText = "Active Badge";
+    clone.appendChild(btn);
+    clone.appendChild(editBtn);
+    clone.appendChild(keepBtn);
+
+    applyPrintStyles(clone);
+
+    expect(clone.style.backgroundColor).toBe("rgb(255, 255, 255)");
+    expect(btn.style.display).toBe("none");
+    expect(editBtn.style.display).toBe("none");
+    expect(keepBtn.style.display).not.toBe("none");
   });
 });
 
