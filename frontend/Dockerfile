@@ -44,7 +44,8 @@ COPY docker/nginx.conf.template /etc/nginx/templates/app.conf.template
 COPY --from=builder /build/dist /usr/share/nginx/html
 
 # Install wget for the healthcheck & configure main nginx.conf for non-root (1001:1001)
-RUN apk add --no-cache wget && \
+# `apk upgrade` pulls the patched OpenSSL (CVE-2026-31789) that the pinned base tag predates.
+RUN apk upgrade --no-cache && apk add --no-cache wget && \
     sed -i 's|^user |#user |g' /etc/nginx/nginx.conf && \
     sed -i 's|/var/run/nginx.pid|/tmp/nginx.pid|g' /etc/nginx/nginx.conf && \
     sed -i 's|/run/nginx.pid|/tmp/nginx.pid|g' /etc/nginx/nginx.conf && \
