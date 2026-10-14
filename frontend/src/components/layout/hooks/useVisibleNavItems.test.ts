@@ -267,8 +267,8 @@ describe("useVisibleNavItems", () => {
       Plugins: "system",
       Admin: "system",
       "Ticket KPI": "skills-kpi",
-      "Team Performance": "skills-kpi",
-      "Upload Management": "skills-kpi",
+      "Team Performance": "leadership",
+      "Upload Management": "leadership",
       Settings: "system",
     });
   });

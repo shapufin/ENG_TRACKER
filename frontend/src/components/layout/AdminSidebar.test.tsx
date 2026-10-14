@@ -38,7 +38,7 @@ const mockGetInjected = (slots: string[]) => {
 const items: AdminNavItem[] = [
   { path: "/admin", label: "Dashboard", icon: () => null, group: "Overview" },
   { path: "/admin/users", label: "Users", icon: () => null, group: "People" },
-  { path: "/admin/data-import", label: "Data Import", icon: () => null, group: "Tools" },
+  { path: "/admin/data-import", label: "Data Import", icon: () => null, group: "System" },
 ];
 
 const renderWithQuery = (ui: React.ReactElement) => {

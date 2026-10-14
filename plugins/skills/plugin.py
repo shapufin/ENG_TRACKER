@@ -90,6 +90,7 @@ class SkillsPlugin(BasePlugin):
                 {
                     "slot": "sidebar-nav",
                     "component": "SkillsSidebarItem",
+                    "section": "skills-kpi",
                 },
             ],
         })

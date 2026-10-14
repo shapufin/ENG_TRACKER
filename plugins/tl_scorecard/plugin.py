@@ -95,6 +95,7 @@ class TlScorecardPlugin(BasePlugin):
                 {
                     "slot": "sidebar-nav",
                     "component": "MyRecordsSidebarLink",
+                    "section": "core",
                     "self_service": True,
                 },
             ],

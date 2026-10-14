@@ -31,8 +31,12 @@ describe("resolveAdminCrumbs", () => {
       expect(r(`/admin/payroll/${p}`)[0]).toEqual({ label: "Payroll" });
     }
   });
-  it("resolves ticket kpi mappings", () => {
-    expect(r("/admin/ticket-kpi/mappings")).toEqual([{ label: "Tools" }, { label: "Ticket KPI" }]);
+  it("resolves ticket kpi mappings and reports", () => {
+    expect(r("/admin/ticket-kpi/mappings")).toEqual([
+      { label: "Skills & KPI" },
+      { label: "Ticket KPI" },
+    ]);
+    expect(r("/admin/reports")).toEqual([{ label: "Overview" }, { label: "Reports" }]);
   });
   it("falls back to plugin crumbs", () => {
     expect(r("/admin/audit-logs")).toEqual([{ label: "System" }, { label: "Audit Logs" }]);

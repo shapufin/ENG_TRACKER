@@ -157,6 +157,6 @@ describe("navItemToPaletteItem", () => {
       icon: Clock,
       section: "core",
     });
-    expect(mapped).toMatchObject({ path: "/overtime", label: "Overtime", group: "Core Ops" });
+    expect(mapped).toMatchObject({ path: "/overtime", label: "Overtime", group: "Workspace" });
   });
 });
