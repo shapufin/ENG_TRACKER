@@ -75,7 +75,23 @@ class MeetingViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMi
         if (meeting_type == 'one_on_one' and not is_staff_user(self.request.user)
                 and counterparty.id not in scoreable_member_ids(self.request.user)):
             raise ValidationError({'counterparty': 'You can only hold one-on-ones with your own team members.'})
-        serializer.save(organizer=self.request.user, recorded_by=self.request.user)
+        extra = {}
+        if meeting_type == 'team_meeting' and (serializer.validated_data.get('notes') or '').strip():
+            extra['notes_published_at'] = timezone.now()
+        serializer.save(organizer=self.request.user, recorded_by=self.request.user, **extra)
+
+    def perform_update(self, serializer):
+        # The create-time checks (counterparty must be a team member, team
+        # required, ...) depend on these three fields, so they are fixed after create.
+        instance = serializer.instance
+        for field in ('meeting_type', 'counterparty', 'team'):
+            if field in serializer.validated_data and                     serializer.validated_data[field] != getattr(instance, field):
+                raise ValidationError({field: 'This cannot change after the meeting is created.'})
+        extra = {}
+        if (instance.meeting_type == 'team_meeting' and instance.notes_published_at is None
+                and (serializer.validated_data.get('notes') or '').strip()):
+            extra['notes_published_at'] = timezone.now()
+        serializer.save(**extra)
 
     @action(detail=True, methods=['post'])
     def share(self, request, pk=None):
@@ -165,6 +181,13 @@ class IdleFlagViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionM
             if employee.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'employee': 'You can only flag your own team members as idle.'})
         serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.status != 'open':
+            return Response({'error': 'A resolved idle flag cannot be deleted.'}, status=status.HTTP_409_CONFLICT)
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['post'])
     def resolve(self, request, pk=None):
@@ -319,6 +342,13 @@ class AbsenceViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMi
             if employee.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'employee': 'You can only flag your own team members.'})
         serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.addressed_on is not None:
+            return Response({'error': 'An addressed absence cannot be deleted.'}, status=status.HTTP_409_CONFLICT)
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['post'])
     def address(self, request, pk=None):

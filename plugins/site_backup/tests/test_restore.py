@@ -244,3 +244,61 @@ class UndecodableDbDumpTests(TestCase):
     def test_preview_raises_archive_error_not_unicode_decode_error(self):
         with self.assertRaises(ArchiveError):
             restore_service.preview(self._corrupted_backup_zip())
+
+
+class ExtractMediaGuardTests(TestCase):
+    """SEC-04: a crafted backup zip must not write outside MEDIA_ROOT or explode."""
+
+    def _zip(self, members):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for name, data in members.items():
+                zf.writestr(name, data)
+        buf.seek(0)
+        return zipfile.ZipFile(buf)
+
+    def test_zip_slip_member_is_rejected_and_nothing_is_written(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            media = os.path.join(tmp, 'media')
+            os.makedirs(media)
+            archive = self._zip({
+                'media/ok.txt': b'fine',
+                'media/../../evil.txt': b'pwned',
+            })
+            with override_settings(MEDIA_ROOT=media):
+                with self.assertRaises(restore_service.RestoreError):
+                    restore_service._extract_media(archive)
+            self.assertFalse(os.path.exists(os.path.join(tmp, 'evil.txt')))
+            self.assertFalse(os.path.exists(os.path.join(media, 'ok.txt')))
+
+    def test_absolute_member_path_is_rejected(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            media = os.path.join(tmp, 'media')
+            os.makedirs(media)
+            outside = os.path.join(tmp, 'abs.txt')
+            archive = self._zip({'media//' + outside.replace(chr(92), '/'): b'x'})
+            with override_settings(MEDIA_ROOT=media):
+                with self.assertRaises(restore_service.RestoreError):
+                    restore_service._extract_media(archive)
+            self.assertFalse(os.path.exists(outside))
+
+    def test_total_uncompressed_size_over_cap_is_rejected(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            archive = self._zip({'media/a.bin': b'0' * 600, 'media/b.bin': b'0' * 600})
+            with override_settings(MEDIA_ROOT=tmp):
+                with patch.object(restore_service, 'MAX_MEDIA_UNCOMPRESSED_BYTES', 1000):
+                    with self.assertRaises(restore_service.RestoreError):
+                        restore_service._extract_media(archive)
+            self.assertFalse(os.path.exists(os.path.join(tmp, 'a.bin')))
+
+    def test_valid_media_is_still_extracted(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            archive = self._zip({'media/sub/a.txt': b'hello'})
+            with override_settings(MEDIA_ROOT=tmp):
+                self.assertEqual(restore_service._extract_media(archive), 1)
+            with open(os.path.join(tmp, 'sub', 'a.txt'), 'rb') as f:
+                self.assertEqual(f.read(), b'hello')

@@ -163,7 +163,27 @@ class SiteBrandingSerializer(serializers.ModelSerializer):
         model = SiteBranding
         fields = ['id', 'site_name', 'logo', 'logo_url']
 
-    def get_logo_url(self, obj):
+    _LOGO_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
+
+    def validate_logo(self, logo):
+        """Raster images only (SEC-13): no SVG/HTML, checked by extension and magic bytes."""
+        if not logo:
+            return logo
+        ext = logo.name.rsplit('.', 1)[-1].lower() if '.' in logo.name else ''
+        if ext not in self._LOGO_EXTENSIONS:
+            raise serializers.ValidationError('Logo must be a PNG, JPEG or WebP image.')
+        head = logo.read(12)
+        logo.seek(0)
+        is_image = (
+            head.startswith(b'\x89PNG\r\n\x1a\n')
+            or head.startswith(b'\xff\xd8\xff')
+            or (head[:4] == b'RIFF' and head[8:12] == b'WEBP')
+        )
+        if not is_image:
+            raise serializers.ValidationError('File content is not a PNG, JPEG or WebP image.')
+        return logo
+
+    def get_logo_url(self, obj) -> str | None:
         if obj.logo:
             request = self.context.get('request')
             if request:

@@ -13,6 +13,9 @@ export const NotificationsPage: React.FC = () => {
   const {
     notifications,
     isLoading,
+    hasMore,
+    isLoadingMore,
+    handleLoadMore,
     searchQuery,
     setSearchQuery,
     filteredNotifications,
@@ -62,6 +65,13 @@ export const NotificationsPage: React.FC = () => {
               ))
             )}
           </div>
+          {hasMore && !isLoading && (
+            <div className="flex justify-center border-t p-3">
+              <Button variant="outline" size="sm" onClick={handleLoadMore} disabled={isLoadingMore}>
+                {isLoadingMore ? "Loading..." : "Load more"}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </GlassCard>
     </PageShell>

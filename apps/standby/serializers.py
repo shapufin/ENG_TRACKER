@@ -82,7 +82,7 @@ class StandbyLogSerializer(serializers.ModelSerializer):
             'client_ids', 'client_names',
         ]
 
-    def get_client_names(self, obj):
+    def get_client_names(self, obj) -> list[str]:
         return list(obj.clients.values_list('name', flat=True))
 
     def get_is_carried_over(self, obj) -> bool:

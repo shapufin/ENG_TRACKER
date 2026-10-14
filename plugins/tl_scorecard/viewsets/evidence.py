@@ -117,11 +117,14 @@ class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet
             raise PermissionDenied(
                 'Only the assigned Albanian TL can record this evidence.'
             )
-        occurred_on = serializer.validated_data.get('occurred_on')
+        self._ensure_in_window(assignment, serializer.validated_data.get('occurred_on'))
+        serializer.save(recorded_by=self.request.user)
+
+    @staticmethod
+    def _ensure_in_window(assignment, occurred_on):
         if occurred_on and (occurred_on < assignment.effective_from or (
                 assignment.effective_to and occurred_on > assignment.effective_to)):
             raise ValidationError({'occurred_on': 'The date is outside the assignment period.'})
-        serializer.save(recorded_by=self.request.user)
 
     def perform_update(self, serializer):
         instance = serializer.instance
@@ -129,6 +132,10 @@ class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet
             raise PermissionDenied(
                 'Only the assigned Albanian TL can edit this evidence.'
             )
+        self._ensure_in_window(
+            serializer.validated_data.get('assignment', instance.assignment),
+            serializer.validated_data.get('occurred_on', instance.occurred_on),
+        )
         serializer.save(updated_by=self.request.user)
 
     def destroy(self, request, *args, **kwargs):

@@ -1100,3 +1100,21 @@ class PayrollSettlementColumnTests(TestCase):
         self.assertIn('Member', names)
         self.assertNotIn('Outsider', names)
 
+
+
+class ExportExcelFilterValidationTests(TestCase):
+    """SEC-15: a malformed filter is a 400 for the client, not a 500."""
+
+    def setUp(self):
+        self.admin = User.objects.create_user(username='xl_admin', password='x', is_staff=True)
+        self.client = APIClient()
+        self.client.force_authenticate(self.admin)
+
+    def test_bad_date_returns_400(self):
+        response = self.client.get('/api/reports/export-excel/', {'start_date': 'not-a-date'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('start_date', response.data)
+
+    def test_valid_filter_still_exports(self):
+        response = self.client.get('/api/reports/export-excel/', {'start_date': '2026-01-01'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

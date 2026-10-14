@@ -366,10 +366,12 @@ class PayrollWorkCalendarSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
 
     def get_workday_count(self, obj):
-        return obj.workdays.count()
+        return len(obj.workdays.all())
 
     def get_working_day_count(self, obj):
-        return obj.workdays.filter(is_working_day=True).count()
+        # Count in Python over the ``workdays`` prefetch (``.filter()`` would
+        # bypass it and cost one query per calendar).
+        return sum(1 for day in obj.workdays.all() if day.is_working_day)
 
 
 # ---------------------------------------------------------------------------
@@ -428,6 +430,9 @@ class PayrollRunSerializer(serializers.ModelSerializer):
         return obj.lines.filter(user_id__in=scoped_user_ids)
 
     def get_line_count(self, obj):
+        annotated = getattr(obj, 'line_count_annotated', None)
+        if annotated is not None:
+            return annotated
         return self._visible_lines(obj).count()
 
     def to_representation(self, instance):

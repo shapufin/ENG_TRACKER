@@ -18,6 +18,8 @@ from datetime import date
 
 import xlsxwriter
 
+from core.utils.csv_safe import xlsx_safe
+
 from .report_kpis import NO_DATA, kpi_rows
 
 PRIMARY = "#1D4ED8"
@@ -238,7 +240,7 @@ def _build_governance_sheet(wb, fmt, governance):
         ws.write(row, 0, title, fmt.section)
         row += 1
         if records:
-            data = [[getter(record) for getter in getters] for record in records]
+            data = [[xlsx_safe(getter(record)) for getter in getters] for record in records]
         else:
             data = [["None open"] + [""] * (len(headers) - 1)]
         ws.add_table(row, 0, row + len(data), len(headers) - 1, {
@@ -283,9 +285,9 @@ def _build_hbpr_evidence_sheet(wb, fmt, evidence):
         ws.write(row, 0, item["kind_display"], fmt.cell_center)
         ws.write(row, 1, item["occurred_on"], fmt.cell_center)
         ws.write(row, 2, item["reporting_year"] or "—", fmt.cell_center)
-        ws.write(row, 3, item["shared_summary"] or "—", fmt.cell)
-        ws.write(row, 4, item["action_items"] or "—", fmt.cell)
-        ws.write(row, 5, item["reference_url"] or "—", fmt.cell)
+        ws.write(row, 3, xlsx_safe(item["shared_summary"]) or "—", fmt.cell)
+        ws.write(row, 4, xlsx_safe(item["action_items"]) or "—", fmt.cell)
+        ws.write(row, 5, xlsx_safe(item["reference_url"]) or "—", fmt.cell)
         row += 1
 
 

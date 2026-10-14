@@ -5,15 +5,19 @@ identify the application server to the push service. The private key
 signs the JWT sent with each push request. The public key is sent to the
 browser when subscribing.
 
-Keys are generated on first use and stored in the database (Settings table)
-or a file. For development, they are generated on demand and cached.
+In development keys are generated on demand and stored in a file. In production
+(``VAPID_REQUIRE_ENV``) they must come from the environment.
 """
 
 import os
 import json
 import logging
 from pathlib import Path
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
+from cryptography.hazmat.primitives import serialization
 from py_vapid import Vapid01 as Vapid
+from py_vapid.utils import b64urlencode
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +30,19 @@ def generate_vapid_keys():
     """Generate a new VAPID key pair and save to file."""
     vapid = Vapid()
     vapid.generate_keys()
+    # py_vapid exposes key objects; store the base64url strings that
+    # Vapid.from_string() (private, raw 32 bytes) and the browser (public,
+    # uncompressed point) consume.
     keys = {
-        "public_key": vapid.public_key,
-        "private_key": vapid.private_key,
+        "public_key": b64urlencode(
+            vapid.public_key.public_bytes(
+                serialization.Encoding.X962,
+                serialization.PublicFormat.UncompressedPoint,
+            )
+        ),
+        "private_key": b64urlencode(
+            vapid.private_key.private_numbers().private_value.to_bytes(32, "big")
+        ),
     }
     try:
         VAPID_KEYS_FILE.write_text(json.dumps(keys))
@@ -49,6 +63,15 @@ def get_vapid_keys():
     env_private = os.environ.get("VAPID_PRIVATE_KEY")
     if env_public and env_private:
         return {"public_key": env_public, "private_key": env_private}
+
+    # SEC-18: production never falls back to a key file or generated keys. A
+    # container-local file is lost on redeploy, which silently invalidates every
+    # browser subscription, so fail loudly instead.
+    if getattr(settings, "VAPID_REQUIRE_ENV", False):
+        raise ImproperlyConfigured(
+            "VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set in production "
+            "(see docker-compose.yml)."
+        )
 
     # 2. Check file
     try:

@@ -936,3 +936,53 @@ class AnalyticsMetricQueryCountTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['user_name'], self.metric_user.get_full_name() or '')
         self.assertEqual(response.data['team_name'], self.team.name)
+
+
+class ScheduledReportVisibilityTests(TestCase):
+    """SEC-07: schedules carry recipient emails; only managers may see them.
+
+    ``ScheduledReport`` has no owner column (the plan's "owner sees own" cannot
+    be expressed without a schema change), and the SPA only renders the panel
+    for ``analytics.manage`` holders, so visibility follows the manage grant.
+    """
+    URL = '/api/plugins/analytics/scheduled-reports/'
+
+    @classmethod
+    def setUpTestData(cls):
+        from plugins.analytics.models import ScheduledReport
+        cls.report = ScheduledReport.objects.create(
+            name='SEC-07 report', recipients=['boss@example.com'],
+        )
+        cls.employee = User.objects.create_user(username='sr_employee', password='x')
+        cls.admin = User.objects.create_user(username='sr_admin', password='x', is_staff=True)
+
+    def _grant_view_to_everyone(self):
+        from apps.plugins.models import PluginPermission
+        PluginPermission.objects.update_or_create(
+            plugin_name='analytics', action='view', defaults={'is_public': True},
+        )
+
+    def _client(self, user):
+        from rest_framework.test import APIClient
+        client = APIClient()
+        client.force_authenticate(user)
+        return client
+
+    def test_non_manager_sees_no_scheduled_reports(self):
+        self._grant_view_to_everyone()
+        client = self._client(self.employee)
+        resp = client.get(self.URL)
+        if resp.status_code == 200:
+            rows = resp.data['results'] if isinstance(resp.data, dict) else resp.data
+            self.assertEqual(list(rows), [])
+        else:
+            self.assertEqual(resp.status_code, 403)
+        self.assertIn(client.get(f'{self.URL}{self.report.id}/').status_code, (403, 404))
+
+    def test_staff_sees_scheduled_reports(self):
+        client = self._client(self.admin)
+        resp = client.get(self.URL)
+        self.assertEqual(resp.status_code, 200)
+        rows = resp.data['results'] if isinstance(resp.data, dict) else resp.data
+        self.assertEqual([r['id'] for r in rows], [self.report.id])
+        self.assertEqual(client.get(f'{self.URL}{self.report.id}/').status_code, 200)

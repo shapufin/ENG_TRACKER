@@ -17,6 +17,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
+from core.utils.csv_safe import csv_safe, xlsx_safe_row
 from plugins.skills.models import SkillLevelLabels, UserSkill, Skill
 
 
@@ -73,7 +74,7 @@ def export_matrix_csv(visible_ids, category_code=None, search=None):
     pseudo_buffer = Echo()
     writer = csv.writer(pseudo_buffer)
     response = StreamingHttpResponse(
-        (writer.writerow(row) for row in rows),
+        (writer.writerow([csv_safe(v) for v in row]) for row in rows),
         content_type="text/csv",
     )
     response['Content-Disposition'] = 'attachment; filename="skills_matrix.csv"'
@@ -181,8 +182,8 @@ def export_matrix_xlsx(visible_ids, category_code=None, search=None):
         )
         previous_category = skill.category.name
         header_row.append(skill.name)
-    ws.append(band_row)
-    ws.append(header_row)
+    ws.append(xlsx_safe_row(band_row))
+    ws.append(xlsx_safe_row(header_row))
 
     for user in users:
         row = [
@@ -194,7 +195,7 @@ def export_matrix_xlsx(visible_ids, category_code=None, search=None):
         for skill in skills:
             level = levels.get((user.id, skill.id))
             row.append(level_names.get(level) if level else None)
-        ws.append(row)
+        ws.append(xlsx_safe_row(row))
 
     for cell in ws[1]:
         cell.font = Font(bold=True)

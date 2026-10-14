@@ -40,7 +40,7 @@ export const ROLE_FIXTURES = {
   admin: { username: "e2e_admin" },
   hbpr: { username: "e2e_hbpr" },
   cr_user: null, // NO FIXTURE — no deterministic CR identity in seed_e2e_data
-  cr_admin: null, // NO FIXTURE — verified absent; stop CR gate, request fixture
+  cr_admin: { username: "e2e_cr" }, // seeded by seed_e2e_data (extra_roles: cr_admin)
 };
 
 export const DYNAMIC_FIXTURES = ["resource-group", "payroll-run", "org-chart"];

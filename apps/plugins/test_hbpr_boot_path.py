@@ -21,7 +21,7 @@ PLUGIN_STATE_COMMANDS = ('sync_plugins', 'seed_plugin_permissions', 'grant_hbpr_
 
 def entrypoint_plugin_commands():
     text = (Path(settings.BASE_DIR) / 'docker' / 'entrypoint.sh').read_text(encoding='utf-8')
-    commands = re.findall(r'^python manage\.py (\w+)', text, flags=re.M)
+    commands = re.findall(r'^\s*python manage\.py (\w+)', text, flags=re.M)
     return [c for c in commands if c in PLUGIN_STATE_COMMANDS]
 
 

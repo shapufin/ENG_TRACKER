@@ -9,14 +9,16 @@ from datetime import date
 
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from .permissions import IsAdminOrReadOnly
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import DatabaseError, models, transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, OuterRef, Q, Subquery, Sum
 from django.db.utils import OperationalError
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -33,6 +35,7 @@ from .serializers import (
     HbprAlbanianTlAssignmentSerializer,
 )
 from .services.hbpr_scope import get_hbpr_scope
+from .services.profile_loading import with_profile_list_loading
 from .services.tech_assignments import (
     TechAssignmentError,
     apply_tech_assignments,
@@ -50,6 +53,7 @@ from core.mixins.permissions import (
     is_hr_only,
     has_hr_role,
     has_team_leader_role,
+    is_staff_user,
 )
 
 logger = logging.getLogger(__name__)
@@ -355,21 +359,56 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         
         return Response(results)
 
+    @staticmethod
+    def _invalid_leader_error(field, leader_id):
+        """Error text when ``leader_id`` does not hold the TL role for ``field``.
+
+        Same rule as UserProfileViewSet.set_team_leader. A falsy id clears the
+        link and is always valid.
+        """
+        if not leader_id:
+            return None
+        leader_profile = UserProfile.objects.filter(user_id=leader_id).first()
+        is_valid_tl = leader_profile is not None and (
+            leader_profile.is_italian_tl if field == 'italian_tl' else leader_profile.is_albanian_tl
+        )
+        if is_valid_tl:
+            return None
+        return f'User {leader_id} is not currently an active {field} team leader'
+
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser()])
     def reset_password(self, request, pk=None):
         """
         Admin resets a user's password.
         Expects {'new_password': '...'} in request body.
+        Only a superuser may reset a staff or superuser account (own account excepted).
         """
         user = self.get_object()
+        if (
+            (user.is_staff or user.is_superuser)
+            and not request.user.is_superuser
+            and user.pk != request.user.pk
+        ):
+            raise PermissionDenied('Only a superuser can reset a staff or superuser password.')
         new_password = request.data.get('new_password')
-        if not new_password or len(new_password) < 6:
+        if not new_password:
             return Response(
-                {'error': 'Password must be at least 6 characters.'},
+                {'error': 'new_password is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            validate_password(new_password, user)
+        except DjangoValidationError as exc:
+            return Response(
+                {'error': 'Password does not meet the password policy.', 'messages': list(exc.messages)},
                 status=status.HTTP_400_BAD_REQUEST
             )
         user.set_password(new_password)
         user.save()
+        # SEC-10: a reset must end sessions that are still alive on the old password.
+        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+        for outstanding in OutstandingToken.objects.filter(user=user):
+            BlacklistedToken.objects.get_or_create(token=outstanding)
         return Response({'detail': 'Password reset successfully.'}, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['post'], permission_classes=[IsAdminUser()])
@@ -488,6 +527,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     {'error': f'{field} must be a user ID or null'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+        for field, leader_id in leader_ids.items():
+            leader_error = self._invalid_leader_error(field, leader_id)
+            if leader_error:
+                return Response({'error': leader_error}, status=status.HTTP_400_BAD_REQUEST)
         referenced_leader_ids = {value for value in leader_ids.values() if value is not None}
         if referenced_leader_ids:
             existing_leader_ids = set(
@@ -683,26 +726,17 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 failed_users.append({'id': user.id, 'reason': 'is_superuser'})
                 continue
 
-            # Check UserProfile existence
-            has_profile = hasattr(user, 'profile')
-            logger.info(f"User {user.id} has UserProfile: {has_profile}")
-
-            # Check TL references
-            italian_tl_count = UserProfile.objects.filter(italian_tl=user).count()
-            albanian_tl_count = UserProfile.objects.filter(albanian_tl=user).count()
-            logger.info(f"User {user.id} TL references: {italian_tl_count} Italian, {albanian_tl_count} Albanian")
-
-            # Check team leader references
-            team_leader_count = Team.objects.filter(team_leader=user).count()
-            logger.info(f"User {user.id} team leader references: {team_leader_count}")
-
             try:
-                # Clear TL references before deletion to avoid constraint violations
-                UserProfile.objects.filter(italian_tl=user).update(italian_tl=None)
-                UserProfile.objects.filter(albanian_tl=user).update(albanian_tl=None)
-
-                # Clear team leader references
-                Team.objects.filter(team_leader=user).update(team_leader=None)
+                # Clear TL references before deletion to avoid constraint violations.
+                # PERF-14: the update row counts are logged; the old per-user COUNT
+                # queries existed only to write log lines.
+                italian_cleared = UserProfile.objects.filter(italian_tl=user).update(italian_tl=None)
+                albanian_cleared = UserProfile.objects.filter(albanian_tl=user).update(albanian_tl=None)
+                led_cleared = Team.objects.filter(team_leader=user).update(team_leader=None)
+                logger.info(
+                    f"User {user.id} references cleared: {italian_cleared} Italian TL, "
+                    f"{albanian_cleared} Albanian TL, {led_cleared} led teams"
+                )
 
                 # HBPR↔AL-TL assignments PROTECT both participants: an
                 # assigned user must have their assignments ended (history
@@ -762,6 +796,20 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            validate_password(
+                data['password'],
+                User(
+                    username=data['username'], email=data['email'],
+                    first_name=data.get('first_name', ''), last_name=data.get('last_name', ''),
+                ),
+            )
+        except DjangoValidationError as exc:
+            return Response(
+                {'error': 'Password does not meet the password policy.', 'messages': list(exc.messages)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
             user = create_user_with_profile(
                 username=data['username'],
                 email=data['email'],
@@ -785,6 +833,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['put', 'patch'], permission_classes=[IsAdminUser()])
+    @transaction.atomic
     def update_user(self, request, pk=None):
         """
         Admin updates a user and their profile in one call.
@@ -846,6 +895,12 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         if hbpr_refusal:
             return Response(hbpr_refusal, status=status.HTTP_400_BAD_REQUEST)
 
+        for leader_field in ('italian_tl', 'albanian_tl'):
+            if leader_field in data:
+                leader_error = self._invalid_leader_error(leader_field, data[leader_field])
+                if leader_error:
+                    return Response({'error': leader_error}, status=status.HTTP_400_BAD_REQUEST)
+
         if 'email' in data:
             user.email = data['email']
         if 'first_name' in data:
@@ -864,6 +919,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             try:
                 set_tech_assignments(profile, data['techs'], assigned_by=request.user)
             except TechAssignmentError as exc:
+                transaction.set_rollback(True)
                 return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         if 'team' in data:
             # Backward compatibility: if single team provided, set as only team
@@ -894,6 +950,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             except ValueError as e:
                 # e.g. the hbpr role row was never seeded — create_user
                 # translates the same failure to a 400.
+                transaction.set_rollback(True)
                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         else:
             _sync_legacy_roles(
@@ -954,38 +1011,37 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             return Response([])
 
         try:
+            # PERF-01: one correlated Sum per relation. Two Sum() annotations over
+            # different reverse joins in one query multiply each other's rows.
+            def _month_total(model):
+                return Coalesce(
+                    Subquery(
+                        model.objects.filter(
+                            user_id=OuterRef('user_id'),
+                            status='approved',
+                            date__gte=start_of_month,
+                            date__lt=next_month,
+                        )
+                        .order_by()
+                        .values('user_id')
+                        .annotate(total=Sum('hours'))
+                        .values('total'),
+                        output_field=models.DecimalField(max_digits=7, decimal_places=2),
+                    ),
+                    models.Value(0),
+                    output_field=models.DecimalField(max_digits=7, decimal_places=2),
+                )
+
+            from apps.overtime.models import OvertimeLog
+            from apps.standby.models import StandbyLog
+
             members = (
-                UserProfile.objects.filter(user_id__in=target_user_ids)
-                .select_related('user')
-                .prefetch_related('teams', 'techs', 'team_memberships__team', 'user__user_groups__group', 'user__italian_team_members', 'user__albanian_team_members', 'user__led_teams')
+                with_profile_list_loading(UserProfile.objects.filter(user_id__in=target_user_ids))
                 .annotate(
-                    current_month_overtime_hours=Coalesce(
-                        Sum(
-                            'user__overtime_logs__hours',
-                            filter=Q(
-                                user__overtime_logs__status='approved',
-                                user__overtime_logs__date__gte=start_of_month,
-                                user__overtime_logs__date__lt=next_month,
-                            ),
-                        ),
-                        models.Value(0),
-                        output_field=models.DecimalField(max_digits=7, decimal_places=2),
-                    ),
-                    current_month_standby_hours=Coalesce(
-                        Sum(
-                            'user__standby_logs__hours',
-                            filter=Q(
-                                user__standby_logs__status='approved',
-                                user__standby_logs__date__gte=start_of_month,
-                                user__standby_logs__date__lt=next_month,
-                            ),
-                        ),
-                        models.Value(0),
-                        output_field=models.DecimalField(max_digits=7, decimal_places=2),
-                    ),
+                    current_month_overtime_hours=_month_total(OvertimeLog),
+                    current_month_standby_hours=_month_total(StandbyLog),
                 )
                 .order_by('user__first_name', 'user__last_name', 'user__username')
-                .distinct()
             )
 
             serializer = UserProfileSerializer(members, many=True)
@@ -1011,9 +1067,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             )
 
         members = (
-            UserProfile.objects.filter(italian_tl_id=italian_tl_id)
-            .select_related('user', 'italian_tl')
-            .prefetch_related('teams', 'techs')
+            with_profile_list_loading(UserProfile.objects.filter(italian_tl_id=italian_tl_id))
             .order_by('user__first_name', 'user__last_name', 'user__username')
         )
 
@@ -1093,7 +1147,7 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
     # TeamSerializer, whose team_leader is a UserSerializer — and its get_techs
     # reaches leader.profile. Without this the leader's Tech read is one query
     # per team-with-a-leader on every page.
-    queryset = UserProfile.objects.all().select_related('user').prefetch_related('teams', 'techs', 'tech_assignments__tech', 'tech_assignments__level', 'teams__team_leader__profile__tech_assignments__tech', 'teams__team_leader__profile__tech_assignments__level', 'team_memberships__team', 'user__user_groups__group', 'user__italian_team_members', 'user__albanian_team_members', 'user__led_teams').order_by('-id')
+    queryset = with_profile_list_loading(UserProfile.objects.all()).order_by('-id')
     serializer_class = UserProfileSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['user__username', 'user__email']
@@ -1545,7 +1599,12 @@ class TechViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path='users')
     def list_users(self, request, pk=None):
-        """List users assigned to this tech with the level each holds."""
+        """List users assigned to this tech with the level each holds.
+
+        Staff and HR only (SEC-06): the rows carry every assignee's email.
+        """
+        if not (is_staff_user(request.user) or has_hr_role(request.user)):
+            raise PermissionDenied("Only staff and HR can list a tech's users.")
         tech = self.get_object()
         members = (
             User.objects
@@ -1822,6 +1881,24 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         serializer = TeamHierarchySerializer(team)
         return Response(serializer.data)
     
+    @staticmethod
+    def _visible_member_user_ids(user):
+        """User ids whose profiles this viewer may list; ``None`` means all.
+
+        Mirrors ``UserViewSet.filter_for_regular_user`` (staff/HR all, HBPR its
+        assigned scope, everyone else only themselves) and lets team leaders
+        see the people they manage.
+        """
+        if is_staff_user(user) or has_hr_role(user):
+            return None
+        visible = {user.id}
+        if has_team_leader_role(user):
+            visible |= user.profile.get_team_member_ids()
+        hbpr_scope = get_hbpr_scope(user)
+        if hbpr_scope is not None:
+            visible |= set(hbpr_scope.user_ids)
+        return visible
+
     @action(detail=True, methods=['get'])
     def members(self, request, pk=None):
         """
@@ -1843,10 +1920,12 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
                 .values_list('id', flat=True)
             )
 
+        members = UserProfile.objects.filter(teams__in=target_team_ids)
+        visible_ids = self._visible_member_user_ids(request.user)
+        if visible_ids is not None:  # SEC-06: scope the child rows, not just the parent
+            members = members.filter(user_id__in=visible_ids)
         members = (
-            UserProfile.objects.filter(teams__in=target_team_ids)
-            .select_related('user')
-            .prefetch_related('teams', 'techs')
+            with_profile_list_loading(members)
             .order_by('user__first_name', 'user__last_name', 'user__username')
             .distinct()
         )

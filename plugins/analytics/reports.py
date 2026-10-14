@@ -1,5 +1,7 @@
 import pandas as pd
 import io
+
+from core.utils.csv_safe import xlsx_safe
 from datetime import timedelta, datetime
 
 from django.utils import timezone
@@ -325,12 +327,12 @@ class AnalyticsReportGenerator:
         # 2. User Breakdown Sheet (per-user aggregated)
         df_user = pd.DataFrame(cls._user_summary_rows(
             leave_data, overtime_data, standby_data,
-            include_leave, include_overtime, include_standby))
+            include_leave, include_overtime, include_standby)).map(xlsx_safe)
 
         # 3. Raw Records Sheet (every record with full detail)
         df_raw = pd.DataFrame(cls._raw_records_rows(
             leave_data, overtime_data, standby_data,
-            include_leave, include_overtime, include_standby))
+            include_leave, include_overtime, include_standby)).map(xlsx_safe)
 
         # 4. Client Breakdown Sheet
         client_rows = []
@@ -340,7 +342,7 @@ class AnalyticsReportGenerator:
                 'Client': log.client.name if log.client else 'Unassigned',
                 'Hours': float(log.hours),
             })
-        df_client = pd.DataFrame(client_rows)
+        df_client = pd.DataFrame(client_rows).map(xlsx_safe)
 
         # Create Excel file in memory
         output = io.BytesIO()
@@ -543,7 +545,7 @@ class AnalyticsReportGenerator:
 
         df = pd.DataFrame(cls._user_summary_rows(
             leave_data, overtime_data, standby_data,
-            include_leave, include_overtime, include_standby))
+            include_leave, include_overtime, include_standby)).map(xlsx_safe)
         output = io.StringIO()
         df.to_csv(output, index=False)
         return output.getvalue()

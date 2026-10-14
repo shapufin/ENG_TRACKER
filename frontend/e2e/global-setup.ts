@@ -12,7 +12,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default async function globalSetup() {
   const projectRoot = resolve(__dirname, "..", "..");
   const managePy = resolve(projectRoot, "manage.py");
-  const commandOptions = { stdio: "pipe" as const, cwd: projectRoot };
-  execSync(`python "${managePy}" migrate --noinput`, commandOptions);
-  execSync(`python "${managePy}" seed_e2e_data`, commandOptions);
+  // Never seed the dev DB: pin the e2e settings for every child process.
+  const commandOptions = {
+    stdio: "pipe" as const,
+    cwd: projectRoot,
+    env: { ...process.env, DJANGO_SETTINGS_MODULE: "config.settings_e2e" },
+  };
+  const settings = "--settings=config.settings_e2e";
+  execSync(`python "${managePy}" migrate --noinput ${settings}`, commandOptions);
+  execSync(`python "${managePy}" seed_e2e_data ${settings}`, commandOptions);
 }

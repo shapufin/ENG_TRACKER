@@ -102,6 +102,12 @@ class PermissionService:
         (led_teams). FK-only checks silently deny led-team TLs who can already
         see and delete those entries on team pages.
         """
+        # SEC-09: nobody decides their own request, whatever their role
+        # (staff, HR and superusers included).
+        obj_user = getattr(obj, 'user', None)
+        if obj_user is not None and obj_user.id == user.id:
+            return False
+
         if user.is_superuser or user.is_staff:
             return True
 
@@ -119,7 +125,6 @@ class PermissionService:
                 or has_role(user, 'albanian_tl')
                 or profile.is_team_leader
             ): 
-                obj_user = getattr(obj, 'user', None)
                 if obj_user is not None:
                     try:
                         target_user_ids = profile.get_team_member_ids()

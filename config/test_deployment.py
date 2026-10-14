@@ -354,6 +354,21 @@ class OpenAPISmokeTests(TestCase):
             )
         self.assertEqual(len(operation_ids), len(set(operation_ids)))
 
+    def test_schema_generation_has_no_phase4_warnings(self):
+        """The six drf_spectacular warnings from ``check --deploy`` stay fixed."""
+        from drf_spectacular.drainage import GENERATOR_STATS
+        from drf_spectacular.generators import SchemaGenerator
+
+        GENERATOR_STATS.reset()
+        SchemaGenerator().get_schema(request=None, public=True)
+        messages = list(GENERATOR_STATS._warn_cache) + list(GENERATOR_STATS._error_cache)
+        watched = (
+            "get_logo_url", "get_plugin_access", "get_client_names",
+            "TechAssignmentField", "TokenLogoutView", "GatedSpectacularAPIView",
+        )
+        offending = [m for m in messages if any(name in m for name in watched)]
+        self.assertEqual(offending, [])
+
     def test_schema_endpoint_disabled_when_api_docs_off(self):
         """P0-4: ``/api/schema/`` must be gated by ``ENABLE_API_DOCS``.
 
@@ -413,6 +428,15 @@ class NginxTemplateProxyContractTests(SimpleTestCase):
     def test_template_has_backend_locations(self):
         self.assertTrue({'/api/', '/media/', '/static/', '/admin/'} <= set(self._backend_locations()))
 
+    def test_every_backend_location_overwrites_x_forwarded_for(self):
+        """SEC-11: the health throttle and DRF NUM_PROXIES=1 read the *last*
+        X-Forwarded-For entry, which is only the real client when nginx
+        overwrites the header instead of appending to a client-supplied one."""
+        for path, body in self._backend_locations().items():
+            with self.subTest(location=path):
+                self.assertIn('proxy_set_header X-Forwarded-For $remote_addr;', body)
+                self.assertNotIn('$proxy_add_x_forwarded_for;', body)
+
     def test_every_backend_location_forwards_x_forwarded_proto(self):
         for path, body in self._backend_locations().items():
             with self.subTest(location=path):
@@ -450,6 +474,17 @@ class DockerIgnoreContractTests(SimpleTestCase):
         }
         self.assertEqual(required - patterns, set())
 
+    def test_backend_context_excludes_backups_exports_and_agent_state(self):
+        """DEP-01: DB backups, PII exports and large local-only trees must not ship."""
+        patterns = self._patterns('.dockerignore')
+        required = {
+            '*.bak*', 'migration/out', 'migration/*.csv', 'graphify-out', '.opencode',
+            '.codex', 'admin-gui-screenshots', 'design-screenshots', 'design-fingerprints',
+            '*.patch', '*.log', 'time_tracker_export.json', '*.xlsx',
+            'export_skills_plugin.py', 'db.sqlite3*', '.env*',
+        }
+        self.assertEqual(required - patterns, set())
+
     def test_backend_context_keeps_the_example_env(self):
         self.assertIn('!.env.example', self._patterns('.dockerignore'))
 
@@ -482,6 +517,45 @@ class EntrypointContractTests(SimpleTestCase):
         self.assertLess(migrate, sync)
         self.assertLess(sync, serve)
 
+    @staticmethod
+    def _gated_block():
+        """The text between ``if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then`` and its ``fi``."""
+        from pathlib import Path
+
+        from django.conf import settings
+
+        text = (Path(settings.BASE_DIR) / 'docker' / 'entrypoint.sh').read_text(encoding='utf-8')
+        opener = 'if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then'
+        assert opener in text, 'entrypoint has no RUN_MIGRATIONS gate'
+        start = text.index(opener) + len(opener)
+        import re
+
+        end = re.search(r'^fi$', text[start:], re.MULTILINE)
+        return text[start:start + end.start()]
+
+    def test_boot_commands_are_gated_by_run_migrations_defaulting_to_on(self):
+        block = self._gated_block()
+        for command in (
+            'migrate --noinput', 'sync_plugins', 'seed_plugin_permissions',
+            'grant_hbpr_plugin_access', 'purge_hbpr_archive', 'ensure_superuser',
+        ):
+            with self.subTest(command=command):
+                self.assertIn(f'python manage.py {command}', block)
+
+    def test_gated_boot_commands_keep_their_order(self):
+        block = self._gated_block()
+        order = [
+            block.index(f'python manage.py {c}') for c in (
+                'migrate --noinput', 'sync_plugins', 'seed_plugin_permissions',
+                'grant_hbpr_plugin_access', 'purge_hbpr_archive',
+            )
+        ]
+        self.assertEqual(order, sorted(order))
+
+    def test_server_start_is_not_gated(self):
+        block = self._gated_block()
+        self.assertNotIn('exec "$@"', block)
+
 
 class FrontendPublicAssetsTests(SimpleTestCase):
     """Everything under frontend/public is copied into dist/ and served to the internet."""
@@ -510,3 +584,304 @@ class FrontendPublicAssetsTests(SimpleTestCase):
             if jwt.search(path.read_text(encoding='utf-8-sig', errors='ignore')):
                 offenders.append(path.name)
         self.assertEqual(offenders, [])
+
+
+class ProductionThrottleRatesTests(SimpleTestCase):
+    """SEC-01: scoped throttle rates must not depend on the dev DEBUG default.
+
+    The base settings compute the scoped rates as ``None`` when ``DEBUG`` is
+    truthy (its env default is ``'1'``). Production forces ``DEBUG = False``
+    only after ``import *``, so without explicit literals login throttling was
+    silently off. Checked in a subprocess so the live settings are untouched.
+    """
+
+    def _production_rates(self, **extra_env):
+        import json
+        import os
+        import subprocess
+        import sys
+
+        from django.conf import settings
+
+        env = {k: v for k, v in os.environ.items() if k != 'DEBUG'}
+        env.update({
+            'SECRET_KEY': 'test-secret-key-long-enough-for-django-deploy-check-50chars',
+            'ALLOWED_HOSTS': 'localhost',
+            'DB_NAME': 'test', 'DB_USER': 'test', 'DB_PASSWORD': 'test',
+            'DB_HOST': 'localhost', 'FRONTEND_URL': 'http://localhost',
+            'ENABLE_API_DOCS': 'False',
+        })
+        env.update(extra_env)
+        out = subprocess.run(
+            [sys.executable, '-c',
+             'import json, config.settings_production as s; '
+             'print(json.dumps(s.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]))'],
+            cwd=str(settings.BASE_DIR), env=env, capture_output=True,
+            text=True, check=True,
+        )
+        return json.loads(out.stdout.strip().splitlines()[-1])
+
+    def _assert_all_set(self, rates):
+        for scope in ('anon', 'user', 'auth', 'upload', 'export',
+                      'evidence_upload', 'control_room', 'health'):
+            self.assertIn(scope, rates)
+        for scope, rate in rates.items():
+            self.assertIsNotNone(rate, f"throttle scope {scope!r} is unlimited in production")
+
+    def test_rates_set_when_debug_env_unset(self):
+        self._assert_all_set(self._production_rates())
+
+    def test_rates_set_when_debug_env_is_one(self):
+        self._assert_all_set(self._production_rates(DEBUG='1'))
+
+
+class ProductionSettingsHardeningTests(SimpleTestCase):
+    """DEP-03/04/05/10/11/14: production settings are read in a subprocess so the
+    live (test) settings and the reload-sensitive sibling tests stay untouched."""
+
+    BASE_ENV = {
+        'SECRET_KEY': 'test-secret-key-long-enough-for-django-deploy-check-50chars',
+        'ALLOWED_HOSTS': 'localhost',
+        'DB_NAME': 'test', 'DB_USER': 'test', 'DB_PASSWORD': 'test',
+        'DB_HOST': 'localhost', 'FRONTEND_URL': 'http://localhost',
+    }
+
+    def _run(self, expression, drop=(), **extra_env):
+        import os
+        import subprocess
+        import sys
+
+        from django.conf import settings
+
+        env = {k: v for k, v in os.environ.items() if k not in ('DEBUG', *drop)}
+        env.update(self.BASE_ENV)
+        env.update(extra_env)
+        for key in drop:
+            env.pop(key, None)
+        return subprocess.run(
+            [sys.executable, '-c',
+             'import json, config.settings_production as s; '
+             f'print(json.dumps({expression}))'],
+            cwd=str(settings.BASE_DIR), env=env, capture_output=True, text=True,
+        )
+
+    def _value(self, expression, **kwargs):
+        import json
+
+        out = self._run(expression, **kwargs)
+        self.assertEqual(out.returncode, 0, out.stderr[-600:])
+        return json.loads(out.stdout.strip().splitlines()[-1])
+
+    def test_logging_has_console_handler_on_root_at_info(self):
+        logging_cfg = self._value('s.LOGGING')
+        self.assertEqual(logging_cfg['root']['level'], 'INFO')
+        self.assertIn('console', logging_cfg['root']['handlers'])
+        self.assertEqual(logging_cfg['handlers']['console']['class'], 'logging.StreamHandler')
+
+    def test_logging_django_request_is_warning_and_security_file_handler_kept(self):
+        logging_cfg = self._value('s.LOGGING')
+        self.assertEqual(logging_cfg['loggers']['django.request']['level'], 'WARNING')
+        for name in ('django.security', 'engtracker.security'):
+            self.assertIn('security_file', logging_cfg['loggers'][name]['handlers'])
+            self.assertIn('console', logging_cfg['loggers'][name]['handlers'])
+
+    def test_db_connections_are_persistent_and_health_checked(self):
+        db = self._value("s.DATABASES['default']", drop=('DB_CONN_MAX_AGE',))
+        self.assertEqual(db['CONN_MAX_AGE'], 60)
+        self.assertIs(db['CONN_HEALTH_CHECKS'], True)
+
+    def test_db_conn_max_age_is_env_driven(self):
+        db = self._value("s.DATABASES['default']", DB_CONN_MAX_AGE='5')
+        self.assertEqual(db['CONN_MAX_AGE'], 5)
+
+    def test_redis_cache_has_timeouts_and_ignores_outages(self):
+        options = self._value("s.CACHES['default']['OPTIONS']")
+        self.assertEqual(options['CLIENT_CLASS'], 'django_redis.client.DefaultClient')
+        self.assertEqual(options['SOCKET_CONNECT_TIMEOUT'], 5)
+        self.assertEqual(options['SOCKET_TIMEOUT'], 5)
+        self.assertIs(options['IGNORE_EXCEPTIONS'], True)
+
+    def test_empty_allowed_hosts_fails_fast(self):
+        for value in ('', ' , '):
+            with self.subTest(value=value):
+                out = self._run('s.ALLOWED_HOSTS', ALLOWED_HOSTS=value)
+                self.assertNotEqual(out.returncode, 0)
+                self.assertIn('ALLOWED_HOSTS', out.stderr)
+
+    def test_unset_allowed_hosts_fails_fast(self):
+        out = self._run('s.ALLOWED_HOSTS', drop=('ALLOWED_HOSTS',))
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn('ALLOWED_HOSTS', out.stderr)
+
+    def test_allowed_hosts_are_trimmed(self):
+        self.assertEqual(
+            self._value('s.ALLOWED_HOSTS', ALLOWED_HOSTS='a.example.com, b.example.com'),
+            ['a.example.com', 'b.example.com'],
+        )
+
+    def test_session_lifetime_is_eight_hours(self):
+        self.assertEqual(self._value('s.SESSION_COOKIE_AGE'), 8 * 60 * 60)
+
+    def test_data_upload_limit_is_explicit(self):
+        self.assertEqual(self._value('s.DATA_UPLOAD_MAX_MEMORY_SIZE'), 2621440)
+
+    def test_api_docs_off_without_env_var(self):
+        self.assertIs(self._value('s.ENABLE_API_DOCS'), False)
+
+    def test_dead_api_docs_env_var_not_set_in_dockerfile_or_ci(self):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        for rel in ('Dockerfile', '.github/workflows/ci.yml'):
+            text = (Path(settings.BASE_DIR) / rel).read_text(encoding='utf-8')
+            self.assertNotIn('ENABLE_API_DOCS', text, rel)
+
+
+class DockerfileGunicornContractTests(SimpleTestCase):
+    """DEP-13: gunicorn flags live in the Dockerfile CMD."""
+
+    @staticmethod
+    def _cmd():
+        from pathlib import Path
+
+        from django.conf import settings
+
+        text = (Path(settings.BASE_DIR) / 'Dockerfile').read_text(encoding='utf-8')
+        return next(line for line in text.splitlines() if line.startswith('CMD '))
+
+    def test_workers_are_env_driven_with_default_three(self):
+        self.assertIn('--workers ${GUNICORN_WORKERS:-3}', self._cmd())
+
+    def test_heartbeat_dir_is_memory_backed_and_graceful_timeout_set(self):
+        cmd = self._cmd()
+        self.assertIn('--worker-tmp-dir /dev/shm', cmd)
+        self.assertIn('--graceful-timeout 30', cmd)
+
+    def test_gunicorn_is_exec_ed_so_it_receives_signals(self):
+        self.assertIn('exec gunicorn', self._cmd())
+
+
+class NginxTemplateHardeningTests(SimpleTestCase):
+    """DEP-09: server_tokens, /api/ rate limit, header coverage, report-only CSP."""
+
+    @staticmethod
+    def _text():
+        from pathlib import Path
+
+        from django.conf import settings
+
+        return (Path(settings.BASE_DIR) / 'frontend' / 'docker' / 'nginx.conf.template').read_text(
+            encoding='utf-8'
+        )
+
+    @classmethod
+    def _location(cls, path):
+        import re
+
+        text = cls._text()
+        match = re.search(r'^\s*location\s+(?:\S+\s+)?' + re.escape(path) + r'\s*\{', text, re.MULTILINE)
+        assert match, f'no location {path}'
+        depth, pos = 1, match.end()
+        while depth and pos < len(text):
+            depth += {'{': 1, '}': -1}.get(text[pos], 0)
+            pos += 1
+        return text[match.end():pos]
+
+    @staticmethod
+    def _directives(body, name):
+        return [
+            line.strip() for line in body.splitlines()
+            if line.strip().startswith(name + ' ')
+        ]
+
+    def test_server_tokens_off(self):
+        self.assertIn('server_tokens off;', self._text())
+
+    def test_api_has_a_general_rate_limit_zone(self):
+        text = self._text()
+        self.assertRegex(text, r'limit_req_zone \$binary_remote_addr zone=api:\d+m rate=\d+r/s;')
+        body = self._location('/api/')
+        self.assertIn('limit_req zone=api burst=40 nodelay;', body)
+        self.assertIn('limit_req_status 429;', body)
+
+    def test_global_body_limit_covers_backup_restore(self):
+        # 512 MB is the largest backend limit (site-backup restore); the global
+        # value covers every location, so no per-location override may remain.
+        text = self._text()
+        server_level = text.split('location /assets/', 1)[0]
+        self.assertIn('client_max_body_size 512m;', server_level)
+        self.assertNotIn('100m', text)
+        self.assertNotIn('/api/plugins/site_backup/', text)
+        self.assertIn('client_max_body_size 512m;', server_level)
+        # site_backup requests fall under /api/, which keeps the rate limit.
+        self.assertIn('limit_req zone=api', self._location('/api/'))
+
+    def test_assets_carry_hsts_and_permissions_policy(self):
+        body = self._location('/assets/')
+        self.assertIn('Strict-Transport-Security', body)
+        self.assertIn('Permissions-Policy', body)
+        self.assertIn('X-Content-Type-Options', body)
+
+    def test_spa_keeps_enforcing_csp_and_adds_strict_report_only(self):
+        body = self._location('/')
+        enforcing = [d for d in self._directives(body, 'add_header')
+                     if '"Content-Security-Policy"' in d or 'Content-Security-Policy ' in d]
+        report_only = [d for d in self._directives(body, 'add_header')
+                       if 'Content-Security-Policy-Report-Only' in d]
+        self.assertEqual(len(report_only), 1)
+        self.assertEqual(len(enforcing), 1)
+        # D6: the enforcing policy is unchanged (still allows inline scripts)...
+        self.assertIn("script-src 'self' 'unsafe-inline'", enforcing[0])
+        # ...while the report-only one measures a strict script-src.
+        self.assertIn("script-src 'self' ${ONLYOFFICE_ORIGIN};", report_only[0])
+        self.assertNotIn("'unsafe-inline'", report_only[0].split('style-src')[0])
+
+    def test_only_onlyoffice_origin_is_an_envsubst_variable(self):
+        import re
+
+        self.assertEqual(set(re.findall(r'\$\{(\w+)\}', self._text())), {'ONLYOFFICE_ORIGIN'})
+
+
+class ComposeContractTests(SimpleTestCase):
+    """DEP-06/07/13/02: compose wiring for the new env switches, backups and ingress."""
+
+    @staticmethod
+    def _service(name):
+        import re
+        from pathlib import Path
+
+        from django.conf import settings
+
+        text = (Path(settings.BASE_DIR) / 'docker-compose.yml').read_text(encoding='utf-8')
+        start = re.search(rf'^  {re.escape(name)}:$', text, re.MULTILINE).start()
+        end = re.search(r'^(?:  [a-z][\w-]*:|volumes:|networks:)$', text[start + 1:], re.MULTILINE)
+        return text[start:start + 1 + end.start()] if end else text[start:]
+
+    def test_backend_receives_the_new_switches(self):
+        body = self._service('backend')
+        for var in ('RUN_MIGRATIONS', 'GUNICORN_WORKERS', 'DB_CONN_MAX_AGE'):
+            with self.subTest(var=var):
+                self.assertIn(f'{var}: ${{{var}:-', body)
+
+    def test_db_backup_is_a_scheduled_loop_with_retention_and_media(self):
+        body = self._service('db-backup')
+        for needle in ('pg_dump -Fc', 'sleep', 'BACKUP_RETENTION', 'BACKUP_INTERVAL_SECONDS',
+                       'media_files:/media:ro', 'tar -czf', 'db_backup:/backups'):
+            with self.subTest(needle=needle):
+                self.assertIn(needle, body)
+
+    def test_db_backup_only_prunes_after_a_successful_dump(self):
+        body = self._service('db-backup')
+        self.assertLess(body.index('pg_dump -Fc'), body.index('rm -f'))
+
+    def test_no_ingress_service_is_claimed(self):
+        text = self._service('frontend')
+        self.assertNotIn('cloudflared reaches', text)
+        from pathlib import Path
+
+        from django.conf import settings
+
+        compose = (Path(settings.BASE_DIR) / 'docker-compose.yml').read_text(encoding='utf-8')
+        self.assertNotIn('--profile tunnel', compose)
+        self.assertNotIn('CLOUDFLARE_TUNNEL_TOKEN', compose)

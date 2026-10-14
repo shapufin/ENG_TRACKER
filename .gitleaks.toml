@@ -1,0 +1,23 @@
+# Used by the `gitleaks` job in .github/workflows/ci.yml (GITLEAKS_CONFIG).
+# Default ruleset stays on; only the items below are allowed. Do not widen with
+# a blanket path or a generic regex: every entry must name one known false positive.
+title = "Engineering Tracker gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known test-only values"
+# The deterministic password of the local Playwright seed users (e2e_*), published
+# on purpose: seed_e2e_data refuses to run against anything but SQLite and the
+# accounts exist only in db.e2e.sqlite3.
+regexes = [
+  '''e2e_pass_2026''',
+]
+paths = [
+  '''^apps/users/management/commands/seed_e2e_data\.py$''',
+  '''^frontend/e2e/helpers\.ts$''',
+  # Frontend test fixtures (fake data objects, no live credentials).
+  '''^frontend/src/pages/admin/components/dashboard-widgets/adminFixtures\.ts$''',
+  '''^frontend/src/plugins/control_room/components/crTestFixtures\.ts$''',
+]

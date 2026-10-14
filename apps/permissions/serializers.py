@@ -21,7 +21,7 @@ class GroupSerializer(serializers.ModelSerializer):
             'plugin_access',
         ]
 
-    def get_plugin_access(self, obj):
+    def get_plugin_access(self, obj) -> list[dict[str, str]]:
         return [
             {'plugin_name': permission.plugin_name, 'action': permission.action}
             for permission in obj.plugin_permissions.all()

@@ -19,7 +19,9 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse, Http404
+from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import (
+    SCHEMA_KWARGS,
     SpectacularAPIView,
     SpectacularRedocView,
     SpectacularSwaggerView,
@@ -37,6 +39,9 @@ class GatedSpectacularAPIView(SpectacularAPIView):
     tests.
     """
 
+    # The override drops the base get()'s @extend_schema, so re-apply the same
+    # kwargs (drf_spectacular.views.SCHEMA_KWARGS) to keep it described.
+    @extend_schema(**SCHEMA_KWARGS)
     def get(self, request, *args, **kwargs):
         if not getattr(settings, "ENABLE_API_DOCS", True) and not settings.DEBUG:
             raise Http404("API schema is not available.")

@@ -14,10 +14,17 @@
 # Optional:
 #   EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
 #   DB_SSL_MODE - PostgreSQL SSL mode (default: prefer)
+#   DB_CONN_MAX_AGE - seconds a DB connection is kept open per worker (default: 60)
+#   GUNICORN_WORKERS - sync workers per backend container (default: 3). Each
+#     worker holds one DB connection and loads pandas; the container CPU limit is 1.0.
+#   RUN_MIGRATIONS - 1 (default) runs migrate + boot-time reconciliation on start.
+#     With several backend replicas set it to 0 on all but one (see docker/entrypoint.sh).
+#   BACKUP_INTERVAL_SECONDS, BACKUP_RETENTION - db-backup schedule and how many
+#     DB dumps and media archives to keep (defaults: 86400, 7)
 #
-# Cloudflare Tunnel (see README.md -> Production Deployment -> Ingress):
-#   CLOUDFLARE_TUNNEL_TOKEN - only required with `--profile tunnel`
-#     docker compose --profile tunnel up -d --build
+# Ingress: this file ships no TLS terminator or tunnel. Put an external reverse
+# proxy (or a Cloudflare Tunnel connector) in front of the `frontend` service,
+# see README.md -> Production Deployment -> Ingress for the requirements.
 
 name: engineering-tracker
 
@@ -102,6 +109,13 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       # P1-10: Database SSL — use 'prefer' by default, 'require' for managed DBs
       DB_SSL_MODE: ${DB_SSL_MODE:-prefer}
+      # DEP-04: persistent DB connections (seconds). Replicas x GUNICORN_WORKERS
+      # connections must stay below Postgres max_connections (default 100).
+      DB_CONN_MAX_AGE: ${DB_CONN_MAX_AGE:-60}
+      # DEP-13: sync gunicorn workers; the Dockerfile CMD reads this.
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      # DEP-06: set to 0 on every backend replica except the one that migrates.
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-1}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       EMAIL_HOST: ${EMAIL_HOST:-}
@@ -159,14 +173,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    # Bound to localhost only: with the tunnel profile, cloudflared reaches
-    # this container over frontend_net by service name (http://frontend:8080),
-    # never through this published port. Publishing it to 0.0.0.0 would let
-    # anyone bypass Cloudflare's edge and hit the origin directly — the one
-    # thing a tunnel exists to prevent. Kept bound to 127.0.0.1 so `curl
-    # localhost:8080` still works for local health checks/debugging on the
-    # host. Once Traefik replaces the tunnel, this can go back to 0.0.0.0 (or
-    # be dropped entirely) since Traefik becomes the sole public entrypoint.
+    # Bound to localhost only: the external reverse proxy (or tunnel connector)
+    # running on this host reaches nginx through this port, or over frontend_net
+    # by service name (http://frontend:8080) when it is a container on that
+    # network. Publishing it to 0.0.0.0 would let anyone bypass the proxy's TLS
+    # and edge protections and hit the origin directly. Kept bound to 127.0.0.1
+    # so `curl localhost:8080` still works for local health checks/debugging.
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-8080}:8080"
     networks:
@@ -185,36 +197,28 @@ services:
           cpus: '1.0'
           memory: 512M
 
-  # Cloudflare Tunnel — the current ingress path (see README.md -> Production
-  # Deployment -> Ingress). Not started by plain `docker compose up`; needs
-  # `--profile tunnel` so a deploy without Cloudflare configured never blocks
-  # on a token that doesn't exist yet.
-  #
-  # Makes an OUTBOUND-only connection to Cloudflare's edge — no inbound port
-  # to publish or firewall. Create the tunnel once in the Cloudflare
-  # dashboard (Zero Trust -> Networks -> Tunnels), point its public hostname
-  # at origin service `http://frontend:8080`, and put the connector token it
-  # gives you in `.env` as CLOUDFLARE_TUNNEL_TOKEN.
-  #
-  # Switching to Traefik later: drop this service (and --profile tunnel),
-  # add Traefik as its own service on frontend_net with its usual
-  # `traefik.http.routers.*` labels on the `frontend` service, and update
-  # frontend/docker/nginx.conf.template's `set_real_ip_from`/`real_ip_header` (see
-  # that file's comment) to match Traefik's forwarded-header shape instead
-  # of Cloudflare's.
+  # No ingress service is defined here (the Cloudflare Tunnel connector was
+  # removed). Terminate TLS in an external reverse proxy, or run a tunnel
+  # connector (cloudflared) yourself, pointing at http://frontend:8080 on
+  # frontend_net or at 127.0.0.1:${FRONTEND_PORT:-8080} on the host. Required
+  # forwarded headers, the real-client-IP header and the trusted subnet are
+  # documented in README.md -> Production Deployment -> Ingress.
 
-
-  # P2-4: Nightly database backup service.
-  # Runs pg_dump once and exits. Schedule via host cron or a cron sidecar:
-  #   docker compose --profile backup run --rm db-backup
-  # Or schedule nightly (host crontab):
-  #   0 2 * * * cd /path/to/project && docker compose --profile backup run --rm db-backup
-  # Backups are written to the db_backup volume as
-  # engtracker_YYYY-MM-DD_HHMMSS.dump (custom-format pg_dump -Fc).
-  # Copy offsite to an encrypted location (see README.md → Database → Backups).
+  # DEP-07: scheduled backups. Start once with
+  #   docker compose --profile backup up -d db-backup
+  # It then loops forever: every BACKUP_INTERVAL_SECONDS (default 86400 = daily)
+  # it writes, into the db_backup volume,
+  #   engtracker_YYYY-MM-DD_HHMMSS.dump   custom-format pg_dump -Fc of the database
+  #   media_YYYY-MM-DD_HHMMSS.tar.gz      tar of the media_files volume (read-only mount)
+  # and keeps the newest BACKUP_RETENTION (default 7) of each kind. Old files are
+  # pruned only after the new one was written successfully. Set BACKUP_ONCE=1
+  # for a single run (`docker compose --profile backup run --rm -e BACKUP_ONCE=1
+  # db-backup`). The volume lives on the same host: copy it offsite to an
+  # encrypted location, and follow docs/deploy/production-runbook.md to restore.
   db-backup:
     image: postgres:16
     profiles: ["backup"]  # not started by `docker compose up`
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -224,10 +228,42 @@ services:
       PGPORT: 5432
       PGUSER: ${DB_USER:-engtracker}
       PGDATABASE: ${DB_NAME:-engtracker}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RETENTION: ${BACKUP_RETENTION:-7}
+      BACKUP_ONCE: ${BACKUP_ONCE:-0}
     volumes:
       - db_backup:/backups
-    entrypoint: >
-      sh -c "pg_dump -Fc -f /backups/engtracker_$$(date +%Y-%m-%d_%H%M%S).dump"
+      - media_files:/media:ro
+    # `$$` is compose's escape for a literal `$` that the shell expands.
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        interval="$${BACKUP_INTERVAL_SECONDS:-86400}"
+        keep="$${BACKUP_RETENTION:-7}"
+        while true; do
+          ts="$$(date +%Y-%m-%d_%H%M%S)"
+          if pg_dump -Fc -f "/backups/engtracker_$$ts.dump.part"; then
+            mv "/backups/engtracker_$$ts.dump.part" "/backups/engtracker_$$ts.dump"
+            ls -1t /backups/engtracker_*.dump | tail -n +"$$((keep + 1))" | xargs -r rm -f
+            echo "[db-backup] database dump engtracker_$$ts.dump written"
+          else
+            rm -f "/backups/engtracker_$$ts.dump.part"
+            echo "[db-backup] database dump FAILED, keeping existing backups" >&2
+          fi
+          # tar exits 1 when a file changed while it was read (users uploading
+          # during the run); the archive is still usable. 2+ is a real failure.
+          tar -czf "/backups/media_$$ts.tar.gz.part" -C /media .; rc=$$?
+          if [ "$$rc" -le 1 ]; then
+            mv "/backups/media_$$ts.tar.gz.part" "/backups/media_$$ts.tar.gz"
+            ls -1t /backups/media_*.tar.gz | tail -n +"$$((keep + 1))" | xargs -r rm -f
+            echo "[db-backup] media archive media_$$ts.tar.gz written"
+          else
+            rm -f "/backups/media_$$ts.tar.gz.part"
+            echo "[db-backup] media archive FAILED, keeping existing backups" >&2
+          fi
+          if [ "$${BACKUP_ONCE:-0}" = "1" ]; then exit 0; fi
+          sleep "$$interval"
+        done
     networks:
       - backend_net
     security_opt:

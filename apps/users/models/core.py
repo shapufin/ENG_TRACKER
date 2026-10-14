@@ -359,6 +359,17 @@ class ApprovalPeriodCloseMember(BaseModel):
         ]
 
 
+def _user_has_related(user, relation):
+    """``user.<relation>.exists()`` that reuses a ``prefetch_related`` result.
+
+    List endpoints prefetch ``led_teams`` / ``*_team_members`` once for the
+    whole page; without this each row would issue its own EXISTS query.
+    """
+    if relation in getattr(user, '_prefetched_objects_cache', {}):
+        return bool(getattr(user, relation).all())
+    return getattr(user, relation).exists()
+
+
 class UserProfile(BaseModel):
     """
     Extended user profile with additional fields.
@@ -536,11 +547,12 @@ class UserProfile(BaseModel):
             return True
         if self.is_italian_tl_role or self.is_albanian_tl_role:
             return True
-        if self.user.led_teams.exists():
+        if _user_has_related(self.user, 'led_teams'):
             return True
-        return UserProfile.objects.filter(
-            Q(italian_tl=self.user) | Q(albanian_tl=self.user)
-        ).exists()
+        return (
+            _user_has_related(self.user, 'italian_team_members')
+            or _user_has_related(self.user, 'albanian_team_members')
+        )
 
     @property
     def is_hr(self):
@@ -559,14 +571,14 @@ class UserProfile(BaseModel):
         """Check if user is an Albanian team leader (database role or legacy flag)."""
         if 'albanian_tl' in (self.role_codes or []):
             return True
-        return self.is_albanian_tl_role or self.user.albanian_team_members.exists()
+        return self.is_albanian_tl_role or _user_has_related(self.user, 'albanian_team_members')
 
     @property
     def is_italian_tl(self):
         """Check if user is an Italian team leader (database role or legacy flag)."""
         if 'italian_tl' in (self.role_codes or []):
             return True
-        return self.is_italian_tl_role or self.user.italian_team_members.exists()
+        return self.is_italian_tl_role or _user_has_related(self.user, 'italian_team_members')
 
 
 @receiver(post_save, sender=User)

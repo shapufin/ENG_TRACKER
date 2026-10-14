@@ -149,6 +149,11 @@ class RoleViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'code']
 
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve'):
+            return [permissions.IsAdminUser()]
+        return [IsSuperuser()]
+
 
 class PermissionViewSet(SuperuserPermissionMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Permission.objects.all().order_by('module', 'action')
@@ -166,6 +171,11 @@ class UserRoleViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAdminUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['user', 'role', 'team', 'is_active']
+
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve'):
+            return [permissions.IsAdminUser()]
+        return [IsSuperuser()]
 
 
 class UserGroupViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
@@ -208,3 +218,8 @@ class RolePermissionViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAdminUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['role', 'permission']
+
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve'):
+            return [permissions.IsAdminUser()]
+        return [IsSuperuser()]

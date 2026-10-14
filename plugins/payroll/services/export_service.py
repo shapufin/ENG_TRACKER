@@ -9,6 +9,8 @@ import io
 import logging
 from decimal import Decimal, InvalidOperation
 
+from core.utils.csv_safe import xlsx_safe
+
 logger = logging.getLogger(__name__)
 
 # Must match the fixed dropdown labels in
@@ -24,7 +26,7 @@ OVERTIME_CATEGORY_LABELS = {
 
 
 def _excel_text(value: str) -> str:
-    return f"'{value}" if value.lstrip().startswith(('=', '+', '-', '@')) else value
+    return xlsx_safe(value)
 
 
 def _dec(value, default: str = '0') -> Decimal:
@@ -200,7 +202,7 @@ def generate_payroll_excel(run) -> io.BytesIO:
     ws_summary.title = 'Summary'
     r = 1
     if org:
-        ws_summary.cell(row=r, column=1, value=org).font = Font(bold=True, size=14)
+        ws_summary.cell(row=r, column=1, value=_excel_text(org)).font = Font(bold=True, size=14)
         r += 1
     ws_summary.cell(row=r, column=1, value=f'Payroll Run {run.year}-{run.month:02d}').font = Font(bold=True, size=13)
     r += 1

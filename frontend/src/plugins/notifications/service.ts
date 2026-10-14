@@ -41,6 +41,21 @@ export const notificationService = {
     return extractResponseResults(response);
   },
 
+  /** One server page (newest first); `hasMore` mirrors the DRF `next` link. */
+  getNotificationPage: async (
+    page: number
+  ): Promise<{ results: NotificationRecord[]; hasMore: boolean }> => {
+    const response = await api.get<NotificationRecord[] | PaginatedResponse<NotificationRecord>>(
+      "/plugins/notifications/notifications/",
+      { params: { page } }
+    );
+    const data = response.data;
+    return {
+      results: extractResponseResults(response),
+      hasMore: !Array.isArray(data) && Boolean(data.next),
+    };
+  },
+
   markAsRead: async (id: number): Promise<void> => {
     await api.post(`/plugins/notifications/notifications/${id}/mark_read/`);
   },

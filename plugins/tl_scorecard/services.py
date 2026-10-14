@@ -9,6 +9,7 @@ those plugins is composed in the frontend against their own existing APIs.
 """
 from __future__ import annotations
 
+import copy
 import math
 from datetime import date, timedelta
 
@@ -345,9 +346,10 @@ def scorecard_trend(user, months: int, end_month: date) -> list[dict]:
     end = reporting_period(end_month)
     current_state = _current_state_metrics(user, scoreable_member_ids(user))
     points = []
+    year_metrics: dict = {}
     cursor = end
     for _ in range(months):
-        points.append(build_scorecard(user, cursor, current_state))
+        points.append(build_scorecard(user, cursor, current_state, year_metrics))
         if cursor.month == 1:
             cursor = cursor.replace(year=cursor.year - 1, month=12)
         else:
@@ -355,17 +357,30 @@ def scorecard_trend(user, months: int, end_month: date) -> list[dict]:
     return list(reversed(points))
 
 
-def escalation_candidates(leader) -> list[dict]:
+def escalation_candidates(leader, subject_ids=None, include_leave=True) -> list[dict]:
     """Computed, not logged — surfaces anything that would become an
     escalation if left unhandled, from data already tracked elsewhere.
     Directly answers "0 escalations from administrative delays" without a
-    single new manual entry."""
+    single new manual entry.
+
+    ``subject_ids`` limits every candidate to those employees (an HBPR sees only
+    its assigned population); ``include_leave=False`` drops leave candidates,
+    which an HBPR-only viewer is denied."""
     team_member_ids = scoreable_member_ids(leader)
+    if subject_ids is not None:
+        team_member_ids = set(team_member_ids) & set(subject_ids)
+
+    def _limit(qs, field):
+        return qs if subject_ids is None else qs.filter(**{f'{field}__in': team_member_ids})
+
     today = date.today()
     candidates = []
 
-    for r in LeaveRequest.objects.filter(
-            user_id__in=team_member_ids, status='pending').select_related('user'):
+    pending_leave = (
+        LeaveRequest.objects.filter(user_id__in=team_member_ids, status='pending').select_related('user')
+        if include_leave else []
+    )
+    for r in pending_leave:
         elapsed = count_business_days(r.submitted_at.date(), today) - 1 if r.submitted_at else 0
         if elapsed > ESCALATION_LEAVE_SLA_DAYS:
             candidates.append({
@@ -375,8 +390,9 @@ def escalation_candidates(leader) -> list[dict]:
             })
 
     stale_cutoff = today - timedelta(weeks=ESCALATION_IDLE_STALE_WEEKS)
-    for flag in IdleFlag.objects.filter(
-            flagged_by=leader, status='open').select_related('employee').prefetch_related('status_updates'):
+    for flag in _limit(
+            IdleFlag.objects.filter(flagged_by=leader, status='open'), 'employee_id',
+    ).select_related('employee').prefetch_related('status_updates'):
         latest_update = max((u.week_of for u in flag.status_updates.all()), default=None)
         last_activity = latest_update or flag.flagged_on
         if last_activity < stale_cutoff:
@@ -387,16 +403,17 @@ def escalation_candidates(leader) -> list[dict]:
             })
 
     pip_cutoff = today - timedelta(days=ESCALATION_PIP_PENDING_DAYS)
-    for pip in PIPRecord.objects.filter(
-            tl=leader, approved_at__isnull=True, created_at__date__lt=pip_cutoff).select_related('employee'):
+    for pip in _limit(PIPRecord.objects.filter(
+            tl=leader, approved_at__isnull=True, created_at__date__lt=pip_cutoff),
+            'employee_id').select_related('employee'):
         candidates.append({
             'kind': 'pip_pending_approval', 'subject_id': pip.employee_id, 'subject_name': str(pip.employee),
             'detail': f'PIP still pending HR approval since {pip.created_at.date()}.',
             'since': pip.created_at.date(),
         })
 
-    for a in Absence.objects.filter(
-            flagged_by=leader, addressed_on__isnull=True).select_related('employee'):
+    for a in _limit(Absence.objects.filter(
+            flagged_by=leader, addressed_on__isnull=True), 'employee_id').select_related('employee'):
         elapsed = count_business_days(a.absence_date, today) - 1
         if elapsed > ESCALATION_ABSENCE_SLA_DAYS:
             candidates.append({
@@ -468,19 +485,33 @@ def _current_state_metrics(user, team_member_ids) -> dict:
     }
 
 
-def build_scorecard(user, month: date, current_state: dict | None = None) -> dict:
-    """Full scorecard for one TL (`user`) for `month`."""
+def build_scorecard(
+    user, month: date, current_state: dict | None = None, year_metrics: dict | None = None,
+) -> dict:
+    """Full scorecard for one TL (`user`) for `month`.
+
+    `year_metrics` lets a multi-month caller (the trend) share the two
+    calendar-year metrics across the months of one year instead of re-querying
+    them for every point.
+    """
     team_member_ids = scoreable_member_ids(user)
     month = reporting_period(month)
     if current_state is None:
         current_state = _current_state_metrics(user, team_member_ids)
+    if year_metrics is None:
+        year_metrics = {}
+    if month.year not in year_metrics:
+        year_metrics[month.year] = {
+            'review_deliveries_ytd': review_delivery_count(user, month.year),
+            'promotion': promotion_ratio(team_member_ids, month.year),
+        }
+    year_part = copy.deepcopy(year_metrics[month.year])  # points are masked in place later
     return {
         'month': month.isoformat(),
         'team_size': len(team_member_ids),
         'leave': leave_sla_metrics(team_member_ids, month),
         'overtime': ot_turnaround_metrics(team_member_ids, month),
         'meetings': meeting_compliance_metrics(user, team_member_ids, month),
-        'review_deliveries_ytd': review_delivery_count(user, month.year),
-        'promotion': promotion_ratio(team_member_ids, month.year),
+        **year_part,
         **current_state,
     }

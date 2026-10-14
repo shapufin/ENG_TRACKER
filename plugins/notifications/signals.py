@@ -1,4 +1,7 @@
+import logging
+
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
@@ -14,6 +17,7 @@ from .types.base import REGISTRY
 from .types import own, period_finalized, team  # noqa: F401
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -49,6 +53,15 @@ def _team_recipients(user):
             ).values_list('team_leader_id', flat=True)
         )
     return User.objects.filter(id__in=recipient_ids).distinct()
+
+
+def _push_best_effort(user, title, message, link):
+    try:
+        send_push_notification(user, title, message, url=link)
+    except Exception:
+        # Push is best-effort and runs after commit: nothing may escape into
+        # the request that already succeeded.
+        logger.exception("Push delivery failed for user_id=%s", user.id)
 
 
 def _create_notification(
@@ -99,10 +112,11 @@ def _create_notification(
             notification = Notification.objects.create(user=user, **defaults)
 
     if _preference_enabled(user, pref_key, 'push'):
-        try:
-            send_push_notification(user, title, message, url=link)
-        except Exception:
-            pass  # Push is best-effort; in-app is the source of truth
+        # PERF-08: push is HTTP to a third party; run it after the surrounding
+        # transaction commits (and never if it rolls back) instead of inside the
+        # request's DB transaction. In-app rows stay synchronous: they are the
+        # source of truth and must roll back together with the event.
+        transaction.on_commit(lambda: _push_best_effort(user, title, message, link))
 
     return notification
 

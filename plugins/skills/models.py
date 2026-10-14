@@ -118,7 +118,6 @@ class UserSkill(models.Model):
             models.UniqueConstraint(fields=['user', 'skill'], name='user_skill_unique'),
         ]
         indexes = [
-            models.Index(fields=['user', 'skill']),
             models.Index(fields=['skill', 'level']),
         ]
 

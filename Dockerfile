@@ -73,7 +73,7 @@ RUN DJANGO_SETTINGS_MODULE=config.settings_production \
     REDIS_URL=redis://redis:6379/0 \
     USE_REDIS=true \
     FRONTEND_URL=http://localhost \
-    ENABLE_API_DOCS=False \
+\
     python manage.py collectstatic --noinput
 
 EXPOSE 8000
@@ -86,4 +86,12 @@ ENTRYPOINT ["/app/docker/entrypoint.sh"]
 # leaked by long-running prod workloads (pandas, Excel parsing, reportlab
 # may not fully release memory). Jitter avoids all workers recycling
 # simultaneously.
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120", "--max-requests", "1000", "--max-requests-jitter", "100", "--access-logfile", "-", "--error-logfile", "-", "config.wsgi:application"]
+#
+# DEP-13: the worker count is env-driven (GUNICORN_WORKERS, default 3), so the
+# CMD runs through `sh -c` (exec form does not expand variables) and `exec`s
+# gunicorn to keep it PID 1's direct child for signal handling. Sync workers
+# each load pandas and the compose CPU limit is 1.0, so more workers add memory
+# and DB connections (one per worker, see DB_CONN_MAX_AGE) without throughput.
+# --worker-tmp-dir /dev/shm keeps the heartbeat file off the (overlay) disk,
+# which can block a worker; --graceful-timeout bounds a restart/stop drain.
+CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3} --timeout 120 --graceful-timeout 30 --worker-tmp-dir /dev/shm --max-requests 1000 --max-requests-jitter 100 --access-logfile - --error-logfile - config.wsgi:application"]

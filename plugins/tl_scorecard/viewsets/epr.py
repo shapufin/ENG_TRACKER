@@ -84,7 +84,24 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
         if target_user and not is_staff_user(self.request.user):
             if target_user.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'user': 'You can only manage an EPR cycle for your own team members.'})
-        serializer.save()
+        instance = serializer.instance
+        started = any(getattr(instance, f) is not None for f in self.STAGE_FIELD.values())
+        if started:
+            for field in ('user', 'year'):
+                if field in serializer.validated_data and                         serializer.validated_data[field] != getattr(instance, field):
+                    raise ValidationError({field: 'This cannot change once a stage is completed.'})
+        try:
+            with transaction.atomic():
+                serializer.save()
+        except IntegrityError:
+            raise ValidationError({'year': 'An EPR cycle for this user and year already exists.'})
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if any(getattr(instance, f) is not None for f in self.STAGE_FIELD.values()) or instance.stage_records.exists():
+            return Response({'error': 'An EPR cycle with a completed stage cannot be deleted.'}, status=status.HTTP_409_CONFLICT)
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _ensure_stage_order(self, cycle, stage):
         """Reject a stage while an earlier one is still open — see STAGE_ORDER."""

@@ -177,7 +177,8 @@ class TicketOvertimeLinkSerializer(serializers.ModelSerializer):
             'ticket_status', 'batch_month',
         ]
         read_only_fields = [
-            'linked_by', 'linked_at', 'link_method', 'reviewed_by', 'reviewed_at',
+            'linked_by', 'linked_at', 'link_method', 'review_status',
+            'reviewed_by', 'reviewed_at',
         ]
 
     def get_overtime_user(self, obj):

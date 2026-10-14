@@ -388,9 +388,6 @@ class MonthlyKPI(models.Model):
         ordering = ['-month']
         verbose_name = 'Monthly KPI'
         verbose_name_plural = 'Monthly KPIs'
-        indexes = [
-            models.Index(fields=['user', 'month']),
-        ]
 
     def __str__(self):
         return f"{self.user.username} - {self.month.strftime('%Y-%m')}"

@@ -213,4 +213,8 @@ describe("visual-route-manifest contract", () => {
       assert.ok(!blob.includes("/skills/me"), `${role}: stale /skills/me emitted`);
     }
   });
+
+  it("cr_admin is backed by the seeded e2e_cr identity (DOC-07)", () => {
+    assert.equal(ROLE_FIXTURES.cr_admin?.username, "e2e_cr");
+  });
 });

@@ -47,3 +47,14 @@ describe("notificationService URL contracts", () => {
     expect(BASE).not.toContain("/api/");
   });
 });
+
+describe("getNotificationPage", () => {
+  it("requests ?page=N and reports hasMore from the DRF next link", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { count: 3, next: "http://x/?page=3", previous: null, results: [{ id: 1 }] },
+    } as any);
+    const out = await notificationService.getNotificationPage(2);
+    expect(api.get).toHaveBeenCalledWith(`${BASE}/`, { params: { page: 2 } });
+    expect(out.hasMore).toBe(true);
+  });
+});

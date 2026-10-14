@@ -1297,6 +1297,41 @@ class KPIEvidenceTests(TestCase):
         self.assertEqual(response.data['count'], 1)
         self.assertEqual(response.data['results'][0]['user'], self.member.id)
 
+    def _list_evidence_as(self, user, params=None):
+        from plugins.ticket_kpi.viewsets import KPIEvidenceViewSet
+        view = KPIEvidenceViewSet.as_view({'get': 'list'})
+        request = self.factory.get('/evidence/', params or {})
+        force_authenticate(request, user)
+        return view(request)
+
+    def test_tl_list_without_user_id_is_scoped_to_own_and_team(self):
+        """SEC-02: a TL omitting ?user_id must not see other teams' evidence."""
+        outsider = User.objects.create_user(username='evidence_outsider', password='testpass123')
+        for owner in (self.tl, self.member, outsider):
+            KPIEvidence.objects.create(
+                user=owner, month=date(2026, 3, 1),
+                evidence_type='document', description='scope probe',
+            )
+        response = self._list_evidence_as(self.tl)
+        self.assertEqual(response.status_code, 200)
+        owners = {row['user'] for row in response.data['results']}
+        self.assertEqual(owners, {self.tl.id, self.member.id})
+
+    def test_hr_list_without_user_id_sees_all_evidence(self):
+        outsider = User.objects.create_user(username='evidence_outsider2', password='testpass123')
+        hr = User.objects.create_user(username='evidence_hr', password='testpass123')
+        hr.profile.is_hr_user = True
+        hr.profile.save()
+        for owner in (self.member, outsider):
+            KPIEvidence.objects.create(
+                user=owner, month=date(2026, 3, 1),
+                evidence_type='document', description='scope probe',
+            )
+        response = self._list_evidence_as(hr)
+        self.assertEqual(response.status_code, 200)
+        owners = {row['user'] for row in response.data['results']}
+        self.assertEqual(owners, {self.member.id, outsider.id})
+
     def test_evidence_list_accepts_short_month_format(self):
         """Month query param may be YYYY-MM and is normalized to first day."""
         from plugins.ticket_kpi.models import KPIEvidence
@@ -2521,3 +2556,28 @@ class UploadEndpointValidationTests(TestCase):
         response = self._analyze(f)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data.get("code"), "signature_mismatch")
+
+
+class EvidenceMaxMbResolutionTests(TestCase):
+    """The evidence upload limit comes from plugin config only."""
+
+    def test_profile_attribute_is_not_a_limit_source(self):
+        from apps.plugins.models import Plugin
+        from plugins.ticket_kpi.viewsets import _resolve_evidence_max_mb
+
+        Plugin.objects.update_or_create(
+            name="ticket_kpi", defaults={"config": {"max_file_size_mb": 3}}
+        )
+        user = User.objects.create_user(username="evmb", password="x")
+        # UserProfile has no max_file_size_mb field; a stray attribute must
+        # not be able to override the configured limit.
+        user.profile.max_file_size_mb = 500
+        self.assertEqual(_resolve_evidence_max_mb(user), 3)
+
+    def test_defaults_to_ten_without_plugin_config(self):
+        from apps.plugins.models import Plugin
+        from plugins.ticket_kpi.viewsets import _resolve_evidence_max_mb
+
+        Plugin.objects.filter(name="ticket_kpi").delete()
+        user = User.objects.create_user(username="evmb2", password="x")
+        self.assertEqual(_resolve_evidence_max_mb(user), 10)

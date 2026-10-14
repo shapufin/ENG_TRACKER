@@ -355,7 +355,7 @@ def compute_yearly_summary(
             is_overridden=False,
             clients__id__in=client_ids
         ).distinct()
-        if user_ids:
+        if user_ids is not None:
             batches = batches.filter(user_id__in=user_ids)
 
         tickets = NormalizedTicket.objects.filter(batch__in=batches)
@@ -422,7 +422,7 @@ def compute_yearly_summary(
 
     # Pre-computed path
     queryset = MonthlyKPI.objects.filter(month__year=year)
-    if user_ids:
+    if user_ids is not None:
         queryset = queryset.filter(user_id__in=user_ids)
 
     if not queryset.exists():

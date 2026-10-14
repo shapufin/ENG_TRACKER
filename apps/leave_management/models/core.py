@@ -359,6 +359,8 @@ class LeaveRequest(BaseModel):
         ordering = ['-start_date', '-created_at']
         indexes = [
             models.Index(fields=['user', 'status']),
+            models.Index(fields=['status', 'start_date']),
+            models.Index(fields=['user', 'start_date']),
             models.Index(fields=['start_date']),
             models.Index(fields=['end_date']),
             models.Index(fields=['request_type']),
