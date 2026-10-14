@@ -810,7 +810,7 @@ class ConfigurableThresholdsTest(TestCase):
         from plugins.analytics.insights import generate_insights
         from django.utils import timezone
         from datetime import timedelta
-        AnalyticsConfiguration.objects.create(
+        AnalyticsConfiguration.objects.create(pk=1,
             trend_threshold=0.50,  # 50% — higher than the 25% change
         )
         now = timezone.now()
@@ -839,7 +839,7 @@ class ConfigurableThresholdsTest(TestCase):
 
     def test_config_serializer_includes_threshold_fields(self):
         """The serializer exposes all threshold fields."""
-        config = AnalyticsConfiguration.objects.create(
+        config = AnalyticsConfiguration.objects.create(pk=1,
             trend_threshold=0.25,
             concentration_threshold=0.50,
             spike_threshold=3.0,

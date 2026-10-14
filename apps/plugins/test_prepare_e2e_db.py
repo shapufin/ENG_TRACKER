@@ -5,13 +5,17 @@ are computed once at process startup, so everything (tables, enabled plugins,
 seed) must already exist when the servers boot.
 """
 from django.contrib.auth.models import User
+from unittest import skipUnless
+
 from django.core.management import call_command
+from django.db import connection
 from django.test import TestCase
 
 from apps.plugins.models import Plugin
 from core.plugins.registry import plugin_registry
 
 
+@skipUnless(connection.vendor == "sqlite", "seed_e2e_data only runs against SQLite")
 class PrepareE2EDbTests(TestCase):
     def test_enables_every_plugin_and_seeds_users(self):
         call_command("prepare_e2e_db", verbosity=0)

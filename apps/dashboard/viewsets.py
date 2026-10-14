@@ -1063,7 +1063,7 @@ class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
             existing = SiteBranding.objects.first()
             serializer.update(existing, serializer.validated_data)
         else:
-            serializer.save()
+            serializer.save(pk=1)
         self.invalidate_related_cache()
 
     def perform_update(self, serializer):
@@ -1081,6 +1081,6 @@ class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
         branding = SiteBranding.objects.first()
         if not branding:
             # Create default branding if none exists
-            branding = SiteBranding.objects.create()
+            branding = SiteBranding.objects.create(pk=1)
         serializer = self.get_serializer(branding)
         return Response(serializer.data)

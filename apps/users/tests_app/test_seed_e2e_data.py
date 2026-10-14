@@ -1,7 +1,10 @@
 """Contract for the deterministic fixture the Playwright role-workflow suite logs in as."""
 from django.contrib.auth.models import User
+from unittest import skipUnless
+
 from django.core.management import call_command
 from django.utils import timezone
+from django.db import connection
 from django.test import TestCase
 
 from apps.permissions.models import UserRole
@@ -32,6 +35,7 @@ class SeedE2EDataGuardTests(TestCase):
         self.assertFalse(User.objects.filter(username="e2e_admin").exists())
 
 
+@skipUnless(connection.vendor == "sqlite", "seed_e2e_data only runs against SQLite")
 class SeedE2EDataTests(TestCase):
     @classmethod
     def setUpTestData(cls):

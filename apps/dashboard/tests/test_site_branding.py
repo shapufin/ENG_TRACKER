@@ -26,7 +26,7 @@ class SiteBrandingViewSetTests(TestCase):
         self.assertTrue(SiteBranding.objects.exists())
 
     def test_any_authenticated_user_can_read_current(self):
-        SiteBranding.objects.create(site_name="Acme Tracker")
+        SiteBranding.objects.create(pk=1, site_name="Acme Tracker")
         self.client.force_authenticate(self.employee)
 
         response = self.client.get("/api/dashboard/branding/current/")
@@ -35,7 +35,7 @@ class SiteBrandingViewSetTests(TestCase):
         self.assertEqual(response.data["site_name"], "Acme Tracker")
 
     def test_unauthenticated_user_can_read_current(self):
-        SiteBranding.objects.create(site_name="Public Branding Tracker")
+        SiteBranding.objects.create(pk=1, site_name="Public Branding Tracker")
 
         response = self.client.get("/api/dashboard/branding/current/")
 
@@ -43,7 +43,7 @@ class SiteBrandingViewSetTests(TestCase):
         self.assertEqual(response.data["site_name"], "Public Branding Tracker")
 
     def test_non_staff_cannot_update_branding(self):
-        branding = SiteBranding.objects.create(site_name="Acme Tracker")
+        branding = SiteBranding.objects.create(pk=1, site_name="Acme Tracker")
         self.client.force_authenticate(self.employee)
 
         response = self.client.patch(
@@ -53,7 +53,7 @@ class SiteBrandingViewSetTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_staff_can_update_site_name_and_logo(self):
-        branding = SiteBranding.objects.create(site_name="Acme Tracker")
+        branding = SiteBranding.objects.create(pk=1, site_name="Acme Tracker")
         self.client.force_authenticate(self.staff_user)
         logo = SimpleUploadedFile("logo.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 16, content_type="image/png")
 
@@ -74,7 +74,7 @@ class SiteBrandingViewSetTests(TestCase):
         logo — a PATCH with no `logo` key must not clear the existing one.
         """
         logo = SimpleUploadedFile("logo.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 16, content_type="image/png")
-        branding = SiteBranding.objects.create(site_name="Acme Tracker", logo=logo)
+        branding = SiteBranding.objects.create(pk=1, site_name="Acme Tracker", logo=logo)
         original_logo_name = branding.logo.name
         self.client.force_authenticate(self.staff_user)
 
@@ -102,7 +102,7 @@ class SiteBrandingLogoValidationTests(TestCase):
             username="logo_staff", password="testpass", is_staff=True
         )
         self.client.force_authenticate(self.staff_user)
-        self.branding = SiteBranding.objects.create(site_name="Acme")
+        self.branding = SiteBranding.objects.create(pk=1, site_name="Acme")
 
     def _upload(self, name, content, content_type="application/octet-stream"):
         return self.client.patch(

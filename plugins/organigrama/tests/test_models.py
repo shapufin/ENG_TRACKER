@@ -232,11 +232,8 @@ class MigrationReversibilityTestCase(TransactionTestCase):
 
     def _organigrama_tables(self):
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' "
-                "AND name LIKE 'organigrama_%'"
-            )
-            return {row[0] for row in cursor.fetchall()}
+            names = connection.introspection.table_names(cursor)
+        return {n for n in names if n.startswith("organigrama_")}
 
     def test_migration_reverses_to_zero(self):
         tables_before = self._organigrama_tables()

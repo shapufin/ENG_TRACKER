@@ -370,7 +370,7 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
         failed_ids = []
 
         with transaction.atomic(), actor_team_scope_cached(request.user):
-            queryset = self.get_queryset().filter(id__in=ids, status='pending').select_for_update()
+            queryset = self.get_queryset().filter(id__in=ids, status='pending').select_for_update(of=('self',))
 
             for obj in queryset:
                 if self._can_approve(request.user, obj):
@@ -400,7 +400,7 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
         failed_ids = []
 
         with transaction.atomic(), actor_team_scope_cached(request.user):
-            queryset = self.get_queryset().filter(id__in=ids, status='pending').select_for_update()
+            queryset = self.get_queryset().filter(id__in=ids, status='pending').select_for_update(of=('self',))
 
             for obj in queryset:
                 if self._can_approve(request.user, obj):
@@ -437,7 +437,7 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
         failed_ids = []
 
         with transaction.atomic(), actor_team_scope_cached(request.user):
-            queryset = self.get_queryset().filter(id__in=ids).select_for_update()
+            queryset = self.get_queryset().filter(id__in=ids).select_for_update(of=('self',))
 
             for obj in queryset:
                 if self._can_delete(request.user, obj):

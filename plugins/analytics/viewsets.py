@@ -772,7 +772,7 @@ class AnalyticsConfigurationViewSet(PluginPermissionMixin, viewsets.ModelViewSet
         """Get the current configuration or create default if none exists."""
         config = AnalyticsConfiguration.objects.first()
         if not config:
-            config = AnalyticsConfiguration.objects.create()
+            config = AnalyticsConfiguration.objects.create(pk=1)
         serializer = self.get_serializer(config)
         return Response(serializer.data)
 
