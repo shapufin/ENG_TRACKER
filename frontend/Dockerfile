@@ -35,6 +35,9 @@ RUN rm /etc/nginx/conf.d/default.conf
 # $remote_addr, $trusted_ingress used throughout this config) are never
 # touched since none of them collide with a real (conventionally uppercase)
 # env var name.
+# Defined-but-empty so envsubst always substitutes it; an undefined variable is
+# left as a literal ${ONLYOFFICE_ORIGIN}, which nginx rejects as an unknown variable.
+ENV ONLYOFFICE_ORIGIN=""
 COPY docker/nginx.conf.template /etc/nginx/templates/app.conf.template
 
 # Copy built assets
