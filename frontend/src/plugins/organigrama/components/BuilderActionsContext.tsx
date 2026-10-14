@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 
-export interface BuilderActionsContextValue {
+interface BuilderActionsContextValue {
   onAddChild?: (parentId: string) => void;
   onAddPeer?: (nodeId: string) => void;
   onDeleteNode?: (nodeId: string) => void;
