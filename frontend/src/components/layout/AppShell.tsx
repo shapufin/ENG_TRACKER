@@ -15,9 +15,11 @@ import { navItemToPaletteItem } from "./paletteItems";
 import { HeaderProfileMenu } from "./HeaderProfileMenu";
 import { useVisibleNavItems } from "./hooks/useVisibleNavItems";
 import { usePendingApprovalCount } from "@/hooks/usePendingApprovalCount";
+import { useSiteBranding } from "@/hooks/useSiteBranding";
 
 export const AppShell = React.memo(() => {
   const { user } = useAuth();
+  const { data: branding } = useSiteBranding();
   const {
     isAdmin,
     isHR,
@@ -108,7 +110,7 @@ export const AppShell = React.memo(() => {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <span className="font-semibold">TimeTracker</span>
+            <span className="font-semibold">{branding?.site_name || "Engineering Tracker"}</span>
           </div>
           <div className="flex items-center gap-2">
             <PluginSlot slot="header-mobile" />

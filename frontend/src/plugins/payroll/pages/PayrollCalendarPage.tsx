@@ -3,6 +3,8 @@
  * grid, per-month summary stats, and full holiday CRUD.
  */
 import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { CalendarDays } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -129,6 +131,8 @@ export const PayrollCalendarPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll-calendars"] });
       queryClient.invalidateQueries({ queryKey: ["payroll-calendar-month-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "holidays"] });
+      queryClient.invalidateQueries({ queryKey: ["leave-balances"] });
       toast.success("Holiday added");
       setAddHolidayOpen(false);
       setNewHolidayDate("");
@@ -150,6 +154,8 @@ export const PayrollCalendarPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll-calendars"] });
       queryClient.invalidateQueries({ queryKey: ["payroll-calendar-month-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "holidays"] });
+      queryClient.invalidateQueries({ queryKey: ["leave-balances"] });
       toast.success("Holiday updated");
       setEditHoliday(null);
       setEditHolidayName("");
@@ -163,6 +169,8 @@ export const PayrollCalendarPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll-calendars"] });
       queryClient.invalidateQueries({ queryKey: ["payroll-calendar-month-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "holidays"] });
+      queryClient.invalidateQueries({ queryKey: ["leave-balances"] });
       toast.success("Holiday removed");
       setDeleteHoliday(null);
     },
@@ -298,7 +306,17 @@ export const PayrollCalendarPage: React.FC = () => {
   if (error) return <ErrorCard title="Failed to load work calendars" onRetry={refetch} />;
 
   return (
-    <PageShell title="Work Calendar" subtitle="Authoritative payroll work calendar with holidays">
+    <PageShell
+      title="Work Calendar"
+      subtitle="Visual payroll work calendar. Holidays automatically sync with the global company holiday catalog and leave tracking."
+      actions={
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/admin/calendars">
+            <CalendarDays className="mr-2 h-4 w-4" /> Company Holidays
+          </Link>
+        </Button>
+      }
+    >
       {calendars && calendars.length > 0 ? (
         <div className="space-y-4">
           {/* Selectors */}

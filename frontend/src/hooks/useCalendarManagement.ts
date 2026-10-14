@@ -113,6 +113,8 @@ export const useCalendarManagement = (options?: UseCalendarManagementOptions) =>
         : calendarAdminService.createHoliday(payload),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["admin", "holidays"] });
+      qc.invalidateQueries({ queryKey: ["payroll-calendars"] });
+      qc.invalidateQueries({ queryKey: ["payroll-calendar-month-summary"] });
       toast.success(variables.id ? "Holiday updated" : "Holiday created");
       options?.onHolidaySuccess?.();
     },
@@ -123,6 +125,8 @@ export const useCalendarManagement = (options?: UseCalendarManagementOptions) =>
     mutationFn: (id: number) => calendarAdminService.deleteHoliday(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "holidays"] });
+      qc.invalidateQueries({ queryKey: ["payroll-calendars"] });
+      qc.invalidateQueries({ queryKey: ["payroll-calendar-month-summary"] });
       toast.success("Holiday deleted");
       options?.onHolidayDeleteSuccess?.();
     },

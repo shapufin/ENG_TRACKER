@@ -1,4 +1,4 @@
-﻿"""
+"""
 Leave management app viewsets.
 """
 
@@ -262,7 +262,7 @@ class LeaveBalanceViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserPer
 
 class GlobalSettingsViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.ModelViewSet):
     """ViewSet for GlobalSettings singleton. Admin write, all authenticated read."""
-    queryset = GlobalSettings.objects.all()
+    queryset = GlobalSettings.objects.all().order_by('id')
     serializer_class = GlobalSettingsSerializer
 
     def get_permissions(self):
@@ -298,11 +298,13 @@ class GlobalSettingsViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserP
     def perform_update(self, serializer):
         with transaction.atomic():
             settings_obj = serializer.save()
-            # The rule governs the current carry cycle only. Older carry rows keep the
-            # expiry they were granted with, so an expired balance is never revived.
+            # The rule governs the current carry cycle. If rollover already ran,
+            # target applied - 1; otherwise target the active year's carry rows (localdate().year - 1).
+            # Older carry rows keep the expiry they were granted with, so an expired balance is never revived.
             applied = settings_obj.carry_over_applied_year
-            cycle = LeaveBalance.objects.none() if applied is None else LeaveBalance.objects.filter(
-                is_carry_over=True, year=applied - 1,
+            target_year = (applied - 1) if applied is not None else (timezone.localdate().year - 1)
+            cycle = LeaveBalance.objects.filter(
+                is_carry_over=True, year=target_year,
             )
             for row in cycle.select_for_update():
                 row.expires_at = carry_over_expiry_for(

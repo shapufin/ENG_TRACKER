@@ -1,12 +1,12 @@
-﻿"""
+"""
 Dashboard app viewsets.
 """
 
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
 from django.db import models, transaction
@@ -61,6 +61,30 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         set_cached_response_data(cache_key, response.data, CacheTTL.LONG)
         return response
 
+    @staticmethod
+    def _may_use_team(user, team):
+        """Staff and HR may inspect any team; others only teams they belong to or lead."""
+        if user.is_staff or user.is_superuser or user.profile.is_hr:
+            return True
+        return (
+            team.team_leader_id == user.id
+            or user.profile.teams.filter(id=team.id).exists()
+        )
+
+    @staticmethod
+    def _parse_limit(request, default):
+        """Positive integer ``limit`` query param; 400 instead of a 500 otherwise."""
+        raw = request.query_params.get('limit')
+        if raw in (None, ''):
+            return default
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            value = 0
+        if value < 1:
+            raise ValidationError({'limit': 'Must be a positive integer.'})
+        return value
+
     def _get_team_and_members(self, request):
         """
         Get team and team member IDs for dashboard actions.
@@ -78,8 +102,12 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
             return None, None, 'no_profile'
 
         if team_id:
-            team = Team.objects.filter(id=team_id).first()
-            if not team:
+            try:
+                team = Team.objects.filter(id=int(team_id)).first()
+            except (TypeError, ValueError):
+                team = None
+            # SEC-05: unknown and not-yours look the same (no existence oracle).
+            if not team or not self._may_use_team(user, team):
                 return None, None, 'team_not_found'
         else:
             team = user.profile.teams.first()
@@ -502,7 +530,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         from apps.leave_management.models import LeaveRequest
 
         team, team_member_ids, error = self._get_team_and_members(request)
-        limit = int(request.query_params.get('limit', 5))
+        limit = self._parse_limit(request, 5)
 
         if error == 'no_profile' or error == 'no_team':
             return Response([])
@@ -553,7 +581,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         from apps.leave_management.models import LeaveRequest
 
         team, team_member_ids, error = self._get_team_and_members(request)
-        limit = int(request.query_params.get('limit', 4))
+        limit = self._parse_limit(request, 4)
         scope = request.query_params.get('scope') or 'all'
 
         if error == 'no_profile' or error == 'no_team':
@@ -932,20 +960,36 @@ class PublicHolidayViewSet(HbprBlockedMixin, CacheInvalidationMixin, viewsets.Mo
     filterset_fields = ['calendar', 'country_code', 'is_global', 'date']
     search_fields = ['name', 'country_code']
 
+    def _is_unrestricted(self):
+        user = self.request.user
+        return user.is_staff or user.is_superuser
+
     def get_queryset(self):
         queryset = super().get_queryset()
+        # D-F1: holidays attached to a workspace are visible only to users
+        # who can see that workspace; global (calendar-less) ones to everyone.
+        if not self._is_unrestricted():
+            accessible = CalendarWorkspace.get_accessible_for_user(self.request.user)
+            queryset = queryset.filter(Q(calendar__isnull=True) | Q(calendar__in=accessible))
         calendar_id = self.request.query_params.get('calendar')
         if calendar_id:
             queryset = queryset.filter(calendar_id=calendar_id)
         return queryset
 
     def list(self, request, *args, **kwargs):
-        # Read-heavy, write-rare reference data (holidays don't vary per
-        # user — only by the ?calendar/?country_code/etc. filters already
-        # in the fingerprint). Invalidated on every write via the existing
-        # CacheInvalidationMixin hooks below, no new invalidation path.
+        # Read-heavy, write-rare reference data. The result varies by the
+        # viewer's accessible workspaces (D-F1), so that scope is part of the
+        # key; writes still invalidate via the CacheInvalidationMixin hooks.
+        if self._is_unrestricted():
+            scope = 'all'
+        else:
+            import hashlib
+            ids = sorted(
+                CalendarWorkspace.get_accessible_for_user(request.user).values_list('id', flat=True)
+            )
+            scope = hashlib.md5(','.join(map(str, ids)).encode()).hexdigest()
         cache_key = CacheKey.dashboard_reference(
-            'holidays', build_query_fingerprint(request)
+            'holidays', f'{build_query_fingerprint(request)}|ws={scope}'
         )
         cached = get_cached_response_data(cache_key)
         if cached is not None:
@@ -979,6 +1023,9 @@ class PublicHolidayViewSet(HbprBlockedMixin, CacheInvalidationMixin, viewsets.Mo
 
     def perform_update(self, serializer):
         self._ensure_admin()
+        # D-F2: the holiday's current workspace must be accessible too, so a
+        # null/other target cannot detach it from a workspace the user cannot see.
+        self._ensure_calendar_accessible(serializer.instance.calendar)
         self._ensure_calendar_accessible(
             serializer.validated_data.get('calendar', serializer.instance.calendar)
         )
@@ -994,9 +1041,14 @@ class PublicHolidayViewSet(HbprBlockedMixin, CacheInvalidationMixin, viewsets.Mo
 
 class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
     """ViewSet for SiteBranding singleton - used for global settings like site name and logo."""
-    queryset = SiteBranding.objects.all()
+    queryset = SiteBranding.objects.all().order_by('id')
     serializer_class = SiteBrandingSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == 'current':
+            return [AllowAny()]
+        return super().get_permissions()
 
     def _ensure_admin(self):
         user = self.request.user

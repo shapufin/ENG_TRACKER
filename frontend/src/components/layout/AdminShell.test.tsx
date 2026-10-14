@@ -14,6 +14,9 @@ vi.mock("@/context/PluginContext", () => ({
   usePlugins: () => ({ activePlugins: [], isLoading: false }),
 }));
 vi.mock("@/hooks/useLogout", () => ({ useLogout: () => vi.fn() }));
+vi.mock("@/hooks/useSiteBranding", () => ({
+  useSiteBranding: () => ({ data: { site_name: "Admin Panel" } }),
+}));
 vi.mock("./AdminSidebar", () => ({
   AdminSidebar: () => <div data-testid="admin-sidebar" />,
 }));

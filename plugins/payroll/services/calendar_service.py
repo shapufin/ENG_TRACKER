@@ -87,17 +87,23 @@ def generate_workdays_for_year(calendar: PayrollWorkCalendar) -> int:
 def _get_holidays_for_year(year: int) -> dict[date, str]:
     """Return holidays for a given year.
 
-    For 2026, returns the predefined ``ALBANIA_2026_HOLIDAYS``.
-    For other years, returns only fixed-date holidays (movable ones
-    need manual admin entry).
+    First checks the global ``PublicHoliday`` catalog. If no holidays exist yet
+    for that year, falls back to Albanian standard reference holidays and auto-seeds
+    them into ``PublicHoliday`` so the HR catalog and Vacation Leave are aligned.
     """
-    if year == 2026:
-        return dict(ALBANIA_2026_HOLIDAYS)
+    from apps.dashboard.models.calendar import PublicHoliday
 
-    # Fixed-date holidays for any year
-    fixed: dict[date, str] = {
-        date(year, 1, 1): 'New Year\'s Day',
-        date(year, 1, 2): 'New Year\'s Holiday',
+    existing = dict(
+        PublicHoliday.objects.filter(
+            calendar__isnull=True, date__year=year
+        ).values_list('date', 'name')
+    )
+    if existing:
+        return existing
+
+    fixed = dict(ALBANIA_2026_HOLIDAYS) if year == 2026 else {
+        date(year, 1, 1): "New Year's Day",
+        date(year, 1, 2): "New Year's Holiday",
         date(year, 3, 14): 'Summer Day',
         date(year, 3, 22): 'Nevruz Day',
         date(year, 5, 1): 'Labour Day',
@@ -107,6 +113,12 @@ def _get_holidays_for_year(year: int) -> dict[date, str]:
         date(year, 12, 8): 'National Youth Day',
         date(year, 12, 25): 'Christmas Day',
     }
+
+    for h_date, h_name in fixed.items():
+        PublicHoliday.objects.get_or_create(
+            date=h_date, calendar=None,
+            defaults={'name': h_name, 'is_global': True, 'country_code': 'AL'}
+        )
     return fixed
 
 
@@ -153,6 +165,7 @@ def add_holiday(calendar: PayrollWorkCalendar, holiday_date: date, name: str) ->
 
     Sets is_holiday=True, is_working_day=False, holiday_name=name.
     Creates the workday row if it doesn't exist for this date.
+    Also syncs with the global PublicHoliday catalog.
     """
     workday, created = PayrollWorkday.objects.update_or_create(
         calendar=calendar,
@@ -164,6 +177,16 @@ def add_holiday(calendar: PayrollWorkCalendar, holiday_date: date, name: str) ->
             'standard_hours': Decimal('0'),
         },
     )
+    try:
+        from apps.dashboard.models.calendar import PublicHoliday
+        PublicHoliday.objects.update_or_create(
+            date=holiday_date,
+            calendar=None,
+            defaults={'name': name, 'is_global': True, 'country_code': calendar.country or 'AL'},
+        )
+    except Exception:
+        pass
+
     if not created:
         logger.info('Updated holiday %s on %s (was: %s)', name, holiday_date, workday.holiday_name)
     return workday
@@ -174,6 +197,7 @@ def remove_holiday(workday: PayrollWorkday) -> None:
 
     Restores is_working_day based on weekday (Mon-Fri = working).
     Clears holiday_name and restores standard_hours if it's a working day.
+    Also deletes from the global PublicHoliday catalog.
     """
     is_weekend = workday.date.weekday() >= 5
     workday.is_holiday = False
@@ -181,3 +205,25 @@ def remove_holiday(workday: PayrollWorkday) -> None:
     workday.is_working_day = not is_weekend
     workday.standard_hours = Decimal('8') if not is_weekend else Decimal('0')
     workday.save(update_fields=['is_holiday', 'holiday_name', 'is_working_day', 'standard_hours'])
+
+    try:
+        from apps.dashboard.models.calendar import PublicHoliday
+        PublicHoliday.objects.filter(date=workday.date, calendar__isnull=True).delete()
+    except Exception:
+        pass
+
+
+def update_holiday_name(workday: PayrollWorkday, name: str) -> PayrollWorkday:
+    """Update a holiday's name and sync to global PublicHoliday."""
+    workday.holiday_name = name
+    workday.save(update_fields=['holiday_name'])
+    try:
+        from apps.dashboard.models.calendar import PublicHoliday
+        for h in PublicHoliday.objects.filter(date=workday.date, calendar__isnull=True):
+            if h.name != name:
+                h.name = name
+                h.save(update_fields=['name'])
+    except Exception:
+        pass
+    return workday
+

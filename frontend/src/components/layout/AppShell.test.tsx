@@ -21,6 +21,9 @@ vi.mock("@/context/PermissionContext", () => ({
 }));
 vi.mock("@/hooks/useLogout", () => ({ useLogout: () => vi.fn() }));
 vi.mock("@/hooks/usePendingApprovalCount", () => ({ usePendingApprovalCount: () => 0 }));
+vi.mock("@/hooks/useSiteBranding", () => ({
+  useSiteBranding: () => ({ data: { site_name: "Engineering Tracker" } }),
+}));
 vi.mock("@/components/plugins/PluginSlot", () => ({ PluginSlot: () => null }));
 vi.mock("./Sidebar", () => ({ Sidebar: () => <div data-testid="sidebar" /> }));
 vi.mock("./TeamContextPill", () => ({ TeamContextPill: () => null }));

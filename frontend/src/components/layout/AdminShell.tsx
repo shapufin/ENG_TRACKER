@@ -12,9 +12,11 @@ import { useAdminNavItems } from "./hooks/useAdminNavItems";
 import { AdminBreadcrumbNav } from "./AdminBreadcrumbNav";
 import { isAllowedCRAdminPath } from "./adminRouteGuards";
 import { AdminCommandPalette } from "./AdminCommandPalette";
+import { useSiteBranding } from "@/hooks/useSiteBranding";
 
 export const AdminShell = React.memo(() => {
   const { user } = useAuth();
+  const { data: branding } = useSiteBranding();
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
@@ -93,7 +95,7 @@ export const AdminShell = React.memo(() => {
           </button>
           <div className="flex items-center gap-2">
             <Shield className="text-primary h-4 w-4" />
-            <span className="font-semibold">Admin Panel</span>
+            <span className="font-semibold">{branding?.site_name || "Admin Panel"}</span>
           </div>
         </div>
         <MainContentTransition pathname={location.pathname} className="h-full">

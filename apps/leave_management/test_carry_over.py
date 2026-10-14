@@ -282,6 +282,35 @@ class SettingsTests(CarryOverTestBase):
         self.settings.refresh_from_db()
         self.assertFalse(self.settings.carry_over_enabled)
 
+    def test_month_and_day_bounds_rejected(self):
+        self.api.force_authenticate(user=self.staff)
+        for invalid_payload in [
+            {'carry_over_expiry_month': 0},
+            {'carry_over_expiry_month': 13},
+            {'carry_over_expiry_day': 0},
+            {'carry_over_expiry_day': 32},
+            {'default_yearly_leave_days': -1},
+            {'default_yearly_leave_days': 400},
+        ]:
+            response = self.api.patch(self.url.format(self.settings.pk), invalid_payload, format='json')
+            self.assertEqual(response.status_code, 400, f'Expected 400 for {invalid_payload}')
+
+    def test_re_stamping_when_applied_year_is_none(self):
+        # Even before rollover has marked carry_over_applied_year,
+        # carry rows for the prior calendar year are re-stamped when settings change.
+        self.settings.carry_over_applied_year = None
+        self.settings.save(update_fields=['carry_over_applied_year'])
+        self.set_today(date(2027, 2, 1))
+        # Prior year carry row
+        carry = self.balance(2026, total=10, used=0, carry=True, expires=date(2027, 3, 31))
+        self.api.force_authenticate(user=self.staff)
+        response = self.api.patch(self.url.format(self.settings.pk), {
+            'carry_over_expiry_month': 4, 'carry_over_expiry_day': 30,
+        }, format='json')
+        self.assertEqual(response.status_code, 200)
+        carry.refresh_from_db()
+        self.assertEqual(carry.expires_at, date(2027, 4, 30))
+
 
 class BalanceUpdateBugTests(CarryOverTestBase):
     def test_edit_that_fits_only_after_releasing_old_days_is_accepted(self):

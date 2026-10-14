@@ -34,6 +34,14 @@ class SiteBrandingViewSetTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertEqual(response.data["site_name"], "Acme Tracker")
 
+    def test_unauthenticated_user_can_read_current(self):
+        SiteBranding.objects.create(site_name="Public Branding Tracker")
+
+        response = self.client.get("/api/dashboard/branding/current/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data["site_name"], "Public Branding Tracker")
+
     def test_non_staff_cannot_update_branding(self):
         branding = SiteBranding.objects.create(site_name="Acme Tracker")
         self.client.force_authenticate(self.employee)
@@ -47,7 +55,7 @@ class SiteBrandingViewSetTests(TestCase):
     def test_staff_can_update_site_name_and_logo(self):
         branding = SiteBranding.objects.create(site_name="Acme Tracker")
         self.client.force_authenticate(self.staff_user)
-        logo = SimpleUploadedFile("logo.png", b"fake-image-bytes", content_type="image/png")
+        logo = SimpleUploadedFile("logo.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 16, content_type="image/png")
 
         response = self.client.patch(
             f"/api/dashboard/branding/{branding.id}/",
@@ -65,7 +73,7 @@ class SiteBrandingViewSetTests(TestCase):
         """The frontend leaves the file input empty when not changing the
         logo — a PATCH with no `logo` key must not clear the existing one.
         """
-        logo = SimpleUploadedFile("logo.png", b"fake-image-bytes", content_type="image/png")
+        logo = SimpleUploadedFile("logo.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 16, content_type="image/png")
         branding = SiteBranding.objects.create(site_name="Acme Tracker", logo=logo)
         original_logo_name = branding.logo.name
         self.client.force_authenticate(self.staff_user)
@@ -80,3 +88,40 @@ class SiteBrandingViewSetTests(TestCase):
         branding.refresh_from_db()
         self.assertEqual(branding.site_name, "Renamed Only")
         self.assertEqual(branding.logo.name, original_logo_name)
+
+
+class SiteBrandingLogoValidationTests(TestCase):
+    """SEC-13: the logo is served back to every user, so only real raster images."""
+    PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+    JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 16
+    WEBP = b"RIFF\x00\x00\x00\x00WEBP" + b"\x00" * 8
+
+    def setUp(self):
+        self.client = APIClient()
+        self.staff_user = User.objects.create_user(
+            username="logo_staff", password="testpass", is_staff=True
+        )
+        self.client.force_authenticate(self.staff_user)
+        self.branding = SiteBranding.objects.create(site_name="Acme")
+
+    def _upload(self, name, content, content_type="application/octet-stream"):
+        return self.client.patch(
+            f"/api/dashboard/branding/{self.branding.id}/",
+            {"logo": SimpleUploadedFile(name, content, content_type=content_type)},
+            format="multipart",
+        )
+
+    def test_svg_is_rejected(self):
+        svg = b'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
+        response = self._upload("logo.svg", svg, "image/svg+xml")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("logo", response.data)
+
+    def test_html_renamed_to_png_is_rejected_by_content(self):
+        response = self._upload("logo.png", b"<html><script>alert(1)</script></html>", "image/png")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_real_png_jpeg_and_webp_are_accepted(self):
+        for name, data in (("a.png", self.PNG), ("b.jpg", self.JPEG), ("c.webp", self.WEBP)):
+            with self.subTest(name=name):
+                self.assertEqual(self._upload(name, data).status_code, status.HTTP_200_OK)
