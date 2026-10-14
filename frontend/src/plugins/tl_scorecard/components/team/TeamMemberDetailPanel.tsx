@@ -201,7 +201,7 @@ export const TeamMemberDetailPanel: React.FC<TeamMemberDetailPanelProps> = ({
                           {leaveTypeLabel(item.request_type)}
                         </Badge>
                         <span className="text-muted-foreground">
-                          {plural(item.business_days, "day", "days")}
+                          {plural(item.business_days, "business day", "business days")}
                         </span>
                       </div>
                     </li>
