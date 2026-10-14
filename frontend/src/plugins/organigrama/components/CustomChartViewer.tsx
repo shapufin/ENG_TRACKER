@@ -1,5 +1,5 @@
 /** Custom chart viewer — renders a published org chart for end users. */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -707,10 +707,12 @@ export const CustomChartViewer: React.FC<CustomChartViewerProps> = ({ chart, pay
   const isLandscape = useMediaQuery("(orientation: landscape) and (max-height: 550px)");
   const [userModeOverride, setUserModeOverride] = useState<"graph" | "list" | null>(null);
 
-  // Automatically switch mode when orientation changes (e.g. rotating phone into landscape opens graph)
-  useEffect(() => {
+  // Automatically reset user override when orientation changes (e.g. rotating phone into landscape opens graph)
+  const [prevLandscape, setPrevLandscape] = useState(isLandscape);
+  if (prevLandscape !== isLandscape) {
+    setPrevLandscape(isLandscape);
     setUserModeOverride(null);
-  }, [isLandscape]);
+  }
 
   // In landscape mode or desktop, automatically open in interactive graph view.
   // In portrait mobile, default to list unless user toggles graph view.

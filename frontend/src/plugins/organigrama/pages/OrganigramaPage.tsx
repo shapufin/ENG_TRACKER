@@ -1,5 +1,5 @@
 /** Organigrama page — route entry, source selector, mobile/desktop switch. */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Network, Loader2, AlertCircle } from "lucide-react";
 import {
   Select,
@@ -29,10 +29,12 @@ export const OrganigramaPage: React.FC = () => {
   const isLandscape = useMediaQuery("(orientation: landscape) and (max-height: 550px)");
   const [liveModeOverride, setLiveModeOverride] = useState<"graph" | "list" | null>(null);
 
-  // Automatically switch mode when orientation changes (e.g. rotating phone into landscape opens graph)
-  useEffect(() => {
+  // Automatically reset user override when orientation changes (e.g. rotating phone into landscape opens graph)
+  const [prevLandscape, setPrevLandscape] = useState(isLandscape);
+  if (prevLandscape !== isLandscape) {
+    setPrevLandscape(isLandscape);
     setLiveModeOverride(null);
-  }, [isLandscape]);
+  }
 
   const isLiveGraphMode =
     liveModeOverride === "graph" || (liveModeOverride === null && (isLandscape || !isSmallScreen));
