@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import html2canvas from "html2canvas-pro";
 import { captureChartsToPdf, expandScrollRegions, hiddenScrollExtent } from "./pdfExport";
 
@@ -7,16 +7,29 @@ const addPage = vi.fn();
 const text = vi.fn();
 const setFontSize = vi.fn();
 const setTextColor = vi.fn();
+const setDrawColor = vi.fn();
+const setLineWidth = vi.fn();
+const line = vi.fn();
+const setPage = vi.fn();
 const save = vi.fn();
+let pageCount = 1;
 
 vi.mock("jspdf", () => ({
   jsPDF: class {
     internal = { pageSize: { getWidth: () => 595, getHeight: () => 842 } };
     addImage = addImage;
-    addPage = addPage;
+    addPage = vi.fn().mockImplementation(() => {
+      pageCount++;
+      addPage();
+    });
     text = text;
     setFontSize = setFontSize;
     setTextColor = setTextColor;
+    setDrawColor = setDrawColor;
+    setLineWidth = setLineWidth;
+    line = line;
+    setPage = setPage;
+    getNumberOfPages = vi.fn().mockImplementation(() => pageCount);
     save = save;
   },
 }));
@@ -40,6 +53,25 @@ const makeContainer = (sectionCount: number) => {
 };
 
 describe("captureChartsToPdf", () => {
+  beforeEach(() => {
+    pageCount = 1;
+    addImage.mockClear();
+    addPage.mockClear();
+    text.mockClear();
+    setFontSize.mockClear();
+    setTextColor.mockClear();
+    setDrawColor.mockClear();
+    setLineWidth.mockClear();
+    line.mockClear();
+    setPage.mockClear();
+    save.mockClear();
+    vi.mocked(html2canvas).mockResolvedValue({
+      width: 1200,
+      height: 3000,
+      toDataURL: () => "data:image/png;base64,fake",
+    } as unknown as HTMLCanvasElement);
+  });
+
   it("does nothing when there are no chart sections", async () => {
     await captureChartsToPdf(makeContainer(0), { title: "t", filename: "f.pdf" });
     expect(save).not.toHaveBeenCalled();
@@ -51,6 +83,49 @@ describe("captureChartsToPdf", () => {
     expect(addImage).toHaveBeenCalledTimes(3);
     expect(addPage).toHaveBeenCalledTimes(2); // not called before the first section
     expect(save).toHaveBeenCalledWith("report.pdf");
+  });
+
+  it("bundles multiple compact sections onto the same page without adding unnecessary pages", async () => {
+    const mockedCapture = vi.mocked(html2canvas);
+    // 3 sections, each only 300px high (scaled height ~130pt, so all 3 easily fit on 1 page)
+    mockedCapture.mockResolvedValue({
+      width: 1200,
+      height: 300,
+      toDataURL: () => "data:image/png;base64,fake",
+    } as unknown as HTMLCanvasElement);
+
+    await captureChartsToPdf(makeContainer(3), {
+      title: "Bundled Report",
+      filename: "bundled.pdf",
+    });
+
+    expect(addImage).toHaveBeenCalledTimes(3);
+    expect(addPage).not.toHaveBeenCalled(); // All 3 fit on page 1!
+    expect(save).toHaveBeenCalledWith("bundled.pdf");
+  });
+
+  it("renders document header on page 1, running headers on subsequent pages, and footers with page numbers", async () => {
+    await captureChartsToPdf(makeContainer(2), {
+      title: "Scorecard Visual",
+      filename: "scorecard.pdf",
+      periodLabel: "Q3 2026",
+    });
+
+    expect(setPage).toHaveBeenCalledWith(1);
+    expect(setPage).toHaveBeenCalledWith(2);
+
+    // Verify footer page numbering
+    const page1Footer = text.mock.calls.find(([arg]) => String(arg) === "Page 1 of 2");
+    const page2Footer = text.mock.calls.find(([arg]) => String(arg) === "Page 2 of 2");
+    expect(page1Footer).toBeDefined();
+    expect(page2Footer).toBeDefined();
+
+    // Verify running header period label
+    const periodCall = text.mock.calls.find(([arg]) => String(arg) === "Q3 2026");
+    expect(periodCall).toBeDefined();
+
+    // Verify divider lines were drawn (headers and footers on both pages)
+    expect(line).toHaveBeenCalled();
   });
 
   it("scales a tall section down proportionally instead of stretching it", async () => {

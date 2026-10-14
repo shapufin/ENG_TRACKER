@@ -283,3 +283,9 @@ Rules:
 - Mobile experience: portrait defaults to semantic searchable hierarchy tree with "Interactive Graph" toggle; pinch-to-zoom and touch panning enabled; rotating to landscape (max-height 550px) automatically switches to full-height interactive graph with return toggle to list view.
 - Gates: vitest 167/167 OK across 22 suites, backend tests 165/165 OK, tsc clean, eslint clean, prettier clean, table-header-audit 0 violations, production build clean.
 
+## 2026-10-14 — PDF export bundling & layout modernization
+- Multi-chart bundling: `captureChartsToPdf` (`frontend/src/components/visualization/pdfExport.ts`) dynamically packs consecutive charts onto each A4 page based on remaining page height (`GAP = 14pt`), replacing the previous 1-chart-per-page behavior and eliminating 75%–90% empty white space. Page breaks occur only when a section overflows `usableBottomY`.
+- Headers and footers: Cover header on Page 1 (13pt bold title, 7.5pt muted provenance line with date/time, author, period, and full-width divider); running header on Pages 2+ (8pt running title, right-aligned period label, divider); two-pass running footer on all pages with `"Page X of Y"` and full-width divider.
+- Quality & preservation: Preserves scroll-expanded table rows and WYSIWYG colors (`html2canvas-pro` + `jsPDF`).
+- Gates: vitest 10/10 OK (`pdfExport.test.ts`), `DashboardActionsMenu` 12/12 OK, `TLScorecardVisualizationPage` 7/7 OK, tsc clean, eslint clean, prettier clean, table-header-audit 0 violations, production build clean. Live browser export verified (Admin Dashboard reduced from 10 to 5 pages with 2 charts per page and proper pagination).
+
