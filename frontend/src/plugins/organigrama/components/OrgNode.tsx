@@ -4,6 +4,7 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ChevronRight, ChevronDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RoleBadge } from "../types";
+import { getInitials } from "./viewerHelpers";
 
 export interface OrgNodeData extends Record<string, unknown> {
   nodeType: "person" | "tech";
@@ -75,6 +76,11 @@ export const OrgNode: React.FC<NodeProps> = React.memo(function OrgNode({ data }
                 <ChevronDown className="h-3 w-3" />
               )}
             </span>
+          )}
+          {!isTech && (
+            <div className="bg-primary/10 text-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+              {getInitials(nodeData.label)}
+            </div>
           )}
           <span className="text-sm font-medium">{nodeData.label}</span>
         </div>

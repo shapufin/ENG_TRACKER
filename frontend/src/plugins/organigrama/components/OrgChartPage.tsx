@@ -1,5 +1,5 @@
-/** Interactive org chart using React Flow + Dagre layout. */
-import React, { useMemo, useState, useCallback } from "react";
+/** Interactive org chart using React Flow + Dagre layout with 3D perspective mode and export. */
+import React, { useMemo, useState, useCallback, useRef } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -16,6 +16,8 @@ import dagre from "@dagrejs/dagre";
 import type { TreeNode } from "../types";
 import { OrgNode, type OrgNodeData } from "./OrgNode";
 import { OrgChartToolbar } from "./OrgChartToolbar";
+import { exportCanvasToPng } from "./viewerHelpers";
+import { cn } from "@/lib/utils";
 
 const nodeTypes: NodeTypes = { orgNode: OrgNode };
 
@@ -156,9 +158,23 @@ function layoutTree(
   return { nodes, edges };
 }
 
-const OrgChartInner: React.FC<{ roots: TreeNode[] }> = ({ roots }) => {
+export interface OrgChartPageProps {
+  roots: TreeNode[];
+  isLandscape?: boolean;
+  isMobile?: boolean;
+  onSwitchToList?: () => void;
+}
+
+const OrgChartInner: React.FC<OrgChartPageProps> = ({
+  roots,
+  isLandscape,
+  isMobile,
+  onSwitchToList,
+}) => {
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [is3D, setIs3D] = useState(false);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
   const reactFlow = useReactFlow();
 
   // Filter tree based on search
@@ -208,6 +224,13 @@ const OrgChartInner: React.FC<{ roots: TreeNode[] }> = ({ roots }) => {
   const handleZoomOut = useCallback(() => reactFlow.zoomOut(), [reactFlow]);
   const handleFitView = useCallback(() => reactFlow.fitView({ padding: 0.2 }), [reactFlow]);
 
+  const handleExportPng = useCallback(async () => {
+    const success = await exportCanvasToPng(canvasRef.current, "company-organigrama.png");
+    if (!success) {
+      alert("Failed to export image.");
+    }
+  }, []);
+
   return (
     <div className="space-y-2" aria-label="Organizational chart">
       <OrgChartToolbar
@@ -218,30 +241,55 @@ const OrgChartInner: React.FC<{ roots: TreeNode[] }> = ({ roots }) => {
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onFitView={handleFitView}
+        is3D={is3D}
+        onToggle3D={() => setIs3D((prev) => !prev)}
+        onExportPng={handleExportPng}
+        onSwitchToList={onSwitchToList}
       />
-      <div className="h-[calc(100vh-16rem)] w-full rounded-lg border">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          defaultEdgeOptions={defaultEdgeOptions}
-          onNodeClick={onNodeClick}
-          fitView
-          attributionPosition="bottom-left"
-          proOptions={{ hideAttribution: true }}
+      <div
+        ref={canvasRef}
+        className={cn(
+          "w-full overflow-hidden rounded-lg border [perspective:1400px]",
+          isLandscape
+            ? "h-[calc(100dvh-5.5rem)]"
+            : isMobile
+              ? "h-[calc(100dvh-10rem)]"
+              : "h-[calc(100vh-16rem)]"
+        )}
+      >
+        <div
+          className="h-full w-full transition-transform duration-500 ease-out"
+          style={{
+            transform: is3D ? "rotateX(22deg) rotateZ(-3deg) scale(0.92)" : "none",
+            transformStyle: "preserve-3d",
+          }}
         >
-          <Background gap={16} />
-          <Controls showInteractive={false} />
-        </ReactFlow>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            defaultEdgeOptions={defaultEdgeOptions}
+            onNodeClick={onNodeClick}
+            panOnDrag={true}
+            zoomOnPinch={true}
+            preventScrolling={false}
+            fitView
+            attributionPosition="bottom-left"
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background gap={16} />
+            <Controls showInteractive={false} />
+          </ReactFlow>
+        </div>
       </div>
     </div>
   );
 };
 
-export const OrgChartPage: React.FC<{ roots: TreeNode[] }> = ({ roots }) => {
+export const OrgChartPage: React.FC<OrgChartPageProps> = (props) => {
   return (
     <ReactFlowProvider>
-      <OrgChartInner roots={roots} />
+      <OrgChartInner {...props} />
     </ReactFlowProvider>
   );
 };

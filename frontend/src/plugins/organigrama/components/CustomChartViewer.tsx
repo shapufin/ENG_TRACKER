@@ -1,5 +1,5 @@
 /** Custom chart viewer — renders a published org chart for end users. */
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -29,7 +29,9 @@ import {
   User,
   UserX,
   Users,
+  Network,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { Input } from "@/components/ui/input";
@@ -37,7 +39,16 @@ import { OrgChartToolbar } from "./OrgChartToolbar";
 import { builderEdgeTypes } from "./BuilderEdge";
 import { builderEdgeProps } from "./builderEdgeHelpers";
 import { CONTAINER_SHAPE_TYPES, orderNodesParentFirst } from "../pages/groupHelpers";
-import { nodeMatches, filterHierarchy } from "./viewerHelpers";
+import {
+  nodeMatches,
+  filterHierarchy,
+  getInitials,
+  COLOR_ACCENT_CLASSES,
+  SHAPE_GEOMETRY_CLASSES,
+  BORDER_STYLE_CLASSES,
+  buildParentMap,
+  exportCanvasToPng,
+} from "./viewerHelpers";
 import type { OrgChart, DraftPayload, OrgChartNode, OrgChartEdge, ShapeType } from "../types";
 
 interface ViewerNodeData extends Record<string, unknown> {
@@ -47,6 +58,8 @@ interface ViewerNodeData extends Record<string, unknown> {
   department_label?: string;
   subtitle?: string;
   status: string;
+  style_key?: string;
+  custom_fields?: Record<string, unknown>;
   width: number;
   height: number;
   highlighted?: boolean;
@@ -73,25 +86,25 @@ const SHAPE_LABELS: Record<ShapeType, string> = {
 
 const SHAPE_STYLES: Record<ShapeType, string> = {
   person:
-    "bg-blue-50 border-blue-200 text-blue-900 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-100",
+    "bg-card/95 border-blue-200 text-foreground hover:border-blue-400 dark:border-blue-900/60 dark:hover:border-blue-700",
   position:
-    "bg-green-50 border-green-200 text-green-900 dark:bg-green-950/30 dark:border-green-800 dark:text-green-100",
+    "bg-card/95 border-emerald-200 text-foreground hover:border-emerald-400 dark:border-emerald-900/60 dark:hover:border-emerald-700",
   vacant:
-    "bg-amber-50 border-amber-200 border-dashed text-amber-900 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-100",
+    "bg-amber-50/50 border-amber-300 border-dashed text-foreground hover:border-amber-400 dark:bg-amber-950/20 dark:border-amber-700",
   external:
-    "bg-purple-50 border-purple-200 text-purple-900 dark:bg-purple-950/30 dark:border-purple-800 dark:text-purple-100",
+    "bg-card/95 border-purple-200 text-foreground hover:border-purple-400 dark:border-purple-900/60 dark:hover:border-purple-700",
   department:
-    "bg-slate-100 border-slate-300 text-slate-900 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-100",
+    "bg-card/95 border-slate-300 text-foreground hover:border-slate-400 dark:border-slate-700",
   division:
-    "bg-indigo-50 border-indigo-200 text-indigo-900 dark:bg-indigo-950/30 dark:border-indigo-800 dark:text-indigo-100",
-  team: "bg-sky-50 border-sky-200 text-sky-900 dark:bg-sky-950/30 dark:border-sky-800 dark:text-sky-100",
+    "bg-card/95 border-indigo-200 text-foreground hover:border-indigo-400 dark:border-indigo-900/60",
+  team: "bg-card/95 border-sky-200 text-foreground hover:border-sky-400 dark:border-sky-900/60",
   location:
-    "bg-cyan-50 border-cyan-200 text-cyan-900 dark:bg-cyan-950/30 dark:border-cyan-800 dark:text-cyan-100",
+    "bg-card/95 border-cyan-200 text-foreground hover:border-cyan-400 dark:border-cyan-900/60",
   label:
-    "bg-transparent border-dashed border-muted-foreground text-muted-foreground dark:border-slate-500",
+    "bg-transparent border-dashed border-muted-foreground/60 text-muted-foreground hover:border-foreground dark:text-slate-400",
   section:
-    "bg-transparent border-dashed border-slate-400 text-slate-600 dark:border-slate-500 dark:text-slate-400",
-  placeholder: "bg-muted/50 border-border text-foreground dark:bg-muted/30 dark:border-border ",
+    "bg-slate-50/70 border-2 border-dashed border-slate-300 text-slate-900 dark:bg-slate-950/30 dark:border-slate-700 dark:text-slate-100",
+  placeholder: "bg-muted/40 border-dashed border-border text-foreground hover:border-primary",
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -118,7 +131,10 @@ const SHAPE_ICONS: Record<ShapeType, React.ReactNode> = {
 const ViewerNode: React.FC<NodeProps> = ({ data }) => {
   const nodeData = data as unknown as ViewerNodeData;
   const isVacantPosition = nodeData.shape_type === "position" && nodeData.status === "vacant";
+  const colorTheme = (nodeData.custom_fields?.color_theme as string) || nodeData.style_key;
+  const customAccent = colorTheme ? COLOR_ACCENT_CLASSES[colorTheme] : undefined;
   const style =
+    customAccent ||
     (isVacantPosition ? SHAPE_STYLES.vacant : SHAPE_STYLES[nodeData.shape_type]) ||
     SHAPE_STYLES.person;
   const width = nodeData.width ?? DEFAULT_WIDTH;
@@ -127,13 +143,22 @@ const ViewerNode: React.FC<NodeProps> = ({ data }) => {
   const hasChildren = nodeData.hasChildren ?? false;
   const isExpanded = nodeData.isExpanded ?? true;
 
+  const shapeGeometry = (nodeData.custom_fields?.shape_geometry as string) || "rounded";
+  const borderStyle = (nodeData.custom_fields?.border_style as string) || "solid";
+  const geometryClass = isContainer
+    ? "rounded-lg"
+    : SHAPE_GEOMETRY_CLASSES[shapeGeometry] || SHAPE_GEOMETRY_CLASSES.rounded;
+  const borderStyleClass = BORDER_STYLE_CLASSES[borderStyle] || BORDER_STYLE_CLASSES.solid;
+
   return (
     <div
       className={cn(
-        "relative rounded-lg border shadow-sm transition-shadow",
+        "relative border shadow-xs transition-shadow",
+        geometryClass,
+        borderStyleClass,
         isContainer
           ? "flex h-full w-full flex-col border-2 border-dashed"
-          : "flex flex-col items-center justify-center px-3 py-2",
+          : "flex h-full w-full flex-col justify-center",
         style,
         nodeData.highlighted && "ring-2 ring-yellow-400 ring-offset-1"
       )}
@@ -155,37 +180,64 @@ const ViewerNode: React.FC<NodeProps> = ({ data }) => {
           <div className="flex-1" />
         </>
       ) : (
-        <>
-          <div className="text-muted-foreground flex items-center gap-1 text-xs font-medium uppercase">
-            {hasChildren && (
-              <span className="shrink-0" aria-hidden="true">
-                {isExpanded ? (
-                  <ChevronDown className="h-3 w-3" />
-                ) : (
-                  <ChevronRight className="h-3 w-3" />
-                )}
+        <div className="flex h-full w-full items-center gap-2.5 px-3 py-1.5">
+          {["person", "position", "vacant", "external"].includes(nodeData.shape_type) ? (
+            <div className="relative shrink-0">
+              <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold shadow-xs">
+                {getInitials(nodeData.display_name)}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-muted text-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-md">
+              {SHAPE_ICONS[nodeData.shape_type]}
+            </div>
+          )}
+
+          <div className="flex min-w-0 flex-1 flex-col justify-center text-left">
+            <div className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium tracking-wide uppercase">
+              {hasChildren && (
+                <span className="shrink-0" aria-hidden="true">
+                  {isExpanded ? (
+                    <ChevronDown className="h-3 w-3" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3" />
+                  )}
+                </span>
+              )}
+              <span>{SHAPE_LABELS[nodeData.shape_type]}</span>
+            </div>
+            <span
+              className="text-foreground truncate text-xs leading-tight font-semibold"
+              title={nodeData.display_name}
+            >
+              {nodeData.display_name}
+            </span>
+            {nodeData.role_title && (
+              <span
+                className="text-muted-foreground truncate text-[11px] leading-tight"
+                title={nodeData.role_title}
+              >
+                {nodeData.role_title}
               </span>
             )}
-            <span>{SHAPE_LABELS[nodeData.shape_type]}</span>
-          </div>
-          <span className="text-center text-sm leading-tight font-semibold">
-            {nodeData.display_name}
-          </span>
-          {nodeData.role_title && (
-            <span className="text-muted-foreground text-xs">{nodeData.role_title}</span>
-          )}
-          {nodeData.department_label && (
-            <span className="text-muted-foreground text-xs">{nodeData.department_label}</span>
-          )}
-          <span
-            className={cn(
-              "mt-1 rounded-full px-2 py-0.5 text-xs font-medium",
-              STATUS_STYLES[nodeData.status] || STATUS_STYLES.active
+            {nodeData.department_label && (
+              <span
+                className="text-muted-foreground/75 truncate text-[10px] leading-tight"
+                title={nodeData.department_label}
+              >
+                {nodeData.department_label}
+              </span>
             )}
-          >
-            {nodeData.status}
-          </span>
-        </>
+            <span
+              className={cn(
+                "py-0.2 mt-0.5 inline-block w-fit rounded-full px-1.5 text-[9px] font-medium",
+                STATUS_STYLES[nodeData.status] || STATUS_STYLES.active
+              )}
+            >
+              {nodeData.status}
+            </span>
+          </div>
+        </div>
       )}
       <Handle type="source" position={Position.Bottom} className="opacity-0" />
     </div>
@@ -199,22 +251,7 @@ function buildHierarchy(
   edges: OrgChartEdge[]
 ): { roots: OrgChartNode[]; childrenMap: Map<string, OrgChartNode[]> } {
   const childrenMap = new Map<string, OrgChartNode[]>();
-  const parentMap = new Map<string, string>();
-  const nodeIds = new Set(nodes.map((node) => node.node_uuid));
-
-  // Explicit hierarchy edges take precedence over visual group membership.
-  for (const e of edges) {
-    if (e.edge_type === "reports_to" || e.edge_type === "contains") {
-      if (!parentMap.has(e.target_uuid)) {
-        parentMap.set(e.target_uuid, e.source_uuid);
-      }
-    }
-  }
-  for (const node of nodes) {
-    if (!parentMap.has(node.node_uuid) && node.group_uuid && nodeIds.has(node.group_uuid)) {
-      parentMap.set(node.node_uuid, node.group_uuid);
-    }
-  }
+  const parentMap = buildParentMap(nodes, edges);
 
   const roots: OrgChartNode[] = [];
   for (const n of nodes) {
@@ -298,7 +335,10 @@ const MobileNode: React.FC<{
   );
 };
 
-const CustomChartMobileList: React.FC<{ payload: DraftPayload }> = ({ payload }) => {
+const CustomChartMobileList: React.FC<{
+  payload: DraftPayload;
+  onSwitchToGraph?: () => void;
+}> = ({ payload, onSwitchToGraph }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const fullHierarchy = useMemo(
     () => buildHierarchy(payload.nodes, payload.edges),
@@ -325,13 +365,28 @@ const CustomChartMobileList: React.FC<{ payload: DraftPayload }> = ({ payload })
 
   return (
     <div className="space-y-2">
-      <Input
-        placeholder="Search by name, title, or department..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="text-sm"
-        aria-label="Search chart"
-      />
+      <div className="flex items-center justify-between gap-2">
+        <Input
+          placeholder="Search by name, title, or department..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="text-sm"
+          aria-label="Search chart"
+        />
+        {onSwitchToGraph && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSwitchToGraph}
+            className="shrink-0 gap-1.5 text-xs font-medium"
+            title="Switch to interactive graph canvas with zoom & pan"
+            aria-label="Switch to graph view"
+          >
+            <Network className="text-primary h-3.5 w-3.5" />
+            <span>Graph View</span>
+          </Button>
+        )}
+      </div>
       {roots.length === 0 ? (
         <div className="text-muted-foreground px-4 py-8 text-center text-sm">
           No matching nodes found.
@@ -392,6 +447,8 @@ function layoutGraph(nodes: OrgChartNode[], edges: OrgChartEdge[]) {
               department_label: n.department_label,
               subtitle: n.subtitle,
               status: n.status,
+              style_key: n.style_key,
+              custom_fields: n.custom_fields ?? {},
               width,
               height,
               highlighted: false,
@@ -416,6 +473,8 @@ function layoutGraph(nodes: OrgChartNode[], edges: OrgChartEdge[]) {
             department_label: n.department_label,
             subtitle: n.subtitle,
             status: n.status,
+            style_key: n.style_key,
+            custom_fields: n.custom_fields ?? {},
             width,
             height,
             highlighted: false,
@@ -430,14 +489,23 @@ function layoutGraph(nodes: OrgChartNode[], edges: OrgChartEdge[]) {
       target: e.target_uuid,
       ...builderEdgeProps(e.edge_type),
       label: e.label,
-      data: { edge_type: e.edge_type } as Record<string, unknown>,
+      data: {
+        edge_type: e.edge_type,
+        line_style: (e.custom_fields?.line_style as string) || "step",
+        custom_fields: e.custom_fields ?? {},
+      } as Record<string, unknown>,
     };
   });
 
   return { baseNodes, baseEdges };
 }
 
-const CustomChartDesktopInner: React.FC<{ payload: DraftPayload }> = ({ payload }) => {
+const CustomChartDesktopInner: React.FC<{
+  payload: DraftPayload;
+  isLandscape?: boolean;
+  isMobile?: boolean;
+  onSwitchToList?: () => void;
+}> = ({ payload, isLandscape, isMobile, onSwitchToList }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(payload.nodes.map((n) => n.node_uuid))
@@ -542,9 +610,19 @@ const CustomChartDesktopInner: React.FC<{ payload: DraftPayload }> = ({ payload 
     [baseEdges, visibleIds, searchFilteredIds]
   );
 
+  const [is3D, setIs3D] = useState(false);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+
   const handleZoomIn = useCallback(() => reactFlow.zoomIn(), [reactFlow]);
   const handleZoomOut = useCallback(() => reactFlow.zoomOut(), [reactFlow]);
   const handleFitView = useCallback(() => reactFlow.fitView({ padding: 0.2 }), [reactFlow]);
+
+  const handleExportPng = useCallback(async () => {
+    const success = await exportCanvasToPng(canvasRef.current, "custom-organigrama.png");
+    if (!success) {
+      alert("Failed to export image.");
+    }
+  }, []);
 
   return (
     <div className="space-y-2" aria-label="Custom organizational chart">
@@ -556,30 +634,65 @@ const CustomChartDesktopInner: React.FC<{ payload: DraftPayload }> = ({ payload 
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onFitView={handleFitView}
+        is3D={is3D}
+        onToggle3D={() => setIs3D((prev) => !prev)}
+        onExportPng={handleExportPng}
+        onSwitchToList={onSwitchToList}
       />
-      <div className="h-[calc(100vh-16rem)] w-full rounded-lg border">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={builderEdgeTypes}
-          fitView
-          onNodeClick={handleNodeClick}
-          attributionPosition="bottom-left"
-          proOptions={{ hideAttribution: true }}
+      <div
+        ref={canvasRef}
+        className={cn(
+          "w-full overflow-hidden rounded-lg border [perspective:1400px]",
+          isLandscape
+            ? "h-[calc(100dvh-5.5rem)]"
+            : isMobile
+              ? "h-[calc(100dvh-10rem)]"
+              : "h-[calc(100vh-16rem)]"
+        )}
+      >
+        <div
+          className="h-full w-full transition-transform duration-500 ease-out"
+          style={{
+            transform: is3D ? "rotateX(22deg) rotateZ(-3deg) scale(0.92)" : "none",
+            transformStyle: "preserve-3d",
+          }}
         >
-          <Background gap={16} />
-          <Controls showInteractive={false} />
-        </ReactFlow>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={builderEdgeTypes}
+            fitView
+            onNodeClick={handleNodeClick}
+            panOnDrag={true}
+            zoomOnPinch={true}
+            preventScrolling={false}
+            attributionPosition="bottom-left"
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background gap={16} />
+            <Controls showInteractive={false} />
+          </ReactFlow>
+        </div>
       </div>
     </div>
   );
 };
 
-const CustomChartDesktop: React.FC<{ payload: DraftPayload }> = ({ payload }) => {
+const CustomChartDesktop: React.FC<{
+  payload: DraftPayload;
+  isLandscape?: boolean;
+  isMobile?: boolean;
+  onSwitchToList?: () => void;
+}> = ({ payload, isLandscape, isMobile, onSwitchToList }) => {
   return (
     <ReactFlowProvider>
-      <CustomChartDesktopInner payload={payload} />
+      <CustomChartDesktopInner
+        payload={payload}
+        isLandscape={isLandscape}
+        isMobile={isMobile}
+        onSwitchToList={onSwitchToList}
+      />
     </ReactFlowProvider>
   );
 };
@@ -590,14 +703,35 @@ export interface CustomChartViewerProps {
 }
 
 export const CustomChartViewer: React.FC<CustomChartViewerProps> = ({ chart, payload }) => {
-  const isMobile = useMediaQuery("(max-width: 767px)");
+  const isSmallScreen = useMediaQuery("(max-width: 767px)");
+  const isLandscape = useMediaQuery("(orientation: landscape) and (max-height: 550px)");
+  const [userModeOverride, setUserModeOverride] = useState<"graph" | "list" | null>(null);
+
+  // Automatically switch mode when orientation changes (e.g. rotating phone into landscape opens graph)
+  useEffect(() => {
+    setUserModeOverride(null);
+  }, [isLandscape]);
+
+  // In landscape mode or desktop, automatically open in interactive graph view.
+  // In portrait mobile, default to list unless user toggles graph view.
+  const isGraphMode =
+    userModeOverride === "graph" || (userModeOverride === null && (isLandscape || !isSmallScreen));
 
   return (
     <div className="space-y-2">
-      {isMobile ? (
-        <CustomChartMobileList payload={payload} />
+      {!isGraphMode ? (
+        <CustomChartMobileList
+          payload={payload}
+          onSwitchToGraph={() => setUserModeOverride("graph")}
+        />
       ) : (
-        <CustomChartDesktop key={chart.id} payload={payload} />
+        <CustomChartDesktop
+          key={chart.id}
+          payload={payload}
+          isLandscape={isLandscape}
+          isMobile={isSmallScreen}
+          onSwitchToList={isSmallScreen ? () => setUserModeOverride("list") : undefined}
+        />
       )}
     </div>
   );

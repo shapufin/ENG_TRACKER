@@ -10,6 +10,7 @@ import {
   Globe,
   HelpCircle,
   MapPin,
+  Plus,
   Tag,
   User,
   UserX,
@@ -17,130 +18,217 @@ import {
 } from "lucide-react";
 import type { ShapeType, BuilderNodeData } from "../types";
 import { CONTAINER_SHAPE_TYPES } from "../pages/groupHelpers";
+import { useBuilderActions } from "./BuilderActionsContext";
+import {
+  getInitials,
+  COLOR_ACCENT_CLASSES,
+  SHAPE_GEOMETRY_CLASSES,
+  BORDER_STYLE_CLASSES,
+} from "./viewerHelpers";
 
-const DEFAULT_WIDTH = 180;
-const DEFAULT_HEIGHT = 80;
+const DEFAULT_WIDTH = 210;
+const DEFAULT_HEIGHT = 88;
 
-type ShapeLayout = "card" | "wide" | "minimal" | "group";
+type ShapeLayout = "person" | "wide" | "minimal" | "group";
 
 interface ShapeConfig {
   label: string;
   icon: React.ReactNode;
   className: string;
+  accentBar?: string;
   layout: ShapeLayout;
 }
 
 const SHAPE_CONFIG: Record<ShapeType, ShapeConfig> = {
   person: {
     label: "Person",
-    icon: <User className="h-4 w-4" />,
+    icon: <User className="h-3.5 w-3.5" />,
     className:
-      "bg-blue-50 border-blue-200 text-blue-900 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-100",
-    layout: "card",
+      "bg-card/95 border-blue-200 text-foreground hover:border-blue-400 dark:border-blue-900/60 dark:hover:border-blue-700",
+    accentBar: "bg-blue-500",
+    layout: "person",
   },
   position: {
     label: "Position",
-    icon: <Briefcase className="h-4 w-4" />,
+    icon: <Briefcase className="h-3.5 w-3.5" />,
     className:
-      "bg-green-50 border-green-200 text-green-900 dark:bg-green-950/40 dark:border-green-800 dark:text-green-100",
-    layout: "card",
+      "bg-card/95 border-emerald-200 text-foreground hover:border-emerald-400 dark:border-emerald-900/60 dark:hover:border-emerald-700",
+    accentBar: "bg-emerald-500",
+    layout: "person",
   },
   vacant: {
     label: "Vacant",
-    icon: <UserX className="h-4 w-4" />,
+    icon: <UserX className="h-3.5 w-3.5" />,
     className:
-      "bg-amber-50 border-amber-200 border-dashed text-amber-900 dark:bg-amber-950/40 dark:border-amber-700 dark:text-amber-100",
-    layout: "card",
+      "bg-amber-50/50 border-amber-300 border-dashed text-foreground hover:border-amber-400 dark:bg-amber-950/20 dark:border-amber-700",
+    accentBar: "bg-amber-500",
+    layout: "person",
   },
   external: {
     label: "External",
-    icon: <Globe className="h-4 w-4" />,
+    icon: <Globe className="h-3.5 w-3.5" />,
     className:
-      "bg-purple-50 border-purple-200 text-purple-900 dark:bg-purple-950/40 dark:border-purple-800 dark:text-purple-100",
-    layout: "card",
+      "bg-card/95 border-purple-200 text-foreground hover:border-purple-400 dark:border-purple-900/60 dark:hover:border-purple-700",
+    accentBar: "bg-purple-500",
+    layout: "person",
   },
   department: {
     label: "Department",
-    icon: <Building className="h-4 w-4" />,
+    icon: <Building className="h-3.5 w-3.5" />,
     className:
-      "bg-slate-100 border-slate-300 text-slate-900 dark:bg-slate-800/60 dark:border-slate-600 dark:text-slate-100",
+      "bg-card/95 border-slate-300 text-foreground hover:border-slate-400 dark:border-slate-700",
+    accentBar: "bg-indigo-500",
     layout: "wide",
   },
   division: {
     label: "Division",
-    icon: <Building2 className="h-4 w-4" />,
+    icon: <Building2 className="h-3.5 w-3.5" />,
     className:
-      "bg-indigo-50 border-indigo-200 text-indigo-900 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-100",
+      "bg-card/95 border-indigo-200 text-foreground hover:border-indigo-400 dark:border-indigo-900/60",
+    accentBar: "bg-indigo-600",
     layout: "wide",
   },
   team: {
     label: "Team",
-    icon: <Users className="h-4 w-4" />,
+    icon: <Users className="h-3.5 w-3.5" />,
     className:
-      "bg-sky-50 border-sky-200 text-sky-900 dark:bg-sky-950/40 dark:border-sky-800 dark:text-sky-100",
+      "bg-card/95 border-sky-200 text-foreground hover:border-sky-400 dark:border-sky-900/60",
+    accentBar: "bg-sky-500",
     layout: "wide",
   },
   location: {
     label: "Location",
-    icon: <MapPin className="h-4 w-4" />,
+    icon: <MapPin className="h-3.5 w-3.5" />,
     className:
-      "bg-cyan-50 border-cyan-200 text-cyan-900 dark:bg-cyan-950/40 dark:border-cyan-800 dark:text-cyan-100",
+      "bg-card/95 border-cyan-200 text-foreground hover:border-cyan-400 dark:border-cyan-900/60",
+    accentBar: "bg-cyan-500",
     layout: "wide",
   },
   label: {
     label: "Label",
     icon: <Tag className="h-3 w-3" />,
     className:
-      "bg-transparent border-dashed border-muted-foreground text-muted-foreground dark:text-slate-400",
+      "bg-transparent border-dashed border-muted-foreground/60 text-muted-foreground hover:border-foreground dark:text-slate-400",
     layout: "minimal",
   },
   section: {
     label: "Group",
-    icon: <Folder className="h-4 w-4" />,
+    icon: <Folder className="h-3.5 w-3.5" />,
     className:
-      "bg-slate-50/80 border-2 border-dashed border-slate-400 text-slate-900 dark:bg-slate-950/40 dark:border-slate-600 dark:text-slate-100",
+      "bg-slate-50/70 border-2 border-dashed border-slate-300 text-slate-900 dark:bg-slate-950/30 dark:border-slate-700 dark:text-slate-100",
     layout: "group",
   },
   placeholder: {
     label: "Placeholder",
-    icon: <HelpCircle className="h-4 w-4" />,
-    className: "bg-muted/50 border-border text-foreground dark:bg-muted/60 dark:border-border ",
-    layout: "card",
+    icon: <HelpCircle className="h-3.5 w-3.5" />,
+    className: "bg-muted/40 border-dashed border-border text-foreground hover:border-primary",
+    layout: "person",
   },
 };
 
-const CardLayout: React.FC<{
+const STATUS_INDICATOR: Record<string, string> = {
+  active: "bg-emerald-500 ring-emerald-500/30",
+  vacant: "bg-amber-500 ring-amber-500/30",
+  planned: "bg-sky-500 ring-sky-500/30",
+  archived: "bg-slate-400 ring-slate-400/30",
+};
+
+const PersonLayout: React.FC<{
   config: ShapeConfig;
   nodeData: BuilderNodeData;
-}> = ({ config, nodeData }) => (
-  <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-2 py-1">
-    <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium uppercase">
-      {config.icon}
-      <span>{config.label}</span>
+}> = ({ config, nodeData }) => {
+  const statusColor = STATUS_INDICATOR[nodeData.status] || STATUS_INDICATOR.active;
+  const initials = getInitials(nodeData.display_name);
+
+  return (
+    <div className="flex h-full w-full items-center gap-2.5 px-3 py-1.5">
+      {/* Avatar with status ring */}
+      <div className="relative shrink-0">
+        <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold shadow-xs">
+          {initials}
+        </div>
+        <span
+          className={cn(
+            "absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white dark:ring-slate-950",
+            statusColor
+          )}
+          title={`Status: ${nodeData.status}`}
+        />
+      </div>
+
+      {/* Details */}
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
+        <div className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium tracking-wide uppercase">
+          {config.icon}
+          <span>{config.label}</span>
+        </div>
+        <span
+          className="text-foreground truncate text-xs leading-tight font-semibold"
+          title={nodeData.display_name}
+        >
+          {nodeData.display_name}
+        </span>
+        {nodeData.role_title && (
+          <span
+            className="text-muted-foreground truncate text-[11px] leading-tight"
+            title={nodeData.role_title}
+          >
+            {nodeData.role_title}
+          </span>
+        )}
+        {nodeData.subtitle && (
+          <span
+            className="text-muted-foreground/80 truncate text-[10px] leading-tight italic"
+            title={nodeData.subtitle}
+          >
+            {nodeData.subtitle}
+          </span>
+        )}
+        {nodeData.department_label && (
+          <span
+            className="text-muted-foreground/75 truncate text-[10px] leading-tight"
+            title={nodeData.department_label}
+          >
+            {nodeData.department_label}
+          </span>
+        )}
+        {typeof nodeData.custom_fields?.tech_level === "string" &&
+          Boolean(nodeData.custom_fields.tech_level) && (
+            <span className="bg-primary/10 text-primary mt-0.5 inline-block w-fit rounded px-1.5 py-0.5 text-[9px] font-semibold">
+              {nodeData.custom_fields.tech_level}
+            </span>
+          )}
+      </div>
     </div>
-    <span className="text-center text-sm leading-tight font-semibold">{nodeData.display_name}</span>
-    {nodeData.role_title && (
-      <span className="text-muted-foreground text-xs">{nodeData.role_title}</span>
-    )}
-  </div>
-);
+  );
+};
 
 const WideLayout: React.FC<{
   config: ShapeConfig;
   nodeData: BuilderNodeData;
 }> = ({ config, nodeData }) => (
-  <div className="flex h-full w-full items-center gap-2 px-3">
-    <span className="text-muted-foreground shrink-0">{config.icon}</span>
-    <div className="flex min-w-0 flex-1 flex-col">
-      <span className="text-muted-foreground text-xs font-medium uppercase">{config.label}</span>
-      <span className="truncate text-sm font-semibold" title={nodeData.display_name}>
-        {nodeData.display_name}
-      </span>
-      {nodeData.role_title && (
-        <span className="text-muted-foreground truncate text-xs" title={nodeData.role_title}>
-          {nodeData.role_title}
+  <div className="flex h-full w-full flex-col justify-between overflow-hidden">
+    {config.accentBar && <div className={cn("h-1 w-full shrink-0", config.accentBar)} />}
+    <div className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-1">
+      <div className="bg-muted text-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-md">
+        {config.icon}
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
+        <span className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
+          {config.label}
         </span>
-      )}
+        <span
+          className="text-foreground truncate text-xs font-semibold"
+          title={nodeData.display_name}
+        >
+          {nodeData.display_name}
+        </span>
+        {nodeData.role_title && (
+          <span className="text-muted-foreground truncate text-[11px]" title={nodeData.role_title}>
+            {nodeData.role_title}
+          </span>
+        )}
+      </div>
     </div>
   </div>
 );
@@ -149,9 +237,10 @@ const MinimalLayout: React.FC<{
   config: ShapeConfig;
   nodeData: BuilderNodeData;
 }> = ({ config, nodeData }) => (
-  <div className="flex h-full w-full items-center justify-center gap-1.5 px-2">
+  <div className="flex h-full w-full items-center justify-center gap-1.5 px-3">
     <span className="text-muted-foreground">{config.icon}</span>
-    <span className="text-sm font-semibold">{nodeData.display_name}</span>
+    <span className="text-muted-foreground text-[10px] uppercase">{config.label}:</span>
+    <span className="text-foreground truncate text-xs font-semibold">{nodeData.display_name}</span>
   </div>
 );
 
@@ -160,7 +249,7 @@ const GroupLayout: React.FC<{
   nodeData: BuilderNodeData;
 }> = ({ config, nodeData }) => (
   <div className="flex h-full w-full flex-col">
-    <div className="builder-group-drag-handle flex h-8 w-full cursor-move items-center gap-1.5 border-b border-slate-300 px-2 text-xs font-semibold text-slate-700 uppercase dark:border-slate-600 dark:text-slate-300">
+    <div className="builder-group-drag-handle bg-muted/60 flex h-7 w-full cursor-move items-center gap-1.5 border-b border-slate-300 px-2 text-[11px] font-semibold text-slate-700 uppercase dark:border-slate-700 dark:text-slate-300">
       {config.icon}
       <span className="truncate" title={nodeData.display_name}>
         {nodeData.display_name}
@@ -171,44 +260,78 @@ const GroupLayout: React.FC<{
 );
 
 const LAYOUTS: Record<ShapeLayout, React.FC<{ config: ShapeConfig; nodeData: BuilderNodeData }>> = {
-  card: CardLayout,
+  person: PersonLayout,
   wide: WideLayout,
   minimal: MinimalLayout,
   group: GroupLayout,
 };
 
 export const BuilderNode: React.FC<NodeProps> = (props) => {
-  const { data, selected, width, height } = props;
+  const { id, data, selected, width, height } = props;
   const nodeData = data as unknown as BuilderNodeData;
   const config = SHAPE_CONFIG[nodeData.shape_type] || SHAPE_CONFIG.person;
-  const Layout = LAYOUTS[config.layout] || CardLayout;
+  const Layout = LAYOUTS[config.layout] || PersonLayout;
   const isVacantPosition = nodeData.shape_type === "position" && nodeData.status === "vacant";
-  const styleClass = isVacantPosition ? SHAPE_CONFIG.vacant.className : config.className;
+  const colorTheme = (nodeData.custom_fields?.color_theme as string) || nodeData.style_key;
+  const customAccent = colorTheme ? COLOR_ACCENT_CLASSES[colorTheme] : undefined;
+  const styleClass =
+    customAccent || (isVacantPosition ? SHAPE_CONFIG.vacant.className : config.className);
+  const actions = useBuilderActions();
 
-  // Container nodes use style:{width,height} on the React Flow node wrapper
-  // (.react-flow__node). The inner component should fill the wrapper with
-  // 100% so the correct dimensions are visible immediately (before React
-  // Flow measures and populates width/height in NodeProps). Non-container
-  // nodes use top-level width/height which are available immediately.
   const isContainer = CONTAINER_SHAPE_TYPES.has(nodeData.shape_type);
+  const shapeGeometry = (nodeData.custom_fields?.shape_geometry as string) || "rounded";
+  const borderStyle = (nodeData.custom_fields?.border_style as string) || "solid";
+  const geometryClass = isContainer
+    ? "rounded-lg"
+    : SHAPE_GEOMETRY_CLASSES[shapeGeometry] || SHAPE_GEOMETRY_CLASSES.rounded;
+  const borderStyleClass = BORDER_STYLE_CLASSES[borderStyle] || BORDER_STYLE_CLASSES.solid;
+
   const resolvedWidth = isContainer ? "100%" : (width ?? DEFAULT_WIDTH);
   const resolvedHeight = isContainer ? "100%" : (height ?? DEFAULT_HEIGHT);
+
+  const handleAddReportClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    actions.onAddChild?.(id);
+  };
 
   return (
     <div
       className={cn(
-        "rounded-lg border px-1 py-1 shadow-sm transition-shadow",
+        "group relative border shadow-xs transition-all duration-150",
+        geometryClass,
+        borderStyleClass,
         styleClass,
-        selected && "ring-primary ring-2 ring-offset-1"
+        selected && "ring-primary shadow-md ring-2 ring-offset-1"
       )}
       style={{ width: resolvedWidth, height: resolvedHeight }}
       role="treeitem"
       tabIndex={0}
       aria-label={`${config.label}, ${nodeData.display_name}`}
     >
-      <Handle type="target" position={Position.Top} className="!h-3 !w-3" />
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!border-background !bg-muted-foreground !h-3 !w-3 transition-transform group-hover:scale-125"
+      />
       <Layout config={config} nodeData={nodeData} />
-      <Handle type="source" position={Position.Bottom} className="!h-3 !w-3" />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!border-background !bg-primary !h-3 !w-3 transition-transform group-hover:scale-125"
+      />
+
+      {/* On-node [+] quick action to add direct report */}
+      {actions.onAddChild && !isContainer && (
+        <button
+          type="button"
+          onClick={handleAddReportClick}
+          aria-label={`Add direct report under ${nodeData.display_name}`}
+          title="Add direct report"
+          className="bg-primary text-primary-foreground absolute -bottom-3 left-1/2 flex h-5 w-5 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full opacity-0 shadow-md transition-all duration-150 group-hover:opacity-100 hover:scale-110"
+        >
+          <Plus className="h-3 w-3 stroke-[2.5]" />
+        </button>
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-/** Admin builder page for custom org charts. */
+/** Admin builder page for custom org charts with auto-layout, live import, undo/redo, and rich cards. */
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import {
@@ -6,6 +6,7 @@ import {
   ReactFlowProvider,
   Background,
   Controls,
+  MiniMap,
   useReactFlow,
   type Edge,
   type Node,
@@ -15,16 +16,36 @@ import "@xyflow/react/dist/style.css";
 import {
   AlertCircle,
   ArrowLeft,
+  Briefcase,
+  Building,
+  Building2,
   Check,
+  Circle,
   Copy,
+  Download,
+  FileDown,
   Folder,
+  Globe,
+  HelpCircle,
+  Hexagon,
   Loader2,
+  MapPin,
   Plus,
+  Redo2,
   Rocket,
   Save,
+  Search,
+  Sparkles,
+  Square,
+  Tag,
   Trash2,
+  Undo2,
+  User,
+  UserX,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { BuilderCanvasInspector } from "../components/BuilderCanvasInspector";
 import { PageShell } from "@/components/layout/PageShell";
@@ -41,6 +62,14 @@ import {
 } from "../hooks/useOrganigramaAdmin";
 import { useBuilderSelection } from "../hooks/useBuilderSelection";
 import { useBuilderGraphOps, newId } from "../hooks/useBuilderGraphOps";
+import { calculateHierarchyLayout } from "../hooks/useBuilderAutoLayout";
+import { useBuilderHistory } from "../hooks/useBuilderHistory";
+import { convertLiveTreeToGraph } from "../services/liveTreeConverter";
+import { organigramaService } from "../services/organigramaService";
+import { BuilderActionsContext } from "../components/BuilderActionsContext";
+import { exportCanvasToPng } from "../components/viewerHelpers";
+import html2canvas from "html2canvas-pro";
+import { jsPDF } from "jspdf";
 import type {
   BuilderNodeData,
   EdgeType,
@@ -50,11 +79,114 @@ import type {
   ValidationResult,
 } from "../types";
 
-// Curated creation palette (4 core shapes). The full model vocabulary is
-// used by BuilderCanvasInspector so any loaded chart shape can be edited.
-const SHAPE_TYPES: ShapeType[] = ["person", "department", "position", "label"];
-
 const nodeTypes: NodeTypes = { builderNode: BuilderNode };
+
+interface ShapePaletteItem {
+  shape: ShapeType;
+  label: string;
+  icon: React.ReactNode;
+  initialCustomFields?: Record<string, unknown>;
+}
+
+const SHAPE_CATEGORIES: { category: string; items: ShapePaletteItem[] }[] = [
+  {
+    category: "Shape Silhouettes",
+    items: [
+      {
+        shape: "person",
+        label: "Pill Capsule",
+        icon: <Circle className="h-3.5 w-3.5 text-blue-500" />,
+        initialCustomFields: { shape_geometry: "pill" },
+      },
+      {
+        shape: "department",
+        label: "Tech Hexagon",
+        icon: <Hexagon className="h-3.5 w-3.5 text-purple-500" />,
+        initialCustomFields: { shape_geometry: "chamfered" },
+      },
+      {
+        shape: "position",
+        label: "Sharp Rectangle",
+        icon: <Square className="h-3.5 w-3.5 text-emerald-500" />,
+        initialCustomFields: { shape_geometry: "sharp" },
+      },
+      {
+        shape: "team",
+        label: "Soft Squircle",
+        icon: <Sparkles className="h-3.5 w-3.5 text-sky-500" />,
+        initialCustomFields: { shape_geometry: "soft" },
+      },
+      {
+        shape: "person",
+        label: "Executive Double",
+        icon: <User className="h-3.5 w-3.5 text-amber-500" />,
+        initialCustomFields: { border_style: "double", color_theme: "amber" },
+      },
+    ],
+  },
+  {
+    category: "People & Roles",
+    items: [
+      { shape: "person", label: "Person", icon: <User className="h-3.5 w-3.5 text-blue-500" /> },
+      {
+        shape: "position",
+        label: "Position",
+        icon: <Briefcase className="h-3.5 w-3.5 text-emerald-500" />,
+      },
+      {
+        shape: "vacant",
+        label: "Vacant / Hiring",
+        icon: <UserX className="h-3.5 w-3.5 text-amber-500" />,
+      },
+      {
+        shape: "external",
+        label: "External / Contractor",
+        icon: <Globe className="h-3.5 w-3.5 text-purple-500" />,
+      },
+    ],
+  },
+  {
+    category: "Units & Teams",
+    items: [
+      {
+        shape: "department",
+        label: "Department",
+        icon: <Building className="h-3.5 w-3.5 text-indigo-500" />,
+      },
+      {
+        shape: "division",
+        label: "Division",
+        icon: <Building2 className="h-3.5 w-3.5 text-indigo-600" />,
+      },
+      { shape: "team", label: "Team", icon: <Users className="h-3.5 w-3.5 text-sky-500" /> },
+      {
+        shape: "location",
+        label: "Location / Office",
+        icon: <MapPin className="h-3.5 w-3.5 text-cyan-500" />,
+      },
+    ],
+  },
+  {
+    category: "Grouping & Notes",
+    items: [
+      {
+        shape: "section",
+        label: "Group Section",
+        icon: <Folder className="h-3.5 w-3.5 text-slate-500" />,
+      },
+      {
+        shape: "label",
+        label: "Annotation Label",
+        icon: <Tag className="text-muted-foreground h-3.5 w-3.5" />,
+      },
+      {
+        shape: "placeholder",
+        label: "Placeholder",
+        icon: <HelpCircle className="text-muted-foreground h-3.5 w-3.5" />,
+      },
+    ],
+  },
+];
 
 const toApiNode = (n: Node): OrgChartNode => {
   const d = n.data as unknown as BuilderNodeData;
@@ -75,25 +207,26 @@ const toApiNode = (n: Node): OrgChartNode => {
     custom_fields: d.custom_fields ?? {},
     position_x: n.position.x,
     position_y: n.position.y,
-    // Container nodes use style:{width,height} per React Flow's parent
-    // pattern; non-container nodes use top-level width/height. nodeWidth/
-    // nodeHeight resolve from either source so saving doesn't lose group
-    // dimensions (which would fall back to DEFAULT_WIDTH/HEIGHT otherwise).
     width: nodeWidth(n),
     height: nodeHeight(n),
     group_uuid: n.parentId || null,
   };
 };
 
-const toApiEdge = (e: Edge): OrgChartEdge => ({
-  edge_uuid: e.id || newId(),
-  source_uuid: e.source,
-  target_uuid: e.target,
-  edge_type:
-    (e.data as unknown as { edge_type?: EdgeType } | undefined)?.edge_type ??
-    edgeTypeFromBuilder(e.type),
-  label: typeof e.label === "string" ? e.label : "",
-});
+const toApiEdge = (e: Edge): OrgChartEdge => {
+  const edgeData = e.data as Record<string, unknown> | undefined;
+  return {
+    edge_uuid: e.id || newId(),
+    source_uuid: e.source,
+    target_uuid: e.target,
+    edge_type: (edgeData?.edge_type as EdgeType) ?? edgeTypeFromBuilder(e.type),
+    label: typeof e.label === "string" ? e.label : "",
+    custom_fields: {
+      ...((edgeData?.custom_fields as Record<string, unknown>) ?? {}),
+      ...(edgeData?.line_style ? { line_style: edgeData.line_style } : {}),
+    },
+  };
+};
 
 const fromApiNode = (n: OrgChartNode): Node => {
   const data: BuilderNodeData = {
@@ -111,11 +244,6 @@ const fromApiNode = (n: OrgChartNode): Node => {
     style_key: n.style_key ?? "",
     custom_fields: n.custom_fields ?? {},
   };
-  // Use isContainerNode to detect any container shape (not just "section").
-  // Container nodes use style:{width,height} per React Flow's recommended
-  // pattern for parent nodes, and zIndex:0 so they render behind their
-  // children (which have auto-incrementing zIndex). The previous zIndex:-1
-  // could interfere with React Flow's parent-child drag handling.
   const isContainer = isContainerNode({ data } as unknown as Node);
   const width = n.width;
   const height = n.height;
@@ -123,9 +251,6 @@ const fromApiNode = (n: OrgChartNode): Node => {
     id: n.node_uuid,
     type: "builderNode",
     position: { x: n.position_x, y: n.position_y },
-    // Container nodes: dimensions go in style (React Flow parent pattern).
-    // Non-container nodes: keep top-level width/height for the BuilderNode
-    // component which reads them from NodeProps.
     ...(isContainer ? { style: { width, height } } : { width, height }),
     zIndex: isContainer ? 0 : undefined,
     dragHandle: isContainer ? ".builder-group-drag-handle" : undefined,
@@ -141,7 +266,11 @@ const fromApiEdge = (e: OrgChartEdge): Edge => ({
   target: e.target_uuid,
   ...builderEdgeProps(e.edge_type),
   label: e.label,
-  data: { edge_type: e.edge_type } as Record<string, unknown>,
+  data: {
+    edge_type: e.edge_type,
+    line_style: (e.custom_fields?.line_style as string) || "step",
+    custom_fields: e.custom_fields ?? {},
+  } as Record<string, unknown>,
 });
 
 const BuilderCanvas: React.FC = () => {
@@ -158,13 +287,11 @@ const BuilderCanvas: React.FC = () => {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  // Track the last draft revision loaded into local state. After a save,
-  // useSaveDraft uses setQueryData to update the draft cache synchronously
-  // with the save response — the revision changes, but the nodes/edges are
-  // already what the user just saved. Without this guard, the effect would
-  // overwrite local state (destroying any post-save edits) and cause a
-  // refetch that could trigger a 409 on a rapid second save.
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+
   const lastLoadedRevision = useRef<number | null>(null);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (draft && draft.revision_number !== lastLoadedRevision.current) {
@@ -197,6 +324,8 @@ const BuilderCanvas: React.FC = () => {
     onNodesChange,
     onEdgesChange,
     addShape,
+    addChildNode,
+    addPeerNode,
     onConnect,
     handleGroup,
     ungroupNode,
@@ -207,6 +336,7 @@ const BuilderCanvas: React.FC = () => {
     handleDeleteSelected,
     updateSelectedNode,
     updateSelectedEdgeType,
+    updateSelectedEdgeLineStyle,
   } = useBuilderGraphOps({
     nodes,
     edges,
@@ -219,6 +349,107 @@ const BuilderCanvas: React.FC = () => {
     setContextMenu,
   });
 
+  const { canUndo, canRedo, undo, redo, recordSnapshot } = useBuilderHistory(
+    nodes,
+    edges,
+    setNodes,
+    setEdges
+  );
+
+  const handleAutoLayout = useCallback(() => {
+    recordSnapshot(nodes, edges);
+    const layouted = calculateHierarchyLayout(nodes, edges, {
+      direction: "TB",
+      nodeSep: 50,
+      rankSep: 90,
+    });
+    setNodes(layouted);
+    window.setTimeout(() => reactFlow.fitView({ padding: 0.2, duration: 600 }), 50);
+  }, [nodes, edges, recordSnapshot, reactFlow]);
+
+  const handleImportLiveOrg = useCallback(async () => {
+    if (
+      nodes.length > 0 &&
+      !window.confirm(
+        "Importing the company hierarchy will replace existing canvas nodes. Continue?"
+      )
+    ) {
+      return;
+    }
+    setIsImporting(true);
+    try {
+      const tree = await organigramaService.getTree();
+      if (tree && tree.roots) {
+        recordSnapshot(nodes, edges);
+        const { nodes: importedNodes, edges: importedEdges } = convertLiveTreeToGraph(tree.roots);
+        setNodes(importedNodes);
+        setEdges(importedEdges);
+        window.setTimeout(() => reactFlow.fitView({ padding: 0.2, duration: 600 }), 100);
+      }
+    } catch {
+      alert("Failed to fetch live company hierarchy.");
+    } finally {
+      setIsImporting(false);
+    }
+  }, [nodes, edges, recordSnapshot, reactFlow]);
+
+  const handleSearchNode = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+      if (!query.trim()) return;
+      const q = query.toLowerCase().trim();
+      const match = nodes.find((n) => {
+        const d = n.data as unknown as BuilderNodeData;
+        return (
+          d.display_name.toLowerCase().includes(q) ||
+          (d.role_title && d.role_title.toLowerCase().includes(q))
+        );
+      });
+      if (match) {
+        reactFlow.fitView({ nodes: [match], duration: 600, padding: 0.8 });
+        setNodes((prev) =>
+          prev.map((n) => ({
+            ...n,
+            selected: n.id === match.id,
+          }))
+        );
+        setLastSelectedId(match.id);
+      }
+    },
+    [nodes, reactFlow, setLastSelectedId]
+  );
+
+  const handleExportPng = useCallback(async () => {
+    const filename = `${chart?.name || "org-chart"}-export.png`;
+    const success = await exportCanvasToPng(canvasRef.current, filename);
+    if (!success) {
+      alert("Failed to export chart image.");
+    }
+  }, [chart]);
+
+  const handleExportPdf = useCallback(async () => {
+    if (!canvasRef.current) return;
+    const viewport = canvasRef.current.querySelector(".react-flow__viewport") as HTMLElement | null;
+    if (!viewport) return;
+    try {
+      const canvas = await html2canvas(viewport, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        logging: false,
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      pdf.setFontSize(16);
+      pdf.text(chart?.name || "Organizational Chart", 40, 40);
+      pdf.addImage(imgData, "PNG", 40, 60, pageWidth - 80, pageHeight - 100);
+      pdf.save(`${chart?.name || "org-chart"}.pdf`);
+    } catch {
+      alert("Failed to export PDF.");
+    }
+  }, [chart]);
+
   const handleSave = useCallback(() => {
     setSaveError(null);
     const payload = {
@@ -228,10 +459,6 @@ const BuilderCanvas: React.FC = () => {
     };
     saveDraft(payload, {
       onSuccess: (data) => {
-        // Mark this revision as already loaded so the draft useEffect
-        // doesn't overwrite local state when setQueryData fires it.
-        // The save response has the same nodes/edges we just saved,
-        // so overwriting would only destroy any post-save edits.
         lastLoadedRevision.current = data.revision_number;
         setValidation({ is_valid: true, errors: [] });
       },
@@ -264,7 +491,7 @@ const BuilderCanvas: React.FC = () => {
     return (
       <PageShell title="Chart Builder">
         <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
         </div>
       </PageShell>
     );
@@ -273,7 +500,7 @@ const BuilderCanvas: React.FC = () => {
   if (isError) {
     return (
       <PageShell title="Chart Builder">
-        <div className="flex h-[calc(100vh-8rem)] items-center justify-center gap-2 text-destructive">
+        <div className="text-destructive flex h-[calc(100vh-8rem)] items-center justify-center gap-2">
           <AlertCircle className="h-6 w-6" />
           <span>Failed to load chart draft.</span>
         </div>
@@ -282,7 +509,9 @@ const BuilderCanvas: React.FC = () => {
   }
 
   const selectedNodeData = selectedNode?.data as unknown as BuilderNodeData | undefined;
-  const selectedEdgeData = selectedEdge?.data as unknown as { edge_type?: EdgeType } | undefined;
+  const selectedEdgeData = selectedEdge?.data as unknown as
+    | { edge_type?: EdgeType; line_style?: string }
+    | undefined;
 
   return (
     <PageShell
@@ -290,96 +519,233 @@ const BuilderCanvas: React.FC = () => {
       subtitle="Define shapes, hierarchy, and relationships. Save as a draft."
       actions={
         <>
-          <Button variant="outline" onClick={() => navigate("/admin/organigrama")}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+          <Button variant="outline" size="sm" onClick={() => navigate("/admin/organigrama")}>
+            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Back
           </Button>
+
+          {/* Undo / Redo */}
+          <div className="dark:border-border flex items-center gap-1 border-r pr-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={undo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+              aria-label="Undo"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={redo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Y)"
+              aria-label="Redo"
+            >
+              <Redo2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+
+          {/* Auto-Arrange */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAutoLayout}
+            title="Auto-arrange tree hierarchy"
+          >
+            <Sparkles className="text-primary mr-1.5 h-3.5 w-3.5" /> Auto-Arrange
+          </Button>
+
+          {/* Live Org Import */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleImportLiveOrg}
+            disabled={isImporting}
+            title="Clone live company hierarchy into draft"
+          >
+            {isImporting ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Import Live Org
+          </Button>
+
+          {/* Selection Actions */}
           {selectedNodeIds.length > 1 && (
-            <Button variant="outline" onClick={handleGroup}>
-              <Folder className="mr-2 h-4 w-4" /> Group
+            <Button variant="outline" size="sm" onClick={handleGroup}>
+              <Folder className="mr-1.5 h-3.5 w-3.5" /> Group
             </Button>
           )}
           {selectedNode && isContainerNode(selectedNode) && (
-            <Button variant="outline" onClick={handleUngroup}>
+            <Button variant="outline" size="sm" onClick={handleUngroup}>
               Ungroup
             </Button>
           )}
           {selectedNodeIds.length > 0 && (
-            <Button variant="outline" onClick={handleDuplicate}>
-              <Copy className="mr-2 h-4 w-4" /> Duplicate
+            <Button variant="outline" size="sm" onClick={handleDuplicate}>
+              <Copy className="mr-1.5 h-3.5 w-3.5" /> Duplicate
             </Button>
           )}
           {selectedNodeIds.length > 0 && (
             <Button
               variant="outline"
+              size="sm"
               className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
               onClick={handleDeleteSelected}
             >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
             </Button>
           )}
-          <Button variant="outline" onClick={handleValidate} disabled={saving}>
-            <Check className="mr-2 h-4 w-4" /> Validate
+
+          {/* Export Dropdown / Buttons */}
+          <div className="dark:border-border flex items-center gap-1 border-l pl-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleExportPng}
+              title="Export as PNG image"
+              aria-label="Export PNG"
+            >
+              <Download className="h-3.5 w-3.5" /> PNG
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleExportPdf}
+              title="Export as PDF document"
+              aria-label="Export PDF"
+            >
+              <FileDown className="h-3.5 w-3.5" /> PDF
+            </Button>
+          </div>
+
+          <Button variant="outline" size="sm" onClick={handleValidate} disabled={saving}>
+            <Check className="mr-1.5 h-3.5 w-3.5" /> Validate
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="mr-2 h-4 w-4" /> {saving ? "Saving..." : "Save Draft"}
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            <Save className="mr-1.5 h-3.5 w-3.5" /> {saving ? "Saving..." : "Save Draft"}
           </Button>
           <Button
+            size="sm"
             variant="outline"
             onClick={() => navigate(`/admin/organigrama/${chartId}/publish`)}
           >
-            <Rocket className="mr-2 h-4 w-4" /> Publish
+            <Rocket className="mr-1.5 h-3.5 w-3.5" /> Publish
           </Button>
         </>
       }
     >
-      <div className="grid h-[calc(100vh-12rem)] grid-cols-1 gap-4 lg:grid-cols-[14rem_1fr_18rem]">
-        <GlassCard className="flex flex-col gap-2 overflow-y-auto p-3">
-          <h2 className="text-sm font-semibold">Shapes</h2>
-          {SHAPE_TYPES.map((shape) => (
-            <Button
-              key={shape}
-              variant="outline"
-              className="justify-start text-xs"
-              onClick={() => addShape(shape)}
-            >
-              <Plus className="mr-2 h-3 w-3" /> {shape}
-            </Button>
+      <div className="grid h-[calc(100vh-12rem)] grid-cols-1 gap-4 lg:grid-cols-[15rem_1fr_18rem]">
+        {/* Left categorized shape palette */}
+        <GlassCard className="flex flex-col gap-3 overflow-y-auto p-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Palette
+            </h2>
+            <span className="text-muted-foreground text-[10px]">{nodes.length} nodes</span>
+          </div>
+
+          {SHAPE_CATEGORIES.map((category) => (
+            <div key={category.category} className="space-y-1">
+              <span className="text-muted-foreground text-[11px] font-medium">
+                {category.category}
+              </span>
+              <div className="grid grid-cols-1 gap-1">
+                {category.items.map((item) => (
+                  <Button
+                    key={item.label}
+                    variant="outline"
+                    className="h-8 justify-start px-2 text-xs"
+                    onClick={() => addShape(item.shape, item.initialCustomFields)}
+                  >
+                    <span className="mr-2">{item.icon}</span>
+                    <span className="truncate">{item.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
           ))}
         </GlassCard>
 
-        <GlassCard className="relative min-h-0 p-0">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            onNodeContextMenu={onNodeContextMenu}
-            onPaneClick={onPaneClick}
-            onPaneContextMenu={onPaneContextMenu}
-            nodeTypes={nodeTypes}
-            edgeTypes={builderEdgeTypes}
-            defaultEdgeOptions={builderEdgeProps("reports_to")}
-            multiSelectionKeyCode={["Meta", "Control"]}
-            deleteKeyCode={["Delete", "Backspace"]}
-            fitView
+        {/* Center Canvas */}
+        <GlassCard className="relative flex min-h-0 flex-col overflow-hidden p-0" ref={canvasRef}>
+          {/* Quick Search Header Bar inside canvas */}
+          <div className="bg-background/90 absolute top-2 left-2 z-10 flex items-center gap-2 rounded-lg border p-1.5 shadow-xs backdrop-blur-sm">
+            <Search className="text-muted-foreground h-3.5 w-3.5" />
+            <Input
+              type="text"
+              placeholder="Find node in canvas..."
+              value={searchQuery}
+              onChange={(e) => handleSearchNode(e.target.value)}
+              className="h-7 w-48 border-0 bg-transparent px-1 text-xs shadow-none focus-visible:ring-0"
+            />
+          </div>
+
+          <BuilderActionsContext.Provider
+            value={{
+              onAddChild: (parentId) => addChildNode(parentId),
+              onAddPeer: (nodeId) => addPeerNode(nodeId),
+              onDeleteNode: (nodeId) => handleDeleteNode(nodeId),
+            }}
           >
-            <Background gap={16} />
-            <Controls showInteractive={false} />
-          </ReactFlow>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              onNodeContextMenu={onNodeContextMenu}
+              onPaneClick={onPaneClick}
+              onPaneContextMenu={onPaneContextMenu}
+              nodeTypes={nodeTypes}
+              edgeTypes={builderEdgeTypes}
+              defaultEdgeOptions={builderEdgeProps("reports_to")}
+              multiSelectionKeyCode={["Meta", "Control"]}
+              deleteKeyCode={["Delete", "Backspace"]}
+              fitView
+            >
+              <Background gap={16} />
+              <Controls showInteractive={false} />
+              <MiniMap
+                zoomable
+                pannable
+                className="!bg-background/80 !border-border !rounded-lg !border !shadow-sm"
+                nodeColor={(n) => {
+                  const d = n.data as unknown as BuilderNodeData;
+                  if (d?.shape_type === "person") return "#3b82f6";
+                  if (d?.shape_type === "department" || d?.shape_type === "division")
+                    return "#6366f1";
+                  if (d?.shape_type === "team") return "#0284c7";
+                  if (d?.shape_type === "vacant" || d?.status === "vacant") return "#f59e0b";
+                  return "#94a3b8";
+                }}
+              />
+            </ReactFlow>
+          </BuilderActionsContext.Provider>
+
           {contextMenu && (
             <div
-              className="fixed z-50 min-w-[10rem] rounded-md border bg-popover p-1 shadow-md"
+              className="bg-popover fixed z-50 min-w-[10rem] rounded-md border p-1 shadow-md"
               style={{ top: contextMenu.y, left: contextMenu.x }}
               onClick={(e) => e.stopPropagation()}
             >
               <Button
                 variant="ghost"
                 className="w-full justify-start text-xs"
-                onClick={() => handleDeleteNode(contextMenu.nodeId)}
+                onClick={() => addChildNode(contextMenu.nodeId)}
               >
-                Delete
+                <Plus className="mr-2 h-3 w-3" /> Add Direct Report
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-xs"
+                onClick={() => addPeerNode(contextMenu.nodeId)}
+              >
+                <Plus className="mr-2 h-3 w-3" /> Add Peer
               </Button>
               <Button
                 variant="ghost"
@@ -389,7 +755,14 @@ const BuilderCanvas: React.FC = () => {
                   setContextMenu(null);
                 }}
               >
-                Duplicate
+                <Copy className="mr-2 h-3 w-3" /> Duplicate
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-destructive hover:bg-destructive hover:text-destructive-foreground w-full justify-start text-xs"
+                onClick={() => handleDeleteNode(contextMenu.nodeId)}
+              >
+                <Trash2 className="mr-2 h-3 w-3" /> Delete
               </Button>
               {selectedNodeIds.length > 1 && (
                 <Button
@@ -397,7 +770,7 @@ const BuilderCanvas: React.FC = () => {
                   className="w-full justify-start text-xs"
                   onClick={handleGroup}
                 >
-                  Group {selectedNodeIds.length} nodes
+                  <Folder className="mr-2 h-3 w-3" /> Group {selectedNodeIds.length} nodes
                 </Button>
               )}
               {nodes.find((n) => n.id === contextMenu.nodeId) &&
@@ -414,6 +787,7 @@ const BuilderCanvas: React.FC = () => {
           )}
         </GlassCard>
 
+        {/* Right Inspector */}
         <GlassCard className="min-h-0 p-0">
           <BuilderCanvasInspector
             selectedNodeData={selectedNodeData}
@@ -421,6 +795,7 @@ const BuilderCanvas: React.FC = () => {
             hasSelectedEdge={Boolean(selectedEdge)}
             updateSelectedNode={updateSelectedNode}
             updateSelectedEdgeType={updateSelectedEdgeType}
+            updateSelectedEdgeLineStyle={updateSelectedEdgeLineStyle}
             validation={validation}
             saveError={saveError}
           />
@@ -433,8 +808,6 @@ const BuilderCanvas: React.FC = () => {
 export const OrganigramaBuilderPage: React.FC = () => {
   const { isAdmin, isSuperuser } = usePermissions();
 
-  // Staff-only API (IsStaffOrSuperuser) — HR admitted by the admin route
-  // guard would only see 403s here.
   if (!isAdmin && !isSuperuser) {
     return <Navigate to="/organigrama" replace />;
   }

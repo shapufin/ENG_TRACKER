@@ -40,19 +40,28 @@ import {
   orderNodesParentFirst,
 } from "../pages/groupHelpers";
 import { builderEdgeProps } from "../components/builderEdgeHelpers";
+import { calculateChildSpawnPosition } from "./useBuilderAutoLayout";
 import type { BuilderNodeData, EdgeType, ShapeType } from "../types";
 
 const DEFAULT_WIDTH = 180;
 const DEFAULT_HEIGHT = 80;
 
 export function newId(): string {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
-  return `${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
-export function makeNode(shape: ShapeType, count: number): Node {
+export function makeNode(
+  shape: ShapeType,
+  count: number,
+  customFields?: Record<string, unknown>
+): Node {
   const x = 100 + (count % 5) * 40;
   const y = 100 + Math.floor(count / 5) * 80;
   const data: BuilderNodeData = {
@@ -63,7 +72,7 @@ export function makeNode(shape: ShapeType, count: number): Node {
     is_searchable: true,
     is_visible: true,
     style_key: "",
-    custom_fields: {},
+    custom_fields: customFields ?? {},
   };
   return {
     id: newId(),
@@ -77,7 +86,9 @@ export function makeNode(shape: ShapeType, count: number): Node {
 export interface BuilderGraphOps {
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
-  addShape: (shape: ShapeType) => void;
+  addShape: (shape: ShapeType, customFields?: Record<string, unknown>) => void;
+  addChildNode: (parentId: string, shape?: ShapeType) => void;
+  addPeerNode: (nodeId: string, shape?: ShapeType) => void;
   onConnect: (connection: Connection) => void;
   handleGroup: () => void;
   ungroupNode: (groupId: string) => void;
@@ -88,6 +99,7 @@ export interface BuilderGraphOps {
   handleDeleteSelected: () => void;
   updateSelectedNode: <K extends keyof BuilderNodeData>(key: K, value: BuilderNodeData[K]) => void;
   updateSelectedEdgeType: (edgeType: EdgeType) => void;
+  updateSelectedEdgeLineStyle: (lineStyle: string) => void;
 }
 
 interface UseBuilderGraphOpsArgs {
@@ -151,10 +163,96 @@ export function useBuilderGraphOps({
   );
 
   const addShape = useCallback(
-    (shape: ShapeType) => {
-      setNodes((prev) => [...prev, makeNode(shape, prev.length)]);
+    (shape: ShapeType, customFields?: Record<string, unknown>) => {
+      setNodes((prev) => [...prev, makeNode(shape, prev.length, customFields)]);
     },
     [setNodes]
+  );
+
+  const addChildNode = useCallback(
+    (parentId: string, shape: ShapeType = "person") => {
+      const parentNode = nodes.find((n) => n.id === parentId);
+      if (!parentNode) return;
+
+      const existingReportsCount = edges.filter(
+        (e) => e.source === parentId && (e.data?.edge_type === "reports_to" || !e.data?.edge_type)
+      ).length;
+
+      const childId = newId();
+      const spawnPos = calculateChildSpawnPosition(parentNode, existingReportsCount + 1);
+
+      const childNode: Node = {
+        id: childId,
+        type: "builderNode",
+        position: spawnPos,
+        ...nodeLayoutProps(shape, DEFAULT_WIDTH, DEFAULT_HEIGHT),
+        selected: true,
+        data: {
+          shape_type: shape,
+          display_name: `New ${shape}`,
+          status: shape === "position" ? "vacant" : "active",
+          sort_order: 0,
+          is_searchable: true,
+          is_visible: true,
+          style_key: "",
+          custom_fields: {},
+        } as BuilderNodeData,
+      };
+
+      const newEdge: Edge = {
+        id: newId(),
+        source: parentId,
+        target: childId,
+        ...builderEdgeProps("reports_to"),
+        data: {
+          edge_type: "reports_to",
+          line_style: "step",
+          custom_fields: { line_style: "step" },
+        } as Record<string, unknown>,
+      };
+
+      setNodes((prev) => [...prev.map((n) => ({ ...n, selected: false })), childNode]);
+      setEdges((prev) => [...prev, newEdge]);
+      setLastSelectedId(childId);
+    },
+    [nodes, edges, setNodes, setEdges, setLastSelectedId]
+  );
+
+  const addPeerNode = useCallback(
+    (nodeId: string, shape: ShapeType = "person") => {
+      const currentNode = nodes.find((n) => n.id === nodeId);
+      if (!currentNode) return;
+
+      const incomingEdge = edges.find(
+        (e) => e.target === nodeId && (e.data?.edge_type === "reports_to" || !e.data?.edge_type)
+      );
+
+      if (incomingEdge) {
+        addChildNode(incomingEdge.source, shape);
+      } else {
+        const peerId = newId();
+        const peerNode: Node = {
+          id: peerId,
+          type: "builderNode",
+          position: { x: currentNode.position.x + 240, y: currentNode.position.y },
+          ...nodeLayoutProps(shape, DEFAULT_WIDTH, DEFAULT_HEIGHT),
+          selected: true,
+          data: {
+            shape_type: shape,
+            display_name: `New ${shape}`,
+            status: shape === "position" ? "vacant" : "active",
+            sort_order: 0,
+            is_searchable: true,
+            is_visible: true,
+            style_key: "",
+            custom_fields: {},
+          } as BuilderNodeData,
+        };
+        setNodes((prev) => [...prev.map((n) => ({ ...n, selected: false })), peerNode]);
+        setLastSelectedId(peerId);
+      }
+    },
+    [nodes, edges, addChildNode, setNodes, setLastSelectedId]
   );
 
   const onConnect = useCallback(
@@ -165,7 +263,11 @@ export function useBuilderGraphOps({
         source: connection.source,
         target: connection.target,
         ...builderEdgeProps("reports_to"),
-        data: { edge_type: "reports_to" } as Record<string, unknown>,
+        data: {
+          edge_type: "reports_to",
+          line_style: "step",
+          custom_fields: { line_style: "step" },
+        } as Record<string, unknown>,
       };
       setEdges((eds) => addEdge(newEdge, eds));
     },
@@ -339,10 +441,38 @@ export function useBuilderGraphOps({
             ? {
                 ...e,
                 ...builderEdgeProps(edgeType),
-                data: { edge_type: edgeType } as Record<string, unknown>,
+                data: {
+                  ...((e.data as Record<string, unknown>) || {}),
+                  edge_type: edgeType,
+                },
               }
             : e
         )
+      );
+    },
+    [selectedEdge, setEdges]
+  );
+
+  const updateSelectedEdgeLineStyle = useCallback(
+    (lineStyle: string) => {
+      if (!selectedEdge) return;
+      setEdges((prev) =>
+        prev.map((e) => {
+          if (e.id !== selectedEdge.id) return e;
+          const currentData = (e.data as Record<string, unknown>) || {};
+          const nextCustom = {
+            ...((currentData.custom_fields as Record<string, unknown>) || {}),
+            line_style: lineStyle,
+          };
+          return {
+            ...e,
+            data: {
+              ...currentData,
+              line_style: lineStyle,
+              custom_fields: nextCustom,
+            },
+          };
+        })
       );
     },
     [selectedEdge, setEdges]
@@ -352,6 +482,8 @@ export function useBuilderGraphOps({
     onNodesChange,
     onEdgesChange,
     addShape,
+    addChildNode,
+    addPeerNode,
     onConnect,
     handleGroup,
     ungroupNode,
@@ -362,5 +494,6 @@ export function useBuilderGraphOps({
     handleDeleteSelected,
     updateSelectedNode,
     updateSelectedEdgeType,
+    updateSelectedEdgeLineStyle,
   };
 }

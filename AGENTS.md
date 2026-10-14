@@ -275,3 +275,11 @@ Rules:
 - Gate: `python manage.py test apps.overtime apps.standby apps.users apps.reports apps.permissions apps.dashboard apps.leave_management plugins.payroll plugins.notifications plugins.data_import plugins.audit_log plugins.control_room` → 1428 OK (earlier subset gate, superseded by the full gate below).
 - Full gate as of 2026-10-12: `py -3.14 manage.py test` → 2737 OK, `ruff check` on changed files. See `docs/workflow-invariants.md`.
 - 2026-10-12 — merged: TL-closure gate ON by default (PR #105, migration 0011); leave balance follows approve/reject transitions and OT/standby approve/reject refuse non-pending entries (PR #106). Details and rules in `docs/workflow-invariants.md`.
+
+## 2026-10-14 — Organigrama rework: shapes, orthogonal connectors, 3D & mobile auto-landscape
+- Connectors: straight 90° orthogonal step paths (`getSmoothStepPath` with `borderRadius: 0`) and direct point-to-point lines with directional markers.
+- Node shapes: five geometric silhouettes (`pill`, `chamfered`, `sharp`, `soft`, `leaf`) and border styles (`solid`, `dashed`, `dotted`, `double`, `glow`).
+- 3D perspective: spatial 3D mode with perspective tilt, elevation and node drop shadows.
+- Mobile experience: portrait defaults to semantic searchable hierarchy tree with "Interactive Graph" toggle; pinch-to-zoom and touch panning enabled; rotating to landscape (max-height 550px) automatically switches to full-height interactive graph with return toggle to list view.
+- Gates: vitest 167/167 OK across 22 suites, backend tests 165/165 OK, tsc clean, eslint clean, prettier clean, table-header-audit 0 violations, production build clean.
+

@@ -1,5 +1,5 @@
 /** Organigrama page — route entry, source selector, mobile/desktop switch. */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Network, Loader2, AlertCircle } from "lucide-react";
 import {
   Select,
@@ -25,7 +25,17 @@ type SourceOption = { id: "live" | number; label: string };
 export const OrganigramaPage: React.FC = () => {
   const tree = useOrganigramaTree();
   const visible = useOrganigramaVisibleCharts();
-  const isMobile = useMediaQuery("(max-width: 767px)");
+  const isSmallScreen = useMediaQuery("(max-width: 767px)");
+  const isLandscape = useMediaQuery("(orientation: landscape) and (max-height: 550px)");
+  const [liveModeOverride, setLiveModeOverride] = useState<"graph" | "list" | null>(null);
+
+  // Automatically switch mode when orientation changes (e.g. rotating phone into landscape opens graph)
+  useEffect(() => {
+    setLiveModeOverride(null);
+  }, [isLandscape]);
+
+  const isLiveGraphMode =
+    liveModeOverride === "graph" || (liveModeOverride === null && (isLandscape || !isSmallScreen));
 
   const sources = useMemo<SourceOption[]>(() => {
     const list: SourceOption[] = [];
@@ -69,7 +79,7 @@ export const OrganigramaPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -77,8 +87,8 @@ export const OrganigramaPage: React.FC = () => {
   if (isError) {
     return (
       <div className="flex h-[calc(100vh-8rem)] flex-col items-center justify-center gap-2">
-        <AlertCircle className="h-8 w-8 text-destructive" />
-        <p className="text-sm text-muted-foreground">Failed to load organizational chart.</p>
+        <AlertCircle className="text-destructive h-8 w-8" />
+        <p className="text-muted-foreground text-sm">Failed to load organizational chart.</p>
       </div>
     );
   }
@@ -88,15 +98,23 @@ export const OrganigramaPage: React.FC = () => {
       if (!tree.data || tree.data.roots.length === 0) {
         return (
           <div className="flex h-[calc(100vh-8rem)] flex-col items-center justify-center gap-2">
-            <Network className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">No organizational data available.</p>
+            <Network className="text-muted-foreground h-8 w-8" />
+            <p className="text-muted-foreground text-sm">No organizational data available.</p>
           </div>
         );
       }
-      return isMobile ? (
-        <OrgChartMobileList roots={tree.data.roots} />
+      return !isLiveGraphMode ? (
+        <OrgChartMobileList
+          roots={tree.data.roots}
+          onSwitchToGraph={() => setLiveModeOverride("graph")}
+        />
       ) : (
-        <OrgChartPage roots={tree.data.roots} />
+        <OrgChartPage
+          roots={tree.data.roots}
+          isLandscape={isLandscape}
+          isMobile={isSmallScreen}
+          onSwitchToList={isSmallScreen ? () => setLiveModeOverride("list") : undefined}
+        />
       );
     }
 

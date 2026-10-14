@@ -107,6 +107,7 @@ export interface OrgChartEdge {
   label?: string;
   sort_order?: number;
   style_key?: string;
+  custom_fields?: Record<string, unknown>;
 }
 
 export interface DraftPayload {

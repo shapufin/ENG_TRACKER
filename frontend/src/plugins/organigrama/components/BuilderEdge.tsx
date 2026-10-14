@@ -10,7 +10,14 @@
  * only exports React components (react-refresh compliance).
  */
 import React, { memo } from "react";
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from "@xyflow/react";
+import {
+  BaseEdge,
+  EdgeLabelRenderer,
+  getSmoothStepPath,
+  getStraightPath,
+  getBezierPath,
+  type EdgeProps,
+} from "@xyflow/react";
 import type { EdgeType } from "../types";
 import { EDGE_STYLE_CONFIGS, edgePathStyle } from "./builderEdgeHelpers";
 
@@ -30,15 +37,30 @@ const BuilderEdgeBase: React.FC<BuilderEdgeComponentProps> = ({
   selected,
   markerEnd,
   edgeType,
+  data,
 }) => {
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
+  const lineStyle = (data?.line_style as string) || "step";
+  const [edgePath, labelX, labelY] =
+    lineStyle === "straight"
+      ? getStraightPath({ sourceX, sourceY, targetX, targetY })
+      : lineStyle === "bezier"
+        ? getBezierPath({
+            sourceX,
+            sourceY,
+            sourcePosition,
+            targetX,
+            targetY,
+            targetPosition,
+          })
+        : getSmoothStepPath({
+            sourceX,
+            sourceY,
+            sourcePosition,
+            targetX,
+            targetY,
+            targetPosition,
+            borderRadius: 0,
+          });
   const config = EDGE_STYLE_CONFIGS[edgeType];
   const style = edgePathStyle(edgeType);
 

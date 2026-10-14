@@ -10,6 +10,13 @@ vi.mock("@/hooks/useMediaQuery", () => ({
   useMediaQuery: vi.fn(),
 }));
 
+class ResizeObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+global.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
+
 const mockChart: OrgChart = {
   id: 1,
   name: "Q3 Structure",
@@ -74,10 +81,12 @@ const mockPayload: DraftPayload = {
 describe("CustomChartViewer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useMediaQuery).mockImplementation(
+      (query) => typeof query === "string" && query.includes("max-width")
+    );
   });
 
   it("renders a semantic mobile tree with expand/collapse buttons", () => {
-    vi.mocked(useMediaQuery).mockReturnValue(true);
     render(<CustomChartViewer chart={mockChart} payload={mockPayload} />);
 
     expect(screen.getByRole("tree")).toBeInTheDocument();
@@ -90,7 +99,6 @@ describe("CustomChartViewer", () => {
   });
 
   it("nests visual group members in the published mobile viewer", () => {
-    vi.mocked(useMediaQuery).mockReturnValue(true);
     const payload: DraftPayload = {
       revision_number: 1,
       nodes: [
@@ -127,7 +135,6 @@ describe("CustomChartViewer", () => {
   });
 
   it("renders an empty state when the payload has no roots", () => {
-    vi.mocked(useMediaQuery).mockReturnValue(true);
     render(
       <CustomChartViewer chart={mockChart} payload={{ revision_number: 0, nodes: [], edges: [] }} />
     );
@@ -136,14 +143,12 @@ describe("CustomChartViewer", () => {
   });
 
   it("renders a search input on mobile", () => {
-    vi.mocked(useMediaQuery).mockReturnValue(true);
     render(<CustomChartViewer chart={mockChart} payload={mockPayload} />);
 
     expect(screen.getByLabelText("Search chart")).toBeInTheDocument();
   });
 
   it("filters mobile list by search query", () => {
-    vi.mocked(useMediaQuery).mockReturnValue(true);
     render(<CustomChartViewer chart={mockChart} payload={mockPayload} />);
 
     const searchInput = screen.getByLabelText("Search chart");
@@ -155,7 +160,6 @@ describe("CustomChartViewer", () => {
   });
 
   it("shows no-match message when search has no results on mobile", () => {
-    vi.mocked(useMediaQuery).mockReturnValue(true);
     render(<CustomChartViewer chart={mockChart} payload={mockPayload} />);
 
     const searchInput = screen.getByLabelText("Search chart");
@@ -165,7 +169,6 @@ describe("CustomChartViewer", () => {
   });
 
   it("hides non-matching children of a matching parent on mobile", () => {
-    vi.mocked(useMediaQuery).mockReturnValue(true);
     // CEO (root) -> Engineering (matches) -> Alice (should be hidden)
     const payload: DraftPayload = {
       revision_number: 1,
@@ -219,6 +222,39 @@ describe("CustomChartViewer", () => {
     expect(screen.getByText("CEO")).toBeInTheDocument();
     // Non-matching descendants of the match must be hidden.
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+  });
+
+  it("allows mobile portrait users to switch to interactive graph view and back to list", () => {
+    render(<CustomChartViewer chart={mockChart} payload={mockPayload} />);
+
+    // In portrait mobile, "Graph View" button is visible
+    const switchButton = screen.getByRole("button", { name: /switch to graph view/i });
+    expect(switchButton).toBeInTheDocument();
+
+    // Click to switch to graph view
+    fireEvent.click(switchButton);
+
+    // List view tree is now unmounted; toolbar with "List View" switch button appears
+    expect(screen.queryByRole("tree")).not.toBeInTheDocument();
+    const listButton = screen.getByRole("button", { name: /switch to list view/i });
+    expect(listButton).toBeInTheDocument();
+
+    // Click to return to list view
+    fireEvent.click(listButton);
+    expect(screen.getByRole("tree")).toBeInTheDocument();
+  });
+
+  it("automatically renders interactive graph view in landscape mobile orientation", () => {
+    // Both small screen and landscape match
+    vi.mocked(useMediaQuery).mockImplementation(
+      (query) =>
+        typeof query === "string" && (query.includes("max-width") || query.includes("landscape"))
+    );
+    render(<CustomChartViewer chart={mockChart} payload={mockPayload} />);
+
+    // In landscape mode, graph view is automatically rendered (tree is not present)
+    expect(screen.queryByRole("tree")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /switch to list view/i })).toBeInTheDocument();
   });
 });
 

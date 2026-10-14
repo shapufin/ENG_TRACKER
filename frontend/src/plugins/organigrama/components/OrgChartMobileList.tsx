@@ -1,7 +1,8 @@
 /** Mobile fallback: collapsible nested list for screens < 768px. */
 import React, { useState, useCallback } from "react";
-import { Users, User, ChevronRight, ChevronDown } from "lucide-react";
+import { Users, User, ChevronRight, ChevronDown, Network } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import type { TreeNode, RoleBadge } from "../types";
 
 const ROLE_BADGE_STYLES: Record<RoleBadge, string> = {
@@ -80,7 +81,10 @@ const MobileNode: React.FC<{ node: TreeNode; depth: number }> = ({ node, depth }
   );
 };
 
-export const OrgChartMobileList: React.FC<{ roots: TreeNode[] }> = ({ roots }) => {
+export const OrgChartMobileList: React.FC<{
+  roots: TreeNode[];
+  onSwitchToGraph?: () => void;
+}> = ({ roots, onSwitchToGraph }) => {
   if (roots.length === 0) {
     return (
       <div className="text-muted-foreground px-4 py-8 text-center text-sm">
@@ -90,10 +94,28 @@ export const OrgChartMobileList: React.FC<{ roots: TreeNode[] }> = ({ roots }) =
   }
 
   return (
-    <ul role="tree" aria-label="Organizational chart (mobile list view)" className="divide-y">
-      {roots.map((root) => (
-        <MobileNode key={`${root.type}-${root.id}`} node={root} depth={0} />
-      ))}
-    </ul>
+    <div className="space-y-2">
+      {onSwitchToGraph && (
+        <div className="flex items-center justify-between pb-1">
+          <span className="text-muted-foreground text-xs font-medium">Tree View</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSwitchToGraph}
+            className="h-7 gap-1.5 px-2 text-xs font-medium"
+            title="Switch to interactive graph canvas with zoom & pan"
+            aria-label="Switch to graph view"
+          >
+            <Network className="text-primary h-3.5 w-3.5" />
+            <span>Interactive Graph</span>
+          </Button>
+        </div>
+      )}
+      <ul role="tree" aria-label="Organizational chart (mobile list view)" className="divide-y">
+        {roots.map((root) => (
+          <MobileNode key={`${root.type}-${root.id}`} node={root} depth={0} />
+        ))}
+      </ul>
+    </div>
   );
 };
