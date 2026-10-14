@@ -20,13 +20,31 @@ class GlobalSettingsSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'carry_over_applied_year', 'created_at', 'updated_at']
 
     def validate(self, attrs):
-        # Reject days that never exist in the month (31 Feb). 29 Feb passes:
-        # carry_over_expiry_for clamps it in non-leap years.
         month = attrs.get('carry_over_expiry_month', self.instance.carry_over_expiry_month if self.instance else None)
         day = attrs.get('carry_over_expiry_day', self.instance.carry_over_expiry_day if self.instance else None)
+        yearly_days = attrs.get('default_yearly_leave_days', self.instance.default_yearly_leave_days if self.instance else None)
+
+        if yearly_days is not None and (yearly_days < 0 or yearly_days > 365):
+            raise serializers.ValidationError(
+                {'default_yearly_leave_days': 'Default yearly vacation days must be between 0 and 365.'}
+            )
+
+        if month is not None:
+            if month < 1 or month > 12:
+                raise serializers.ValidationError(
+                    {'carry_over_expiry_month': 'Expiry month must be between 1 and 12.'}
+                )
+
+        if day is not None:
+            if day < 1 or day > 31:
+                raise serializers.ValidationError(
+                    {'carry_over_expiry_day': 'Expiry day must be between 1 and 31.'}
+                )
+
         if month is not None and day is not None:
             import calendar
-            if day > calendar.monthrange(2000, month)[1]:  # 2000 is a leap year
+            max_day = calendar.monthrange(2000, month)[1]  # 2000 is a leap year
+            if day > max_day:
                 raise serializers.ValidationError(
                     {'carry_over_expiry_day': f'Day {day} does not exist in month {month}.'}
                 )

@@ -381,13 +381,15 @@ class HolidayCRUDTests(TestCase):
         self.factory = APIRequestFactory()
 
     def test_add_holiday(self):
-        """Adding a holiday sets is_holiday=True, is_working_day=False."""
+        """Adding a holiday sets is_holiday=True, is_working_day=False and creates PublicHoliday."""
         from plugins.payroll.services.calendar_service import add_holiday
+        from apps.dashboard.models.calendar import PublicHoliday
         # Nov 26 is not a standard holiday
         workday = add_holiday(self.calendar, date(2026, 11, 26), 'Test Holiday')
         self.assertTrue(workday.is_holiday)
         self.assertFalse(workday.is_working_day)
         self.assertEqual(workday.holiday_name, 'Test Holiday')
+        self.assertTrue(PublicHoliday.objects.filter(date=date(2026, 11, 26), is_global=True).exists())
 
     def test_add_holiday_via_api(self):
         payload = {'date': '2026-11-26', 'name': 'API Test Holiday'}
@@ -415,16 +417,19 @@ class HolidayCRUDTests(TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test_remove_holiday_restores_working_day(self):
-        """Removing a holiday from a weekday restores it as a working day."""
+        """Removing a holiday from a weekday restores it as a working day and removes PublicHoliday."""
         from plugins.payroll.services.calendar_service import add_holiday, remove_holiday
+        from apps.dashboard.models.calendar import PublicHoliday
         # Nov 26, 2026 is a Thursday (weekday)
         workday = add_holiday(self.calendar, date(2026, 11, 26), 'Temp Holiday')
         self.assertFalse(workday.is_working_day)
+        self.assertTrue(PublicHoliday.objects.filter(date=date(2026, 11, 26), is_global=True).exists())
         remove_holiday(workday)
         workday.refresh_from_db()
         self.assertFalse(workday.is_holiday)
         self.assertTrue(workday.is_working_day)
         self.assertEqual(workday.holiday_name, '')
+        self.assertFalse(PublicHoliday.objects.filter(date=date(2026, 11, 26), is_global=True).exists())
 
     def test_remove_holiday_via_api(self):
         from plugins.payroll.services.calendar_service import add_holiday
@@ -442,6 +447,7 @@ class HolidayCRUDTests(TestCase):
 
     def test_update_holiday_name_via_api(self):
         from plugins.payroll.services.calendar_service import add_holiday
+        from apps.dashboard.models.calendar import PublicHoliday
         workday = add_holiday(self.calendar, date(2026, 11, 28), 'Original Name')
         request = self.factory.patch(
             f'/api/plugins/payroll/work-calendar/{self.calendar.id}/holidays/{workday.id}/update/',
@@ -453,3 +459,26 @@ class HolidayCRUDTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['holiday_name'], 'Updated Name')
+        self.assertTrue(PublicHoliday.objects.filter(date=date(2026, 11, 28), name='Updated Name').exists())
+
+    def test_global_public_holiday_signals_sync_to_payroll(self):
+        """Saving or deleting a global PublicHoliday automatically updates PayrollWorkday."""
+        from apps.dashboard.models.calendar import PublicHoliday
+        holiday_date = date(2026, 10, 20)  # Tuesday
+        pub_holiday = PublicHoliday.objects.create(
+            name='Liberation Fest',
+            date=holiday_date,
+            is_global=True,
+        )
+        workday = self.calendar.workdays.get(date=holiday_date)
+        self.assertTrue(workday.is_holiday)
+        self.assertFalse(workday.is_working_day)
+        self.assertEqual(workday.holiday_name, 'Liberation Fest')
+
+        # Deleting the PublicHoliday restores workday to standard working day
+        pub_holiday.delete()
+        workday.refresh_from_db()
+        self.assertFalse(workday.is_holiday)
+        self.assertTrue(workday.is_working_day)
+        self.assertEqual(workday.holiday_name, '')
+

@@ -20,12 +20,15 @@ from django.db.models import (
     BooleanField,
     Case,
     CharField,
+    Count,
     Exists,
     OuterRef,
     Q,
+    Subquery,
     Value,
     When,
 )
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.http import FileResponse
 from rest_framework import viewsets, status, permissions, filters
@@ -39,6 +42,7 @@ from core.mixins.permissions import PluginPermissionMixin
 from .models import (
     PayrollConfiguration,
     PayrollContributionRate,
+    PayrollLine,
     PayrollOvertimeCategory,
     PayrollRuleSet,
     PayrollTaxBracket,
@@ -893,9 +897,9 @@ class PayrollWorkCalendarViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             return Response({'detail': 'This workday is not a holiday.'},
                             status=status.HTTP_400_BAD_REQUEST)
         old_name = workday.holiday_name
+        from .services.calendar_service import update_holiday_name
         with transaction.atomic():
-            workday.holiday_name = name
-            workday.save(update_fields=['holiday_name'])
+            workday = update_holiday_name(workday, name)
         _log_audit(request.user, 'payroll_holiday_update',
                     f'Updated holiday name from "{old_name}" to "{name}" on {workday.date}',
                     new_values={'name': name}, old_values={'name': old_name})
@@ -965,6 +969,18 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         allowed_ids = _allowed_payroll_user_ids(self.request.user)
+        # PERF-04: the visible-line count as a correlated subquery, scoped to the
+        # same ids the serializer context carries (``None`` = every line). A
+        # subquery cannot reuse the ``lines`` join of the scope filter below.
+        visible_lines = PayrollLine.objects.filter(run=OuterRef('pk'))
+        if allowed_ids is not None:
+            visible_lines = visible_lines.filter(user_id__in=allowed_ids)
+        queryset = queryset.annotate(
+            line_count_annotated=Coalesce(
+                Subquery(visible_lines.order_by().values('run').annotate(n=Count('pk')).values('n')),
+                Value(0),
+            ),
+        )
         if allowed_ids is not None:
             queryset = queryset.filter(lines__user_id__in=allowed_ids).distinct()
         return queryset

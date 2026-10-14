@@ -110,7 +110,7 @@ describe("GlobalSettingsPage", () => {
     renderPage();
     const input = (await screen.findByLabelText("Logo")) as HTMLInputElement;
     expect(input).toHaveClass("sr-only");
-    expect(input.accept).toBe("image/png,image/jpeg,image/svg+xml,image/webp");
+    expect(input.accept).toBe("image/png,image/jpeg,image/webp");
     expect(screen.getByText("No file chosen")).toBeInTheDocument();
 
     const clickSpy = vi.spyOn(input, "click");

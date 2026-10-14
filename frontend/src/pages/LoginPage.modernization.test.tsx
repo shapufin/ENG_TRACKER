@@ -13,9 +13,16 @@ vi.mock("framer-motion", () => ({
   useReducedMotion: () => false,
 }));
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
 describe("LoginPage modernization", () => {
   it("uses semantic background tokens instead of a raw gradient", () => {
-    const { container } = render(<LoginPage />);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <LoginPage />
+      </QueryClientProvider>
+    );
     expect(container.querySelector(".bg-linear-to-br")).toBeNull();
     expect(container.querySelector(".bg-background")).toBeInTheDocument();
   });

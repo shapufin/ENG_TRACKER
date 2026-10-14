@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { LogIn } from "lucide-react";
+import { useSiteBranding } from "@/hooks/useSiteBranding";
 
 export const LoginPage: React.FC = () => {
   const [username, setUsername] = useState("");
@@ -17,6 +18,8 @@ export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
+  const { data: branding } = useSiteBranding();
+  const [logoFailed, setLogoFailed] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,10 +69,19 @@ export const LoginPage: React.FC = () => {
       >
         <GlassCard delay={0} className="p-8">
           <div className="mb-6 text-center">
-            <div className="bg-primary/10 mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full">
-              <LogIn className="text-primary h-6 w-6" />
-            </div>
-            <h1 className="text-2xl font-bold">Time Tracker</h1>
+            {branding?.logo_url && !logoFailed ? (
+              <img
+                src={branding.logo_url}
+                alt=""
+                className="mx-auto mb-3 h-12 w-12 rounded-xl object-contain shadow-md"
+                onError={() => setLogoFailed(true)}
+              />
+            ) : (
+              <div className="bg-primary/10 mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full">
+                <LogIn className="text-primary h-6 w-6" />
+              </div>
+            )}
+            <h1 className="text-2xl font-bold">{branding?.site_name || "Engineering Tracker"}</h1>
             <p className="text-muted-foreground mt-1">Sign in to your account</p>
           </div>
 

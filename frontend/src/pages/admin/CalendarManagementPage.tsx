@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { PageShell } from "@/components/layout/PageShell";
@@ -255,8 +256,17 @@ export const CalendarManagementPage: React.FC = () => {
                   Holiday Catalog
                 </p>
                 <h3 className="text-lg font-semibold">Global & Workspace Holidays</h3>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Global holidays synchronize automatically with the Payroll Work Calendar and
+                  employee leave calculations.
+                </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" asChild>
+                  <Link to="/admin/payroll/calendar">
+                    <CalendarDays className="mr-2 h-4 w-4" /> Visual Payroll Calendar
+                  </Link>
+                </Button>
                 <PluginImportButton
                   targetKey="public_holidays"
                   label="Import holidays"

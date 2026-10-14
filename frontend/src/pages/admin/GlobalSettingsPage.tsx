@@ -53,6 +53,9 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
     mutationFn: leaveService.updateSettings,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "global-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["leave-management"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       toast.success("Settings updated");
     },
     onError: (err: unknown) => handleApiError(err),
@@ -75,10 +78,16 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
         <Input
           id="settings-yearly-days"
           type="number"
+          min={0}
+          max={365}
           value={form.default_yearly_leave_days}
           onChange={(e) => setForm((f) => ({ ...f, default_yearly_leave_days: e.target.value }))}
           required
         />
+        <p className="text-muted-foreground text-xs">
+          Default vacation days allocated when new employee balances or new yearly cycles are
+          initialized. Individual balances can be adjusted in Leave Balances.
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="settings-carryover-month">Carry-over Expiry Month</Label>
@@ -187,7 +196,7 @@ const SiteBrandingForm: React.FC<{ branding: SiteBranding }> = ({ branding }) =>
             id="branding-logo"
             type="file"
             className="sr-only"
-            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+            accept="image/png,image/jpeg,image/webp"
             onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
           />
           <Button
