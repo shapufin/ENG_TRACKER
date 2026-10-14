@@ -127,7 +127,6 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
                 setForm((f) => ({ ...f, default_yearly_leave_days: e.target.value }))
               }
               required
-              className="h-10"
             />
             <p className="text-muted-foreground text-xs">
               Default vacation days allocated when new employee balances or new yearly cycles are
@@ -236,7 +235,7 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
 
             <div className="text-muted-foreground space-y-3 text-xs">
               <div className="flex items-start gap-2.5">
-                <div className="bg-muted text-foreground mt-0.5 flex h-4 w-4 items-center justify-center rounded-full p-1 text-[10px] font-bold">
+                <div className="bg-muted text-foreground mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold">
                   1
                 </div>
                 <div>
@@ -245,7 +244,7 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
-                <div className="bg-muted text-foreground mt-0.5 flex h-4 w-4 items-center justify-center rounded-full p-1 text-[10px] font-bold">
+                <div className="bg-muted text-foreground mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold">
                   2
                 </div>
                 <div>
@@ -256,7 +255,7 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
-                <div className="bg-muted text-foreground mt-0.5 flex h-4 w-4 items-center justify-center rounded-full p-1 text-[10px] font-bold">
+                <div className="bg-muted text-foreground mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold">
                   3
                 </div>
                 <div>
@@ -338,7 +337,6 @@ const SiteBrandingForm: React.FC<{ branding: SiteBranding }> = ({ branding }) =>
               onChange={(e) => setSiteName(e.target.value)}
               placeholder="e.g. Engineering Operations Tracker"
               required
-              className="h-10"
             />
             <p className="text-muted-foreground text-xs">
               Displayed on browser tab titles, navigation bars, and authentication portals.
@@ -429,7 +427,7 @@ const SiteBrandingForm: React.FC<{ branding: SiteBranding }> = ({ branding }) =>
 
         {/* Mockup 1: Top Bar Header */}
         <div className="border-border bg-card space-y-2 rounded-xl border p-3 shadow-sm">
-          <div className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+          <div className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
             Navigation Header Preview
           </div>
           <div className="bg-surface-sunken/60 border-border/60 flex items-center justify-between rounded-lg border px-3 py-2">
@@ -456,7 +454,7 @@ const SiteBrandingForm: React.FC<{ branding: SiteBranding }> = ({ branding }) =>
 
         {/* Mockup 2: Login Card Preview */}
         <div className="border-border bg-card space-y-3 rounded-xl border p-4 shadow-sm">
-          <div className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+          <div className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
             Login Screen Preview
           </div>
           <div className="bg-background border-border/80 flex flex-col items-center rounded-lg border p-4 text-center">
@@ -470,7 +468,7 @@ const SiteBrandingForm: React.FC<{ branding: SiteBranding }> = ({ branding }) =>
             <h4 className="text-foreground text-sm font-bold">
               {siteName || "Engineering Tracker"}
             </h4>
-            <p className="text-muted-foreground mt-0.5 text-[11px]">
+            <p className="text-muted-foreground mt-0.5 text-xs">
               Sign in to manage your engineering records
             </p>
           </div>
