@@ -13,6 +13,9 @@ description = "Known test-only values"
 # accounts exist only in db.e2e.sqlite3.
 regexes = [
   '''e2e_pass_2026''',
+  # Fixed throwaway passwords in unit tests that run against the test database only.
+  '''Orig-Pass-7391x''',
+  '''Sturdy-Pass-7391''',
 ]
 paths = [
   '''^apps/users/management/commands/seed_e2e_data\.py$''',
