@@ -987,7 +987,7 @@ class PublicHolidayViewSet(HbprBlockedMixin, CacheInvalidationMixin, viewsets.Mo
             ids = sorted(
                 CalendarWorkspace.get_accessible_for_user(request.user).values_list('id', flat=True)
             )
-            scope = hashlib.md5(','.join(map(str, ids)).encode()).hexdigest()
+            scope = hashlib.md5(','.join(map(str, ids)).encode(), usedforsecurity=False).hexdigest()
         cache_key = CacheKey.dashboard_reference(
             'holidays', f'{build_query_fingerprint(request)}|ws={scope}'
         )
