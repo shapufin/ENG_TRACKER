@@ -34,7 +34,6 @@ import {
   Redo2,
   Rocket,
   Save,
-  Search,
   Sparkles,
   Square,
   Tag,
@@ -45,7 +44,7 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/SearchField";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { BuilderCanvasInspector } from "../components/BuilderCanvasInspector";
 import { PageShell } from "@/components/layout/PageShell";
@@ -658,7 +657,8 @@ const BuilderCanvas: React.FC = () => {
                   <Button
                     key={item.label}
                     variant="outline"
-                    className="h-8 justify-start px-2 text-xs"
+                    size="sm"
+                    className="justify-start px-2 text-xs"
                     onClick={() => addShape(item.shape, item.initialCustomFields)}
                   >
                     <span className="mr-2">{item.icon}</span>
@@ -673,14 +673,13 @@ const BuilderCanvas: React.FC = () => {
         {/* Center Canvas */}
         <GlassCard className="relative flex min-h-0 flex-col overflow-hidden p-0" ref={canvasRef}>
           {/* Quick Search Header Bar inside canvas */}
-          <div className="bg-background/90 absolute top-2 left-2 z-10 flex items-center gap-2 rounded-lg border p-1.5 shadow-xs backdrop-blur-sm">
-            <Search className="text-muted-foreground h-3.5 w-3.5" />
-            <Input
-              type="text"
-              placeholder="Find node in canvas..."
+          <div className="absolute top-2 left-2 z-10 w-48">
+            <SearchField
               value={searchQuery}
-              onChange={(e) => handleSearchNode(e.target.value)}
-              className="h-7 w-48 border-0 bg-transparent px-1 text-xs shadow-none focus-visible:ring-0"
+              onChange={handleSearchNode}
+              placeholder="Find node in canvas..."
+              aria-label="Find node in canvas"
+              controlSize="sm"
             />
           </div>
 

@@ -54,9 +54,24 @@ export const ALLOW = {
   "plugins/skills/utils/proficiencyLevels.ts": ["DARK-OVERRIDE", "DARK-EXTRA"],
   "plugins/skills/utils/categoryAccents.ts": ["DARK-OVERRIDE"],
   "plugins/organigrama/components/OrgNode.tsx": ["DARK-OVERRIDE", "STRAY-FILL"],
-  "plugins/organigrama/components/BuilderNode.tsx": ["DARK-OVERRIDE", "STRAY-FILL"],
-  "plugins/organigrama/components/CustomChartViewer.tsx": ["DARK-OVERRIDE", "STRAY-FILL"],
+  "plugins/organigrama/components/BuilderNode.tsx": [
+    "DARK-OVERRIDE",
+    "STRAY-FILL",
+    "DARK-EXTRA",
+    "MICRO-TEXT",
+  ],
+  "plugins/organigrama/components/CustomChartViewer.tsx": [
+    "DARK-OVERRIDE",
+    "STRAY-FILL",
+    "MICRO-TEXT",
+  ],
   "plugins/organigrama/components/OrgChartMobileList.tsx": ["DARK-OVERRIDE"],
+  "plugins/organigrama/components/viewerHelpers.ts": ["DARK-OVERRIDE", "STRAY-FILL"],
+  "plugins/organigrama/pages/OrganigramaBuilderPage.tsx": [
+    "DARK-OVERRIDE",
+    "STRAY-FILL",
+    "MICRO-TEXT",
+  ],
   // Light and dark pick different steps of the same token (border vs line-subtle, 5% vs 10% foreground,
   // 12% vs 15% primary): no single token carries both.
   "components/calendar/ConflictCard.tsx": ["DARK-OVERRIDE"],

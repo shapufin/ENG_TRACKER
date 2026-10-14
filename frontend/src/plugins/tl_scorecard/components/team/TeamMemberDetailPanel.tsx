@@ -123,7 +123,7 @@ export const TeamMemberDetailPanel: React.FC<TeamMemberDetailPanelProps> = ({
           >
             {wageText ? (
               <div className="border-border/50 bg-background/50 rounded-xl border p-3">
-                <span className="text-micro-lg text-muted-foreground font-medium tracking-wider uppercase">
+                <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                   Gross Monthly
                 </span>
                 <p className="text-foreground font-mono text-2xl font-bold tabular-nums">
