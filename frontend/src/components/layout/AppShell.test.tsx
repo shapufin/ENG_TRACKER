@@ -71,7 +71,7 @@ describe("AppShell command palette", () => {
       "Overtime",
       "Calendar",
     ]);
-    expect(screen.getByText("Core Ops")).toBeInTheDocument();
+    expect(screen.getByText("Workspace")).toBeInTheDocument();
   });
 
   it("never searches users from the main app", async () => {

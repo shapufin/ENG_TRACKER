@@ -20,7 +20,7 @@ export type NavSection = "core" | "leadership" | "hr" | "skills-kpi" | "system";
 export const NAV_SECTION_ORDER: NavSection[] = ["core", "leadership", "hr", "skills-kpi", "system"];
 
 export const NAV_SECTION_LABELS: Record<NavSection, string> = {
-  core: "Core Ops",
+  core: "Workspace",
   leadership: "Leadership",
   hr: "HR",
   "skills-kpi": "Skills & KPI",
@@ -57,6 +57,7 @@ export interface NavItem {
 }
 
 const allNavItems: NavItem[] = [
+  // Workspace (Core operations & daily attendance)
   {
     path: "/dashboard",
     label: "Dashboard",
@@ -88,6 +89,8 @@ const allNavItems: NavItem[] = [
     hbprHidden: true,
   },
   { path: "/calendar", label: "Calendar", icon: CalendarDays, section: "core", hbprHidden: true },
+
+  // Leadership (Team oversight & approvals)
   {
     path: "/team/approvals",
     label: "Pending Approvals",
@@ -103,6 +106,22 @@ const allNavItems: NavItem[] = [
     roles: ["team_leader"],
     exact: true,
   },
+  {
+    path: "/ticket-kpi/team",
+    label: "Team Performance",
+    icon: Users,
+    section: "leadership",
+    roles: ["team_leader"],
+  },
+  {
+    path: "/ticket-kpi/team-management",
+    label: "Upload Management",
+    icon: Users,
+    section: "leadership",
+    roles: ["team_leader"],
+  },
+
+  // HR (Workforce & compensation operations)
   {
     path: "/hr/reports",
     label: "HR Reports",
@@ -138,15 +157,8 @@ const allNavItems: NavItem[] = [
     section: "hr",
     roles: ["hr"],
   },
-  { path: "/admin/plugins", label: "Plugins", icon: Puzzle, section: "system", roles: ["admin"] },
-  {
-    path: "/admin",
-    label: "Admin",
-    icon: Shield,
-    section: "system",
-    roles: ["admin"],
-    exact: true,
-  },
+
+  // Skills & KPI (Competency & ticket metrics)
   {
     path: "/ticket-kpi/dashboard",
     label: "Ticket KPI",
@@ -156,20 +168,17 @@ const allNavItems: NavItem[] = [
     // never registers for them.
     hbprHidden: true,
   },
+
+  // System & Administration
   {
-    path: "/ticket-kpi/team",
-    label: "Team Performance",
-    icon: Users,
-    section: "skills-kpi",
-    roles: ["team_leader"],
+    path: "/admin",
+    label: "Admin",
+    icon: Shield,
+    section: "system",
+    roles: ["admin"],
+    exact: true,
   },
-  {
-    path: "/ticket-kpi/team-management",
-    label: "Upload Management",
-    icon: Users,
-    section: "skills-kpi",
-    roles: ["team_leader"],
-  },
+  { path: "/admin/plugins", label: "Plugins", icon: Puzzle, section: "system", roles: ["admin"] },
   {
     path: "/settings",
     label: "Settings",

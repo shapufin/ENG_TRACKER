@@ -55,7 +55,9 @@ describe("useAdminNavItems", () => {
   it("shows Skills Catalog to HR when the Skills plugin is active", () => {
     const { result } = renderHook(() => useAdminNavItems(false, true, false, false, ["skills"]));
     expect(result.current.map((item) => item.label)).toContain("Skills Catalog");
-    expect(result.current.find((item) => item.label === "Skills Catalog")?.group).toBe("People");
+    expect(result.current.find((item) => item.label === "Skills Catalog")?.group).toBe(
+      "Skills & KPI"
+    );
   });
 
   it("hides Skills Catalog from regular users and inactive plugins", () => {

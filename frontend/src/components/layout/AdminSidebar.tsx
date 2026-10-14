@@ -38,11 +38,11 @@ const ADMIN_NAV_GROUPS = [
   "Overview",
   "People",
   "Operations",
-  "Governance",
-  "Tools",
   "Payroll",
-  "Extensions",
+  "Skills & KPI",
+  "Governance",
   "System",
+  "Extensions",
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -123,7 +123,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           )}
           {!collapsed && (
             <div className="min-w-0 leading-tight">
-              <span className="block truncate text-base">{branding?.site_name || "Admin Panel"}</span>
+              <span className="block truncate text-base">
+                {branding?.site_name || "Admin Panel"}
+              </span>
               <div className="text-foreground font-mono text-xs font-semibold tracking-wider uppercase">
                 Enterprise
               </div>
@@ -163,7 +165,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             {!collapsed && (
               <>
                 <span className="flex-1 text-left">Search pages</span>
-                <kbd className="text-xs font-mono">Ctrl K</kbd>
+                <kbd className="font-mono text-xs">Ctrl K</kbd>
               </>
             )}
           </button>

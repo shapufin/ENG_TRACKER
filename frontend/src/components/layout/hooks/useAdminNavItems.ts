@@ -39,6 +39,7 @@ export interface AdminNavItem {
 }
 
 export const allAdminNavItems: AdminNavItem[] = [
+  // Overview (Executive metrics & reporting)
   {
     path: "/admin",
     label: "Dashboard",
@@ -47,6 +48,15 @@ export const allAdminNavItems: AdminNavItem[] = [
     exact: true,
     fullAdminOnly: true,
   },
+  {
+    path: "/admin/reports",
+    label: "Reports",
+    icon: BarChart3,
+    group: "Overview",
+    fullAdminOnly: true,
+  },
+
+  // People (Workforce directory & organizational units)
   { path: "/admin/users", label: "Users", icon: Users, group: "People" },
   { path: "/admin/teams", label: "Teams", icon: Building2, group: "People", fullAdminOnly: true },
   { path: "/admin/techs", label: "Tech", icon: Cpu, group: "People", fullAdminOnly: true },
@@ -64,57 +74,8 @@ export const allAdminNavItems: AdminNavItem[] = [
     group: "People",
     fullAdminOnly: true,
   },
-  {
-    path: "/admin/skills/catalog",
-    label: "Skills Catalog",
-    icon: Award,
-    group: "People",
-    pluginName: "skills",
-    roles: ["admin", "superuser", "hr"],
-  },
-  {
-    path: "/admin/skills/settings",
-    label: "Skills Settings",
-    icon: Settings2,
-    group: "People",
-    pluginName: "skills",
-    roles: ["admin", "superuser", "hr"],
-  },
-  {
-    path: "/admin/resource-access",
-    label: "Resource Access",
-    icon: KeyRound,
-    group: "Governance",
-    fullAdminOnly: true,
-  },
-  {
-    path: "/admin/reports",
-    label: "Reports",
-    icon: BarChart3,
-    group: "Governance",
-    fullAdminOnly: true,
-  },
-  {
-    path: "/admin/calendars",
-    label: "Calendar Sharing",
-    icon: CalendarDays,
-    group: "Operations",
-    fullAdminOnly: true,
-  },
-  {
-    path: "/admin/overtime-logs",
-    label: "Overtime Logs",
-    icon: Clock,
-    group: "Operations",
-    fullAdminOnly: true,
-  },
-  {
-    path: "/admin/standby-logs",
-    label: "Standby Logs",
-    icon: Moon,
-    group: "Operations",
-    fullAdminOnly: true,
-  },
+
+  // Operations (Time & attendance tracking)
   {
     path: "/admin/leave-requests",
     label: "Leave Requests",
@@ -132,29 +93,28 @@ export const allAdminNavItems: AdminNavItem[] = [
     fullAdminOnly: true,
   },
   {
-    path: "/admin/plugins",
-    label: "Plugins",
-    icon: Settings2,
-    group: "Tools",
+    path: "/admin/overtime-logs",
+    label: "Overtime Logs",
+    icon: Clock,
+    group: "Operations",
     fullAdminOnly: true,
   },
   {
-    path: "/admin/ticket-kpi/mappings",
-    label: "Ticket KPI",
-    icon: Ticket,
-    group: "Tools",
+    path: "/admin/standby-logs",
+    label: "Standby Logs",
+    icon: Moon,
+    group: "Operations",
     fullAdminOnly: true,
-    pluginName: "ticket_kpi",
   },
   {
-    path: "/admin/data-import",
-    label: "Data Import",
-    icon: Upload,
-    group: "Tools",
-    adminOnly: true,
+    path: "/admin/calendars",
+    label: "Calendar Sharing",
+    icon: CalendarDays,
+    group: "Operations",
     fullAdminOnly: true,
-    pluginName: "data_import",
   },
+
+  // Payroll (Wages & payroll cycles)
   {
     path: "/admin/payroll/wages",
     label: "Wages",
@@ -187,12 +147,65 @@ export const allAdminNavItems: AdminNavItem[] = [
     fullAdminOnly: true,
     pluginName: "payroll",
   },
+
+  // Skills & KPI (Competency matrices & performance metrics)
+  {
+    path: "/admin/skills/catalog",
+    label: "Skills Catalog",
+    icon: Award,
+    group: "Skills & KPI",
+    pluginName: "skills",
+    roles: ["admin", "superuser", "hr"],
+  },
+  {
+    path: "/admin/skills/settings",
+    label: "Skills Settings",
+    icon: Settings2,
+    group: "Skills & KPI",
+    pluginName: "skills",
+    roles: ["admin", "superuser", "hr"],
+  },
+  {
+    path: "/admin/ticket-kpi/mappings",
+    label: "Ticket KPI",
+    icon: Ticket,
+    group: "Skills & KPI",
+    fullAdminOnly: true,
+    pluginName: "ticket_kpi",
+  },
+
+  // Governance (Access policies & permissions)
+  {
+    path: "/admin/resource-access",
+    label: "Resource Access",
+    icon: KeyRound,
+    group: "Governance",
+    fullAdminOnly: true,
+  },
+
+  // System (Global config, plugin ecosystem & data maintenance)
   {
     path: "/admin/global-settings",
     label: "Global Settings",
     icon: Globe,
     group: "System",
     fullAdminOnly: true,
+  },
+  {
+    path: "/admin/plugins",
+    label: "Plugins",
+    icon: Settings2,
+    group: "System",
+    fullAdminOnly: true,
+  },
+  {
+    path: "/admin/data-import",
+    label: "Data Import",
+    icon: Upload,
+    group: "System",
+    adminOnly: true,
+    fullAdminOnly: true,
+    pluginName: "data_import",
   },
 ];
 

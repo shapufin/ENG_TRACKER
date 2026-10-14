@@ -114,11 +114,11 @@ describe("SidebarNav", () => {
     mockGetInjected([]);
     render(<SidebarNav items={allSectionItems} collapsed={false} onItemClick={onItemClick} />);
     const labels = screen
-      .getAllByText(/^(Core Ops|Leadership|Skills & KPI|System|Plugins)$/)
+      .getAllByText(/^(Workspace|Leadership|Skills & KPI|System|Plugins)$/)
       .map((el) => el.textContent);
     // Settings is pinned to the end (pinToEnd), so its "System" group is
     // empty here and no System label renders for this fixture.
-    expect(labels).toEqual(["Core Ops", "Leadership", "Skills & KPI"]);
+    expect(labels).toEqual(["Workspace", "Leadership", "Skills & KPI"]);
   });
 
   it("renders pinned items last, after section groups", () => {
@@ -136,7 +136,7 @@ describe("SidebarNav", () => {
       { path: "/dashboard", label: "Dashboard", icon: () => <span>icon</span>, section: "core" },
     ];
     render(<SidebarNav items={coreOnly} collapsed={false} onItemClick={onItemClick} />);
-    expect(screen.getByText("Core Ops")).toBeInTheDocument();
+    expect(screen.getByText("Workspace")).toBeInTheDocument();
     expect(screen.queryByText("Leadership")).not.toBeInTheDocument();
     expect(screen.queryByText("Skills & KPI")).not.toBeInTheDocument();
     expect(screen.queryByText("System")).not.toBeInTheDocument();
@@ -145,7 +145,7 @@ describe("SidebarNav", () => {
   it("renders no section labels when collapsed", () => {
     mockGetInjected([]);
     render(<SidebarNav items={allSectionItems} collapsed={true} onItemClick={onItemClick} />);
-    expect(screen.queryByText("Core Ops")).not.toBeInTheDocument();
+    expect(screen.queryByText("Workspace")).not.toBeInTheDocument();
     expect(screen.queryByText("Leadership")).not.toBeInTheDocument();
     expect(screen.queryByText("Skills & KPI")).not.toBeInTheDocument();
     expect(screen.queryByText("System")).not.toBeInTheDocument();
