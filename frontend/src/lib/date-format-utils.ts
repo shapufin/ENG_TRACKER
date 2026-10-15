@@ -49,7 +49,11 @@ export function getMonthEndISO(startDateISO: string): string | null {
 
 export function formatDateDDMMYYYY(dateStr: string | Date | null): string {
   if (!dateStr) return "";
-  const d = typeof dateStr === "string" ? new Date(dateStr + "T00:00:00") : dateStr;
+  // Date-only strings are local midnight; full timestamps (API `created_at`) already carry a time.
+  const d =
+    typeof dateStr === "string"
+      ? new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00")
+      : dateStr;
   if (isNaN(d.getTime())) return "";
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");

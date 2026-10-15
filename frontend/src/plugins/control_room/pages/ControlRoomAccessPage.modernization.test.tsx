@@ -14,6 +14,7 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ControlRoomAccessPage } from "./ControlRoomAccessPage";
 
 // PluginImportButton (admin page headers) reads the active-plugin list. With
@@ -23,7 +24,14 @@ vi.mock("@/context/PluginContext", () => ({
   usePlugins: () => ({ activePlugins: [], isLoading: false }),
 }));
 
-const mockAccess = vi.hoisted(() => ({ list: [] as unknown[] }));
+const mockAccess = vi.hoisted(() => ({
+  list: [] as unknown[],
+  roles: { isCRAdmin: true, isAdmin: false, isSuperuser: false },
+}));
+
+vi.mock("@/context/PermissionContext", () => ({
+  usePermissions: () => mockAccess.roles,
+}));
 
 vi.mock("../hooks/useControlRoomAccessPage", () => ({
   useControlRoomAccessPage: () => ({
@@ -64,7 +72,9 @@ describe("ControlRoomAccessPage modernization", () => {
   it("uses semantic warning colors instead of raw amber backgrounds", () => {
     const { container } = render(
       <QueryClientProvider client={new QueryClient()}>
-        <ControlRoomAccessPage />
+        <MemoryRouter>
+          <ControlRoomAccessPage />
+        </MemoryRouter>
       </QueryClientProvider>
     );
 
@@ -75,9 +85,20 @@ describe("ControlRoomAccessPage modernization", () => {
 
   it("filters access records with status chips", () => {
     const base = {
-      email: "", first_name: "", last_name: "", phone: "", display_name: "", timezone: "UTC",
-      team_scopes: [], team_ids: [], created_by: null, created_by_name: null,
-      updated_by: null, updated_by_name: null, created_at: "2026-01-01", updated_at: "2026-01-01",
+      email: "",
+      first_name: "",
+      last_name: "",
+      phone: "",
+      display_name: "",
+      timezone: "UTC",
+      team_scopes: [],
+      team_ids: [],
+      created_by: null,
+      created_by_name: null,
+      updated_by: null,
+      updated_by_name: null,
+      created_at: "2026-01-01",
+      updated_at: "2026-01-01",
     };
     mockAccess.list = [
       { ...base, id: 1, user: 1, username: "alice", user_name: "Alice A", is_active: true },
@@ -85,11 +106,16 @@ describe("ControlRoomAccessPage modernization", () => {
     ];
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <ControlRoomAccessPage />
+        <MemoryRouter>
+          <ControlRoomAccessPage />
+        </MemoryRouter>
       </QueryClientProvider>
     );
     const group = screen.getByRole("group", { name: "Status" });
-    expect(within(group).getByRole("button", { name: /All/ })).toHaveAttribute("aria-pressed", "true");
+    expect(within(group).getByRole("button", { name: /All/ })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
     expect(screen.getByText("Alice A")).toBeInTheDocument();
     expect(screen.getByText("Bob B")).toBeInTheDocument();
 
@@ -97,5 +123,26 @@ describe("ControlRoomAccessPage modernization", () => {
     expect(screen.queryByText("Alice A")).not.toBeInTheDocument();
     expect(screen.getByText("Bob B")).toBeInTheDocument();
     mockAccess.list = [];
+  });
+
+  it.each([
+    ["a plain CR user", { isCRAdmin: false, isAdmin: false, isSuperuser: false }, false],
+    ["a CR admin", { isCRAdmin: true, isAdmin: false, isSuperuser: false }, true],
+    ["staff", { isCRAdmin: false, isAdmin: true, isSuperuser: false }, true],
+  ])("treats %s correctly", (_label, roles, allowed) => {
+    mockAccess.roles = roles;
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={["/control-room/access"]}>
+          <Routes>
+            <Route path="/control-room/access" element={<ControlRoomAccessPage />} />
+            <Route path="/" element={<div>home</div>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    expect(screen.queryByText("Access management") !== null).toBe(allowed);
+    expect(screen.queryByText("home") !== null).toBe(!allowed);
+    mockAccess.roles = { isCRAdmin: true, isAdmin: false, isSuperuser: false };
   });
 });
