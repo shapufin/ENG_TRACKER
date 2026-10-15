@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
+import { usePermissions } from "@/context/PermissionContext";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
@@ -38,6 +39,8 @@ import { extractApiErrorMessage } from "@/lib/apiFormError";
 
 export function ResourceAccessPage() {
   const navigate = useNavigate();
+  // Staff can read groups, but the API only lets superusers change them.
+  const { isSuperuser } = usePermissions();
   const {
     search,
     page,
@@ -150,7 +153,7 @@ export function ResourceAccessPage() {
       actions={
         <Badge variant="outline" className="gap-2 px-3 py-1.5 text-xs">
           <ShieldCheck className="text-primary h-3.5 w-3.5" />
-          Superuser controls
+          {isSuperuser ? "Superuser controls" : "View only"}
         </Badge>
       }
     >
@@ -208,7 +211,7 @@ export function ResourceAccessPage() {
             />
           </FilterToolbar.Search>
           <FilterToolbar.Group>
-            {selectedCount > 0 && (
+            {isSuperuser && selectedCount > 0 && (
               <Button
                 variant="destructive"
                 size="control"
@@ -219,10 +222,12 @@ export function ResourceAccessPage() {
                 Delete selected ({selectedCount})
               </Button>
             )}
-            <Button size="control" onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create group
-            </Button>
+            {isSuperuser && (
+              <Button size="control" onClick={() => setDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create group
+              </Button>
+            )}
           </FilterToolbar.Group>
         </FilterToolbar>
       </GlassCard>
@@ -234,10 +239,12 @@ export function ResourceAccessPage() {
           title="No access groups yet"
           description="Create a group to start assigning plugin capabilities to people."
           action={
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create your first group
-            </Button>
+            isSuperuser ? (
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create your first group
+              </Button>
+            ) : undefined
           }
         />
       ) : directoryState === "empty-search" ? (

@@ -38,6 +38,11 @@ vi.mock("react-router-dom", () => ({
   useSearchParams: () => [currentSearchParams, mockSetSearchParams],
 }));
 
+const mockRoles = vi.hoisted(() => ({ isSuperuser: true }));
+vi.mock("@/context/PermissionContext", () => ({
+  usePermissions: () => mockRoles,
+}));
+
 vi.mock("@/lib/error-handler", () => ({
   handleApiError: vi.fn(),
 }));
@@ -247,6 +252,14 @@ describe("ResourceAccessPage (directory)", () => {
     render(<ResourceAccessPage />);
 
     expect(screen.getByRole("button", { name: /Create group/ })).toBeInTheDocument();
+  });
+
+  it("hides Create group from staff who are not superusers (the API would 403)", () => {
+    mockRoles.isSuperuser = false;
+    render(<ResourceAccessPage />);
+    expect(screen.queryByRole("button", { name: /create group/i })).toBeNull();
+    expect(screen.getByText("View only")).toBeInTheDocument();
+    mockRoles.isSuperuser = true;
   });
 
   it("opens the create dialog when Create group is clicked", () => {
