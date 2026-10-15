@@ -36,12 +36,28 @@ Redis is down the app keeps serving (cache misses) but DRF throttles, which live
 in that cache, fail open. nginx still rate-limits `/api/` (20 r/s per client IP,
 burst 40) and `/admin/login/`.
 
+Cache invalidation fails open too: a `cache.delete` or version bump issued during
+the outage is dropped, so cached permissions and `dashboard:*` entries written
+before it can outlive a role revoke until their TTL after Redis returns. After
+an outage that overlapped permission changes, flush the cache once Redis is
+back (`python manage.py shell -c "from django.core.cache import cache; cache.clear()"`).
+
 ## 2. Ingress
 
 The stack ships no TLS terminator or tunnel. An external reverse proxy (or a
 Cloudflare Tunnel connector) must terminate TLS and forward to the `frontend`
 service. See README.md, Production Deployment, Ingress, for the required
 headers (`X-Forwarded-Proto`, real client IP) and the trusted subnet.
+
+**Rate-limit key.** The `/api/` limit (20 r/s, burst 40) and the admin-login
+limit are keyed on nginx's `$remote_addr`, which is the real client only when
+the ingress sends the header named in `real_ip_header` (`CF-Connecting-IP`) and
+its network is listed in `set_real_ip_from`. Behind any other proxy that is not
+configured, every user shares the proxy's address and one 20 r/s bucket, so
+normal dashboard loads return 429. Before go-live, confirm with
+`curl -s -H 'CF-Connecting-IP: 203.0.113.7' ...` (or your proxy's header) that
+the backend logs the forwarded address, or change `real_ip_header` and
+`set_real_ip_from` in `frontend/docker/nginx.conf.template`.
 
 ## 3. Backups
 

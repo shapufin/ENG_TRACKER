@@ -15,6 +15,8 @@ from datetime import date, timedelta
 
 from django.utils import timezone
 
+from core.utils.timezone_local import tirana_today
+
 from apps.leave_management.models import LeaveRequest, count_business_days
 from apps.overtime.models.core import OvertimeLog
 
@@ -33,7 +35,7 @@ def reporting_period(month: date | None) -> date:
     """Normalize any date within a month to that month's first day — the
     one shared "as-of month" convention every later phase should reuse
     (calendar month, not a rolling window)."""
-    target = month or date.today()
+    target = month or tirana_today()
     return target.replace(day=1)
 
 
@@ -182,7 +184,7 @@ def absence_metrics(team_member_ids) -> dict:
     finding #5). `addressed_on is None` means still open."""
     open_absences = list(Absence.objects.filter(
         employee_id__in=team_member_ids, addressed_on__isnull=True).only('absence_date'))
-    today = date.today()
+    today = tirana_today()
     breached = sum(
         1 for a in open_absences
         if count_business_days(a.absence_date, today) - 1 > ESCALATION_ABSENCE_SLA_DAYS
@@ -373,7 +375,7 @@ def escalation_candidates(leader, subject_ids=None, include_leave=True) -> list[
     def _limit(qs, field):
         return qs if subject_ids is None else qs.filter(**{f'{field}__in': team_member_ids})
 
-    today = date.today()
+    today = tirana_today()
     candidates = []
 
     pending_leave = (

@@ -76,3 +76,19 @@ class PushTimeoutTests(TestCase):
             resp = api.post(f'/api/overtime/logs/{log.id}/approve/', {}, format='json')
         self.assertEqual(resp.status_code, 200, getattr(resp, 'data', None))
         self.assertTrue(Notification.objects.filter(user=employee).exists())
+
+
+class PushMisconfiguredTests(TestCase):
+    def test_missing_vapid_keys_count_as_failed_and_do_not_raise(self):
+        from django.core.exceptions import ImproperlyConfigured
+
+        user = User.objects.create_user(username='pm-user', password='x')
+        for n in range(2):
+            PushSubscription.objects.create(
+                user=user, endpoint=f'https://push.example.test/{n}', p256dh_key='k', auth_key='a',
+            )
+        with patch('plugins.notifications.push_service.get_private_key', side_effect=ImproperlyConfigured('no keys')), \
+                patch('plugins.notifications.push_service.webpush') as mock_webpush:
+            self.assertEqual(send_push_notification(user, 't', 'm'), (0, 2))
+        mock_webpush.assert_not_called()
+        self.assertEqual(PushSubscription.objects.filter(user=user, is_active=True).count(), 2)
