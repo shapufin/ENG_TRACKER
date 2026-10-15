@@ -383,9 +383,13 @@ class LeaveRequest(BaseModel):
         return stored is None or stored != (*self._parsed_dates(), self.request_type)
 
     def save(self, *args, **kwargs):
-        self.clean()
         is_new = self._state.adding
-        if self.days_counted is None or (not is_new and self._counted_inputs_changed()):
+        inputs_changed = not is_new and self._counted_inputs_changed()
+        # Validate dates only when they are new or edited: a row stored before the
+        # business-day rule must still be approvable/rejectable (status-only saves).
+        if is_new or inputs_changed:
+            self.clean()
+        if self.days_counted is None or inputs_changed:
             start, end = self._parsed_dates()
             self.days_counted = Decimal(count_request_days(self.request_type, start, end))
         super().save(*args, **kwargs)
