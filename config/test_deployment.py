@@ -837,10 +837,10 @@ class NginxTemplateHardeningTests(SimpleTestCase):
         self.assertIn("script-src 'self' ${ONLYOFFICE_ORIGIN};", report_only[0])
         self.assertNotIn("'unsafe-inline'", report_only[0].split('style-src')[0])
 
-    def test_only_onlyoffice_origin_is_an_envsubst_variable(self):
+    def test_only_known_envsubst_variables(self):
         import re
 
-        self.assertEqual(set(re.findall(r'\$\{(\w+)\}', self._text())), {'ONLYOFFICE_ORIGIN'})
+        self.assertEqual(set(re.findall(r'\$\{(\w+)\}', self._text())), {'ONLYOFFICE_ORIGIN', 'INGRESS_TRUSTED_CIDR', 'INGRESS_REAL_IP_HEADER'})
 
 
 class ComposeContractTests(SimpleTestCase):
@@ -885,3 +885,31 @@ class ComposeContractTests(SimpleTestCase):
         compose = (Path(settings.BASE_DIR) / 'docker-compose.yml').read_text(encoding='utf-8')
         self.assertNotIn('--profile tunnel', compose)
         self.assertNotIn('CLOUDFLARE_TUNNEL_TOKEN', compose)
+
+
+class IngressTrustConfigTests(SimpleTestCase):
+    """The ingress trust boundary is env-driven and its defaults ship in the image."""
+
+    @staticmethod
+    def _read(*parts):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        return Path(settings.BASE_DIR).joinpath(*parts).read_text(encoding='utf-8')
+
+    def test_template_uses_env_vars_not_literals(self):
+        text = self._read('frontend', 'docker', 'nginx.conf.template')
+        self.assertIn('set_real_ip_from ${INGRESS_TRUSTED_CIDR};', text)
+        self.assertIn('real_ip_header ${INGRESS_REAL_IP_HEADER};', text)
+        self.assertIn('${INGRESS_TRUSTED_CIDR} 1;', text)
+        self.assertNotIn('set_real_ip_from 172.', text)
+
+    def test_image_and_compose_default_to_the_frontend_net_subnet(self):
+        dockerfile = self._read('frontend', 'Dockerfile')
+        compose = self._read('docker-compose.yml')
+        for source in (dockerfile, compose):
+            self.assertIn('172.28.0.0/24', source)
+            self.assertIn('CF-Connecting-IP', source)
+        self.assertIn('ENV INGRESS_TRUSTED_CIDR=', dockerfile)
+        self.assertIn('INGRESS_REAL_IP_HEADER: ${INGRESS_REAL_IP_HEADER:-CF-Connecting-IP}', compose)

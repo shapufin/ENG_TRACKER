@@ -289,18 +289,20 @@ Requirements for whatever you choose:
 2. **Send `X-Forwarded-Proto: https`.** `frontend/docker/nginx.conf.template`
    forwards it to Django only when the connection comes from the trusted
    subnet; otherwise it falls back to `http` and Django redirects every request.
-3. **Send the real client IP in a header nginx trusts.** The template reads
-   `CF-Connecting-IP` (`real_ip_header`), which is Cloudflare's header. For any
-   other proxy, change `real_ip_header` to the header it sets (`X-Real-IP` or
-   `X-Forwarded-For`) and make sure the proxy overwrites it rather than
+3. **Send the real client IP in a header nginx trusts.** nginx reads the
+   header named by `INGRESS_REAL_IP_HEADER` (default `CF-Connecting-IP`,
+   Cloudflare's). For any other proxy set it in `.env` to the header the proxy
+   sets (`X-Real-IP` or `X-Forwarded-For`) and make sure the proxy overwrites it rather than
    appending a client-supplied value. Throttles and the `/api/` rate limit
    depend on it.
-4. **Match the trusted subnet.** `set_real_ip_from` and the `geo` block in the
-   template trust `172.28.0.0/24`, the fixed `frontend_net` subnet. A proxy
+4. **Match the trusted subnet.** `INGRESS_TRUSTED_CIDR` (one CIDR, default
+   `172.28.0.0/24`, the fixed `frontend_net` subnet) feeds `set_real_ip_from`
+   and the `geo` block in the template. A proxy
    container must run on that network inside this range. A proxy on the host
    or elsewhere reaches nginx from another address (for a host proxy via the
-   published port, the docker bridge gateway, e.g. `172.28.0.1`), so add that
-   address or CIDR to both places, and nothing broader.
+   published port, the docker bridge gateway, e.g. `172.28.0.1`), so set
+   `INGRESS_TRUSTED_CIDR` to that address (e.g. `172.28.0.1/32`), and nothing
+   broader.
 5. **Do not publish the frontend port on `0.0.0.0`.** It stays bound to
    `127.0.0.1` so the proxy's TLS and edge protections cannot be bypassed.
 

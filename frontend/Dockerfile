@@ -38,6 +38,10 @@ RUN rm /etc/nginx/conf.d/default.conf
 # Defined-but-empty so envsubst always substitutes it; an undefined variable is
 # left as a literal ${ONLYOFFICE_ORIGIN}, which nginx rejects as an unknown variable.
 ENV ONLYOFFICE_ORIGIN=""
+# Ingress trust boundary (see nginx.conf.template). Defaults keep the Cloudflare
+# Tunnel / frontend_net behaviour; override per deployment.
+ENV INGRESS_TRUSTED_CIDR="172.28.0.0/24"
+ENV INGRESS_REAL_IP_HEADER="CF-Connecting-IP"
 COPY docker/nginx.conf.template /etc/nginx/templates/app.conf.template
 
 # Copy built assets
