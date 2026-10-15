@@ -23,6 +23,14 @@ class Command(BaseCommand):
 
         call_command('seed_payroll_rules', verbosity=0)
         call_command('seed_e2e_data', verbosity=0)
+
+        # The role-workflow payroll specs finalize runs for far-future periods that no
+        # TL can have closed; opt the fixture out of the closure gate (same as the
+        # backend test fixtures do). The gate itself has dedicated unit tests.
+        from plugins.payroll.models import PayrollConfiguration
+        config = PayrollConfiguration.get_singleton()
+        config.require_tl_closed_before_finalize = False
+        config.save(update_fields=['require_tl_closed_before_finalize'])
         self.stdout.write(self.style.SUCCESS(
             f'Prepared e2e database: {len(plugin_registry.get_all_plugins())} plugins enabled.'
         ))
