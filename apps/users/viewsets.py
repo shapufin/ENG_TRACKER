@@ -778,12 +778,14 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         Admin creates a new user with profile in one call.
         Payload: {username, email, first_name, last_name, password, phone, team, albanian_tl, italian_tl, is_hr, is_italian_tl_role, is_albanian_tl_role, is_cr_admin}
         """
-        from .services.user_creation import create_user_with_profile
+        from .services.user_creation import UserValidationError, create_user_with_profile
         data = request.data
         required = ['username', 'email', 'password']
         missing = [f for f in required if not data.get(f)]
         if missing:
-            return Response({'error': f'Missing required fields: {", ".join(missing)}'}, status=status.HTTP_400_BAD_REQUEST)
+            body = {'error': f'Missing required fields: {", ".join(missing)}'}
+            body.update({f: ['This field is required.'] for f in missing})
+            return Response(body, status=status.HTTP_400_BAD_REQUEST)
 
         if data.get('techs') is not None:
             try:
@@ -805,7 +807,11 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             )
         except DjangoValidationError as exc:
             return Response(
-                {'error': 'Password does not meet the password policy.', 'messages': list(exc.messages)},
+                {
+                    'error': 'Password does not meet the password policy.',
+                    'password': list(exc.messages),
+                    'messages': list(exc.messages),
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -829,6 +835,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 roles=data.get('roles'),
             )
             return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        except UserValidationError as e:
+            return Response({'error': str(e), e.field: [str(e)]}, status=status.HTTP_400_BAD_REQUEST)
         except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

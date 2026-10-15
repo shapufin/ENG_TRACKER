@@ -15,6 +15,14 @@ from apps.users.models import Team, TeamMembership, UserProfile
 from apps.users.services.tech_assignments import set_tech_assignments
 
 
+class UserValidationError(ValueError):
+    """A ValueError that also names the form field it belongs to."""
+
+    def __init__(self, field: str, message: str):
+        super().__init__(message)
+        self.field = field
+
+
 def _username_is_valid(username: str) -> Optional[str]:
     """Return an error message if the username is invalid, otherwise None."""
     if len(username) < 3:
@@ -33,15 +41,6 @@ def _email_is_valid(email: str) -> Optional[str]:
     return None
 
 
-def _user_exists_error(username: str, email: str) -> Optional[str]:
-    """Return an error message if the username or email already exists."""
-    if User.objects.filter(username=username).exists():
-        return f'Username "{username}" already exists.'
-    if User.objects.filter(email=email).exists():
-        return f'Email "{email}" already exists.'
-    return None
-
-
 def generate_random_password(length: int = 12) -> str:
     """Generate a random alphanumeric password."""
     alphabet = string.ascii_letters + string.digits
@@ -49,13 +48,20 @@ def generate_random_password(length: int = 12) -> str:
 
 
 def validate_new_user(username: str, email: str, password: str) -> None:
-    """Raise ValueError when a new account could not be created (no writes)."""
+    """Raise UserValidationError when a new account could not be created (no writes)."""
     if len(password) < 6:
-        raise ValueError("Password must be at least 6 characters.")
+        raise UserValidationError('password', "Password must be at least 6 characters.")
 
-    err = _username_is_valid(username) or _email_is_valid(email) or _user_exists_error(username, email)
-    if err:
-        raise ValueError(err)
+    for field, err in (
+        ('username', _username_is_valid(username)),
+        ('email', _email_is_valid(email)),
+    ):
+        if err:
+            raise UserValidationError(field, err)
+    if User.objects.filter(username=username).exists():
+        raise UserValidationError('username', f'Username "{username}" already exists.')
+    if User.objects.filter(email=email).exists():
+        raise UserValidationError('email', f'Email "{email}" already exists.')
 
 
 def create_user_with_profile(
