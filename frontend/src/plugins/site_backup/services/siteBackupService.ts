@@ -9,6 +9,9 @@ import type {
 
 const BASE = "/plugins/site_backup";
 
+// Dumping or restoring the whole site outlasts the app-wide 10s axios timeout.
+const LONG_RUNNING = { timeout: 300_000 };
+
 /** Build the request body for an archive-source endpoint (preview/commit). */
 const archiveSourcePayload = (source: ArchiveSource, extra: Record<string, unknown> = {}) => {
   if ("file" in source) {
@@ -33,7 +36,11 @@ export const siteBackupService = {
   },
 
   async createBackup(note: string, includeMedia: boolean): Promise<BackupRecord> {
-    const { data } = await api.post(`${BASE}/backups/`, { note, include_media: includeMedia });
+    const { data } = await api.post(
+      `${BASE}/backups/`,
+      { note, include_media: includeMedia },
+      LONG_RUNNING
+    );
     return data;
   },
 
@@ -44,13 +51,17 @@ export const siteBackupService = {
   async downloadBackup(record: BackupRecord): Promise<void> {
     const { data } = await api.get(`${BASE}/backups/${record.id}/download/`, {
       responseType: "blob",
+      ...LONG_RUNNING,
     });
     downloadBlobResponse(data, record.filename);
   },
 
   async previewRestore(source: ArchiveSource): Promise<RestorePreviewResult> {
     const { data: body, headers } = archiveSourcePayload(source);
-    const { data } = await api.post(`${BASE}/restore/preview/`, body, { headers });
+    const { data } = await api.post(`${BASE}/restore/preview/`, body, {
+      headers,
+      ...LONG_RUNNING,
+    });
     return data;
   },
 
@@ -69,7 +80,10 @@ export const siteBackupService = {
       restore_media: options.restoreMedia ?? false,
       confirmed: options.confirmed,
     });
-    const { data } = await api.post(`${BASE}/restore/commit/`, body, { headers });
+    const { data } = await api.post(`${BASE}/restore/commit/`, body, {
+      headers,
+      ...LONG_RUNNING,
+    });
     return data;
   },
 };

@@ -103,6 +103,20 @@ class BaseImporter(ABC):
     def get_alias_suggestions(self) -> Dict[str, List[str]]:
         """Return field-key -> list of lowercase column-name aliases for auto-detect."""
 
+    def get_mapping_aliases(self) -> Dict[str, List[str]]:
+        """Aliases for auto-detect: the declared ones plus each field's own label.
+
+        The downloadable template uses the labels as headers, so a re-uploaded
+        template must map every column even when no explicit alias lists it.
+        """
+        aliases = {key: list(values) for key, values in self.get_alias_suggestions().items()}
+        for spec in self.get_fields():
+            label = spec.label.lower().strip()
+            known = aliases.setdefault(spec.key, [])
+            if label not in known:
+                known.append(label)
+        return aliases
+
     @abstractmethod
     def get_dedupe_keys(self) -> List[str]:
         """Return field keys used to find an existing record to update."""

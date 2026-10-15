@@ -191,6 +191,8 @@ class LeaveRequestImporter(StaffOnlyAuthority, BaseImporter):
                     reason=mapped_row.get("reason") or "",
                 )
 
+        if dry_run:
+            return ImportRowResult(row_index=row_index, status="valid")
         return ImportRowResult(
             row_index=row_index,
             status="updated" if is_update else "created",

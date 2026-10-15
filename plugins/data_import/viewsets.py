@@ -477,7 +477,7 @@ class DataImportViewSet(ImporterAccessMixin, PluginPermissionMixin, viewsets.Gen
             df, filename = self._read_file(request)
 
             columns = list(df.columns)
-            suggested = suggest_mapping(columns, importer.get_alias_suggestions())
+            suggested = suggest_mapping(columns, importer.get_mapping_aliases())
             profiles = ImportProfileListSerializer(
                 ImportProfile.objects.filter(
                     target_key=importer.target_key, is_active=True
@@ -512,7 +512,7 @@ class DataImportViewSet(ImporterAccessMixin, PluginPermissionMixin, viewsets.Gen
 
             if not field_mapping:
                 field_mapping = suggest_mapping(
-                    list(df.columns), importer.get_alias_suggestions()
+                    list(df.columns), importer.get_mapping_aliases()
                 )
 
             preview = self._run_preview(importer, df, field_mapping, default_values, options)

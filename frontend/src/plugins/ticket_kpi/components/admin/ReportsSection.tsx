@@ -22,7 +22,7 @@ import { ticketKPIService } from "../../services/ticketKPIService";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import type { YearlyReport } from "../../types/ticketKPI";
 
-const reportUserColumns: AppColumnDef<YearlyReport["per_user_summary"][number]>[] = [
+export const reportUserColumns: AppColumnDef<YearlyReport["per_user_summary"][number]>[] = [
   { accessorKey: "name", header: "Name" },
   { accessorKey: "username", header: "Username" },
   { accessorKey: "total_tickets", header: "Tickets" },
@@ -30,15 +30,13 @@ const reportUserColumns: AppColumnDef<YearlyReport["per_user_summary"][number]>[
     accessorKey: "avg_resolution_hours",
     header: "Avg Resolution",
     cell: ({ row }) =>
-      row.original.avg_resolution_hours !== undefined
-        ? `${row.original.avg_resolution_hours}h`
-        : "N/A",
+      row.original.avg_resolution_hours != null ? `${row.original.avg_resolution_hours}h` : "N/A",
   },
   {
     accessorKey: "sla_compliance_pct",
     header: "SLA %",
     cell: ({ row }) =>
-      row.original.sla_compliance_pct !== undefined ? `${row.original.sla_compliance_pct}%` : "N/A",
+      row.original.sla_compliance_pct != null ? `${row.original.sla_compliance_pct}%` : "N/A",
   },
 ];
 
@@ -161,13 +159,21 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ year, onYearChan
             />
             <KPICard
               title="Avg Resolution"
-              value={`${reportPreview.avg_resolution_hours ?? 0}h`}
+              value={
+                reportPreview.avg_resolution_hours != null
+                  ? `${reportPreview.avg_resolution_hours}h`
+                  : "N/A"
+              }
               subtitle="Per ticket"
               icon={Clock}
             />
             <KPICard
               title="SLA Compliance"
-              value={`${reportPreview.sla_compliance_pct ?? 0}%`}
+              value={
+                reportPreview.sla_compliance_pct != null
+                  ? `${reportPreview.sla_compliance_pct}%`
+                  : "N/A"
+              }
               subtitle="Team average"
               icon={CheckCircle}
             />
