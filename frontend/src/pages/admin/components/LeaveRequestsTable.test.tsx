@@ -105,3 +105,18 @@ describe("LeaveRequestsTable action buttons", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
+
+describe("LeaveRequestsTable day labels", () => {
+  it("uses the singular for a one-day request", () => {
+    const oneDay = {
+      ...request,
+      start_date: "2026-09-10",
+      end_date: "2026-09-10",
+      days_requested: 1,
+    } as unknown as LeaveRequest;
+    render(<LeaveRequestsTable requests={[oneDay]} onApprove={vi.fn()} onReject={vi.fn()} />);
+
+    expect(screen.queryByText(/\b1 days\b/)).toBeNull();
+    expect(screen.getAllByText("1 day").length).toBeGreaterThan(0);
+  });
+});
