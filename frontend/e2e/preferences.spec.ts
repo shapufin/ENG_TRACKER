@@ -27,7 +27,9 @@ test.describe("Role-aware notification preferences", () => {
     ).toBe(true);
   });
 
-  for (const role of ["teamLeader", "hr", "admin", "teamLeaderHr"] as const) {
+  // Team categories mirror delivery: only team leaders receive team events, so a plain
+  // HR or admin account (not a team leader) must not be offered them.
+  for (const role of ["teamLeader", "teamLeaderHr"] as const) {
     test(`${role} sees team categories`, async ({ page }) => {
       await loginAsUser(page, E2E_CREDENTIALS[role]);
       const result = await fetchPreferences(page);
@@ -39,6 +41,22 @@ test.describe("Role-aware notification preferences", () => {
       ).toBe(true);
       expect(
         result.body.some((item: { event_type: string }) => item.event_type === "team_leave_deleted")
+      ).toBe(true);
+    });
+  }
+
+  for (const role of ["hr", "admin"] as const) {
+    test(`${role} without a team-leader role sees only personal categories`, async ({ page }) => {
+      await loginAsUser(page, E2E_CREDENTIALS[role]);
+      const result = await fetchPreferences(page);
+      expect(result.status).toBe(200);
+      expect(
+        result.body.some(
+          (item: { event_type: string }) => item.event_type === "team_action_required"
+        )
+      ).toBe(false);
+      expect(
+        result.body.some((item: { event_type: string }) => item.event_type === "own_leave_updated")
       ).toBe(true);
     });
   }
