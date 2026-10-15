@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { AlertTriangle, Eye, Wrench } from "lucide-react";
 import { FieldMappingGrid } from "./FieldMappingGrid";
 import { OUR_FIELDS } from "../constants/fields";
+import { previewCell, previewColumns } from "./previewTable";
 import type { UploadPreview } from "../types/ticketKPI";
 
 interface UploadPreviewPanelProps {
@@ -157,7 +158,7 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
             <table className="w-full text-sm">
               <thead>
                 <tr className={TABLE_HEAD_ROW_CLASS}>
-                  {Object.keys(preview.preview_rows[0]).map((k) => (
+                  {previewColumns(preview.preview_rows[0]).map((k) => (
                     <th key={k} className={cn(TABLE_HEAD_CELL_CLASS, "px-3 py-2")}>
                       {k}
                     </th>
@@ -167,9 +168,9 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
               <tbody className="divide-y">
                 {preview.preview_rows.map((row, i) => (
                   <tr key={i}>
-                    {Object.values(row).map((v, j) => (
+                    {previewColumns(preview.preview_rows[0]).map((k, j) => (
                       <td key={j} className="px-3 py-2">
-                        {String(v)}
+                        {previewCell((row as Record<string, unknown>)[k])}
                       </td>
                     ))}
                   </tr>

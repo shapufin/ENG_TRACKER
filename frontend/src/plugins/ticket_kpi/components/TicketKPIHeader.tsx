@@ -39,10 +39,10 @@ export const TicketKPIHeader: React.FC<TicketKPIHeaderProps> = ({
         )}
         {isFilteredView && memberName && (
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-foreground">{memberName}</span>
+            <span className="text-foreground text-sm font-semibold">{memberName}</span>
           </div>
         )}
-        <Calendar className="h-5 w-5 text-muted-foreground" />
+        <Calendar className="text-muted-foreground h-5 w-5" />
         <Select value={selectedMonth} onValueChange={onMonthChange}>
           <SelectTrigger className="w-[200px]">
             <SelectValue>{formatMonthLabel(selectedMonth)}</SelectValue>

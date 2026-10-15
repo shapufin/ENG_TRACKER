@@ -19,7 +19,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
   return (
     <div className="space-y-2">
       <Label>Clients</Label>
-      <p className="text-xs text-muted-foreground">Tag this upload with relevant clients.</p>
+      <p className="text-muted-foreground text-xs">Tag this upload with relevant clients.</p>
       <div className="flex flex-wrap gap-3">
         {clients.map((client) => (
           <div key={client.id} className="flex items-center gap-1.5">

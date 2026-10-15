@@ -1,6 +1,7 @@
 import React from "react";
 import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
 import { cn } from "@/lib/utils";
+import { previewCell, previewColumns } from "./previewTable";
 import type { UploadPreview } from "../types/ticketKPI";
 
 interface TestMappingResultProps {
@@ -33,7 +34,7 @@ export const TestMappingResult: React.FC<TestMappingResultProps> = ({ result }) 
         <table className="w-full text-xs">
           <thead>
             <tr className={TABLE_HEAD_ROW_CLASS}>
-              {Object.keys(result.preview_rows[0]).map((k) => (
+              {previewColumns(result.preview_rows[0]).map((k) => (
                 <th key={k} className={cn(TABLE_HEAD_CELL_CLASS, "px-2 py-1")}>
                   {k}
                 </th>
@@ -43,9 +44,9 @@ export const TestMappingResult: React.FC<TestMappingResultProps> = ({ result }) 
           <tbody>
             {result.preview_rows.map((row, i) => (
               <tr key={i}>
-                {Object.values(row).map((v, j) => (
+                {previewColumns(result.preview_rows[0]).map((k, j) => (
                   <td key={j} className="px-2 py-1">
-                    {String(v)}
+                    {previewCell((row as Record<string, unknown>)[k])}
                   </td>
                 ))}
               </tr>

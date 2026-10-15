@@ -80,11 +80,11 @@ export const FileInput: React.FC<FileInputProps> = ({
         className="hidden"
         onChange={(e) => e.target.files?.[0] && acceptFile(e.target.files[0])}
       />
-      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+      <div className="text-muted-foreground flex flex-col items-center gap-2">
         {file ? (
           <>
-            <SelectedIcon className="h-8 w-8 text-primary" />
-            <p className="font-medium text-foreground">{file.name}</p>
+            <SelectedIcon className="text-primary h-8 w-8" />
+            <p className="text-foreground font-medium">{file.name}</p>
             <p className="text-xs">{(file.size / 1024).toFixed(1)} KB</p>
           </>
         ) : (
