@@ -145,6 +145,22 @@ class CodeKeyedImporter(BaseImporter):
             if error:
                 return ImportRowResult(row_index=row_index, status="error", errors=[error])
 
+            if dry_run and context is not None:
+                # A dry run writes nothing, so a code repeated later in the file would
+                # look new; track it so the preview matches what commit will do.
+                seen = context.setdefault("_preview_codes", set())
+                if code in seen:
+                    updating = bool(options.get("update_existing"))
+                    return ImportRowResult(
+                        row_index=row_index,
+                        status="valid" if updating else "skipped",
+                        warnings=[
+                            f"Code {code} appears earlier in this file; "
+                            + ("this row will overwrite it." if updating else "this row will be skipped.")
+                        ],
+                    )
+                seen.add(code)
+
             if not dry_run:
                 self.model.objects.create(**values)
 
