@@ -60,9 +60,15 @@ export const useTicketKPIAdmin = () => {
     setDialogOpen(true);
   };
 
-  const openEditDialog = (profile: ExportProfile) => {
-    setEditingProfile(profile);
-    setDialogOpen(true);
+  // Seeding the dialog from a list row would save blank mappings over the real ones.
+  const openEditDialog = async (profile: ExportProfile) => {
+    try {
+      const { data } = await ticketKPIService.getProfile(profile.id);
+      setEditingProfile(data);
+      setDialogOpen(true);
+    } catch {
+      toast.error("Failed to load profile");
+    }
   };
 
   const handleSave = (payload: Partial<ExportProfile>) => {
