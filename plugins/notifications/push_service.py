@@ -8,6 +8,7 @@ PushSubscription records for that user.
 import logging
 
 import requests
+from django.core.exceptions import ImproperlyConfigured
 from pywebpush import webpush, WebPushException
 from .models import PushSubscription
 from .vapid_utils import get_private_key, VAPID_SUBJECT
@@ -53,6 +54,14 @@ def send_push_notification(user, title, message, url=None):
     import json
     payload_json = json.dumps(payload)
 
+    try:
+        private_key = get_private_key()
+    except ImproperlyConfigured:
+        # VAPID_REQUIRE_ENV and no keys: push is simply unavailable, not an error
+        # worth a traceback per notification or a failed caller.
+        logger.warning("Web Push skipped for user_id=%s: VAPID keys are not configured", user.id)
+        return 0, subscriptions.count()
+
     sent = 0
     failed = 0
 
@@ -67,7 +76,7 @@ def send_push_notification(user, title, message, url=None):
                     },
                 },
                 data=payload_json,
-                vapid_private_key=get_private_key(),
+                vapid_private_key=private_key,
                 vapid_claims={"sub": VAPID_SUBJECT},
                 timeout=PUSH_TIMEOUT_SECONDS,
             )
