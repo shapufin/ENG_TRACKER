@@ -444,10 +444,6 @@ test.describe.serial("E: overtime lifecycle, cross-team isolation and the monthl
   let lockedA = 0;
 
   const today = () => iso(new Date());
-  const previousMonthDay = () => {
-    const d = new Date();
-    return iso(new Date(d.getFullYear(), d.getMonth() - 1, 10, 12));
-  };
   const log = (date: string, description: string) => ({ date, hours: 2, description, client: clientId });
 
   test.beforeAll(async () => {
@@ -507,10 +503,14 @@ test.describe.serial("E: overtime lifecycle, cross-team isolation and the monthl
 
   test("monthly lock: owner updates frozen in past months; pending deletes bypass; approved is superuser-delete only", async () => {
     const q = "?ignore_date_filter=true";
-    const past = await employeeA.post("overtime/logs/", { data: log(previousMonthDay(), "e2e locked") });
-    expect(past.status(), await past.text()).toBe(201);
-    lockedA = (await past.json()).id;
+    // Entries for a closed month cannot be created through the API (they close on the 2nd), so
+    // the past-month pending records are seeded by `seed_e2e_data`; take two that are still unused.
+    const seeded = results(await (await employeeA.get(`overtime/logs/${q}&page_size=100`)).json())
+      .filter((l) => String(l.description).startsWith("e2e seed past-month") && l.status === "pending");
+    expect(seeded.length, "run prepare_e2e_db to seed past-month overtime").toBeGreaterThanOrEqual(2);
+    lockedA = seeded[0].id as number;
     created.push(lockedA);
+    const scratchId = seeded[1].id as number;
 
     // Updates: locked for the owner in a past month even while pending. A plain admin cannot
     // reach another employee's record through this personal endpoint at all (scoped queryset).
@@ -520,9 +520,7 @@ test.describe.serial("E: overtime lifecycle, cross-team isolation and the monthl
     );
 
     // Deletes: a pending record can always be removed by its owner (un-approved carry-over cleanup).
-    const scratch = await employeeA.post("overtime/logs/", { data: log(previousMonthDay(), "e2e pending delete") });
-    expect(scratch.status(), await scratch.text()).toBe(201);
-    const scratchDelete = await employeeA.delete(`overtime/logs/${(await scratch.json()).id}/${q}`);
+    const scratchDelete = await employeeA.delete(`overtime/logs/${scratchId}/${q}`);
     expect([200, 204], await scratchDelete.text()).toContain(scratchDelete.status());
 
     // Once approved, deletion is locked for the owner and for plain staff.

@@ -19,7 +19,7 @@ from django.utils import timezone
 
 from apps.dashboard.models.calendar import CalendarWorkspace
 from apps.leave_management.models import LeaveBalance
-from apps.overtime.models import Client
+from apps.overtime.models import Client, OvertimeLog
 from apps.permissions.models import Role
 from apps.permissions.services.role_service import assign_role
 from apps.users.models import Team, TeamMembership, UserProfile
@@ -241,6 +241,20 @@ class Command(BaseCommand):
         client.name = E2E_CLIENT["name"]
         client.is_active = E2E_CLIENT["is_active"]
         client.save(update_fields=["name", "is_active"])
+
+        # Past-month pending overtime for the monthly-lock specs. The API refuses to
+        # create entries once a month is closed (after the 2nd), so these cannot be made
+        # through it at test time; seed a few so a retry still finds an unused one.
+        today = timezone.localdate()
+        past_year, past_month = (today.year, today.month - 1) if today.month > 1 else (today.year - 1, 12)
+        for n in range(1, 7):
+            OvertimeLog.objects.get_or_create(
+                user=users["e2e_employee_a"],
+                client=client,
+                date=date(past_year, past_month, 10),
+                description=f"e2e seed past-month {n}",
+                defaults={"hours": 2},
+            )
 
         # Calendar workspace linked to the E2E team so calendar E2E tests
         # can exercise the full authenticated calendar workflow.
