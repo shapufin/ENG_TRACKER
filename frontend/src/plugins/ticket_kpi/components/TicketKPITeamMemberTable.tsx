@@ -28,7 +28,7 @@ export const TicketKPITeamMemberTable: React.FC<TicketKPITeamMemberTableProps> =
         cell: ({ row }) => (
           <div className="flex items-center gap-2 font-medium">
             {row.original.name}
-            <Eye className="text-muted-foreground h-3.5 w-3.5 opacity-60 transition-opacity group-hover:opacity-100" />
+            <Eye className="h-3.5 w-3.5 text-muted-foreground opacity-60 transition-opacity group-hover:opacity-100" />
           </div>
         ),
       },
@@ -59,11 +59,11 @@ export const TicketKPITeamMemberTable: React.FC<TicketKPITeamMemberTableProps> =
   );
 
   if (members.length === 0)
-    return <p className="text-muted-foreground text-sm">No member data for this month.</p>;
+    return <p className="text-sm text-muted-foreground">No member data for this month.</p>;
 
   return (
     <div className="space-y-3">
-      <p className="text-muted-foreground text-xs">
+      <p className="text-xs text-muted-foreground">
         {members.length} member{members.length !== 1 ? "s" : ""} · {membersWithData} with data this
         month
       </p>

@@ -48,7 +48,7 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ title, data 
           </ResponsiveContainer>
         </div>
       ) : (
-        <p className="text-muted-foreground text-sm">No category data.</p>
+        <p className="text-sm text-muted-foreground">No category data.</p>
       )}
     </CardContent>
   </Card>

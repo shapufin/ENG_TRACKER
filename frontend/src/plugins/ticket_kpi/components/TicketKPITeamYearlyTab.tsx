@@ -69,10 +69,10 @@ export const TicketKPITeamYearlyTab: React.FC<TicketKPITeamYearlyTabProps> = ({
         <span className="sr-only">Loading yearly summary...</span>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-muted/40 h-28 animate-pulse rounded-lg border" />
+            <div key={i} className="h-28 animate-pulse rounded-lg border bg-muted/40" />
           ))}
         </div>
-        <div className="bg-muted/40 h-80 animate-pulse rounded-lg border" />
+        <div className="h-80 animate-pulse rounded-lg border bg-muted/40" />
       </div>
     );
   }
@@ -118,7 +118,7 @@ export const TicketKPITeamYearlyTab: React.FC<TicketKPITeamYearlyTabProps> = ({
         </CardHeader>
         <CardContent>
           {members.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No member data for this year.</p>
+            <p className="text-sm text-muted-foreground">No member data for this year.</p>
           ) : (
             <DataTable
               columns={columns}
