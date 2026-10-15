@@ -86,3 +86,65 @@ class TiranaTodayTests(TestCase):
             absence_metrics(set())
             escalation_candidates(leader)
         self.assertEqual(clock.call_count, 3)
+
+
+class TrendWindowedMetricsTests(TestCase):
+    """Leave, overtime and meeting rows are read once for the whole trend window,
+    not once per month, and every point still equals its stand-alone scorecard."""
+
+    def setUp(self):
+        from datetime import datetime, time, timedelta, timezone as utc
+
+        from apps.leave_management.models import LeaveRequest
+        from apps.overtime.models.core import Client, OvertimeLog
+
+        from .models import Meeting, MeetingAttendee
+
+        self.leader = make_user('window_leader')
+        self.members = []
+        for i in range(3):
+            member = make_user(f'window_member{i}')
+            member.profile.italian_tl = self.leader
+            member.profile.save(update_fields=['italian_tl'])
+            self.members.append(member)
+        client = Client.objects.create(name='Acme', code='ACME')
+        for index, month in enumerate((4, 5, 6, 7, 8, 9)):
+            submitted = datetime(2026, month, 3, 22, 30, tzinfo=utc.utc)  # late evening: UTC/Tirane day edge
+            approved = submitted + timedelta(days=index)
+            member = self.members[index % 3]
+            leave = LeaveRequest.objects.create(
+                user=member, request_type='vacation', status='approved',
+                start_date=date(2026, month, 24), end_date=date(2026, month, 25),
+            )
+            LeaveRequest.objects.filter(pk=leave.pk).update(submitted_at=submitted, approved_at=approved)
+            log = OvertimeLog.objects.create(
+                user=member, client=client, date=date(2026, month, 3), hours=2,
+                start_time=time(18, 0), end_time=time(20, 0), status='approved',
+            )
+            OvertimeLog.objects.filter(pk=log.pk).update(submitted_at=submitted, approved_at=approved)
+            Meeting.objects.create(
+                meeting_type='one_on_one', organizer=self.leader, counterparty=member,
+                occurred_on=date(2026, month, 1 if month % 2 else 28),
+            )
+            team_meeting = Meeting.objects.create(
+                meeting_type='team_meeting', organizer=self.leader, occurred_on=date(2026, month, 10),
+            )
+            MeetingAttendee.objects.create(meeting=team_meeting, user=member, role='hrbp')
+        LeaveRequest.objects.create(
+            user=self.members[0], request_type='vacation', status='pending',
+            start_date=date(2026, 10, 5), end_date=date(2026, 10, 6),
+        )
+
+    def test_trend_equals_independent_per_month_scorecards(self):
+        trend = scorecard_trend(self.leader, 6, date(2026, 9, 1))
+        for point in trend:
+            self.assertEqual(point, build_scorecard(self.leader, date.fromisoformat(point['month'])), point['month'])
+        self.assertTrue(any(p['leave']['decided_count'] for p in trend))  # not a vacuous pass
+        self.assertTrue(any(p['overtime']['decided_count'] for p in trend))
+        self.assertTrue(any(p['meetings']['team_meetings_with_hrbp'] for p in trend))
+
+    def test_six_month_trend_reads_each_table_once(self):
+        scoreable_member_ids(self.leader)
+        with CaptureQueriesContext(connection) as ctx:
+            scorecard_trend(self.leader, 6, date(2026, 9, 1))
+        self.assertLessEqual(len(ctx), 20, [q['sql'][:80] for q in ctx.captured_queries])
