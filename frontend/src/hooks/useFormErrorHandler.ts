@@ -11,16 +11,21 @@ import type { ApiError } from "@/types";
  * - TeamsPage (2 instances)
  * - UsersPage
  */
+export const extractFieldErrors = (err: ApiError): Record<string, string> => {
+  const data = err?.response?.data;
+  const errors: Record<string, string> = {};
+  if (data && typeof data === "object") {
+    Object.entries(data).forEach(([key, val]) => {
+      errors[key] = Array.isArray(val) ? val.join(" ") : String(val);
+    });
+  }
+  return errors;
+};
+
 export const useFormErrorHandler = (setFormErrors: (errors: Record<string, string>) => void) => {
   return (err: ApiError) => {
     handleApiError(err);
     const data = err?.response?.data;
-    if (data && typeof data === "object") {
-      const errors: Record<string, string> = {};
-      Object.entries(data).forEach(([key, val]) => {
-        errors[key] = Array.isArray(val) ? val.join(" ") : String(val);
-      });
-      setFormErrors(errors);
-    }
+    if (data && typeof data === "object") setFormErrors(extractFieldErrors(err));
   };
 };

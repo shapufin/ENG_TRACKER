@@ -208,6 +208,7 @@ export const useUsersPage = () => {
       setEditing(null);
       setFormErrors({});
     },
+    onCreateError: (errors) => setCreateErrors(errors),
     onCreateSuccess: () => {
       setCreateOpen(false);
       setCreateForm({ ...emptyCreateForm });

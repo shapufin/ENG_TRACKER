@@ -14,6 +14,7 @@ vi.mock("@/services/userService", () => ({
     getItalianTeamLeaders: vi.fn(),
     getAlbanianTeamLeaders: vi.fn(),
     getUserStats: vi.fn(),
+    createUser: vi.fn(),
   },
 }));
 
@@ -86,5 +87,23 @@ describe("useUserManagement Control Room filter", () => {
     expect(vi.mocked(userService.getProfiles).mock.calls[0][0]).toMatchObject({
       cr_access: undefined,
     });
+  });
+});
+
+describe("useUserManagement create errors", () => {
+  it("hands server field errors to the form instead of only toasting", async () => {
+    const onCreateError = vi.fn();
+    vi.mocked(userService.createUser).mockRejectedValue({
+      response: {
+        data: { username: ["Username already exists."], error: "Username already exists." },
+      },
+    });
+    const { result } = renderHook(() => useUserManagement({ page: 1, onCreateError }), { wrapper });
+    result.current.createMutation.mutate({ username: "x" } as never);
+    await waitFor(() =>
+      expect(onCreateError).toHaveBeenCalledWith(
+        expect.objectContaining({ username: "Username already exists." })
+      )
+    );
   });
 });

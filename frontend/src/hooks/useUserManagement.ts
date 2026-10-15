@@ -2,6 +2,7 @@ import { useState } from "react";
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userService } from "@/services/userService";
 import { handleApiError, getBlockedRevocations } from "@/lib/error-handler";
+import { extractFieldErrors } from "@/hooks/useFormErrorHandler";
 import { toast } from "sonner";
 import type { ApiError, BlockedRevocation, TLFilter } from "@/types";
 
@@ -10,6 +11,8 @@ export const USERS_PAGE_SIZE = 50;
 interface UseUserManagementOptions {
   onUpdateSuccess?: () => void;
   onCreateSuccess?: () => void;
+  /** Server field errors (e.g. `username`) so the create form can show them inline. */
+  onCreateError?: (errors: Record<string, string>) => void;
   onResetSuccess?: () => void;
   onDeleteSuccess?: () => void;
   /** Server-side role tab + tech chip selection. Must be included in every
@@ -177,7 +180,7 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
     },
     onError: (err: ApiError) => {
       handleApiError(err);
-      // Let component handle specific field errors from err.response.data
+      options?.onCreateError?.(extractFieldErrors(err));
     },
   });
 

@@ -9,7 +9,9 @@ import { InfoCallout } from "@/components/ui/InfoCallout";
 import { FormInputField } from "./userFormFields";
 import { UserFormCore } from "./UserFormCore";
 import { TeamMultiSelect } from "@/components/admin/TeamMultiSelect";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { GeneratedPasswordField } from "./GeneratedPasswordField";
 import type { Tech, Team } from "@/types";
 
 interface CreateForm {
@@ -51,6 +53,18 @@ interface UserCreateFormDialogProps {
 
 type UserType = "standard" | "cr";
 
+// Server keys that belong to the always-visible account section; any other
+// error key lives in the collapsed assignment section and must open it.
+const ACCOUNT_ERROR_KEYS = new Set([
+  "username",
+  "email",
+  "password",
+  "first_name",
+  "last_name",
+  "error",
+  "messages",
+]);
+
 export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
   open,
   onOpenChange,
@@ -69,6 +83,7 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
   const [crTeamIds, setCrTeamIds] = useState<number[]>([]);
   const [crError, setCrError] = useState<string>("");
   const [crSubmitting, setCrSubmitting] = useState(false);
+  const [assignmentOpen, setAssignmentOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,6 +100,7 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
     setCrTeamIds([]);
     setCrError("");
     setUserType("standard");
+    setAssignmentOpen(false);
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -101,9 +117,8 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
     setCrSubmitting(true);
     setCrError("");
     try {
-      const { controlRoomService } = await import(
-        "@/plugins/control_room/services/controlRoomService"
-      );
+      const { controlRoomService } =
+        await import("@/plugins/control_room/services/controlRoomService");
       await controlRoomService.createCRUser({
         username: form.username.trim(),
         email: form.email.trim(),
@@ -139,6 +154,8 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
     }
   };
 
+  const assignmentVisible =
+    assignmentOpen || Object.keys(formErrors).some((key) => !ACCOUNT_ERROR_KEYS.has(key));
   const teams = (teamsData || []) as unknown as Team[];
   const submitting = userType === "cr" ? crSubmitting : isSubmitting;
 
@@ -198,30 +215,49 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
             onChange={(e) => updateField("last_name", e.target.value)}
           />
         </div>
-        <FormInputField
-          label="Password"
+        <GeneratedPasswordField
           value={form.password}
           onChange={(v) => updateField("password", v)}
           error={formErrors.password}
-          type="password"
         />
       </ModalSection>
 
       {userType === "standard" ? (
-        <UserFormCore
-          form={form}
-          updateField={updateField}
-          prefix="c"
-          teamsData={teamsData}
-          techsData={techsData}
-          albanianTLs={albanianTLs}
-          italianTLs={italianTLs}
-        />
+        <>
+          <Button
+            type="button"
+            variant="ghost"
+            size="control-sm"
+            className="-ml-2 self-start"
+            aria-expanded={assignmentVisible}
+            onClick={() => setAssignmentOpen((open) => !open)}
+          >
+            <ChevronDown
+              className={`h-4 w-4 transition-transform motion-reduce:transition-none ${
+                assignmentVisible ? "rotate-180" : ""
+              }`}
+              aria-hidden="true"
+            />
+            Assignment & roles
+            <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+          </Button>
+          {assignmentVisible && (
+            <UserFormCore
+              form={form}
+              updateField={updateField}
+              prefix="c"
+              teamsData={teamsData}
+              techsData={techsData}
+              albanianTLs={albanianTLs}
+              italianTLs={italianTLs}
+            />
+          )}
+        </>
       ) : (
         <div className="space-y-2" role="group" aria-labelledby="user-create-scopes-label">
           <Label id="user-create-scopes-label">Team Scopes</Label>
           <TeamMultiSelect teams={teams} value={crTeamIds} onChange={setCrTeamIds} />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Empty scope means no visibility (not global). Admin/staff always have global access.
           </p>
         </div>
