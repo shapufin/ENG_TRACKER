@@ -1,7 +1,7 @@
 import React from "react";
 import { UserBulkCommandDrawer } from "@/components/admin/UserBulkCommandDrawer";
 import { PluginCRBulkCommandDrawer } from "@/components/admin/PluginCRUserDialogs";
-import { UserStatsCards } from "./UserStatsCards";
+import { UserStatsStrip } from "./UserStatsStrip";
 import { UsersPageBulkBar } from "./UsersPageBulkBar";
 import { UsersPageTable } from "./UsersPageTable";
 import { UsersPageFilters } from "./UsersPageFilters";
@@ -73,7 +73,7 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
 
   return (
     <div className="space-y-4 pb-8">
-      {state.stats && <UserStatsCards stats={state.stats} />}
+      {state.stats && <UserStatsStrip stats={state.stats} />}
 
       <UsersPageBulkBar
         selectedCount={state.selectedProfiles.length}

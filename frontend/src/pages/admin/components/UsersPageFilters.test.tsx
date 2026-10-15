@@ -51,3 +51,28 @@ describe("UsersPageFilters active strip", () => {
     expect(screen.queryByText(/1 users match/)).toBeNull();
   });
 });
+
+describe("UsersPageFilters layout", () => {
+  const renderWithFacets = () => {
+    const state = makeState({
+      techFacets: [{ id: 1, name: "Infra", code: "INF", count: 4, levels: [], no_level_count: 0 }],
+      noTechCount: 2,
+    });
+    render(
+      <UsersPageFilters state={state as never} teams={[{ id: 7, name: "Alpha Team" }] as never} />
+    );
+  };
+
+  it("labels the role row once", () => {
+    renderWithFacets();
+    expect(screen.getAllByText("Role")).toHaveLength(1);
+  });
+
+  it("keeps Tech and Team side by side in one wrapping row", () => {
+    renderWithFacets();
+    const row = screen.getByTestId("secondary-facets");
+    expect(row).toContainElement(screen.getByRole("group", { name: "Tech" }));
+    expect(row).toContainElement(screen.getByRole("group", { name: "Team" }));
+    expect(row.className).toContain("flex-wrap");
+  });
+});

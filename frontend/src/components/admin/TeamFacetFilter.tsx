@@ -37,7 +37,7 @@ export const TeamFacetFilter: React.FC<TeamFacetFilterProps> = ({
   if (teams.length === 0) return null;
 
   return (
-    <div className="border-border/70 border-t pt-2">
+    <div>
       <FilterChipRow
         label="Team"
         options={[

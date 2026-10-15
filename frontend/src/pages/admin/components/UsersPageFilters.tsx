@@ -2,7 +2,6 @@ import React from "react";
 import { UserFilterTabs } from "@/components/admin/UserFilterTabs";
 import { TechFacetFilter } from "@/components/admin/TechFacetFilter";
 import { TeamFacetFilter } from "@/components/admin/TeamFacetFilter";
-import { FacetRow } from "@/components/admin/FacetRow";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import { cn } from "@/lib/utils";
 import { CRUsersFilterButton } from "./CRUsersFilterButton";
@@ -53,7 +52,8 @@ export const UsersPageFilters: React.FC<UsersPageFiltersProps> = ({ state, teams
 
   return (
     <div className="border-line-subtle space-y-2 border-b pb-4">
-      <FacetRow label="Role">
+      {/* UserFilterTabs is itself the labelled "Role" row; the CR chip joins it. */}
+      <div className="flex flex-wrap items-center gap-2">
         <UserFilterTabs
           filter={state.tlFilter}
           onFilterChange={state.setTlFilter}
@@ -65,24 +65,26 @@ export const UsersPageFilters: React.FC<UsersPageFiltersProps> = ({ state, teams
             onToggle={() => state.setCrOnly(!state.crOnly)}
           />
         )}
-      </FacetRow>
+      </div>
 
-      <TechFacetFilter
-        facets={state.techFacets}
-        noTechCount={state.noTechCount}
-        selectedTechIds={state.techIds}
-        selectedLevelIds={state.techLevelIds}
-        noTechOnly={state.noTechOnly}
-        onTechIdsChange={state.setTechIds}
-        onLevelIdsChange={state.setTechLevelIds}
-        onNoTechOnlyChange={state.setNoTechOnly}
-      />
+      <div data-testid="secondary-facets" className="flex flex-wrap items-start gap-x-8 gap-y-2">
+        <TechFacetFilter
+          facets={state.techFacets}
+          noTechCount={state.noTechCount}
+          selectedTechIds={state.techIds}
+          selectedLevelIds={state.techLevelIds}
+          noTechOnly={state.noTechOnly}
+          onTechIdsChange={state.setTechIds}
+          onLevelIdsChange={state.setTechLevelIds}
+          onNoTechOnlyChange={state.setNoTechOnly}
+        />
 
-      <TeamFacetFilter
-        teams={teams}
-        selectedTeamIds={state.teamIds}
-        onTeamIdsChange={state.setTeamIds}
-      />
+        <TeamFacetFilter
+          teams={teams}
+          selectedTeamIds={state.teamIds}
+          onTeamIdsChange={state.setTeamIds}
+        />
+      </div>
 
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
