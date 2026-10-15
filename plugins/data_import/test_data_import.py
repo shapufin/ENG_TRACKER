@@ -91,6 +91,20 @@ class UserImporterTests(TestCase):
         self.assertIn("email", keys)
         self.assertIn("password", keys)
 
+    def test_preview_rejects_what_commit_would_reject(self):
+        base = {"__row_index": 1, "username": "previewer", "first_name": "P", "last_name": "V"}
+
+        bad_email = self.importer.validate_row({**base, "email": "not-an-email"}, {})
+        email_taken = self.importer.validate_row(
+            {**base, "email": "admin@example.com"}, {}
+        )
+        fine = self.importer.validate_row({**base, "email": "previewer@example.com"}, {})
+
+        self.assertEqual(bad_email.status, "error")
+        self.assertEqual(email_taken.status, "error")
+        self.assertEqual(fine.status, "valid")
+        self.assertFalse(User.objects.filter(username="previewer").exists())
+
     def test_create_user_with_generated_password(self):
         row = {
             "__row_index": 1,

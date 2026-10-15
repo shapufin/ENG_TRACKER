@@ -15,6 +15,7 @@ from apps.users.services.user_creation import (
     create_user_with_profile,
     generate_random_password,
     update_user_profile,
+    validate_new_user,
 )
 from .base import (
     UPDATE_EXISTING_OPTION,
@@ -624,6 +625,10 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                     status="error",
                     errors=["No password could be determined for new user."],
                 )
+
+            if dry_run:
+                # The preview must reject what commit would (bad email, taken username...).
+                validate_new_user(username, email, password)
 
             if not dry_run:
                 create_kwargs = {

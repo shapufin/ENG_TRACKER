@@ -48,6 +48,16 @@ def generate_random_password(length: int = 12) -> str:
     return ''.join(random.SystemRandom().choice(alphabet) for _ in range(length))  # noqa: S311
 
 
+def validate_new_user(username: str, email: str, password: str) -> None:
+    """Raise ValueError when a new account could not be created (no writes)."""
+    if len(password) < 6:
+        raise ValueError("Password must be at least 6 characters.")
+
+    err = _username_is_valid(username) or _email_is_valid(email) or _user_exists_error(username, email)
+    if err:
+        raise ValueError(err)
+
+
 def create_user_with_profile(
     username: str,
     email: str,
@@ -77,12 +87,7 @@ def create_user_with_profile(
     Raises:
         ValueError: if username/email/password validation fails.
     """
-    if len(password) < 6:
-        raise ValueError("Password must be at least 6 characters.")
-
-    err = _username_is_valid(username) or _email_is_valid(email) or _user_exists_error(username, email)
-    if err:
-        raise ValueError(err)
+    validate_new_user(username, email, password)
 
     user = User.objects.create_user(
         username=username,
