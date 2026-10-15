@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useUserManagement } from "@/hooks/useUserManagement";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useUsersPageBulk } from "./useUsersPageBulk";
 import { usePlugins } from "@/context/PluginContext";
 import { usePermissions } from "@/context/PermissionContext";
@@ -126,6 +128,7 @@ const emptyCreateForm = {
 };
 
 export const useUsersPage = () => {
+  const [initialQuery] = useSearchParams();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<UserProfile | null>(null);
   const [form, setForm] = useState({ ...emptyEditForm });
@@ -138,6 +141,26 @@ export const useUsersPage = () => {
   const [techLevelIds, setTechLevelIds] = useState<number[]>([]);
   const [noTechOnly, setNoTechOnly] = useState(false);
   const [teamIds, setTeamIds] = useState<number[]>([]);
+  // ?q= seeds the search (command palette deep link). The server does the
+  // matching, so only the debounced term reaches the query key.
+  const [searchInput, setSearchInput] = useState(() => initialQuery.get("q") ?? "");
+  const search = useDebouncedValue(searchInput, 300);
+  // The page is remembered together with the filters it was chosen under, so any
+  // filter or search change falls back to page 1 without a second, stale fetch.
+  const filterSignature = JSON.stringify([
+    tlFilter,
+    techIds,
+    techLevelIds,
+    noTechOnly,
+    teamIds,
+    search.trim(),
+  ]);
+  const [pageState, setPageState] = useState({ signature: filterSignature, page: 1 });
+  const page = pageState.signature === filterSignature ? pageState.page : 1;
+  const setPage = useCallback(
+    (next: number) => setPageState({ signature: filterSignature, page: next }),
+    [filterSignature]
+  );
   const [bulkCommandDrawerOpen, setBulkCommandDrawerOpen] = useState(false);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -173,6 +196,8 @@ export const useUsersPage = () => {
     techLevelIds,
     noTechOnly,
     teamIds,
+    search,
+    page,
     onUpdateSuccess: () => {
       setFormOpen(false);
       setEditing(null);
@@ -465,5 +490,9 @@ export const useUsersPage = () => {
     retryBlocked,
     closeBlockedDialog,
     blockedRetrying,
+    search: searchInput,
+    setSearch: setSearchInput,
+    page,
+    setPage,
   };
 };

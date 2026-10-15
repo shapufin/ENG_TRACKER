@@ -1150,7 +1150,7 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
     queryset = with_profile_list_loading(UserProfile.objects.all()).order_by('-id')
     serializer_class = UserProfileSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-    search_fields = ['user__username', 'user__email']
+    search_fields = ['user__username', 'user__email', 'user__first_name', 'user__last_name']
     filterset_fields = ['albanian_tl', 'italian_tl', 'is_hr_user']
     pagination_class = UserProfilePagination
 

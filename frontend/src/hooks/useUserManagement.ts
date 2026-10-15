@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userService } from "@/services/userService";
 import { handleApiError, getBlockedRevocations } from "@/lib/error-handler";
 import { toast } from "sonner";
 import type { ApiError, BlockedRevocation, TLFilter } from "@/types";
+
+export const USERS_PAGE_SIZE = 50;
 
 interface UseUserManagementOptions {
   onUpdateSuccess?: () => void;
@@ -17,6 +19,9 @@ interface UseUserManagementOptions {
   techLevelIds?: number[];
   noTechOnly?: boolean;
   teamIds?: number[];
+  /** Server-side search term and 1-based page; both belong in the query key. */
+  search?: string;
+  page?: number;
 }
 
 /**
@@ -32,6 +37,8 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
   const techLevelIds = options?.techLevelIds ?? [];
   const noTechOnly = options?.noTechOnly ?? false;
   const teamIds = options?.teamIds ?? [];
+  const search = options?.search?.trim() || undefined;
+  const page = options?.page ?? 1;
   // Comma-joined, not a bare array: axios serializes array params as
   // `tech[]=1`, which doesn't match DRF's `getlist('tech')` on the backend.
   const techParam = !noTechOnly && techIds.length > 0 ? techIds.join(",") : undefined;
@@ -45,7 +52,11 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
     isError: isProfilesError,
     error: profilesError,
   } = useQuery({
-    queryKey: ["admin", "profiles", { role, techIds, techLevelIds, noTechOnly, teamIds }],
+    queryKey: [
+      "admin",
+      "profiles",
+      { role, techIds, techLevelIds, noTechOnly, teamIds, search, page },
+    ],
     queryFn: () =>
       userService.getProfiles({
         role,
@@ -53,7 +64,11 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
         tech_level: techLevelParam,
         no_tech: noTechOnly || undefined,
         team: teamParam,
+        search,
+        page,
+        page_size: USERS_PAGE_SIZE,
       }),
+    placeholderData: keepPreviousData,
     refetchOnMount: true,
     staleTime: 300000,
     refetchOnWindowFocus: false,
@@ -62,8 +77,9 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
   // Team narrows the facet counts too (see get_queryset), so it must be in
   // this query key — otherwise switching teams would serve stale counts.
   const { data: techFacets } = useQuery({
-    queryKey: ["admin", "profiles", "tech-facets", { role, teamIds }],
-    queryFn: () => userService.getTechFacets({ role, team: teamParam }),
+    queryKey: ["admin", "profiles", "tech-facets", { role, teamIds, search }],
+    queryFn: () => userService.getTechFacets({ role, team: teamParam, search }),
+    placeholderData: keepPreviousData,
     refetchOnMount: true,
     staleTime: 60000,
     refetchOnWindowFocus: false,
