@@ -19,9 +19,26 @@ import os
 import shutil
 import tempfile
 
+from django.core.signals import request_finished
+from django.db import close_old_connections
 from django.test import TestCase, RequestFactory, override_settings
 
 from config.views import protected_media
+
+
+def _close_response(response):
+    """Close a response without letting ``request_finished`` close the DB.
+
+    ``HttpResponse.close()`` sends ``request_finished``, whose
+    ``close_old_connections`` receiver closes the connection. Inside a
+    ``TestCase`` transaction that poisons every later test in the class on
+    PostgreSQL ("connection already closed"); SQLite in-memory ignores it.
+    """
+    request_finished.disconnect(close_old_connections)
+    try:
+        response.close()
+    finally:
+        request_finished.connect(close_old_connections)
 
 
 class ProtectedMediaTests(TestCase):
@@ -114,7 +131,7 @@ class ProtectedMediaAuthorizationTests(TestCase):
         with override_settings(MEDIA_ROOT=self._tmpdir):
             response = protected_media(request, path)
             if hasattr(response, "close"):
-                response.close()
+                _close_response(response)
             return response
 
     def _user(self, username, **flags):

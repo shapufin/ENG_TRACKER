@@ -9,6 +9,8 @@ from datetime import date, timedelta
 
 from django.contrib.auth.models import User
 from django.core import mail
+from django.core.signals import request_finished
+from django.db import close_old_connections
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -19,6 +21,21 @@ from plugins.analytics.models import ExportJob, ScheduledReport
 from plugins.analytics.test_analytics import _ensure_analytics_urls
 
 BASE = '/api/plugins/analytics'
+
+
+def _close_response(response):
+    """Close a response without letting ``request_finished`` close the DB.
+
+    ``HttpResponse.close()`` sends ``request_finished``, whose
+    ``close_old_connections`` receiver closes the connection. Inside a
+    ``TestCase`` transaction that poisons every later test in the class on
+    PostgreSQL ("connection already closed"); SQLite in-memory ignores it.
+    """
+    request_finished.disconnect(close_old_connections)
+    try:
+        response.close()
+    finally:
+        request_finished.connect(close_old_connections)
 
 
 def _public(action):
@@ -52,7 +69,7 @@ class ExportJobGrantTests(TestCase):
     def test_download_requires_export_grant(self):
         r = self.client.get(f'{BASE}/metrics/export-jobs/{self.job.id}/download/')
         if hasattr(r, 'close'):
-            r.close()
+            _close_response(r)
         self.assertEqual(r.status_code, 403)
 
     def test_status_requires_export_grant(self):
@@ -66,7 +83,7 @@ class ExportJobGrantTests(TestCase):
     def test_download_allowed_with_export_grant(self):
         _public('export')
         r = self.client.get(f'{BASE}/metrics/export-jobs/{self.job.id}/download/')
-        r.close()
+        _close_response(r)
         self.assertEqual(r.status_code, 200)
 
 
