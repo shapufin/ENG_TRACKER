@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { leaveService } from "@/services/leaveService";
 import { dashboardService } from "@/services/dashboardService";
+import { usePlugins } from "@/context/PluginContext";
 import { useSiteBranding, SITE_BRANDING_QUERY_KEY } from "@/hooks/useSiteBranding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -481,6 +482,8 @@ const SiteBrandingForm: React.FC<{ branding: SiteBranding }> = ({ branding }) =>
 export const GlobalSettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<string>("branding");
+  const { activePlugins } = usePlugins();
+  const isPayrollActive = activePlugins.some((p) => p.name === "payroll");
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "global-settings"],
@@ -565,7 +568,7 @@ export const GlobalSettingsPage: React.FC = () => {
           forceMount
           className={activeTab === "workplace" ? "block" : "hidden"}
         >
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className={`grid gap-6 ${isPayrollActive ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
             <GlassCard delay={0} className="space-y-4 p-6">
               <div className="bg-primary/10 text-primary w-fit rounded-xl p-2.5">
                 <Clock className="h-5 w-5" />
@@ -590,34 +593,37 @@ export const GlobalSettingsPage: React.FC = () => {
                 </div>
                 <h3 className="mt-3 text-base font-semibold">Company Holiday Catalog</h3>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  Global and workspace-specific holidays synchronized with payroll and vacation
-                  deductions.
+                  {isPayrollActive
+                    ? "Global and workspace-specific holidays synchronized with payroll and vacation deductions."
+                    : "Global and workspace-specific holidays synchronized with vacation leave deductions."}
                 </p>
               </div>
               <Button variant="outline" asChild className="w-full justify-between">
-                <a href="/admin/calendars">
+                <a href="/admin/calendars?tab=holidays">
                   Manage Holidays <ExternalLink className="ml-2 h-4 w-4" />
                 </a>
               </Button>
             </GlassCard>
 
-            <GlassCard delay={0.1} className="flex flex-col justify-between space-y-4 p-6">
-              <div>
-                <div className="bg-tone-success-surface text-tone-success-text w-fit rounded-xl p-2.5">
-                  <Layers className="h-5 w-5" />
+            {isPayrollActive && (
+              <GlassCard delay={0.1} className="flex flex-col justify-between space-y-4 p-6">
+                <div>
+                  <div className="bg-tone-success-surface text-tone-success-text w-fit rounded-xl p-2.5">
+                    <Layers className="h-5 w-5" />
+                  </div>
+                  <h3 className="mt-3 text-base font-semibold">Payroll Work Calendar</h3>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Authoritative monthly visual grid with standard workdays, weekends, and holiday
+                    designations.
+                  </p>
                 </div>
-                <h3 className="mt-3 text-base font-semibold">Payroll Work Calendar</h3>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Authoritative monthly visual grid with standard workdays, weekends, and holiday
-                  designations.
-                </p>
-              </div>
-              <Button variant="outline" asChild className="w-full justify-between">
-                <a href="/admin/payroll/calendar">
-                  Open Payroll Calendar <ExternalLink className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-            </GlassCard>
+                <Button variant="outline" asChild className="w-full justify-between">
+                  <a href="/admin/payroll/calendar">
+                    Open Payroll Calendar <ExternalLink className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              </GlassCard>
+            )}
           </div>
         </TabsContent>
 

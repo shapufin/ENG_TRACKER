@@ -1,5 +1,7 @@
+import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { useCalendarManagementPage } from "./useCalendarManagementPage";
 
 vi.mock("@/hooks/useCalendarManagement", () => ({
@@ -21,9 +23,12 @@ vi.mock("@/hooks/useCalendarManagement", () => ({
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
+const wrapper = ({ children }: { children: React.ReactNode }) =>
+  React.createElement(MemoryRouter, null, children);
+
 describe("useCalendarManagementPage", () => {
   it("initializes state and opens forms", () => {
-    const { result } = renderHook(() => useCalendarManagementPage());
+    const { result } = renderHook(() => useCalendarManagementPage(), { wrapper });
     expect(result.current.activeTab).toBe("team-groups");
     act(() => {
       result.current.setActiveTab("holidays");
@@ -32,7 +37,7 @@ describe("useCalendarManagementPage", () => {
   });
 
   it("opens holiday form", () => {
-    const { result } = renderHook(() => useCalendarManagementPage());
+    const { result } = renderHook(() => useCalendarManagementPage(), { wrapper });
     act(() => {
       result.current.openHolidayForm();
     });
@@ -41,7 +46,7 @@ describe("useCalendarManagementPage", () => {
   });
 
   it("handles bulk apply intent", () => {
-    const { result } = renderHook(() => useCalendarManagementPage());
+    const { result } = renderHook(() => useCalendarManagementPage(), { wrapper });
     act(() => {
       result.current.setSelectedTeams(new Set([1]));
       result.current.setBulkGroup("G");
@@ -54,7 +59,7 @@ describe("useCalendarManagementPage", () => {
   });
 
   it("confirms bulk update", () => {
-    const { result } = renderHook(() => useCalendarManagementPage());
+    const { result } = renderHook(() => useCalendarManagementPage(), { wrapper });
     act(() => {
       result.current.setSelectedTeams(new Set([1]));
       result.current.setBulkGroup("G");
@@ -69,7 +74,7 @@ describe("useCalendarManagementPage", () => {
   });
 
   it("validates holiday submit", () => {
-    const { result } = renderHook(() => useCalendarManagementPage());
+    const { result } = renderHook(() => useCalendarManagementPage(), { wrapper });
     const e = { preventDefault: vi.fn() } as any;
     act(() => {
       result.current.handleHolidaySubmit(e);

@@ -4,7 +4,7 @@
  */
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, RefreshCcw } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -177,6 +177,30 @@ export const PayrollCalendarPage: React.FC = () => {
     onError: (error) => handleApiError(error),
   });
 
+  const syncHolidaysMutation = useMutation({
+    mutationFn: (calendarId: number) => payrollService.syncHolidays(calendarId),
+    onSuccess: (data: {
+      status: string;
+      synced_to_hr?: number;
+      synced_to_payroll?: number;
+      total_holidays?: number;
+      reason?: string;
+    }) => {
+      queryClient.invalidateQueries({ queryKey: ["payroll-calendars"] });
+      queryClient.invalidateQueries({ queryKey: ["payroll-calendar-month-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "holidays"] });
+      queryClient.invalidateQueries({ queryKey: ["leave-balances"] });
+      if (data.status === "skipped") {
+        toast.info("Payroll holiday synchronization was skipped.");
+        return;
+      }
+      toast.success(
+        `Synchronized with HR Catalog: ${data.synced_to_hr ?? 0} added to HR, ${data.synced_to_payroll ?? 0} updated in Payroll (${data.total_holidays ?? 0} total)`
+      );
+    },
+    onError: (error) => handleApiError(error),
+  });
+
   // --- Month grid construction -------------------------------------------------
   const monthWorkdays = useMemo<PayrollWorkday[]>(() => {
     if (!selectedCalendar?.workdays) return [];
@@ -310,11 +334,26 @@ export const PayrollCalendarPage: React.FC = () => {
       title="Work Calendar"
       subtitle="Visual payroll work calendar. Holidays automatically sync with the global company holiday catalog and leave tracking."
       actions={
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/admin/calendars">
-            <CalendarDays className="mr-2 h-4 w-4" /> Company Holidays
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {canConfigurePayroll && effectiveCalendarId !== null && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => syncHolidaysMutation.mutate(effectiveCalendarId)}
+              disabled={syncHolidaysMutation.isPending}
+            >
+              <RefreshCcw
+                className={`mr-2 h-4 w-4 ${syncHolidaysMutation.isPending ? "animate-spin" : ""}`}
+              />
+              {syncHolidaysMutation.isPending ? "Syncing..." : "Sync with HR Holidays"}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/admin/calendars?tab=holidays">
+              <CalendarDays className="mr-2 h-4 w-4" /> Company Holidays
+            </Link>
+          </Button>
+        </div>
       }
     >
       {calendars && calendars.length > 0 ? (

@@ -12,7 +12,14 @@ interface PluginContextType {
   refreshActivePlugins: () => Promise<void>;
 }
 
-const PluginContext = createContext<PluginContextType | undefined>(undefined);
+const DEFAULT_PLUGIN_CONTEXT: PluginContextType = {
+  activePlugins: [],
+  isLoading: false,
+  getInjectedComponents: () => [],
+  refreshActivePlugins: async () => {},
+};
+
+const PluginContext = createContext<PluginContextType>(DEFAULT_PLUGIN_CONTEXT);
 
 export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, user, isLoading: authLoading } = useAuth();
@@ -86,8 +93,5 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 // eslint-disable-next-line react-refresh/only-export-components
 export const usePlugins = () => {
   const context = useContext(PluginContext);
-  if (context === undefined) {
-    throw new Error("usePlugins must be used within a PluginProvider");
-  }
-  return context;
+  return context ?? DEFAULT_PLUGIN_CONTEXT;
 };

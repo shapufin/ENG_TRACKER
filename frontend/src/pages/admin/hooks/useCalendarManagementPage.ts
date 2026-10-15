@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useCalendarManagement } from "@/hooks/useCalendarManagement";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { buildHolidayFormValues } from "./useCalendarManagementPageHelpers";
@@ -7,8 +8,25 @@ import type { HolidayPayload } from "@/services/calendarAdminService";
 import type { PublicHoliday, Team } from "@/types";
 
 export const useCalendarManagementPage = () => {
-  const [activeTab, setActiveTab] = useState<"team-groups" | "workspaces" | "holidays">(
-    "team-groups"
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get("tab");
+  const activeTab: "team-groups" | "workspaces" | "holidays" =
+    urlTab === "holidays" || urlTab === "workspaces" || urlTab === "team-groups"
+      ? urlTab
+      : "team-groups";
+
+  const setActiveTab = useCallback(
+    (tab: "team-groups" | "workspaces" | "holidays") => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("tab", tab);
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
   );
   const [selectedTeams, setSelectedTeams] = useState<Set<number>>(new Set());
   const [bulkGroup, setBulkGroup] = useState("");
@@ -50,6 +68,7 @@ export const useCalendarManagementPage = () => {
     clearGroupMutation,
     holidayMutation,
     deleteHolidayMutation,
+    syncPayrollMutation,
   } = useCalendarManagement({
     onHolidaySuccess: () => {
       setHolidayFormOpen(false);
@@ -198,6 +217,7 @@ export const useCalendarManagementPage = () => {
     clearGroupMutation,
     holidayMutation,
     deleteHolidayMutation,
+    syncPayrollMutation,
     resetHolidayForm,
     openHolidayForm,
     openEdit,

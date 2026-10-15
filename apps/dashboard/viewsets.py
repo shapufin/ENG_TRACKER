@@ -1038,6 +1038,21 @@ class PublicHolidayViewSet(HbprBlockedMixin, CacheInvalidationMixin, viewsets.Mo
         instance.delete()
         self.invalidate_related_cache()
 
+    @action(detail=False, methods=['post'], url_path='sync_payroll')
+    def sync_payroll(self, request):
+        """Synchronize holidays between HR (PublicHoliday) and Payroll (PayrollWorkCalendar)."""
+        self._ensure_admin()
+        year = request.data.get('year')
+        if year is not None:
+            try:
+                year = int(year)
+            except (ValueError, TypeError):
+                year = None
+        from apps.dashboard.services.holiday_sync import sync_holidays_between_hr_and_payroll
+        result = sync_holidays_between_hr_and_payroll(year=year)
+        self.invalidate_related_cache()
+        return Response(result)
+
 
 class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
     """ViewSet for SiteBranding singleton - used for global settings like site name and logo."""

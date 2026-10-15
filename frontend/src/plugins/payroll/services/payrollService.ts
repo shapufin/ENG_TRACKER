@@ -239,6 +239,21 @@ export const payrollService = {
     await api.delete(`${BASE}/work-calendar/${calendarId}/holidays/${workdayId}/remove/`);
   },
 
+  async syncHolidays(calendarId: number): Promise<{
+    status: string;
+    synced_to_hr: number;
+    synced_to_payroll: number;
+    total_holidays: number;
+  }> {
+    const { data } = await api.post<{
+      status: string;
+      synced_to_hr: number;
+      synced_to_payroll: number;
+      total_holidays: number;
+    }>(`${BASE}/work-calendar/${calendarId}/sync_holidays/`);
+    return data;
+  },
+
   // --- Runs ---
   async getRuns(params?: Record<string, unknown>): Promise<PayrollRun[]> {
     const { data } = await api.get<PayrollRun[] | PaginatedResponse<PayrollRun>>(`${BASE}/runs/`, {

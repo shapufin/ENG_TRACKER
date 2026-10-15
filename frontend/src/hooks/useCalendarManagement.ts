@@ -133,6 +133,35 @@ export const useCalendarManagement = (options?: UseCalendarManagementOptions) =>
     onError: (err: unknown) => handleApiError(err),
   });
 
+  const syncPayrollMutation = useMutation({
+    mutationFn: (year?: number | void) =>
+      calendarAdminService.syncPayroll(typeof year === "number" ? year : undefined),
+    onSuccess: (data: {
+      status: string;
+      synced_to_hr?: number;
+      synced_to_payroll?: number;
+      total_holidays?: number;
+      reason?: string;
+    }) => {
+      qc.invalidateQueries({ queryKey: ["admin", "holidays"] });
+      qc.invalidateQueries({ queryKey: ["payroll-calendars"] });
+      qc.invalidateQueries({ queryKey: ["payroll-calendar-month-summary"] });
+      qc.invalidateQueries({ queryKey: ["leave-balances"] });
+      if (data.status === "skipped") {
+        toast.info(
+          data.reason === "payroll_plugin_disabled"
+            ? "Payroll plugin is currently disabled. Holidays remain in the global company catalog."
+            : "Payroll plugin is not installed."
+        );
+        return;
+      }
+      toast.success(
+        `Synchronized: ${data.synced_to_hr ?? 0} added to HR, ${data.synced_to_payroll ?? 0} updated in Payroll (${data.total_holidays ?? 0} total)`
+      );
+    },
+    onError: (err: unknown) => handleApiError(err),
+  });
+
   return {
     teams: teamsData?.results ?? [],
     calendarGroups,
@@ -147,5 +176,6 @@ export const useCalendarManagement = (options?: UseCalendarManagementOptions) =>
     clearGroupMutation,
     holidayMutation,
     deleteHolidayMutation,
+    syncPayrollMutation,
   };
 };
