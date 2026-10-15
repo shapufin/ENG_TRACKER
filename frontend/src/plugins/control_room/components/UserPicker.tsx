@@ -22,6 +22,8 @@ interface UserPickerProps {
   excludeUserIds?: number[];
   placeholder?: string;
   disabled?: boolean;
+  /** Shown for `value` until a search result supplies the full record (pre-selected user). */
+  fallbackUser?: ControlRoomEligibleUser;
 }
 
 export const UserPicker: React.FC<UserPickerProps> = ({
@@ -30,6 +32,7 @@ export const UserPicker: React.FC<UserPickerProps> = ({
   excludeUserIds = [],
   placeholder = "Search by username or email...",
   disabled = false,
+  fallbackUser,
 }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -53,8 +56,12 @@ export const UserPicker: React.FC<UserPickerProps> = ({
   );
 
   const selectedUser = useMemo(
-    () => (value ? searchUsers.find((u) => u.id === value) : null),
-    [value, searchUsers]
+    () =>
+      value
+        ? (searchUsers.find((u) => u.id === value) ??
+          (fallbackUser?.id === value ? fallbackUser : null))
+        : null,
+    [value, searchUsers, fallbackUser]
   );
 
   const handleClear = () => {
@@ -75,8 +82,10 @@ export const UserPicker: React.FC<UserPickerProps> = ({
             <UserIcon className="text-muted-foreground mr-2 h-4 w-4" />
             {selectedUser ? (
               <span className="truncate">
-                {selectedUser.username}{" "}
-                <span className="text-muted-foreground">· {selectedUser.email}</span>
+                {selectedUser.username}
+                {selectedUser.email && (
+                  <span className="text-muted-foreground"> · {selectedUser.email}</span>
+                )}
               </span>
             ) : value ? (
               <span className="text-muted-foreground">User #{value}</span>

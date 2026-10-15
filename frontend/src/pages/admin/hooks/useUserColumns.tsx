@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import type { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { UserCell } from "@/components/admin/UserCell";
 import { RowActions } from "@/components/ui/RowActions";
@@ -18,6 +17,8 @@ interface UseUserColumnsOptions {
   showCRScopeTeams?: boolean;
   /** Opens the record detail panel for a row. Omit to render the name as plain text. */
   onView?: (profile: UserProfile) => void;
+  /** Opens the in-place Control Room grant dialog for a row. */
+  onGrantCR?: (profile: UserProfile) => void;
 }
 
 const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
@@ -117,8 +118,8 @@ export const useUserColumns = (
     crAccessByUserId = new Map<number, CRAccessRecord>(),
     showCRScopeTeams = false,
     onView,
+    onGrantCR,
   } = options;
-  const navigate = useNavigate();
 
   return useMemo(() => {
     const base: AppColumnDef<UserProfile>[] = [
@@ -327,13 +328,15 @@ export const useUserColumns = (
                   tone: "danger" as const,
                   onClick: () => onDelete(row.original),
                 },
-                ...(crActive && !crAccessUserIds.has(userId) && userId
+                // Any existing record (even inactive) is managed on the CR page;
+                // a second grant would be rejected as a duplicate.
+                ...(crActive && onGrantCR && userId && !crAccessByUserId.has(userId)
                   ? [
                       {
                         label: `Grant Control Room access to ${username}`,
                         shortLabel: "Grant CR access",
                         icon: Shield,
-                        onClick: () => navigate(`/admin/control-room/access?user_id=${userId}`),
+                        onClick: () => onGrantCR(row.original),
                       },
                     ]
                   : []),
@@ -353,7 +356,7 @@ export const useUserColumns = (
     crAccessUserIds,
     crAccessByUserId,
     showCRScopeTeams,
-    navigate,
     onView,
+    onGrantCR,
   ]);
 };

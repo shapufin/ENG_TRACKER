@@ -9,6 +9,8 @@ import { UsersPageHeader } from "./components/UsersPageHeader";
 import { UsersPageContent } from "./components/UsersPageContent";
 import { UsersPageDialogs } from "./components/UsersPageDialogs";
 import { UserDetailPanel } from "@/components/admin/UserDetailPanel";
+import { PluginGrantCRAccessDialog } from "@/components/admin/PluginCRUserDialogs";
+import type { Team, UserProfile } from "@/types";
 
 export const UsersPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -18,6 +20,7 @@ export const UsersPage: React.FC = () => {
   // panel through the normal ["admin"] invalidation — never a stale snapshot.
   const viewing =
     viewingId != null ? (state.profiles?.find((p) => p.id === viewingId) ?? null) : null;
+  const [grantCRProfile, setGrantCRProfile] = useState<UserProfile | null>(null);
   const columns = useUserColumns(
     state.openEdit,
     state.openReset,
@@ -28,6 +31,7 @@ export const UsersPage: React.FC = () => {
       crAccessByUserId: state.crAccessByUserId,
       showCRScopeTeams: state.isCROnlyAdmin,
       onView: (profile) => setViewingId(profile.id),
+      onGrantCR: setGrantCRProfile,
     }
   );
 
@@ -52,6 +56,24 @@ export const UsersPage: React.FC = () => {
     >
       <UsersPageContent state={state} columns={columns} />
       <UsersPageDialogs state={state} />
+      {grantCRProfile && (
+        <PluginGrantCRAccessDialog
+          key={grantCRProfile.user.id}
+          open
+          onOpenChange={(open) => {
+            if (!open) setGrantCRProfile(null);
+          }}
+          teams={(state.teamsData || []) as unknown as Team[]}
+          existingUserIds={Array.from(state.crAccessByUserId.keys())}
+          initialUserId={grantCRProfile.user.id}
+          initialUser={{
+            id: grantCRProfile.user.id,
+            username: grantCRProfile.user.username,
+            email: grantCRProfile.user.email ?? "",
+            full_name: grantCRProfile.user.full_name,
+          }}
+        />
+      )}
       <UserDetailPanel
         profile={viewing}
         onOpenChange={(open) => {
