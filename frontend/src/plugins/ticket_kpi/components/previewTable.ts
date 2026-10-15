@@ -8,3 +8,10 @@ export const previewColumns = (row: Record<string, unknown>): string[] =>
 
 export const previewCell = (value: unknown): string =>
   value === null || value === undefined || value === "" ? "—" : String(value);
+
+/** The API sends null for a metric that was not computed. */
+export const formatHours = (value: number | null | undefined): string =>
+  value != null ? `${value}h` : "N/A";
+
+export const formatPct = (value: number | null | undefined): string =>
+  value != null ? `${value}%` : "N/A";
