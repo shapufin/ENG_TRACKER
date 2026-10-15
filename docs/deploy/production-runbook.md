@@ -51,13 +51,13 @@ headers (`X-Forwarded-Proto`, real client IP) and the trusted subnet.
 
 **Rate-limit key.** The `/api/` limit (20 r/s, burst 40) and the admin-login
 limit are keyed on nginx's `$remote_addr`, which is the real client only when
-the ingress sends the header named in `real_ip_header` (`CF-Connecting-IP`) and
-its network is listed in `set_real_ip_from`. Behind any other proxy that is not
+the ingress sends the header named by `INGRESS_REAL_IP_HEADER` (`CF-Connecting-IP`) and
+its network is covered by `INGRESS_TRUSTED_CIDR`. Behind any other proxy that is not
 configured, every user shares the proxy's address and one 20 r/s bucket, so
 normal dashboard loads return 429. Before go-live, confirm with
 `curl -s -H 'CF-Connecting-IP: 203.0.113.7' ...` (or your proxy's header) that
-the backend logs the forwarded address, or change `real_ip_header` and
-`set_real_ip_from` in `frontend/docker/nginx.conf.template`.
+the backend logs the forwarded address, or set `INGRESS_REAL_IP_HEADER` and
+`INGRESS_TRUSTED_CIDR` in `.env` and restart the `frontend` container.
 
 ## 3. Backups
 

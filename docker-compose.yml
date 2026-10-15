@@ -169,6 +169,12 @@ services:
       # configured (ONLYOFFICE_DOCUMENT_SERVER_URL on the backend service,
       # below) — the CSP directive simply omits it.
       ONLYOFFICE_ORIGIN: ${ONLYOFFICE_ORIGIN:-}
+      # Ingress trust boundary: the network your reverse proxy reaches nginx from
+      # (one CIDR) and the header it sets with the real client IP. Without a match
+      # every user shares the proxy's address and one /api/ rate-limit bucket.
+      # Host proxy via the published port: the bridge gateway, e.g. 172.28.0.1/32.
+      INGRESS_TRUSTED_CIDR: ${INGRESS_TRUSTED_CIDR:-172.28.0.0/24}
+      INGRESS_REAL_IP_HEADER: ${INGRESS_REAL_IP_HEADER:-CF-Connecting-IP}
     restart: unless-stopped
     depends_on:
       backend:
