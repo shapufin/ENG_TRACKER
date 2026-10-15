@@ -151,7 +151,10 @@ class HbprEscalationLeakTests(Phase6Base):
         return TLScorecardViewSet.as_view({'get': name})(request)
 
     def test_hbpr_escalations_have_no_leave_and_no_out_of_scope_subjects(self):
+        # Land on a Monday: leave must span a business day, and today + 30
+        # is a weekend on some calendar days.
         start = self.today + timedelta(days=30)
+        start += timedelta(days=-start.weekday() % 7)
         LeaveRequest.objects.create(
             user=self.al_member, request_type='vacation', start_date=start,
             end_date=start + timedelta(days=1), status='pending')
