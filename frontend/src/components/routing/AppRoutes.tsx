@@ -8,7 +8,10 @@ import { HomeRedirect } from "@/components/routing/HomeRedirect";
 import { AppShell } from "@/components/layout/AppShell";
 import { AdminShell } from "@/components/layout/AdminShell";
 import { LoginPage } from "@/pages/LoginPage";
-import { DashboardPage } from "@/pages/dashboard/DashboardPage";
+// Lazy so the login page does not download recharts (the dashboard's charts).
+const DashboardPage = React.lazy(() =>
+  import("@/pages/dashboard/DashboardPage").then((m) => ({ default: m.DashboardPage }))
+);
 const OvertimePage = React.lazy(() =>
   import("@/pages/overtime/OvertimePage").then((m) => ({ default: m.OvertimePage }))
 );
@@ -89,8 +92,6 @@ const PluginManagementPage = React.lazy(() =>
   import("@/pages/admin/PluginManagementPage").then((m) => ({ default: m.PluginManagementPage }))
 );
 
-const withErrorBoundary = (element: React.ReactNode) => <ErrorBoundary>{element}</ErrorBoundary>;
-
 const withSuspense = (element: React.ReactNode) => (
   <ErrorBoundary>
     <Suspense fallback={<PageLoader />}>{element}</Suspense>
@@ -141,7 +142,7 @@ export const AppRoutes: React.FC = () => {
             {
               element: <CRUserGuard />,
               children: [
-                { path: "/dashboard", element: withErrorBoundary(<DashboardPage />) },
+                { path: "/dashboard", element: withSuspense(<DashboardPage />) },
                 {
                   element: <HoursRoute />,
                   children: [

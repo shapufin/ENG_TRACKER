@@ -2,7 +2,6 @@
 Restore preview (read-only) and commit (destructive, transactional).
 """
 import os
-import shutil
 from collections import defaultdict
 
 from django.apps import apps as django_apps
@@ -90,17 +89,50 @@ def preview(file_obj) -> dict:
     }
 
 
+# SEC-04: cap on the total uncompressed media a restore may write.
+MAX_MEDIA_UNCOMPRESSED_BYTES = 4 * 1024 ** 3
+
+
+def _safe_media_target(media_root: str, rel_path: str) -> str:
+    """Resolve ``rel_path`` under ``media_root`` or raise (zip-slip guard).
+
+    Same commonpath pattern as ``config.views.protected_media``.
+    """
+    target = os.path.normpath(os.path.join(media_root, rel_path))
+    try:
+        inside = os.path.commonpath([target, media_root]) == media_root
+    except ValueError:  # different drives on Windows
+        inside = False
+    if not inside or target == media_root:
+        raise RestoreError(f'Unsafe media path in backup: {rel_path!r}')
+    return target
+
+
 def _extract_media(archive) -> int:
-    media_root = str(settings.MEDIA_ROOT)
+    media_root = os.path.normpath(str(settings.MEDIA_ROOT))
+    members = [
+        info for info in archive.infolist()
+        if info.filename.startswith('media/') and not info.filename.endswith('/')
+    ]
+    # Validate every member before writing anything.
+    targets = [
+        _safe_media_target(media_root, info.filename[len('media/'):])
+        for info in members
+    ]
+    if sum(info.file_size for info in members) > MAX_MEDIA_UNCOMPRESSED_BYTES:
+        raise RestoreError('Backup media exceeds the maximum allowed size.')
+
     count = 0
-    for name in archive.namelist():
-        if not name.startswith('media/') or name.endswith('/'):
-            continue
-        rel_path = name[len('media/'):]
-        target_path = os.path.join(media_root, rel_path)
+    written = 0
+    for info, target_path in zip(members, targets):
         os.makedirs(os.path.dirname(target_path), exist_ok=True)
-        with archive.open(name) as src, open(target_path, 'wb') as dst:
-            shutil.copyfileobj(src, dst)
+        with archive.open(info) as src, open(target_path, 'wb') as dst:
+            # Headers can lie about the size: also bound the bytes really written.
+            while chunk := src.read(1024 * 1024):
+                written += len(chunk)
+                if written > MAX_MEDIA_UNCOMPRESSED_BYTES:
+                    raise RestoreError('Backup media exceeds the maximum allowed size.')
+                dst.write(chunk)
         count += 1
     return count
 

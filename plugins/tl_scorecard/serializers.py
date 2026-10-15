@@ -106,8 +106,9 @@ class EprProgressSerializer(serializers.Serializer):
 class ScorecardSerializer(serializers.Serializer):
     month = serializers.CharField()
     team_size = serializers.IntegerField()
-    leave = LeaveSlaSerializer()
-    overtime = OvertimeTurnaroundSerializer()
+    # Omitted for HBPR-only viewers (leave/overtime are denied to them).
+    leave = LeaveSlaSerializer(required=False)
+    overtime = OvertimeTurnaroundSerializer(required=False)
     meetings = MeetingComplianceSerializer()
     idle = IdleMetricsSerializer()
     review_deliveries_ytd = serializers.IntegerField()
@@ -193,6 +194,7 @@ class MeetingSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id', 'organizer', 'recorded_by', 'recorded_at', 'shared_summary', 'shared_at',
+            'notes_published_at',  # the 24h KPI clock: stamped by the server only
         ]
 
     def to_representation(self, instance):

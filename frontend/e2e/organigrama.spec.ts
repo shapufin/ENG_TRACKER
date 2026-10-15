@@ -344,11 +344,11 @@ test.describe("Organigrama plugin", () => {
 
       await nodes.nth(0).click();
       await nodes.nth(1).click({ modifiers: ["Control"] });
-      await page.getByRole("button", { name: "Group" }).click();
+      await page.getByRole("button", { name: "Group", exact: true }).click();
       await expect(nodes).toHaveCount(3);
 
       await nodes.filter({ hasText: "Group" }).click();
-      await page.getByRole("button", { name: "Ungroup" }).click();
+      await page.getByRole("button", { name: "Ungroup", exact: true }).first().click();
       await expect(nodes).toHaveCount(2);
 
       await nodes.nth(0).click();

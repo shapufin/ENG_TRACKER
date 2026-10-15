@@ -238,6 +238,10 @@ def revoke_role(user, role_code: str, team=None) -> int:
         user=user, role=role, team=team, is_active=True
     ).update(is_active=False)
     _refresh_role_cache(user)
+    # .update() sends no post_save, so the signal that normally clears the
+    # permission cache never fires.
+    from core.utils.cache import invalidate_permission_cache_for_user
+    invalidate_permission_cache_for_user(user)
     return updated
 
 

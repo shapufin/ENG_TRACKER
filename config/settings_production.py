@@ -7,7 +7,15 @@ from .settings import *  # noqa: F403
 
 DEBUG = False
 
-ALLOWED_HOSTS = [h for h in os.getenv('ALLOWED_HOSTS', '').split(',') if h]
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '').split(',') if h.strip()]
+# DEP-10: an empty list makes every request a 400 in production; fail at boot
+# with a clear message instead (same pattern as the SECRET_KEY guard below).
+if not ALLOWED_HOSTS:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "ALLOWED_HOSTS must list at least one hostname in production "
+        "(comma-separated, e.g. ALLOWED_HOSTS=app.example.com)."
+    )
 
 # P3-8: Strip django_extensions from production INSTALLED_APPS.
 # It adds management commands (shell_plus, runserver_plus, sqldiff,
@@ -52,6 +60,13 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 # P2-7: session cookie hardening
 SESSION_COOKIE_HTTPONLY = True
+# DEP-14: Django's default session lifetime is two weeks. The SPA authenticates
+# with JWTs; the session only backs the Django admin, so keep it to a work day.
+SESSION_COOKIE_AGE = 8 * 60 * 60
+# DEP-14: explicit request-body ceiling for non-file data (Django's default,
+# 2.5 MiB). Uploaded files stream to disk and are exempt from this limit, so no
+# existing upload needs a higher value; raise it only with evidence.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'
@@ -67,7 +82,8 @@ SECURE_HSTS_PRELOAD = True
 X_FRAME_OPTIONS = 'DENY'
 
 # Disable API docs (schema + Swagger/Redoc UI) in production so
-# unauthenticated users cannot enumerate endpoints (P0-4).
+# unauthenticated users cannot enumerate endpoints (P0-4). Hardcoded on
+# purpose: there is no env switch (DEP-11).
 ENABLE_API_DOCS = False
 
 # DRF throttle trust: set NUM_PROXIES so DRF extracts the real client IP
@@ -78,6 +94,18 @@ ENABLE_API_DOCS = False
 REST_FRAMEWORK = {
     **REST_FRAMEWORK,  # noqa: F405 — inherit base config
     'NUM_PROXIES': 1,
+    # SEC-01: explicit literals. The base settings compute the scoped rates as
+    # None while their DEBUG env default is on, and DEBUG is only forced False
+    # above, after that dict was built.
+    'DEFAULT_THROTTLE_RATES': {
+        **REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'],  # noqa: F405
+        'auth': '20/min',
+        'upload': '30/hour',
+        'export': '20/hour',
+        'evidence_upload': '60/hour',
+        'control_room': '120/hour',
+        'health': '60/min',
+    },
 }
 
 # Database
@@ -89,6 +117,12 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD'),
         'HOST': os.getenv('DB_HOST'),
         'PORT': os.getenv('DB_PORT', '5432'),
+        # DEP-04: reuse connections instead of a new Postgres+SSL handshake per
+        # request. With sync gunicorn each worker holds one connection, so
+        # replicas x GUNICORN_WORKERS must stay below Postgres max_connections.
+        # CONN_HEALTH_CHECKS drops a stale persistent connection before reuse.
+        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '60')),
+        'CONN_HEALTH_CHECKS': True,
         # P1-10: SSL connection to the database.
         # 'prefer' = use SSL if available (local Docker), 'require' = force SSL
         # (managed DBs like RDS/Azure Postgres). Set via DB_SSL_MODE env var.
@@ -131,6 +165,11 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
+        # DEP-03: stdout/stderr so `docker logs` shows application logs.
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+        },
         'file': {
             'level': 'ERROR',
             'class': 'logging.handlers.RotatingFileHandler',
@@ -146,21 +185,30 @@ LOGGING = {
             'backupCount': 10,
         },
     },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
     'loggers': {
         'django': {
             'handlers': ['file'],
             'level': 'ERROR',
             'propagate': True,
         },
+        # Request errors (4xx/5xx) reach the root console handler.
+        'django.request': {
+            'level': 'WARNING',
+            'propagate': True,
+        },
         # P2-1: security events — auth failures, permission denied,
         # suspicious requests, etc.
         'django.security': {
-            'handlers': ['security_file'],
+            'handlers': ['security_file', 'console'],
             'level': 'INFO',
             'propagate': False,
         },
         'engtracker.security': {
-            'handlers': ['security_file'],
+            'handlers': ['security_file', 'console'],
             'level': 'INFO',
             'propagate': False,
         },
@@ -201,6 +249,11 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # noqa: F405
 # For CDN/S3 deployments, set this to False and use django-storages.
 SERVE_MEDIA_IN_PROD = True
 
+# SEC-18: Web Push keys come from VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY only.
+# Without them the push features raise ImproperlyConfigured instead of
+# generating throwaway keys into the container filesystem.
+VAPID_REQUIRE_ENV = True
+
 # Cache
 CACHES = {
     'default': {
@@ -208,6 +261,14 @@ CACHES = {
         'LOCATION': os.getenv('REDIS_URL', 'redis://localhost:6379/0'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            # DEP-05: mirror the dev block in settings.py. Short socket timeouts
+            # plus IGNORE_EXCEPTIONS turn a Redis outage into cache misses
+            # instead of 500s. Trade-off: DRF throttles live in this cache, so
+            # they fail open while Redis is down (availability over throttling;
+            # nginx still rate-limits /api/ and admin login).
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+            'IGNORE_EXCEPTIONS': True,
         }
     }
 }

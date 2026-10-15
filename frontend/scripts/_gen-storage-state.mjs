@@ -1,6 +1,8 @@
 // One-shot: generate a Playwright storageState JSON for the admin role
 // so designlang can crawl authenticated pages. Uses the same Django-shell
 // token pregeneration as scrape-screenshots.mjs.
+// Run with DJANGO_SETTINGS_MODULE=config.settings_e2e: the e2e_admin user exists
+// only in db.e2e.sqlite3 (the script's setdefault keeps an exported value).
 import { execSync } from "node:child_process";
 import { writeFileSync, existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
@@ -17,7 +19,7 @@ django.setup()
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 User = get_user_model()
-user = User.objects.get(username='admin')
+user = User.objects.get(username='e2e_admin')
 refresh = RefreshToken.for_user(user)
 profile = getattr(user, 'profile', None)
 user_data = {

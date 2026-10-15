@@ -7,13 +7,18 @@ export const useNotificationsPage = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const fetchNotifications = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await notificationService.getNotifications();
-      setNotifications(data);
+      const data = await notificationService.getNotificationPage(1);
+      setNotifications(data.results);
+      setPage(1);
+      setHasMore(data.hasMore);
     } catch {
       toast.error("Failed to fetch notifications");
     } finally {
@@ -25,6 +30,23 @@ export const useNotificationsPage = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNotifications();
   }, [fetchNotifications]);
+
+  const handleLoadMore = async () => {
+    setIsLoadingMore(true);
+    try {
+      const data = await notificationService.getNotificationPage(page + 1);
+      setNotifications((prev) => {
+        const seen = new Set(prev.map((n) => n.id));
+        return [...prev, ...data.results.filter((n) => !seen.has(n.id))];
+      });
+      setPage(page + 1);
+      setHasMore(data.hasMore);
+    } catch {
+      toast.error("Failed to load more notifications");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   const handleMarkRead = async (id: number) => {
     try {
@@ -58,6 +80,9 @@ export const useNotificationsPage = () => {
   return {
     notifications,
     isLoading,
+    hasMore,
+    isLoadingMore,
+    handleLoadMore,
     searchQuery,
     setSearchQuery,
     filteredNotifications,

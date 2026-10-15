@@ -155,7 +155,16 @@ class AnalyticsMetricViewSet(PluginPermissionMixin,
     plugin_name = 'analytics'
     # The export action requires the dedicated 'export' plugin permission
     # (not just 'view'); other reads fall back to 'view'.
-    permission_action_map = {'download_report': 'export'}
+    permission_action_map = {
+        'download_report': 'export',
+        # A-04: background export jobs carry the same data as the export
+        # endpoint, so every job action needs the export grant.
+        'create_export_job': 'export',
+        'list_export_jobs': 'export',
+        'export_job_status': 'export',
+        'export_job_download': 'export',
+    }
+    MAX_EXPORT_RANGE_DAYS = 400
     queryset = AnalyticsMetric.objects.select_related('user', 'team')
     serializer_class = AnalyticsMetricSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -633,6 +642,23 @@ class AnalyticsMetricViewSet(PluginPermissionMixin,
         if report_format not in ('excel', 'csv'):
             return Response({'error': 'Invalid format'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # A-03: bound the explicit date range of a background export.
+        raw_from, raw_to = request.data.get('date_from'), request.data.get('date_to')
+        if raw_from and raw_to:
+            try:
+                range_from = datetime.strptime(str(raw_from), '%Y-%m-%d').date()
+                range_to = datetime.strptime(str(raw_to), '%Y-%m-%d').date()
+            except ValueError:
+                return Response({'error': 'date_from and date_to must be YYYY-MM-DD.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            if range_to < range_from:
+                return Response({'error': 'date_to must not be before date_from.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            if (range_to - range_from).days > self.MAX_EXPORT_RANGE_DAYS:
+                return Response(
+                    {'error': f'Date range must not exceed {self.MAX_EXPORT_RANGE_DAYS} days.'},
+                    status=status.HTTP_400_BAD_REQUEST)
+
         filter_params = {
             'period': request.data.get('period', 'month'),
             'date_from': request.data.get('date_from'),
@@ -746,7 +772,7 @@ class AnalyticsConfigurationViewSet(PluginPermissionMixin, viewsets.ModelViewSet
         """Get the current configuration or create default if none exists."""
         config = AnalyticsConfiguration.objects.first()
         if not config:
-            config = AnalyticsConfiguration.objects.create()
+            config = AnalyticsConfiguration.objects.create(pk=1)
         serializer = self.get_serializer(config)
         return Response(serializer.data)
 
@@ -773,6 +799,15 @@ class ScheduledReportViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         if request.user.is_superuser or request.user.is_staff:
             return True
         return self._has_plugin_permission(request.user, 'analytics', 'manage')
+
+    def get_queryset(self):
+        # SEC-07: a schedule lists recipient emails and report filters. The
+        # model has no owner, so visibility follows the manage grant (the SPA
+        # only renders this panel for those users); view-only users see none.
+        queryset = super().get_queryset()
+        if self._check_manage_permission(self.request):
+            return queryset
+        return queryset.none()
 
     def create(self, request, *args, **kwargs):
         if not self._check_manage_permission(request):
@@ -836,6 +871,19 @@ class ScheduledReportViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                 )
                 content_type = 'text/csv'
                 file_ext = 'csv'
+            elif report.report_format == 'pdf':
+                # A-02: same PDF branch as run_scheduled_reports.
+                report_data = AnalyticsReportGenerator.generate_pdf_report(
+                    period, date_from, date_to, teams, users, statuses, categories
+                )
+                content_type = 'application/pdf'
+                file_ext = 'pdf'
+
+            if not report_data:
+                return Response(
+                    {'error': 'Report could not be generated; nothing was sent.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             if report_data:
                 subject = f"Scheduled Analytics Report: {report.name}"

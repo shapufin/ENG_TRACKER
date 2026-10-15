@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
+from core.utils.csv_injection_assert import PAYLOAD, assert_xlsx_neutralised
 from plugins.payroll.models import PayrollConfiguration, PayrollRuleSet, PayrollRun, WageAssignment
 from plugins.payroll.services.export_service import (
     OVERTIME_CATEGORY_LABELS,
@@ -212,6 +213,34 @@ class PayrollAdditionalRegressionTests(TestCase):
         self.assertEqual(workbook['Overtime Detail']['A2'].value, "'=1+1")
         # Row 1 is the bracket summary, row 3 the header, data starts row 4.
         self.assertEqual(workbook['Tax & Contributions Detail']['A4'].value, "'=1+1")
+
+    def test_excel_export_neutralises_hyperlink_in_employee_name(self):
+        self.employee.first_name = PAYLOAD
+        self.employee.last_name = ''
+        self.employee.save(update_fields=['first_name', 'last_name'])
+        run = self._new_run(12)
+
+        content = generate_payroll_excel(run).read()
+
+        assert_xlsx_neutralised(self, content)
+
+    def test_excel_export_neutralises_tab_and_formula_in_organization_name(self):
+        config = PayrollConfiguration.get_singleton()
+        config.organization_name = '	=cmd|calc'
+        config.save()
+        run = self._new_run(10)
+
+        workbook = openpyxl.load_workbook(io.BytesIO(generate_payroll_excel(run).read()))
+
+        self.assertEqual(workbook['Summary']['A1'].value, "'	=cmd|calc")
+
+    def test_excel_export_neutralises_hyperlink_in_organization_name(self):
+        config = PayrollConfiguration.get_singleton()
+        config.organization_name = PAYLOAD
+        config.save()
+        run = self._new_run(10)
+
+        assert_xlsx_neutralised(self, generate_payroll_excel(run).read())
 
     def test_excel_export_has_tax_and_contributions_sheet(self):
         run = self._new_run(3)

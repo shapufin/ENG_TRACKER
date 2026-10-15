@@ -46,6 +46,20 @@ def _max_upload_size_bytes() -> int:
     return config.get('max_upload_size_mb', 500) * 1024 * 1024
 
 
+ZIP_MAGIC = b'PK\x03\x04'
+
+
+def _require_zip_upload(uploaded):
+    """SEC-17: only a .zip carrying the zip signature reaches the archive reader."""
+    if not (getattr(uploaded, 'name', '') or '').lower().endswith('.zip'):
+        raise ValidationError('Upload a .zip backup archive.')
+    position = uploaded.tell()
+    head = uploaded.read(len(ZIP_MAGIC))
+    uploaded.seek(position)
+    if head != ZIP_MAGIC:
+        raise ValidationError('The uploaded file is not a zip archive.')
+
+
 @contextmanager
 def _resolve_archive_file(data):
     """Yield an open, seekable file object for the uploaded file or a stored backup.
@@ -61,6 +75,7 @@ def _resolve_archive_file(data):
                 f'Archive exceeds the maximum upload size of '
                 f'{_max_upload_size_bytes() // (1024 * 1024)} MB.'
             )
+        _require_zip_upload(uploaded)
         yield uploaded
         return
 

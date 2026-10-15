@@ -987,7 +987,7 @@ class PublicHolidayViewSet(HbprBlockedMixin, CacheInvalidationMixin, viewsets.Mo
             ids = sorted(
                 CalendarWorkspace.get_accessible_for_user(request.user).values_list('id', flat=True)
             )
-            scope = hashlib.md5(','.join(map(str, ids)).encode()).hexdigest()
+            scope = hashlib.md5(','.join(map(str, ids)).encode(), usedforsecurity=False).hexdigest()
         cache_key = CacheKey.dashboard_reference(
             'holidays', f'{build_query_fingerprint(request)}|ws={scope}'
         )
@@ -1063,7 +1063,7 @@ class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
             existing = SiteBranding.objects.first()
             serializer.update(existing, serializer.validated_data)
         else:
-            serializer.save()
+            serializer.save(pk=1)
         self.invalidate_related_cache()
 
     def perform_update(self, serializer):
@@ -1081,6 +1081,6 @@ class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
         branding = SiteBranding.objects.first()
         if not branding:
             # Create default branding if none exists
-            branding = SiteBranding.objects.create()
+            branding = SiteBranding.objects.create(pk=1)
         serializer = self.get_serializer(branding)
         return Response(serializer.data)

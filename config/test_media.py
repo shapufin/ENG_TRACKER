@@ -19,9 +19,26 @@ import os
 import shutil
 import tempfile
 
+from django.core.signals import request_finished
+from django.db import close_old_connections
 from django.test import TestCase, RequestFactory, override_settings
 
 from config.views import protected_media
+
+
+def _close_response(response):
+    """Close a response without letting ``request_finished`` close the DB.
+
+    ``HttpResponse.close()`` sends ``request_finished``, whose
+    ``close_old_connections`` receiver closes the connection. Inside a
+    ``TestCase`` transaction that poisons every later test in the class on
+    PostgreSQL ("connection already closed"); SQLite in-memory ignores it.
+    """
+    request_finished.disconnect(close_old_connections)
+    try:
+        response.close()
+    finally:
+        request_finished.connect(close_old_connections)
 
 
 class ProtectedMediaTests(TestCase):
@@ -80,3 +97,81 @@ class ProtectedMediaTests(TestCase):
         """Only GET is permitted (POST must be rejected with 405)."""
         response = self._call_view("evidence.txt", method="POST")
         self.assertEqual(response.status_code, 405)
+
+
+class ProtectedMediaAuthorizationTests(TestCase):
+    """SEC-03: deny by default, per-prefix authorizers (not just 'logged in')."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls._tmpdir = tempfile.mkdtemp(prefix="engtracker_media_authz_")
+        for rel in (
+            "backups/backup_20260101_000000.zip",
+            "kpi_evidence/2026/03/cert.pdf",
+            "analytics_exports/report.xlsx",
+            "onboarding/2026/03/doc.pdf",
+            "branding/logo.png",
+            "something_new/file.bin",
+        ):
+            full = os.path.join(cls._tmpdir, *rel.split("/"))
+            os.makedirs(os.path.dirname(full), exist_ok=True)
+            with open(full, "wb") as f:
+                f.write(b"x")
+        cls.factory = RequestFactory()
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls._tmpdir, ignore_errors=True)
+        super().tearDownClass()
+
+    def _get(self, path, user):
+        request = self.factory.get(f"/media/{path}")
+        request.user = user
+        with override_settings(MEDIA_ROOT=self._tmpdir):
+            response = protected_media(request, path)
+            if hasattr(response, "close"):
+                _close_response(response)
+            return response
+
+    def _user(self, username, **flags):
+        from django.contrib.auth import get_user_model
+        return get_user_model().objects.create_user(
+            username=username, password="x-unused-pw-123", **flags
+        )
+
+    def test_regular_user_cannot_read_private_prefixes(self):
+        employee = self._user("media_employee")
+        for rel in (
+            "backups/backup_20260101_000000.zip",
+            "kpi_evidence/2026/03/cert.pdf",
+            "analytics_exports/report.xlsx",
+            "onboarding/2026/03/doc.pdf",
+            "something_new/file.bin",
+        ):
+            with self.subTest(path=rel):
+                self.assertEqual(self._get(rel, employee).status_code, 403)
+
+    def test_regular_user_can_read_branding_logo(self):
+        employee = self._user("media_employee2")
+        self.assertEqual(self._get("branding/logo.png", employee).status_code, 200)
+
+    def test_staff_cannot_read_backups_but_can_read_other_prefixes(self):
+        staff = self._user("media_staff", is_staff=True)
+        self.assertEqual(
+            self._get("backups/backup_20260101_000000.zip", staff).status_code, 403
+        )
+        self.assertEqual(
+            self._get("kpi_evidence/2026/03/cert.pdf", staff).status_code, 200
+        )
+
+    def test_dotdot_inside_allowed_prefix_cannot_reach_private_prefix(self):
+        employee = self._user("media_employee3")
+        response = self._get("branding/../backups/backup_20260101_000000.zip", employee)
+        self.assertEqual(response.status_code, 403)
+
+    def test_superuser_can_read_backups(self):
+        root = self._user("media_root", is_staff=True, is_superuser=True)
+        self.assertEqual(
+            self._get("backups/backup_20260101_000000.zip", root).status_code, 200
+        )

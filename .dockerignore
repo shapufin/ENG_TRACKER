@@ -53,6 +53,7 @@ Thumbs.db
 .DS_Store
 
 # Environment files (secrets — never bake into image)
+.env*
 .env
 .env.*
 !.env.example
@@ -73,6 +74,16 @@ docs/
 *.patch
 time_tracker_export.json
 export_skills_plugin.py
+
+# DEP-01: database backups, PII exports and large local-only trees
+*.bak*
+db.sqlite3*
+migration/out
+migration/*.csv
+graphify-out
+.opencode
+.codex
+admin-gui-screenshots
 
 # Agent / design / scratch / worktree material
 .worktrees

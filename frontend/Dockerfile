@@ -35,13 +35,17 @@ RUN rm /etc/nginx/conf.d/default.conf
 # $remote_addr, $trusted_ingress used throughout this config) are never
 # touched since none of them collide with a real (conventionally uppercase)
 # env var name.
+# Defined-but-empty so envsubst always substitutes it; an undefined variable is
+# left as a literal ${ONLYOFFICE_ORIGIN}, which nginx rejects as an unknown variable.
+ENV ONLYOFFICE_ORIGIN=""
 COPY docker/nginx.conf.template /etc/nginx/templates/app.conf.template
 
 # Copy built assets
 COPY --from=builder /build/dist /usr/share/nginx/html
 
 # Install wget for the healthcheck & configure main nginx.conf for non-root (1001:1001)
-RUN apk add --no-cache wget && \
+# `apk upgrade` pulls the patched OpenSSL (CVE-2026-31789) that the pinned base tag predates.
+RUN apk upgrade --no-cache && apk add --no-cache wget && \
     sed -i 's|^user |#user |g' /etc/nginx/nginx.conf && \
     sed -i 's|/var/run/nginx.pid|/tmp/nginx.pid|g' /etc/nginx/nginx.conf && \
     sed -i 's|/run/nginx.pid|/tmp/nginx.pid|g' /etc/nginx/nginx.conf && \

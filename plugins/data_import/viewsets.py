@@ -26,6 +26,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 
 from core.mixins.permissions import PluginPermissionMixin
+from core.utils.csv_safe import xlsx_safe
 from core.utils.tabular_file import (
     read_tabular_file,
     resolve_mapping,
@@ -34,6 +35,7 @@ from core.utils.tabular_file import (
 from apps.plugins.models import Plugin
 
 from .models import ImportBatch, ImportProfile
+from .upload_validation import validate_upload
 from .serializers import ImportBatchSerializer, ImportProfileListSerializer, ImportProfileSerializer
 from .importers.registry import get_importer, is_registered, list_importers
 from .importers.base import ImportRowResult
@@ -217,7 +219,7 @@ def _template_frame(importer) -> pd.DataFrame:
         {header[f.key]: row.get(f.key, "") for f in fields}
         for row in importer.get_sample_rows()
     ]
-    return pd.DataFrame(rows, columns=columns)
+    return pd.DataFrame(rows, columns=columns).map(xlsx_safe)
 
 
 def _template_response(importer, file_format: str) -> HttpResponse:
@@ -400,6 +402,8 @@ class DataImportViewSet(ImporterAccessMixin, PluginPermissionMixin, viewsets.Gen
         max_size_mb = config.get('max_file_size_mb', 10)
         if file_obj.size and file_obj.size > max_size_mb * 1024 * 1024:
             raise ValueError(f'File exceeds maximum size of {max_size_mb} MB.')
+
+        validate_upload(file_obj)
 
         df = read_tabular_file(file_obj.read(), filename=file_obj.name)
 

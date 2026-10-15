@@ -836,10 +836,6 @@ class PayrollLine(models.Model):
         verbose_name = _('Payroll Line')
         verbose_name_plural = _('Payroll Lines')
         ordering = ['run', 'user__username']
-        indexes = [
-            models.Index(fields=['run', 'user']),
-            models.Index(fields=['user']),
-        ]
         constraints = [
             models.UniqueConstraint(
                 fields=['run', 'user'],

@@ -441,7 +441,7 @@ class ControlRoomAccessViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                 access = (
                     ControlRoomAccess.objects
                     .select_related('user', 'user__profile')
-                    .select_for_update()
+                    .select_for_update(of=('self',))
                     .get(user_id=target_user_id)
                 )
                 user = access.user

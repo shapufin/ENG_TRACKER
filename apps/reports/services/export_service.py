@@ -24,6 +24,7 @@ from django.db.models import Q, QuerySet
 from django.contrib.auth.models import User
 
 from apps.leave_management.models import counted_days
+from core.utils.csv_safe import csv_safe, xlsx_safe_row
 
 logger = logging.getLogger(__name__)
 
@@ -335,7 +336,7 @@ class ExportService:
                     row.append(rpp.strftime('%m/%Y') if rpp else '')
                     row.append('Yes' if rec.get('is_carried_over') else 'No')
                     row.append(rec['settlement'])
-                ws.append(row)
+                ws.append(xlsx_safe_row(row))
                 # Color-code the Type cell (column G = 7) by category
                 type_cell = ws.cell(row=ws.max_row, column=7)
                 type_cell.fill = ot_fill if rec['type'] == 'OT' else sb_fill
@@ -447,7 +448,7 @@ class ExportService:
                     rec['status'].capitalize(),
                     rec['reason'],
                 ]
-                ws.append(row)
+                ws.append(xlsx_safe_row(row))
             
             # Style data rows and set column widths
             self._style_data_rows(ws, border)
@@ -477,7 +478,9 @@ class ExportService:
         writer = csv.DictWriter(output, fieldnames=fieldnames)
         
         writer.writeheader()
-        writer.writerows(records)
+        writer.writerows(
+            {k: csv_safe(v) for k, v in rec.items()} for rec in records
+        )
         
         return output.getvalue()
     

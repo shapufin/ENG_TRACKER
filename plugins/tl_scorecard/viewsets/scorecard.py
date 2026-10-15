@@ -92,6 +92,30 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         for payload in payloads:
             payload['meetings']['one_on_one_compliance_pct'] = None
 
+    @staticmethod
+    def _hbpr_subject_ids(request, leader):
+        """The employees a non-owner HBPR viewer may see about `leader`'s team,
+        or None when the viewer is staff/the leader (no limit)."""
+        user = request.user
+        if is_staff_user(user) or leader.id == user.id:
+            return None
+        scope = get_hbpr_scope(user)
+        if scope is None:
+            return None
+        return set(scoreable_member_ids(leader)) & scope.user_ids
+
+    def _mask_hbpr_only(self, request, leader, *payloads):
+        """Leave and overtime are denied to HBPR-only viewers (CLAUDE.md), so
+        their scorecard omits those blocks and counts no leave escalations."""
+        if not is_hbpr_only(request.user):
+            return
+        escalations = len(escalation_candidates(
+            leader, self._hbpr_subject_ids(request, leader), include_leave=False))
+        for payload in payloads:
+            payload.pop('leave', None)
+            payload.pop('overtime', None)
+            payload['escalation_count'] = escalations
+
     @action(detail=False, methods=['get'])
     def scorecard(self, request):
         try:
@@ -106,6 +130,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
         data = build_scorecard(leader, month or tirana_today())
         self._mask_one_on_one(request, leader, data)
+        self._mask_hbpr_only(request, leader, data)
         return Response(ScorecardSerializer(data).data)
 
     @action(detail=False, methods=['get'])
@@ -131,6 +156,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
         points = scorecard_trend(leader, months, month or tirana_today())
         self._mask_one_on_one(request, leader, *points)
+        self._mask_hbpr_only(request, leader, *points)
         return Response(ScorecardSerializer(points, many=True).data)
 
     @action(detail=False, methods=['get'], url_path='team-members')
@@ -190,7 +216,11 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
     def escalations(self, request):
         """Computed candidates, not a log — see services.escalation_candidates."""
         leader = self._resolve_leader(request)
-        return Response(EscalationCandidateSerializer(escalation_candidates(leader), many=True).data)
+        candidates = escalation_candidates(
+            leader, self._hbpr_subject_ids(request, leader),
+            include_leave=not is_hbpr_only(request.user),
+        )
+        return Response(EscalationCandidateSerializer(candidates, many=True).data)
 
     @action(detail=False, methods=['get'], throttle_scope='export')
     def export(self, request):

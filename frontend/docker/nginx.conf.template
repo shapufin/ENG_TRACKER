@@ -21,23 +21,43 @@ geo $realip_remote_addr $trusted_ingress {
 # connections, same as every other $remote_addr use in this file).
 limit_req_zone $binary_remote_addr zone=admin_login:10m rate=5r/m;
 
+# DEP-09: general /api/ rate limit, same client-IP key as above. 20 r/s with a
+# burst of 40 is far above what one SPA session generates (a page load fires a
+# dozen requests), so it only bites scripted abuse. The tighter DRF scoped
+# throttles (auth, upload, export, ...) still apply behind it. Exceeding it
+# returns 429 (limit_req_status in the location), not nginx's default 503.
+limit_req_zone $binary_remote_addr zone=api:10m rate=20r/s;
+
 server {
     listen 8080;
     server_name _;
 
+    # DEP-09: do not advertise the nginx version in the Server header or on
+    # error pages.
+    server_tokens off;
+
     # nginx defaults to 1 MB, which 413s every evidence/import/document upload.
     # Ceiling = the largest backend limit (site-backup restore, 500 MB); each
-    # endpoint still enforces its own, smaller limit.
+    # endpoint still enforces its own, smaller limit. This global value covers
+    # every location, so no per-location override is needed.
     client_max_body_size 512m;
     root /usr/share/nginx/html;
     index index.html;
 
-    # Ingress: Cloudflare Tunnel today, Traefik planned later (see
-    # docker-compose.yml's cloudflared service comment for the switch-over).
+    # Ingress: this stack ships NO TLS terminator or tunnel (docker-compose.yml
+    # has no ingress service). An external reverse proxy (or a Cloudflare
+    # Tunnel connector) must terminate TLS and reach this container; see
+    # README.md -> Production Deployment -> Ingress for the requirements
+    # (X-Forwarded-Proto, real-client-IP header, trusted subnet).
     #
-    # `cloudflared` is the only thing that can reach this container (the
+    # The comments below describe the Cloudflare Tunnel shape, because
+    # CF-Connecting-IP is the header read by real_ip_header. For another proxy,
+    # change real_ip_header (e.g. X-Real-IP / X-Forwarded-For) and
+    # set_real_ip_from to that proxy's network.
+    #
+    # The ingress connector is the only thing that can reach this container (the
     # host's published port is bound to 127.0.0.1, see docker-compose.yml).
-    # It runs on this same docker network (frontend_net, pinned to
+    # When it runs on this same docker network (frontend_net, pinned to
     # 172.28.0.0/24) and forwards Cloudflare's CF-Connecting-IP header,
     # which Cloudflare's edge sets and a client cannot spoof past it.
     # real_ip_module rewrites $remote_addr from that header, but ONLY for
@@ -70,10 +90,14 @@ server {
     location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
-        # P2-9: security headers for static assets
+        # P2-9: security headers for static assets. nginx drops every
+        # server-level add_header as soon as a location declares its own, so
+        # each content-serving location repeats the full set (DEP-09).
         add_header X-Frame-Options "DENY" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
         try_files $uri =404;
     }
 
@@ -108,11 +132,19 @@ server {
         # empty token in the header value, which every browser's CSP parser
         # ignores.
         add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' ${ONLYOFFICE_ORIGIN}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://fcm.googleapis.com https://push.services.mozilla.com https://updates.push.services.mozilla.com ${ONLYOFFICE_ORIGIN}; frame-src 'self' ${ONLYOFFICE_ORIGIN}; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
+        # D6 (DEP-09): measure a strict script-src before dropping
+        # 'unsafe-inline' from the enforcing policy above. Report-Only blocks
+        # nothing; violations show in the browser console (no report-uri
+        # endpoint exists). Remove 'unsafe-inline' from the enforcing header
+        # once a browser sweep shows zero violations here.
+        add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' ${ONLYOFFICE_ORIGIN}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://fcm.googleapis.com https://push.services.mozilla.com https://updates.push.services.mozilla.com ${ONLYOFFICE_ORIGIN}; frame-src 'self' ${ONLYOFFICE_ORIGIN}; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
         try_files $uri $uri/ /index.html;
     }
 
     # Proxy API requests to backend
     location /api/ {
+        limit_req zone=api burst=40 nodelay;
+        limit_req_status 429;
         proxy_pass http://backend:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

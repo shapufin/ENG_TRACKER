@@ -105,6 +105,34 @@ class ScheduledReportSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['last_run_at', 'next_run_at', 'created_at', 'updated_at']
 
+    # A-01: recipients feed EmailMessage and filter_preset feeds the report
+    # generator, so both are validated at the API boundary.
+    LIST_FILTER_KEYS = ('teams', 'users', 'statuses', 'categories')
+    SCALAR_FILTER_KEYS = ('period', 'date_from', 'date_to')
+
+    def validate_recipients(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError('Recipients must be a list of email addresses.')
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from django.core.validators import validate_email
+        for address in value:
+            try:
+                validate_email(address)
+            except (DjangoValidationError, TypeError):
+                raise serializers.ValidationError(f'Invalid email address: {address!r}')
+        return value
+
+    def validate_filter_preset(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError('Filter preset must be an object.')
+        for key in self.LIST_FILTER_KEYS:
+            if key in value and not isinstance(value[key], list):
+                raise serializers.ValidationError(f'"{key}" must be a list.')
+        for key in self.SCALAR_FILTER_KEYS:
+            if value.get(key) is not None and not isinstance(value[key], str):
+                raise serializers.ValidationError(f'"{key}" must be a string.')
+        return value
+
 
 @extend_schema_serializer(component_name='AnalyticsReportTemplate')
 class ReportTemplateSerializer(serializers.ModelSerializer):

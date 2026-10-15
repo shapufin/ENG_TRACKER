@@ -31,6 +31,12 @@ export default defineConfig({
         // fallow-ignore-next-line complexity
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            // React is shared by recharts and the whole shell. Without its own
+            // chunk the bundler folds it into vendor-recharts, which then loads
+            // (111KB gz) on every page, login included.
+            if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'vendor-react';
+            // Same for clsx (cn(), cva).
+            if (/[\\/]node_modules[\\/]clsx[\\/]/.test(id)) return 'vendor-clsx';
             if (id.includes('recharts')) return 'vendor-recharts';
             if (id.includes('date-fns')) return 'vendor-date-fns';
             if (id.includes('framer-motion')) return 'vendor-framer';

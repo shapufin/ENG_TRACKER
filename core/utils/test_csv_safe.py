@@ -14,3 +14,13 @@ class CsvSafeTests(SimpleTestCase):
         self.assertEqual(csv_safe(4.5), 4.5)
         self.assertEqual(csv_safe(None), "")
         self.assertEqual(csv_safe(""), "")
+
+
+class XlsxSafeTests(SimpleTestCase):
+    def test_none_stays_none_and_text_is_neutralised(self):
+        from core.utils.csv_safe import xlsx_safe, xlsx_safe_row
+
+        self.assertIsNone(xlsx_safe(None))
+        self.assertEqual(xlsx_safe("=1+1"), "'=1+1")
+        self.assertEqual(xlsx_safe(-5), -5)
+        self.assertEqual(xlsx_safe_row(["a", None, "@x", 3]), ["a", None, "'@x", 3])

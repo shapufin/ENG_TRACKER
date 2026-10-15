@@ -180,7 +180,6 @@ class OvertimeLog(BaseModel):
             models.Index(fields=['user', 'status', 'date']),
             models.Index(fields=['requested_processing_period', 'status']),
             models.Index(fields=['user', 'requested_processing_period']),
-            models.Index(fields=['client']),
             models.Index(fields=['status']),
             models.Index(fields=['date']),
         ]

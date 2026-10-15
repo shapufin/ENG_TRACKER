@@ -67,9 +67,6 @@ class CalendarWorkspace(BaseModel):
         ordering = ['name']
         verbose_name = 'Calendar Workspace'
         verbose_name_plural = 'Calendar Workspaces'
-        indexes = [
-            models.Index(fields=['team']),
-        ]
         constraints = [
             models.UniqueConstraint(fields=['name'], name='calendar_workspace_name_unique'),
         ]

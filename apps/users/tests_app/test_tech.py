@@ -29,7 +29,7 @@ class TechModelAndAssignmentTests(TestCase):
             {
                 "username": "new-tech-user",
                 "email": "new-tech@example.com",
-                "password": "test123",
+                "password": "Sturdy-Pass-7391",
                 "techs": [infra.id],
             },
             format="json",

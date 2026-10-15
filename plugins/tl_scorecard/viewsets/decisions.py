@@ -75,6 +75,13 @@ class PIPRecordViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermission
                 raise ValidationError({'employee': 'You can only open a PIP for your own team members.'})
         serializer.save()
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.approved_at is not None or instance.status != 'draft':
+            return Response({'error': 'Only a draft PIP can be deleted; cancel it instead.'}, status=status.HTTP_409_CONFLICT)
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         # HBPR is read-only: participation in PIP decisions was removed, so
@@ -177,6 +184,13 @@ class PromotionFlagViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermis
             if employee.id not in scoreable_member_ids(self.request.user):
                 raise ValidationError({'employee': 'You can only nominate your own team members.'})
         serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.status != 'nominated':
+            return Response({'error': 'A decided promotion flag cannot be deleted.'}, status=status.HTTP_409_CONFLICT)
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['post'])
     def decide(self, request, pk=None):

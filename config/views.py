@@ -19,6 +19,26 @@ from django.http import FileResponse, Http404, HttpResponseForbidden
 from django.views.decorators.http import require_GET
 
 
+# SEC-03: deny by default. The SPA never links to /media/ for private files
+# (evidence, onboarding, exports and backups are all served through DRF
+# endpoints that scope per object), so this view is only for the site logo
+# plus staff tooling. Longest matching prefix wins; anything else is staff-only.
+_MEDIA_PREFIX_RULES = (
+    ("branding/", "authenticated"),
+    ("backups/", "superuser"),
+)
+
+
+def _may_read_media(user, path: str) -> bool:
+    normalized = path.replace("\\", "/").lstrip("/")
+    for prefix, rule in _MEDIA_PREFIX_RULES:
+        if normalized.startswith(prefix):
+            if rule == "superuser":
+                return bool(user.is_superuser)
+            return True
+    return bool(user.is_staff or user.is_superuser)
+
+
 @require_GET
 def protected_media(request, path: str):
     """Serve a media file with download-forcing + nosniff headers (P0-6).
@@ -65,6 +85,9 @@ def protected_media(request, path: str):
     user = getattr(request, "user", None)
     if not user or not user.is_authenticated:
         return HttpResponseForbidden("Authentication required.")
+
+    if not _may_read_media(user, os.path.relpath(full, media_root)):
+        return HttpResponseForbidden("Not allowed to read this file.")
 
     # Guess a content type for the download; fall back to octet-stream so
     # the browser never renders it inline based on extension.

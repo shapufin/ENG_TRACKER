@@ -6,11 +6,18 @@ PushSubscription records for that user.
 """
 
 import logging
+
+import requests
 from pywebpush import webpush, WebPushException
 from .models import PushSubscription
 from .vapid_utils import get_private_key, VAPID_SUBJECT
 
 logger = logging.getLogger(__name__)
+
+# pywebpush 2.5.0 ``webpush(..., timeout=)`` is forwarded to ``requests.post``;
+# left unset the request has no bound at all, so one dead push endpoint would
+# hold a gunicorn worker. 5 s per subscription keeps the worst case bounded.
+PUSH_TIMEOUT_SECONDS = 5
 
 # Payload is kept small — browsers limit push payload to ~4KB
 PUSH_PAYLOAD_TEMPLATE = {
@@ -62,6 +69,7 @@ def send_push_notification(user, title, message, url=None):
                 data=payload_json,
                 vapid_private_key=get_private_key(),
                 vapid_claims={"sub": VAPID_SUBJECT},
+                timeout=PUSH_TIMEOUT_SECONDS,
             )
             sent += 1
         except WebPushException as e:
@@ -72,8 +80,10 @@ def send_push_notification(user, title, message, url=None):
                     sub.is_active = False
                     sub.save(update_fields=['is_active'])
             failed += 1
-        except Exception as e:
-            logger.error("Unexpected push error for user_id=%s: %s", user.id, e)
+        except requests.exceptions.RequestException as e:
+            # Timeout / connection errors from the push service: transient, the
+            # subscription stays active and the request is never failed by it.
+            logger.warning("Push request error for user_id=%s: %s", user.id, e)
             failed += 1
 
     return sent, failed

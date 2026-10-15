@@ -121,6 +121,7 @@ class AuditLogViewSet(PluginPermissionMixin, viewsets.ReadOnlyModelViewSet):
         """Export audit logs as CSV."""
         import csv
         from django.http import HttpResponse
+        from core.utils.csv_safe import csv_safe
 
         queryset = self.get_queryset()
         
@@ -134,7 +135,7 @@ class AuditLogViewSet(PluginPermissionMixin, viewsets.ReadOnlyModelViewSet):
         ])
         
         for log in queryset:
-            writer.writerow([
+            writer.writerow([csv_safe(v) for v in (
                 log.user.username if log.user else 'Unknown',
                 log.get_action_display(),
                 log.description,
@@ -143,7 +144,7 @@ class AuditLogViewSet(PluginPermissionMixin, viewsets.ReadOnlyModelViewSet):
                 log.ip_address or '',
                 log.get_status_display(),
                 log.timestamp.isoformat(),
-            ])
+            )])
         
         return response
 

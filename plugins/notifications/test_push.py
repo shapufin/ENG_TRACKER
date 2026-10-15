@@ -284,6 +284,12 @@ class PushSubscriptionAPITest(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertIn('public_key', response.data)
 
+    def test_vapid_public_key_endpoint_is_503_when_production_keys_missing(self):
+        from django.core.exceptions import ImproperlyConfigured
+        with patch('plugins.notifications.viewsets.get_public_key', side_effect=ImproperlyConfigured('x')):
+            response = self._request('get', 'vapid_public_key')
+        self.assertEqual(response.status_code, 503)
+
     def test_preferences_default_to_all_own_events_enabled(self):
         response = self._request('get', 'preferences')
         self.assertEqual(response.status_code, 200)
@@ -392,20 +398,21 @@ class OvertimeSignalTest(TestCase):
         from apps.overtime.models import Client
         client = Client.objects.create(name="Test Client")
 
-        OvertimeLog.objects.create(
-            user=self.user,
-            client=client,
-            date="2026-08-03",
-            hours=2.0,
-            start_time=datetime.time(18, 0),
-            end_time=datetime.time(20, 0),
-            description="Test overtime",
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            OvertimeLog.objects.create(
+                user=self.user,
+                client=client,
+                date="2026-08-03",
+                hours=2.0,
+                start_time=datetime.time(18, 0),
+                end_time=datetime.time(20, 0),
+                description="Test overtime",
+            )
 
         notifs = Notification.objects.filter(user=self.user)
         self.assertTrue(notifs.exists())
         self.assertIn("Overtime", notifs.first().title)
-        # Push is called best-effort
+        # Push is called best-effort, after commit
         mock_push.assert_called()
 
     @patch('plugins.notifications.signals.send_push_notification')
@@ -469,13 +476,14 @@ class LeaveSignalPushTest(TestCase):
 
     @patch('plugins.notifications.signals.send_push_notification')
     def test_leave_creation_triggers_push(self, mock_push):
-        LeaveRequest.objects.create(
-            user=self.user,
-            request_type='vacation',
-            start_date='2026-08-10',
-            end_date='2026-08-12',
-            reason='Test vacation',
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            LeaveRequest.objects.create(
+                user=self.user,
+                request_type='vacation',
+                start_date='2026-08-10',
+                end_date='2026-08-12',
+                reason='Test vacation',
+            )
 
         # Push should have been called for the user
         mock_push.assert_called()
@@ -513,3 +521,74 @@ class LeaveSignalPushTest(TestCase):
         )
         self.assertFalse(Notification.objects.filter(user=self.user).exists())
         mock_push.assert_not_called()
+
+
+class VapidProductionKeySourceTests(TestCase):
+    """SEC-18: production reads VAPID keys from the environment only."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.keys_file = Path(self._tmp.name) / 'vapid.json'
+        patcher = patch('plugins.notifications.vapid_utils.VAPID_KEYS_FILE', self.keys_file)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        env = patch.dict('os.environ', {}, clear=False)
+        env.start()
+        self.addCleanup(env.stop)
+        import os
+        os.environ.pop('VAPID_PUBLIC_KEY', None)
+        os.environ.pop('VAPID_PRIVATE_KEY', None)
+
+    def test_missing_env_keys_fail_fast_and_write_no_file_in_production(self):
+        from django.core.exceptions import ImproperlyConfigured
+        from django.test import override_settings
+        from plugins.notifications.vapid_utils import get_vapid_keys
+
+        with override_settings(VAPID_REQUIRE_ENV=True):
+            with self.assertRaises(ImproperlyConfigured):
+                get_vapid_keys()
+        self.assertFalse(self.keys_file.exists())
+
+    def test_env_keys_are_used_in_production(self):
+        import os
+        from django.test import override_settings
+        from plugins.notifications.vapid_utils import get_vapid_keys
+
+        os.environ['VAPID_PUBLIC_KEY'] = 'pub-from-env'
+        os.environ['VAPID_PRIVATE_KEY'] = 'priv-from-env'
+        with override_settings(VAPID_REQUIRE_ENV=True):
+            self.assertEqual(
+                get_vapid_keys(),
+                {'public_key': 'pub-from-env', 'private_key': 'priv-from-env'},
+            )
+
+    def test_dev_keeps_the_generate_fallback_when_no_keys_configured(self):
+        from plugins.notifications.vapid_utils import get_vapid_keys
+
+        keys = get_vapid_keys()  # no VAPID_REQUIRE_ENV: must not raise
+        self.assertTrue(keys['public_key'] and keys['private_key'])
+
+    def test_production_settings_require_env_keys(self):
+        from pathlib import Path
+        from django.conf import settings
+        text = (Path(settings.BASE_DIR) / 'config' / 'settings_production.py').read_text(encoding='utf-8')
+        self.assertIn('VAPID_REQUIRE_ENV = True', text)
+
+
+    def test_generated_dev_keys_are_saved_and_reloaded_without_error(self):
+        from py_vapid import Vapid01
+        from plugins.notifications import vapid_utils
+
+        with self.assertNoLogs('plugins.notifications.vapid_utils', level='WARNING'):
+            generated = vapid_utils.get_vapid_keys()
+        self.assertTrue(self.keys_file.exists())
+        reloaded = vapid_utils.get_vapid_keys()
+        self.assertEqual(reloaded, generated)
+        # The stored strings must be what the push stack consumes.
+        Vapid01.from_string(private_key=reloaded['private_key'])
+        Vapid01.from_raw_public(reloaded['public_key'].encode())

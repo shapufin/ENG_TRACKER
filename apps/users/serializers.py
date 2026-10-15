@@ -6,12 +6,15 @@ This module contains DRF serializers for User, UserProfile, and Team models.
 
 from datetime import date
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.models import User
 from apps.overtime.serializers import ClientSerializer
 from core.mixins.permissions import is_cr_admin
 from .models import Tech, TechLevel, Team, UserProfile, TeamMembership
+from .models.core import _user_has_related
 from .services.tech_assignments import (
     TechAssignmentError,
     apply_tech_assignments,
@@ -217,6 +220,22 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id']
 
+    def _guard_privilege_flag(self, field, value):
+        """Only a superuser may change is_staff / is_superuser (SEC: N1)."""
+        request = self.context.get('request')
+        if request is None or request.user.is_superuser:
+            return value
+        current = bool(getattr(self.instance, field, False)) if self.instance else False
+        if bool(value) != current:
+            raise PermissionDenied(f'Only a superuser can change {field}.')
+        return value
+
+    def validate_is_staff(self, value):
+        return self._guard_privilege_flag('is_staff', value)
+
+    def validate_is_superuser(self, value):
+        return self._guard_privilege_flag('is_superuser', value)
+
     def get_full_name(self, obj) -> str:
         """Return user's full name."""
         return f"{obj.first_name} {obj.last_name}".strip() or obj.username
@@ -228,7 +247,7 @@ class UserSerializer(serializers.ModelSerializer):
             return True
         if hasattr(obj, 'profile') and obj.profile.is_italian_tl_role:
             return True
-        return obj.italian_team_members.exists()
+        return _user_has_related(obj, 'italian_team_members')
 
     def get_is_albanian_tl_role(self, obj) -> bool:
         """Check if user has the Albanian TL role or assigned Albanian reports."""
@@ -237,7 +256,7 @@ class UserSerializer(serializers.ModelSerializer):
             return True
         if hasattr(obj, 'profile') and obj.profile.is_albanian_tl_role:
             return True
-        return obj.albanian_team_members.exists()
+        return _user_has_related(obj, 'albanian_team_members')
 
     def get_is_team_leader(self, obj) -> bool:
         """Check if user is any kind of TL (database role or legacy flag)."""
@@ -246,7 +265,10 @@ class UserSerializer(serializers.ModelSerializer):
             return True
         if hasattr(obj, 'profile'):
             return obj.profile.is_team_leader
-        return obj.italian_team_members.exists() or obj.albanian_team_members.exists()
+        return (
+            _user_has_related(obj, 'italian_team_members')
+            or _user_has_related(obj, 'albanian_team_members')
+        )
 
     def get_is_hr(self, obj) -> bool:
         """Check if user has the HR role, with the legacy flag as fallback."""
@@ -274,10 +296,14 @@ class UserSerializer(serializers.ModelSerializer):
         ``control_room_access`` related object when available to avoid
         an N+1 query in list endpoints. See CONTEXT.md rule 11.
         """
-        # Use prefetched OneToOne related objects if present (no extra query).
-        if hasattr(obj, '_prefetched_objects_cache') and 'control_room_access' in obj._prefetched_objects_cache:
-            accesses = obj._prefetched_objects_cache['control_room_access']
-            return any(getattr(a, 'is_active', False) for a in accesses)
+        # List endpoints load the row with ``Prefetch(..., to_attr='prefetched_cr_access')``
+        # (None when the user has no access row). The reverse OneToOne cache
+        # itself is NOT trusted: creating a row populates it on the instance
+        # and it then goes stale. Mirrors get_access_for_user: the account and
+        # the row must both be active.
+        if hasattr(obj, 'prefetched_cr_access'):
+            access = obj.prefetched_cr_access
+            return bool(access is not None and access.is_active and obj.is_active)
         # Fallback: fresh query via scope_service. Never use the cached reverse
         # OneToOne accessor (``getattr(obj, 'control_room_access')``) — Django
         # populates that cache when the related object is created/saved, so it
@@ -370,13 +396,26 @@ class TechSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
+class TeamLeaderSerializer(serializers.ModelSerializer):
+    """Display-only team leader: no email, flags or roles (any member can read teams)."""
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name', 'full_name']
+        read_only_fields = fields
+
+    def get_full_name(self, obj) -> str:
+        return f"{obj.first_name} {obj.last_name}".strip() or obj.username
+
+
 class TeamSerializer(serializers.ModelSerializer):
     """
     Serializer for Team model.
 
     Includes team leader information and parent team reference.
     """
-    team_leader = UserSerializer(read_only=True)
+    team_leader = TeamLeaderSerializer(read_only=True)
     team_leader_id = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
         source='team_leader',
@@ -422,6 +461,24 @@ class TeamSerializer(serializers.ModelSerializer):
         return obj.members.count()
 
 
+# Raw schema (drf_spectacular.utils.extend_schema_field accepts a dict): input
+# takes ids or {tech, level} objects; output is always a list of ids.
+@extend_schema_field({
+    'type': 'array',
+    'items': {
+        'oneOf': [
+            {'type': 'integer'},
+            {
+                'type': 'object',
+                'properties': {
+                    'tech': {'type': 'integer'},
+                    'level': {'type': 'integer', 'nullable': True},
+                },
+                'required': ['tech'],
+            },
+        ],
+    },
+})
 class TechAssignmentField(serializers.Field):
     """Writable ``techs`` field accepting both payload shapes.
 
@@ -460,9 +517,26 @@ class UserProfileSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
-    teams_detail = TeamSerializer(source='teams', many=True, read_only=True)
+    teams_detail = serializers.SerializerMethodField()
     techs = TechAssignmentField(required=False)
     techs_detail = serializers.SerializerMethodField()
+
+    @extend_schema_field(TeamSerializer(many=True))
+    def get_teams_detail(self, obj):
+        """Teams of this profile, each serialised once per request.
+
+        ``TeamSerializer`` nests the team leader's full ``UserSerializer``
+        (about ten queries). A page of members mostly shares a handful of
+        teams, so the nested payload is memoised per team id on this
+        serializer instance (one instance serves the whole ``many=True`` list).
+        """
+        cache = self.__dict__.setdefault('_teams_detail_cache', {})
+        rows = []
+        for team in obj.teams.all():
+            if team.id not in cache:
+                cache[team.id] = dict(TeamSerializer(team, context=self.context).data)
+            rows.append(cache[team.id])
+        return rows
 
     def get_techs_detail(self, obj) -> list:
         """Assigned Techs with the level held in each (Users-page badges)."""

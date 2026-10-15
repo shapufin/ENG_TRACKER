@@ -422,6 +422,9 @@ def generate_draft_run(run: PayrollRun, users, replace_user_ids=None) -> list[Pa
             )
             result = calculate_payroll(inp)
 
+            # PERF-09: deliberately one create per user, not bulk_create.
+            # PayrollLine.save() is the finalized-run immutability guard and
+            # bulk_create would bypass it. See test_generate_finalize_budget.py.
             line = PayrollLine.objects.create(
                 user=user,
                 run=locked_run,
@@ -471,8 +474,9 @@ def generate_draft_run(run: PayrollRun, users, replace_user_ids=None) -> list[Pa
 
 def aggregate_line_totals(lines) -> dict:
     """Totals JSON for a queryset of payroll lines (a whole run, or a scoped subset)."""
-    from django.db.models import Sum
+    from django.db.models import Count, Sum
     agg = lines.aggregate(
+        line_count=Count('pk'),
         total_gross=Sum('total_gross'),
         total_deductions=Sum('total_employee_deductions'),
         total_net=Sum('net_pay'),
@@ -487,7 +491,7 @@ def aggregate_line_totals(lines) -> dict:
         'total_employer_cost': str(agg['total_employer_cost'] or Decimal('0')),
         'total_overtime': str(agg['total_overtime'] or Decimal('0')),
         'total_standby': str(agg['total_standby'] or Decimal('0')),
-        'line_count': lines.count(),
+        'line_count': agg['line_count'],
     }
 
 

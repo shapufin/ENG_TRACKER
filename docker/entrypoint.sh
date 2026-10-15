@@ -44,36 +44,51 @@ sys.exit(1)
 
 export BUILD_ID="${BUILD_ID:-$(cat /app/.build_id 2>/dev/null || echo 1)}"
 
-echo "[entrypoint] Running migrations..."
-python manage.py migrate --noinput
+# DEP-06: schema migration and the boot-time reconciliation below write to the
+# shared database and take no lock. With several replicas, set
+# RUN_MIGRATIONS=0 on all but one container (or run them in a one-off job with
+# RUN_MIGRATIONS=1 and start the replicas with RUN_MIGRATIONS=0). The default
+# (1) keeps single-replica behaviour unchanged.
+if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
+    echo "[entrypoint] Running migrations..."
+    python manage.py migrate --noinput
 
-# Register discovered plugins in the Plugin table (idempotent; never enables
-# anything). Without this a fresh deploy lists no plugins until an admin calls the
-# discover action. Enabling a plugin still needs a server restart afterwards,
-# because plugin URLs are computed once at process start.
-echo "[entrypoint] Syncing plugin registry..."
-python manage.py sync_plugins
+    # Register discovered plugins in the Plugin table (idempotent; never enables
+    # anything). Without this a fresh deploy lists no plugins until an admin calls the
+    # discover action. Enabling a plugin still needs a server restart afterwards,
+    # because plugin URLs are computed once at process start.
+    echo "[entrypoint] Syncing plugin registry..."
+    python manage.py sync_plugins
 
-# Reconcile every plugin's permission rows from its manifest (creates missing rows,
-# always re-asserts manifest-owned role denials such as the HBPR block). sync_plugins
-# only registers plugins; without this, a fresh database has no permission rows until a
-# plugin is enabled, and an upgraded one keeps stale rows with no denial.
-echo "[entrypoint] Reconciling plugin permissions..."
-python manage.py seed_plugin_permissions
+    # Reconcile every plugin's permission rows from its manifest (creates missing rows,
+    # always re-asserts manifest-owned role denials such as the HBPR block). sync_plugins
+    # only registers plugins; without this, a fresh database has no permission rows until a
+    # plugin is enabled, and an upgraded one keeps stale rows with no denial.
+    echo "[entrypoint] Reconciling plugin permissions..."
+    python manage.py seed_plugin_permissions
 
-# Existing databases keep their old PluginPermission rows, so reconcile the hbpr role's
-# view grants (tl_scorecard only) on every boot; an admin edit to them is re-asserted.
-echo "[entrypoint] Granting HBPR plugin access..."
-python manage.py grant_hbpr_plugin_access || echo "[entrypoint] HBPR grant skipped (non-fatal)"
+    # Existing databases keep their old PluginPermission rows, so reconcile the hbpr role's
+    # view grants (tl_scorecard only) on every boot; an admin edit to them is re-asserted.
+    echo "[entrypoint] Granting HBPR plugin access..."
+    python manage.py grant_hbpr_plugin_access || echo "[entrypoint] HBPR grant skipped (non-fatal)"
 
-# Archive retention: ended HBPR assignments older than 6 months are deleted when
-# no governance evidence references them. No scheduler exists, so the sweep also
-# runs lazily on the staff-only admin list read; this reconciles on every boot.
-echo "[entrypoint] Purging HBPR assignment archive..."
-python manage.py purge_hbpr_archive || echo "[entrypoint] HBPR archive purge skipped (non-fatal)"
+    # Archive retention: ended HBPR assignments older than 6 months are deleted when
+    # no governance evidence references them. No scheduler exists, so the sweep also
+    # runs lazily on the staff-only admin list read; this reconciles on every boot.
+    echo "[entrypoint] Purging HBPR assignment archive..."
+    python manage.py purge_hbpr_archive || echo "[entrypoint] HBPR archive purge skipped (non-fatal)"
 
-echo "[entrypoint] Ensuring superuser..."
-python manage.py ensure_superuser
+    # PERF-06 retention: read notifications older than 180 days are deleted (unread are
+    # kept). No scheduler exists, so this runs on boot; for a long-lived replica also
+    # run `python manage.py prune_notifications` from a daily cron.
+    echo "[entrypoint] Pruning old read notifications..."
+    python manage.py prune_notifications || echo "[entrypoint] Notification prune skipped (non-fatal)"
+
+    echo "[entrypoint] Ensuring superuser..."
+    python manage.py ensure_superuser
+else
+    echo "[entrypoint] RUN_MIGRATIONS=${RUN_MIGRATIONS}: skipping migrations and boot-time reconciliation"
+fi
 
 echo "[entrypoint] Starting server..."
 exec "$@"

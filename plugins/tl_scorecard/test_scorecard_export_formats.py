@@ -9,7 +9,9 @@ from pypdf import PdfReader
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.permissions.models import Role, UserRole
+from core.utils.csv_injection_assert import PAYLOAD, assert_xlsx_neutralised
 
+from .excel_export import build_workbook_bytes
 from .report_kpis import kpi_rows, status_for
 from .models import Absence, PIPRecord
 from .services import build_scorecard
@@ -85,6 +87,41 @@ class SummaryExportFormatTests(TestCase):
         resp = self._get({'file_format': 'docx'})
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.data, {'error': 'file_format must be xlsx or pdf'})
+
+
+class WorkbookFormulaSafetyTests(TestCase):
+    """User-controlled text is stored as a literal, never a formula or link."""
+
+    def _build(self, **evidence_fields):
+        leader = _make_user('leader_formula_safety')
+        evidence = [{
+            'kind_display': 'Cadence', 'occurred_on': '2026-10-01', 'reporting_year': 2026,
+            'shared_summary': '', 'action_items': '', 'reference_url': '', **evidence_fields,
+        }]
+        governance = {
+            'open_pips': [], 'pending_promotions': [], 'epr_cycles': [],
+            'open_absences': [{'employee': PAYLOAD, 'absence_date': '2026-10-01', 'reason': PAYLOAD}],
+        }
+        return build_workbook_bytes(
+            build_scorecard(leader, date.today()), governance, 'Oct 2026', hbpr_evidence=evidence,
+        )
+
+    def test_partnership_log_shared_summary_is_neutralised(self):
+        assert_xlsx_neutralised(self, self._build(shared_summary=PAYLOAD))
+
+    def test_partnership_log_action_items_is_neutralised(self):
+        assert_xlsx_neutralised(self, self._build(action_items=PAYLOAD))
+
+    def test_partnership_log_reference_url_is_neutralised(self):
+        assert_xlsx_neutralised(self, self._build(reference_url=PAYLOAD))
+
+    def test_tab_leading_text_is_neutralised(self):
+        wb = load_workbook(io.BytesIO(self._build(shared_summary='	=cmd')))
+        values = [c for row in wb['HBPR partnership log'].iter_rows(values_only=True) for c in row]
+        self.assertIn("'	=cmd", values)
+
+    def test_governance_free_text_is_neutralised(self):
+        assert_xlsx_neutralised(self, self._build())
 
 
 class HbprExportFormatTests(HbprScorecardBase):

@@ -12,6 +12,12 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.e2e.sqlite3',
+        # Parallel dev-server threads write to one SQLite file; WAL plus a long
+        # busy timeout stops "database is locked" 500s on slow CI disks.
+        'OPTIONS': {
+            'timeout': 30,
+            'init_command': 'PRAGMA journal_mode=WAL;',
+        },
     }
 }
 

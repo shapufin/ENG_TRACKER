@@ -1,7 +1,9 @@
+from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from rest_framework import viewsets, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from .models import (
     Notification,
@@ -59,11 +61,18 @@ class PushSubscriptionSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'is_active', 'created_at']
 
 
+class NotificationPagination(PageNumberPagination):
+    """Newest 100 by default; the client frontend reads ``results`` (normalizeList)."""
+    page_size = 100
+    page_size_query_param = 'page_size'
+    max_page_size = 200
+
+
 class NotificationViewSet(viewsets.ModelViewSet):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = None
+    pagination_class = NotificationPagination
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user)
@@ -194,7 +203,13 @@ class NotificationViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='vapid-public-key')
     def vapid_public_key(self, request):
         """Return the VAPID public key for browser push subscription."""
-        return Response({'public_key': get_public_key()})
+        try:
+            return Response({'public_key': get_public_key()})
+        except ImproperlyConfigured:
+            return Response(
+                {'detail': 'Web Push is not configured on this server.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
     @action(detail=False, methods=['post'])
     def subscribe(self, request):

@@ -96,13 +96,10 @@ def _upload_error_response(exc: UploadValidationError):
 
 
 def _resolve_evidence_max_mb(user) -> int:
-    """Resolve the per-user evidence size limit (MB).
+    """Resolve the evidence size limit (MB): plugin config, default 10.
 
-    Order of precedence: user profile override → plugin config → default 10.
+    There is no per-user override: UserProfile has no ``max_file_size_mb``.
     """
-    profile_max = getattr(getattr(user, "profile", None), "max_file_size_mb", None)
-    if profile_max and profile_max > 0:
-        return profile_max
     from apps.plugins.models import Plugin
     plugin = Plugin.objects.filter(name="ticket_kpi").first()
     if plugin:
@@ -722,8 +719,9 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
 
         Rules:
         - Admin can delete any batch.
-        - Team leader can delete any batch belonging to a managed user.
+        - Team leader can delete an unreviewed batch belonging to a managed user.
         - Owner can delete their own batch until it has been reviewed.
+        - A reviewed batch is admin-only (same as delete_team_batch).
         """
         try:
             batch = TicketImportBatch.objects.get(pk=pk)
@@ -737,15 +735,15 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
         is_tl = _is_tl_for_user(request.user, batch.user)
         is_owner = batch.user == request.user
         can_delete = (
-            is_admin or is_tl or (is_owner and not batch.reviewed_by)
+            is_admin or ((is_tl or is_owner) and not batch.reviewed_by)
         )
 
         if not can_delete:
             return Response(
                 {
                     'error': (
-                        'Only administrators, team leaders, or the owner of an '
-                        'unreviewed upload can delete this batch.'
+                        'Only administrators, or the team leader or owner of an '
+                        'unreviewed upload, can delete this batch.'
                     )
                 },
                 status=status.HTTP_403_FORBIDDEN
@@ -1039,7 +1037,7 @@ class TicketKPIDashboardViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
     @action(detail=False, methods=['get'])
     def trend(self, request):
         """Get trend data for last N months."""
-        months, err = _safe_int(request.query_params.get('months', 6), 'months')
+        months, err = _safe_months(request.query_params.get('months', 6))
         if err:
             return err
         target_user_id = request.query_params.get('user_id')
@@ -1172,7 +1170,7 @@ class TicketKPIDashboardViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
     @action(detail=False, methods=['get'])
     def team_trend(self, request):
         """Get 6-month trend for the team leader's team. Supports month anchor."""
-        months, err = _safe_int(request.query_params.get('months', 6), 'months')
+        months, err = _safe_months(request.query_params.get('months', 6))
         if err:
             return err
         month_str = request.query_params.get('month')
@@ -1592,6 +1590,22 @@ def _safe_int(value, field_name='parameter'):
         )
 
 
+MAX_TREND_MONTHS = 36
+
+
+def _safe_months(value):
+    """Parse the trend window: an int in 1..MAX_TREND_MONTHS, else a 400."""
+    months, err = _safe_int(value, 'months')
+    if err:
+        return None, err
+    if not 1 <= months <= MAX_TREND_MONTHS:
+        return None, Response(
+            {'error': f'months must be between 1 and {MAX_TREND_MONTHS}'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return months, None
+
+
 def _parse_month_param(value, field_name='month'):
     """Parse YYYY-MM-DD and normalize to the first day of that month.
 
@@ -1747,6 +1761,7 @@ class TicketKPIReportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
         """Generate and download yearly Excel report."""
         from django.http import HttpResponse
         from openpyxl import Workbook
+        from core.utils.csv_safe import xlsx_safe_row
 
         raw_year = request.query_params.get('year', str(timezone.now().year))
         try:
@@ -1794,13 +1809,13 @@ class TicketKPIReportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
         ws3 = wb.create_sheet("Per-User Summary")
         ws3.append(['User', 'Name', 'Total Tickets', 'Avg Resolution (h)', 'SLA Compliance (%)'])
         for u in data['per_user_summary']:
-            ws3.append([
+            ws3.append(xlsx_safe_row([
                 u['username'],
                 u['name'],
                 u['total_tickets'],
                 u.get('avg_resolution_hours', 'N/A'),
                 u.get('sla_compliance_pct', 'N/A'),
-            ])
+            ]))
 
         response = HttpResponse(
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -1814,6 +1829,7 @@ class TicketKPIReportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
         """Generate and download yearly CSV report."""
         import csv
         from django.http import HttpResponse
+        from core.utils.csv_safe import csv_safe
 
         raw_year = request.query_params.get('year', str(timezone.now().year))
         try:
@@ -1841,14 +1857,14 @@ class TicketKPIReportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
         writer.writerow(['Year', 'User', 'Name', 'Total Tickets', 'Avg Resolution (h)', 'SLA Compliance (%)'])
 
         for u in data['per_user_summary']:
-            writer.writerow([
+            writer.writerow([csv_safe(v) for v in (
                 year,
                 u['username'],
                 u['name'],
                 u['total_tickets'],
                 u.get('avg_resolution_hours', ''),
                 u.get('sla_compliance_pct', ''),
-            ])
+            )])
 
         return response
 
@@ -1941,6 +1957,9 @@ class KPIEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                 # TLs can only view users they manage
                 if not _get_tl_team_members(user).filter(id=target_id).exists():
                     return KPIEvidence.objects.none()
+            elif not target_id and not (is_admin or is_hr):
+                # SEC-02: no user_id must not widen a TL to every user's rows.
+                qs = qs.filter(Q(user=user) | Q(user__in=_get_tl_team_members(user)))
             if target_id:
                 qs = qs.filter(user_id=target_id)
 

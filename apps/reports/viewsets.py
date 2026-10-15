@@ -27,6 +27,7 @@ from core.mixins.permissions import (
     has_team_leader_role,
     is_cr_admin,
 )
+from core.utils.csv_safe import xlsx_safe_row
 from .filters import UnifiedReportFilter, apply_visibility_constraints
 from .services.export_service import export_service, ExportConfig
 
@@ -417,6 +418,9 @@ class ExportExcelView(HbprBlockedMixin, APIView):
             logger.info(f"[Excel Export] Starting export - report_type={report_type}, group_by_tl={group_by_tl}")
 
             filterset = UnifiedReportFilter(request.query_params, user=request.user)
+            if not filterset.is_valid():
+                from rest_framework.response import Response
+                return Response(filterset.errors, status=400)
             qs_map = filterset.get_filtered_querysets()
             overtime_qs = qs_map['overtime']
             standby_qs = qs_map['standby']
@@ -512,7 +516,7 @@ class ExportExcelView(HbprBlockedMixin, APIView):
                         row.extend([sb['total_hours'] or 0, sb_approved.get(u.id, 0) or 0, sb['entries']])
                         leave = leave_total.get(u.id, {'total_days': 0, 'entries': 0})
                         row.extend([leave['total_days'] or 0, leave_approved.get(u.id, 0) or 0, leave['entries']])
-                        ws.append(row)
+                        ws.append(xlsx_safe_row(row))
                 
                 # Create sheet for users without Italian TL if any exist
                 if users_without_tl.exists():
@@ -538,7 +542,7 @@ class ExportExcelView(HbprBlockedMixin, APIView):
                         row.extend([sb['total_hours'] or 0, sb_approved.get(u.id, 0) or 0, sb['entries']])
                         leave = leave_total.get(u.id, {'total_days': 0, 'entries': 0})
                         row.extend([leave['total_days'] or 0, leave_approved.get(u.id, 0) or 0, leave['entries']])
-                        ws.append(row)
+                        ws.append(xlsx_safe_row(row))
             else:
                 # Single sheet for specific report type
                 ws = wb.active
@@ -572,7 +576,7 @@ class ExportExcelView(HbprBlockedMixin, APIView):
                     elif report_type == 'leave':
                         leave = leave_total.get(u.id, {'total_days': 0, 'entries': 0})
                         row.extend([leave['total_days'] or 0, leave_approved.get(u.id, 0) or 0, leave['entries']])
-                    ws.append(row)
+                    ws.append(xlsx_safe_row(row))
 
             # Monthly sheet
             ws2 = wb.create_sheet(title='Monthly')
@@ -1024,6 +1028,7 @@ class AuditLogViewSet(HbprBlockedMixin, TeamLeaderFilterMixin, viewsets.ReadOnly
         import csv
         import io
         from django.http import StreamingHttpResponse
+        from core.utils.csv_safe import csv_safe
 
         queryset = self.filter_queryset(self.get_queryset())
 
@@ -1040,7 +1045,7 @@ class AuditLogViewSet(HbprBlockedMixin, TeamLeaderFilterMixin, viewsets.ReadOnly
             buffer.seek(0)
             buffer.truncate()
             for log in queryset.iterator(chunk_size=1000):
-                writer.writerow([
+                writer.writerow([csv_safe(v) for v in (
                     log.user.username if log.user else '',
                     log.get_action_display(),
                     log.get_model_name_display(),
@@ -1049,7 +1054,7 @@ class AuditLogViewSet(HbprBlockedMixin, TeamLeaderFilterMixin, viewsets.ReadOnly
                     log.changes_summary,
                     log.ip_address or '',
                     log.timestamp.isoformat() if log.timestamp else '',
-                ])
+                )])
                 yield buffer.getvalue()
                 buffer.seek(0)
                 buffer.truncate()

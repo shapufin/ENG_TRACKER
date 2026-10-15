@@ -240,11 +240,12 @@ permanently — it skips once the user already exists.
 cp .env.example .env
 #    Required: SECRET_KEY, ALLOWED_HOSTS, FRONTEND_URL, DB_PASSWORD,
 #              REDIS_PASSWORD (see .env.example for notes)
-#    Also required if using the Cloudflare Tunnel ingress below:
-#              CLOUDFLARE_TUNNEL_TOKEN
+#    Optional tuning: DB_CONN_MAX_AGE, GUNICORN_WORKERS, RUN_MIGRATIONS,
+#              BACKUP_INTERVAL_SECONDS, BACKUP_RETENTION (documented in
+#              docker-compose.yml and docs/deploy/production-runbook.md)
 
-# 2. Build and start every service, including the tunnel
-docker compose --profile tunnel up -d --build
+# 2. Build and start every service
+docker compose up -d --build
 
 # 3. Verify health (from the host — the frontend port is bound to
 #    127.0.0.1 only, see "Ingress" below)
@@ -266,60 +267,53 @@ returning 404.
 (after `sync_plugins`), which gives the `hbpr` role `view` on the TL Scorecard and Engagement plugins once;
 nothing to do by hand. Details and the role's scope rules: `docs/hbpr-and-scorecard.md`.
 
-Without `--profile tunnel` (e.g. while `cloudflared` isn't configured yet),
-drop that flag — everything else still comes up:
+**Several backend replicas.** `migrate` and the boot-time commands take no lock.
+Set `RUN_MIGRATIONS=0` on every backend container except one (default `1`).
 
-```bash
-docker compose up -d --build
-```
+### Ingress: bring your own TLS reverse proxy
 
-### Ingress: Cloudflare Tunnel now, Traefik planned later
+`docker-compose.yml` defines **no ingress service**: the Cloudflare Tunnel
+connector (`cloudflared`) was removed, so there is no `tunnel` profile and no
+`CLOUDFLARE_TUNNEL_TOKEN`. The stack serves plain HTTP on the `frontend`
+container (`127.0.0.1:${FRONTEND_PORT:-8080}` on the host, and
+`http://frontend:8080` on the `frontend_net` docker network). Put one of these in
+front of it, outside this repo:
 
-**Current setup — Cloudflare Tunnel.** The `cloudflared` service
-(`docker-compose.yml`, `tunnel` profile) makes an **outbound-only**
-connection to Cloudflare's edge — there is no inbound port to open or
-firewall. The frontend container's published port is bound to
-`127.0.0.1:8080` specifically so nothing on the public internet can bypass
-Cloudflare and hit the origin directly; `cloudflared` reaches it over the
-internal `frontend_net` docker network by service name
-(`http://frontend:8080`), never through that published port.
+- a TLS-terminating reverse proxy on the host or another machine (Caddy, nginx
+  with certificates, Traefik, an AWS ALB), or
+- a Cloudflare Tunnel connector you run yourself, pointed at the frontend.
 
-Setup (one-time, in the Cloudflare dashboard — Zero Trust → Networks →
-Tunnels):
-1. Create a tunnel, name it whatever you like.
-2. Add a public hostname pointing at origin service `http://frontend:8080`.
-3. Copy the connector token it gives you into `.env` as
-   `CLOUDFLARE_TUNNEL_TOKEN`.
-4. `docker compose --profile tunnel up -d --build`.
+Requirements for whatever you choose:
 
-Cloudflare terminates TLS at its edge and always sets
-`X-Forwarded-Proto: https` and `CF-Connecting-IP` on what it forwards through
-the tunnel — `frontend/docker/nginx.conf.template` trusts and forwards both (see that
-file's comments) so Django sees the real client IP and scheme with no
-`NUM_PROXIES` change needed.
+1. **Terminate TLS** with a valid certificate (see below).
+2. **Send `X-Forwarded-Proto: https`.** `frontend/docker/nginx.conf.template`
+   forwards it to Django only when the connection comes from the trusted
+   subnet; otherwise it falls back to `http` and Django redirects every request.
+3. **Send the real client IP in a header nginx trusts.** The template reads
+   `CF-Connecting-IP` (`real_ip_header`), which is Cloudflare's header. For any
+   other proxy, change `real_ip_header` to the header it sets (`X-Real-IP` or
+   `X-Forwarded-For`) and make sure the proxy overwrites it rather than
+   appending a client-supplied value. Throttles and the `/api/` rate limit
+   depend on it.
+4. **Match the trusted subnet.** `set_real_ip_from` and the `geo` block in the
+   template trust `172.28.0.0/24`, the fixed `frontend_net` subnet. A proxy
+   container must run on that network inside this range. A proxy on the host
+   or elsewhere reaches nginx from another address (for a host proxy via the
+   published port, the docker bridge gateway, e.g. `172.28.0.1`), so add that
+   address or CIDR to both places, and nothing broader.
+5. **Do not publish the frontend port on `0.0.0.0`.** It stays bound to
+   `127.0.0.1` so the proxy's TLS and edge protections cannot be bypassed.
 
-**Later — Traefik.** When Traefik replaces the tunnel as the public
-entrypoint: drop the `cloudflared` service (and `--profile tunnel`), add
-Traefik as its own service on `frontend_net` with the usual
-`traefik.http.routers.*` labels on the `frontend` service, and update
-`nginx.conf.template`'s `set_real_ip_from`/`real_ip_header` to match Traefik's
-forwarded-header shape (`X-Forwarded-For`, not Cloudflare's
-`CF-Connecting-IP`) and its network/CIDR instead of `cloudflared`'s. The
-published port can go back to `0.0.0.0` (or be dropped) once Traefik is the
-sole public entrypoint.
-
-Either way, an upstream proxy **must** sit in front — see below.
+`NUM_PROXIES` stays `1` in `settings_production.py`: nginx presents exactly one
+trusted hop to Django whatever sits in front of it.
 
 ### TLS / HTTPS — required
 
 This repo does **not** terminate TLS anywhere in the stack — `nginx.conf.template` has
-no `ssl` listener. Whatever sits in front (Cloudflare Tunnel today, an AWS
-ALB, nginx-with-certs, Caddy, or Traefik later) **must**:
+no `ssl` listener. Whatever sits in front (see Ingress above) **must**:
 
 1. Terminate TLS with a valid certificate.
-2. Reach the frontend container — via Cloudflare Tunnel's internal
-   `http://frontend:8080` (current setup, above), or by forwarding to the
-   published port if using an external proxy instead.
+2. Reach the frontend container (see Ingress above).
 3. Send `X-Forwarded-Proto: https` so Django detects HTTPS behind the proxy
    (`SECURE_PROXY_SSL_HEADER` is configured in `settings_production.py`).
    `nginx.conf.template` forwards this header through unchanged rather than
