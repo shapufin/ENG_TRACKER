@@ -43,6 +43,11 @@ class LeaveRequestImporterTests(TestCase):
         self.assertEqual(str(req.start_date), "2026-06-29")
         self.assertEqual(str(req.end_date), "2026-07-03")
 
+    def test_preview_reports_valid_and_writes_nothing(self):
+        result = self.importer.validate_row(self._row(), {})
+        self.assertEqual(result.status, "valid")
+        self.assertFalse(LeaveRequest.objects.filter(user=self.user).exists())
+
     def test_reason_carries_the_source_note(self):
         result = self.importer.commit_row(
             self._row(reason="Date range corrected"), {}
