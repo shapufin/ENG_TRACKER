@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight, Pencil, UserPlus, UsersRound } from "lucide-react";
+import { usePermissions } from "@/context/PermissionContext";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
@@ -26,6 +27,8 @@ function clamp(value: number, min: number, max: number): number {
 export function ResourceAccessGroupPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
+  // Staff can read groups; only superusers can change them (API returns 403 otherwise).
+  const { isSuperuser } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const groupIdNum = Number(groupId);
@@ -202,16 +205,18 @@ export function ResourceAccessGroupPage() {
               )}
             </div>
           </div>
-          <div className="flex shrink-0 gap-2">
-            <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit group
-            </Button>
-            <Button onClick={() => setAddDialogOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add member
-            </Button>
-          </div>
+          {isSuperuser && (
+            <div className="flex shrink-0 gap-2">
+              <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit group
+              </Button>
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add member
+              </Button>
+            </div>
+          )}
         </div>
       </GlassCard>
 
@@ -246,10 +251,16 @@ export function ResourceAccessGroupPage() {
         groupName={groupData?.name}
         onRetry={() => void members.refetch()}
         onClearSearch={clearMemberSearch}
-        onAdd={() => setAddDialogOpen(true)}
+        onAdd={isSuperuser ? () => setAddDialogOpen(true) : undefined}
         onPageChange={setMemberPage}
-        onRemove={(membership) =>
-          setMemberToRemove({ id: membership.id, label: membership.user_name || "this person" })
+        onRemove={
+          isSuperuser
+            ? (membership) =>
+                setMemberToRemove({
+                  id: membership.id,
+                  label: membership.user_name || "this person",
+                })
+            : undefined
         }
       />
 

@@ -82,6 +82,8 @@ export const ticketKPIService = {
     );
     return normalizeList(data);
   },
+  // The list endpoint is lightweight (no mapping/transforms/clients); editing needs the full row.
+  getProfile: (id: number) => api.get<ExportProfile>(`/plugins/ticket_kpi/profiles/${id}/`),
   createProfile: (data: Partial<ExportProfile>) =>
     api.post<ExportProfile>("/plugins/ticket_kpi/profiles/", data),
   updateProfile: (id: number, data: Partial<ExportProfile>) =>

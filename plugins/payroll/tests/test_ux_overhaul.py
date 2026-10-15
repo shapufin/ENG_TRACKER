@@ -379,6 +379,12 @@ class HolidayCRUDTests(TestCase):
 
     def setUp(self):
         self.factory = APIRequestFactory()
+        # Holiday signals only mirror into payroll while the plugin is enabled.
+        from apps.plugins.models import Plugin
+        Plugin.objects.update_or_create(
+            name='payroll',
+            defaults={'is_enabled': True, 'verbose_name': 'Payroll', 'version': '1.0.0'},
+        )
 
     def test_add_holiday(self):
         """Adding a holiday sets is_holiday=True, is_working_day=False and creates PublicHoliday."""

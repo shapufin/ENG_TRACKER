@@ -45,6 +45,23 @@ class ClientImporterTests(TestCase):
         self.assertEqual(result.status, "valid")
         self.assertFalse(Client.objects.exists())
 
+    def test_preview_flags_a_code_repeated_within_the_file(self):
+        context = {}
+        first = self.importer.validate_row(row(1, code="ZZ1", name="One"), NO_UPDATE, context=context)
+        again = self.importer.validate_row(row(2, code="ZZ1", name="Two"), NO_UPDATE, context=context)
+
+        self.assertEqual(first.status, "valid")
+        self.assertEqual(again.status, "skipped")
+        self.assertTrue(again.warnings)
+
+    def test_preview_warns_that_a_repeated_code_overwrites_when_updating(self):
+        context = {}
+        self.importer.validate_row(row(1, code="ZZ1", name="One"), UPDATE, context=context)
+        again = self.importer.validate_row(row(2, code="ZZ1", name="Two"), UPDATE, context=context)
+
+        self.assertEqual(again.status, "valid")
+        self.assertTrue(again.warnings)
+
     def test_skips_an_existing_client_without_update(self):
         Client.objects.create(code="ACME", name="Acme")
         result = self.importer.commit_row(row(code="ACME", name="Renamed"), NO_UPDATE)

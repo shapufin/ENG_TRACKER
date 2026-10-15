@@ -6,7 +6,7 @@ when a new Team is created, ensuring every team has a corresponding calendar.
 """
 
 from decimal import Decimal
-from django.db.models.signals import post_save, post_delete, pre_save
+from django.db.models.signals import post_save, post_delete, pre_delete, pre_save
 from django.dispatch import receiver
 from apps.users.models import Team
 from apps.dashboard.models import CalendarWorkspace
@@ -23,7 +23,7 @@ def create_team_calendar_workspace(sender, instance, created, **kwargs):
         workspace_code = f"{instance.code}_calendar"
         workspace_name = f"{instance.name} Calendar"
 
-        CalendarWorkspace.objects.get_or_create(
+        workspace, workspace_created = CalendarWorkspace.objects.get_or_create(
             code=workspace_code,
             defaults={
                 'name': workspace_name,
@@ -37,6 +37,25 @@ def create_team_calendar_workspace(sender, instance, created, **kwargs):
                 'show_holidays': True,
             }
         )
+        # A workspace kept after its team was deleted (it held holidays) is
+        # detached; re-creating the team under the same code must reattach it.
+        if not workspace_created and workspace.team_id is None:
+            workspace.team = instance
+            workspace.save(update_fields=['team'])
+
+
+@receiver(pre_delete, sender=Team)
+def remove_team_calendar_workspace(sender, instance, **kwargs):
+    """Drop the team's auto-created workspace so it is not left orphaned.
+
+    A workspace that already holds holidays is kept (it would otherwise take
+    that data with it); the FK's SET_NULL detaches it from the deleted team.
+    """
+    workspace = CalendarWorkspace.objects.filter(
+        team=instance, code=f"{instance.code}_calendar"
+    ).first()
+    if workspace and not PublicHoliday.objects.filter(calendar=workspace).exists():
+        workspace.delete()
 
 
 def _restore_payroll_workday(h_date):

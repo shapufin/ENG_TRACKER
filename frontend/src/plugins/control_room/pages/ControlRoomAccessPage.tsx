@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from "react";
+import { Navigate } from "react-router-dom";
+import { usePermissions } from "@/context/PermissionContext";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import {
   AlertTriangle,
@@ -121,7 +123,16 @@ const AccessStats: React.FC<{
   );
 };
 
+// The sidebar already hides this page from plain CR users, but the route is
+// reachable by URL and the API answers 403, so redirect instead of rendering
+// an admin page that can only show "permission denied".
 export const ControlRoomAccessPage: React.FC = () => {
+  const { isCRAdmin, isAdmin, isSuperuser } = usePermissions();
+  if (!isCRAdmin && !isAdmin && !isSuperuser) return <Navigate to="/" replace />;
+  return <ControlRoomAccessPageContent />;
+};
+
+const ControlRoomAccessPageContent: React.FC = () => {
   const state = useControlRoomAccessPage();
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const activeTotal = state.accessList.filter((access) => access.is_active).length;

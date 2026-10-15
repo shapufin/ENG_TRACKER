@@ -15,6 +15,7 @@ describe("formatDateDDMMYYYY", () => {
 
   it("returns empty string for null or empty input", () => {
     expect(formatDateDDMMYYYY(null)).toBe("");
+    expect(formatDateDDMMYYYY("2026-07-27T08:12:17.015471Z")).toMatch(/^2[678]\/07\/2026$/);
     expect(formatDateDDMMYYYY("")).toBe("");
   });
 

@@ -325,3 +325,33 @@ class PublicHolidayHRPermissionTests(TestCase):
             'calendar': private_ws.id,
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+
+
+class TeamDeletionWorkspaceCleanupTests(TestCase):
+    def test_deleting_team_removes_its_empty_auto_created_workspace(self):
+        team = Team.objects.create(name="Gone Team", code="GONE")
+        self.assertTrue(CalendarWorkspace.objects.filter(code="GONE_calendar").exists())
+
+        team.delete()
+
+        self.assertFalse(CalendarWorkspace.objects.filter(code="GONE_calendar").exists())
+
+    def test_deleting_team_keeps_workspace_that_holds_holidays(self):
+        team = Team.objects.create(name="Held Team", code="HELD")
+        workspace = CalendarWorkspace.objects.get(code="HELD_calendar")
+        PublicHoliday.objects.create(name="Local day", date="2026-11-11", calendar=workspace)
+
+        team.delete()
+
+        self.assertTrue(CalendarWorkspace.objects.filter(code="HELD_calendar").exists())
+
+    def test_recreating_a_team_relinks_the_surviving_workspace(self):
+        team = Team.objects.create(name="Back Team", code="BACK")
+        workspace = CalendarWorkspace.objects.get(code="BACK_calendar")
+        PublicHoliday.objects.create(name="Local day", date="2026-11-11", calendar=workspace)
+        team.delete()
+
+        again = Team.objects.create(name="Back Team", code="BACK")
+
+        workspace.refresh_from_db()
+        self.assertEqual(workspace.team_id, again.id)

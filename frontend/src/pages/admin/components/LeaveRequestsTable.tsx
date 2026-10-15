@@ -174,7 +174,9 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
               <span className="text-sm">
                 {start} → {end}
               </span>
-              <span className="text-muted-foreground text-xs">{days} days</span>
+              <span className="text-muted-foreground text-xs">
+                {days} {days === 1 ? "day" : "days"}
+              </span>
             </div>
           );
         },
@@ -183,7 +185,12 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         id: "days",
         accessorKey: "days",
         header: "Days",
-        cell: ({ row }) => <span>{row.original.days_requested} days</span>,
+        cell: ({ row }) => (
+          <span>
+            {row.original.days_requested}{" "}
+            {Number(row.original.days_requested) === 1 ? "day" : "days"}
+          </span>
+        ),
       },
       {
         id: "user_leave_balance",

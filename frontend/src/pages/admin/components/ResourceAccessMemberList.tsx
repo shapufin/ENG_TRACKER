@@ -29,9 +29,10 @@ interface ResourceAccessMemberListProps {
   groupName?: string;
   onRetry: () => void;
   onClearSearch: () => void;
-  onAdd: () => void;
+  /** Omit (with onRemove) for a read-only list. */
+  onAdd?: () => void;
   onPageChange: (page: number) => void;
-  onRemove: (membership: UserGroup) => void;
+  onRemove?: (membership: UserGroup) => void;
 }
 
 export function ResourceAccessMemberList({
@@ -90,12 +91,12 @@ export function ResourceAccessMemberList({
                 <X className="mr-2 h-4 w-4" />
                 Clear search
               </Button>
-            ) : (
+            ) : onAdd ? (
               <Button onClick={onAdd}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Add first member
               </Button>
-            )
+            ) : undefined
           }
         />
       </GlassCard>
@@ -129,7 +130,13 @@ export function ResourceAccessMemberList({
                 </td>
                 <td className="text-muted-foreground px-4 py-3">{membership.user_name}</td>
                 <td className="px-4 py-3 text-right">
-                  <RemoveButton membership={membership} groupName={groupName} onRemove={onRemove} />
+                  {onRemove && (
+                    <RemoveButton
+                      membership={membership}
+                      groupName={groupName}
+                      onRemove={onRemove}
+                    />
+                  )}
                 </td>
               </tr>
             ))}
@@ -155,12 +162,14 @@ export function ResourceAccessMemberList({
                 </p>
               </div>
             </div>
-            <RemoveButton
-              membership={membership}
-              groupName={groupName}
-              onRemove={onRemove}
-              reveal="always"
-            />
+            {onRemove && (
+              <RemoveButton
+                membership={membership}
+                groupName={groupName}
+                onRemove={onRemove}
+                reveal="always"
+              />
+            )}
           </div>
         ))}
       </div>
