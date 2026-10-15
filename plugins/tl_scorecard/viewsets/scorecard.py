@@ -239,9 +239,11 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
                              status=status.HTTP_400_BAD_REQUEST)
 
         month = month or tirana_today()
-        scorecard = build_scorecard(leader, month)
+        # The newest trend point is the requested month's scorecard; building it
+        # again would repeat every query of the trend's last month.
         trend = scorecard_trend(leader, 6, month)
-        self._mask_one_on_one(request, leader, scorecard, *trend)
+        scorecard = trend[-1]
+        self._mask_one_on_one(request, leader, *trend)
         team_member_ids = scoreable_member_ids(leader)
         subject_ids = None
         if not is_staff_user(request.user) and leader.id != request.user.id:

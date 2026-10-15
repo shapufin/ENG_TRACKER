@@ -289,3 +289,11 @@ Rules:
 - Quality & preservation: Preserves scroll-expanded table rows and WYSIWYG colors (`html2canvas-pro` + `jsPDF`).
 - Gates: vitest 10/10 OK (`pdfExport.test.ts`), `DashboardActionsMenu` 12/12 OK, `TLScorecardVisualizationPage` 7/7 OK, tsc clean, eslint clean, prettier clean, table-header-audit 0 violations, production build clean. Live browser export verified (Admin Dashboard reduced from 10 to 5 pages with 2 charts per page and proper pagination).
 
+## 2026-10-15 — Holiday unification, plugin fail-closed isolation & admin settings redesign
+- Global HR holidays and Payroll Work Calendar holidays unified via two-way sync (`apps/dashboard/services/holiday_sync.py`: `sync_holidays_between_hr_and_payroll()`), with missing holidays backfilled into HR and HR names authoritative.
+- Fail-closed isolation: When the payroll plugin is disabled or uninstalled, `holiday_sync` and signals (`apps/dashboard/signals.py`) skip payroll mutations gracefully (`status: skipped, reason: payroll_plugin_disabled`), preventing DB errors or crashes during public holiday CRUD.
+- Automatic sync on plugin reactivation: `PayrollPlugin.ready()` (`plugins/payroll/plugin.py`) triggers holiday synchronization when payroll is enabled or initialized.
+- UI resilience: `usePlugins()` provides fallback empty metadata (`DEFAULT_PLUGIN_CONTEXT`) when unmounted or in tests; admin and HR pages (`GlobalSettingsPage`, `CalendarManagementPage`, `HRCalendarsPage`) dynamically show payroll work calendar links, sync actions, and sync descriptions only when `payroll` is active.
+- Global Settings redesign: 4 categorized glassmorphic tabs (Branding & Identity, Vacation & Carry-Over, Workplace & Hours, System & Operations) with live identity mockup preview, standard 40-hour workweek baseline, and operational cut-off references.
+- Gates passed: `py -3.14 manage.py test apps.dashboard.tests.test_holiday_sync` 8 OK, `node scripts/table-header-audit.mjs` 0 violations across 913 files, `npx tsc -b` clean, `npx eslint` clean, `npx prettier --check` clean, `py -3.14 manage.py check` 0 issues, `py -3.14 manage.py makemigrations --check` no changes, `npx vitest run calendar` 36 suites / 188 tests OK, `npm run build` OK.
+

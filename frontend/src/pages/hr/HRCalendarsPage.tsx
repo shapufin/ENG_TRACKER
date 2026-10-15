@@ -2,11 +2,12 @@ import React from "react";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, RefreshCcw } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { HolidayTable } from "../admin/components/HolidayTable";
 import { HolidayFormDialog } from "../admin/components/HolidayFormDialog";
 import { useHRHolidays } from "./hooks/useHRHolidays";
+import { usePlugins } from "@/context/PluginContext";
 
 /**
  * HR-native Company Holidays page (Part D: HR reaches holiday management
@@ -15,6 +16,8 @@ import { useHRHolidays } from "./hooks/useHRHolidays";
  * (their bulk cross-team actions are not granted to HR).
  */
 export const HRCalendarsPage: React.FC = () => {
+  const { activePlugins } = usePlugins();
+  const isPayrollActive = activePlugins.some((p) => p.name === "payroll");
   const {
     workspaceOptions,
     holidayRows,
@@ -28,6 +31,7 @@ export const HRCalendarsPage: React.FC = () => {
     setDeleteTarget,
     holidayMutation,
     deleteHolidayMutation,
+    syncPayrollMutation,
     openHolidayForm,
     handleHolidaySubmit,
   } = useHRHolidays();
@@ -41,6 +45,18 @@ export const HRCalendarsPage: React.FC = () => {
             <h3 className="text-lg font-semibold">Global & Workspace Holidays</h3>
           </div>
           <div className="flex flex-wrap gap-2">
+            {isPayrollActive && (
+              <Button
+                variant="outline"
+                onClick={() => syncPayrollMutation.mutate()}
+                disabled={syncPayrollMutation.isPending}
+              >
+                <RefreshCcw
+                  className={`mr-2 h-4 w-4 ${syncPayrollMutation.isPending ? "animate-spin" : ""}`}
+                />
+                {syncPayrollMutation.isPending ? "Syncing..." : "Sync with Payroll"}
+              </Button>
+            )}
             <Button onClick={() => openHolidayForm()}>
               <CalendarDays className="mr-2 h-4 w-4" /> Add Holiday
             </Button>

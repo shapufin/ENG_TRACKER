@@ -43,6 +43,32 @@ export const PluginCreateCRUserDialog: React.FC<PluginCreateCRUserDialogProps> =
   );
 };
 
+export interface PluginGrantCRAccessDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  teams: Team[];
+  existingUserIds: number[];
+  initialUserId: number | null;
+  initialUser?: { id: number; username: string; email: string; full_name?: string };
+}
+
+export const PluginGrantCRAccessDialog: React.FC<PluginGrantCRAccessDialogProps> = (props) => {
+  if (!useControlRoomActive()) return null;
+
+  const GrantDialog = getPluginComponent(
+    "control_room",
+    "GrantControlRoomAccessDialog"
+  ) as React.ComponentType<PluginGrantCRAccessDialogProps> | null;
+
+  if (!GrantDialog) return null;
+
+  return (
+    <Suspense fallback={null}>
+      <GrantDialog {...props} />
+    </Suspense>
+  );
+};
+
 export interface PluginEditCRUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

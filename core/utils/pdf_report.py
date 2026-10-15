@@ -275,7 +275,7 @@ def _chart_box(drawing):
     """Chart area inside the drawing, leaving room for the legend row."""
     width = drawing.width
     height = drawing.height
-    return 34, 22, width - 34 - 12, height - 22 - 10
+    return 34, 32, width - 34 - 12, height - 32 - 10
 
 
 def _add_chart(story, drawing):
@@ -359,6 +359,16 @@ def bar_chart(story, *, categories, series, horizontal=False, y_max=None, y_suff
     chart.valueAxis.valueMin = min(0, min(all_values)) if all_values else 0
     if y_max is not None:
         chart.valueAxis.valueMax = y_max
+    elif not any(all_values):
+        # An all-zero chart would otherwise get a 0..0.01 axis.
+        chart.valueAxis.valueMax = 1
+        chart.valueAxis.valueStep = 1
+    muted = colors.HexColor(PALETTE['muted'])
+    for axis in (chart.valueAxis, chart.categoryAxis):
+        axis.labels.fontName = 'Helvetica'
+        axis.labels.fontSize = 7
+        axis.labels.fillColor = muted
+    chart.categoryAxis.labels.dy = -2
     chart.valueAxis.labelTextFormat = lambda v: f'{v:g}{y_suffix}'
     chart.valueAxis.strokeColor = colors.HexColor(PALETTE['rule'])
     chart.categoryAxis.strokeColor = colors.HexColor(PALETTE['rule'])

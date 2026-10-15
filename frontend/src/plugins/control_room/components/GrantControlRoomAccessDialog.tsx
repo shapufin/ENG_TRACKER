@@ -15,6 +15,8 @@ interface GrantControlRoomAccessDialogProps {
   teams: Team[];
   existingUserIds: number[];
   initialUserId?: number | null;
+  /** Display record for `initialUserId`, so the picker shows a name instead of "User #id". */
+  initialUser?: ControlRoomEligibleUser;
 }
 
 export const GrantControlRoomAccessDialog: React.FC<GrantControlRoomAccessDialogProps> = ({
@@ -23,6 +25,7 @@ export const GrantControlRoomAccessDialog: React.FC<GrantControlRoomAccessDialog
   teams,
   existingUserIds,
   initialUserId = null,
+  initialUser,
 }) => {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(initialUserId);
   const [selectedUser, setSelectedUser] = useState<ControlRoomEligibleUser | undefined>();
@@ -85,9 +88,10 @@ export const GrantControlRoomAccessDialog: React.FC<GrantControlRoomAccessDialog
           excludeUserIds={existingUserIds}
           placeholder="Search by name, username, or email..."
           disabled={createMutation.isPending}
+          fallbackUser={initialUser}
         />
         {selectedUser && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {selectedUser.full_name || selectedUser.username} will receive read-only access.
           </p>
         )}
@@ -101,7 +105,7 @@ export const GrantControlRoomAccessDialog: React.FC<GrantControlRoomAccessDialog
           disabled={createMutation.isPending}
           placeholder="Choose teams this user can view..."
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           No teams means no visibility. It does not grant global access.
         </p>
       </div>

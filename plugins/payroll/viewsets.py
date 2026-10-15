@@ -797,6 +797,7 @@ class PayrollWorkCalendarViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         'create': 'configure', 'update': 'configure', 'partial_update': 'configure',
         'destroy': 'configure', 'generate_year': 'configure',
         'add_holiday': 'configure', 'update_holiday': 'configure', 'remove_holiday': 'configure',
+        'sync_holidays': 'configure',
     }
 
     @action(detail=True, methods=['post'])
@@ -925,6 +926,20 @@ class PayrollWorkCalendarViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                     f'Removed holiday "{old_name}" on {workday.date}',
                     old_values={'name': old_name, 'date': str(workday.date)})
         return Response({'status': 'removed'})
+
+    @action(detail=True, methods=['post'], url_path='sync_holidays')
+    def sync_holidays(self, request, pk=None):
+        """Synchronize holidays between this Payroll calendar and HR PublicHoliday catalog."""
+        calendar = self.get_object()
+        from apps.dashboard.services.holiday_sync import sync_holidays_between_hr_and_payroll
+        result = sync_holidays_between_hr_and_payroll(year=calendar.year)
+        _log_audit(
+            request.user,
+            'payroll_calendar_sync_holidays',
+            f'Synchronized holidays for {calendar.country} {calendar.year}: {result.get("total_holidays", 0)} total',
+            new_values=result,
+        )
+        return Response(result)
 
 
 # ---------------------------------------------------------------------------

@@ -23,10 +23,13 @@ import { HolidayFormDialog } from "./components/HolidayFormDialog";
 import { TeamEditDialog } from "./components/TeamEditDialog";
 import { GroupRenameDialog } from "./components/GroupRenameDialog";
 import { useCalendarManagementPage } from "./hooks/useCalendarManagementPage";
+import { usePlugins } from "@/context/PluginContext";
 
 // fallow-ignore-next-line complexity
 export const CalendarManagementPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const { activePlugins } = usePlugins();
+  const isPayrollActive = activePlugins.some((p) => p.name === "payroll");
   const {
     activeTab,
     setActiveTab,
@@ -76,6 +79,7 @@ export const CalendarManagementPage: React.FC = () => {
     clearGroupMutation,
     holidayMutation,
     deleteHolidayMutation,
+    syncPayrollMutation,
     openHolidayForm,
     openEdit,
     handleBulkApplyIntent,
@@ -257,16 +261,31 @@ export const CalendarManagementPage: React.FC = () => {
                 </p>
                 <h3 className="text-lg font-semibold">Global & Workspace Holidays</h3>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  Global holidays synchronize automatically with the Payroll Work Calendar and
-                  employee leave calculations.
+                  {isPayrollActive
+                    ? "Global holidays synchronize automatically with the Payroll Work Calendar and employee leave calculations."
+                    : "Global holidays synchronize automatically with employee leave calculations."}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" asChild>
-                  <Link to="/admin/payroll/calendar">
-                    <CalendarDays className="mr-2 h-4 w-4" /> Visual Payroll Calendar
-                  </Link>
-                </Button>
+                {isPayrollActive && (
+                  <>
+                    <Button variant="outline" asChild>
+                      <Link to="/admin/payroll/calendar">
+                        <CalendarDays className="mr-2 h-4 w-4" /> Visual Payroll Calendar
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => syncPayrollMutation.mutate()}
+                      disabled={syncPayrollMutation.isPending}
+                    >
+                      <RefreshCcw
+                        className={`mr-2 h-4 w-4 ${syncPayrollMutation.isPending ? "animate-spin" : ""}`}
+                      />
+                      {syncPayrollMutation.isPending ? "Syncing..." : "Sync with Payroll"}
+                    </Button>
+                  </>
+                )}
                 <PluginImportButton
                   targetKey="public_holidays"
                   label="Import holidays"

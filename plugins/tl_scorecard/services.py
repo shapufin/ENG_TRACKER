@@ -54,20 +54,78 @@ def _business_days_elapsed(start, end) -> int:
     return max(count_business_days(start.date(), end.date()) - 1, 0)
 
 
-def leave_sla_metrics(team_member_ids, month: date) -> dict:
+def _local_date(value):
+    """The calendar date a stored datetime falls on in the app's time zone,
+    which is how a ``submitted_at__gte=<date>`` filter reads it."""
+    return timezone.localtime(value).date()
+
+
+class TrendWindow:
+    """Leave, overtime and meeting rows for every month of a trend, read once.
+
+    The per-month metrics take it as an optional ``window`` and slice it in
+    Python instead of each running their own queries, so a six-month trend
+    costs four reads for these tables rather than about forty.
+    """
+
+    def __init__(self, leader, team_member_ids, first_month: date, end: date):
+        self.first_month = first_month
+        self.end = end
+        self.leave = list(LeaveRequest.objects.filter(
+            user_id__in=team_member_ids, submitted_at__gte=first_month, submitted_at__lt=end,
+        ))
+        self.pending_leave = [
+            _local_date(submitted) for submitted in LeaveRequest.objects.filter(
+                user_id__in=team_member_ids, status='pending', submitted_at__lt=end,
+            ).values_list('submitted_at', flat=True)
+        ]
+        self.overtime = list(OvertimeLog.objects.filter(
+            user_id__in=team_member_ids, submitted_at__gte=first_month, submitted_at__lt=end,
+        ))
+        self.meetings = list(Meeting.objects.filter(
+            organizer=leader, occurred_on__gte=first_month, occurred_on__lt=end,
+        ).prefetch_related('attendees'))
+
+    @staticmethod
+    def _submitted_in(rows, month_start, month_end):
+        return [r for r in rows if month_start <= _local_date(r.submitted_at) < month_end]
+
+    def leave_in(self, month_start, month_end):
+        return self._submitted_in(self.leave, month_start, month_end)
+
+    def overtime_in(self, month_start, month_end):
+        return self._submitted_in(self.overtime, month_start, month_end)
+
+    def pending_leave_before(self, month_end) -> int:
+        return sum(1 for submitted in self.pending_leave if submitted < month_end)
+
+    def meetings_in(self, meeting_type, month_start, month_end):
+        return [
+            m for m in self.meetings
+            if m.meeting_type == meeting_type and month_start <= m.occurred_on < month_end
+        ]
+
+
+def leave_sla_metrics(team_member_ids, month: date, window: TrendWindow | None = None) -> dict:
     """Leave-approval SLA + month-end pending count for a TL's team."""
     month_start, month_end = _month_bounds(month)
-    qs = LeaveRequest.objects.filter(
-        user_id__in=team_member_ids, submitted_at__gte=month_start, submitted_at__lt=month_end,
-    )
+    if window is not None:
+        rows = window.leave_in(month_start, month_end)
+    else:
+        rows = LeaveRequest.objects.filter(
+            user_id__in=team_member_ids, submitted_at__gte=month_start, submitted_at__lt=month_end,
+        )
 
-    decided = [r for r in qs if r.status in ('approved', 'rejected') and r.approved_at]
+    decided = [r for r in rows if r.status in ('approved', 'rejected') and r.approved_at]
     within_2_days = sum(1 for r in decided if _business_days_elapsed(r.submitted_at, r.approved_at) <= 2)
     pct_within_2_days = round((within_2_days / len(decided)) * 100, 1) if decided else None
 
-    pending_at_month_end = LeaveRequest.objects.filter(
-        user_id__in=team_member_ids, status='pending', submitted_at__lt=month_end,
-    ).count()
+    if window is not None:
+        pending_at_month_end = window.pending_leave_before(month_end)
+    else:
+        pending_at_month_end = LeaveRequest.objects.filter(
+            user_id__in=team_member_ids, status='pending', submitted_at__lt=month_end,
+        ).count()
 
     return {
         'decided_count': len(decided),
@@ -76,15 +134,18 @@ def leave_sla_metrics(team_member_ids, month: date) -> dict:
     }
 
 
-def ot_turnaround_metrics(team_member_ids, month: date) -> dict:
+def ot_turnaround_metrics(team_member_ids, month: date, window: TrendWindow | None = None) -> dict:
     """Overtime approval turnaround only — deliberately NOT a measure of
     'unauthorized overtime': that KPI has no data source yet, since
     OvertimeLog has no pre-approval concept."""
     month_start, month_end = _month_bounds(month)
-    qs = OvertimeLog.objects.filter(
-        user_id__in=team_member_ids, submitted_at__gte=month_start, submitted_at__lt=month_end,
-    )
-    decided = [r for r in qs if r.status in ('approved', 'rejected') and r.approved_at]
+    if window is not None:
+        rows = window.overtime_in(month_start, month_end)
+    else:
+        rows = OvertimeLog.objects.filter(
+            user_id__in=team_member_ids, submitted_at__gte=month_start, submitted_at__lt=month_end,
+        )
+    decided = [r for r in rows if r.status in ('approved', 'rejected') and r.approved_at]
     if not decided:
         return {'decided_count': 0, 'avg_turnaround_days': None}
 
@@ -95,27 +156,31 @@ def ot_turnaround_metrics(team_member_ids, month: date) -> dict:
     }
 
 
-def meeting_compliance_metrics(leader, team_member_ids, month: date) -> dict:
+def meeting_compliance_metrics(leader, team_member_ids, month: date, window: TrendWindow | None = None) -> dict:
     """1-on-1 compliance %, TL-sync count, and team-meeting governance —
     all three KPIs the Meeting model covers (gap-audit findings #12/#13)."""
     month_start, month_end = _month_bounds(month)
 
-    one_on_ones = Meeting.objects.filter(
-        organizer=leader, meeting_type='one_on_one', occurred_on__gte=month_start, occurred_on__lt=month_end,
-    )
-    members_with_one_on_one = set(one_on_ones.values_list('counterparty_id', flat=True))
+    if window is not None:
+        members_with_one_on_one = {
+            m.counterparty_id for m in window.meetings_in('one_on_one', month_start, month_end)
+        }
+        tl_sync_count = len(window.meetings_in('tl_sync', month_start, month_end))
+        team_meetings = window.meetings_in('team_meeting', month_start, month_end)
+    else:
+        def _month_meetings(meeting_type):
+            return Meeting.objects.filter(
+                organizer=leader, meeting_type=meeting_type,
+                occurred_on__gte=month_start, occurred_on__lt=month_end,
+            )
+
+        members_with_one_on_one = set(_month_meetings('one_on_one').values_list('counterparty_id', flat=True))
+        tl_sync_count = _month_meetings('tl_sync').count()
+        team_meetings = list(_month_meetings('team_meeting').prefetch_related('attendees'))
     compliant_members = len(members_with_one_on_one & set(team_member_ids))
     one_on_one_pct = (
         round((compliant_members / len(team_member_ids)) * 100, 1) if team_member_ids else None
     )
-
-    tl_sync_count = Meeting.objects.filter(
-        organizer=leader, meeting_type='tl_sync', occurred_on__gte=month_start, occurred_on__lt=month_end,
-    ).count()
-
-    team_meetings = list(Meeting.objects.filter(
-        organizer=leader, meeting_type='team_meeting', occurred_on__gte=month_start, occurred_on__lt=month_end,
-    ).prefetch_related('attendees'))
     # `.attendees.all()`, not `.filter(...)` — the latter bypasses the
     # prefetch_related cache above and re-queries per meeting (N+1).
     held_with_hrbp = sum(1 for m in team_meetings if any(a.role == 'hrbp' for a in m.attendees.all()))
@@ -346,12 +411,17 @@ def scorecard_trend(user, months: int, end_month: date) -> list[dict]:
     no snapshot model (same "computed live" approach as the rest of this
     plugin)."""
     end = reporting_period(end_month)
-    current_state = _current_state_metrics(user, scoreable_member_ids(user))
+    team_member_ids = scoreable_member_ids(user)
+    current_state = _current_state_metrics(user, team_member_ids)
+    first = end.replace(day=1)
+    for _ in range(months - 1):
+        first = (first - timedelta(days=1)).replace(day=1)
+    window = TrendWindow(user, team_member_ids, first, _month_bounds(end)[1])
     points = []
     year_metrics: dict = {}
     cursor = end
     for _ in range(months):
-        points.append(build_scorecard(user, cursor, current_state, year_metrics))
+        points.append(build_scorecard(user, cursor, current_state, year_metrics, window))
         if cursor.month == 1:
             cursor = cursor.replace(year=cursor.year - 1, month=12)
         else:
@@ -489,12 +559,14 @@ def _current_state_metrics(user, team_member_ids) -> dict:
 
 def build_scorecard(
     user, month: date, current_state: dict | None = None, year_metrics: dict | None = None,
+    window: TrendWindow | None = None,
 ) -> dict:
     """Full scorecard for one TL (`user`) for `month`.
 
     `year_metrics` lets a multi-month caller (the trend) share the two
     calendar-year metrics across the months of one year instead of re-querying
-    them for every point.
+    them for every point, and `window` does the same for leave, overtime and
+    meetings.
     """
     team_member_ids = scoreable_member_ids(user)
     month = reporting_period(month)
@@ -511,9 +583,9 @@ def build_scorecard(
     return {
         'month': month.isoformat(),
         'team_size': len(team_member_ids),
-        'leave': leave_sla_metrics(team_member_ids, month),
-        'overtime': ot_turnaround_metrics(team_member_ids, month),
-        'meetings': meeting_compliance_metrics(user, team_member_ids, month),
+        'leave': leave_sla_metrics(team_member_ids, month, window),
+        'overtime': ot_turnaround_metrics(team_member_ids, month, window),
+        'meetings': meeting_compliance_metrics(user, team_member_ids, month, window),
         **year_part,
         **current_state,
     }

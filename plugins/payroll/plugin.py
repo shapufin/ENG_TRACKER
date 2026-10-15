@@ -136,7 +136,13 @@ class PayrollPlugin(BasePlugin):
         return True
 
     def ready(self):
-        """Initialize plugin when enabled. Phase 1: no signals."""
+        """Initialize plugin when enabled. Ensure holidays are synchronized with HR."""
+        try:
+            from apps.dashboard.services.holiday_sync import sync_holidays_between_hr_and_payroll
+            sync_holidays_between_hr_and_payroll()
+        except Exception:
+            pass
 
     def disable(self):
         """Cleanup when plugin is disabled. Phase 1: no signals."""
+

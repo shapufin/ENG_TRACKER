@@ -217,6 +217,10 @@ export const AppRoutes: React.FC = () => {
                   element: withSuspense(<CalendarManagementPage />),
                 },
                 {
+                  path: "/admin/holidays",
+                  element: <Navigate to="/admin/calendars?tab=holidays" replace />,
+                },
+                {
                   path: "/admin/leave-balances",
                   element: withSuspense(<LeaveBalancesPage />),
                 },

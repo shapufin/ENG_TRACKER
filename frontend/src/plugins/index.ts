@@ -112,6 +112,11 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
         default: m.CreateCRUserDialog,
       }))
     ),
+    GrantControlRoomAccessDialog: lazy(() =>
+      import("./control_room/components/GrantControlRoomAccessDialog").then((m) => ({
+        default: m.GrantControlRoomAccessDialog,
+      }))
+    ),
     EditCRUserDialog: lazy(() =>
       import("./control_room/components/EditCRUserDialog").then((m) => ({
         default: m.EditCRUserDialog,

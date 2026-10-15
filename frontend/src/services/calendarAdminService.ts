@@ -106,4 +106,21 @@ export const calendarAdminService = {
   async deleteHoliday(id: number): Promise<void> {
     await api.delete(`/dashboard/holidays/${id}/`);
   },
+
+  async syncPayroll(
+    year?: number
+  ): Promise<{
+    status: string;
+    synced_to_hr: number;
+    synced_to_payroll: number;
+    total_holidays: number;
+  }> {
+    const { data } = await api.post<{
+      status: string;
+      synced_to_hr: number;
+      synced_to_payroll: number;
+      total_holidays: number;
+    }>("/dashboard/holidays/sync_payroll/", { year });
+    return data;
+  },
 };

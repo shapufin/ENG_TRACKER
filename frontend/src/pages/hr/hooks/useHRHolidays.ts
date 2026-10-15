@@ -22,16 +22,22 @@ export const useHRHolidays = () => {
 
   const resetHolidayForm = useCallback(() => setHolidayForm(buildHolidayFormValues(undefined)), []);
 
-  const { holidays, workspaces, holidaysLoading, holidayMutation, deleteHolidayMutation } =
-    useCalendarManagement({
-      includeTeams: false,
-      onHolidaySuccess: () => {
-        setFormOpen(false);
-        setEditingHoliday(null);
-        resetHolidayForm();
-      },
-      onHolidayDeleteSuccess: () => setDeleteTarget(null),
-    });
+  const {
+    holidays,
+    workspaces,
+    holidaysLoading,
+    holidayMutation,
+    deleteHolidayMutation,
+    syncPayrollMutation,
+  } = useCalendarManagement({
+    includeTeams: false,
+    onHolidaySuccess: () => {
+      setFormOpen(false);
+      setEditingHoliday(null);
+      resetHolidayForm();
+    },
+    onHolidayDeleteSuccess: () => setDeleteTarget(null),
+  });
 
   const openHolidayForm = useCallback((holiday?: PublicHoliday) => {
     setEditingHoliday(holiday ?? null);
@@ -88,6 +94,7 @@ export const useHRHolidays = () => {
     setDeleteTarget,
     holidayMutation,
     deleteHolidayMutation,
+    syncPayrollMutation,
     openHolidayForm,
     handleHolidaySubmit,
   };
