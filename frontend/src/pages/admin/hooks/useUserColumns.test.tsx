@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useUserColumns } from "./useUserColumns";
@@ -183,5 +183,34 @@ describe("useUserColumns", () => {
     );
     expect(screen.getByText("IT TL")).toHaveClass("bg-tone-info-surface");
     expect(screen.getByText("IT TL").className).not.toMatch(/blue-|emerald-|violet-/);
+  });
+
+  describe("Grant CR access row action", () => {
+    const renderActions = (options: Parameters<typeof useUserColumns>[3]) => {
+      const { result } = renderHook(() => useUserColumns(vi.fn(), vi.fn(), vi.fn(), options));
+      const column = result.current.find((item) => item.id === "actions");
+      const cell = column?.cell as (context: { row: { original: UserProfile } }) => React.ReactNode;
+      render(<>{cell({ row: { original: profile() } })}</>);
+    };
+
+    it("opens the grant dialog in place instead of navigating", () => {
+      const onGrantCR = vi.fn();
+      renderActions({ crActive: true, onGrantCR });
+
+      fireEvent.click(screen.getByRole("button", { name: "Grant Control Room access to alice" }));
+
+      expect(onGrantCR).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+    });
+
+    it("is hidden when the user already has a CR record", () => {
+      const record = { id: 3, user: 7, is_active: false, team_scopes: [] };
+      renderActions({
+        crActive: true,
+        onGrantCR: vi.fn(),
+        crAccessByUserId: new Map([[7, record]]) as never,
+      });
+
+      expect(screen.queryByRole("button", { name: /Grant Control Room access/ })).toBeNull();
+    });
   });
 });
