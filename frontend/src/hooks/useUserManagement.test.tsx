@@ -69,3 +69,22 @@ describe("useUserManagement server paging", () => {
     });
   });
 });
+
+describe("useUserManagement Control Room filter", () => {
+  it("sends cr_access to the server instead of filtering the loaded page", async () => {
+    renderHook(() => useUserManagement({ crAccess: true, page: 1 }), { wrapper });
+    await waitFor(() =>
+      expect(userService.getProfiles).toHaveBeenCalledWith(
+        expect.objectContaining({ cr_access: true })
+      )
+    );
+  });
+
+  it("omits cr_access when off", async () => {
+    renderHook(() => useUserManagement({ page: 1 }), { wrapper });
+    await waitFor(() => expect(userService.getProfiles).toHaveBeenCalled());
+    expect(vi.mocked(userService.getProfiles).mock.calls[0][0]).toMatchObject({
+      cr_access: undefined,
+    });
+  });
+});

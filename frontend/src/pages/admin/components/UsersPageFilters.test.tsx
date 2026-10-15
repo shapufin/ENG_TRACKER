@@ -35,8 +35,8 @@ describe("UsersPageFilters active strip", () => {
     expect(screen.queryByText("Active:")).toBeNull();
   });
 
-  it("counts CR-only as an active filter, matches the visible rows, and Clear all resets it", () => {
-    const state = renderFilters({ crOnly: true, filteredData: [{ id: 1 }, { id: 2 }, { id: 3 }] });
+  it("counts CR-only as an active filter, reports the server total, and Clear all resets it", () => {
+    const state = renderFilters({ crOnly: true, profilesCount: 3 });
     expect(screen.getByText("Active:")).toBeInTheDocument();
     expect(screen.getByText("CR only")).toBeInTheDocument();
     expect(screen.getByText(/3 users match/)).toBeInTheDocument();

@@ -141,6 +141,9 @@ export const useUsersPage = () => {
   const [techLevelIds, setTechLevelIds] = useState<number[]>([]);
   const [noTechOnly, setNoTechOnly] = useState(false);
   const [teamIds, setTeamIds] = useState<number[]>([]);
+  const { activePlugins } = usePlugins();
+  const crActive = activePlugins.some((p) => p.name === "control_room");
+  const [crOnly, setCrOnly] = useState(false);
   // ?q= seeds the search (command palette deep link). The server does the
   // matching, so only the debounced term reaches the query key.
   const [searchInput, setSearchInput] = useState(() => initialQuery.get("q") ?? "");
@@ -154,6 +157,7 @@ export const useUsersPage = () => {
     noTechOnly,
     teamIds,
     search.trim(),
+    crOnly,
   ]);
   const [pageState, setPageState] = useState({ signature: filterSignature, page: 1 });
   const page = pageState.signature === filterSignature ? pageState.page : 1;
@@ -198,6 +202,7 @@ export const useUsersPage = () => {
     teamIds,
     search,
     page,
+    crAccess: crActive && crOnly,
     onUpdateSuccess: () => {
       setFormOpen(false);
       setEditing(null);
@@ -243,10 +248,7 @@ export const useUsersPage = () => {
   // direct API call to the plugin's URL to resolve CR access for the visible
   // page of users. If the plugin is deactivated/removed, crActive becomes
   // false and the fetch never happens — no broken references.
-  const { activePlugins } = usePlugins();
-  const crActive = activePlugins.some((p) => p.name === "control_room");
   const isCROnlyAdmin = isCRAdmin && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
-  const [crOnly, setCrOnly] = useState(false);
   const [crAccessUserIds, setCrAccessUserIds] = useState<Set<number>>(new Set());
   const [crAccessByUserId, setCrAccessByUserId] = useState<Map<number, CRAccessRecord>>(new Map());
 
@@ -282,10 +284,9 @@ export const useUsersPage = () => {
     };
   }, [crActive, visibleUserIds]);
 
-  const crFilteredData = useMemo(() => {
-    if (!crActive || !crOnly) return filteredData;
-    return filteredData.filter((p) => crAccessUserIds.has(p.user.id));
-  }, [crActive, crOnly, filteredData, crAccessUserIds]);
+  // The Control Room filter is applied by the server (cr_access), so the loaded
+  // page is already the filtered one.
+  const crFilteredData = filteredData;
 
   const handleRowSelectionChange: OnChangeFn<RowSelectionState> = useCallback(
     (updater) => {

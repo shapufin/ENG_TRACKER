@@ -46,3 +46,30 @@ class TestProfileSearchAndPaging(APITestCase):
         response = self.client.get('/api/users/profiles/', {'page_size': 5000})
         self.assertEqual(response.status_code, 200)
         self.assertLessEqual(len(response.data['results']), 200)
+
+
+class TestProfileCrAccessFilter(APITestCase):
+    """`?cr_access=true` narrows the whole result set, not just the loaded page."""
+
+    def setUp(self):
+        from plugins.control_room.models import ControlRoomAccess
+
+        self.admin = User.objects.create_superuser(
+            username='cr-admin', password='testpass123', email='cr-admin@example.com'
+        )
+        self.active = User.objects.create_user(username='cr-active', password='testpass123')
+        self.inactive = User.objects.create_user(username='cr-inactive', password='testpass123')
+        self.plain = User.objects.create_user(username='cr-plain', password='testpass123')
+        ControlRoomAccess.objects.create(user=self.active, is_active=True)
+        ControlRoomAccess.objects.create(user=self.inactive, is_active=False)
+        self.client.force_authenticate(user=self.admin)
+
+    def test_only_active_control_room_users_are_returned(self):
+        response = self.client.get('/api/users/profiles/', {'cr_access': 'true'})
+        usernames = {p['user']['username'] for p in response.data['results']}
+        self.assertEqual(usernames, {'cr-active'})
+        self.assertEqual(response.data['count'], 1)
+
+    def test_filter_is_off_by_default(self):
+        response = self.client.get('/api/users/profiles/')
+        self.assertEqual(response.data['count'], 4)

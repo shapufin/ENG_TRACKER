@@ -48,10 +48,8 @@ export const UsersPageFilters: React.FC<UsersPageFiltersProps> = ({ state, teams
     state.noTechOnly ||
     state.crOnly ||
     activeTeamLabels.length > 0;
-  // profilesCount is the server-side total for the active role/tech filters
-  // (accurate even past the page cap); once CR-only narrows the page
-  // client-side, fall back to the actually-displayed row count.
-  const matchCount = state.crOnly ? state.filteredData.length : state.profilesCount;
+  // profilesCount is the server-side total for every active filter.
+  const matchCount = state.profilesCount;
 
   return (
     <div className="border-line-subtle space-y-2 border-b pb-4">

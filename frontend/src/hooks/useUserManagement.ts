@@ -22,6 +22,8 @@ interface UseUserManagementOptions {
   /** Server-side search term and 1-based page; both belong in the query key. */
   search?: string;
   page?: number;
+  /** Only users with active Control Room access, decided by the server. */
+  crAccess?: boolean;
 }
 
 /**
@@ -39,6 +41,7 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
   const teamIds = options?.teamIds ?? [];
   const search = options?.search?.trim() || undefined;
   const page = options?.page ?? 1;
+  const crAccess = options?.crAccess || undefined;
   // Comma-joined, not a bare array: axios serializes array params as
   // `tech[]=1`, which doesn't match DRF's `getlist('tech')` on the backend.
   const techParam = !noTechOnly && techIds.length > 0 ? techIds.join(",") : undefined;
@@ -55,7 +58,7 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
     queryKey: [
       "admin",
       "profiles",
-      { role, techIds, techLevelIds, noTechOnly, teamIds, search, page },
+      { role, techIds, techLevelIds, noTechOnly, teamIds, search, page, crAccess },
     ],
     queryFn: () =>
       userService.getProfiles({
@@ -65,6 +68,7 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
         no_tech: noTechOnly || undefined,
         team: teamParam,
         search,
+        cr_access: crAccess,
         page,
         page_size: USERS_PAGE_SIZE,
       }),
@@ -77,8 +81,9 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
   // Team narrows the facet counts too (see get_queryset), so it must be in
   // this query key — otherwise switching teams would serve stale counts.
   const { data: techFacets } = useQuery({
-    queryKey: ["admin", "profiles", "tech-facets", { role, teamIds, search }],
-    queryFn: () => userService.getTechFacets({ role, team: teamParam, search }),
+    queryKey: ["admin", "profiles", "tech-facets", { role, teamIds, search, crAccess }],
+    queryFn: () =>
+      userService.getTechFacets({ role, team: teamParam, search, cr_access: crAccess }),
     placeholderData: keepPreviousData,
     refetchOnMount: true,
     staleTime: 60000,

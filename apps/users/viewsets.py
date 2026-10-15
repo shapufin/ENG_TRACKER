@@ -16,7 +16,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from .permissions import IsAdminOrReadOnly
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.exceptions import FieldError, ValidationError as DjangoValidationError
 from django.db import DatabaseError, models, transaction
 from django.db.models import Count, OuterRef, Q, Subquery, Sum
 from django.db.utils import OperationalError
@@ -1163,6 +1163,13 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
         team_ids = self._id_list_param('team')
         if team_ids:
             queryset = queryset.filter(teams__id__in=team_ids).distinct()
+        if self.request.query_params.get('cr_access', '').lower() == 'true':
+            # Filtered through the plugin's reverse relation, never an import.
+            # Fails closed (empty) when control_room is not installed.
+            try:
+                queryset = queryset.filter(user__control_room_access__is_active=True)
+            except FieldError:
+                queryset = queryset.none()
         # tech_facets counts each tech (and no-tech) against this same
         # queryset, so the `tech`/`no_tech` params there select what to
         # count, not which profiles to keep — applying them here would
