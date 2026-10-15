@@ -35,6 +35,11 @@ vi.mock("react-router-dom", () => ({
   useParams: () => currentParams,
 }));
 
+const mockRoles = vi.hoisted(() => ({ isSuperuser: true }));
+vi.mock("@/context/PermissionContext", () => ({
+  usePermissions: () => mockRoles,
+}));
+
 vi.mock("@/lib/error-handler", () => ({
   handleApiError: vi.fn(),
 }));
@@ -231,6 +236,17 @@ describe("ResourceAccessGroupPage (detail)", () => {
     render(<ResourceAccessGroupPage />);
 
     expect(screen.getByRole("button", { name: /Edit group/ })).toBeInTheDocument();
+  });
+
+  it("hides edit and membership controls from staff who are not superusers", () => {
+    mockRoles.isSuperuser = false;
+    setup();
+    render(<ResourceAccessGroupPage />);
+
+    expect(screen.queryByRole("button", { name: /Edit group/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Add member/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Remove / })).toBeNull();
+    mockRoles.isSuperuser = true;
   });
 
   it("renders member rows with username and remove button", () => {
