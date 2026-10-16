@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from core.utils.tabular_file import suggest_mapping
 from plugins.data_import.importers.registry import list_importers
-from plugins.data_import.viewsets import _template_frame
+from plugins.data_import.parsing import _template_frame
 
 
 class TemplateRoundTripTests(TestCase):

@@ -1,38 +1,13 @@
 """
 Importer registry entries.
-Importing these modules registers the concrete importers with the registry.
+
+Importing every module in this package registers the concrete importers with
+the registry, so a new target file needs no edit here. Modules that register
+nothing (base, helpers, registry, ...) are imported too, which is harmless.
 """
 
-from . import (
-    clients,
-    control_room_access,
-    leave_balances,
-    leave_requests,
-    overtime_logs,
-    public_holidays,
-    skill_categories,
-    skills,
-    standby_logs,
-    teams,
-    techs,
-    user_skills,
-    users,
-    wages,
-)
+import importlib
+import pkgutil
 
-__all__ = [
-    "clients",
-    "control_room_access",
-    "leave_balances",
-    "leave_requests",
-    "overtime_logs",
-    "public_holidays",
-    "skill_categories",
-    "skills",
-    "standby_logs",
-    "teams",
-    "techs",
-    "user_skills",
-    "users",
-    "wages",
-]
+for _module in pkgutil.iter_modules(__path__):
+    importlib.import_module(f"{__name__}.{_module.name}")

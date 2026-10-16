@@ -19,7 +19,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 
 from .authority import PayrollAuthority
-from .base import BaseImporter, ImportField, ImportRowResult, UPDATE_EXISTING_OPTION
+from .base import row_error_from_exception, BaseImporter, ImportField, ImportRowResult, UPDATE_EXISTING_OPTION
 from .registry import register
 
 #: Months listed per same-month warning before the text is truncated.
@@ -348,11 +348,5 @@ class WageImporter(PayrollAuthority, BaseImporter):
                 row_index=row_index, status="created", warnings=warnings
             )
 
-        except ValueError as e:
-            return ImportRowResult(row_index=row_index, status="error", errors=[str(e)])
         except Exception as e:  # noqa: BLE001
-            return ImportRowResult(
-                row_index=row_index,
-                status="error",
-                errors=[f"Unexpected error: {str(e)}"],
-            )
+            return row_error_from_exception(row_index, e)

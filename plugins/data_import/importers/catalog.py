@@ -9,7 +9,8 @@ model, its fields, and how to resolve its foreign keys.
 
 from typing import Any, Dict, List, Optional
 
-from .base import BaseImporter, ImportRowResult
+from .base import row_error_from_exception, BaseImporter, ImportRowResult
+from .helpers import is_blank, parse_bool
 
 
 class CodeKeyedImporter(BaseImporter):
@@ -46,18 +47,6 @@ class CodeKeyedImporter(BaseImporter):
         code = str(value or "").strip()
         return code.upper() if self.uppercase_code else code
 
-    @staticmethod
-    def _is_blank(value: Any) -> bool:
-        return value is None or (isinstance(value, str) and not value.strip())
-
-    def _parse_bool(self, value: Any) -> Optional[bool]:
-        """Return the boolean, or None when the cell carries no value."""
-        if value is None or value == "":
-            return None
-        if isinstance(value, bool):
-            return value
-        return str(value).lower().strip() in ("true", "1", "yes", "y")
-
     def _build_field_values(self, mapped_row: Dict[str, Any]) -> Dict[str, Any]:
         """Map row values onto model kwargs, skipping cells that are empty.
 
@@ -70,7 +59,7 @@ class CodeKeyedImporter(BaseImporter):
             if mapped_row.get(key) is not None:
                 values[key] = mapped_row[key]
         for key in self.bool_fields:
-            parsed = self._parse_bool(mapped_row.get(key))
+            parsed = parse_bool(mapped_row.get(key))
             if parsed is not None:
                 values[key] = parsed
         return values
@@ -132,7 +121,7 @@ class CodeKeyedImporter(BaseImporter):
             missing = sorted(
                 key
                 for key in required_keys
-                if key not in values or self._is_blank(values[key])
+                if key not in values or is_blank(values[key])
             )
             if missing:
                 return ImportRowResult(
@@ -169,14 +158,8 @@ class CodeKeyedImporter(BaseImporter):
                 status="created" if not dry_run else "valid",
             )
 
-        except ValueError as e:
-            return ImportRowResult(row_index=row_index, status="error", errors=[str(e)])
         except Exception as e:  # noqa: BLE001
-            return ImportRowResult(
-                row_index=row_index,
-                status="error",
-                errors=[f"Unexpected error: {str(e)}"],
-            )
+            return row_error_from_exception(row_index, e)
 
     def validate_new(self, values: Dict[str, Any]) -> Optional[str]:
         """Return an error message when a new record cannot be created.

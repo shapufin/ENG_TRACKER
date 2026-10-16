@@ -81,7 +81,7 @@ class TemplateFormulaInjectionTests(TestCase):
             assert_csv_neutralised,
             assert_xlsx_neutralised,
         )
-        from plugins.data_import.viewsets import _template_response
+        from plugins.data_import.parsing import _template_response
 
         field = SimpleNamespace(key="name", label="Name", required=False)
         importer = SimpleNamespace(

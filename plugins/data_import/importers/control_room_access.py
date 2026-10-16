@@ -7,11 +7,11 @@ maps no team codes leaves the grant without scopes and warns about it.
 
 from typing import Any, Dict, List, Optional
 
-from django.contrib.auth.models import User
 
 from apps.users.models import Team
 from plugins.control_room.models import ControlRoomAccess, ControlRoomTeamScope
-from .base import BaseImporter, ImportField, ImportRowResult
+from .base import row_error_from_exception, BaseImporter, ImportField, ImportRowResult
+from .helpers import resolve_user, parse_bool
 from .authority import ControlRoomAuthority
 from .registry import register
 
@@ -88,17 +88,6 @@ class ControlRoomAccessImporter(ControlRoomAuthority, BaseImporter):
     def get_dedupe_keys(self) -> List[str]:
         return ["username"]
 
-    def _resolve_user(self, mapped_row: Dict[str, Any]) -> Optional[User]:
-        username = mapped_row.get("username")
-        if username:
-            user = User.objects.filter(username=username).first()
-            if user is not None:
-                return user
-        email = mapped_row.get("email")
-        if email:
-            return User.objects.filter(email=email).first()
-        return None
-
     def _resolve_teams(self, mapped_row: Dict[str, Any]) -> Optional[List[Team]]:
         """Return the scoped teams, or None when no team column is mapped."""
         raw = mapped_row.get("team_codes")
@@ -112,13 +101,6 @@ class ControlRoomAccessImporter(ControlRoomAuthority, BaseImporter):
         if missing:
             raise ValueError(f'Unknown Team code(s): {", ".join(missing)}')
         return teams
-
-    def _parse_bool(self, value: Any, default: bool) -> bool:
-        if value is None or value == "":
-            return default
-        if isinstance(value, bool):
-            return value
-        return str(value).lower().strip() in ("true", "1", "yes", "y")
 
     def _sync_scopes(self, access: ControlRoomAccess, teams: List[Team], actor) -> None:
         wanted = {t.id for t in teams}
@@ -144,7 +126,7 @@ class ControlRoomAccessImporter(ControlRoomAuthority, BaseImporter):
         warnings: List[str] = []
 
         try:
-            user = self._resolve_user(mapped_row)
+            user = resolve_user(mapped_row)
             if user is None:
                 return ImportRowResult(
                     row_index=row_index,
@@ -158,7 +140,7 @@ class ControlRoomAccessImporter(ControlRoomAuthority, BaseImporter):
                     "No team codes given — this grant has no visibility into any team."
                 )
 
-            is_active = self._parse_bool(mapped_row.get("is_active"), True)
+            is_active = parse_bool(mapped_row.get("is_active"), True)
             display_name = mapped_row.get("display_name")
             timezone_value = mapped_row.get("timezone")
 
@@ -207,14 +189,8 @@ class ControlRoomAccessImporter(ControlRoomAuthority, BaseImporter):
                 warnings=warnings,
             )
 
-        except ValueError as e:
-            return ImportRowResult(row_index=row_index, status="error", errors=[str(e)])
         except Exception as e:  # noqa: BLE001
-            return ImportRowResult(
-                row_index=row_index,
-                status="error",
-                errors=[f"Unexpected error: {str(e)}"],
-            )
+            return row_error_from_exception(row_index, e)
 
     def get_sample_rows(self) -> List[Dict[str, Any]]:
         return [
