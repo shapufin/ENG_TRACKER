@@ -68,11 +68,9 @@ describe("UsersPageFilters layout", () => {
     expect(screen.getAllByText("Role")).toHaveLength(1);
   });
 
-  it("keeps Tech and Team side by side in one wrapping row", () => {
+  it("keeps Team out of the filter bar (it lives in the table toolbar)", () => {
     renderWithFacets();
-    const row = screen.getByTestId("secondary-facets");
-    expect(row).toContainElement(screen.getByRole("group", { name: "Tech" }));
-    expect(row).toContainElement(screen.getByRole("group", { name: "Team" }));
-    expect(row.className).toContain("flex-wrap");
+    expect(screen.getByRole("group", { name: "Tech" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Team" })).toBeNull();
   });
 });

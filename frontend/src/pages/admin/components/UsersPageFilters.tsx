@@ -1,7 +1,6 @@
 import React from "react";
 import { UserFilterTabs } from "@/components/admin/UserFilterTabs";
 import { TechFacetFilter } from "@/components/admin/TechFacetFilter";
-import { TeamFacetFilter } from "@/components/admin/TeamFacetFilter";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import { cn } from "@/lib/utils";
 import { CRUsersFilterButton } from "./CRUsersFilterButton";
@@ -67,24 +66,16 @@ export const UsersPageFilters: React.FC<UsersPageFiltersProps> = ({ state, teams
         )}
       </div>
 
-      <div data-testid="secondary-facets" className="flex flex-wrap items-start gap-x-8 gap-y-2">
-        <TechFacetFilter
-          facets={state.techFacets}
-          noTechCount={state.noTechCount}
-          selectedTechIds={state.techIds}
-          selectedLevelIds={state.techLevelIds}
-          noTechOnly={state.noTechOnly}
-          onTechIdsChange={state.setTechIds}
-          onLevelIdsChange={state.setTechLevelIds}
-          onNoTechOnlyChange={state.setNoTechOnly}
-        />
-
-        <TeamFacetFilter
-          teams={teams}
-          selectedTeamIds={state.teamIds}
-          onTeamIdsChange={state.setTeamIds}
-        />
-      </div>
+      <TechFacetFilter
+        facets={state.techFacets}
+        noTechCount={state.noTechCount}
+        selectedTechIds={state.techIds}
+        selectedLevelIds={state.techLevelIds}
+        noTechOnly={state.noTechOnly}
+        onTechIdsChange={state.setTechIds}
+        onLevelIdsChange={state.setTechLevelIds}
+        onNoTechOnlyChange={state.setNoTechOnly}
+      />
 
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
