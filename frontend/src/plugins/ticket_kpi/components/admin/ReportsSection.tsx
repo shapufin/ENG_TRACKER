@@ -19,24 +19,23 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ticketKPIService } from "../../services/ticketKPIService";
+import { formatHours, formatPct } from "../previewTable";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import type { YearlyReport } from "../../types/ticketKPI";
 
-export const reportUserColumns: AppColumnDef<YearlyReport["per_user_summary"][number]>[] = [
+const reportUserColumns: AppColumnDef<YearlyReport["per_user_summary"][number]>[] = [
   { accessorKey: "name", header: "Name" },
   { accessorKey: "username", header: "Username" },
   { accessorKey: "total_tickets", header: "Tickets" },
   {
     accessorKey: "avg_resolution_hours",
     header: "Avg Resolution",
-    cell: ({ row }) =>
-      row.original.avg_resolution_hours != null ? `${row.original.avg_resolution_hours}h` : "N/A",
+    cell: ({ row }) => formatHours(row.original.avg_resolution_hours),
   },
   {
     accessorKey: "sla_compliance_pct",
     header: "SLA %",
-    cell: ({ row }) =>
-      row.original.sla_compliance_pct != null ? `${row.original.sla_compliance_pct}%` : "N/A",
+    cell: ({ row }) => formatPct(row.original.sla_compliance_pct),
   },
 ];
 

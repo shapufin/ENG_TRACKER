@@ -43,9 +43,22 @@ import { RowActionsPill } from "./RowActionsPill";
 const withoutActions = (visibility: ColumnVisibilityState): ColumnVisibilityState =>
   Object.fromEntries(Object.entries(visibility).filter(([id]) => id !== "actions"));
 
+/** Search and paging owned by the server: `data` is one already-filtered page
+ * (`pageSize` rows at most), so the table neither filters nor slices it. */
+export interface DataTableServerMode {
+  search: string;
+  onSearchChange: (value: string) => void;
+  /** 1-based page number. */
+  page: number;
+  /** Total matching rows across every page. */
+  total: number;
+  onPageChange: (page: number) => void;
+}
+
 interface DataTableProps<TData extends RowData> {
   columns: AppColumnDef<TData, unknown>[];
   data: TData[];
+  server?: DataTableServerMode;
   /** Column path(s) the global search matches. Nested paths use dot notation
    * ("user.username"); an array matches ANY listed path. Omit to search every
    * primitive cell value. */
@@ -76,6 +89,7 @@ interface DataTableProps<TData extends RowData> {
 export const DataTable = function DataTable<TData extends RowData>({
   columns,
   data,
+  server,
   searchColumn,
   searchPlaceholder = "Search...",
   initialSearch,
@@ -198,7 +212,7 @@ export const DataTable = function DataTable<TData extends RowData>({
     features: appFeatures,
     data,
     columns,
-    state: { sorting, globalFilter, rowSelection, columnVisibility },
+    state: { sorting, globalFilter: server ? "" : globalFilter, rowSelection, columnVisibility },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange,
@@ -375,6 +389,14 @@ export const DataTable = function DataTable<TData extends RowData>({
 
   const totalCols = columns.length + (enableRowSelection ? 1 : 0);
 
+  const totalRows = server ? server.total : table.getFilteredRowModel().rows.length;
+  const pageCount = server ? Math.max(1, Math.ceil(server.total / pageSize)) : table.getPageCount();
+  const pageIndex = server ? server.page - 1 : table.state.pagination.pageIndex;
+  const canPrevious = pageIndex > 0;
+  const canNext = pageIndex < pageCount - 1;
+  const goToPage = (index: number) =>
+    server ? server.onPageChange(index + 1) : table.setPageIndex(index);
+
   return (
     <div className="space-y-4">
       {(searchPaths.length > 0 || enableColumnVisibility || toolbarActions) && (
@@ -383,8 +405,8 @@ export const DataTable = function DataTable<TData extends RowData>({
             <FilterToolbar.Search>
               <SearchField
                 placeholder={searchPlaceholder}
-                value={globalFilter}
-                onChange={setGlobalFilter}
+                value={server ? server.search : globalFilter}
+                onChange={server ? server.onSearchChange : setGlobalFilter}
                 aria-label={searchPlaceholder.replace(/[.…\s]+$/, "")}
               />
             </FilterToolbar.Search>
@@ -495,19 +517,18 @@ export const DataTable = function DataTable<TData extends RowData>({
 
         <div className="border-border/70 bg-muted/30 flex items-center justify-between gap-2 border-t px-4 py-2">
           <p className="text-muted-foreground text-xs">
-            {table.getFilteredRowModel().rows.length} result
-            {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
-            {table.getPageCount() > 1 &&
-              ` · Page ${table.state.pagination.pageIndex + 1} of ${table.getPageCount()}`}
+            {totalRows} result
+            {totalRows !== 1 ? "s" : ""}
+            {pageCount > 1 && ` · Page ${pageIndex + 1} of ${pageCount}`}
           </p>
-          {table.getPageCount() > 1 && (
+          {pageCount > 1 && (
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="sm"
                 className="h-11 w-11 p-0"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
+                onClick={() => goToPage(0)}
+                disabled={!canPrevious}
                 aria-label="First page"
               >
                 <ChevronsLeft className="h-3.5 w-3.5" />
@@ -516,8 +537,8 @@ export const DataTable = function DataTable<TData extends RowData>({
                 variant="outline"
                 size="sm"
                 className="h-11 w-11 p-0"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
+                onClick={() => goToPage(pageIndex - 1)}
+                disabled={!canPrevious}
                 aria-label="Previous page"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
@@ -526,8 +547,8 @@ export const DataTable = function DataTable<TData extends RowData>({
                 variant="outline"
                 size="sm"
                 className="h-11 w-11 p-0"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
+                onClick={() => goToPage(pageIndex + 1)}
+                disabled={!canNext}
                 aria-label="Next page"
               >
                 <ChevronRight className="h-3.5 w-3.5" />
@@ -536,8 +557,8 @@ export const DataTable = function DataTable<TData extends RowData>({
                 variant="outline"
                 size="sm"
                 className="h-11 w-11 p-0"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
+                onClick={() => goToPage(pageCount - 1)}
+                disabled={!canNext}
                 aria-label="Last page"
               >
                 <ChevronsRight className="h-3.5 w-3.5" />

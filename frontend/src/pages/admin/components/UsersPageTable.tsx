@@ -1,5 +1,6 @@
 import React from "react";
-import { DataTable } from "@/components/ui/DataTable";
+import { DataTable, type DataTableServerMode } from "@/components/ui/DataTable";
+import { USERS_PAGE_SIZE } from "@/hooks/useUserManagement";
 import { GlassCard } from "@/components/ui/GlassCard";
 import type { UserProfile } from "@/types";
 import type { RowSelectionState, OnChangeFn } from "@tanstack/react-table";
@@ -10,8 +11,8 @@ interface UsersPageTableProps {
   data: UserProfile[];
   rowSelection: RowSelectionState;
   onRowSelectionChange: OnChangeFn<RowSelectionState>;
-  /** Seeds the search box (from ?q=, e.g. the command palette's user result). */
-  initialSearch?: string;
+  /** Search and paging are answered by the server over the whole user set. */
+  server: DataTableServerMode;
   /** Filter strip rendered above the table, inside the same card. */
   filters?: React.ReactNode;
 }
@@ -21,7 +22,7 @@ export const UsersPageTable: React.FC<UsersPageTableProps> = ({
   data,
   rowSelection,
   onRowSelectionChange,
-  initialSearch,
+  server,
   filters,
 }) => (
   <GlassCard delay={0} className="p-4">
@@ -31,7 +32,8 @@ export const UsersPageTable: React.FC<UsersPageTableProps> = ({
       data={data}
       searchColumn="user.username"
       searchPlaceholder="Search users..."
-      initialSearch={initialSearch}
+      server={server}
+      pageSize={USERS_PAGE_SIZE}
       enableColumnVisibility
       storageKey="table-visibility-users-page"
       defaultColumnVisibility={{ email: false }}

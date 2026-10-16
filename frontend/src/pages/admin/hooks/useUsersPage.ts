@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useUserManagement } from "@/hooks/useUserManagement";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useUsersPageBulk } from "./useUsersPageBulk";
 import { usePlugins } from "@/context/PluginContext";
 import { usePermissions } from "@/context/PermissionContext";
@@ -126,6 +128,7 @@ const emptyCreateForm = {
 };
 
 export const useUsersPage = () => {
+  const [initialQuery] = useSearchParams();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<UserProfile | null>(null);
   const [form, setForm] = useState({ ...emptyEditForm });
@@ -138,6 +141,30 @@ export const useUsersPage = () => {
   const [techLevelIds, setTechLevelIds] = useState<number[]>([]);
   const [noTechOnly, setNoTechOnly] = useState(false);
   const [teamIds, setTeamIds] = useState<number[]>([]);
+  const { activePlugins } = usePlugins();
+  const crActive = activePlugins.some((p) => p.name === "control_room");
+  const [crOnly, setCrOnly] = useState(false);
+  // ?q= seeds the search (command palette deep link). The server does the
+  // matching, so only the debounced term reaches the query key.
+  const [searchInput, setSearchInput] = useState(() => initialQuery.get("q") ?? "");
+  const search = useDebouncedValue(searchInput, 300);
+  // The page is remembered together with the filters it was chosen under, so any
+  // filter or search change falls back to page 1 without a second, stale fetch.
+  const filterSignature = JSON.stringify([
+    tlFilter,
+    techIds,
+    techLevelIds,
+    noTechOnly,
+    teamIds,
+    search.trim(),
+    crOnly,
+  ]);
+  const [pageState, setPageState] = useState({ signature: filterSignature, page: 1 });
+  const page = pageState.signature === filterSignature ? pageState.page : 1;
+  const setPage = useCallback(
+    (next: number) => setPageState({ signature: filterSignature, page: next }),
+    [filterSignature]
+  );
   const [bulkCommandDrawerOpen, setBulkCommandDrawerOpen] = useState(false);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -173,11 +200,15 @@ export const useUsersPage = () => {
     techLevelIds,
     noTechOnly,
     teamIds,
+    search,
+    page,
+    crAccess: crActive && crOnly,
     onUpdateSuccess: () => {
       setFormOpen(false);
       setEditing(null);
       setFormErrors({});
     },
+    onCreateError: (errors) => setCreateErrors(errors),
     onCreateSuccess: () => {
       setCreateOpen(false);
       setCreateForm({ ...emptyCreateForm });
@@ -218,10 +249,7 @@ export const useUsersPage = () => {
   // direct API call to the plugin's URL to resolve CR access for the visible
   // page of users. If the plugin is deactivated/removed, crActive becomes
   // false and the fetch never happens — no broken references.
-  const { activePlugins } = usePlugins();
-  const crActive = activePlugins.some((p) => p.name === "control_room");
   const isCROnlyAdmin = isCRAdmin && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
-  const [crOnly, setCrOnly] = useState(false);
   const [crAccessUserIds, setCrAccessUserIds] = useState<Set<number>>(new Set());
   const [crAccessByUserId, setCrAccessByUserId] = useState<Map<number, CRAccessRecord>>(new Map());
 
@@ -257,10 +285,9 @@ export const useUsersPage = () => {
     };
   }, [crActive, visibleUserIds]);
 
-  const crFilteredData = useMemo(() => {
-    if (!crActive || !crOnly) return filteredData;
-    return filteredData.filter((p) => crAccessUserIds.has(p.user.id));
-  }, [crActive, crOnly, filteredData, crAccessUserIds]);
+  // The Control Room filter is applied by the server (cr_access), so the loaded
+  // page is already the filtered one.
+  const crFilteredData = filteredData;
 
   const handleRowSelectionChange: OnChangeFn<RowSelectionState> = useCallback(
     (updater) => {
@@ -465,5 +492,9 @@ export const useUsersPage = () => {
     retryBlocked,
     closeBlockedDialog,
     blockedRetrying,
+    search: searchInput,
+    setSearch: setSearchInput,
+    page,
+    setPage,
   };
 };

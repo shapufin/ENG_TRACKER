@@ -1,13 +1,18 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userService } from "@/services/userService";
 import { handleApiError, getBlockedRevocations } from "@/lib/error-handler";
+import { extractFieldErrors } from "@/hooks/useFormErrorHandler";
 import { toast } from "sonner";
 import type { ApiError, BlockedRevocation, TLFilter } from "@/types";
+
+export const USERS_PAGE_SIZE = 50;
 
 interface UseUserManagementOptions {
   onUpdateSuccess?: () => void;
   onCreateSuccess?: () => void;
+  /** Server field errors (e.g. `username`) so the create form can show them inline. */
+  onCreateError?: (errors: Record<string, string>) => void;
   onResetSuccess?: () => void;
   onDeleteSuccess?: () => void;
   /** Server-side role tab + tech chip selection. Must be included in every
@@ -17,6 +22,11 @@ interface UseUserManagementOptions {
   techLevelIds?: number[];
   noTechOnly?: boolean;
   teamIds?: number[];
+  /** Server-side search term and 1-based page; both belong in the query key. */
+  search?: string;
+  page?: number;
+  /** Only users with active Control Room access, decided by the server. */
+  crAccess?: boolean;
 }
 
 /**
@@ -32,6 +42,9 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
   const techLevelIds = options?.techLevelIds ?? [];
   const noTechOnly = options?.noTechOnly ?? false;
   const teamIds = options?.teamIds ?? [];
+  const search = options?.search?.trim() || undefined;
+  const page = options?.page ?? 1;
+  const crAccess = options?.crAccess || undefined;
   // Comma-joined, not a bare array: axios serializes array params as
   // `tech[]=1`, which doesn't match DRF's `getlist('tech')` on the backend.
   const techParam = !noTechOnly && techIds.length > 0 ? techIds.join(",") : undefined;
@@ -45,7 +58,11 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
     isError: isProfilesError,
     error: profilesError,
   } = useQuery({
-    queryKey: ["admin", "profiles", { role, techIds, techLevelIds, noTechOnly, teamIds }],
+    queryKey: [
+      "admin",
+      "profiles",
+      { role, techIds, techLevelIds, noTechOnly, teamIds, search, page, crAccess },
+    ],
     queryFn: () =>
       userService.getProfiles({
         role,
@@ -53,7 +70,12 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
         tech_level: techLevelParam,
         no_tech: noTechOnly || undefined,
         team: teamParam,
+        search,
+        cr_access: crAccess,
+        page,
+        page_size: USERS_PAGE_SIZE,
       }),
+    placeholderData: keepPreviousData,
     refetchOnMount: true,
     staleTime: 300000,
     refetchOnWindowFocus: false,
@@ -62,8 +84,10 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
   // Team narrows the facet counts too (see get_queryset), so it must be in
   // this query key — otherwise switching teams would serve stale counts.
   const { data: techFacets } = useQuery({
-    queryKey: ["admin", "profiles", "tech-facets", { role, teamIds }],
-    queryFn: () => userService.getTechFacets({ role, team: teamParam }),
+    queryKey: ["admin", "profiles", "tech-facets", { role, teamIds, search, crAccess }],
+    queryFn: () =>
+      userService.getTechFacets({ role, team: teamParam, search, cr_access: crAccess }),
+    placeholderData: keepPreviousData,
     refetchOnMount: true,
     staleTime: 60000,
     refetchOnWindowFocus: false,
@@ -156,7 +180,7 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
     },
     onError: (err: ApiError) => {
       handleApiError(err);
-      // Let component handle specific field errors from err.response.data
+      options?.onCreateError?.(extractFieldErrors(err));
     },
   });
 

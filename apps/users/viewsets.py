@@ -16,7 +16,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from .permissions import IsAdminOrReadOnly
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.exceptions import FieldError, ValidationError as DjangoValidationError
 from django.db import DatabaseError, models, transaction
 from django.db.models import Count, OuterRef, Q, Subquery, Sum
 from django.db.utils import OperationalError
@@ -778,12 +778,14 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         Admin creates a new user with profile in one call.
         Payload: {username, email, first_name, last_name, password, phone, team, albanian_tl, italian_tl, is_hr, is_italian_tl_role, is_albanian_tl_role, is_cr_admin}
         """
-        from .services.user_creation import create_user_with_profile
+        from .services.user_creation import UserValidationError, create_user_with_profile
         data = request.data
         required = ['username', 'email', 'password']
         missing = [f for f in required if not data.get(f)]
         if missing:
-            return Response({'error': f'Missing required fields: {", ".join(missing)}'}, status=status.HTTP_400_BAD_REQUEST)
+            body = {'error': f'Missing required fields: {", ".join(missing)}'}
+            body.update({f: ['This field is required.'] for f in missing})
+            return Response(body, status=status.HTTP_400_BAD_REQUEST)
 
         if data.get('techs') is not None:
             try:
@@ -805,7 +807,11 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             )
         except DjangoValidationError as exc:
             return Response(
-                {'error': 'Password does not meet the password policy.', 'messages': list(exc.messages)},
+                {
+                    'error': 'Password does not meet the password policy.',
+                    'password': list(exc.messages),
+                    'messages': list(exc.messages),
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -829,6 +835,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 roles=data.get('roles'),
             )
             return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        except UserValidationError as e:
+            return Response({'error': str(e), e.field: [str(e)]}, status=status.HTTP_400_BAD_REQUEST)
         except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1150,7 +1158,7 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
     queryset = with_profile_list_loading(UserProfile.objects.all()).order_by('-id')
     serializer_class = UserProfileSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-    search_fields = ['user__username', 'user__email']
+    search_fields = ['user__username', 'user__email', 'user__first_name', 'user__last_name']
     filterset_fields = ['albanian_tl', 'italian_tl', 'is_hr_user']
     pagination_class = UserProfilePagination
 
@@ -1163,6 +1171,13 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
         team_ids = self._id_list_param('team')
         if team_ids:
             queryset = queryset.filter(teams__id__in=team_ids).distinct()
+        if self.request.query_params.get('cr_access', '').lower() == 'true':
+            # Filtered through the plugin's reverse relation, never an import.
+            # Fails closed (empty) when control_room is not installed.
+            try:
+                queryset = queryset.filter(user__control_room_access__is_active=True)
+            except FieldError:
+                queryset = queryset.none()
         # tech_facets counts each tech (and no-tech) against this same
         # queryset, so the `tech`/`no_tech` params there select what to
         # count, not which profiles to keep — applying them here would
