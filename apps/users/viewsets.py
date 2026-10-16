@@ -24,6 +24,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Tech, TechLevel, Team, UserProfile, UserTech
+from .models.core import normalize_calendar_group
 from .serializers import (
     UserSerializer,
     UserProfileSerializer,
@@ -2009,10 +2010,12 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         Request body: { team_ids: [1, 2, 3], calendar_group: "msc_siae" }
         """
         team_ids = request.data.get('team_ids', [])
-        calendar_group = request.data.get('calendar_group', '')
+        calendar_group = normalize_calendar_group(request.data.get('calendar_group'))
 
         if not team_ids:
             return Response({'error': 'team_ids required'}, status=400)
+        if len(calendar_group) > Team._meta.get_field('calendar_group').max_length:
+            return Response({'error': 'calendar_group is too long'}, status=400)
 
         updated = Team.objects.filter(id__in=team_ids).update(calendar_group=calendar_group)
 
@@ -2028,10 +2031,12 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         Request body: { old_name: "msc_siae", new_name: "msc_siae_v2" }
         """
         old_name = request.data.get('old_name')
-        new_name = request.data.get('new_name')
+        new_name = normalize_calendar_group(request.data.get('new_name'))
 
         if not old_name or not new_name:
             return Response({'error': 'old_name and new_name required'}, status=400)
+        if len(new_name) > Team._meta.get_field('calendar_group').max_length:
+            return Response({'error': 'new_name is too long'}, status=400)
 
         updated = Team.objects.filter(calendar_group=old_name).update(calendar_group=new_name)
 

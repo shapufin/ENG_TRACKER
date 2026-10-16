@@ -166,6 +166,14 @@ class UserTech(models.Model):
             )
 
 
+def normalize_calendar_group(value):
+    """Canonical calendar group name: trimmed, lowercase, inner whitespace as '-'.
+
+    Calendar groups are matched by exact string, so every write goes through here.
+    """
+    return '-'.join(str(value or '').lower().split())
+
+
 class Team(BaseModel):
     """
     Team model for organizing users into groups.

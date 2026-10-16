@@ -55,7 +55,7 @@ describe("useCalendarManagementPage", () => {
       result.current.handleBulkApplyIntent();
     });
     expect(result.current.bulkConfirmOpen).toBe(true);
-    expect(result.current.pendingBulkGroup).toBe("G");
+    expect(result.current.pendingBulkGroup).toBe("g");
   });
 
   it("confirms bulk update", () => {

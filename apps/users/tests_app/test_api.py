@@ -1119,6 +1119,61 @@ class TestTeamCalendarGroupAdminOnly(APITestCase):
         self.assertEqual(team.calendar_group, 'grp2')
 
 
+class TestCalendarGroupNormalisation(APITestCase):
+    """Calendar groups are matched by exact string, so every write normalises the
+    name once (trim, lowercase, whitespace runs to '-'). 'MSC SIAE' and 'msc-siae'
+    must never become two different groups."""
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username='grp-admin', password='testpass123', email='grp-admin@example.com'
+        )
+        self.client.force_authenticate(user=self.admin)
+        self.team_a = Team.objects.create(name='Team GA', code='GA', calendar_group='old-grp')
+        self.team_b = Team.objects.create(name='Team GB', code='GB')
+
+    def test_bulk_update_normalises_group_name(self):
+        response = self.client.post(
+            '/api/users/teams/bulk_update_calendar_group/',
+            {'team_ids': [self.team_b.id], 'calendar_group': '  MSC  SIAE Pod '},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['calendar_group'], 'msc-siae-pod')
+        self.team_b.refresh_from_db()
+        self.assertEqual(self.team_b.calendar_group, 'msc-siae-pod')
+
+    def test_rename_normalises_new_name_and_matches_stored_old_name(self):
+        response = self.client.post(
+            '/api/users/teams/rename_calendar_group/',
+            {'old_name': 'old-grp', 'new_name': 'New Name'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.team_a.refresh_from_db()
+        self.assertEqual(self.team_a.calendar_group, 'new-name')
+
+    def test_team_update_normalises_calendar_group(self):
+        response = self.client.patch(
+            f'/api/users/teams/{self.team_b.id}/',
+            {'calendar_group': 'Flow SIM'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.team_b.refresh_from_db()
+        self.assertEqual(self.team_b.calendar_group, 'flow-sim')
+
+    def test_bulk_update_rejects_name_longer_than_column(self):
+        response = self.client.post(
+            '/api/users/teams/bulk_update_calendar_group/',
+            {'team_ids': [self.team_b.id], 'calendar_group': 'x' * 51},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400, response.data)
+        self.team_b.refresh_from_db()
+        self.assertEqual(self.team_b.calendar_group, '')
+
+
 class TestTeamCreateUpdateAdminOnly(APITestCase):
     """Team writes are admin-only: the HR-native /hr/teams page and its IsHR
     grant on create/update/partial_update were removed. HR keeps read access

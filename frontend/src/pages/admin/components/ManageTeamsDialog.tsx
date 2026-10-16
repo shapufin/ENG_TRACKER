@@ -65,6 +65,8 @@ interface ManageTeamsDialogProps {
   groupName: string | null;
   teams: Team[];
   onUpdateTeam: (id: number, payload: { calendar_group: string }) => void;
+  /** Removing a team stops it sharing calendars, so the page confirms first. */
+  onRemove: (team: Team) => void;
   isPending: boolean;
 }
 
@@ -74,6 +76,7 @@ export const ManageTeamsDialog: React.FC<ManageTeamsDialogProps> = ({
   groupName,
   teams,
   onUpdateTeam,
+  onRemove,
   isPending,
 }) => {
   const inGroup = teams.filter((t) => t.calendar_group === groupName);
@@ -99,7 +102,7 @@ export const ManageTeamsDialog: React.FC<ManageTeamsDialogProps> = ({
                   team={team}
                   actionLabel="Remove"
                   actionVariant="remove"
-                  onAction={() => onUpdateTeam(team.id, { calendar_group: "" })}
+                  onAction={() => onRemove(team)}
                   isPending={isPending}
                 />
               ))}

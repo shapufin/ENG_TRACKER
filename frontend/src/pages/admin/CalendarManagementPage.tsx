@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoadingCard } from "@/components/ui/LoadingCard";
@@ -24,6 +24,7 @@ import { TeamEditDialog } from "./components/TeamEditDialog";
 import { GroupRenameDialog } from "./components/GroupRenameDialog";
 import { useCalendarManagementPage } from "./hooks/useCalendarManagementPage";
 import { usePlugins } from "@/context/PluginContext";
+import { normalizeCalendarGroup } from "@/lib/calendarGroup";
 
 // fallow-ignore-next-line complexity
 export const CalendarManagementPage: React.FC = () => {
@@ -68,6 +69,14 @@ export const CalendarManagementPage: React.FC = () => {
     setManageTeamsOpen,
     managingGroup,
     setManagingGroup,
+    statusFilter,
+    setStatusFilter,
+    groupFilter,
+    setGroupFilter,
+    pendingUnlink,
+    setPendingUnlink,
+    handleAssignTeam,
+    handleConfirmUnlink,
     teams,
     calendarGroups,
     groupStats,
@@ -87,6 +96,8 @@ export const CalendarManagementPage: React.FC = () => {
     handleHolidaySubmit,
     holidayRows,
   } = useCalendarManagementPage();
+
+  const [guideOpen, setGuideOpen] = useState(false);
 
   if (isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
   if (!teams)
@@ -121,28 +132,40 @@ export const CalendarManagementPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="team-groups" className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.6fr_0.8fr]">
-            <CalendarGroupInfoCard
-              icon={Share2}
-              trackingLabel="How calendar sharing works"
-              title="Share calendar visibility across teams"
-              description="When you assign the same calendar group to multiple teams, they can see each other's leave, overtime, and standby entries in the Calendar page."
-              exampleTitle="Example"
-              exampleText="Assign group 'Regional-Pod-A' to MSC_TEAM and SIAE_TEAM => Both teams see each other's calendar entries in the workspace selector."
-              gradient
-            />
-            <CalendarGroupWorkflowCard
-              icon={Layers}
-              title="Sharing workflow"
-              subtitle="Quick setup guide"
-              steps={[
-                "Select teams from the table below",
-                "Type a group name (e.g., msc-siae-shared)",
-                "Click 'Apply to selected'",
-                "Teams refresh their Calendar page to see shared entries",
-              ]}
-            />
+          <div>
+            <Button
+              variant="outline"
+              size="control-sm"
+              aria-expanded={guideOpen}
+              onClick={() => setGuideOpen((open) => !open)}
+            >
+              {guideOpen ? "Hide how sharing works" : "How calendar sharing works"}
+            </Button>
           </div>
+          {guideOpen && (
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.6fr_0.8fr]">
+              <CalendarGroupInfoCard
+                icon={Share2}
+                trackingLabel="How calendar sharing works"
+                title="Share calendar visibility across teams"
+                description="When you assign the same calendar group to multiple teams, they can see each other's leave, overtime, and standby entries in the Calendar page."
+                exampleTitle="Example"
+                exampleText="Assign group 'Regional-Pod-A' to MSC_TEAM and SIAE_TEAM => Both teams see each other's calendar entries in the workspace selector."
+                gradient
+              />
+              <CalendarGroupWorkflowCard
+                icon={Layers}
+                title="Sharing workflow"
+                subtitle="Quick setup guide"
+                steps={[
+                  "Select teams from the table below",
+                  "Type a group name (e.g., msc-siae-shared)",
+                  "Click 'Apply to selected'",
+                  "Teams refresh their Calendar page to see shared entries",
+                ]}
+              />
+            </div>
+          )}
 
           {groupStats && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -188,6 +211,15 @@ export const CalendarManagementPage: React.FC = () => {
                     key={group.calendar_group}
                     groupName={group.calendar_group}
                     teamCount={group.team_count}
+                    members={teams
+                      .filter((t) => t.calendar_group === group.calendar_group)
+                      .map((t) => t.name)}
+                    isFiltered={groupFilter === group.calendar_group}
+                    onFilter={() =>
+                      setGroupFilter(
+                        groupFilter === group.calendar_group ? null : group.calendar_group
+                      )
+                    }
                     onEdit={() => {
                       setEditingGroup(group.calendar_group);
                       setNewGroupName(group.calendar_group);
@@ -216,6 +248,11 @@ export const CalendarManagementPage: React.FC = () => {
                   placeholder="Enter group name (e.g., msc-siae-shared)"
                   className="border-border bg-muted/50 w-full max-w-[280px] rounded-xl"
                 />
+                {bulkGroup.trim() && normalizeCalendarGroup(bulkGroup) !== bulkGroup.trim() && (
+                  <span className="text-muted-foreground text-xs">
+                    Will be saved as "{normalizeCalendarGroup(bulkGroup)}"
+                  </span>
+                )}
                 <Button
                   onClick={handleBulkApplyIntent}
                   disabled={!bulkGroup.trim() || selectedTeams.size === 0}
@@ -238,6 +275,12 @@ export const CalendarManagementPage: React.FC = () => {
             onEditTeam={openEdit}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            groupFilter={groupFilter}
+            groupNames={calendarGroups?.map((g) => g.calendar_group) ?? []}
+            onAssignGroup={handleAssignTeam}
+            onUnlinkTeam={setPendingUnlink}
           />
         </TabsContent>
 
@@ -408,8 +451,26 @@ export const CalendarManagementPage: React.FC = () => {
         groupName={managingGroup}
         teams={teams}
         onUpdateTeam={(id, payload) => updateTeamMutation.mutate({ id, payload })}
+        onRemove={setPendingUnlink}
         isPending={updateTeamMutation.isPending}
       />
+
+      <ConfirmDialog
+        open={Boolean(pendingUnlink)}
+        onOpenChange={(open) => {
+          if (!open) setPendingUnlink(null);
+        }}
+        title="Remove team from calendar group"
+        description={`Remove ${pendingUnlink?.name ?? ""} from "${pendingUnlink?.calendar_group ?? ""}"?`}
+        onConfirm={handleConfirmUnlink}
+        isConfirming={updateTeamMutation.isPending}
+        variant="destructive"
+      >
+        <p className="text-muted-foreground text-sm">
+          Its members will stop seeing this group's leave, overtime and standby entries, and the
+          group's other teams will stop seeing this team's.
+        </p>
+      </ConfirmDialog>
     </PageShell>
   );
 };

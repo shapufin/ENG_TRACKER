@@ -1,16 +1,21 @@
 import React from "react";
-import { Edit3 } from "lucide-react";
+import { Edit3, X } from "lucide-react";
 import { RowActions } from "@/components/ui/RowActions";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Team } from "@/types";
 import { isTeamsColumnVisible, teamsGridTemplate } from "./teamsColumns";
+import { TeamGroupAssignPopover } from "./TeamGroupAssignPopover";
 
 interface TeamsTableRowProps {
   team: Team;
   isSelected: boolean;
   onSelect: (teamId: number, checked: boolean) => void;
   onEdit: (team: Team) => void;
+  groupNames?: string[];
+  onAssign?: (team: Team, group: string) => void;
+  onUnlink?: (team: Team) => void;
   columnVisibility?: Record<string, boolean>;
 }
 
@@ -28,6 +33,9 @@ export const TeamsTableRow: React.FC<TeamsTableRowProps> = ({
   isSelected,
   onSelect,
   onEdit,
+  groupNames = [],
+  onAssign,
+  onUnlink,
   columnVisibility = {},
 }) => (
   <div
@@ -63,11 +71,26 @@ export const TeamsTableRow: React.FC<TeamsTableRowProps> = ({
     )}
 
     {isTeamsColumnVisible(columnVisibility, "calendar_group") && (
-      <div>
+      <div className="flex flex-wrap items-center gap-2">
         {team.calendar_group ? (
-          <Badge className="bg-muted text-foreground hover:bg-muted rounded-full px-4 py-1">
-            {team.calendar_group}
-          </Badge>
+          <>
+            <Badge className="bg-muted text-foreground hover:bg-muted rounded-full px-4 py-1">
+              {team.calendar_group}
+            </Badge>
+            {onUnlink && (
+              <Button
+                size="icon"
+                variant="ghost"
+                title="Remove from group"
+                aria-label={`Remove ${team.name} from ${team.calendar_group}`}
+                onClick={() => onUnlink(team)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </>
+        ) : onAssign ? (
+          <TeamGroupAssignPopover team={team} groups={groupNames} onAssign={onAssign} />
         ) : (
           <span className="text-muted-foreground text-sm">—</span>
         )}
