@@ -14,7 +14,7 @@ from django.contrib.auth.models import User
 from apps.overtime.serializers import ClientSerializer
 from core.mixins.permissions import is_cr_admin
 from .models import Tech, TechLevel, Team, UserProfile, TeamMembership
-from .models.core import _user_has_related
+from .models.core import _user_has_related, normalize_calendar_group
 from .services.tech_assignments import (
     TechAssignmentError,
     apply_tech_assignments,
@@ -445,6 +445,9 @@ class TeamSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_calendar_group(self, value):
+        return normalize_calendar_group(value)
 
     def get_sub_teams_count(self, obj) -> int:
         """Count of direct sub-teams."""

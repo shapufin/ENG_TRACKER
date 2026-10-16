@@ -2,18 +2,42 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TeamsTableToolbar } from "./TeamsTableToolbar";
 
+const counts = { all: 6, grouped: 2, ungrouped: 4 };
+
 const renderToolbar = (
   columnVisibility: Record<string, boolean> = {},
-  onColumnVisibilityChange = vi.fn()
+  onColumnVisibilityChange = vi.fn(),
+  onStatusFilterChange = vi.fn()
 ) =>
   render(
     <TeamsTableToolbar
       searchQuery=""
       onSearchChange={vi.fn()}
+      statusFilter="all"
+      onStatusFilterChange={onStatusFilterChange}
+      statusCounts={counts}
       columnVisibility={columnVisibility}
       onColumnVisibilityChange={onColumnVisibilityChange}
     />
   );
+
+describe("TeamsTableToolbar status filter", () => {
+  it("shows each status with its count and marks the active one", () => {
+    renderToolbar();
+    expect(screen.getByRole("button", { name: /All 6/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /Ungrouped 4/ })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+  });
+
+  it("reports the chosen status", () => {
+    const onStatus = vi.fn();
+    renderToolbar({}, vi.fn(), onStatus);
+    fireEvent.click(screen.getByRole("button", { name: /Grouped 2/ }));
+    expect(onStatus).toHaveBeenCalledWith("grouped");
+  });
+});
 
 describe("TeamsTableToolbar Columns menu", () => {
   it("opens a Toggle Columns dialog listing all six data columns", () => {

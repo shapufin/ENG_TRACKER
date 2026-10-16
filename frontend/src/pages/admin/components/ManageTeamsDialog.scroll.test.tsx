@@ -18,6 +18,7 @@ describe("ManageTeamsDialog scroll contract", () => {
         groupName="g1"
         teams={teams}
         onUpdateTeam={vi.fn()}
+        onRemove={vi.fn()}
         isPending={false}
       />
     );

@@ -5,6 +5,7 @@ import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { buildHolidayFormValues } from "./useCalendarManagementPageHelpers";
 import { toast } from "sonner";
 import type { HolidayPayload } from "@/services/calendarAdminService";
+import { normalizeCalendarGroup } from "@/lib/calendarGroup";
 import type { PublicHoliday, Team } from "@/types";
 
 export const useCalendarManagementPage = () => {
@@ -53,6 +54,9 @@ export const useCalendarManagementPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [manageTeamsOpen, setManageTeamsOpen] = useState(false);
   const [managingGroup, setManagingGroup] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | "grouped" | "ungrouped">("all");
+  const [groupFilter, setGroupFilter] = useState<string | null>(null);
+  const [pendingUnlink, setPendingUnlink] = useState<Team | null>(null);
 
   const {
     teams,
@@ -121,7 +125,7 @@ export const useCalendarManagementPage = () => {
 
   const handleBulkApplyIntent = () => {
     if (!bulkGroup.trim() || selectedTeams.size === 0) return;
-    setPendingBulkGroup(bulkGroup.trim());
+    setPendingBulkGroup(normalizeCalendarGroup(bulkGroup));
     setBulkConfirmOpen(true);
   };
 
@@ -133,6 +137,15 @@ export const useCalendarManagementPage = () => {
     });
     setBulkConfirmOpen(false);
     setPendingBulkGroup(null);
+  };
+
+  const handleAssignTeam = (team: Team, group: string) =>
+    updateTeamMutation.mutate({ id: team.id, payload: { calendar_group: group } });
+
+  const handleConfirmUnlink = () => {
+    if (!pendingUnlink) return;
+    updateTeamMutation.mutate({ id: pendingUnlink.id, payload: { calendar_group: "" } });
+    setPendingUnlink(null);
   };
 
   const handleHolidaySubmit = (e: React.FormEvent) => {
@@ -154,6 +167,11 @@ export const useCalendarManagementPage = () => {
     };
     holidayMutation.mutate({ id: editingHoliday?.id, payload });
   };
+
+  // A filter on a group that was renamed or removed must not hide every team.
+  const activeGroupFilter = calendarGroups?.some((g) => g.calendar_group === groupFilter)
+    ? groupFilter
+    : null;
 
   const holidayRows = useMemo(
     () =>
@@ -204,6 +222,14 @@ export const useCalendarManagementPage = () => {
     setManageTeamsOpen,
     managingGroup,
     setManagingGroup,
+    statusFilter,
+    setStatusFilter,
+    groupFilter: activeGroupFilter,
+    setGroupFilter,
+    pendingUnlink,
+    setPendingUnlink,
+    handleAssignTeam,
+    handleConfirmUnlink,
     teams,
     calendarGroups,
     groupStats,

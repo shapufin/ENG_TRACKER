@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ModalSection } from "@/components/ui/ModalSection";
+import { normalizeCalendarGroup } from "@/lib/calendarGroup";
 
 interface GroupRenameDialogProps {
   open: boolean;
@@ -55,6 +56,12 @@ export const GroupRenameDialog: React.FC<GroupRenameDialogProps> = ({
                   onChange={(e) => onNewGroupNameChange(e.target.value)}
                   placeholder="Enter new group name"
                 />
+                {newGroupName.trim() &&
+                  normalizeCalendarGroup(newGroupName) !== newGroupName.trim() && (
+                    <p className="text-muted-foreground text-xs">
+                      Will be saved as "{normalizeCalendarGroup(newGroupName)}"
+                    </p>
+                  )}
               </div>
             </ModalSection>
           </div>
