@@ -117,7 +117,14 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
       <UsersPageTable
         filters={<UsersPageFilters state={state} teams={teams} />}
         toolbarActions={
-          <TeamMultiSelect teams={teams} value={state.teamIds} onChange={state.setTeamIds} />
+          <div className="w-56">
+            <TeamMultiSelect
+              teams={teams}
+              value={state.teamIds}
+              onChange={state.setTeamIds}
+              compact
+            />
+          </div>
         }
         server={server}
         columns={columns}

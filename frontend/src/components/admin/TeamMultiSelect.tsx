@@ -33,6 +33,8 @@ interface TeamMultiSelectProps {
   onChange: (teamIds: number[]) => void;
   placeholder?: string;
   disabled?: boolean;
+  /** Toolbar mode: 36px control-height trigger, no selected-chip list (the caller shows the selection). */
+  compact?: boolean;
 }
 
 export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
@@ -41,6 +43,7 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
   onChange,
   placeholder = "Select teams...",
   disabled = false,
+  compact = false,
 }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -150,12 +153,13 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
   };
 
   return (
-    <div className="space-y-2">
+    <div className={compact ? undefined : "space-y-2"}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             type="button"
             variant="outline"
+            size={compact ? "control" : undefined}
             className="w-full justify-between font-normal"
             disabled={disabled}
           >
@@ -237,7 +241,7 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
         </PopoverContent>
       </Popover>
 
-      {selectedTeams.length > 0 && (
+      {!compact && selectedTeams.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
           {selectedTeams.map((t) => (
             <span
