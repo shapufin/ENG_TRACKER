@@ -15,6 +15,8 @@ interface UsersPageTableProps {
   server: DataTableServerMode;
   /** Filter strip rendered above the table, inside the same card. */
   filters?: React.ReactNode;
+  /** Filter controls that share the search/Columns toolbar row. */
+  toolbarActions?: React.ReactNode;
 }
 
 export const UsersPageTable: React.FC<UsersPageTableProps> = ({
@@ -24,6 +26,7 @@ export const UsersPageTable: React.FC<UsersPageTableProps> = ({
   onRowSelectionChange,
   server,
   filters,
+  toolbarActions,
 }) => (
   <GlassCard delay={0} className="p-4">
     {filters && <div className="mb-4">{filters}</div>}
@@ -42,6 +45,7 @@ export const UsersPageTable: React.FC<UsersPageTableProps> = ({
       onRowSelectionChange={onRowSelectionChange}
       getRowId={(row) => String(row.id)}
       emptyMessage="No users match your filters."
+      toolbarActions={toolbarActions}
     />
   </GlassCard>
 );
