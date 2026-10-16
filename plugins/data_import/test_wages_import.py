@@ -22,8 +22,8 @@ from plugins.data_import.importers.wages import WageImporter
 from plugins.data_import.viewsets import (
     DataImportViewSet,
     ImportTargetViewSet,
-    _build_mapped_rows,
 )
+from plugins.data_import.parsing import _build_mapped_rows
 from plugins.payroll.models import WageAssignment
 
 BASE = "/api/plugins/data_import"

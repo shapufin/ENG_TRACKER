@@ -10,7 +10,6 @@ instead of a single FK, so there is no client-based dedupe key.
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
-from django.contrib.auth.models import User
 from django.utils import timezone
 
 from core.utils.time_overlap import find_overlapping_entry
@@ -18,7 +17,8 @@ from core.utils.time_overlap import find_overlapping_entry
 from apps.overtime.models import Client
 from apps.standby.models import StandbyLog
 from .authority import StaffOnlyAuthority
-from .base import BaseImporter, ImportField, ImportOption, ImportRowResult, UPDATE_EXISTING_OPTION
+from .base import row_error_from_exception, BaseImporter, ImportField, ImportOption, ImportRowResult, UPDATE_EXISTING_OPTION
+from .helpers import resolve_user
 from .payroll_draft import (
     GENERATE_DRAFT_PAYROLL_OPTION,
     GENERATE_DRAFT_PAYROLL_OPTION_KEY,
@@ -115,23 +115,6 @@ class StandbyLogImporter(StaffOnlyAuthority, BaseImporter):
             },
         ]
 
-    def _resolve_user(self, mapped_row: Dict[str, Any]) -> Optional[User]:
-        username = mapped_row.get("username")
-        if username:
-            try:
-                return User.objects.get(username=username)
-            except User.DoesNotExist:
-                pass
-        email = mapped_row.get("email")
-        if email:
-            try:
-                return User.objects.get(email=email)
-            except (User.DoesNotExist, User.MultipleObjectsReturned):
-                # Django does not enforce a unique email — an ambiguous match
-                # is treated the same as no match, not a raw 500.
-                pass
-        return None
-
     def _resolve_clients(self, mapped_row: Dict[str, Any]) -> "tuple[list, Optional[str]]":
         raw = mapped_row.get("client_codes")
         if not raw:
@@ -167,7 +150,7 @@ class StandbyLogImporter(StaffOnlyAuthority, BaseImporter):
         context = context if context is not None else {}
 
         try:
-            user = self._resolve_user(mapped_row)
+            user = resolve_user(mapped_row)
             if not user:
                 return ImportRowResult(
                     row_index=row_index, status="error",
@@ -277,10 +260,8 @@ class StandbyLogImporter(StaffOnlyAuthority, BaseImporter):
                 return ImportRowResult(row_index=row_index, status="valid")
             return ImportRowResult(row_index=row_index, status="updated" if is_update else "created")
 
-        except ValueError as e:
-            return ImportRowResult(row_index=row_index, status="error", errors=[str(e)])
         except Exception as e:  # noqa: BLE001
-            return ImportRowResult(row_index=row_index, status="error", errors=[f"Unexpected error: {str(e)}"])
+            return row_error_from_exception(row_index, e)
 
     def finalize_batch(
         self, context: Dict[str, Any], options: Dict[str, Any], *, dry_run: bool = False

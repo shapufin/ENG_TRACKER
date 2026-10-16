@@ -8,6 +8,7 @@ purely from this metadata, so adding a target must never require a frontend
 change.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -53,6 +54,24 @@ class ImportRowResult:
     errors: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     extra: Dict[str, Any] = field(default_factory=dict)
+
+
+logger = logging.getLogger(__name__)
+
+
+def row_error_from_exception(row_index: int, exc: Exception) -> ImportRowResult:
+    """Turn an exception raised while handling one row into its error result.
+
+    A ``ValueError`` is a readable validation message for the admin. Anything
+    else is a bug or a database failure: it is logged with its traceback and
+    reported generically, so one bad row cannot abort the batch.
+    """
+    if isinstance(exc, ValueError):
+        return ImportRowResult(row_index=row_index, status="error", errors=[str(exc)])
+    logger.error("Unexpected error importing row %s", row_index, exc_info=exc)
+    return ImportRowResult(
+        row_index=row_index, status="error", errors=[f"Unexpected error: {exc}"]
+    )
 
 
 UPDATE_EXISTING_OPTION = ImportOption(

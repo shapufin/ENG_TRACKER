@@ -23,6 +23,7 @@ from .base import (
     ImportField,
     ImportOption,
     ImportRowResult,
+    row_error_from_exception,
 )
 from .authority import StaffOnlyAuthority
 from .registry import register
@@ -659,15 +660,5 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                 extra=extra,
             )
 
-        except ValueError as e:
-            return ImportRowResult(
-                row_index=row_index,
-                status="error",
-                errors=[str(e)],
-            )
         except Exception as e:  # noqa: BLE001
-            return ImportRowResult(
-                row_index=row_index,
-                status="error",
-                errors=[f"Unexpected error: {str(e)}"],
-            )
+            return row_error_from_exception(row_index, e)

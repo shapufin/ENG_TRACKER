@@ -14,11 +14,11 @@ explicit row checks rather than silently skipped.
 """
 from typing import Any, Dict, List, Optional
 
-from django.contrib.auth.models import User
 
 from apps.leave_management.models.core import LeaveRequest, count_request_days
 from .authority import StaffOnlyAuthority
 from .base import BaseImporter, ImportField, ImportOption, ImportRowResult, UPDATE_EXISTING_OPTION
+from .helpers import resolve_user
 from .registry import register
 
 
@@ -96,21 +96,6 @@ class LeaveRequestImporter(StaffOnlyAuthority, BaseImporter):
             },
         ]
 
-    def _resolve_user(self, mapped_row: Dict[str, Any]) -> Optional[User]:
-        username = mapped_row.get("username")
-        if username:
-            try:
-                return User.objects.get(username=username)
-            except User.DoesNotExist:
-                pass
-        email = mapped_row.get("email")
-        if email:
-            try:
-                return User.objects.get(email=email)
-            except (User.DoesNotExist, User.MultipleObjectsReturned):
-                pass
-        return None
-
     def commit_row(
         self,
         mapped_row: Dict[str, Any],
@@ -122,7 +107,7 @@ class LeaveRequestImporter(StaffOnlyAuthority, BaseImporter):
     ) -> ImportRowResult:
         row_index = mapped_row.get("__row_index", 0)
 
-        user = self._resolve_user(mapped_row)
+        user = resolve_user(mapped_row)
         if not user:
             identifier = mapped_row.get("username") or mapped_row.get("email") or "?"
             return ImportRowResult(

@@ -5,10 +5,10 @@ Importer for bulk-importing leave balances.
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional
 
-from django.contrib.auth.models import User
 
 from apps.leave_management.models import LeaveBalance
-from .base import BaseImporter, ImportField, ImportRowResult
+from .base import row_error_from_exception, BaseImporter, ImportField, ImportRowResult
+from .helpers import resolve_user, parse_bool
 from .authority import StaffOnlyAuthority
 from .registry import register
 
@@ -142,29 +142,6 @@ class LeaveBalanceImporter(StaffOnlyAuthority, BaseImporter):
         # The real model constraint is (user, leave_type, year, is_carry_over).
         return ["user", "leave_type", "year", "is_carry_over"]
 
-    def _resolve_user(self, mapped_row: Dict[str, Any]) -> Optional[User]:
-        username = mapped_row.get("username")
-        if username:
-            try:
-                return User.objects.get(username=username)
-            except User.DoesNotExist:
-                pass
-        email = mapped_row.get("email")
-        if email:
-            try:
-                return User.objects.get(email=email)
-            except User.DoesNotExist:
-                pass
-        return None
-
-    def _parse_bool(self, value: Any) -> bool:
-        if value is None or value == "":
-            return False
-        if isinstance(value, bool):
-            return value
-        lowered = str(value).lower().strip()
-        return lowered in ("true", "1", "yes", "y")
-
     def _parse_decimal(self, value: Any, field_name: str) -> Decimal:
         if value is None or value == "":
             raise ValueError(f"{field_name} is required.")
@@ -217,7 +194,7 @@ class LeaveBalanceImporter(StaffOnlyAuthority, BaseImporter):
         warnings: List[str] = []
 
         try:
-            user = self._resolve_user(mapped_row)
+            user = resolve_user(mapped_row)
             if not user:
                 return ImportRowResult(
                     row_index=row_index,
@@ -230,7 +207,7 @@ class LeaveBalanceImporter(StaffOnlyAuthority, BaseImporter):
             total_days = self._parse_decimal(mapped_row.get("total_days"), "total_days")
             used_days = self._parse_decimal(mapped_row.get("used_days", "0") or "0", "used_days")
             pending_days = self._parse_decimal(mapped_row.get("pending_days", "0") or "0", "pending_days")
-            is_carry_over = self._parse_bool(mapped_row.get("is_carry_over"))
+            is_carry_over = parse_bool(mapped_row.get("is_carry_over"), False)
             expires_at = mapped_row.get("expires_at") or None
             accrual_start_date = mapped_row.get("accrual_start_date") or None
 
@@ -305,15 +282,5 @@ class LeaveBalanceImporter(StaffOnlyAuthority, BaseImporter):
                 warnings=warnings,
             )
 
-        except ValueError as e:
-            return ImportRowResult(
-                row_index=row_index,
-                status="error",
-                errors=[str(e)],
-            )
         except Exception as e:  # noqa: BLE001
-            return ImportRowResult(
-                row_index=row_index,
-                status="error",
-                errors=[f"Unexpected error: {str(e)}"],
-            )
+            return row_error_from_exception(row_index, e)

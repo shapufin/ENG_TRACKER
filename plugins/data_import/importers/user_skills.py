@@ -9,10 +9,10 @@ the change correctly; never write ``SkillRatingHistory`` directly.
 
 from typing import Any, Dict, List, Optional
 
-from django.contrib.auth.models import User
 
 from plugins.skills.models import Skill, UserSkill
-from .base import BaseImporter, ImportField, ImportRowResult
+from .base import row_error_from_exception, BaseImporter, ImportField, ImportRowResult
+from .helpers import resolve_user
 from .authority import SkillsPluginAuthority
 from .registry import register
 
@@ -76,17 +76,6 @@ class UserSkillImporter(SkillsPluginAuthority, BaseImporter):
     def get_dedupe_keys(self) -> List[str]:
         return ["username", "skill_code"]
 
-    def _resolve_user(self, mapped_row: Dict[str, Any]) -> Optional[User]:
-        username = mapped_row.get("username")
-        if username:
-            user = User.objects.filter(username=username).first()
-            if user is not None:
-                return user
-        email = mapped_row.get("email")
-        if email:
-            return User.objects.filter(email=email).first()
-        return None
-
     def _parse_level(self, value: Any) -> int:
         if value is None or value == "":
             raise ValueError("level is required.")
@@ -111,7 +100,7 @@ class UserSkillImporter(SkillsPluginAuthority, BaseImporter):
         actor = (context or {}).get("actor")
 
         try:
-            user = self._resolve_user(mapped_row)
+            user = resolve_user(mapped_row)
             if user is None:
                 return ImportRowResult(
                     row_index=row_index,
@@ -171,14 +160,8 @@ class UserSkillImporter(SkillsPluginAuthority, BaseImporter):
                 status="created" if not dry_run else "valid",
             )
 
-        except ValueError as e:
-            return ImportRowResult(row_index=row_index, status="error", errors=[str(e)])
         except Exception as e:  # noqa: BLE001
-            return ImportRowResult(
-                row_index=row_index,
-                status="error",
-                errors=[f"Unexpected error: {str(e)}"],
-            )
+            return row_error_from_exception(row_index, e)
 
     def get_sample_rows(self) -> List[Dict[str, Any]]:
         return [

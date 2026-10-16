@@ -13,7 +13,8 @@ from django.db import transaction
 from apps.core.cache_constants import CachePattern
 from apps.dashboard.models.calendar import CalendarWorkspace, PublicHoliday
 from core.utils.cache import delete_pattern_safe
-from .base import BaseImporter, ImportField, ImportRowResult
+from .base import row_error_from_exception, BaseImporter, ImportField, ImportRowResult
+from .helpers import parse_bool
 from .authority import StaffOnlyAuthority
 from .registry import register
 
@@ -81,21 +82,6 @@ class PublicHolidayImporter(StaffOnlyAuthority, BaseImporter):
             raise ValueError(f'Calendar workspace "{name}" does not exist.')
         return workspace
 
-    def _parse_bool(self, value: Any, default: bool) -> bool:
-        if value is None or value == "":
-            return default
-        if isinstance(value, bool):
-            return value
-        return str(value).lower().strip() in ("true", "1", "yes", "y")
-
-    def _parse_bool_optional(self, value: Any) -> Optional[bool]:
-        """Blank cell -> None ("leave this alone"), used on update only."""
-        if value is None or value == "":
-            return None
-        if isinstance(value, bool):
-            return value
-        return str(value).lower().strip() in ("true", "1", "yes", "y")
-
     def _normalize_country(self, value: Any) -> str:
         code = str(value or "").strip().upper()
         if code and len(code) != 2:
@@ -144,7 +130,7 @@ class PublicHolidayImporter(StaffOnlyAuthority, BaseImporter):
 
             workspace = self._resolve_workspace(mapped_row)
             country_code = self._normalize_country(mapped_row.get("country_code"))
-            is_global = self._parse_bool(mapped_row.get("is_global"), workspace is None)
+            is_global = parse_bool(mapped_row.get("is_global"), workspace is None)
             description = mapped_row.get("description")
 
             holiday = existing
@@ -164,7 +150,7 @@ class PublicHolidayImporter(StaffOnlyAuthority, BaseImporter):
                     )
                 if not dry_run:
                     holiday.name = name
-                    is_global_update = self._parse_bool_optional(mapped_row.get("is_global"))
+                    is_global_update = parse_bool(mapped_row.get("is_global"))
                     if is_global_update is not None:
                         holiday.is_global = is_global_update
                     if description is not None:
@@ -190,14 +176,8 @@ class PublicHolidayImporter(StaffOnlyAuthority, BaseImporter):
                 status="created" if not dry_run else "valid",
             )
 
-        except ValueError as e:
-            return ImportRowResult(row_index=row_index, status="error", errors=[str(e)])
         except Exception as e:  # noqa: BLE001
-            return ImportRowResult(
-                row_index=row_index,
-                status="error",
-                errors=[f"Unexpected error: {str(e)}"],
-            )
+            return row_error_from_exception(row_index, e)
 
     def get_sample_rows(self) -> List[Dict[str, Any]]:
         return [
