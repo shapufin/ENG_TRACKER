@@ -40,7 +40,7 @@ export const TeamsTableToolbar: React.FC<TeamsTableToolbarProps> = ({
         onChange={onSearchChange}
       />
     </FilterToolbar.Search>
-    <FilterToolbar.Group>
+    <FilterToolbar.Group className="flex-wrap">
       {STATUS_OPTIONS.map((option) => (
         <Chip
           key={option.value}
