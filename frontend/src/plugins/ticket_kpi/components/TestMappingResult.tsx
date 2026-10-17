@@ -12,7 +12,7 @@ export const TestMappingResult: React.FC<TestMappingResultProps> = ({ result }) 
   <div className="space-y-3 rounded-md border p-4">
     <p className="text-sm font-medium">Result: {result.total_records} records</p>
     {Object.entries(result.issues || {}).length > 0 && (
-      <div className="space-y-1 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs">
+      <div className="border-tone-warning-border bg-tone-warning-surface space-y-1 rounded-md border p-2 text-xs">
         {Object.entries(result.issues).map(([key, count]) => (
           <p key={key}>
             {count} row{count === 1 ? "" : "s"} missing {key.replace(/^missing_/, "")}

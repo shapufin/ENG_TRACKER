@@ -77,12 +77,12 @@ export const SkillsTeamToolbar: React.FC<SkillsTeamToolbarProps> = ({
           </div>
         </div>
         <span
-          className="text-tone-success-text inline-flex min-h-11 items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 text-sm"
+          className="text-tone-success-text border-tone-success-border bg-tone-success-surface inline-flex min-h-11 items-center gap-2 rounded-full border px-3 text-sm"
           aria-label={`${memberCount} team members loaded`}
         >
           <span
             aria-hidden="true"
-            className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
+            className="bg-tone-success-text h-1.5 w-1.5 animate-pulse rounded-full"
           />
           <Users className="h-4 w-4" aria-hidden="true" />
           {memberCount} Members
