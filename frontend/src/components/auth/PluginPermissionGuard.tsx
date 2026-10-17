@@ -36,12 +36,12 @@ export const PluginPermissionGuard: React.FC<PluginPermissionGuardProps> = ({
     return (
       <GlassCard>
         <div className="flex items-center gap-4 p-8">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
-            <Lock className="h-6 w-6 text-amber-500" />
+          <div className="bg-tone-warning-surface flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
+            <Lock className="text-tone-warning-text h-6 w-6" />
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">Authentication Required</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h3 className="text-foreground font-semibold">Authentication Required</h3>
+            <p className="text-muted-foreground mt-1 text-sm">
               Please log in to access this plugin.
             </p>
           </div>
@@ -55,8 +55,8 @@ export const PluginPermissionGuard: React.FC<PluginPermissionGuardProps> = ({
       <GlassCard>
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary border-r-transparent"></div>
-            <p className="mt-4 text-sm text-muted-foreground">Loading permissions...</p>
+            <div className="border-primary inline-block h-8 w-8 animate-spin rounded-full border-4 border-r-transparent"></div>
+            <p className="text-muted-foreground mt-4 text-sm">Loading permissions...</p>
           </div>
         </div>
       </GlassCard>
@@ -75,12 +75,12 @@ export const PluginPermissionGuard: React.FC<PluginPermissionGuardProps> = ({
     return (
       <GlassCard>
         <div className="flex items-center gap-4 p-8">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-red-500/10">
-            <AlertCircle className="h-6 w-6 text-red-500" />
+          <div className="bg-tone-danger-surface flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
+            <AlertCircle className="text-tone-danger-text h-6 w-6" />
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">Access Denied</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h3 className="text-foreground font-semibold">Access Denied</h3>
+            <p className="text-muted-foreground mt-1 text-sm">
               You don't have permission to {action} this plugin. Contact your administrator to
               request access.
             </p>

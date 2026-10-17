@@ -69,8 +69,8 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         {preview.has_existing_upload && (
-          <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <div className="border-tone-warning-border bg-tone-warning-surface flex items-center gap-2 rounded-md border p-3 text-sm">
+            <AlertTriangle className="text-tone-warning-text h-4 w-4" />
             <span>
               You already uploaded {preview.existing_record_count} tickets for this month. Contact
               an administrator to override.
@@ -79,9 +79,9 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
         )}
 
         {issueEntries.length > 0 && (
-          <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+          <div className="border-tone-warning-border bg-tone-warning-surface space-y-2 rounded-md border p-3 text-sm">
             <div className="flex items-center gap-2 font-medium">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <AlertTriangle className="text-tone-warning-text h-4 w-4" />
               Some fields look unmapped or empty
             </div>
             <ul className="ml-6 list-disc space-y-0.5 text-xs">

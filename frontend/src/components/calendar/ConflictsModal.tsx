@@ -44,12 +44,12 @@ export const ConflictsModal: React.FC<ConflictsModalProps> = ({
           <div className="shrink-0 p-6 pb-4">
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/15">
-                  <AlertTriangle className="h-6 w-6 text-rose-400" />
+                <div className="bg-tone-danger-surface flex h-12 w-12 items-center justify-center rounded-2xl">
+                  <AlertTriangle className="text-tone-danger-text h-6 w-6" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-semibold tracking-tight">All Conflicts</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     {conflicts.length} conflict{conflicts.length !== 1 ? "s" : ""} this month
                   </p>
                 </div>
@@ -57,7 +57,7 @@ export const ConflictsModal: React.FC<ConflictsModalProps> = ({
               <button
                 onClick={() => onOpenChange(false)}
                 aria-label="Close"
-                className="flex h-11 w-11 items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+                className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground flex h-11 w-11 items-center justify-center rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
               >
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
@@ -67,11 +67,11 @@ export const ConflictsModal: React.FC<ConflictsModalProps> = ({
           <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-6 pb-6">
             {conflicts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15">
-                  <AlertTriangle className="h-8 w-8 text-emerald-400" />
+                <div className="bg-tone-success-surface mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                  <AlertTriangle className="text-tone-success-text h-8 w-8" />
                 </div>
                 <h3 className="text-lg font-medium">No conflicts</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="text-muted-foreground mt-2 text-sm">
                   All days have adequate staffing coverage
                 </p>
               </div>

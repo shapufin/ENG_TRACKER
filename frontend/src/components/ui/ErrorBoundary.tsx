@@ -42,10 +42,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="flex min-h-[400px] w-full items-center justify-center p-6 text-center">
-          <GlassCard className="max-w-md border-rose-500/20 bg-rose-500/5 p-8">
+          <GlassCard className="border-tone-danger-border bg-tone-danger-surface max-w-md p-8">
             <div className="mb-4 flex justify-center">
-              <div className="rounded-full bg-rose-500/10 p-3">
-                <AlertCircle className="h-8 w-8 text-rose-500" />
+              <div className="bg-tone-danger-surface rounded-full p-3">
+                <AlertCircle className="text-tone-danger-text h-8 w-8" />
               </div>
             </div>
             <h2 className="mb-2 text-xl font-bold tracking-tight">Something went wrong</h2>

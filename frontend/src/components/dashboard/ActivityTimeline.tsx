@@ -15,9 +15,9 @@ interface ActivityItem {
 }
 
 const statusConfig = {
-  approved: { icon: CheckCircle2, color: "text-emerald-500 bg-emerald-500/10" },
-  pending: { icon: Clock, color: "text-amber-500 bg-amber-500/10" },
-  rejected: { icon: XCircle, color: "text-rose-500 bg-rose-500/10" },
+  approved: { icon: CheckCircle2, color: "text-tone-success-text bg-tone-success-surface" },
+  pending: { icon: Clock, color: "text-tone-warning-text bg-tone-warning-surface" },
+  rejected: { icon: XCircle, color: "text-tone-danger-text bg-tone-danger-surface" },
   cancelled: { icon: AlertCircle, color: "text-muted-foreground bg-muted" },
 };
 

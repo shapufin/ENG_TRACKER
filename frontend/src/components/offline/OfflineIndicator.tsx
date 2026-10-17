@@ -20,7 +20,7 @@ export function OfflineIndicator() {
   if (isOnline && pendingCount === 0 && showingStaleData) {
     return (
       <div
-        className="border-border fixed right-0 bottom-0 left-0 z-50 border-t bg-amber-500/10 px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur"
+        className="border-border bg-tone-warning-surface fixed right-0 bottom-0 left-0 z-50 border-t px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur"
         role="status"
         aria-live="polite"
       >

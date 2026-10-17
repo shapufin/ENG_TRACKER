@@ -55,7 +55,7 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
         Select a profile, or leave empty to auto-detect from your file columns.
       </p>
       {selectedProfile?.assigned_client_ids && selectedProfile.assigned_client_ids.length > 0 && (
-        <div className="flex items-center gap-1.5 text-xs text-amber-600">
+        <div className="text-tone-warning-text flex items-center gap-1.5 text-xs">
           <AlertTriangle className="h-3.5 w-3.5" />
           <span>Scoped to clients:</span>
           {selectedProfile.assigned_client_ids.map((id) => {

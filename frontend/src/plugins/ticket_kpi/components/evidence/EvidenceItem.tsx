@@ -171,7 +171,7 @@ export const EvidenceItem = memo(function EvidenceItem({
                 disabled={isProcessing}
                 aria-label="Approve evidence"
               >
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <CheckCircle className="text-tone-success-text h-4 w-4" />
               </Button>
             )}
             {canReview && item.status !== "rejected" && (
