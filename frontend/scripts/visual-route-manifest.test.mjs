@@ -126,29 +126,36 @@ describe("visual-route-manifest contract", () => {
     }
   });
 
-  it("non-NONE extractions resolve to real app-extract-pages dirs; admin app-shell rows stay suspect", () => {
-    for (const r of ROUTES.filter((x) => x.extraction !== "NONE")) {
-      if (r.layout === "admin") {
-        assert.ok(
-          existsSync(path.join(EXTRACT_ROOT, "admin", r.extraction)),
-          `${r.path}: missing admin extraction dir ${r.extraction}`
-        );
-      } else {
-        const hits = r.roles
-          .map((role) => extractionDirFor(r, role))
-          .filter((d) => d && existsSync(path.join(EXTRACT_ROOT, d)));
-        assert.ok(
-          hits.length > 0,
-          `${r.path}: no composed extraction dir exists for any visual role`
-        );
-        assert.equal(
-          r.adminExtractionSuspect,
-          true,
-          `${r.path}: app-shell admin extraction must stay suspect until re-asserted`
-        );
+  // design-audit/app-extract-pages is untracked local evidence; skip when absent.
+  it(
+    "non-NONE extractions resolve to real app-extract-pages dirs; admin app-shell rows stay suspect",
+    {
+      skip: !existsSync(EXTRACT_ROOT) && "design-audit/app-extract-pages not present",
+    },
+    () => {
+      for (const r of ROUTES.filter((x) => x.extraction !== "NONE")) {
+        if (r.layout === "admin") {
+          assert.ok(
+            existsSync(path.join(EXTRACT_ROOT, "admin", r.extraction)),
+            `${r.path}: missing admin extraction dir ${r.extraction}`
+          );
+        } else {
+          const hits = r.roles
+            .map((role) => extractionDirFor(r, role))
+            .filter((d) => d && existsSync(path.join(EXTRACT_ROOT, d)));
+          assert.ok(
+            hits.length > 0,
+            `${r.path}: no composed extraction dir exists for any visual role`
+          );
+          assert.equal(
+            r.adminExtractionSuspect,
+            true,
+            `${r.path}: app-shell admin extraction must stay suspect until re-asserted`
+          );
+        }
       }
     }
-  });
+  );
 
   it("matrix generates exactly 4 theme/viewport combos per authorized route/role", () => {
     assert.deepEqual(Object.keys(VIEWPORTS), ["desktop", "mobile"]);
