@@ -4,7 +4,7 @@ Covers single and bulk endpoints of overtime, standby and leave: a TL may act
 on managed users' rows only, never on another team's rows and never on their
 own request.
 """
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
@@ -34,7 +34,10 @@ class TeamLeaderApprovalScopeTests(APITestCase):
 
     def setUp(self):
         self.client.force_authenticate(self.tl)
+        # LeaveRequest needs a business day, so never pin these rows to a weekend.
         self.today = date.today()
+        while self.today.weekday() >= 5:
+            self.today -= timedelta(days=1)
 
     def _ot(self, user):
         return OvertimeLog.objects.create(
