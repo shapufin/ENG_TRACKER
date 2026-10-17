@@ -83,7 +83,7 @@ export const ScoreBreakdownCard: React.FC<ScoreBreakdownCardProps> = ({ summary 
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <dt className="text-muted-foreground">{label}</dt>
-                <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
+                <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs font-medium">
                   {badge(value)}
                 </span>
               </div>

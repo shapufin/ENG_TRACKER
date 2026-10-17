@@ -1,10 +1,19 @@
 import React, { useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/PageShell";
 import { ChartCard } from "@/components/dashboard/ChartCard";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { InfoCallout } from "@/components/ui/InfoCallout";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SearchField } from "@/components/ui/SearchField";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import { downloadBlobResponse, parseFilenameFromDisposition } from "@/lib/download";
 import {
@@ -13,7 +22,6 @@ import {
   Gauge,
   LineChart,
   RefreshCw,
-  Search,
   TriangleAlert,
   Upload,
 } from "lucide-react";
@@ -192,49 +200,48 @@ export const EngagementMetricsPage: React.FC = () => {
           {monthOptions.length > 1 && (
             <label className="text-muted-foreground flex items-center gap-2 text-xs">
               Month
-              <select
-                aria-label="Snapshot month"
-                className="border-border bg-card text-foreground h-9 rounded-xl border px-2 text-sm"
+              <Select
                 value={month ?? summary.month ?? ""}
-                onChange={(e) => setMonth(e.target.value || undefined)}
+                onValueChange={(value) => setMonth(value || undefined)}
               >
-                {monthOptions.map((m) => (
-                  <option key={m} value={m}>
-                    {formatMonthLabel(m)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger controlSize="sm" aria-label="Snapshot month" className="w-44">
+                  <SelectValue>{formatMonthLabel(month ?? summary.month)}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {formatMonthLabel(m)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
           )}
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="control-icon-sm"
             aria-label="Refresh metrics"
             title="Refresh metrics"
             onClick={() => refetch()}
-            className="border-border bg-card text-muted-foreground hover:text-foreground flex h-9 w-9 items-center justify-center rounded-xl border transition-colors"
           >
             <RefreshCw
               className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
               aria-hidden="true"
             />
-          </button>
-          <Link
-            to={month ? `/engagement/visualize?month=${month}` : "/engagement/visualize"}
-            className="border-border bg-card text-muted-foreground hover:text-foreground inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-sm font-medium transition-colors"
-          >
-            <LineChart className="h-4 w-4" aria-hidden="true" />
-            Visualize
-          </Link>
+          </Button>
+          <Button asChild variant="outline" size="control-sm">
+            <Link to={month ? `/engagement/visualize?month=${month}` : "/engagement/visualize"}>
+              <LineChart className="mr-2 h-4 w-4" aria-hidden="true" />
+              Visualize
+            </Link>
+          </Button>
           <Popover>
             <PopoverTrigger asChild>
-              <button
-                type="button"
-                disabled={isExporting}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors disabled:opacity-60"
-              >
-                <Upload className="h-4 w-4" aria-hidden="true" />
+              <Button type="button" size="control-sm" disabled={isExporting}>
+                <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
                 {isExporting ? "Exporting…" : "Export Report"}
-              </button>
+              </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-56 p-1.5">
               <button
@@ -305,22 +312,14 @@ export const EngagementMetricsPage: React.FC = () => {
             <RequestVolumeChart rows={teamBreakdown} />
           </ChartCard>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative max-w-xs flex-1">
-            <Search
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <input
-              type="text"
-              value={teamFilter}
-              onChange={(e) => setTeamFilter(e.target.value)}
-              placeholder="Filter teams..."
-              aria-label="Filter teams"
-              className="border-border bg-card text-foreground placeholder:text-muted-foreground h-9 w-full rounded-lg border pr-3 pl-8 text-sm"
-            />
-          </div>
-        </div>
+        <SearchField
+          value={teamFilter}
+          onChange={setTeamFilter}
+          placeholder="Filter teams..."
+          aria-label="Filter teams"
+          controlSize="sm"
+          className="max-w-xs"
+        />
         <TeamBreakdownTable rows={filteredTeamBreakdown} />
       </div>
     </PageShell>

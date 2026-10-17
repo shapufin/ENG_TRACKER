@@ -37,7 +37,7 @@ const renderScoreDot = (props: {
       cx={cx}
       cy={cy}
       r={dedicated ? 5 : 3}
-      fill={dedicated ? "hsl(var(--tone-warning-text))" : "#fff"}
+      fill={dedicated ? "hsl(var(--tone-warning-text))" : "hsl(var(--card))"}
       stroke="hsl(var(--chart-1))"
       strokeWidth={2}
     >
@@ -126,7 +126,7 @@ export const TTATrendChart: React.FC<TTATrendChartProps> = ({ data }) => (
               strokeWidth={3}
               fill="url(#engagementScoreFill)"
               dot={renderScoreDot}
-              activeDot={{ r: 7, stroke: "hsl(var(--chart-1))", strokeWidth: 2, fill: "white" }}
+              activeDot={{ r: 7, stroke: "hsl(var(--chart-1))", strokeWidth: 2, fill: "hsl(var(--card))" }}
               connectNulls
             />
             <Line
@@ -137,7 +137,7 @@ export const TTATrendChart: React.FC<TTATrendChartProps> = ({ data }) => (
               stroke="hsl(var(--chart-2))"
               strokeWidth={2.5}
               strokeDasharray="6 3"
-              dot={{ r: 3, fill: "white", stroke: "hsl(var(--chart-2))", strokeWidth: 2 }}
+              dot={{ r: 3, fill: "hsl(var(--card))", stroke: "hsl(var(--chart-2))", strokeWidth: 2 }}
               activeDot={{ r: 6 }}
               connectNulls
             />

@@ -224,6 +224,43 @@ describe("EngagementMetricsPage", () => {
     expect(screen.getByRole("status", { name: /watch/i })).toBeInTheDocument();
   });
 
+  describe("control kit", () => {
+    const mockMetrics = (trend = baseTrend) =>
+      vi.mocked(useEngagementMetrics.useEngagementMetrics).mockReturnValue({
+        summary: baseSummary,
+        trend,
+        teamBreakdown: baseTeamBreakdown,
+        isLoading: false,
+        isFetching: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+
+    it("renders the month picker with the shared Select trigger", () => {
+      mockMetrics([...baseTrend, { ...baseTrend[0], month: "2026-08" }]);
+
+      renderPage();
+
+      const picker = screen.getByRole("combobox", { name: /snapshot month/i });
+      expect(picker.tagName).toBe("BUTTON");
+      expect(picker).toHaveTextContent(/september 2026/i);
+    });
+
+    it("filters teams through the shared SearchField (clearable)", () => {
+      mockMetrics();
+
+      renderPage();
+
+      fireEvent.change(screen.getByRole("searchbox", { name: /filter teams/i }), {
+        target: { value: "zzz" },
+      });
+      expect(screen.queryByText("Team A")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /clear search/i }));
+      expect(screen.getByText("Team A")).toBeInTheDocument();
+    });
+  });
+
   describe("export menu", () => {
     afterEach(() => {
       vi.restoreAllMocks();

@@ -272,14 +272,14 @@ export const EngagementVisualizationPage: React.FC = () => {
                 {(summary.resubmission_count > 0 || summary.decisions_during_leave > 0) && (
                   <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                     {summary.resubmission_count > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                         <RotateCcw className="h-3 w-3" aria-hidden="true" />
                         {summary.resubmission_count} resubmission
                         {summary.resubmission_count === 1 ? "" : "s"}
                       </span>
                     )}
                     {summary.decisions_during_leave > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-tone-success-surface px-2.5 py-0.5 text-[11px] font-medium text-tone-success-text">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-tone-success-surface px-2.5 py-0.5 text-xs font-medium text-tone-success-text">
                         <HeartHandshake className="h-3 w-3" aria-hidden="true" />
                         {summary.decisions_during_leave} decided while on leave
                       </span>

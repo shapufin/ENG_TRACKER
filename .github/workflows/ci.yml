@@ -78,9 +78,9 @@ jobs:
         run: node --test scripts/table-header-audit.test.mjs && node scripts/table-header-audit.mjs
       # --exclude: src/plugins/engagement still carries a raw search input/select; drop the flag once it migrates.
       - name: Control kit contract
-        run: node --test scripts/control-audit.test.mjs && node scripts/control-audit.mjs --strict --exclude=src/plugins/engagement
+        run: node --test scripts/control-audit.test.mjs && node scripts/control-audit.mjs --strict
       - name: Surface contract
-        run: node --test scripts/surface-audit.test.mjs && node scripts/surface-audit.mjs --strict --exclude=src/plugins/engagement
+        run: node --test scripts/surface-audit.test.mjs && node scripts/surface-audit.mjs --strict
       # Static source scans (no browser, no server). Phase 8.1 / CI-03.
       - name: Modal contract
         run: node scripts/modal-audit.mjs && node scripts/modal-visual-audit.mjs
