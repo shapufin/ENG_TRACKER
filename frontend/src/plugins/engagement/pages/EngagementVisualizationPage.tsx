@@ -118,7 +118,7 @@ export const EngagementVisualizationPage: React.FC = () => {
   if (isLoading) {
     return (
       <PageShell title="Engagement Visualization">
-        <div className="h-96 animate-pulse rounded-lg border bg-muted/40" />
+        <div className="bg-muted/40 h-96 animate-pulse rounded-lg border" />
       </PageShell>
     );
   }
@@ -174,7 +174,7 @@ export const EngagementVisualizationPage: React.FC = () => {
         <>
           <Link
             to={month ? `/engagement/metrics?month=${month}` : "/engagement/metrics"}
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="border-border bg-card text-muted-foreground hover:text-foreground inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-sm font-medium transition-colors"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back to metrics
@@ -183,7 +183,7 @@ export const EngagementVisualizationPage: React.FC = () => {
             type="button"
             disabled={isExporting}
             onClick={handleExportPdf}
-            className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_0_24px_-6px_hsl(var(--primary))] transition-colors hover:bg-primary/90 disabled:opacity-60"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center gap-2 rounded-xl px-4 text-sm font-semibold shadow-[0_0_24px_-6px_hsl(var(--primary))] transition-colors disabled:opacity-60"
           >
             <Download className="h-4 w-4" aria-hidden="true" />
             {isExporting ? "Exporting…" : "Export PDF"}
@@ -235,17 +235,17 @@ export const EngagementVisualizationPage: React.FC = () => {
 
             <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
               <div className="text-center sm:text-left">
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="text-muted-foreground text-xs font-medium tracking-[0.2em] uppercase">
                   Composite Engagement Score
                 </p>
                 <div className="mt-2 flex items-baseline justify-center gap-2 sm:justify-start">
                   <span
-                    className="bg-linear-to-br from-[hsl(var(--chart-1))] to-[hsl(var(--chart-2))] bg-clip-text font-mono text-6xl font-black tabular-nums tracking-tight text-transparent sm:text-7xl"
+                    className="bg-linear-to-br from-[hsl(var(--chart-1))] to-[hsl(var(--chart-2))] bg-clip-text font-mono text-6xl font-black tracking-tight text-transparent tabular-nums sm:text-7xl"
                     style={{ filter: `drop-shadow(0 0 24px ${ringGlow})` }}
                   >
                     {score !== null ? Math.round(score) : "—"}
                   </span>
-                  <span className="text-xl font-semibold text-muted-foreground">/ 100</span>
+                  <span className="text-muted-foreground text-xl font-semibold">/ 100</span>
                 </div>
                 <div className="mt-3 flex items-center justify-center gap-2 sm:justify-start">
                   <span
@@ -272,14 +272,14 @@ export const EngagementVisualizationPage: React.FC = () => {
                 {(summary.resubmission_count > 0 || summary.decisions_during_leave > 0) && (
                   <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                     {summary.resubmission_count > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                      <span className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium">
                         <RotateCcw className="h-3 w-3" aria-hidden="true" />
                         {summary.resubmission_count} resubmission
                         {summary.resubmission_count === 1 ? "" : "s"}
                       </span>
                     )}
                     {summary.decisions_during_leave > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-tone-success-surface px-2.5 py-0.5 text-xs font-medium text-tone-success-text">
+                      <span className="bg-tone-success-surface text-tone-success-text inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium">
                         <HeartHandshake className="h-3 w-3" aria-hidden="true" />
                         {summary.decisions_during_leave} decided while on leave
                       </span>
@@ -304,7 +304,7 @@ export const EngagementVisualizationPage: React.FC = () => {
                     boxShadow: `0 0 32px -6px ${ringColor}`,
                   }}
                 />
-                <div className="absolute inset-[10px] rounded-full bg-card" />
+                <div className="bg-card absolute inset-[10px] rounded-full" />
                 <Gauge
                   className="relative h-7 w-7"
                   style={{ color: ringColor }}

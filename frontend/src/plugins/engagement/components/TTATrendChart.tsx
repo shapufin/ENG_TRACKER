@@ -66,7 +66,12 @@ export const TTATrendChart: React.FC<TTATrendChartProps> = ({ data }) => (
                 <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} strokeDasharray="0" stroke="hsl(var(--border))" opacity={0.5} />
+            <CartesianGrid
+              vertical={false}
+              strokeDasharray="0"
+              stroke="hsl(var(--border))"
+              opacity={0.5}
+            />
             <XAxis
               dataKey="month"
               tickFormatter={formatMonthTick}
@@ -126,7 +131,12 @@ export const TTATrendChart: React.FC<TTATrendChartProps> = ({ data }) => (
               strokeWidth={3}
               fill="url(#engagementScoreFill)"
               dot={renderScoreDot}
-              activeDot={{ r: 7, stroke: "hsl(var(--chart-1))", strokeWidth: 2, fill: "hsl(var(--card))" }}
+              activeDot={{
+                r: 7,
+                stroke: "hsl(var(--chart-1))",
+                strokeWidth: 2,
+                fill: "hsl(var(--card))",
+              }}
               connectNulls
             />
             <Line
@@ -137,7 +147,12 @@ export const TTATrendChart: React.FC<TTATrendChartProps> = ({ data }) => (
               stroke="hsl(var(--chart-2))"
               strokeWidth={2.5}
               strokeDasharray="6 3"
-              dot={{ r: 3, fill: "hsl(var(--card))", stroke: "hsl(var(--chart-2))", strokeWidth: 2 }}
+              dot={{
+                r: 3,
+                fill: "hsl(var(--card))",
+                stroke: "hsl(var(--chart-2))",
+                strokeWidth: 2,
+              }}
               activeDot={{ r: 6 }}
               connectNulls
             />
