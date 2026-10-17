@@ -43,7 +43,12 @@ export const ROLE_FIXTURES = {
   cr_admin: { username: "e2e_cr" }, // seeded by seed_e2e_data (extra_roles: cr_admin)
 };
 
-export const DYNAMIC_FIXTURES = ["resource-group", "payroll-run", "org-chart"];
+export const DYNAMIC_FIXTURES = [
+  "resource-group",
+  "payroll-run",
+  "org-chart",
+  "onboarding-document",
+];
 
 // layout: "app" (AppShell, CRUserGuard-wrapped except /settings) | "admin"
 // (AdminShell behind SuperuserRoute: superuser/admin/HR in, CR-only admin
@@ -576,6 +581,142 @@ export const ROUTES = [
     mockup: "NONE",
     extraction: "admin-ticket-kpi-mappings",
   },
+  // ---- Added 2026-10-17 (route-manifest drift repair). Roles follow the plugin
+  // permission manifests / route guards and are re-asserted at capture time. ----
+  {
+    path: "/hr/team-leaders",
+    label: "hr-team-leaders",
+    layout: "app",
+    roles: ["hr", "tl_hr", "admin"],
+    expectedHeading: "Team Leader Assignment",
+    mockup: "NONE",
+    extraction: "NONE",
+  },
+  {
+    path: "/hr/calendars",
+    label: "hr-calendars",
+    layout: "app",
+    roles: ["hr", "tl_hr", "admin"],
+    expectedHeading: "Company Holidays",
+    mockup: "NONE",
+    extraction: "NONE",
+  },
+  {
+    path: "/hr/payroll/runs",
+    label: "hr-payroll-runs",
+    layout: "app",
+    roles: ["hr", "admin"],
+    expectedHeading: "Payroll Runs",
+    mockup: "NONE",
+    extraction: "NONE",
+    note: "plugin layout 'hr' (HRRoute inside AppShell); payroll view/manage are HR grants",
+  },
+  {
+    path: "/hr/payroll/runs/:id",
+    label: "hr-payroll-run-detail",
+    layout: "app",
+    roles: ["hr", "admin"],
+    expectedHeading: /^Payroll Run \d{4}-\d{2}/,
+    mockup: "NONE",
+    extraction: "NONE",
+    dynamicFixture: "payroll-run",
+  },
+  {
+    path: "/hr/payroll/wages",
+    label: "hr-payroll-wages",
+    layout: "app",
+    roles: ["hr", "admin"],
+    expectedHeading: "Wage Assignments",
+    mockup: "NONE",
+    extraction: "NONE",
+  },
+  {
+    path: "/engagement/metrics",
+    label: "engagement-metrics",
+    layout: "app",
+    roles: ["tl", "tl_hr", "admin"],
+    expectedHeading: "My Engagement",
+    mockup: "NONE",
+    extraction: "NONE",
+    note: "engagement is TL/staff-only; hbpr is denied",
+  },
+  {
+    path: "/engagement/visualize",
+    label: "engagement-visualize",
+    layout: "app",
+    roles: ["tl", "tl_hr", "admin"],
+    expectedHeading: "Engagement Visualization",
+    mockup: "NONE",
+    extraction: "NONE",
+  },
+  {
+    path: "/tl-scorecard/visualize",
+    label: "tl-scorecard-visualize",
+    layout: "app",
+    roles: ["tl", "tl_hr", "admin"],
+    expectedHeading: "TL Scorecard Visualization",
+    mockup: "NONE",
+    extraction: "NONE",
+  },
+  {
+    path: "/my-records",
+    label: "my-records",
+    layout: "app",
+    roles: ["employee", "tl"],
+    expectedHeading: "My records",
+    mockup: "NONE",
+    extraction: "NONE",
+    note: "employee-facing shared records; role set to be re-asserted at capture time",
+  },
+  {
+    path: "/onboarding",
+    label: "onboarding",
+    layout: "app",
+    roles: ["employee", "tl", "hr", "tl_hr", "admin"],
+    expectedHeading: "Onboarding",
+    mockup: "NONE",
+    extraction: "NONE",
+    note: "public plugin grants; empty state when no clients are assigned",
+  },
+  {
+    path: "/onboarding/documents/:id/edit",
+    label: "onboarding-document-edit",
+    layout: "app",
+    roles: ["admin"],
+    expectedHeading: "Edit document",
+    mockup: "NONE",
+    extraction: "NONE",
+    dynamicFixture: "onboarding-document",
+    note: "no fixture resolver yet: capture tooling SKIPs it (NO FIXTURE) until one is added",
+  },
+  {
+    path: "/admin/notifications",
+    label: "admin-notifications",
+    layout: "admin",
+    roles: ["admin"],
+    expectedHeading: "Notification types",
+    mockup: "NONE",
+    extraction: "NONE",
+  },
+  {
+    path: "/admin/backup-restore",
+    label: "admin-backup-restore",
+    layout: "admin",
+    roles: ["admin"],
+    expectedHeading: "Backup & Restore",
+    mockup: "NONE",
+    extraction: "NONE",
+    note: "superuser-only (SuperuserOnlyMixin)",
+  },
+  {
+    path: "/admin/skills/settings",
+    label: "admin-skills-settings",
+    layout: "admin",
+    roles: ["admin", "hr"],
+    expectedHeading: "Proficiency Level Names",
+    mockup: "NONE",
+    extraction: "NONE",
+  },
   // ---- Public ----
   {
     path: "/login",
@@ -593,6 +734,7 @@ export const ROUTES = [
 export const REDIRECTS = [
   { path: "/", note: "HomeRedirect (role-dependent landing)" },
   { path: "/admin-dashboard/*", to: "/admin" },
+  { path: "/admin/holidays", to: "/admin/calendars?tab=holidays" },
 ];
 
 // Guard-only access: asserted redirects (Playwright), never visual captures.

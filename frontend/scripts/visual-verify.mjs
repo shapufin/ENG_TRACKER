@@ -65,7 +65,7 @@ const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const OUT_ROOT = path.join(REPO_ROOT, "design-fingerprints");
 
 const BASE = process.env.BASE_URL || "http://127.0.0.1:5173";
-const API_HEALTH = "http://127.0.0.1:8000/api/health/live/";
+const API_HEALTH = `${process.env.API_URL || "http://127.0.0.1:8000"}/api/health/live/`;
 
 const VIEWPORTS = {
   desktop: { width: 1280, height: 800 },
