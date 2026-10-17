@@ -1,6 +1,5 @@
 import React from "react";
 import { PageShell } from "@/components/layout/PageShell";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, RefreshCcw } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -38,31 +37,30 @@ export const HRCalendarsPage: React.FC = () => {
 
   return (
     <PageShell title="Company Holidays" subtitle="Manage global and workspace holidays.">
-      <GlassCard className="p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-muted-foreground text-xs font-semibold uppercase">Holiday Catalog</p>
-            <h3 className="text-lg font-semibold">Global & Workspace Holidays</h3>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {isPayrollActive && (
-              <Button
-                variant="outline"
-                onClick={() => syncPayrollMutation.mutate()}
-                disabled={syncPayrollMutation.isPending}
-              >
-                <RefreshCcw
-                  className={`mr-2 h-4 w-4 ${syncPayrollMutation.isPending ? "animate-spin" : ""}`}
-                />
-                {syncPayrollMutation.isPending ? "Syncing..." : "Sync with Payroll"}
-              </Button>
-            )}
-            <Button onClick={() => openHolidayForm()}>
-              <CalendarDays className="mr-2 h-4 w-4" /> Add Holiday
-            </Button>
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-muted-foreground text-xs font-semibold uppercase">Holiday Catalog</p>
+          <h3 className="text-lg font-semibold">Global & Workspace Holidays</h3>
         </div>
-      </GlassCard>
+        <div className="flex flex-wrap gap-2">
+          {isPayrollActive && (
+            <Button
+              variant="outline"
+              size="control"
+              onClick={() => syncPayrollMutation.mutate()}
+              disabled={syncPayrollMutation.isPending}
+            >
+              <RefreshCcw
+                className={`mr-2 h-4 w-4 ${syncPayrollMutation.isPending ? "animate-spin" : ""}`}
+              />
+              {syncPayrollMutation.isPending ? "Syncing..." : "Sync with Payroll"}
+            </Button>
+          )}
+          <Button size="control" onClick={() => openHolidayForm()}>
+            <CalendarDays className="mr-2 h-4 w-4" /> Add Holiday
+          </Button>
+        </div>
+      </div>
 
       <HolidayTable
         holidays={holidayRows}

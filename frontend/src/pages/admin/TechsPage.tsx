@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageShell } from "@/components/layout/PageShell";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { RowActions } from "@/components/ui/RowActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TechMembersDialog } from "@/components/admin/TechMembersDialog";
@@ -139,100 +140,90 @@ export const TechsPage: React.FC = () => {
           )}
         </div>
       </GlassCard>
-      <div className="space-y-2">
-        {isLoading && <LoadingCard title="Loading Techs..." rows={4} className="min-h-[200px]" />}
-        {!isLoading && (data?.results ?? []).length === 0 && (
-          <GlassCard>
-            <EmptyState
-              icon={Wrench}
-              title="No Techs yet"
-              description="Add one above to get started."
-            />
-          </GlassCard>
-        )}
-        {(data?.results ?? []).map((tech) => (
-          <div key={tech.id} className="border-border bg-card rounded-lg border p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-expanded={expandedId === tech.id}
-                  aria-label={`${expandedId === tech.id ? "Hide" : "Show"} levels for ${tech.name}`}
-                  onClick={() => setExpandedId(expandedId === tech.id ? null : tech.id)}
-                >
-                  {expandedId === tech.id ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                </Button>
-                <div>
-                  <div className="font-medium">
-                    {tech.name}
-                    {!tech.is_active && (
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        Inactive
-                      </Badge>
+      {isLoading && <LoadingCard title="Loading Techs..." rows={4} className="min-h-[200px]" />}
+      {!isLoading && (data?.results ?? []).length === 0 && (
+        <GlassCard>
+          <EmptyState
+            icon={Wrench}
+            title="No Techs yet"
+            description="Add one above to get started."
+          />
+        </GlassCard>
+      )}
+      {(data?.results ?? []).length > 0 && (
+        <GlassCard className="divide-border/70 divide-y overflow-hidden p-0">
+          {(data?.results ?? []).map((tech) => (
+            <div key={tech.id} className="group/row px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="control-icon-sm"
+                    aria-expanded={expandedId === tech.id}
+                    aria-label={`${expandedId === tech.id ? "Hide" : "Show"} levels for ${tech.name}`}
+                    onClick={() => setExpandedId(expandedId === tech.id ? null : tech.id)}
+                  >
+                    {expandedId === tech.id ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
                     )}
+                  </Button>
+                  <div>
+                    <div className="font-medium">
+                      {tech.name}
+                      {!tech.is_active && (
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          Inactive
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      {tech.code}
+                      {(tech.levels?.length ?? 0) > 0 && (
+                        <span className="ml-2">
+                          {tech.levels!.length} level{tech.levels!.length === 1 ? "" : "s"}
+                        </span>
+                      )}
+                    </p>
                   </div>
-                  <p className="text-muted-foreground text-xs">
-                    {tech.code}
-                    {(tech.levels?.length ?? 0) > 0 && (
-                      <span className="ml-2">
-                        {tech.levels!.length} level{tech.levels!.length === 1 ? "" : "s"}
-                      </span>
-                    )}
-                  </p>
                 </div>
+                <RowActions
+                  actions={[
+                    {
+                      label: tech.is_active ? `Deactivate ${tech.name}` : `Activate ${tech.name}`,
+                      icon: Power,
+                      tone: tech.is_active ? "success" : "default",
+                      disabled: toggleActive.isPending,
+                      onClick: () => toggleActive.mutate(tech),
+                    },
+                    {
+                      label: `Manage users in ${tech.name}`,
+                      icon: Users,
+                      onClick: () => setMembersTarget(tech),
+                    },
+                    {
+                      label: `Edit ${tech.name}`,
+                      icon: Pencil,
+                      onClick: () => {
+                        setEditing(tech);
+                        setForm({ name: tech.name, code: tech.code });
+                      },
+                    },
+                    {
+                      label: `Delete ${tech.name}`,
+                      icon: Trash2,
+                      tone: "danger",
+                      onClick: () => setDeleteTarget(tech),
+                    },
+                  ]}
+                />
               </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={tech.is_active ? `Deactivate ${tech.name}` : `Activate ${tech.name}`}
-                  title={tech.is_active ? "Deactivate" : "Activate"}
-                  onClick={() => toggleActive.mutate(tech)}
-                  disabled={toggleActive.isPending}
-                >
-                  <Power
-                    className={`h-4 w-4 ${tech.is_active ? "text-success" : "text-muted-foreground"}`}
-                  />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Manage users in ${tech.name}`}
-                  title="Manage users"
-                  onClick={() => setMembersTarget(tech)}
-                >
-                  <Users className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Edit ${tech.name}`}
-                  onClick={() => {
-                    setEditing(tech);
-                    setForm({ name: tech.name, code: tech.code });
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Delete ${tech.name}`}
-                  onClick={() => setDeleteTarget(tech)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              {expandedId === tech.id && <TechLevelEditor tech={tech} />}
             </div>
-            {expandedId === tech.id && <TechLevelEditor tech={tech} />}
-          </div>
-        ))}
-      </div>
+          ))}
+        </GlassCard>
+      )}
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
