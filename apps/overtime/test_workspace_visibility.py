@@ -6,7 +6,7 @@ Behavior pinned here (no code change was needed):
 - a *public* workspace exposes its members' rows by design (team-calendar
   transparency); that is the recorded D2 default, so this test documents it.
 """
-from datetime import date
+from datetime import date, timedelta
 from uuid import uuid4
 
 from django.contrib.auth.models import User
@@ -32,7 +32,10 @@ class WorkspaceIdsVisibilityTests(APITestCase):
         cls.public_ws = CalendarWorkspace.objects.create(
             name='Public WS', code=f'ws-{uuid4().hex[:8]}', team=cls.team, is_public=True,
         )
+        # LeaveRequest needs a business day, so never pin these rows to a weekend.
         today = date.today()
+        while today.weekday() >= 5:
+            today -= timedelta(days=1)
         cls.ot = OvertimeLog.objects.create(
             user=cls.victim, date=today, hours=2, description='victim ot',
             client=cls.client_obj, status='pending',
