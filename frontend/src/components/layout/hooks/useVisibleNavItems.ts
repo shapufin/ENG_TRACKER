@@ -155,6 +155,7 @@ const allNavItems: NavItem[] = [
     label: "Wage Assignment",
     icon: Wallet,
     section: "hr",
+    pluginName: "payroll",
     roles: ["hr"],
   },
   {
@@ -162,6 +163,7 @@ const allNavItems: NavItem[] = [
     label: "Payroll",
     icon: Wallet,
     section: "hr",
+    pluginName: "payroll",
     roles: ["hr"],
   },
 

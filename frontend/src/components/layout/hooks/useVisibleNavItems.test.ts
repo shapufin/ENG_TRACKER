@@ -336,3 +336,23 @@ describe("useVisibleNavItems plugin gating", () => {
     for (const label of kpiLabels) expect(visible).toContain(label);
   });
 });
+
+describe("useVisibleNavItems payroll gating", () => {
+  it("hides HR payroll links when the payroll plugin is not active", () => {
+    const { result } = renderHook(() =>
+      useVisibleNavItems(false, true, false, false, false, false, false, false, [])
+    );
+    const visible = result.current.map((item) => item.label);
+    expect(visible).not.toContain("Payroll");
+    expect(visible).not.toContain("Wage Assignment");
+  });
+
+  it("shows them when it is active", () => {
+    const { result } = renderHook(() =>
+      useVisibleNavItems(false, true, false, false, false, false, false, false, ["payroll"])
+    );
+    const visible = result.current.map((item) => item.label);
+    expect(visible).toContain("Payroll");
+    expect(visible).toContain("Wage Assignment");
+  });
+});
