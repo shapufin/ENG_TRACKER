@@ -80,7 +80,7 @@ Counts always use `count_business_days`, never calendar span.
 
 Derived from the 2026-10-18 `ticket_kpi` audit. Each line is a defect class that was found there.
 
-1. **Core never references a plugin.** `grep -rn "plugins\.<name>" apps config` must be empty (migrations excepted). `ticket_kpi` enforces this with `test_core_coupling.CoreDoesNotImportKpiTests`; copy that test for a new plugin. A plugin may register its own OpenAPI enum name in its `apps.py ready()`, never in `config/settings.py`.
+1. **Core never references a plugin.** `grep -rn "plugins\.<name>" apps config` must be empty (migrations excepted). `ticket_kpi` enforces this with `test_core_coupling.CoreDoesNotImportKpiTests`; copy that test for a new plugin. A plugin may register its own OpenAPI enum name in its `apps.py ready()`, never in `config/settings.py`. Core-wide guard: `apps/plugins/test_core_plugin_isolation.py` fails on an unguarded module-level plugin import, on any import not in its `ALLOWED_IMPORTS` list (add a line only together with a fail-closed `except ImportError` fallback), and on any `plugins.*` string in `config/`.
 2. **Team scope = `UserProfile.get_team_member_ids()`.** Never rebuild a TL scope with ORM filters (`profile__teams__team_leader`, FK checks). KPI had a private copy that missed shared-team members. Pinned by `TeamScopeParityTests`.
 3. **One normalizer / one helper.** If a plugin needs core logic (ticket reference normalization, business days), import it; do not copy the regex. KPI's `normalize_ticket_id` is core's `normalize_ticket_reference`.
 4. **Update paths authorize the OLD object, not only the new target.** A `perform_update` that repoints a FK must check the current owner as well as the new one (`LinkRepointTests`).

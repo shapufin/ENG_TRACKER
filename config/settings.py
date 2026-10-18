@@ -261,14 +261,12 @@ SPECTACULAR_SETTINGS = {
         'ApprovalStatusEnum': 'apps.overtime.models.core.OvertimeLog.STATUS_CHOICES',
         'ReportStatusEnum': 'apps.reports.models.core.GeneratedReport.STATUS_CHOICES',
         'CoreAuditActionEnum': 'apps.reports.models.core.AuditLog.ACTION_CHOICES',
-        'PluginAuditActionEnum': 'plugins.audit_log.models.AuditLog.ACTION_TYPES',
         'PluginAuditStatusEnum': [
             ('success', 'Success'),
             ('failure', 'Failure'),
             ('pending', 'Pending'),
         ],
         'PluginPermissionActionEnum': 'apps.plugins.models.PluginPermission.ACTION_CHOICES',
-        'SnapshotFrequencyEnum': 'plugins.analytics.models.AnalyticsSnapshot.SNAPSHOT_TYPES',
         # evidence_type is defined on both OvertimeLog and KPIEvidence with
         # different choice sets; give each a distinct generated enum name.
         'OvertimeEvidenceTypeEnum': 'apps.overtime.models.core.OvertimeLog.EVIDENCE_TYPE_CHOICES',
