@@ -925,10 +925,10 @@ class AnalyticsMetricQueryCountTests(TestCase):
         request = self.factory.get(f'/api/plugins/analytics/metrics/{self.metric.id}/')
         force_authenticate(request, user=self.admin)
 
-        # Budget: 1 query for the metric row (joined to user + team via
+        # Budget: 1 plugin-enabled check + 1 query for the metric row (joined to user + team via
         # select_related). A regression to `.objects.all()` would add 2
         # more queries (one for user, one for team).
-        with self.assertNumQueries(1):
+        with self.assertNumQueries(2):
             response = AnalyticsMetricViewSet.as_view({'get': 'retrieve'})(
                 request, pk=self.metric.id
             )

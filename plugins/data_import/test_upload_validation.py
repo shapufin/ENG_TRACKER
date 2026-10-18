@@ -25,7 +25,7 @@ class ImportUploadTypeTests(TestCase):
         )
         Plugin.objects.update_or_create(
             name="data_import",
-            defaults={"config": {"max_file_size_mb": 1, "max_rows_per_import": 100}},
+            defaults={"is_enabled": True, "config": {"max_file_size_mb": 1, "max_rows_per_import": 100}},
         )
 
     def _analyze(self, upload):
