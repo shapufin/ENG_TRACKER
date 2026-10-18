@@ -388,6 +388,8 @@ class SkillExportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
     plugin_name = 'skills'
     permission_classes = [permissions.IsAuthenticated]
     throttle_scope = 'export'
+    # Revoking the 'export' grant must stop exports (GET would map to 'view').
+    permission_action_map = {'export': 'export', 'export_xlsx': 'export'}
 
     @action(detail=False, methods=['get'])
     def export(self, request):

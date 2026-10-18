@@ -79,6 +79,10 @@ class ViewSetTestCase:
         for action in ('manage', 'configure'):
             perm = PluginPermission.objects.get(plugin_name='skills', action=action)
             perm.allowed_roles.add(hr_role)
+        # Matches the manifest (export is public); seeded at boot by seed_plugin_permissions.
+        PluginPermission.objects.update_or_create(
+            plugin_name='skills', action='export', defaults={'is_public': True}
+        )
 
     def _list(self, viewset_cls, user, action='list', params=None):
         url = '/api/plugins/skills/'
