@@ -47,9 +47,9 @@ class SkillsPlugin(BasePlugin):
             },
             "manage": {"roles": ["hr"], "public": False},
             "configure": {"roles": ["hr"], "public": False},
-            # export is public=True so TLs can export their team matrix.
-            # The SkillExportViewSet uses GET (safe method → view by default),
-            # but the export action is available for future fine-grained control.
+            # export is public=True by default so TLs can export their team
+            # matrix; SkillExportViewSet maps both actions to 'export', so
+            # revoking this grant stops exports (scope is still visible_user_ids).
             "export": {
                 "roles": ["hr", "italian_tl", "albanian_tl"],
                 "public": True,
