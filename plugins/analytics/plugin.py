@@ -70,30 +70,8 @@ class AnalyticsPlugin(BasePlugin):
         return metadata
 
     def get_config_schema(self):
-        return {
-            "snapshot_frequency": {
-                "type": "string",
-                "enum": ["daily", "weekly", "monthly"],
-                "default": "daily",
-                "description": "How often to generate analytics snapshots"
-            },
-            "retention_days": {
-                "type": "integer",
-                "default": 90,
-                "description": "How many days to retain analytics data"
-            },
-            "enable_metrics": {
-                "type": "boolean",
-                "default": True,
-                "description": "Enable detailed metrics collection"
-            }
-        }
-
-    def validate_config(self, config):
-        if 'retention_days' in config:
-            if not isinstance(config['retention_days'], int) or config['retention_days'] < 1:
-                raise ValueError("retention_days must be a positive integer")
-        return True
+        # Snapshot frequency and retention live on the AnalyticsConfiguration model.
+        return {}
 
     def ready(self):
         """Initialize plugin when enabled."""

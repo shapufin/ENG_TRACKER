@@ -20,9 +20,6 @@ EXEMPT = {
     ('notifications', 'NotificationViewSet'),
     # Admin-only (IsAdminUser) kill-switch for the notification system itself.
     ('notifications', 'NotificationEventTypeConfigViewSet'),
-    # Superuser-only by SuperuserOnlyMixin (stricter than plugin grants).
-    ('site_backup', 'BackupRecordViewSet'),
-    ('site_backup', 'RestoreViewSet'),
 }
 
 

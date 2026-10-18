@@ -37,24 +37,6 @@ class AnalyticsPluginTestCase(TestCase):
         self.assertEqual(self.plugin.version, '1.0.0')
         self.assertIn('Analytics', self.plugin.verbose_name)
 
-    def test_plugin_config_schema(self):
-        """Test plugin configuration schema."""
-        schema = self.plugin.get_config_schema()
-        self.assertIn('snapshot_frequency', schema)
-        self.assertIn('retention_days', schema)
-        self.assertIn('enable_metrics', schema)
-
-    def test_plugin_config_validation(self):
-        """Test plugin configuration validation."""
-        # Valid config
-        valid_config = {'retention_days': 90}
-        self.assertTrue(self.plugin.validate_config(valid_config))
-
-        # Invalid config
-        invalid_config = {'retention_days': -1}
-        with self.assertRaises(ValueError):
-            self.plugin.validate_config(invalid_config)
-
 
 class AnalyticsSnapshotTestCase(TestCase):
     def setUp(self):
@@ -859,6 +841,7 @@ class ExportJobTest(TestCase):
     """Tests for background export jobs (Feature 3)."""
 
     def setUp(self):
+        _ensure_analytics_urls()  # URL mounting depends on registry state left by other tests
         self.user = User.objects.create_user(
             username='export-user', password='testpass', is_staff=True,
         )
@@ -955,6 +938,9 @@ class ScheduledReportVisibilityTests(TestCase):
         )
         cls.employee = User.objects.create_user(username='sr_employee', password='x')
         cls.admin = User.objects.create_user(username='sr_admin', password='x', is_staff=True)
+
+    def setUp(self):
+        _ensure_analytics_urls()
 
     def _grant_view_to_everyone(self):
         from apps.plugins.models import PluginPermission

@@ -8,6 +8,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.plugins.models import Plugin
+from core.mixins.permissions import PluginPermissionMixin
 
 from .models import BackupRecord
 from .serializers import (
@@ -23,14 +24,15 @@ from .services.archive import ArchiveError
 logger = logging.getLogger(__name__)
 
 
-class SuperuserOnlyMixin:
+class SuperuserOnlyMixin(PluginPermissionMixin):
     """Hard superuser gate for the whole plugin.
 
     A full-site restore can overwrite or delete any row in the database, so
     this is intentionally stricter than the platform's usual
     staff-or-plugin-manage-grant pattern: only ``is_superuser`` passes,
     regardless of ``is_staff`` or any ``PluginPermission.is_public``/role
-    grant on ``site_backup``.
+    grant on ``site_backup``. It still refuses while the plugin is disabled
+    (``PluginPermissionMixin``), superusers included.
     """
 
     def check_permissions(self, request):

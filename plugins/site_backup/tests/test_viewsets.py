@@ -82,7 +82,7 @@ class UploadSizeLimitTests(TestCase):
     def setUp(self):
         self.superuser = User.objects.create_user(username='root', password='x', is_superuser=True)
         Plugin.objects.update_or_create(
-            name='site_backup', defaults={'config': {'max_upload_size_mb': 1}, 'verbose_name': 'x', 'version': '1'}
+            name='site_backup', defaults={'config': {'max_upload_size_mb': 1}, 'verbose_name': 'x', 'version': '1', 'is_enabled': True}
         )
 
     def _oversized_file(self):
