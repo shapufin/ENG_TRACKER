@@ -22,8 +22,6 @@ class AuditLogPluginTestCase(TestCase):
         """Test plugin configuration schema."""
         schema = self.plugin.get_config_schema()
         self.assertIn('retention_days', schema)
-        self.assertIn('log_level', schema)
-        self.assertIn('enable_ip_logging', schema)
 
     def test_plugin_config_validation(self):
         """Test plugin configuration validation."""

@@ -38,22 +38,6 @@ class ControlRoomPluginMetadataTests(TestCase):
         self.assertIn('/control-room/dashboard', paths)
         self.assertIn('/admin/control-room/access', paths)
 
-    def test_config_schema_has_status_mode(self):
-        schema = self.plugin.get_config_schema()
-        self.assertIn('default_status_mode', schema)
-        self.assertIn('include_rejected', schema)
-
-    def test_validate_config_accepts_valid_mode(self):
-        self.assertTrue(self.plugin.validate_config({'default_status_mode': 'approved_only'}))
-
-    def test_validate_config_rejects_invalid_mode(self):
-        with self.assertRaises(ValueError):
-            self.plugin.validate_config({'default_status_mode': 'bogus'})
-
-    def test_validate_config_rejects_non_boolean_include_rejected(self):
-        with self.assertRaises(ValueError):
-            self.plugin.validate_config({'include_rejected': 'yes'})
-
 
 class ControlRoomAccessModelTests(TestCase):
     def setUp(self):

@@ -77,29 +77,9 @@ class ControlRoomPlugin(BasePlugin):
         return metadata
 
     def get_config_schema(self):
-        return {
-            "default_status_mode": {
-                "type": "string",
-                "enum": ["pending_approved", "approved_only", "all"],
-                "default": "pending_approved",
-                "description": "Which standby statuses the dashboard shows by default.",
-            },
-            "include_rejected": {
-                "type": "boolean",
-                "default": False,
-                "description": "Whether rejected standby entries are visible by default.",
-            },
-        }
-
-    def validate_config(self, config):
-        valid_modes = {"pending_approved", "approved_only", "all"}
-        if 'default_status_mode' in config and config['default_status_mode'] not in valid_modes:
-            raise ValueError(
-                f"default_status_mode must be one of {sorted(valid_modes)}"
-            )
-        if 'include_rejected' in config and not isinstance(config['include_rejected'], bool):
-            raise ValueError("include_rejected must be a boolean")
-        return True
+        # The dashboard reads status_mode / include_rejected from query params;
+        # no plugin-level config is consumed.
+        return {}
 
     def ready(self):
         """Connect signals when plugin is enabled. Phase 1: no signals."""
