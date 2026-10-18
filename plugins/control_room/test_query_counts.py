@@ -80,7 +80,7 @@ class QueryCountTests(TestCase):
         request = self.factory.get('/api/plugins/control_room/access/')
         force_authenticate(request, user=self.admin)
 
-        with self.assertNumQueries(3):
+        with self.assertNumQueries(4):  # +1 plugin-enabled check
             ControlRoomAccessViewSet.as_view({'get': 'list'})(request)
 
     def test_dashboard_summary_query_count_budget(self):

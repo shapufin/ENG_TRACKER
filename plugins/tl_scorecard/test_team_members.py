@@ -240,7 +240,7 @@ class TeamMemberQueryBudgetTests(TeamMembersBase):
         self.assertLessEqual(len(owned), 10)
         self.assertEqual(len(owned), 2)
 
-    def test_endpoint_total_is_eleven(self):
-        # 11 = 2 team-owned + 5 permission/role lookups + 4 team-scope lookups
+    def test_endpoint_total_is_twelve(self):
+        # 12 = 1 plugin-enabled check + 2 team-owned + 5 permission/role lookups + 4 team-scope lookups
         # shared with the other scorecard endpoints.
-        self.assertEqual(len(self._queries()), 11)
+        self.assertEqual(len(self._queries()), 12)

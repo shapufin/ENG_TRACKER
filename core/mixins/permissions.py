@@ -946,6 +946,12 @@ class PluginPermissionMixin:
             logger.error(f"Error checking plugin permission: {e}")
             return False
     
+    @staticmethod
+    def _plugin_is_disabled(plugin_name):
+        from apps.plugins.models import Plugin
+
+        return Plugin.objects.filter(name=plugin_name, is_enabled=False).exists()
+
     def check_plugin_permission(self, plugin_name, action='view'):
         """
         Check plugin permission and raise PermissionDenied if user lacks access.
@@ -992,13 +998,20 @@ class PluginPermissionMixin:
         """
         # Call parent check_permissions first
         super().check_permissions(request)
-        
+
+        plugin_name = self._get_plugin_name()
+
+        # Plugin URLs are mounted at process start, so a runtime disable must be
+        # enforced here. No staff/superuser bypass: these are data endpoints.
+        # An absent Plugin row stays allowed.
+        if plugin_name and self._plugin_is_disabled(plugin_name):
+            raise PermissionDenied(detail=f"The {plugin_name} plugin is disabled.")
+
         # Superuser/staff always have access - bypass plugin check
         if request.user.is_superuser or request.user.is_staff:
             return
-        
+
         # Check plugin permission
-        plugin_name = self._get_plugin_name()
         if plugin_name:
             # Check permission for the current action (honors permission_action_map)
             action = self._resolve_permission_action(request)

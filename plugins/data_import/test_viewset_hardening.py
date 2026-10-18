@@ -57,7 +57,7 @@ class UploadLimitTests(TestCase):
         )
         Plugin.objects.update_or_create(
             name="data_import",
-            defaults={"config": {"max_file_size_mb": 1, "max_rows_per_import": 3}},
+            defaults={"is_enabled": True, "config": {"max_file_size_mb": 1, "max_rows_per_import": 3}},
         )
 
     def _oversized_file(self) -> io.BytesIO:

@@ -116,7 +116,7 @@ class AuditLogQueryCountTests(TestCase):
         request = self.factory.get('/api/plugins/audit_log/logs/')
         force_authenticate(request, user=self.admin)
 
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):  # +1 plugin-enabled check
             response = AuditLogViewSet.as_view({'get': 'list'})(request)
 
         self.assertEqual(response.status_code, 200)
