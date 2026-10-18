@@ -2,6 +2,7 @@ import React from "react";
 
 import { FormDialog } from "@/components/ui/FormDialog";
 import { FormField } from "@/components/ui/FormField";
+import { ModalSection } from "@/components/ui/ModalSection";
 import type { Client } from "@/types";
 
 interface ClientFormDialogProps {
@@ -33,7 +34,7 @@ export const ClientFormDialog: React.FC<ClientFormDialogProps> = ({
     onSubmit={onSubmit}
     isSubmitting={isSubmitting}
   >
-    <div className="grid grid-cols-2 gap-4">
+    <ModalSection title="Client details" columns={2}>
       <FormField
         id="client-name"
         label="Name"
@@ -50,16 +51,17 @@ export const ClientFormDialog: React.FC<ClientFormDialogProps> = ({
         error={formErrors.code}
         required
       />
-    </div>
-    <FormField
-      id="client-description"
-      label="Description"
-      value={form.description}
-      onChange={(value) => onFieldChange("description", value)}
-      error={formErrors.description}
-    />
+      <FormField
+        id="client-description"
+        label="Description"
+        value={form.description}
+        onChange={(value) => onFieldChange("description", value)}
+        error={formErrors.description}
+        className="sm:col-span-2"
+      />
+    </ModalSection>
     {formErrors.non_field_errors && (
-      <p className="text-xs text-destructive">{formErrors.non_field_errors}</p>
+      <p className="text-destructive text-xs">{formErrors.non_field_errors}</p>
     )}
   </FormDialog>
 );

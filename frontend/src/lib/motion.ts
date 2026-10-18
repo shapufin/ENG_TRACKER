@@ -25,9 +25,9 @@ export const fadeSlideUp: Variants = {
 
 /** Shared bulk-action-bar entrance (BulkActionBar + UsersPageBulkBar). */
 export const bulkBarEnter: Variants = {
-  hidden: { opacity: 0, y: -10, height: 0 },
-  visible: { opacity: 1, y: 0, height: "auto" },
-  exit: { opacity: 0, y: -10, height: 0 },
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 16 },
 };
 
 /** Small list mount stagger — safe for short, non-virtualized lists only. */

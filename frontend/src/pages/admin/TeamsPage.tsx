@@ -9,7 +9,6 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Plus } from "lucide-react";
 import { TeamFormDialog } from "@/components/admin/TeamFormDialog";
 import { TeamDataTable } from "@/components/admin/TeamDataTable";
-import { CalendarGroupsSummary } from "@/components/admin/CalendarGroupsSummary";
 import { TeamStatsCards } from "./components/TeamStatsCards";
 import { TeamsPageFilters } from "./components/TeamsPageFilters";
 import { useTeamsPage } from "./hooks/useTeamsPage";
@@ -77,8 +76,6 @@ export const TeamsPage: React.FC = () => {
         noLeader={leaderCounts.noLeader}
         groups={groupsData?.length ?? 0}
       />
-
-      <CalendarGroupsSummary groups={groupsData} />
 
       <TeamDataTable
         header={

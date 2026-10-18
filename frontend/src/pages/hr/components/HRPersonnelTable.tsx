@@ -1,5 +1,6 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
+import { TABLE_ROW_HOVER_CLASS } from "@/components/ui/tableStyles";
 import { toneTextClass } from "@/components/ui/tone";
 import type { DetailedUserReport } from "@/services/reportService";
 import { HRTableShell } from "./HRTableShell";
@@ -10,7 +11,7 @@ interface HRPersonnelTableProps {
 
 // fallow-ignore-next-line complexity
 const HRPersonnelRow: React.FC<{ user: DetailedUserReport }> = ({ user: u }) => (
-  <tr key={u.user_id} className="group hover:bg-primary/[0.02] transition-colors">
+  <tr key={u.user_id} className={`group ${TABLE_ROW_HOVER_CLASS}`}>
     <td className="px-6 py-4">
       <div className="flex flex-col">
         <span className="font-semibold">{u.full_name}</span>

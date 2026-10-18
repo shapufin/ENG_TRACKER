@@ -62,8 +62,8 @@ export const HoursLogExportButtons = <T extends object>({
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={isExporting}>
+    <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+      <Button variant="outline" size="control" onClick={handleExportCsv} disabled={isExporting}>
         {isExporting ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
@@ -71,7 +71,7 @@ export const HoursLogExportButtons = <T extends object>({
         )}
         Export CSV
       </Button>
-      <Button variant="outline" size="sm" onClick={handleExportJson} disabled={isExporting}>
+      <Button variant="outline" size="control" onClick={handleExportJson} disabled={isExporting}>
         {isExporting ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (

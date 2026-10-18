@@ -3,6 +3,7 @@ import { FormDialog } from "@/components/ui/FormDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ModalSection } from "@/components/ui/ModalSection";
 import {
   Select,
   SelectContent,
@@ -121,7 +122,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
     >
-      <div className="grid grid-cols-2 gap-4">
+      <ModalSection title="Shift & client" columns={2}>
         {!editing && isAdmin && (
           <UserSelectField
             value={form.user}
@@ -130,9 +131,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
           />
         )}
         <div className="space-y-2">
-          <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-            Client
-          </Label>
+          <Label>Client</Label>
           <Select value={form.client} onValueChange={(v) => updateField("client", v)}>
             <SelectTrigger className={`px-3 ${formErrors.client ? "border-destructive" : ""}`}>
               <SelectValue placeholder="Select client" />
@@ -156,7 +155,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
           />
           {formErrors.date && <p className="text-destructive text-xs">{formErrors.date}</p>}
         </div>
-      </div>
+      </ModalSection>
       <TimeHoursGrid
         startTime={form.start_time}
         endTime={form.end_time}
@@ -167,92 +166,92 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
         onStartTimeChange={(v) => updateField("start_time", v)}
         onEndTimeChange={(v) => updateField("end_time", v)}
       />
-      <div className="space-y-2">
-        <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-          Evidence type
-        </Label>
-        <Select
-          value={form.evidence_type}
-          onValueChange={(v) =>
-            updateField("evidence_type", v as "ticket" | "email" | "call" | "other")
-          }
-        >
-          <SelectTrigger className="px-3">
-            <SelectValue placeholder="Select evidence type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ticket">Ticket</SelectItem>
-            <SelectItem value="email">Email</SelectItem>
-            <SelectItem value="call">Call</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      {form.evidence_type === "ticket" && (
+      <ModalSection title="Evidence & notes" columns={1}>
         <div className="space-y-2">
-          <Label>Ticket references</Label>
-          <div className="flex gap-2">
-            <Input
-              value={ticketDraft}
-              onChange={(event) => setTicketDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  addTicketReference();
-                }
-              }}
-              placeholder="Add ticket ID"
-              aria-label="Add structured ticket reference"
-            />
-            <Button type="button" variant="outline" onClick={addTicketReference}>
-              Add
-            </Button>
-          </div>
-          {form.ticket_references.length > 0 && (
-            <div className="flex flex-wrap gap-2" aria-label="Structured ticket references">
-              {form.ticket_references.map((reference, index) => (
-                <Button
-                  key={`${reference}-${index}`}
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() =>
-                    updateField(
-                      "ticket_references",
-                      form.ticket_references.filter((_, i) => i !== index)
-                    )
-                  }
-                >
-                  {reference} ×
-                </Button>
-              ))}
-            </div>
-          )}
-          <p className="text-muted-foreground text-xs">
-            Up to 20 references. Click a reference to remove it.
-          </p>
+          <Label>Evidence type</Label>
+          <Select
+            value={form.evidence_type}
+            onValueChange={(v) =>
+              updateField("evidence_type", v as "ticket" | "email" | "call" | "other")
+            }
+          >
+            <SelectTrigger className="px-3">
+              <SelectValue placeholder="Select evidence type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ticket">Ticket</SelectItem>
+              <SelectItem value="email">Email</SelectItem>
+              <SelectItem value="call">Call</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      )}
-      {form.evidence_type !== "ticket" && (
+        {form.evidence_type === "ticket" && (
+          <div className="space-y-2">
+            <Label>Ticket references</Label>
+            <div className="flex gap-2">
+              <Input
+                value={ticketDraft}
+                onChange={(event) => setTicketDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addTicketReference();
+                  }
+                }}
+                placeholder="Add ticket ID"
+                aria-label="Add structured ticket reference"
+              />
+              <Button type="button" variant="outline" onClick={addTicketReference}>
+                Add
+              </Button>
+            </div>
+            {form.ticket_references.length > 0 && (
+              <div className="flex flex-wrap gap-2" aria-label="Structured ticket references">
+                {form.ticket_references.map((reference, index) => (
+                  <Button
+                    key={`${reference}-${index}`}
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      updateField(
+                        "ticket_references",
+                        form.ticket_references.filter((_, i) => i !== index)
+                      )
+                    }
+                  >
+                    {reference} ×
+                  </Button>
+                ))}
+              </div>
+            )}
+            <p className="text-muted-foreground text-xs">
+              Up to 20 references. Click a reference to remove it.
+            </p>
+          </div>
+        )}
+        {form.evidence_type !== "ticket" && (
+          <div className="space-y-2">
+            <Label>Reference / Evidence</Label>
+            <Input
+              value={form.evidence}
+              onChange={(e) => updateField("evidence", e.target.value)}
+              placeholder="Email reference, call log, etc."
+            />
+          </div>
+        )}
+        {showTicketLinks && TicketLinkSection && editingLog?.id && (
+          <TicketLinkSection overtimeLogId={editingLog.id} />
+        )}
         <div className="space-y-2">
-          <Label>Reference / Evidence</Label>
+          <Label>Description</Label>
           <Input
-            value={form.evidence}
-            onChange={(e) => updateField("evidence", e.target.value)}
-            placeholder="Email reference, call log, etc."
+            value={form.description}
+            onChange={(e) => updateField("description", e.target.value)}
           />
         </div>
-      )}
-      {showTicketLinks && TicketLinkSection && editingLog?.id && (
-        <TicketLinkSection overtimeLogId={editingLog.id} />
-      )}
-      <div className="space-y-2">
-        <Label>Description</Label>
-        <Input
-          value={form.description}
-          onChange={(e) => updateField("description", e.target.value)}
-        />
-      </div>
+      </ModalSection>
     </FormDialog>
   );
 };

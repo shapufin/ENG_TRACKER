@@ -1,7 +1,11 @@
 import React from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardHeader, CardTitle } from "@/components/ui/card";
-import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
+import {
+  TABLE_BODY_DIVIDER_CLASS,
+  TABLE_HEAD_CELL_CLASS,
+  TABLE_HEAD_ROW_CLASS,
+} from "@/components/ui/tableStyles";
 import { cn } from "@/lib/utils";
 
 interface HRTableHeader {
@@ -25,12 +29,12 @@ const ALIGN_CLASSES = {
 } as const;
 
 export const HRTableShell: React.FC<HRTableShellProps> = ({ title, headers, children }) => (
-  <GlassCard className="border-border/70 overflow-hidden p-0 shadow-xl">
-    <CardHeader className="bg-muted/20 border-b p-4">
+  <GlassCard className="overflow-hidden p-0">
+    <CardHeader className="border-line-subtle bg-muted/20 border-b p-4">
       <CardTitle className="text-sm font-semibold">{title}</CardTitle>
     </CardHeader>
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="text-dense w-full">
         <thead className={TABLE_HEAD_ROW_CLASS}>
           <tr>
             {headers.map((h, i) => (
@@ -40,7 +44,7 @@ export const HRTableShell: React.FC<HRTableShellProps> = ({ title, headers, chil
             ))}
           </tr>
         </thead>
-        <tbody className="divide-border/40 divide-y">{children}</tbody>
+        <tbody className={TABLE_BODY_DIVIDER_CLASS}>{children}</tbody>
       </table>
     </div>
   </GlassCard>

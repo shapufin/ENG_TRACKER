@@ -23,7 +23,9 @@ export const UserCell: React.FC<UserCellProps> = ({ name, techLevels, subtitle }
         {initials}
       </div>
       <div className="min-w-0">
-        <span className="block truncate">{name || "Unknown"}</span>
+        <span className="block truncate" title={name ?? "Unknown"}>
+          {name || "Unknown"}
+        </span>
         {subtitle && (
           <span className="text-muted-foreground block truncate text-xs" title={subtitle}>
             {subtitle}
@@ -31,7 +33,7 @@ export const UserCell: React.FC<UserCellProps> = ({ name, techLevels, subtitle }
         )}
         {(techLevels?.length ?? 0) > 0 && (
           <span
-            className="text-xs text-muted-foreground block truncate"
+            className="text-muted-foreground block truncate text-xs"
             title={techLevels!.join(" · ")}
           >
             {techLevels!.join(" · ")}

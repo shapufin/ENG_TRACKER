@@ -2,6 +2,7 @@ import React from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ModalSection } from "@/components/ui/ModalSection";
 import {
   Select,
   SelectContent,
@@ -71,14 +72,9 @@ export const LeaveBalanceFormDialog: React.FC<LeaveBalanceFormDialogProps> = ({
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
     >
-      <div className="grid grid-cols-2 gap-4">
+      <ModalSection title="Employee & leave type" columns={2}>
         <div className="space-y-2">
-          <Label
-            htmlFor="leave-balance-user"
-            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-          >
-            User
-          </Label>
+          <Label htmlFor="leave-balance-user">User</Label>
           <Select value={form.user} onValueChange={(v) => updateField("user", v)}>
             <SelectTrigger
               id="leave-balance-user"
@@ -97,12 +93,7 @@ export const LeaveBalanceFormDialog: React.FC<LeaveBalanceFormDialogProps> = ({
           {formErrors.user && <p className="text-destructive text-xs">{formErrors.user}</p>}
         </div>
         <div className="space-y-2">
-          <Label
-            htmlFor="leave-balance-type"
-            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-          >
-            Leave Type
-          </Label>
+          <Label htmlFor="leave-balance-type">Leave Type</Label>
           <Select value={form.leave_type} onValueChange={(v) => updateField("leave_type", v)}>
             <SelectTrigger
               id="leave-balance-type"
@@ -118,6 +109,8 @@ export const LeaveBalanceFormDialog: React.FC<LeaveBalanceFormDialogProps> = ({
             <p className="text-destructive text-xs">{formErrors.leave_type}</p>
           )}
         </div>
+      </ModalSection>
+      <ModalSection title="Allowance & usage" columns={2}>
         <div className="space-y-2">
           <Label htmlFor="leave-balance-year">Year</Label>
           <Input
@@ -144,19 +137,21 @@ export const LeaveBalanceFormDialog: React.FC<LeaveBalanceFormDialogProps> = ({
             <p className="text-destructive text-xs">{formErrors.total_days}</p>
           )}
         </div>
-      </div>
-      <div className="mt-4 space-y-2">
-        <Label htmlFor="leave-balance-used">Used Days</Label>
-        <Input
-          id="leave-balance-used"
-          type="number"
-          value={form.used_days}
-          onChange={(e) => updateField("used_days", e.target.value)}
-          required
-          className={formErrors.used_days ? "border-destructive" : ""}
-        />
-        {formErrors.used_days && <p className="text-destructive text-xs">{formErrors.used_days}</p>}
-      </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="leave-balance-used">Used Days</Label>
+          <Input
+            id="leave-balance-used"
+            type="number"
+            value={form.used_days}
+            onChange={(e) => updateField("used_days", e.target.value)}
+            required
+            className={formErrors.used_days ? "border-destructive" : ""}
+          />
+          {formErrors.used_days && (
+            <p className="text-destructive text-xs">{formErrors.used_days}</p>
+          )}
+        </div>
+      </ModalSection>
       {formErrors.non_field_errors && (
         <p className="text-destructive text-xs">{formErrors.non_field_errors}</p>
       )}

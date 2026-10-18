@@ -142,39 +142,6 @@ export const OvertimePage: React.FC = () => {
       }
     >
       <OvertimeSummaryCards summary={summary} isTeamLeader={canApprove} />
-      <HoursLogExportButtons
-        logs={logs}
-        filename="overtime-logs"
-        csvHeaders={[
-          "User",
-          "Date",
-          "Client",
-          "Hours",
-          "Status",
-          "Evidence Type",
-          "Evidence",
-          "Description",
-        ]}
-        // fallow-ignore-next-line complexity
-        rowMapper={(l) => [
-          l.user_name || "",
-          formatDateDDMMYYYY(l.date),
-          l.client_name || "",
-          String(Number(l.hours)),
-          l.status,
-          l.evidence_type || "",
-          l.evidence || "",
-          l.description || "",
-        ]}
-        onFetchAll={async () => {
-          const all = await overtimeService.downloadAllLogs(dateParams);
-          return userId ? all.filter((l) => l.user === userId) : all;
-        }}
-        onExportCsv={async () => {
-          const exportParams = userId ? { ...dateParams, user: String(userId) } : dateParams;
-          await overtimeService.exportCsv(exportParams);
-        }}
-      />
 
       <HoursLogBulkActionBar
         selectedCount={Object.keys(rowSelection).length}
@@ -184,6 +151,41 @@ export const OvertimePage: React.FC = () => {
       />
 
       <HoursLogDataTable
+        toolbarActions={
+          <HoursLogExportButtons
+            logs={logs}
+            filename="overtime-logs"
+            csvHeaders={[
+              "User",
+              "Date",
+              "Client",
+              "Hours",
+              "Status",
+              "Evidence Type",
+              "Evidence",
+              "Description",
+            ]}
+            // fallow-ignore-next-line complexity
+            rowMapper={(l) => [
+              l.user_name || "",
+              formatDateDDMMYYYY(l.date),
+              l.client_name || "",
+              String(Number(l.hours)),
+              l.status,
+              l.evidence_type || "",
+              l.evidence || "",
+              l.description || "",
+            ]}
+            onFetchAll={async () => {
+              const all = await overtimeService.downloadAllLogs(dateParams);
+              return userId ? all.filter((l) => l.user === userId) : all;
+            }}
+            onExportCsv={async () => {
+              const exportParams = userId ? { ...dateParams, user: String(userId) } : dateParams;
+              await overtimeService.exportCsv(exportParams);
+            }}
+          />
+        }
         columns={columns}
         data={logs}
         rowSelection={rowSelection}

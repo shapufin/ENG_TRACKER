@@ -30,6 +30,8 @@ interface HoursLogsTableProps<T extends HoursLog> {
   onDelete?: (id: number) => void;
   canDelete?: boolean;
   storageKey: string;
+  /** Header strip rendered above the table inside the same GlassCard (two-surface rule). */
+  header?: React.ReactNode;
 }
 
 const HoursLogRowActions = ({
@@ -91,6 +93,7 @@ export const HoursLogsTable = <T extends HoursLog>({
   onDelete,
   canDelete = false,
   storageKey,
+  header,
 }: HoursLogsTableProps<T>) => {
   const columns = useMemo<AppColumnDef<T>[]>(
     () => [
@@ -151,6 +154,7 @@ export const HoursLogsTable = <T extends HoursLog>({
 
   return (
     <GlassCard className="p-4">
+      {header && <div className="border-line-subtle mb-4 border-b pb-4">{header}</div>}
       <DataTable
         data={logs}
         columns={columns}

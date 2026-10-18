@@ -546,6 +546,34 @@ describe("floating actions pill", () => {
     expect(screen.queryByRole("toolbar")).not.toBeInTheDocument();
   });
 
+  it("never caps the actions column width, so decision buttons cannot overflow it", () => {
+    // Regression: TanStack's default size:150 was applied as BOTH width and
+    // maxWidth, so an actions column holding Approve/Reject (or
+    // View/Approve/Reject) was narrower than its own buttons. The overflow
+    // direction depended on the cell's justify — left onto the Status badge, or
+    // right out of the card. The actions column is content-sized; every other
+    // column keeps the cap.
+    stubPointer(true);
+    const withMeta: AppColumnDef<Item>[] = [
+      ...columns,
+      {
+        id: "actions",
+        header: "Actions",
+        meta: { actionsDisplay: "column" },
+        cell: () => <button>Approve</button>,
+      },
+    ];
+    render(<DataTable columns={withMeta} data={data} getRowId={(row) => row.id.toString()} />);
+
+    const actionCell = screen.getByRole("button", { name: "Approve" }).closest("td");
+    expect(actionCell).not.toBeNull();
+    expect(actionCell).toHaveStyle({ width: "150px" });
+    expect(getComputedStyle(actionCell as HTMLElement).maxWidth).toBe("none");
+
+    const nameCell = screen.getByText("Alice").closest("td");
+    expect(getComputedStyle(nameCell as HTMLElement).maxWidth).toBe("150px");
+  });
+
   it("an approval helper column keeps its pending Approve button visible without hover", () => {
     stubPointer(true);
     type Pending = { id: number; status: string; name: string };

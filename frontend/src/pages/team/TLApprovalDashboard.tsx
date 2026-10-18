@@ -72,7 +72,7 @@ export const TLApprovalDashboard: React.FC = () => {
     return (
       <PageShell title="Pending Approvals">
         <GlassCard className="p-8 text-center">
-          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+          <AlertCircle className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
           <p className="text-muted-foreground">You do not have permission to access this page.</p>
         </GlassCard>
       </PageShell>
@@ -102,11 +102,11 @@ export const TLApprovalDashboard: React.FC = () => {
       }
     >
       {isFinalized && periodStatus.close && (
-        <GlassCard className="mb-4 border-warning/40 bg-warning/5 p-4">
+        <GlassCard className="border-warning/40 bg-warning/5 mb-4 p-4">
           <p className="text-sm font-medium">
             The {selectedMonthLabel} approval period is finalized.
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Entries submitted after {new Date(periodStatus.close.closed_at).toLocaleString()} will
             be processed in the next payroll period.
           </p>
@@ -138,14 +138,15 @@ export const TLApprovalDashboard: React.FC = () => {
         onCardClick={handleCardClick}
       />
 
-      <TLApprovalDateFilters
-        dateFrom={dateFrom}
-        onDateFromChange={setDateFrom}
-        dateTo={dateTo}
-        onDateToChange={setDateTo}
-      />
-
       <TLApprovalTabs
+        header={
+          <TLApprovalDateFilters
+            dateFrom={dateFrom}
+            onDateFromChange={setDateFrom}
+            dateTo={dateTo}
+            onDateToChange={setDateTo}
+          />
+        }
         activeTab={activeTab}
         onActiveTabChange={setActiveTab}
         queries={queries}
@@ -174,15 +175,15 @@ export const TLApprovalDashboard: React.FC = () => {
         confirmLabel={`Finalize ${selectedMonthLabel}`}
       >
         <div className="space-y-3 pt-2">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             New overtime and standby entries submitted after this moment with work dates in{" "}
             <strong>{selectedMonthLabel}</strong> will be processed in the next payroll period.
             Existing work dates will not change.
           </p>
           {isPastMonth && (
-            <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-              <p className="text-sm text-warning">
+            <div className="border-warning/40 bg-warning/5 flex items-start gap-2 rounded-md border p-3">
+              <AlertTriangle className="text-warning mt-0.5 h-4 w-4 shrink-0" />
+              <p className="text-warning text-sm">
                 <strong>This is a past month.</strong> Only finalize if you want late-submitted
                 entries with work dates in {selectedMonthLabel} to carry over to the next processing
                 period. This action is irreversible.

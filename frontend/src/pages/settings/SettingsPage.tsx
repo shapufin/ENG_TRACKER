@@ -11,6 +11,7 @@ import { usePermissions } from "@/context/PermissionContext";
 import { usePlugins } from "@/context/PluginContext";
 import { Badge } from "@/components/ui/badge";
 import { FormDialog } from "@/components/ui/FormDialog";
+import { ModalSection } from "@/components/ui/ModalSection";
 import { LogOut, Lock, User } from "lucide-react";
 import { toast } from "sonner";
 import { MyClientsSection } from "./components/MyClientsSection";
@@ -182,7 +183,7 @@ export const SettingsPage: React.FC = () => {
         submitLabel="Update Password"
         size="md"
       >
-        <div className="space-y-4">
+        <ModalSection title="Password credentials" columns={1}>
           <div className="space-y-2">
             <Label htmlFor="password-current">Current Password</Label>
             <Input
@@ -216,7 +217,7 @@ export const SettingsPage: React.FC = () => {
               required
             />
           </div>
-        </div>
+        </ModalSection>
       </FormDialog>
 
       {/* Logout Card */}

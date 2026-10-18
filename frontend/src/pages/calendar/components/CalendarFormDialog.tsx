@@ -1,6 +1,7 @@
 import React from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Label } from "@/components/ui/label";
+import { ModalSection } from "@/components/ui/ModalSection";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -64,14 +65,14 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
     >
-      <div className="space-y-3">
-        <div>
+      <ModalSection title="Leave schedule" columns={2}>
+        <div className="space-y-2">
           <Label className="text-xs font-medium">Request type</Label>
           <Select
             value={requestType}
             onValueChange={(value) => onRequestTypeChange(value as LeaveRequest["request_type"])}
           >
-            <SelectTrigger className="border-input focus:ring-primary mt-1 rounded-md border bg-transparent text-sm focus:ring-2">
+            <SelectTrigger>
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
@@ -83,7 +84,7 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
             </SelectContent>
           </Select>
         </div>
-        <div>
+        <div className="space-y-2">
           <Label htmlFor="calendar-request-dates" className="text-xs font-medium">
             Event dates
           </Label>
@@ -93,11 +94,10 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
             to={selectedDates?.end ?? ""}
             onChange={({ from, to }) => onDateRangeChange(from, to)}
             placeholder="Select dates"
-            className="mt-1"
           />
         </div>
         {requestType === "vacation" ? (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-muted-foreground text-xs sm:col-span-2">
             Balance:{" "}
             {carryOverAndBalance.carryOver
               ? `${carryOverAndBalance.carryOver.effective_available_days ?? carryOverAndBalance.carryOver.available_days} carry-over + `
@@ -107,10 +107,9 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
               : "0 current"}
           </p>
         ) : null}
-        <div>
+        <div className="space-y-2 sm:col-span-2">
           <Label className="text-xs font-medium">Reason / Notes</Label>
           <Textarea
-            className="border-input focus:ring-primary mt-1 w-full rounded-md border bg-transparent px-3 py-2 text-sm focus:ring-2 focus:outline-hidden"
             rows={3}
             value={reason}
             onChange={(e) => onReasonChange(e.target.value)}
@@ -118,11 +117,11 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
           />
         </div>
         {isError && (
-          <div className="text-destructive text-xs">
+          <div className="text-destructive text-xs sm:col-span-2">
             {error?.message || "Failed to create request"}
           </div>
         )}
-      </div>
+      </ModalSection>
     </FormDialog>
   );
 };

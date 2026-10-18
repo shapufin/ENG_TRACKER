@@ -1,5 +1,6 @@
 import React from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
+import { ModalSection } from "@/components/ui/ModalSection";
 
 import { FormInputField } from "./userFormFields";
 import { UserFormCore } from "./UserFormCore";
@@ -74,7 +75,7 @@ export const UserEditFormDialog: React.FC<UserEditFormDialogProps> = ({
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
     >
-      <div className="grid grid-cols-2 gap-3">
+      <ModalSection title="Account" columns={2}>
         <FormInputField
           label="First Name"
           value={form.first_name}
@@ -87,14 +88,16 @@ export const UserEditFormDialog: React.FC<UserEditFormDialogProps> = ({
           onChange={(v) => updateField("last_name", v)}
           error={formErrors.last_name}
         />
-      </div>
-      <FormInputField
-        label="Email"
-        value={form.email}
-        onChange={(v) => updateField("email", v)}
-        error={formErrors.email}
-        type="email"
-      />
+        <div className="sm:col-span-2">
+          <FormInputField
+            label="Email"
+            value={form.email}
+            onChange={(v) => updateField("email", v)}
+            error={formErrors.email}
+            type="email"
+          />
+        </div>
+      </ModalSection>
       <UserFormCore
         form={form}
         updateField={updateField}
@@ -106,7 +109,7 @@ export const UserEditFormDialog: React.FC<UserEditFormDialogProps> = ({
         showHireDate
       />
       {formErrors.non_field_errors && (
-        <p className="text-xs text-destructive">{formErrors.non_field_errors}</p>
+        <p className="text-destructive text-xs">{formErrors.non_field_errors}</p>
       )}
     </FormDialog>
   );

@@ -64,7 +64,7 @@ const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
   if (badges.length === 0) {
     return <span className="text-muted-foreground text-xs">—</span>;
   }
-  return <div className="flex gap-1">{badges}</div>;
+  return <div className="flex flex-wrap gap-1">{badges}</div>;
 };
 
 const renderCRScopeTeamsCell = ({
@@ -127,7 +127,12 @@ export const useUserColumns = (
         id: "username",
         accessorKey: "user.username",
         header: "Username",
-        size: 220,
+        // Explicit widths throughout: TanStack's 150px default for an unsized
+        // column is wider than several of these fields need, and 10 columns at
+        // the default pushed the table ~400px past its 1440px viewport.
+        // Flexible columns (badge lists, UserCell) truncate or wrap; the sum of
+        // the visible columns is what keeps the table inside the viewport.
+        size: 160,
         cell: ({ row }) => {
           const username = row.original.user?.username;
           const identity = <UserCell name={username} subtitle={row.original.user?.email} />;
@@ -171,7 +176,7 @@ export const useUserColumns = (
               id: "team",
               accessorKey: "team_name",
               header: "Teams",
-              size: 160,
+              size: 130,
               cell: ({ row }: { row: { original: UserProfile } }) => {
                 const teams = row.original.teams_detail;
                 if (teams && teams.length > 0) {
@@ -199,7 +204,7 @@ export const useUserColumns = (
               id: "cr_teams",
               accessorKey: "cr_teams",
               header: "CR Teams",
-              size: 220,
+              size: 96,
               cell: ({ row }: { row: { original: UserProfile } }) =>
                 renderCRScopeTeamsCell({
                   profile: row.original,
@@ -215,7 +220,7 @@ export const useUserColumns = (
         id: "techs",
         accessorKey: "techs",
         header: "Tech",
-        size: 160,
+        size: 90,
         cell: ({ row }: { row: { original: UserProfile } }) => {
           const techs = row.original.techs_detail;
           if (techs && techs.length > 0) {
@@ -246,7 +251,7 @@ export const useUserColumns = (
         id: "hire_date",
         accessorKey: "hire_date",
         header: "Hire Date",
-        size: 110,
+        size: 104,
         cell: ({ row }) => (
           <span className="text-sm tabular-nums">{formatDateDDMMYYYY(row.original.hire_date)}</span>
         ),
@@ -254,7 +259,7 @@ export const useUserColumns = (
       {
         id: "tl_role",
         header: "TL Role",
-        size: 120,
+        size: 90,
         cell: ({ row }) => renderTLRoleCell({ profile: row.original }),
       },
     ];
@@ -265,7 +270,7 @@ export const useUserColumns = (
       base.push({
         id: "cr_access",
         header: "CR",
-        size: 60,
+        size: 56,
         cell: ({ row }) =>
           renderCRAccessCell({ profile: row.original, accessUserIds: crAccessUserIds }),
       });
@@ -276,7 +281,7 @@ export const useUserColumns = (
         id: "it_tl_assigned",
         accessorKey: "italian_tl_name",
         header: "IT TL (Assigned)",
-        size: 130,
+        size: 145,
         cell: ({ row }) =>
           row.original.italian_tl_name ? (
             <span className="text-xs font-medium">{row.original.italian_tl_name}</span>
@@ -288,7 +293,7 @@ export const useUserColumns = (
         id: "al_tl_assigned",
         accessorKey: "albanian_tl_name",
         header: "AL TL (Assigned)",
-        size: 130,
+        size: 150,
         cell: ({ row }) =>
           row.original.albanian_tl_name ? (
             <span className="text-xs font-medium">{row.original.albanian_tl_name}</span>

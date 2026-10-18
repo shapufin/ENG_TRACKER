@@ -2,6 +2,7 @@ import React from "react";
 
 import { FormDialog } from "@/components/ui/FormDialog";
 import { FormField } from "@/components/ui/FormField";
+import { ModalSection } from "@/components/ui/ModalSection";
 import type { Team } from "@/types";
 
 interface CalendarGroup {
@@ -59,7 +60,7 @@ export const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
     >
-      <div className="grid grid-cols-2 gap-4">
+      <ModalSection title="Team identity" columns={2}>
         <FormField
           id="team-name"
           label="Name"
@@ -76,36 +77,38 @@ export const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
           error={formErrors.code}
           required
         />
-      </div>
-      <FormField
-        id="team-description"
-        label="Description"
-        value={form.description}
-        onChange={(value) => updateField("description", value)}
-        className="mt-4"
-      />
-      <div className="mt-4 space-y-2">
         <FormField
-          id="team-calendar-group"
-          label="Calendar Group"
-          value={form.calendar_group}
-          onChange={(value) => updateField("calendar_group", value)}
-          placeholder="e.g. italy, albania, shared"
-          list="calendar-groups"
+          id="team-description"
+          label="Description"
+          value={form.description}
+          onChange={(value) => updateField("description", value)}
+          className="sm:col-span-2"
         />
-        <datalist id="calendar-groups">
-          <option value="" label="No group" />
-          {groups?.map((g) => (
-            <option key={g.calendar_group} value={g.calendar_group}>
-              {g.calendar_group} ({g.team_count} teams)
-            </option>
-          ))}
-        </datalist>
-        <p className="text-xs text-muted-foreground">
-          Teams with the same group share vacation/sick calendar visibility. Overtime and standby
-          remain individual-only.
-        </p>
-      </div>
+      </ModalSection>
+      <ModalSection title="Calendar sharing" columns={1}>
+        <div className="space-y-2">
+          <FormField
+            id="team-calendar-group"
+            label="Calendar Group"
+            value={form.calendar_group}
+            onChange={(value) => updateField("calendar_group", value)}
+            placeholder="e.g. italy, albania, shared"
+            list="calendar-groups"
+          />
+          <datalist id="calendar-groups">
+            <option value="" label="No group" />
+            {groups?.map((g) => (
+              <option key={g.calendar_group} value={g.calendar_group}>
+                {g.calendar_group} ({g.team_count} teams)
+              </option>
+            ))}
+          </datalist>
+          <p className="text-muted-foreground text-xs">
+            Teams with the same group share vacation/sick calendar visibility. Overtime and standby
+            remain individual-only.
+          </p>
+        </div>
+      </ModalSection>
     </FormDialog>
   );
 };

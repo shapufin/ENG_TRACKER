@@ -116,7 +116,7 @@ const TeamManagementPage: React.FC = () => {
     return (
       <PageShell title="Team Overview">
         <GlassCard className="p-8 text-center">
-          <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+          <Users className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
           <h2 className="mb-2 text-xl font-semibold">Access Denied</h2>
           <p className="text-muted-foreground">
             You don&apos;t have permission to access this page.
@@ -130,6 +130,11 @@ const TeamManagementPage: React.FC = () => {
     <PageShell
       title="Team Overview"
       subtitle="Comprehensive team management with filters, bulk operations, and full request history"
+      actions={
+        <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+          <Download className="mr-2 h-4 w-4" /> Export
+        </Button>
+      }
     >
       <div className="space-y-6">
         <TeamOverviewCard
@@ -139,11 +144,6 @@ const TeamManagementPage: React.FC = () => {
           overtimeHours={overtimeHours}
           standbyHours={standbyHours}
         />
-        <div className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
-            <Download className="mr-2 h-4 w-4" /> Export
-          </Button>
-        </div>
 
         <TeamFilterBar
           searchQuery={searchQuery}
@@ -186,7 +186,7 @@ const TeamManagementPage: React.FC = () => {
             setActiveTab(v as "overtime" | "standby" | "leave");
           }}
         >
-          <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1">
+          <TabsList className="bg-muted/50 grid w-full grid-cols-3 p-1">
             <TabsTrigger value="overtime" className="relative flex items-center gap-2">
               <Clock className="h-4 w-4" /> Overtime{" "}
               {activeTab === "overtime" && filteredOvertime.length > 0 && (

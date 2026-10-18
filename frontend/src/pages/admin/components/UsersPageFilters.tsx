@@ -1,6 +1,7 @@
 import React from "react";
 import { UserFilterTabs } from "@/components/admin/UserFilterTabs";
 import { TechFacetFilter } from "@/components/admin/TechFacetFilter";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import { cn } from "@/lib/utils";
 import { CRUsersFilterButton } from "./CRUsersFilterButton";
@@ -76,6 +77,29 @@ export const UsersPageFilters: React.FC<UsersPageFiltersProps> = ({ state, teams
         onLevelIdsChange={state.setTechLevelIds}
         onNoTechOnlyChange={state.setNoTechOnly}
       />
+
+      {teams.length > 0 && (
+        <FilterChipRow
+          label="Team"
+          options={[
+            { value: "all", label: "All teams" },
+            ...teams.map((t) => ({ value: String(t.id), label: t.name })),
+          ]}
+          selected={state.teamIds.length === 0 ? ["all"] : state.teamIds.map(String)}
+          onToggle={(val) => {
+            if (val === "all") {
+              state.setTeamIds([]);
+              return;
+            }
+            const id = Number(val);
+            state.setTeamIds(
+              state.teamIds.includes(id)
+                ? state.teamIds.filter((tid) => tid !== id)
+                : [...state.teamIds, id]
+            );
+          }}
+        />
+      )}
 
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">

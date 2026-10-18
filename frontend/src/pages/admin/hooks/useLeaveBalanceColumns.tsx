@@ -35,16 +35,24 @@ const utilizationBar = (used: unknown, total: unknown) => {
 const numCol = (
   id: "total_days" | "used_days" | "pending_days" | "available_days" | "effective_available_days",
   header: string,
+  size: number,
   bold = false
 ): AppColumnDef<LeaveBalance> => ({
   id,
   accessorKey: id,
   header,
+  size,
   cell: ({ row }) => (
     <span className={cn(NUM_CELL, bold && "font-semibold")}>{num(row.original[id])}</span>
   ),
 });
 
+/**
+ * Explicit widths: 11 columns at TanStack's 150px default were ~575px past the
+ * 1440px viewport. Values are the measured header/content width plus slack; the
+ * `is_carry_over` flag is hidden by default (see LeaveBalancesPage) since the
+ * Expires/Effective columns already carry that information.
+ */
 export const useLeaveBalanceColumns = (
   onEdit: (b: LeaveBalance) => void,
   onDelete: (b: LeaveBalance) => void,
@@ -56,36 +64,42 @@ export const useLeaveBalanceColumns = (
         id: "user_name",
         accessorKey: "user_name",
         header: "Employee",
+        size: 130,
         cell: ({ row }) => <UserCell name={row.original.user_name} />,
       },
       {
         id: "leave_type",
         accessorKey: "leave_type",
         header: "Type",
+        size: 82,
         cell: ({ row }) => <span className="capitalize">{row.original.leave_type}</span>,
       },
-      { id: "year", accessorKey: "year", header: "Year" },
-      numCol("total_days", "Total"),
-      numCol("used_days", "Used"),
+      { id: "year", accessorKey: "year", header: "Year", size: 73 },
+      numCol("total_days", "Total", 78),
+      numCol("used_days", "Used", 82),
       {
         id: "utilization",
         header: "Utilization",
+        // Fixed: the bar is `w-24` (96px) plus the cell's px-4 gutter.
+        size: 128,
         enableSorting: false,
         cell: ({ row }) => utilizationBar(row.original.used_days, row.original.total_days),
       },
-      numCol("pending_days", "Pending"),
-      numCol("available_days", "Available", true),
-      numCol("effective_available_days", "Effective"),
+      numCol("pending_days", "Pending", 100),
+      numCol("available_days", "Available", 104, true),
+      numCol("effective_available_days", "Effective", 105),
       {
         id: "is_carry_over",
         accessorKey: "is_carry_over",
         header: "Carry-over",
+        size: 118,
         cell: ({ row }) => (row.original.is_carry_over ? "Yes" : "No"),
       },
       {
         id: "expires_at",
         accessorKey: "expires_at",
         header: "Expires",
+        size: 95,
         cell: ({ row }) => (
           <span
             className={cn(
@@ -100,6 +114,7 @@ export const useLeaveBalanceColumns = (
       {
         id: "actions",
         header: "Actions",
+        size: 100,
         cell: ({ row }) => (
           <RowActions
             actions={[

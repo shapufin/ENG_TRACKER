@@ -27,6 +27,12 @@ interface TLApprovalTabPanelProps {
   onBulkApprove: () => void;
   onBulkReject: () => void;
   isBulkPending: boolean;
+  /** Header strip rendered above the table inside the same GlassCard (two-surface rule). */
+  header?: React.ReactNode;
+  /** Persisted column-visibility key for this tab's table. */
+  storageKey: string;
+  /** Columns hidden on first load (still one click away in the Columns menu). */
+  defaultColumnVisibility?: Record<string, boolean>;
 }
 
 export const TLApprovalTabPanel: React.FC<TLApprovalTabPanelProps> = ({
@@ -44,10 +50,14 @@ export const TLApprovalTabPanel: React.FC<TLApprovalTabPanelProps> = ({
   onBulkApprove,
   onBulkReject,
   isBulkPending,
+  header,
+  storageKey,
+  defaultColumnVisibility,
 }) => {
   return (
     <GlassCard delay={0.2} className="overflow-hidden">
       <div className="p-4">
+        {header && <div className="border-line-subtle mb-4 border-b pb-4">{header}</div>}
         <TLBulkActions
           type={type}
           entityLabel={label}
@@ -68,6 +78,9 @@ export const TLApprovalTabPanel: React.FC<TLApprovalTabPanelProps> = ({
             enableRowSelection
             rowSelection={rowSelection}
             onRowSelectionChange={onRowSelectionChange}
+            enableColumnVisibility
+            storageKey={storageKey}
+            defaultColumnVisibility={defaultColumnVisibility}
           />
         )}
       </div>

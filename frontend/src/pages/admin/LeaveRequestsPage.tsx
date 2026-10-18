@@ -6,7 +6,7 @@ import { userService } from "@/services/userService";
 import { useAdminRejectMutation } from "@/hooks/useAdminRejectMutation";
 import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/layout/PageShell";
-import { GlassCard } from "@/components/ui/GlassCard";
+import { LoadingCard } from "@/components/ui/LoadingCard";
 import { Sun, Stethoscope, Download } from "lucide-react";
 import { handleApiError } from "@/lib/error-handler";
 import { toast } from "sonner";
@@ -87,13 +87,7 @@ const LeaveRequestsContent: React.FC = () => {
   const handleExport = () => exportLeaveRequestsToCSV(filteredRequests);
 
   if (isLoading) {
-    return (
-      <PageShell title="Leave Requests" subtitle="Manage vacation and sick leave">
-        <div className="flex h-64 items-center justify-center">
-          <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2" />
-        </div>
-      </PageShell>
-    );
+    return <LoadingCard rows={5} className="min-h-[300px]" />;
   }
 
   return (
@@ -126,26 +120,25 @@ const LeaveRequestsContent: React.FC = () => {
         }
       />
 
-      <GlassCard className="p-4">
-        <LeaveFilterBar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          filterStatus={filterStatus}
-          onStatusChange={setFilterStatus}
-          filterType={filterType}
-          onTypeChange={setFilterType}
-          filterUser={filterUser}
-          onUserChange={setFilterUser}
-          users={users?.results}
-          dateFrom={dateFrom}
-          onDateFromChange={setDateFrom}
-          dateTo={dateTo}
-          onDateToChange={setDateTo}
-          statusCounts={stats}
-        />
-      </GlassCard>
-
       <LeaveRequestsTable
+        header={
+          <LeaveFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            filterStatus={filterStatus}
+            onStatusChange={setFilterStatus}
+            filterType={filterType}
+            onTypeChange={setFilterType}
+            filterUser={filterUser}
+            onUserChange={setFilterUser}
+            users={users?.results}
+            dateFrom={dateFrom}
+            onDateFromChange={setDateFrom}
+            dateTo={dateTo}
+            onDateToChange={setDateTo}
+            statusCounts={stats}
+          />
+        }
         requests={filteredRequests}
         onApprove={(id) => approveMutation.mutate(id)}
         onReject={(id, reason) => rejectMutation.mutate({ id, reason })}

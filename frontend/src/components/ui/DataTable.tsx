@@ -325,9 +325,18 @@ export const DataTable = function DataTable<TData extends RowData>({
                   TABLE_BODY_CELL_CLASS,
                   cell.column.id === "actions" && TABLE_ACTIONS_CELL_CLASS
                 )}
+                // The actions column is content-sized. `maxWidth` must stay off
+                // it: TanStack's default 150px cap made a decision column
+                // (`meta.actionsDisplay: "column"`, e.g. Approve/Reject or
+                // View/Approve/Reject) narrower than its own buttons, which then
+                // overflowed — left onto the Status badge, or right out of the
+                // card and clipped. Every other column keeps the cap so long
+                // text cannot stretch its column.
                 style={
                   cell.column.columnDef.size
-                    ? { width: cell.column.columnDef.size, maxWidth: cell.column.columnDef.size }
+                    ? cell.column.id === "actions"
+                      ? { width: cell.column.columnDef.size }
+                      : { width: cell.column.columnDef.size, maxWidth: cell.column.columnDef.size }
                     : undefined
                 }
               >

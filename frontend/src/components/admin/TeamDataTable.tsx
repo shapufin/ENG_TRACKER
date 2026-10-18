@@ -3,9 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
 import { DataTableActions } from "./DataTableActions";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronRight, ChevronDown, Share2, Users } from "lucide-react";
+import { toneSurfaceClass } from "@/components/ui/tone";
 import type { UserProfile } from "@/types";
 import type { TeamNode } from "@/lib/teamTree";
+
+const SEARCH_COLUMNS = ["name", "code", "description"];
 
 interface TeamDataTableProps {
   data: TeamNode[];
@@ -69,13 +72,37 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
               ) : (
                 <span className="inline-block h-5 w-5" />
               )}
-              <span className="font-medium">{team.name}</span>
+              <span className="font-medium whitespace-nowrap">{team.name}</span>
             </div>
           );
         },
       },
-      { id: "code", accessorKey: "code", header: "Code" },
-      { id: "description", accessorKey: "description", header: "Description" },
+      {
+        id: "code",
+        accessorKey: "code",
+        header: "Code",
+        cell: ({ row }: { row: { original: TeamNode } }) => (
+          <Badge variant="outline" className="font-mono text-xs font-normal">
+            {row.original.code}
+          </Badge>
+        ),
+      },
+      {
+        id: "description",
+        accessorKey: "description",
+        header: "Description",
+        cell: ({ row }: { row: { original: TeamNode } }) =>
+          row.original.description ? (
+            <span
+              className="text-muted-foreground block max-w-xs truncate text-xs"
+              title={row.original.description}
+            >
+              {row.original.description}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
+      },
       {
         id: "team_leader",
         accessorKey: "team_leader",
@@ -86,25 +113,68 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
           if (!team.team_leader) return <span className="text-muted-foreground">—</span>;
           const profile = profiles.find((p: UserProfile) => p.user.id === team.team_leader!.id);
           return (
-            <div className="flex items-center gap-1">
-              <span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-medium whitespace-nowrap">
                 {team.team_leader.first_name} {team.team_leader.last_name}
               </span>
-              {profile?.italian_tl && <Badge variant="secondary">Italian TL</Badge>}
-              {profile?.albanian_tl && <Badge variant="outline">Albanian TL</Badge>}
+              {profile?.italian_tl && (
+                <Badge
+                  variant="default"
+                  className={`${toneSurfaceClass.info} h-5 shrink-0 px-1.5 py-0 text-xs font-normal whitespace-nowrap`}
+                >
+                  Italian TL
+                </Badge>
+              )}
+              {profile?.albanian_tl && (
+                <Badge
+                  variant="default"
+                  className={`${toneSurfaceClass.success} h-5 shrink-0 px-1.5 py-0 text-xs font-normal whitespace-nowrap`}
+                >
+                  Albanian TL
+                </Badge>
+              )}
             </div>
           );
         },
       },
-      { id: "members_count", accessorKey: "members_count", header: "Members" },
+      {
+        id: "members_count",
+        accessorKey: "members_count",
+        header: "Members",
+        cell: ({ row }: { row: { original: TeamNode } }) => (
+          <span className="inline-flex items-center gap-1 font-mono text-xs font-medium tabular-nums">
+            <Users className="text-muted-foreground h-3.5 w-3.5" aria-hidden="true" />
+            {row.original.members_count ?? 0}
+          </span>
+        ),
+      },
       {
         id: "calendar_group",
         accessorKey: "calendar_group",
         header: "Calendar Group",
         cell: ({ row }: { row: { original: TeamNode } }) =>
-          row.original.calendar_group || <span className="text-muted-foreground">—</span>,
+          row.original.calendar_group ? (
+            <Badge
+              variant="secondary"
+              className="inline-flex items-center gap-1 font-mono text-xs font-normal"
+            >
+              <Share2 className="h-3 w-3 shrink-0" aria-hidden="true" />
+              {row.original.calendar_group}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
       },
-      { id: "sub_teams_count", accessorKey: "sub_teams_count", header: "Sub-teams" },
+      {
+        id: "sub_teams_count",
+        accessorKey: "sub_teams_count",
+        header: "Sub-teams",
+        cell: ({ row }: { row: { original: TeamNode } }) => (
+          <span className="text-muted-foreground font-mono text-xs tabular-nums">
+            {row.original.sub_teams_count ?? 0}
+          </span>
+        ),
+      },
       {
         id: "actions",
         header: "Actions",
@@ -123,10 +193,12 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
 
   return (
     <GlassCard delay={0} className="p-4">
-      {header}
+      {header && <div className="mb-4">{header}</div>}
       <DataTable
         columns={columns}
         data={data}
+        searchColumn={SEARCH_COLUMNS}
+        searchPlaceholder="Search teams by name, code, description..."
         enableColumnVisibility
         storageKey="table-visibility-teams-page"
         pageSize={1000}

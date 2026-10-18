@@ -1,6 +1,5 @@
 import React from "react";
 import { UserBulkCommandDrawer } from "@/components/admin/UserBulkCommandDrawer";
-import { TeamMultiSelect } from "@/components/admin/TeamMultiSelect";
 import { PluginCRBulkCommandDrawer } from "@/components/admin/PluginCRUserDialogs";
 import { UserStatsStrip } from "./UserStatsStrip";
 import { UsersPageBulkBar } from "./UsersPageBulkBar";
@@ -116,16 +115,6 @@ export const UsersPageContent: React.FC<UsersPageContentProps> = ({ state, colum
 
       <UsersPageTable
         filters={<UsersPageFilters state={state} teams={teams} />}
-        toolbarActions={
-          <div className="w-56">
-            <TeamMultiSelect
-              teams={teams}
-              value={state.teamIds}
-              onChange={state.setTeamIds}
-              compact
-            />
-          </div>
-        }
         server={server}
         columns={columns}
         data={state.filteredData}

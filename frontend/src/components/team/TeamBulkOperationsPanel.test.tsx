@@ -17,22 +17,25 @@ function renderPanel() {
 
 describe("TeamBulkOperationsPanel", () => {
   it("renders the selection count in foreground color, not 1:1 primary text on primary tint", () => {
-    const { container } = renderPanel();
+    renderPanel();
 
-    const count = screen.getByText("3");
-    expect(count.className).toContain("text-foreground");
-    expect(count.className).not.toContain("text-primary");
-
-    const pill = container.querySelector(".rounded-md");
-    expect(pill?.className).not.toContain("text-primary");
+    // The shared dock keeps the count in its AnimatedNumber badge (aria-label)
+    // and the words in their own node — the contract pinned by the ticket_kpi
+    // page test. Asserting on the words node, not a concatenated string.
+    expect(screen.getByLabelText("3 selected")).toBeInTheDocument();
+    const label = screen.getByText("items selected");
+    expect(label.className).toContain("text-foreground");
+    expect(label.className).not.toContain("text-primary");
   });
 
-  it("renders on a flat non-hover-lift GlassCard", () => {
-    const { container } = renderPanel();
+  it("delegates to the shared floating BulkActionBar without a one-sided accent border", () => {
+    renderPanel();
 
-    const card = container.querySelector("[class*='shadow-card']");
-    expect(card).toBeInTheDocument();
-    expect(card?.className).not.toContain("hover:-translate-y-1");
+    const bar = screen.getByRole("status");
+    expect(bar).toBeInTheDocument();
+    expect(bar.className).toContain("bg-popover/95");
+    expect(bar.className).not.toContain("border-l-4");
+    expect(bar.className).not.toContain("hover:-translate-y-1");
   });
 
   it("labels every action button accessibly", () => {
@@ -41,6 +44,6 @@ describe("TeamBulkOperationsPanel", () => {
     expect(screen.getByRole("button", { name: /approve/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /reject/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /delete/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /clear/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /clear selection/i })).toBeInTheDocument();
   });
 });

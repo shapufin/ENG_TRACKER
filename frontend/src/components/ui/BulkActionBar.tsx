@@ -39,30 +39,35 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
           exit="exit"
           variants={bulkBarEnter}
           transition={transition}
+          className="fixed bottom-5 left-1/2 z-40 w-[calc(100%-1.5rem)] max-w-2xl -translate-x-1/2 sm:w-auto"
         >
           {/*
-            Flat selection strip (AdminGUI mockup treatment, 2026-10-10). The
-            lift's original version was a GlassCard with an accent left border and
-            a tinted body, which read as a second card floating above the table;
-            this is one quiet band that sits in the page's flow.
+            Floating bottom bulk-action dock (AdminGUI mockup treatment).
+            Uses semantic popover + border + shadow-pop tokens so light and dark
+            modes share one elevated dock without shifting table rows.
           */}
-          <div className="border-line-subtle mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/40 px-4 py-2.5">
-            <div className="flex items-center gap-3">
+          <div
+            role="status"
+            aria-live="polite"
+            className="border-border bg-popover/95 text-popover-foreground shadow-pop flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 supports-[backdrop-filter]:backdrop-blur-md"
+          >
+            <div className="flex items-center gap-2.5 pr-1">
               <div
-                className="from-accent-violet to-primary text-primary-foreground shadow-accent-violet/25 flex h-6 w-6 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold shadow-sm"
+                className="from-accent-violet to-primary text-primary-foreground shadow-accent-violet/25 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-linear-to-br font-mono text-xs font-bold shadow-sm"
                 aria-label={`${selectedCount} selected`}
               >
                 <span aria-hidden="true">
                   <AnimatedNumber value={selectedCount} duration={0.4} />
                 </span>
-              </div>
-              <span className="text-sm font-medium">
+              </div>{" "}
+              <span className="text-foreground text-sm font-medium whitespace-nowrap">
                 {selectedCount === 1
                   ? `${entityName.replace(/s$/, "")} selected`
                   : `${entityName} selected`}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="bg-border hidden h-4 w-px sm:block" aria-hidden="true" />
+            <div className="flex flex-wrap items-center gap-2">
               {children}
               {actions.map((action, idx) => (
                 <Button
