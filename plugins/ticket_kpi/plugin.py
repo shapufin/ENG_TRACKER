@@ -88,32 +88,14 @@ class TicketKPIPlugin(BasePlugin):
 
     def get_config_schema(self):
         return {
-            "default_profile_id": {
-                "type": "integer",
-                "default": None,
-                "description": "Default export profile ID for new users"
-            },
-            "sla_threshold_hours": {
-                "type": "integer",
-                "default": 24,
-                "description": "Hours threshold for auto-detecting SLA breaches"
-            },
             "max_file_size_mb": {
                 "type": "integer",
                 "default": 10,
                 "description": "Maximum upload file size in MB"
-            },
-            "retention_months": {
-                "type": "integer",
-                "default": 24,
-                "description": "How many months of ticket data to retain"
             }
         }
 
     def validate_config(self, config):
-        if 'sla_threshold_hours' in config:
-            if not isinstance(config['sla_threshold_hours'], int) or config['sla_threshold_hours'] < 1:
-                raise ValueError("sla_threshold_hours must be a positive integer")
         if 'max_file_size_mb' in config:
             if not isinstance(config['max_file_size_mb'], int) or config['max_file_size_mb'] < 1:
                 raise ValueError("max_file_size_mb must be a positive integer")

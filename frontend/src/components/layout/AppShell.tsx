@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
+import { usePlugins } from "@/context/PluginContext";
 import { useLogout } from "@/hooks/useLogout";
 import { PluginSlot } from "@/components/plugins/PluginSlot";
 import { Menu } from "lucide-react";
@@ -51,6 +52,8 @@ export const AppShell = React.memo(() => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const { activePlugins } = usePlugins();
+  const activePluginNames = useMemo(() => activePlugins.map((p) => p.name), [activePlugins]);
   const visibleItems = useVisibleNavItems(
     isAdmin,
     isHR,
@@ -59,7 +62,8 @@ export const AppShell = React.memo(() => {
     isSuperuser,
     isCRAdmin,
     isCRUser,
-    isHBPROnly
+    isHBPROnly,
+    activePluginNames
   );
   const handleLogout = useLogout();
   const paletteItems = useMemo(() => visibleItems.map(navItemToPaletteItem), [visibleItems]);

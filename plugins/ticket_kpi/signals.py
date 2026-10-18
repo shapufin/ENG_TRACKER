@@ -44,7 +44,7 @@ def delete_kpi_on_batch_remove(sender, instance, **kwargs):
     from .models import MonthlyKPI, TicketImportBatch
     with transaction.atomic():
         has_other = TicketImportBatch.objects.filter(
-            user=instance.user, month=instance.month
+            user=instance.user, month=instance.month, is_overridden=False
         ).exists()
         if not has_other:
             MonthlyKPI.objects.filter(

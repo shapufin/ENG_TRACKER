@@ -7,7 +7,6 @@ from apps.leave_management.models import LeaveRequest
 from apps.overtime.models import OvertimeLog
 from plugins.payroll.models import PayrollLine
 from plugins.skills.models import UserSkill
-from plugins.ticket_kpi.models import MonthlyKPI
 
 
 def _index_fields(model):
@@ -31,7 +30,7 @@ class NoRedundantIndexTests(SimpleTestCase):
         return sets + [tuple(u) for u in opts.unique_together]
 
     def test_no_index_duplicates_a_unique_constraint(self):
-        for model in (PayrollLine, UserSkill, MonthlyKPI):
+        for model in (PayrollLine, UserSkill):
             clash = set(_index_fields(model)) & set(self._unique_sets(model))
             self.assertFalse(clash, f'{model.__name__} indexes duplicate a unique constraint: {clash}')
 

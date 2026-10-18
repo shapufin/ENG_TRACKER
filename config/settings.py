@@ -272,7 +272,6 @@ SPECTACULAR_SETTINGS = {
         # evidence_type is defined on both OvertimeLog and KPIEvidence with
         # different choice sets; give each a distinct generated enum name.
         'OvertimeEvidenceTypeEnum': 'apps.overtime.models.core.OvertimeLog.EVIDENCE_TYPE_CHOICES',
-        'KPIEvidenceTypeEnum': 'plugins.ticket_kpi.models.KPIEvidence.EVIDENCE_TYPES',
     },
 }
 
