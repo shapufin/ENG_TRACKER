@@ -5,12 +5,15 @@ This module contains Django signals to automatically create a CalendarWorkspace
 when a new Team is created, ensuring every team has a corresponding calendar.
 """
 
+import logging
 from decimal import Decimal
 from django.db.models.signals import post_save, post_delete, pre_delete, pre_save
 from django.dispatch import receiver
 from apps.users.models import Team
 from apps.dashboard.models import CalendarWorkspace
 from apps.dashboard.models.calendar import PublicHoliday
+
+logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=Team)
@@ -80,7 +83,7 @@ def _restore_payroll_workday(h_date):
                 standard_hours=Decimal('8') if not is_weekend else Decimal('0'),
             )
     except Exception:
-        pass
+        logger.warning('Payroll workday restore failed for %s', h_date, exc_info=True)
 
 
 @receiver(pre_save, sender=PublicHoliday)
@@ -133,8 +136,9 @@ def sync_public_holiday_to_payroll(sender, instance, **kwargs):
                 },
             )
     except Exception:
-        # If payroll app/tables are not installed or active, fail gracefully
-        pass
+        # Never block saving a holiday, but a silent failure leaves HR and
+        # Payroll calendars out of step.
+        logger.warning('Payroll holiday mirror failed for %s', instance.date, exc_info=True)
 
 
 @receiver(post_delete, sender=PublicHoliday)
