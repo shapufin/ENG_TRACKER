@@ -419,7 +419,7 @@ class PayrollRunSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'created_by', 'finalized_by',
                             'finalized_at', 'rule_set', 'configuration_snapshot',
-                            'totals', 'status']
+                            'totals', 'status', 'year', 'month']
 
     def _visible_lines(self, obj):
         # A run is company-wide; a scoped viewer (plain TL) only sees their own

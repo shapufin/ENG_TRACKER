@@ -8,6 +8,7 @@ from __future__ import annotations
 import io
 import logging
 from decimal import Decimal, InvalidOperation
+from xml.sax.saxutils import escape
 
 from core.utils.csv_safe import xlsx_safe
 
@@ -27,6 +28,28 @@ OVERTIME_CATEGORY_LABELS = {
 
 def _excel_text(value: str) -> str:
     return xlsx_safe(value)
+
+
+def _md(value) -> str:
+    """Escape free text for a ReportLab ``Paragraph`` (which parses markup:
+    a stray ``<`` crashes the whole document and ``<img src>`` is fetched)."""
+    return escape(str(value or ''))
+
+
+def run_branding(run) -> tuple[str, str]:
+    """``(organization_name, payslip_footer)`` for ``run``.
+
+    Read from the run's configuration snapshot so editing Settings never
+    rewrites an old payslip; runs generated before the snapshot carried
+    branding fall back to the live configuration.
+    """
+    from ..models import PayrollConfiguration
+
+    snapshot = run.configuration_snapshot or {}
+    if 'organization_name' in snapshot and 'payslip_footer' in snapshot:
+        return snapshot['organization_name'] or '', snapshot['payslip_footer'] or ''
+    config = PayrollConfiguration.get_singleton()
+    return config.organization_name or '', config.payslip_footer or ''
 
 
 def _dec(value, default: str = '0') -> Decimal:
@@ -187,11 +210,8 @@ def generate_payroll_excel(run) -> io.BytesIO:
     from openpyxl.utils import get_column_letter
     from django.utils import timezone
 
-    from ..models import PayrollConfiguration
-
     wb = openpyxl.Workbook()
-    config = PayrollConfiguration.get_singleton()
-    org = config.organization_name or ''
+    org, _footer = run_branding(run)
     lines = list(run.lines.all().select_related('user').order_by('user__username'))
 
     def full_name(user) -> str:
@@ -490,8 +510,8 @@ def _validation_warning_flowable(rule_set, styles):
 
     warn_table = Table(
         [[Paragraph(
-            f"⚠ Calculated using a '{rule_set.validation_status}' rule set "
-            f"({rule_set.name} v{rule_set.version}) — verify against official "
+            f"⚠ Calculated using a '{_md(rule_set.validation_status)}' rule set "
+            f"({_md(rule_set.name)} v{_md(rule_set.version)}) — verify against official "
             f"figures before relying on this document.",
             styles['warn'],
         )]],
@@ -542,14 +562,12 @@ def _build_payslip_flowables(line, styles: dict) -> list:
     from reportlab.lib import colors
 
     from django.utils import timezone
-    from ..models import PayrollConfiguration
 
     run = line.run
     rule_set = run.rule_set
     user = line.user
     full_name = f'{user.first_name} {user.last_name}'.strip() or user.username
-    config = PayrollConfiguration.get_singleton()
-    org = config.organization_name or ''
+    org, footer = run_branding(run)
     total_gross = line.total_gross
     trace = line.calculation_trace or {}
 
@@ -557,7 +575,7 @@ def _build_payslip_flowables(line, styles: dict) -> list:
 
     # --- Letterhead ---
     if org:
-        story.append(Paragraph(org, styles['org']))
+        story.append(Paragraph(_md(org), styles['org']))
     story.append(Paragraph('PAYSLIP', styles['title']))
     story.append(Paragraph(
         f'Period: {run.year}-{run.month:02d}  •  Generated: {timezone.now().strftime("%Y-%m-%d %H:%M")}',
@@ -701,21 +719,21 @@ def _build_payslip_flowables(line, styles: dict) -> list:
     story.append(net_table)
 
     # Footer
-    if config.payslip_footer:
+    if footer:
         story.append(Spacer(1, 5 * mm))
-        story.append(Paragraph(config.payslip_footer, styles['label']))
+        story.append(Paragraph(_md(footer), styles['label']))
 
     # Warnings
     if line.warnings:
         story.append(Spacer(1, 4 * mm))
         story.append(Paragraph('<b>Warnings:</b>', styles['normal']))
         for w in line.warnings:
-            story.append(Paragraph(f'• {w}', styles['label']))
+            story.append(Paragraph(f'• {_md(w)}', styles['label']))
 
     # Rule set info
     story.append(Spacer(1, 4 * mm))
     story.append(Paragraph(
-        f'Rule Set: {rule_set.name} v{rule_set.version} ({rule_set.validation_status})',
+        f'Rule Set: {_md(rule_set.name)} v{_md(rule_set.version)} ({_md(rule_set.validation_status)})',
         styles['label'],
     ))
 
@@ -730,15 +748,13 @@ def _build_cover_flowables(run, lines: list, styles: dict) -> list:
     from reportlab.platypus import Paragraph, Spacer, Table
 
     from django.utils import timezone
-    from ..models import PayrollConfiguration
 
-    config = PayrollConfiguration.get_singleton()
-    org = config.organization_name or ''
+    org, _footer = run_branding(run)
     rule_set = run.rule_set
 
     story: list = []
     if org:
-        story.append(Paragraph(org, styles['org']))
+        story.append(Paragraph(_md(org), styles['org']))
     story.append(Paragraph('PAYROLL RUN SUMMARY', styles['cover_title']))
     story.append(Paragraph(
         f'Period: {run.year}-{run.month:02d}  •  Status: {run.status}  •  '
@@ -753,7 +769,7 @@ def _build_cover_flowables(run, lines: list, styles: dict) -> list:
         story.append(Spacer(1, 3 * mm))
 
     story.append(Paragraph(
-        f'Rule Set: {rule_set.name} v{rule_set.version} ({rule_set.validation_status})  •  '
+        f'Rule Set: {_md(rule_set.name)} v{_md(rule_set.version)} ({_md(rule_set.validation_status)})  •  '
         f'Employees included: {len(lines)}',
         styles['normal'],
     ))

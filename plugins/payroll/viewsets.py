@@ -273,11 +273,15 @@ class WageAssignmentViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         """Wage history grouped by user."""
         user_id = request.query_params.get('user_id')
         allowed_ids = _allowed_payroll_user_ids(request.user)
-        if user_id and allowed_ids is not None:
+        if user_id:
             try:
                 requested_user_id = int(user_id)
             except ValueError:
-                raise PermissionDenied('Invalid user scope.')
+                if allowed_ids is not None:
+                    raise PermissionDenied('Invalid user scope.')
+                return Response({'detail': 'user_id must be a number.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+        if user_id and allowed_ids is not None:
             if requested_user_id not in allowed_ids:
                 raise PermissionDenied('You cannot view this user\'s wage history.')
         qs = self.get_queryset()
@@ -332,8 +336,19 @@ class WageAssignmentViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         errors = []
         created = 0
 
+        if not all(isinstance(item, dict) for item in assignments):
+            return Response(
+                {'detail': 'Each assignment must be an object.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Check for duplicate users in the request
         user_ids = [item.get('user') for item in assignments]
+        if not all(uid is None or isinstance(uid, (int, str)) for uid in user_ids):
+            return Response(
+                {'detail': 'Each assignment needs a valid user id.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if len(user_ids) != len(set(user_ids)):
             return Response(
                 {'detail': 'Duplicate users in assignments list. Each user may only appear once.'},
@@ -1449,6 +1464,11 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
         # Scoped to what this user may see — not just anything in the run
         # (a run spans every team; see `_scoped_lines`).
+        try:
+            line_id = int(line_id)
+        except (TypeError, ValueError):
+            return Response({'detail': 'line_id must be a number.'},
+                            status=status.HTTP_400_BAD_REQUEST)
         line = self._scoped_lines(run).filter(id=line_id).first()
         if not line:
             return Response({'detail': 'Payroll line not found in this run.'},
