@@ -50,6 +50,11 @@ export interface NavItem {
    * dead link. Multi-role HBPR+TL/HR/admin users are not HBPR-only and keep
    * these items. */
   hbprHidden?: boolean;
+  /** Only shown while this plugin is active (same contract as
+   * `useAdminNavItems`). Set on every item a plugin owns, otherwise disabling
+   * the plugin leaves a dead link. Not enforced when the caller passes no
+   * `activePluginNames`. */
+  pluginName?: string;
   /** Rendered at the very bottom of the nav, after section groups AND
    * plugin-injected items, separated by a divider (footer-convention item,
    * e.g. Settings). Excluded from its section's label/group flow. */
@@ -108,6 +113,7 @@ const allNavItems: NavItem[] = [
   },
   {
     path: "/ticket-kpi/team",
+    pluginName: "ticket_kpi",
     label: "Team Performance",
     icon: Users,
     section: "leadership",
@@ -115,6 +121,7 @@ const allNavItems: NavItem[] = [
   },
   {
     path: "/ticket-kpi/team-management",
+    pluginName: "ticket_kpi",
     label: "Upload Management",
     icon: Users,
     section: "leadership",
@@ -161,6 +168,7 @@ const allNavItems: NavItem[] = [
   // Skills & KPI (Competency & ticket metrics)
   {
     path: "/ticket-kpi/dashboard",
+    pluginName: "ticket_kpi",
     label: "Ticket KPI",
     icon: Ticket,
     section: "skills-kpi",
@@ -197,7 +205,8 @@ export const useVisibleNavItems = (
   isSuperuser: boolean,
   isCRAdmin: boolean = false,
   isCRUser: boolean = false,
-  isHBPROnly: boolean = false
+  isHBPROnly: boolean = false,
+  activePluginNames?: string[]
 ) =>
   useMemo(() => {
     // A CR-only admin (cr_admin role, no other elevated role) uses the
@@ -217,6 +226,9 @@ export const useVisibleNavItems = (
     return allNavItems.filter((item) => {
       if (isCRScoped && !item.crUserVisible) return false;
       if (isHBPROnly && item.hbprHidden) return false;
+      if (item.pluginName && activePluginNames && !activePluginNames.includes(item.pluginName)) {
+        return false;
+      }
       if (!item.roles) return true;
       if (isSuperuser) return true;
       if (isAdmin && item.roles.includes("admin")) return true;
@@ -225,4 +237,14 @@ export const useVisibleNavItems = (
       if (isEmployee && item.roles.includes("employee")) return true;
       return false;
     });
-  }, [isAdmin, isHR, isTeamLeader, isEmployee, isSuperuser, isCRAdmin, isCRUser, isHBPROnly]);
+  }, [
+    isAdmin,
+    isHR,
+    isTeamLeader,
+    isEmployee,
+    isSuperuser,
+    isCRAdmin,
+    isCRUser,
+    isHBPROnly,
+    activePluginNames,
+  ]);

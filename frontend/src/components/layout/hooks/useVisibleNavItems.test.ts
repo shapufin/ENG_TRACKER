@@ -316,3 +316,23 @@ describe("useVisibleNavItems", () => {
     expect(visible).toContain("Ticket KPI");
   });
 });
+
+describe("useVisibleNavItems plugin gating", () => {
+  const kpiLabels = ["Team Performance", "Upload Management", "Ticket KPI"];
+
+  it("hides ticket_kpi links when the plugin is not active", () => {
+    const { result } = renderHook(() =>
+      useVisibleNavItems(false, false, false, false, true, false, false, false, [])
+    );
+    const visible = result.current.map((item) => item.label);
+    for (const label of kpiLabels) expect(visible).not.toContain(label);
+  });
+
+  it("shows ticket_kpi links when the plugin is active", () => {
+    const { result } = renderHook(() =>
+      useVisibleNavItems(false, false, false, false, true, false, false, false, ["ticket_kpi"])
+    );
+    const visible = result.current.map((item) => item.label);
+    for (const label of kpiLabels) expect(visible).toContain(label);
+  });
+});

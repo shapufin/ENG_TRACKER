@@ -2,16 +2,11 @@
 
 import re
 
-
-_PREFIX_RE = re.compile(r'^(?:inc|ticket|t|#)\s*-?\s*', re.IGNORECASE)
-_SPACE_RE = re.compile(r'\s+')
+from apps.overtime.models.core import normalize_ticket_reference
 
 
-def normalize_ticket_id(raw: str) -> str:
-    """Normalize one ticket reference without turning substrings into matches."""
-    value = str(raw or '').strip().lower()
-    value = _PREFIX_RE.sub('', value)
-    return _SPACE_RE.sub('', value)
+# One normalizer for structured refs (core) and imported ticket ids (KPI).
+normalize_ticket_id = normalize_ticket_reference
 
 
 def evidence_tokens(raw: str) -> list[str]:

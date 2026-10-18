@@ -20,7 +20,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction, IntegrityError
 from django.db.models import Q
 
-from apps.users.models import Team, UserProfile
+from apps.users.models import Team
 from django.utils import timezone
 from rest_framework import viewsets, status, permissions, serializers
 from rest_framework.exceptions import PermissionDenied
@@ -1482,30 +1482,18 @@ def _fields_populated(kpi):
     return fields
 
 
-def _tl_member_q(user):
-    """Return Q object matching Users managed by `user` as a team leader."""
-    q = Q(id=user.id)
-    # is_albanian_tl / is_italian_tl properties already check role_codes,
-    # legacy flags, and team members — no need for redundant flag checks.
-    if user.profile.is_albanian_tl:
-        q |= Q(profile__albanian_tl=user)
-    if user.profile.is_italian_tl:
-        q |= Q(profile__italian_tl=user)
-    if user.led_teams.exists():
-        q |= Q(profile__teams__team_leader=user)
-    return q
-
-
 def _get_tl_team_members(user):
     """Return a queryset of Users managed by this team leader.
 
-    Includes users assigned via direct italian_tl/albanian_tl FKs and members
-    of any Team where this user is the team_leader. Also includes the TL
-    themselves so their own data appears in team dashboards/reports.
+    Scope comes from core's ``UserProfile.get_team_member_ids()`` (direct
+    italian_tl/albanian_tl FKs, shared team membership, led teams) so KPI can
+    never drift from the rest of the app. Includes the TL themselves so their
+    own data appears in team dashboards/reports.
     """
     if not hasattr(user, 'profile') or not user.profile.is_team_leader:
         return User.objects.none()
-    return User.objects.filter(_tl_member_q(user)).select_related('profile').distinct().order_by('username')
+    ids = user.profile.get_team_member_ids() | {user.id}
+    return User.objects.filter(id__in=ids).select_related('profile').order_by('username')
 
 
 def _is_tl_for_user(tl_user, target_user):
@@ -1514,11 +1502,7 @@ def _is_tl_for_user(tl_user, target_user):
         return False
     if not hasattr(tl_user, 'profile') or not tl_user.profile.is_team_leader:
         return False
-    return UserProfile.objects.filter(
-        user=target_user
-    ).filter(
-        Q(italian_tl=tl_user) | Q(albanian_tl=tl_user) | Q(teams__team_leader=tl_user)
-    ).exists()
+    return target_user.id in tl_user.profile.get_team_member_ids()
 
 
 def _review_batch_or_reason(batch, user, reviewed_at) -> Optional[str]:
@@ -2276,6 +2260,7 @@ class TicketOvertimeLinkViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         ticket = serializer.validated_data.get(
             'normalized_ticket', serializer.instance.normalized_ticket
         )
+        self._check_link_mutation_permission(serializer.instance.overtime_log.user)
         self._validate_link_target(overtime_log, ticket)
         instance = serializer.save()
         _audit_link_action(self.request.user, 'update', instance)
