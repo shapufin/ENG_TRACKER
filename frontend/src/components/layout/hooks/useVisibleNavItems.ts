@@ -237,4 +237,14 @@ export const useVisibleNavItems = (
       if (isEmployee && item.roles.includes("employee")) return true;
       return false;
     });
-  }, [isAdmin, isHR, isTeamLeader, isEmployee, isSuperuser, isCRAdmin, isCRUser, isHBPROnly, activePluginNames]);
+  }, [
+    isAdmin,
+    isHR,
+    isTeamLeader,
+    isEmployee,
+    isSuperuser,
+    isCRAdmin,
+    isCRUser,
+    isHBPROnly,
+    activePluginNames,
+  ]);
