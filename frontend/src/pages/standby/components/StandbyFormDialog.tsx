@@ -2,6 +2,7 @@ import React from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ModalSection } from "@/components/ui/ModalSection";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { TimeHoursGrid } from "@/components/ui/TimeHoursGrid";
 import { UserSelectField } from "@/components/common/forms/UserSelectField";
@@ -74,14 +75,14 @@ export const StandbyFormDialog: React.FC<StandbyFormDialogProps> = ({
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
     >
-      {!editing && isAdmin && (
-        <UserSelectField
-          value={form.user}
-          users={users}
-          onChange={(value) => updateField("user", value)}
-        />
-      )}
-      <div className="grid grid-cols-2 gap-4">
+      <ModalSection title="Schedule" columns={2}>
+        {!editing && isAdmin && (
+          <UserSelectField
+            value={form.user}
+            users={users}
+            onChange={(value) => updateField("user", value)}
+          />
+        )}
         <div className="space-y-2">
           <Label htmlFor="standby-date">Date (DD/MM/YYYY)</Label>
           <DatePicker
@@ -90,9 +91,9 @@ export const StandbyFormDialog: React.FC<StandbyFormDialogProps> = ({
             onChange={(v) => updateField("date", v)}
             placeholder="DD/MM/YYYY"
           />
-          {formErrors.date && <p className="text-xs text-destructive">{formErrors.date}</p>}
+          {formErrors.date && <p className="text-destructive text-xs">{formErrors.date}</p>}
         </div>
-      </div>
+      </ModalSection>
       <TimeHoursGrid
         startTime={form.start_time}
         endTime={form.end_time}
@@ -103,35 +104,37 @@ export const StandbyFormDialog: React.FC<StandbyFormDialogProps> = ({
         onStartTimeChange={(v) => updateField("start_time", v)}
         onEndTimeChange={(v) => updateField("end_time", v)}
       />
-      <div className="space-y-2">
-        <Label>Clients (optional — select all clients covered by this standby)</Label>
-        <div className="max-h-32 space-y-2 overflow-y-auto rounded-md border p-2">
-          {clients?.length ? (
-            clients.map((c) => (
-              <div key={c.id} className="flex items-center gap-2">
-                <Checkbox
-                  id={`standby-client-${c.id}`}
-                  checked={form.client_ids?.includes(c.id) ?? false}
-                  onCheckedChange={() => toggleClient(c.id)}
-                />
-                <Label htmlFor={`standby-client-${c.id}`} className="text-sm">
-                  {c.name}
-                </Label>
-              </div>
-            ))
-          ) : (
-            <p className="text-xs text-muted-foreground">No clients available.</p>
-          )}
+      <ModalSection title="Coverage & notes" columns={1}>
+        <div className="space-y-2">
+          <Label>Clients (optional — select all clients covered by this standby)</Label>
+          <div className="no-scrollbar max-h-32 space-y-2 overflow-y-auto rounded-xl border p-2.5">
+            {clients?.length ? (
+              clients.map((c) => (
+                <div key={c.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`standby-client-${c.id}`}
+                    checked={form.client_ids?.includes(c.id) ?? false}
+                    onCheckedChange={() => toggleClient(c.id)}
+                  />
+                  <Label htmlFor={`standby-client-${c.id}`} className="text-sm">
+                    {c.name}
+                  </Label>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground text-xs">No clients available.</p>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="standby-description">Description</Label>
-        <Input
-          id="standby-description"
-          value={form.description}
-          onChange={(e) => updateField("description", e.target.value)}
-        />
-      </div>
+        <div className="space-y-2">
+          <Label htmlFor="standby-description">Description</Label>
+          <Input
+            id="standby-description"
+            value={form.description}
+            onChange={(e) => updateField("description", e.target.value)}
+          />
+        </div>
+      </ModalSection>
     </FormDialog>
   );
 };

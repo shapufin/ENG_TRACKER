@@ -19,6 +19,8 @@ export const useLeaveColumns = (
         id: "actions",
         meta: { actionsDisplay: "column" },
         header: "Actions",
+        // Sized to the widest row (Approve + Reject + edit + delete icons).
+        size: 285,
         cell: (info: AppCellContext<LeaveRequest, unknown>) => (
           <EmployeeLeaveRowActions
             request={info.row.original}

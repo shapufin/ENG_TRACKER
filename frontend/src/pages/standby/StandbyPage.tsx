@@ -158,27 +158,6 @@ export const StandbyPage: React.FC = () => {
         </div>
       }
     >
-      <HoursLogExportButtons
-        logs={logs}
-        filename="standby-logs"
-        csvHeaders={["User", "Date", "Hours", "Status", "Description"]}
-        rowMapper={(l) => [
-          l.user_name || "",
-          formatDateDDMMYYYY(l.date),
-          String(Number(l.hours)),
-          l.status,
-          l.description || "",
-        ]}
-        onFetchAll={async () => {
-          const all = await standbyService.downloadAllLogs(dateParams);
-          return userId ? all.filter((l) => l.user === userId) : all;
-        }}
-        onExportCsv={async () => {
-          const exportParams = userId ? { ...dateParams, user: String(userId) } : dateParams;
-          await standbyService.exportCsv(exportParams);
-        }}
-      />
-
       <HoursLogBulkActionBar
         selectedCount={Object.keys(rowSelection).length}
         onClear={() => setRowSelection({})}
@@ -187,6 +166,28 @@ export const StandbyPage: React.FC = () => {
       />
 
       <HoursLogDataTable
+        toolbarActions={
+          <HoursLogExportButtons
+            logs={logs}
+            filename="standby-logs"
+            csvHeaders={["User", "Date", "Hours", "Status", "Description"]}
+            rowMapper={(l) => [
+              l.user_name || "",
+              formatDateDDMMYYYY(l.date),
+              String(Number(l.hours)),
+              l.status,
+              l.description || "",
+            ]}
+            onFetchAll={async () => {
+              const all = await standbyService.downloadAllLogs(dateParams);
+              return userId ? all.filter((l) => l.user === userId) : all;
+            }}
+            onExportCsv={async () => {
+              const exportParams = userId ? { ...dateParams, user: String(userId) } : dateParams;
+              await standbyService.exportCsv(exportParams);
+            }}
+          />
+        }
         columns={columns}
         data={logs}
         rowSelection={rowSelection}

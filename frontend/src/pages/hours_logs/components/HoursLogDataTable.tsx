@@ -12,6 +12,8 @@ interface HoursLogDataTableProps<T extends { id: number }> {
   storageKey: string;
   searchColumn?: string;
   searchPlaceholder?: string;
+  /** Extra toolbar controls rendered on the same row as Search and Columns. */
+  toolbarActions?: React.ReactNode;
 }
 
 export const HoursLogDataTable = <T extends { id: number }>({
@@ -22,6 +24,7 @@ export const HoursLogDataTable = <T extends { id: number }>({
   storageKey,
   searchColumn,
   searchPlaceholder,
+  toolbarActions,
 }: HoursLogDataTableProps<T>) => (
   <GlassCard delay={0} className="p-4">
     <DataTable
@@ -33,6 +36,7 @@ export const HoursLogDataTable = <T extends { id: number }>({
       enableColumnVisibility
       storageKey={storageKey}
       getRowId={(row) => row.id.toString()}
+      toolbarActions={toolbarActions}
       {...(searchColumn && { searchColumn, searchPlaceholder })}
     />
   </GlassCard>

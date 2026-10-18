@@ -21,25 +21,24 @@ describe("BulkActionBar mobile responsiveness", () => {
   it("wraps action buttons on small screens", () => {
     renderBar();
 
-    const selectedText = screen.getByText("items selected");
-    const outerBar = selectedText.parentElement?.parentElement;
-    expect(outerBar?.className).toContain("flex-wrap");
+    const bar = screen.getByRole("status");
+    expect(bar.className).toContain("flex-wrap");
   });
 });
 
 describe("BulkActionBar surface", () => {
-  it("renders as a flat selection strip, not a lift surface", () => {
-    // A selection bar must sit flat (no `interactive`): no hover translate or
-    // lift shadow, matching the filter-bar convention. The 2026-10-10 refinement
-    // also dropped the GlassCard + accent-border treatment for one quiet band.
-    const { container } = renderBar();
+  it("renders as a floating bottom dock with semantic popover tokens", () => {
+    renderBar();
 
-    const bar = container.querySelector(".mb-4");
+    const bar = screen.getByRole("status");
     expect(bar).toBeInTheDocument();
-    expect(bar?.className).toContain("rounded-lg");
-    expect(bar?.className).toContain("bg-muted/40");
-    expect(bar?.className).not.toContain("hover:-translate-y-1");
-    expect(bar?.className).not.toContain("border-l-4");
+    expect(bar.className).toContain("rounded-2xl");
+    expect(bar.className).toContain("bg-popover/95");
+    expect(bar.className).toContain("shadow-pop");
+    expect(bar.className).not.toContain("hover:-translate-y-1");
+    expect(bar.className).not.toContain("border-l-4");
+    expect(bar.parentElement?.className).toContain("fixed");
+    expect(bar.parentElement?.className).toContain("bottom-5");
   });
 
   it("labels every action button accessibly", () => {

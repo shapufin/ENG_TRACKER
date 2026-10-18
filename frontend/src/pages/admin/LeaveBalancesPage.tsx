@@ -164,6 +164,10 @@ const LeaveBalancesContent: React.FC = () => {
           data={visibleBalances}
           enableColumnVisibility
           storageKey="table-visibility-leave-balances"
+          // 11 columns do not fit a 1440px viewport at readable widths; the
+          // Carry-over flag is the one column the Expires/Effective pair already
+          // implies, so it starts hidden and stays in the Columns menu.
+          defaultColumnVisibility={{ is_carry_over: false }}
           searchColumn="user_name"
           searchPlaceholder="Search balances..."
         />

@@ -20,7 +20,7 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
   standbyHours,
 }) => {
   return (
-    <GlassCard className="border-l-primary border-l-4 p-6">
+    <GlassCard glow="primary" className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Team Overview</h2>

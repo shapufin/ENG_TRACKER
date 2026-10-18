@@ -13,7 +13,10 @@ describe("UsersPageBulkBar", () => {
     const onBulkActions = vi.fn();
     render(<UsersPageBulkBar selectedCount={2} onClear={onClear} onBulkActions={onBulkActions} />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("2 users selected");
+    // Shared floating dock: the count lives in the AnimatedNumber badge (its
+    // aria-label carries the number), the words in their own node.
+    expect(screen.getByRole("status")).toHaveTextContent("users selected");
+    expect(screen.getByLabelText("2 selected")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Clear selection" }));
     fireEvent.click(screen.getByRole("button", { name: "Bulk edit" }));
     expect(onClear).toHaveBeenCalledOnce();

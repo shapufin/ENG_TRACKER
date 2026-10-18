@@ -1,5 +1,5 @@
 import React, { useId, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogBody, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -303,7 +303,7 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent size="xl">
+      <DialogContent size="xl" hideClose>
         <div className="shrink-0">
           <BulkDrawerHeader
             count={selectedCount}
@@ -316,7 +316,47 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
           />
         </div>
 
-        <div className="no-scrollbar mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto px-1">
+        {onRemoveSelected && selectedCount > 0 && (
+          <div className="border-line-subtle bg-surface-sunken/50 -mx-1 shrink-0 space-y-1.5 rounded-xl border px-3.5 py-2.5">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="text-muted-foreground font-semibold tracking-wider uppercase">
+                Target users ({selectedCount}):
+              </span>
+              <span className="text-muted-foreground">Select × to exclude from batch</span>
+            </div>
+            <div className="no-scrollbar flex max-h-24 flex-wrap items-center gap-1.5 overflow-y-auto">
+              {selectedProfiles.map((profile) => {
+                const username = profile.user?.username ?? `#${profile.id}`;
+                const initial = username.slice(0, 1).toUpperCase();
+                return (
+                  <span
+                    key={profile.id}
+                    className="border-border/70 bg-card inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-medium shadow-2xs"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="bg-primary/15 text-primary flex h-4 w-4 items-center justify-center rounded-full font-mono text-xs font-bold"
+                    >
+                      {initial}
+                    </span>
+                    <span className="font-mono text-xs">{username}</span>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveSelected(profile.id)}
+                      aria-label={`Remove ${username} from selection`}
+                      title="Remove from selection"
+                      className="text-muted-foreground hover:text-destructive cursor-pointer rounded-sm p-0.5 transition-colors"
+                    >
+                      <X className="h-3 w-3" aria-hidden="true" />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <DialogBody className="space-y-4 py-2">
           <div className="border-primary/20 bg-primary/5 text-muted-foreground flex items-start gap-2 rounded-lg border px-3 py-2 text-xs">
             <Sparkles className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>
@@ -342,83 +382,52 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
             </div>
           )}
 
-          {onRemoveSelected && selectedCount > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                Target users ({selectedCount}) — select × to exclude from batch
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {selectedProfiles.map((profile) => {
-                  const username = profile.user?.username ?? `#${profile.id}`;
-                  return (
-                    <span
-                      key={profile.id}
-                      className="border-border/60 bg-card inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-medium shadow-xs"
-                    >
-                      <span className="font-mono text-xs">{username}</span>
-                      <button
-                        type="button"
-                        onClick={() => onRemoveSelected(profile.id)}
-                        aria-label={`Remove ${username} from selection`}
-                        title="Remove from selection"
-                        className="text-muted-foreground hover:text-destructive cursor-pointer rounded-sm p-0.5 transition-colors"
-                      >
-                        <X className="h-3 w-3" aria-hidden="true" />
-                      </button>
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Teams — full width (TeamMultiSelect needs horizontal space) */}
-          {!allHbpr && (
-            <ToggleSectionCard
-              icon={<Users className="h-4 w-4" />}
-              title="Teams"
-              description="Replace complete team membership for every selected user."
-              hint="Selecting no teams clears all team assignments."
-              applyId="bulk-apply-teams"
-              applied={applyTeams}
-              onAppliedChange={setApplyTeams}
-            >
-              <TeamMultiSelect
-                teams={teams?.results ?? []}
-                value={teamIds}
-                onChange={setTeamIds}
-                placeholder="Select one or more teams..."
-                disabled={!applyTeams || isMutating}
-              />
-            </ToggleSectionCard>
-          )}
-
-          {!allHbpr && (
-            <ToggleSectionCard
-              icon={<ListChecks className="h-4 w-4" />}
-              title="Tech"
-              description="Replace technology assignments for every selected user."
-              hint="Selecting no Tech clears all Tech assignments. A level applies to every selected user."
-              applyId="bulk-apply-techs"
-              applied={applyTechs}
-              onAppliedChange={setApplyTechs}
-            >
-              <TechMultiSelect
-                techs={techs?.results ?? []}
-                value={techIds}
-                onChange={setTechIds}
-                levelByTech={techLevels}
-                onLevelChange={(techId, levelId) =>
-                  setTechLevels((current) => ({ ...current, [techId]: levelId }))
-                }
-                placeholder="Select one or more Tech..."
-                disabled={!applyTechs || isMutating}
-              />
-            </ToggleSectionCard>
-          )}
-
-          {/* TL assignments + Roles — side by side to save vertical space */}
+          {/* Modular 2-column responsive grid (AdminGUI mockup layout) */}
           <div className={cn("grid gap-4", !allHbpr && "md:grid-cols-2")}>
+            {!allHbpr && (
+              <ToggleSectionCard
+                icon={<Users className="h-4 w-4" />}
+                title="Teams"
+                description="Replace complete team membership for every selected user."
+                hint="Selecting no teams clears all team assignments."
+                applyId="bulk-apply-teams"
+                applied={applyTeams}
+                onAppliedChange={setApplyTeams}
+              >
+                <TeamMultiSelect
+                  teams={teams?.results ?? []}
+                  value={teamIds}
+                  onChange={setTeamIds}
+                  placeholder="Select one or more teams..."
+                  disabled={!applyTeams || isMutating}
+                />
+              </ToggleSectionCard>
+            )}
+
+            {!allHbpr && (
+              <ToggleSectionCard
+                icon={<ListChecks className="h-4 w-4" />}
+                title="Tech"
+                description="Replace technology assignments for every selected user."
+                hint="Selecting no Tech clears all Tech assignments. A level applies to every selected user."
+                applyId="bulk-apply-techs"
+                applied={applyTechs}
+                onAppliedChange={setApplyTechs}
+              >
+                <TechMultiSelect
+                  techs={techs?.results ?? []}
+                  value={techIds}
+                  onChange={setTechIds}
+                  levelByTech={techLevels}
+                  onLevelChange={(techId, levelId) =>
+                    setTechLevels((current) => ({ ...current, [techId]: levelId }))
+                  }
+                  placeholder="Select one or more Tech..."
+                  disabled={!applyTechs || isMutating}
+                />
+              </ToggleSectionCard>
+            )}
+
             {!allHbpr && (
               <SectionCard
                 icon={<Crown className="h-4 w-4" />}
@@ -476,9 +485,9 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
               </div>
             </SectionCard>
           </div>
-        </div>
+        </DialogBody>
 
-        <div className="border-border/60 flex shrink-0 flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <DialogFooter className="sm:items-center sm:justify-between sm:space-x-0">
           <span className="text-muted-foreground text-xs">
             {hasChanges
               ? `${changeCount} field${changeCount === 1 ? "" : "s"} will change`
@@ -501,7 +510,7 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
               )}
             </Button>
           </div>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

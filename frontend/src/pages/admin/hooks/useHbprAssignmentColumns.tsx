@@ -18,6 +18,12 @@ const STATUS_TONE: Record<HbprCadenceStatus, "success" | "warning" | "destructiv
 /**
  * Column definitions for the Admin → HBPR assignments table.
  * `onEnd` receives the row being ended so the page can seed the confirm dialog.
+ *
+ * Sizes are the measured header/content width plus slack: the previous values
+ * were below their own header's minimum (Cadence, Effective from/to, Log
+ * entries), so those columns grew past their declared width and the 9-column
+ * table ran 82px wider than its 1440px viewport. The two identity columns
+ * truncate their name with a tooltip.
  */
 export const useHbprAssignmentColumns = (
   onEnd: (row: HbprAssignment) => void
@@ -28,11 +34,16 @@ export const useHbprAssignmentColumns = (
         id: "hbpr",
         accessorKey: "hbpr_detail.name",
         header: "HBPR",
-        size: 180,
+        size: 130,
         cell: ({ row }) => (
-          <span className="flex items-center gap-2.5">
+          <span className="flex min-w-0 items-center gap-2.5">
             <UserAvatar name={row.original.hbpr_detail.name} size="sm" />
-            <span className="text-foreground font-medium">{row.original.hbpr_detail.name}</span>
+            <span
+              className="text-foreground truncate font-medium"
+              title={row.original.hbpr_detail.name}
+            >
+              {row.original.hbpr_detail.name}
+            </span>
           </span>
         ),
       },
@@ -40,11 +51,13 @@ export const useHbprAssignmentColumns = (
         id: "albanian_tl",
         accessorKey: "albanian_tl_detail.name",
         header: "Albanian TL",
-        size: 180,
+        size: 130,
         cell: ({ row }) => (
-          <span className="flex items-center gap-2.5">
+          <span className="flex min-w-0 items-center gap-2.5">
             <UserAvatar name={row.original.albanian_tl_detail.name} size="sm" />
-            {row.original.albanian_tl_detail.name}
+            <span className="truncate" title={row.original.albanian_tl_detail.name}>
+              {row.original.albanian_tl_detail.name}
+            </span>
           </span>
         ),
       },
@@ -52,7 +65,7 @@ export const useHbprAssignmentColumns = (
         id: "cadence",
         accessorKey: "cadence",
         header: "Cadence",
-        size: 100,
+        size: 108,
         cell: ({ row }) => CADENCE_LABELS[row.original.cadence],
       },
       {
@@ -81,7 +94,7 @@ export const useHbprAssignmentColumns = (
         id: "effective_from",
         accessorKey: "effective_from",
         header: "Effective from",
-        size: 120,
+        size: 139,
         cell: ({ row }) => (
           <span className="font-mono whitespace-nowrap tabular-nums">
             {row.original.effective_from}
@@ -92,7 +105,7 @@ export const useHbprAssignmentColumns = (
         id: "effective_to",
         accessorKey: "effective_to",
         header: "Effective to",
-        size: 110,
+        size: 122,
         cell: ({ row }) => (
           <span className="font-mono whitespace-nowrap tabular-nums">
             {row.original.effective_to ?? "—"}
@@ -103,7 +116,7 @@ export const useHbprAssignmentColumns = (
         id: "evidence_count",
         accessorKey: "evidence_count",
         header: "Log entries",
-        size: 90,
+        size: 119,
         cell: ({ row }) =>
           row.original.evidence_count > 0 ? (
             <Badge variant="neutral" className="whitespace-nowrap">

@@ -34,6 +34,7 @@ interface TLApprovalTabsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getSelectedIds: (type: Tab, data: any[]) => number[];
   isBulkPending: boolean;
+  header?: React.ReactNode;
 }
 
 const TABS = [
@@ -41,6 +42,18 @@ const TABS = [
   { key: "standby" as Tab, label: "Standby" },
   { key: "leave" as Tab, label: "Leave" },
 ];
+
+/**
+ * 8-9 columns do not fit a 1440px viewport at readable widths, so each tab's
+ * free-text column starts hidden — still one click away in the Columns menu and
+ * persisted per tab, never dropped. The tab panel owns the Columns control
+ * because it owns the table.
+ */
+const HIDDEN_BY_DEFAULT: Record<Tab, Record<string, boolean>> = {
+  overtime: { description: false },
+  standby: { description: false },
+  leave: { reason: false },
+};
 
 export const TLApprovalTabs: React.FC<TLApprovalTabsProps> = ({
   activeTab,
@@ -54,6 +67,7 @@ export const TLApprovalTabs: React.FC<TLApprovalTabsProps> = ({
   onClearSelection,
   getSelectedIds,
   isBulkPending,
+  header,
 }) => (
   <Tabs value={activeTab} onValueChange={(v) => onActiveTabChange(v as Tab)}>
     <TabsList className="grid w-full grid-cols-3">
@@ -67,8 +81,11 @@ export const TLApprovalTabs: React.FC<TLApprovalTabsProps> = ({
     {TABS.map(({ key, label }) => (
       <TabsContent value={key} key={key}>
         <TLApprovalTabPanel
+          header={header}
           type={key}
           label={label.toLowerCase()}
+          storageKey={`table-visibility-tl-approvals-${key}`}
+          defaultColumnVisibility={HIDDEN_BY_DEFAULT[key]}
           data={queries[key].data || []}
           isLoading={queries[key].isLoading}
           error={queries[key].error}

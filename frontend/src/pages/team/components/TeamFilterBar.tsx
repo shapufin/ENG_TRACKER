@@ -1,6 +1,6 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import { SearchField } from "@/components/ui/SearchField";
 import {
   Select,
@@ -114,21 +114,13 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
           />
         </div>
       </FilterToolbar>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-muted-foreground text-xs tracking-wide uppercase">Grouping mode</p>
-        <div className="flex flex-wrap gap-2">
-          {groupOptions.map((option) => (
-            <Button
-              key={option.value}
-              size="sm"
-              className="min-h-11"
-              variant={memberGroupMode === option.value ? "default" : "outline"}
-              onClick={() => onMemberGroupModeChange(option.value)}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </div>
+      <div className="border-line-subtle border-t pt-3">
+        <FilterChipRow<"none" | "team" | "italian_tl">
+          label="Grouping"
+          options={groupOptions}
+          selected={[memberGroupMode]}
+          onToggle={onMemberGroupModeChange}
+        />
       </div>
     </GlassCard>
   );

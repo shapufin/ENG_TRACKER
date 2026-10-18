@@ -162,7 +162,7 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
         </div>
         <div className="space-y-2">
           <Label>Clients (optional — applied to all entries)</Label>
-          <div className="max-h-32 space-y-2 overflow-y-auto rounded-md border p-2">
+          <div className="no-scrollbar max-h-32 space-y-2 overflow-y-auto rounded-xl border p-2.5">
             {clients?.length ? (
               clients.map((c) => (
                 <div key={c.id} className="flex items-center gap-2">

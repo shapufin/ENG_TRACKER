@@ -68,9 +68,17 @@ describe("UsersPageFilters layout", () => {
     expect(screen.getAllByText("Role")).toHaveLength(1);
   });
 
-  it("keeps Team out of the filter bar (it lives in the table toolbar)", () => {
-    renderWithFacets();
+  it("renders the inline Team filter chip row and toggles team selection", () => {
+    const state = makeState({
+      techFacets: [{ id: 1, name: "Infra", code: "INF", count: 4, levels: [], no_level_count: 0 }],
+      noTechCount: 2,
+    });
+    render(
+      <UsersPageFilters state={state as never} teams={[{ id: 7, name: "Alpha Team" }] as never} />
+    );
     expect(screen.getByRole("group", { name: "Tech" })).toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: "Team" })).toBeNull();
+    expect(screen.getByRole("group", { name: "Team" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Alpha Team" }));
+    expect(state.setTeamIds).toHaveBeenCalledWith([7]);
   });
 });

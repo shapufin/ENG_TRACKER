@@ -23,6 +23,8 @@ interface LeaveRequestsTableProps {
   onReject: (id: number, reason: string) => void;
   onDelete?: (id: number) => void;
   canDelete?: boolean;
+  /** Header strip rendered above the table inside the same GlassCard (two-surface rule). */
+  header?: React.ReactNode;
 }
 
 const LeaveRequestRowActions = ({
@@ -133,6 +135,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
   onReject,
   onDelete,
   canDelete = false,
+  header,
 }) => {
   const columns = useMemo<AppColumnDef<LeaveRequest>[]>(
     () => [
@@ -140,12 +143,14 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         id: "user_name",
         accessorKey: "user_name",
         header: "User",
+        size: 150,
         cell: ({ row }) => <UserCell name={row.original.user_name} />,
       },
       {
         id: "type",
         accessorKey: "type",
         header: "Type",
+        size: 104,
         cell: ({ row }) => (
           <Badge variant={row.original.request_type === "vacation" ? "default" : "secondary"}>
             {row.original.request_type === "vacation" ? (
@@ -161,6 +166,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         id: "dates",
         accessorKey: "dates",
         header: "Period",
+        size: 150,
         cell: ({ row }) => {
           const start = formatDateDDMMYYYY(row.original.start_date);
           const end = formatDateDDMMYYYY(row.original.end_date);
@@ -185,6 +191,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         id: "days",
         accessorKey: "days",
         header: "Days",
+        size: 86,
         cell: ({ row }) => (
           <span>
             {row.original.days_requested}{" "}
@@ -196,18 +203,23 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         id: "user_leave_balance",
         accessorKey: "user_leave_balance",
         header: "Balance Left",
+        size: 128,
         cell: ({ row }) => <LeaveBalanceBadge balance={row.original.user_leave_balance} />,
       },
       {
         id: "reason",
         accessorKey: "reason",
         header: "Reason",
+        // Free-text column: the one flexible width, truncated with a tooltip.
+        // Hidden by default (see defaultColumnVisibility) so the table fits 1440px.
+        size: 130,
         cell: ({ row }) => <DescriptionColumn value={row.original.reason} />,
       },
       {
         id: "status",
         accessorKey: "status",
         header: "Status",
+        size: 127,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         cell: ({ row }) => <StatusBadge variant={row.original.status as any} />,
       },
@@ -215,6 +227,8 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         id: "actions",
         meta: { actionsDisplay: "column" },
         header: "Actions",
+        // Sized to the widest row (Approve + Reject + delete icon).
+        size: 210,
         cell: ({ row }) => (
           <LeaveRequestRowActions
             id={row.original.id}
@@ -231,11 +245,16 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
 
   return (
     <GlassCard className="p-4">
+      {header && <div className="border-line-subtle mb-4 border-b pb-4">{header}</div>}
       <DataTable
         data={requests}
         columns={columns}
         enableColumnVisibility
         storageKey="table-visibility-leave-requests"
+        // 8 columns do not fit a 1440px admin viewport at readable widths; the
+        // free-text Reason column is hidden by default and stays one click away
+        // in the Columns menu (never dropped).
+        defaultColumnVisibility={{ reason: false }}
         getRowId={(row) => row.id.toString()}
       />
     </GlassCard>

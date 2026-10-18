@@ -21,7 +21,7 @@ export const BulkDrawerHeader: React.FC<BulkDrawerHeaderProps> = ({
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-3">
         <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-accent-violet to-primary font-mono text-sm font-bold text-primary-foreground shadow-lg shadow-accent-violet/25"
+          className="from-accent-violet to-primary text-primary-foreground shadow-accent-violet/25 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br font-mono text-sm font-bold shadow-lg"
           aria-label={`${count} selected`}
         >
           <span aria-hidden="true">
@@ -30,7 +30,7 @@ export const BulkDrawerHeader: React.FC<BulkDrawerHeaderProps> = ({
         </div>
         <div className="min-w-0">
           <DialogTitle className="text-lg">{title}</DialogTitle>
-          <p className="truncate text-sm text-muted-foreground" title={subtitle}>
+          <p className="text-muted-foreground truncate text-sm" title={subtitle}>
             {subtitle}
           </p>
         </div>
@@ -39,7 +39,7 @@ export const BulkDrawerHeader: React.FC<BulkDrawerHeaderProps> = ({
         variant="outline"
         size="sm"
         onClick={onClearAndClose}
-        className="w-full shrink-0 sm:w-auto"
+        className="min-h-11 w-full shrink-0 sm:w-auto"
       >
         <X className="mr-1 h-4 w-4" /> Clear & Close
       </Button>

@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/layout/PageShell";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { StatsCards } from "@/components/admin/StatsCards";
 import { FilterBar } from "./FilterBar";
@@ -119,21 +118,20 @@ export const HoursLogsPage = <T extends HoursLog>({
         rejected={stats.rejected}
       />
 
-      <GlassCard className="p-4">
-        <FilterBar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          filterStatus={filterStatus}
-          onStatusChange={setFilterStatus}
-          dateFrom={dateFrom}
-          onDateFromChange={setDateFrom}
-          dateTo={dateTo}
-          onDateToChange={setDateTo}
-          statusCounts={stats}
-        />
-      </GlassCard>
-
       <HoursLogsTable
+        header={
+          <FilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            filterStatus={filterStatus}
+            onStatusChange={setFilterStatus}
+            dateFrom={dateFrom}
+            onDateFromChange={setDateFrom}
+            dateTo={dateTo}
+            onDateToChange={setDateTo}
+            statusCounts={stats}
+          />
+        }
         logs={filteredLogs}
         extraColumns={extraColumns}
         onApprove={onApprove}

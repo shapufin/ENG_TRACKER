@@ -1,7 +1,6 @@
 import React from "react";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { Button } from "@/components/ui/button";
-import { CheckSquare, Trash2 } from "lucide-react";
+import { Check, Trash2, X } from "lucide-react";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 interface TeamBulkOperationsPanelProps {
   selectedCount: number;
@@ -25,37 +24,37 @@ export const TeamBulkOperationsPanel: React.FC<TeamBulkOperationsPanelProps> = (
   isApproving = false,
   isRejecting = false,
   isDeleting = false,
-}) => {
-  return (
-    <GlassCard className="border-l-primary mb-4 border-l-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary/10 flex items-center gap-2 rounded-md px-3 py-1.5">
-            <CheckSquare className="text-primary h-4 w-4" />
-            <span className="text-foreground text-sm font-medium">{selectedCount}</span>
-          </div>
-          <span className="text-muted-foreground text-sm">selected</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {canManage && (
-            <>
-              <Button size="sm" variant="outline" onClick={onApprove} disabled={isApproving}>
-                Approve
-              </Button>
-              <Button size="sm" variant="outline" onClick={onReject} disabled={isRejecting}>
-                Reject
-              </Button>
-            </>
-          )}
-          <Button size="sm" variant="destructive" onClick={onDelete} disabled={isDeleting}>
-            <Trash2 className="mr-1 h-3.5 w-3.5" />
-            Delete
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onClear}>
-            Clear
-          </Button>
-        </div>
-      </div>
-    </GlassCard>
-  );
-};
+}) => (
+  <BulkActionBar
+    selectedCount={selectedCount}
+    entityName="items"
+    onClear={onClear}
+    actions={[
+      ...(canManage
+        ? [
+            {
+              label: "Approve",
+              icon: Check,
+              variant: "default" as const,
+              onClick: onApprove,
+              disabled: isApproving,
+            },
+            {
+              label: "Reject",
+              icon: X,
+              variant: "outline" as const,
+              onClick: onReject,
+              disabled: isRejecting,
+            },
+          ]
+        : []),
+      {
+        label: "Delete",
+        icon: Trash2,
+        variant: "destructive" as const,
+        onClick: onDelete,
+        disabled: isDeleting,
+      },
+    ]}
+  />
+);

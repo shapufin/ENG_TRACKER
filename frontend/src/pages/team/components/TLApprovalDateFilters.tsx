@@ -1,5 +1,4 @@
 import React from "react";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 
 interface TLApprovalDateFiltersProps {
@@ -16,16 +15,14 @@ export const TLApprovalDateFilters: React.FC<TLApprovalDateFiltersProps> = ({
   onDateToChange,
 }) => {
   return (
-    <GlassCard delay={0.15} className="p-4">
-      <DateRangePicker
-        from={dateFrom}
-        to={dateTo}
-        onChange={({ from, to }) => {
-          onDateFromChange(from);
-          onDateToChange(to);
-        }}
-        placeholder="Filter by date"
-      />
-    </GlassCard>
+    <DateRangePicker
+      from={dateFrom}
+      to={dateTo}
+      onChange={({ from, to }) => {
+        onDateFromChange(from);
+        onDateToChange(to);
+      }}
+      placeholder="Filter by date"
+    />
   );
 };

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -77,7 +78,7 @@ export const TeamExportDialog: React.FC<TeamExportDialogProps> = ({ open, onOpen
             Exports records for your own team{"'"}s members only, as an Excel file.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-2">
+        <DialogBody>
           <div className="space-y-1.5">
             <Label htmlFor="team-export-type">Records</Label>
             <Select value={exportType} onValueChange={(v) => setExportType(v as ExportType)}>
@@ -139,7 +140,7 @@ export const TeamExportDialog: React.FC<TeamExportDialogProps> = ({ open, onOpen
               ariaLabel="Export date range"
             />
           </div>
-        </div>
+        </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel

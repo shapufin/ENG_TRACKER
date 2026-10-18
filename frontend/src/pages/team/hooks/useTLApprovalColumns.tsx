@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { UserCell } from "@/components/admin/UserCell";
 import { ApprovalActionsWithView } from "@/components/admin/ApprovalActionsWithView";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { leaveRequestBaseColumns } from "@/pages/leave_management/hooks/leaveColumnsBase";
@@ -22,17 +23,33 @@ export const useTLApprovalColumns = ({
 }: UseTLApprovalColumnsOptions) => {
   const overtimeColumns: AppColumnDef<OvertimeLog>[] = useMemo(
     () => [
-      { accessorKey: "user_name", header: "User" },
-      { accessorKey: "client_name", header: "Client" },
+      {
+        accessorKey: "user_name",
+        header: "User",
+        size: 150,
+        cell: ({ row }) => <UserCell name={row.original.user_name} />,
+      },
+      { accessorKey: "client_name", header: "Client", size: 110 },
       {
         accessorKey: "date",
         header: "Date",
+        size: 108,
         cell: (info) => formatDateDDMMYYYY(info.getValue() as string),
       },
-      { accessorKey: "hours", header: "Hours" },
+      {
+        accessorKey: "hours",
+        header: "Hours",
+        size: 87,
+        cell: ({ row }) => (
+          <Badge variant="secondary" className="rounded-full font-mono text-xs">
+            {row.original.hours}h
+          </Badge>
+        ),
+      },
       {
         id: "payroll_period",
         header: "Payroll",
+        size: 130,
         cell: ({ row }) =>
           row.original.is_carried_over ? (
             <Badge
@@ -45,10 +62,17 @@ export const useTLApprovalColumns = ({
             <span className="text-muted-foreground">Same month</span>
           ),
       },
-      { accessorKey: "description", header: "Description" },
+      {
+        accessorKey: "description",
+        header: "Description",
+        // Free-text column: the flexible width, truncated with a tooltip. Hidden
+        // by default (see TLApprovalTabPanel) so 8 columns fit 1440px.
+        size: 120,
+      },
       {
         accessorKey: "status",
         header: "Status",
+        size: 122,
         cell: (info) => (
           <StatusBadge variant={info.getValue() as "pending" | "approved" | "rejected"} />
         ),
@@ -57,6 +81,8 @@ export const useTLApprovalColumns = ({
         id: "actions",
         meta: { actionsDisplay: "column" },
         header: "Actions",
+        // Sized to the widest row (View + Approve + Reject).
+        size: 259,
         cell: (info: { row: { original: OvertimeLog } }) => {
           const row = info.row.original;
           return (
@@ -76,16 +102,32 @@ export const useTLApprovalColumns = ({
 
   const standbyColumns: AppColumnDef<StandbyLog>[] = useMemo(
     () => [
-      { accessorKey: "user_name", header: "User" },
+      {
+        accessorKey: "user_name",
+        header: "User",
+        size: 150,
+        cell: ({ row }) => <UserCell name={row.original.user_name} />,
+      },
       {
         accessorKey: "date",
         header: "Date",
+        size: 108,
         cell: (info) => formatDateDDMMYYYY(info.getValue() as string),
       },
-      { accessorKey: "hours", header: "Hours" },
+      {
+        accessorKey: "hours",
+        header: "Hours",
+        size: 87,
+        cell: ({ row }) => (
+          <Badge variant="secondary" className="rounded-full font-mono text-xs">
+            {row.original.hours}h
+          </Badge>
+        ),
+      },
       {
         id: "payroll_period",
         header: "Payroll",
+        size: 130,
         cell: ({ row }) =>
           row.original.is_carried_over ? (
             <Badge
@@ -98,10 +140,15 @@ export const useTLApprovalColumns = ({
             <span className="text-muted-foreground">Same month</span>
           ),
       },
-      { accessorKey: "description", header: "Description" },
+      {
+        accessorKey: "description",
+        header: "Description",
+        size: 120,
+      },
       {
         accessorKey: "status",
         header: "Status",
+        size: 122,
         cell: (info) => (
           <StatusBadge variant={info.getValue() as "pending" | "approved" | "rejected"} />
         ),
@@ -110,6 +157,7 @@ export const useTLApprovalColumns = ({
         id: "actions",
         meta: { actionsDisplay: "column" },
         header: "Actions",
+        size: 259,
         cell: (info: { row: { original: StandbyLog } }) => {
           const row = info.row.original;
           return (
@@ -130,11 +178,12 @@ export const useTLApprovalColumns = ({
   const leaveColumns: AppColumnDef<LeaveRequest>[] = useMemo(
     () => [
       ...leaveRequestBaseColumns<LeaveRequest>(),
-      { accessorKey: "reason", header: "Reason" },
+      { accessorKey: "reason", header: "Reason", size: 120 },
       {
         id: "actions",
         meta: { actionsDisplay: "column" },
         header: "Actions",
+        size: 259,
         cell: (info: { row: { original: LeaveRequest } }) => {
           const row = info.row.original;
           return (

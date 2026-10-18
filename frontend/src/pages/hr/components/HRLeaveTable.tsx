@@ -1,5 +1,6 @@
 import React from "react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { TABLE_ROW_HOVER_CLASS } from "@/components/ui/tableStyles";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { HRTableShell } from "./HRTableShell";
 
@@ -32,7 +33,7 @@ export const HRLeaveTable: React.FC<HRLeaveTableProps> = ({ leaves }) => (
   >
     {leaves.length > 0 ? (
       leaves.map((v) => (
-        <tr key={v.id} className="transition-colors hover:bg-primary/[0.02]">
+        <tr key={v.id} className={TABLE_ROW_HOVER_CLASS}>
           <td className="px-6 py-4 font-medium">{v.user_full_name || v.user_name || "Unknown"}</td>
           <td className="px-6 py-4">{v.request_type_display || "Vacation"}</td>
           <td className="px-6 py-4">
@@ -46,7 +47,7 @@ export const HRLeaveTable: React.FC<HRLeaveTableProps> = ({ leaves }) => (
       ))
     ) : (
       <tr>
-        <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+        <td colSpan={5} className="text-muted-foreground px-6 py-8 text-center">
           No leave requests found.
         </td>
       </tr>
