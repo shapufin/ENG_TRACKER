@@ -58,22 +58,6 @@ class AuditLogPlugin(BasePlugin):
                 "type": "integer",
                 "default": 365,
                 "description": "How many days to retain audit logs"
-            },
-            "log_level": {
-                "type": "string",
-                "enum": ["all", "important", "critical"],
-                "default": "all",
-                "description": "What level of actions to log"
-            },
-            "enable_ip_logging": {
-                "type": "boolean",
-                "default": True,
-                "description": "Log user IP addresses"
-            },
-            "enable_user_agent_logging": {
-                "type": "boolean",
-                "default": True,
-                "description": "Log user agent information"
             }
         }
 
