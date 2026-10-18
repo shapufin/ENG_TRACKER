@@ -188,8 +188,14 @@ def period_close(today):
 
 
 def backup_status(now):
-    """Latest site backup. Superuser-only data: callers must gate it."""
-    from plugins.site_backup.models import BackupRecord
+    """Latest site backup. Superuser-only data: callers must gate it.
+
+    ``None`` when the site_backup plugin is not installed.
+    """
+    try:
+        from plugins.site_backup.models import BackupRecord
+    except ImportError:
+        return None
 
     latest = BackupRecord.objects.order_by("-created_at").first()
     count = BackupRecord.objects.count()
