@@ -89,3 +89,5 @@ Derived from the 2026-10-18 `ticket_kpi` audit. Each line is a defect class that
 7. **Signal receivers and the code that decides the same thing must agree** (e.g. delete-signal "other batch exists" must filter `is_overridden=False` like `compute_monthly_kpi`).
 8. **Signals connect in `plugin.py ready()` and disconnect in `disable()`**, never in `apps.py`.
 9. **Core tests do not import plugin models.** Put the plugin's own checks in the plugin's tests.
+10. **Every plugin API view uses `PluginPermissionMixin`** (it enforces the runtime-disable refusal and the plugin grants). `apps/plugins/test_plugin_view_guard.py` fails on a view without it; an exemption needs a one-line reason in its `EXEMPT` set.
+11. **A plugin with its own bulk scope query must prove parity with core.** `engagement` keeps a fixed-query-count `_managed_map`; `plugins/engagement/test_core_scope_parity.py` pins it to `get_team_member_ids()` (intended differences: leader excluded, inactive users dropped).
