@@ -34,12 +34,23 @@ GENERATE_DRAFT_PAYROLL_OPTION = ImportOption(
 )
 
 
+def payroll_plugin_disabled() -> bool:
+    """True when an admin switched Payroll off (its Plugin row says so).
+
+    A disabled plugin is still installed, so ``ImportError`` alone does not
+    stop an importer from writing wages or generating draft runs.
+    """
+    from apps.plugins.models import Plugin
+
+    return Plugin.objects.filter(name="payroll", is_enabled=False).exists()
+
+
 def payroll_plugin_available() -> bool:
     try:
         import plugins.payroll.models  # noqa: F401
     except ImportError:
         return False
-    return True
+    return not payroll_plugin_disabled()
 
 
 def parse_time_string(value: Any, field_name: str):

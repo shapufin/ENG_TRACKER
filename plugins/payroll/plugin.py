@@ -7,8 +7,12 @@ an authoritative work calendar, and monthly payroll runs with
 draft → finalize workflow. Reuses existing users, approved overtime,
 approved standby, and core team data.
 """
+import logging
+
 from core.plugins.base import BasePlugin
 from .urls import urlpatterns
+
+logger = logging.getLogger(__name__)
 
 
 class PayrollPlugin(BasePlugin):
@@ -141,7 +145,9 @@ class PayrollPlugin(BasePlugin):
             from apps.dashboard.services.holiday_sync import sync_holidays_between_hr_and_payroll
             sync_holidays_between_hr_and_payroll()
         except Exception:
-            pass
+            # Must not block startup or re-enable, but never fail silently:
+            # a broken sync leaves HR and Payroll holidays out of step.
+            logger.warning('Payroll holiday sync failed during ready()', exc_info=True)
 
     def disable(self):
         """Cleanup when plugin is disabled. Phase 1: no signals."""

@@ -256,7 +256,50 @@ def _snapshot_config(config: PayrollConfiguration) -> dict:
         'missing_timestamp_fallback_category': config.missing_timestamp_fallback_category,
         'rules_source_label': config.rules_source_label,
         'rules_validation_status': config.rules_validation_status,
+        'organization_name': config.organization_name,
+        'payslip_footer': config.payslip_footer,
     }
+
+
+# Snapshot keys that are not calculation inputs: the finalize gate flag and
+# payslip branding may change after a draft was generated without staling it.
+_NON_CALCULATION_SNAPSHOT_KEYS = frozenset({
+    'require_tl_closed_before_finalize', 'organization_name', 'payslip_footer',
+})
+
+
+def _ensure_draft_inputs_current(run: PayrollRun, config: PayrollConfiguration) -> None:
+    """Refuse to finalize a draft whose wage or calculation config changed
+    after it was generated (finalizing would freeze outdated numbers)."""
+    stale_message = (
+        'Wage or payroll configuration changed since this draft was generated. '
+        'Regenerate the payroll run before finalizing.'
+    )
+    snapshot = run.configuration_snapshot or {}
+    current = _snapshot_config(config)
+    for key, value in current.items():
+        if key in _NON_CALCULATION_SNAPSHOT_KEYS or key not in snapshot:
+            continue
+        if snapshot[key] != value:
+            raise ValidationError(stale_message)
+    # One query for every line's applicable wage (same window as
+    # ``WageAssignment.resolve_for_month``), not one query per line.
+    month_start, month_end = _get_month_range(run.year, run.month)
+    lines = list(run.lines.only('user_id', 'wage_assignment_id', 'gross_monthly_wage'))
+    applicable: dict[int, list] = {}
+    for wage in WageAssignment.objects.filter(
+        user_id__in=[line.user_id for line in lines],
+        is_active=True,
+        effective_from__lte=month_end,
+    ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=month_start)):
+        applicable.setdefault(wage.user_id, []).append(wage)
+    for line in lines:
+        wages = applicable.get(line.user_id, [])
+        if len(wages) != 1:
+            raise ValidationError(stale_message)
+        wage = wages[0]
+        if wage.pk != line.wage_assignment_id or wage.gross_monthly_wage != line.gross_monthly_wage:
+            raise ValidationError(stale_message)
 
 
 # ---------------------------------------------------------------------------
@@ -464,7 +507,10 @@ def generate_draft_run(run: PayrollRun, users, replace_user_ids=None) -> list[Pa
 
         # Update run totals
         _update_run_totals(locked_run)
-        locked_run.configuration_snapshot = _snapshot_config(config)
+        if replace_user_ids is None or not locked_run.configuration_snapshot:
+            # A partial regenerate leaves other lines on the old inputs, so it
+            # must not relabel the whole run with the new configuration.
+            locked_run.configuration_snapshot = _snapshot_config(config)
         locked_run.save()
         run.totals = locked_run.totals
         run.configuration_snapshot = locked_run.configuration_snapshot
@@ -597,6 +643,7 @@ def finalize_run(run: PayrollRun, user) -> PayrollRun:
             raise ValidationError('Run was finalized by another process.')
 
         config = PayrollConfiguration.get_singleton()
+        _ensure_draft_inputs_current(locked_run, config)
         if config.require_tl_closed_before_finalize:
             closure_status = get_period_closure_status(locked_run)
             if not closure_status['all_closed']:

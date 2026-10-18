@@ -56,6 +56,10 @@ class PayrollAuthority:
             from plugins.payroll.services.wage_access import can_write_wages
         except ImportError:
             return f"Importing {self.display_name} requires the Payroll plugin."
+        from .payroll_draft import payroll_plugin_disabled
+
+        if payroll_plugin_disabled():
+            return f"Importing {self.display_name} requires the Payroll plugin to be enabled."
         if can_write_wages(user):
             return None
         return f"Importing {self.display_name} requires HR or administrator access."
