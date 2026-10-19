@@ -40,7 +40,8 @@ def _count_for(queryset):
 
 
 def _wage_annotations(month_start, month_end):
-    """Current-month wage annotations, or None when payroll is not importable.
+    """Current-month wage annotations, or None when payroll is not importable
+    or an admin has disabled it (a disabled plugin must not expose its data).
 
     Mirrors `WageAssignment.resolve_for_month` (plugins/payroll/models.py:227-263):
     active assignments overlapping the month. Exactly one gives `ok`; none or
@@ -49,6 +50,10 @@ def _wage_annotations(month_start, month_end):
     try:
         from plugins.payroll.models import WageAssignment
     except ImportError:
+        return None
+
+    from apps.plugins.models import Plugin
+    if Plugin.objects.filter(name='payroll', is_enabled=False).exists():
         return None
 
     applicable = WageAssignment.objects.filter(
