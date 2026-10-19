@@ -144,6 +144,18 @@ class TeamMemberWageTests(TeamMembersBase):
         self.assertEqual(wage['status'], 'unavailable')
         self.assertIsNone(wage['gross_monthly'])
 
+    def test_wage_is_unavailable_when_payroll_is_disabled(self):
+        from apps.plugins.models import Plugin
+
+        self._wage(self.member, '1234.00', self.today.replace(day=1) - timedelta(days=40))
+        Plugin.objects.update_or_create(
+            name='payroll',
+            defaults={'verbose_name': 'Payroll', 'version': '1', 'is_enabled': False},
+        )
+        wage = self._member_row(self._get(self.tl))['wage']
+        self.assertEqual(wage['status'], 'unavailable')
+        self.assertIsNone(wage['gross_monthly'])
+
 
 class TeamMemberDetailTests(TeamMembersBase):
     def test_leave_epr_and_governance_are_summarised_per_member(self):
@@ -240,7 +252,8 @@ class TeamMemberQueryBudgetTests(TeamMembersBase):
         self.assertLessEqual(len(owned), 10)
         self.assertEqual(len(owned), 2)
 
-    def test_endpoint_total_is_twelve(self):
-        # 12 = 1 plugin-enabled check + 2 team-owned + 5 permission/role lookups + 4 team-scope lookups
-        # shared with the other scorecard endpoints.
-        self.assertEqual(len(self._queries()), 12)
+    def test_endpoint_total_is_thirteen(self):
+        # 13 = 1 plugin-enabled check + 1 payroll-enabled check (wages) + 2 team-owned
+        # + 5 permission/role lookups + 4 team-scope lookups shared with the other
+        # scorecard endpoints. Constant per request, not per member.
+        self.assertEqual(len(self._queries()), 13)
