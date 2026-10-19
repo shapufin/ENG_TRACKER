@@ -25,7 +25,7 @@ class PurgeAnalyticsDataTests(TestCase):
         )
 
     def test_purges_only_data_older_than_the_configured_retention(self):
-        AnalyticsConfiguration.objects.create(data_retention_days=30)
+        AnalyticsConfiguration.objects.update_or_create(pk=1, defaults={'data_retention_days': 30})
         self._data(10)
         self._data(45)
         call_command('purge_analytics_data', stdout=StringIO())
@@ -40,7 +40,7 @@ class PurgeAnalyticsDataTests(TestCase):
         self.assertEqual(list(AnalyticsMetric.objects.values_list('label', flat=True)), ['200d'])
 
     def test_days_option_overrides_the_configuration(self):
-        AnalyticsConfiguration.objects.create(data_retention_days=365)
+        AnalyticsConfiguration.objects.update_or_create(pk=1, defaults={'data_retention_days': 365})
         self._data(10)
         call_command('purge_analytics_data', '--days', '5', stdout=StringIO())
         self.assertEqual(AnalyticsSnapshot.objects.count(), 0)
