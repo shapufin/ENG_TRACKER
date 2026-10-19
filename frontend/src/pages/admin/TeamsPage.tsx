@@ -92,9 +92,7 @@ export const TeamsPage: React.FC = () => {
           />
         }
         data={visibleData}
-        emptyMessage={
-          hasActiveFilters ? "No teams match the current filters." : "No teams yet."
-        }
+        emptyMessage={hasActiveFilters ? "No teams match the current filters." : "No teams yet."}
         expanded={expanded}
         onToggleExpand={toggleExpand}
         onEdit={openEdit}

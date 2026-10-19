@@ -22,7 +22,14 @@ const TL = { id: 9, username: "x", first_name: "X", last_name: "Y" };
 const TEAMS = [
   team({ id: 1, name: "Alpha", code: "A", italian_tl: TL, albanian_tl: TL, calendar_group: "g1" }),
   team({ id: 2, name: "Beta", code: "B", italian_tl: TL, albanian_tl: null, calendar_group: "" }),
-  team({ id: 3, name: "Gamma", code: "C", italian_tl: null, albanian_tl: null, calendar_group: "g1" }),
+  team({
+    id: 3,
+    name: "Gamma",
+    code: "C",
+    italian_tl: null,
+    albanian_tl: null,
+    calendar_group: "g1",
+  }),
 ];
 
 describe("useTeamsPageUI filters", () => {

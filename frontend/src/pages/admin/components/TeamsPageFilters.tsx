@@ -36,8 +36,18 @@ export const TeamsPageFilters: React.FC<TeamsPageFiltersProps> = ({
         options={[
           { value: "all", label: "All teams", count: counts.all },
           { value: "complete", label: "Both TLs", count: counts.complete },
-          { value: "missing-it", label: "Missing IT TL", count: counts.missingIt, emphasis: "missing" },
-          { value: "missing-al", label: "Missing AL TL", count: counts.missingAl, emphasis: "missing" },
+          {
+            value: "missing-it",
+            label: "Missing IT TL",
+            count: counts.missingIt,
+            emphasis: "missing",
+          },
+          {
+            value: "missing-al",
+            label: "Missing AL TL",
+            count: counts.missingAl,
+            emphasis: "missing",
+          },
         ]}
         selected={[leaderFilter]}
         onToggle={onLeaderFilterChange}
