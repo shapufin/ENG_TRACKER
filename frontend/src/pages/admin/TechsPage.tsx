@@ -23,6 +23,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TechMembersDialog } from "@/components/admin/TechMembersDialog";
 import { TechLevelEditor } from "@/components/admin/TechLevelEditor";
+import { TechStatsCards } from "./components/TechStatsCards";
 import { userService } from "@/services/userService";
 import type { Tech } from "@/types";
 import { toast } from "sonner";
@@ -92,6 +93,7 @@ export const TechsPage: React.FC = () => {
       title="Tech"
       actions={<PluginImportButton targetKey="techs" invalidateKeys={[["admin", "techs"]]} />}
     >
+      <TechStatsCards techs={data?.results ?? []} />
       <GlassCard className="p-4">
         <h2 className="mb-3 font-semibold">{editing ? `Edit ${editing.name}` : "Add Tech"}</h2>
         <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto] sm:items-end">
@@ -99,6 +101,7 @@ export const TechsPage: React.FC = () => {
             <Label htmlFor="tech-name">Name</Label>
             <Input
               id="tech-name"
+              placeholder="e.g. Infrastructure"
               value={form.name}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
             />
@@ -107,6 +110,7 @@ export const TechsPage: React.FC = () => {
             <Label htmlFor="tech-code">Code</Label>
             <Input
               id="tech-code"
+              placeholder="e.g. INFRA"
               value={form.code}
               onChange={(event) => setForm({ ...form, code: event.target.value })}
             />
@@ -178,6 +182,11 @@ export const TechsPage: React.FC = () => {
                         </Badge>
                       )}
                     </div>
+                    {tech.description && (
+                      <p className="text-muted-foreground max-w-xl truncate text-xs">
+                        {tech.description}
+                      </p>
+                    )}
                     <p className="text-muted-foreground text-xs">
                       {tech.code}
                       {(tech.levels?.length ?? 0) > 0 && (
@@ -188,36 +197,45 @@ export const TechsPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <RowActions
-                  actions={[
-                    {
-                      label: tech.is_active ? `Deactivate ${tech.name}` : `Activate ${tech.name}`,
-                      icon: Power,
-                      tone: tech.is_active ? "success" : "default",
-                      disabled: toggleActive.isPending,
-                      onClick: () => toggleActive.mutate(tech),
-                    },
-                    {
-                      label: `Manage users in ${tech.name}`,
-                      icon: Users,
-                      onClick: () => setMembersTarget(tech),
-                    },
-                    {
-                      label: `Edit ${tech.name}`,
-                      icon: Pencil,
-                      onClick: () => {
-                        setEditing(tech);
-                        setForm({ name: tech.name, code: tech.code });
+                <div className="flex items-center gap-3">
+                  <span
+                    aria-label={`${tech.members_count ?? 0} engineer${tech.members_count === 1 ? "" : "s"}`}
+                    className="text-muted-foreground inline-flex items-center gap-1 text-xs tabular-nums"
+                  >
+                    <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                    {tech.members_count ?? 0}
+                  </span>
+                  <RowActions
+                    actions={[
+                      {
+                        label: tech.is_active ? `Deactivate ${tech.name}` : `Activate ${tech.name}`,
+                        icon: Power,
+                        tone: tech.is_active ? "success" : "default",
+                        disabled: toggleActive.isPending,
+                        onClick: () => toggleActive.mutate(tech),
                       },
-                    },
-                    {
-                      label: `Delete ${tech.name}`,
-                      icon: Trash2,
-                      tone: "danger",
-                      onClick: () => setDeleteTarget(tech),
-                    },
-                  ]}
-                />
+                      {
+                        label: `Manage users in ${tech.name}`,
+                        icon: Users,
+                        onClick: () => setMembersTarget(tech),
+                      },
+                      {
+                        label: `Edit ${tech.name}`,
+                        icon: Pencil,
+                        onClick: () => {
+                          setEditing(tech);
+                          setForm({ name: tech.name, code: tech.code });
+                        },
+                      },
+                      {
+                        label: `Delete ${tech.name}`,
+                        icon: Trash2,
+                        tone: "danger",
+                        onClick: () => setDeleteTarget(tech),
+                      },
+                    ]}
+                  />
+                </div>
               </div>
               {expandedId === tech.id && <TechLevelEditor tech={tech} />}
             </div>
