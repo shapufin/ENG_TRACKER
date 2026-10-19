@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Download, Trash2, ShieldAlert, DatabaseBackup } from "lucide-react";
+import { Download, Trash2, ShieldAlert, DatabaseBackup, Upload } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import {
@@ -219,6 +219,7 @@ const RestoreTab: React.FC = () => {
   });
 
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedBackupId, setSelectedBackupId] = useState<number | "">("");
   const [approvedModels, setApprovedModels] = useState<Set<string>>(new Set());
   const [deleteMissingModels, setDeleteMissingModels] = useState<Set<string>>(new Set());
@@ -309,16 +310,34 @@ const RestoreTab: React.FC = () => {
               Upload an archive
             </label>
             <input
+              ref={fileInputRef}
               id="restore-file"
               type="file"
               accept=".zip"
+              className="sr-only"
               onChange={(e) => {
                 setFile(e.target.files?.[0] ?? null);
                 setSelectedBackupId("");
                 setCommitResult(null);
               }}
-              className="block text-sm"
             />
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="control"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
+                Choose archive
+              </Button>
+              <span
+                className="text-muted-foreground max-w-[16rem] truncate text-xs"
+                title={file?.name}
+              >
+                {file ? file.name : "No file chosen"}
+              </span>
+            </div>
           </div>
           <span className="text-muted-foreground text-xs">or</span>
           <div>

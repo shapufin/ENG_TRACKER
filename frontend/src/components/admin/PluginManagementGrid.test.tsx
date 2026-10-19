@@ -151,6 +151,15 @@ describe("PluginManagementGrid", () => {
     expect(card.querySelector('span[aria-hidden="true"] svg.lucide-puzzle')).toBeTruthy();
   });
 
+  it("pins the footer to the card bottom so footers align across a row", () => {
+    renderGrid([plugin()]);
+    const heading = screen.getByRole("heading", { name: "Analytics Plugin" });
+    const card = heading.closest("div.relative") as HTMLElement;
+    expect(card).toHaveClass("flex", "flex-col");
+    const body = screen.getByText("Dashboard analytics and metrics.").parentElement as HTMLElement;
+    expect(body).toHaveClass("flex-1");
+  });
+
   it("lays the cards out with an auto-fit grid so no column is left empty", () => {
     renderGrid([plugin()]);
     const heading = screen.getByRole("heading", { name: "Analytics Plugin" });
