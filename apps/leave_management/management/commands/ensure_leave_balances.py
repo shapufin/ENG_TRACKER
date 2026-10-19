@@ -1,9 +1,9 @@
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 from django.db import transaction
 
 from apps.users.models import UserProfile
 from apps.leave_management.models import LeaveBalance, GlobalSettings
+from core.utils.timezone_local import business_today
 
 
 class Command(BaseCommand):
@@ -18,7 +18,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        current_date = timezone.now().date()
+        current_date = business_today()
         target_year = options.get("year") or current_date.year
         settings_obj, _ = GlobalSettings.objects.get_or_create(pk=1)
 

@@ -15,13 +15,13 @@ from datetime import date
 from decimal import Decimal
 
 from django.db import transaction
-from django.utils import timezone
 
 from apps.leave_management.models.core import (
     GlobalSettings,
     LeaveBalance,
     count_leave_days,
 )
+from core.utils.timezone_local import business_today
 
 ZERO = Decimal('0')
 
@@ -92,7 +92,7 @@ def apply_year_end_carry_over(today=None) -> dict:
     over. The marker is set in the same transaction, so a crash leaves the year
     un-applied and the next call retries it.
     """
-    today = today or timezone.localdate()
+    today = today or business_today()
     counts = {'created': 0, 'skipped': 0}
     with transaction.atomic():
         _settings()
@@ -119,7 +119,7 @@ def apply_year_end_carry_over(today=None) -> dict:
 
 def ensure_year_end_rollover():
     """Called before any leave read or write so the first read of a year rolls it over."""
-    apply_year_end_carry_over(timezone.localdate())
+    apply_year_end_carry_over(business_today())
 
 
 def restore_closed_year_days(user_id: int, year: int, days: Decimal, settings_obj=None):

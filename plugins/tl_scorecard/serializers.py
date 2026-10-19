@@ -1,7 +1,6 @@
 import re
 
 
-from django.utils import timezone
 from rest_framework import serializers
 
 from core.mixins.permissions import is_staff_user
@@ -22,6 +21,7 @@ from .models import (
     PromotionFlag,
     ReviewDelivery,
 )
+from core.utils.timezone_local import business_today
 
 
 def _display_name(user):
@@ -567,7 +567,7 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
         # Evidence records something that happened; a future date would also make
         # `next_due_on` future and read as 'on_track' prematurely.
         occurred_on = attrs.get('occurred_on', getattr(self.instance, 'occurred_on', None))
-        if occurred_on is not None and occurred_on > timezone.localdate():
+        if occurred_on is not None and occurred_on > business_today():
             raise serializers.ValidationError(
                 {'occurred_on': 'Evidence cannot be recorded for a future date.'}
             )

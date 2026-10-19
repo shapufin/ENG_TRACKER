@@ -19,6 +19,7 @@ from apps.standby.models import StandbyLog
 from apps.users.models.core import UserTech
 
 from .admin_overview import employees_without_tl
+from core.utils.timezone_local import business_today
 
 User = get_user_model()
 
@@ -142,7 +143,7 @@ def _rejections(today):
 
 def build_admin_people(user, today: date | None = None, now: datetime | None = None) -> dict:
     now = now or timezone.now()
-    today = today or timezone.localdate()
+    today = today or business_today()
     roles = _roles()
     roles["employees_without_tl"] = employees_without_tl()
     return {

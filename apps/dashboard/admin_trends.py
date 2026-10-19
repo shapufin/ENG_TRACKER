@@ -11,7 +11,6 @@ from datetime import date, timedelta
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncMonth
-from django.utils import timezone
 
 from apps.leave_management.models import LeaveRequest
 from apps.leave_management.models.core import count_request_days, global_holiday_dates
@@ -19,6 +18,7 @@ from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from apps.users.models import Team
 from apps.users.models.core import TeamMembership
+from core.utils.timezone_local import business_today
 
 User = get_user_model()
 
@@ -205,7 +205,7 @@ def _who_is_out(today):
 
 def build_admin_trends(user, today: date | None = None, months: int = MONTHS) -> dict:
     """``months`` (3-24) sets the series window; the client/team/who-is-out blocks stay current-month."""
-    today = today or timezone.localdate()
+    today = today or business_today()
     starts = _window(today, months)
     leave = _leave_days(starts)
     return {

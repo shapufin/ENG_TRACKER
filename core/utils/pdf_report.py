@@ -9,8 +9,8 @@ Every value that reaches a Paragraph goes through `xml.sax.saxutils.escape`:
 report cells hold free text (names, reasons, shared summaries), and markup in
 them must print as text, never be parsed.
 """
-from datetime import date
 from xml.sax.saxutils import escape
+from core.utils.timezone_local import business_today
 
 MARGIN_MM = 16
 HEADER_MM = 22
@@ -100,7 +100,7 @@ def new_report(buffer, *, title, subtitle, generated_by, period_label):
 
     page_width, page_height = A4
     margin = MARGIN_MM * mm
-    generated_on = date.today().strftime('%d %b %Y')
+    generated_on = business_today().strftime('%d %b %Y')
     doc = BaseDocTemplate(
         buffer, pagesize=A4,
         leftMargin=margin, rightMargin=margin,

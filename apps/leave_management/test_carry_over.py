@@ -2,7 +2,6 @@
 
 from datetime import date
 from decimal import Decimal
-from unittest import mock
 
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
@@ -10,6 +9,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from apps.leave_management.models import GlobalSettings, LeaveBalance, LeaveRequest
+from core.utils.clock_testing import freeze_business_today
 from core.utils.timezone_local import clear_business_tz_cache
 from apps.leave_management.services.carry_over import (
     apply_year_end_carry_over,
@@ -31,11 +31,10 @@ class CarryOverTestBase(TestCase):
         self.set_today(date(2026, 10, 13))
 
     def set_today(self, day):
-        """Pin the app's notion of 'today' (timezone.localdate) for this test."""
+        """Pin the app's notion of 'today' (business_today) for this test."""
         if self._patcher:
             self._patcher.stop()
-        self._patcher = mock.patch('django.utils.timezone.localdate', return_value=day)
-        self._patcher.start()
+        self._patcher = freeze_business_today(day)
         self.addCleanup(lambda: self._patcher and self._patcher.stop())
 
     def balance(self, year, total=22, used=0, pending=0, user=None, carry=False, expires=None):

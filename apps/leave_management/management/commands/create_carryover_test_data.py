@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from apps.leave_management.models import LeaveBalance, GlobalSettings
 from decimal import Decimal
+from core.utils.timezone_local import business_today
 
 
 class Command(BaseCommand):
@@ -86,7 +87,7 @@ class Command(BaseCommand):
                 is_carry_over=False,
                 defaults={
                     'total_days': Decimal(scenario['current_year_days']),
-                    'accrual_start_date': timezone.now().date()
+                    'accrual_start_date': business_today()
                 }
             )
 

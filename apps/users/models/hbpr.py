@@ -14,9 +14,9 @@ from datetime import date, timedelta
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils import timezone
 
 from core.models.abstract import BaseModel, TrackedFieldsMixin
+from core.utils.timezone_local import business_today
 
 CADENCE_CHOICES = [
     ("weekly", "Weekly"),
@@ -116,7 +116,7 @@ class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
     @property
     def is_current(self) -> bool:
         """Not over yet: ``effective_to`` is the last day in effect, not a switch."""
-        return self.effective_to is None or self.effective_to >= timezone.now().date()
+        return self.effective_to is None or self.effective_to >= business_today()
 
     def next_due_on(self, *, last_meeting_on: date | None) -> date:
         """Next cadence date after the last meeting (or the start date)."""

@@ -1,5 +1,4 @@
 """PIP and promotion records (approve/decide are staff/HR-only)."""
-from datetime import date
 
 from django.db import transaction
 from django.db.models import Q
@@ -24,6 +23,7 @@ from ..serializers import (
 )
 from core.mixins.permissions import is_staff_user
 from core.mixins.viewer_scope import HbprScopedQuerysetMixin
+from core.utils.timezone_local import business_today
 
 
 class PIPRecordViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
@@ -123,7 +123,7 @@ class PIPRecordViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermission
                 return Response({'error': 'Only a PIP awaiting approval can be returned.'}, status=status.HTTP_409_CONFLICT)
             pip.status = 'cancelled'
             pip.status_note = note
-            pip.closed_on = date.today()
+            pip.closed_on = business_today()
             pip.save(update_fields=['status', 'status_note', 'closed_on'])
         return Response(PIPRecordSerializer(pip, context=self.get_serializer_context()).data)
 
@@ -136,7 +136,7 @@ class PIPRecordViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermission
             raise ValidationError({'status_note': 'A reason is required.'})
         pip.status = outcome
         pip.status_note = note
-        pip.closed_on = date.today()
+        pip.closed_on = business_today()
         pip.save(update_fields=['status', 'status_note', 'closed_on'])
         return Response(PIPRecordSerializer(pip, context=self.get_serializer_context()).data)
 
@@ -206,7 +206,7 @@ class PromotionFlagViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermis
         if decided_status not in ('promoted', 'declined'):
             raise ValidationError({'status': 'Must be "promoted" or "declined".'})
         flag.status = decided_status
-        flag.decided_on = date.today()
+        flag.decided_on = business_today()
         flag.decided_by = request.user
         flag.decision_note = (request.data.get('decision_note') or '').strip()
         flag.save(update_fields=['status', 'decided_on', 'decided_by', 'decision_note'])

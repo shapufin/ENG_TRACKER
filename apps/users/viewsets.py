@@ -56,6 +56,7 @@ from core.mixins.permissions import (
     has_team_leader_role,
     is_staff_user,
 )
+from core.utils.timezone_local import business_today
 
 logger = logging.getLogger(__name__)
 
@@ -997,7 +998,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        current_date = timezone.localdate()
+        current_date = business_today()
         start_of_month = current_date.replace(day=1)
         if current_date.month == 12:
             next_month = date(current_date.year + 1, 1, 1)
@@ -1089,9 +1090,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         Get user statistics for admin dashboard.
         Returns counts for total users, Italian TLs, Albanian TLs, users with no TL, and active today.
         """
-        from django.utils import timezone
         
-        current_date = timezone.localdate()
+        current_date = business_today()
         
         # Total users
         total_users = User.objects.count()

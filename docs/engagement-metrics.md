@@ -22,8 +22,11 @@ staff submit.
 
 ## Deadlines (Albania local time, end of day)
 
-Local time is the IANA zone `Europe/Tirane` (the current canonical name for
-Albania; `Europe/Tirana` is no longer in tzdata).
+Local time is the business timezone, `GlobalSettings.business_timezone`
+(Admin > Global Settings), default IANA `Europe/Tirane` (the current canonical
+name for Albania; `Europe/Tirana` is no longer in tzdata). Read it through
+`core.utils.timezone_local.business_tz()`. Months already computed are not
+recalculated when the zone changes.
 
 Working day = Monday to Friday, not a public holiday.
 

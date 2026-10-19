@@ -16,6 +16,7 @@ from .models import (
     PayrollWorkday,
     WageAssignment,
 )
+from core.utils.timezone_local import business_today
 
 
 # ---------------------------------------------------------------------------
@@ -187,7 +188,7 @@ class PayrollRuleSetSerializer(serializers.ModelSerializer):
         annotated = getattr(obj, 'effective_status', None)
         if annotated:
             return annotated
-        today = date.today()
+        today = business_today()
         if not obj.is_active:
             return 'inactive'
         if obj.effective_from > today:

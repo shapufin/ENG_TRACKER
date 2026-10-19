@@ -14,6 +14,7 @@ from rest_framework import status
 
 from .models import LeaveRequest, LeaveBalance, GlobalSettings, count_business_days
 from apps.dashboard.models.calendar import CalendarWorkspace
+from core.utils.clock_testing import freeze_business_today
 from apps.users.models import Team, TeamMembership
 
 
@@ -184,7 +185,7 @@ class LeaveRequestViewSetTests(TestCase):
         self.assertIn('Overlapping', str(response.data))
 
     def test_carry_over_expiry_respects_timezone(self):
-        """Carry-over expiry check must use timezone.localdate() to avoid drift."""
+        """Carry-over expiry check must use business_today() to avoid drift."""
         balance = LeaveBalance.objects.create(
             user=self.user,
             leave_type='vacation',
@@ -195,7 +196,7 @@ class LeaveRequestViewSetTests(TestCase):
             is_carry_over=True,
             expires_at=date(2026, 3, 31)
         )
-        with patch('apps.leave_management.models.core.timezone.localdate', return_value=date(2026, 4, 1)):
+        with patch('apps.leave_management.models.core.business_today', return_value=date(2026, 4, 1)):
             self.assertTrue(balance.is_expired)
 
     def test_hr_user_cannot_create_leave_request(self):
@@ -414,38 +415,53 @@ class LeaveRequestViewSetTests(TestCase):
         response = self.client.get('/api/leave-management/requests/team_logs/', {'workspace_ids': str(workspace.id)})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
 
+    def test_carry_over_expires_at_the_business_midnight_not_utc(self):
+        """22:30 UTC on 31 March is already 1 April in Tirane (UTC+2): expired."""
+        from datetime import datetime, timezone as dt_timezone
+        from unittest import mock
+        from core.utils import timezone_local
+        balance = LeaveBalance.objects.create(
+            user=self.user, leave_type='vacation', year=2025, total_days=10,
+            is_carry_over=True, expires_at=date(2026, 3, 31),
+        )
+        fake = mock.MagicMock(wraps=datetime)
+        fake.now.side_effect = lambda tz=None: datetime(2026, 3, 31, 22, 30, tzinfo=dt_timezone.utc).astimezone(tz)
+        with mock.patch.object(timezone_local, 'datetime', fake):
+            self.assertTrue(balance.is_expired)
+
     def test_carry_over_priority_before_march_31(self):
         """Carry-over is prioritized before March 31 deadline."""
         current_year = timezone.now().year
         carry_over_expiry = date(current_year, 3, 31)
         
         # Mock today to be before March 31
-        with patch('apps.leave_management.viewsets.timezone.localdate', return_value=date(current_year, 1, 15)):
-            carry = LeaveBalance.objects.create(
-                user=self.user,
-                leave_type='vacation',
-                year=current_year - 1,
-                total_days=5,
-                is_carry_over=True,
-                expires_at=carry_over_expiry,
-            )
-            initial_carry_pending = carry.pending_days
-            initial_balance_pending = self.balance.pending_days
+        clock = freeze_business_today(date(current_year, 1, 15))
+        self.addCleanup(clock.stop)
+        carry = LeaveBalance.objects.create(
+            user=self.user,
+            leave_type='vacation',
+            year=current_year - 1,
+            total_days=5,
+            is_carry_over=True,
+            expires_at=carry_over_expiry,
+        )
+        initial_carry_pending = carry.pending_days
+        initial_balance_pending = self.balance.pending_days
 
-            self.client.force_authenticate(user=self.user)
-            data = {
-                'start_date': date(current_year, 1, 20).isoformat(),
-                'end_date': date(current_year, 1, 22).isoformat(),
-                'request_type': 'vacation',
-                'reason': 'Before March 31',
-            }
-            response = self.client.post('/api/leave-management/requests/', data, format='json')
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.client.force_authenticate(user=self.user)
+        data = {
+            'start_date': date(current_year, 1, 20).isoformat(),
+            'end_date': date(current_year, 1, 22).isoformat(),
+            'request_type': 'vacation',
+            'reason': 'Before March 31',
+        }
+        response = self.client.post('/api/leave-management/requests/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
 
-            carry.refresh_from_db()
-            self.balance.refresh_from_db()
-            self.assertGreater(carry.pending_days, initial_carry_pending, "carry-over should be used before March 31")
-            self.assertEqual(self.balance.pending_days, initial_balance_pending, "current year should be untouched")
+        carry.refresh_from_db()
+        self.balance.refresh_from_db()
+        self.assertGreater(carry.pending_days, initial_carry_pending, "carry-over should be used before March 31")
+        self.assertEqual(self.balance.pending_days, initial_balance_pending, "current year should be untouched")
 
     def test_calendar_fetch_honors_page_size(self):
         """Calendar workspace fetches with page_size must return the full set

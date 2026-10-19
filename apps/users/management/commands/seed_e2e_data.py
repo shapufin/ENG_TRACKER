@@ -15,7 +15,6 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
 from datetime import date
 
-from django.utils import timezone
 
 from apps.dashboard.models.calendar import CalendarWorkspace
 from apps.leave_management.models import LeaveBalance
@@ -23,6 +22,7 @@ from apps.overtime.models import Client, OvertimeLog
 from apps.permissions.models import Role
 from apps.permissions.services.role_service import assign_role
 from apps.users.models import Team, TeamMembership, UserProfile
+from core.utils.timezone_local import business_today
 
 E2E_PASSWORD = "e2e_pass_2026"
 E2E_USERS = [
@@ -228,7 +228,7 @@ class Command(BaseCommand):
                 hbpr=users["e2e_hbpr"],
                 albanian_tl=users["e2e_tl_b"],
                 cadence="weekly",
-                effective_from=date(timezone.localdate().year - 1, 1, 1),
+                effective_from=date(business_today().year - 1, 1, 1),
             )
 
         client, client_created = Client.objects.get_or_create(
@@ -245,7 +245,7 @@ class Command(BaseCommand):
         # Past-month pending overtime for the monthly-lock specs. The API refuses to
         # create entries once a month is closed (after the 2nd), so these cannot be made
         # through it at test time; seed a few so a retry still finds an unused one.
-        today = timezone.localdate()
+        today = business_today()
         past_year, past_month = (today.year, today.month - 1) if today.month > 1 else (today.year - 1, 12)
         for n in range(1, 7):
             OvertimeLog.objects.get_or_create(
@@ -269,7 +269,7 @@ class Command(BaseCommand):
         # Long-tenured staff: vacation accrues 1.8 days/month from the hire date
         # (capped at 12 months), and an unset hire date would default to "today" on
         # the first leave request, leaving only ~2 requestable days.
-        hire_date = date(timezone.localdate().year - 2, 1, 1)
+        hire_date = date(business_today().year - 2, 1, 1)
         for user in users.values():
             profile = user.profile
             profile.clients.add(client)
@@ -278,7 +278,7 @@ class Command(BaseCommand):
             LeaveBalance.objects.update_or_create(
                 user=user,
                 leave_type="vacation",
-                year=timezone.localdate().year,
+                year=business_today().year,
                 is_carry_over=False,
                 defaults={
                     "total_days": 22,

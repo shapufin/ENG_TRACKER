@@ -18,6 +18,7 @@ from core.models.abstract import BaseModel
 from core.utils.timezone_local import (
     DEFAULT_BUSINESS_TIMEZONE, clear_business_tz_cache, validate_business_timezone,
 )
+from core.utils.timezone_local import business_today
 
 
 def count_business_days(start_date, end_date) -> int:
@@ -195,7 +196,7 @@ class LeaveBalance(BaseModel):
         """Check if carry-over balance has expired."""
         if not self.is_carry_over or not self.expires_at:
             return False
-        return timezone.localdate() > self.expires_at
+        return business_today() > self.expires_at
 
     def get_monthly_accrued_days(self, reference_date=None):
         """
@@ -205,7 +206,7 @@ class LeaveBalance(BaseModel):
         from decimal import Decimal, ROUND_UP
         
         if reference_date is None:
-            reference_date = timezone.localdate()
+            reference_date = business_today()
         if not self.accrual_start_date:
             return self.total_days  # fallback: full year if no hire date
         # Calculate months between accrual_start_date and reference_date
@@ -416,7 +417,6 @@ def auto_create_leave_balance(sender, instance, created, **kwargs):
     """Auto-create current year leave balance when hire_date is set."""
     if not instance.hire_date:
         return
-    from django.utils import timezone
     year = timezone.now().year
     user = instance.user
     # Only create if no current year leave balance exists
