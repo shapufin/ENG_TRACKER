@@ -83,7 +83,6 @@ export const DateRangePickers: React.FC<DateRangePickersProps> = ({
       onDateFromChange(from);
       onDateToChange(to);
     }}
-    controlSize="lg"
     placeholder="Select date range"
   />
 );

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { HoursLogsPage } from "./HoursLogsPage";
 
 beforeEach(() => {
@@ -53,6 +53,16 @@ describe("HoursLogsPage", () => {
     // The filter bar and table GlassCards converge to the base rounded-xl
     // surface; no ad-hoc rounded-3xl wrappers.
     expect(container.querySelector(".rounded-3xl")).toBeNull();
+  });
+
+  it("puts search, date range and Columns in one toolbar row, with status chips above it", () => {
+    renderPage();
+    const toolbar = document.querySelector("[data-filter-toolbar]") as HTMLElement;
+    expect(within(toolbar).getByPlaceholderText("Search by user...")).toBeInTheDocument();
+    expect(within(toolbar).getByText("Select date range")).toBeInTheDocument();
+    expect(within(toolbar).getByRole("button", { name: /columns/i })).toBeInTheDocument();
+    const pending = screen.getByRole("button", { name: /pending/i });
+    expect(toolbar.contains(pending)).toBe(false);
   });
 
   it("shows no export button unless onExport is provided", () => {

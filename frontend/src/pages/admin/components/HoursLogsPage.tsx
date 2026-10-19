@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/layout/PageShell";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { StatsCards } from "@/components/admin/StatsCards";
-import { FilterBar } from "./FilterBar";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { SearchInput, StatusChips, DateRangePickers } from "./filterBarParts";
 import { HoursLogsTable } from "./HoursLogsTable";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 
@@ -120,17 +121,26 @@ export const HoursLogsPage = <T extends HoursLog>({
 
       <HoursLogsTable
         header={
-          <FilterBar
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
+          <StatusChips
             filterStatus={filterStatus}
             onStatusChange={setFilterStatus}
-            dateFrom={dateFrom}
-            onDateFromChange={setDateFrom}
-            dateTo={dateTo}
-            onDateToChange={setDateTo}
-            statusCounts={stats}
+            counts={stats}
           />
+        }
+        toolbar={
+          <>
+            <FilterToolbar.Search>
+              <SearchInput value={searchQuery} onChange={setSearchQuery} />
+            </FilterToolbar.Search>
+            <div className="w-full sm:w-64">
+              <DateRangePickers
+                dateFrom={dateFrom}
+                onDateFromChange={setDateFrom}
+                dateTo={dateTo}
+                onDateToChange={setDateTo}
+              />
+            </div>
+          </>
         }
         logs={filteredLogs}
         extraColumns={extraColumns}

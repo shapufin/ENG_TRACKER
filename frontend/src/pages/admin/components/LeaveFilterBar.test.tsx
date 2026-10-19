@@ -1,25 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { LeaveFilterBar } from "./LeaveFilterBar";
+import { LeaveToolbarFilters } from "./LeaveFilterBar";
+import { StatusChips } from "./filterBarParts";
 
-describe("LeaveFilterBar status chips", () => {
+describe("Leave status chips", () => {
   it("shows a chip per status with counts and selects one on click", () => {
     const onStatusChange = vi.fn();
     render(
-      <LeaveFilterBar
-        searchQuery=""
-        onSearchChange={vi.fn()}
+      <StatusChips
         filterStatus="all"
         onStatusChange={onStatusChange}
-        filterType="all"
-        onTypeChange={vi.fn()}
-        filterUser="all"
-        onUserChange={vi.fn()}
-        dateFrom=""
-        onDateFromChange={vi.fn()}
-        dateTo=""
-        onDateToChange={vi.fn()}
-        statusCounts={{ total: 9, pending: 4, approved: 3, rejected: 2 }}
+        counts={{ total: 9, pending: 4, approved: 3, rejected: 2 }}
       />
     );
     const pending = screen.getByRole("button", { name: /pending/i });
@@ -27,5 +18,38 @@ describe("LeaveFilterBar status chips", () => {
     expect(screen.getByRole("button", { name: /^all/i, pressed: true })).toHaveTextContent("9");
     fireEvent.click(pending);
     expect(onStatusChange).toHaveBeenCalledWith("pending");
+  });
+});
+
+describe("LeaveToolbarFilters", () => {
+  const renderFilters = (onTypeChange = vi.fn()) =>
+    render(
+      <LeaveToolbarFilters
+        searchQuery=""
+        onSearchChange={vi.fn()}
+        filterType="all"
+        onTypeChange={onTypeChange}
+        filterUser="all"
+        onUserChange={vi.fn()}
+        dateFrom=""
+        onDateFromChange={vi.fn()}
+        dateTo=""
+        onDateToChange={vi.fn()}
+      />
+    );
+
+  it("offers search, type, user and date range as toolbar controls", () => {
+    renderFilters();
+    expect(screen.getByPlaceholderText("Search by user...")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /all types/i })).toBeInTheDocument();
+    expect(screen.getByText("All Users")).toBeInTheDocument();
+    expect(screen.getByText("Select date range")).toBeInTheDocument();
+  });
+
+  it("cycles the type filter", () => {
+    const onTypeChange = vi.fn();
+    renderFilters(onTypeChange);
+    fireEvent.click(screen.getByRole("button", { name: /all types/i }));
+    expect(onTypeChange).toHaveBeenCalledWith("vacation");
   });
 });

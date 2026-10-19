@@ -120,3 +120,21 @@ describe("LeaveRequestsTable day labels", () => {
     expect(screen.getAllByText("1 day").length).toBeGreaterThan(0);
   });
 });
+
+describe("LeaveRequestsTable toolbar", () => {
+  it("renders the page's filters in the same toolbar row as Columns", () => {
+    render(
+      <LeaveRequestsTable
+        requests={[request]}
+        onApprove={vi.fn()}
+        onReject={vi.fn()}
+        toolbar={<span>page filters</span>}
+        header={<span>status chips</span>}
+      />
+    );
+    const toolbar = document.querySelector("[data-filter-toolbar]") as HTMLElement;
+    expect(within(toolbar).getByText("page filters")).toBeInTheDocument();
+    expect(within(toolbar).getByRole("button", { name: /columns/i })).toBeInTheDocument();
+    expect(toolbar.contains(screen.getByText("status chips"))).toBe(false);
+  });
+});
