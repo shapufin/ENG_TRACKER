@@ -31,7 +31,6 @@ export const PluginManagementPage: React.FC = () => {
 
   return (
     <PageShell
-      category="Tools"
       title="Plugin Management"
       subtitle="Manage and extend application functionality through plugins."
       actions={

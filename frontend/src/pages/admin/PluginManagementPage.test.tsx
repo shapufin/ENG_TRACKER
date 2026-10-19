@@ -42,4 +42,9 @@ describe("PluginManagementPage mockup fidelity", () => {
     expect(headerRow?.className).toContain("pb-3");
     expect(headerRow?.className).toContain("border-line-subtle");
   });
+
+  it("does not repeat the breadcrumb as a tracked eyebrow above the title", () => {
+    render(<PluginManagementPage />);
+    expect(screen.queryByText("Tools")).not.toBeInTheDocument();
+  });
 });
