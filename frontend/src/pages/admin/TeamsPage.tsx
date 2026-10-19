@@ -20,7 +20,6 @@ export const TeamsPage: React.FC = () => {
     data,
     isLoading,
     groupsData,
-    profiles,
     formOpen,
     setFormOpen,
     editing,
@@ -46,6 +45,8 @@ export const TeamsPage: React.FC = () => {
     groupFilter,
     setGroupFilter,
     leaderCounts,
+    hasActiveFilters,
+    resetFilters,
   } = useTeamsPage();
 
   if (isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
@@ -73,7 +74,7 @@ export const TeamsPage: React.FC = () => {
       <TeamStatsCards
         total={data.results.length}
         members={data.results.reduce((sum, t) => sum + (t.members_count ?? 0), 0)}
-        noLeader={leaderCounts.noLeader}
+        noLeader={leaderCounts.incomplete}
         groups={groupsData?.length ?? 0}
       />
 
@@ -86,10 +87,12 @@ export const TeamsPage: React.FC = () => {
             groupFilter={groupFilter}
             onGroupFilterChange={setGroupFilter}
             counts={leaderCounts}
+            hasActiveFilters={hasActiveFilters}
+            onReset={resetFilters}
           />
         }
         data={visibleData}
-        profiles={profiles}
+        emptyMessage={hasActiveFilters ? "No teams match the current filters." : "No teams yet."}
         expanded={expanded}
         onToggleExpand={toggleExpand}
         onEdit={openEdit}

@@ -89,6 +89,9 @@ export interface Team {
   parent_team_name?: string;
   team_leader: User | null;
   team_leader_id?: number | null;
+  /** Display-only: the IT/AL TL most of the team's active members share. */
+  italian_tl?: Pick<User, "id" | "username" | "first_name" | "last_name"> | null;
+  albanian_tl?: Pick<User, "id" | "username" | "first_name" | "last_name"> | null;
   sub_teams_count?: number;
   calendar_group: string;
   members_count?: number;

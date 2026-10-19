@@ -9,7 +9,7 @@ describe("TeamStatsCards", () => {
     expect(screen.getByText("5")).toBeInTheDocument();
     expect(screen.getByText("Members Assigned")).toBeInTheDocument();
     expect(screen.getByText("12")).toBeInTheDocument();
-    expect(screen.getByText("No Leader")).toBeInTheDocument();
+    expect(screen.getByText("Missing TL")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("Calendar Groups")).toBeInTheDocument();
   });

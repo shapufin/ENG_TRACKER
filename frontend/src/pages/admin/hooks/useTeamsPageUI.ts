@@ -3,7 +3,7 @@ import { buildTeamTree, flattenTree, getVisibleNodes, getHierarchyPath } from "@
 import { toggleSetItem } from "@/lib/set-utils";
 import type { Team } from "@/types";
 
-export type TeamLeaderFilter = "all" | "with-leader" | "no-leader";
+export type TeamLeaderFilter = "all" | "complete" | "missing-it" | "missing-al";
 
 export const useTeamsPageUI = (teams: Team[] = []) => {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -25,22 +25,31 @@ export const useTeamsPageUI = (teams: Team[] = []) => {
   const filteredTeams = useMemo(
     () =>
       teams.filter((t) => {
-        if (leaderFilter === "with-leader" && !t.team_leader) return false;
-        if (leaderFilter === "no-leader" && t.team_leader) return false;
+        if (leaderFilter === "complete" && !(t.italian_tl && t.albanian_tl)) return false;
+        if (leaderFilter === "missing-it" && t.italian_tl) return false;
+        if (leaderFilter === "missing-al" && t.albanian_tl) return false;
         if (groupFilter !== "all" && t.calendar_group !== groupFilter) return false;
         return true;
       }),
     [teams, leaderFilter, groupFilter]
   );
 
-  const leaderCounts = useMemo(
-    () => ({
+  const leaderCounts = useMemo(() => {
+    const complete = teams.filter((t) => t.italian_tl && t.albanian_tl).length;
+    return {
       all: teams.length,
-      withLeader: teams.filter((t) => t.team_leader).length,
-      noLeader: teams.filter((t) => !t.team_leader).length,
-    }),
-    [teams]
-  );
+      complete,
+      missingIt: teams.filter((t) => !t.italian_tl).length,
+      missingAl: teams.filter((t) => !t.albanian_tl).length,
+      incomplete: teams.length - complete,
+    };
+  }, [teams]);
+
+  const hasActiveFilters = leaderFilter !== "all" || groupFilter !== "all";
+  const resetFilters = useCallback(() => {
+    setLeaderFilter("all");
+    setGroupFilter("all");
+  }, []);
 
   const visibleData = useMemo(() => {
     const tree = buildTeamTree(filteredTeams);
@@ -59,5 +68,7 @@ export const useTeamsPageUI = (teams: Team[] = []) => {
     groupFilter,
     setGroupFilter,
     leaderCounts,
+    hasActiveFilters,
+    resetFilters,
   };
 };

@@ -4,15 +4,31 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
 import { DataTableActions } from "./DataTableActions";
 import { ChevronRight, ChevronDown, Share2, Users } from "lucide-react";
-import { toneSurfaceClass } from "@/components/ui/tone";
-import type { UserProfile } from "@/types";
 import type { TeamNode } from "@/lib/teamTree";
 
-const SEARCH_COLUMNS = ["name", "code", "description"];
+const SEARCH_COLUMNS = ["name", "code", "description", "italian_tl", "albanian_tl"];
+
+/** IT/AL TL derived from the team's members; sortable by the TL's name. */
+const tlColumn = (side: "italian_tl" | "albanian_tl", header: string) => ({
+  id: side,
+  header,
+  accessorFn: (team: TeamNode) => {
+    const tl = team[side];
+    return tl ? `${tl.first_name} ${tl.last_name}`.trim() || tl.username : "";
+  },
+  cell: ({ row }: { row: { original: TeamNode } }) => {
+    const tl = row.original[side];
+    if (!tl) return <span className="text-muted-foreground">—</span>;
+    return (
+      <span className="font-medium whitespace-nowrap">
+        {`${tl.first_name} ${tl.last_name}`.trim() || tl.username}
+      </span>
+    );
+  },
+});
 
 interface TeamDataTableProps {
   data: TeamNode[];
-  profiles: UserProfile[];
   expanded: Set<number>;
   onToggleExpand: (id: number) => void;
   onEdit: (team: TeamNode) => void;
@@ -22,11 +38,12 @@ interface TeamDataTableProps {
   onRowMouseLeave: () => void;
   /** Header strip inside the table card (e.g. facet filters), not its own surface. */
   header?: React.ReactNode;
+  /** Shown when no row matches (filter-aware wording comes from the page). */
+  emptyMessage?: string;
 }
 
 export const TeamDataTable: React.FC<TeamDataTableProps> = ({
   data,
-  profiles,
   expanded,
   onToggleExpand,
   onEdit,
@@ -35,6 +52,7 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
   onRowMouseEnter,
   onRowMouseLeave,
   header,
+  emptyMessage,
 }) => {
   const hasChildren = useCallback(
     (id: number) => data.find((t) => t.id === id)?.children.length || 0 > 0,
@@ -103,40 +121,8 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
             <span className="text-muted-foreground">—</span>
           ),
       },
-      {
-        id: "team_leader",
-        accessorKey: "team_leader",
-        header: "Leader",
-        // fallow-ignore-next-line complexity
-        cell: ({ row }: { row: { original: TeamNode } }) => {
-          const team = row.original;
-          if (!team.team_leader) return <span className="text-muted-foreground">—</span>;
-          const profile = profiles.find((p: UserProfile) => p.user.id === team.team_leader!.id);
-          return (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="font-medium whitespace-nowrap">
-                {team.team_leader.first_name} {team.team_leader.last_name}
-              </span>
-              {profile?.italian_tl && (
-                <Badge
-                  variant="default"
-                  className={`${toneSurfaceClass.info} h-5 shrink-0 px-1.5 py-0 text-xs font-normal whitespace-nowrap`}
-                >
-                  Italian TL
-                </Badge>
-              )}
-              {profile?.albanian_tl && (
-                <Badge
-                  variant="default"
-                  className={`${toneSurfaceClass.success} h-5 shrink-0 px-1.5 py-0 text-xs font-normal whitespace-nowrap`}
-                >
-                  Albanian TL
-                </Badge>
-              )}
-            </div>
-          );
-        },
-      },
+      tlColumn("italian_tl", "IT TL"),
+      tlColumn("albanian_tl", "AL TL"),
       {
         id: "members_count",
         accessorKey: "members_count",
@@ -188,7 +174,7 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
         ),
       },
     ],
-    [profiles, expanded, onToggleExpand, onEdit, onDelete, hasChildren]
+    [expanded, onToggleExpand, onEdit, onDelete, hasChildren]
   );
 
   return (
@@ -198,7 +184,8 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
         columns={columns}
         data={data}
         searchColumn={SEARCH_COLUMNS}
-        searchPlaceholder="Search teams by name, code, description..."
+        emptyMessage={emptyMessage}
+        searchPlaceholder="Search teams by name, code, TL..."
         enableColumnVisibility
         storageKey="table-visibility-teams-page"
         pageSize={1000}
