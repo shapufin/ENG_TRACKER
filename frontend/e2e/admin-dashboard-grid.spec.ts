@@ -56,7 +56,9 @@ test.describe("Admin dashboard grid", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/admin");
     await expect(page.getByRole("heading", { name: "Admin Dashboard" })).toBeVisible();
-    await expect(cell(page, "kpi-strip")).toBeVisible();
+    // The grid mounts after the widget queries resolve; the 5s default flakes on a
+    // loaded CI runner (heading is visible, cells are not yet). Passes on retry.
+    await expect(cell(page, "kpi-strip")).toBeVisible({ timeout: 20_000 });
   });
 
   test.afterEach(async ({ page }) => {
