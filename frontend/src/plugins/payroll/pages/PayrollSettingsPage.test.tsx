@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PayrollSettingsPage } from "./PayrollSettingsPage";
@@ -157,6 +157,44 @@ describe("PayrollSettingsPage", () => {
       expect(screen.getByText("Albanian Lek")).toBeInTheDocument();
     });
     expect(screen.getAllByRole("switch")).toHaveLength(6);
+  });
+
+  it("groups the configuration fields into labelled sections", async () => {
+    vi.spyOn(payrollService.payrollService, "getConfiguration").mockResolvedValue(mockConfig);
+    vi.spyOn(payrollService.payrollService, "getRuleSets").mockResolvedValue([]);
+    vi.spyOn(payrollService.payrollService, "getConfigurationChoices").mockResolvedValue({
+      currency: [{ value: "ALL", label: "Albanian Lek" }],
+      rounding_mode: [{ value: "half_up", label: "Round half up" }],
+      monthly_hours_strategy: [{ value: "fixed_174", label: "Fixed 174 hours/month" }],
+      missing_timestamp_fallback_category: [{ value: "weekday_day", label: "Weekday daytime" }],
+    });
+    render(
+      <MemoryRouter>
+        <PayrollSettingsPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    const sections: Record<string, string[]> = {
+      Organization: ["Organization Name", "Currency", "Payroll country"],
+      "Standby rates": ["Weekday Standby Rate (Lek/hour)", "Weekend Standby Rate (Lek/hour)"],
+      "Rounding & working hours": [
+        "Rounding Mode",
+        "Decimal Places for Rounding",
+        "Monthly Working Hours Basis",
+      ],
+      "Tax & rules reference": ["Default Tax Profile", "Standard Workday Hours"],
+      "Calculation switches": [],
+      Payslip: ["Payslip Footer"],
+    };
+    for (const [name, labels] of Object.entries(sections)) {
+      const region = await screen.findByRole("region", { name });
+      for (const label of labels) {
+        expect(within(region).getByText(label)).toBeInTheDocument();
+      }
+    }
+    expect(
+      within(screen.getByRole("region", { name: "Calculation switches" })).getAllByRole("switch")
+    ).toHaveLength(6);
   });
 
   it("renders rule sets", async () => {
