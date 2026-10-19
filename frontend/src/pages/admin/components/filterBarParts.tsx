@@ -31,7 +31,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   />
 );
 
-export interface StatusCounts {
+interface StatusCounts {
   total: number;
   pending: number;
   approved: number;
