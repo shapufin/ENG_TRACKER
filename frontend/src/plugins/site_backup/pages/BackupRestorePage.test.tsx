@@ -157,4 +157,16 @@ describe("BackupRestorePage", () => {
     fireEvent.click(screen.getByRole("option", { name: filename }));
     expect(screen.getByRole("combobox")).toHaveAttribute("title", filename);
   });
+
+  it("replaces the native file input with a styled button and shows the chosen archive", async () => {
+    usePermissions.mockReturnValue({ isSuperuser: true });
+    renderPage();
+    fireEvent.mouseDown(await screen.findByRole("tab", { name: /restore/i }), { button: 0 });
+    const input = await screen.findByLabelText("Upload an archive");
+    expect(input).toHaveClass("sr-only");
+    expect(screen.getByRole("button", { name: /choose archive/i })).toBeInTheDocument();
+    expect(screen.getByText("No file chosen")).toBeInTheDocument();
+    fireEvent.change(input, { target: { files: [new File(["x"], "site.zip")] } });
+    expect(screen.getByText("site.zip")).toBeInTheDocument();
+  });
 });

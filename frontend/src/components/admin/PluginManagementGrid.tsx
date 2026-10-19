@@ -55,7 +55,7 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
       >
         {/* fallow-ignore-next-line complexity */}
         {plugins.map((plugin) => (
-          <GlassCard key={plugin.id} className="relative overflow-hidden">
+          <GlassCard key={plugin.id} className="relative flex flex-col overflow-hidden">
             <div className="p-6 pb-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
@@ -83,7 +83,7 @@ export const PluginManagementGrid: React.FC<PluginManagementGridProps> = ({
                 />
               </div>
             </div>
-            <div className="px-6 pb-4">
+            <div className="flex-1 px-6 pb-4">
               <p className="text-muted-foreground line-clamp-3 text-sm">
                 {plugin.description || "No description provided."}
               </p>
