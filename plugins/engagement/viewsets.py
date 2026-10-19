@@ -30,7 +30,7 @@ from .services import (
     monthly_rollup,
     stale_snapshot_ids,
 )
-from core.utils.timezone_local import tirana_today
+from core.utils.timezone_local import business_today
 
 
 def _parse_month(raw):
@@ -52,7 +52,7 @@ def _trend_months(request):
 
 
 def _trend_start(months_back):
-    return tirana_today().replace(day=1) - relativedelta(months=months_back - 1)
+    return business_today().replace(day=1) - relativedelta(months=months_back - 1)
 
 
 class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):

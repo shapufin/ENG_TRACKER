@@ -15,7 +15,7 @@ class GlobalSettingsSerializer(serializers.ModelSerializer):
             'id', 'default_yearly_leave_days',
             'carry_over_expiry_month', 'carry_over_expiry_day',
             'carry_over_enabled', 'carry_over_applied_year',
-            'created_at', 'updated_at'
+            'business_timezone', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'carry_over_applied_year', 'created_at', 'updated_at']
 

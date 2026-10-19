@@ -45,6 +45,12 @@ const MONTH_NAMES = Array.from({ length: 12 }, (_, i) =>
   new Date(2000, i, 1).toLocaleString("en", { month: "long" })
 );
 
+// Browser's IANA list; the stored value is always offered even if it is not in it.
+const timezoneOptions = (current: string) => {
+  const zones = Intl.supportedValuesOf("timeZone");
+  return zones.includes(current) ? zones : [current, ...zones];
+};
+
 type GlobalSettings = Awaited<ReturnType<typeof leaveService.getSettings>>;
 
 const mapSettingsToForm = (settings: GlobalSettings) => ({
@@ -52,6 +58,7 @@ const mapSettingsToForm = (settings: GlobalSettings) => ({
   carry_over_expiry_month: String(settings.carry_over_expiry_month),
   carry_over_expiry_day: String(settings.carry_over_expiry_day),
   carry_over_enabled: settings.carry_over_enabled,
+  business_timezone: settings.business_timezone,
 });
 
 // Carry from the year that is closing now expires on this date next year.
@@ -86,6 +93,7 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
       carry_over_expiry_month: Number(form.carry_over_expiry_month),
       carry_over_expiry_day: Number(form.carry_over_expiry_day),
       carry_over_enabled: form.carry_over_enabled,
+      business_timezone: form.business_timezone,
     });
   };
 
@@ -197,6 +205,32 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
               Carry-over from {new Date().getFullYear()} expires{" "}
               <span className="text-foreground font-medium">{calculatedExpiry}</span>. Changing this
               date also moves the expiry of carry-over already granted.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="settings-business-timezone" className="font-medium">
+              Business timezone
+            </Label>
+            <Select
+              value={form.business_timezone}
+              onValueChange={(v) => setForm((f) => ({ ...f, business_timezone: v }))}
+            >
+              <SelectTrigger id="settings-business-timezone">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {timezoneOptions(settings.business_timezone).map((zone) => (
+                  <SelectItem key={zone} value={zone}>
+                    {zone}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-xs">
+              Decides which calendar day it is for deadlines, month cut-offs and reports. Stored
+              times stay in UTC. Already computed engagement months are not recalculated when this
+              changes.
             </p>
           </div>
 

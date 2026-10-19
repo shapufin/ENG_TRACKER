@@ -10,6 +10,7 @@ import io
 from datetime import date
 
 from core.utils import pdf_report as pdf
+from core.utils.timezone_local import business_tz
 
 from .excel_export import _group_by_month
 from .services import AGING_BUCKETS, COMPONENT_WEIGHTS, REQUEST_TYPES, aggregate_rows, monthly_rollup, weighted_mean
@@ -21,7 +22,10 @@ SUB_SCORES = (
     ('responsiveness', 'Responsiveness', 'score_responsiveness'),
     ('consistency', 'Consistency', 'score_consistency'),
 )
-FOOTNOTE = "Times computed in Europe/Tirane. Leader's own requests and deactivated users are excluded."
+
+
+def _footnote():
+    return f"Times computed in {business_tz()}. Leader's own requests and deactivated users are excluded."
 
 
 def _score_tone(value):
@@ -213,6 +217,6 @@ def build_report_pdf(target_rows, trend_rows, scope, period_label, leader_name, 
     _trend_section(story, scope, trend_rows)
     _volume_section(story, scope, trend_rows)
     _detail_section(story, scope, target_rows, period_label)
-    pdf.paragraph(story, FOOTNOTE)
+    pdf.paragraph(story, _footnote())
     doc.build(story)
     return buffer.getvalue()
