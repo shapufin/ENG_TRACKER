@@ -347,7 +347,10 @@ test.describe("Organigrama plugin", () => {
       await page.getByRole("button", { name: "Group", exact: true }).click();
       await expect(nodes).toHaveCount(3);
 
-      await nodes.filter({ hasText: "Group" }).click();
+      // Click the group's header, not its centre: an edge's transparent interaction
+      // path crosses the centre, so Playwright retries "intercepts pointer events"
+      // until the test times out (seen in the CI trace).
+      await nodes.filter({ hasText: "Group" }).locator(".builder-group-drag-handle").click();
       await page.getByRole("button", { name: "Ungroup", exact: true }).first().click();
       await expect(nodes).toHaveCount(2);
 
