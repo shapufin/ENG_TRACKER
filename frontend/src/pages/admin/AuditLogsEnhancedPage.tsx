@@ -68,7 +68,6 @@ export const AuditLogsEnhancedPage: React.FC = () => {
       <PageShell
         title="Audit Logs"
         subtitle="Monitor system activity and user actions"
-        category="Governance"
         actions={
           <Button size="control" className="gap-2" onClick={handleExport} disabled={isExporting}>
             {isExporting ? (

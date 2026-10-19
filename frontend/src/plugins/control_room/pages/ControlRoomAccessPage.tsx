@@ -248,7 +248,6 @@ const ControlRoomAccessPageContent: React.FC = () => {
 
   return (
     <PageShell
-      category="Control Room administration"
       title="Access management"
       subtitle="Control who can view standby data and keep team visibility scoped by design."
       actions={

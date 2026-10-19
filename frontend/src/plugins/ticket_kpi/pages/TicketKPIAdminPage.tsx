@@ -36,7 +36,7 @@ export const TicketKPIAdminPage: React.FC = () => {
 
   return (
     <PageShell title="Ticket KPI Admin" subtitle="Manage export profiles and generate reports.">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-muted">
             <TabsTrigger value="profiles">
