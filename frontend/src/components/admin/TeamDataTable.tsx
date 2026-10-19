@@ -59,6 +59,8 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
     [data]
   );
 
+  const hasDescriptions = data.some((team) => team.description);
+
   const columns = useMemo(
     () => [
       {
@@ -188,6 +190,8 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
         searchPlaceholder="Search teams by name, code, TL..."
         enableColumnVisibility
         storageKey="table-visibility-teams-page"
+        // An all-empty Description column pushes Actions off a 1440px card; it appears as soon as one team has text.
+        defaultColumnVisibility={{ description: hasDescriptions }}
         pageSize={1000}
         getRowClassName={(team: TeamNode) =>
           hoveredPath.has(team.id)
