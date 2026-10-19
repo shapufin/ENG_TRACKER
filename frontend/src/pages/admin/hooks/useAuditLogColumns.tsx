@@ -1,16 +1,17 @@
-﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo } from "react";
 import { Eye } from "lucide-react";
 import { RowActions } from "@/components/ui/RowActions";
+import { toneSurfaceClass, type Tone } from "@/components/ui/tone";
 import type { AuditLog } from "@/services/auditService";
 
-// fallow-ignore-next-line complexity
-const getActionColor = (action: string) => {
-  if (action.includes("create") || action.includes("add")) return "bg-primary/10 text-foreground";
-  if (action.includes("update") || action.includes("edit")) return "bg-warning/10 text-warning";
-  if (action.includes("delete") || action.includes("remove"))
-    return "bg-destructive/10 text-destructive";
-  return "bg-primary/10 text-foreground";
+// Server actions arrive upper-case (CREATE/UPDATE/DELETE), so match case-insensitively.
+const getActionTone = (action: string): Tone => {
+  const a = action.toLowerCase();
+  if (a.includes("create") || a.includes("add")) return "success";
+  if (a.includes("update") || a.includes("edit")) return "warning";
+  if (a.includes("delete") || a.includes("remove")) return "danger";
+  return "neutral";
 };
 
 const timestampFormat = new Intl.DateTimeFormat(undefined, {
@@ -43,7 +44,7 @@ export const useAuditLogColumns = (onView: (log: AuditLog) => void) =>
         accessorKey: "action",
         cell: (info: any) => (
           <span
-            className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${getActionColor(info.getValue())}`}
+            className={`rounded-full border px-3 py-1 text-xs font-medium capitalize ${toneSurfaceClass[getActionTone(info.getValue())]}`}
           >
             {info.getValue()}
           </span>
@@ -59,11 +60,15 @@ export const useAuditLogColumns = (onView: (log: AuditLog) => void) =>
       {
         header: "Object",
         accessorKey: "object_repr",
-        cell: (info: any) => (
-          <div className="text-muted-foreground max-w-[200px] truncate text-sm">
-            {info.getValue() || "N/A"}
-          </div>
-        ),
+        cell: (info: any) => {
+          // object_repr can start with a separator when the name part is empty.
+          const label = String(info.getValue() ?? "").replace(/^[\s-]+/, "") || "N/A";
+          return (
+            <div className="text-muted-foreground max-w-[200px] truncate text-sm" title={label}>
+              {label}
+            </div>
+          );
+        },
       },
       {
         header: "IP Address",

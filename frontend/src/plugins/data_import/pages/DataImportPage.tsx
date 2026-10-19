@@ -335,7 +335,7 @@ export const DataImportPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
-          <ImportHistoryTab batches={batches ?? []} />
+          <ImportHistoryTab batches={batches ?? []} targets={targets} />
         </TabsContent>
       </Tabs>
 
