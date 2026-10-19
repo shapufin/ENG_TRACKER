@@ -1,4 +1,5 @@
 import React from "react";
+import { Button } from "@/components/ui/button";
 import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import type { TeamLeaderFilter } from "../hooks/useTeamsPageUI";
 
@@ -8,11 +9,13 @@ interface TeamsPageFiltersProps {
   groups: string[];
   groupFilter: string;
   onGroupFilterChange: (value: string) => void;
-  counts: { all: number; withLeader: number; noLeader: number };
+  counts: { all: number; complete: number; missingIt: number; missingAl: number };
+  hasActiveFilters: boolean;
+  onReset: () => void;
 }
 
 /**
- * Leader / calendar-group facet chips. Rendered as the header strip of the
+ * IT/AL TL and calendar-group facet chips. Rendered as the header strip of the
  * teams table card (page and card are the only two surface levels), never as
  * a card of its own.
  */
@@ -23,15 +26,18 @@ export const TeamsPageFilters: React.FC<TeamsPageFiltersProps> = ({
   groupFilter,
   onGroupFilterChange,
   counts,
+  hasActiveFilters,
+  onReset,
 }) => {
   return (
     <div className="border-line-subtle space-y-2 border-b pb-4">
       <FilterChipRow<TeamLeaderFilter>
-        label="Leader"
+        label="Team leaders"
         options={[
           { value: "all", label: "All teams", count: counts.all },
-          { value: "with-leader", label: "With leader", count: counts.withLeader },
-          { value: "no-leader", label: "No leader", count: counts.noLeader, emphasis: "missing" },
+          { value: "complete", label: "Both TLs", count: counts.complete },
+          { value: "missing-it", label: "Missing IT TL", count: counts.missingIt, emphasis: "missing" },
+          { value: "missing-al", label: "Missing AL TL", count: counts.missingAl, emphasis: "missing" },
         ]}
         selected={[leaderFilter]}
         onToggle={onLeaderFilterChange}
@@ -46,6 +52,11 @@ export const TeamsPageFilters: React.FC<TeamsPageFiltersProps> = ({
           selected={[groupFilter]}
           onToggle={onGroupFilterChange}
         />
+      )}
+      {hasActiveFilters && (
+        <Button type="button" variant="ghost" size="control-sm" onClick={onReset}>
+          Clear all
+        </Button>
       )}
     </div>
   );

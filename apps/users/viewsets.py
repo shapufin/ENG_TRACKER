@@ -37,6 +37,7 @@ from .serializers import (
 )
 from .services.hbpr_scope import get_hbpr_scope
 from .services.profile_loading import with_profile_list_loading
+from .services.team_leaders import derive_team_tls
 from .services.tech_assignments import (
     TechAssignmentError,
     apply_tech_assignments,
@@ -1805,6 +1806,14 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
     search_fields = ['name', 'code', 'description']
     filterset_fields = ['calendar_group']
     lookup_field = 'pk'
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.action == 'list':
+            # Teams are few: derive every team's IT/AL TL in one pass instead
+            # of one query pair per row.
+            context['derived_team_tls'] = derive_team_tls()
+        return context
 
     def get_queryset(self):
         """

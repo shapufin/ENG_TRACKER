@@ -15,6 +15,7 @@ from apps.overtime.serializers import ClientSerializer
 from core.mixins.permissions import is_cr_admin
 from .models import Tech, TechLevel, Team, UserProfile, TeamMembership
 from .models.core import _user_has_related, normalize_calendar_group
+from .services.team_leaders import derive_team_tls
 from .services.tech_assignments import (
     TechAssignmentError,
     apply_tech_assignments,
@@ -434,13 +435,15 @@ class TeamSerializer(serializers.ModelSerializer):
     )
     sub_teams_count = serializers.SerializerMethodField()
     members_count = serializers.SerializerMethodField()
+    italian_tl = serializers.SerializerMethodField()
+    albanian_tl = serializers.SerializerMethodField()
 
     class Meta:
         model = Team
         fields = [
             'id', 'name', 'code', 'description', 'calendar_group',
             'parent_team', 'parent_team_id', 'parent_team_name',
-            'team_leader', 'team_leader_id',
+            'team_leader', 'team_leader_id', 'italian_tl', 'albanian_tl',
             'sub_teams_count', 'members_count',
             'created_at', 'updated_at'
         ]
@@ -448,6 +451,24 @@ class TeamSerializer(serializers.ModelSerializer):
 
     def validate_calendar_group(self, value):
         return normalize_calendar_group(value)
+
+    def _derived_tls(self, obj):
+        # List views pass one precomputed map (``derived_team_tls``); anything
+        # else (create/retrieve) derives just this team.
+        derived = self.context.get('derived_team_tls')
+        if derived is None:
+            derived = derive_team_tls([obj.pk])
+        return derived.get(obj.pk, {})
+
+    @extend_schema_field(TeamLeaderSerializer(allow_null=True))
+    def get_italian_tl(self, obj):
+        user = self._derived_tls(obj).get('italian_tl')
+        return TeamLeaderSerializer(user).data if user else None
+
+    @extend_schema_field(TeamLeaderSerializer(allow_null=True))
+    def get_albanian_tl(self, obj):
+        user = self._derived_tls(obj).get('albanian_tl')
+        return TeamLeaderSerializer(user).data if user else None
 
     def get_sub_teams_count(self, obj) -> int:
         """Count of direct sub-teams."""
