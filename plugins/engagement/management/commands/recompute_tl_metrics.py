@@ -12,7 +12,7 @@ from datetime import date
 from django.core.management.base import BaseCommand, CommandError
 
 from plugins.engagement.services import compute_tl_metric, leader_team_pairs, months_with_activity
-from core.utils.timezone_local import tirana_today
+from core.utils.timezone_local import business_today
 
 
 class Command(BaseCommand):
@@ -43,7 +43,7 @@ class Command(BaseCommand):
             except ValueError:
                 raise CommandError('--month must be an ISO date (YYYY-MM-DD)')
         else:
-            month = tirana_today()
+            month = business_today()
         months = months_with_activity() if options.get('all_months') else [month.replace(day=1)]
 
         leader_id = options.get('leader_id')

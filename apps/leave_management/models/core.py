@@ -15,6 +15,9 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from core.models.abstract import BaseModel
+from core.utils.timezone_local import (
+    DEFAULT_BUSINESS_TIMEZONE, clear_business_tz_cache, validate_business_timezone,
+)
 
 
 def count_business_days(start_date, end_date) -> int:
@@ -117,6 +120,12 @@ class GlobalSettings(BaseModel):
         help_text='Year the year-end carry-over was last applied for (rollover marker)'
     )
 
+    business_timezone = models.CharField(
+        max_length=64, default=DEFAULT_BUSINESS_TIMEZONE,
+        validators=[validate_business_timezone],
+        help_text='IANA time zone that defines the company calendar day (deadlines, month cutoffs, reports)'
+    )
+
     class Meta:
         db_table = 'leave_global_settings'
         constraints = [
@@ -125,6 +134,10 @@ class GlobalSettings(BaseModel):
                 name='leave_global_settings_singleton',
             ),
         ]
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        clear_business_tz_cache()
 
     def __str__(self):
         return f'Leave settings: {self.default_yearly_leave_days}d/year, carry-over expires {self.carry_over_expiry_month}/{self.carry_over_expiry_day}'

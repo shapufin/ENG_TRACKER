@@ -75,13 +75,13 @@ class TrendValuesMatchPerMonthTests(TestCase):
 class TiranaTodayTests(TestCase):
     """Service clocks use the Europe/Tirane date, not the server-local one."""
 
-    def test_default_period_and_sla_clocks_read_tirana_today(self):
+    def test_default_period_and_sla_clocks_read_business_today(self):
         from unittest.mock import patch
 
         from .services import absence_metrics, escalation_candidates, reporting_period
 
         leader = make_user('tirana-leader')
-        with patch('plugins.tl_scorecard.services.tirana_today', return_value=date(2031, 7, 15)) as clock:
+        with patch('plugins.tl_scorecard.services.business_today', return_value=date(2031, 7, 15)) as clock:
             self.assertEqual(reporting_period(None), date(2031, 7, 1))
             absence_metrics(set())
             escalation_candidates(leader)

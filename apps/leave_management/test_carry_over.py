@@ -10,6 +10,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from apps.leave_management.models import GlobalSettings, LeaveBalance, LeaveRequest
+from core.utils.timezone_local import clear_business_tz_cache
 from apps.leave_management.services.carry_over import (
     apply_year_end_carry_over,
     carry_over_expiry_for,
@@ -252,6 +253,23 @@ class SettingsTests(CarryOverTestBase):
         }, format='json')
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(self.carry_row().expires_at, date(2027, 4, 30))
+
+    def test_business_timezone_is_editable_and_exposed(self):
+        self.addCleanup(clear_business_tz_cache)  # rollback fires no signals
+        self.api.force_authenticate(user=self.staff)
+        response = self.api.patch(self.url.format(self.settings.pk), {
+            'business_timezone': 'Europe/Rome',
+        }, format='json')
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.data['business_timezone'], 'Europe/Rome')
+
+    def test_unknown_business_timezone_is_rejected(self):
+        self.api.force_authenticate(user=self.staff)
+        response = self.api.patch(self.url.format(self.settings.pk), {
+            'business_timezone': 'Mars/Olympus',
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('business_timezone', response.data)
 
     def test_day_that_does_not_exist_is_rejected(self):
         self.api.force_authenticate(user=self.staff)

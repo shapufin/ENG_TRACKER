@@ -25,7 +25,7 @@ from apps.standby.models import StandbyLog
 from apps.users.models import Team, TeamMembership, UserProfile
 
 from .models import TLApprovalMetric
-from core.utils.timezone_local import TIRANA, tirana_today
+from core.utils.timezone_local import business_tz, business_today
 
 from .sla import deadline_for, responsiveness_score
 
@@ -49,7 +49,7 @@ def _now():
 
 
 def _local_midnight(day):
-    return datetime.combine(day, time.min, tzinfo=TIRANA)
+    return datetime.combine(day, time.min, tzinfo=business_tz())
 
 
 def month_bounds(month):
@@ -266,7 +266,7 @@ def ensure_current_month_snapshots(leader_ids=None, scope=None):
     next read without waiting for a recompute.
     """
     scope = _scope(scope)
-    month = tirana_today().replace(day=1)
+    month = business_today().replace(day=1)
     pairs = leader_team_pairs(leader_ids, scope)
     scope.team_members({team.id for _, team in pairs})  # one query for every team about to be computed
     have = set(TLApprovalMetric.objects.filter(month=month).values_list('leader_id', 'team_id'))
@@ -460,8 +460,8 @@ def _decisions_during_leave(leader, member_ids, month_start, month_end):
     if not member_ids:
         return 0
 
-    month_start_date = month_start.astimezone(TIRANA).date()
-    month_end_date = month_end.astimezone(TIRANA).date()  # exclusive
+    month_start_date = month_start.astimezone(business_tz()).date()
+    month_end_date = month_end.astimezone(business_tz()).date()  # exclusive
 
     leave_periods = list(
         LeaveRequest.objects.filter(user=leader, status='approved', is_deleted=False)
@@ -479,6 +479,7 @@ def _decisions_during_leave(leader, member_ids, month_start, month_end):
     window_end = _local_midnight(max(end for _, end in clipped_periods) + timedelta(days=2))
 
     counted = set()
+    tz = business_tz()
     for type_key in REQUEST_TYPES:
         model = _TYPE_CONFIG[type_key]['model']
         decided = model.objects.filter(
@@ -490,7 +491,7 @@ def _decisions_during_leave(leader, member_ids, month_start, month_end):
             is_deleted=False,
         ).values_list('id', 'approved_at')
         for obj_id, approved_at in decided:
-            decided_date = approved_at.astimezone(TIRANA).date()
+            decided_date = approved_at.astimezone(tz).date()
             if any(start <= decided_date <= end for start, end in clipped_periods):
                 counted.add((type_key, obj_id))
     return len(counted)
@@ -501,6 +502,7 @@ def _decisions_on_holidays(leader, member_ids, month_start, month_end, holidays)
     if not member_ids or not holidays:
         return 0
     counted = set()
+    tz = business_tz()
     for type_key in REQUEST_TYPES:
         model = _TYPE_CONFIG[type_key]['model']
         decided = model.objects.filter(
@@ -512,7 +514,7 @@ def _decisions_on_holidays(leader, member_ids, month_start, month_end, holidays)
             is_deleted=False,
         ).values_list('id', 'approved_at')
         for obj_id, approved_at in decided:
-            if approved_at.astimezone(TIRANA).date() in holidays:
+            if approved_at.astimezone(tz).date() in holidays:
                 counted.add((type_key, obj_id))
     return len(counted)
 
@@ -576,7 +578,7 @@ def months_with_activity():
         months |= {
             value.date()
             for value in model.objects.filter(is_deleted=False, submitted_at__isnull=False)
-            .annotate(month_start=TruncMonth('submitted_at', tzinfo=TIRANA))
+            .annotate(month_start=TruncMonth('submitted_at', tzinfo=business_tz()))
             .values_list('month_start', flat=True)
             .distinct()
         }

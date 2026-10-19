@@ -312,6 +312,7 @@ export interface GlobalSettings {
   carry_over_expiry_day: number;
   carry_over_enabled: boolean;
   carry_over_applied_year: number | null;
+  business_timezone: string;
   created_at: string;
   updated_at: string;
 }

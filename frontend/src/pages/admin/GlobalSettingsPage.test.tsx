@@ -13,6 +13,7 @@ vi.mock("@/services/leaveService", () => ({
       carry_over_expiry_day: 31,
       carry_over_enabled: true,
       carry_over_applied_year: null,
+      business_timezone: "Europe/Tirane",
     }),
     updateSettings: vi.fn(),
   },
@@ -55,7 +56,28 @@ describe("GlobalSettingsPage", () => {
     expect(await screen.findByLabelText("Default Yearly Vacation Days")).toBeInTheDocument();
     expect(screen.getByLabelText("Carry-over Expiry Month")).toBeInTheDocument();
     expect(screen.getByLabelText("Carry-over Expiry Day")).toBeInTheDocument();
+    expect(screen.getByLabelText("Business timezone")).toBeInTheDocument();
   });
+
+  it("shows the stored business timezone and submits a changed one", async () => {
+    Element.prototype.hasPointerCapture = () => false;
+    Element.prototype.setPointerCapture = () => {};
+    Element.prototype.releasePointerCapture = () => {};
+    Element.prototype.scrollIntoView = () => {};
+    vi.mocked(leaveService.updateSettings).mockResolvedValue({} as never);
+    renderPage();
+
+    const zone = await screen.findByLabelText("Business timezone");
+    expect(zone).toHaveTextContent("Europe/Tirane");
+    fireEvent.keyDown(zone, { key: "Enter" });
+    fireEvent.click(await screen.findByRole("option", { name: "Europe/Rome" }));
+    fireEvent.click(screen.getByRole("button", { name: /save settings/i }));
+
+    await waitFor(() => expect(leaveService.updateSettings).toHaveBeenCalled());
+    expect(vi.mocked(leaveService.updateSettings).mock.calls.at(-1)?.[0]).toMatchObject({
+      business_timezone: "Europe/Rome",
+    });
+  }, 20_000); // ~420 zone options render in jsdom; headroom for full-suite load
 
   it("renders and submits the site branding form", async () => {
     vi.mocked(dashboardService.updateBranding).mockResolvedValue({
@@ -97,8 +119,9 @@ describe("GlobalSettingsPage", () => {
       carry_over_expiry_month: 3,
       carry_over_expiry_day: 31,
       carry_over_enabled: true,
+      business_timezone: "Europe/Tirane",
     });
-  });
+  }, 20_000);
 
   it("opens the hidden logo input from a Choose file button and shows the file name", async () => {
     vi.mocked(dashboardService.updateBranding).mockResolvedValue({

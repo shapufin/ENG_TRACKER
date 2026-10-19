@@ -38,6 +38,16 @@ class WorkDateCutoffTests(TestCase):
         now = datetime(2026, 10, 1, 23, 30, tzinfo=ZoneInfo('UTC'))
         self.assertFalse(is_work_date_open(date(2026, 9, 15), now=now))
 
+    def test_cutoff_follows_the_configured_business_timezone(self):
+        from apps.leave_management.models import GlobalSettings
+        from core.utils.timezone_local import clear_business_tz_cache
+        self.addCleanup(clear_business_tz_cache)  # rollback fires no signals
+        GlobalSettings.objects.update_or_create(pk=1, defaults={'business_timezone': 'America/New_York'})
+        clear_business_tz_cache()
+        # Same instant as above: 19:30 on Oct 1 in New York, so September is still open.
+        now = datetime(2026, 10, 1, 23, 30, tzinfo=ZoneInfo('UTC'))
+        self.assertTrue(is_work_date_open(date(2026, 9, 15), now=now))
+
     def test_december_rolls_to_january(self):
         self.assertTrue(is_work_date_open(date(2026, 12, 5), now=datetime(2027, 1, 1, 23, 59, tzinfo=TIRANE)))
         self.assertFalse(is_work_date_open(date(2026, 12, 5), now=datetime(2027, 1, 2, 0, 0, tzinfo=TIRANE)))

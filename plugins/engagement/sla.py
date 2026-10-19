@@ -6,14 +6,14 @@ Deadline rules for TL engagement scoring.
   working day.
 - Overtime / standby: decided within 5 working days after the submission date.
 - Working day = Mon-Fri, not a public holiday in the TL's holiday set.
-- Deadlines are end-of-day in Europe/Tirana (the company's local time), so the
-  Django TIME_ZONE setting (UTC) is deliberately not used here.
+- Deadlines are end-of-day in the business timezone (GlobalSettings, default
+  Europe/Tirane), so the Django TIME_ZONE setting (UTC) is deliberately not used.
 
 Pure functions only: no database access. The services layer loads holidays.
 """
 from datetime import datetime, time, timedelta
 
-from core.utils.timezone_local import TIRANA
+from core.utils.timezone_local import business_tz
 SLA_WORKING_DAYS = {'overtime': 5, 'standby': 5}
 RESPONSIVENESS_FULL_CREDIT = 0.25
 RESPONSIVENESS_ZERO_CREDIT = 1.0
@@ -24,8 +24,9 @@ def is_working_day(day, holidays):
 
 
 def deadline_for(type_key, submitted_at, holidays):
-    """End-of-day (Tirana) instant by which a request of ``type_key`` must be decided."""
-    day = submitted_at.astimezone(TIRANA).date()
+    """End-of-day (business timezone) instant by which a request of ``type_key`` must be decided."""
+    tz = business_tz()
+    day = submitted_at.astimezone(tz).date()
     if type_key == 'leave':
         while not is_working_day(day, holidays):
             day += timedelta(days=1)
@@ -35,7 +36,7 @@ def deadline_for(type_key, submitted_at, holidays):
             day += timedelta(days=1)
             if is_working_day(day, holidays):
                 remaining -= 1
-    return datetime.combine(day, time.max, tzinfo=TIRANA)
+    return datetime.combine(day, time.max, tzinfo=tz)
 
 
 def responsiveness_score(median_fraction):
