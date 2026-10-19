@@ -11,7 +11,8 @@ import { Sun, Stethoscope, Download } from "lucide-react";
 import { handleApiError } from "@/lib/error-handler";
 import { toast } from "sonner";
 import { usePermissions } from "@/context/PermissionContext";
-import { LeaveFilterBar } from "./components/LeaveFilterBar";
+import { LeaveToolbarFilters } from "./components/LeaveFilterBar";
+import { StatusChips } from "./components/filterBarParts";
 import { StatsCards } from "@/components/admin/StatsCards";
 import { StatCard } from "@/components/ui/StatCard";
 import { LeaveRequestsTable } from "./components/LeaveRequestsTable";
@@ -122,11 +123,16 @@ const LeaveRequestsContent: React.FC = () => {
 
       <LeaveRequestsTable
         header={
-          <LeaveFilterBar
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
+          <StatusChips
             filterStatus={filterStatus}
             onStatusChange={setFilterStatus}
+            counts={stats}
+          />
+        }
+        toolbar={
+          <LeaveToolbarFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
             filterType={filterType}
             onTypeChange={setFilterType}
             filterUser={filterUser}
@@ -136,7 +142,6 @@ const LeaveRequestsContent: React.FC = () => {
             onDateFromChange={setDateFrom}
             dateTo={dateTo}
             onDateToChange={setDateTo}
-            statusCounts={stats}
           />
         }
         requests={filteredRequests}

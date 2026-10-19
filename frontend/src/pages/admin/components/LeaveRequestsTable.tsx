@@ -25,6 +25,8 @@ interface LeaveRequestsTableProps {
   canDelete?: boolean;
   /** Header strip rendered above the table inside the same GlassCard (two-surface rule). */
   header?: React.ReactNode;
+  /** Filters that share the table toolbar row with the Columns menu. */
+  toolbar?: React.ReactNode;
 }
 
 const LeaveRequestRowActions = ({
@@ -136,6 +138,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
   onDelete,
   canDelete = false,
   header,
+  toolbar,
 }) => {
   const columns = useMemo<AppColumnDef<LeaveRequest>[]>(
     () => [
@@ -250,6 +253,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         data={requests}
         columns={columns}
         enableColumnVisibility
+        toolbarActions={toolbar}
         storageKey="table-visibility-leave-requests"
         // 8 columns do not fit a 1440px admin viewport at readable widths; the
         // free-text Reason column is hidden by default and stays one click away

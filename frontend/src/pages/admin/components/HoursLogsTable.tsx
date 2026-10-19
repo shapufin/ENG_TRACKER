@@ -32,6 +32,8 @@ interface HoursLogsTableProps<T extends HoursLog> {
   storageKey: string;
   /** Header strip rendered above the table inside the same GlassCard (two-surface rule). */
   header?: React.ReactNode;
+  /** Filters that share the table toolbar row with the Columns menu. */
+  toolbar?: React.ReactNode;
 }
 
 const HoursLogRowActions = ({
@@ -94,6 +96,7 @@ export const HoursLogsTable = <T extends HoursLog>({
   canDelete = false,
   storageKey,
   header,
+  toolbar,
 }: HoursLogsTableProps<T>) => {
   const columns = useMemo<AppColumnDef<T>[]>(
     () => [
@@ -159,6 +162,7 @@ export const HoursLogsTable = <T extends HoursLog>({
         data={logs}
         columns={columns}
         enableColumnVisibility
+        toolbarActions={toolbar}
         storageKey={storageKey}
         getRowId={(row) => row.id.toString()}
       />

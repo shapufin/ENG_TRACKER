@@ -1,7 +1,8 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Filter, Sun } from "lucide-react";
-import { SearchInput, StatusChips, DateRangePickers, type StatusCounts } from "./filterBarParts";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { SearchInput, DateRangePickers } from "./filterBarParts";
 import {
   Select,
   SelectContent,
@@ -11,11 +12,9 @@ import {
 } from "@/components/ui/select";
 import type { User as UserType } from "@/types";
 
-interface LeaveFilterBarProps {
+interface LeaveToolbarFiltersProps {
   searchQuery: string;
   onSearchChange: (val: string) => void;
-  filterStatus: "all" | "pending" | "approved" | "rejected";
-  onStatusChange: (val: "all" | "pending" | "approved" | "rejected") => void;
   filterType: "all" | "vacation";
   onTypeChange: (val: "all" | "vacation") => void;
   filterUser: string;
@@ -25,7 +24,6 @@ interface LeaveFilterBarProps {
   onDateFromChange: (val: string) => void;
   dateTo: string;
   onDateToChange: (val: string) => void;
-  statusCounts?: StatusCounts;
 }
 
 const typeLabels = {
@@ -33,11 +31,10 @@ const typeLabels = {
   vacation: "Vacation",
 };
 
-export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
+/** Search, type, user and date range: the controls that share the table toolbar row with Columns. */
+export const LeaveToolbarFilters: React.FC<LeaveToolbarFiltersProps> = ({
   searchQuery,
   onSearchChange,
-  filterStatus,
-  onStatusChange,
   filterType,
   onTypeChange,
   filterUser,
@@ -47,16 +44,15 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
   onDateFromChange,
   dateTo,
   onDateToChange,
-  statusCounts,
 }) => {
   return (
-    <div className="space-y-4">
-    <div className="grid gap-4 xl:grid-cols-[1fr_160px_180px_260px]">
-      <SearchInput value={searchQuery} onChange={onSearchChange} />
+    <>
+      <FilterToolbar.Search>
+        <SearchInput value={searchQuery} onChange={onSearchChange} />
+      </FilterToolbar.Search>
       <Button
         variant="outline"
-        size="control-lg"
-        className="justify-start"
+        size="control"
         onClick={() => {
           const types: Array<"all" | "vacation"> = ["all", "vacation"];
           const currentIndex = types.indexOf(filterType);
@@ -72,7 +68,7 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
         {typeLabels[filterType]}
       </Button>
       <Select value={filterUser} onValueChange={onUserChange}>
-        <SelectTrigger controlSize="lg">
+        <SelectTrigger className="w-44">
           <SelectValue placeholder="All Users" />
         </SelectTrigger>
         <SelectContent>
@@ -84,14 +80,14 @@ export const LeaveFilterBar: React.FC<LeaveFilterBarProps> = ({
           ))}
         </SelectContent>
       </Select>
-      <DateRangePickers
-        dateFrom={dateFrom}
-        onDateFromChange={onDateFromChange}
-        dateTo={dateTo}
-        onDateToChange={onDateToChange}
-      />
-    </div>
-    <StatusChips filterStatus={filterStatus} onStatusChange={onStatusChange} counts={statusCounts} />
-    </div>
+      <div className="w-full sm:w-64">
+        <DateRangePickers
+          dateFrom={dateFrom}
+          onDateFromChange={onDateFromChange}
+          dateTo={dateTo}
+          onDateToChange={onDateToChange}
+        />
+      </div>
+    </>
   );
 };

@@ -31,7 +31,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   />
 );
 
-export interface StatusCounts {
+interface StatusCounts {
   total: number;
   pending: number;
   approved: number;
@@ -83,7 +83,6 @@ export const DateRangePickers: React.FC<DateRangePickersProps> = ({
       onDateFromChange(from);
       onDateToChange(to);
     }}
-    controlSize="lg"
     placeholder="Select date range"
   />
 );
