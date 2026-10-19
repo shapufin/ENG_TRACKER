@@ -137,6 +137,12 @@ describe("PayrollWagesPage", () => {
     });
   });
 
+  it("does not paint every missing-wage row with a filled primary button", async () => {
+    renderPage();
+    const button = await screen.findByRole("button", { name: "Assign Wage" });
+    expect(button.className).not.toContain("bg-primary");
+  });
+
   it("opens an assignment form for the selected employee without asking for a user", async () => {
     renderPage();
 

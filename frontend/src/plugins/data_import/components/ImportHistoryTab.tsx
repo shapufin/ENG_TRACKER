@@ -12,20 +12,35 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ImportBatch } from "../types/dataImport";
+import { formatDateTime } from "@/lib/date-format-utils";
+import type { ImportBatch, ImportTarget } from "../types/dataImport";
 import { rowErrorColumns } from "./rowErrors";
 
 interface ImportHistoryTabProps {
   batches: ImportBatch[];
+  /** Resolves a batch's target_key to its display name; unknown keys show as-is. */
+  targets?: ImportTarget[];
 }
 
-export const ImportHistoryTab: React.FC<ImportHistoryTabProps> = ({ batches }) => {
+export const ImportHistoryTab: React.FC<ImportHistoryTabProps> = ({ batches, targets = [] }) => {
   const [errorBatch, setErrorBatch] = useState<ImportBatch | null>(null);
 
   const columns = useMemo(
     () => [
-      { accessorKey: "created_at", header: "Date" },
-      { accessorKey: "target_key", header: "Target" },
+      {
+        accessorKey: "created_at",
+        header: "Date",
+        cell: ({ row }: { row: { original: ImportBatch } }) => (
+          <span className="whitespace-nowrap">{formatDateTime(row.original.created_at)}</span>
+        ),
+      },
+      {
+        accessorKey: "target_key",
+        header: "Target",
+        cell: ({ row }: { row: { original: ImportBatch } }) =>
+          targets.find((t) => t.target_key === row.original.target_key)?.display_name ??
+          row.original.target_key,
+      },
       {
         accessorKey: "original_filename",
         header: "File",
@@ -56,7 +71,7 @@ export const ImportHistoryTab: React.FC<ImportHistoryTabProps> = ({ batches }) =
         },
       },
     ],
-    []
+    [targets]
   );
 
   return (

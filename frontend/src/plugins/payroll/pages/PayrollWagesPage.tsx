@@ -243,7 +243,11 @@ export const PayrollWagesPage: React.FC = () => {
                       ]}
                     />
                   ) : (
-                    <Button size="sm" onClick={() => openAddForm(row.original)}>
+                    <Button
+                      variant="outline"
+                      size="control-sm"
+                      onClick={() => openAddForm(row.original)}
+                    >
                       Assign Wage
                     </Button>
                   )}
