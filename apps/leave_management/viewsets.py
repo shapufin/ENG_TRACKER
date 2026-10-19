@@ -63,6 +63,7 @@ from .serializers import (
     LeaveRequestSerializer,
     LeaveRequestCreateSerializer,
 )
+from core.utils.timezone_local import business_today
 
 
 def ensure_current_year_balance(user, year):
@@ -74,7 +75,7 @@ def ensure_current_year_balance(user, year):
     """
     ensure_year_end_rollover()
     profile = getattr(user, 'profile', None)
-    today = timezone.now().date()
+    today = business_today()
     hire_date = None
 
     if profile:
@@ -302,7 +303,7 @@ class GlobalSettingsViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserP
             # target applied - 1; otherwise target the active year's carry rows (localdate().year - 1).
             # Older carry rows keep the expiry they were granted with, so an expired balance is never revived.
             applied = settings_obj.carry_over_applied_year
-            target_year = (applied - 1) if applied is not None else (timezone.localdate().year - 1)
+            target_year = (applied - 1) if applied is not None else (business_today().year - 1)
             cycle = LeaveBalance.objects.filter(
                 is_carry_over=True, year=target_year,
             )

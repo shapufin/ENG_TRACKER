@@ -30,6 +30,7 @@ from core.mixins.permissions import (
 from core.utils.csv_safe import xlsx_safe_row
 from .filters import UnifiedReportFilter, apply_visibility_constraints
 from .services.export_service import export_service, ExportConfig
+from core.utils.timezone_local import business_today
 
 logger = logging.getLogger(__name__)
 
@@ -293,7 +294,6 @@ class DetailedReportView(HbprBlockedMixin, APIView):
         from django.contrib.auth.models import User
         from django.db.models import Q, Sum, Count
         from apps.leave_management.models import LeaveBalance
-        import datetime
 
         ot_qs = querysets['overtime']
         sb_qs = querysets['standby']
@@ -325,7 +325,7 @@ class DetailedReportView(HbprBlockedMixin, APIView):
 
         from apps.leave_management.services.carry_over import ensure_year_end_rollover
         ensure_year_end_rollover()
-        current_year = params['start_date'].year if params['start_date'] else datetime.date.today().year
+        current_year = params['start_date'].year if params['start_date'] else business_today().year
         balances = {b.user_id: b.get_effective_available_days() for b in LeaveBalance.objects.filter(year=current_year, leave_type='vacation', is_carry_over=False)}
 
         users_qs = User.objects.filter(Q(id__in=ot_qs.values('user')) | Q(id__in=sb_qs.values('user')) | Q(id__in=leave_qs.values('user'))).distinct()

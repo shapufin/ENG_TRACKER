@@ -14,6 +14,7 @@ from django.db.models import Avg, Count, Max, Min, Sum
 from django.contrib.auth.models import User
 
 from .models import NormalizedTicket, TicketImportBatch, MonthlyKPI
+from core.utils.timezone_local import business_today
 
 # Maximum number of distinct values for a field to be considered categorical
 # and included in field_breakdowns. Fields with more distinct values (e.g.
@@ -193,15 +194,14 @@ def get_user_monthly_summary(user: User, months: int = 12) -> List[Dict[str, Any
     shows a continuous 12-month axis instead of gaps.
     """
     from datetime import date as _date
-    from django.utils import timezone
 
     kpis = MonthlyKPI.objects.filter(user=user).order_by('-month')[:months]
     kpi_map = {kpi.month: kpi for kpi in kpis}
 
     # Build the full month range (oldest → newest) for the last N months,
-    # ending on the first day of the current month. Use timezone.now().date()
+    # ending on the first day of the current month. Use business_today()
     # so the boundary respects Django's TIME_ZONE setting in USE_TZ apps.
-    today = timezone.now().date()
+    today = business_today()
     month_start = _date(today.year, today.month, 1)
     result: List[Dict[str, Any]] = []
     for i in range(months - 1, -1, -1):

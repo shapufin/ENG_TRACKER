@@ -29,7 +29,6 @@ from django.db.models import (
     When,
 )
 from django.db.models.functions import Coalesce
-from django.utils import timezone
 from django.http import FileResponse
 from rest_framework import viewsets, status, permissions, filters
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -79,6 +78,7 @@ from .services.payroll_service import (
 )
 from .services.calculator import calculate_payroll
 from .services.wage_access import can_write_wages
+from core.utils.timezone_local import business_today
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -446,7 +446,7 @@ class PayrollRuleSetViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         independently. ``today`` is computed per request so the status stays
         correct as time advances without a process restart.
         """
-        today = timezone.now().date()
+        today = business_today()
         # A newer active rule set (same tax profile) that also covers today
         # would win in resolve_for_date, superseding this one.
         newer_covers_today = PayrollRuleSet.objects.filter(

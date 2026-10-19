@@ -20,6 +20,7 @@ from apps.standby.models import StandbyLog
 from apps.users.models import ApprovalPeriodClose, Team
 from apps.users.models.hbpr import HbprAlbanianTlAssignment
 from apps.users.services.hbpr_assignments import in_effect_q
+from core.utils.timezone_local import business_today
 
 User = get_user_model()
 
@@ -213,7 +214,7 @@ def backup_status(now):
 
 def build_admin_overview(user):
     now = timezone.now()
-    today = timezone.localdate()
+    today = business_today()
     return {
         "headcount": headcount(now),
         "coverage_gaps": coverage_gaps(today),

@@ -21,6 +21,7 @@ import xlsxwriter
 from core.utils.csv_safe import xlsx_safe
 
 from .report_kpis import NO_DATA, kpi_rows
+from core.utils.timezone_local import business_today
 
 PRIMARY = "#1D4ED8"
 INK = "#0F172A"
@@ -118,7 +119,7 @@ def _build_summary_sheet(wb, fmt, scorecard, period_label, include_leave_overtim
     ws.merge_range(
         "A2:E2",
         f"Period: {period_label} · Team size: {scorecard['team_size']} · "
-        f"Generated on {date.today().strftime('%d %b %Y')}",
+        f"Generated on {business_today().strftime('%d %b %Y')}",
         fmt.subtitle,
     )
     ws.set_row(1, 20)

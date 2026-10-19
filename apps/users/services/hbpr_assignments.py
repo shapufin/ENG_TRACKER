@@ -13,10 +13,10 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
-from django.utils import timezone
 
 from apps.permissions.services.role_service import has_role
 from apps.users.models.hbpr import HbprAlbanianTlAssignment
+from core.utils.timezone_local import business_today
 
 User = get_user_model()
 
@@ -219,7 +219,7 @@ def cadence_status(assignment, *, last_meeting_on, on_date=None) -> str:
 
 
 def today() -> date:
-    return timezone.now().date()
+    return business_today()
 
 
 def hbpr_revocation_refusal(user, data) -> dict | None:

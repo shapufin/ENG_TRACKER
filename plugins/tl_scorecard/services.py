@@ -353,12 +353,12 @@ def build_year_end_pack(assignment, year: int, evidence_qs) -> dict:
         (r for r in rows if r.kind == 'epr_year_end' and r.reporting_year == year), None)
 
     window_start = max(assignment.effective_from, date(year, 1, 1))
-    # The app clock (timezone.now().date(), same as hbpr_assignments.today()),
+    # The app clock (business_today(), same as hbpr_assignments.today()),
     # not the host's local date — the two can differ across midnight.
     window_end = min(
         assignment.effective_to or date.max,
         date(year, 12, 31),
-        timezone.now().date(),
+        business_today(),
     )
     if window_end < window_start:
         expected = 0

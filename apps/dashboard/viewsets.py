@@ -35,6 +35,7 @@ from .serializers import (
     SiteBrandingSerializer,
     WorkspaceUserSerializer,
 )
+from core.utils.timezone_local import business_today
 
 User = get_user_model()
 
@@ -256,7 +257,6 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         Query param: team_id (optional)
         Returns: pending_team_overtime, pending_team_standby, pending_team_leaves, team_size, approved_count, rejected_count, total_count
         """
-        from django.utils import timezone
         from apps.overtime.models import OvertimeLog
         from apps.standby.models import StandbyLog
         from apps.leave_management.models import LeaveRequest
@@ -303,7 +303,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         rejected_count = ot_stats['rejected'] + sb_stats['rejected'] + lv_stats['rejected']
         total_count = pending_overtime + pending_standby + pending_leaves + approved_count + rejected_count
 
-        today = timezone.now().date()
+        today = business_today()
         on_leave_ids = set(LeaveRequest.objects.filter(
             user_id__in=team_member_ids,
             status='approved',
@@ -336,7 +336,6 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         Returns: Array of {date, count} for each day
         """
         from datetime import timedelta, date as date_type
-        from django.utils import timezone
         from apps.overtime.models import OvertimeLog
         from apps.standby.models import StandbyLog
         from apps.leave_management.models import LeaveRequest
@@ -348,7 +347,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         if error == 'team_not_found':
             return Response({'error': 'Team not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        today = timezone.now().date()
+        today = business_today()
         window_start = today - timedelta(days=13)
 
         # 3 bulk queries instead of 42 (14 days Ã— 3 models)
@@ -401,7 +400,6 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         Returns current month and previous month totals with percentage change.
         """
         from datetime import date as date_cls, timedelta
-        from django.utils import timezone
         from apps.overtime.models import OvertimeLog
         from apps.standby.models import StandbyLog
         from apps.leave_management.models import LeaveRequest
@@ -415,7 +413,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({'error': 'Team not found'}, status=status.HTTP_404_NOT_FOUND)
 
         granularity = request.query_params.get('granularity', 'month')
-        today = timezone.now().date()
+        today = business_today()
 
         # Helper to get counts for an arbitrary inclusive date range
         def get_counts_for_range(start, end, member_ids):

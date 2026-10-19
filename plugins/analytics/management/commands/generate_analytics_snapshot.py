@@ -1,5 +1,4 @@
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 from django.db.models import Sum
 from datetime import timedelta
 from apps.leave_management.models import LeaveRequest
@@ -7,6 +6,7 @@ from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from django.contrib.auth.models import User
 from plugins.analytics.models import AnalyticsSnapshot
+from core.utils.timezone_local import business_today
 
 
 class Command(BaseCommand):
@@ -35,7 +35,7 @@ class Command(BaseCommand):
             from datetime import datetime
             snapshot_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         else:
-            snapshot_date = timezone.now().date()
+            snapshot_date = business_today()
         
         self.stdout.write(f'Generating {snapshot_type} snapshot for {snapshot_date}...')
         

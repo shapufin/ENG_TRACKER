@@ -1,7 +1,7 @@
 """Shared ReportLab kit: every helper builds a valid PDF and never trusts cell text."""
 import io
 
-from django.test import SimpleTestCase
+from django.test import TestCase
 from pypdf import PdfReader
 
 from core.utils import pdf_report
@@ -44,7 +44,7 @@ def _build(*, cells=None, series=None):
     return buffer.getvalue()
 
 
-class PdfReportKitTests(SimpleTestCase):
+class PdfReportKitTests(TestCase):
     def test_every_helper_builds_a_pdf(self):
         self.assertTrue(_build().startswith(b'%PDF'))
 

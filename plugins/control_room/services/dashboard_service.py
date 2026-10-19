@@ -27,6 +27,7 @@ from apps.users.services.tech_assignments import format_assignments
 from plugins.control_room.services.scope_service import (
     get_allowed_team_ids, get_allowed_user_ids, can_access_dashboard,
 )
+from core.utils.timezone_local import business_today
 
 
 STATUS_MODES = {
@@ -51,7 +52,7 @@ def _resolve_statuses(status_mode: str, include_rejected: bool) -> list:
 def _validate_date_range(date_from: str, date_to: str) -> tuple:
     """Parse and validate date range. Returns (date_from, date_to) as date objects."""
     try:
-        d_from = date.fromisoformat(date_from) if date_from else date.today()
+        d_from = date.fromisoformat(date_from) if date_from else business_today()
         d_to = date.fromisoformat(date_to) if date_to else d_from + timedelta(days=6)
     except (ValueError, TypeError) as e:
         raise ValueError(f"Invalid date format: {e}")

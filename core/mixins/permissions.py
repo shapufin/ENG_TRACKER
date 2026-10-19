@@ -13,6 +13,7 @@ from apps.permissions.services import permission_service
 from apps.permissions.services.role_service import has_role
 from core.mixins.cache import CacheInvalidationMixin
 import logging
+from core.utils.timezone_local import business_today
 
 logger = logging.getLogger(__name__)
 
@@ -293,7 +294,7 @@ class MonthlyLockMixin:
         record_date = getattr(obj, 'date', None)
         if record_date is None:
             return False
-        today = timezone.now().date()
+        today = business_today()
         return (record_date.year, record_date.month) < (today.year, today.month)
 
     def _is_approval_period_locked(self, obj) -> bool:

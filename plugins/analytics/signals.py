@@ -1,6 +1,6 @@
-from django.utils import timezone
 from django.db import models
 import logging
+from core.utils.timezone_local import business_today
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def generate_snapshot(snapshot_type='daily'):
     from apps.standby.models import StandbyLog
     
     try:
-        now = timezone.now().date()
+        now = business_today()
         
         # Leave metrics
         leave_requests = LeaveRequest.objects.all()

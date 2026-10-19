@@ -28,6 +28,7 @@ from plugins.control_room.services.scope_service import (
     get_access_for_user, get_allowed_team_ids,
 )
 from core.mixins.permissions import PluginPermissionMixin, IsCRAdminOrStaff
+from core.utils.timezone_local import business_today
 
 logger = logging.getLogger(__name__)
 
@@ -829,8 +830,8 @@ class ControlRoomDashboardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         if not date_from and not date_to:
-            from datetime import date, timedelta
-            today = date.today()
+            from datetime import timedelta
+            today = business_today()
             date_from = today.isoformat()
             date_to = (today + timedelta(days=6)).isoformat()
 
@@ -861,8 +862,8 @@ class ControlRoomDashboardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         if not date_from and not date_to:
-            from datetime import date, timedelta
-            today = date.today()
+            from datetime import timedelta
+            today = business_today()
             date_from = today.isoformat()
             date_to = (today + timedelta(days=6)).isoformat()
 
@@ -892,8 +893,8 @@ class ControlRoomDashboardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         if not date_from and not date_to:
-            from datetime import date, timedelta
-            today = date.today()
+            from datetime import timedelta
+            today = business_today()
             date_from = today.isoformat()
             date_to = (today + timedelta(days=6)).isoformat()
 

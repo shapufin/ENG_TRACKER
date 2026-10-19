@@ -1,5 +1,4 @@
 """Event-logging endpoints: meetings, idle flags, review deliveries, absences, survey."""
-from datetime import date
 
 from django.db import IntegrityError
 from django.db.models import Avg, Count, Q
@@ -34,6 +33,7 @@ from ..serializers import (
 )
 from core.mixins.permissions import is_staff_user
 from core.mixins.viewer_scope import HbprScopedQuerysetMixin
+from core.utils.timezone_local import business_today
 
 
 class MeetingViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
@@ -195,7 +195,7 @@ class IdleFlagViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionM
         if flag.status != 'open':
             return Response({'error': 'This idle flag is already resolved.'}, status=status.HTTP_409_CONFLICT)
         flag.status = 'resolved'
-        flag.resolved_on = date.today()
+        flag.resolved_on = business_today()
         flag.save(update_fields=['status', 'resolved_on'])
         return Response(IdleFlagSerializer(flag, context=self.get_serializer_context()).data)
 
@@ -295,7 +295,7 @@ class EngagementSurveyResponseViewSet(PluginPermissionMixin, viewsets.ModelViewS
     def team_average(self, request):
         """TL-only aggregate — average score for the caller's own team,
         never individual responses (see class docstring)."""
-        period = request.query_params.get('period') or date.today().strftime('%Y-%m')
+        period = request.query_params.get('period') or business_today().strftime('%Y-%m')
 
         if not hasattr(request.user, 'profile'):
             return Response({'period': period, 'average_score': None, 'response_count': 0})
@@ -355,6 +355,6 @@ class AbsenceViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMi
         absence = self.get_object()
         if absence.addressed_on is not None:
             return Response({'error': 'This absence is already addressed.'}, status=status.HTTP_409_CONFLICT)
-        absence.addressed_on = date.today()
+        absence.addressed_on = business_today()
         absence.save(update_fields=['addressed_on'])
         return Response(AbsenceSerializer(absence, context=self.get_serializer_context()).data)

@@ -1,5 +1,4 @@
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 from django.db.models import Sum
 from datetime import timedelta
 from apps.leave_management.models import LeaveRequest
@@ -7,6 +6,7 @@ from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from plugins.analytics.models import AnalyticsDailyBucket
 import logging
+from core.utils.timezone_local import business_today
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         days = options['days']
-        end_date = timezone.now().date()
+        end_date = business_today()
         start_date = end_date - timedelta(days=days)
 
         self.stdout.write(f"Pre-aggregating analytics from {start_date} to {end_date}...")
