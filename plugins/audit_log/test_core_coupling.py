@@ -49,3 +49,36 @@ class PurgeAuditLogsTests(TestCase):
         )
         call_command('purge_audit_logs', '--days', '100', stdout=StringIO())
         self.assertFalse(AuditLog.objects.exists())
+
+
+class PurgeIfConfiguredTests(TestCase):
+    """Boot-time purge must never delete anything the admin did not opt into."""
+
+    def _log_old(self):
+        log_action(user=None, action='login', description='old')
+        AuditLog.objects.filter(description='old').update(
+            timestamp=timezone.now() - timedelta(days=4000)
+        )
+
+    def test_if_configured_is_a_no_op_without_an_explicit_retention(self):
+        self._log_old()
+        call_command('purge_audit_logs', '--if-configured', stdout=StringIO())
+        self.assertEqual(AuditLog.objects.count(), 1)
+        Plugin.objects.update_or_create(
+            name='audit_log',
+            defaults={'verbose_name': 'Audit Log', 'version': '1', 'is_enabled': True, 'config': {}},
+        )
+        call_command('purge_audit_logs', '--if-configured', stdout=StringIO())
+        self.assertEqual(AuditLog.objects.count(), 1)
+
+    def test_if_configured_purges_when_retention_is_set(self):
+        self._log_old()
+        Plugin.objects.update_or_create(
+            name='audit_log',
+            defaults={
+                'verbose_name': 'Audit Log', 'version': '1', 'is_enabled': True,
+                'config': {'retention_days': 30},
+            },
+        )
+        call_command('purge_audit_logs', '--if-configured', stdout=StringIO())
+        self.assertEqual(AuditLog.objects.count(), 0)

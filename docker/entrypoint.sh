@@ -84,6 +84,12 @@ if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
     echo "[entrypoint] Pruning old read notifications..."
     python manage.py prune_notifications || echo "[entrypoint] Notification prune skipped (non-fatal)"
 
+    # Audit-log retention: only when an admin explicitly set retention_days on the
+    # audit_log plugin (--if-configured is a no-op otherwise, so no trail is ever
+    # deleted by default). No scheduler exists; for a long-lived replica also cron it.
+    echo "[entrypoint] Purging audit logs past the configured retention..."
+    python manage.py purge_audit_logs --if-configured || echo "[entrypoint] Audit log purge skipped (non-fatal)"
+
     echo "[entrypoint] Ensuring superuser..."
     python manage.py ensure_superuser
 else
