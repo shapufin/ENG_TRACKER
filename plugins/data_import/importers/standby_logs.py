@@ -285,8 +285,11 @@ class StandbyLogImporter(StaffOnlyAuthority, BaseImporter):
         if not created_dates:
             return
 
-        from plugins.notifications.signals import _create_notification
-        from plugins.notifications.types.own import StandbySubmittedNotification
+        try:
+            from plugins.notifications.signals import _create_notification
+            from plugins.notifications.types.own import StandbySubmittedNotification
+        except ImportError:
+            return  # notifications plugin not installed: nothing to notify
 
         event_type = StandbySubmittedNotification.event_type
         for user_id, dates in created_dates.items():
