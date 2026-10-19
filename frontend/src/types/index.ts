@@ -8,6 +8,8 @@ export interface Tech {
   code: string;
   description?: string;
   is_active: boolean;
+  /** Active users holding this Tech. */
+  members_count?: number;
   /** The Tech's own ordered grade scale, rank-ascending. */
   levels?: TechLevel[];
   created_at?: string;

@@ -7,6 +7,7 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Plus } from "lucide-react";
 import { ClientDataTable } from "@/components/admin/ClientDataTable";
+import { ClientStatsCards } from "./components/ClientStatsCards";
 import { ClientFormDialog } from "@/components/admin/ClientFormDialog";
 import { useClientManagement } from "./hooks/useClientManagement";
 
@@ -47,6 +48,8 @@ export const ClientsPage: React.FC = () => {
         </div>
       }
     >
+      <ClientStatsCards clients={clients} />
+
       <ClientDataTable clients={clients} onEdit={openEdit} onDelete={setConfirmDelete} />
 
       <ClientFormDialog

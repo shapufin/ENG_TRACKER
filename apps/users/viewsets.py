@@ -1554,7 +1554,13 @@ class TechViewSet(viewsets.ModelViewSet):
     - POST   /techs/:id/reorder_levels/ — rewrite the level ranks in one go.
     """
 
-    queryset = Tech.objects.all().prefetch_related('levels').order_by('name')
+    queryset = Tech.objects.all().prefetch_related('levels').annotate(
+        members_count_annotated=Count(
+            'assignments',
+            filter=models.Q(assignments__user_profile__user__is_active=True),
+            distinct=True,
+        ),
+    ).order_by('name')
     serializer_class = TechSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['name', 'code', 'description']

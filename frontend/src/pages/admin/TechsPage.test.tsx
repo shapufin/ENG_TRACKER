@@ -129,6 +129,29 @@ describe("TechsPage", () => {
     expect(screen.getByText("Inactive")).toBeInTheDocument();
   });
 
+  it("shows a description line and the engineer count on each row", async () => {
+    vi.mocked(userService.getTechs).mockResolvedValue({
+      count: 1,
+      results: [{ ...activeTech, description: "Bare-metal hypervisors", members_count: 4 }],
+    } as never);
+    renderWithProvider(<TechsPage />);
+    expect(await screen.findByText("Bare-metal hypervisors")).toBeInTheDocument();
+    expect(screen.getByLabelText("4 engineers")).toBeInTheDocument();
+  });
+
+  it("guides the Add form with placeholders", async () => {
+    renderWithProvider(<TechsPage />);
+    await waitFor(() => expect(screen.getByText("Infrastructure")).toBeInTheDocument());
+    expect(screen.getByLabelText("Name")).toHaveAttribute(
+      "placeholder",
+      expect.stringMatching(/e\.g\./i)
+    );
+    expect(screen.getByLabelText("Code")).toHaveAttribute(
+      "placeholder",
+      expect.stringMatching(/e\.g\./i)
+    );
+  });
+
   it("creates a tech when the Add button is clicked", async () => {
     renderWithProvider(<TechsPage />);
     await waitFor(() => expect(screen.getByText("Infrastructure")).toBeInTheDocument());

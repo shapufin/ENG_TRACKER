@@ -387,14 +387,22 @@ class TechSerializer(serializers.ModelSerializer):
     """Serializer for the independent user technology catalog."""
 
     levels = TechLevelSerializer(many=True, read_only=True)
+    members_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Tech
         fields = [
             'id', 'name', 'code', 'description', 'is_active', 'levels',
-            'created_at', 'updated_at',
+            'members_count', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_members_count(self, obj) -> int:
+        """Active users holding this Tech (annotated on list, counted otherwise)."""
+        annotated = getattr(obj, 'members_count_annotated', None)
+        if annotated is not None:
+            return annotated
+        return obj.assignments.filter(user_profile__user__is_active=True).count()
 
 
 class TeamLeaderSerializer(serializers.ModelSerializer):
