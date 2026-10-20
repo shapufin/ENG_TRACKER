@@ -1235,6 +1235,20 @@ class KPIEvidenceTests(TestCase):
         evidence = KPIEvidence.objects.get(pk=evidence_id)
         self.assertEqual(evidence.description, 'Updated by member')
 
+    def test_replacing_the_file_on_update_runs_the_upload_policy(self):
+        # Create validates the upload; a PATCH that swaps the file must too (T-F8).
+        evidence_id = self._create_evidence(self.member, client_ids=[self.client_a.id]).data['id']
+        before = KPIEvidence.objects.get(pk=evidence_id).file.name
+
+        fake = SimpleUploadedFile('payload.pdf', b'MZ binary, not a pdf', content_type='application/pdf')
+        request = self.factory.patch(f'/evidence/{evidence_id}/', {'file': fake}, format='multipart')
+        force_authenticate(request, self.member)
+        from plugins.ticket_kpi.viewsets import KPIEvidenceViewSet
+        response = KPIEvidenceViewSet.as_view({'patch': 'partial_update'})(request, pk=evidence_id)
+
+        self.assertEqual(response.status_code, 400, getattr(response, 'data', None))
+        self.assertEqual(KPIEvidence.objects.get(pk=evidence_id).file.name, before)
+
     def test_member_cannot_update_reviewed_evidence(self):
         response = self._create_evidence(self.member, client_ids=[self.client_a.id])
         evidence_id = response.data['id']
