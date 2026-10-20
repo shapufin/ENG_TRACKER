@@ -104,7 +104,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             return None
         return set(scoreable_member_ids(leader)) & scope.user_ids
 
-    def _mask_hbpr_only(self, request, leader, *payloads):
+    def _mask_hbpr_only(self, request, leader, *payloads, drop_blocks=True):
         """Leave and overtime are denied to HBPR-only viewers (CLAUDE.md), so
         their scorecard omits those blocks and counts no leave escalations."""
         if not is_hbpr_only(request.user):
@@ -112,8 +112,9 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         escalations = len(escalation_candidates(
             leader, self._hbpr_subject_ids(request, leader), include_leave=False))
         for payload in payloads:
-            payload.pop('leave', None)
-            payload.pop('overtime', None)
+            if drop_blocks:
+                payload.pop('leave', None)
+                payload.pop('overtime', None)
             payload['escalation_count'] = escalations
 
     @action(detail=False, methods=['get'])
@@ -244,6 +245,9 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         trend = scorecard_trend(leader, 6, month)
         scorecard = trend[-1]
         self._mask_one_on_one(request, leader, *trend)
+        # The builders read the leave/overtime blocks themselves (and skip them
+        # via include_leave_overtime); only the escalation count needs recounting.
+        self._mask_hbpr_only(request, leader, *trend, drop_blocks=False)
         team_member_ids = scoreable_member_ids(leader)
         subject_ids = None
         if not is_staff_user(request.user) and leader.id != request.user.id:

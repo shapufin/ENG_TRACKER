@@ -171,6 +171,29 @@ class HbprEscalationLeakTests(Phase6Base):
         self.assertNotIn('leave_pending', kinds)
         self.assertNotIn(self.outsider.id, subjects)
 
+    def test_hbpr_pdf_export_does_not_count_leave_escalations(self):
+        # The JSON scorecard recounts escalations without leave for an HBPR-only
+        # viewer; the PDF export must show that same number, not a count that
+        # includes the leave they may not see (launch review D-11).
+        import io
+        import re
+
+        from pypdf import PdfReader
+
+        start = self.today + timedelta(days=30)
+        start += timedelta(days=-start.weekday() % 7)
+        LeaveRequest.objects.create(
+            user=self.al_member, request_type='vacation', start_date=start,
+            end_date=start + timedelta(days=1), status='pending')
+        LeaveRequest.objects.update(submitted_at=timezone.now() - timedelta(days=20))
+
+        resp = self._get('export', self.hbpr, leader_id=self.al_tl.id, file_format='pdf')
+        self.assertEqual(resp.status_code, 200)
+        text = ' '.join(page.extract_text() for page in PdfReader(io.BytesIO(resp.content)).pages)
+        match = re.search(r'Escalation risks\s*(\d+)', text)
+        self.assertIsNotNone(match, text[:400])
+        self.assertEqual(match.group(1), '0')
+
     def test_hbpr_scorecard_omits_leave_and_overtime(self):
         resp = self._get('scorecard', self.hbpr, leader_id=self.al_tl.id)
         self.assertEqual(resp.status_code, 200, resp.data)
