@@ -1,7 +1,10 @@
 """Tests for bi-directional holiday sync between HR PublicHolidays and Payroll."""
 from datetime import date
 from decimal import Decimal
+from io import StringIO
+from unittest import mock
 from django.contrib.auth.models import User
+from django.core.management import call_command
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -62,6 +65,35 @@ class HolidaySyncServiceTests(TestCase):
 
         h2 = PublicHoliday.objects.get(date=date(2026, 3, 14), calendar__isnull=True)
         self.assertEqual(h2.name, 'Summer Day')
+
+    def test_sync_twice_creates_no_duplicates(self):
+        sync_holidays_between_hr_and_payroll(year=2026)
+        second = sync_holidays_between_hr_and_payroll(year=2026)
+        self.assertEqual(second['synced_to_hr'], 0)
+        self.assertEqual(PublicHoliday.objects.filter(calendar__isnull=True).count(), 2)
+
+    def test_sync_survives_another_worker_creating_the_same_holiday(self):
+        """Two workers can both see 'missing' and both insert; the loser must not abort the sync."""
+        for wd in (self.wd1, self.wd2):
+            PublicHoliday.objects.create(
+                date=wd.date, name=wd.holiday_name, is_global=True, country_code='AL')
+        real_filter = PublicHoliday.objects.filter
+
+        def blind_to_rival(*args, **kwargs):
+            # The existence check ran before the rival worker committed.
+            if 'date' in kwargs:
+                return real_filter().none()
+            return real_filter(*args, **kwargs)
+
+        with mock.patch.object(PublicHoliday.objects, 'filter', side_effect=blind_to_rival):
+            result = sync_holidays_between_hr_and_payroll(year=2026)
+        self.assertEqual(result['status'], 'success')
+        self.assertEqual(result['synced_to_hr'], 0)
+        self.assertEqual(PublicHoliday.objects.filter(calendar__isnull=True).count(), 2)
+
+    def test_boot_command_runs_the_sync(self):
+        call_command('sync_payroll_holidays', year=2026, stdout=StringIO())
+        self.assertEqual(PublicHoliday.objects.filter(calendar__isnull=True).count(), 2)
 
     def test_sync_inherits_hr_holidays_to_payroll(self):
         """When HR has a holiday not in Payroll, sync creates or updates the Payroll workday."""

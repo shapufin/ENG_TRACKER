@@ -74,15 +74,20 @@ def sync_holidays_between_hr_and_payroll(year: Optional[int] = None) -> dict:
                 # Check if exists in PublicHoliday (global)
                 existing_hr = PublicHoliday.objects.filter(calendar__isnull=True, date=h_date).first()
                 if not existing_hr:
-                    PublicHoliday.objects.create(
+                    # get_or_create: another worker may have inserted the same
+                    # global holiday since the check above (unique on date+country).
+                    _, created = PublicHoliday.objects.get_or_create(
                         date=h_date,
                         calendar=None,
-                        name=h_name,
-                        is_global=True,
                         country_code=country,
-                        description='Imported from Payroll Work Calendar',
+                        defaults={
+                            'name': h_name,
+                            'is_global': True,
+                            'description': 'Imported from Payroll Work Calendar',
+                        },
                     )
-                    synced_to_hr += 1
+                    if created:
+                        synced_to_hr += 1
 
             # 2. Inherit/Mirror from HR -> Payroll
             hr_holidays = PublicHoliday.objects.filter(calendar__isnull=True, date__year=y)
