@@ -222,6 +222,10 @@ export const useUsersPage = () => {
     onDeleteSuccess: () => setConfirmDelete(null),
   });
 
+  // A page past the end (the last row of the last page was just deleted, or
+  // another admin removed users) is a 404 from the server: fall back to page 1.
+  if (isError && page > 1) setPage(1);
+
   // Role tab + tech chips + "No tech" are all filtered server-side (see
   // useUserManagement) — "No tech" is a distinct facet value, mutually
   // exclusive with picking real tech chips (setTechIdsFiltered/
