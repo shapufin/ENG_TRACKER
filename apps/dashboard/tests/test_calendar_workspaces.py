@@ -355,3 +355,21 @@ class TeamDeletionWorkspaceCleanupTests(TestCase):
 
         workspace.refresh_from_db()
         self.assertEqual(workspace.team_id, again.id)
+
+    def test_relinked_workspace_does_not_keep_the_old_sharing(self):
+        old_viewer = User.objects.create_user(username="old_viewer", password="x")
+        team = Team.objects.create(name="Share Team", code="SHARE")
+        workspace = CalendarWorkspace.objects.get(code="SHARE_calendar")
+        PublicHoliday.objects.create(name="Local day", date="2026-11-11", calendar=workspace)
+        workspace.is_public = True
+        workspace.save(update_fields=["is_public"])
+        workspace.allowed_users.add(old_viewer)
+        team.delete()
+
+        again = Team.objects.create(name="Share Team", code="SHARE")
+
+        workspace.refresh_from_db()
+        self.assertEqual(workspace.team_id, again.id)
+        self.assertFalse(workspace.is_public)
+        self.assertFalse(workspace.allowed_users.exists())
+        self.assertNotIn(workspace, CalendarWorkspace.get_accessible_for_user(old_viewer))

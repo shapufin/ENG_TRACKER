@@ -43,8 +43,11 @@ def create_team_calendar_workspace(sender, instance, created, **kwargs):
         # A workspace kept after its team was deleted (it held holidays) is
         # detached; re-creating the team under the same code must reattach it.
         if not workspace_created and workspace.team_id is None:
+            # The new team is a new audience: drop the old team's sharing.
             workspace.team = instance
-            workspace.save(update_fields=['team'])
+            workspace.is_public = False
+            workspace.save(update_fields=['team', 'is_public'])
+            workspace.allowed_users.clear()
 
 
 @receiver(pre_delete, sender=Team)
