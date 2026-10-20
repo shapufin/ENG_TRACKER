@@ -1,4 +1,3 @@
-import html2canvas from "html2canvas-pro";
 import type { OrgChartNode, OrgChartEdge } from "../types";
 
 /**
@@ -120,6 +119,7 @@ export async function exportCanvasToPng(
   const viewport = container.querySelector(".react-flow__viewport") as HTMLElement | null;
   if (!viewport) return false;
   try {
+    const { default: html2canvas } = await import("html2canvas-pro");
     const canvas = await html2canvas(viewport, {
       backgroundColor: null,
       scale: 2,
