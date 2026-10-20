@@ -49,3 +49,46 @@ class BulkDeleteQueryTests(TestCase):
         # Measured 2026-10-14: 153/user (157 before the logging counts were removed).
         # Almost all of it is Django's delete cascade over every FK to User.
         self.assertLessEqual((large - small) / 6, 160)
+
+
+class ProtectedUserDeleteTests(TestCase):
+    """A user referenced by payroll lines cannot be deleted; the failure must be
+    clean (no 500) and must not leave the TL references half-cleared."""
+
+    def setUp(self):
+        from datetime import date
+
+        from plugins.payroll.models import PayrollLine, PayrollRuleSet, PayrollRun
+
+        self.admin = User.objects.create_user(username='pd-admin', password='x', is_staff=True)
+        self.api = APIClient()
+        self.api.force_authenticate(self.admin)
+        self.leader = User.objects.create_user(username='pd-leader', password='x')
+        rule_set = PayrollRuleSet.objects.create(
+            name='Std', country='AL', tax_profile='standard',
+            effective_from=date(2020, 1, 1), is_active=True)
+        run = PayrollRun.objects.create(year=2026, month=1, status='draft', rule_set=rule_set)
+        PayrollLine.objects.create(user=self.leader, run=run)
+
+    def test_bulk_delete_failure_keeps_tl_references(self):
+        from apps.users.models import Team
+
+        member = User.objects.create_user(username='pd-member', password='x')
+        member.profile.italian_tl = self.leader
+        member.profile.save()
+        team = Team.objects.create(name='PD Team', code='PDT', team_leader=self.leader)
+
+        resp = self.api.post(URL, {'ids': [self.leader.id]}, format='json')
+
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(resp.data['deleted_count'], 0)
+        self.assertEqual(len(resp.data['failed_users']), 1)
+        member.profile.refresh_from_db()
+        team.refresh_from_db()
+        self.assertEqual(member.profile.italian_tl_id, self.leader.id)
+        self.assertEqual(team.team_leader_id, self.leader.id)
+
+    def test_single_delete_is_a_409_not_a_500(self):
+        resp = self.api.delete(f'/api/users/users/{self.leader.id}/')
+        self.assertEqual(resp.status_code, 409, getattr(resp, 'data', None))
+        self.assertTrue(User.objects.filter(pk=self.leader.id).exists())

@@ -9,7 +9,7 @@ from datetime import date
 
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
+from rest_framework.exceptions import APIException, PermissionDenied, ValidationError as DRFValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
@@ -60,6 +60,12 @@ from core.mixins.permissions import (
 from core.utils.timezone_local import business_today
 
 logger = logging.getLogger(__name__)
+
+
+class ProtectedRecordConflict(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = 'This user is referenced by records that cannot be deleted (for example payroll lines).'
+    default_code = 'protected'
 
 
 class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
@@ -725,6 +731,12 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             'updated_count': len(profiles),
         }, status=status.HTTP_200_OK)
 
+    def perform_destroy(self, instance):
+        try:
+            instance.delete()
+        except models.ProtectedError:
+            raise ProtectedRecordConflict()
+
     @action(detail=False, methods=['post'], permission_classes=[IsAdminUser()])
     def bulk_delete(self, request):
         """
@@ -751,20 +763,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 continue
 
             try:
-                # Clear TL references before deletion to avoid constraint violations.
-                # PERF-14: the update row counts are logged; the old per-user COUNT
-                # queries existed only to write log lines.
-                italian_cleared = UserProfile.objects.filter(italian_tl=user).update(italian_tl=None)
-                albanian_cleared = UserProfile.objects.filter(albanian_tl=user).update(albanian_tl=None)
-                led_cleared = Team.objects.filter(team_leader=user).update(team_leader=None)
-                logger.info(
-                    f"User {user.id} references cleared: {italian_cleared} Italian TL, "
-                    f"{albanian_cleared} Albanian TL, {led_cleared} led teams"
-                )
-
                 # HBPR↔AL-TL assignments PROTECT both participants: an
                 # assigned user must have their assignments ended (history
-                # retained) before the account can be deleted.
+                # retained) before the account can be deleted. Checked before
+                # anything is cleared so a refusal changes nothing.
                 from apps.users.models.hbpr import HbprAlbanianTlAssignment
                 from apps.users.services.hbpr_assignments import unfinished_q
 
@@ -781,8 +783,19 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     })
                     continue
 
-                logger.info(f"Clearing references for user {user.id} complete, attempting deletion")
-                user.delete()
+                # Clear TL references and delete in one savepoint: a PROTECTed
+                # row (e.g. payroll lines) must not leave the references cleared.
+                # PERF-14: the update row counts are logged; the old per-user COUNT
+                # queries existed only to write log lines.
+                with transaction.atomic():
+                    italian_cleared = UserProfile.objects.filter(italian_tl=user).update(italian_tl=None)
+                    albanian_cleared = UserProfile.objects.filter(albanian_tl=user).update(albanian_tl=None)
+                    led_cleared = Team.objects.filter(team_leader=user).update(team_leader=None)
+                    logger.info(
+                        f"User {user.id} references cleared: {italian_cleared} Italian TL, "
+                        f"{albanian_cleared} Albanian TL, {led_cleared} led teams"
+                    )
+                    user.delete()
                 deleted_count += 1
                 logger.info(f"User {user.id} deleted successfully")
             except Exception as e:
