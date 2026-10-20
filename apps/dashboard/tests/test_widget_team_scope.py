@@ -3,6 +3,9 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from rest_framework.test import APITestCase
 
+from django.utils import timezone
+
+from apps.overtime.models.core import Client, OvertimeLog
 from apps.users.models import Team
 
 WIDGET_URL = '/api/dashboard/widgets/{}/'
@@ -14,7 +17,10 @@ class DashboardWidgetTeamScopeTests(APITestCase):
     def setUpTestData(cls):
         cls.tl = User.objects.create_user(username='dw_tl', password='x')
         cls.employee = User.objects.create_user(username='dw_emp', password='x')
-        cls.victim = User.objects.create_user(username='dw_victim', password='x')
+        cls.victim = User.objects.create_user(
+            username='dw_victim', password='x', first_name='Vivian', last_name='Victim')
+        cls.employee.first_name, cls.employee.last_name = 'Olive', 'Own'
+        cls.employee.save()
         cls.admin = User.objects.create_user(username='dw_admin', password='x', is_staff=True)
         cls.hr = User.objects.create_user(username='dw_hr', password='x')
         cls.hr.profile.is_hr_user = True
@@ -25,6 +31,11 @@ class DashboardWidgetTeamScopeTests(APITestCase):
         cls.employee.profile.teams.add(cls.own_team)
         cls.foreign_team = Team.objects.create(name='DW Foreign', code='DWF')
         cls.victim.profile.teams.add(cls.foreign_team)
+
+        client = Client.objects.create(name='DW Client', code='DWC')
+        for user in (cls.employee, cls.victim):
+            OvertimeLog.objects.create(
+                user=user, date=timezone.now().date(), hours=2, status='pending', client=client)
 
     def setUp(self):
         cache.clear()
@@ -58,7 +69,8 @@ class DashboardWidgetTeamScopeTests(APITestCase):
             with self.subTest(action=action):
                 resp = self._get(self.tl, action)
                 self.assertEqual(resp.status_code, 200)
-                self.assertNotIn('dw_victim', str(resp.data))
+                self.assertIn('Olive Own', str(resp.data))
+                self.assertNotIn('Vivian', str(resp.data))
 
     def test_staff_and_hr_can_query_any_team(self):
         for user in (self.admin, self.hr):
