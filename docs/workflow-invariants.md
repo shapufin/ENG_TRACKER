@@ -76,6 +76,10 @@ Counts always use `count_business_days`, never calendar span.
 - Refs go stale after any click or navigation. Take a fresh snapshot before the next action.
 - A bottom install banner or a top status aside can intercept clicks. Dismiss it first.
 
+## Team confidentiality (2026-10-20)
+
+Ruling: "Team members don't see statuses of other team members; that is part of the TL's confidentiality. They can see vacation and so on, which is related to their work." Employees are self-only for statuses, pending counts, approval queues and per-person aggregates; only the team leave calendar is shared. TL = own team via `get_team_member_ids()`; HR/staff unchanged; TL names are not confidential, counts are. A test that pins employees seeing teammates' statuses is a bug. Enforced by `apps/permissions/test_row_ownership_matrix.py`, `apps/dashboard/tests/test_widget_team_scope.py`, `apps/users/tests_app/test_tl_directory_scope.py`.
+
 ## Plugin audit checklist (run when touching or reviewing any plugin)
 
 Derived from the 2026-10-18 `ticket_kpi` audit. Each line is a defect class that was found there.
