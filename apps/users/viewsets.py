@@ -343,7 +343,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             Q(profile__role_codes__icontains='italian_tl')
         ).distinct().annotate(
             member_count=Count('italian_team_members', distinct=True)
-        ).select_related('profile').prefetch_related('profile__teams')
+        ).select_related('profile').prefetch_related('profile__team_memberships__team')
 
         results = []
         for u in queryset:
@@ -353,7 +353,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 'full_name': f"{u.first_name} {u.last_name}".strip() or u.username,
             }
             if show_counts:
-                row['team_name'] = u.profile.get_primary_team().name if hasattr(u, 'profile') and u.profile.get_primary_team() else None
+                primary_team = u.profile.get_primary_team() if hasattr(u, 'profile') else None
+                row['team_name'] = primary_team.name if primary_team else None
                 row['member_count'] = u.member_count
             results.append(row)
         
@@ -373,7 +374,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             Q(profile__role_codes__icontains='albanian_tl')
         ).distinct().annotate(
             member_count=Count('albanian_team_members', distinct=True)
-        ).select_related('profile').prefetch_related('profile__teams')
+        ).select_related('profile').prefetch_related('profile__team_memberships__team')
 
         results = []
         for u in queryset:
@@ -383,7 +384,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 'full_name': f"{u.first_name} {u.last_name}".strip() or u.username,
             }
             if show_counts:
-                row['team_name'] = u.profile.get_primary_team().name if hasattr(u, 'profile') and u.profile.get_primary_team() else None
+                primary_team = u.profile.get_primary_team() if hasattr(u, 'profile') else None
+                row['team_name'] = primary_team.name if primary_team else None
                 row['member_count'] = u.member_count
             results.append(row)
         
