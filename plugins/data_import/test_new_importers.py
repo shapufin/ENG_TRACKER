@@ -414,3 +414,14 @@ class ControlRoomAccessImporterTests(TestCase):
             row(username="mrossi", team_codes="ENG"), NO_UPDATE, context=self._context()
         )
         self.assertFalse(ControlRoomAccess.objects.exists())
+
+    def test_blank_is_active_on_update_leaves_a_deactivated_grant_deactivated(self):
+        self.importer.commit_row(
+            row(username="mrossi", team_codes="ENG", is_active="false"), NO_UPDATE,
+            context=self._context(),
+        )
+        self.importer.commit_row(
+            row(username="mrossi", team_codes="ENG", is_active=""), UPDATE,
+            context=self._context(),
+        )
+        self.assertFalse(ControlRoomAccess.objects.get(user=self.user).is_active)

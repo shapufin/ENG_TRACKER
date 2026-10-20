@@ -140,7 +140,7 @@ class ControlRoomAccessImporter(ControlRoomAuthority, BaseImporter):
                     "No team codes given — this grant has no visibility into any team."
                 )
 
-            is_active = parse_bool(mapped_row.get("is_active"), True)
+            is_active = parse_bool(mapped_row.get("is_active"))  # None = blank cell
             display_name = mapped_row.get("display_name")
             timezone_value = mapped_row.get("timezone")
 
@@ -156,7 +156,8 @@ class ControlRoomAccessImporter(ControlRoomAuthority, BaseImporter):
                         warnings=["This user already has a Control Room access record."],
                     )
                 if not dry_run:
-                    access.is_active = is_active
+                    if is_active is not None:
+                        access.is_active = is_active
                     if display_name is not None:
                         access.display_name = display_name
                     if timezone_value is not None:
@@ -174,7 +175,7 @@ class ControlRoomAccessImporter(ControlRoomAuthority, BaseImporter):
             if not dry_run:
                 access = ControlRoomAccess.objects.create(
                     user=user,
-                    is_active=is_active,
+                    is_active=True if is_active is None else is_active,
                     display_name=display_name or "",
                     timezone=timezone_value or "",
                     created_by=actor,
