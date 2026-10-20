@@ -152,7 +152,11 @@ class GeneratedReportViewSet(HbprBlockedMixin, TeamLeaderFilterMixin, viewsets.M
     
     def filter_for_regular_user(self, queryset, user):
         return queryset.filter(generated_by=user)
-    
+
+    # Reports are personal: the mixin's team filter looks up a ``user`` column that
+    # this model does not have (a 500 for every team leader).
+    filter_for_team_leader = filter_for_regular_user
+
     def perform_create(self, serializer):
         serializer.save(generated_by=self.request.user)
     
