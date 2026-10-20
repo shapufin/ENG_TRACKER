@@ -31,6 +31,25 @@ Delta review of `b4d48ac..HEAD` (64 commits since the 2026-10-14 production-read
 | Security weekly | `gh run list` | PASS | Latest run 39240729597 (2026-10-19 10:53 UTC) success. |
 | `.dockerignore` excludes `AdminGUI/` | root `.dockerignore` and `frontend/.dockerignore` | NO | Neither file mentions `AdminGUI`. The directory is untracked, so a Docker build context on a dirty tree would include it. See B-02. |
 
+### Bundle
+
+`ANALYZE=true npm run build` (frontend, after P-1), 10 largest JS chunks by raw size, gzip level 9. Before P-1 the `OrganigramaBuilderPage` chunk statically imported `html2canvas-pro.esm` and `jspdf.es.min`, and the shared `organigramaService` chunk statically imported `html2canvas-pro.esm`; after P-1 neither chunk has a static import of either library (grep of `from"./..."` in the built chunks).
+
+| # | Chunk | Raw KB | Gzip KB | Note |
+|---|---|---|---|---|
+| 1 | `vendor-recharts` | 391 | 110 | Static import of 3 pages (`AdminDashboardPage`, `EngagementVisualizationPage`, `TLScorecardVisualizationPage`); charts render on view, not on click. |
+| 2 | `jspdf.es.min` | 390 | 124 | Now loaded only by export handlers (P-1, `pdfExport`). |
+| 3 | `html2canvas-pro.esm` | 255 | 64 | Now loaded only by export handlers (P-1). |
+| 4 | `organigramaService` | 210 | 66 | Own code and React Flow; no longer carries html2canvas-pro. |
+| 5 | `html2canvas` | 195 | 44 | Dynamic dependency of jspdf. |
+| 6 | `vendor-react` | 178 | 55 | |
+| 7 | `index` (entry) | 148 | 41 | |
+| 8 | `index.es` | 148 | 47 | |
+| 9 | `vendor-framer` | 136 | 44 | |
+| 10 | `AdminDashboardPage` | 119 | 36 | |
+
+`node scripts/entry-chunk-audit.mjs`: OK (36 entry chunks, no heavy libs), before and after.
+
 ## Findings register
 
 | ID | Sev | Location | Finding | Evidence | Status |
@@ -58,6 +77,15 @@ Delta review of `b4d48ac..HEAD` (64 commits since the 2026-10-14 production-read
 | C-10 | L | `plugins/data_import/parsing.py` `_parse_value` | Whitespace-only bool cell parses as False not blank. | reading | REJECTED (CSV/XLSX blanks arrive as NaN) |
 | C-11 | L | engagement stored snapshots | Changing `business_timezone` leaves `TLApprovalMetric` rows computed under the old zone until stale. | reading | DEFERRED (admin-rare) |
 | C-12 | L | `UserCreateFormDialog.tsx` | Dynamic import of `plugins/control_room` from core. | pre-existing, documented in file | REJECTED (outside delta) |
+| P-1 | M | `frontend/src/plugins/organigrama/pages/OrganigramaBuilderPage.tsx`, `components/viewerHelpers.ts` | `html2canvas-pro` and `jspdf` (about 190 KB gzip) were static imports, so the builder page chunk and the shared `organigramaService` chunk loaded them on page visit although they are only needed on export click. | Built chunks: static `from"./html2canvas-pro..."` / `from"./jspdf..."` present before, absent after; `entry-chunk-audit` OK; 167 organigrama tests pass; `optimizeDeps.include` still lists `dompurify`, `jspdf`, `html2canvas-pro`. | FIXED (dynamic import in the export handlers) |
+| P-2 | M | `apps/users/viewsets.py` `italian_team_leaders` / `albanian_team_leaders` | Each leader row cost 4 queries: `prefetch_related('profile__teams')` did not feed `get_primary_team()`, which reads `team_memberships`, and it was called twice per row. | `DirectoryQueryBudgetTests` RED (10 vs 50 queries for 2 vs 12 leaders), GREEN after prefetching `profile__team_memberships__team` and one call per row | FIXED (test_italian_team_leaders_is_flat, test_albanian_team_leaders_is_flat) |
+| P-3 | M | `apps/leave_management/services/carry_over.py` `apply_year_end_carry_over` | The first leave read of a year rolled over per user (about 3 queries each: closed balance, existing carry, create) while holding the `GlobalSettings` row lock. | `RolloverQueryBudgetTests` RED (12 vs 42 queries for 2 vs 12 users), GREEN with two reads and one `bulk_create` | FIXED (test_rollover_query_count_does_not_grow_with_users) |
+| P-4 | L | `purge_audit_logs`, `purge_analytics_data`, `purge_ended_assignments` | Checked that the retention purges delete in bulk. | Budget tests: query count equal for 2 and 50 rows (audit logs), 2 and 30 rows (analytics), 1 and 8 rows (HBPR assignments). | CLEAN (tests added) |
+| P-5 | L | `plugins/data_import` `UserImporter.validate_row` (and the other importers' dry run) | Preview costs 3 indexed queries per row (existing-user lookup plus username and email uniqueness checks). Linear, not amplified. | Measured 6 queries for 2 rows, 36 for 12. Bounded by `max_rows_per_import` (5000), admin only. | DEFERRED (a batched pre-load is a per-importer redesign; worst case about 15000 indexed lookups) |
+| P-6 | L | `apps/dashboard/services/holiday_sync.py` | Mirror loop does `get_or_create` per holiday per calendar. | Reading: holidays x calendars of one year (tens of queries), runs from a command or a manual action. | REJECTED (bounded, rare) |
+| P-7 | L | `core/mixins/permissions.py` plugin gate | Added one `Plugin` lookup per plugin request (the disabled check). | Reading: once per request in `has_permission`, constant. | REJECTED (constant, not N+1) |
+| P-8 | L | `frontend/src/pages/admin/components/dashboard-grid/DashboardGrid.tsx` | `react-grid-layout` is imported by the admin dashboard although drag/resize is edit mode only. | Chunk is part of `AdminDashboardPage` (36 KB gzip total), not a large chunk. | DEFERRED (small; deferring would add a loading state to the dashboard) |
+| P-9 | L | Targets with existing budgets | Admin users list with search and paging, teams list with TL derivation, tech `members_count`, tl_scorecard `team-members` wage annotation and trend. | Existing tests `ProfileListQueryTests`, `TeamDerivedTlTests.test_list_query_count_does_not_grow_with_teams`, `TechMembersCountTests`, `test_team_members` budget, `test_trend_budget`; this pass adds the profile list with `search` and `page_size`. | CLEAN |
 
 Failing tests (CI, identical on SQLite and PostgreSQL):
 - `apps.dashboard.tests.test_team_leader_widgets.TeamStatsActiveOperatorCountTests.test_active_operator_count_excludes_users_on_approved_leave_or_standby_today`
