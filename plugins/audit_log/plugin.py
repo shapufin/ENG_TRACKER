@@ -63,7 +63,8 @@ class AuditLogPlugin(BasePlugin):
 
     def validate_config(self, config):
         if 'retention_days' in config:
-            if not isinstance(config['retention_days'], int) or config['retention_days'] < 1:
+            if (not isinstance(config['retention_days'], int) or isinstance(config['retention_days'], bool)
+                    or config['retention_days'] < 1):
                 raise ValueError("retention_days must be a positive integer")
         return True
 
