@@ -382,6 +382,10 @@ class DataImportViewSet(ImporterAccessMixin, PluginPermissionMixin, viewsets.Gen
                             row_result = importer.commit_row(
                                 mapped_row, options, existing=None, context=context
                             )
+                            if row_result.status == 'error':
+                                # Importers report most failures as a result, not an
+                                # exception: undo whatever the row wrote before it failed.
+                                transaction.set_rollback(True)
                     except Exception as e:  # noqa: BLE001
                         row_result = ImportRowResult(
                             row_index=mapped_row.get('__row_index', 0),
