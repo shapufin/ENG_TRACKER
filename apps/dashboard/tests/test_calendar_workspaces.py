@@ -74,10 +74,10 @@ class CalendarWorkspaceVisibilityTests(TestCase):
             'email',
             'first_name',
             'last_name',
-            'is_staff',
-            'is_superuser',
         }
         self.assertTrue(expected_fields.issubset(first.keys()))
+        # Colleagues' admin flags are not calendar information.
+        self.assertTrue({'is_staff', 'is_superuser'}.isdisjoint(first.keys()))
 
     def test_workspace_users_excludes_calendar_group_members(self):
         """workspace_users returns only the workspace's own team members, not calendar_group siblings."""

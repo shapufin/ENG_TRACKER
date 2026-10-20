@@ -83,6 +83,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         if self.action in [
             'destroy', 'bulk_delete', 'bulk_update',
             'create_user', 'update_user', 'reset_password',
+            # Company-wide headcount and TL counts: TL management data, not for employees.
+            'stats',
         ]:
             return [IsAdminUser()]
         if self.action in ['create', 'update', 'partial_update']:

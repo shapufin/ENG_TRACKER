@@ -18,7 +18,7 @@ class WorkspaceUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'full_name',
-                  'is_staff', 'is_superuser', 'team', 'teams']
+                  'team', 'teams']
 
     def get_full_name(self, obj):
         if obj.first_name or obj.last_name:
