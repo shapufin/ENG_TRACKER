@@ -116,18 +116,10 @@ for _url in (
         if 'calendar-workspaces' in _url else '')
 # Intentionally wider than the owner rule, with the invariant that sanctions it.
 WIDENED_ROUTES = {
-    '/api/dashboard/widgets/top_pending_users/': (
-        'UNDECIDED - see register M-1: any team member, employees included, reads '
-        "teammates' names and pending counts; apps/dashboard/tests/"
-        'test_widget_team_scope.py::test_member_can_still_query_own_team only pins the 200'),
-    '/api/dashboard/widgets/queue_highlights/': 'UNDECIDED - see register M-1 (same team widget scope)',
-    '/api/dashboard/widgets/team_stats/': 'UNDECIDED - see register M-1 (team aggregate counts)',
-    '/api/dashboard/widgets/pending_trend/': 'UNDECIDED - see register M-1 (team aggregate counts)',
-    '/api/dashboard/widgets/monthly_comparison/': 'UNDECIDED - see register M-1 (team aggregate counts)',
     '/api/users/users/albanian_team_leaders/': (
-        'UNDECIDED - see register M-2: every authenticated user can list all Albanian '
-        'TLs with username and member count'),
-    '/api/users/users/italian_team_leaders/': 'UNDECIDED - see register M-2 (same directory)',
+        "a team leader's name is not confidential (register S-4 / M-2 ruling); staff and HR "
+        'get member counts, team leaders get names only, employees are refused'),
+    '/api/users/users/italian_team_leaders/': 'same TL name list (register M-2)',
     '/api/users/users/eligible_for_control_room/': (
         'CR admin picker returns minimum identity data by design; '
         'plugins/control_room/test_cr_admin_role.py and the action docstring'),
@@ -150,15 +142,8 @@ COMPANY_WIDE_REFERENCE = {
 # Per-role exemptions of WIDENED_ROUTES: world attributes whose rows that role may
 # read there. '*' means every user, 'team_b' that the response may name team B. Anything else still fails.
 WIDENED_EXTRA = {
-    '/api/dashboard/widgets/top_pending_users/': {'A1': ('tl_a', 'a2')},
-    '/api/dashboard/widgets/queue_highlights/': {'A1': ('tl_a', 'a2')},
-    '/api/dashboard/widgets/team_stats/': {'A1': ('tl_a', 'a2')},
-    '/api/dashboard/widgets/pending_trend/': {'A1': ('tl_a', 'a2')},
-    '/api/dashboard/widgets/monthly_comparison/': {'A1': ('tl_a', 'a2')},
-    '/api/users/users/albanian_team_leaders/': {
-        role: ('tl_a', 'tl_b', 'team_b') for role in ('A1', 'TL_A', 'HBPR', 'CR')},
-    '/api/users/users/italian_team_leaders/': {
-        role: ('tl_a', 'tl_b', 'team_b') for role in ('A1', 'TL_A', 'HBPR', 'CR')},
+    '/api/users/users/albanian_team_leaders/': {'TL_A': ('tl_b',)},
+    '/api/users/users/italian_team_leaders/': {'TL_A': ('tl_b',)},
     '/api/users/users/eligible_for_control_room/': {
         'CR': ('*', 'team_b')},
     '/api/plugins/tl_scorecard/partnership/': {'TL_A': ('hbpr',)},
@@ -177,6 +162,13 @@ for _url in (
 ):
     AGGREGATE_ROUTES[_url] = (
         "the viewer's own settings or records, queried by request.user, no owner key")
+for _url in (
+    '/api/dashboard/widgets/team_stats/', '/api/dashboard/widgets/pending_trend/',
+    '/api/dashboard/widgets/monthly_comparison/',
+):
+    AGGREGATE_ROUTES[_url] = (
+        'TL/HR/staff only (employees get 403, register M-1); team counts without owner keys, '
+        'scope proven by apps/dashboard/tests/test_widget_team_scope.py')
 for _url in (
     '/api/leave-management/requests/team_pending_months/',
     '/api/overtime/logs/summary/', '/api/overtime/logs/team_pending_months/',

@@ -33,19 +33,32 @@ class DashboardWidgetTeamScopeTests(APITestCase):
         self.client.force_authenticate(user)
         return self.client.get(WIDGET_URL.format(action), params)
 
-    def test_employee_and_tl_get_404_for_foreign_team(self):
-        for user in (self.employee, self.tl):
-            for action in TEAM_SCOPED_ACTIONS:
-                with self.subTest(user=user.username, action=action):
-                    resp = self._get(user, action, team_id=self.foreign_team.id)
-                    self.assertEqual(resp.status_code, 404)
+    def test_tl_gets_404_for_foreign_team(self):
+        for action in TEAM_SCOPED_ACTIONS:
+            with self.subTest(action=action):
+                resp = self._get(self.tl, action, team_id=self.foreign_team.id)
+                self.assertEqual(resp.status_code, 404)
 
-    def test_member_can_still_query_own_team(self):
-        for user in (self.employee, self.tl):
-            for action in TEAM_SCOPED_ACTIONS:
-                with self.subTest(user=user.username, action=action):
-                    resp = self._get(user, action, team_id=self.own_team.id)
-                    self.assertEqual(resp.status_code, 200)
+    def test_team_leader_can_query_own_team(self):
+        for action in TEAM_SCOPED_ACTIONS + ('monthly_comparison',):
+            with self.subTest(action=action):
+                resp = self._get(self.tl, action, team_id=self.own_team.id)
+                self.assertEqual(resp.status_code, 200)
+
+    def test_employee_is_refused_every_team_widget(self):
+        # Team confidentiality (2026-10-20): teammates' statuses and pending
+        # counts are the TL's management data, not an employee's.
+        for action in TEAM_SCOPED_ACTIONS + ('monthly_comparison',):
+            for params in ({}, {'team_id': self.own_team.id}, {'team_id': self.foreign_team.id}):
+                with self.subTest(action=action, params=params):
+                    self.assertEqual(self._get(self.employee, action, **params).status_code, 403)
+
+    def test_team_leader_sees_only_own_team_names(self):
+        for action in ('top_pending_users', 'queue_highlights'):
+            with self.subTest(action=action):
+                resp = self._get(self.tl, action)
+                self.assertEqual(resp.status_code, 200)
+                self.assertNotIn('dw_victim', str(resp.data))
 
     def test_staff_and_hr_can_query_any_team(self):
         for user in (self.admin, self.hr):

@@ -17,7 +17,7 @@ class TeamStatsActiveOperatorCountTests(TestCase):
         self.today = timezone.now().date()
 
         self.tl = User.objects.create_user(username="tl", password="testpass")
-        self.team = Team.objects.create(name="Infra", code="INFRA")
+        self.team = Team.objects.create(name="Infra", code="INFRA", team_leader=self.tl)
         TeamMembership.objects.create(user_profile=self.tl.profile, team=self.team)
 
         self.on_leave_user = User.objects.create_user(username="on-leave", password="testpass")
@@ -54,6 +54,8 @@ class TeamStatsActiveOperatorCountTests(TestCase):
 
     def test_active_operator_count_is_zero_on_no_team_response(self):
         no_profile_user = User.objects.create_user(username="lonely", password="testpass")
+        no_profile_user.profile.is_italian_tl_role = True
+        no_profile_user.profile.save()
         self.client.force_authenticate(no_profile_user)
 
         response = self.client.get("/api/dashboard/widgets/team_stats/")
@@ -68,7 +70,7 @@ class QueueHighlightsScopeAndTagTests(TestCase):
         self.today = timezone.now().date()
 
         self.tl = User.objects.create_user(username="tl2", password="testpass")
-        self.team = Team.objects.create(name="Infra2", code="INFRA2")
+        self.team = Team.objects.create(name="Infra2", code="INFRA2", team_leader=self.tl)
         TeamMembership.objects.create(user_profile=self.tl.profile, team=self.team)
 
         self.member = User.objects.create_user(username="member", password="testpass")
@@ -127,7 +129,7 @@ class MonthlyComparisonGranularityTests(TestCase):
         self.today = timezone.now().date()
 
         self.tl = User.objects.create_user(username="tl3", password="testpass")
-        self.team = Team.objects.create(name="Infra3", code="INFRA3")
+        self.team = Team.objects.create(name="Infra3", code="INFRA3", team_leader=self.tl)
         TeamMembership.objects.create(user_profile=self.tl.profile, team=self.team)
 
         # Same weekend-proof range as above: a single-day fixture leave dated on a
