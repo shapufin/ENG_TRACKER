@@ -140,7 +140,8 @@ class LeaveRequestImporter(StaffOnlyAuthority, BaseImporter):
                 row_index=row_index, status="error",
                 errors=[f"'{request_type}' is not a valid type. Choices: {sorted(valid_types)}."],
             )
-        req_status = mapped_row.get("status") or "approved"
+        status_cell = mapped_row.get("status") or None  # blank = leave alone on update
+        req_status = status_cell or "approved"
         valid_statuses = {code for code, _ in LeaveRequest.STATUS_CHOICES}
         if req_status not in valid_statuses:
             return ImportRowResult(
@@ -162,7 +163,8 @@ class LeaveRequestImporter(StaffOnlyAuthority, BaseImporter):
 
         if not dry_run:
             if is_update:
-                existing_req.status = req_status
+                if status_cell:
+                    existing_req.status = req_status
                 if mapped_row.get("reason"):
                     existing_req.reason = mapped_row["reason"]
                 existing_req.save()

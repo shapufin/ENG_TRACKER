@@ -110,3 +110,24 @@ class LeaveRequestImporterTests(TestCase):
         result = self.importer.commit_row(self._row(request_type=""), {})
         self.assertEqual(result.status, "created", result.errors)
         self.assertEqual(LeaveRequest.objects.get(user=self.user).request_type, "vacation")
+
+
+class LeaveRequestBlankCellOnUpdateTests(TestCase):
+    def test_blank_status_on_update_leaves_a_pending_request_pending(self):
+        user = User.objects.create_user(username="mrossi2", email="m2@example.com", password="x")
+        req = LeaveRequest.objects.create(
+            user=user, request_type="vacation", status="pending",
+            start_date=datetime.date(2026, 6, 29), end_date=datetime.date(2026, 7, 3),
+        )
+        result = LeaveRequestImporter().commit_row(
+            {
+                "__row_index": 1, "username": "mrossi2", "request_type": "vacation",
+                "start_date": datetime.date(2026, 6, 29), "end_date": datetime.date(2026, 7, 3),
+                "status": "", "reason": "note",
+            },
+            {"update_existing": True},
+        )
+        self.assertEqual(result.status, "updated", result.errors)
+        req.refresh_from_db()
+        self.assertEqual(req.status, "pending")
+        self.assertEqual(req.reason, "note")
