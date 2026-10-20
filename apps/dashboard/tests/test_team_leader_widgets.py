@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase
-from django.utils import timezone
+from core.utils.timezone_local import business_today
 from rest_framework.test import APIClient
 
 from apps.overtime.models.core import OvertimeLog, Client
@@ -14,7 +14,7 @@ from apps.users.models import Team, TeamMembership
 class TeamStatsActiveOperatorCountTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.today = timezone.now().date()
+        self.today = business_today()
 
         self.tl = User.objects.create_user(username="tl", password="testpass")
         self.team = Team.objects.create(name="Infra", code="INFRA", team_leader=self.tl)
@@ -67,7 +67,7 @@ class TeamStatsActiveOperatorCountTests(TestCase):
 class QueueHighlightsScopeAndTagTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.today = timezone.now().date()
+        self.today = business_today()
 
         self.tl = User.objects.create_user(username="tl2", password="testpass")
         self.team = Team.objects.create(name="Infra2", code="INFRA2", team_leader=self.tl)
@@ -126,7 +126,7 @@ class QueueHighlightsScopeAndTagTests(TestCase):
 class MonthlyComparisonGranularityTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.today = timezone.now().date()
+        self.today = business_today()
 
         self.tl = User.objects.create_user(username="tl3", password="testpass")
         self.team = Team.objects.create(name="Infra3", code="INFRA3", team_leader=self.tl)

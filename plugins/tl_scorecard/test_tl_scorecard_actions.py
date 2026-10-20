@@ -1,10 +1,13 @@
 """State-changing actions (PIP return/complete/cancel, idle resolve, absence
 address, meeting share, promotion decision audit) and note privacy."""
-from datetime import date
+from datetime import date, datetime, timezone as dt_timezone
+from unittest import mock
 
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
+from core.utils import timezone_local
+from core.utils.timezone_local import business_today
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.permissions.models import Role
@@ -45,7 +48,7 @@ class ActionsBase(TestCase):
         self.other_tl = _make_user('other_tl_act')
         assign_role(self.other_tl, 'albanian_tl')
         self.staff = _make_user('staff_act', is_staff=True)
-        self.today = date.today()
+        self.today = business_today()
 
     def call(self, viewset, action_name, user, pk=None, data=None, method='post'):
         request = getattr(self.factory, method)('/x/', data or {}, format='json')
@@ -182,6 +185,19 @@ class IdleAndAbsenceActionTests(ActionsBase):
         flag.refresh_from_db()
         self.assertEqual((flag.status, flag.resolved_on), ('resolved', self.today))
         self.assertEqual(self.call(IdleFlagViewSet, 'resolve', self.tl, flag.id).status_code, 409)
+
+    def test_idle_resolve_stamps_the_tirana_day_at_2330_utc(self):
+        # 23:30 UTC on the 19th is already the 20th in Europe/Tirane.
+        instant = datetime(2026, 10, 19, 23, 30, tzinfo=dt_timezone.utc)
+        fake = mock.MagicMock(wraps=datetime)
+        fake.now.side_effect = lambda tz=None: instant.astimezone(tz)
+        flag = IdleFlag.objects.create(
+            employee=self.member, flagged_by=self.tl, flagged_on=date(2026, 10, 19))
+        with mock.patch.object(timezone_local, 'datetime', fake):
+            resp = self.call(IdleFlagViewSet, 'resolve', self.tl, flag.id)
+        self.assertEqual(resp.status_code, 200, resp.data)
+        flag.refresh_from_db()
+        self.assertEqual(flag.resolved_on, date(2026, 10, 20))
 
     def test_idle_status_cannot_be_patched_directly(self):
         flag = IdleFlag.objects.create(
