@@ -86,13 +86,8 @@ jobs:
         run: node scripts/modal-audit.mjs && node scripts/modal-visual-audit.mjs
       - name: Dashboard contract
         run: node scripts/dashboard-audit.mjs
-      # visual-route-manifest.test.mjs is deliberately NOT here: it is red at HEAD
-      # (manifest lacks /hr/team-leaders and /engagement/metrics) and one of its
-      # tests reads the untracked design-audit/ mockup extraction, which no
-      # runner has. Add it back once the manifest is updated and that test
-      # skips when the directory is absent.
       - name: Visual tooling tests
-        run: node --test scripts/visual-fingerprint.test.mjs scripts/visual-capture-helpers.test.mjs scripts/admin-routes.test.mjs
+        run: node --test scripts/visual-fingerprint.test.mjs scripts/visual-route-manifest.test.mjs scripts/visual-capture-helpers.test.mjs scripts/admin-routes.test.mjs
       - name: Build
         run: npm run build
       # Needs dist/ from the build step above.
