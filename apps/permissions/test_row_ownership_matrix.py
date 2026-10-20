@@ -15,6 +15,7 @@ import importlib
 import json
 import re
 from collections import namedtuple
+from urllib.parse import urlsplit
 from datetime import timedelta
 
 from django.apps import apps as django_apps
@@ -26,6 +27,8 @@ from django.test import TestCase, override_settings
 from django.urls import Resolver404, URLResolver, clear_url_caches, get_resolver, path, resolve
 from rest_framework import serializers, viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.test import APIClient
 
 from apps.dashboard.models.calendar import CalendarWorkspace
@@ -52,10 +55,23 @@ from plugins.control_room.services import scope_service
 
 Route = namedtuple('Route', 'url cls')
 
+# Keys that hold a user (id, nested {id} or username).
 OWNER_KEYS = {
     'user', 'user_id', 'employee', 'employee_id', 'owner', 'owner_id',
     'team_leader', 'team_leader_id', 'leader', 'leader_id', 'organizer', 'organizer_id',
-    'generated_by', 'generated_by_id',
+    'generated_by', 'generated_by_id', 'respondent', 'tl', 'tl_id', 'recorded_by',
+    'flagged_by', 'nominated_by', 'albanian_tl', 'italian_tl', 'hbpr', 'created_by',
+    'approved_by',
+}
+# Keys that name someone's team leader: an employee may see their own leader there.
+LEADER_KEYS = {
+    'team_leader', 'team_leader_id', 'leader', 'leader_id', 'albanian_tl', 'italian_tl',
+    'tl', 'tl_id',
+}
+# Routes that expose the employee's own leader (profile, org chart), also by name.
+OWN_LEADER_ROUTES = {
+    '/api/users/profiles/', '/api/plugins/organigrama/tree/',
+    '/api/plugins/organigrama/subtree/',
 }
 # Child rows that point at a parent whose owner is looked up.
 PARENT_KEYS = {'cycle', 'flag'}
@@ -121,6 +137,33 @@ WIDENED_ROUTES = {
     '/api/plugins/tl_scorecard/hbpr-evidence/year-end-pack/': (
         'the AL TL hands the pack, which names the HBPR partner, to their manager: '
         'docs/hbpr-and-scorecard.md (Year-end evidence pack)'),
+    '/api/plugins/tl_scorecard/hbpr-evidence/': (
+        'evidence is authored by the AL TL about their own HBPR partnership, so rows '
+        'name the partner: docs/hbpr-and-scorecard.md (partnership log)'),
+}
+# Reference routes whose design is company-wide: exempt from the owner / team-B scan.
+COMPANY_WIDE_REFERENCE = {
+    '/api/users/teams/': 'the team directory lists every team and leader',
+    '/api/users/teams/root_teams/': 'the team directory lists every team and leader',
+    '/api/users/teams/list_for_reports/': 'the team directory lists every team and leader',
+}
+# Per-role exemptions of WIDENED_ROUTES: world attributes whose rows that role may
+# read there. '*' means every user, 'team_b' that the response may name team B. Anything else still fails.
+WIDENED_EXTRA = {
+    '/api/dashboard/widgets/top_pending_users/': {'A1': ('tl_a', 'a2')},
+    '/api/dashboard/widgets/queue_highlights/': {'A1': ('tl_a', 'a2')},
+    '/api/dashboard/widgets/team_stats/': {'A1': ('tl_a', 'a2')},
+    '/api/dashboard/widgets/pending_trend/': {'A1': ('tl_a', 'a2')},
+    '/api/dashboard/widgets/monthly_comparison/': {'A1': ('tl_a', 'a2')},
+    '/api/users/users/albanian_team_leaders/': {
+        role: ('tl_a', 'tl_b', 'team_b') for role in ('A1', 'TL_A', 'HBPR', 'CR')},
+    '/api/users/users/italian_team_leaders/': {
+        role: ('tl_a', 'tl_b', 'team_b') for role in ('A1', 'TL_A', 'HBPR', 'CR')},
+    '/api/users/users/eligible_for_control_room/': {
+        'CR': ('*', 'team_b')},
+    '/api/plugins/tl_scorecard/partnership/': {'TL_A': ('hbpr',)},
+    '/api/plugins/tl_scorecard/hbpr-evidence/year-end-pack/': {'TL_A': ('hbpr',)},
+    '/api/plugins/tl_scorecard/hbpr-evidence/': {'TL_A': ('hbpr',)},
 }
 # Aggregates, exports and per-viewer payloads with no owner key or name: the walker
 # cannot prove their scope, which the owning app's own tests cover.
@@ -226,28 +269,29 @@ def _user_id(value, usernames):
     return None
 
 
+def _merge(into, other):
+    for owner, occurrences in other.items():
+        into.setdefault(owner, []).extend(occurrences)
+
+
 def collect_owner_hits(payload, usernames, path='$'):
-    """``{owner id: json path of its first occurrence}`` anywhere in a payload."""
+    """``{owner id: [(json path, key), ...]}`` for every owner found in a payload."""
     hits = {}
     if isinstance(payload, list):
         for index, item in enumerate(payload):
-            for owner, where in collect_owner_hits(
-                    item, usernames, f'{path}[{index}]').items():
-                hits.setdefault(owner, where)
+            _merge(hits, collect_owner_hits(item, usernames, f'{path}[{index}]'))
     elif isinstance(payload, dict):
         for key, value in payload.items():
             if key in PARENT_KEYS:
                 owner = _parent_owner(key, value)
                 if owner is not None:
-                    hits.setdefault(owner, f'{path}.{key} (parent owner)')
+                    hits.setdefault(owner, []).append((f'{path}.{key} (parent owner)', key))
             if key in OWNER_KEYS:
                 owner = _user_id(value, usernames)
                 if owner is not None:
-                    hits.setdefault(owner, f'{path}.{key}')
+                    hits.setdefault(owner, []).append((f'{path}.{key}', key))
             if isinstance(value, (dict, list)) and key not in NESTED_REFERENCE_KEYS:
-                for owner, where in collect_owner_hits(
-                        value, usernames, f'{path}.{key}').items():
-                    hits.setdefault(owner, where)
+                _merge(hits, collect_owner_hits(value, usernames, f'{path}.{key}'))
     return hits
 
 
@@ -268,13 +312,13 @@ def owner_hits(url, payload, text, usernames):
     hits = collect_owner_hits(payload, usernames)
     for username, user_id in usernames.items():
         if re.search(r'\b' + re.escape(username) + r'\b', text):
-            hits.setdefault(user_id, 'body text')
+            hits.setdefault(user_id, []).append(('body text', None))
     if re.search(r'Matrix B|MXB', text):
-        hits.setdefault(FOREIGN_TEAM, 'body text names team B')
+        hits.setdefault(FOREIGN_TEAM, []).append(('body text names team B', None))
     if url in ID_IS_USER_ROUTES:
         for index, row in enumerate(rows_of(payload)):
             if isinstance(row.get('id'), int):
-                hits.setdefault(row['id'], f'$[{index}].id')
+                hits.setdefault(row['id'], []).append((f'$[{index}].id', 'id'))
     return hits
 
 
@@ -311,11 +355,8 @@ def route_variants(cls, url):
     }.get(url, [{}])
 
 
-def fetch(user, url, params=None):
-    client = APIClient(raise_request_exception=False)
-    client.force_authenticate(user=user)
-    response = client.get(
-        url, {'page_size': 500, 'ignore_date_filter': 'true', **(params or {})})
+def _get(client, url, params=None):
+    response = client.get(url, params or {})
     content_type = response.get('Content-Type') or ''
     body = response.getvalue() if response.streaming else response.content
     payload, text = None, ''
@@ -326,14 +367,65 @@ def fetch(user, url, params=None):
     return response.status_code, payload, text
 
 
-def find_leaks(user, url, allowed_ids, params=None):
-    """Owner ids ``user`` can read at ``url`` that are outside ``allowed_ids``."""
+def fetch(user, url, params=None):
+    """GET ``url`` as ``user``, following DRF ``next`` links and merging the pages."""
+    client = APIClient(raise_request_exception=False)
+    client.force_authenticate(user=user)
+    status, payload, text = _get(
+        client, url, {'page_size': 500, 'ignore_date_filter': 'true', **(params or {})})
+    for _ in range(20):
+        next_url = payload.get('next') if isinstance(payload, dict) else None
+        if status != 200 or not next_url:
+            break
+        parts = urlsplit(next_url)
+        status, page, page_text = _get(client, f'{parts.path}?{parts.query}')
+        if status != 200 or not isinstance(page, dict):
+            break
+        payload = {**payload, 'results': payload['results'] + page['results'],
+                   'next': page.get('next')}
+        text += page_text
+    return status, payload, text
+
+
+def observe(user, url, variants=({},)):
+    """``(status, hits)`` for ``user`` at ``url`` over every query variant."""
     usernames = {u.username: u.id for u in User.objects.all()}
-    status, payload, text = fetch(user, url, params)
+    codes, hits = [], {}
+    for params in variants:
+        code, payload, text = fetch(user, url, params)
+        codes.append(code)
+        if code == 200:
+            _merge(hits, {
+                owner: [(f'{where} {params or ""}'.strip(), key) for where, key in found]
+                for owner, found in owner_hits(url, payload, text, usernames).items()})
+    status = max(codes) if max(codes) >= 500 else 200 if 200 in codes else codes[0]
+    return status, hits
+
+
+def find_foreign(hits, allowed_ids, url, role=None, leader_id=None, extra_ids=()):
+    """``{owner id: first path}`` of hits outside the role's scope.
+
+    An employee may see their own leader (``leader_id``) only under a leader
+    reference key, or on a route that is meant to show their leader.
+    """
+    foreign = {}
+    for owner, occurrences in hits.items():
+        if owner in allowed_ids or owner in extra_ids:
+            continue
+        for where, key in occurrences:
+            if (role in (None, 'A1') and owner == leader_id
+                    and (key in LEADER_KEYS or url in OWN_LEADER_ROUTES)):
+                continue
+            foreign.setdefault(owner, where)
+    return foreign
+
+
+def find_leaks(user, url, allowed_ids, params=None, leader_id=None):
+    """The one checker: owners ``user`` can read at ``url`` outside ``allowed_ids``."""
+    status, hits = observe(user, url, (params or {},))
     if status != 200:
         return set()
-    hits = owner_hits(url, payload, text, usernames)
-    return set(hits) - set(allowed_ids)
+    return set(find_foreign(hits, allowed_ids, url, leader_id=leader_id))
 
 
 ROLES = ('A1', 'TL_A', 'HBPR', 'CR')
@@ -487,20 +579,63 @@ class _LeakyOvertimeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = OvertimeLog.objects.all()
 
 
-urlpatterns = [path('api/leaky/', _LeakyOvertimeViewSet.as_view({'get': 'list'}))]
+class _LeakyKeyView(APIView):
+    """Emits only B1's id under the key named in ``?key=`` (no other owner field)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        victim = User.objects.get(username='meta_b1')
+        return Response([{'id': 1, request.query_params['key']: victim.id}])
+
+
+urlpatterns = [
+    path('api/leaky/', _LeakyOvertimeViewSet.as_view({'get': 'list'})),
+    path('api/leaky-keys/', _LeakyKeyView.as_view()),
+]
+
+# Keys added after review; each must be recognised as an owner reference.
+REVIEWED_KEYS = (
+    'respondent', 'tl', 'recorded_by', 'flagged_by', 'nominated_by', 'albanian_tl',
+    'italian_tl', 'hbpr', 'created_by', 'approved_by',
+)
 
 
 @override_settings(ROOT_URLCONF=__name__)
 class WalkerCatchesAnUnscopedRouteTests(TestCase):
-    def test_unscoped_viewset_is_reported_as_a_leak_for_an_employee(self):
-        a1 = User.objects.create_user('meta_a1')
-        b1 = User.objects.create_user('meta_b1')
+    """The same ``find_leaks`` the matrix is built on, against a leaky urlconf."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.a1 = User.objects.create_user('meta_a1')
+        cls.b1 = User.objects.create_user('meta_b1')
         client = Client.objects.create(name='Meta', code='META')
-        for owner in (a1, b1):
+        for owner in (cls.a1, cls.b1):
             OvertimeLog.objects.create(user=owner, client=client, date=business_today(), hours=1)
+
+    def test_unscoped_viewset_is_reported_as_a_leak_for_an_employee(self):
         routes = [r for r in walk_routes() if r.url == '/api/leaky/']
         self.assertEqual(len(routes), 1)
-        self.assertEqual(find_leaks(a1, '/api/leaky/', {a1.id}), {b1.id})
+        self.assertEqual(find_leaks(self.a1, '/api/leaky/', {self.a1.id}), {self.b1.id})
+
+    def test_an_id_under_each_reviewed_key_is_detected(self):
+        for key in REVIEWED_KEYS:
+            with self.subTest(key=key):
+                self.assertIn(key, OWNER_KEYS)
+                self.assertEqual(
+                    find_leaks(self.a1, '/api/leaky-keys/', {self.a1.id}, {'key': key}),
+                    {self.b1.id})
+
+    def test_an_employee_may_see_their_leader_only_under_a_leader_key(self):
+        url = '/api/leaky-keys/'
+        for key in ('albanian_tl', 'italian_tl', 'team_leader', 'tl'):
+            with self.subTest(key=key):
+                self.assertEqual(find_leaks(
+                    self.a1, url, {self.a1.id}, {'key': key}, leader_id=self.b1.id), set())
+        for key in ('user', 'recorded_by', 'approved_by'):
+            with self.subTest(key=key):
+                self.assertEqual(find_leaks(
+                    self.a1, url, {self.a1.id}, {'key': key}, leader_id=self.b1.id),
+                    {self.b1.id})
 
 
 class RowOwnershipMatrixTests(TestCase):
@@ -509,8 +644,7 @@ class RowOwnershipMatrixTests(TestCase):
         build_world(cls)
         populate_rows(cls)
         cls.allowed = {
-            # An employee also knows their own team leader (profile, org chart).
-            'A1': {cls.a1.id, cls.tl_a.id},
+            'A1': {cls.a1.id},
             'TL_A': cls.tl_a.profile.get_team_member_ids() | {cls.tl_a.id},
             'HBPR': set(get_hbpr_scope(cls.hbpr).user_ids) | {cls.hbpr.id},
             'CR': scope_service.get_allowed_user_ids(
@@ -519,32 +653,27 @@ class RowOwnershipMatrixTests(TestCase):
         cls.users = {'A1': cls.a1, 'TL_A': cls.tl_a, 'HBPR': cls.hbpr, 'CR': cls.cr}
         cache.clear()
         cls.routes = walk_routes()
-        usernames = {u.username: u.id for u in User.objects.all()}
-        cls.observed = {}
-        cls.bodies = {}
-        for route in cls.routes:
-            for role, user in cls.users.items():
-                codes, hits, body = [], {}, ''
-                for params in route_variants(cls, route.url):
-                    code, payload, text = fetch(user, route.url, params)
-                    if code == 200:
-                        for owner, where in owner_hits(
-                                route.url, payload, text, usernames).items():
-                            hits.setdefault(owner, f'{where} {params or ""}')
-                    codes.append(code)
-                    body = body if code == 200 else (body or text[:150])
-                status = (
-                    max(codes) if max(codes) >= 500 else 200 if 200 in codes else codes[0])
-                cls.observed[(route.url, role)] = (status, hits)
-                cls.bodies[(route.url, role)] = body
+        cls.observed = {
+            (route.url, role): observe(user, route.url, route_variants(cls, route.url))
+            for route in cls.routes for role, user in cls.users.items()}
+
+    def _extra_ids(self, url, role):
+        names = WIDENED_EXTRA.get(url, {}).get(role, ())
+        if '*' in names:
+            return set(User.objects.values_list('id', flat=True)) | {FOREIGN_TEAM}
+        return {FOREIGN_TEAM if name == 'team_b' else getattr(self, name).id
+                for name in names}
 
     def test_world_sanity(self):
-        self.assertEqual(self.allowed['A1'], {self.a1.id, self.tl_a.id})
+        self.assertEqual(self.allowed['A1'], {self.a1.id})
         self.assertIn(self.a2.id, self.allowed['TL_A'])
         self.assertNotIn(self.b1.id, self.allowed['TL_A'])
         self.assertEqual(
             self.allowed['HBPR'], {self.hbpr.id, self.tl_a.id, self.a1.id, self.a2.id})
         self.assertGreater(len(self.routes), 100)
+
+    def test_widened_extras_name_declared_widened_routes(self):
+        self.assertEqual(sorted(set(WIDENED_EXTRA) - set(WIDENED_ROUTES)), [])
 
     def test_no_role_sees_rows_outside_its_scope(self):
         for route in self.routes:
@@ -552,11 +681,12 @@ class RowOwnershipMatrixTests(TestCase):
                 with self.subTest(route=route.url, role=role):
                     status, hits = self.observed[(route.url, role)]
                     self.assertLess(status, 500, f'{route.url} returned {status}')
-                    if route.url in REFERENCE_ROUTES or route.url in WIDENED_ROUTES:
+                    if route.url in COMPANY_WIDE_REFERENCE:
                         continue
-                    foreign = {owner: where for owner, where in hits.items()
-                               if owner not in self.allowed[role]}
-                    names = {(User.objects.filter(id=owner).first() or 'team B').__str__(): where
+                    foreign = find_foreign(
+                        hits, self.allowed[role], route.url, role=role,
+                        leader_id=self.tl_a.id, extra_ids=self._extra_ids(route.url, role))
+                    names = {str(User.objects.filter(id=owner).first() or 'team B'): where
                              for owner, where in foreign.items()}
                     self.assertEqual(names, {}, f'{role} read foreign rows at {route.url}')
 
@@ -565,12 +695,13 @@ class RowOwnershipMatrixTests(TestCase):
             NOT_POPULATED_ROUTES) | set(AGGREGATE_ROUTES)
         walked = {route.url for route in self.routes}
         self.assertEqual(sorted(declared - walked), [], 'declared routes that no longer exist')
+        self.assertEqual(sorted(set(COMPANY_WIDE_REFERENCE) - set(REFERENCE_ROUTES)), [])
         for route in self.routes:
             if route.url in declared:
                 continue
             with self.subTest(route=route.url):
                 results = [self.observed[(route.url, role)] for role in ROLES]
-                verified = any(hits for status, hits in results if status == 200)
+                verified = any(status == 200 and hits for status, hits in results)
                 denied = all(status in (401, 403, 404) for status, _ in results)
                 self.assertTrue(
                     verified or denied,
@@ -578,29 +709,43 @@ class RowOwnershipMatrixTests(TestCase):
                     'populate the world, or list it in REFERENCE_ROUTES / AGGREGATE_ROUTES '
                     '/ NOT_POPULATED_ROUTES / WIDENED_ROUTES with a justification')
 
+    def test_an_employee_never_reads_the_team_leaders_overtime(self):
+        _, payload, _ = fetch(self.a1, '/api/overtime/logs/')
+        ids = {row['id'] for row in rows_of(payload)}
+        self.assertIn(self.ot_logs[self.a1.id], ids)
+        self.assertNotIn(self.ot_logs[self.tl_a.id], ids)
+
     def test_a_foreign_row_cannot_be_fetched_by_id(self):
         declared = set(REFERENCE_ROUTES) | set(WIDENED_ROUTES)
         usernames = {u.username: u.id for u in User.objects.all()}
-        checked = 0
+        # (owner of the probed row, roles that must be refused). B1 is out of scope for
+        # everyone; TL_A's rows are in scope for TL_A, HBPR and CR but not for an employee.
+        targets = ((self.b1, ROLES), (self.tl_a, ('A1',)))
+        checked = {self.b1.id: 0, self.tl_a.id: 0}
         for route in self.routes:
             if route.url in declared:
                 continue
             status, payload, _ = fetch(self.superuser, route.url)
-            foreign = [row for row in rows_of(payload)
-                       if row.get('id') is not None
-                       and self.b1.id in collect_owner_hits(row, usernames)]
-            if status != 200 or not foreign:
+            if status != 200:
                 continue
-            detail = f"{route.url}{foreign[0]['id']}/"
-            try:
-                match = resolve(detail)
-            except Resolver404:
-                continue
-            if 'get' not in (getattr(match.func, 'actions', None) or {}):
-                continue
-            checked += 1
-            for role in ROLES:
-                with self.subTest(route=detail, role=role):
-                    code, _, _ = fetch(self.users[role], detail)
-                    self.assertIn(code, (403, 404), f'{role} read B1 row {detail}')
-        self.assertGreater(checked, 5)
+            for owner, roles in targets:
+                if owner is self.tl_a and route.url in OWN_LEADER_ROUTES:
+                    continue
+                rows = [row for row in rows_of(payload) if row.get('id') is not None
+                        and owner.id in owner_hits(route.url, row, '', usernames)]
+                if not rows:
+                    continue
+                detail = f"{route.url}{rows[0]['id']}/"
+                try:
+                    match = resolve(detail)
+                except Resolver404:
+                    continue
+                if 'get' not in (getattr(match.func, 'actions', None) or {}):
+                    continue
+                checked[owner.id] += 1
+                for role in roles:
+                    with self.subTest(route=detail, role=role):
+                        code, _, _ = fetch(self.users[role], detail)
+                        self.assertIn(code, (403, 404), f'{role} read {owner} row {detail}')
+        self.assertGreater(checked[self.b1.id], 5)
+        self.assertGreater(checked[self.tl_a.id], 2)
