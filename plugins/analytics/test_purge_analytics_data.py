@@ -44,3 +44,27 @@ class PurgeAnalyticsDataTests(TestCase):
         self._data(10)
         call_command('purge_analytics_data', '--days', '5', stdout=StringIO())
         self.assertEqual(AnalyticsSnapshot.objects.count(), 0)
+
+
+class PurgeAnalyticsQueryBudgetTests(TestCase):
+    """P-pass: the purge deletes in bulk (queries do not grow with rows)."""
+
+    _data = PurgeAnalyticsDataTests._data
+
+    def _purge_queries(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        with CaptureQueriesContext(connection) as ctx:
+            call_command('purge_analytics_data', '--days', '30', stdout=StringIO())
+        return len(ctx.captured_queries)
+
+    def test_purge_query_count_does_not_grow_with_rows(self):
+        for age in (100, 101):
+            self._data(age)
+        few = self._purge_queries()
+        for age in range(102, 132):
+            self._data(age)
+        many = self._purge_queries()
+        self.assertEqual(AnalyticsSnapshot.objects.count(), 0)
+        self.assertEqual(few, many, f'{few} queries (2 rows) vs {many} (30 rows)')
