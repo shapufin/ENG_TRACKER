@@ -292,8 +292,29 @@ Rules:
 ## 2026-10-15 — Holiday unification, plugin fail-closed isolation & admin settings redesign
 - Global HR holidays and Payroll Work Calendar holidays unified via two-way sync (`apps/dashboard/services/holiday_sync.py`: `sync_holidays_between_hr_and_payroll()`), with missing holidays backfilled into HR and HR names authoritative.
 - Fail-closed isolation: When the payroll plugin is disabled or uninstalled, `holiday_sync` and signals (`apps/dashboard/signals.py`) skip payroll mutations gracefully (`status: skipped, reason: payroll_plugin_disabled`), preventing DB errors or crashes during public holiday CRUD.
-- Automatic sync on plugin reactivation: `PayrollPlugin.ready()` (`plugins/payroll/plugin.py`) triggers holiday synchronization when payroll is enabled or initialized.
+- Automatic sync on plugin reactivation: `PayrollPlugin.ready()` (`plugins/payroll/plugin.py`) triggers holiday synchronization when payroll is enabled or initialized. Superseded 2026-10-20 (launch review C-1): the sync now runs from `manage.py sync_payroll_holidays` in `docker/entrypoint.sh`, not `ready()`.
 - UI resilience: `usePlugins()` provides fallback empty metadata (`DEFAULT_PLUGIN_CONTEXT`) when unmounted or in tests; admin and HR pages (`GlobalSettingsPage`, `CalendarManagementPage`, `HRCalendarsPage`) dynamically show payroll work calendar links, sync actions, and sync descriptions only when `payroll` is active.
 - Global Settings redesign: 4 categorized glassmorphic tabs (Branding & Identity, Vacation & Carry-Over, Workplace & Hours, System & Operations) with live identity mockup preview, standard 40-hour workweek baseline, and operational cut-off references.
 - Gates passed: `py -3.14 manage.py test apps.dashboard.tests.test_holiday_sync` 8 OK, `node scripts/table-header-audit.mjs` 0 violations across 913 files, `npx tsc -b` clean, `npx eslint` clean, `npx prettier --check` clean, `py -3.14 manage.py check` 0 issues, `py -3.14 manage.py makemigrations --check` no changes, `npx vitest run calendar` 36 suites / 188 tests OK, `npm run build` OK.
+
+## 2026-10-13 — Leave carry-over and detail drawers
+- Year-end vacation carry-over (`apps/leave_management/services/carry_over.py`), holiday-aware vacation days (`count_leave_days`, `days_counted` snapshot). Rules in `docs/workflow-invariants.md` §Leave balances.
+- One detail-drawer pattern for the user and team panels (`DialogContent side="right"`), floating `RowActionsPill` on fine pointers.
+
+## 2026-10-15/16 — Readiness follow-ups and admin sweep (#118 to #126)
+- Env-driven ingress trust (`INGRESS_TRUSTED_CIDR`, `INGRESS_REAL_IP_HEADER`); push without VAPID keys degrades to a warning; runbook ingress and Redis notes.
+- Admin Users: server-side search and paging, team filter, in-place Control Room grant; data-import preview/commit parity fixes; calendar sharing normalises group names.
+
+## 2026-10-17/18 — UI convergence and plugin sweep (#127 to #143)
+- Admin and user surfaces share one set of primitives; raw status palettes replaced by tone tokens.
+- A runtime-disabled plugin refuses its API for everyone (`PluginPermissionMixin`); guards: `apps/plugins/test_core_plugin_isolation.py`, `test_plugin_view_guard.py`, `ticket_kpi/test_core_coupling.py`. Payroll finalize refuses stale drafts; skills exports gated on the `export` grant. Checklist in `docs/workflow-invariants.md`.
+
+## 2026-10-19 — Business timezone, derived TLs, retention (#144 to #157)
+- `business_today()` replaces naive "today" everywhere, with an AST guard (`core/test_business_today_guard.py`); the zone is `GlobalSettings.business_timezone`.
+- Teams show derived Italian and Albanian TLs (`TeamSerializer.italian_tl` / `albanian_tl`); admin Tech and Clients KPI strips; TL wages hidden while Payroll is disabled; `purge_audit_logs` and `purge_analytics_data` enforce retention.
+
+## 2026-10-20/21 — Launch review programme
+- Plan `docs/superpowers/plans/2026-10-20-launch-review.md`; register and go/no-go in `docs/reviews/2026-10-20-launch-review.md`. Findings are fixed by ID (B, M, S, C, P, D), one commit each, test first.
+- Row-ownership matrix test over every API route (`apps/permissions/test_row_ownership_matrix.py`) and the team confidentiality ruling (employees self-only; recorded in CLAUDE.md and `docs/workflow-invariants.md`). Fixes: M-1..M-3, S-1..S-3, C-1..C-7, P-1..P-4, B-01 (CI clock-independence).
+- Docs refreshed to match code (D-n rows): CLAUDE.md router and invariants, workflow-invariants, production runbook section 5, README, `.dockerignore` contract. Deferred items are triaged in the register ("Deferred items triage").
 
