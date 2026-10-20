@@ -482,6 +482,8 @@ class DockerIgnoreContractTests(SimpleTestCase):
             '.codex', 'admin-gui-screenshots', 'design-screenshots', 'design-fingerprints',
             '*.patch', '*.log', 'time_tracker_export.json', '*.xlsx',
             'export_skills_plugin.py', 'db.sqlite3*', '.env*',
+            # Untracked mockup/capture trees and the e2e database (B-02).
+            'AdminGUI', 'pill-verify-shots', 'db.e2e.sqlite3',
         }
         self.assertEqual(required - patterns, set())
 
