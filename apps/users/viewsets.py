@@ -310,14 +310,28 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @staticmethod
+    def _tl_directory_access(request):
+        """Team confidentiality: TL names for staff/HR/TLs, member counts for staff/HR only.
+
+        Returns whether member counts may be shown; raises 403 for everyone else.
+        """
+        user = request.user
+        if user.is_staff or user.is_superuser or has_hr_role(user):
+            return True
+        if has_team_leader_role(user):
+            return False
+        raise PermissionDenied()
+
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])
     def italian_team_leaders(self, request):
         """
         Get all users who are Italian team leaders, with their member counts.
         Includes users with the role flag OR users with team members assigned.
+        Staff and HR only get member counts; team leaders get names; others are refused.
         """
         from django.db.models import Q
-        
+        show_counts = self._tl_directory_access(request)
         queryset = User.objects.filter(
             Q(profile__is_italian_tl_role=True) |
             Q(profile__role_codes__icontains='italian_tl')
@@ -327,13 +341,15 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
 
         results = []
         for u in queryset:
-            results.append({
+            row = {
                 'id': u.id,
                 'username': u.username,
                 'full_name': f"{u.first_name} {u.last_name}".strip() or u.username,
-                'team_name': u.profile.get_primary_team().name if hasattr(u, 'profile') and u.profile.get_primary_team() else None,
-                'member_count': u.member_count
-            })
+            }
+            if show_counts:
+                row['team_name'] = u.profile.get_primary_team().name if hasattr(u, 'profile') and u.profile.get_primary_team() else None
+                row['member_count'] = u.member_count
+            results.append(row)
         
         return Response(results)
 
@@ -342,9 +358,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         """
         Get all users who are Albanian team leaders, with their member counts.
         Includes users with the role flag OR users with team members assigned.
+        Staff and HR only get member counts; team leaders get names; others are refused.
         """
         from django.db.models import Q
-        
+        show_counts = self._tl_directory_access(request)
         queryset = User.objects.filter(
             Q(profile__is_albanian_tl_role=True) |
             Q(profile__role_codes__icontains='albanian_tl')
@@ -354,13 +371,15 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
 
         results = []
         for u in queryset:
-            results.append({
+            row = {
                 'id': u.id,
                 'username': u.username,
                 'full_name': f"{u.first_name} {u.last_name}".strip() or u.username,
-                'team_name': u.profile.get_primary_team().name if hasattr(u, 'profile') and u.profile.get_primary_team() else None,
-                'member_count': u.member_count
-            })
+            }
+            if show_counts:
+                row['team_name'] = u.profile.get_primary_team().name if hasattr(u, 'profile') and u.profile.get_primary_team() else None
+                row['member_count'] = u.member_count
+            results.append(row)
         
         return Response(results)
 
