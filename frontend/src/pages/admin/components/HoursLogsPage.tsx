@@ -35,6 +35,11 @@ interface HoursLogsPageProps<T extends HoursLog> {
   setSearchQuery: (val: string) => void;
   stats: { total: number; pending: number; approved: number; rejected: number };
   filteredLogs: T[];
+  /** Rows matching the filters across every server page. */
+  total: number;
+  /** 1-based server page. */
+  page: number;
+  onPageChange: (page: number) => void;
   onApprove: (id: number) => void;
   onReject: (id: number) => void;
   onDelete?: (id: number) => void;
@@ -62,6 +67,9 @@ export const HoursLogsPage = <T extends HoursLog>({
   setSearchQuery,
   stats,
   filteredLogs,
+  total,
+  page,
+  onPageChange,
   onApprove,
   onReject,
   onDelete,
@@ -143,6 +151,13 @@ export const HoursLogsPage = <T extends HoursLog>({
           </>
         }
         logs={filteredLogs}
+        server={{
+          search: searchQuery,
+          onSearchChange: setSearchQuery,
+          page,
+          total,
+          onPageChange,
+        }}
         extraColumns={extraColumns}
         onApprove={onApprove}
         onReject={onReject}

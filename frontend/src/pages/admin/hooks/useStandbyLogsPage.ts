@@ -1,15 +1,16 @@
-import { useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { standbyService } from "@/services/standbyService";
 import { handleApiError } from "@/lib/error-handler";
 import { useAdminRejectMutation } from "@/hooks/useAdminRejectMutation";
 import { toast } from "sonner";
-import { useHoursLogsFilterState, useHoursLogsData } from "./hoursLogsFilter";
+import { useHoursLogsFilterState } from "./hoursLogsFilter";
+import { useHoursLogsServerData } from "./useHoursLogsServerData";
 import type { StandbyLog } from "@/types";
 import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
 export const useStandbyLogsPage = () => {
   const qc = useQueryClient();
+  const filters = useHoursLogsFilterState();
   const {
     filterStatus,
     setFilterStatus,
@@ -19,14 +20,19 @@ export const useStandbyLogsPage = () => {
     setDateTo,
     searchQuery,
     setSearchQuery,
-  } = useHoursLogsFilterState();
-
-  const { data: logs, isLoading } = useQuery({
+    page,
+    setPage,
+  } = filters;
+  const {
+    logs: filteredLogs,
+    total,
+    stats,
+    isLoading,
+    onRowRemoved,
+  } = useHoursLogsServerData<StandbyLog>({
     queryKey: ["admin", "standby", "admin_logs"],
-    queryFn: () => standbyService.getAdminLogs({ page_size: 500 }),
-    refetchOnMount: true,
-    staleTime: 0,
-    refetchOnWindowFocus: false,
+    fetchPage: standbyService.getAdminLogs,
+    ...filters,
   });
 
   const approveMutation = useMutation({
@@ -34,6 +40,7 @@ export const useStandbyLogsPage = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "standby", "admin_logs"] });
       void invalidateAdminDashboard(qc);
+      onRowRemoved();
       toast.success("Approved");
     },
     onError: (err: unknown) => handleApiError(err),
@@ -41,6 +48,7 @@ export const useStandbyLogsPage = () => {
 
   const rejectMutation = useAdminRejectMutation(standbyService.reject, {
     invalidateKeys: [["admin", "standby", "admin_logs"]],
+    onSuccess: () => onRowRemoved(),
   });
 
   const deleteMutation = useMutation({
@@ -48,19 +56,11 @@ export const useStandbyLogsPage = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "standby", "admin_logs"] });
       void invalidateAdminDashboard(qc);
+      onRowRemoved();
       toast.success("Standby record deleted");
     },
     onError: (err: unknown) => handleApiError(err),
   });
-
-  const results = useMemo(() => logs?.results as StandbyLog[] | undefined, [logs]);
-  const { filteredLogs, stats } = useHoursLogsData(
-    results,
-    filterStatus,
-    dateFrom,
-    dateTo,
-    searchQuery
-  );
 
   const handleReject = (id: number) => {
     const reason = prompt("Enter rejection reason:") || "";
@@ -68,7 +68,6 @@ export const useStandbyLogsPage = () => {
   };
 
   return {
-    logs,
     isLoading,
     filterStatus,
     setFilterStatus,
@@ -79,6 +78,9 @@ export const useStandbyLogsPage = () => {
     searchQuery,
     setSearchQuery,
     filteredLogs,
+    total,
+    page,
+    setPage,
     stats,
     approveMutation,
     deleteMutation,

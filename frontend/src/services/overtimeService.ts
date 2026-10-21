@@ -5,6 +5,7 @@ import type {
   OvertimeLog,
   Client,
   OvertimeSummary,
+  AdminLogsPage,
   PaginatedResponse,
   PendingMonthEntry,
 } from "@/types";
@@ -204,10 +205,13 @@ export const overtimeService = {
     status?: string;
     client?: number;
     date?: string;
+    date_from?: string;
+    date_to?: string;
+    search?: string;
     page?: number;
     page_size?: number;
-  }): Promise<PaginatedResponse<OvertimeLog>> {
-    const { data } = await api.get<PaginatedResponse<OvertimeLog>>("/overtime/logs/admin_logs/", {
+  }): Promise<AdminLogsPage<OvertimeLog>> {
+    const { data } = await api.get<AdminLogsPage<OvertimeLog>>("/overtime/logs/admin_logs/", {
       params,
     });
     return data;

@@ -23,6 +23,9 @@ export const OvertimeLogsPage: React.FC = () => {
     rejectionDialogOpen,
     setRejectionDialogOpen,
     filteredLogs,
+    total,
+    page,
+    setPage,
     stats,
     approveMutation,
     deleteMutation,
@@ -48,6 +51,9 @@ export const OvertimeLogsPage: React.FC = () => {
       setSearchQuery={setSearchQuery}
       stats={stats}
       filteredLogs={filteredLogs}
+      total={total}
+      page={page}
+      onPageChange={setPage}
       onApprove={approveMutation.mutate}
       onReject={handleSingleReject}
       onDelete={(id) => deleteMutation.mutate(id)}
