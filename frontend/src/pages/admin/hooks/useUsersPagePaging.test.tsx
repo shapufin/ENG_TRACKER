@@ -21,7 +21,9 @@ vi.mock("@/hooks/useUserManagement", () => ({
     deleteMutation: {},
   }),
 }));
-vi.mock("./useUsersPageBulk", () => ({ useUsersPageBulk: () => ({ bulkUpdateMutation: {}, bulkDeleteMutation: {} }) }));
+vi.mock("./useUsersPageBulk", () => ({
+  useUsersPageBulk: () => ({ bulkUpdateMutation: {}, bulkDeleteMutation: {} }),
+}));
 vi.mock("@/context/PluginContext", () => ({ usePlugins: () => ({ activePlugins: [] }) }));
 vi.mock("@/context/PermissionContext", () => ({ usePermissions: () => ({}) }));
 vi.mock("@/lib/api", () => ({ default: { get: vi.fn() } }));
