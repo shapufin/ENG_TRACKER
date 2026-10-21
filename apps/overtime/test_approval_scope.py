@@ -1,8 +1,9 @@
 """SEC-09 proof tests: approve/reject authority of a plain team leader.
 
 Covers single and bulk endpoints of overtime, standby and leave: a TL may act
-on managed users' rows only, never on another team's rows and never on their
-own request.
+on managed users' rows only, never on another team's rows. A TL may decide
+their own overtime and standby (product ruling 2026-10-21) but never their own
+leave; non-TL users never decide their own request.
 """
 from datetime import date, timedelta
 
@@ -88,20 +89,43 @@ class TeamLeaderApprovalScopeTests(APITestCase):
                 obj.refresh_from_db()
                 self.assertEqual(obj.status, 'approved')
 
-    def test_team_leader_cannot_approve_or_reject_their_own_request(self):
-        for label, url, make in self._cases():
-            for verb in ('approve', 'reject'):
+    def test_team_leader_can_approve_or_reject_own_overtime_and_standby(self):
+        for label, url, make in self._cases()[:2]:
+            for verb, status in (('approve', 'approved'), ('reject', 'rejected')):
                 obj = make(self.tl)
+                body = {'rejection_reason': 'x'} if verb == 'reject' else {}
                 with self.subTest(kind=label, verb=verb):
-                    resp = self.client.post(f'{url}{obj.id}/{verb}/', {}, format='json')
-                    self.assertIn(resp.status_code, (403, 404))
-                    self._assert_pending(obj)
+                    resp = self.client.post(f'{url}{obj.id}/{verb}/', body, format='json')
+                    self.assertEqual(resp.status_code, 200, resp.data)
+                    obj.refresh_from_db()
+                    self.assertEqual(obj.status, status)
 
-    def test_team_leader_cannot_bulk_approve_or_reject_their_own_requests(self):
-        for label, url, make in self._cases():
-            for verb in ('bulk_approve', 'bulk_reject'):
-                obj = make(self.tl)
-                with self.subTest(kind=label, verb=verb):
-                    resp = self.client.post(f'{url}{verb}/', {'ids': [obj.id]}, format='json')
-                    self.assertLess(resp.status_code, 500)
-                    self._assert_pending(obj)
+    def test_team_leader_can_bulk_approve_own_overtime_and_standby(self):
+        for label, url, make in self._cases()[:2]:
+            obj = make(self.tl)
+            with self.subTest(kind=label):
+                resp = self.client.post(f'{url}bulk_approve/', {'ids': [obj.id]}, format='json')
+                self.assertEqual(resp.data['approved_count'], 1, resp.data)
+
+    def test_team_leader_cannot_decide_their_own_leave(self):
+        _, url, make = self._cases()[2]
+        for verb in ('approve', 'reject'):
+            obj = make(self.tl)
+            with self.subTest(verb=verb):
+                resp = self.client.post(f'{url}{obj.id}/{verb}/', {}, format='json')
+                self.assertIn(resp.status_code, (403, 404))
+                self._assert_pending(obj)
+        obj = make(self.tl)
+        resp = self.client.post(f'{url}bulk_approve/', {'ids': [obj.id]}, format='json')
+        self.assertLess(resp.status_code, 500)
+        self._assert_pending(obj)
+
+    def test_non_team_leader_cannot_decide_own_overtime_or_standby(self):
+        plain = User.objects.create_user(username='ap_plain', password='x')
+        self.client.force_authenticate(plain)
+        for label, url, make in self._cases()[:2]:
+            obj = make(plain)
+            with self.subTest(kind=label):
+                resp = self.client.post(f'{url}{obj.id}/approve/', {}, format='json')
+                self.assertIn(resp.status_code, (403, 404))
+                self._assert_pending(obj)
