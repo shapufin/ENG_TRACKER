@@ -1893,7 +1893,7 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
             members_count=Count('members', distinct=True)
         ).order_by('name')
 
-        serializer = TeamSerializer(queryset, many=True)
+        serializer = TeamSerializer(queryset, many=True, context={'request': request})
         data = [
             {
                 'id': team['id'],

@@ -85,12 +85,13 @@ ID_IS_USER_ROUTES = {'/api/users/users/', '/api/users/users/me/'}
 # Rows with no owner key: shared reference data, justified one by one.
 REFERENCE_ROUTES = {
     '/api/users/teams/': (
-        'team directory (name, leader, counts) is readable by every authenticated '
-        'user; member lists are scoped separately (SEC-06 test_child_list_scope, '
-        'test_list_for_reports_exposes_no_more_than_the_team_list_already_does)'),
-    '/api/users/teams/root_teams/': 'same team directory, filtered to root teams',
+        'names and TLs readable by all; counts masked for non-staff/HR/non-own-TL '
+        '(apps/users/tests_app/test_team_directory_counts.py); member lists are scoped '
+        'separately (SEC-06 test_child_list_scope)'),
+    '/api/users/teams/root_teams/': 'same team directory (names and TLs; counts masked), filtered to root teams',
     '/api/users/teams/list_for_reports/': (
-        'same team directory (apps/users/tests_app/test_child_list_scope.py::'
+        'same team directory: names readable by all, counts masked for non-staff/HR/non-own-TL '
+        '(apps/users/tests_app/test_child_list_scope.py::'
         'test_list_for_reports_exposes_no_more_than_the_team_list_already_does)'),
 }
 _SHARED = 'shared reference or configuration data, no per-user rows'
@@ -117,8 +118,10 @@ for _url in (
 # Intentionally wider than the owner rule, with the invariant that sanctions it.
 WIDENED_ROUTES = {
     '/api/users/users/albanian_team_leaders/': (
-        "a team leader's name is not confidential (register S-4 / M-2 ruling); staff and HR "
-        'get member counts, team leaders get names only, employees are refused'),
+        "a team leader's name is not confidential (register S-4 / M-2 ruling); the list is "
+        'for staff, HR and TLs only (employees, HBPR-only and CR-only get 403); staff and HR '
+        'get member counts, TLs names only. Employees learn TL names from the org chart and '
+        '/users/teams/'),
     '/api/users/users/italian_team_leaders/': 'same TL name list (register M-2)',
     '/api/users/users/eligible_for_control_room/': (
         'CR admin picker returns minimum identity data by design; '
@@ -135,9 +138,9 @@ WIDENED_ROUTES = {
 }
 # Reference routes whose design is company-wide: exempt from the owner / team-B scan.
 COMPANY_WIDE_REFERENCE = {
-    '/api/users/teams/': 'the team directory lists every team and leader',
-    '/api/users/teams/root_teams/': 'the team directory lists every team and leader',
-    '/api/users/teams/list_for_reports/': 'the team directory lists every team and leader',
+    '/api/users/teams/': 'the team directory lists every team and leader by name; counts are masked',
+    '/api/users/teams/root_teams/': 'the team directory lists every team and leader by name; counts are masked',
+    '/api/users/teams/list_for_reports/': 'the team directory lists every team and leader by name; counts are masked',
 }
 # Per-role exemptions of WIDENED_ROUTES: world attributes whose rows that role may
 # read there. '*' means every user, 'team_b' that the response may name team B. Anything else still fails.

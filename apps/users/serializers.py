@@ -478,15 +478,33 @@ class TeamSerializer(serializers.ModelSerializer):
         user = self._derived_tls(obj).get('albanian_tl')
         return TeamLeaderSerializer(user).data if user else None
 
-    def get_sub_teams_count(self, obj) -> int:
-        """Count of direct sub-teams."""
+    def _may_see_counts(self, obj):
+        """Team confidentiality: counts for staff, HR and the TL of this team.
+
+        No request in the context means an internal caller, never a viewer.
+        """
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user is None:
+            return True
+        if user.is_staff or user.is_superuser or user.profile.is_hr:
+            return True
+        tl_ids = {u.pk for u in self._derived_tls(obj).values() if u}
+        return obj.team_leader_id == user.pk or user.pk in tl_ids
+
+    def get_sub_teams_count(self, obj) -> int | None:
+        """Count of direct sub-teams (masked for viewers who may not see counts)."""
+        if not self._may_see_counts(obj):
+            return None
         annotated = getattr(obj, 'sub_teams_count_annotated', None)
         if annotated is not None:
             return annotated
         return obj.sub_teams.count()
 
-    def get_members_count(self, obj) -> int:
-        """Count of team members."""
+    def get_members_count(self, obj) -> int | None:
+        """Count of team members (masked for viewers who may not see counts)."""
+        if not self._may_see_counts(obj):
+            return None
         annotated = getattr(obj, 'members_count_annotated', None)
         if annotated is not None:
             return annotated
