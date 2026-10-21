@@ -602,6 +602,64 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
             )
         self.invalidate_related_cache()
 
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def admin_requests(self, request):
+        """One server-filtered page of every leave request for the admin page.
+
+        Staff admins and HR only (same guard as the overtime/standby admin
+        lists). Filters: status, user, request_type, date_from (start on or
+        after), date_to (end on or before) and a whitespace-split search over
+        the employee's username, name and the reason. ``status_counts`` covers
+        the same filters except ``status`` so the chips stay meaningful.
+        """
+        from django.db.models import Q
+        from core.mixins.permissions import has_hr_role
+
+        user = request.user
+        if not (user.is_superuser or user.is_staff or has_hr_role(user)):
+            return Response(
+                {'error': 'Only staff admins or HR can access this endpoint.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        params = request.query_params
+        queryset = LeaveRequest.objects.all().select_related('user', 'approved_by').prefetch_related(
+            'user__profile__team_memberships__team'
+        )
+        if params.get('user'):
+            queryset = queryset.filter(user_id=params['user'])
+        if params.get('request_type'):
+            queryset = queryset.filter(request_type=params['request_type'])
+        if params.get('date_from'):
+            queryset = queryset.filter(start_date__gte=params['date_from'])
+        if params.get('date_to'):
+            queryset = queryset.filter(end_date__lte=params['date_to'])
+        for term in (params.get('search') or '').split():
+            queryset = queryset.filter(
+                Q(user__username__icontains=term)
+                | Q(user__first_name__icontains=term)
+                | Q(user__last_name__icontains=term)
+                | Q(reason__icontains=term)
+            )
+        queryset = queryset.order_by('-created_at', '-id')
+
+        counts = queryset.aggregate(
+            total=Count('id'),
+            pending=Count('id', filter=Q(status='pending')),
+            approved=Count('id', filter=Q(status='approved')),
+            rejected=Count('id', filter=Q(status='rejected')),
+            vacation=Count('id', filter=Q(request_type='vacation')),
+            sick=Count('id', filter=Q(request_type='sick')),
+        )
+        if params.get('status'):
+            queryset = queryset.filter(status=params['status'])
+
+        page = self.paginate_queryset(queryset)
+        serializer = self.get_serializer(page, many=True)
+        response = self.get_paginated_response(serializer.data)
+        response.data['status_counts'] = counts
+        return response
+
     def perform_destroy(self, instance):
         with transaction.atomic():
             if instance.request_type == 'vacation' and instance.balance:

@@ -3,6 +3,8 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { LeaveRequestsTable } from "./LeaveRequestsTable";
 import type { LeaveRequest } from "@/types";
 
+const server = { search: "", onSearchChange: () => {}, page: 1, total: 2, onPageChange: () => {} };
+
 // DataTable (TanStack) needs ResizeObserver, which jsdom lacks.
 vi.stubGlobal(
   "ResizeObserver",
@@ -31,6 +33,7 @@ describe("LeaveRequestsTable action buttons", () => {
     // delete button relied on title alone (weak accessible name).
     render(
       <LeaveRequestsTable
+        server={server}
         requests={[request]}
         onApprove={vi.fn()}
         onReject={vi.fn()}
@@ -49,7 +52,14 @@ describe("LeaveRequestsTable action buttons", () => {
     // ConfirmDialog + Input like every other reject flow in the app.
     const nativePrompt = vi.spyOn(window, "prompt");
     const onReject = vi.fn();
-    render(<LeaveRequestsTable requests={[request]} onApprove={vi.fn()} onReject={onReject} />);
+    render(
+      <LeaveRequestsTable
+        server={server}
+        requests={[request]}
+        onApprove={vi.fn()}
+        onReject={onReject}
+      />
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Reject 1" }));
     expect(nativePrompt).not.toHaveBeenCalled();
@@ -67,6 +77,7 @@ describe("LeaveRequestsTable action buttons", () => {
     const onDelete = vi.fn();
     render(
       <LeaveRequestsTable
+        server={server}
         requests={[request]}
         onApprove={vi.fn()}
         onReject={vi.fn()}
@@ -83,7 +94,14 @@ describe("LeaveRequestsTable action buttons", () => {
 
   it("offers approve/reject only for pending requests and hides delete without permission", () => {
     const approved = { ...request, status: "approved" } as LeaveRequest;
-    render(<LeaveRequestsTable requests={[approved]} onApprove={vi.fn()} onReject={vi.fn()} />);
+    render(
+      <LeaveRequestsTable
+        server={server}
+        requests={[approved]}
+        onApprove={vi.fn()}
+        onReject={vi.fn()}
+      />
+    );
     expect(screen.queryByRole("button", { name: "Approve 1" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Reject 1" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete 1" })).not.toBeInTheDocument();
@@ -92,14 +110,28 @@ describe("LeaveRequestsTable action buttons", () => {
   it("renders pending approve/reject as always-visible inline buttons with text", () => {
     // AdminGUI comparison 2026-10-11: approval decisions must be discoverable
     // without hovering — icon-only hover-reveal actions hide the row's point.
-    render(<LeaveRequestsTable requests={[request]} onApprove={vi.fn()} onReject={vi.fn()} />);
+    render(
+      <LeaveRequestsTable
+        server={server}
+        requests={[request]}
+        onApprove={vi.fn()}
+        onReject={vi.fn()}
+      />
+    );
     expect(screen.getByRole("button", { name: "Approve 1" })).toHaveTextContent("Approve");
     expect(screen.getByRole("button", { name: "Reject 1" })).toHaveTextContent("Reject");
   });
 
   it("calls onApprove immediately without a dialog", () => {
     const onApprove = vi.fn();
-    render(<LeaveRequestsTable requests={[request]} onApprove={onApprove} onReject={vi.fn()} />);
+    render(
+      <LeaveRequestsTable
+        server={server}
+        requests={[request]}
+        onApprove={onApprove}
+        onReject={vi.fn()}
+      />
+    );
     fireEvent.click(screen.getByRole("button", { name: "Approve 1" }));
     expect(onApprove).toHaveBeenCalledWith(1);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -114,7 +146,14 @@ describe("LeaveRequestsTable day labels", () => {
       end_date: "2026-09-10",
       days_requested: 1,
     } as unknown as LeaveRequest;
-    render(<LeaveRequestsTable requests={[oneDay]} onApprove={vi.fn()} onReject={vi.fn()} />);
+    render(
+      <LeaveRequestsTable
+        server={server}
+        requests={[oneDay]}
+        onApprove={vi.fn()}
+        onReject={vi.fn()}
+      />
+    );
 
     expect(screen.queryByText(/\b1 days\b/)).toBeNull();
     expect(screen.getAllByText("1 day").length).toBeGreaterThan(0);
@@ -125,6 +164,7 @@ describe("LeaveRequestsTable toolbar", () => {
   it("renders the page's filters in the same toolbar row as Columns", () => {
     render(
       <LeaveRequestsTable
+        server={server}
         requests={[request]}
         onApprove={vi.fn()}
         onReject={vi.fn()}

@@ -355,6 +355,19 @@ export interface PaginatedResponse<T> {
   results: T[];
 }
 
+/** One page of the admin Leave Requests list. */
+export interface AdminLeaveRequestsPage extends PaginatedResponse<LeaveRequest> {
+  /** Counts for the same filters except status, so the chips stay meaningful. */
+  status_counts?: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    vacation: number;
+    sick: number;
+  };
+}
+
 /** Month with pending item count — returned by team_pending_months endpoints. */
 export interface PendingMonthEntry {
   month: string;

@@ -1,52 +1,39 @@
-import { useMemo, useState } from "react";
-import type { LeaveRequest } from "@/types";
+import { useState } from "react";
 import { useUrlParamState } from "@/hooks/useUrlParamState";
-import { matchesLeaveRequestFilter, sortLeaveRequests } from "./leaveRequestFilterHelpers";
 
 const LEAVE_STATUSES = ["all", "pending", "approved", "rejected"] as const;
 
-export const useLeaveRequestFilters = (
-  requests: LeaveRequest[] | { results: LeaveRequest[] } | undefined
-) => {
+export const useLeaveRequestFilters = () => {
   // ?status= so dashboard insights can deep-link to the pending queue.
-  const [filterStatus, setFilterStatus] = useUrlParamState("status", LEAVE_STATUSES, "all");
-  const [filterUser, setFilterUser] = useState<string>("all");
-  const [filterType, setFilterType] = useState<"all" | "vacation">("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const allRequests = useMemo(() => {
-    const results = Array.isArray(requests) ? requests : requests?.results;
-    return results ?? [];
-  }, [requests]);
-
-  const filterOptions = useMemo(
-    () => ({ filterStatus, filterUser, filterType, dateFrom, dateTo, searchQuery }),
-    [filterStatus, filterUser, filterType, dateFrom, dateTo, searchQuery]
-  );
-
-  const filteredRequests = useMemo(
-    () =>
-      allRequests
-        .filter((req) => matchesLeaveRequestFilter(req, filterOptions))
-        .sort(sortLeaveRequests),
-    [allRequests, filterOptions]
-  );
+  const [filterStatus, setStatus] = useUrlParamState("status", LEAVE_STATUSES, "all");
+  const [filterUser, setUser] = useState<string>("all");
+  const [filterType, setType] = useState<"all" | "vacation">("all");
+  const [dateFrom, setFrom] = useState("");
+  const [dateTo, setTo] = useState("");
+  const [searchQuery, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  // Any filter change starts again from the first page.
+  const resetting =
+    <V>(set: (value: V) => void) =>
+    (value: V) => {
+      set(value);
+      setPage(1);
+    };
 
   return {
     filterStatus,
-    setFilterStatus,
+    setFilterStatus: resetting(setStatus),
     filterUser,
-    setFilterUser,
+    setFilterUser: resetting(setUser),
     filterType,
-    setFilterType,
+    setFilterType: resetting(setType),
     dateFrom,
-    setDateFrom,
+    setDateFrom: resetting(setFrom),
     dateTo,
-    setDateTo,
+    setDateTo: resetting(setTo),
     searchQuery,
-    setSearchQuery,
-    filteredRequests,
+    setSearchQuery: resetting(setSearch),
+    page,
+    setPage,
   };
 };
