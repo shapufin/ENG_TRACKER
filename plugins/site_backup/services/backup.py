@@ -4,7 +4,9 @@ Full-site backup creation: DB fixture (dumpdata) + media files, zipped.
 Both the DB dump and the media zip stream to disk rather than buffering in
 memory, so backup size is bounded by disk space, not RAM.
 """
+import gzip
 import hashlib
+import io
 import json
 import os
 import tempfile
@@ -79,12 +81,17 @@ def _write_db_dump(db_gz_path: str) -> None:
     Plain PK-based dumps keep restore deterministic and engine-portable
     enough for this tool's dev=SQLite/prod=PostgreSQL use case.
     """
-    call_command(
-        'dumpdata',
-        *dumpable_model_labels(),
-        indent=None,
-        output=db_gz_path,
-    )
+    # ``dumpdata(output=...)`` opens the file with the process locale encoding
+    # (cp1252 on Windows, ASCII under ``LANG=C``) while the reader decodes
+    # UTF-8, so stream through an explicit UTF-8 wrapper instead.
+    with gzip.open(db_gz_path, 'wb') as gz:
+        with io.TextIOWrapper(gz, encoding='utf-8', newline='') as stream:
+            call_command(
+                'dumpdata',
+                *dumpable_model_labels(),
+                indent=None,
+                stdout=stream,
+            )
 
 
 def _write_media(archive: zipfile.ZipFile) -> int:
