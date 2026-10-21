@@ -34,7 +34,10 @@ interface UserDetailPanelProps {
    * never roles or TL assignments, which must keep going through the full
    * edit dialog's blocked-revocation handling).
    */
-  onSaveField?: (userId: number, payload: { phone?: string; code?: string; hire_date?: string | null }) => void;
+  onSaveField?: (
+    userId: number,
+    payload: { phone?: string; code?: string; hire_date?: string | null }
+  ) => void;
   isSaving?: boolean;
 }
 
