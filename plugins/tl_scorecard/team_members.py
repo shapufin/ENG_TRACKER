@@ -205,6 +205,7 @@ def team_member_summaries(leader, today: date, include_meetings: bool) -> list[d
             'full_name': member.get_full_name() or member.username,
             'username': member.username,
             'email': member.email,
+            'code': profile.code if profile is not None else None,
             'seniority_level': profile.seniority_level if profile is not None else None,
             'wage': wage,
             'leave': {

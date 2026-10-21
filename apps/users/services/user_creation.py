@@ -47,8 +47,26 @@ def generate_random_password(length: int = 12) -> str:
     return ''.join(random.SystemRandom().choice(alphabet) for _ in range(length))  # noqa: S311
 
 
-def validate_new_user(username: str, email: str, password: str) -> None:
+def normalize_employee_code(code) -> Optional[str]:
+    """Trimmed code, or None for a blank one (stored as NULL, never '')."""
+    return (str(code).strip() or None) if code is not None else None
+
+
+def validate_employee_code(code, *, exclude_profile_id: Optional[int] = None) -> None:
+    """Raise UserValidationError when another profile already holds ``code``."""
+    cleaned = normalize_employee_code(code)
+    if not cleaned:
+        return
+    taken = UserProfile.objects.filter(code__iexact=cleaned)
+    if exclude_profile_id is not None:
+        taken = taken.exclude(pk=exclude_profile_id)
+    if taken.exists():
+        raise UserValidationError('code', f'Employee code "{cleaned}" already exists.')
+
+
+def validate_new_user(username: str, email: str, password: str, code=None) -> None:
     """Raise UserValidationError when a new account could not be created (no writes)."""
+    validate_employee_code(code)
     if len(password) < 6:
         raise UserValidationError('password', "Password must be at least 6 characters.")
 
@@ -83,6 +101,7 @@ def create_user_with_profile(
     is_active: bool = True,
     is_cr_admin: bool = False,
     roles: Optional[list[str]] = None,
+    code: Optional[str] = None,
 ) -> User:
     """
     Create a User and their UserProfile, and assign team memberships.
@@ -93,7 +112,7 @@ def create_user_with_profile(
     Raises:
         ValueError: if username/email/password validation fails.
     """
-    validate_new_user(username, email, password)
+    validate_new_user(username, email, password, code=code)
 
     user = User.objects.create_user(
         username=username,
@@ -106,6 +125,7 @@ def create_user_with_profile(
 
     profile = user.profile
     profile.phone = phone or ''
+    profile.code = normalize_employee_code(code)
     if hire_date:
         profile.hire_date = hire_date
     if albanian_tl_id:
@@ -159,10 +179,11 @@ def update_user_profile(
     is_active: Optional[bool] = None,
     is_cr_admin: Optional[bool] = None,
     roles: Optional[list[str]] = None,
+    code: Optional[str] = None,
 ) -> User:
     """
     Update a User and their UserProfile from an import row. Only supplied fields
-    are changed; None values are left untouched.
+    are changed; None values are left untouched (``code=''`` clears the code).
 
     When ``is_cr_admin`` is True, an active ``UserRole`` for the seeded
     ``cr_admin`` role is created (idempotent). When False, any existing
@@ -183,6 +204,9 @@ def update_user_profile(
         if blocked:
             raise TeamLeaderRevokeBlockedError(blocked)
 
+    if code is not None:
+        validate_employee_code(code, exclude_profile_id=user.profile.pk)
+
     if first_name is not None:
         user.first_name = first_name
     if last_name is not None:
@@ -192,6 +216,8 @@ def update_user_profile(
     user.save()
 
     profile = user.profile
+    if code is not None:
+        profile.code = normalize_employee_code(code)
     if phone is not None:
         profile.phone = phone
     if hire_date is not None:

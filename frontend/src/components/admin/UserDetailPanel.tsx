@@ -34,11 +34,11 @@ interface UserDetailPanelProps {
    * never roles or TL assignments, which must keep going through the full
    * edit dialog's blocked-revocation handling).
    */
-  onSaveField?: (userId: number, payload: { phone?: string; hire_date?: string | null }) => void;
+  onSaveField?: (userId: number, payload: { phone?: string; code?: string; hire_date?: string | null }) => void;
   isSaving?: boolean;
 }
 
-type EditableField = "phone" | "hire_date";
+type EditableField = "phone" | "code" | "hire_date";
 
 /**
  * One scalar fact with an inline edit affordance. Editing stays local until
@@ -181,6 +181,7 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
   const saveField = (field: EditableField) => (value: string) => {
     if (!onSaveField || userId === undefined) return;
     if (field === "phone") onSaveField(userId, { phone: value });
+    else if (field === "code") onSaveField(userId, { code: value });
     else onSaveField(userId, { hire_date: value === "" ? null : value });
   };
 
@@ -259,6 +260,26 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
               onStart={setEditing}
               onCancel={() => setEditing(null)}
               onSave={saveField("hire_date")}
+              isSaving={isSaving}
+              canEdit={canSaveField}
+            />
+            <EditableFact
+              key={`code-${editing === "code" ? "open" : "closed"}`}
+              label="Code"
+              field="code"
+              username={username}
+              display={
+                profile.code ? (
+                  <span className="font-mono text-xs">{profile.code}</span>
+                ) : (
+                  <DetailDrawerEmpty />
+                )
+              }
+              currentValue={profile.code ?? ""}
+              editing={editing}
+              onStart={setEditing}
+              onCancel={() => setEditing(null)}
+              onSave={saveField("code")}
               isSaving={isSaving}
               canEdit={canSaveField}
             />

@@ -21,6 +21,7 @@ interface CreateForm {
   last_name: string;
   password: string;
   phone: string;
+  code?: string;
   teams: number[];
   techs: number[];
   albanian_tl: string;
@@ -219,6 +220,12 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
           value={form.password}
           onChange={(v) => updateField("password", v)}
           error={formErrors.password}
+        />
+        <FormInputField
+          label="Employee Code"
+          value={form.code ?? ""}
+          onChange={(v) => updateField("code", v)}
+          error={formErrors.code}
         />
       </ModalSection>
 

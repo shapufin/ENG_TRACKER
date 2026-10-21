@@ -55,6 +55,19 @@ describe("useUserColumns", () => {
     expect(screen.getByText("AL")).toBeInTheDocument();
   });
 
+  it("renders the employee code, or a dash when none is set", () => {
+    const { result } = renderHook(() => useUserColumns(vi.fn(), vi.fn(), vi.fn()));
+    const column = result.current.find((item) => item.id === "code");
+    const cell = column?.cell as (context: { row: { original: UserProfile } }) => React.ReactNode;
+
+    const { unmount } = render(<>{cell({ row: { original: profile({ code: "EMP-1" }) } })}</>);
+    expect(screen.getByText("EMP-1")).toBeInTheDocument();
+    unmount();
+
+    render(<>{cell({ row: { original: profile({ code: null }) } })}</>);
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
   it("renders an HBPR badge alongside the TL role badges", () => {
     const { result } = renderHook(() => useUserColumns(vi.fn(), vi.fn(), vi.fn()));
     const column = result.current.find((item) => item.id === "tl_role");

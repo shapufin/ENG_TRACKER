@@ -153,6 +153,18 @@ export const useUserColumns = (
         },
       },
       {
+        id: "code",
+        accessorKey: "code",
+        header: "Code",
+        size: 96,
+        cell: ({ row }) =>
+          row.original.code ? (
+            <span className="font-mono text-xs">{row.original.code}</span>
+          ) : (
+            <span className="text-muted-foreground text-xs">—</span>
+          ),
+      },
+      {
         id: "email",
         accessorKey: "user.email",
         header: "Email",

@@ -83,7 +83,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
     queryset = User.objects.all().select_related('profile').prefetch_related('profile__teams', 'profile__techs', 'profile__tech_assignments__tech', 'profile__tech_assignments__level', 'profile__team_memberships__team', 'profile__clients', 'italian_team_members', 'albanian_team_members', 'led_teams', 'user_roles__role', 'control_room_access').order_by('username')
     serializer_class = UserSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-    search_fields = ['username', 'email', 'first_name', 'last_name']
+    search_fields = ['username', 'email', 'first_name', 'last_name', 'profile__code']
     filterset_fields = ['is_active', 'is_staff']
 
     def get_permissions(self):
@@ -881,6 +881,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 is_albanian_tl_role=data.get('is_albanian_tl_role', False),
                 is_cr_admin=data.get('is_cr_admin', False),
                 roles=data.get('roles'),
+                code=data.get('code'),
             )
             return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
         except UserValidationError as e:
@@ -957,6 +958,17 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 if leader_error:
                     return Response({'error': leader_error}, status=status.HTTP_400_BAD_REQUEST)
 
+        if 'code' in data:
+            from .services.user_creation import UserValidationError, validate_employee_code
+            try:
+                validate_employee_code(
+                    data['code'],
+                    exclude_profile_id=getattr(profile_for_check, 'pk', None),
+                )
+            except UserValidationError as exc:
+                return Response({'error': str(exc), exc.field: [str(exc)]},
+                                status=status.HTTP_400_BAD_REQUEST)
+
         if 'email' in data:
             user.email = data['email']
         if 'first_name' in data:
@@ -967,6 +979,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         profile, _ = UserProfile.objects.get_or_create(user=user)
         if 'phone' in data:
             profile.phone = data['phone']
+        if 'code' in data:
+            profile.code = data['code']  # UserProfile.save() trims / blanks to NULL
         if 'teams' in data:
             profile.teams.set(data['teams'])
         if 'techs' in data:
@@ -1205,7 +1219,7 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
     queryset = with_profile_list_loading(UserProfile.objects.all()).order_by('-id')
     serializer_class = UserProfileSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-    search_fields = ['user__username', 'user__email', 'user__first_name', 'user__last_name']
+    search_fields = ['user__username', 'user__email', 'user__first_name', 'user__last_name', 'code']
     filterset_fields = ['albanian_tl', 'italian_tl', 'is_hr_user']
     pagination_class = UserProfilePagination
 

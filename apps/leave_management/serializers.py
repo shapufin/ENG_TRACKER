@@ -110,6 +110,7 @@ class LeaveBalanceSummarySerializer(serializers.Serializer):
 class LeaveRequestSerializer(serializers.ModelSerializer):
     """Serializer for LeaveRequest model."""
     user_name = serializers.CharField(source='user.username', read_only=True)
+    user_code = serializers.CharField(source='user.profile.code', read_only=True, allow_null=True)
     user_full_name = serializers.SerializerMethodField()
     request_type_display = serializers.CharField(source='get_request_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -124,7 +125,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = LeaveRequest
         fields = [
-            'id', 'user', 'user_name', 'user_full_name',
+            'id', 'user', 'user_name', 'user_code', 'user_full_name',
             'team_id', 'team_name',
             'request_type', 'request_type_display',
             'start_date', 'end_date', 'days_requested',

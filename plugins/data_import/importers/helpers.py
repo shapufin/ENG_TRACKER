@@ -30,10 +30,11 @@ def parse_bool(value: Any, default: Optional[bool] = None) -> Optional[bool]:
 
 
 def resolve_user(mapped_row: Dict[str, Any]) -> Optional[User]:
-    """Find the user a row refers to: by username, then by email.
+    """Find the user a row refers to: by username, then email, then employee code.
 
     Django does not enforce a unique email, so an ambiguous email match is
-    treated as no match rather than guessing which person was meant.
+    treated as no match rather than guessing which person was meant. The
+    employee code is unique (case-insensitively), so it never is ambiguous.
     """
     username = mapped_row.get("username")
     if username:
@@ -45,4 +46,7 @@ def resolve_user(mapped_row: Dict[str, Any]) -> Optional[User]:
         matches = list(User.objects.filter(email=email)[:2])
         if len(matches) == 1:
             return matches[0]
+    code = str(mapped_row.get("code") or "").strip()
+    if code:
+        return User.objects.filter(profile__code__iexact=code).first()
     return None

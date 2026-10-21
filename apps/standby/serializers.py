@@ -31,6 +31,7 @@ class StandbyPatternSerializer(serializers.ModelSerializer):
 
 class StandbyLogSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    user_code = serializers.CharField(source='user.profile.code', read_only=True, allow_null=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     is_carried_over = serializers.SerializerMethodField()
     requested_period_label = serializers.SerializerMethodField()
@@ -49,6 +50,7 @@ class StandbyLogSerializer(serializers.ModelSerializer):
             'id',
             'user',
             'user_name',
+            'user_code',
             'user_tech_levels',
             'pattern',
             'pattern_name',

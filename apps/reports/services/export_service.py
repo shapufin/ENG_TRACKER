@@ -24,7 +24,14 @@ from django.db.models import Q, QuerySet
 from django.contrib.auth.models import User
 
 from apps.leave_management.models import counted_days
+from openpyxl.utils import get_column_letter
 from core.utils.csv_safe import csv_safe, xlsx_safe_row
+
+
+def employee_code(user) -> str:
+    """The user's employee code for a spreadsheet cell ('' when none is set)."""
+    profile = getattr(user, 'profile', None)
+    return (profile.code if profile is not None else None) or ''
 
 logger = logging.getLogger(__name__)
 
@@ -300,6 +307,7 @@ class ExportService:
             headers = ['Name', 'Date', 'Day', 'Start Time', 'End Time', 'Total Hours', 'Type', 'Description', 'Evidence Type', 'Evidence', 'Reference Code', 'Status']
             if include_carryover:
                 headers += ['Processing Period', 'Carried Over', 'Payroll settlement']
+            headers.append('Code')
             ws.append(headers)
             self._style_header_row(ws, header_fill, header_font, border)
 
@@ -336,6 +344,7 @@ class ExportService:
                     row.append(rpp.strftime('%m/%Y') if rpp else '')
                     row.append('Yes' if rec.get('is_carried_over') else 'No')
                     row.append(rec['settlement'])
+                row.append(employee_code(user))
                 ws.append(xlsx_safe_row(row))
                 # Color-code the Type cell (column G = 7) by category
                 type_cell = ws.cell(row=ws.max_row, column=7)
@@ -361,6 +370,7 @@ class ExportService:
                 col_widths['M'] = COLUMN_WIDTH_DEFAULT
                 col_widths['N'] = COLUMN_WIDTH_DEFAULT
                 col_widths['O'] = COLUMN_WIDTH_LARGE
+            col_widths[get_column_letter(len(headers))] = COLUMN_WIDTH_DEFAULT
             self._set_column_widths(ws, col_widths)
         
         # Save to bytes
@@ -427,7 +437,7 @@ class ExportService:
                 ws = wb.create_sheet(title=tl_name[:31])
 
             # Headers
-            headers = ['Name', 'Start Date', 'End Date', 'Days', 'Type', 'Status', 'Reason']
+            headers = ['Name', 'Start Date', 'End Date', 'Days', 'Type', 'Status', 'Reason', 'Code']
             ws.append(headers)
             self._style_header_row(ws, header_fill, header_font, border)
 
@@ -447,6 +457,7 @@ class ExportService:
                     rec['request_type'].capitalize(),
                     rec['status'].capitalize(),
                     rec['reason'],
+                    employee_code(user),
                 ]
                 ws.append(xlsx_safe_row(row))
             
@@ -460,6 +471,7 @@ class ExportService:
                 'E': COLUMN_WIDTH_DEFAULT,
                 'F': COLUMN_WIDTH_DEFAULT,
                 'G': COLUMN_WIDTH_LARGE,
+                'H': COLUMN_WIDTH_DEFAULT,
             })
         
         # Save to bytes

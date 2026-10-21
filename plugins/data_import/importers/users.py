@@ -15,8 +15,10 @@ from apps.users.services.user_creation import (
     create_user_with_profile,
     generate_random_password,
     update_user_profile,
+    validate_employee_code,
     validate_new_user,
 )
+from .helpers import is_blank
 from .base import (
     UPDATE_EXISTING_OPTION,
     BaseImporter,
@@ -140,6 +142,14 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                 field_type="string",
             ),
             ImportField(
+                key="code",
+                label="Code",
+                required=False,
+                field_type="string",
+                help_text="Unique employee code (case-insensitive). Blank leaves "
+                          "any existing code alone.",
+            ),
+            ImportField(
                 key="hire_date",
                 label="Hire Date",
                 required=False,
@@ -169,6 +179,7 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
             "italian_tl_username": ["italian tl username", "italian_tl_username", "italian_tl", "italian tl user", "reports to italian tl"],
             "albanian_tl_username": ["albanian tl username", "albanian_tl_username", "albanian_tl", "albanian tl user", "reports to albanian tl"],
             "phone": ["phone", "phone number", "telephone", "mobile"],
+            "code": ["code", "employee code", "employee_code", "employee id", "employee_id", "emp id", "emp_id", "badge", "badge number"],
             "hire_date": ["hire date", "hire_date", "start date", "started", "date hired"],
             "is_active": ["active", "is_active", "enabled", "status"],
         }
@@ -225,6 +236,7 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                 "italian_tl_username": "gverdi",
                 "albanian_tl_username": "ahoxha",
                 "phone": "+39 02 1234567",
+                "code": "EMP001",
                 "hire_date": "2024-01-15",
                 "is_active": True,
             },
@@ -241,6 +253,7 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                 "italian_tl_username": "gverdi",
                 "albanian_tl_username": "",
                 "phone": "+355 4 1234567",
+                "code": "EMP002",
                 "hire_date": "2024-03-01",
                 "is_active": True,
             },
@@ -554,6 +567,9 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                 for key in ("first_name", "last_name", "phone", "hire_date"):
                     if mapped_row.get(key) is not None:
                         update_kwargs[key] = mapped_row[key]
+                # Blank means "leave alone" here, so a blank cell never clears a code.
+                if not is_blank(mapped_row.get("code")):
+                    update_kwargs["code"] = mapped_row["code"]
 
                 # The column keys and ``update_user_profile``'s parameter names
                 # differ for the two role flags (``_role`` suffix). Passing the
@@ -582,6 +598,11 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
 
                 if tech_ids is not None:
                     update_kwargs["techs"] = tech_ids
+
+                if dry_run and "code" in update_kwargs:
+                    validate_employee_code(
+                        update_kwargs["code"], exclude_profile_id=existing_user.profile.pk
+                    )
 
                 if not dry_run:
                     try:
@@ -629,7 +650,7 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
 
             if dry_run:
                 # The preview must reject what commit would (bad email, taken username...).
-                validate_new_user(username, email, password)
+                validate_new_user(username, email, password, code=mapped_row.get("code"))
 
             if not dry_run:
                 create_kwargs = {
@@ -647,6 +668,7 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                     "is_italian_tl_role": self._normalize_bool(mapped_row.get("is_italian_tl")) or False,
                     "is_albanian_tl_role": self._normalize_bool(mapped_row.get("is_albanian_tl")) or False,
                     "hire_date": mapped_row.get("hire_date"),
+                    "code": mapped_row.get("code"),
                     "is_active": self._normalize_bool(mapped_row.get("is_active")) if mapped_row.get("is_active") is not None else True,
                 }
                 create_user_with_profile(**create_kwargs)

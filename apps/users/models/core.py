@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
+from django.db.models.functions import Lower
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from core.models.abstract import BaseModel, TimeStampedModel
@@ -481,6 +482,13 @@ class UserProfile(BaseModel):
         help_text='Clients this user is assigned to (used for KPI evidence and uploads)'
     )
 
+    code = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text='Optional unique employee code (case-insensitive). Blank is stored as NULL.',
+    )
+
     class Meta:
         db_table = 'user_profiles'
         indexes = [
@@ -489,6 +497,20 @@ class UserProfile(BaseModel):
             models.Index(fields=['is_hr_user']),
             models.Index(fields=['hire_date']),
         ]
+        constraints = [
+            # Case-insensitive, and NULL (not yet assigned) never collides.
+            models.UniqueConstraint(
+                Lower('code'),
+                condition=Q(code__isnull=False),
+                name='user_profile_code_ci_unique',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        # "" must become NULL or two codeless profiles would collide.
+        if 'code' in self.__dict__:  # skip a deferred (.only()) instance
+            self.code = (self.code or '').strip() or None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user.username} Profile"
