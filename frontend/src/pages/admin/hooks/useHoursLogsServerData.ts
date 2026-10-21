@@ -5,14 +5,14 @@ import type { HoursLogStatus } from "./hoursLogsFilter";
 /** Rows per request: the server pages the history so it never has to fit in the browser. */
 export const HOURS_PAGE_SIZE = 50;
 
-export interface HoursStatusCounts {
+interface HoursStatusCounts {
   total: number;
   pending: number;
   approved: number;
   rejected: number;
 }
 
-export interface HoursPageParams {
+interface HoursPageParams {
   page: number;
   page_size: number;
   status?: string;
