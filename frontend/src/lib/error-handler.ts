@@ -161,6 +161,7 @@ const detectErrorCode = (error: unknown): string => {
     if (status === 400) return detect400(response);
     if (status === 403) return detect403(response);
     if (status === 404) return detect404(response);
+    if (status === 409) return ERROR_CODES.RESOURCE_CONFLICT;
     if (status === 401) return ERROR_CODES.AUTHENTICATION_ERROR;
   }
   return detectNetwork(error) || ERROR_CODES.UNKNOWN_ERROR;
