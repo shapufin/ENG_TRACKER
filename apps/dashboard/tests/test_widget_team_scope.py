@@ -89,3 +89,49 @@ class DashboardWidgetTeamScopeTests(APITestCase):
                 with self.subTest(action=action, limit=bad):
                     resp = self._get(self.tl, action, limit=bad)
                     self.assertEqual(resp.status_code, 400)
+
+
+class LedTeamOnlyLeaderTests(APITestCase):
+    """A user who leads a team only through ``Team.team_leader`` is a TL (no role flag)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.lead = User.objects.create_user(username='dw_led', password='x')
+        cls.member = User.objects.create_user(
+            username='dw_led_member', password='x', first_name='Mona', last_name='Member')
+        cls.other = User.objects.create_user(
+            username='dw_led_other', password='x', first_name='Orla', last_name='Other')
+        cls.team_a = Team.objects.create(name='DW Led A', code='DLA')
+        cls.team_b = Team.objects.create(name='DW Led B', code='DLB')
+        # Deliberately set after creation and with no role flag on the profile.
+        Team.objects.filter(pk=cls.team_a.pk).update(team_leader=cls.lead)
+        cls.lead.profile.teams.add(cls.team_a)
+        cls.member.profile.teams.add(cls.team_a)
+        cls.other.profile.teams.add(cls.team_b)
+        client = Client.objects.create(name='DW Led Client', code='DLC')
+        for user in (cls.member, cls.other):
+            OvertimeLog.objects.create(
+                user=user, date=timezone.now().date(), hours=2, status='pending', client=client)
+
+    def setUp(self):
+        cache.clear()
+        self.client.force_authenticate(self.lead)
+
+    def test_led_team_only_user_has_no_role_flag(self):
+        # No TL role code or legacy flag: authority comes from ``led_teams`` via
+        # ``profile.is_team_leader``, which ``has_team_leader_role`` reads.
+        profile = self.lead.profile
+        self.assertFalse(profile.is_italian_tl_role or profile.is_albanian_tl_role)
+        self.assertFalse(set(profile.role_codes or []) & {'italian_tl', 'albanian_tl'})
+
+    def test_gets_own_team_data(self):
+        for action in ('top_pending_users', 'queue_highlights'):
+            with self.subTest(action=action):
+                resp = self.client.get(WIDGET_URL.format(action), {'team_id': self.team_a.id})
+                self.assertEqual(resp.status_code, 200)
+                self.assertIn('Mona Member', str(resp.data))
+                self.assertNotIn('Orla', str(resp.data))
+
+    def test_gets_404_for_other_team(self):
+        resp = self.client.get(WIDGET_URL.format('team_stats'), {'team_id': self.team_b.id})
+        self.assertEqual(resp.status_code, 404)

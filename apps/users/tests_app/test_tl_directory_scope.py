@@ -55,3 +55,13 @@ class TeamLeaderDirectoryScopeTests(APITestCase):
                 self.assertEqual(resp.status_code, 200)
                 row = next(r for r in resp.data if r['id'] == self.tl.id)
                 self.assertEqual(set(row), {'id', 'username', 'full_name'})
+
+    def test_user_leading_a_team_without_a_role_flag_gets_names(self):
+        lead = User.objects.create_user(username='dir_led_only', password='x')
+        Team.objects.create(name='Dir Led', code='DLD', team_leader=lead)
+        for url in URLS:
+            with self.subTest(url=url):
+                resp = self._get(lead, url)
+                self.assertEqual(resp.status_code, 200)
+                for row in resp.data:
+                    self.assertEqual(set(row), {'id', 'username', 'full_name'})
