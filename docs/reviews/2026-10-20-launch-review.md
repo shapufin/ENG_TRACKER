@@ -4,29 +4,29 @@
 
 **Verdict: GO WITH CONDITIONS.**
 
-NO-GO criteria checked: the one Sev H row (C-3) is FIXED; no regression versus the Baseline table (every check that passed there passes now, the backend suite grew from 3139 to 3179 tests, vitest from 3597 to 3599); the rehearsal has no FAIL on health or auth, its one FAIL (backup restore preview, R-3) is FIXED, and the login throttle and the Docker/Postgres backup drill are NOT REHEARSED rather than failed, which is condition 1.
+NO-GO criteria checked: the one Sev H row (C-3) is FIXED; no regression versus the Baseline table (every check that passed there passes now, the backend suite grew from 3139 to 3189 tests, vitest from 3597 to 3599); the rehearsal has no FAIL on health or auth, its one FAIL (backup restore preview, R-3) is FIXED in code with the Postgres restore drill still pending (condition 1), and the login throttle and the Docker/Postgres backup drill are NOT REHEARSED rather than failed, which is condition 1.
 
-### Counts (54 rows: B, M, S, C, P, D, R, F)
+### Counts (61 rows: B, M, S, C, P, D, R, F)
 
 | Status | Rows | | Severity | Rows |
 |---|---|---|---|---|
-| FIXED | 33 | | H | 1 |
-| REJECTED | 9 | | M | 20 |
-| DEFERRED (POST-LAUNCH) | 9 | | L | 33 |
+| FIXED | 39 | | H | 1 |
+| REJECTED | 10 | | M | 22 |
+| DEFERRED (POST-LAUNCH) | 9 | | L | 38 |
 | OPEN-DECISION | 1 (R-1) | | | |
 | CLEAN (checked, no finding) | 2 (P-4, P-9) | | | |
 
-Sev H: 1 of 1 FIXED. Sev M: 17 FIXED, 1 REJECTED (R-2), 1 DEFERRED (D-13), 1 OPEN-DECISION (R-1). No row is left as plain OPEN.
+Sev H: 1 of 1 FIXED. Sev M: 19 FIXED, 1 REJECTED (R-2), 1 DEFERRED (D-13), 1 OPEN-DECISION (R-1). No row is left as plain OPEN.
 
 ### Test totals
 
-Backend (SQLite, local): 3179 tests, OK. Backend and Backend (PostgreSQL 16) in CI: success. Frontend vitest: 568 files, 3599 tests, all passed. CI run 39559565997 at head `8325478`: all 10 jobs success, including E2E (Playwright), Frontend, both Backend jobs, Docker build, Trivy, gitleaks, compose/nginx and image smoke.
+Backend (SQLite, local): 3189 tests, OK at the final head (full run after the F-5 to F-11 fix wave). Backend and Backend (PostgreSQL 16) in CI: success. Frontend vitest: 568 files, 3599 tests, all passed. CI run 39559565997 at the earlier head `8325478` (superseded, see condition 3): all 10 jobs success, including E2E (Playwright), Frontend, both Backend jobs, Docker build, Trivy, gitleaks, compose/nginx and image smoke.
 
 ### Conditions (each must be met before or at go-live)
 
 1. **R-1:** on the target host, run the Docker image build, `nginx -t`, header and rate-limit checks, a Postgres backup then restore drill (R-3 is fixed, so this is the first real drill), and a throttled-login check. `settings_e2e` disables throttles, so this cannot be rehearsed on the dev machine.
 2. **Runbook env list vs `.env.example`:** the runbook list was derived from `docker-compose.yml`; diff it against `.env.example` and fix whichever side drifts (Task 6 minor, no row).
-3. **CI on the final head:** the controller pushes this branch's last commits (the paging fix `5e4cf01` and this document); the E2E and Frontend jobs must be green on that head, as they are on `8325478`.
+3. **CI on the final head:** the CI evidence must name the final head, which includes the F-5 to F-11 fix wave, not `8325478`. Push the branch and require every job, E2E and Frontend included, green on that exact commit before merge.
 
 ### Remaining risks, ranked
 
@@ -264,3 +264,10 @@ Partial production rehearsal, 2026-10-21, on the dev machine (no Docker). Stack:
 | F-2 | L | `frontend/src/pages/settings/components/NotificationPreferencesSection.tsx:15`; `frontend/src/pages/admin/components/UserCreateFormDialog.tsx:121` | The plugin static-import grep finds two core to plugin imports: a static import of `@/plugins/notifications/service`, and a dynamic import of `@/plugins/control_room/services/controlRoomService` (C-12). Removing either plugin would break the build or that dialog. Neither is in the `b4d48ac..HEAD` delta (`git log` for the first file shows no commit in range). | Final verification grep (below). | DEFERRED (POST-LAUNCH: route both through `getPluginComponent`/a core-owned wrapper; pre-existing, no runtime exposure while the plugins stay installed) |
 | F-3 | L | `frontend/src/pages/admin/GlobalSettingsPage.test.tsx` ("associates setting labels with their inputs") | Failed once in a subset run executed while another heavy job ran; passes alone and in the full 568-file run. Timing flake under load, not a regression. | Rerun alone: 125/125 pass across `src/pages/admin/hooks` + this file; full `npx vitest run` 3599/3599. | DEFERRED (POST-LAUNCH: unreproduced flake) |
 | F-4 | L | `frontend/src/pages/admin/hooks/useUsersPage.ts` | Deferred minor from Task 4: the page reset ran on any error and set state during render. | `useUsersPagePaging.test.tsx` "keeps the page when the failure is not a 404" RED (page 1 instead of 3), GREEN after the 404-only effect. | FIXED (`useUsersPagePaging.test.tsx`, commit `5e4cf01`) |
+| F-5 | M | `apps/users/serializers.py` `TeamSerializer` | `/api/users/teams/` returned `members_count` and `sub_teams_count` to every authenticated user, against the confidentiality ruling that counts are management data. | `test_team_directory_counts.py` RED (5 tests, 7 failures: employee and other-team TL saw counts), GREEN after masking to `null` for viewers who are not staff, HR or that team's TL; `list_for_reports` passes the request so HR keeps counts. Frontend consumers use `?? 0` and only admin or HR pages show counts. Matrix justification text rewritten. | FIXED (`TeamDirectoryCountTests`) |
+| F-6 | M | `CLAUDE.md`, `docs/workflow-invariants.md`, matrix `WIDENED_ROUTES`, `ProtectedRecordConflict` | Docs said TL name lists were readable beyond staff, HR and TLs, and the 409 detail named only payroll lines though HBPR assignments also protect users. | Docs and matrix text now say `italian_team_leaders`/`albanian_team_leaders` are staff, HR and TL only (employees, HBPR-only, CR-only get 403) and that employees learn TL names from the org chart and `/users/teams/`. `PROTECTED_RECORD_DETAIL` covers both causes. Matrix test passes. | FIXED (`test_row_ownership_matrix`, `test_single_delete_is_a_409_not_a_500`) |
+| F-7 | L | `frontend/src/lib/error-handler.ts` `detectErrorCode` | A 409 fell through to "Unknown error" in the toast. | `error-handler.test.ts` "titles a 409 protected-record conflict" RED (expected "Operation Failed" to be "Cannot delete"), GREEN with a `RESOURCE_CONFLICT` code. | FIXED (`error-handler.test.ts`) |
+| F-8 | L | `apps/dashboard/viewsets.py` `_get_team_and_members`; `apps/users/viewsets.py` `_tl_directory_access` | Review claim: the gates admit only `has_team_leader_role`, so a user who leads a team only through `Team.team_leader` is refused. | `has_team_leader_role` reads `profile.is_team_leader`, a property that already counts `led_teams`, so such a user passes. Regression tests added and green without a code change: own-team widget data, 404 for another team, names-only TL lists. | REJECTED (already correct; pinned by `LedTeamOnlyLeaderTests`, `test_user_leading_a_team_without_a_role_flag_gets_names`) |
+| F-9 | L | `apps/users/viewsets.py` `bulk_delete` | A `ProtectedError` put `type(e).__name__: str(e)` in `failed_users[].reason`, leaking object reprs (usernames, payroll period). | `test_bulk_delete_failure_keeps_tl_references` RED (reason held `ProtectedError ... PayrollLine`), GREEN with the fixed message. | FIXED (`test_bulk_delete_failure_keeps_tl_references`) |
+| F-10 | L | `apps/leave_management/services/carry_over.py` `apply_year_end_carry_over` | The `has_carry` branch (marker reset, re-run) had no test. The leftover formula is also duplicated between the rollover and the balance path. | New test resets only `carry_over_applied_year`, re-runs, and asserts the same counts and one carry row (no RED: it covers existing behaviour). Formula duplication not refactored. | FIXED (`test_rerun_after_marker_reset_adds_no_duplicate_carry_rows`); formula duplication DEFERRED (POST-LAUNCH) |
+| F-11 | L | `docs/workflow-invariants.md`, `docs/deploy/production-runbook.md`, `AGENTS.md`, `frontend/.dockerignore` | A hard-coded test count in the invariants doc; no note that `sync_payroll_holidays` is manual outside `RUN_MIGRATIONS=1`; `vite.config.audit.ts` not excluded from the frontend image context. | Count dropped in favour of this register; runbook and AGENTS.md carry the manual-step line; `DockerIgnoreContractTests.test_frontend_context_excludes_test_artifacts_and_env_files` RED then GREEN with the new pattern. | FIXED (`DockerIgnoreContractTests`) |
