@@ -72,7 +72,7 @@ export const TeamsPage: React.FC = () => {
       }
     >
       <TeamStatsCards
-        total={data.results.length}
+        total={data.count}
         members={data.results.reduce((sum, t) => sum + (t.members_count ?? 0), 0)}
         noLeader={leaderCounts.incomplete}
         groups={groupsData?.length ?? 0}

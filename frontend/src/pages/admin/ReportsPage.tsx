@@ -56,6 +56,7 @@ export const ReportsPage: React.FC = () => {
     detailedData,
     isLoading,
     handleGenerate,
+    generateForRange,
     downloadExcel,
     filteredUsersData,
   } = useReportsPage();
@@ -82,12 +83,7 @@ export const ReportsPage: React.FC = () => {
     </Button>
   );
 
-  const useThisMonth = () => {
-    const range = presetRange("this_month", new Date());
-    setStart(range.start);
-    setEnd(range.end);
-    handleGenerate();
-  };
+  const useThisMonth = () => generateForRange(presetRange("this_month", new Date()));
 
   const scrollToResults = () =>
     document.getElementById(RESULTS_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });

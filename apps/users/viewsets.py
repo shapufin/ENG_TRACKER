@@ -57,6 +57,7 @@ from core.mixins.permissions import (
     has_team_leader_role,
     is_staff_user,
 )
+from core.pagination import LargeResultsPagination
 from core.utils.timezone_local import business_today
 
 logger = logging.getLogger(__name__)
@@ -1866,6 +1867,8 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
     Provides CRUD operations for teams and team hierarchy.
     Write operations restricted to admin users.
     """
+    # The admin Teams page loads the whole directory in one request.
+    pagination_class = LargeResultsPagination
     serializer_class = TeamSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['name', 'code', 'description']

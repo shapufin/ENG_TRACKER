@@ -110,6 +110,8 @@ class LeaveBalanceViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserPer
     """ViewSet for LeaveBalance model. Admin/HR can update; regular users read-only."""
     allow_staff_global_view = False
     staff_global_view_actions = {'team_balances'}
+    # The admin balances page loads the whole roster in one request.
+    pagination_class = LargeResultsPagination
     queryset = LeaveBalance.objects.all().select_related('user')
     serializer_class = LeaveBalanceSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]

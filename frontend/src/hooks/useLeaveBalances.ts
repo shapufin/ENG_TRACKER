@@ -23,7 +23,7 @@ export const useLeaveBalances = (options?: UseLeaveBalancesOptions) => {
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin", "balances"],
-    queryFn: () => leaveService.getBalances(),
+    queryFn: () => leaveService.getBalances({ page_size: 1000 }),
   });
 
   const { data: usersData } = useQuery({
