@@ -492,7 +492,10 @@ class DockerIgnoreContractTests(SimpleTestCase):
 
     def test_frontend_context_excludes_test_artifacts_and_env_files(self):
         patterns = self._patterns('frontend/.dockerignore')
-        required = {'e2e', 'e2e-observed', 'test-results', 'playwright-report', '.env', '.env.*'}
+        required = {
+            'e2e', 'e2e-observed', 'test-results', 'playwright-report', '.env', '.env.*',
+            'vite.config.audit.ts',
+        }
         self.assertEqual(required - patterns, set())
 
 
