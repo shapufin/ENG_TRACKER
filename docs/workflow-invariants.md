@@ -6,7 +6,7 @@ environment. `.devin/context/` is local-only (`.gitignore`), so anything a
 future maintainer or agent must know lives here. Keep this file short and
 update it in the same PR as the behaviour change.
 
-Last verified: 2026-10-21 (launch review baseline, `py -3.14 manage.py test` → 3139 OK).
+Last verified: 2026-10-21 (launch review baseline, `py -3.14 manage.py test` → OK, count in the review register).
 
 ## Test gate
 
@@ -90,7 +90,7 @@ Plan: `docs/superpowers/plans/2026-10-13-leave-carryover-and-holidays.md`.
 
 ## Team confidentiality (2026-10-20)
 
-Ruling: "Team members don't see statuses of other team members; that is part of the TL's confidentiality. They can see vacation and so on, which is related to their work." Employees are self-only for statuses, pending counts, approval queues and per-person aggregates; only the team leave calendar is shared. TL = own team via `get_team_member_ids()`; HR/staff unchanged; TL names are not confidential, counts are. A test that pins employees seeing teammates' statuses is a bug. Enforced by `apps/permissions/test_row_ownership_matrix.py`, `apps/dashboard/tests/test_widget_team_scope.py`, `apps/users/tests_app/test_tl_directory_scope.py`.
+Ruling: "Team members don't see statuses of other team members; that is part of the TL's confidentiality. They can see vacation and so on, which is related to their work." Employees are self-only for statuses, pending counts, approval queues and per-person aggregates; only the team leave calendar is shared. TL = own team via `get_team_member_ids()`; HR/staff unchanged; TL names are not confidential, counts are (`/users/teams/` masks `members_count`/`sub_teams_count` except for staff, HR and that team's TL). `italian_team_leaders`/`albanian_team_leaders` are staff, HR and TL only: employees, HBPR-only and CR-only get 403, and employees learn TL names from the org chart and `/users/teams/`. A test that pins employees seeing teammates' statuses is a bug. Enforced by `apps/permissions/test_row_ownership_matrix.py`, `apps/dashboard/tests/test_widget_team_scope.py`, `apps/users/tests_app/test_tl_directory_scope.py`.
 
 ## Plugin audit checklist (run when touching or reviewing any plugin)
 

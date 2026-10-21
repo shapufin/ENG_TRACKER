@@ -147,6 +147,8 @@ Boot sequence of the backend container (`docker/entrypoint.sh`, all gated by
 
 Steps 5 to 8 are non-fatal (`|| echo ... skipped`); a failure shows in `docker compose logs backend`.
 
+The entrypoint runs `sync_payroll_holidays` only with `RUN_MIGRATIONS=1`. After enabling the Payroll plugin later, or on a dev box, run `py manage.py sync_payroll_holidays` by hand.
+
 Steps:
 
 1. Copy `.env.example` to `.env` and set the required values: `SECRET_KEY`,
