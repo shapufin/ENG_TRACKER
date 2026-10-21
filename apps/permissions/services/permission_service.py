@@ -103,10 +103,20 @@ class PermissionService:
         see and delete those entries on team pages.
         """
         # SEC-09: nobody decides their own request, whatever their role
-        # (staff, HR and superusers included).
+        # (staff, HR and superusers included). Ruling 2026-10-21: a team
+        # leader may decide their own overtime and standby, nothing else.
         obj_user = getattr(obj, 'user', None)
         if obj_user is not None and obj_user.id == user.id:
-            return False
+            profile = getattr(user, 'profile', None)
+            return bool(
+                obj._meta.model_name in ('overtimelog', 'standbylog')
+                and profile is not None
+                and (
+                    has_role(user, 'italian_tl')
+                    or has_role(user, 'albanian_tl')
+                    or profile.is_team_leader
+                )
+            )
 
         if user.is_superuser or user.is_staff:
             return True
