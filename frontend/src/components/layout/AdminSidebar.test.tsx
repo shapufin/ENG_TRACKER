@@ -263,4 +263,25 @@ describe("AdminSidebar palette trigger", () => {
     fireEvent.click(screen.getByRole("button", { name: /search pages/i }));
     expect(open).toHaveBeenCalledTimes(2);
   });
+
+  it("shows the Mac shortcut on Apple platforms", async () => {
+    vi.resetModules();
+    vi.spyOn(globalThis.navigator, "platform", "get").mockReturnValue("MacIntel");
+    const { AdminSidebar: MacSidebar } = await import("./AdminSidebar");
+    renderWithQuery(
+      <MemoryRouter>
+        <MacSidebar
+          items={items}
+          collapsed={false}
+          mobileOpen={false}
+          onToggleCollapse={vi.fn()}
+          onCloseMobile={vi.fn()}
+          onLogout={vi.fn()}
+          onOpenPalette={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("⌘ K")).toBeInTheDocument();
+    vi.restoreAllMocks();
+  });
 });

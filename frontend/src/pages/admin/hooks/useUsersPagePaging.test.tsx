@@ -1,4 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -34,7 +35,12 @@ vi.mock("@/lib/api", () => ({ default: { get: vi.fn() } }));
 
 import { useUsersPage } from "./useUsersPage";
 
-const wrapper = ({ children }: { children: ReactNode }) => <MemoryRouter>{children}</MemoryRouter>;
+const client = new QueryClient();
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider client={client}>
+    <MemoryRouter>{children}</MemoryRouter>
+  </QueryClientProvider>
+);
 
 describe("useUsersPage paging", () => {
   beforeEach(() => {

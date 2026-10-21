@@ -160,3 +160,17 @@ describe("navItemToPaletteItem", () => {
     expect(mapped).toMatchObject({ path: "/overtime", label: "Overtime", group: "Workspace" });
   });
 });
+
+describe("pointer vs keyboard selection", () => {
+  it("ignores a mousemove that did not move the pointer", () => {
+    setup();
+    const [first, second] = screen.getAllByRole("option");
+    fireEvent.mouseMove(first, { clientX: 5, clientY: 5 });
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "ArrowDown" });
+    expect(second).toHaveAttribute("aria-selected", "true");
+    fireEvent.mouseMove(first, { clientX: 5, clientY: 5 });
+    expect(second).toHaveAttribute("aria-selected", "true");
+    fireEvent.mouseMove(first, { clientX: 9, clientY: 9 });
+    expect(first).toHaveAttribute("aria-selected", "true");
+  });
+});

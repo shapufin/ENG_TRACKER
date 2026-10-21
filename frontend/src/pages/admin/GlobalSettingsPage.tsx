@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { leaveService } from "@/services/leaveService";
 import { dashboardService } from "@/services/dashboardService";
@@ -305,9 +306,9 @@ const GlobalSettingsForm: React.FC<{ settings: GlobalSettings }> = ({ settings }
         <div className="bg-muted/40 border-border/60 text-muted-foreground flex items-center justify-between rounded-lg border p-3 text-xs">
           <span>Manage individual employee allocations:</span>
           <Button variant="ghost" size="sm" asChild className="h-7 text-xs">
-            <a href="/admin/leave-balances">
+            <Link to="/admin/leave-balances">
               Leave Balances <ArrowRight className="ml-1 h-3 w-3" />
-            </a>
+            </Link>
           </Button>
         </div>
       </GlassCard>
@@ -518,6 +519,7 @@ export const GlobalSettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("branding");
   const { activePlugins } = usePlugins();
   const isPayrollActive = activePlugins.some((p) => p.name === "payroll");
+  const isAuditLogActive = activePlugins.some((p) => p.name === "audit_log");
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "global-settings"],
@@ -633,9 +635,9 @@ export const GlobalSettingsPage: React.FC = () => {
                 </p>
               </div>
               <Button variant="outline" asChild className="w-full justify-between">
-                <a href="/admin/calendars?tab=holidays">
+                <Link to="/admin/calendars?tab=holidays">
                   Manage Holidays <ExternalLink className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </GlassCard>
 
@@ -652,9 +654,9 @@ export const GlobalSettingsPage: React.FC = () => {
                   </p>
                 </div>
                 <Button variant="outline" asChild className="w-full justify-between">
-                  <a href="/admin/payroll/calendar">
+                  <Link to="/admin/payroll/calendar">
                     Open Payroll Calendar <ExternalLink className="ml-2 h-4 w-4" />
-                  </a>
+                  </Link>
                 </Button>
               </GlassCard>
             )}
@@ -713,20 +715,22 @@ export const GlobalSettingsPage: React.FC = () => {
 
                 <div className="mt-4 space-y-2">
                   <Button variant="outline" size="sm" asChild className="w-full justify-between">
-                    <a href="/admin/users">
+                    <Link to="/admin/users">
                       User Accounts & Roles <ArrowRight className="h-3.5 w-3.5" />
-                    </a>
+                    </Link>
                   </Button>
                   <Button variant="outline" size="sm" asChild className="w-full justify-between">
-                    <a href="/admin/plugins">
+                    <Link to="/admin/plugins">
                       Plugin Architecture <ArrowRight className="h-3.5 w-3.5" />
-                    </a>
+                    </Link>
                   </Button>
-                  <Button variant="outline" size="sm" asChild className="w-full justify-between">
-                    <a href="/admin/audit-logs">
-                      Security & Audit Logs <ArrowRight className="h-3.5 w-3.5" />
-                    </a>
-                  </Button>
+                  {isAuditLogActive && (
+                    <Button variant="outline" size="sm" asChild className="w-full justify-between">
+                      <Link to="/admin/audit-logs">
+                        Security & Audit Logs <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               </div>
 

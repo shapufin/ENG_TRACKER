@@ -127,7 +127,6 @@ export const CalendarManagementPage: React.FC = () => {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
         <TabsList className="bg-card">
           <TabsTrigger value="team-groups">Team Calendar Groups</TabsTrigger>
-          <TabsTrigger value="workspaces">Calendar Workspaces</TabsTrigger>
           <TabsTrigger value="holidays">Holidays</TabsTrigger>
         </TabsList>
 
@@ -282,17 +281,6 @@ export const CalendarManagementPage: React.FC = () => {
             onAssignGroup={handleAssignTeam}
             onUnlinkTeam={setPendingUnlink}
           />
-        </TabsContent>
-
-        <TabsContent value="workspaces" className="space-y-4">
-          <GlassCard>
-            <EmptyState
-              size="sm"
-              icon={CalendarRange}
-              title="Calendar Workspaces are coming soon"
-              description="Advanced calendar workspaces with fine-grained permissions. For simple team sharing, use the Team Calendar Groups tab."
-            />
-          </GlassCard>
         </TabsContent>
 
         <TabsContent value="holidays" className="space-y-4">

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -262,40 +263,32 @@ export const useUsersPage = () => {
   // page of users. If the plugin is deactivated/removed, crActive becomes
   // false and the fetch never happens — no broken references.
   const isCROnlyAdmin = isCRAdmin && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
-  const [crAccessUserIds, setCrAccessUserIds] = useState<Set<number>>(new Set());
-  const [crAccessByUserId, setCrAccessByUserId] = useState<Map<number, CRAccessRecord>>(new Map());
-
   const visibleUserIds = useMemo(() => filteredData.map((p) => p.user.id), [filteredData]);
+  const visibleUserIdsKey = visibleUserIds.join(",");
 
-  useEffect(() => {
-    if (!crActive || visibleUserIds.length === 0) return;
-    let cancelled = false;
-    // Fetch ALL CR access records (active + inactive) for the visible page.
-    // crAccessUserIds (active only) is derived client-side for the badge/filter.
-    // crAccessByUserId (all) is used by the edit dialog, which must be able
-    // to edit inactive users too.
-    api
-      .get("/plugins/control_room/access/", {
-        params: { user_id__in: visibleUserIds.join(",") },
-      })
-      .then((res) => {
-        if (cancelled) return;
-        const records: CRAccessRecord[] = Array.isArray(res.data) ? res.data : [];
-        const activeIdSet = new Set(records.filter((a) => a.is_active).map((a) => a.user));
-        const idMap = new Map(records.map((a) => [a.user, a]));
-        setCrAccessUserIds(activeIdSet);
-        setCrAccessByUserId(idMap);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCrAccessUserIds(new Set());
-          setCrAccessByUserId(new Map());
-        }
+  // Fetch ALL CR access records (active + inactive) for the visible page.
+  // crAccessUserIds (active only) is derived client-side for the badge/filter.
+  // crAccessByUserId (all) is used by the edit dialog, which must be able
+  // to edit inactive users too.
+  const { data: crAccessRecords } = useQuery({
+    queryKey: ["admin", "control-room-access", visibleUserIdsKey],
+    queryFn: async (): Promise<CRAccessRecord[]> => {
+      const res = await api.get("/plugins/control_room/access/", {
+        params: { user_id__in: visibleUserIdsKey },
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [crActive, visibleUserIds]);
+      return Array.isArray(res.data) ? res.data : [];
+    },
+    enabled: crActive && visibleUserIds.length > 0,
+  });
+
+  const crAccessUserIds = useMemo(
+    () => new Set((crAccessRecords ?? []).filter((a) => a.is_active).map((a) => a.user)),
+    [crAccessRecords]
+  );
+  const crAccessByUserId = useMemo(
+    () => new Map((crAccessRecords ?? []).map((a) => [a.user, a])),
+    [crAccessRecords]
+  );
 
   // The Control Room filter is applied by the server (cr_access), so the loaded
   // page is already the filtered one.
