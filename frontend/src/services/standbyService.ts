@@ -32,6 +32,7 @@ export const standbyService = {
     date_from?: string;
     date_to?: string;
     status?: string;
+    search?: string;
     ignore_date_filter?: string;
   }): Promise<StandbyLog[]> {
     return paginatedFetchAll<StandbyLog>(({ page, page_size }) =>
