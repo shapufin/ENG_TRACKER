@@ -155,5 +155,31 @@ Rule (controller): only security-relevant items that are cheap to fix are BLOCKE
 | P-8 | `react-grid-layout` ships in the `AdminDashboardPage` chunk | POST-LAUNCH | 36 KB gzip total chunk; deferring adds a loading state to the dashboard. |
 | D-13 | Plugin URLs are loaded from the database at process start | POST-LAUNCH | Mitigated by compose ordering and worker recycling; load without the database or retry per request. |
 
+## Rehearsal
+
+Partial production rehearsal, 2026-10-21, on the dev machine (no Docker). Stack: `config.settings_e2e` + `db.e2e.sqlite3` (prepared with `prepare_e2e_db`), backend on 127.0.0.1:8010, production build (`VITE_API_URL=/api`) served by `vite preview` on 5180 with the `/api` proxy. Ports 8000/5173 were already held by the owner's dev servers (dev DB), so the rehearsal used other ports and left those processes alone. Screenshots (not committed): `.superpowers/sdd/2026-10-20-launch-review/rehearsal/`.
+
+| Check | Result | Evidence |
+|---|---|---|
+| Docker image build, compose stack, nginx headers/CSP/rate limits, gunicorn config | NOT REHEARSED | No Docker here. Rely on CI (image build, `nginx -t`, Trivy, `docker compose config`); must be run on the target host before go-live (runbook). See R-1 |
+| Backup then restore drill on Postgres | NOT REHEARSED | No Postgres/Docker here. Same reliance; run on the target host. See R-1 |
+| Backend and frontend start (e2e DB, prod build) | PASS | `/api/health/live/` 200 on 8010; `/login` 200 and `/api/...` proxied on 5180 |
+| Login throttle | NOT REHEARSED | `settings_e2e` sets every throttle rate to None by design; not weakened to test. Throttle code path is the `auth` scope on the three views in `apps/users/views/auth.py`. See R-1 |
+| Playwright suite (chromium) | NOT REHEARSED (partial, FAIL signals) | Run 1: 141 failed, cause was my own setup (Git Bash turned `VITE_API_URL=/api` into `C:/Program Files/Git/api`; fixed with `MSYS_NO_PATHCONV=1`). Run 2 (after fix, parallel workers): 103 passed, 39 failed, 4 skipped, 14 not run. Run 3 (`--workers=1`) was stopped at 97/160 with 23 failures by the controller time-box. Failure messages seen: `Failed to fetch`, `API login failed: 429`, `ECONNREFUSED 127.0.0.1:8010`, and assertions in `hbpr-governance`, `preferences`, `admin-dashboard`, `organigrama`, `skills`, `session-concurrency`, `visual-guards`, `role-workflows`. Not triaged. See R-2 |
+| Confidentiality: employee `top_pending_users`, `italian_team_leaders`, `albanian_team_leaders`, `users/stats` | PASS | Token API, 403 for `e2e_employee_a`, `e2e_cr`, `e2e_hbpr`. TL and HR 200 on the leader/pending routes, 403 on `stats`. admin and super 200 on all |
+| Employee dashboard has no team widgets | PASS | `e2e_employee_a` `/dashboard` renders with 0 console errors and 0 API responses >= 400 (the page does not call the gated routes) |
+| TL widgets show own team only | NOT REHEARSED | Not inspected visually in the time-box; covered by `apps/dashboard/tests/test_widget_team_scope.py` |
+| Media: employee cannot read `backups/...` | PASS | `protected_media` called with the production-path view for a real backup file: employee 403, plain admin 403, anonymous 403, superuser 200. The running e2e server is DEBUG and serves media through `static()`, which is not the production path, so the view was exercised directly |
+| Browser sweep, one or more pages per role, 0 console errors, 0 API >= 400 | PASS | employee `/dashboard /overtime /standby /leave-management`; TL `/dashboard /team/approvals /team /tl-scorecard`; HR `/dashboard /hr/reports /hr/payroll/runs`; admin `/admin /admin/users /admin/teams /admin/plugins /admin/notifications`; super `/admin /admin/backup-restore`; CR `/control-room` (lands on `/control-room/dashboard`); HBPR `/hbpr`. Each rendered content. `/admin/holidays` redirects to `/admin/calendars`. `/hr/holidays` was not visited (route name guessed wrong, not retried) |
+| Backup creation | PASS | `POST /api/plugins/site_backup/backups/` as `e2e_super` 201; employee 403 on list and on restore preview. The test backups were deleted afterwards |
+| Restore preview | FAIL | R-3. No restore was executed |
+
+| ID | Sev | file:line | finding | evidence | status |
+|---|---|---|---|---|---|
+| R-1 | M | n/a | Docker/nginx/gunicorn/Postgres backup-restore and login-throttle behaviour were not rehearsed | No Docker or Postgres on this machine; `settings_e2e` disables throttles | OPEN: run image build, `nginx -t`, header and rate-limit checks, a Postgres backup then restore drill, and a throttled-login check on the target host before go-live |
+| R-2 | M | `frontend/e2e/*` | The Playwright suite did not complete cleanly: 39 failures in run 2, 23 failures by spec 97 in a serial run, not triaged. Some may be environmental: 429 on API login and ECONNREFUSED/`Failed to fetch` occurred against a single-threaded-looking runserver under parallel workers | `pw` run output, scratch only; CI does not run Playwright (UPGRADE-JOURNAL) | OPEN: rerun with `--workers=1` on a quiet machine on the exact e2e recipe, then triage each failure; a 429 under `settings_e2e` is itself unexplained since all throttle rates are None |
+| R-3 | M | `plugins/site_backup/services/backup.py:_write_db_dump` | On Windows a freshly created backup fails restore preview with "Backup file contains invalid encoding in db.json.gz". `dumpdata(output=...)` writes with the locale encoding (cp1252 here, em-dash byte 0x97) and `archive.py` decodes as UTF-8 | Created a backup via the API as `e2e_super`; `restore/preview/` returned 400; decoding the stored `db.json.gz` raised `0x97` at an em-dash in existing data | OPEN (Low risk on the Linux production image where the locale is UTF-8; confirm on the target host). Recommendation: make the dump explicitly UTF-8 (or set `PYTHONUTF8=1` for Windows dev), with a test that backs up non-ASCII text and previews it |
+| R-4 | L | `frontend/src/lib/constants.ts` | A production build made without `VITE_API_URL` bakes `http://<host>:8000/api`, so `vite preview` ignores its `/api` proxy. Docker sets `VITE_API_URL=/api`, so production is fine; the e2e recipe in the journal does not mention it for preview runs | Build served on 5180 sent XHR to 8000 and failed CORS until rebuilt with `VITE_API_URL=/api` | OPEN: note in the runbook/journal; Git Bash users need `MSYS_NO_PATHCONV=1` |
+
 ## Go/no-go
 
