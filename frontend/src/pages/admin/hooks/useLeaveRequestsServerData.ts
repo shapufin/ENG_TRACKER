@@ -5,7 +5,7 @@ import type { AdminLeaveRequestsPage } from "@/types";
 /** Rows per request: the server pages the history so it never has to fit in the browser. */
 export const LEAVE_REQUESTS_PAGE_SIZE = 50;
 
-export interface LeaveRequestsPageParams {
+interface LeaveRequestsPageParams {
   page?: number;
   page_size?: number;
   status?: string;
