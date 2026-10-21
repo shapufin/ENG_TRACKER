@@ -57,6 +57,7 @@ from core.mixins.permissions import (
     has_team_leader_role,
     is_staff_user,
 )
+from core.pagination import LargeResultsPagination
 from core.utils.timezone_local import business_today
 
 logger = logging.getLogger(__name__)
@@ -81,6 +82,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
     Provides read access to all users, write access restricted to admin.
     """
     queryset = User.objects.all().select_related('profile').prefetch_related('profile__teams', 'profile__techs', 'profile__tech_assignments__tech', 'profile__tech_assignments__level', 'profile__team_memberships__team', 'profile__clients', 'italian_team_members', 'albanian_team_members', 'led_teams', 'user_roles__role', 'control_room_access').order_by('username')
+    # Admin pickers (HBPR assignments, leave requests) ask for ?page_size=500.
+    pagination_class = LargeResultsPagination
     serializer_class = UserSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['username', 'email', 'first_name', 'last_name', 'profile__code']

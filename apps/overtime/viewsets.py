@@ -113,7 +113,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermi
     serializer_class = OvertimeLogSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-    search_fields = ['user__username', 'client__name', 'description', 'reference_code']
+    search_fields = ['user__username', 'user__first_name', 'user__last_name', 'client__name', 'description', 'reference_code']
     filterset_fields = ['status', 'client', 'date', 'user']
     pagination_class = LargeResultsPagination
 

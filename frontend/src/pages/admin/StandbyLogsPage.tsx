@@ -49,7 +49,7 @@ export const StandbyLogsPage: React.FC = () => {
       extraColumns={[timeRangeColumn]}
       onExport={() =>
         standbyService
-          .exportCsv(buildHoursExportParams(filterStatus, dateFrom, dateTo))
+          .exportCsv(buildHoursExportParams(filterStatus, dateFrom, dateTo, searchQuery))
           .catch((err: unknown) => {
             handleApiError(err);
           })

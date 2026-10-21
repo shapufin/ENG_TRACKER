@@ -14,4 +14,12 @@ describe("buildHoursExportParams", () => {
       ignore_date_filter: "true",
     });
   });
+
+  it("forwards a trimmed search and omits a blank one", () => {
+    expect(buildHoursExportParams("all", "", "", "  anna ")).toEqual({
+      search: "anna",
+      ignore_date_filter: "true",
+    });
+    expect(buildHoursExportParams("all", "", "", "  ")).toEqual({ ignore_date_filter: "true" });
+  });
 });

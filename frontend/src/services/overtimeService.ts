@@ -61,6 +61,7 @@ export const overtimeService = {
     date_from?: string;
     date_to?: string;
     status?: string;
+    search?: string;
     ignore_date_filter?: string;
   }): Promise<OvertimeLog[]> {
     return paginatedFetchAll<OvertimeLog>(({ page, page_size }) =>
