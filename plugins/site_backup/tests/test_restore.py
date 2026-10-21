@@ -234,7 +234,11 @@ class NonAsciiRoundTripTests(TestCase):
                 kwargs['encoding'] = 'cp1252'
             return real_open(filename, mode, *args, **kwargs)
 
-        with tempfile.TemporaryDirectory() as media_root,                 override_settings(MEDIA_ROOT=media_root),                 patch('gzip.open', legacy_locale_open):
+        with (
+            tempfile.TemporaryDirectory() as media_root,
+            override_settings(MEDIA_ROOT=media_root),
+            patch('gzip.open', legacy_locale_open),
+        ):
             record = backup_service.create_backup(user, include_media=False)
             with record.file.open('rb') as fh:
                 result = restore_service.preview(fh)

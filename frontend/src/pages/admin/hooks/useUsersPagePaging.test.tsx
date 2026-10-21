@@ -3,7 +3,10 @@ import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const management = vi.hoisted(() => ({ isError: false }));
+const management = vi.hoisted(() => ({
+  isError: false,
+  error: null as { response: { status: number } } | null,
+}));
 
 vi.mock("@/hooks/useUserManagement", () => ({
   useUserManagement: () => ({
@@ -15,6 +18,7 @@ vi.mock("@/hooks/useUserManagement", () => ({
     italianTLs: [],
     albanianTLs: [],
     isError: management.isError,
+    error: management.error,
     updateMutation: {},
     createMutation: {},
     resetMutation: {},
@@ -35,6 +39,7 @@ const wrapper = ({ children }: { children: ReactNode }) => <MemoryRouter>{childr
 describe("useUsersPage paging", () => {
   beforeEach(() => {
     management.isError = false;
+    management.error = null;
   });
 
   it("falls back to page 1 when the requested page no longer exists", () => {
@@ -43,8 +48,20 @@ describe("useUsersPage paging", () => {
     expect(result.current.page).toBe(3);
 
     management.isError = true;
+    management.error = { response: { status: 404 } };
     rerender();
 
     expect(result.current.page).toBe(1);
+  });
+
+  it("keeps the page when the failure is not a 404", () => {
+    const { result, rerender } = renderHook(() => useUsersPage(), { wrapper });
+    act(() => result.current.setPage(3));
+
+    management.isError = true;
+    management.error = { response: { status: 500 } };
+    rerender();
+
+    expect(result.current.page).toBe(3);
   });
 });

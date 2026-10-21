@@ -45,7 +45,7 @@ class EvidenceBase(TestCase):
             cadence='monthly', effective_from=date(2020, 1, 1),
         )
         self.staff = _make_user('staff_ev', is_staff=True)
-        # The app's calendar day is the UTC day (TIME_ZONE='UTC'), not the host's.
+        # The business day (Europe/Tirane), not the host's or the UTC day.
         self.today = business_today()
 
     def call(self, action_name, user, pk=None, data=None, method='post'):

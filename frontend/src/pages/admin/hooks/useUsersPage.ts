@@ -224,7 +224,13 @@ export const useUsersPage = () => {
 
   // A page past the end (the last row of the last page was just deleted, or
   // another admin removed users) is a 404 from the server: fall back to page 1.
-  if (isError && page > 1) setPage(1);
+  const pageGone =
+    isError && (error as { response?: { status?: number } } | null)?.response?.status === 404;
+  useEffect(() => {
+    // The 404 comes from the server (external state); there is no event to hang the reset on.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (pageGone && page > 1) setPage(1);
+  }, [pageGone, page, setPage]);
 
   // Role tab + tech chips + "No tech" are all filtered server-side (see
   // useUserManagement) — "No tech" is a distinct facet value, mutually
