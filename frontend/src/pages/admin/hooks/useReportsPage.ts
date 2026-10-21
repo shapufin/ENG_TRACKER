@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useReportManagement } from "@/hooks/useReportManagement";
 import { reportService } from "@/services/reportService";
 import { handleApiError } from "@/lib/error-handler";
@@ -34,6 +34,22 @@ export const useReportsPage = () => {
     setHasGenerated(true);
     onGenerate();
   };
+
+  // The range is state, so generating in the same tick would use the previous
+  // dates. Flag the request and generate once the new range has rendered.
+  const pendingGenerate = useRef(false);
+  const generateForRange = (range: { start: string; end: string }) => {
+    if (range.start === start && range.end === end) return handleGenerate();
+    pendingGenerate.current = true;
+    setStart(range.start);
+    setEnd(range.end);
+  };
+  useEffect(() => {
+    if (!pendingGenerate.current) return;
+    pendingGenerate.current = false;
+    handleGenerate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [start, end]);
 
   const currentType = activeTab === "overtime_standby" ? "combined" : "leave";
 
@@ -86,6 +102,7 @@ export const useReportsPage = () => {
     detailedData,
     isLoading,
     handleGenerate,
+    generateForRange,
     downloadExcel,
     filteredUsersData,
   };
