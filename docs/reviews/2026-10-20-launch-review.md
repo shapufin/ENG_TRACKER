@@ -1,5 +1,46 @@
 # Launch review, 2026-10-20
 
+## Go/no-go
+
+**Verdict: GO WITH CONDITIONS.**
+
+NO-GO criteria checked: the one Sev H row (C-3) is FIXED; no regression versus the Baseline table (every check that passed there passes now, the backend suite grew from 3139 to 3179 tests, vitest from 3597 to 3599); the rehearsal has no FAIL on health or auth, its one FAIL (backup restore preview, R-3) is FIXED, and the login throttle and the Docker/Postgres backup drill are NOT REHEARSED rather than failed, which is condition 1.
+
+### Counts (54 rows: B, M, S, C, P, D, R, F)
+
+| Status | Rows | | Severity | Rows |
+|---|---|---|---|---|
+| FIXED | 33 | | H | 1 |
+| REJECTED | 9 | | M | 20 |
+| DEFERRED (POST-LAUNCH) | 9 | | L | 33 |
+| OPEN-DECISION | 1 (R-1) | | | |
+| CLEAN (checked, no finding) | 2 (P-4, P-9) | | | |
+
+Sev H: 1 of 1 FIXED. Sev M: 17 FIXED, 1 REJECTED (R-2), 1 DEFERRED (D-13), 1 OPEN-DECISION (R-1). No row is left as plain OPEN.
+
+### Test totals
+
+Backend (SQLite, local): 3179 tests, OK. Backend and Backend (PostgreSQL 16) in CI: success. Frontend vitest: 568 files, 3599 tests, all passed. CI run 39559565997 at head `8325478`: all 10 jobs success, including E2E (Playwright), Frontend, both Backend jobs, Docker build, Trivy, gitleaks, compose/nginx and image smoke.
+
+### Conditions (each must be met before or at go-live)
+
+1. **R-1:** on the target host, run the Docker image build, `nginx -t`, header and rate-limit checks, a Postgres backup then restore drill (R-3 is fixed, so this is the first real drill), and a throttled-login check. `settings_e2e` disables throttles, so this cannot be rehearsed on the dev machine.
+2. **Runbook env list vs `.env.example`:** the runbook list was derived from `docker-compose.yml`; diff it against `.env.example` and fix whichever side drifts (Task 6 minor, no row).
+3. **CI on the final head:** the controller pushes this branch's last commits (the paging fix `5e4cf01` and this document); the E2E and Frontend jobs must be green on that head, as they are on `8325478`.
+
+### Remaining risks, ranked
+
+1. Docker/nginx/gunicorn and Postgres backup-restore are unrehearsed (R-1); CI covers build, `nginx -t`, Trivy and an image smoke only.
+2. D-13: plugin URLs load from the database at process start; a worker that imports the URLconf while Postgres is down serves no plugin routes until recycled. Mitigated by compose ordering and `--max-requests`.
+3. No task queue (SR-01, PERF-12): site backup, large exports and push fan-out run in the request path; start large backups off-peak.
+4. DEP-08 (no error monitoring) and DEP-09 (CSP still allows inline scripts; a strict Report-Only twin ships): low exposure, but nothing reports a production fault.
+5. C-8 (stored legacy `calendar_group` values can split groups) and C-11 (engagement snapshots after a timezone change): bounded, admin-rare.
+6. P-5 (import preview, 3 indexed queries per row up to 5000 rows, admin only) and F-2 (two core to plugin imports that block clean removal of those plugins).
+
+### Post-launch list
+
+The "Deferred items triage" table below is the post-launch list: every row marked POST-LAUNCH, plus D-14, R-4, F-2 and F-3. The only item needing a product decision is D-3 (wire browser push, or delete `usePushNotifications`); A-05 needs an owner decision on org-wide leave reasons for `export` grant holders.
+
 ## Scope
 
 Delta review of `b4d48ac..HEAD` (64 commits since the 2026-10-14 production-readiness programme, #117; 65 at baseline time because the plan commit `f589304` is included). Plan: `docs/superpowers/plans/2026-10-20-launch-review.md`. Baseline taken on branch `chore/launch-review-plan` at `f589304`, Windows, Python 3.14 + Django 6.1.1.
@@ -101,7 +142,7 @@ Sev legend: **H** = data exposure, data loss or a launch-blocking defect; **M** 
 | D-11 | L | `plugins/tl_scorecard/viewsets/scorecard.py` (`export`) | The PDF/xlsx export of an HBPR-only viewer showed the unmasked `escalation_count` (it includes leave escalations), while the JSON scorecard already recounts without leave. Listed as "observed, not fixed" in the 2026-10-14 plan. | `HbprEscalationLeakTests.test_hbpr_pdf_export_does_not_count_leave_escalations` RED (`'1' != '0'`), GREEN after `_mask_hbpr_only(..., drop_blocks=False)`; whole `plugins.tl_scorecard` suite 521 OK. | FIXED |
 | D-12 | M | `plugins/ticket_kpi/viewsets.py` (`KPIEvidenceViewSet.perform_update`), T-F8 | A PATCH that replaced the evidence file skipped `validate_upload`: only the model's extension validator ran, so a non-PDF named `.pdf` (and any file past the per-user size cap) replaced the stored file. Create ran the policy. | `KPIEvidenceTests.test_replacing_the_file_on_update_runs_the_upload_policy` RED (`200 != 400`), GREEN; `plugins.ticket_kpi` 193 OK. | FIXED |
 | D-13 | M | `apps/plugins/urls.py` (log line "Could not load dynamic plugin URLs") | Cause: the URLconf calls `plugin_registry.get_active_plugins()`, a `Plugin` table query, at import time. `check --deploy --settings=config.settings_production` with the CI env block points at Postgres on localhost, which is not running here, so the query raises `OperationalError` and the broad `except` logs the warning and registers no plugin routes in that process. Not an import failure and not a missing env var. In production the database is up first (compose `depends_on` health check, entrypoint `migrate` before gunicorn), so routes load; if Postgres is unreachable when a worker first imports the URLconf, that worker serves no plugin routes (404) until it is recycled (`--max-requests 1000`) or restarted. | Read of `apps/plugins/urls.py` and `core/plugins/registry.py` (`get_active_plugins`), baseline note that localhost:5432 was unreachable. | DEFERRED (POST-LAUNCH: load plugin URLs without the database, or retry per request); documented in the runbook 5.6 |
-| D-14 | L | `frontend/scripts/shot-audit.mjs`, `shot-flows.mjs`; `skills-lock.json` (DOC-11, DOC-12) | Scripts still say "TEMPORARY ... DELETE after"; nothing imports them. `skills-lock.json` lists `fallow` but the gitignored `.claude/skills/fallow` is absent. | `grep` for imports in `package.json`, `scripts/`, `.github/`. | OPEN (deleting tracked files that were not created in this programme needs the owner; POST-LAUNCH, cosmetic) |
+| D-14 | L | `frontend/scripts/shot-audit.mjs`, `shot-flows.mjs`; `skills-lock.json` (DOC-11, DOC-12) | Scripts still say "TEMPORARY ... DELETE after"; nothing imports them. `skills-lock.json` lists `fallow` but the gitignored `.claude/skills/fallow` is absent. | `grep` for imports in `package.json`, `scripts/`, `.github/`. | DEFERRED (POST-LAUNCH, cosmetic: deleting tracked files that were not created in this programme needs the owner) |
 
 Failing tests (CI, identical on SQLite and PostgreSQL):
 - `apps.dashboard.tests.test_team_leader_widgets.TeamStatsActiveOperatorCountTests.test_active_operator_count_excludes_users_on_approved_leave_or_standby_today`
@@ -154,6 +195,45 @@ Rule (controller): only security-relevant items that are cheap to fix are BLOCKE
 | P-5 | Import preview costs 3 indexed queries per row | POST-LAUNCH (controller ruling) | Bounded by `max_rows_per_import` (5000), admin-only, linear; a batched pre-load is a per-importer redesign. |
 | P-8 | `react-grid-layout` ships in the `AdminDashboardPage` chunk | POST-LAUNCH | 36 KB gzip total chunk; deferring adds a loading state to the dashboard. |
 | D-13 | Plugin URLs are loaded from the database at process start | POST-LAUNCH | Mitigated by compose ordering and worker recycling; load without the database or retry per request. |
+| F-2 | Core imports of the notifications and control_room plugins | POST-LAUNCH | Pre-existing; see F-2. |
+| Task 2 minors | Detail-route child lists (`teams/{id}/members`) not walked by the matrix; `LEADER_KEYS` `leader`/`team_leader` could name the subject of a TL-owned record; ticket_kpi/profiles justification generic; `reload_plugin_urls` vs `--parallel` | POST-LAUNCH | Matrix coverage refinements, no finding behind them. |
+| Task 3 minor | S-2 test relies on the auto-created `SCOPE_calendar` workspace; pin `stats` in the admin-gated guard set | POST-LAUNCH | Test hardening. |
+| Task 4 minors | `ProtectedRecordConflict` wording omits the HBPR PROTECT; a 409 shows an "Unknown error" toast title | POST-LAUNCH | Wording; the 409 itself is correct. |
+| Task 5 minors | Carry-over leftover formula duplicated (rollover vs `ensure_carry_over_for_user`); no test for the `has_carry` branch with marker reset; organigrama export has no in-flight guard | POST-LAUNCH | Duplication and a double-click guard; no wrong result found. The bundle claim was re-verified in this pass (entry-chunk audit OK). |
+| Task 6 minors | CLAUDE.md audit-log router row points at a business-day heading; evidence replace (.eml/.msg) does not recompute `parsed_email`; N5/N8/N10 to N13 triaged without text | POST-LAUNCH | Docs and edge cases. The runbook env list vs `.env.example` diff is a launch condition (see Go/no-go). |
+
+## Final verification
+
+Run 2026-10-21 on branch `chore/launch-review-plan` (commits on top of `8325478`), Windows, Python 3.14 + Django 6.1.1. Logs: `.superpowers/sdd/2026-10-20-launch-review/logs/final-*.log`.
+
+| Check | Result | Baseline |
+|---|---|---|
+| `makemigrations --check --dry-run` | PASS, no changes | PASS |
+| `manage.py test -v 1` | PASS, 3179 tests, OK | 3139 |
+| `ruff check apps core config plugins` | PASS | PASS |
+| `npx tsc -b --noEmit` | PASS | PASS |
+| `npm run lint` | PASS, 0 errors, 2 warnings in `useSkillsGridVirtualizer.ts` (unchanged since the baseline commit, so the baseline's "0 problems" omitted them) | PASS |
+| `npx vitest run` | PASS, 568 files, 3599 tests | 3597 |
+| `npm run build` | PASS | PASS |
+| `entry-chunk-audit` | PASS, 36 entry chunks, no heavy libs | PASS |
+| table-header, control, surface, modal, modal-visual, dashboard audits and the four visual tooling tests | PASS | PASS |
+| `npm audit --audit-level=high` | PASS, 0 vulnerabilities (after F-1) | PASS |
+| pip-audit | NOT RUN locally (Python 3.11 cannot resolve Django 6.1.1); CI Security scan job success | NOT RUN |
+| Prettier on changed frontend files | PASS (`useUsersPage.ts`, `useUsersPagePaging.test.tsx`) | n/a |
+
+CI for PR #158, run 39559565997, head `8325478`: Backend success, Backend (PostgreSQL 16) success, Frontend success, E2E (Playwright) success, Docker build success, Image scan (Trivy) success, Secret scan (gitleaks) success, Security scan success, Deploy config (compose + nginx) success, Backend image smoke success. The two earlier runs on this branch (39528396781, 39529482901) failed and are superseded; the Postgres suite that failed on main (B-01) is green here.
+
+### Anti-pattern greps (step 11.2 of the 2026-10-14 plan, plus the launch-review additions)
+
+| Command | Result |
+|---|---|
+| `grep -rn "if not DEBUG else None" config/settings_production.py` | no output |
+| `grep -rn "except Exception" apps core plugins --include=*.py \| grep -i "permission\|access\|import" \| grep -v tests` | 27 lines, all sanctioned: cache get/set best-effort in `permission_service.py` (falls through to the DB check or denies); team-member lookups that log and deny (`core/mixins/permissions.py:262,542`); plugin-permission lookup that returns False (`:946`); `seed_plugin_permissions` per-plugin report; `plugins/data_import/*` and `epr_goal_import.py` turn a row/parse failure into a reported error (`# noqa: BLE001`). None returns True or grants access on error. |
+| `grep -rn "startswith(\"http\|startswith('http" apps core plugins --include=*.py \| grep -v tests` | no output |
+| `grep -rn "csv.writer(" apps plugins --include=*.py \| grep -v "tests\|csv_safe"` | 7 lines (overtime, reports, standby, audit_log, skills, ticket_kpi, tl_scorecard). Every data row in each goes through `csv_safe` (inspected); the unwrapped `writerow` calls are literal header rows. |
+| `grep -rn "pagination_class = None" plugins/notifications` | no output |
+| `grep -rn "date.today()\|timezone.now().date()" apps core plugins --include=*.py \| grep -v test` | 4 lines, all sanctioned: `hbpr_scope.py:60,63,127` use the local `today()` helper (`business_today`), and `core/utils/timezone_local.py:4` is the docstring explaining why `date.today()` is wrong. |
+| Plugin static-import grep per `frontend/src/plugins/*` (REST path strings excluded; imports only) | `analytics`, `audit_log`, `data_import`, `engagement`, `onboarding`, `organigrama`, `payroll`, `site_backup`, `skills`, `ticket_kpi`, `tl_scorecard`: none (matches were `api.get("plugins/<name>/...")` URL strings and comments). `control_room`: `UserCreateFormDialog.tsx:121` dynamic import (C-12) and mocks in `SettingsPage.test.tsx`. `notifications`: `NotificationPreferencesSection.tsx:15` static import. Both are pre-existing: F-2. |
 
 ## Rehearsal
 
@@ -176,10 +256,11 @@ Partial production rehearsal, 2026-10-21, on the dev machine (no Docker). Stack:
 
 | ID | Sev | file:line | finding | evidence | status |
 |---|---|---|---|---|---|
-| R-1 | M | n/a | Docker/nginx/gunicorn/Postgres backup-restore and login-throttle behaviour were not rehearsed | No Docker or Postgres on this machine; `settings_e2e` disables throttles | OPEN: run image build, `nginx -t`, header and rate-limit checks, a Postgres backup then restore drill, and a throttled-login check on the target host before go-live |
-| R-2 | M | `frontend/e2e/*` | The Playwright suite did not complete cleanly: 39 failures in run 2, 23 failures by spec 97 in a serial run, not triaged. Some may be environmental: 429 on API login and ECONNREFUSED/`Failed to fetch` occurred against a single-threaded-looking runserver under parallel workers | `pw` run output, scratch only; CI does not run Playwright (UPGRADE-JOURNAL) | OPEN: rerun with `--workers=1` on a quiet machine on the exact e2e recipe, then triage each failure; a 429 under `settings_e2e` is itself unexplained since all throttle rates are None |
+| R-1 | M | n/a | Docker/nginx/gunicorn/Postgres backup-restore and login-throttle behaviour were not rehearsed | No Docker or Postgres on this machine; `settings_e2e` disables throttles | OPEN-DECISION (launch condition 1): run image build, `nginx -t`, header and rate-limit checks, a Postgres backup then restore drill, and a throttled-login check on the target host before go-live |
+| R-2 | M | `frontend/e2e/*` | The Playwright suite did not complete cleanly: 39 failures in run 2, 23 failures by spec 97 in a serial run, not triaged. Some may be environmental: 429 on API login and ECONNREFUSED/`Failed to fetch` occurred against a single-threaded-looking runserver under parallel workers | `pw` run output, scratch only. Correction: CI does run Playwright (`E2E (Playwright)` job). At `8325478` that job concluded success (run 39559565997) | REJECTED (local-environment only: ports/env on a machine already holding the dev servers; CI E2E green on the same commit) |
 | R-3 | M | `plugins/site_backup/services/backup.py:_write_db_dump` | On Windows a freshly created backup fails restore preview with "Backup file contains invalid encoding in db.json.gz". `dumpdata(output=...)` writes with the locale encoding (cp1252 here, em-dash byte 0x97) and `archive.py` decodes as UTF-8 | Created a backup via the API as `e2e_super`; `restore/preview/` returned 400; decoding the stored `db.json.gz` raised `0x97` at an em-dash in existing data | FIXED(`plugins.site_backup.tests.test_restore.NonAsciiRoundTripTests.test_non_ascii_text_survives_backup_then_preview_under_legacy_locale`): dump is streamed through an explicit UTF-8 `TextIOWrapper` over `gzip.open(..., 'wb')` |
-| R-4 | L | `frontend/src/lib/constants.ts` | A production build made without `VITE_API_URL` bakes `http://<host>:8000/api`, so `vite preview` ignores its `/api` proxy. Docker sets `VITE_API_URL=/api`, so production is fine; the e2e recipe in the journal does not mention it for preview runs | Build served on 5180 sent XHR to 8000 and failed CORS until rebuilt with `VITE_API_URL=/api` | OPEN: note in the runbook/journal; Git Bash users need `MSYS_NO_PATHCONV=1` |
-
-## Go/no-go
-
+| R-4 | L | `frontend/src/lib/constants.ts` | A production build made without `VITE_API_URL` bakes `http://<host>:8000/api`, so `vite preview` ignores its `/api` proxy. Docker sets `VITE_API_URL=/api`, so production is fine; the e2e recipe in the journal does not mention it for preview runs | Build served on 5180 sent XHR to 8000 and failed CORS until rebuilt with `VITE_API_URL=/api` | DEFERRED (POST-LAUNCH, docs only: note in the runbook/journal; Git Bash users need `MSYS_NO_PATHCONV=1`) |
+| F-1 | M | `frontend/package.json`, `package-lock.json` (commit `786a2a1`) | Two new high npm advisories (vite, follow-redirects) made CI's `npm audit --audit-level=high` step fail. | Bumped vite to 8.3.4 and follow-redirects to 1.16.1; `npm audit --audit-level=high` now reports 0 vulnerabilities; tsc, build, entry-chunk audit and vitest pass. | FIXED (dependency bump, verified by the audit step and the full frontend pass) |
+| F-2 | L | `frontend/src/pages/settings/components/NotificationPreferencesSection.tsx:15`; `frontend/src/pages/admin/components/UserCreateFormDialog.tsx:121` | The plugin static-import grep finds two core to plugin imports: a static import of `@/plugins/notifications/service`, and a dynamic import of `@/plugins/control_room/services/controlRoomService` (C-12). Removing either plugin would break the build or that dialog. Neither is in the `b4d48ac..HEAD` delta (`git log` for the first file shows no commit in range). | Final verification grep (below). | DEFERRED (POST-LAUNCH: route both through `getPluginComponent`/a core-owned wrapper; pre-existing, no runtime exposure while the plugins stay installed) |
+| F-3 | L | `frontend/src/pages/admin/GlobalSettingsPage.test.tsx` ("associates setting labels with their inputs") | Failed once in a subset run executed while another heavy job ran; passes alone and in the full 568-file run. Timing flake under load, not a regression. | Rerun alone: 125/125 pass across `src/pages/admin/hooks` + this file; full `npx vitest run` 3599/3599. | DEFERRED (POST-LAUNCH: unreproduced flake) |
+| F-4 | L | `frontend/src/pages/admin/hooks/useUsersPage.ts` | Deferred minor from Task 4: the page reset ran on any error and set state during render. | `useUsersPagePaging.test.tsx` "keeps the page when the failure is not a 404" RED (page 1 instead of 3), GREEN after the 404-only effect. | FIXED (`useUsersPagePaging.test.tsx`, commit `5e4cf01`) |
