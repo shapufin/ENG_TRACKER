@@ -37,6 +37,13 @@ describe("handleApiError", () => {
     expect(firstCall[0]).toBe(ERROR_MESSAGES[ERROR_CODES.RESOURCE_USER_NOT_FOUND].title);
   });
 
+  it("titles a 409 protected-record conflict instead of Unknown error", () => {
+    handleApiError({ response: { status: 409, data: { detail: "Kept by records." } } });
+    const firstCall = vi.mocked(toast.error).mock.calls[0];
+    expect(firstCall[0]).toBe("Cannot delete");
+    expect(firstCall[1]).toMatchObject({ description: "Kept by records." });
+  });
+
   it("detects network error", () => {
     handleApiError({ message: "Network Error" });
     const firstCall = vi.mocked(toast.error).mock.calls[0];

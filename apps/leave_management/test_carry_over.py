@@ -86,6 +86,15 @@ class RolloverTests(CarryOverTestBase):
         self.assertEqual(counts, {'created': 0, 'skipped': 0})
         self.assertEqual(LeaveBalance.objects.filter(is_carry_over=True, year=2026).count(), 1)
 
+    def test_rerun_after_marker_reset_adds_no_duplicate_carry_rows(self):
+        self.balance(2026, total=22, used=12)
+        self.set_today(date(2027, 1, 2))
+        first = apply_year_end_carry_over()
+        GlobalSettings.objects.filter(pk=1).update(carry_over_applied_year=None)
+        second = apply_year_end_carry_over()
+        self.assertEqual(second, first)
+        self.assertEqual(LeaveBalance.objects.filter(is_carry_over=True, year=2026).count(), 1)
+
     def test_switch_off_creates_nothing(self):
         self.settings.carry_over_enabled = False
         self.settings.save()

@@ -6,7 +6,7 @@ environment. `.devin/context/` is local-only (`.gitignore`), so anything a
 future maintainer or agent must know lives here. Keep this file short and
 update it in the same PR as the behaviour change.
 
-Last verified: 2026-10-12 (full suite `py -3.14 manage.py test` → 2737 OK).
+Last verified: 2026-10-21 (launch review baseline, `py -3.14 manage.py test` → OK, count in the review register).
 
 ## Test gate
 
@@ -43,7 +43,19 @@ between `LeaveBalance.pending_days` and `used_days` by transition:
 | approved → approved | no change |
 
 Test: `apps/leave_management/tests.py::LeaveBalanceTransitionTests`.
-Counts always use `count_business_days`, never calendar span.
+Counted days are never the calendar span. Vacation uses `count_leave_days` /
+`count_request_days` (`apps/leave_management/models/core.py`): Monday to Friday minus
+global public holidays (`PublicHoliday.calendar IS NULL`); sick leave uses plain
+`count_business_days`. Workspace-only holidays never reduce a balance. A request freezes
+its count in `days_counted`, and reports read the snapshot (`counted_days`) so totals match
+what the balance moved. Pinned by `apps/leave_management/test_leave_days.py`.
+
+Year-end carry-over (`apps/leave_management/services/carry_over.py`,
+`apply_year_end_carry_over`): a closed year's unused vacation becomes a carry row that
+expires on the settings date (default 31 March of the next year); pending days count as
+reserved and are not carried twice; days released later in a closed year flow back into that
+year's carry row. Pinned by `test_carry_over.py` and, for cost, `test_carry_over_query_budget.py`.
+Plan: `docs/superpowers/plans/2026-10-13-leave-carryover-and-holidays.md`.
 
 ## Notification delivery (`plugins/notifications/signals.py`)
 
@@ -64,7 +76,7 @@ Counts always use `count_business_days`, never calendar span.
 - Start the backend with `DJANGO_SETTINGS_MODULE=config.settings_e2e`. It writes to `db.e2e.sqlite3`.
 - Seed with `migrate`, `seed_e2e_data` and `seed_payroll_rules`, then give each paid employee a `WageAssignment` (payroll skips users without one).
 - Password for all seeded accounts: `e2e_pass_2026`.
-- Accounts: `e2e_employee_a`, `e2e_employee_c` (Albanian TL only, a seed gap), `e2e_tl` (Italian), `e2e_tl_b` (Albanian), `e2e_hr`, `e2e_admin`.
+- Accounts (11, from `seed_e2e_data`): `e2e_employee_a`, `e2e_employee_b`, `e2e_employee_c` (Albanian TL only, a seed gap), `e2e_tl` (Italian), `e2e_tl_b` (Albanian), `e2e_tl_hr`, `e2e_hr`, `e2e_admin`, `e2e_super`, `e2e_cr` (Control Room), `e2e_hbpr`.
 - TL close: `/team/approvals`, button "Finalize <Month YYYY>". Run page: `/admin/payroll/runs/<id>`. Finalize stays disabled until the status reads "All TL scopes closed".
 - Before writing scratch data, confirm the database: `netstat -ano` for port 8000, and `settings.DATABASES['default']['NAME']`. A server started without `settings_e2e` writes to `db.sqlite3`.
 - Clean up only rows you created, matched by id and description.
@@ -75,6 +87,10 @@ Counts always use `count_business_days`, never calendar span.
 - `browser_type` takes `target` (the snapshot ref), not `ref`.
 - Refs go stale after any click or navigation. Take a fresh snapshot before the next action.
 - A bottom install banner or a top status aside can intercept clicks. Dismiss it first.
+
+## Team confidentiality (2026-10-20)
+
+Ruling: "Team members don't see statuses of other team members; that is part of the TL's confidentiality. They can see vacation and so on, which is related to their work." Employees are self-only for statuses, pending counts, approval queues and per-person aggregates; only the team leave calendar is shared. TL = own team via `get_team_member_ids()`; HR/staff unchanged; TL names are not confidential, counts are (`/users/teams/` masks `members_count`/`sub_teams_count` except for staff, HR and that team's TL). `italian_team_leaders`/`albanian_team_leaders` are staff, HR and TL only: employees, HBPR-only and CR-only get 403, and employees learn TL names from the org chart and `/users/teams/`. A test that pins employees seeing teammates' statuses is a bug. Enforced by `apps/permissions/test_row_ownership_matrix.py`, `apps/dashboard/tests/test_widget_team_scope.py`, `apps/users/tests_app/test_tl_directory_scope.py`.
 
 ## Plugin audit checklist (run when touching or reviewing any plugin)
 
@@ -99,3 +115,7 @@ Derived from the 2026-10-18 `ticket_kpi` audit. Each line is a defect class that
 
 15. **"What day is it" comes from `business_today()`, never the server clock.** `TIME_ZONE` is UTC, so `date.today()`, naive `datetime.now()`, `timezone.localdate()` and `timezone.now().date()` return the previous day for the first 1-2 hours of each business day. Use `core.utils.timezone_local.business_today()` / `business_tz()` (zone = `GlobalSettings.business_timezone`, default `Europe/Tirane`, cached and cleared on save). Do not call `timezone.activate` (it would silently change `TruncDate`/`__date` grouping). `core/test_business_today_guard.py` fails on a new offender; an exemption needs a reason in its `ALLOWED` map. Tests pin the day with `core.utils.clock_testing.freeze_business_today`, and a test that changes the zone must `addCleanup(clear_business_tz_cache)` (rollback fires no signals).
 16. **A retention setting needs an enforcer, and deletion is opt-in.** `audit_log` `retention_days` is enforced by `purge_audit_logs --if-configured` (runs at boot, no-op unless an admin set the value); `AnalyticsConfiguration.data_retention_days` by `purge_analytics_data` (manual or cron; daily buckets are never purged because live trends read them). Never add a boot-time delete that runs on defaults.
+17. **Retention commands are the only deleters, and each is bounded.** `prune_notifications` (read notifications older than 180 days, batched, unread kept, runs at boot), `purge_audit_logs --if-configured`, `purge_analytics_data` and `purge_hbpr_archive` delete in bulk; their query counts do not grow with row count (`plugins/notifications/test_pagination_prune.py`, `plugins/audit_log/test_purge_query_budget.py`, `plugins/analytics/test_purge_analytics_data.py`, `apps/users/tests_app/test_hbpr_assignments.py`). There is no scheduler: boot runs the first three, `purge_analytics_data` needs the cron in `docs/deploy/production-runbook.md` section 5.4.
+18. **A plugin disabled at runtime refuses its API for everyone, staff included.** `PluginPermissionMixin` raises `PermissionDenied` when the `Plugin` row says `is_enabled=False` (`plugins/payroll/tests/test_disabled_plugin_gate.py`); `apps/plugins/test_plugin_view_guard.py` fails on a plugin view without the mixin. Code that reaches another plugin's data must treat "disabled" like "absent" (`payroll_plugin_disabled()`, `except ImportError` only).
+19. **A team's Italian and Albanian TL are derived from its members, not stored.** `TeamSerializer.italian_tl` / `albanian_tl` show the TL most active members share (ties to the lowest id, inactive members do not vote) in two queries per list; `Team.team_leader` and `led_teams` scope are untouched, so derivation never widens access. Pinned by `apps/users/tests_app/test_team_derived_tls.py` (including `test_list_query_count_does_not_grow_with_teams`).
+20. **Holiday sync runs from the boot path, not from `ready()`.** `manage.py sync_payroll_holidays` (in `docker/entrypoint.sh`) copies Payroll-only holidays to HR and mirrors HR ones back; it uses `get_or_create`, so two workers cannot race into an `IntegrityError` (`apps/dashboard/tests/test_holiday_sync.py::test_sync_survives_another_worker_creating_the_same_holiday`, `::test_boot_command_runs_the_sync`).

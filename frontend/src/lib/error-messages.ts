@@ -32,6 +32,7 @@ export const ERROR_CODES = {
   PERMISSION_ONLY_HR: "PERMISSION_ONLY_HR",
   PERMISSION_NO_PERMISSION: "PERMISSION_NO_PERMISSION",
   RESOURCE_NOT_FOUND: "RESOURCE_NOT_FOUND",
+  RESOURCE_CONFLICT: "RESOURCE_CONFLICT",
   RESOURCE_USER_NOT_FOUND: "RESOURCE_USER_NOT_FOUND",
   NETWORK_ERROR: "NETWORK_ERROR",
   AUTHENTICATION_ERROR: "AUTHENTICATION_ERROR",
@@ -175,6 +176,11 @@ export const ERROR_MESSAGES: Record<string, { title: string; message: string; ac
     title: "Resource Not Found",
     message: "The requested resource could not be found.",
     action: "It may have been deleted or you may not have access.",
+  },
+  [ERROR_CODES.RESOURCE_CONFLICT]: {
+    title: "Cannot delete",
+    message: "This item is referenced by records that must be kept.",
+    action: "Deactivate it instead.",
   },
   [ERROR_CODES.RESOURCE_USER_NOT_FOUND]: {
     title: "User Not Found",

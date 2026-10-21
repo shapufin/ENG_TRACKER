@@ -34,6 +34,11 @@ class AuditLogPluginTestCase(TestCase):
         with self.assertRaises(ValueError):
             self.plugin.validate_config(invalid_config)
 
+    def test_boolean_retention_is_not_a_one_day_window(self):
+        # bool is an int in Python: `true` would otherwise purge the audit trail daily.
+        with self.assertRaises(ValueError):
+            self.plugin.validate_config({'retention_days': True})
+
 
 class AuditLogTestCase(TestCase):
     def setUp(self):

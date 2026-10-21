@@ -90,6 +90,11 @@ if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
     echo "[entrypoint] Purging audit logs past the configured retention..."
     python manage.py purge_audit_logs --if-configured || echo "[entrypoint] Audit log purge skipped (non-fatal)"
 
+    # Holidays defined only in Payroll work calendars are copied to HR (and HR ones
+    # mirrored back). Idempotent; used to run in PayrollPlugin.ready() on every worker.
+    echo "[entrypoint] Syncing HR and Payroll holidays..."
+    python manage.py sync_payroll_holidays || echo "[entrypoint] Holiday sync skipped (non-fatal)"
+
     echo "[entrypoint] Ensuring superuser..."
     python manage.py ensure_superuser
 else

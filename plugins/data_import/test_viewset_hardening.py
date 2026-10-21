@@ -305,3 +305,39 @@ class ProfileVisibilityTests(TestCase):
         profile.refresh_from_db()
         self.assertFalse(profile.is_active)
         self.assertEqual(self._list().data, [])
+
+
+class FailedRowRollbackTests(TestCase):
+    """A row that reports an error must not leave the writes it made before failing."""
+
+    def test_error_result_rolls_back_the_rows_partial_writes(self):
+        from unittest import mock
+
+        from apps.overtime.models import Client
+        from plugins.data_import.importers.base import ImportRowResult
+        from plugins.data_import.importers.clients import ClientImporter
+
+        admin = User.objects.create_user(
+            username="admin_rb", email="rb@example.com", password="password", is_staff=True
+        )
+        Plugin.objects.update_or_create(
+            name="data_import", defaults={"is_enabled": True, "config": {}}
+        )
+
+        def write_then_fail(self, mapped_row, options, **kwargs):
+            Client.objects.create(name="Half written", code="HALF")
+            return ImportRowResult(row_index=1, status="error", errors=["boom"])
+
+        with mock.patch.object(ClientImporter, "commit_row", write_then_fail):
+            response = call(
+                DataImportViewSet, {"post": "commit"}, f"{BASE}/import/commit/", admin,
+                {
+                    "file": make_csv([{"Code": "AWS", "Name": "Amazon"}], ["Code", "Name"]),
+                    "target_key": "clients",
+                    "field_mapping": '{"code": "Code", "name": "Name"}',
+                },
+            )
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["summary"]["error"], 1)
+        self.assertFalse(Client.objects.filter(code="HALF").exists())

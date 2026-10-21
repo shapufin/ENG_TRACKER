@@ -67,8 +67,6 @@ import { convertLiveTreeToGraph } from "../services/liveTreeConverter";
 import { organigramaService } from "../services/organigramaService";
 import { BuilderActionsContext } from "../components/BuilderActionsContext";
 import { exportCanvasToPng } from "../components/viewerHelpers";
-import html2canvas from "html2canvas-pro";
-import { jsPDF } from "jspdf";
 import type {
   BuilderNodeData,
   EdgeType,
@@ -431,6 +429,10 @@ const BuilderCanvas: React.FC = () => {
     const viewport = canvasRef.current.querySelector(".react-flow__viewport") as HTMLElement | null;
     if (!viewport) return;
     try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas-pro"),
+        import("jspdf"),
+      ]);
       const canvas = await html2canvas(viewport, {
         backgroundColor: "#ffffff",
         scale: 2,

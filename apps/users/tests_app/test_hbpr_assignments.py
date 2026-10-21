@@ -332,6 +332,20 @@ class AssignmentPurgeTests(HbprAssignmentTestBase):
             HbprAlbanianTlAssignment.objects.filter(pk=ended.pk).exists()
         )
 
+    def test_purge_query_count_does_not_grow_with_rows(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        self._ended_assignment(al_tl=self.al_tl, ended_days_ago=600)
+        with CaptureQueriesContext(connection) as ctx:
+            self.assertEqual(purge_ended_assignments(), 1)
+        few = len(ctx.captured_queries)
+        for ago in range(560, 240, -40):
+            self._ended_assignment(al_tl=self.al_tl, ended_days_ago=ago)
+        with CaptureQueriesContext(connection) as ctx:
+            self.assertEqual(purge_ended_assignments(), 8)
+        self.assertEqual(few, len(ctx.captured_queries))
+
     def test_purge_keeps_recently_ended_rows(self):
         ended = self._ended_assignment(al_tl=self.al_tl, ended_days_ago=10)
         self.assertEqual(purge_ended_assignments(), 0)

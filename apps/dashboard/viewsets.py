@@ -102,6 +102,11 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         if not hasattr(user, 'profile'):
             return None, None, 'no_profile'
 
+        # Team confidentiality (2026-10-20): teammates' pending counts and
+        # statuses are TL management data. Employees get nothing from here.
+        if not (user.is_staff or user.is_superuser or has_hr_role(user) or has_team_leader_role(user)):
+            raise PermissionDenied()
+
         if team_id:
             try:
                 team = Team.objects.filter(id=int(team_id)).first()

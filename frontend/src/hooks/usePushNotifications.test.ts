@@ -116,8 +116,11 @@ describe("usePushNotifications", () => {
     });
 
     expect(success).toBe(true);
-    expect(api.get).toHaveBeenCalled();
-    expect(api.post).toHaveBeenCalled();
+    // axios baseURL already ends in /api: a literal /api/ prefix doubles it.
+    expect(api.get).toHaveBeenCalledWith("/plugins/notifications/notifications/vapid-public-key/");
+    expect(vi.mocked(api.post).mock.calls[0][0]).toBe(
+      "/plugins/notifications/notifications/subscribe/"
+    );
     expect(result.current.isSubscribed).toBe(true);
   });
 

@@ -1,8 +1,6 @@
 # Engineering Time Tracker
 
-> **CORE DIRECTIVE**: This project operates under **The Agency Protocol**. All development is guided by specialized AI agents.
-
-A comprehensive time tracking and management system for engineering teams, built with Django 5.2 and React 19.
+A comprehensive time tracking and management system for engineering teams, built with Django 6.1 and React 19.
 
 ---
 
@@ -20,42 +18,28 @@ A comprehensive time tracking and management system for engineering teams, built
 ### 🚀 Optimization Highlights
 - **DataTable Optimization**: Reusable, type-safe data grid with tree support.
 - **Glassmorphism UI**: Modern, dark-first design system with semantic tokens.
-- **Auto-Dispatch Workflow**: Integrated AI agent system for accelerated development.
 - **Production-Grade Caching**: Redis backend with automatic versioning & invalidation.
 - **Enterprise Consistency**: 100% consistent naming, schemas, and API patterns.
 
 ---
 
-## 🏛️ The Agency Protocol
+## AI-assisted development
 
-This repository is optimized for AI-assisted development using specialized agents.
-
-### 🤖 Agent Dispatch
-The project uses an automatic dispatch system ([.devin/workflows/agent-dispatch.md](.devin/workflows/agent-dispatch.md)) to activate the correct specialist based on your prompt:
-
-| Domain | Keywords | Specialist Agent |
-|--------|----------|------------------|
-| **Backend** | django, models, API, migrations | Backend Architect |
-| **Frontend** | UI, React, CSS, components | UI Designer → ArchitectUX → Frontend Developer |
-| **Audit** | refactor, cleanup, debloat | Software Architect |
-| **Security** | auth, permission, review | Security Engineer |
-
-### 🛠️ Activation
-Simply describe your task. The system will auto-dispatch. For manual override:
-`"As a Backend Architect, optimize this model..."`
+Agents working in this repository follow [`CLAUDE.md`](CLAUDE.md) (task router, hot
+invariants, verification commands) and the tracked
+[`docs/workflow-invariants.md`](docs/workflow-invariants.md). The `.devin/` directory is
+local-only (gitignored), so links into it are aids that may be absent on other clones.
 
 ---
 
 ## 📊 Project Status & Health
 
-### ✅ Latest Audit Report (2026-05-30)
-**Comprehensive audits completed**:
-- ✅ Production-Grade Cache System Implementation
-- ✅ Enterprise-Grade Consistency Audit (100% pass)
-- ✅ Full Application Cache & Real-Time Data Audit
-- ✅ Code Quality Verification (All modules)
+### Latest review
 
-View detailed tracking: **[.devin/tracking/CHANGES_OPTIMIZED.md](.devin/tracking/CHANGES_OPTIMIZED.md)**
+The pre-production launch review (findings register, triage of deferred items, baseline
+results) is in [`docs/reviews/2026-10-20-launch-review.md`](docs/reviews/2026-10-20-launch-review.md).
+The earlier readiness programme is in
+[`docs/superpowers/plans/2026-10-14-production-readiness.md`](docs/superpowers/plans/2026-10-14-production-readiness.md).
 
 ### � Quick Health Check
 Run these commands to verify system integrity:
@@ -77,19 +61,18 @@ npx tsc --noEmit
 
 ## �� Documentation
 
-Project documentation is organized in `.devin/` (AI context) and `frontend/` (frontend-specific).
-
-> **For AI assistants:** Read **[.devin/context/03-FRONTEND-PATTERNS.md](.devin/context/03-FRONTEND-PATTERNS.md)** for all frontend UI conventions, tokens, and component patterns.
-> **For AI file navigation:** Read **[.devin/context/PROJECT_INDEX.md](.devin/context/PROJECT_INDEX.md)** for a complete file map.
-> **For AI context:** Read **[.devin/context/00-INDEX.md](.devin/context/00-INDEX.md)** for permission system, patterns, and common task recipes.
+Tracked documentation lives in `docs/`; `.devin/` (AI context) is local-only and may be absent.
 
 | Document | Description |
 |----------|-------------|
-| [.devin/context/00-INDEX.md](.devin/context/00-INDEX.md) | AI context navigation hub |
-| [.devin/context/03-FRONTEND-PATTERNS.md](.devin/context/03-FRONTEND-PATTERNS.md) | **Frontend patterns and conventions** |
-| [.devin/context/PROJECT_INDEX.md](.devin/context/PROJECT_INDEX.md) | Complete file map |
-| [.devin/rules/CONTEXT.md](.devin/rules/CONTEXT.md) | **Always-on invariants and rules** |
-| [.devin/tracking/SENIOR_AUDIT_2026-07-31.md](.devin/tracking/SENIOR_AUDIT_2026-07-31.md) | Latest audit report |
+| [CLAUDE.md](CLAUDE.md) | Task router, hot invariants, verification commands |
+| [docs/workflow-invariants.md](docs/workflow-invariants.md) | Shared invariants and recipes (leave, payroll, timezone, retention, E2E) |
+| [docs/deploy/production-runbook.md](docs/deploy/production-runbook.md) | First deploy, upgrade, rollback, backups, scheduled jobs, ingress checklist |
+| [docs/hbpr-and-scorecard.md](docs/hbpr-and-scorecard.md) | HBPR role and TL scorecard rules |
+| [docs/engagement-metrics.md](docs/engagement-metrics.md) | TL engagement SLA rules |
+| [docs/table-header-contract.md](docs/table-header-contract.md) | Table header rule and audit gate |
+| [docs/ui-control-kit.md](docs/ui-control-kit.md) | Control kit and surface rules |
+| [docs/reviews/2026-10-20-launch-review.md](docs/reviews/2026-10-20-launch-review.md) | Launch review register and go/no-go |
 
 ## Features
 
@@ -101,6 +84,11 @@ Project documentation is organized in `.devin/` (AI context) and `frontend/` (fr
 - **Admin Panel**: Dashboard for comprehensive data management and system configuration
 - **Tree-View Teams**: Hierarchical team management with automated member synchronization
 - **Reports**: Advanced report generation with animated statistics and multi-format export
+
+### Plugins
+
+Optional features live in `plugins/` and start disabled after a fresh deploy (enable them in Admin, Plugins, then restart the backend):
+`analytics`, `audit_log`, `control_room`, `data_import`, `engagement`, `notifications`, `onboarding`, `organigrama`, `payroll`, `site_backup`, `skills`, `ticket_kpi`, `tl_scorecard`.
 
 ## Progressive Web App (PWA)
 
@@ -220,8 +208,8 @@ npm test
 
 The app ships as a multi-container Docker stack (`docker-compose.yml`):
 backend (Django + gunicorn), frontend (nginx serving the Vite build),
-PostgreSQL, and Redis. The deployment hardening plan lives at
-[`.devin/plans/plan-production-security-2026-08-21.md`](.devin/plans/plan-production-security-2026-08-21.md).
+PostgreSQL, and Redis. First deploy, upgrade, rollback, backups and scheduled
+jobs are in [`docs/deploy/production-runbook.md`](docs/deploy/production-runbook.md).
 
 ### Quick deploy (Docker Compose)
 
@@ -262,6 +250,9 @@ start **disabled**: enable the ones you want in Admin → Plugins, then **restar
 the backend** (`docker compose restart backend`), because plugin URLs are computed
 once at process start. Enabling without a restart leaves the plugin's API routes
 returning 404.
+
+**Holidays.** The entrypoint also runs `manage.py sync_payroll_holidays` (idempotent: copies
+holidays defined only in Payroll work calendars to HR and mirrors HR ones back).
 
 **HBPR access on existing databases.** The entrypoint also runs `manage.py grant_hbpr_plugin_access`
 (after `sync_plugins`), which gives the `hbpr` role `view` on the TL Scorecard and Engagement plugins once;
@@ -437,11 +428,11 @@ leave unset if OnlyOffice isn't used.
 
 ### Backend
 ```bash
-# Run all tests
-pytest
+# Run all tests (Django test runner; use the 3.14 interpreter on Windows)
+py -3.14 manage.py test
 
-# Run with coverage
-pytest --cov=apps --cov-report=html
+# One app or module
+py -3.14 manage.py test apps.leave_management
 ```
 
 ### Frontend
@@ -461,7 +452,9 @@ Engineering_tracker/
 ├── apps/                  # Django apps (users, overtime, standby, etc.)
 ├── config/               # Django settings and root URLs
 ├── core/                 # Shared utilities and abstract models
-├── .devin/               # AI context, rules, tracking, workflows
+├── plugins/              # Optional feature plugins (13)
+├── docs/                 # Tracked docs: invariants, deploy runbook, reviews
+├── .devin/               # Local-only AI context (gitignored)
 ├── frontend/             # React SPA (Vite + React 19)
 ├── manage.py             # Django entry point
 └── README.md             # Project hub

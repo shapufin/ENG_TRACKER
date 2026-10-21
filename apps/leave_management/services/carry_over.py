@@ -102,16 +102,37 @@ def apply_year_end_carry_over(today=None) -> dict:
             return counts
         closed_year = today.year - 1
         if settings_obj.carry_over_enabled:
-            user_ids = set(
+            closed_balances = list(
                 LeaveBalance.objects.filter(
                     leave_type='vacation', is_carry_over=False, year=closed_year,
+                ).order_by('user_id')
+            )
+            has_carry = set(
+                LeaveBalance.objects.filter(
+                    leave_type='vacation', is_carry_over=True, year=closed_year,
                 ).values_list('user_id', flat=True)
             )
-            for user_id in sorted(user_ids):
-                if ensure_carry_over_for_user(user_id, closed_year, settings_obj) is None:
-                    counts['skipped'] += 1
-                else:
+            expires_at = carry_over_expiry_for(
+                closed_year, settings_obj.carry_over_expiry_month, settings_obj.carry_over_expiry_day,
+            )
+            new_rows = []
+            for closed in closed_balances:
+                if closed.user_id in has_carry:
                     counts['created'] += 1
+                    continue
+                leftover = (
+                    _entitled_at_year_end(closed, closed_year)
+                    - Decimal(closed.used_days) - Decimal(closed.pending_days)
+                )
+                if leftover <= ZERO:
+                    counts['skipped'] += 1
+                    continue
+                counts['created'] += 1
+                new_rows.append(LeaveBalance(
+                    user_id=closed.user_id, leave_type='vacation', year=closed_year,
+                    is_carry_over=True, total_days=leftover, expires_at=expires_at,
+                ))
+            LeaveBalance.objects.bulk_create(new_rows)
         settings_obj.carry_over_applied_year = today.year
         settings_obj.save(update_fields=['carry_over_applied_year'])
     return counts

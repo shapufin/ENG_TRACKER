@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from django.core.management import call_command
 from django.db import IntegrityError, transaction
 from django.test import TestCase
-from django.utils import timezone
+from core.utils.timezone_local import business_today
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.permissions.models import Role
@@ -45,8 +45,8 @@ class EvidenceBase(TestCase):
             cadence='monthly', effective_from=date(2020, 1, 1),
         )
         self.staff = _make_user('staff_ev', is_staff=True)
-        # The app's calendar day is the UTC day (TIME_ZONE='UTC'), not the host's.
-        self.today = timezone.localdate()
+        # The business day (Europe/Tirane), not the host's or the UTC day.
+        self.today = business_today()
 
     def call(self, action_name, user, pk=None, data=None, method='post'):
         request = getattr(self.factory, method)('/x/', data or {}, format='json')

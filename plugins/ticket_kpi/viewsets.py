@@ -2047,6 +2047,14 @@ class KPIEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         if is_owner and evidence.status != 'pending' and not is_admin:
             raise PermissionDenied("Reviewed evidence cannot be edited by the owner.")
 
+        # A replacement file goes through the same policy as an upload at create.
+        file_obj = serializer.validated_data.get('file')
+        if file_obj:
+            try:
+                validate_upload(file_obj, "evidence", max_bytes_override_mb=_resolve_evidence_max_mb(evidence.user))
+            except UploadValidationError as exc:
+                raise serializers.ValidationError({"file": exc.detail})
+
         client_ids = serializer.validated_data.pop('client_ids', None)
         if client_ids is not None:
             target_user = evidence.user

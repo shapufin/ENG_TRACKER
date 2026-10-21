@@ -217,6 +217,40 @@ class FieldFidelityRoundTripTests(TestCase):
         self.assertIsNotNone(deleted.deleted_at)
 
 
+class NonAsciiRoundTripTests(TestCase):
+    """Backups must be UTF-8 whatever the process locale encoding is (R-3)."""
+
+    def test_non_ascii_text_survives_backup_then_preview_under_legacy_locale(self):
+        user = User.objects.create_user(
+            username='admin', password='password', is_superuser=True,
+            first_name='Ëndri Çela —',
+        )
+        real_open = gzip.open
+
+        def legacy_locale_open(filename, mode='rb', *args, **kwargs):
+            # Text mode without an explicit encoding follows the locale
+            # (cp1252 on Windows); simulate that.
+            if 't' in mode and kwargs.get('encoding') is None:
+                kwargs['encoding'] = 'cp1252'
+            return real_open(filename, mode, *args, **kwargs)
+
+        with (
+            tempfile.TemporaryDirectory() as media_root,
+            override_settings(MEDIA_ROOT=media_root),
+            patch('gzip.open', legacy_locale_open),
+        ):
+            record = backup_service.create_backup(user, include_media=False)
+            with record.file.open('rb') as fh:
+                result = restore_service.preview(fh)
+            with record.file.open('rb') as fh, zipfile.ZipFile(fh) as zf:
+                dump = gzip.decompress(zf.read('db.json.gz')).decode('utf-8')
+
+        entry = next(g for g in result['model_groups'] if g['model'] == 'auth.user')
+        self.assertEqual(entry['file_count'], 1)
+        self.assertEqual(entry['overwritten'], 1)
+        self.assertIn('Ëndri Çela', dump)
+
+
 class UndecodableDbDumpTests(TestCase):
     """A db.json.gz payload that isn't valid UTF-8 (corrupted archive, or one
     built by a different tool/encoding) must fail as a clean ArchiveError,

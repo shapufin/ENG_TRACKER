@@ -9,7 +9,7 @@ from datetime import date
 
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
+from rest_framework.exceptions import APIException, PermissionDenied, ValidationError as DRFValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
@@ -62,6 +62,18 @@ from core.utils.timezone_local import business_today
 logger = logging.getLogger(__name__)
 
 
+PROTECTED_RECORD_DETAIL = (
+    'This user is referenced by records that must be kept '
+    '(payroll lines or an HBPR assignment). Deactivate the user instead.'
+)
+
+
+class ProtectedRecordConflict(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = PROTECTED_RECORD_DETAIL
+    default_code = 'protected'
+
+
 class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
     """
     ViewSet for User model.
@@ -83,6 +95,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         if self.action in [
             'destroy', 'bulk_delete', 'bulk_update',
             'create_user', 'update_user', 'reset_password',
+            # Company-wide headcount and TL counts: TL management data, not for employees.
+            'stats',
         ]:
             return [IsAdminUser()]
         if self.action in ['create', 'update', 'partial_update']:
@@ -308,30 +322,47 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @staticmethod
+    def _tl_directory_access(request):
+        """Team confidentiality: TL names for staff/HR/TLs, member counts for staff/HR only.
+
+        Returns whether member counts may be shown; raises 403 for everyone else.
+        """
+        user = request.user
+        if user.is_staff or user.is_superuser or has_hr_role(user):
+            return True
+        if has_team_leader_role(user):
+            return False
+        raise PermissionDenied()
+
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])
     def italian_team_leaders(self, request):
         """
         Get all users who are Italian team leaders, with their member counts.
         Includes users with the role flag OR users with team members assigned.
+        Staff and HR only get member counts; team leaders get names; others are refused.
         """
         from django.db.models import Q
-        
+        show_counts = self._tl_directory_access(request)
         queryset = User.objects.filter(
             Q(profile__is_italian_tl_role=True) |
             Q(profile__role_codes__icontains='italian_tl')
         ).distinct().annotate(
             member_count=Count('italian_team_members', distinct=True)
-        ).select_related('profile').prefetch_related('profile__teams')
+        ).select_related('profile').prefetch_related('profile__team_memberships__team')
 
         results = []
         for u in queryset:
-            results.append({
+            row = {
                 'id': u.id,
                 'username': u.username,
                 'full_name': f"{u.first_name} {u.last_name}".strip() or u.username,
-                'team_name': u.profile.get_primary_team().name if hasattr(u, 'profile') and u.profile.get_primary_team() else None,
-                'member_count': u.member_count
-            })
+            }
+            if show_counts:
+                primary_team = u.profile.get_primary_team() if hasattr(u, 'profile') else None
+                row['team_name'] = primary_team.name if primary_team else None
+                row['member_count'] = u.member_count
+            results.append(row)
         
         return Response(results)
 
@@ -340,25 +371,29 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         """
         Get all users who are Albanian team leaders, with their member counts.
         Includes users with the role flag OR users with team members assigned.
+        Staff and HR only get member counts; team leaders get names; others are refused.
         """
         from django.db.models import Q
-        
+        show_counts = self._tl_directory_access(request)
         queryset = User.objects.filter(
             Q(profile__is_albanian_tl_role=True) |
             Q(profile__role_codes__icontains='albanian_tl')
         ).distinct().annotate(
             member_count=Count('albanian_team_members', distinct=True)
-        ).select_related('profile').prefetch_related('profile__teams')
+        ).select_related('profile').prefetch_related('profile__team_memberships__team')
 
         results = []
         for u in queryset:
-            results.append({
+            row = {
                 'id': u.id,
                 'username': u.username,
                 'full_name': f"{u.first_name} {u.last_name}".strip() or u.username,
-                'team_name': u.profile.get_primary_team().name if hasattr(u, 'profile') and u.profile.get_primary_team() else None,
-                'member_count': u.member_count
-            })
+            }
+            if show_counts:
+                primary_team = u.profile.get_primary_team() if hasattr(u, 'profile') else None
+                row['team_name'] = primary_team.name if primary_team else None
+                row['member_count'] = u.member_count
+            results.append(row)
         
         return Response(results)
 
@@ -704,6 +739,12 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             'updated_count': len(profiles),
         }, status=status.HTTP_200_OK)
 
+    def perform_destroy(self, instance):
+        try:
+            instance.delete()
+        except models.ProtectedError:
+            raise ProtectedRecordConflict()
+
     @action(detail=False, methods=['post'], permission_classes=[IsAdminUser()])
     def bulk_delete(self, request):
         """
@@ -730,20 +771,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 continue
 
             try:
-                # Clear TL references before deletion to avoid constraint violations.
-                # PERF-14: the update row counts are logged; the old per-user COUNT
-                # queries existed only to write log lines.
-                italian_cleared = UserProfile.objects.filter(italian_tl=user).update(italian_tl=None)
-                albanian_cleared = UserProfile.objects.filter(albanian_tl=user).update(albanian_tl=None)
-                led_cleared = Team.objects.filter(team_leader=user).update(team_leader=None)
-                logger.info(
-                    f"User {user.id} references cleared: {italian_cleared} Italian TL, "
-                    f"{albanian_cleared} Albanian TL, {led_cleared} led teams"
-                )
-
                 # HBPR↔AL-TL assignments PROTECT both participants: an
                 # assigned user must have their assignments ended (history
-                # retained) before the account can be deleted.
+                # retained) before the account can be deleted. Checked before
+                # anything is cleared so a refusal changes nothing.
                 from apps.users.models.hbpr import HbprAlbanianTlAssignment
                 from apps.users.services.hbpr_assignments import unfinished_q
 
@@ -760,10 +791,24 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     })
                     continue
 
-                logger.info(f"Clearing references for user {user.id} complete, attempting deletion")
-                user.delete()
+                # Clear TL references and delete in one savepoint: a PROTECTed
+                # row (e.g. payroll lines) must not leave the references cleared.
+                # PERF-14: the update row counts are logged; the old per-user COUNT
+                # queries existed only to write log lines.
+                with transaction.atomic():
+                    italian_cleared = UserProfile.objects.filter(italian_tl=user).update(italian_tl=None)
+                    albanian_cleared = UserProfile.objects.filter(albanian_tl=user).update(albanian_tl=None)
+                    led_cleared = Team.objects.filter(team_leader=user).update(team_leader=None)
+                    logger.info(
+                        f"User {user.id} references cleared: {italian_cleared} Italian TL, "
+                        f"{albanian_cleared} Albanian TL, {led_cleared} led teams"
+                    )
+                    user.delete()
                 deleted_count += 1
                 logger.info(f"User {user.id} deleted successfully")
+            except models.ProtectedError:
+                logger.warning(f"User {user.id} not deleted: protected records")
+                failed_users.append({'id': user.id, 'reason': PROTECTED_RECORD_DETAIL})
             except Exception as e:
                 logger.error(f"Failed to delete user {user.id}: {type(e).__name__}: {str(e)}")
                 failed_users.append({'id': user.id, 'reason': f"{type(e).__name__}: {str(e)}"})
@@ -1857,7 +1902,7 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
             members_count=Count('members', distinct=True)
         ).order_by('name')
 
-        serializer = TeamSerializer(queryset, many=True)
+        serializer = TeamSerializer(queryset, many=True, context={'request': request})
         data = [
             {
                 'id': team['id'],

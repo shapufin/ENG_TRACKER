@@ -482,6 +482,8 @@ class DockerIgnoreContractTests(SimpleTestCase):
             '.codex', 'admin-gui-screenshots', 'design-screenshots', 'design-fingerprints',
             '*.patch', '*.log', 'time_tracker_export.json', '*.xlsx',
             'export_skills_plugin.py', 'db.sqlite3*', '.env*',
+            # Untracked mockup/capture trees and the e2e database (B-02).
+            'AdminGUI', 'pill-verify-shots', 'db.e2e.sqlite3',
         }
         self.assertEqual(required - patterns, set())
 
@@ -490,7 +492,10 @@ class DockerIgnoreContractTests(SimpleTestCase):
 
     def test_frontend_context_excludes_test_artifacts_and_env_files(self):
         patterns = self._patterns('frontend/.dockerignore')
-        required = {'e2e', 'e2e-observed', 'test-results', 'playwright-report', '.env', '.env.*'}
+        required = {
+            'e2e', 'e2e-observed', 'test-results', 'playwright-report', '.env', '.env.*',
+            'vite.config.audit.ts',
+        }
         self.assertEqual(required - patterns, set())
 
 

@@ -1,0 +1,273 @@
+# Launch review, 2026-10-20
+
+## Go/no-go
+
+**Verdict: GO WITH CONDITIONS.**
+
+NO-GO criteria checked: the one Sev H row (C-3) is FIXED; no regression versus the Baseline table (every check that passed there passes now, the backend suite grew from 3139 to 3189 tests, vitest from 3597 to 3599); the rehearsal has no FAIL on health or auth, its one FAIL (backup restore preview, R-3) is FIXED in code with the Postgres restore drill still pending (condition 1), and the login throttle and the Docker/Postgres backup drill are NOT REHEARSED rather than failed, which is condition 1.
+
+### Counts (61 rows: B, M, S, C, P, D, R, F)
+
+| Status | Rows | | Severity | Rows |
+|---|---|---|---|---|
+| FIXED | 39 | | H | 1 |
+| REJECTED | 10 | | M | 22 |
+| DEFERRED (POST-LAUNCH) | 9 | | L | 38 |
+| OPEN-DECISION | 1 (R-1) | | | |
+| CLEAN (checked, no finding) | 2 (P-4, P-9) | | | |
+
+Sev H: 1 of 1 FIXED. Sev M: 19 FIXED, 1 REJECTED (R-2), 1 DEFERRED (D-13), 1 OPEN-DECISION (R-1). No row is left as plain OPEN.
+
+### Test totals
+
+Backend (SQLite, local): 3189 tests, OK at the final head (full run after the F-5 to F-11 fix wave). Backend and Backend (PostgreSQL 16) in CI: success. Frontend vitest: 568 files, 3599 tests, all passed. CI run 39559565997 at the earlier head `8325478` (superseded, see condition 3): all 10 jobs success, including E2E (Playwright), Frontend, both Backend jobs, Docker build, Trivy, gitleaks, compose/nginx and image smoke.
+
+### Conditions (each must be met before or at go-live)
+
+1. **R-1:** on the target host, run the Docker image build, `nginx -t`, header and rate-limit checks, a Postgres backup then restore drill (R-3 is fixed, so this is the first real drill), and a throttled-login check. `settings_e2e` disables throttles, so this cannot be rehearsed on the dev machine.
+2. **Runbook env list vs `.env.example`:** the runbook list was derived from `docker-compose.yml`; diff it against `.env.example` and fix whichever side drifts (Task 6 minor, no row).
+3. **CI on the final head:** the CI evidence must name the final head, which includes the F-5 to F-11 fix wave, not `8325478`. Push the branch and require every job, E2E and Frontend included, green on that exact commit before merge.
+
+### Remaining risks, ranked
+
+1. Docker/nginx/gunicorn and Postgres backup-restore are unrehearsed (R-1); CI covers build, `nginx -t`, Trivy and an image smoke only.
+2. D-13: plugin URLs load from the database at process start; a worker that imports the URLconf while Postgres is down serves no plugin routes until recycled. Mitigated by compose ordering and `--max-requests`.
+3. No task queue (SR-01, PERF-12): site backup, large exports and push fan-out run in the request path; start large backups off-peak.
+4. DEP-08 (no error monitoring) and DEP-09 (CSP still allows inline scripts; a strict Report-Only twin ships): low exposure, but nothing reports a production fault.
+5. C-8 (stored legacy `calendar_group` values can split groups) and C-11 (engagement snapshots after a timezone change): bounded, admin-rare.
+6. P-5 (import preview, 3 indexed queries per row up to 5000 rows, admin only) and F-2 (two core to plugin imports that block clean removal of those plugins).
+
+### Post-launch list
+
+The "Deferred items triage" table below is the post-launch list: every row marked POST-LAUNCH, plus D-14, R-4, F-2 and F-3. The only item needing a product decision is D-3 (wire browser push, or delete `usePushNotifications`); A-05 needs an owner decision on org-wide leave reasons for `export` grant holders.
+
+## Scope
+
+Delta review of `b4d48ac..HEAD` (64 commits since the 2026-10-14 production-readiness programme, #117; 65 at baseline time because the plan commit `f589304` is included). Plan: `docs/superpowers/plans/2026-10-20-launch-review.md`. Baseline taken on branch `chore/launch-review-plan` at `f589304`, Windows, Python 3.14 + Django 6.1.1.
+
+## Baseline
+
+| Check | Command | Result | Notes |
+|---|---|---|---|
+| Migrations applied | `py -3.14 manage.py migrate`; `showmigrations \| grep "\[ \]"` | PASS | No migrations to apply; 0 unapplied. |
+| Django check | `py -3.14 manage.py check` | PASS | 0 issues. |
+| Migration drift | `py -3.14 manage.py makemigrations --check --dry-run` | PASS | No changes detected. |
+| Deploy check | `check --deploy --settings=config.settings_production` with the CI env block | PASS | 0 issues. Local run logged "Could not load dynamic plugin URLs" (no Postgres on localhost:5432); same as CI-style env, not a failure. |
+| Backend suite (SQLite) | `py -3.14 manage.py test -v 1` | PASS | 3139 tests, OK, 269 s. Zero failures locally. See B-01: CI on main fails 7 tests the same suite passes here. |
+| Backend suite (Postgres) | `config/settings_ci_pg.py` | NOT RUN locally | No Postgres reachable on localhost:5432. CI run 39332492412 on main: 3139 tests, 7 failures, 9 skipped (same 7 as SQLite CI). |
+| Ruff | `python -m ruff check --output-format=concise apps core config plugins` | PASS | All checks passed. |
+| tsc | `npx tsc -b --noEmit` | PASS | 0 errors. |
+| ESLint | `npm run lint` | PASS | 0 problems. |
+| Vitest | `npx vitest run` | PASS | 567 files, 3597 tests, all passed. |
+| Build | `npm run build` | PASS | |
+| Entry chunk audit | `node scripts/entry-chunk-audit.mjs` | PASS | 36 entry JS chunks, no heavy libs. |
+| table-header-audit | `node --test scripts/table-header-audit.test.mjs && node scripts/table-header-audit.mjs` | PASS | 33 tests; 0 violations across 918 files. |
+| control-audit | test file + `control-audit.mjs --strict` | PASS | 55 tests; 0 violations across 628 files. |
+| surface-audit | test file + `surface-audit.mjs --strict` | PASS | 54 tests; 0 violations across 922 files. |
+| modal-audit + modal-visual-audit | `node scripts/modal-audit.mjs && node scripts/modal-visual-audit.mjs` | PASS | Both PASS. |
+| dashboard-audit | `node scripts/dashboard-audit.mjs` | PASS | |
+| npm audit | `npm audit --audit-level=high` (frontend) | PASS | 0 vulnerabilities. |
+| pip-audit | `pip-audit -r requirements.txt -r requirements-production.txt` | NOT RUN | The installed pip-audit runs on Python 3.11, which cannot resolve `Django==6.1.1` (needs >=3.12). Covered by the Security weekly workflow. |
+| CI on main | `gh run list --branch main --limit 5` | FAIL (latest) | Latest CI (run 39332492412, #157, 2026-10-19 22:05 UTC) failed: Backend and Backend (PostgreSQL 16) jobs, 7 test failures. The other 4 recent CI runs succeeded. All other jobs in the failed run passed (Frontend, E2E, Docker build, Trivy, gitleaks, Security scan, compose/nginx, image smoke). |
+| Security weekly | `gh run list` | PASS | Latest run 39240729597 (2026-10-19 10:53 UTC) success. |
+| `.dockerignore` excludes `AdminGUI/` | root `.dockerignore` and `frontend/.dockerignore` | NO | Neither file mentions `AdminGUI`. The directory is untracked, so a Docker build context on a dirty tree would include it. See B-02. |
+
+### Bundle
+
+`ANALYZE=true npm run build` (frontend, after P-1), 10 largest JS chunks by raw size, gzip level 9. Before P-1 the `OrganigramaBuilderPage` chunk statically imported `html2canvas-pro.esm` and `jspdf.es.min`, and the shared `organigramaService` chunk statically imported `html2canvas-pro.esm`; after P-1 neither chunk has a static import of either library (grep of `from"./..."` in the built chunks).
+
+| # | Chunk | Raw KB | Gzip KB | Note |
+|---|---|---|---|---|
+| 1 | `vendor-recharts` | 391 | 110 | Static import of 3 pages (`AdminDashboardPage`, `EngagementVisualizationPage`, `TLScorecardVisualizationPage`); charts render on view, not on click. |
+| 2 | `jspdf.es.min` | 390 | 124 | Now loaded only by export handlers (P-1, `pdfExport`). |
+| 3 | `html2canvas-pro.esm` | 255 | 64 | Now loaded only by export handlers (P-1). |
+| 4 | `organigramaService` | 210 | 66 | Own code and React Flow; no longer carries html2canvas-pro. |
+| 5 | `html2canvas` | 195 | 44 | Dynamic dependency of jspdf. |
+| 6 | `vendor-react` | 178 | 55 | |
+| 7 | `index` (entry) | 148 | 41 | |
+| 8 | `index.es` | 148 | 47 | |
+| 9 | `vendor-framer` | 136 | 44 | |
+| 10 | `AdminDashboardPage` | 119 | 36 | |
+
+`node scripts/entry-chunk-audit.mjs`: OK (36 entry chunks, no heavy libs), before and after.
+
+## Findings register
+
+Sev legend: **H** = data exposure, data loss or a launch-blocking defect; **M** = wrong behaviour or an exposure limited to one role or feature; **L** = hardening, cosmetic or a bounded cost.
+
+| ID | Sev | Location | Finding | Evidence | Status |
+|---|---|---|---|---|---|
+| B-01 | M | `apps/dashboard/tests/test_team_leader_widgets.py` (`TeamStatsActiveOperatorCountTests`); `plugins/tl_scorecard/test_hbpr_governance_evidence.py` (`EvidenceCadenceStatusTests`, `EvidenceWriteGuardTests`); `plugins/tl_scorecard/test_tl_scorecard_actions.py` (`IdleAndAbsenceActionTests`, `PipTransitionTests`) | Latest CI on main is red: 7 tests fail on SQLite and on PostgreSQL. Six are clearly date-boundary failures (the dashboard `3 != 2` is probably the same, unconfirmed): CI ran at 22:06 UTC, when `Europe/Tirane` is already the next day (2026-10-20) but the tests compute "today" in UTC or Django `TIME_ZONE` (2026-10-19). Code under test uses Tirane dates; tests are not clock-independent. Passes locally (run at 18:4x WEST). Needs a fix before CI is trustworthy; whether any production code path has the same UTC/Tirane mismatch is for the correctness phase. | CI run 39332492412 `--log-failed`: `3 != 2`; `'overdue' != 'due'`; `201 != 400` (future-dated evidence accepted); `date(2026,10,20) != date(2026,10,19)` x2; `('resolved', 2026-10-20) != ('resolved', 2026-10-19)`; `('completed', 2026-10-20) != ('completed', 2026-10-19)`. Log: `.superpowers/sdd/2026-10-20-launch-review/logs/ci-failed.log`. | FIXED (tests now use `business_today()`; guard `IdleAndAbsenceActionTests.test_idle_resolve_stamps_the_tirana_day_at_2330_utc`). Production code was already Tirane-based; the AST guard `core.test_business_today_guard` runs under normal discovery. |
+| B-02 | L | `.dockerignore`, `frontend/.dockerignore` | `AdminGUI/` (untracked mockup directory) is not excluded from the Docker build context. | `grep -in admingui` on both files returns nothing. | FIXED (D-1: `DockerIgnoreContractTests.test_backend_context_excludes_backups_exports_and_agent_state`). `frontend/.dockerignore` needs no entry: that image's context is `./frontend`, which never contains the root-level `AdminGUI/`. |
+| M-1 | M | `apps/dashboard/viewsets.py` (`top_pending_users`, `queue_highlights`, `team_stats`, `pending_trend`, `monthly_comparison` via `_get_team_and_members`) | Any member of a team, plain employees included, reads teammates' names and pending-item counts (and team aggregates) from the TL dashboard widgets. The caller's own team is used when no `team_id` is given. `test_widget_team_scope.py::test_member_can_still_query_own_team` pins the 200 for an employee, so this looks deliberate but only the status is asserted, not the content. Whether employees should see teammates' pending counts is a product decision. | Matrix test, role A1: `top_pending_users` returns `user_id` of A2 and TL_A, `queue_highlights` names them. Both are in `WIDENED_ROUTES` as `UNDECIDED - see register M-1`. | FIXED (apps.dashboard.tests.test_widget_team_scope::test_employee_is_refused_every_team_widget, ::test_team_leader_sees_only_own_team_names, matrix). Ruling 2026-10-20: "Team members don't see statuses of other team members; that is part of the TL's confidentiality. They can see vacation and so on, which is related to their work." Employees get 403; no frontend change, the TL dashboard renders only for `isTeamLeader`. |
+| M-2 | L | `apps/users/viewsets.py:312,339` (`italian_team_leaders`, `albanian_team_leaders`) | Every authenticated user (employee, HBPR, CR) can list all Italian/Albanian TLs with username, full name, team name and member count, unscoped. Consumers are admin/HR user management, HR report filters and the TL scorecard meeting dialog; the scoped sibling `team_leaders` returns `[]` for an employee. The team directory already exposes leader and counts to everyone (REFERENCE), so the delta is username and a possible need of TLs for the meeting dialog. Scope depends on who needs these lists. | Matrix test: A1 sees TL_A and TL_B, HBPR/CR/TL_A see TL_B at `/api/users/users/albanian_team_leaders/`. In `WIDENED_ROUTES` as `UNDECIDED - see register M-2`. | FIXED (apps.users.tests_app.test_tl_directory_scope, matrix). Employees, HBPR and CR get 403; staff/HR unchanged; a TL gets names only (id, username, full_name), no member count or team name, since the TL scorecard meeting dialog needs the Italian TL names. |
+| M-3 | M | `apps/reports/viewsets.py:158` (`GeneratedReportViewSet`, via `TeamLeaderFilterMixin.filter_for_team_leader`) | `GET /api/reports/generated/` returned 500 for every team leader: the mixin filters `user_id__in`, and `GeneratedReport` has `generated_by`, not `user`. Reports are personal, so a TL now sees their own, same as an employee. | Matrix test as TL_A: `FieldError: Cannot resolve keyword 'user_id'`. Fix test `apps/reports/test_generated_report_scope.py` (RED before the one-line override, GREEN after). | FIXED(`apps.reports.test_generated_report_scope.GeneratedReportListScopeTests`) |
+| S-1 | M | `apps/users/viewsets.py` (`UserViewSet.stats`, was in the open list of `get_permissions`) | Any authenticated employee could read company-wide headcount, Italian/Albanian TL counts, the number of users with no TL and the active-today count; the only consumer is the admin Users page. Rule: employees see themselves only, TL management data included. | Employee GET `/api/users/users/stats/` returned 200 with all five counts; now 403 (staff still 200). | FIXED(`apps.permissions.test_employee_self_scope.EmployeeSelfScopeTests.test_user_stats_is_not_open_to_an_employee`) |
+| S-2 | L | `apps/dashboard/serializers.py:20` (`WorkspaceUserSerializer`) | `calendar-workspaces/<id>/workspace_users/` returned `is_staff` and `is_superuser` of every colleague on a shared team calendar to any member, so an employee could tell which colleagues are administrators; no calendar screen uses them (only `email`, which the calendar shows on purpose). | Employee GET returned `is_staff`/`is_superuser` per row; the old test `test_workspace_users_endpoint_returns_identity_fields` pinned them and now asserts their absence. | FIXED(`apps.permissions.test_employee_self_scope.EmployeeSelfScopeTests.test_team_calendar_user_list_does_not_name_admins`) |
+| S-3 | L | `plugins/audit_log/plugin.py:66` (`validate_config`) | `retention_days: true` passed validation (`bool` is an `int`), meaning a 1-day window: the boot hook `purge_audit_logs --if-configured` would then delete the audit trail older than a day on every start. Admin-only config, so low. | `validate_config({'retention_days': True})` returned True. | FIXED(`plugins.audit_log.test_audit_log.AuditLogPluginTestCase.test_boolean_retention_is_not_a_one_day_window`) |
+| S-4 | L | `apps/users/serializers.py` (`TeamSerializer.italian_tl` / `albanian_tl`, from c498197) | The team directory (`/api/users/teams/`, readable by every authenticated user and declared company-wide reference in the matrix) now also names the derived Italian and Albanian TL of every team, with username. Same information class as M-2 (TL directory); the previous `team_leader` field already named one leader per team. Under the employee self-only rule this needs the same decision as M-2, because scoping the team list to an employee's own teams also affects pickers that need all teams. | Matrix test sanctions `/api/users/teams/` as REFERENCE and exempts it from the owner scan (`COMPANY_WIDE_REFERENCE`). | REJECTED-by-ruling (a team leader's name is not confidential, employees know their TL and the org chart shows it; what is confidential is per-person status/pending counts and management aggregates, which the team directory does not expose). |
+| S-5 | L | `apps/users/serializers.py` (`TechSerializer.members_count`, from 91b0586) | Every authenticated user reads how many active users hold each Tech. It is a headcount per catalogue entry, no identities. | `techs/` is a declared reference route; the field was added to the admin Techs KPI strip. | REJECTED (company-wide count with no person, same class as the existing team `members_count`; not per-person or approval data) |
+| S-6 | L | `apps/dashboard/services/holiday_sync.py:29-35` | The payroll-enabled check is `except Exception: pass`, so a failing `Plugin` lookup falls through to writing payroll workdays, unlike the sibling signal helpers which return on the same error. | No exploit: the lookup fails only if the database is broken, and the next statements then fail as well; the endpoint (`sync_payroll`) is staff/HR only. | REJECTED (no reachable abuse; the sibling helpers fail closed) |
+| C-1 | M | `plugins/payroll/plugin.py` ready(), `apps/dashboard/services/holiday_sync.py` | HR/Payroll holiday sync ran in every worker at boot; check-then-create on a unique (date,country) global holiday raced into IntegrityError and aborted the sync. | `test_sync_survives_another_worker_creating_the_same_holiday` RED (IntegrityError) then GREEN | FIXED (get_or_create; sync moved to `manage.py sync_payroll_holidays` in docker/entrypoint.sh, `test_boot_command_runs_the_sync`) |
+| C-2 | M | `apps/dashboard/signals.py` | Re-created team reattached the kept workspace with the old `is_public` and `allowed_users`, exposing the new team's calendar to old sharers. | `test_relinked_workspace_does_not_keep_the_old_sharing` RED then GREEN | FIXED |
+| C-3 | H | `apps/users/viewsets.py` bulk_delete / destroy | TL references (italian/albanian TL, led teams) were cleared before `user.delete()`; a PROTECT (payroll lines) failure left them cleared. Single delete returned 500. | `ProtectedUserDeleteTests` (2 tests) RED then GREEN | FIXED (savepoint, HBPR check first, 409) |
+| C-4 | M | `plugins/data_import/viewsets.py` commit | Importers return error results instead of raising, so the per-row savepoint kept writes made before the failure. | `FailedRowRollbackTests` RED then GREEN | FIXED |
+| C-5 | M | `plugins/data_import/importers/control_room_access.py` | Blank `is_active` on update reactivated a deactivated grant. | `test_blank_is_active_on_update_leaves_a_deactivated_grant_deactivated` | FIXED |
+| C-6 | M | `plugins/data_import/importers/leave_requests.py` | Blank `status` on update set the request to approved. | `LeaveRequestBlankCellOnUpdateTests` | FIXED |
+| C-7 | M | `frontend/src/pages/admin/hooks/useUsersPage.ts` | Page kept after the last page emptied gives a 404 and a dead table. | `useUsersPagePaging.test.tsx` RED then GREEN | FIXED |
+| C-8 | L | `apps/users` calendar_group normalization | New writes are normalized but stored legacy values are not; groups matched by exact string can split. Needs a data migration (migrations are deny-listed for this session). | reading | DEFERRED (data migration) |
+| C-9 | L | `plugins/payroll/services/payroll_service.py` `_ensure_draft_inputs_current` | `rules_source_label`/`rules_validation_status` count as calculation inputs and stale a draft; conservative, not wrong. | reading | REJECTED (safe direction) |
+| C-10 | L | `plugins/data_import/parsing.py` `_parse_value` | Whitespace-only bool cell parses as False not blank. | reading | REJECTED (CSV/XLSX blanks arrive as NaN) |
+| C-11 | L | engagement stored snapshots | Changing `business_timezone` leaves `TLApprovalMetric` rows computed under the old zone until stale. | reading | DEFERRED (admin-rare) |
+| C-12 | L | `UserCreateFormDialog.tsx` | Dynamic import of `plugins/control_room` from core. | pre-existing, documented in file | REJECTED (outside delta) |
+| P-1 | M | `frontend/src/plugins/organigrama/pages/OrganigramaBuilderPage.tsx`, `components/viewerHelpers.ts` | `html2canvas-pro` and `jspdf` (about 190 KB gzip) were static imports, so the builder page chunk and the shared `organigramaService` chunk loaded them on page visit although they are only needed on export click. | Built chunks: static `from"./html2canvas-pro..."` / `from"./jspdf..."` present before, absent after; `entry-chunk-audit` OK; 167 organigrama tests pass; `optimizeDeps.include` still lists `dompurify`, `jspdf`, `html2canvas-pro`. | FIXED (dynamic import in the export handlers) |
+| P-2 | M | `apps/users/viewsets.py` `italian_team_leaders` / `albanian_team_leaders` | Each leader row cost 4 queries: `prefetch_related('profile__teams')` did not feed `get_primary_team()`, which reads `team_memberships`, and it was called twice per row. | `DirectoryQueryBudgetTests` RED (10 vs 50 queries for 2 vs 12 leaders), GREEN after prefetching `profile__team_memberships__team` and one call per row | FIXED (test_italian_team_leaders_is_flat, test_albanian_team_leaders_is_flat) |
+| P-3 | M | `apps/leave_management/services/carry_over.py` `apply_year_end_carry_over` | The first leave read of a year rolled over per user (about 3 queries each: closed balance, existing carry, create) while holding the `GlobalSettings` row lock. | `RolloverQueryBudgetTests` RED (12 vs 42 queries for 2 vs 12 users), GREEN with two reads and one `bulk_create` | FIXED (test_rollover_query_count_does_not_grow_with_users) |
+| P-4 | L | `purge_audit_logs`, `purge_analytics_data`, `purge_ended_assignments` | Checked that the retention purges delete in bulk. | Budget tests: query count equal for 2 and 50 rows (audit logs), 2 and 30 rows (analytics), 1 and 8 rows (HBPR assignments). | CLEAN (tests added) |
+| P-5 | L | `plugins/data_import` `UserImporter.validate_row` (and the other importers' dry run) | Preview costs 3 indexed queries per row (existing-user lookup plus username and email uniqueness checks). Linear, not amplified. | Measured 6 queries for 2 rows, 36 for 12. Bounded by `max_rows_per_import` (5000), admin only. | DEFERRED (a batched pre-load is a per-importer redesign; worst case about 15000 indexed lookups) |
+| P-6 | L | `apps/dashboard/services/holiday_sync.py` | Mirror loop does `get_or_create` per holiday per calendar. | Reading: holidays x calendars of one year (tens of queries), runs from a command or a manual action. | REJECTED (bounded, rare) |
+| P-7 | L | `core/mixins/permissions.py` plugin gate | Added one `Plugin` lookup per plugin request (the disabled check). | Reading: once per request in `has_permission`, constant. | REJECTED (constant, not N+1) |
+| P-8 | L | `frontend/src/pages/admin/components/dashboard-grid/DashboardGrid.tsx` | `react-grid-layout` is imported by the admin dashboard although drag/resize is edit mode only. | Chunk is part of `AdminDashboardPage` (36 KB gzip total), not a large chunk. | DEFERRED (small; deferring would add a loading state to the dashboard) |
+| P-9 | L | Targets with existing budgets | Admin users list with search and paging, teams list with TL derivation, tech `members_count`, tl_scorecard `team-members` wage annotation and trend. | Existing tests `ProfileListQueryTests`, `TeamDerivedTlTests.test_list_query_count_does_not_grow_with_teams`, `TechMembersCountTests`, `test_team_members` budget, `test_trend_budget`; this pass adds the profile list with `search` and `page_size`. | CLEAN |
+| D-1 | L | `.dockerignore`, `config/test_deployment.py` | `AdminGUI/`, `pill-verify-shots/` and `db.e2e.sqlite3` were not excluded from the backend build context (B-02). `*.sqlite3` already covered the e2e database, now listed explicitly. | Contract test RED (`'AdminGUI'` missing), GREEN after the three lines. | FIXED (`DockerIgnoreContractTests`) |
+| D-2 | L | `.github/workflows/ci.yml` | `visual-route-manifest.test.mjs` was left out of the "Visual tooling tests" step; the 2026-10-14 note said it was red. | At HEAD it is green: the manifest has the rows and the design-audit test skips when `design-audit/app-extract-pages` is absent (`node --test` of the four files: 46 pass, 1 skipped, 0 fail). Added to the step, stale comment removed. | FIXED |
+| D-3 | L | `frontend/src/hooks/usePushNotifications.ts` | Endpoints hard-coded `/api/plugins/notifications/...`; axios `baseURL` already ends in `/api`, so every call would hit `/api/api/...` (the CI URL guard greps only literal `api.get("/api/")` calls, not constants). The hook has no consumer outside its own test, so browser push subscription is not wired in the UI. | Hook test now asserts the exact URLs: RED, GREEN after dropping the prefix. 14 hook tests pass, eslint clean. | FIXED (URL prefix); wiring or deleting the hook is DEFERRED (POST-LAUNCH, user decision) |
+| D-4 | L | `README.md` | Links to missing `.devin/workflows/agent-dispatch.md` and `.devin/tracking/CHANGES_OPTIMIZED.md`, audit dated 2026-05-30, 10 of 13 plugins unmentioned, `pytest` test command, "Django 5.2". | Link check script over the new README prints no dead link; plugin list matches `ls plugins`. | FIXED |
+| D-5 | M | `docs/deploy/production-runbook.md` | Section 5 was a "to expand" stub: no first-deploy, upgrade, rollback, cron or monitoring text. | Written against `docker/entrypoint.sh` (boot order including `sync_payroll_holidays`), `docker-compose.yml` and the real command names (`prune_notifications`, `purge_audit_logs --if-configured`, `purge_analytics_data`, `purge_hbpr_archive`, `create_site_backup`). | FIXED |
+| D-6 | L | `docs/workflow-invariants.md` | Leave counting said `count_business_days`; carry-over, retention commands, plugin runtime-disable, TL derivation and boot-time holiday sync were undocumented; the E2E account list had 6 of 11 users. | Items 17 to 20 and the Leave balances section cite the enforcing tests. | FIXED |
+| D-7 | L | `CLAUDE.md` | Stale line refs (`permissions.py:536,756`, `Sidebar.tsx:130`, `AdminSidebar.tsx:165-166`), leave-counting wording, duplicate payroll and admin-lift bullets, a point-in-time "gate state" sentence, a garbled formula-prefix sentence (literal tab and newline), unbolded bullets, audit commands without `cd frontend &&`, missing router rows (leave carry-over, timezone, notifications, audit log, onboarding, confidentiality, deploy). | File is 56,676 bytes (was 56,700) while gaining 6 router rows; `grep -n "permissions.py:536\|Sidebar.tsx:130\|AdminSidebar.tsx:165\|Gate state" CLAUDE.md` prints nothing; the Team confidentiality bullet is present once. | FIXED |
+| D-8 | L | `AGENTS.md` | No entries after 2026-10-15 (nothing for 2026-10-13, 10-16 to 10-19, nor this programme); one line said holiday sync runs in `PayrollPlugin.ready()` (superseded by C-1). | Five dated entries and a supersede note added. | FIXED |
+| D-9 | L | `.claude/hooks/context-router.ps1` | Printed 11 of the Task Router's routes. | Rewritten with 30 routes matching the router keywords; runs under PowerShell. The file is gitignored (`.claude/`), so this edit is local to the working copy and not in any commit. | FIXED (local file) |
+| D-10 | L | `docs/superpowers/plans/2026-10-14-production-readiness.md` | The §0.1 register had no outcome column and 90 unticked steps. | Status column on all 64 rows (test name or file as evidence); 56 steps ticked where evidence exists; the note under §0.1 lists what stays open. | FIXED |
+| D-11 | L | `plugins/tl_scorecard/viewsets/scorecard.py` (`export`) | The PDF/xlsx export of an HBPR-only viewer showed the unmasked `escalation_count` (it includes leave escalations), while the JSON scorecard already recounts without leave. Listed as "observed, not fixed" in the 2026-10-14 plan. | `HbprEscalationLeakTests.test_hbpr_pdf_export_does_not_count_leave_escalations` RED (`'1' != '0'`), GREEN after `_mask_hbpr_only(..., drop_blocks=False)`; whole `plugins.tl_scorecard` suite 521 OK. | FIXED |
+| D-12 | M | `plugins/ticket_kpi/viewsets.py` (`KPIEvidenceViewSet.perform_update`), T-F8 | A PATCH that replaced the evidence file skipped `validate_upload`: only the model's extension validator ran, so a non-PDF named `.pdf` (and any file past the per-user size cap) replaced the stored file. Create ran the policy. | `KPIEvidenceTests.test_replacing_the_file_on_update_runs_the_upload_policy` RED (`200 != 400`), GREEN; `plugins.ticket_kpi` 193 OK. | FIXED |
+| D-13 | M | `apps/plugins/urls.py` (log line "Could not load dynamic plugin URLs") | Cause: the URLconf calls `plugin_registry.get_active_plugins()`, a `Plugin` table query, at import time. `check --deploy --settings=config.settings_production` with the CI env block points at Postgres on localhost, which is not running here, so the query raises `OperationalError` and the broad `except` logs the warning and registers no plugin routes in that process. Not an import failure and not a missing env var. In production the database is up first (compose `depends_on` health check, entrypoint `migrate` before gunicorn), so routes load; if Postgres is unreachable when a worker first imports the URLconf, that worker serves no plugin routes (404) until it is recycled (`--max-requests 1000`) or restarted. | Read of `apps/plugins/urls.py` and `core/plugins/registry.py` (`get_active_plugins`), baseline note that localhost:5432 was unreachable. | DEFERRED (POST-LAUNCH: load plugin URLs without the database, or retry per request); documented in the runbook 5.6 |
+| D-14 | L | `frontend/scripts/shot-audit.mjs`, `shot-flows.mjs`; `skills-lock.json` (DOC-11, DOC-12) | Scripts still say "TEMPORARY ... DELETE after"; nothing imports them. `skills-lock.json` lists `fallow` but the gitignored `.claude/skills/fallow` is absent. | `grep` for imports in `package.json`, `scripts/`, `.github/`. | DEFERRED (POST-LAUNCH, cosmetic: deleting tracked files that were not created in this programme needs the owner) |
+
+Failing tests (CI, identical on SQLite and PostgreSQL):
+- `apps.dashboard.tests.test_team_leader_widgets.TeamStatsActiveOperatorCountTests.test_active_operator_count_excludes_users_on_approved_leave_or_standby_today`
+- `plugins.tl_scorecard.test_hbpr_governance_evidence.EvidenceCadenceStatusTests.test_cadence_status_reports_due_on_the_exact_due_date`
+- `plugins.tl_scorecard.test_hbpr_governance_evidence.EvidenceWriteGuardTests.test_future_dated_evidence_is_rejected`
+- `plugins.tl_scorecard.test_tl_scorecard_actions.IdleAndAbsenceActionTests.test_absence_address_sets_the_date_once`
+- `plugins.tl_scorecard.test_tl_scorecard_actions.IdleAndAbsenceActionTests.test_idle_resolve_sets_status_and_date_together`
+- `plugins.tl_scorecard.test_tl_scorecard_actions.PipTransitionTests.test_owner_tl_can_complete_an_active_pip`
+- `plugins.tl_scorecard.test_tl_scorecard_actions.PipTransitionTests.test_staff_can_return_a_draft_pip_with_a_reason`
+
+## Deferred items triage
+
+Rule (controller): only security-relevant items that are cheap to fix are BLOCKER; everything else is POST-LAUNCH. Sources: the 2026-10-14 production-readiness plan (§0.1, Phases 5 to 8 deferred notes, Senior findings) and the deferred rows of this register. The rows marked "BLOCKER, FIXED" are closed; no BLOCKER is open.
+
+| ID | Summary | Decision | Reason |
+|---|---|---|---|
+| visual-route-manifest test | Left out of CI because it was red | BLOCKER, FIXED (D-2) | Already green at HEAD; added to the step. |
+| T-F8 | Evidence file replacement skipped upload validation | BLOCKER, FIXED (D-12) | Security-relevant, one block of code. |
+| HBPR export escalation count | PDF/xlsx export not HBPR-masked ("observed, not fixed") | BLOCKER, FIXED (D-11) | Leave-derived count shown to a role denied leave; one line. |
+| Evidence PATCH re-point | PATCH could re-point `assignment` without the owner check ("observed, not fixed") | FIXED earlier | `EvidenceWriteGuardTests.test_evidence_cannot_be_moved_to_another_assignment` (400) and `perform_update` checks the old assignment's owner. |
+| B-02 | `AdminGUI/` in the Docker context | BLOCKER, FIXED (D-1) | Cheap, and an image-contents risk. |
+| D-3 follow-up | `usePushNotifications` is unwired (no consumer) | POST-LAUNCH | URL fixed; wiring browser push or deleting the hook is a product decision. The in-app notification list and the server push path are unaffected. |
+| SEC-14 | OnlyOffice callback JWT has no `exp`/replay check | POST-LAUNCH | The file token expires in 300 s and is bound to the document id; a replayed callback re-saves the same document it was issued for. OnlyOffice does not reliably send `iat`/`exp`. |
+| SR-01 | Task queue (RQ/Celery) | POST-LAUNCH | New dependency; ruling D3. Push after commit with a timeout, bounded work in requests, cron for retention. |
+| SR-02 | One authoritative audit log (two `AuditLog` models) | POST-LAUNCH | Migration and read-model redesign; PERF-10 actor loss is fixed. |
+| SR-03 | Request-id and structured logs | POST-LAUNCH | Observability, no correctness impact. |
+| SR-04 | Replace the thread-local current user with explicit passing | POST-LAUNCH | Refactor; the actor is now set from DRF auth (`test_audit_actor`). |
+| SR-05 | Split CLAUDE.md | POST-LAUNCH | Controller ruling. This pass only fixed stale facts and kept the file smaller. |
+| SR-06 | Track `.devin/context` or mirror it | POST-LAUNCH | Controller ruling. Tracked essentials live in `docs/workflow-invariants.md`. |
+| SR-07 | Row-ownership matrix test | DONE | `apps/permissions/test_row_ownership_matrix.py` (phase M). |
+| SR-08 | Soft-delete consistency (`is_deleted` has no default manager) | POST-LAUNCH | Needs a per-model audit; no reachable leak found in this review. |
+| SR-09 | Unused `core/middleware/cache_stats.py` | POST-LAUNCH | Dead code, not registered in settings; deleting a file this programme did not create waits for the owner. |
+| SR-10 | Retention for PII exports | POST-LAUNCH | `purge_audit_logs`, `purge_analytics_data`, `prune_notifications` exist; `media/analytics_exports/` still has no job (runbook 5.4). |
+| SR-11 | Pin GitHub Actions by SHA, Dependabot | POST-LAUNCH | Cannot be proven without a CI run; tags are exact or major today and Trivy/gitleaks/pip-audit jobs exist. |
+| SR-12 to SR-14 | Postgres-specific wins, error-boundary telemetry, repo-root clutter | POST-LAUNCH | Optimisation or housekeeping. |
+| A-03 (concurrency) | No cap on concurrent background analytics exports | POST-LAUNCH | The range cap (400 days) is fixed; admin/export-grant users only. |
+| A-05 | `export` grant holders get org-wide leave reasons in the Excel raw sheet | POST-LAUNCH, needs an owner decision | Grant is admin-assigned; documented by `ExportFreeTextDocumentationTests`, no behaviour change. |
+| A-06 | Stuck analytics export jobs (no reaper) | POST-LAUNCH | Operational; admin can re-run. |
+| N5, N8, N10 to N13 | Permissions/users items deferred on 2026-10-14 | POST-LAUNCH | The tracked plan records only the IDs, not their text (the discovery report was not kept). The class they belong to (row scoping and escalation in users/permissions) is now covered by the row-ownership matrix, the escalation tests and the launch security review (S-1 to S-6) with no new finding. Re-derive from the matrix if the owner wants each closed by name. |
+| T-F5, T-F6 | Scorecard recompute on signal / per save | POST-LAUNCH | Performance; `test_trend_budget` bounds the read path. |
+| T-F7 | Bulk review payload validation | POST-LAUNCH | Each batch is already permission-checked via `_review_batch_or_reason`; only list-element typing is loose. |
+| T-F9, T-F10, T-F11, T-F12, T-F13 | Archive expansion order, unassigned clients, mean-of-means, scoped read throttle, batch-list N+1 | POST-LAUNCH | Correctness or cost at the margins; no exposure. |
+| DEP-08 | No error monitoring (Sentry) | POST-LAUNCH | New dependency and DSN, ruling D4 not given; documented gap in runbook 5.6. |
+| DEP-09 | CSP `script-src 'unsafe-inline'` still enforcing | POST-LAUNCH | A strict Report-Only twin ships; remove after the report shows no violations (ruling D6). |
+| PERF-12 | Site backup runs inside the POST | POST-LAUNCH | Superuser-only, gunicorn timeout 120 s; start large backups off-peak. Needs SR-01. |
+| DOC-03 | Local `.devin/context/PLUGINS` files for analytics, audit_log, notifications, onboarding | POST-LAUNCH | Gitignored; tracked essentials added to `docs/workflow-invariants.md`. |
+| DOC-11, DOC-12 | Temporary shot scripts, `fallow` skill lock entry | POST-LAUNCH | See D-14. |
+| C-8 | Legacy `calendar_group` values are not normalized in stored rows; groups matched by exact string can split | POST-LAUNCH | Needs a data migration (deny-listed in this programme); new writes are normalized, so the set of split groups cannot grow. |
+| C-11 | Engagement snapshots keep the old zone after `business_timezone` changes until stale | POST-LAUNCH | Admin-rare; snapshots recompute on read when stale. |
+| P-5 | Import preview costs 3 indexed queries per row | POST-LAUNCH (controller ruling) | Bounded by `max_rows_per_import` (5000), admin-only, linear; a batched pre-load is a per-importer redesign. |
+| P-8 | `react-grid-layout` ships in the `AdminDashboardPage` chunk | POST-LAUNCH | 36 KB gzip total chunk; deferring adds a loading state to the dashboard. |
+| D-13 | Plugin URLs are loaded from the database at process start | POST-LAUNCH | Mitigated by compose ordering and worker recycling; load without the database or retry per request. |
+| F-2 | Core imports of the notifications and control_room plugins | POST-LAUNCH | Pre-existing; see F-2. |
+| Task 2 minors | Detail-route child lists (`teams/{id}/members`) not walked by the matrix; `LEADER_KEYS` `leader`/`team_leader` could name the subject of a TL-owned record; ticket_kpi/profiles justification generic; `reload_plugin_urls` vs `--parallel` | POST-LAUNCH | Matrix coverage refinements, no finding behind them. |
+| Task 3 minor | S-2 test relies on the auto-created `SCOPE_calendar` workspace; pin `stats` in the admin-gated guard set | POST-LAUNCH | Test hardening. |
+| Task 4 minors | `ProtectedRecordConflict` wording omits the HBPR PROTECT; a 409 shows an "Unknown error" toast title | POST-LAUNCH | Wording; the 409 itself is correct. |
+| Task 5 minors | Carry-over leftover formula duplicated (rollover vs `ensure_carry_over_for_user`); no test for the `has_carry` branch with marker reset; organigrama export has no in-flight guard | POST-LAUNCH | Duplication and a double-click guard; no wrong result found. The bundle claim was re-verified in this pass (entry-chunk audit OK). |
+| Task 6 minors | CLAUDE.md audit-log router row points at a business-day heading; evidence replace (.eml/.msg) does not recompute `parsed_email`; N5/N8/N10 to N13 triaged without text | POST-LAUNCH | Docs and edge cases. The runbook env list vs `.env.example` diff is a launch condition (see Go/no-go). |
+
+## Final verification
+
+Run 2026-10-21 on branch `chore/launch-review-plan` (commits on top of `8325478`), Windows, Python 3.14 + Django 6.1.1. Logs: `.superpowers/sdd/2026-10-20-launch-review/logs/final-*.log`.
+
+| Check | Result | Baseline |
+|---|---|---|
+| `makemigrations --check --dry-run` | PASS, no changes | PASS |
+| `manage.py test -v 1` | PASS, 3179 tests, OK | 3139 |
+| `ruff check apps core config plugins` | PASS | PASS |
+| `npx tsc -b --noEmit` | PASS | PASS |
+| `npm run lint` | PASS, 0 errors, 2 warnings in `useSkillsGridVirtualizer.ts` (unchanged since the baseline commit, so the baseline's "0 problems" omitted them) | PASS |
+| `npx vitest run` | PASS, 568 files, 3599 tests | 3597 |
+| `npm run build` | PASS | PASS |
+| `entry-chunk-audit` | PASS, 36 entry chunks, no heavy libs | PASS |
+| table-header, control, surface, modal, modal-visual, dashboard audits and the four visual tooling tests | PASS | PASS |
+| `npm audit --audit-level=high` | PASS, 0 vulnerabilities (after F-1) | PASS |
+| pip-audit | NOT RUN locally (Python 3.11 cannot resolve Django 6.1.1); CI Security scan job success | NOT RUN |
+| Prettier on changed frontend files | PASS (`useUsersPage.ts`, `useUsersPagePaging.test.tsx`) | n/a |
+
+CI for PR #158, run 39559565997, head `8325478`: Backend success, Backend (PostgreSQL 16) success, Frontend success, E2E (Playwright) success, Docker build success, Image scan (Trivy) success, Secret scan (gitleaks) success, Security scan success, Deploy config (compose + nginx) success, Backend image smoke success. The two earlier runs on this branch (39528396781, 39529482901) failed and are superseded; the Postgres suite that failed on main (B-01) is green here.
+
+### Anti-pattern greps (step 11.2 of the 2026-10-14 plan, plus the launch-review additions)
+
+| Command | Result |
+|---|---|
+| `grep -rn "if not DEBUG else None" config/settings_production.py` | no output |
+| `grep -rn "except Exception" apps core plugins --include=*.py \| grep -i "permission\|access\|import" \| grep -v tests` | 27 lines, all sanctioned: cache get/set best-effort in `permission_service.py` (falls through to the DB check or denies); team-member lookups that log and deny (`core/mixins/permissions.py:262,542`); plugin-permission lookup that returns False (`:946`); `seed_plugin_permissions` per-plugin report; `plugins/data_import/*` and `epr_goal_import.py` turn a row/parse failure into a reported error (`# noqa: BLE001`). None returns True or grants access on error. |
+| `grep -rn "startswith(\"http\|startswith('http" apps core plugins --include=*.py \| grep -v tests` | no output |
+| `grep -rn "csv.writer(" apps plugins --include=*.py \| grep -v "tests\|csv_safe"` | 7 lines (overtime, reports, standby, audit_log, skills, ticket_kpi, tl_scorecard). Every data row in each goes through `csv_safe` (inspected); the unwrapped `writerow` calls are literal header rows. |
+| `grep -rn "pagination_class = None" plugins/notifications` | no output |
+| `grep -rn "date.today()\|timezone.now().date()" apps core plugins --include=*.py \| grep -v test` | 4 lines, all sanctioned: `hbpr_scope.py:60,63,127` use the local `today()` helper (`business_today`), and `core/utils/timezone_local.py:4` is the docstring explaining why `date.today()` is wrong. |
+| Plugin static-import grep per `frontend/src/plugins/*` (REST path strings excluded; imports only) | `analytics`, `audit_log`, `data_import`, `engagement`, `onboarding`, `organigrama`, `payroll`, `site_backup`, `skills`, `ticket_kpi`, `tl_scorecard`: none (matches were `api.get("plugins/<name>/...")` URL strings and comments). `control_room`: `UserCreateFormDialog.tsx:121` dynamic import (C-12) and mocks in `SettingsPage.test.tsx`. `notifications`: `NotificationPreferencesSection.tsx:15` static import. Both are pre-existing: F-2. |
+
+## Rehearsal
+
+Partial production rehearsal, 2026-10-21, on the dev machine (no Docker). Stack: `config.settings_e2e` + `db.e2e.sqlite3` (prepared with `prepare_e2e_db`), backend on 127.0.0.1:8010, production build (`VITE_API_URL=/api`) served by `vite preview` on 5180 with the `/api` proxy. Ports 8000/5173 were already held by the owner's dev servers (dev DB), so the rehearsal used other ports and left those processes alone. Screenshots (not committed): `.superpowers/sdd/2026-10-20-launch-review/rehearsal/`.
+
+| Check | Result | Evidence |
+|---|---|---|
+| Docker image build, compose stack, nginx headers/CSP/rate limits, gunicorn config | NOT REHEARSED | No Docker here. Rely on CI (image build, `nginx -t`, Trivy, `docker compose config`); must be run on the target host before go-live (runbook). See R-1 |
+| Backup then restore drill on Postgres | NOT REHEARSED | No Postgres/Docker here. Same reliance; run on the target host. See R-1 |
+| Backend and frontend start (e2e DB, prod build) | PASS | `/api/health/live/` 200 on 8010; `/login` 200 and `/api/...` proxied on 5180 |
+| Login throttle | NOT REHEARSED | `settings_e2e` sets every throttle rate to None by design; not weakened to test. Throttle code path is the `auth` scope on the three views in `apps/users/views/auth.py`. See R-1 |
+| Playwright suite (chromium) | NOT REHEARSED (partial, FAIL signals) | Run 1: 141 failed, cause was my own setup (Git Bash turned `VITE_API_URL=/api` into `C:/Program Files/Git/api`; fixed with `MSYS_NO_PATHCONV=1`). Run 2 (after fix, parallel workers): 103 passed, 39 failed, 4 skipped, 14 not run. Run 3 (`--workers=1`) was stopped at 97/160 with 23 failures by the controller time-box. Failure messages seen: `Failed to fetch`, `API login failed: 429`, `ECONNREFUSED 127.0.0.1:8010`, and assertions in `hbpr-governance`, `preferences`, `admin-dashboard`, `organigrama`, `skills`, `session-concurrency`, `visual-guards`, `role-workflows`. Not triaged. See R-2 |
+| Confidentiality: employee `top_pending_users`, `italian_team_leaders`, `albanian_team_leaders`, `users/stats` | PASS | Token API, 403 for `e2e_employee_a`, `e2e_cr`, `e2e_hbpr`. TL and HR 200 on the leader/pending routes, 403 on `stats`. admin and super 200 on all |
+| Employee dashboard has no team widgets | PASS | `e2e_employee_a` `/dashboard` renders with 0 console errors and 0 API responses >= 400 (the page does not call the gated routes) |
+| TL widgets show own team only | NOT REHEARSED | Not inspected visually in the time-box; covered by `apps/dashboard/tests/test_widget_team_scope.py` |
+| Media: employee cannot read `backups/...` | PASS | `protected_media` called with the production-path view for a real backup file: employee 403, plain admin 403, anonymous 403, superuser 200. The running e2e server is DEBUG and serves media through `static()`, which is not the production path, so the view was exercised directly |
+| Browser sweep, one or more pages per role, 0 console errors, 0 API >= 400 | PASS | employee `/dashboard /overtime /standby /leave-management`; TL `/dashboard /team/approvals /team /tl-scorecard`; HR `/dashboard /hr/reports /hr/payroll/runs`; admin `/admin /admin/users /admin/teams /admin/plugins /admin/notifications`; super `/admin /admin/backup-restore`; CR `/control-room` (lands on `/control-room/dashboard`); HBPR `/hbpr`. Each rendered content. `/admin/holidays` redirects to `/admin/calendars`. `/hr/holidays` was not visited (route name guessed wrong, not retried) |
+| Backup creation | PASS | `POST /api/plugins/site_backup/backups/` as `e2e_super` 201; employee 403 on list and on restore preview. The test backups were deleted afterwards |
+| Restore preview | FAIL | R-3. No restore was executed |
+
+| ID | Sev | file:line | finding | evidence | status |
+|---|---|---|---|---|---|
+| R-1 | M | n/a | Docker/nginx/gunicorn/Postgres backup-restore and login-throttle behaviour were not rehearsed | No Docker or Postgres on this machine; `settings_e2e` disables throttles | OPEN-DECISION (launch condition 1): run image build, `nginx -t`, header and rate-limit checks, a Postgres backup then restore drill, and a throttled-login check on the target host before go-live |
+| R-2 | M | `frontend/e2e/*` | The Playwright suite did not complete cleanly: 39 failures in run 2, 23 failures by spec 97 in a serial run, not triaged. Some may be environmental: 429 on API login and ECONNREFUSED/`Failed to fetch` occurred against a single-threaded-looking runserver under parallel workers | `pw` run output, scratch only. Correction: CI does run Playwright (`E2E (Playwright)` job). At `8325478` that job concluded success (run 39559565997) | REJECTED (local-environment only: ports/env on a machine already holding the dev servers; CI E2E green on the same commit) |
+| R-3 | M | `plugins/site_backup/services/backup.py:_write_db_dump` | On Windows a freshly created backup fails restore preview with "Backup file contains invalid encoding in db.json.gz". `dumpdata(output=...)` writes with the locale encoding (cp1252 here, em-dash byte 0x97) and `archive.py` decodes as UTF-8 | Created a backup via the API as `e2e_super`; `restore/preview/` returned 400; decoding the stored `db.json.gz` raised `0x97` at an em-dash in existing data | FIXED(`plugins.site_backup.tests.test_restore.NonAsciiRoundTripTests.test_non_ascii_text_survives_backup_then_preview_under_legacy_locale`): dump is streamed through an explicit UTF-8 `TextIOWrapper` over `gzip.open(..., 'wb')` |
+| R-4 | L | `frontend/src/lib/constants.ts` | A production build made without `VITE_API_URL` bakes `http://<host>:8000/api`, so `vite preview` ignores its `/api` proxy. Docker sets `VITE_API_URL=/api`, so production is fine; the e2e recipe in the journal does not mention it for preview runs | Build served on 5180 sent XHR to 8000 and failed CORS until rebuilt with `VITE_API_URL=/api` | DEFERRED (POST-LAUNCH, docs only: note in the runbook/journal; Git Bash users need `MSYS_NO_PATHCONV=1`) |
+| F-1 | M | `frontend/package.json`, `package-lock.json` (commit `786a2a1`) | Two new high npm advisories (vite, follow-redirects) made CI's `npm audit --audit-level=high` step fail. | Bumped vite to 8.3.4 and follow-redirects to 1.16.1; `npm audit --audit-level=high` now reports 0 vulnerabilities; tsc, build, entry-chunk audit and vitest pass. | FIXED (dependency bump, verified by the audit step and the full frontend pass) |
+| F-2 | L | `frontend/src/pages/settings/components/NotificationPreferencesSection.tsx:15`; `frontend/src/pages/admin/components/UserCreateFormDialog.tsx:121` | The plugin static-import grep finds two core to plugin imports: a static import of `@/plugins/notifications/service`, and a dynamic import of `@/plugins/control_room/services/controlRoomService` (C-12). Removing either plugin would break the build or that dialog. Neither is in the `b4d48ac..HEAD` delta (`git log` for the first file shows no commit in range). | Final verification grep (below). | DEFERRED (POST-LAUNCH: route both through `getPluginComponent`/a core-owned wrapper; pre-existing, no runtime exposure while the plugins stay installed) |
+| F-3 | L | `frontend/src/pages/admin/GlobalSettingsPage.test.tsx` ("associates setting labels with their inputs") | Failed once in a subset run executed while another heavy job ran; passes alone and in the full 568-file run. Timing flake under load, not a regression. | Rerun alone: 125/125 pass across `src/pages/admin/hooks` + this file; full `npx vitest run` 3599/3599. | DEFERRED (POST-LAUNCH: unreproduced flake) |
+| F-4 | L | `frontend/src/pages/admin/hooks/useUsersPage.ts` | Deferred minor from Task 4: the page reset ran on any error and set state during render. | `useUsersPagePaging.test.tsx` "keeps the page when the failure is not a 404" RED (page 1 instead of 3), GREEN after the 404-only effect. | FIXED (`useUsersPagePaging.test.tsx`, commit `5e4cf01`) |
+| F-5 | M | `apps/users/serializers.py` `TeamSerializer` | `/api/users/teams/` returned `members_count` and `sub_teams_count` to every authenticated user, against the confidentiality ruling that counts are management data. | `test_team_directory_counts.py` RED (5 tests, 7 failures: employee and other-team TL saw counts), GREEN after masking to `null` for viewers who are not staff, HR or that team's TL; `list_for_reports` passes the request so HR keeps counts. Frontend consumers use `?? 0` and only admin or HR pages show counts. Matrix justification text rewritten. | FIXED (`TeamDirectoryCountTests`) |
+| F-6 | M | `CLAUDE.md`, `docs/workflow-invariants.md`, matrix `WIDENED_ROUTES`, `ProtectedRecordConflict` | Docs said TL name lists were readable beyond staff, HR and TLs, and the 409 detail named only payroll lines though HBPR assignments also protect users. | Docs and matrix text now say `italian_team_leaders`/`albanian_team_leaders` are staff, HR and TL only (employees, HBPR-only, CR-only get 403) and that employees learn TL names from the org chart and `/users/teams/`. `PROTECTED_RECORD_DETAIL` covers both causes. Matrix test passes. | FIXED (`test_row_ownership_matrix`, `test_single_delete_is_a_409_not_a_500`) |
+| F-7 | L | `frontend/src/lib/error-handler.ts` `detectErrorCode` | A 409 fell through to "Unknown error" in the toast. | `error-handler.test.ts` "titles a 409 protected-record conflict" RED (expected "Operation Failed" to be "Cannot delete"), GREEN with a `RESOURCE_CONFLICT` code. | FIXED (`error-handler.test.ts`) |
+| F-8 | L | `apps/dashboard/viewsets.py` `_get_team_and_members`; `apps/users/viewsets.py` `_tl_directory_access` | Review claim: the gates admit only `has_team_leader_role`, so a user who leads a team only through `Team.team_leader` is refused. | `has_team_leader_role` reads `profile.is_team_leader`, a property that already counts `led_teams`, so such a user passes. Regression tests added and green without a code change: own-team widget data, 404 for another team, names-only TL lists. | REJECTED (already correct; pinned by `LedTeamOnlyLeaderTests`, `test_user_leading_a_team_without_a_role_flag_gets_names`) |
+| F-9 | L | `apps/users/viewsets.py` `bulk_delete` | A `ProtectedError` put `type(e).__name__: str(e)` in `failed_users[].reason`, leaking object reprs (usernames, payroll period). | `test_bulk_delete_failure_keeps_tl_references` RED (reason held `ProtectedError ... PayrollLine`), GREEN with the fixed message. | FIXED (`test_bulk_delete_failure_keeps_tl_references`) |
+| F-10 | L | `apps/leave_management/services/carry_over.py` `apply_year_end_carry_over` | The `has_carry` branch (marker reset, re-run) had no test. The leftover formula is also duplicated between the rollover and the balance path. | New test resets only `carry_over_applied_year`, re-runs, and asserts the same counts and one carry row (no RED: it covers existing behaviour). Formula duplication not refactored. | FIXED (`test_rerun_after_marker_reset_adds_no_duplicate_carry_rows`); formula duplication DEFERRED (POST-LAUNCH) |
+| F-11 | L | `docs/workflow-invariants.md`, `docs/deploy/production-runbook.md`, `AGENTS.md`, `frontend/.dockerignore` | A hard-coded test count in the invariants doc; no note that `sync_payroll_holidays` is manual outside `RUN_MIGRATIONS=1`; `vite.config.audit.ts` not excluded from the frontend image context. | Count dropped in favour of this register; runbook and AGENTS.md carry the manual-step line; `DockerIgnoreContractTests.test_frontend_context_excludes_test_artifacts_and_env_files` RED then GREEN with the new pattern. | FIXED (`DockerIgnoreContractTests`) |

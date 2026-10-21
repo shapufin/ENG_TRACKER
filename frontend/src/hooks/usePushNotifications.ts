@@ -4,7 +4,7 @@
  * Flow:
  * 1. After login, call `requestPermission()` — browser shows "Allow notifications?"
  * 2. If granted, call `subscribe()` — browser generates a push subscription
- * 3. Send the subscription to the backend via POST /api/plugins/notifications/notifications/subscribe/
+ * 3. Send the subscription to the backend via POST /plugins/notifications/notifications/subscribe/
  * 4. The backend stores it and uses it to send push messages
  *
  * The hook also provides `isSupported` (browser check) and `permission` state.
@@ -13,9 +13,9 @@
 import { useState, useCallback, useEffect } from "react";
 import api from "@/lib/api";
 
-const VAPID_PUBLIC_KEY_ENDPOINT = "/api/plugins/notifications/notifications/vapid-public-key/";
-const SUBSCRIBE_ENDPOINT = "/api/plugins/notifications/notifications/subscribe/";
-const UNSUBSCRIBE_ENDPOINT = "/api/plugins/notifications/notifications/unsubscribe/";
+const VAPID_PUBLIC_KEY_ENDPOINT = "/plugins/notifications/notifications/vapid-public-key/";
+const SUBSCRIBE_ENDPOINT = "/plugins/notifications/notifications/subscribe/";
+const UNSUBSCRIBE_ENDPOINT = "/plugins/notifications/notifications/unsubscribe/";
 
 export type PushPermission = "default" | "granted" | "denied" | "unsupported";
 

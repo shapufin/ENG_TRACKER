@@ -12,7 +12,6 @@ from apps.users.viewsets import UserViewSet
 # Reviewed non-admin actions: name -> why open access is acceptable.
 REVIEWED_NON_ADMIN_ACTIONS = {
     'me': 'GET, returns the caller\'s own record',
-    'stats': 'GET, aggregate counts',
     'my_team_members': 'GET, scoped to the caller\'s managed team',
     'italian_team_members': 'GET, scoped to the caller\'s managed team',
     'team_leaders': 'GET, TL picker (identity fields only)',

@@ -84,6 +84,9 @@ graphify-out
 .opencode
 .codex
 admin-gui-screenshots
+AdminGUI
+pill-verify-shots
+db.e2e.sqlite3
 
 # Agent / design / scratch / worktree material
 .worktrees
