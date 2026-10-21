@@ -324,6 +324,7 @@ export const userService = {
     first_name?: string;
     last_name?: string;
     phone?: string;
+    code?: string | null;
     teams?: number[];
     techs?: TechAssignmentInput[];
     albanian_tl?: number | null;
@@ -345,6 +346,7 @@ export const userService = {
       first_name?: string;
       last_name?: string;
       phone?: string;
+      code?: string | null;
       teams?: number[];
       techs?: TechAssignmentInput[];
       albanian_tl?: number | null;

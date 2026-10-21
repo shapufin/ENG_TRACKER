@@ -25,7 +25,10 @@ export const useTeamColumns = (
         header: "Employee",
         size: 140,
         cell: ({ row }) => (
-          <UserCell name={row.original.user_full_name || row.original.user_name} />
+          <UserCell
+            name={row.original.user_full_name || row.original.user_name}
+            subtitle={row.original.user_code}
+          />
         ),
       },
       {
@@ -84,7 +87,10 @@ export const useTeamColumns = (
         header: "Employee",
         size: 140,
         cell: ({ row }) => (
-          <UserCell name={row.original.user_full_name || row.original.user_name} />
+          <UserCell
+            name={row.original.user_full_name || row.original.user_name}
+            subtitle={row.original.user_code}
+          />
         ),
       },
       {
@@ -136,7 +142,10 @@ export const useTeamColumns = (
         header: "Employee",
         size: 140,
         cell: ({ row }) => (
-          <UserCell name={row.original.user_full_name || row.original.user_name} />
+          <UserCell
+            name={row.original.user_full_name || row.original.user_name}
+            subtitle={row.original.user_code}
+          />
         ),
       },
       {

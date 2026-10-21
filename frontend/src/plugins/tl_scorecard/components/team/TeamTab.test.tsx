@@ -113,6 +113,18 @@ describe("TeamTab", () => {
     expect(screen.getAllByText("PIP").length).toBeGreaterThan(0);
   });
 
+  it("shows the employee code under the name when one is set", async () => {
+    (tlScorecardService.getTeamMembers as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: [{ ...MEMBER, code: "EMP-7" }, OTHER],
+    });
+    renderTab();
+
+    const row = (await screen.findByText("Bora Zeta")).closest("tr") as HTMLElement;
+    expect(within(row).getByText(/EMP-7/)).toBeInTheDocument();
+    const otherRow = screen.getByText("Ilir Gjoka").closest("tr") as HTMLElement;
+    expect(within(otherRow).queryByText(/EMP-/)).not.toBeInTheDocument();
+  });
+
   it("shows governance badges and the missing-wage dash with a reason", async () => {
     renderTab();
     await screen.findByText("Bora Zeta");

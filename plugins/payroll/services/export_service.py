@@ -30,6 +30,11 @@ def _excel_text(value: str) -> str:
     return xlsx_safe(value)
 
 
+def _employee_code(user) -> str:
+    profile = getattr(user, 'profile', None)
+    return (profile.code if profile is not None else None) or ''
+
+
 def _md(value) -> str:
     """Escape free text for a ReportLab ``Paragraph`` (which parses markup:
     a stray ``<`` crashes the whole document and ``<img src>`` is fetched)."""
@@ -212,7 +217,7 @@ def generate_payroll_excel(run) -> io.BytesIO:
 
     wb = openpyxl.Workbook()
     org, _footer = run_branding(run)
-    lines = list(run.lines.all().select_related('user').order_by('user__username'))
+    lines = list(run.lines.all().select_related('user', 'user__profile').order_by('user__username'))
 
     def full_name(user) -> str:
         return f'{user.first_name} {user.last_name}'.strip() or user.username
@@ -259,6 +264,7 @@ def generate_payroll_excel(run) -> io.BytesIO:
         'Total Deductions', 'Net Pay', 'Employer Social',
         'Employer Health', 'Employer Cost',
         'Overtime % Gross', 'Effective Tax Rate %', 'Total Deduction % Gross',
+        'Code',  # last: consumers read this sheet by column position
     ]
     for col, header in enumerate(headers, 1):
         ws_emp.cell(row=1, column=col, value=header)
@@ -290,6 +296,7 @@ def generate_payroll_excel(run) -> io.BytesIO:
             float(_pct(line.overtime_amount, line.total_gross)),
             float(_pct(line.income_tax, line.total_gross)),
             float(_pct(line.total_employee_deductions, line.total_gross)),
+            _excel_text(_employee_code(line.user)),
         ]
         for col, val in enumerate(values, 1):
             cell = ws_emp.cell(row=row, column=col, value=val)
@@ -297,7 +304,7 @@ def generate_payroll_excel(run) -> io.BytesIO:
                 cell.number_format = '#,##0.00'
             elif col in (17, 18, 19):
                 cell.number_format = '0.00"%"'
-            elif col >= 2:
+            elif 2 <= col < len(headers):
                 cell.number_format = '#,##0'
         row += 1
 
@@ -310,7 +317,7 @@ def generate_payroll_excel(run) -> io.BytesIO:
 
     # --- Sheet 3: Overtime Detail ---
     ws_ot = wb.create_sheet('Overtime Detail')
-    ot_headers = ['User', 'Category', 'Hours', 'Multiplier', 'Amount', '% of Employee Gross']
+    ot_headers = ['User', 'Category', 'Hours', 'Multiplier', 'Amount', '% of Employee Gross', 'Code']
     for col, header in enumerate(ot_headers, 1):
         ws_ot.cell(row=1, column=col, value=header)
 
@@ -320,10 +327,12 @@ def generate_payroll_excel(run) -> io.BytesIO:
         if not rows:
             ws_ot.cell(row=row, column=1, value=_excel_text(full_name(line.user)))
             ws_ot.cell(row=row, column=2, value='(none)')
+            ws_ot.cell(row=row, column=7, value=_excel_text(_employee_code(line.user)))
             row += 1
             continue
         for entry in rows:
             ws_ot.cell(row=row, column=1, value=_excel_text(full_name(line.user)))
+            ws_ot.cell(row=row, column=7, value=_excel_text(_employee_code(line.user)))
             ws_ot.cell(row=row, column=2, value=entry['label'])
             ws_ot.cell(row=row, column=3, value=float(entry['hours'])).number_format = '#,##0.00'
             mult_cell = ws_ot.cell(row=row, column=4, value=float(entry['multiplier_pct']) / 100)
@@ -589,11 +598,13 @@ def _build_payslip_flowables(line, styles: dict) -> list:
         story.append(Spacer(1, 3 * mm))
 
     # --- Employee info ---
+    info_rows = [['Employee', f'{full_name} ({user.username})']]
+    code = _employee_code(user)
+    if code:
+        info_rows.append(['Employee Code', code])
+    info_rows.append(['Rule Set', f'{rule_set.name} v{rule_set.version}'])
     info_table = Table(
-        [
-            ['Employee', f'{full_name} ({user.username})'],
-            ['Rule Set', f'{rule_set.name} v{rule_set.version}'],
-        ],
+        info_rows,
         colWidths=[35 * mm, 95 * mm],
     )
     info_table.setStyle(TableStyle([

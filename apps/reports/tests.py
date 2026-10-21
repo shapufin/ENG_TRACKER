@@ -609,6 +609,30 @@ class ExportGroupingAndStylingTests(TestCase):
         import io
         return self.openpyxl.load_workbook(io.BytesIO(data))
 
+    def test_exports_carry_employee_code_as_last_column(self):
+        """Code is appended (existing consumers read the sheet by position);
+        a user without one gets an empty cell."""
+        from apps.standby.models import StandbyLog
+        self.alpha.profile.code = 'EMP-A1'
+        self.alpha.profile.save()
+        ot_ws = self._load_wb(export_service.export_ot_standby_to_excel(
+            OvertimeLog.objects.filter(status='approved'),
+            StandbyLog.objects.filter(status='approved'),
+        )).active
+        last = ot_ws.max_column
+        self.assertEqual(ot_ws.cell(row=1, column=last).value, 'Code')
+        codes = {ot_ws.cell(row=r, column=1).value: ot_ws.cell(row=r, column=last).value
+                 for r in range(2, ot_ws.max_row + 1)}
+        self.assertEqual(codes['Alpha Employee'], 'EMP-A1')
+        self.assertIn(codes['Beta Employee'], (None, ''))
+        leave_ws = self._load_wb(export_service.export_leave_to_excel(
+            LeaveRequest.objects.filter(status='approved'),
+        )).active
+        self.assertEqual(leave_ws.cell(row=1, column=leave_ws.max_column).value, 'Code')
+        leave_codes = {leave_ws.cell(row=r, column=1).value: leave_ws.cell(row=r, column=leave_ws.max_column).value
+                       for r in range(2, leave_ws.max_row + 1)}
+        self.assertEqual(leave_codes['Alpha Employee'], 'EMP-A1')
+
     def test_ot_standby_records_grouped_by_user_then_category(self):
         """Within a TL sheet, each user's records are contiguous AND within a
         user the categories are contiguous (all Extra hours, then all On Call

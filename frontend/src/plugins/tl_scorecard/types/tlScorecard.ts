@@ -432,6 +432,8 @@ export interface TeamMemberSummary {
   full_name: string;
   username: string;
   email: string;
+  /** Optional employee code. */
+  code?: string | null;
   seniority_level: string | null;
   wage: {
     gross_monthly: string | null;

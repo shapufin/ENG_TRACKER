@@ -621,6 +621,7 @@ class TeamMemberSummarySerializer(serializers.Serializer):
     full_name = serializers.CharField()
     username = serializers.CharField()
     email = serializers.CharField(allow_blank=True)
+    code = serializers.CharField(allow_null=True)
     seniority_level = serializers.CharField(allow_null=True)
     wage = TeamWageSerializer()
     leave = TeamLeaveSerializer()

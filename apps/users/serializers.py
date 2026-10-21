@@ -611,11 +611,21 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'techs', 'techs_detail',
             'clients', 'clients_detail',
             'albanian_tl', 'albanian_tl_name', 'italian_tl', 'italian_tl_name',
-            'is_hr_user', 'is_italian_tl_role', 'is_albanian_tl_role', 'phone', 'hire_date', 'groups',
+            'is_hr_user', 'is_italian_tl_role', 'is_albanian_tl_role', 'phone', 'code', 'hire_date', 'groups',
             'current_month_overtime_hours', 'current_month_standby_hours',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_code(self, value):
+        """Trim, store blank as NULL, and refuse a code another profile holds."""
+        from apps.users.services.user_creation import UserValidationError, normalize_employee_code, validate_employee_code
+        cleaned = normalize_employee_code(value)
+        try:
+            validate_employee_code(cleaned, exclude_profile_id=getattr(self.instance, 'pk', None))
+        except UserValidationError as exc:
+            raise serializers.ValidationError(str(exc))
+        return cleaned
 
     def to_representation(self, instance):
         """Point ``user.profile`` back at the profile we already have.

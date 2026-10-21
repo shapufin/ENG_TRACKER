@@ -190,6 +190,8 @@ export interface UserProfile {
   is_italian_tl_role?: boolean;
   is_albanian_tl_role?: boolean;
   phone: string;
+  /** Optional unique employee code. */
+  code?: string | null;
   hire_date: string | null;
   groups: string[];
   current_month_overtime_hours?: number;
@@ -215,6 +217,8 @@ export interface OvertimeLog {
   id: number;
   user: number;
   user_name?: string;
+  /** Optional employee code. */
+  user_code?: string | null;
   user_full_name?: string;
   /** Tech + held level labels, e.g. ["Infrastructure L3"]. */
   user_tech_levels?: string[];
@@ -253,6 +257,8 @@ export interface StandbyLog {
   id: number;
   user: number;
   user_name?: string;
+  /** Optional employee code. */
+  user_code?: string | null;
   user_full_name?: string;
   /** Tech + held level labels, e.g. ["Infrastructure L3"]. */
   user_tech_levels?: string[];
@@ -289,6 +295,8 @@ export interface LeaveRequest {
   id: number;
   user: number;
   user_name?: string;
+  /** Optional employee code. */
+  user_code?: string | null;
   user_full_name?: string;
   team_id?: number | null;
   team_name?: string;

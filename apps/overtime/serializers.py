@@ -24,6 +24,7 @@ class OvertimeLogSerializer(serializers.ModelSerializer):
     Includes nested user and client information.
     """
     user_name = serializers.CharField(source='user.username', read_only=True)
+    user_code = serializers.CharField(source='user.profile.code', read_only=True, allow_null=True)
     user_full_name = serializers.SerializerMethodField()
     client_name = serializers.CharField(source='client.name', read_only=True)
     client_code = serializers.CharField(source='client.code', read_only=True)
@@ -40,7 +41,7 @@ class OvertimeLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = OvertimeLog
         fields = [
-            'id', 'user', 'user_name', 'user_full_name',
+            'id', 'user', 'user_name', 'user_code', 'user_full_name',
             'team_id', 'team_name', 'user_tech_levels',
             'client', 'client_name', 'client_code',
             'date', 'submitted_at', 'requested_processing_period',

@@ -92,13 +92,22 @@ export const TeamMemberDetailPanel: React.FC<TeamMemberDetailPanelProps> = ({
               ) : undefined
             }
             badges={
-              seniority ? (
-                <Badge
-                  variant="default"
-                  className={cn(toneSurfaceClass.info, "h-5 px-1.5 py-0 text-xs font-normal")}
-                >
-                  {seniority}
-                </Badge>
+              seniority || member.code ? (
+                <>
+                  {member.code && (
+                    <Badge variant="outline" className="h-5 px-1.5 py-0 font-mono text-xs">
+                      {member.code}
+                    </Badge>
+                  )}
+                  {seniority && (
+                    <Badge
+                      variant="default"
+                      className={cn(toneSurfaceClass.info, "h-5 px-1.5 py-0 text-xs font-normal")}
+                    >
+                      {seniority}
+                    </Badge>
+                  )}
+                </>
               ) : null
             }
           />

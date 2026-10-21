@@ -15,6 +15,7 @@ interface UserEditFormDialogProps {
     last_name: string;
     email: string;
     phone: string;
+    code?: string;
     teams: number[];
     techs: number[];
     albanian_tl: string;
@@ -97,6 +98,12 @@ export const UserEditFormDialog: React.FC<UserEditFormDialogProps> = ({
             type="email"
           />
         </div>
+        <FormInputField
+          label="Employee Code"
+          value={form.code ?? ""}
+          onChange={(v) => updateField("code", v)}
+          error={formErrors.code}
+        />
       </ModalSection>
       <UserFormCore
         form={form}

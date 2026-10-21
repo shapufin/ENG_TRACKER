@@ -214,6 +214,28 @@ class PayrollAdditionalRegressionTests(TestCase):
         # Row 1 is the bracket summary, row 3 the header, data starts row 4.
         self.assertEqual(workbook['Tax & Contributions Detail']['A4'].value, "'=1+1")
 
+    def test_excel_export_carries_employee_code_as_last_column(self):
+        self.employee.profile.code = '=EMP-1'
+        self.employee.profile.save()
+        run = self._new_run(9)
+
+        workbook = openpyxl.load_workbook(io.BytesIO(generate_payroll_excel(run).read()))
+
+        emp = workbook['Employee Breakdown']
+        self.assertEqual(emp.cell(row=1, column=emp.max_column).value, 'Code')
+        # Neutralised like the name beside it: a code is free text in a spreadsheet.
+        self.assertEqual(emp.cell(row=2, column=emp.max_column).value, "'=EMP-1")
+        ot = workbook['Overtime Detail']
+        self.assertEqual(ot.cell(row=1, column=7).value, 'Code')
+        self.assertEqual(ot.cell(row=2, column=7).value, "'=EMP-1")
+
+    def test_payslip_pdf_renders_with_employee_code(self):
+        self.employee.profile.code = 'EMP-1 <b>'
+        self.employee.profile.save()
+        run = finalize_run(self._new_run(9), self.admin)
+        payload = generate_payslip_pdf(run.lines.get(user=self.employee))
+        self.assertTrue(payload.read(5).startswith(b'%PDF'))
+
     def test_excel_export_neutralises_hyperlink_in_employee_name(self):
         self.employee.first_name = PAYLOAD
         self.employee.last_name = ''

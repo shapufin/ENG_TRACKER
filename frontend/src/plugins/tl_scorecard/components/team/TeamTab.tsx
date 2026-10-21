@@ -83,11 +83,14 @@ const buildColumns = (): AppColumnDef<TeamMemberSummary>[] => [
     cell: ({ row }) => (
       <UserCell
         name={row.original.full_name}
-        subtitle={
+        subtitle={[
+          row.original.code,
           row.original.seniority_level
             ? (SENIORITY_LABELS[row.original.seniority_level] ?? row.original.email)
-            : row.original.email
-        }
+            : row.original.email,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
       />
     ),
   },

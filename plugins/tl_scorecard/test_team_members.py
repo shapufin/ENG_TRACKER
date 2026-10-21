@@ -87,6 +87,15 @@ class TeamMemberScopeTests(TeamMembersBase):
         ids = [row['id'] for row in self._rows(response)]
         self.assertEqual(ids, [self.member.id])
 
+    def test_each_row_carries_the_employee_code_or_null(self):
+        self.member.profile.code = 'EMP-77'
+        self.member.profile.save()
+        row = self._member_row(self._get(self.tl))
+        self.assertEqual(row['code'], 'EMP-77')
+        self.member.profile.code = ''
+        self.member.profile.save()
+        self.assertIsNone(self._member_row(self._get(self.tl))['code'])
+
     def test_a_tl_cannot_pass_another_tls_leader_id(self):
         self.assertEqual(self._get(self.tl, leader_id=self.other_tl.id).status_code, 403)
 
