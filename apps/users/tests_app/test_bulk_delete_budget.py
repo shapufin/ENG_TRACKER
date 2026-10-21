@@ -83,6 +83,10 @@ class ProtectedUserDeleteTests(TestCase):
         self.assertEqual(resp.status_code, 200, resp.data)
         self.assertEqual(resp.data['deleted_count'], 0)
         self.assertEqual(len(resp.data['failed_users']), 1)
+        reason = resp.data['failed_users'][0]['reason']
+        self.assertNotIn('ProtectedError', reason)
+        self.assertNotIn('PayrollLine', reason)
+        self.assertIn('Deactivate the user instead', reason)
         member.profile.refresh_from_db()
         team.refresh_from_db()
         self.assertEqual(member.profile.italian_tl_id, self.leader.id)

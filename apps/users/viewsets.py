@@ -62,9 +62,15 @@ from core.utils.timezone_local import business_today
 logger = logging.getLogger(__name__)
 
 
+PROTECTED_RECORD_DETAIL = (
+    'This user is referenced by records that must be kept '
+    '(payroll lines or an HBPR assignment). Deactivate the user instead.'
+)
+
+
 class ProtectedRecordConflict(APIException):
     status_code = status.HTTP_409_CONFLICT
-    default_detail = 'This user is referenced by records that cannot be deleted (for example payroll lines).'
+    default_detail = PROTECTED_RECORD_DETAIL
     default_code = 'protected'
 
 
@@ -800,6 +806,9 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     user.delete()
                 deleted_count += 1
                 logger.info(f"User {user.id} deleted successfully")
+            except models.ProtectedError:
+                logger.warning(f"User {user.id} not deleted: protected records")
+                failed_users.append({'id': user.id, 'reason': PROTECTED_RECORD_DETAIL})
             except Exception as e:
                 logger.error(f"Failed to delete user {user.id}: {type(e).__name__}: {str(e)}")
                 failed_users.append({'id': user.id, 'reason': f"{type(e).__name__}: {str(e)}"})
