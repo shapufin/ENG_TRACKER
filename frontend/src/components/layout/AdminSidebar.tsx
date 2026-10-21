@@ -45,6 +45,11 @@ const ADMIN_NAV_GROUPS = [
   "Extensions",
 ];
 
+// Platform is fixed for the page lifetime, so read it once.
+const PALETTE_SHORTCUT = /Mac|iPhone|iPad/.test(globalThis.navigator?.platform ?? "")
+  ? "⌘ K"
+  : "Ctrl K";
+
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   items,
   collapsed,
@@ -158,14 +163,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             type="button"
             onClick={onOpenPalette}
             aria-label="Search pages"
-            title="Search pages (Ctrl+K)"
+            title={`Search pages (${PALETTE_SHORTCUT.replace(" ", "+")})`}
             className={`border-border bg-card text-muted-foreground hover:text-foreground flex h-9 items-center gap-2 rounded-lg border text-sm transition-colors ${collapsed ? "w-9 justify-center" : "w-full px-3"}`}
           >
             <Search className="h-4 w-4 shrink-0" aria-hidden />
             {!collapsed && (
               <>
                 <span className="flex-1 text-left">Search pages</span>
-                <kbd className="font-mono text-xs">Ctrl K</kbd>
+                <kbd className="font-mono text-xs">{PALETTE_SHORTCUT}</kbd>
               </>
             )}
           </button>

@@ -96,6 +96,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  // Scrolling the list under a resting pointer can fire mousemove without the pointer
+  // moving; that must not override the keyboard selection.
+  const lastPointer = useRef<{ x: number; y: number } | null>(null);
+  const handleMouseMove = (e: React.MouseEvent, index: number) => {
+    const prev = lastPointer.current;
+    lastPointer.current = { x: e.clientX, y: e.clientY };
+    if (!prev || (prev.x === e.clientX && prev.y === e.clientY)) return;
+    setActive(index);
+  };
   const users = useUserSearch(query, userSearch);
 
   // Re-read each time the palette opens so a visit made elsewhere shows up.
@@ -211,7 +220,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     id={o.id}
                     role="option"
                     aria-selected={index === current}
-                    onMouseMove={() => setActive(index)}
+                    onMouseMove={(e) => handleMouseMove(e, index)}
                     onClick={() => go(o)}
                     className={cn(
                       "flex min-h-9 cursor-pointer items-center gap-3 rounded-lg px-2 text-sm",

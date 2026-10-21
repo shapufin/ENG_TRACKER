@@ -11,13 +11,11 @@ import type { PublicHoliday, Team } from "@/types";
 export const useCalendarManagementPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get("tab");
-  const activeTab: "team-groups" | "workspaces" | "holidays" =
-    urlTab === "holidays" || urlTab === "workspaces" || urlTab === "team-groups"
-      ? urlTab
-      : "team-groups";
+  const activeTab: "team-groups" | "holidays" =
+    urlTab === "holidays" || urlTab === "team-groups" ? urlTab : "team-groups";
 
   const setActiveTab = useCallback(
-    (tab: "team-groups" | "workspaces" | "holidays") => {
+    (tab: "team-groups" | "holidays") => {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);

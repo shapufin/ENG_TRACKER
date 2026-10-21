@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { leaveService } from "@/services/leaveService";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import { GlobalSettingsPage } from "./GlobalSettingsPage";
 import { dashboardService } from "@/services/dashboardService";
 
@@ -39,11 +40,18 @@ class ResizeObserverMock {
 }
 Object.defineProperty(window, "ResizeObserver", { value: ResizeObserverMock, writable: true });
 
+const activePlugins = vi.hoisted(() => ({ value: [] as { name: string }[] }));
+vi.mock("@/context/PluginContext", () => ({
+  usePlugins: () => ({ activePlugins: activePlugins.value }),
+}));
+
 const renderPage = () => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <GlobalSettingsPage />
+      <MemoryRouter>
+        <GlobalSettingsPage />
+      </MemoryRouter>
     </QueryClientProvider>
   );
 };
@@ -147,5 +155,18 @@ describe("GlobalSettingsPage", () => {
     await waitFor(() =>
       expect(dashboardService.updateBranding).toHaveBeenCalledWith(1, "Engineering Tracker", file)
     );
+  });
+
+  it("hides the audit log link while the audit_log plugin is inactive", async () => {
+    activePlugins.value = [];
+    renderPage();
+    await screen.findByText("Plugin Architecture");
+    expect(screen.queryByText(/Security & Audit Logs/)).toBeNull();
+  });
+
+  it("shows the audit log link when the audit_log plugin is active", async () => {
+    activePlugins.value = [{ name: "audit_log" }];
+    renderPage();
+    expect(await screen.findByText(/Security & Audit Logs/)).toBeTruthy();
   });
 });

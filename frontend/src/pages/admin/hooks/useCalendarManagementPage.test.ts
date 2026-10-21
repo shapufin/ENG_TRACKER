@@ -81,4 +81,11 @@ describe("useCalendarManagementPage", () => {
     });
     expect(e.preventDefault).toHaveBeenCalled();
   });
+
+  it("falls back to team groups for the removed workspaces tab", () => {
+    const tabWrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(MemoryRouter, { initialEntries: ["/?tab=workspaces"] }, children);
+    const { result } = renderHook(() => useCalendarManagementPage(), { wrapper: tabWrapper });
+    expect(result.current.activeTab).toBe("team-groups");
+  });
 });
