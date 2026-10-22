@@ -60,7 +60,7 @@ export const OvertimeLogsPage: React.FC = () => {
       canDelete={isSuperuser}
       onExport={() =>
         overtimeService
-          .exportCsv(buildHoursExportParams(filterStatus, dateFrom, dateTo))
+          .exportCsv(buildHoursExportParams(filterStatus, dateFrom, dateTo, searchQuery))
           .catch((err: unknown) => {
             handleApiError(err);
           })

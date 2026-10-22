@@ -1,5 +1,6 @@
 import api from "@/lib/api";
 import type {
+  AdminLeaveRequestsPage,
   LeaveRequest,
   LeaveBalance,
   GlobalSettings,
@@ -11,6 +12,23 @@ import { bulkApproveEntities, rejectEntity } from "./bulkActionHelpers";
 import { requestWithOfflineQueue } from "@/lib/offline/offlineQueue";
 
 export const leaveService = {
+  async getAdminRequests(params?: {
+    status?: string;
+    user?: string;
+    request_type?: string;
+    date_from?: string;
+    date_to?: string;
+    search?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<AdminLeaveRequestsPage> {
+    const { data } = await api.get<AdminLeaveRequestsPage>(
+      "/leave-management/requests/admin_requests/",
+      { params }
+    );
+    return data;
+  },
+
   async getRequests(params?: {
     workspace_ids?: string;
     calendar?: boolean;

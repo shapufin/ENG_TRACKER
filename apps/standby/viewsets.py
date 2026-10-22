@@ -88,7 +88,7 @@ class StandbyLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermis
     serializer_class = StandbyLogSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-    search_fields = ['user__username', 'description', 'evidence']
+    search_fields = ['user__username', 'user__first_name', 'user__last_name', 'description', 'evidence']
     filterset_fields = ['status', 'date', 'pattern', 'user']
     pagination_class = LargeResultsPagination
     
