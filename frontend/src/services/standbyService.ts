@@ -1,6 +1,12 @@
 import api from "@/lib/api";
 import { downloadBlobResponse, paginatedFetchAll } from "@/lib/download";
-import type { StandbyLog, PaginatedResponse, PendingMonthEntry, StandbySummary } from "@/types";
+import type {
+  StandbyLog,
+  AdminLogsPage,
+  PaginatedResponse,
+  PendingMonthEntry,
+  StandbySummary,
+} from "@/types";
 import { bulkApproveEntities, rejectEntity } from "./bulkActionHelpers";
 import { requestWithOfflineQueue } from "@/lib/offline/offlineQueue";
 
@@ -167,10 +173,13 @@ export const standbyService = {
   async getAdminLogs(params?: {
     status?: string;
     date?: string;
+    date_from?: string;
+    date_to?: string;
+    search?: string;
     page?: number;
     page_size?: number;
-  }): Promise<PaginatedResponse<StandbyLog>> {
-    const { data } = await api.get<PaginatedResponse<StandbyLog>>("/standby/logs/admin_logs/", {
+  }): Promise<AdminLogsPage<StandbyLog>> {
+    const { data } = await api.get<AdminLogsPage<StandbyLog>>("/standby/logs/admin_logs/", {
       params,
     });
     return data;

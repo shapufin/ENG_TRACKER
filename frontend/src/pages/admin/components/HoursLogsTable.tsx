@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { HOURS_PAGE_SIZE } from "../hooks/useHoursLogsServerData";
 import { DataTable } from "@/components/ui/DataTable";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -11,6 +12,7 @@ import { UserCell } from "@/components/admin/UserCell";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import type { StatusVariant } from "@/components/ui/StatusBadge";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
+import type { DataTableServerMode } from "@/components/ui/DataTable";
 
 interface HoursLog {
   id: number;
@@ -24,6 +26,8 @@ interface HoursLog {
 
 interface HoursLogsTableProps<T extends HoursLog> {
   logs: T[];
+  /** One server-filtered page; the table neither filters nor slices it. */
+  server: DataTableServerMode;
   extraColumns?: AppColumnDef<T>[];
   onApprove: (id: number) => void;
   onReject: (id: number) => void;
@@ -89,6 +93,7 @@ const HoursLogRowActions = ({
 
 export const HoursLogsTable = <T extends HoursLog>({
   logs,
+  server,
   extraColumns = [],
   onApprove,
   onReject,
@@ -160,6 +165,8 @@ export const HoursLogsTable = <T extends HoursLog>({
       {header && <div className="border-line-subtle mb-4 border-b pb-4">{header}</div>}
       <DataTable
         data={logs}
+        server={server}
+        pageSize={HOURS_PAGE_SIZE}
         columns={columns}
         enableColumnVisibility
         toolbarActions={toolbar}

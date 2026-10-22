@@ -355,17 +355,10 @@ export interface PaginatedResponse<T> {
   results: T[];
 }
 
-/** One page of the admin Leave Requests list. */
-export interface AdminLeaveRequestsPage extends PaginatedResponse<LeaveRequest> {
-  /** Counts for the same filters except status, so the chips stay meaningful. */
-  status_counts?: {
-    total: number;
-    pending: number;
-    approved: number;
-    rejected: number;
-    vacation: number;
-    sick: number;
-  };
+/** One page of an admin Hours Logs list (overtime or standby). */
+export interface AdminLogsPage<T> extends PaginatedResponse<T> {
+  /** Per-status counts for the same search and date window, ignoring the status filter. */
+  status_counts?: { total: number; pending: number; approved: number; rejected: number };
 }
 
 /** Month with pending item count — returned by team_pending_months endpoints. */

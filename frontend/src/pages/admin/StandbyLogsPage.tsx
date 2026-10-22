@@ -20,6 +20,9 @@ export const StandbyLogsPage: React.FC = () => {
     searchQuery,
     setSearchQuery,
     filteredLogs,
+    total,
+    page,
+    setPage,
     stats,
     approveMutation,
     deleteMutation,
@@ -42,6 +45,9 @@ export const StandbyLogsPage: React.FC = () => {
       setSearchQuery={setSearchQuery}
       stats={stats}
       filteredLogs={filteredLogs}
+      total={total}
+      page={page}
+      onPageChange={setPage}
       onApprove={approveMutation.mutate}
       onReject={handleReject}
       onDelete={(id) => deleteMutation.mutate(id)}

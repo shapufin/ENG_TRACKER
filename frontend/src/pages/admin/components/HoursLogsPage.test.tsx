@@ -19,7 +19,8 @@ afterEach(() => {
 
 function renderPage(
   onExport?: () => void | Promise<void>,
-  setFilterStatus: (v: string) => void = () => {}
+  setFilterStatus: (v: string) => void = () => {},
+  onPageChange: (page: number) => void = () => {}
 ) {
   return render(
     <HoursLogsPage
@@ -38,6 +39,9 @@ function renderPage(
       filteredLogs={[
         { id: 1, user_name: "E2E Employee", date: "2026-08-01", hours: 2, status: "pending" },
       ]}
+      total={120}
+      page={1}
+      onPageChange={onPageChange}
       onApprove={() => {}}
       onReject={() => {}}
       storageKey="test-storage"
@@ -105,5 +109,13 @@ describe("HoursLogsPage", () => {
     expect(screen.getByRole("button", { name: "Approve 1" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reject 1" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete 1" })).not.toBeInTheDocument();
+  });
+
+  it("pages on the server: shows the page count from the total and asks for the next page", () => {
+    const onPageChange = vi.fn();
+    renderPage(undefined, undefined, onPageChange);
+    expect(screen.getByText(/Page 1 of 3/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /next page/i }));
+    expect(onPageChange).toHaveBeenCalledWith(2);
   });
 });

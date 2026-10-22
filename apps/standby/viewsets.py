@@ -546,16 +546,23 @@ class StandbyLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermis
         status_filter = request.query_params.get('status')
         date_filter = request.query_params.get('date')
 
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
         if date_filter:
             queryset = queryset.filter(date=date_filter)
+
+        from core.utils.admin_logs import filter_admin_logs, status_counts
+
+        queryset = filter_admin_logs(queryset, request.query_params, ['user__username', 'user__first_name', 'user__last_name', 'description', 'evidence'])
+        counts = status_counts(queryset)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
 
         # Handle pagination
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+            response = self.get_paginated_response(serializer.data)
+            response.data['status_counts'] = counts
+            return response
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
