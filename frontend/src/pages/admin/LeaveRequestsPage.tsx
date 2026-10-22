@@ -17,20 +17,17 @@ import { StatsCards } from "@/components/admin/StatsCards";
 import { StatCard } from "@/components/ui/StatCard";
 import { LeaveRequestsTable } from "./components/LeaveRequestsTable";
 import { useLeaveRequestFilters } from "./hooks/useLeaveRequestFilters";
-import { useLeaveRequestStats } from "./hooks/useLeaveRequestStats";
+import {
+  buildLeaveRequestFilters,
+  useLeaveRequestsServerData,
+} from "./hooks/useLeaveRequestsServerData";
+import { paginatedFetchAll } from "@/lib/download";
+import type { LeaveRequest } from "@/types";
 import { exportLeaveRequestsToCSV } from "@/lib/export-leave-requests";
 
 const LeaveRequestsContent: React.FC = () => {
   const qc = useQueryClient();
   const { isSuperuser } = usePermissions();
-
-  const { data: requests, isLoading } = useQuery({
-    queryKey: ["admin", "leaves", "requests"],
-    queryFn: () => leaveService.getRequests({ page_size: 500, ignore_date_filter: "true" }),
-    refetchOnMount: true,
-    staleTime: 0,
-    refetchOnWindowFocus: false,
-  });
 
   const { data: users } = useQuery({
     queryKey: ["admin", "users"],
@@ -40,33 +37,7 @@ const LeaveRequestsContent: React.FC = () => {
     refetchOnWindowFocus: false,
   });
 
-  const approveMutation = useMutation({
-    mutationFn: (id: number) => leaveService.approve(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "leaves", "requests"] });
-      qc.invalidateQueries({ queryKey: ["vacations", "calendar"] });
-      toast.success("Approved");
-    },
-    onError: (err: unknown) => handleApiError(err),
-  });
-
-  const rejectMutation = useAdminRejectMutation(leaveService.reject, {
-    invalidateKeys: [
-      ["admin", "leaves", "requests"],
-      ["vacations", "calendar"],
-    ],
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => leaveService.deleteRequest(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "leaves", "requests"] });
-      qc.invalidateQueries({ queryKey: ["vacations", "calendar"] });
-      toast.success("Leave request deleted and balance restored");
-    },
-    onError: (err: unknown) => handleApiError(err),
-  });
-
+  const filters = useLeaveRequestFilters();
   const {
     filterStatus,
     setFilterStatus,
@@ -80,12 +51,63 @@ const LeaveRequestsContent: React.FC = () => {
     setDateTo,
     searchQuery,
     setSearchQuery,
-    filteredRequests,
-  } = useLeaveRequestFilters(requests);
+    page,
+    setPage,
+  } = filters;
+  const { requests, total, stats, isLoading, onRowRemoved } = useLeaveRequestsServerData({
+    fetchPage: leaveService.getAdminRequests,
+    ...filters,
+  });
 
-  const stats = useLeaveRequestStats(requests);
+  const approveMutation = useMutation({
+    mutationFn: (id: number) => leaveService.approve(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "leaves", "requests"] });
+      qc.invalidateQueries({ queryKey: ["vacations", "calendar"] });
+      onRowRemoved();
+      toast.success("Approved");
+    },
+    onError: (err: unknown) => handleApiError(err),
+  });
 
-  const handleExport = () => exportLeaveRequestsToCSV(filteredRequests);
+  const rejectMutation = useAdminRejectMutation(leaveService.reject, {
+    invalidateKeys: [
+      ["admin", "leaves", "requests"],
+      ["vacations", "calendar"],
+    ],
+    onSuccess: () => onRowRemoved(),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => leaveService.deleteRequest(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "leaves", "requests"] });
+      qc.invalidateQueries({ queryKey: ["vacations", "calendar"] });
+      onRowRemoved();
+      toast.success("Leave request deleted and balance restored");
+    },
+    onError: (err: unknown) => handleApiError(err),
+  });
+
+  const handleExport = async () => {
+    try {
+      const filters = buildLeaveRequestFilters({
+        filterStatus,
+        filterUser,
+        filterType,
+        dateFrom,
+        dateTo,
+        searchQuery,
+      });
+      const all = await paginatedFetchAll<LeaveRequest>(
+        async (p) => ({ data: await leaveService.getAdminRequests({ ...filters, ...p }) }),
+        500
+      );
+      exportLeaveRequestsToCSV(all);
+    } catch (err) {
+      handleApiError(err);
+    }
+  };
 
   if (isLoading) {
     return <LoadingCard rows={5} className="min-h-[300px]" />;
@@ -96,7 +118,7 @@ const LeaveRequestsContent: React.FC = () => {
       title="Leave Requests"
       subtitle="Manage and review employee leave submissions."
       actions={
-        <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+        <Button variant="outline" size="sm" onClick={() => void handleExport()} className="gap-2">
           <Download className="h-4 w-4" />
           Export CSV
         </Button>
@@ -144,7 +166,14 @@ const LeaveRequestsContent: React.FC = () => {
             onDateToChange={setDateTo}
           />
         }
-        requests={filteredRequests}
+        requests={requests}
+        server={{
+          search: searchQuery,
+          onSearchChange: setSearchQuery,
+          page,
+          total,
+          onPageChange: setPage,
+        }}
         onApprove={(id) => approveMutation.mutate(id)}
         onReject={(id, reason) => rejectMutation.mutate({ id, reason })}
         onDelete={(id) => deleteMutation.mutate(id)}
