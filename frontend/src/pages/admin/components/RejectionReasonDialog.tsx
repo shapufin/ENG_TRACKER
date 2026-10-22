@@ -40,7 +40,7 @@ export const RejectionReasonDialog: React.FC<RejectionReasonDialogProps> = ({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent size="sm">
         <DialogHeader className="shrink-0">
-          <DialogTitle>Reject Overtime Entry</DialogTitle>
+          <DialogTitle>Reject Entry</DialogTitle>
           <DialogDescription>Please provide a reason for rejection</DialogDescription>
         </DialogHeader>
         <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-1 py-1">
