@@ -16,9 +16,13 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UserCell } from "@/components/admin/UserCell";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import type { LeaveRequest } from "@/types";
+import type { DataTableServerMode } from "@/components/ui/DataTable";
+import { LEAVE_REQUESTS_PAGE_SIZE } from "../hooks/useLeaveRequestsServerData";
 
 interface LeaveRequestsTableProps {
   requests: LeaveRequest[];
+  /** One server-filtered page; the table neither filters nor slices it. */
+  server: DataTableServerMode;
   onApprove: (id: number) => void;
   onReject: (id: number, reason: string) => void;
   onDelete?: (id: number) => void;
@@ -133,6 +137,7 @@ const LeaveRequestRowActions = ({
 
 export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
   requests,
+  server,
   onApprove,
   onReject,
   onDelete,
@@ -251,6 +256,8 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
       {header && <div className="border-line-subtle mb-4 border-b pb-4">{header}</div>}
       <DataTable
         data={requests}
+        server={server}
+        pageSize={LEAVE_REQUESTS_PAGE_SIZE}
         columns={columns}
         enableColumnVisibility
         toolbarActions={toolbar}

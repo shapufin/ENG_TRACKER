@@ -38,14 +38,14 @@ describe("useHoursLogsFilterState status deep link", () => {
 
 describe("useLeaveRequestFilters status deep link", () => {
   it("starts on the status from ?status=", () => {
-    const { result } = renderHook(() => useLeaveRequestFilters([]), {
+    const { result } = renderHook(() => useLeaveRequestFilters(), {
       wrapper: wrap("/admin/leave-requests?status=pending"),
     });
     expect(result.current.filterStatus).toBe("pending");
   });
 
   it("ignores a bogus status and updates the URL on change", () => {
-    const { result } = renderHook(() => ({ f: useLeaveRequestFilters([]), loc: useLocation() }), {
+    const { result } = renderHook(() => ({ f: useLeaveRequestFilters(), loc: useLocation() }), {
       wrapper: wrap("/admin/leave-requests?status=nope"),
     });
     expect(result.current.f.filterStatus).toBe("all");
