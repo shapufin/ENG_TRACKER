@@ -53,6 +53,16 @@ export const TLApprovalStats: React.FC<TLApprovalStatsProps> = ({
         onClick={isClickable ? () => onCardClick!(type) : undefined}
         role={isClickable ? "button" : undefined}
         tabIndex={isClickable ? 0 : undefined}
+        onKeyDown={
+          isClickable
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onCardClick!(type);
+                }
+              }
+            : undefined
+        }
         aria-disabled={!isClickable}
       >
         <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", iconClass)}>

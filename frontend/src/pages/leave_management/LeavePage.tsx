@@ -205,7 +205,7 @@ export const LeavePage: React.FC = () => {
         icon={<X className="h-4 w-4" />}
         contextSlot={
           rejectingRequest && (
-            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-foreground">
+            <div className="border-destructive/20 bg-destructive/10 text-foreground rounded-xl border p-3 text-xs">
               Rejecting <strong>{rejectingRequest.request_type}</strong> leave for{" "}
               <strong>{rejectingRequest.user_name ?? "employee"}</strong> (
               {rejectingRequest.start_date} → {rejectingRequest.end_date}).
@@ -222,6 +222,7 @@ export const LeavePage: React.FC = () => {
         <div className="pt-2">
           <Input
             placeholder="Rejection reason"
+            aria-label="Rejection reason"
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
           />

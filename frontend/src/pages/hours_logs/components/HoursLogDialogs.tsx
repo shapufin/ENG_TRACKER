@@ -91,6 +91,7 @@ export const RejectConfirmDialog: React.FC<RejectConfirmDialogProps> = ({
     <div className="pt-2">
       <Input
         placeholder="Rejection reason"
+        aria-label="Rejection reason"
         value={rejectReason}
         onChange={(e) => onRejectReasonChange(e.target.value)}
       />
