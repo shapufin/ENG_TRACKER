@@ -61,6 +61,14 @@ describe("ReportsPage", () => {
     expect(screen.getByRole("button", { name: "Use this month" })).toBeInTheDocument();
   });
 
+  it("lists the available reports before generating, with export disabled", () => {
+    renderPage();
+    const catalog = screen.getByRole("region", { name: "Available reports" });
+    expect(within(catalog).getByRole("heading", { name: "Overtime ledger" })).toBeInTheDocument();
+    expect(within(catalog).getByRole("heading", { name: "Standby ledger" })).toBeInTheDocument();
+    expect(within(catalog).getAllByRole("button", { name: /export xlsx/i })[0]).toBeDisabled();
+  });
+
   it("shows the KPI strip values on the generated OT tab", () => {
     page.value = {
       ...base,

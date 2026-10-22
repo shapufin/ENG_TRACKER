@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/layout/PageShell";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { Sun, Stethoscope, Download } from "lucide-react";
+import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 import { handleApiError } from "@/lib/error-handler";
 import { toast } from "sonner";
 import { usePermissions } from "@/context/PermissionContext";
@@ -15,7 +16,10 @@ import { LeaveToolbarFilters } from "./components/LeaveFilterBar";
 import { StatusChips } from "./components/filterBarParts";
 import { StatsCards } from "@/components/admin/StatsCards";
 import { StatCard } from "@/components/ui/StatCard";
+import { BulkDecisionBar } from "./components/BulkDecisionBar";
 import { LeaveRequestsTable } from "./components/LeaveRequestsTable";
+import { useBulkOperations } from "@/hooks/useBulkOperations";
+import { useScopedRowSelection } from "./hooks/useScopedRowSelection";
 import { useLeaveRequestFilters } from "./hooks/useLeaveRequestFilters";
 import {
   buildLeaveRequestFilters,
@@ -24,6 +28,18 @@ import {
 import { paginatedFetchAll } from "@/lib/download";
 import type { LeaveRequest } from "@/types";
 import { exportLeaveRequestsToCSV } from "@/lib/export-leave-requests";
+
+const runBulk =
+  <A extends unknown[]>(action: (...args: A) => Promise<unknown>) =>
+  async (...args: A) => {
+    try {
+      await action(...args);
+      return true;
+    } catch (err) {
+      handleApiError(err);
+      return false;
+    }
+  };
 
 const LeaveRequestsContent: React.FC = () => {
   const qc = useQueryClient();
@@ -88,6 +104,36 @@ const LeaveRequestsContent: React.FC = () => {
     },
     onError: (err: unknown) => handleApiError(err),
   });
+
+  const {
+    rowSelection,
+    setRowSelection,
+    clear: clearSelection,
+  } = useScopedRowSelection(
+    JSON.stringify([page, filterStatus, filterUser, filterType, dateFrom, dateTo, searchQuery])
+  );
+
+  const { bulkApproveMutation, bulkRejectMutation } = useBulkOperations({
+    queryKey: ["admin", "leaves", "requests"],
+    entityName: "requests",
+    approveFn: leaveService.bulkApprove,
+    rejectFn: leaveService.bulkReject,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vacations", "calendar"] });
+      void invalidateAdminDashboard(qc);
+    },
+  });
+  const bulk = {
+    approve: runBulk((ids: number[]) => bulkApproveMutation.mutateAsync(ids)),
+    reject: runBulk((ids: number[], reason: string) =>
+      bulkRejectMutation.mutateAsync({ ids, reason })
+    ),
+    isPending: bulkApproveMutation.isPending || bulkRejectMutation.isPending,
+  };
+  const selectedPendingIds = requests
+    .filter((r) => rowSelection[r.id.toString()] && r.status === "pending")
+    .map((r) => r.id);
+  const selectedCount = Object.keys(rowSelection).filter((id) => rowSelection[id]).length;
 
   const handleExport = async () => {
     try {
@@ -178,6 +224,15 @@ const LeaveRequestsContent: React.FC = () => {
         onReject={(id, reason) => rejectMutation.mutate({ id, reason })}
         onDelete={(id) => deleteMutation.mutate(id)}
         canDelete={isSuperuser}
+        rowSelection={rowSelection}
+        onRowSelectionChange={setRowSelection}
+      />
+      <BulkDecisionBar
+        selectedCount={selectedCount}
+        pendingIds={selectedPendingIds}
+        bulk={bulk}
+        entityName="requests"
+        onClear={clearSelection}
       />
     </PageShell>
   );

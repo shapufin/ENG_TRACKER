@@ -24,6 +24,7 @@ export const StandbyLogsPage: React.FC = () => {
     page,
     setPage,
     stats,
+    bulk,
     approveMutation,
     deleteMutation,
     handleReject,
@@ -60,6 +61,7 @@ export const StandbyLogsPage: React.FC = () => {
             handleApiError(err);
           })
       }
+      bulk={bulk}
       storageKey="table-visibility-standby-logs"
     />
   );

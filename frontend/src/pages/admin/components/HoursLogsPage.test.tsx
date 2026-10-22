@@ -20,7 +20,8 @@ afterEach(() => {
 function renderPage(
   onExport?: () => void | Promise<void>,
   setFilterStatus: (v: string) => void = () => {},
-  onPageChange: (page: number) => void = () => {}
+  onPageChange: (page: number) => void = () => {},
+  bulk?: React.ComponentProps<typeof HoursLogsPage>["bulk"]
 ) {
   return render(
     <HoursLogsPage
@@ -46,6 +47,7 @@ function renderPage(
       onReject={() => {}}
       storageKey="test-storage"
       onExport={onExport}
+      bulk={bulk}
     />
   );
 }
@@ -117,5 +119,33 @@ describe("HoursLogsPage", () => {
     expect(screen.getByText(/Page 1 of 3/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /next page/i }));
     expect(onPageChange).toHaveBeenCalledWith(2);
+  });
+
+  it("has no row checkboxes without bulk actions", () => {
+    renderPage();
+    expect(screen.queryByRole("checkbox", { name: /select row/i })).not.toBeInTheDocument();
+  });
+
+  it("bulk-approves only the selected pending rows, then clears the selection", async () => {
+    const approve = vi.fn().mockResolvedValue(true);
+    renderPage(undefined, undefined, undefined, { approve, reject: vi.fn(), isPending: false });
+    fireEvent.click(screen.getByRole("checkbox", { name: /select row/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /approve 1 pending/i }));
+    await waitFor(() => expect(approve).toHaveBeenCalledWith([1]));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /clear selection/i })).not.toBeInTheDocument()
+    );
+  });
+
+  it("asks for a reason before bulk-rejecting", async () => {
+    const reject = vi.fn().mockResolvedValue(true);
+    renderPage(undefined, undefined, undefined, { approve: vi.fn(), reject, isPending: false });
+    fireEvent.click(screen.getByRole("checkbox", { name: /select row/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /^reject$/i }));
+    fireEvent.change(await screen.findByLabelText(/rejection reason/i), {
+      target: { value: "Duplicate" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /confirm rejection/i }));
+    await waitFor(() => expect(reject).toHaveBeenCalledWith([1], "Duplicate"));
   });
 });

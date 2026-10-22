@@ -1,5 +1,5 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import { Filter, Sun } from "lucide-react";
 import { FilterToolbar } from "@/components/ui/FilterToolbar";
 import { SearchInput, DateRangePickers } from "./filterBarParts";
@@ -26,10 +26,10 @@ interface LeaveToolbarFiltersProps {
   onDateToChange: (val: string) => void;
 }
 
-const typeLabels = {
-  all: "All Types",
-  vacation: "Vacation",
-};
+const typeOptions = [
+  { value: "all", label: "All Types", icon: Filter },
+  { value: "vacation", label: "Vacation", icon: Sun },
+] as const;
 
 /** Search, type, user and date range: the controls that share the table toolbar row with Columns. */
 export const LeaveToolbarFilters: React.FC<LeaveToolbarFiltersProps> = ({
@@ -50,23 +50,12 @@ export const LeaveToolbarFilters: React.FC<LeaveToolbarFiltersProps> = ({
       <FilterToolbar.Search>
         <SearchInput value={searchQuery} onChange={onSearchChange} />
       </FilterToolbar.Search>
-      <Button
-        variant="outline"
-        size="control"
-        onClick={() => {
-          const types: Array<"all" | "vacation"> = ["all", "vacation"];
-          const currentIndex = types.indexOf(filterType);
-          const nextIndex = (currentIndex + 1) % types.length;
-          onTypeChange(types[nextIndex]);
-        }}
-      >
-        {filterType === "vacation" ? (
-          <Sun className="mr-2 h-4 w-4" />
-        ) : (
-          <Filter className="mr-2 h-4 w-4" />
-        )}
-        {typeLabels[filterType]}
-      </Button>
+      <FilterChipRow<"all" | "vacation">
+        label="Type"
+        options={[...typeOptions]}
+        selected={[filterType]}
+        onToggle={onTypeChange}
+      />
       <Select value={filterUser} onValueChange={onUserChange}>
         <SelectTrigger className="w-44">
           <SelectValue placeholder="All Users" />

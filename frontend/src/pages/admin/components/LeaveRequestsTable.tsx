@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { LeaveBalanceBadge } from "@/components/ui/LeaveBalanceBadge";
 import { DataTable } from "@/components/ui/DataTable";
+import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Check, Sun, Stethoscope, Trash2, X } from "lucide-react";
@@ -31,6 +32,9 @@ interface LeaveRequestsTableProps {
   header?: React.ReactNode;
   /** Filters that share the table toolbar row with the Columns menu. */
   toolbar?: React.ReactNode;
+  /** Row checkboxes appear only when a selection owner is supplied. */
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
 }
 
 const LeaveRequestRowActions = ({
@@ -144,6 +148,8 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
   canDelete = false,
   header,
   toolbar,
+  rowSelection,
+  onRowSelectionChange,
 }) => {
   const columns = useMemo<AppColumnDef<LeaveRequest>[]>(
     () => [
@@ -259,6 +265,9 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         server={server}
         pageSize={LEAVE_REQUESTS_PAGE_SIZE}
         columns={columns}
+        enableRowSelection={Boolean(onRowSelectionChange)}
+        rowSelection={rowSelection}
+        onRowSelectionChange={onRowSelectionChange}
         enableColumnVisibility
         toolbarActions={toolbar}
         storageKey="table-visibility-leave-requests"

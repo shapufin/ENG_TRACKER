@@ -41,15 +41,16 @@ describe("LeaveToolbarFilters", () => {
   it("offers search, type, user and date range as toolbar controls", () => {
     renderFilters();
     expect(screen.getByPlaceholderText("Search by user...")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /all types/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /all types/i, pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /vacation/i, pressed: false })).toBeInTheDocument();
     expect(screen.getByText("All Users")).toBeInTheDocument();
     expect(screen.getByText("Select date range")).toBeInTheDocument();
   });
 
-  it("cycles the type filter", () => {
+  it("selects the type filter from visible chips", () => {
     const onTypeChange = vi.fn();
     renderFilters(onTypeChange);
-    fireEvent.click(screen.getByRole("button", { name: /all types/i }));
+    fireEvent.click(screen.getByRole("button", { name: /vacation/i }));
     expect(onTypeChange).toHaveBeenCalledWith("vacation");
   });
 });

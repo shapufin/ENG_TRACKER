@@ -6,6 +6,7 @@ import { useAdminRejectMutation } from "@/hooks/useAdminRejectMutation";
 import { toast } from "sonner";
 import { useHoursLogsFilterState } from "./hoursLogsFilter";
 import { useHoursLogsServerData } from "./useHoursLogsServerData";
+import { useHoursLogsBulk } from "./useHoursLogsBulk";
 import type { OvertimeLog } from "@/types";
 import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
@@ -39,6 +40,8 @@ export const useOvertimeLogsPage = () => {
     fetchPage: overtimeService.getAdminLogs,
     ...filters,
   });
+
+  const bulk = useHoursLogsBulk(overtimeService, ["admin", "overtime", "admin_logs"]);
 
   const approveMutation = useMutation({
     mutationFn: (id: number) => overtimeService.approve(id),
@@ -96,6 +99,7 @@ export const useOvertimeLogsPage = () => {
     page,
     setPage,
     stats,
+    bulk,
     approveMutation,
     rejectMutation,
     deleteMutation,

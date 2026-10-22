@@ -30,4 +30,19 @@ describe("LeaveBalanceKpis", () => {
     fireEvent.click(screen.getByRole("button", { name: /carry-over at risk/i }));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
+
+  it("exposes the expiring filter as a pressed toggle", () => {
+    const { rerender } = render(
+      <LeaveBalanceKpis totals={totals} expiringOnly={false} onToggleExpiring={vi.fn()} />
+    );
+    expect(screen.getByRole("button", { name: /carry-over at risk/i })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    rerender(<LeaveBalanceKpis totals={totals} expiringOnly onToggleExpiring={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /carry-over at risk/i })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+  });
 });
