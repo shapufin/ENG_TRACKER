@@ -113,4 +113,28 @@ describe("TLApprovalStats", () => {
     );
     expect(screen.getByText("Pending · click to jump")).toBeInTheDocument();
   });
+
+  it("activates a pending card from the keyboard with Enter and Space", () => {
+    const onCardClick = vi.fn();
+    render(
+      <TLApprovalStats
+        overtimeCount={5}
+        standbyCount={0}
+        leaveCount={0}
+        isLoading={{ overtime: false, standby: false, leave: false }}
+        pendingMonths={{
+          overtime: [{ month: "2026-03-01", count: 5 }],
+          standby: [],
+          leave: [],
+        }}
+        onCardClick={onCardClick}
+      />
+    );
+    const card = screen.getByRole("button");
+    fireEvent.keyDown(card, { key: "Enter" });
+    fireEvent.keyDown(card, { key: " " });
+    fireEvent.keyDown(card, { key: "a" });
+    expect(onCardClick).toHaveBeenCalledTimes(2);
+    expect(onCardClick).toHaveBeenCalledWith("overtime");
+  });
 });

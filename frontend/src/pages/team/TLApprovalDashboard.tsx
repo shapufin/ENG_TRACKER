@@ -206,6 +206,7 @@ export const TLApprovalDashboard: React.FC = () => {
         <div className="pt-2">
           <Input
             placeholder="Rejection reason"
+            aria-label="Rejection reason"
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
           />

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { standbyService } from "@/services/standbyService";
 import { handleApiError } from "@/lib/error-handler";
@@ -12,6 +13,8 @@ import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 export const useStandbyLogsPage = () => {
   const qc = useQueryClient();
   const filters = useHoursLogsFilterState();
+  const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
+  const [pendingRejectId, setPendingRejectId] = useState<number | null>(null);
   const {
     filterStatus,
     setFilterStatus,
@@ -65,9 +68,14 @@ export const useStandbyLogsPage = () => {
     onError: (err: unknown) => handleApiError(err),
   });
 
-  const handleReject = (id: number) => {
-    const reason = prompt("Enter rejection reason:") || "";
-    if (reason) rejectMutation.mutate({ id, reason });
+  const handleSingleReject = (id: number) => {
+    setPendingRejectId(id);
+    setRejectionDialogOpen(true);
+  };
+
+  const handleRejectionConfirm = (reason: string) => {
+    if (pendingRejectId !== null) rejectMutation.mutate({ id: pendingRejectId, reason });
+    setPendingRejectId(null);
   };
 
   return {
@@ -88,6 +96,9 @@ export const useStandbyLogsPage = () => {
     bulk,
     approveMutation,
     deleteMutation,
-    handleReject,
+    rejectionDialogOpen,
+    setRejectionDialogOpen,
+    handleSingleReject,
+    handleRejectionConfirm,
   };
 };

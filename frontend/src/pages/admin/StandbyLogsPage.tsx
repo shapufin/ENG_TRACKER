@@ -1,5 +1,6 @@
 import React from "react";
 import { HoursLogsPage } from "./components/HoursLogsPage";
+import { RejectionReasonDialog } from "./components/RejectionReasonDialog";
 import { timeRangeColumn } from "./components/standbyColumns";
 import { useStandbyLogsPage } from "./hooks/useStandbyLogsPage";
 import type { StandbyLog } from "@/types";
@@ -27,7 +28,10 @@ export const StandbyLogsPage: React.FC = () => {
     bulk,
     approveMutation,
     deleteMutation,
-    handleReject,
+    rejectionDialogOpen,
+    setRejectionDialogOpen,
+    handleSingleReject,
+    handleRejectionConfirm,
   } = useStandbyLogsPage();
   const { isSuperuser } = usePermissions();
 
@@ -50,7 +54,7 @@ export const StandbyLogsPage: React.FC = () => {
       page={page}
       onPageChange={setPage}
       onApprove={approveMutation.mutate}
-      onReject={handleReject}
+      onReject={handleSingleReject}
       onDelete={(id) => deleteMutation.mutate(id)}
       canDelete={isSuperuser}
       extraColumns={[timeRangeColumn]}
@@ -63,7 +67,13 @@ export const StandbyLogsPage: React.FC = () => {
       }
       bulk={bulk}
       storageKey="table-visibility-standby-logs"
-    />
+    >
+      <RejectionReasonDialog
+        open={rejectionDialogOpen}
+        onOpenChange={setRejectionDialogOpen}
+        onConfirm={handleRejectionConfirm}
+      />
+    </HoursLogsPage>
   );
 };
 
