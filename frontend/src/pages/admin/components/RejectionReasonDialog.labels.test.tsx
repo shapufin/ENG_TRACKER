@@ -23,4 +23,9 @@ describe("RejectionReasonDialog labels", () => {
     expect(body.className).toContain("no-scrollbar");
     expect(document.querySelectorAll(".shrink-0").length).toBeGreaterThan(0);
   });
+
+  it("is titled generically because it serves overtime, standby and bulk rejections", () => {
+    render(<RejectionReasonDialog open onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: "Reject Entry" })).toBeInTheDocument();
+  });
 });
