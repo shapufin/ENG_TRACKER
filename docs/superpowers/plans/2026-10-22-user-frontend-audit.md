@@ -2,7 +2,7 @@
 
 Scope: pages outside `pages/admin` (overtime, standby, leave, team, TL approvals, dashboard, hr, calendar, settings) plus shared tables. Base: origin/main c13c4c8.
 Baselines: tsc failed on main (missing `AdminLeaveRequestsPage`, fixed by cherry-pick of 9f206da from #166, drops out on rebase); table-header, modal, control, surface audits all PASS.
-Not verified visually: no browser capture was run. Every layout/contrast/375px claim is unverified-visual.
+Verification (2026-10-22): full vitest 3592/3592, `npm run build` ok. Playwright captures (own e2e backend + Vite from this worktree, 1440 and Pixel 5, light and dark) of `/overtime`, `/standby`, `/team/approvals` show the status chips rendering, no horizontal overflow, 3 chips on each hours page. Not verified: chip filtering with real rows (unit-tested only; seed had no records), contrast measurements, axe, other pages. Pre-existing, not touched: the empty-state text is clipped ("No re") inside the table on mobile.
 
 | # | Finding | Evidence | Sev | Status |
 |---|---|---|---|---|

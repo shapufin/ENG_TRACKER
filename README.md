@@ -4,22 +4,27 @@ A comprehensive time tracking and management system for engineering teams, built
 
 ---
 
-## ✨ Project Quality Summary
+## Using the app
 
-| Metric | Status |
-|--------|--------|
-| **Type Safety** | ✅ Strict TypeScript, Zero `any` in core components |
-| **Accessibility** | ✅ WCAG AA Compliance (aria-labels, tree navigation) |
-| **Backend Security** | ✅ Role-based ViewSet restrictions implemented |
-| **Performance** | ✅ TanStack Query caching, Lazy-loaded admin routes |
-| **Cache System** | ✅ Production-grade Redis with versioning |
-| **Consistency** | ✅ 100% enterprise-grade naming & patterns |
+Sign in with the username and password your administrator gave you. What you see depends on your role.
 
-### 🚀 Optimization Highlights
-- **DataTable Optimization**: Reusable, type-safe data grid with tree support.
-- **Glassmorphism UI**: Modern, dark-first design system with semantic tokens.
-- **Production-Grade Caching**: Redis backend with automatic versioning & invalidation.
-- **Enterprise Consistency**: 100% consistent naming, schemas, and API patterns.
+| Role | What you can do |
+|------|-----------------|
+| **Employee** | Log overtime and standby, request leave, see your own balances and records (**My records**), and see when teammates are away on the **Calendar**. You never see teammates' request statuses. |
+| **Team leader** | Everything an employee can, plus **Pending Approvals** (`/team/approvals`): approve or reject your team's overtime, standby and leave one by one or in bulk, and finalize a month. |
+| **HR** | Company-wide holidays, leave and reports, and payroll (view, manage, export). |
+| **HBPR** | Read-only governance view of the Albanian team leaders assigned to you (`/hbpr`). |
+| **Admin** | The admin panel: users, teams, clients, logs, reports, plugins and system settings. |
+
+**Everyday tasks**
+- **Log overtime or standby:** open *Overtime* or *Standby*, choose **Add Entry**, then submit. Use the date filter for other months and the **Status** chips to show only pending, approved or rejected entries.
+- **Request leave:** open *Leave* and create a request. Vacation days count Monday to Friday, minus public holidays.
+- **Edit or delete an entry:** use the row actions. Entries from past months are locked for employees; ask your team leader or an administrator.
+- **Notifications:** the bell shows in-app notifications. Turn on push in *Settings, Notification Preferences*.
+
+**Install it like an app.** Desktop Chrome or Edge: use the install icon in the address bar. Android Chrome: menu, *Install app*. iPhone or iPad: Safari, Share, *Add to Home Screen*, then open the installed app (push needs it). The app loads offline, but data needs a connection. Your own recent reads are cached with a "stale" marker, and a personal entry you create offline is sent when you are back online. Details are under *Progressive Web App* below.
+
+**Trouble signing in or seeing a page?** A missing page usually means your role does not include it. Ask your administrator; do not share accounts.
 
 ---
 
@@ -41,25 +46,25 @@ results) is in [`docs/reviews/2026-10-20-launch-review.md`](docs/reviews/2026-10
 The earlier readiness programme is in
 [`docs/superpowers/plans/2026-10-14-production-readiness.md`](docs/superpowers/plans/2026-10-14-production-readiness.md).
 
-### � Quick Health Check
+### Quick Health Check
 Run these commands to verify system integrity:
 
 **Backend (Python 3.12+):**
 ```bash
-python manage.py check
-python manage.py test
+py -3.14 manage.py check      # Windows dev; use python 3.12+ elsewhere
+py -3.14 manage.py test
 ```
 
 **Frontend (Node 20+):**
 ```bash
 cd frontend
 npm run lint
-npx tsc --noEmit
+npx tsc -b
 ```
 
 ---
 
-## �� Documentation
+## Documentation
 
 Tracked documentation lives in `docs/`; `.devin/` (AI context) is local-only and may be absent.
 
@@ -72,6 +77,7 @@ Tracked documentation lives in `docs/`; `.devin/` (AI context) is local-only and
 | [docs/engagement-metrics.md](docs/engagement-metrics.md) | TL engagement SLA rules |
 | [docs/table-header-contract.md](docs/table-header-contract.md) | Table header rule and audit gate |
 | [docs/ui-control-kit.md](docs/ui-control-kit.md) | Control kit and surface rules |
+| [docs/superpowers/plans/2026-10-22-user-frontend-audit.md](docs/superpowers/plans/2026-10-22-user-frontend-audit.md) | User-facing frontend audit: findings, fixes, backlog |
 | [docs/reviews/2026-10-20-launch-review.md](docs/reviews/2026-10-20-launch-review.md) | Launch review register and go/no-go |
 
 ## Features
@@ -93,8 +99,7 @@ Optional features live in `plugins/` and start disabled after a fresh deploy (en
 ## Progressive Web App (PWA)
 
 The Engineering Tracker is installable as a PWA on desktop and mobile
-browsers. See `.devin/plans/plan-mobile-pwa-readiness-2026-08-15.md` for
-the full readiness plan and acceptance criteria.
+browsers. The readiness plan lives in `.devin/plans/` (local-only, may be absent).
 
 ### Browser support
 

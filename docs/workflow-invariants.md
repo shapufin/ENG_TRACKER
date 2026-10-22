@@ -80,6 +80,8 @@ Plan: `docs/superpowers/plans/2026-10-13-leave-carryover-and-holidays.md`.
 - TL close: `/team/approvals`, button "Finalize <Month YYYY>". Run page: `/admin/payroll/runs/<id>`. Finalize stays disabled until the status reads "All TL scopes closed".
 - Before writing scratch data, confirm the database: `netstat -ano` for port 8000, and `settings.DATABASES['default']['NAME']`. A server started without `settings_e2e` writes to `db.sqlite3`.
 - Clean up only rows you created, matched by id and description.
+- **Playwright reuses whatever already listens on 5173/8000** (`reuseExistingServer`). From a second checkout or worktree that means you silently test the other checkout's code. Before capturing, check who owns the ports (`Get-NetTCPConnection -LocalPort 5173,8000 -State Listen`, then the process command line). To test a worktree, run its own backend on another port with `settings_e2e`, and start Vite on another port with `VITE_API_URL=http://127.0.0.1:<backend port>/api` (the API base URL is absolute, so a Vite proxy override is ignored). Use `127.0.0.1`, not `localhost`, for the backend (Django binds IPv4).
+- The non-e2e dev backend throttles `/api/auth/token/` hard (a dozen logins locks it out for 10-20 minutes, and probes count). Log in once per role per test and reuse the page; never log in per screenshot.
 
 ## Browser automation (CloakBrowser / Playwright MCP)
 
