@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Download } from "lucide-react";
+import { useScopedRowSelection } from "../hooks/useScopedRowSelection";
+import { BulkDecisionBar, type BulkDecisions } from "./BulkDecisionBar";
 import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/layout/PageShell";
 import { LoadingCard } from "@/components/ui/LoadingCard";
@@ -48,6 +50,8 @@ interface HoursLogsPageProps<T extends HoursLog> {
   storageKey: string;
   /** Server-side CSV export of the current status/date filters; the button is hidden when omitted. */
   onExport?: () => void | Promise<void>;
+  /** Bulk decisions for pending rows; checkboxes and the floating bar are hidden when omitted. */
+  bulk?: BulkDecisions;
   children?: React.ReactNode;
 }
 
@@ -77,9 +81,21 @@ export const HoursLogsPage = <T extends HoursLog>({
   extraColumns,
   storageKey,
   onExport,
+  bulk,
   children,
 }: HoursLogsPageProps<T>) => {
   const [exporting, setExporting] = useState(false);
+  const {
+    rowSelection,
+    setRowSelection,
+    clear: clearSelection,
+  } = useScopedRowSelection(JSON.stringify([page, filterStatus, dateFrom, dateTo, searchQuery]));
+
+  const selectedPendingIds = filteredLogs
+    .filter((log) => rowSelection[log.id.toString()] && log.status === "pending")
+    .map((log) => log.id);
+  const selectedCount = Object.keys(rowSelection).filter((id) => rowSelection[id]).length;
+
   const handleExport = async () => {
     if (!onExport) return;
     setExporting(true);
@@ -164,7 +180,19 @@ export const HoursLogsPage = <T extends HoursLog>({
         onDelete={onDelete}
         canDelete={canDelete}
         storageKey={storageKey}
+        rowSelection={bulk ? rowSelection : undefined}
+        onRowSelectionChange={bulk ? setRowSelection : undefined}
       />
+
+      {bulk && (
+        <BulkDecisionBar
+          selectedCount={selectedCount}
+          pendingIds={selectedPendingIds}
+          bulk={bulk}
+          entityName="entries"
+          onClear={clearSelection}
+        />
+      )}
 
       {children}
     </PageShell>

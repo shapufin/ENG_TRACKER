@@ -110,7 +110,7 @@ describe("TechsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("No Techs yet")).toBeInTheDocument();
     });
-    expect(screen.getByText("Add one above to get started.")).toBeInTheDocument();
+    expect(screen.getByText("Add a Tech to get started.")).toBeInTheDocument();
   });
 
   it("renders tech rows with name and code", async () => {
@@ -142,11 +142,13 @@ describe("TechsPage", () => {
   it("guides the Add form with placeholders", async () => {
     renderWithProvider(<TechsPage />);
     await waitFor(() => expect(screen.getByText("Infrastructure")).toBeInTheDocument());
-    expect(screen.getByLabelText("Name")).toHaveAttribute(
+    expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /add tech/i }));
+    expect(screen.getByLabelText(/^Name/)).toHaveAttribute(
       "placeholder",
       expect.stringMatching(/e\.g\./i)
     );
-    expect(screen.getByLabelText("Code")).toHaveAttribute(
+    expect(screen.getByLabelText(/^Code/)).toHaveAttribute(
       "placeholder",
       expect.stringMatching(/e\.g\./i)
     );
@@ -156,8 +158,9 @@ describe("TechsPage", () => {
     renderWithProvider(<TechsPage />);
     await waitFor(() => expect(screen.getByText("Infrastructure")).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Backup" } });
-    fireEvent.change(screen.getByLabelText("Code"), { target: { value: "backup" } });
+    fireEvent.click(screen.getByRole("button", { name: /add tech/i }));
+    fireEvent.change(await screen.findByLabelText(/^Name/), { target: { value: "Backup" } });
+    fireEvent.change(screen.getByLabelText(/^Code/), { target: { value: "backup" } });
     fireEvent.click(screen.getByRole("button", { name: /^Add$/ }));
 
     await waitFor(() => {
@@ -175,7 +178,7 @@ describe("TechsPage", () => {
     fireEvent.click(screen.getByLabelText("Edit Infrastructure"));
     await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Infra Updated" } });
+    fireEvent.change(screen.getByLabelText(/^Name/), { target: { value: "Infra Updated" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
@@ -235,8 +238,9 @@ describe("TechsPage", () => {
     renderWithProvider(<TechsPage />);
     await waitFor(() => expect(screen.getByText("Infrastructure")).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Dup" } });
-    fireEvent.change(screen.getByLabelText("Code"), { target: { value: "DUP" } });
+    fireEvent.click(screen.getByRole("button", { name: /add tech/i }));
+    fireEvent.change(await screen.findByLabelText(/^Name/), { target: { value: "Dup" } });
+    fireEvent.change(screen.getByLabelText(/^Code/), { target: { value: "DUP" } });
     fireEvent.click(screen.getByRole("button", { name: /^Add$/ }));
 
     await waitFor(() => {

@@ -5,6 +5,7 @@ import { useAdminRejectMutation } from "@/hooks/useAdminRejectMutation";
 import { toast } from "sonner";
 import { useHoursLogsFilterState } from "./hoursLogsFilter";
 import { useHoursLogsServerData } from "./useHoursLogsServerData";
+import { useHoursLogsBulk } from "./useHoursLogsBulk";
 import type { StandbyLog } from "@/types";
 import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
@@ -34,6 +35,8 @@ export const useStandbyLogsPage = () => {
     fetchPage: standbyService.getAdminLogs,
     ...filters,
   });
+
+  const bulk = useHoursLogsBulk(standbyService, ["admin", "standby", "admin_logs"]);
 
   const approveMutation = useMutation({
     mutationFn: (id: number) => standbyService.approve(id),
@@ -82,6 +85,7 @@ export const useStandbyLogsPage = () => {
     page,
     setPage,
     stats,
+    bulk,
     approveMutation,
     deleteMutation,
     handleReject,

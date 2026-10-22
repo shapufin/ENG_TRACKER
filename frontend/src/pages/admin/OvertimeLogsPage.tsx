@@ -27,6 +27,7 @@ export const OvertimeLogsPage: React.FC = () => {
     page,
     setPage,
     stats,
+    bulk,
     approveMutation,
     deleteMutation,
     handleSingleReject,
@@ -65,6 +66,7 @@ export const OvertimeLogsPage: React.FC = () => {
             handleApiError(err);
           })
       }
+      bulk={bulk}
       storageKey="table-visibility-overtime-logs"
     >
       <RejectionReasonDialog

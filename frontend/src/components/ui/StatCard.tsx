@@ -61,6 +61,8 @@ export interface StatCardProps {
   to?: string;
   /** Whole card becomes a button. Mutually exclusive with `to`. */
   onClick?: () => void;
+  /** Marks an `onClick` card as an active toggle (aria-pressed plus a primary ring). */
+  pressed?: boolean;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -83,6 +85,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   delta,
   to,
   onClick,
+  pressed,
 }) => {
   const DeltaIcon = delta ? DELTA_ICON[delta.direction] : null;
   const content = (
@@ -161,7 +164,12 @@ export const StatCard: React.FC<StatCardProps> = ({
   const focus = "focus-visible:ring-focus focus-visible:outline-none focus-visible:ring-2";
   const interactive = Boolean(to || onClick);
   return (
-    <GlassCard delay={delay} glow={glow} interactive={interactive}>
+    <GlassCard
+      delay={delay}
+      glow={glow}
+      interactive={interactive}
+      className={pressed ? "ring-primary bg-primary/5 ring-2" : undefined}
+    >
       {to ? (
         <Link
           to={to}
@@ -174,6 +182,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         <button
           type="button"
           onClick={onClick}
+          aria-pressed={pressed}
           aria-label={ariaLabel}
           className={cn("block h-full w-full rounded-xl text-left", focus)}
         >

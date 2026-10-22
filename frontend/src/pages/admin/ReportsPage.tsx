@@ -128,22 +128,34 @@ export const ReportsPage: React.FC = () => {
             </TabsList>
             <div className="mt-6 space-y-6">
               {!hasGenerated ? (
-                <GlassCard className="p-6">
-                  <EmptyState
-                    size="md"
-                    tone="info"
-                    icon={FileBarChart}
-                    title="Pick a period, then generate"
-                    description="Totals, per-person breakdown and Excel exports appear here."
-                    action={generateButton}
-                    secondaryAction={
-                      <Button variant="ghost" onClick={useThisMonth} disabled={isLoading}>
-                        Use this month
-                      </Button>
-                    }
-                    preview={<SkeletonPreview />}
+                <>
+                  <ReportCatalog
+                    tab={activeTab}
+                    summary={null}
+                    start={start}
+                    end={end}
+                    scopeLabel={scopeLabel}
+                    canExport
+                    onExport={(kind) => downloadExcel(kind)}
+                    onView={() => handleGenerate()}
                   />
-                </GlassCard>
+                  <GlassCard className="p-6">
+                    <EmptyState
+                      size="md"
+                      tone="info"
+                      icon={FileBarChart}
+                      title="Pick a period, then generate"
+                      description="Totals, per-person breakdown and Excel exports appear here."
+                      action={generateButton}
+                      secondaryAction={
+                        <Button variant="ghost" onClick={useThisMonth} disabled={isLoading}>
+                          Use this month
+                        </Button>
+                      }
+                      preview={<SkeletonPreview />}
+                    />
+                  </GlassCard>
+                </>
               ) : isLoading ? (
                 <LoadingCard rows={4} />
               ) : summaryData ? (

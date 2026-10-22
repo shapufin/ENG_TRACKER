@@ -12,8 +12,6 @@ import {
 } from "lucide-react";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PageShell } from "@/components/layout/PageShell";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
@@ -21,6 +19,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { RowActions } from "@/components/ui/RowActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { TechFormDialog } from "@/components/admin/TechFormDialog";
 import { TechMembersDialog } from "@/components/admin/TechMembersDialog";
 import { TechLevelEditor } from "@/components/admin/TechLevelEditor";
 import { TechStatsCards } from "./components/TechStatsCards";
@@ -32,6 +31,7 @@ export const TechsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ name: "", code: "" });
   const [editing, setEditing] = useState<Tech | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Tech | null>(null);
   const [membersTarget, setMembersTarget] = useState<Tech | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -43,11 +43,21 @@ export const TechsPage: React.FC = () => {
     queryKey: ["admin", "techs", "all"],
     queryFn: () => userService.getTechs(),
   });
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditing(null);
+    setForm({ name: "", code: "" });
+  };
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ name: "", code: "" });
+    setFormOpen(true);
+  };
   const create = useMutation({
     mutationFn: () =>
       userService.createTech({ name: form.name.trim(), code: form.code.trim().toUpperCase() }),
     onSuccess: () => {
-      setForm({ name: "", code: "" });
+      closeForm();
       queryClient.invalidateQueries({ queryKey: ["admin", "techs"] });
       toast.success("Tech created");
     },
@@ -60,8 +70,7 @@ export const TechsPage: React.FC = () => {
         code: form.code.trim().toUpperCase(),
       }),
     onSuccess: () => {
-      setEditing(null);
-      setForm({ name: "", code: "" });
+      closeForm();
       queryClient.invalidateQueries({ queryKey: ["admin", "techs"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "profiles"] });
       toast.success("Tech updated");
@@ -91,67 +100,20 @@ export const TechsPage: React.FC = () => {
   return (
     <PageShell
       title="Tech"
-      actions={<PluginImportButton targetKey="techs" invalidateKeys={[["admin", "techs"]]} />}
+      actions={
+        <>
+          <PluginImportButton targetKey="techs" invalidateKeys={[["admin", "techs"]]} />
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" /> Add Tech
+          </Button>
+        </>
+      }
     >
       <TechStatsCards techs={data?.results ?? []} />
-      <GlassCard className="p-4">
-        <h2 className="mb-3 font-semibold">{editing ? `Edit ${editing.name}` : "Add Tech"}</h2>
-        <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto] sm:items-end">
-          <div className="space-y-2">
-            <Label htmlFor="tech-name">Name</Label>
-            <Input
-              id="tech-name"
-              placeholder="e.g. Infrastructure"
-              value={form.name}
-              onChange={(event) => setForm({ ...form, name: event.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="tech-code">Code</Label>
-            <Input
-              id="tech-code"
-              placeholder="e.g. INFRA"
-              value={form.code}
-              onChange={(event) => setForm({ ...form, code: event.target.value })}
-            />
-          </div>
-          <Button
-            size="control"
-            onClick={() => (editing ? update.mutate() : create.mutate())}
-            disabled={
-              !form.name.trim() || !form.code.trim() || create.isPending || update.isPending
-            }
-          >
-            {editing ? (
-              "Save"
-            ) : (
-              <>
-                <Plus className="mr-2 h-4 w-4" /> Add
-              </>
-            )}
-          </Button>
-          {editing && (
-            <Button
-              variant="ghost"
-              size="control"
-              onClick={() => {
-                setEditing(null);
-                setForm({ name: "", code: "" });
-              }}
-            >
-              Cancel
-            </Button>
-          )}
-        </div>
-      </GlassCard>
       {isLoading && <LoadingCard title="Loading Techs..." rows={4} className="min-h-[200px]" />}
       {!isLoading && (data?.results ?? []).length === 0 && (
         <GlassCard>
-          <EmptyState
-            icon={Wrench}
-            title="No Techs yet"
-            description="Add one above to get started."
-          />
+          <EmptyState icon={Wrench} title="No Techs yet" description="Add a Tech to get started." />
         </GlassCard>
       )}
       {(data?.results ?? []).length > 0 && (
@@ -225,6 +187,7 @@ export const TechsPage: React.FC = () => {
                         onClick: () => {
                           setEditing(tech);
                           setForm({ name: tech.name, code: tech.code });
+                          setFormOpen(true);
                         },
                       },
                       {
@@ -242,6 +205,19 @@ export const TechsPage: React.FC = () => {
           ))}
         </GlassCard>
       )}
+      <TechFormDialog
+        open={formOpen}
+        onOpenChange={(open) => (open ? setFormOpen(true) : closeForm())}
+        editing={editing}
+        form={form}
+        onFormChange={setForm}
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (editing) update.mutate();
+          else create.mutate();
+        }}
+        isSubmitting={create.isPending || update.isPending}
+      />
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}

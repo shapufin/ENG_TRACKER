@@ -50,6 +50,7 @@ export const LeaveBalanceKpis: React.FC<LeaveBalanceKpisProps> = ({
           tone: totals.atRisk > 0 ? "warning" : "neutral",
         }}
         onClick={onToggleExpiring}
+        pressed={expiringOnly}
       />
     </div>
   </section>

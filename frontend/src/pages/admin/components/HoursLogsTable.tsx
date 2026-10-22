@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { HOURS_PAGE_SIZE } from "../hooks/useHoursLogsServerData";
 import { DataTable } from "@/components/ui/DataTable";
+import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,9 @@ interface HoursLogsTableProps<T extends HoursLog> {
   header?: React.ReactNode;
   /** Filters that share the table toolbar row with the Columns menu. */
   toolbar?: React.ReactNode;
+  /** Row checkboxes appear only when a selection owner is supplied. */
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
 }
 
 const HoursLogRowActions = ({
@@ -102,6 +106,8 @@ export const HoursLogsTable = <T extends HoursLog>({
   storageKey,
   header,
   toolbar,
+  rowSelection,
+  onRowSelectionChange,
 }: HoursLogsTableProps<T>) => {
   const columns = useMemo<AppColumnDef<T>[]>(
     () => [
@@ -168,6 +174,9 @@ export const HoursLogsTable = <T extends HoursLog>({
         server={server}
         pageSize={HOURS_PAGE_SIZE}
         columns={columns}
+        enableRowSelection={Boolean(onRowSelectionChange)}
+        rowSelection={rowSelection}
+        onRowSelectionChange={onRowSelectionChange}
         enableColumnVisibility
         toolbarActions={toolbar}
         storageKey={storageKey}
