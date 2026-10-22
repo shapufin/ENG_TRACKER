@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { usePageGoneReset } from "./usePageGoneReset";
 import type { AdminLeaveRequestsPage } from "@/types";
 
 /** Rows per request: the server pages the history so it never has to fit in the browser. */
@@ -60,6 +61,8 @@ export const useLeaveRequestsServerData = ({ fetchPage, page, setPage, ...filter
     staleTime: 0,
     refetchOnWindowFocus: false,
   });
+
+  usePageGoneReset(query.error, page, setPage);
 
   const requests = query.data?.results ?? [];
   return {

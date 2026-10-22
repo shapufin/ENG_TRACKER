@@ -78,3 +78,26 @@ describe("useHoursLogsServerData", () => {
     expect(result.current.filters.page).toBe(1);
   });
 });
+
+describe("useHoursLogsServerData page-gone recovery", () => {
+  it("falls back to page 1 when the server 404s a page past the end", async () => {
+    const fetchPage = vi.fn(async (p: { page: number }) => {
+      if (p.page > 1) throw { response: { status: 404 } };
+      return response;
+    });
+    const { result } = renderHook(
+      () => {
+        const filters = useHoursLogsFilterState();
+        return {
+          filters,
+          data: useHoursLogsServerData({ queryKey: ["t404"], fetchPage, ...filters }),
+        };
+      },
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.data.logs).toHaveLength(1));
+    act(() => result.current.filters.setPage(4));
+    await waitFor(() => expect(result.current.filters.page).toBe(1));
+    await waitFor(() => expect(result.current.data.logs).toHaveLength(1));
+  });
+});
