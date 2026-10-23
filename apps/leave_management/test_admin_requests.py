@@ -58,3 +58,25 @@ class AdminRequestsTests(APITestCase):
             r.data['status_counts'],
             {'total': 2, 'pending': 1, 'approved': 1, 'rejected': 0, 'vacation': 1, 'sick': 1},
         )
+
+    def test_malformed_dates_are_a_400_not_a_500(self):
+        for param in ('date_from', 'date_to'):
+            r = self.client.get(URL, {param: 'not-a-date'})
+            self.assertEqual(r.status_code, 400, param)
+
+    def test_search_is_capped_to_five_terms(self):
+        # Only the first five terms apply, so the sixth (non-matching) one is ignored.
+        r = self.client.get(URL, {'search': 'Anna Zogaj ar_a beach Anna nomatch'})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data['count'], 1)
+
+    def test_bulk_approve_sends_no_per_item_notifications(self):
+        from plugins.notifications.models import Notification
+
+        pending = LeaveRequest.objects.filter(user=self.anna, status='pending').first()
+        Notification.objects.all().delete()
+        r = self.client.post(
+            '/api/leave-management/requests/bulk_approve/', {'ids': [pending.id]}, format='json'
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(Notification.objects.filter(user=self.anna).count(), 0)

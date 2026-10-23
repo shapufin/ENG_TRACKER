@@ -59,3 +59,13 @@ class AdminLogsServerFilterTests(APITestCase):
                 r.data['status_counts'],
                 {'total': 2, 'pending': 1, 'approved': 1, 'rejected': 0},
             )
+
+    def test_malformed_dates_are_a_400_not_a_500(self):
+        for url in URLS:
+            for param in ('date_from', 'date_to'):
+                self.assertEqual(self.client.get(url, {param: '2026-13-45'}).status_code, 400)
+
+    def test_search_is_capped_to_five_terms(self):
+        for url in URLS:
+            r = self.client.get(url, {'search': 'Anna Zogaj asf_a Anna Zogaj nomatch'})
+            self.assertEqual(r.data['count'], 2)

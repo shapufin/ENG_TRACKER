@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { usePageGoneReset } from "./usePageGoneReset";
 import type { HoursLogStatus } from "./hoursLogsFilter";
 
 /** Rows per request: the server pages the history so it never has to fit in the browser. */
@@ -72,6 +73,8 @@ export const useHoursLogsServerData = <T>({
     staleTime: 0,
     refetchOnWindowFocus: false,
   });
+
+  usePageGoneReset(query.error, page, setPage);
 
   const logs = query.data?.results ?? [];
   return {

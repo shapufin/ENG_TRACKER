@@ -614,6 +614,7 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         """
         from django.db.models import Q
         from core.mixins.permissions import has_hr_role
+        from core.utils.admin_logs import parse_iso_date, search_terms
 
         user = request.user
         if not (user.is_superuser or user.is_staff or has_hr_role(user)):
@@ -631,10 +632,10 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         if params.get('request_type'):
             queryset = queryset.filter(request_type=params['request_type'])
         if params.get('date_from'):
-            queryset = queryset.filter(start_date__gte=params['date_from'])
+            queryset = queryset.filter(start_date__gte=parse_iso_date(params['date_from'], 'date_from'))
         if params.get('date_to'):
-            queryset = queryset.filter(end_date__lte=params['date_to'])
-        for term in (params.get('search') or '').split():
+            queryset = queryset.filter(end_date__lte=parse_iso_date(params['date_to'], 'date_to'))
+        for term in search_terms(params.get('search')):
             queryset = queryset.filter(
                 Q(user__username__icontains=term)
                 | Q(user__first_name__icontains=term)
@@ -732,6 +733,7 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
                     f'Year {locked.start_date.year} is closed: a rejected request cannot be re-approved.'
                 )
             locked.status = 'approved'
+            locked._skip_notifications = getattr(obj, '_skip_notifications', False)
             locked.approved_by = user
             locked.approved_at = timezone.now()
             locked.rejection_reason = ''
@@ -747,6 +749,7 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
             locked = LeaveRequest.objects.select_for_update().get(pk=obj.pk)
             old_status = locked.status
             locked.status = 'rejected'
+            locked._skip_notifications = getattr(obj, '_skip_notifications', False)
             locked.approved_by = user
             locked.approved_at = timezone.now()
             locked.rejection_reason = reason

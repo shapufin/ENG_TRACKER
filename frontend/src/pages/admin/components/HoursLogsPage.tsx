@@ -109,12 +109,6 @@ export const HoursLogsPage = <T extends HoursLog>({
   };
 
   if (isLoading) return <LoadingCard rows={5} className="min-h-[300px]" />;
-  if (error)
-    return (
-      <div className="text-destructive p-4">
-        {errorMessage}: {String(error)}
-      </div>
-    );
 
   return (
     <PageShell
@@ -136,6 +130,12 @@ export const HoursLogsPage = <T extends HoursLog>({
         )
       }
     >
+      {error && (
+        <div role="alert" className="text-destructive text-sm">
+          {errorMessage}: {String(error)}
+        </div>
+      )}
+
       <StatsCards
         total={stats.total}
         pending={stats.pending}
