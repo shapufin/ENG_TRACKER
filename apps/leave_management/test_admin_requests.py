@@ -80,3 +80,8 @@ class AdminRequestsTests(APITestCase):
         )
         self.assertEqual(r.status_code, 200)
         self.assertEqual(Notification.objects.filter(user=self.anna).count(), 0)
+
+    def test_team_pending_malformed_dates_are_a_400(self):
+        for param in ('date_from', 'date_to'):
+            r = self.client.get('/api/leave-management/requests/team_pending/', {param: 'nope'})
+            self.assertEqual(r.status_code, 400, param)

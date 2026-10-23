@@ -494,6 +494,8 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         Get pending leave requests for TL's team members.
         Only accessible by team leaders and above.
         """
+        from core.utils.admin_logs import parse_iso_date
+
         user = request.user
 
         # workspace_ids is optional for team_pending; when omitted, all team members' pending requests are returned
@@ -510,9 +512,9 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         date_to = request.query_params.get('date_to')
         request_type = request.query_params.get('request_type')
         if date_from:
-            queryset = queryset.filter(start_date__gte=date_from)
+            queryset = queryset.filter(start_date__gte=parse_iso_date(date_from, 'date_from'))
         if date_to:
-            queryset = queryset.filter(end_date__lte=date_to)
+            queryset = queryset.filter(end_date__lte=parse_iso_date(date_to, 'date_to'))
         if request_type:
             queryset = queryset.filter(request_type=request_type)
 
