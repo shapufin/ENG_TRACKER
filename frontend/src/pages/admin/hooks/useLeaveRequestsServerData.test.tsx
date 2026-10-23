@@ -66,3 +66,17 @@ describe("useLeaveRequestsServerData", () => {
     expect(result.current.filters.page).toBe(1);
   });
 });
+
+describe("useLeaveRequestsServerData page-gone recovery", () => {
+  it("falls back to page 1 when the server 404s a page past the end", async () => {
+    const fetchPage = vi.fn(async (p: { page?: number }) => {
+      if ((p.page ?? 1) > 1) throw { response: { status: 404 } };
+      return response;
+    });
+    const { result } = setup(fetchPage as never);
+    await waitFor(() => expect(result.current.data.requests).toHaveLength(1));
+    act(() => result.current.filters.setPage(4));
+    await waitFor(() => expect(result.current.filters.page).toBe(1));
+    await waitFor(() => expect(result.current.data.requests).toHaveLength(1));
+  });
+});

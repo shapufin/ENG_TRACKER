@@ -149,3 +149,35 @@ describe("HoursLogsPage", () => {
     await waitFor(() => expect(reject).toHaveBeenCalledWith([1], "Duplicate"));
   });
 });
+
+describe("HoursLogsPage error state", () => {
+  it("keeps the search toolbar mounted so the admin can recover", () => {
+    render(
+      <HoursLogsPage
+        title="Overtime Logs"
+        subtitle="Manage overtime entries"
+        isLoading={false}
+        error={new Error("boom")}
+        errorMessage="Failed to load overtime logs"
+        filterStatus="all"
+        setFilterStatus={() => {}}
+        dateFrom=""
+        setDateFrom={() => {}}
+        dateTo=""
+        setDateTo={() => {}}
+        searchQuery="zzz"
+        setSearchQuery={() => {}}
+        stats={{ total: 0, pending: 0, approved: 0, rejected: 0 }}
+        filteredLogs={[]}
+        total={0}
+        page={1}
+        onPageChange={() => {}}
+        onApprove={() => {}}
+        onReject={() => {}}
+        storageKey="test-storage-error"
+      />
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Failed to load overtime logs");
+    expect(screen.getByPlaceholderText("Search by user...")).toBeInTheDocument();
+  });
+});
