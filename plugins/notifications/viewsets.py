@@ -11,7 +11,7 @@ from .models import (
     NotificationPreference,
     PushSubscription,
 )
-from core.mixins.permissions import is_hbpr_only
+from core.mixins.permissions import PluginEnabledMixin, is_hbpr_only
 from .types.base import REGISTRY, get_all_types
 from .vapid_utils import get_public_key
 
@@ -68,7 +68,7 @@ class NotificationPagination(PageNumberPagination):
     max_page_size = 200
 
 
-class NotificationViewSet(viewsets.ModelViewSet):
+class NotificationViewSet(PluginEnabledMixin, viewsets.ModelViewSet):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -306,7 +306,7 @@ def _event_type_catalogue():
     return rows
 
 
-class NotificationEventTypeConfigViewSet(viewsets.ViewSet):
+class NotificationEventTypeConfigViewSet(PluginEnabledMixin, viewsets.ViewSet):
     """Staff kill-switch per notification type (edits NotificationEventTypeConfig)."""
 
     permission_classes = [permissions.IsAdminUser]
