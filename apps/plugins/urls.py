@@ -14,21 +14,16 @@ urlpatterns = [
 
 logger = logging.getLogger(__name__)
 
-try:
-    # We use get_all_plugins() instead of get_active_plugins() here
-    # to avoid database access during URL loading if possible,
-    # OR we handle the database access carefully.
-    # Actually, get_active_plugins() is better if we want to hide inactive plugin URLs.
-    active_plugins = plugin_registry.get_active_plugins()
-    for plugin_name, plugin_instance in active_plugins.items():
-        try:
-            plugin_urls = plugin_instance.get_urls()
-            if plugin_urls:
-                urlpatterns.append(path(f'{plugin_name}/', include(plugin_urls)))
-                logger.info(f"Registered URLs for plugin: {plugin_name}")
-        except Exception as e:
-            logger.error(f"Failed to register URLs for plugin {plugin_name}: {e}")
-except Exception as e:
-    # Fail gracefully during migrations or when DB is not ready
-    logger.warning(f"Could not load dynamic plugin URLs: {e}")
-
+# Every discovered plugin is mounted, enabled or not. Reading the enabled set
+# from the database here meant a plugin enabled after boot stayed 404 until a
+# restart, and an unreachable database at boot dropped every plugin route.
+# Whether a plugin answers is decided per request by ``PluginEnabledMixin``
+# (``core/mixins/permissions.py``), which fails closed with a 403.
+for plugin_name, plugin_instance in plugin_registry.get_all_plugins().items():
+    try:
+        plugin_urls = plugin_instance.get_urls()
+        if plugin_urls:
+            urlpatterns.append(path(f'{plugin_name}/', include(plugin_urls)))
+            logger.info(f"Registered URLs for plugin: {plugin_name}")
+    except Exception as e:
+        logger.error(f"Failed to register URLs for plugin {plugin_name}: {e}")

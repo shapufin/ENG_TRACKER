@@ -884,14 +884,17 @@ class PersonalOnlyFilterMixin(WorkspaceFilterMixin):
         return self._apply_personal_workspace_filter(personal_queryset, user)
 
 
-class PluginPermissionMixin:
+class PluginEnabledMixin:
+    """Refuse every request while the viewset's plugin is disabled.
+
+    Plugin URLs are all mounted at process start (``apps/plugins/urls.py``), so
+    enabling or disabling a plugin at runtime is enforced here, per request.
+    No staff/superuser bypass: these are data endpoints. An absent ``Plugin``
+    row stays allowed. Self-service viewsets that do not use plugin grants
+    (the notification inbox) use this alone; everything else gets it through
+    ``PluginPermissionMixin``.
     """
-    Mixin to check plugin-level permissions.
-    
-    Provides methods to verify if a user has access to a specific plugin action.
-    Integrates with the PluginPermission model for flexible access control.
-    """
-    
+
     def _get_plugin_name(self):
         """
         Get plugin name from the request context or infer from module path.
@@ -914,6 +917,28 @@ class PluginPermissionMixin:
                 return parts[1]  # Returns 'analytics' from 'plugins.analytics.viewsets'
         
         return None
+    
+    @staticmethod
+    def _plugin_is_disabled(plugin_name):
+        from apps.plugins.models import Plugin
+
+        return Plugin.objects.filter(name=plugin_name, is_enabled=False).exists()
+
+    def check_permissions(self, request):
+        super().check_permissions(request)
+
+        plugin_name = self._get_plugin_name()
+        if plugin_name and self._plugin_is_disabled(plugin_name):
+            raise PermissionDenied(detail=f"The {plugin_name} plugin is disabled.")
+
+
+class PluginPermissionMixin(PluginEnabledMixin):
+    """
+    Mixin to check plugin-level permissions.
+    
+    Provides methods to verify if a user has access to a specific plugin action.
+    Integrates with the PluginPermission model for flexible access control.
+    """
     
     def _has_plugin_permission(self, user, plugin_name, action='view'):
         """
@@ -947,12 +972,6 @@ class PluginPermissionMixin:
             logger.error(f"Error checking plugin permission: {e}")
             return False
     
-    @staticmethod
-    def _plugin_is_disabled(plugin_name):
-        from apps.plugins.models import Plugin
-
-        return Plugin.objects.filter(name=plugin_name, is_enabled=False).exists()
-
     def check_plugin_permission(self, plugin_name, action='view'):
         """
         Check plugin permission and raise PermissionDenied if user lacks access.
@@ -997,16 +1016,10 @@ class PluginPermissionMixin:
         Override to add plugin permission checks.
         This is called by DRF before any action is dispatched.
         """
-        # Call parent check_permissions first
+        # Parent chain first: DRF permissions, then the disabled-plugin gate.
         super().check_permissions(request)
 
         plugin_name = self._get_plugin_name()
-
-        # Plugin URLs are mounted at process start, so a runtime disable must be
-        # enforced here. No staff/superuser bypass: these are data endpoints.
-        # An absent Plugin row stays allowed.
-        if plugin_name and self._plugin_is_disabled(plugin_name):
-            raise PermissionDenied(detail=f"The {plugin_name} plugin is disabled.")
 
         # Superuser/staff always have access - bypass plugin check
         if request.user.is_superuser or request.user.is_staff:

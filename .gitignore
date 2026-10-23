@@ -125,6 +125,7 @@ export_skills_plugin.py
 
 # Design mockups (HTML reference, not app source)
 Time Tracker UI Project/
+AdminGUI/
 
 # Skills lock file (local tool state)
 skills-lock.json
@@ -135,6 +136,7 @@ session_diff.patch
 time_tracker_export.json
 tmp-probe/
 frontend/tmp-btn-verify.mjs
+frontend/vite.config.audit.ts
 frontend/test-results/
 frontend/e2e-observed/
 /migration/

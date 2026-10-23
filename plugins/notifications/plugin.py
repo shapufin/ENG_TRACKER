@@ -31,7 +31,7 @@ class NotificationPlugin(BasePlugin):
         return [path('', include(router.urls))]
 
     def get_permission_actions(self):
-        # NotificationViewSet does not use PluginPermissionMixin — all write
+        # NotificationViewSet uses PluginEnabledMixin only (no grants) — all write
         # endpoints (mark_read, preferences, subscribe, unsubscribe) are
         # self-service on the user's own data. Only "view" has a real effect:
         # it controls whether the plugin appears in active_metadata for the
