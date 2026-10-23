@@ -379,6 +379,7 @@ class LeaveRequest(BaseModel):
             models.Index(fields=['end_date']),
             models.Index(fields=['request_type']),
             models.Index(fields=['status']),
+            models.Index(fields=['-created_at', '-id'], name='leave_req_created_idx'),
         ]
     
     def __str__(self):
