@@ -2,7 +2,7 @@
 
 Each test states the behaviour a hostile or careless user must NOT get.
 """
-from datetime import date, time, timedelta
+from datetime import time, timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
