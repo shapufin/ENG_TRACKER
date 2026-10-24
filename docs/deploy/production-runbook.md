@@ -34,7 +34,7 @@ assume the schema is current.
 The production cache uses `IGNORE_EXCEPTIONS` with 5 s socket timeouts. While
 Redis is down the app keeps serving (cache misses) but DRF throttles, which live
 in that cache, fail open. nginx still rate-limits `/api/` (20 r/s per client IP,
-burst 40) and `/admin/login/`.
+burst 40) and `/django-admin/login/`.
 
 Cache invalidation fails open too: a `cache.delete` or version bump issued during
 the outage is dropped, so cached permissions and `dashboard:*` entries written

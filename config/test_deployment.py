@@ -426,7 +426,29 @@ class NginxTemplateProxyContractTests(SimpleTestCase):
         return blocks
 
     def test_template_has_backend_locations(self):
-        self.assertTrue({'/api/', '/media/', '/static/', '/admin/'} <= set(self._backend_locations()))
+        self.assertTrue(
+            {'/api/', '/media/', '/static/', '/django-admin/'} <= set(self._backend_locations())
+        )
+
+    def test_spa_admin_routes_are_not_proxied_to_backend(self):
+        """The React admin panel owns /admin/*; Django's admin lives at
+        /django-admin/. A backend /admin/ location sends every refresh or
+        deep link of the custom admin to Django's built-in admin."""
+        for path in self._backend_locations():
+            with self.subTest(location=path):
+                self.assertFalse(path.startswith('/admin'))
+
+    def test_django_admin_is_mounted_off_the_spa_prefix(self):
+        from django.urls import reverse
+
+        self.assertEqual(reverse('admin:index'), '/django-admin/')
+
+    def test_no_django_root_pattern_claims_the_spa_admin_prefix(self):
+        from django.urls import get_resolver
+
+        for pattern in get_resolver().url_patterns:
+            with self.subTest(pattern=str(pattern.pattern)):
+                self.assertFalse(str(pattern.pattern).startswith('admin'))
 
     def test_every_backend_location_overwrites_x_forwarded_for(self):
         """SEC-11: the health throttle and DRF NUM_PROXIES=1 read the *last*

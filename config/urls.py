@@ -107,8 +107,8 @@ def _health_ready(request):
 
 
 urlpatterns = [
-    # Admin
-    path('admin/', admin.site.urls),
+    # Django's built-in admin. NOT under admin/: the React admin panel owns /admin/*
+    path('django-admin/', admin.site.urls),
 
     # Health/readiness probes (no auth — for orchestrators)
     path('api/health/live/', _health_live, name='health-live'),

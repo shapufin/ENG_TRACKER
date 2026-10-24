@@ -250,7 +250,7 @@ server {
     # 5 requests/minute per IP, burst 3 (one extra retry without an
     # immediate 503) — generous enough for a real user mistyping a
     # password twice, tight enough to make brute-forcing impractical.
-    location /admin/login/ {
+    location /django-admin/login/ {
         limit_req zone=admin_login burst=3 nodelay;
         limit_req_status 429;
         proxy_pass http://backend:8000;
@@ -266,7 +266,7 @@ server {
 
     # Proxy the rest of Django admin (unthrottled here — only the login POST
     # is brute-forceable; everything else requires an authenticated session).
-    location /admin/ {
+    location /django-admin/ {
         proxy_pass http://backend:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
