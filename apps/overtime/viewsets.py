@@ -395,13 +395,14 @@ class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermi
         ``OvertimePage`` rowMapper exactly:
         User, Date, Client, Hours, Status, Evidence Type, Evidence, Description.
 
-        Hours are serialized as ``int(obj.hours)`` to match
-        ``OvertimeLogSerializer.get_hours`` (which rounds for display).
+        Hours are the entry's paid share: whole numbers without a decimal
+        point, fractions (entries sharing a paid hour) kept.
         """
         import csv
         import io
         from django.http import StreamingHttpResponse
         from core.utils.csv_safe import csv_safe
+        from core.utils.hours import format_hours
 
         queryset = self.filter_queryset(self.get_queryset()).select_related('user', 'client')
 
@@ -429,7 +430,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermi
                     ot.user.username if ot.user else '',
                     ot.date.strftime('%d/%m/%Y') if ot.date else '',
                     ot.client.name if ot.client else '',
-                    str(int(ot.hours)) if ot.hours else '0',
+                    format_hours(ot.hours),
                     ot.status,
                     ot.evidence_type or '',
                     evidence_col,

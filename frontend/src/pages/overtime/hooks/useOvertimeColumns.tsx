@@ -4,6 +4,7 @@ import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { UserCell } from "@/components/admin/UserCell";
 import { createCrudActionsColumn } from "@/components/ui/tableColumnHelpers";
 import { formatDateDDMMYYYY, isPastMonth } from "@/lib/date-format-utils";
+import { OvertimeHoursBadge } from "@/pages/overtime/components/OvertimeHoursBadge";
 import type { OvertimeLog } from "@/types";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 
@@ -42,11 +43,7 @@ export const useOvertimeColumns = (
         accessorKey: "hours",
         header: "Hours",
         size: 87,
-        cell: ({ row }) => (
-          <Badge variant="secondary" className="rounded-full font-mono text-xs">
-            {row.original.hours}h
-          </Badge>
-        ),
+        cell: ({ row }) => <OvertimeHoursBadge log={row.original} />,
       },
       {
         id: "payroll_period",

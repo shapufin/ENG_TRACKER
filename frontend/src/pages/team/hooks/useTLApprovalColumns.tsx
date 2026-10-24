@@ -5,6 +5,7 @@ import { UserCell } from "@/components/admin/UserCell";
 import { ApprovalActionsWithView } from "@/components/admin/ApprovalActionsWithView";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { leaveRequestBaseColumns } from "@/pages/leave_management/hooks/leaveColumnsBase";
+import { OvertimeHoursBadge } from "@/pages/overtime/components/OvertimeHoursBadge";
 import type { OvertimeLog, StandbyLog, LeaveRequest } from "@/types";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 
@@ -40,11 +41,7 @@ export const useTLApprovalColumns = ({
         accessorKey: "hours",
         header: "Hours",
         size: 87,
-        cell: ({ row }) => (
-          <Badge variant="secondary" className="rounded-full font-mono text-xs">
-            {row.original.hours}h
-          </Badge>
-        ),
+        cell: ({ row }) => <OvertimeHoursBadge log={row.original} />,
       },
       {
         id: "payroll_period",

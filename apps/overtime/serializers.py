@@ -47,7 +47,7 @@ class OvertimeLogSerializer(serializers.ModelSerializer):
             'date', 'submitted_at', 'requested_processing_period',
             'resolved_settlement_period', 'approval_period_close',
             'is_carried_over', 'requested_period_label', 'resolved_period_label',
-            'start_time', 'end_time', 'hours',
+            'start_time', 'end_time', 'hours', 'paid_window_start', 'paid_window_end',
             'description', 'evidence_type', 'evidence', 'ticket_references', 'reference_code',
             'status', 'status_display',
             'approved_by', 'approved_by_name', 'approved_at', 'rejection_reason',
@@ -88,9 +88,9 @@ class OvertimeLogSerializer(serializers.ModelSerializer):
     def get_resolved_period_label(self, obj) -> str | None:
         return obj.resolved_settlement_period.strftime('%m/%Y') if obj.resolved_settlement_period else None
 
-    def get_hours(self, obj) -> int:
-        """Round hours for display."""
-        return int(obj.hours) if obj.hours else 0
+    def get_hours(self, obj) -> float:
+        """This entry's paid share; fractions are real (0.5 = 30 minutes)."""
+        return float(obj.hours) if obj.hours else 0.0
 
     def get_team_id(self, obj) -> int | None:
         """Get user's primary team ID."""

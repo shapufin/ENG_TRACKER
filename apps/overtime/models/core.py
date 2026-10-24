@@ -93,6 +93,12 @@ def clean_ticket_references(values):
     return cleaned
 
 
+# A partial save that touches none of these cannot change any paid block.
+PAID_BLOCK_FIELDS = frozenset({
+    'status', 'start_time', 'end_time', 'date', 'user', 'user_id', 'is_deleted', 'hours',
+})
+
+
 class OvertimeLog(BaseModel):
     """
     Overtime log entry model.
@@ -140,6 +146,14 @@ class OvertimeLog(BaseModel):
     description = models.TextField(blank=True)
     start_time = models.TimeField(null=True, blank=True, help_text="Start time in 24h format")
     end_time = models.TimeField(null=True, blank=True, help_text="End time in 24h format")
+    paid_window_start = models.TimeField(
+        null=True, blank=True, editable=False,
+        help_text="Start of the paid block this entry shares (see apps.overtime.paid_blocks).",
+    )
+    paid_window_end = models.TimeField(
+        null=True, blank=True, editable=False,
+        help_text="End of the paid block this entry shares.",
+    )
     evidence_type = models.CharField(
         max_length=20,
         choices=EVIDENCE_TYPE_CHOICES,
@@ -191,8 +205,17 @@ class OvertimeLog(BaseModel):
         super().clean()
         self.ticket_references = clean_ticket_references(self.ticket_references)
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._day_at_load = (self.__dict__.get('user_id'), self.__dict__.get('date'))
+        self._timed_at_load = bool(self.__dict__.get('start_time') and self.__dict__.get('end_time'))
+
     def save(self, *args, **kwargs):
-        """Validate hours, calculate time ranges, and assign processing period."""
+        """Validate hours, calculate time ranges, and assign processing period.
+
+        ``hours`` is the standalone figure here; ``recalculate_day`` then turns
+        it into this entry's share of its paid block.
+        """
         if self.requested_processing_period is None and self.user_id and self.date:
             from apps.users.services.approval_periods import resolve_processing_assignment
             assignment = resolve_processing_assignment(self.user, self.date)
@@ -216,4 +239,23 @@ class OvertimeLog(BaseModel):
             raise ValueError("Hours must be greater than 0")
         if self.hours > 24:
             raise ValueError("Hours cannot exceed 24 in a single day")
-        super().save(*args, **kwargs)
+        from django.db import transaction
+        from apps.overtime.paid_blocks import recalculate_day
+
+        timed = bool(self.start_time and self.end_time)
+        update_fields = kwargs.get('update_fields')
+        affects_blocks = update_fields is None or not PAID_BLOCK_FIELDS.isdisjoint(update_fields)
+        if not (affects_blocks and (timed or self._timed_at_load)):
+            super().save(*args, **kwargs)
+            self._day_at_load = (self.user_id, self.date)
+            return
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            days = {(self.user_id, self.date), self._day_at_load}
+            for user_id, work_date in days:
+                if user_id and work_date:
+                    shares = recalculate_day(user_id, work_date)
+                    if self.pk in shares:
+                        self.hours, self.paid_window_start, self.paid_window_end = shares[self.pk]
+        self._day_at_load = (self.user_id, self.date)
+        self._timed_at_load = timed

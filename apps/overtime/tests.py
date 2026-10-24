@@ -2,7 +2,7 @@
 Tests for overtime app.
 """
 
-from datetime import date
+from datetime import date, time
 from uuid import uuid4
 from unittest.mock import MagicMock, patch
 
@@ -580,7 +580,8 @@ class OvertimeLogExportTests(TestCase):
     Regression guards:
     - No 10k row ceiling (the old ``page_size=10000`` cap is bypassed).
     - Filter parity with the list endpoint (status, personal scope).
-    - Hours serialized as ``int(obj.hours)`` to match the serializer.
+    - Hours match the serializer: whole numbers without a decimal point,
+      fractions (a shared paid hour) kept as they are.
     """
 
     def setUp(self):
@@ -697,8 +698,22 @@ class OvertimeLogExportTests(TestCase):
         # staff_global_view_actions), so all 1200 rows appear.
         self.assertEqual(len(lines), 1201)
 
+    def test_export_keeps_fractional_paid_shares(self):
+        """Entries sharing a paid hour export their real share, not a truncated 0."""
+        for start, end in ((time(8, 0), time(8, 30)), (time(8, 31), time(9, 0))):
+            OvertimeLog.objects.create(
+                user=self.employee, client=self.client_obj, date=date(2026, 6, 1),
+                start_time=start, end_time=end, hours=1, status='approved',
+            )
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.get(
+            '/api/overtime/logs/export/', {'ignore_date_filter': 'true'},
+        )
+        data_lines = [ln for ln in _streaming_body(response).split('\r\n') if ln][1:]
+        self.assertEqual([ln.split(',')[3] for ln in data_lines], ['0.5', '0.5'])
+
     def test_export_preserves_integer_hours(self):
-        """Hours are serialized as ``int(obj.hours)`` to match the serializer."""
+        """Whole hours export without a decimal point (4, not 4.0 or 4.00)."""
         OvertimeLog.objects.create(
             user=self.employee, client=self.client_obj,
             date=date(2026, 6, 1), hours=4, status='approved',
