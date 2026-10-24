@@ -108,7 +108,7 @@ export const allAdminNavItems: AdminNavItem[] = [
   },
   {
     path: "/admin/calendars",
-    label: "Calendar Sharing",
+    label: "Calendar Groups",
     icon: CalendarDays,
     group: "Operations",
     fullAdminOnly: true,
