@@ -161,7 +161,7 @@ for _url in (
     '/api/plugins/notifications/notifications/preferences/',
     '/api/plugins/notifications/notifications/subscriptions/',
     '/api/plugins/notifications/notifications/unread_count/',
-    '/api/plugins/tl_scorecard/my-records/',
+    '/api/plugins/tl_scorecard/my-records/', '/api/overtime/logs/preview/',
 ):
     AGGREGATE_ROUTES[_url] = (
         "the viewer's own settings or records, queried by request.user, no owner key")
@@ -514,6 +514,8 @@ def populate_rows(cls):
     monthly_kpi = django_apps.get_model('ticket_kpi', 'MonthlyKPI')
     category = SkillCategory.objects.create(name='Matrix', code='matrix')
     skill = Skill.objects.create(category=category, name='Matrix skill', code='matrix-skill')
+    # Leave must include a business day, so on a weekend use the Friday before.
+    leave_day = today - timedelta(days=max(0, today.weekday() - 4))
     for owner in owners:
         cls.ot_logs[owner.id] = OvertimeLog.objects.create(
             user=owner, client=cls.client_obj, date=today, hours=2,
@@ -522,7 +524,7 @@ def populate_rows(cls):
             user=owner, date=today, hours=4, description=f'sb {owner.username}')
         standby.clients.add(cls.client_obj)
         LeaveRequest.objects.create(
-            user=owner, request_type='vacation', start_date=today, end_date=today,
+            user=owner, request_type='vacation', start_date=leave_day, end_date=leave_day,
             days_counted=1, reason=f'leave {owner.username}')
         GeneratedReport.objects.create(
             generated_by=owner, name=f'report {owner.username}',
