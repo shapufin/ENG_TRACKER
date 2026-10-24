@@ -59,6 +59,8 @@ class OvertimeLogSerializer(serializers.ModelSerializer):
             'requested_processing_period', 'resolved_settlement_period',
             'approval_period_close', 'is_carried_over',
             'requested_period_label', 'resolved_period_label',
+            # Decided only by approve/reject (and the edit-resets-to-pending rule).
+            'status', 'rejection_reason',
         ]
     
     def validate_ticket_references(self, value):
@@ -128,7 +130,7 @@ class OvertimeLogCreateSerializer(serializers.ModelSerializer):
         exclude = [
             'user', 'submitted_at', 'requested_processing_period',
             'approval_period_close', 'resolved_settlement_period',
-            'approved_by', 'approved_at', 'rejection_reason',
+            'approved_by', 'approved_at', 'rejection_reason', 'status',
         ]
         extra_kwargs = {
             'hours': {'required': False},

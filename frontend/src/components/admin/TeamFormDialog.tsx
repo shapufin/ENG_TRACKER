@@ -105,10 +105,7 @@ export const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
       </ModalSection>
       <ModalSection title="Calendar group" columns={1}>
         <div className="space-y-2">
-          <Label
-            htmlFor="team-calendar-group"
-            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-          >
+          <Label htmlFor="team-calendar-group" className="sr-only">
             Calendar Group
           </Label>
           <Select
