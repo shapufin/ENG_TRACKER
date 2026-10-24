@@ -88,12 +88,20 @@ const getBaseLogFields = (record: {
 ];
 
 const getOvertimeFields = (record: OvertimeLog): DetailField[] => {
-  const fields: DetailField[] = [
-    ...getBaseLogFields(record),
+  const fields: DetailField[] = [...getBaseLogFields(record)];
+  if (record.paid_window_start && record.paid_window_end) {
+    const window = `${record.paid_window_start.slice(0, 5)}-${record.paid_window_end.slice(0, 5)}`;
+    fields.push({
+      label: "Paid Block",
+      value: Number(record.hours) === 0 ? `Covered by ${window}` : window,
+      icon: Timer,
+    });
+  }
+  fields.push(
     { label: "Client", value: record.client_name || "-", icon: Building },
     { label: "Description", value: record.description || "-", icon: FileText },
-    { label: "Evidence Type", value: record.evidence_type || "-", icon: Tag },
-  ];
+    { label: "Evidence Type", value: record.evidence_type || "-", icon: Tag }
+  );
   if (record.evidence_type === "ticket") {
     if (record.ticket_references?.length) {
       fields.push({

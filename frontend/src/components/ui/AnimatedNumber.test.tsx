@@ -12,4 +12,16 @@ describe("AnimatedNumber reduced motion", () => {
     render(<AnimatedNumber value={42} />);
     await waitFor(() => expect(screen.getByText("42")).toBeInTheDocument());
   });
+
+  it("rounds to whole numbers unless decimals are asked for", async () => {
+    const { AnimatedNumber } = await import("./AnimatedNumber");
+    render(<AnimatedNumber value={1.5} />);
+    await waitFor(() => expect(screen.getByText("2")).toBeInTheDocument());
+  });
+
+  it("keeps the fraction up to the requested decimals", async () => {
+    const { AnimatedNumber } = await import("./AnimatedNumber");
+    render(<AnimatedNumber value={1.25} decimals={2} />);
+    await waitFor(() => expect(screen.getByText("1.25")).toBeInTheDocument());
+  });
 });

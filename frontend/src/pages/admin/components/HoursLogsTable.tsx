@@ -11,6 +11,7 @@ import { RowActions, type RowAction } from "@/components/ui/RowActions";
 import { DescriptionColumn } from "@/components/admin/DescriptionColumn";
 import { UserCell } from "@/components/admin/UserCell";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
+import { OvertimeHoursBadge } from "@/pages/overtime/components/OvertimeHoursBadge";
 import type { StatusVariant } from "@/components/ui/StatusBadge";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import type { DataTableServerMode } from "@/components/ui/DataTable";
@@ -21,6 +22,8 @@ interface HoursLog {
   user_tech_levels?: string[];
   date: string;
   hours: number;
+  paid_window_start?: string | null;
+  paid_window_end?: string | null;
   description?: string | null;
   status: string;
 }
@@ -130,11 +133,14 @@ export const HoursLogsTable = <T extends HoursLog>({
         id: "hours",
         accessorKey: "hours",
         header: "Hours",
-        cell: ({ row }) => (
-          <Badge variant="secondary" className="rounded-full">
-            {row.original.hours}h
-          </Badge>
-        ),
+        cell: ({ row }) =>
+          row.original.paid_window_start ? (
+            <OvertimeHoursBadge log={row.original} />
+          ) : (
+            <Badge variant="secondary" className="rounded-full">
+              {row.original.hours}h
+            </Badge>
+          ),
       },
       {
         id: "description",

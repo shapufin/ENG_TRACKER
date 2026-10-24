@@ -115,6 +115,22 @@ class CoveredEntryBundlingTests(TestCase):
             (time(8, 0), time(8, 45), Decimal('1.00'), 'CALL-7, CALL-9', 'Paid · Dec 2026'),
         )
 
+    def test_a_later_starting_entry_never_shortens_the_bundled_end(self):
+        long = self._rec(time(8, 0), time(9, 30), '2.00', 'A', 'Paid · Dec 2026')
+        short = self._rec(time(8, 15), time(8, 45), '0.00', 'B', 'Paid · Dec 2026')
+        rows = bundle_paid_blocks([long, short])
+        self.assertEqual((len(rows), rows[0]['end_time']), (1, time(9, 30)))
+
+    def test_a_shorter_covered_entry_keeps_the_host_end(self):
+        paid = self._rec(time(8, 0), time(8, 50), '1.00', 'A', 'Paid · Dec 2026')
+        late = self._rec(time(8, 10), time(8, 20), '0.00', 'B', 'Not yet in a payroll run')
+        self.assertEqual(bundle_paid_blocks([paid, late])[0]['end_time'], time(8, 50))
+
+    def test_an_overnight_end_is_kept_over_a_same_evening_end(self):
+        night = self._rec(time(23, 30), time(1, 0), '2.00', 'A', 'Paid · Dec 2026')
+        brief = self._rec(time(23, 45), time(23, 50), '0.00', 'B', 'Paid · Dec 2026')
+        self.assertEqual(bundle_paid_blocks([night, brief])[0]['end_time'], time(1, 0))
+
     def test_a_zero_hour_entry_with_no_paid_sibling_keeps_its_own_row(self):
         late = self._rec(time(8, 30), time(8, 45), '0.00', 'CALL-9', 'Not yet in a payroll run')
         self.assertEqual(len(bundle_paid_blocks([late])), 1)

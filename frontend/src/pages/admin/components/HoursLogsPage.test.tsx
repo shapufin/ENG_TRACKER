@@ -21,7 +21,16 @@ function renderPage(
   onExport?: () => void | Promise<void>,
   setFilterStatus: (v: string) => void = () => {},
   onPageChange: (page: number) => void = () => {},
-  bulk?: React.ComponentProps<typeof HoursLogsPage>["bulk"]
+  bulk?: React.ComponentProps<typeof HoursLogsPage>["bulk"],
+  logs: Array<{
+    id: number;
+    user_name: string;
+    date: string;
+    hours: number;
+    status: string;
+    paid_window_start?: string | null;
+    paid_window_end?: string | null;
+  }> = [{ id: 1, user_name: "E2E Employee", date: "2026-08-01", hours: 2, status: "pending" }]
 ) {
   return render(
     <HoursLogsPage
@@ -37,9 +46,7 @@ function renderPage(
       searchQuery=""
       setSearchQuery={() => {}}
       stats={{ total: 1, pending: 1, approved: 0, rejected: 0 }}
-      filteredLogs={[
-        { id: 1, user_name: "E2E Employee", date: "2026-08-01", hours: 2, status: "pending" },
-      ]}
+      filteredLogs={logs}
       total={120}
       page={1}
       onPageChange={onPageChange}
@@ -69,6 +76,27 @@ describe("HoursLogsPage", () => {
     expect(within(toolbar).getByRole("button", { name: /columns/i })).toBeInTheDocument();
     const pending = screen.getByRole("button", { name: /pending/i });
     expect(toolbar.contains(pending)).toBe(false);
+  });
+
+  it("explains a covered 0h overtime entry with its paid block", () => {
+    renderPage(undefined, undefined, undefined, undefined, [
+      {
+        id: 1,
+        user_name: "E2E Employee",
+        date: "2026-08-01",
+        hours: 0,
+        status: "approved",
+        paid_window_start: "08:00:00",
+        paid_window_end: "09:00:00",
+      },
+    ]);
+    expect(screen.getByText("Covered by 08:00-09:00")).toBeInTheDocument();
+  });
+
+  it("keeps the plain hours badge for rows without a paid block", () => {
+    renderPage();
+    expect(screen.getByText("2h")).toBeInTheDocument();
+    expect(screen.queryByText(/^(Block|Covered by)/)).not.toBeInTheDocument();
   });
 
   it("shows no export button unless onExport is provided", () => {

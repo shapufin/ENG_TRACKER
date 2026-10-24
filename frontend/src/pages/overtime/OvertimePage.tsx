@@ -48,7 +48,7 @@ export const OvertimePage: React.FC = () => {
     startTime: form.start_time,
     endTime: form.end_time,
     editingId: editing?.id ?? null,
-    user: isAdmin && !editing && form.user ? form.user : undefined,
+    user: isAdmin && form.user ? form.user : undefined,
   }).data;
 
   const {
