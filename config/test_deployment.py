@@ -443,6 +443,13 @@ class NginxTemplateProxyContractTests(SimpleTestCase):
 
         self.assertEqual(reverse('admin:index'), '/django-admin/')
 
+    def test_no_django_root_pattern_claims_the_spa_admin_prefix(self):
+        from django.urls import get_resolver
+
+        for pattern in get_resolver().url_patterns:
+            with self.subTest(pattern=str(pattern.pattern)):
+                self.assertFalse(str(pattern.pattern).startswith('admin'))
+
     def test_every_backend_location_overwrites_x_forwarded_for(self):
         """SEC-11: the health throttle and DRF NUM_PROXIES=1 read the *last*
         X-Forwarded-For entry, which is only the real client when nginx
