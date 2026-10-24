@@ -137,7 +137,10 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id', 'created_at', 'updated_at',
-            'approved_by', 'approved_at', 'submitted_at'
+            'approved_by', 'approved_at', 'submitted_at',
+            # Owner and decision are never set through an edit: approve/reject
+            # decide the status, and a request cannot be handed to another user.
+            'user', 'status', 'rejection_reason',
         ]
     
     def get_user_full_name(self, obj) -> str:
@@ -182,7 +185,7 @@ class LeaveRequestCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LeaveRequest
-        exclude = ['user', 'approved_by', 'approved_at', 'rejection_reason', 'balance', 'submitted_at']
+        exclude = ['user', 'status', 'approved_by', 'approved_at', 'rejection_reason', 'balance', 'submitted_at']
 
     def validate(self, data):
         if data['end_date'] < data['start_date']:

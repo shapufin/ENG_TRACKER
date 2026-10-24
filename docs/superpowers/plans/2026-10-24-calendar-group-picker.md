@@ -31,3 +31,6 @@ How it serves the goal: the page is a group manager, not per-user sharing.
 
 ## Not now
 Consolidating the other editors (they are different views: bulk, rename, per-team) · changing `members` expansion · Team->Client FK · wizard · removing `allowed_users`/`is_public`.
+
+## Status (2026-10-24)
+Done: PR #176 (picker, nav label, helper text, invariant 25). Follow-up simulation found and fixed in PR #177: overtime/leave status self-approval, leave reassignment (invariant 26), and the stale group list after team mutations. Open question for the owner: back-dated entries into a past month are accepted as pending (not refused or carried over); decide the intended behaviour before changing it.

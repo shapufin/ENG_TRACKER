@@ -4,9 +4,10 @@ import { useTeamsPageForm } from "./useTeamsPageForm";
 import type { Team } from "@/types";
 
 const mockMutate = vi.fn();
+const invalidate = vi.hoisted(() => vi.fn());
 
 vi.mock("@tanstack/react-query", () => ({
-  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+  useQueryClient: () => ({ invalidateQueries: invalidate }),
   useMutation: ({ mutationFn, onSuccess, onError }: any) => ({
     mutate: (vars: any) => {
       mockMutate(vars);
@@ -83,5 +84,21 @@ describe("useTeamsPageForm", () => {
       result.current.handleSubmit({ preventDefault: vi.fn() } as unknown as React.FormEvent)
     );
     await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+  });
+
+  it("refreshes the calendar group list after a team is created, edited or deleted", async () => {
+    // The group picker reads this list; a stale copy hides a group the admin just created.
+    for (const run of [
+      (r: any) => r.current.create.mutate({ name: "A", code: "A" }),
+      (r: any) => r.current.update.mutate({ id: 1, payload: {} }),
+      (r: any) => r.current.deleteMutation.mutate(1),
+    ]) {
+      invalidate.mockClear();
+      const { result } = renderHook(() => useTeamsPageForm());
+      act(() => run(result));
+      await waitFor(() =>
+        expect(invalidate).toHaveBeenCalledWith({ queryKey: ["admin", "calendar-groups"] })
+      );
+    }
   });
 });

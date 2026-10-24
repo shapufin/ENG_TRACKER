@@ -29,6 +29,7 @@ export const useTeamsPageForm = () => {
       userService.createTeam(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "teams"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "calendar-groups"] });
       toast.success("Created");
       setFormOpen(false);
       setForm({ ...EMPTY_FORM });
@@ -42,6 +43,7 @@ export const useTeamsPageForm = () => {
       userService.updateTeam(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "teams"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "calendar-groups"] });
       toast.success("Updated");
       setFormOpen(false);
       setEditing(null);
@@ -54,6 +56,7 @@ export const useTeamsPageForm = () => {
     mutationFn: (id: number) => userService.deleteTeam(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "teams"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "calendar-groups"] });
       toast.success("Team deleted");
       setConfirmDelete(null);
     },
