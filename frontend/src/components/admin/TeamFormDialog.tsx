@@ -1,9 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 
 import { FormDialog } from "@/components/ui/FormDialog";
 import { FormField } from "@/components/ui/FormField";
+import { Label } from "@/components/ui/label";
 import { ModalSection } from "@/components/ui/ModalSection";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { normalizeCalendarGroup } from "@/lib/calendarGroup";
 import type { Team } from "@/types";
+
+const NO_GROUP = "none";
+const NEW_GROUP = "__new__";
 
 interface CalendarGroup {
   calendar_group: string;
@@ -42,6 +54,12 @@ export const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
+  const [creating, setCreating] = useState(false);
+  const isNewGroup =
+    creating ||
+    (form.calendar_group !== "" && !groups?.some((g) => g.calendar_group === form.calendar_group));
+  const normalized = normalizeCalendarGroup(form.calendar_group);
+
   const updateField = (key: keyof typeof form, value: string) => {
     onFormChange({ ...form, [key]: value });
     if (formErrors[key]) {
@@ -85,27 +103,49 @@ export const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
           className="sm:col-span-2"
         />
       </ModalSection>
-      <ModalSection title="Calendar sharing" columns={1}>
+      <ModalSection title="Calendar group" columns={1}>
         <div className="space-y-2">
-          <FormField
-            id="team-calendar-group"
-            label="Calendar Group"
-            value={form.calendar_group}
-            onChange={(value) => updateField("calendar_group", value)}
-            placeholder="e.g. italy, albania, shared"
-            list="calendar-groups"
-          />
-          <datalist id="calendar-groups">
-            <option value="" label="No group" />
-            {groups?.map((g) => (
-              <option key={g.calendar_group} value={g.calendar_group}>
-                {g.calendar_group} ({g.team_count} teams)
-              </option>
-            ))}
-          </datalist>
+          <Label
+            htmlFor="team-calendar-group"
+            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
+          >
+            Calendar Group
+          </Label>
+          <Select
+            value={isNewGroup ? NEW_GROUP : form.calendar_group || NO_GROUP}
+            onValueChange={(value) => {
+              setCreating(value === NEW_GROUP);
+              updateField("calendar_group", value === NEW_GROUP || value === NO_GROUP ? "" : value);
+            }}
+          >
+            <SelectTrigger id="team-calendar-group" className="px-3">
+              <SelectValue placeholder="No group" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_GROUP}>No group</SelectItem>
+              {groups?.map((g) => (
+                <SelectItem key={g.calendar_group} value={g.calendar_group}>
+                  {g.calendar_group} ({g.team_count} {g.team_count === 1 ? "team" : "teams"})
+                </SelectItem>
+              ))}
+              <SelectItem value={NEW_GROUP}>New group…</SelectItem>
+            </SelectContent>
+          </Select>
+          {isNewGroup && (
+            <FormField
+              id="team-calendar-group-new"
+              label="New group name"
+              value={form.calendar_group}
+              onChange={(value) => updateField("calendar_group", value)}
+              helper={
+                normalized && normalized !== form.calendar_group.trim()
+                  ? `Will be saved as "${normalized}"`
+                  : undefined
+              }
+            />
+          )}
           <p className="text-muted-foreground text-xs">
-            Teams with the same group share vacation/sick calendar visibility. Overtime and standby
-            remain individual-only.
+            Teams in the same group can see each other's calendars.
           </p>
         </div>
       </ModalSection>
