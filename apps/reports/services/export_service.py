@@ -14,6 +14,7 @@ import csv
 import io
 import json
 import logging
+from datetime import time
 from typing import Dict, List, Optional, Any, Tuple
 from collections import defaultdict
 
@@ -68,6 +69,37 @@ class ExportConfig:
         self.sort_by = sort_by
         self.include_summary = include_summary
         self.batch_size = batch_size
+
+
+def bundle_paid_blocks(records: list[dict]) -> list[dict]:
+    """Merge overtime records that share a paid block into one row.
+
+    Entries on the same day that start inside the same paid hour read as one
+    row: hours added up (a whole number), first start to last end, and every
+    description, evidence and reference together. Standby, entries typed as
+    plain hours and entries in different statuses or payroll settlements stay
+    as they are.
+    """
+    merged: dict[tuple, dict] = {}
+    out: list[dict] = []
+    for rec in sorted(records, key=lambda r: r['start_time'] or time.min):
+        window = rec.get('window')
+        if rec['type'] != 'OT' or not window or not window[0] or not rec['start_time']:
+            out.append(rec)
+            continue
+        key = (rec['user'].pk, rec['date'], window, rec['status'],
+               rec.get('requested_processing_period'), rec.get('settlement'))
+        first = merged.get(key)
+        if first is None:
+            merged[key] = first = dict(rec)
+            out.append(first)
+            continue
+        first['hours'] += rec['hours']
+        first['end_time'] = rec['end_time']
+        for field in ('description', 'evidence', 'reference_code', 'evidence_type'):
+            parts = dict.fromkeys(p for p in (first[field], rec[field]) if p)
+            first[field] = ('; ' if field == 'description' else ', ').join(parts)
+    return out
 
 
 class ExportService:
@@ -233,6 +265,7 @@ class ExportService:
                 'start_time': ot.start_time,
                 'end_time': ot.end_time,
                 'hours': ot.hours,
+                'window': (ot.paid_window_start, ot.paid_window_end),
                 'description': ot.description or '',
                 'evidence_type': ot.evidence_type or '',
                 'evidence': evidence_col,
@@ -277,7 +310,8 @@ class ExportService:
         # date. This groups each user's records together AND keeps each
         # user's categories contiguous (all Extra hours, then all On Call
         # Service) before moving to the next user.
-        records.sort(key=lambda x: (x['user'].username, x['type'], x['date']))
+        records = bundle_paid_blocks(records)
+        records.sort(key=lambda x: (x['user'].username, x['type'], x['date'], x['start_time'] or time.min))
         
         # Group by Italian TL
         tl_groups = defaultdict(list)
