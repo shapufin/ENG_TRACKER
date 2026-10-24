@@ -120,6 +120,54 @@ def _clock(minute: int) -> time:
     return time(minute // 60, minute % 60)
 
 
+def plan_shares(status: dict, span: dict, frozen: dict) -> dict:
+    """``{key: (hours, window_start, window_end)}`` for every entry whose pay can still change.
+
+    ``status`` maps key -> 'approved' | 'pending', ``span`` key -> (start, end)
+    minutes, ``frozen`` key -> hours payroll already paid. Approved entries
+    share the blocks built from approved entries only; pending entries show the
+    share they would get if everything pending were approved.
+    """
+    new = {}
+
+    def paid_in(block):
+        return sum((frozen[k] for k in block.keys if k in frozen), Decimal(0))
+
+    def share_out(block, only_pending):
+        window = (_clock(block.start), _clock(block.end))
+        free = [k for k in block.keys if k not in frozen]
+        shares = block.shares(free, max(Decimal(block.hours) - paid_in(block), Decimal(0)))
+        for k, share in zip(free, shares):
+            if not only_pending or status[k] == 'pending':
+                new[k] = (share, *window)
+
+    approved = [k for k, st in status.items() if st == 'approved']
+    for block in compute_blocks((k, *span[k]) for k in approved):
+        share_out(block, only_pending=False)
+    for block in compute_blocks((k, *span[k]) for k in status):
+        share_out(block, only_pending=True)
+    return new
+
+
+def preview_share(user_id, work_date, start: time, end: time, exclude_pk=None) -> tuple:
+    """What a new (pending) entry would be paid, as ``(hours, window_start, window_end)``."""
+    from .models import OvertimeLog
+
+    siblings = OvertimeLog.objects.filter(
+        user_id=user_id, date=work_date, is_deleted=False,
+        start_time__isnull=False, end_time__isnull=False,
+    ).exclude(status='rejected')
+    if exclude_pk is not None:
+        siblings = siblings.exclude(pk=exclude_pk)
+    logs = list(siblings)
+    approved = [log.pk for log in logs if log.status == 'approved']
+    frozen = frozen_log_hours(approved) if approved else {}
+    status = {log.pk: log.status for log in logs}
+    span = {log.pk: (_minute(log.start_time), _minute(log.end_time)) for log in logs}
+    status['new'], span['new'] = 'pending', (_minute(start), _minute(end))
+    return plan_shares(status, span, frozen)['new']
+
+
 def recalculate_after_delete(sender, instance, **kwargs):
     """``post_delete`` receiver: the entry's siblings may now have the block to themselves."""
     if instance.start_time and instance.end_time:
@@ -146,30 +194,13 @@ def recalculate_day(user_id, work_date) -> dict:
     span = {log.pk: (_minute(log.start_time), _minute(log.end_time)) for log in logs}
     approved = [pk for pk, log in by_pk.items() if log.status == 'approved']
     frozen = frozen_log_hours(approved) if approved else {}
-    new = {}
 
     for pk, paid in frozen.items():
         if by_pk[pk].hours != paid:
             OvertimeLog.objects.filter(pk=pk).update(hours=paid)
             by_pk[pk].hours = paid
 
-    def paid_in(block):
-        return sum((frozen[pk] for pk in block.keys if pk in frozen), Decimal(0))
-
-    for block in compute_blocks((pk, *span[pk]) for pk in approved):
-        window = (_clock(block.start), _clock(block.end))
-        free = [pk for pk in block.keys if pk not in frozen]
-        for pk, share in zip(free, block.shares(free, max(Decimal(block.hours) - paid_in(block), Decimal(0)))):
-            new[pk] = (share, *window)
-
-    everyone = [pk for pk, log in by_pk.items() if log.status in ('approved', 'pending')]
-    for block in compute_blocks((pk, *span[pk]) for pk in everyone):
-        window = (_clock(block.start), _clock(block.end))
-        free = [pk for pk in block.keys if pk not in frozen]
-        shares = block.shares(free, max(Decimal(block.hours) - paid_in(block), Decimal(0)))
-        for pk, share in zip(free, shares):
-            if by_pk[pk].status == 'pending':
-                new[pk] = (share, *window)
+    new = plan_shares({pk: log.status for pk, log in by_pk.items()}, span, frozen)
 
     for pk, (hours, start, end) in new.items():
         log = by_pk[pk]

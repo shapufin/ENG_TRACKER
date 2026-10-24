@@ -42,6 +42,7 @@ interface OvertimeFormDialogProps {
   users?: { id: number; full_name?: string; username?: string }[];
   clients?: { id: number; name: string }[];
   previewHours: number | null;
+  previewNote?: string;
   isSubmitting: boolean;
   onSubmit: (e: React.FormEvent) => void;
   onFormChange: (form: {
@@ -75,6 +76,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
   users,
   clients,
   previewHours,
+  previewNote,
   isSubmitting,
   onSubmit,
   onFormChange,
@@ -161,6 +163,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
         endTime={form.end_time}
         hours={form.hours}
         previewHours={previewHours}
+        previewNote={previewNote}
         startTimeError={formErrors.start_time}
         endTimeError={formErrors.end_time}
         onStartTimeChange={(v) => updateField("start_time", v)}

@@ -15,6 +15,8 @@ interface Props {
   endTime: string;
   hours: string;
   previewHours: number | null;
+  /** Small caption under the hours, e.g. the paid block the entry shares. */
+  previewNote?: string;
   startTimeError?: string;
   endTimeError?: string;
   onStartTimeChange: (v: string) => void;
@@ -26,6 +28,7 @@ export const TimeHoursGrid: React.FC<Props> = ({
   endTime,
   hours,
   previewHours,
+  previewNote,
   startTimeError,
   endTimeError,
   onStartTimeChange,
@@ -62,6 +65,7 @@ export const TimeHoursGrid: React.FC<Props> = ({
         disabled
         className="bg-muted"
       />
+      {previewNote && <p className="text-xs text-muted-foreground">{previewNote}</p>}
     </div>
   </div>
 );

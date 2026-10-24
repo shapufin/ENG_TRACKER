@@ -276,3 +276,57 @@ class PaidBlockApiTests(TestCase):
         row = listed[first.data['id']]
         self.assertEqual(row['hours'], 0.5)
         self.assertEqual((row['paid_window_start'], row['paid_window_end']), ('08:00:00', '09:00:00'))
+
+
+class PaidBlockPreviewApiTests(TestCase):
+    """GET /overtime/logs/preview/ tells the form what an entry would be paid."""
+
+    def setUp(self):
+        self.api = APIClient()
+        self.user = User.objects.create_user(username='preview-user', password='x')
+        self.other = User.objects.create_user(username='preview-other', password='x')
+        self.client_a = Client.objects.create(name='Client P', code='PVW')
+        self.api.force_authenticate(user=self.user)
+
+    def _log(self, start, end, user=None, status='approved'):
+        return OvertimeLog.objects.create(
+            user=user or self.user, client=self.client_a, date=DAY, hours=1,
+            start_time=start, end_time=end, status=status,
+        )
+
+    def _preview(self, start, end, **extra):
+        return self.api.get('/api/overtime/logs/preview/', {
+            'date': DAY.isoformat(), 'start_time': start, 'end_time': end, **extra,
+        })
+
+    def test_an_entry_alone_previews_the_whole_hour(self):
+        response = self._preview('08:00', '08:30')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
+        self.assertEqual(response.data['hours'], 1.0)
+        self.assertEqual((response.data['paid_window_start'], response.data['paid_window_end']), ('08:00:00', '09:00:00'))
+
+    def test_an_entry_beside_a_sibling_previews_its_share(self):
+        self._log(time(8, 0), time(8, 30))
+        response = self._preview('08:31', '09:00')
+        self.assertEqual(response.data['hours'], 0.5)
+
+    def test_an_entry_that_runs_past_the_hour_previews_the_extra_hour(self):
+        self._log(time(8, 0), time(8, 30))
+        self.assertEqual(self._preview('08:40', '09:01').data['hours'], 1.5)
+
+    def test_the_entry_being_edited_does_not_count_against_itself(self):
+        mine = self._log(time(8, 0), time(8, 30))
+        self.assertEqual(self._preview('08:00', '08:30', exclude=mine.pk).data['hours'], 1.0)
+
+    def test_a_paid_sibling_leaves_nothing_for_the_new_entry(self):
+        a = self._log(time(8, 0), time(8, 30))
+        with mock.patch('apps.overtime.paid_blocks.frozen_log_hours', return_value={a.pk: Decimal('1.00')}):
+            self.assertEqual(self._preview('08:31', '09:00').data['hours'], 0.0)
+
+    def test_other_peoples_entries_are_ignored(self):
+        self._log(time(8, 0), time(8, 30), user=self.other)
+        self.assertEqual(self._preview('08:31', '09:00').data['hours'], 1.0)
+
+    def test_bad_input_is_a_400(self):
+        self.assertEqual(self._preview('nope', '09:00').status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.api.get('/api/overtime/logs/preview/').status_code, status.HTTP_400_BAD_REQUEST)

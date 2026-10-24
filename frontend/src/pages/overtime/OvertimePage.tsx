@@ -21,6 +21,7 @@ import { HoursLogDataTable } from "@/pages/hours_logs/components/HoursLogDataTab
 import { DateRangeHistoryButton } from "@/pages/hours_logs/components/DateRangeHistoryButton";
 import { HoursLogBulkActionBar } from "@/pages/hours_logs/components/HoursLogDialogs";
 import { HoursLogConfirmDialogs } from "@/pages/hours_logs/components/HoursLogConfirmDialogs";
+import { useOvertimeHoursPreview, previewNote } from "./hooks/useOvertimeHoursPreview";
 
 // fallow-ignore-next-line complexity
 export const OvertimePage: React.FC = () => {
@@ -42,6 +43,13 @@ export const OvertimePage: React.FC = () => {
     setForm,
     setFormErrors,
   } = useOvertimeForm();
+  const sharedPreview = useOvertimeHoursPreview({
+    date: formOpen ? form.date : "",
+    startTime: form.start_time,
+    endTime: form.end_time,
+    editingId: editing?.id ?? null,
+    user: isAdmin && !editing && form.user ? form.user : undefined,
+  }).data;
 
   const {
     deleteOpen,
@@ -207,7 +215,8 @@ export const OvertimePage: React.FC = () => {
         formErrors={formErrors}
         users={users?.results}
         clients={clients}
-        previewHours={previewHours}
+        previewHours={sharedPreview?.hours ?? previewHours}
+        previewNote={previewNote(sharedPreview)}
         isSubmitting={createMutation.isPending || updateMutation.isPending}
         onSubmit={handleSubmit}
         onFormChange={setForm}
