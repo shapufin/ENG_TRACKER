@@ -15,6 +15,8 @@ interface Props {
   endTime: string;
   hours: string;
   previewHours: number | null;
+  /** Small caption under the hours, e.g. the paid block the entry shares. */
+  previewNote?: string;
   startTimeError?: string;
   endTimeError?: string;
   onStartTimeChange: (v: string) => void;
@@ -26,6 +28,7 @@ export const TimeHoursGrid: React.FC<Props> = ({
   endTime,
   hours,
   previewHours,
+  previewNote,
   startTimeError,
   endTimeError,
   onStartTimeChange,
@@ -41,7 +44,7 @@ export const TimeHoursGrid: React.FC<Props> = ({
         className={startTimeError ? "border-destructive" : ""}
         required
       />
-      {startTimeError && <p className="text-xs text-destructive">{startTimeError}</p>}
+      {startTimeError && <p className="text-destructive text-xs">{startTimeError}</p>}
     </div>
     <div className="space-y-2">
       <Label>End Time *</Label>
@@ -52,7 +55,7 @@ export const TimeHoursGrid: React.FC<Props> = ({
         className={endTimeError ? "border-destructive" : ""}
         required
       />
-      {endTimeError && <p className="text-xs text-destructive">{endTimeError}</p>}
+      {endTimeError && <p className="text-destructive text-xs">{endTimeError}</p>}
     </div>
     <div className="space-y-2">
       <Label>Hours (auto-calculated)</Label>
@@ -62,6 +65,7 @@ export const TimeHoursGrid: React.FC<Props> = ({
         disabled
         className="bg-muted"
       />
+      {previewNote && <p className="text-muted-foreground text-xs">{previewNote}</p>}
     </div>
   </div>
 );

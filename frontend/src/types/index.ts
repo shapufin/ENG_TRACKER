@@ -238,6 +238,9 @@ export interface OvertimeLog {
   start_time?: string | null;
   end_time?: string | null;
   hours: number;
+  /** Paid block this entry shares with others that start in the same hour. */
+  paid_window_start?: string | null;
+  paid_window_end?: string | null;
   description: string;
   evidence_type: "ticket" | "email" | "call" | "other";
   evidence: string;

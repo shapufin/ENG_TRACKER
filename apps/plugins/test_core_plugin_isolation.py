@@ -28,6 +28,7 @@ ALLOWED_IMPORTS = {
     "apps/dashboard/services/holiday_sync.py": {"payroll"},
     "apps/dashboard/signals.py": {"payroll"},
     "apps/leave_management/viewsets.py": {"audit_log", "notifications"},
+    "apps/overtime/paid_blocks.py": {"payroll"},
     "apps/overtime/viewsets.py": {"audit_log", "notifications", "payroll"},
     "apps/plugins/management/commands/prepare_e2e_db.py": {"payroll"},
     "apps/plugins/viewsets.py": {"audit_log", "control_room"},

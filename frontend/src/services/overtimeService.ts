@@ -12,6 +12,13 @@ import type {
 import { bulkApproveEntities, rejectEntity } from "./bulkActionHelpers";
 import { requestWithOfflineQueue } from "@/lib/offline/offlineQueue";
 
+/** What an entry would be paid, given the person's other entries that day. */
+export interface OvertimeHoursPreview {
+  hours: number;
+  paid_window_start: string;
+  paid_window_end: string;
+}
+
 export const overtimeService = {
   async getClients(params?: Record<string, unknown>): Promise<Client[]> {
     const { data } = await api.get<Client[] | PaginatedResponse<Client>>("/overtime/clients/", {
@@ -91,6 +98,17 @@ export const overtimeService = {
       responseType: "blob",
     });
     downloadBlobResponse(response.data, "overtime_logs.csv");
+  },
+
+  async previewHours(params: {
+    date: string;
+    start_time: string;
+    end_time: string;
+    exclude?: number;
+    user?: string;
+  }): Promise<OvertimeHoursPreview> {
+    const { data } = await api.get<OvertimeHoursPreview>("/overtime/logs/preview/", { params });
+    return data;
   },
 
   async getLog(id: number): Promise<OvertimeLog> {

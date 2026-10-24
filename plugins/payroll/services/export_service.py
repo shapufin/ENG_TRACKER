@@ -119,6 +119,52 @@ def _standby_rows(line) -> list[dict]:
     return rows
 
 
+def _clock_range(start, end) -> str:
+    return f'{start:%H:%M}-{end:%H:%M}'
+
+
+def _overtime_reference(log) -> str:
+    """Tickets, call or other evidence the employee attached to an entry."""
+    parts = [*(log.ticket_references or []), log.evidence, log.reference_code]
+    return ', '.join(dict.fromkeys(str(p).strip() for p in parts if p and str(p).strip()))
+
+
+def _overtime_block_rows(source_entries) -> list[dict]:
+    """One row per paid block: the paid window, every worked time range with
+    its reference, the minutes worked and the hours paid in this run.
+
+    ``source_entries`` are the run's ``PayrollRunEntry`` rows (kind overtime).
+    Entries typed as plain hours have no times and get a row of their own.
+    """
+    from apps.overtime.models import OvertimeLog
+
+    entries = list(source_entries)
+    logs = OvertimeLog.objects.in_bulk([e.source_id for e in entries])
+    rows: dict[tuple, dict] = {}
+    for entry in entries:
+        log = logs.get(entry.source_id)
+        if log is None:
+            continue
+        timed = bool(log.start_time and log.end_time and log.paid_window_start)
+        key = (entry.user_id, entry.work_date, log.paid_window_start, log.paid_window_end) if timed \
+            else (entry.user_id, entry.work_date, None, entry.source_id)
+        row = rows.setdefault(key, {
+            'user_id': entry.user_id, 'date': entry.work_date,
+            'window': _clock_range(log.paid_window_start, log.paid_window_end) if timed else '—',
+            'entries': [], 'minutes': 0, 'hours': Decimal('0'),
+        })
+        reference = _overtime_reference(log)
+        if timed:
+            worked = (log.end_time.hour * 60 + log.end_time.minute) - (log.start_time.hour * 60 + log.start_time.minute)
+            row['minutes'] += worked if worked > 0 else worked + 24 * 60
+            label = _clock_range(log.start_time, log.end_time)
+        else:
+            label = 'no times'
+        row['entries'].append(f'{label} {reference}'.strip())
+        row['hours'] += entry.hours
+    return sorted(rows.values(), key=lambda r: (r['user_id'], r['date'], r['window']))
+
+
 def _trace_amount_rate_base(trace: dict, key: str) -> tuple[Decimal, Decimal, Decimal]:
     """Read a ``{'base','rate','amount'}`` trace entry as Decimals."""
     entry = (trace or {}).get(key) or {}
@@ -209,9 +255,11 @@ def generate_payroll_excel(run) -> io.BytesIO:
     4. Tax & Contributions Detail — per-employee contribution/tax breakdown
        against the run's actual rule-set schedule.
     5. Carryover Detail — carried-over overtime/standby from prior periods.
+    6. Overtime Entries — one row per paid block with every worked time range
+       and its reference.
     """
     import openpyxl
-    from openpyxl.styles import Font
+    from openpyxl.styles import Alignment, Font
     from openpyxl.utils import get_column_letter
     from django.utils import timezone
 
@@ -428,6 +476,31 @@ def generate_payroll_excel(run) -> io.BytesIO:
     ws_carry.auto_filter.ref = f'A1:{get_column_letter(len(carry_headers))}{max(row - 1, 1)}'
     for col in range(1, len(carry_headers) + 1):
         ws_carry.column_dimensions[get_column_letter(col)].width = 20
+
+    # --- Sheet 6: Overtime Entries (appended last: other sheets are read by position) ---
+    ws_entries = wb.create_sheet('Overtime Entries')
+    entry_headers = ['Employee', 'Date', 'Paid Window', 'Entries (time, reference)', 'Worked (min)', 'Paid Hours']
+    for col, header in enumerate(entry_headers, 1):
+        ws_entries.cell(row=1, column=col, value=header)
+    names = {line.user_id: full_name(line.user) for line in lines}
+    row = 2
+    for block in _overtime_block_rows(run.source_entries.filter(source_kind='overtime')):
+        values = [
+            _excel_text(names.get(block['user_id'], '')), block['date'].isoformat(), block['window'],
+            _excel_text('\n'.join(block['entries'])), block['minutes'], float(block['hours']),
+        ]
+        for col, value in enumerate(values, 1):
+            cell = ws_entries.cell(row=row, column=col, value=value)
+            if col == 4:
+                cell.alignment = Alignment(wrap_text=True, vertical='top')
+        row += 1
+    _style_header_row(ws_entries, len(entry_headers))
+    if row > 2:
+        _apply_borders(ws_entries, 1, row - 1, len(entry_headers))
+    ws_entries.freeze_panes = 'A2'
+    ws_entries.auto_filter.ref = f'A1:{get_column_letter(len(entry_headers))}{max(row - 1, 1)}'
+    for col, width in enumerate((22, 12, 14, 48, 14, 12), 1):
+        ws_entries.column_dimensions[get_column_letter(col)].width = width
 
     # Save to BytesIO stream for FileResponse streaming
     output = io.BytesIO()
@@ -646,6 +719,23 @@ def _build_payslip_flowables(line, styles: dict) -> list:
     earnings_table.setStyle(_base_table_style(_PDF_PRIMARY, total_bg=_PDF_TOTAL_BG))
     story.append(earnings_table)
     story.append(Spacer(1, 4 * mm))
+
+    # --- Overtime entries: every worked time range and its reference ---
+    block_rows = _overtime_block_rows(line.source_entries.filter(source_kind='overtime'))
+    if block_rows:
+        story.append(Paragraph('Overtime Entries', styles['section_title']))
+        cell_style = styles['normal']
+        entries_data = [['Date', 'Paid window', 'Entries (time, reference)', 'Hours']]
+        for block in block_rows:
+            entries_data.append([
+                block['date'].isoformat(), block['window'],
+                Paragraph('<br/>'.join(_md(e) for e in block['entries']), cell_style),
+                f"{block['hours']:.2f} h",
+            ])
+        entries_table = Table(entries_data, colWidths=[24 * mm, 28 * mm, 90 * mm, 18 * mm])
+        entries_table.setStyle(_base_table_style(_PDF_PRIMARY))
+        story.append(entries_table)
+        story.append(Spacer(1, 4 * mm))
 
     # --- Carryover ---
     carryover_items = (line.carryover_breakdown or {}).get('carried_over', [])

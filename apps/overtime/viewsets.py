@@ -382,6 +382,39 @@ class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermi
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
+    def preview(self, request):
+        """What an entry would be paid, for the form's "Hours (auto-calculated)".
+
+        Takes ``date``, ``start_time``, ``end_time`` and optionally ``exclude``
+        (the entry being edited) and ``user`` (staff only). Counts the user's
+        other entries on that day, so a second entry in the same hour shows its
+        share of it. Nothing is saved.
+        """
+        from django.utils.dateparse import parse_date, parse_time
+        from .paid_blocks import preview_share
+
+        params = request.query_params
+        work_date = parse_date(params.get('date', ''))
+        start = parse_time(params.get('start_time', ''))
+        end = parse_time(params.get('end_time', ''))
+        if not (work_date and start and end):
+            return Response(
+                {'error': 'date, start_time and end_time are required (YYYY-MM-DD, HH:MM).'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        exclude = params.get('exclude', '')
+        target_user, _ = resolve_target_user(request.user, params.get('user'))
+        hours, window_start, window_end = preview_share(
+            target_user.id, work_date, start, end,
+            exclude_pk=int(exclude) if exclude.isdigit() else None,
+        )
+        return Response({
+            'hours': float(hours),
+            'paid_window_start': window_start.isoformat(),
+            'paid_window_end': window_end.isoformat(),
+        })
+
+    @action(detail=False, methods=['get'])
     def export(self, request):
         """Stream the full filtered overtime log queryset as CSV.
 
@@ -395,13 +428,14 @@ class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermi
         ``OvertimePage`` rowMapper exactly:
         User, Date, Client, Hours, Status, Evidence Type, Evidence, Description.
 
-        Hours are serialized as ``int(obj.hours)`` to match
-        ``OvertimeLogSerializer.get_hours`` (which rounds for display).
+        Hours are the entry's paid share: whole numbers without a decimal
+        point, fractions (entries sharing a paid hour) kept.
         """
         import csv
         import io
         from django.http import StreamingHttpResponse
         from core.utils.csv_safe import csv_safe
+        from core.utils.hours import format_hours
 
         queryset = self.filter_queryset(self.get_queryset()).select_related('user', 'client')
 
@@ -429,7 +463,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermi
                     ot.user.username if ot.user else '',
                     ot.date.strftime('%d/%m/%Y') if ot.date else '',
                     ot.client.name if ot.client else '',
-                    str(int(ot.hours)) if ot.hours else '0',
+                    format_hours(ot.hours),
                     ot.status,
                     ot.evidence_type or '',
                     evidence_col,

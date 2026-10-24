@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, time
 
 from django.contrib.auth.models import User
 from django.db import connection
@@ -24,6 +24,9 @@ approval-period membership lookup (1).
 MAX_APPROVE_QUERIES_PER_ROW = 8
 MAX_DELETE_APPROVED_QUERIES_PER_ROW = 10
 MAX_DELETE_PENDING_QUERIES_PER_ROW = 9
+# Timed entries also recalculate their paid block (apps.overtime.paid_blocks): one
+# row lock, the payroll freeze lookup and the share updates on top of the base cost.
+MAX_APPROVE_TIMED_QUERIES_PER_ROW = 12
 
 
 class BulkActionQueryBudgetTests(TestCase):
@@ -50,6 +53,19 @@ class BulkActionQueryBudgetTests(TestCase):
         self.assertEqual(response.status_code, 200, response.data)
         return len(ctx.captured_queries)
 
+    def _timed_query_count(self, n):
+        ids = [
+            OvertimeLog.objects.create(
+                user=self.emp, client=self.client_obj, date=date(2026, 6, 1 + i),
+                start_time=time(8, 0), end_time=time(8, 20), hours=1, status='pending',
+            ).id
+            for i in range(n)
+        ]
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.api.post('/api/overtime/logs/bulk_approve/', {'ids': ids}, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        return len(ctx.captured_queries)
+
     def _per_row(self, url, status):
         small = self._query_count(url, status, 2)
         large = self._query_count(url, status, 10)
@@ -66,3 +82,7 @@ class BulkActionQueryBudgetTests(TestCase):
     def test_bulk_delete_pending_queries_per_row_within_budget(self):
         per_row = self._per_row('/api/overtime/logs/bulk_delete/', 'pending')
         self.assertLessEqual(per_row, MAX_DELETE_PENDING_QUERIES_PER_ROW)
+
+    def test_bulk_approve_timed_entries_queries_per_row_within_budget(self):
+        per_row = (self._timed_query_count(10) - self._timed_query_count(2)) / 8
+        self.assertLessEqual(per_row, MAX_APPROVE_TIMED_QUERIES_PER_ROW, f'per row: {per_row}')
