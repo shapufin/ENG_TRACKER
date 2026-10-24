@@ -21,26 +21,32 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 ALBANIA_2026_HOLIDAYS: dict[date, str] = {
+    # Official list: Bank of Albania 2026 holiday calendar. A holiday that falls
+    # on a Saturday or Sunday is observed on the next working day(s), so each
+    # weekend holiday below is followed by its "(observed)" Monday/Tuesday.
     date(2026, 1, 1): 'New Year\'s Day',
     date(2026, 1, 2): 'New Year\'s Holiday',
-    date(2026, 3, 14): 'Summer Day',
-    date(2026, 3, 22): 'Nevruz Day',
+    date(2026, 3, 14): 'Summer Day',  # Saturday
+    date(2026, 3, 16): 'Summer Day (observed)',
+    date(2026, 3, 20): 'Eid al-Fitr',
+    date(2026, 3, 22): 'Nevruz Day',  # Sunday
+    date(2026, 3, 23): 'Nevruz Day (observed)',
+    date(2026, 4, 5): 'Catholic Easter',  # Sunday
+    date(2026, 4, 6): 'Catholic Easter Monday',
+    date(2026, 4, 12): 'Orthodox Easter',  # Sunday
+    date(2026, 4, 13): 'Orthodox Easter Monday',
     date(2026, 5, 1): 'Labour Day',
-    date(2026, 6, 29): 'Saint Peter and Paul Day (Catholic)',
-    date(2026, 10, 19): 'Mother Teresa Day',
-    date(2026, 11, 28): 'Independence Day',
-    date(2026, 11, 29): 'Liberation Day',
+    date(2026, 5, 27): 'Eid al-Adha',
+    date(2026, 9, 5): 'Saint Teresa Canonisation Day',  # Saturday
+    date(2026, 9, 7): 'Saint Teresa Canonisation Day (observed)',
+    date(2026, 11, 22): 'Alphabet Day',  # Sunday
+    date(2026, 11, 23): 'Alphabet Day (observed)',
+    date(2026, 11, 28): 'Independence Day',  # Saturday
+    date(2026, 11, 30): 'Independence Day (observed)',
+    date(2026, 11, 29): 'Liberation Day',  # Sunday; Monday is taken, so Tuesday
+    date(2026, 12, 1): 'Liberation Day (observed)',
     date(2026, 12, 8): 'National Youth Day',
     date(2026, 12, 25): 'Christmas Day',
-    # Easter dates 2026 (Western Easter: April 5; Orthodox Easter: April 12)
-    date(2026, 4, 5): 'Catholic Easter',
-    date(2026, 4, 6): 'Catholic Easter Monday',
-    date(2026, 4, 12): 'Orthodox Easter',
-    date(2026, 4, 13): 'Orthodox Easter Monday',
-    # Eid al-Fitr and Eid al-Adha are movable — approximate 2026 dates
-    # These should be verified and adjusted by an admin.
-    date(2026, 3, 20): 'Eid al-Fitr (approximate)',
-    date(2026, 5, 27): 'Eid al-Adha (approximate)',
 }
 
 
