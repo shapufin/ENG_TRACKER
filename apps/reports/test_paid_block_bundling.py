@@ -6,6 +6,8 @@ columns do not change. Standby and entries typed as plain hours stay as they are
 """
 import io
 from datetime import date, time
+from decimal import Decimal
+from types import SimpleNamespace
 
 import openpyxl
 from django.contrib.auth.models import User
@@ -13,6 +15,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from apps.overtime.models import Client, OvertimeLog
+from apps.reports.services.export_service import bundle_paid_blocks
 from apps.standby.models import StandbyLog
 
 DAY = date(2026, 7, 10)
@@ -87,3 +90,42 @@ class PaidBlockBundlingTests(TestCase):
             by_kind.setdefault(row[6], []).append((row[5], row[9]))
         self.assertEqual(sorted(by_kind['Extra hours']), [(1, 'INC-1'), (3, 'CALL-PLAIN')])
         self.assertEqual([hours for hours, _ in by_kind['On Call Service']], [2])
+
+
+class CoveredEntryBundlingTests(TestCase):
+    """An entry added after its hour was already paid reads inside that hour's row."""
+
+    @staticmethod
+    def _rec(start, end, hours, evidence, settlement):
+        return {
+            'type': 'OT', 'user': SimpleNamespace(pk=1), 'date': DAY,
+            'start_time': start, 'end_time': end, 'hours': Decimal(hours),
+            'window': (time(8, 0), time(9, 0)), 'description': '', 'evidence_type': 'call',
+            'evidence': evidence, 'reference_code': '', 'status': 'approved',
+            'requested_processing_period': date(2026, 11, 1), 'settlement': settlement,
+        }
+
+    def test_a_zero_hour_entry_joins_its_paid_block_whatever_its_settlement(self):
+        paid = self._rec(time(8, 0), time(8, 20), '1.00', 'CALL-7', 'Paid · Dec 2026')
+        late = self._rec(time(8, 30), time(8, 45), '0.00', 'CALL-9', 'Not yet in a payroll run')
+        rows = bundle_paid_blocks([late, paid])
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(
+            (rows[0]['start_time'], rows[0]['end_time'], rows[0]['hours'], rows[0]['evidence'], rows[0]['settlement']),
+            (time(8, 0), time(8, 45), Decimal('1.00'), 'CALL-7, CALL-9', 'Paid · Dec 2026'),
+        )
+
+    def test_a_zero_hour_entry_with_no_paid_sibling_keeps_its_own_row(self):
+        late = self._rec(time(8, 30), time(8, 45), '0.00', 'CALL-9', 'Not yet in a payroll run')
+        self.assertEqual(len(bundle_paid_blocks([late])), 1)
+
+    def test_paid_entries_in_different_settlements_still_stay_separate(self):
+        first = self._rec(time(8, 0), time(8, 30), '0.50', 'A', 'Paid · Dec 2026')
+        second = self._rec(time(8, 31), time(9, 0), '0.50', 'B', 'Paid · Jan 2027')
+        self.assertEqual(len(bundle_paid_blocks([first, second])), 2)
+
+    def test_a_zero_hour_entry_never_joins_a_row_of_another_payroll_period(self):
+        paid = self._rec(time(8, 0), time(8, 20), '1.00', 'CALL-7', 'Paid · Dec 2026')
+        late = self._rec(time(8, 30), time(8, 45), '0.00', 'CALL-9', 'Not yet in a payroll run')
+        late['requested_processing_period'] = date(2026, 12, 1)
+        self.assertEqual(len(bundle_paid_blocks([paid, late])), 2)

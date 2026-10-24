@@ -76,29 +76,52 @@ def bundle_paid_blocks(records: list[dict]) -> list[dict]:
 
     Entries on the same day that start inside the same paid hour read as one
     row: hours added up (a whole number), first start to last end, and every
-    description, evidence and reference together. Standby, entries typed as
-    plain hours and entries in different statuses or payroll settlements stay
-    as they are.
+    description, evidence and reference together. An entry added after its hour
+    was already paid has 0 hours; it joins the paid row of its block (same
+    payroll period) whatever its settlement, so an emailed file never shows a
+    bare 0h line. Rows never mix payroll periods: carried-over entries belong to
+    the next month's export. Standby,
+    entries typed as plain hours and entries in different statuses or payroll
+    settlements stay as they are.
     """
-    merged: dict[tuple, dict] = {}
-    out: list[dict] = []
-    for rec in sorted(records, key=lambda r: r['start_time'] or time.min):
-        window = rec.get('window')
-        if rec['type'] != 'OT' or not window or not window[0] or not rec['start_time']:
-            out.append(rec)
-            continue
-        key = (rec['user'].pk, rec['date'], window, rec['status'],
-               rec.get('requested_processing_period'), rec.get('settlement'))
-        first = merged.get(key)
-        if first is None:
-            merged[key] = first = dict(rec)
-            out.append(first)
-            continue
+    def absorb(first: dict, rec: dict) -> None:
         first['hours'] += rec['hours']
         first['end_time'] = rec['end_time']
         for field in ('description', 'evidence', 'reference_code', 'evidence_type'):
             parts = dict.fromkeys(p for p in (first[field], rec[field]) if p)
             first[field] = ('; ' if field == 'description' else ', ').join(parts)
+
+    merged: dict[tuple, dict] = {}
+    covered: list[dict] = []
+    out: list[dict] = []
+    for rec in sorted(records, key=lambda r: r['start_time'] or time.min):
+        window = rec.get('window')
+        if rec['type'] != 'OT' or not window or not window[0] or not rec['start_time']:
+            out.append(rec)
+        elif rec['hours'] == 0:
+            covered.append(rec)
+        else:
+            key = (rec['user'].pk, rec['date'], window, rec['status'],
+                   rec.get('requested_processing_period'), rec.get('settlement'))
+            first = merged.get(key)
+            if first is None:
+                merged[key] = first = dict(rec)
+                out.append(first)
+            else:
+                absorb(first, rec)
+    for rec in covered:
+        block = (rec['user'].pk, rec['date'], rec['window'], rec['status'], rec.get('requested_processing_period'))
+        host = next(
+            (
+                row for row in out if row.get('window')
+                and (row['user'].pk, row['date'], row['window'], row['status'], row.get('requested_processing_period')) == block
+            ),
+            None,
+        )
+        if host is None:
+            out.append(rec)
+        else:
+            absorb(host, rec)
     return out
 
 
