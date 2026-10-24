@@ -45,7 +45,11 @@ describe("useOvertimeHoursPreview", () => {
   });
 
   it("leaves the entry being edited out of its own preview", async () => {
-    previewHours.mockResolvedValue({ hours: 1, paid_window_start: "08:00:00", paid_window_end: "09:00:00" });
+    previewHours.mockResolvedValue({
+      hours: 1,
+      paid_window_start: "08:00:00",
+      paid_window_end: "09:00:00",
+    });
     renderHook(() => useOvertimeHoursPreview({ ...filled, editingId: 42 }), { wrapper });
     await waitFor(() => expect(previewHours).toHaveBeenCalled());
     expect(previewHours.mock.calls[0][0].exclude).toBe(42);
