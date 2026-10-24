@@ -144,6 +144,32 @@ class OvertimeLogImporterTests(TestCase):
         self.assertEqual(OvertimeLog.objects.count(), 1)
         self.assertEqual(OvertimeLog.objects.first().hours, Decimal("5"))
 
+    def test_same_day_entry_with_a_different_time_range_is_created(self):
+        OvertimeLog.objects.create(
+            user=self.user, client=self.client_obj, date=date(2026, 1, 5),
+            start_time=time(18, 0), end_time=time(19, 0), status="approved",
+        )
+        result = self.importer.commit_row(
+            row(username="mrossi", client_code="ACME", date=date(2026, 1, 5),
+                start_time="20:00", end_time="20:30"),
+            NO_UPDATE, context=self._ctx(),
+        )
+        self.assertEqual(result.status, "created")
+        self.assertEqual(OvertimeLog.objects.count(), 2)
+
+    def test_same_day_entry_with_the_same_time_range_is_skipped(self):
+        OvertimeLog.objects.create(
+            user=self.user, client=self.client_obj, date=date(2026, 1, 5),
+            start_time=time(18, 0), end_time=time(19, 0), status="approved",
+        )
+        result = self.importer.commit_row(
+            row(username="mrossi", client_code="ACME", date=date(2026, 1, 5),
+                start_time="18:00", end_time="19:00"),
+            NO_UPDATE, context=self._ctx(),
+        )
+        self.assertEqual(result.status, "skipped")
+        self.assertEqual(OvertimeLog.objects.count(), 1)
+
     def test_dry_run_writes_nothing(self):
         result = self.importer.validate_row(
             row(username="mrossi", client_code="ACME", date=date(2026, 1, 5), hours=Decimal("3")),
@@ -278,6 +304,19 @@ class StandbyLogImporterTests(TestCase):
         )
         self.assertEqual(result.status, "skipped")
         self.assertEqual(StandbyLog.objects.count(), 1)
+
+
+    def test_same_day_entry_with_a_different_time_range_is_created(self):
+        StandbyLog.objects.create(
+            user=self.user, date=date(2026, 1, 5), start_time=time(0, 0), end_time=time(8, 0),
+            status="approved",
+        )
+        result = self.importer.commit_row(
+            row(username="mrossi", date=date(2026, 1, 5), start_time="18:00", end_time="23:59"),
+            NO_UPDATE, context=self._ctx(),
+        )
+        self.assertEqual(result.status, "created")
+        self.assertEqual(StandbyLog.objects.count(), 2)
 
 
 class StandbyLogImporterNotificationBundlingTests(TestCase):

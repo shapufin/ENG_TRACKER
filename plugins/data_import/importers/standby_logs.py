@@ -189,7 +189,11 @@ class StandbyLogImporter(StaffOnlyAuthority, BaseImporter):
                     errors=["hours must be greater than 0 and at most 24."],
                 )
 
-            existing_log = StandbyLog.objects.filter(user=user, date=work_date).first()
+            matches = StandbyLog.objects.filter(user=user, date=work_date)
+            if start_time and end_time:
+                # Several shifts on one day are distinct entries: match on the time range too.
+                matches = matches.filter(start_time=start_time, end_time=end_time)
+            existing_log = matches.first()
             update_existing = bool(options.get("update_existing", False))
             is_update = existing_log is not None
 
