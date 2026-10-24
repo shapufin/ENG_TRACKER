@@ -396,13 +396,13 @@ The compose file defines two networks:
 
 ### Django admin
 
-The admin UI is served at `/admin/` (proxied to the backend by
+Django's built-in admin is served at `/django-admin/` (the custom React admin panel owns `/admin/*`; proxied to the backend by
 `frontend/docker/nginx.conf.template`). Static files (`/static/...`,
 CSS/JS) are also explicitly proxied to the backend, which serves them via
 WhiteNoise — both location blocks were missing until 2026-09-27 (admin was
 silently falling through to the SPA and rendering `index.html` instead).
 Admin login is not throttled by the DRF `auth` scope (it uses Django's
-built-in login view, not a DRF view); `/admin/login/` is rate-limited at
+built-in login view, not a DRF view); `/django-admin/login/` is rate-limited at
 the nginx layer instead (`limit_req zone=admin_login`, 5 req/min per IP,
 burst 3) — no new Python dependency. Revisit with `django-axes`/`django-otp`
 if nginx-layer rate limiting proves insufficient.
