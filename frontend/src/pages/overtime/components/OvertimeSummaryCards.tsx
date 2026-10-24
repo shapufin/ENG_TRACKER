@@ -100,7 +100,7 @@ export const OvertimeSummaryCards: React.FC<OvertimeSummaryCardsProps> = ({
             key={k}
             label={SUMMARY_LABELS[k]}
             labelClassName={STAT_CARD_MICRO_LABEL}
-            value={<AnimatedNumber value={summary[k]} />}
+            value={<AnimatedNumber value={summary[k]} decimals={k.endsWith("_hours") ? 2 : 0} />}
             icon={cfg.icon}
             glow={cfg.glow}
             iconColorClass={cfg.iconColorClass}

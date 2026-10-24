@@ -8,6 +8,8 @@ interface AnimatedNumberProps {
   className?: string;
   suffix?: string;
   prefix?: string;
+  /** Fraction digits kept (default 0: whole numbers). */
+  decimals?: number;
 }
 
 export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
@@ -16,6 +18,7 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   className,
   suffix = "",
   prefix = "",
+  decimals = 0,
 }) => {
   const ref = useRef<HTMLSpanElement>(null);
   const reduceMotion = useReducedMotion();
@@ -28,7 +31,9 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   // Reduced motion: read straight from the un-sprung value so the number
   // updates instantly instead of spring-animating (WCAG 2.3.3).
   const display = useTransform(reduceMotion ? motionValue : springValue, (latest) =>
-    Math.round(latest).toLocaleString()
+    decimals > 0
+      ? latest.toLocaleString(undefined, { maximumFractionDigits: decimals })
+      : Math.round(latest).toLocaleString()
   );
 
   useEffect(() => {

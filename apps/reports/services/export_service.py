@@ -84,9 +84,15 @@ def bundle_paid_blocks(records: list[dict]) -> list[dict]:
     entries typed as plain hours and entries in different statuses or payroll
     settlements stay as they are.
     """
+    def after_start(first: dict, end: time) -> int:
+        """Minutes from the row's start to ``end``; an end at or before it is past midnight."""
+        start = first['start_time'].hour * 60 + first['start_time'].minute
+        return (end.hour * 60 + end.minute - start) % (24 * 60) or 24 * 60
+
     def absorb(first: dict, rec: dict) -> None:
         first['hours'] += rec['hours']
-        first['end_time'] = rec['end_time']
+        if after_start(first, rec['end_time']) > after_start(first, first['end_time']):
+            first['end_time'] = rec['end_time']
         for field in ('description', 'evidence', 'reference_code', 'evidence_type'):
             parts = dict.fromkeys(p for p in (first[field], rec[field]) if p)
             first[field] = ('; ' if field == 'description' else ', ').join(parts)

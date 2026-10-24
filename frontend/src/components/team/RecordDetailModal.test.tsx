@@ -72,6 +72,29 @@ describe("RecordDetailModal", () => {
     expect(screen.getByText("C1")).toBeInTheDocument();
   });
 
+  it("shows the paid block an overtime entry shares", () => {
+    const shared = { ...overtimeRecord, paid_window_start: "08:00:00", paid_window_end: "09:00:00" };
+    render(<RecordDetailModal open={true} onOpenChange={vi.fn()} record={shared} />);
+    expect(screen.getByText("Paid Block")).toBeInTheDocument();
+    expect(screen.getByText("08:00-09:00")).toBeInTheDocument();
+  });
+
+  it("says a 0h entry is covered by its paid block", () => {
+    const covered = {
+      ...overtimeRecord,
+      hours: 0,
+      paid_window_start: "08:00:00",
+      paid_window_end: "09:00:00",
+    };
+    render(<RecordDetailModal open={true} onOpenChange={vi.fn()} record={covered} />);
+    expect(screen.getByText("Covered by 08:00-09:00")).toBeInTheDocument();
+  });
+
+  it("omits the paid block row when the entry has no window", () => {
+    render(<RecordDetailModal open={true} onOpenChange={vi.fn()} record={overtimeRecord} />);
+    expect(screen.queryByText("Paid Block")).not.toBeInTheDocument();
+  });
+
   it("shows ticket references for ticket-type overtime", () => {
     render(<RecordDetailModal open={true} onOpenChange={vi.fn()} record={overtimeRecord} />);
     expect(screen.getByText("Ticket References")).toBeInTheDocument();
