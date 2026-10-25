@@ -10,7 +10,7 @@ dependents must be deleted before their parent to satisfy FK constraints.
 """
 from django.apps import apps as django_apps
 
-from .backup import EXCLUDED_APPS
+from .backup import is_excluded
 
 
 def _label(model) -> str:
@@ -22,7 +22,7 @@ def _direct_dependents(model) -> set:
     dependents = set()
     for rel in model._meta.related_objects:
         related_model = rel.related_model
-        if related_model._meta.app_label in EXCLUDED_APPS:
+        if is_excluded(related_model):
             continue
         if related_model is model:
             continue
@@ -34,7 +34,7 @@ def build_dependents_map() -> dict:
     """Map of ``model_label -> set(direct dependent model_labels)`` for every installed model."""
     graph = {}
     for model in django_apps.get_models():
-        if model._meta.app_label in EXCLUDED_APPS:
+        if is_excluded(model):
             continue
         graph[_label(model)] = _direct_dependents(model)
     return graph

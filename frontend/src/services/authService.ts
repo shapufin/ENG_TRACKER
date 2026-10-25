@@ -1,10 +1,33 @@
 import api, { withRefreshLock } from "@/lib/api";
-import type { LoginCredentials, AuthResponse, User } from "@/types";
+import type { LoginCredentials, AuthResponse, LoginResponse, MfaSetupData, User } from "@/types";
 import { clearOfflineUserData } from "@/lib/offline/offlineQueue";
 
 export const authService = {
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const { data } = await api.post<AuthResponse>("/auth/token/", credentials);
+  /** Tokens, or a second-factor challenge when the account needs one. */
+  async login(credentials: LoginCredentials): Promise<LoginResponse> {
+    const { data } = await api.post<LoginResponse>("/auth/token/", credentials);
+    return data;
+  },
+
+  async verifyMfa(mfaToken: string, code: string): Promise<AuthResponse> {
+    const { data } = await api.post<AuthResponse>("/auth/token/mfa-verify/", {
+      mfa_token: mfaToken,
+      code,
+    });
+    return data;
+  },
+
+  /** Seed + QR for an account that must enrol before it can sign in. */
+  async startLoginSetup(mfaToken: string): Promise<MfaSetupData> {
+    const { data } = await api.post<MfaSetupData>("/auth/mfa/login/setup/", { mfa_token: mfaToken });
+    return data;
+  },
+
+  async finishLoginSetup(mfaToken: string, code: string): Promise<AuthResponse> {
+    const { data } = await api.post<AuthResponse>("/auth/mfa/login/activate/", {
+      mfa_token: mfaToken,
+      code,
+    });
     return data;
   },
 

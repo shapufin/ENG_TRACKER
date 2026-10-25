@@ -17,6 +17,18 @@ if not ALLOWED_HOSTS:
         "(comma-separated, e.g. ALLOWED_HOSTS=app.example.com)."
     )
 
+# The base settings derive a dev key from SECRET_KEY when this is unset. In
+# production the seeds must be encrypted with a key that is carried to a new
+# server on purpose, so require it explicitly (docs/deploy/production-runbook.md).
+if not os.getenv('MFA_ENCRYPTION_KEYS', '').strip():
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "MFA_ENCRYPTION_KEYS is required in production (comma-separated Fernet keys; "
+        "generate one with: python -c \"from cryptography.fernet import Fernet; "
+        "print(Fernet.generate_key().decode())\"). Keep it with SECRET_KEY: losing it "
+        "locks out every user who enrolled a second factor."
+    )
+
 # P3-8: Strip django_extensions from production INSTALLED_APPS.
 # It adds management commands (shell_plus, runserver_plus, sqldiff,
 # show_urls) and template tags that are unnecessary attack surface in
@@ -100,6 +112,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         **REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'],  # noqa: F405
         'auth': '20/min',
+        'mfa': '10/min',
         'upload': '30/hour',
         'export': '20/hour',
         'evidence_upload': '60/hour',

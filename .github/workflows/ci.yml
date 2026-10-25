@@ -145,6 +145,7 @@ jobs:
         run: python manage.py check --deploy --settings=config.settings_production
         env:
           SECRET_KEY: ci-deploy-check-secret-key-that-is-long-enough-for-django-check-50chars
+          MFA_ENCRYPTION_KEYS: eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=
           ALLOWED_HOSTS: localhost
           DB_NAME: ci
           DB_USER: ci
@@ -321,6 +322,7 @@ jobs:
             echo "FRONTEND_URL=http://localhost"
             echo "DB_PASSWORD=ci-dummy"
             echo "REDIS_PASSWORD=ci-dummy"
+            echo "MFA_ENCRYPTION_KEYS=eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg="
           } > "$RUNNER_TEMP/compose-ci.env"
           docker compose --env-file "$RUNNER_TEMP/compose-ci.env" config -q
       # The official nginx entrypoint renders /etc/nginx/templates/*.template with
@@ -381,6 +383,7 @@ jobs:
         run: |
           docker run -d --name smoke --network host \
             -e SECRET_KEY=ci-smoke-key-not-a-secret-long-enough-for-the-production-guard \
+            -e MFA_ENCRYPTION_KEYS=eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg= \
             -e ALLOWED_HOSTS=localhost \
             -e FRONTEND_URL=http://localhost \
             -e DB_HOST=127.0.0.1 -e DB_PORT=5432 \

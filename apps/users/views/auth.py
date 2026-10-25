@@ -4,7 +4,7 @@ Authentication views for users app.
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
@@ -14,6 +14,20 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from ..serializers import CustomTokenObtainPairSerializer
+from ..services import mfa as mfa_service
+from ..services.mfa import MFAError
+
+
+def set_refresh_cookie(response, refresh):
+    """The one place the httpOnly refresh cookie is written (login, MFA, refresh)."""
+    response.set_cookie(
+        'refresh_token',
+        refresh,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite='Lax',
+        path='/api/auth/token/',
+    )
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -21,6 +35,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     Custom token view that returns additional user data.
 
     Throttled via the ``auth`` scope to limit brute-force password attempts.
+    A user who must still pass a second factor gets a challenge body instead of
+    tokens (no ``refresh``, so no cookie is set).
     """
     serializer_class = CustomTokenObtainPairSerializer
     throttle_scope = 'auth'
@@ -30,15 +46,166 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         if response.status_code == status.HTTP_200_OK:
             refresh = response.data.pop('refresh', None)
             if refresh:
-                response.set_cookie(
-                    'refresh_token',
-                    refresh,
-                    httponly=True,
-                    secure=not settings.DEBUG,
-                    samesite='Lax',
-                    path='/api/auth/token/',
-                )
+                set_refresh_cookie(response, refresh)
         return response
+
+
+_MFA_STATUS = {
+    'challenge_invalid': status.HTTP_401_UNAUTHORIZED,
+    'invalid_password': status.HTTP_400_BAD_REQUEST,
+    'invalid_code': status.HTTP_400_BAD_REQUEST,
+    'locked': status.HTTP_429_TOO_MANY_REQUESTS,
+    'unavailable': status.HTTP_503_SERVICE_UNAVAILABLE,
+}
+
+
+def _mfa_error(exc: MFAError) -> Response:
+    return Response(
+        {'detail': exc.message, 'code': exc.code},
+        status=_MFA_STATUS.get(exc.code, status.HTTP_400_BAD_REQUEST),
+    )
+
+
+def _signed_in_response(user, extra=None) -> Response:
+    data = CustomTokenObtainPairSerializer().issue(user)
+    refresh = data.pop('refresh')
+    if extra:
+        data.update(extra)
+    response = Response(data)
+    set_refresh_cookie(response, refresh)
+    return response
+
+
+class _MFAView(APIView):
+    """Second-factor endpoints that run before a session exists: no auth classes
+    (so no CSRF/session handling), throttled by the ``mfa`` scope, and they
+    prove identity with the signed challenge from the password step."""
+    authentication_classes = ()
+    permission_classes = (AllowAny,)
+    throttle_scope = 'mfa'
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class MFAVerifyView(_MFAView):
+    """POST /api/auth/token/mfa-verify/ {mfa_token, code}: finish an MFA login."""
+
+    def post(self, request):
+        try:
+            user = mfa_service.read_challenge(
+                str(request.data.get('mfa_token', '')), mfa_service.PURPOSE_VERIFY
+            )
+            mfa_service.verify_second_factor(user, str(request.data.get('code', '')))
+        except MFAError as exc:
+            return _mfa_error(exc)
+        return _signed_in_response(user)
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class MFALoginSetupView(_MFAView):
+    """POST /api/auth/mfa/login/setup/ {mfa_token}: seed + QR for a user who must enrol to sign in."""
+
+    def post(self, request):
+        try:
+            user = mfa_service.read_challenge(
+                str(request.data.get('mfa_token', '')), mfa_service.PURPOSE_SETUP
+            )
+            return Response(mfa_service.begin_setup(user))
+        except MFAError as exc:
+            return _mfa_error(exc)
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class MFALoginActivateView(_MFAView):
+    """POST /api/auth/mfa/login/activate/ {mfa_token, code}: enrol and sign in. Backup codes ride along once."""
+
+    def post(self, request):
+        try:
+            user = mfa_service.read_challenge(
+                str(request.data.get('mfa_token', '')), mfa_service.PURPOSE_SETUP
+            )
+            codes = mfa_service.activate(user, str(request.data.get('code', '')))
+        except MFAError as exc:
+            return _mfa_error(exc)
+        mfa_service.audit(user, 'mfa_enabled', f'{user.username} enrolled a second factor at sign-in', user)
+        return _signed_in_response(user, {'backup_codes': codes})
+
+
+class _SignedInMFAView(APIView):
+    """Self-service MFA management for a signed-in user."""
+    permission_classes = (IsAuthenticated,)
+    throttle_scope = 'mfa'
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class MFAStatusView(_SignedInMFAView):
+    """GET /api/auth/mfa/status/"""
+
+    def get(self, request):
+        return Response(mfa_service.status_for(request.user))
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class MFASetupView(_SignedInMFAView):
+    """POST /api/auth/mfa/setup/ {password}: start enrolment (a stolen session alone cannot add a device)."""
+
+    def post(self, request):
+        if not request.user.check_password(str(request.data.get('password', ''))):
+            return _mfa_error(MFAError('invalid_password', 'The password is not correct.'))
+        try:
+            return Response(mfa_service.begin_setup(request.user))
+        except MFAError as exc:
+            return _mfa_error(exc)
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class MFAActivateView(_SignedInMFAView):
+    """POST /api/auth/mfa/activate/ {code}: confirm the first code; returns the backup codes once."""
+
+    def post(self, request):
+        try:
+            codes = mfa_service.activate(request.user, str(request.data.get('code', '')))
+        except MFAError as exc:
+            return _mfa_error(exc)
+        mfa_service.audit(request.user, 'mfa_enabled', f'{request.user.username} turned on two-factor authentication', request.user)
+        return Response({'backup_codes': codes})
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class MFADisableView(_SignedInMFAView):
+    """POST /api/auth/mfa/disable/ {password, code}: turn the factor off (not while it is required)."""
+
+    def post(self, request):
+        if mfa_service.required_source(request.user) is not None:
+            return _mfa_error(MFAError(
+                'required', 'Two-factor authentication is required for your account and cannot be turned off.'
+            ))
+        try:
+            mfa_service.check_step_up(
+                request.user, str(request.data.get('password', '')), str(request.data.get('code', ''))
+            )
+        except MFAError as exc:
+            return _mfa_error(exc)
+        mfa_service.remove_mfa(request.user)
+        mfa_service.audit(request.user, 'mfa_disabled', f'{request.user.username} turned off two-factor authentication', request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class MFABackupCodesView(_SignedInMFAView):
+    """POST /api/auth/mfa/backup-codes/ {password, code}: replace the backup codes."""
+
+    def post(self, request):
+        if not mfa_service.is_enrolled(request.user):
+            return _mfa_error(MFAError('not_enrolled', 'Two-factor authentication is not set up.'))
+        try:
+            mfa_service.check_step_up(
+                request.user, str(request.data.get('password', '')), str(request.data.get('code', ''))
+            )
+        except MFAError as exc:
+            return _mfa_error(exc)
+        codes = mfa_service.generate_backup_codes(request.user)
+        mfa_service.audit(request.user, 'mfa_backup_codes_regenerated', f'{request.user.username} regenerated backup codes', request.user)
+        return Response({'backup_codes': codes})
 
 
 class CustomTokenRefreshSerializer(TokenRefreshSerializer):
@@ -73,14 +240,7 @@ class CustomTokenRefreshView(TokenRefreshView):
         if response.status_code == status.HTTP_200_OK:
             refresh = response.data.pop('refresh', None)
             if refresh:
-                response.set_cookie(
-                    'refresh_token',
-                    refresh,
-                    httponly=True,
-                    secure=not settings.DEBUG,
-                    samesite='Lax',
-                    path='/api/auth/token/',
-                )
+                set_refresh_cookie(response, refresh)
         return response
 
 

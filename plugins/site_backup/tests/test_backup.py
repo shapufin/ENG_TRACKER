@@ -58,3 +58,12 @@ class CreateBackupTests(TestCase):
         self.assertFalse(any(label.startswith('sessions.') for label in labels))
         self.assertFalse(any(label.startswith('site_backup.') for label in labels))
         self.assertIn('auth.user', labels)
+
+    def test_mfa_credentials_never_enter_a_backup(self):
+        labels = backup_service.dumpable_model_labels()
+        self.assertNotIn('users.usermfa', labels)
+        self.assertNotIn('users.mfabackupcode', labels)
+        from plugins.site_backup.services.dependency_graph import build_dependents_map
+        graph = build_dependents_map()
+        self.assertNotIn('users.usermfa', graph)
+        self.assertFalse(any('users.usermfa' in deps for deps in graph.values()))

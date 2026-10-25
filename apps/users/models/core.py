@@ -447,6 +447,11 @@ class UserProfile(BaseModel):
         help_text='Italian Team Leader assigned to this user'
     )
     is_hr_user = models.BooleanField(default=False)
+    mfa_required = models.BooleanField(
+        default=False,
+        help_text='Admin-set: this person must sign in with a second factor '
+                  '(on top of GlobalSettings.mfa_required, which applies to everyone).',
+    )
     SENIORITY_CHOICES = [
         ('junior', 'Junior'),
         ('mid', 'Mid'),

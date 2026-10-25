@@ -15,9 +15,9 @@ covers (and the prefetch each one needs):
 * TL role fallbacks (``is_team_leader`` ...)  -> ``user__led_teams`` and the two
   ``*_team_members`` reverse relations
 """
-from django.db.models import Count, Prefetch
+from django.db.models import Count, Exists, OuterRef, Prefetch
 
-from apps.users.models import Team, UserProfile
+from apps.users.models import Team, UserMFA, UserProfile
 
 
 def _tl_reports(related_fk):
@@ -33,6 +33,8 @@ def with_profile_list_loading(queryset):
     return (
         queryset
         .select_related('user', 'albanian_tl', 'italian_tl')
+        # Admin-only ``mfa_enabled``: one EXISTS in the page query, not one query per row.
+        .annotate(mfa_enabled=Exists(UserMFA.objects.filter(user_id=OuterRef('user_id'), is_enabled=True)))
         .prefetch_related(
             'techs',
             'clients',

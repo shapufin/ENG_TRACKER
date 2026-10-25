@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { User, LoginCredentials } from "@/types";
+import { isMfaChallenge, type AuthResponse, type User, type LoginCredentials } from "@/types";
 import { authService } from "@/services/authService";
 import { setAccessToken } from "@/lib/api";
 import { AuthContext, type AuthContextType } from "./auth-context-base";
@@ -58,16 +58,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = useCallback(
-    async (credentials: LoginCredentials) => {
+  const startSession = useCallback(
+    (data: AuthResponse) => {
       queryClient.clear();
-      const data = await authService.login(credentials);
       setAccessToken(data.access);
       localStorage.setItem("user", JSON.stringify(data.user));
       setUser(data.user);
       return data;
     },
     [queryClient]
+  );
+
+  const login = useCallback(
+    async (credentials: LoginCredentials) => {
+      queryClient.clear();
+      const data = await authService.login(credentials);
+      // A challenge is not a session: nothing is stored until the second step passes.
+      return isMfaChallenge(data) ? data : startSession(data);
+    },
+    [queryClient, startSession]
+  );
+
+  const verifyMfa = useCallback(
+    async (mfaToken: string, code: string) =>
+      startSession(await authService.verifyMfa(mfaToken, code)),
+    [startSession]
+  );
+
+  const startLoginSetup = useCallback(
+    (mfaToken: string) => authService.startLoginSetup(mfaToken),
+    []
+  );
+
+  const finishLoginSetup = useCallback(
+    async (mfaToken: string, code: string) =>
+      startSession(await authService.finishLoginSetup(mfaToken, code)),
+    [startSession]
   );
 
   const logout = useCallback(() => {
@@ -90,6 +116,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextType = {
     user,
     login,
+    verifyMfa,
+    startLoginSetup,
+    finishLoginSetup,
     logout,
     refreshUser,
     isAuthenticated: !!user,

@@ -9,12 +9,14 @@ from datetime import date
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.contrib.auth.models import User
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
+from rest_framework_simplejwt.settings import api_settings
+from django.contrib.auth.models import User, update_last_login
 from apps.overtime.serializers import ClientSerializer
 from core.mixins.permissions import is_cr_admin
 from .models import Tech, TechLevel, Team, UserProfile, TeamMembership
 from .models.core import _user_has_related, normalize_calendar_group
+from .services import mfa as mfa_service
 from .services.team_leaders import derive_team_tls
 from .services.tech_assignments import (
     TechAssignmentError,
@@ -132,10 +134,24 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             return False
 
     def validate(self, attrs):
-        data = super().validate(attrs)
+        # Authenticate only. Tokens are minted by ``issue`` after the second
+        # factor (if any); minting here would leave an OutstandingToken row for
+        # a login that never completed.
+        TokenObtainSerializer.validate(self, attrs)
+        challenge = mfa_service.login_challenge(self.user)
+        if challenge is not None:
+            return challenge
+        return self.issue(self.user)
+
+    def issue(self, user):
+        """Tokens plus the user payload the SPA hydrates from. One place for
+        password-only logins and for logins finished by ``mfa-verify``."""
+        refresh = self.get_token(user)
+        data = {'refresh': str(refresh), 'access': str(refresh.access_token)}
+        if api_settings.UPDATE_LAST_LOGIN:
+            update_last_login(None, user)
 
         # Add user data to response
-        user = self.user
         data['user'] = {
             'id': user.id,
             'username': user.username,
@@ -603,6 +619,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
     groups = serializers.SerializerMethodField()
     current_month_overtime_hours = serializers.DecimalField(max_digits=7, decimal_places=2, read_only=True)
     current_month_standby_hours = serializers.DecimalField(max_digits=7, decimal_places=2, read_only=True)
+    mfa_enabled = serializers.SerializerMethodField()
+
+    def get_mfa_enabled(self, obj) -> bool:
+        # Annotated by ``with_profile_list_loading``; staff-only (see to_representation).
+        return bool(getattr(obj, 'mfa_enabled', False))
 
     class Meta:
         model = UserProfile
@@ -612,10 +633,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'clients', 'clients_detail',
             'albanian_tl', 'albanian_tl_name', 'italian_tl', 'italian_tl_name',
             'is_hr_user', 'is_italian_tl_role', 'is_albanian_tl_role', 'phone', 'code', 'hire_date', 'groups',
+            'mfa_required', 'mfa_enabled',
             'current_month_overtime_hours', 'current_month_standby_hours',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        # mfa_required is written only through UserViewSet.update_user, which
+        # applies the staff-on-staff rule; this serializer must never set it.
+        read_only_fields = ['id', 'mfa_required', 'created_at', 'updated_at']
 
     def validate_code(self, value):
         """Trim, store blank as NULL, and refuse a code another profile holds."""
@@ -637,7 +661,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
         keeps Tech reads flat as the list grows.
         """
         instance.user.profile = instance
-        return super().to_representation(instance)
+        data = super().to_representation(instance)
+        # Whether MFA is forced on someone is admin management data, not
+        # something a teammate's profile row should reveal.
+        request = self.context.get('request')
+        if not getattr(getattr(request, 'user', None), 'is_staff', False):
+            data.pop('mfa_required', None)
+            data.pop('mfa_enabled', None)
+        return data
 
     def create(self, validated_data):
         """``techs`` is a through-model M2M now, so ModelSerializer cannot

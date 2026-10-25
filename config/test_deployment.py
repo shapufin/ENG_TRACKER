@@ -136,6 +136,7 @@ class ThrottleConfigurationTests(TestCase):
         import os
         env_vars = {
             'SECRET_KEY': 'test-secret-key-long-enough-for-django-deploy-check-50chars',
+            'MFA_ENCRYPTION_KEYS': 'eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=',
             'ALLOWED_HOSTS': 'localhost',
             'DB_NAME': 'test', 'DB_USER': 'test', 'DB_PASSWORD': 'test',
             'DB_HOST': 'localhost', 'FRONTEND_URL': 'http://localhost',
@@ -165,6 +166,7 @@ class ThrottleConfigurationTests(TestCase):
         import os
         env_vars = {
             'SECRET_KEY': 'test-secret-key-long-enough-for-django-deploy-check-50chars',
+            'MFA_ENCRYPTION_KEYS': 'eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=',
             'ALLOWED_HOSTS': 'localhost',
             'DB_NAME': 'test', 'DB_USER': 'test', 'DB_PASSWORD': 'test',
             'DB_HOST': 'localhost', 'FRONTEND_URL': 'http://localhost',
@@ -194,6 +196,7 @@ class ThrottleConfigurationTests(TestCase):
         import os
         env_vars = {
             'SECRET_KEY': 'test-secret-key-long-enough-for-django-deploy-check-50chars',
+            'MFA_ENCRYPTION_KEYS': 'eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=',
             'ALLOWED_HOSTS': 'localhost',
             'DB_NAME': 'test', 'DB_USER': 'test', 'DB_PASSWORD': 'test',
             'DB_HOST': 'localhost', 'ENABLE_API_DOCS': 'False',
@@ -231,6 +234,7 @@ class ThrottleConfigurationTests(TestCase):
         import os
         env_vars = {
             'SECRET_KEY': 'test-secret-key-long-enough-for-django-deploy-check-50chars',
+            'MFA_ENCRYPTION_KEYS': 'eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=',
             'ALLOWED_HOSTS': 'localhost',
             'DB_NAME': 'test', 'DB_USER': 'test', 'DB_PASSWORD': 'test',
             'DB_HOST': 'localhost', 'FRONTEND_URL': 'http://localhost',
@@ -254,6 +258,7 @@ class ThrottleConfigurationTests(TestCase):
         import importlib
         env_vars = {
             'SECRET_KEY': 'test-secret-key-long-enough-for-django-deploy-check-50chars',
+            'MFA_ENCRYPTION_KEYS': 'eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=',
             'ALLOWED_HOSTS': 'localhost',
             'DB_NAME': 'test', 'DB_USER': 'test', 'DB_PASSWORD': 'test',
             'DB_HOST': 'localhost', 'FRONTEND_URL': 'https://app.example.com',
@@ -285,6 +290,7 @@ class ThrottleConfigurationTests(TestCase):
         import importlib
         env_vars = {
             'SECRET_KEY': 'test-secret-key-long-enough-for-django-deploy-check-50chars',
+            'MFA_ENCRYPTION_KEYS': 'eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=',
             'ALLOWED_HOSTS': 'localhost',
             'DB_NAME': 'test', 'DB_USER': 'test', 'DB_PASSWORD': 'test',
             'DB_HOST': 'localhost', 'FRONTEND_URL': 'http://localhost',
@@ -633,6 +639,7 @@ class ProductionThrottleRatesTests(SimpleTestCase):
         env = {k: v for k, v in os.environ.items() if k != 'DEBUG'}
         env.update({
             'SECRET_KEY': 'test-secret-key-long-enough-for-django-deploy-check-50chars',
+            'MFA_ENCRYPTION_KEYS': 'eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=',
             'ALLOWED_HOSTS': 'localhost',
             'DB_NAME': 'test', 'DB_USER': 'test', 'DB_PASSWORD': 'test',
             'DB_HOST': 'localhost', 'FRONTEND_URL': 'http://localhost',
@@ -668,6 +675,7 @@ class ProductionSettingsHardeningTests(SimpleTestCase):
 
     BASE_ENV = {
         'SECRET_KEY': 'test-secret-key-long-enough-for-django-deploy-check-50chars',
+        'MFA_ENCRYPTION_KEYS': 'eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=',
         'ALLOWED_HOSTS': 'localhost',
         'DB_NAME': 'test', 'DB_USER': 'test', 'DB_PASSWORD': 'test',
         'DB_HOST': 'localhost', 'FRONTEND_URL': 'http://localhost',

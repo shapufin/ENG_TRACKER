@@ -15,6 +15,7 @@ vi.mock("@/services/leaveService", () => ({
       carry_over_enabled: true,
       carry_over_applied_year: null,
       business_timezone: "Europe/Tirane",
+      mfa_required: false,
     }),
     updateSettings: vi.fn(),
   },
@@ -45,6 +46,11 @@ vi.mock("@/context/PluginContext", () => ({
   usePlugins: () => ({ activePlugins: activePlugins.value }),
 }));
 
+const permissions = vi.hoisted(() => ({ isSuperuser: true }));
+vi.mock("@/context/PermissionContext", () => ({
+  usePermissions: () => ({ isSuperuser: permissions.isSuperuser }),
+}));
+
 const renderPage = () => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -57,6 +63,41 @@ const renderPage = () => {
 };
 
 describe("GlobalSettingsPage", () => {
+  describe("company-wide two-factor requirement", () => {
+    it("asks for confirmation, then saves only the requirement", async () => {
+      permissions.isSuperuser = true;
+      vi.mocked(leaveService.updateSettings).mockClear();
+      vi.mocked(leaveService.updateSettings).mockResolvedValue({} as never);
+      renderPage();
+
+      fireEvent.click(await screen.findByLabelText("Require two-factor for all users"));
+      expect(leaveService.updateSettings).not.toHaveBeenCalled();
+      fireEvent.click(await screen.findByRole("button", { name: "Require for everyone" }));
+
+      await waitFor(() =>
+        expect(leaveService.updateSettings).toHaveBeenCalledWith({ mfa_required: true })
+      );
+    });
+
+    it("cancelling the confirmation changes nothing", async () => {
+      permissions.isSuperuser = true;
+      vi.mocked(leaveService.updateSettings).mockClear();
+      renderPage();
+
+      fireEvent.click(await screen.findByLabelText("Require two-factor for all users"));
+      fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+      expect(leaveService.updateSettings).not.toHaveBeenCalled();
+    });
+
+    it("is read-only for staff who are not superusers", async () => {
+      permissions.isSuperuser = false;
+      renderPage();
+      expect(await screen.findByLabelText("Require two-factor for all users")).toBeDisabled();
+      expect(screen.getByText(/Only a superuser can change this/)).toBeInTheDocument();
+      permissions.isSuperuser = true;
+    });
+  });
+
   it("associates setting labels with their inputs", async () => {
     // Audit 2026-09-07: <Label> had no htmlFor / inputs no id — the three
     // vacation-policy inputs had no programmatic accessible name.

@@ -106,6 +106,7 @@ const emptyEditForm = {
   is_albanian_tl_role: false,
   is_cr_admin: false,
   is_hbpr: false,
+  mfa_required: false,
   roles: [] as string[],
   hire_date: "",
 };
@@ -338,6 +339,11 @@ export const useUsersPage = () => {
         ...buildRolePayload(form),
         is_hr: form.is_hr_user,
         hire_date: form.hire_date || null,
+        // Only when changed: the server refuses a staff admin touching a staff account's flag,
+        // and an unchanged value must never look like an edit.
+        ...(form.mfa_required !== (editing.mfa_required ?? false)
+          ? { mfa_required: form.mfa_required }
+          : {}),
       },
     });
   };
@@ -365,6 +371,7 @@ export const useUsersPage = () => {
       is_albanian_tl_role: profile.is_albanian_tl_role || roles.includes("albanian_tl"),
       is_cr_admin: profile.user.is_cr_admin || false,
       is_hbpr: roles.includes("hbpr"),
+      mfa_required: profile.mfa_required ?? false,
       roles: roles,
       hire_date: profile.hire_date || "",
     });

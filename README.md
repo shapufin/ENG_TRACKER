@@ -232,7 +232,7 @@ permanently — it skips once the user already exists.
 # 1. Copy the env template and fill in real values
 cp .env.example .env
 #    Required: SECRET_KEY, ALLOWED_HOSTS, FRONTEND_URL, DB_PASSWORD,
-#              REDIS_PASSWORD (see .env.example for notes)
+#              REDIS_PASSWORD, MFA_ENCRYPTION_KEYS (see .env.example for notes)
 #    Optional tuning: DB_CONN_MAX_AGE, GUNICORN_WORKERS, RUN_MIGRATIONS,
 #              BACKUP_INTERVAL_SECONDS, BACKUP_RETENTION (documented in
 #              docker-compose.yml and docs/deploy/production-runbook.md)
@@ -330,6 +330,7 @@ secret manager (HashiCorp Vault, AWS Secrets Manager, GCP Secret Manager)
 for at minimum:
 
 - `SECRET_KEY` (Django session/token signing — rotate to invalidate all sessions)
+- `MFA_ENCRYPTION_KEYS` (Fernet key(s) that encrypt two-factor seeds — copy it to any new server; losing it locks out enrolled users)
 - `DB_PASSWORD` (Postgres)
 - `REDIS_PASSWORD` (Redis auth — required by compose)
 - `EMAIL_HOST_PASSWORD` (SMTP)

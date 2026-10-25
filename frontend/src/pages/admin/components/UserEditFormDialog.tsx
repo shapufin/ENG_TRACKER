@@ -24,6 +24,7 @@ interface UserEditFormDialogProps {
     is_italian_tl_role: boolean;
     is_albanian_tl_role: boolean;
     is_hbpr?: boolean;
+    mfa_required?: boolean;
     hire_date: string;
   };
   formErrors: Record<string, string>;
@@ -114,6 +115,7 @@ export const UserEditFormDialog: React.FC<UserEditFormDialogProps> = ({
         albanianTLs={albanianTLs}
         italianTLs={italianTLs}
         showHireDate
+        showMfa
       />
       {formErrors.non_field_errors && (
         <p className="text-destructive text-xs">{formErrors.non_field_errors}</p>

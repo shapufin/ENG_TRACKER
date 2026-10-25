@@ -38,6 +38,8 @@ ALLOWED_IMPORTS = {
     "apps/standby/viewsets.py": {"audit_log", "notifications", "payroll"},
     # Demo seeder: loaded only when invoked by name, so it cannot break startup.
     "apps/users/management/commands/seed_skills_demo.py": {"skills"},
+    # Security-event audit trail; the import is ``except ImportError: return`` (no plugin, no trail).
+    "apps/users/services/mfa.py": {"audit_log"},
     "apps/users/serializers.py": {"control_room"},
     "apps/users/viewsets.py": {"audit_log", "control_room"},
     "core/mixins/permissions.py": {"control_room"},

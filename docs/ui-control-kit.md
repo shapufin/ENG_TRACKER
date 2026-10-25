@@ -70,6 +70,8 @@ Keep it short; each entry names a rule a token cannot express. Anything else is 
   `proficiencyLevels.ts`, `categoryAccents.ts`, organigrama `OrgNode`/`BuilderNode`/`CustomChartViewer`/
   `OrgChartMobileList` (DARK-OVERRIDE; the org nodes also STRAY-FILL; `proficiencyLevels` and `CalendarDayCell`
   also DARK-EXTRA).
+- A fixed white tile that is not a theme surface: `MfaEnrollment` (STRAY-FILL; a QR code must be dark on white
+  to scan in both themes).
 - Light and dark use different steps of one token (border vs line-subtle, 5% vs 10% foreground): `ConflictCard`,
   `EventActionButtons`, `CalendarDayCell`, `EventCard`, `SkillsDenseMatrix`, `SkillsHeatmapGrid`,
   `SkillsMemberColumn` (DARK-OVERRIDE).

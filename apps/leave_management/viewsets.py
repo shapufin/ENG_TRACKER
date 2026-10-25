@@ -299,6 +299,11 @@ class GlobalSettingsViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserP
         return response
 
     def perform_update(self, serializer):
+        new_mfa = serializer.validated_data.get('mfa_required')
+        mfa_changed = new_mfa is not None and new_mfa != serializer.instance.mfa_required
+        if mfa_changed and not self.request.user.is_superuser:
+            # Forcing a second factor on everyone is a security-policy change.
+            raise PermissionDenied('Only a superuser can change the company-wide two-factor requirement.')
         with transaction.atomic():
             settings_obj = serializer.save()
             # The rule governs the current carry cycle. If rollover already ran,
@@ -314,6 +319,12 @@ class GlobalSettingsViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserP
                     row.year, settings_obj.carry_over_expiry_month, settings_obj.carry_over_expiry_day,
                 )
                 row.save(update_fields=['expires_at'])
+        if mfa_changed:
+            from apps.users.services import mfa as mfa_service
+            mfa_service.audit(
+                self.request.user, 'mfa_required_changed',
+                f'{self.request.user.username} set the company-wide MFA requirement to {new_mfa}',
+            )
         self.invalidate_related_cache()
 
     def perform_create(self, serializer):

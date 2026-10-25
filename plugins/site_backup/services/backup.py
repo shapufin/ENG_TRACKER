@@ -24,6 +24,17 @@ from ..models import BackupRecord
 
 MANIFEST_SCHEMA_VERSION = 1
 EXCLUDED_APPS = ['contenttypes', 'sessions', 'site_backup']
+# Credentials never travel in a downloadable archive, and a restore must not roll
+# a user's second factor back (revive spent backup codes, re-enable a removed
+# factor). Server moves carry them through the database dump instead.
+EXCLUDED_MODELS = ['users.usermfa', 'users.mfabackupcode']
+
+
+def is_excluded(model) -> bool:
+    return (
+        model._meta.app_label in EXCLUDED_APPS
+        or f'{model._meta.app_label}.{model._meta.model_name}' in EXCLUDED_MODELS
+    )
 BACKUPS_SUBDIR = 'backups'
 
 
@@ -41,7 +52,7 @@ def dumpable_model_labels():
     labels = []
     for model in django_apps.get_models():
         app_label = model._meta.app_label
-        if app_label in EXCLUDED_APPS:
+        if is_excluded(model):
             continue
         labels.append(f'{app_label}.{model._meta.model_name}')
     return labels
@@ -51,7 +62,7 @@ def _model_row_counts() -> dict:
     counts = {}
     for model in django_apps.get_models():
         app_label = model._meta.app_label
-        if app_label in EXCLUDED_APPS:
+        if is_excluded(model):
             continue
         label = f'{app_label}.{model._meta.model_name}'
         try:

@@ -1,5 +1,16 @@
 import React, { useState } from "react";
-import { Check, KeyRound, Mail, Pencil, Phone, Shield, Trash2, Users, X } from "lucide-react";
+import {
+  Check,
+  KeyRound,
+  Mail,
+  Pencil,
+  Phone,
+  Shield,
+  ShieldCheck,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
 import {
   Dialog,
   DialogBody,
@@ -68,6 +79,8 @@ interface UserDetailPanelProps {
   onOpenChange: (open: boolean) => void;
   onEdit: (profile: UserProfile) => void;
   onReset: (userId: number) => void;
+  /** Ask to remove this person's second factor (the page owns the confirmation). */
+  onResetMfa?: (profile: UserProfile) => void;
   onDelete: (profile: UserProfile) => void;
   /** Inline save for fields in the detail panel. */
   onSaveField?: (userId: number, payload: UserDetailSavePayload) => void;
@@ -663,6 +676,7 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
   onOpenChange,
   onEdit,
   onReset,
+  onResetMfa,
   onDelete,
   onSaveField,
   isSaving = false,
@@ -939,6 +953,38 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
               canEdit={canSaveField}
             />
           </DetailDrawerSection>
+
+          {profile.mfa_enabled !== undefined && (
+            <DetailDrawerSection id="user-security" title="Security" icon={ShieldCheck}>
+              <DetailDrawerRow
+                label="Two-factor"
+                action={
+                  profile.mfa_enabled && onResetMfa ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="control-sm"
+                      onClick={() => onResetMfa(profile)}
+                      aria-label={`Reset two-factor authentication for ${username}`}
+                    >
+                      Reset two-factor
+                    </Button>
+                  ) : undefined
+                }
+              >
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Badge variant={profile.mfa_enabled ? "default" : "secondary"} className="text-xs font-normal">
+                    {profile.mfa_enabled ? "On" : "Not set up"}
+                  </Badge>
+                  {profile.mfa_required && (
+                    <Badge variant="outline" className="text-xs font-normal">
+                      Required for this user
+                    </Badge>
+                  )}
+                </div>
+              </DetailDrawerRow>
+            </DetailDrawerSection>
+          )}
 
           <div className="border-border/50 bg-muted/30 rounded-xl border px-3 py-2">
             <p className="text-muted-foreground text-xs italic">

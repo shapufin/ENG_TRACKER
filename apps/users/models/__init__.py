@@ -14,8 +14,11 @@ from .core import (
     TeamMembership,
 )
 from .hbpr import HbprAlbanianTlAssignment
+from .mfa import MFABackupCode, UserMFA
 
 __all__ = [
+    'MFABackupCode',
+    'UserMFA',
     'ApprovalPeriodBoundary',
     'ApprovalPeriodClose',
     'ApprovalPeriodCloseMember',

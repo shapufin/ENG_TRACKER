@@ -38,6 +38,7 @@ from .serializers import (
 from .services.hbpr_scope import get_hbpr_scope
 from .services.profile_loading import with_profile_list_loading
 from .services.team_leaders import derive_team_tls
+from .services.tokens import revoke_refresh_tokens
 from .services.tech_assignments import (
     TechAssignmentError,
     apply_tech_assignments,
@@ -97,7 +98,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         # so an action missing from this list is open to any authenticated user.
         if self.action in [
             'destroy', 'bulk_delete', 'bulk_update',
-            'create_user', 'update_user', 'reset_password',
+            'create_user', 'update_user', 'reset_password', 'reset_mfa', 'mfa_status',
             # Company-wide headcount and TL counts: TL management data, not for employees.
             'stats',
         ]:
@@ -417,6 +418,45 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             return None
         return f'User {leader_id} is not currently an active {field} team leader'
 
+    @staticmethod
+    def _forbid_staff_on_staff(request, target, message):
+        """Credential changes on a staff or superuser account need a superuser
+        (own account excepted). One rule for passwords and second factors."""
+        if (
+            (target.is_staff or target.is_superuser)
+            and not request.user.is_superuser
+            and target.pk != request.user.pk
+        ):
+            raise PermissionDenied(message)
+
+    @action(detail=True, methods=['get'], permission_classes=[IsAdminUser()])
+    def mfa_status(self, request, pk=None):
+        """Second-factor state of one account, for the admin user panel."""
+        from .services import mfa as mfa_service
+        return Response(mfa_service.status_for(self.get_object()))
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser()])
+    def reset_mfa(self, request, pk=None):
+        """Admin removes a user's second factor (lost phone and backup codes).
+
+        Ends their live sessions. If MFA is required for them they enrol again
+        at the next sign-in. Not usable on your own account: use Settings.
+        """
+        from .services import mfa as mfa_service
+        user = self.get_object()
+        if user.pk == request.user.pk:
+            return Response(
+                {'error': 'Turn off your own two-factor authentication from Settings.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        self._forbid_staff_on_staff(request, user, 'Only a superuser can reset a staff or superuser second factor.')
+        if not mfa_service.is_enrolled(user):
+            return Response({'error': 'This user has no second factor to reset.'}, status=status.HTTP_400_BAD_REQUEST)
+        mfa_service.remove_mfa(user)
+        revoke_refresh_tokens(user)
+        mfa_service.audit(request.user, 'mfa_reset', f'{request.user.username} reset the second factor of {user.username}', user)
+        return Response({'detail': 'Second factor removed.'}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser()])
     def reset_password(self, request, pk=None):
         """
@@ -425,12 +465,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         Only a superuser may reset a staff or superuser account (own account excepted).
         """
         user = self.get_object()
-        if (
-            (user.is_staff or user.is_superuser)
-            and not request.user.is_superuser
-            and user.pk != request.user.pk
-        ):
-            raise PermissionDenied('Only a superuser can reset a staff or superuser password.')
+        self._forbid_staff_on_staff(request, user, 'Only a superuser can reset a staff or superuser password.')
         new_password = request.data.get('new_password')
         if not new_password:
             return Response(
@@ -447,9 +482,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         user.set_password(new_password)
         user.save()
         # SEC-10: a reset must end sessions that are still alive on the old password.
-        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
-        for outstanding in OutstandingToken.objects.filter(user=user):
-            BlacklistedToken.objects.get_or_create(token=outstanding)
+        revoke_refresh_tokens(user)
         return Response({'detail': 'Password reset successfully.'}, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['post'], permission_classes=[IsAdminUser()])
@@ -982,6 +1015,15 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         profile, _ = UserProfile.objects.get_or_create(user=user)
         if 'phone' in data:
             profile.phone = data['phone']
+        if 'mfa_required' in data and bool(data['mfa_required']) != profile.mfa_required:
+            # Same authority as a password reset: staff cannot touch staff accounts.
+            self._forbid_staff_on_staff(request, user, 'Only a superuser can change the second-factor requirement of a staff or superuser.')
+            from .services import mfa as mfa_service
+            profile.mfa_required = bool(data['mfa_required'])
+            mfa_service.audit(
+                request.user, 'mfa_required_changed',
+                f'{request.user.username} set per-user MFA requirement of {user.username} to {profile.mfa_required}', user,
+            )
         if 'code' in data:
             profile.code = data['code']  # UserProfile.save() trims / blanks to NULL
         if 'teams' in data:

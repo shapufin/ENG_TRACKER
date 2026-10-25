@@ -30,6 +30,11 @@ sqlparse==0.6.0
 tzdata==2026.2
 uritemplate==4.2.0
 
+# Multi-factor authentication: Fernet encryption of TOTP seeds, QR rendering.
+# (TOTP itself is stdlib hmac; cryptography was only a transitive pin before.)
+cryptography==47.0.0
+qrcode==8.2
+
 # Web Push notifications
 pywebpush==2.5.0
 py-vapid==1.9.4

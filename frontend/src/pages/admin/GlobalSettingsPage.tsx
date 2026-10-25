@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { SiteBranding } from "@/types";
+import { TwoFactorPolicyCard } from "./components/TwoFactorPolicyCard";
 
 const MONTH_NAMES = Array.from({ length: 12 }, (_, i) =>
   new Date(2000, i, 1).toLocaleString("en", { month: "long" })
@@ -670,6 +671,7 @@ export const GlobalSettingsPage: React.FC = () => {
           className={activeTab === "system" ? "block" : "hidden"}
         >
           <div className="grid gap-6 md:grid-cols-2">
+            <TwoFactorPolicyCard required={data.mfa_required} className="md:col-span-2" />
             <GlassCard delay={0} className="space-y-4 p-6">
               <div className="flex items-center gap-2 border-b pb-3">
                 <ShieldCheck className="text-primary h-5 w-5" />

@@ -5,6 +5,7 @@ import { ModalSection } from "@/components/ui/ModalSection";
 import { TeamMultiSelect } from "@/components/admin/TeamMultiSelect";
 import { TechMultiSelect } from "@/components/admin/TechMultiSelect";
 import { InfoCallout } from "@/components/ui/InfoCallout";
+import { SwitchField } from "@/components/common/forms/SwitchField";
 import { FormInputField, FormRoleCheckboxes, FormTLSelect } from "./userFormFields";
 import type { Tech, Team } from "@/types";
 
@@ -21,6 +22,7 @@ interface UserFormCoreForm {
   is_albanian_tl_role: boolean;
   is_cr_admin?: boolean;
   is_hbpr?: boolean;
+  mfa_required?: boolean;
   hire_date?: string;
 }
 
@@ -37,6 +39,8 @@ interface UserFormCoreProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   italianTLs: any[];
   showHireDate?: boolean;
+  /** Edit only: the per-person two-factor requirement (create_user does not take it). */
+  showMfa?: boolean;
 }
 
 export const UserFormCore: React.FC<UserFormCoreProps> = ({
@@ -48,6 +52,7 @@ export const UserFormCore: React.FC<UserFormCoreProps> = ({
   albanianTLs,
   italianTLs,
   showHireDate,
+  showMfa,
 }) => {
   const teams = (teamsData || []) as unknown as Team[];
   const hbprMode = Boolean(form.is_hbpr);
@@ -135,6 +140,17 @@ export const UserFormCore: React.FC<UserFormCoreProps> = ({
           onChange={(key, value) => updateField(key, value)}
         />
       </ModalSection>
+      {showMfa && (
+        <ModalSection title="Security" columns={1}>
+          <SwitchField
+            id={`${prefix}_mfa_required`}
+            label="Require two-factor authentication"
+            description="This person must set up an authenticator app and use it to sign in. Applies even when the company-wide requirement is off."
+            checked={Boolean(form.mfa_required)}
+            onCheckedChange={(v) => updateField("mfa_required", v)}
+          />
+        </ModalSection>
+      )}
     </>
   );
 };

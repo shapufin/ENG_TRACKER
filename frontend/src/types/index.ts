@@ -189,6 +189,10 @@ export interface UserProfile {
   is_hr_user: boolean;
   is_italian_tl_role?: boolean;
   is_albanian_tl_role?: boolean;
+  /** Admin-only: this person must use a second factor. Absent for non-staff viewers. */
+  mfa_required?: boolean;
+  /** Admin-only: the person has a second factor set up. Absent for non-staff viewers. */
+  mfa_enabled?: boolean;
   phone: string;
   /** Optional unique employee code. */
   code?: string | null;
@@ -329,6 +333,8 @@ export interface GlobalSettings {
   carry_over_enabled: boolean;
   carry_over_applied_year: number | null;
   business_timezone: string;
+  /** Company-wide second-factor requirement (superuser-controlled). */
+  mfa_required: boolean;
   created_at: string;
   updated_at: string;
 }

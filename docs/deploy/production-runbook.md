@@ -152,7 +152,9 @@ The entrypoint runs `sync_payroll_holidays` only with `RUN_MIGRATIONS=1`. After 
 Steps:
 
 1. Copy `.env.example` to `.env` and set the required values: `SECRET_KEY`,
-   `ALLOWED_HOSTS`, `FRONTEND_URL`, `DB_PASSWORD`, `REDIS_PASSWORD`. Compose refuses to
+   `ALLOWED_HOSTS`, `FRONTEND_URL`, `DB_PASSWORD`, `REDIS_PASSWORD`, `MFA_ENCRYPTION_KEYS`
+   (generate one with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`;
+   read "Two-factor keys" in section 5.7 before you change or lose it). Compose refuses to
    start without them. Optional: `DJANGO_SUPERUSER_USERNAME` / `_EMAIL` / `_PASSWORD`
    (first superuser), `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (Web Push; production reads
    them from the environment only), `EMAIL_*`, `ONLYOFFICE_*`, `INGRESS_*`, `DB_SSL_MODE`.
@@ -247,3 +249,32 @@ If the proxy is not trusted, every user shares one 20 r/s bucket and normal dash
   (`--max-requests 1000`) or the container restarts. Compose starts the database first (health-checked
   `depends_on`); restart the backend after any database outage that overlapped a boot.
 - Contacts: add your organisation's on-call and escalation contacts here before go-live.
+
+### 5.7 Two-factor keys, moves and break-glass
+
+Two-factor (TOTP) is optional per person until an admin switches on the company-wide requirement
+(Admin, Global Settings) or ticks "Require two-factor" on a user. Enrolled users are always asked for a code.
+
+- **`MFA_ENCRYPTION_KEYS`** encrypts every TOTP seed in the database. It is a comma-separated list:
+  the first key encrypts, every key decrypts. Keep it in the same password manager entry as
+  `SECRET_KEY`, **never** in the `db-backup` volume or next to a database dump (that would defeat the
+  encryption). The Site Backup plugin deliberately leaves the two-factor tables out of its archives.
+- **Moving to a new server**: restore the database with `pg_restore` (section 4.1), put the *same*
+  `MFA_ENCRYPTION_KEYS` in the new `.env`, start the stack. The boot log must say
+  `All N MFA seeds are readable.` If it says `WARNING: MFA seeds are unreadable`, stop: the key does
+  not match. Enrolled users cannot sign in (it fails closed, they see "unavailable"), nobody is let in
+  password-only. Fix the key, or run `reset_user_mfa` per user and have them enrol again.
+- **Before routing traffic to a new host**, make sure its clock is NTP-synced (`timedatectl status`);
+  TOTP codes are time based and a host a minute off rejects honest codes. The container timezone does
+  not matter.
+- **Rotating the key**: prepend the new key (`NEW,OLD`), deploy, run
+  `docker compose exec backend python manage.py check_mfa_key --reencrypt`, then remove `OLD` and deploy.
+- **Locked-out user (lost phone and backup codes)**: an admin uses "Reset two-factor" on the user, or from
+  the server: `docker compose exec backend python manage.py reset_user_mfa <username>`. This ends the
+  user's sessions; if MFA is required for them they enrol again at the next sign-in.
+- **Rollback hazard**: rolling the code back to a release that predates two-factor makes the old login
+  ignore it, so enrolled users silently sign in with the password only. Accept that knowingly, or ask
+  users to wait, before rolling back past this feature.
+- Turning the company-wide requirement on never locks anyone out: a user without a factor is walked
+  through setup at sign-in, and only then receives a session. The window between switching it on and a
+  person finishing setup is the one moment a stolen password alone is enough for that person's account.

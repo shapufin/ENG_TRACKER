@@ -357,6 +357,7 @@ export const userService = {
       is_albanian_tl_role?: boolean;
       is_cr_admin?: boolean;
       roles?: string[];
+      mfa_required?: boolean;
     }
   ): Promise<User> {
     const { data } = await api.put<User>(`/users/users/${userId}/update_user/`, payload);

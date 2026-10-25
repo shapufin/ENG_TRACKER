@@ -53,6 +53,8 @@ export const ALLOW = {
   "components/calendar/UserAvatar.tsx": ["DARK-OVERRIDE"],
   "plugins/skills/utils/proficiencyLevels.ts": ["DARK-OVERRIDE", "DARK-EXTRA"],
   "plugins/skills/utils/categoryAccents.ts": ["DARK-OVERRIDE"],
+  // A QR code must be dark on white to scan, in light and dark themes alike.
+  "components/auth/MfaEnrollment.tsx": ["STRAY-FILL"],
   "plugins/organigrama/components/OrgNode.tsx": ["DARK-OVERRIDE", "STRAY-FILL"],
   "plugins/organigrama/components/BuilderNode.tsx": [
     "DARK-OVERRIDE",

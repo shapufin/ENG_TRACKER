@@ -9,6 +9,7 @@
 #   FRONTEND_URL - public URL of the frontend (for CORS)
 #   DB_NAME, DB_USER, DB_PASSWORD - PostgreSQL credentials
 #   REDIS_PASSWORD - Redis password (required for production)
+#   MFA_ENCRYPTION_KEYS - Fernet key(s) for two-factor seeds (python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
 #   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY - Web Push keys (python -m py_vapid generate)
 #
 # Optional:
@@ -97,6 +98,9 @@ services:
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
       FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
+      # Fernet key(s) that encrypt two-factor seeds, comma separated (first encrypts, all
+      # decrypt). Carry it to any new server with SECRET_KEY; losing it locks out enrolled users.
+      MFA_ENCRYPTION_KEYS: ${MFA_ENCRYPTION_KEYS:?MFA_ENCRYPTION_KEYS is required}
       ONLYOFFICE_DOCUMENT_SERVER_URL: ${ONLYOFFICE_DOCUMENT_SERVER_URL:-}
       ONLYOFFICE_JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-}
       USE_REDIS: "true"

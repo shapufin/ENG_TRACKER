@@ -18,6 +18,7 @@ import { MyClientsSection } from "./components/MyClientsSection";
 import { ClientAssignmentSection } from "./components/ClientAssignmentSection";
 import { NotificationPreferencesSection } from "./components/NotificationPreferencesSection";
 import { PluginCRScopeCard } from "./components/PluginCRScopeCard";
+import { TwoFactorSection } from "./components/TwoFactorSection";
 
 export const SettingsPage: React.FC = () => {
   const { user, logout, refreshUser } = useAuth();
@@ -137,6 +138,9 @@ export const SettingsPage: React.FC = () => {
             )}
           </CardContent>
         </GlassCard>
+
+        {/* Two-factor authentication — optional per person until an admin requires it. */}
+        <TwoFactorSection />
 
         {/* My Clients — self-assign which clients the user works for.
             Hidden for CR-scoped identities: they only view standby for their

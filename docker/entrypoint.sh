@@ -95,6 +95,11 @@ if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
     echo "[entrypoint] Syncing HR and Payroll holidays..."
     python manage.py sync_payroll_holidays || echo "[entrypoint] Holiday sync skipped (non-fatal)"
 
+    # Second-factor seeds are encrypted with MFA_ENCRYPTION_KEYS. After a server move or a key
+    # change, a mismatch makes enrolled users unable to sign in (it fails closed); say so loudly.
+    echo "[entrypoint] Checking MFA encryption keys..."
+    python manage.py check_mfa_key || echo "[entrypoint] WARNING: MFA seeds are unreadable with MFA_ENCRYPTION_KEYS (non-fatal; see runbook 'Two-factor keys')"
+
     echo "[entrypoint] Ensuring superuser..."
     python manage.py ensure_superuser
 else

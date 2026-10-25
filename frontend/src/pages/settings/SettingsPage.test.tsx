@@ -20,6 +20,9 @@ vi.mock("./components/MyClientsSection", () => ({
 vi.mock("./components/ClientAssignmentSection", () => ({
   ClientAssignmentSection: () => <div data-testid="client-assignment" />,
 }));
+vi.mock("./components/TwoFactorSection", () => ({
+  TwoFactorSection: () => <div data-testid="two-factor" />,
+}));
 vi.mock("./components/NotificationPreferencesSection", () => ({
   NotificationPreferencesSection: () => <div data-testid="notification-preferences" />,
 }));

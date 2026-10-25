@@ -38,6 +38,19 @@ DEBUG = os.getenv('DEBUG', '1').strip().lower() in {'1', 'true', 'yes', 'on'}
 _INSECURE_DEV_KEY = 'django-insecure-#h&uhd_1pp-56h5&yl%f(3o($x5!-9v1dt4ov5@+alf+m7x+d)'
 SECRET_KEY = os.getenv('SECRET_KEY', _INSECURE_DEV_KEY)
 
+# MFA seeds are stored encrypted. Comma-separated Fernet keys: the first
+# encrypts, all decrypt (rotation + server moves; see docs/deploy). Production
+# requires it (settings_production); dev/test derive one from SECRET_KEY so
+# nothing extra is needed locally.
+MFA_ENCRYPTION_KEYS = [k.strip() for k in os.getenv('MFA_ENCRYPTION_KEYS', '').split(',') if k.strip()]
+if not MFA_ENCRYPTION_KEYS:
+    import base64
+    import hashlib
+    MFA_ENCRYPTION_KEYS = [
+        base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode()).digest()).decode()
+    ]
+MFA_ISSUER = os.getenv('MFA_ISSUER', 'Engineering Tracker')
+
 # ALLOWED_HOSTS: read from env var (comma-separated) or use safe dev defaults.
 _allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '')
 if _allowed_hosts_env:
@@ -213,6 +226,7 @@ REST_FRAMEWORK = {
         # Disabled in dev/test to avoid 429s in the test suite; set real limits
         # when the production settings profile is built.
         'auth': '20/min' if not DEBUG else None,          # login/token refresh
+        'mfa': '10/min' if not DEBUG else None,           # second-factor verify/enrol
         'upload': '30/hour' if not DEBUG else None,       # file parsing endpoints
         'export': '20/hour' if not DEBUG else None,       # report/export endpoints
         'evidence_upload': '60/hour' if not DEBUG else None,

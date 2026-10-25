@@ -127,6 +127,12 @@ class GlobalSettings(BaseModel):
         help_text='IANA time zone that defines the company calendar day (deadlines, month cutoffs, reports)'
     )
 
+    mfa_required = models.BooleanField(
+        default=False,
+        help_text='When on, every user must sign in with a second factor '
+                  '(users without one are walked through enrolment at login)',
+    )
+
     class Meta:
         db_table = 'leave_global_settings'
         constraints = [

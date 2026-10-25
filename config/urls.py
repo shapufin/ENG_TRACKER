@@ -26,7 +26,19 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
-from apps.users.views.auth import CustomTokenObtainPairView, CustomTokenRefreshView, TokenLogoutView
+from apps.users.views.auth import (
+    CustomTokenObtainPairView,
+    CustomTokenRefreshView,
+    MFAActivateView,
+    MFABackupCodesView,
+    MFADisableView,
+    MFALoginActivateView,
+    MFALoginSetupView,
+    MFASetupView,
+    MFAStatusView,
+    MFAVerifyView,
+    TokenLogoutView,
+)
 
 
 class GatedSpectacularAPIView(SpectacularAPIView):
@@ -149,6 +161,15 @@ urlpatterns += [
     path('api/auth/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/token/logout/', TokenLogoutView.as_view(), name='token_logout'),
+    # Second factor. mfa-verify lives under token/ so it shares the refresh cookie path.
+    path('api/auth/token/mfa-verify/', MFAVerifyView.as_view(), name='mfa_verify'),
+    path('api/auth/mfa/login/setup/', MFALoginSetupView.as_view(), name='mfa_login_setup'),
+    path('api/auth/mfa/login/activate/', MFALoginActivateView.as_view(), name='mfa_login_activate'),
+    path('api/auth/mfa/status/', MFAStatusView.as_view(), name='mfa_status'),
+    path('api/auth/mfa/setup/', MFASetupView.as_view(), name='mfa_setup'),
+    path('api/auth/mfa/activate/', MFAActivateView.as_view(), name='mfa_activate'),
+    path('api/auth/mfa/disable/', MFADisableView.as_view(), name='mfa_disable'),
+    path('api/auth/mfa/backup-codes/', MFABackupCodesView.as_view(), name='mfa_backup_codes'),
 ]
 
 if settings.DEBUG:
