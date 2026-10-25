@@ -49,15 +49,11 @@ describe("CalendarFormDialog date range picker", () => {
     const onDateRangeChange = vi.fn();
     render(<CalendarFormDialog {...baseProps} onDateRangeChange={onDateRangeChange} />);
     fireEvent.click(screen.getByRole("button", { name: /open date range/i }));
-    fireEvent.mouseDown(screen.getByRole("tab", { name: "Custom Range" }));
 
-    const dayButtons12 = screen.getAllByText("12");
-    fireEvent.click(dayButtons12[0]);
-    const dayButtons14 = screen.getAllByText("14");
-    fireEvent.click(dayButtons14[0]);
+    fireEvent.click(screen.getByText("12"));
+    fireEvent.click(screen.getByText("14"));
 
-    const saveButtons = screen.getAllByRole("button", { name: "Save" });
-    fireEvent.click(saveButtons[saveButtons.length - 1]);
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
     expect(onDateRangeChange).toHaveBeenCalledWith("2026-09-12", "2026-09-14");
   });
 });

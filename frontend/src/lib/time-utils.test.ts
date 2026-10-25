@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateHours, validateTimeRange } from "./time-utils";
+import { calculateHours, dayPeriod, parseTypedTime, validateTimeRange } from "./time-utils";
 
 describe("calculateHours", () => {
   it("returns null for empty inputs", () => {
@@ -56,5 +56,49 @@ describe("validateTimeRange", () => {
     expect(validateTimeRange("00:00", "34:00")).toBe(
       "End time must be within 24 hours of start time"
     );
+  });
+});
+
+describe("parseTypedTime", () => {
+  it.each([
+    ["9", "09:00"],
+    ["09", "09:00"],
+    ["21", "21:00"],
+    ["0", "00:00"],
+    ["930", "09:30"],
+    ["0930", "09:30"],
+    ["2145", "21:45"],
+    ["9:30", "09:30"],
+    ["09:05", "09:05"],
+    ["9.30", "09:30"],
+    ["9pm", "21:00"],
+    ["9 PM", "21:00"],
+    ["12am", "00:00"],
+    ["12pm", "12:00"],
+    ["11:15p", "23:15"],
+  ])("reads %s as %s", (typed, expected) => {
+    expect(parseTypedTime(typed)).toBe(expected);
+  });
+
+  it.each(["", "abc", "24", "25", "2460", "960", "9:75", "13pm", "0pm", "12345"])(
+    "rejects %s",
+    (typed) => {
+      expect(parseTypedTime(typed)).toBeNull();
+    }
+  );
+});
+
+describe("dayPeriod", () => {
+  it("is AM before noon and PM from noon", () => {
+    expect(dayPeriod("00:00")).toBe("AM");
+    expect(dayPeriod("09:30")).toBe("AM");
+    expect(dayPeriod("11:59")).toBe("AM");
+    expect(dayPeriod("12:00")).toBe("PM");
+    expect(dayPeriod("23:59")).toBe("PM");
+  });
+
+  it("is empty for a value that is not a time", () => {
+    expect(dayPeriod("")).toBe("");
+    expect(dayPeriod("9")).toBe("");
   });
 });

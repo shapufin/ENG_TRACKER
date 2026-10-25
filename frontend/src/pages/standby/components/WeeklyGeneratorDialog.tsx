@@ -1,6 +1,7 @@
 import React from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/ui/TimeInput";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -137,18 +138,16 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Weekday Start Time</Label>
-            <Input
-              type="time"
+            <TimeInput
               value={weeklyForm.start_time}
-              onChange={(e) => onPatchWeeklyForm({ start_time: e.target.value })}
+              onChange={(v) => onPatchWeeklyForm({ start_time: v })}
             />
           </div>
           <div className="space-y-2">
             <Label>Weekday End Time (next day)</Label>
-            <Input
-              type="time"
+            <TimeInput
               value={weeklyForm.end_time}
-              onChange={(e) => onPatchWeeklyForm({ end_time: e.target.value })}
+              onChange={(v) => onPatchWeeklyForm({ end_time: v })}
             />
           </div>
         </div>
@@ -215,18 +214,18 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
                       )}
                     </td>
                     <td className="px-3 py-1">
-                      <Input
-                        type="time"
+                      <TimeInput
+                        showPeriod={false}
                         value={day.start}
-                        onChange={(e) => onUpdatePreviewRow(idx, "start", e.target.value)}
+                        onChange={(v) => onUpdatePreviewRow(idx, "start", v)}
                         className="h-7 w-full min-w-0 px-1 py-0 text-xs"
                       />
                     </td>
                     <td className="px-3 py-1">
-                      <Input
-                        type="time"
+                      <TimeInput
+                        showPeriod={false}
                         value={day.end}
-                        onChange={(e) => onUpdatePreviewRow(idx, "end", e.target.value)}
+                        onChange={(v) => onUpdatePreviewRow(idx, "end", v)}
                         className="h-7 w-full min-w-0 px-1 py-0 text-xs"
                       />
                     </td>

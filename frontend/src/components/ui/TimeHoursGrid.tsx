@@ -8,6 +8,7 @@
  */
 import React from "react";
 import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/ui/TimeInput";
 import { Label } from "@/components/ui/label";
 
 interface Props {
@@ -37,10 +38,9 @@ export const TimeHoursGrid: React.FC<Props> = ({
   <div className="grid grid-cols-3 gap-4">
     <div className="space-y-2">
       <Label>Start Time *</Label>
-      <Input
-        type="time"
+      <TimeInput
         value={startTime}
-        onChange={(e) => onStartTimeChange(e.target.value)}
+        onChange={onStartTimeChange}
         className={startTimeError ? "border-destructive" : ""}
         required
       />
@@ -48,10 +48,9 @@ export const TimeHoursGrid: React.FC<Props> = ({
     </div>
     <div className="space-y-2">
       <Label>End Time *</Label>
-      <Input
-        type="time"
+      <TimeInput
         value={endTime}
-        onChange={(e) => onEndTimeChange(e.target.value)}
+        onChange={onEndTimeChange}
         className={endTimeError ? "border-destructive" : ""}
         required
       />
