@@ -68,6 +68,7 @@ USER appuser
 # The build must fail if collectstatic fails.
 RUN DJANGO_SETTINGS_MODULE=config.settings_production \
     SECRET_KEY=docker-build-collectstatic-key-long-enough-for-deploy-check \
+    MFA_ENCRYPTION_KEYS=eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg= \
     ALLOWED_HOSTS=localhost \
     DB_NAME=db DB_USER=db DB_PASSWORD=db DB_HOST=db \
     REDIS_URL=redis://redis:6379/0 \
