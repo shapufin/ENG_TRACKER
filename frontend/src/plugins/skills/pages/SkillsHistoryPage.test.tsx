@@ -430,7 +430,6 @@ describe("SkillsHistoryPage", () => {
       </MemoryRouter>
     );
     fireEvent.click(screen.getByRole("button", { name: /open date range/i }));
-    fireEvent.mouseDown(screen.getByRole("tab", { name: "Custom Range" }));
 
     const startInput = screen.getByLabelText("Start date");
     fireEvent.change(startInput, { target: { value: "01/01/2026" } });
@@ -439,7 +438,7 @@ describe("SkillsHistoryPage", () => {
     fireEvent.change(endInput, { target: { value: "31/08/2026" } });
     fireEvent.blur(endInput);
 
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
     expect(useHistoryMock).toHaveBeenLastCalledWith(
       undefined,
       undefined,

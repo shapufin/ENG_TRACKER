@@ -28,3 +28,32 @@ export const validateTimeRange = (start: string, end: string): string | null => 
   if (endMins - startMins > 24 * 60) return "End time must be within 24 hours of start time";
   return null;
 };
+
+/** Read what someone typed into a time field and return it as 24-hour "HH:mm".
+ *  Accepts "9", "09", "930", "0930", "9:30", "9.30", and 12-hour forms such as
+ *  "9pm" or "12am". Returns null when it is not a real time of day.
+ */
+export const parseTypedTime = (typed: string): string | null => {
+  const match = typed.trim().toLowerCase().match(/^(\d{1,2})(?:[:.]?(\d{2}))?\s*([ap])?m?$/);
+  if (!match) {
+    return null;
+  }
+  const [, hourText, minuteText, meridiem] = match;
+  let hour = Number(hourText);
+  const minute = minuteText ? Number(minuteText) : 0;
+  if (minute > 59) return null;
+  if (meridiem) {
+    if (hour < 1 || hour > 12) return null;
+    hour = (hour % 12) + (meridiem === "p" ? 12 : 0);
+  } else if (hour > 23) {
+    return null;
+  }
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+};
+
+/** "AM" before noon and "PM" from noon for a 24-hour "HH:mm" value, "" otherwise. */
+export const dayPeriod = (time: string): "AM" | "PM" | "" => {
+  const match = time.match(/^(\d{2}):\d{2}/);
+  if (!match) return "";
+  return Number(match[1]) < 12 ? "AM" : "PM";
+};

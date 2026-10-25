@@ -80,6 +80,8 @@ export const CalendarPanel: React.FC<CalendarPanelProps> = ({
     return isSameDay(day, selectedDate);
   };
 
+  const isRangeEnd = (day: Date) => !!rangeEnd && isSameDay(day, new Date(rangeEnd + "T00:00:00"));
+
   const isInRange = (day: Date) => {
     if (!value || !rangeEnd) return false;
     const start = new Date(value + "T00:00:00");
@@ -117,7 +119,7 @@ export const CalendarPanel: React.FC<CalendarPanelProps> = ({
           <div key={`empty-${idx}`} className="h-8 w-8" />
         ))}
         {calendarDays.days.map((day) => {
-          const selected = isSelectedDay(day);
+          const selected = isSelectedDay(day) || isRangeEnd(day);
           const inRange = !selected && isInRange(day);
           const currentMonthDay = isSameMonth(day, currentMonth);
           const todayDate = isToday(day);
@@ -126,6 +128,7 @@ export const CalendarPanel: React.FC<CalendarPanelProps> = ({
             <button
               key={day.toISOString()}
               type="button"
+              aria-pressed={selected}
               onClick={() => handleDateSelect(day)}
               className={cn(
                 "h-8 w-8 rounded-sm p-0 text-xs",

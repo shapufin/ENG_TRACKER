@@ -156,8 +156,8 @@ test.describe("Authenticated offline queue integration", () => {
     await page.goto("/standby");
     await page.getByRole("button", { name: "Add Entry" }).click();
     await page.locator('input[placeholder="DD/MM/YYYY"]').fill(displayDate(date));
-    await page.locator('input[type="time"]').nth(0).fill("18:00");
-    await page.locator('input[type="time"]').nth(1).fill("20:00");
+    await page.getByPlaceholder("HH:MM").nth(0).fill("18:00");
+    await page.getByPlaceholder("HH:MM").nth(1).fill("20:00");
     await page.getByRole("dialog").locator("input").last().fill("E2E standby form payload");
     await expect(page.getByRole("dialog", { name: "New Standby" })).toBeVisible();
     await page.getByRole("button", { name: "Close" }).click();

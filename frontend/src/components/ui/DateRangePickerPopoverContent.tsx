@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from "react";
-import { addMonths, isValid, subMonths } from "date-fns";
+import React, { useState } from "react";
+import { differenceInCalendarDays, isValid } from "date-fns";
 import * as Popover from "@radix-ui/react-popover";
 import { CalendarPanel } from "./CalendarPanel";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 import { Button } from "./button";
 import { Input } from "./input";
+import { Label } from "./label";
 import { toLocalISODate, formatDateDDMMYYYY, parseDDMMYYYYDate } from "@/lib/date-format-utils";
 import type { QuickRangePreset } from "@/lib/quickDateRanges";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,18 @@ interface DateRangePickerPopoverContentProps {
   onClose: () => void;
 }
 
+const toDate = (iso: string) => new Date(iso + "T00:00:00");
+
+/** Keep the earlier date as the start, whichever order the two were given in. */
+const ordered = (a: string, b: string) => (a && b && b < a ? { from: b, to: a } : { from: a, to: b });
+
+const progressText = (from: string, to: string) => {
+  if (!from) return "Pick the start date";
+  if (!to) return "Now pick the end date";
+  const days = differenceInCalendarDays(toDate(to), toDate(from)) + 1;
+  return `${days} ${days === 1 ? "day" : "days"} selected`;
+};
+
 export const DateRangePickerPopoverContent: React.FC<DateRangePickerPopoverContentProps> = ({
   from,
   to,
@@ -24,53 +36,48 @@ export const DateRangePickerPopoverContent: React.FC<DateRangePickerPopoverConte
   onCommit,
   onClose,
 }) => {
-  const [draftFrom, setDraftFrom] = useState(from);
-  const [draftTo, setDraftTo] = useState(to);
-  const [anchorMonth, setAnchorMonth] = useState(() => {
-    const parsed = draftFrom ? new Date(draftFrom + "T00:00:00") : new Date();
+  const [draft, setDraft] = useState(() => ordered(from, to));
+  const [month, setMonth] = useState(() => {
+    const parsed = from ? toDate(from) : new Date();
     return isValid(parsed) ? parsed : new Date();
   });
 
-  const rightMonth = useMemo(() => addMonths(anchorMonth, 1), [anchorMonth]);
-
-  const handleDaySelect = (isoDate: string) => {
-    if (!draftFrom || (draftFrom && draftTo)) {
-      setDraftFrom(isoDate);
-      setDraftTo("");
+  const handleDaySelect = (iso: string) => {
+    if (!draft.from || draft.to) {
+      setDraft({ from: iso, to: "" });
       return;
     }
-    if (isoDate < draftFrom) {
-      setDraftFrom(isoDate);
-      setDraftTo("");
+    setDraft(ordered(draft.from, iso));
+  };
+
+  const handleTyped = (edge: "from" | "to") => (e: React.FocusEvent<HTMLInputElement>) => {
+    const parsed = parseDDMMYYYYDate(e.target.value);
+    if (!parsed) {
+      // Not a date: put the field back to what the draft holds.
+      e.target.value = formatDateDDMMYYYY(draft[edge]);
       return;
     }
-    setDraftTo(isoDate);
+    const iso = toLocalISODate(parsed);
+    setDraft(edge === "from" ? ordered(iso, draft.to) : ordered(draft.from, iso));
+    setMonth(parsed);
   };
 
-  const handleFromTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseDDMMYYYYDate(e.target.value);
-    if (parsed) setDraftFrom(toLocalISODate(parsed));
+  const commitOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
   };
 
-  const handleToTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseDDMMYYYYDate(e.target.value);
-    if (parsed) setDraftTo(toLocalISODate(parsed));
-  };
-
-  const handlePreset = (preset: QuickRangePreset) => {
-    const range = preset.getRange();
-    onCommit(range);
-  };
-
-  const handleSave = () => {
-    onCommit({ from: draftFrom, to: draftTo || draftFrom });
+  const handleApply = () => {
+    onCommit({ from: draft.from, to: draft.to || draft.from });
   };
 
   return (
     <Popover.Portal>
       <Popover.Content
         className={cn(
-          "w-[calc(100vw-2rem)] max-w-sm p-3 sm:w-[560px] sm:max-w-none",
+          "w-[calc(100vw-2rem)] max-w-sm p-3 sm:w-[500px] sm:max-w-none",
           "bg-popover text-popover-foreground",
           "rounded-md border border-border shadow-lg",
           "z-[9999]"
@@ -81,14 +88,10 @@ export const DateRangePickerPopoverContent: React.FC<DateRangePickerPopoverConte
         avoidCollisions={true}
         style={{ zIndex: 9999 }}
       >
-        <Tabs defaultValue="quick">
-          <TabsList className="mb-3 grid w-full grid-cols-2">
-            <TabsTrigger value="quick">Quick Ranges</TabsTrigger>
-            <TabsTrigger value="custom">Custom Range</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="quick" className="mt-0">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+          <div className="sm:w-32 sm:shrink-0">
+            <p className="text-muted-foreground mb-2 text-xs font-medium">Quick ranges</p>
+            <div className="flex flex-wrap gap-1.5 sm:flex-col sm:flex-nowrap">
               {presets.map((preset) => (
                 <Button
                   key={preset.label}
@@ -96,57 +99,64 @@ export const DateRangePickerPopoverContent: React.FC<DateRangePickerPopoverConte
                   variant="outline"
                   size="sm"
                   className="justify-start"
-                  onClick={() => handlePreset(preset)}
+                  onClick={() => onCommit(preset.getRange())}
                 >
                   {preset.label}
                 </Button>
               ))}
             </div>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="custom" className="mt-0 space-y-3">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <CalendarPanel
-                value={draftFrom}
-                rangeEnd={draftTo || undefined}
-                month={anchorMonth}
-                onMonthChange={setAnchorMonth}
-                onSelect={(_date, iso) => handleDaySelect(iso)}
-              />
-              <div className="hidden sm:block">
-                <CalendarPanel
-                  value={draftFrom}
-                  rangeEnd={draftTo || undefined}
-                  month={rightMonth}
-                  onMonthChange={(m) => setAnchorMonth(subMonths(m, 1))}
-                  onSelect={(_date, iso) => handleDaySelect(iso)}
+          <div className="min-w-0 flex-1 space-y-3 sm:border-l sm:border-border sm:pl-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="range-start">Start</Label>
+                <Input
+                  id="range-start"
+                  key={`start-${draft.from}`}
+                  aria-label="Start date"
+                  placeholder="DD/MM/YYYY"
+                  defaultValue={formatDateDDMMYYYY(draft.from)}
+                  onBlur={handleTyped("from")}
+                  onKeyDown={commitOnEnter}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="range-end">End</Label>
+                <Input
+                  id="range-end"
+                  key={`end-${draft.to}`}
+                  aria-label="End date"
+                  placeholder="DD/MM/YYYY"
+                  defaultValue={formatDateDDMMYYYY(draft.to)}
+                  onBlur={handleTyped("to")}
+                  onKeyDown={commitOnEnter}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                aria-label="Start date"
-                placeholder="DD/MM/YYYY"
-                defaultValue={formatDateDDMMYYYY(draftFrom)}
-                onBlur={handleFromTextChange}
-              />
-              <Input
-                aria-label="End date"
-                placeholder="DD/MM/YYYY"
-                defaultValue={formatDateDDMMYYYY(draftTo)}
-                onBlur={handleToTextChange}
+            <div>
+              <CalendarPanel
+                value={draft.from}
+                rangeEnd={draft.to || undefined}
+                month={month}
+                onMonthChange={setMonth}
+                onSelect={(_date, iso) => handleDaySelect(iso)}
               />
             </div>
-          </TabsContent>
-        </Tabs>
+
+            <p className="text-muted-foreground text-xs" aria-live="polite">
+              {progressText(draft.from, draft.to)}
+            </p>
+          </div>
+        </div>
 
         <div className="mt-3 flex justify-end gap-2 border-t border-border pt-3">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="button" size="sm" onClick={handleSave} disabled={!draftFrom}>
-            Save
+          <Button type="button" size="sm" onClick={handleApply} disabled={!draft.from}>
+            Apply
           </Button>
         </div>
 

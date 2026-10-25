@@ -60,6 +60,13 @@ describe("CalendarPanel", () => {
     expect(day12.className).toContain("bg-primary/10");
   });
 
+  it("marks the range end as selected too", () => {
+    render(<CalendarPanel value="2024-06-10" rangeEnd="2024-06-14" onSelect={vi.fn()} />);
+    expect(screen.getByText("10")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("14")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("12")).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("does not tint any day when rangeEnd is absent", () => {
     render(<CalendarPanel value="2024-06-10" onSelect={vi.fn()} />);
     const day12 = screen.getByText("12");

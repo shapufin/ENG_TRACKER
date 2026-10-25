@@ -1,8 +1,8 @@
 /**
  * DateRangePicker — single unified control for picking a date range.
  * Replaces pairs of separate DatePicker/native date inputs across the app.
- * Displays DD/MM/YYYY, offers Quick Ranges presets and a dual-month
- * Custom Range calendar with explicit Save/Cancel (draft state).
+ * Displays DD/MM/YYYY, offers Quick Ranges presets and a single-month
+ * calendar with Start/End fields and explicit Apply/Cancel (draft state).
  */
 import React, { useState } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
