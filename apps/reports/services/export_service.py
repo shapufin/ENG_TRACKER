@@ -25,7 +25,6 @@ from django.db.models import Q, QuerySet
 from django.contrib.auth.models import User
 
 from apps.leave_management.models import counted_days
-from openpyxl.utils import get_column_letter
 from core.utils.csv_safe import csv_safe, xlsx_safe_row
 
 
@@ -242,9 +241,10 @@ class ExportService:
         """
         Export OT/Standby data to Excel with enterprise features.
 
-        When ``include_carryover`` is True (payroll-aligned export), each row
-        includes ``Processing Period`` and ``Carried Over`` columns sourced
-        from the source entry's ``requested_processing_period`` field.
+        When ``include_carryover`` is True, each record carries its
+        ``requested_processing_period`` and payroll settlement so paid-block
+        bundling never merges rows across periods or settlements. Neither is
+        shown as a column.
 
         Optimizations:
         - Batch processing to avoid memory overflow
@@ -303,10 +303,6 @@ class ExportService:
             }
             if include_carryover:
                 rec['requested_processing_period'] = ot.requested_processing_period
-                rec['is_carried_over'] = bool(
-                    ot.requested_processing_period
-                    and ot.requested_processing_period != ot.date.replace(day=1)
-                )
                 rec['settlement'] = self._settlement_label(ot, draft_periods.get(('overtime', ot.id)))
             records.append(rec)
 
@@ -327,10 +323,6 @@ class ExportService:
             }
             if include_carryover:
                 rec['requested_processing_period'] = sb.requested_processing_period
-                rec['is_carried_over'] = bool(
-                    sb.requested_processing_period
-                    and sb.requested_processing_period != sb.date.replace(day=1)
-                )
                 rec['settlement'] = self._settlement_label(sb, draft_periods.get(('standby', sb.id)))
             records.append(rec)
         
@@ -368,9 +360,6 @@ class ExportService:
 
             # Headers
             headers = ['Name', 'Date', 'Day', 'Start Time', 'End Time', 'Total Hours', 'Type', 'Description', 'Evidence Type', 'Evidence', 'Reference Code', 'Status']
-            if include_carryover:
-                headers += ['Processing Period', 'Carried Over', 'Payroll settlement']
-            headers.append('Code')
             ws.append(headers)
             self._style_header_row(ws, header_fill, header_font, border)
 
@@ -402,12 +391,6 @@ class ExportService:
                     rec['reference_code'],
                     rec['status'].capitalize(),
                 ]
-                if include_carryover:
-                    rpp = rec.get('requested_processing_period')
-                    row.append(rpp.strftime('%m/%Y') if rpp else '')
-                    row.append('Yes' if rec.get('is_carried_over') else 'No')
-                    row.append(rec['settlement'])
-                row.append(employee_code(user))
                 ws.append(xlsx_safe_row(row))
                 # Color-code the Type cell (column G = 7) by category
                 type_cell = ws.cell(row=ws.max_row, column=7)
@@ -429,11 +412,6 @@ class ExportService:
                 'K': 18,
                 'L': COLUMN_WIDTH_DEFAULT,
             }
-            if include_carryover:
-                col_widths['M'] = COLUMN_WIDTH_DEFAULT
-                col_widths['N'] = COLUMN_WIDTH_DEFAULT
-                col_widths['O'] = COLUMN_WIDTH_LARGE
-            col_widths[get_column_letter(len(headers))] = COLUMN_WIDTH_DEFAULT
             self._set_column_widths(ws, col_widths)
         
         # Save to bytes

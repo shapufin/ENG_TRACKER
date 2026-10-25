@@ -609,9 +609,10 @@ class ExportGroupingAndStylingTests(TestCase):
         import io
         return self.openpyxl.load_workbook(io.BytesIO(data))
 
-    def test_exports_carry_employee_code_as_last_column(self):
-        """Code is appended (existing consumers read the sheet by position);
-        a user without one gets an empty cell."""
+    def test_leave_export_carries_employee_code_but_ot_standby_does_not(self):
+        """Leave keeps Code as its last column (positional consumers); the
+        OT/standby export has no Code column; a user without one gets an
+        empty cell."""
         from apps.standby.models import StandbyLog
         self.alpha.profile.code = 'EMP-A1'
         self.alpha.profile.save()
@@ -619,12 +620,9 @@ class ExportGroupingAndStylingTests(TestCase):
             OvertimeLog.objects.filter(status='approved'),
             StandbyLog.objects.filter(status='approved'),
         )).active
-        last = ot_ws.max_column
-        self.assertEqual(ot_ws.cell(row=1, column=last).value, 'Code')
-        codes = {ot_ws.cell(row=r, column=1).value: ot_ws.cell(row=r, column=last).value
-                 for r in range(2, ot_ws.max_row + 1)}
-        self.assertEqual(codes['Alpha Employee'], 'EMP-A1')
-        self.assertIn(codes['Beta Employee'], (None, ''))
+        headers = [c.value for c in ot_ws[1]]
+        self.assertNotIn('Code', headers)
+        self.assertEqual(headers[-1], 'Status')
         leave_ws = self._load_wb(export_service.export_leave_to_excel(
             LeaveRequest.objects.filter(status='approved'),
         )).active
@@ -874,7 +872,7 @@ class ExportVisibilityTests(TestCase):
 
 class PayrollPeriodExportTests(TestCase):
     """date_mode=processing_period exports OT/standby by requested_processing_period
-    (not work date) and includes carryover columns. Used for HR-to-Payroll reports
+    (not work date) and excludes the carryover columns. Used for HR-to-Payroll reports
     so carried-over entries appear in the settlement month, not the work-date month."""
 
     def setUp(self):
@@ -925,18 +923,12 @@ class PayrollPeriodExportTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
         wb = openpyxl.load_workbook(io.BytesIO(response.content))
         ws = wb.active
-        # Column B = work date, Column M = processing period, Column N = carried over
+        # Column B = work date
         dates = [ws.cell(row=r, column=2).value for r in range(2, ws.max_row + 1)]
         dates = [d for d in dates if d]
         self.assertEqual(len(dates), 1, 'should have exactly the carryover row')
         # Work date is May 30 (30/05/2026)
         self.assertIn('30/05/2026', dates[0])
-        # Processing period column (M=13) should be 06/2026
-        pp = ws.cell(row=2, column=13).value
-        self.assertEqual(pp, '06/2026')
-        # Carried over column (N=14) should be 'Yes'
-        carried = ws.cell(row=2, column=14).value
-        self.assertEqual(carried, 'Yes')
         # Filename should include _payroll suffix
         self.assertIn('_payroll', response['Content-Disposition'])
 
@@ -975,30 +967,25 @@ class PayrollPeriodExportTests(TestCase):
         self.assertEqual(len(dates), 1)
         self.assertIn('15/05/2026', dates[0])
 
-    def test_work_date_mode_also_has_carryover_columns(self):
-        """Default (work_date) export also includes carryover columns."""
+    def test_export_has_no_carryover_or_settlement_columns(self):
+        """Neither mode shows Processing Period / Carried Over / Payroll
+        settlement / Code columns."""
         self.client.force_authenticate(user=self.staff)
-        response = self.client.get(
-            '/api/reports/export-ot-standby/',
-            {'start_date': '2026-05-01', 'end_date': '2026-05-31'},
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
-        wb = openpyxl.load_workbook(io.BytesIO(response.content))
-        ws = wb.active
-        # Column M (13) header should be 'Processing Period'
-        header_k = ws.cell(row=1, column=13).value
-        self.assertEqual(header_k, 'Processing Period')
-        # Column N (14) header should be 'Carried Over'
-        header_l = ws.cell(row=1, column=14).value
-        self.assertEqual(header_l, 'Carried Over')
+        for mode in ('work_date', 'processing_period'):
+            response = self.client.get(
+                '/api/reports/export-ot-standby/',
+                {'start_date': '2026-05-01', 'end_date': '2026-06-30', 'date_mode': mode},
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
+            ws = openpyxl.load_workbook(io.BytesIO(response.content)).active
+            headers = [c.value for c in ws[1]]
+            for removed in ('Processing Period', 'Carried Over', 'Payroll settlement', 'Code'):
+                self.assertNotIn(removed, headers, mode)
+            self.assertEqual(headers[-1], 'Status')
 
 
 class PayrollSettlementColumnTests(TestCase):
-    """TL /team export shows where each OT/standby record lands in payroll.
-
-    Column O ('Payroll settlement') is derived from resolved_settlement_period,
-    a draft PayrollRunEntry, or the approval status; see export_service.
-    """
+    """The settlement lookup behind paid-block bundling stays one query."""
 
     def setUp(self):
         self.client = APIClient()
@@ -1024,46 +1011,6 @@ class PayrollSettlementColumnTests(TestCase):
         response = self.client.get('/api/reports/export-ot-standby/', query)
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
         return openpyxl.load_workbook(io.BytesIO(response.content)).active
-
-    def test_tl_export_settlement_column_paid(self):
-        self._ot(15, resolved_settlement_period=date(2026, 8, 1))
-        ws = self._export()
-        self.assertEqual(ws.cell(row=1, column=15).value, 'Payroll settlement')
-        self.assertEqual(ws.cell(row=2, column=15).value, 'Paid · Aug 2026')
-
-    def test_tl_export_settlement_column_in_draft(self):
-        from plugins.payroll.models import PayrollLine, PayrollRun, PayrollRunEntry, PayrollRuleSet
-        log = self._ot(15)
-        rule_set = PayrollRuleSet.objects.create(
-            code='SETTLE_2026_V1', name='Settle rules', version='1.0',
-            effective_from=date(2026, 1, 1),
-        )
-        run = PayrollRun.objects.create(year=2026, month=9, rule_set=rule_set)
-        line = PayrollLine.objects.create(run=run, user=self.employee)
-        PayrollRunEntry.objects.create(
-            run=run, line=line, source_kind='overtime', source_id=log.id,
-            user=self.employee, work_date=log.date,
-            requested_period=date(2026, 7, 1), resolved_period=date(2026, 9, 1),
-        )
-        ws = self._export()
-        self.assertEqual(ws.cell(row=2, column=15).value, 'In draft run · Sep 2026')
-
-    def test_tl_export_settlement_column_pending(self):
-        self._ot(15, status='pending')
-        ws = self._export(status='pending')
-        self.assertEqual(ws.cell(row=2, column=15).value, 'Pending approval')
-
-    def test_tl_export_settlement_column_not_in_run(self):
-        self._ot(15)
-        ws = self._export()
-        self.assertEqual(ws.cell(row=2, column=15).value, 'Not yet in a payroll run')
-
-    def test_tl_export_settlement_column_fails_closed_without_payroll(self):
-        import sys
-        self._ot(15)
-        with patch.dict(sys.modules, {'plugins.payroll.models': None}):
-            ws = self._export()
-        self.assertEqual(ws.cell(row=2, column=15).value, 'Not yet in a payroll run')
 
     def test_settlement_lookup_is_one_query_for_one_and_five_records(self):
         self._ot(1)
