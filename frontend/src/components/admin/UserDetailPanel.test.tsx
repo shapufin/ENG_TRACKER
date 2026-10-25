@@ -160,4 +160,109 @@ describe("UserDetailPanel", () => {
     expect(onSaveField).not.toHaveBeenCalled();
     expect(screen.getByText("+355 69 000 0000")).toBeInTheDocument();
   });
+
+  it("edits teams inline and cancels cleanly", () => {
+    const onSaveField = vi.fn();
+    render(
+      <UserDetailPanel
+        profile={profile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveField={onSaveField}
+        teamsData={[{ id: 2, name: "DOME_TEAM", code: "DT" }]}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit teams for alice" }));
+    expect(screen.getByRole("button", { name: "Save teams" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel editing teams" }));
+    expect(onSaveField).not.toHaveBeenCalled();
+  });
+
+  it("edits tech inline and cancels cleanly", () => {
+    const onSaveField = vi.fn();
+    render(
+      <UserDetailPanel
+        profile={profile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveField={onSaveField}
+        techsData={[{ id: 10, name: "Python", is_active: true } as any]}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit tech for alice" }));
+    expect(screen.getByRole("button", { name: "Save tech" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel editing tech" }));
+    expect(onSaveField).not.toHaveBeenCalled();
+  });
+
+  it("edits Italian TL inline and cancels cleanly", () => {
+    const onSaveField = vi.fn();
+    render(
+      <UserDetailPanel
+        profile={profile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveField={onSaveField}
+        italianTLs={[{ id: 3, username: "mario", full_name: "Mario Rossi" }]}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit italian tl for alice" }));
+    expect(screen.getByRole("button", { name: "Save italian tl" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel editing italian tl" }));
+    expect(onSaveField).not.toHaveBeenCalled();
+  });
+
+  it("edits Albanian TL inline and cancels cleanly", () => {
+    const onSaveField = vi.fn();
+    render(
+      <UserDetailPanel
+        profile={profile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveField={onSaveField}
+        albanianTLs={[{ id: 4, username: "ilir", full_name: "Ilir Hoxha" }]}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit albanian tl for alice" }));
+    expect(screen.getByRole("button", { name: "Save albanian tl" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel editing albanian tl" }));
+    expect(onSaveField).not.toHaveBeenCalled();
+  });
+
+  it("edits roles inline and saves through onSaveField", () => {
+    const onSaveField = vi.fn();
+    render(
+      <UserDetailPanel
+        profile={profile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveField={onSaveField}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit roles for alice" }));
+    expect(screen.getByRole("button", { name: "Save roles" })).toBeInTheDocument();
+
+    // Toggle HR switch
+    const hrSwitch = screen.getByLabelText("HR");
+    fireEvent.click(hrSwitch);
+
+    fireEvent.click(screen.getByRole("button", { name: "Save roles" }));
+    expect(onSaveField).toHaveBeenCalledWith(7, {
+      roles: ["hr", "albanian_tl"],
+      is_hr: true,
+      is_italian_tl_role: false,
+      is_albanian_tl_role: true,
+      is_cr_admin: false,
+    });
+  });
 });

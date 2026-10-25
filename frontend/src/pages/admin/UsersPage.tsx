@@ -84,6 +84,10 @@ export const UsersPage: React.FC = () => {
         onDelete={(profile) => state.setConfirmDelete(profile)}
         onSaveField={(userId, payload) => state.updateMutation.mutate({ id: userId, payload })}
         isSaving={state.updateMutation.isPending}
+        teamsData={(state.teamsData || []) as unknown as Team[]}
+        techsData={state.techs || []}
+        italianTLs={state.italianTLs || []}
+        albanianTLs={state.albanianTLs || []}
       />
     </PageShell>
   );

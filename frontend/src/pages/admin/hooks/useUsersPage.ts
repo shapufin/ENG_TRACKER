@@ -42,7 +42,7 @@ const MIN_PASSWORD_LENGTH = 6;
 /** Build the {tech, level} write shape the API expects from the form's
  * separate id list and level map. Always explicit, so clearing a level in the
  * form actually clears it server-side instead of being left alone. */
-const toTechAssignments = (
+export const toTechAssignments = (
   techIds: number[],
   levels: Record<number, number | null> | undefined
 ): TechAssignmentInput[] =>
