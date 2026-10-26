@@ -16,6 +16,7 @@ import type {
   HbprEvidenceKind,
   HbprEvidencePayload,
   HbprOverview,
+  HbprCadencePayload,
   HbprPartnership,
   IdleFlag,
   Meeting,
@@ -264,6 +265,12 @@ export const tlScorecardService = {
     if (year) params.year = year;
     return api.get<HbprPartnership>(`${BASE}/partnership/`, { params });
   },
+
+  /** The assigned AL TL changes their own meeting schedule; returns the fresh partnership. */
+  updatePartnershipCadence: (data: HbprCadencePayload, year?: number) =>
+    api.post<HbprPartnership>(`${BASE}/partnership/cadence/`, data, {
+      params: year ? { year } : undefined,
+    }),
 
   createHbprEvidence: (data: HbprEvidencePayload) =>
     api.post<HbprEvidence>(`${BASE}/hbpr-evidence/`, data),

@@ -3,7 +3,8 @@ from datetime import date
 
 from django.contrib.auth.models import User
 from django.http import HttpResponse
-from rest_framework import viewsets, status
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework import serializers, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
@@ -44,6 +45,43 @@ def _parse_month(raw):
     except ValueError:
         raise ValueError('month must be an ISO date (YYYY-MM-DD)')
     return parsed.replace(day=1)
+
+
+class CadenceChangeSerializer(serializers.Serializer):
+    """Full replacement of the schedule triple; ``null`` clears the two optional parts.
+
+    ``cadence`` is required because ``update_assignment`` reads ``None`` as
+    "leave unchanged". Cross-field rules (nth-week only for monthly, needs a
+    weekday) stay in the model's ``clean()``.
+    """
+
+    cadence = serializers.ChoiceField(choices=['weekly', 'biweekly', 'monthly'])
+    cadence_day_of_week = serializers.IntegerField(min_value=0, max_value=6, allow_null=True, required=False)
+    cadence_nth_week = serializers.ChoiceField(choices=[1, 2, 3, 4, -1], allow_null=True, required=False)
+
+
+def _audit_cadence_change(user, assignment, old, new):
+    """Best-effort audit row without a hard audit_log dependency."""
+    try:
+        from plugins.audit_log.signals import log_action
+    except ImportError:
+        return
+    log_action(
+        user,
+        'update',
+        description=f'HBPR meeting schedule changed for assignment #{assignment.pk}',
+        obj=assignment,
+        old_values=old,
+        new_values=new,
+    )
+
+
+def _cadence_triple(assignment):
+    return {
+        'cadence': assignment.cadence,
+        'cadence_day_of_week': assignment.cadence_day_of_week,
+        'cadence_nth_week': assignment.cadence_nth_week,
+    }
 
 
 class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
@@ -211,7 +249,50 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         except ValueError as exc:
             raise ValidationError({'year': str(exc)})
         leader = self._resolve_leader(request)
-        return Response(services_hbpr.partnership(leader, reporting_year=year))
+        return Response(services_hbpr.partnership(leader, reporting_year=year, viewer=request.user))
+
+    @action(detail=False, methods=['post'], url_path='partnership/cadence')
+    def change_cadence(self, request):
+        """The assigned Albanian TL (or staff) changes the HBPR meeting schedule.
+
+        Reuses ``update_assignment`` as-is; the audit row is the only history.
+        Returns the same payload as ``partnership`` so the page can swap it in.
+        """
+        from apps.users.services.hbpr_assignments import (
+            AssignmentError,
+            active_assignment_for_tl,
+            update_assignment,
+        )
+        from .. import services_hbpr
+
+        try:
+            year = services_hbpr.parse_reporting_year(request.query_params.get('year'))
+        except ValueError as exc:
+            raise ValidationError({'year': str(exc)})
+        leader = self._resolve_leader(request)
+        assignment = active_assignment_for_tl(leader.id)
+        if assignment is None:
+            return Response({'detail': 'No open HBPR assignment.'}, status=status.HTTP_400_BAD_REQUEST)
+        if request.user.id != assignment.albanian_tl_id and not is_staff_user(request.user):
+            raise PermissionDenied('Only the assigned team leader can change this schedule.')
+
+        body = CadenceChangeSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        new = {
+            'cadence': body.validated_data['cadence'],
+            'cadence_day_of_week': body.validated_data.get('cadence_day_of_week'),
+            'cadence_nth_week': body.validated_data.get('cadence_nth_week'),
+        }
+        old = _cadence_triple(assignment)
+        try:
+            update_assignment(assignment=assignment, actor=request.user, **new)
+        except AssignmentError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except DjangoValidationError as exc:
+            return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        if old != new:
+            _audit_cadence_change(request.user, assignment, old, new)
+        return Response(services_hbpr.partnership(leader, reporting_year=year, viewer=request.user))
 
     @action(detail=False, methods=['get'])
     def escalations(self, request):

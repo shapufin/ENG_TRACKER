@@ -21,6 +21,7 @@ from django.contrib.auth import get_user_model
 from apps.users.models.hbpr import HbprAlbanianTlAssignment
 from apps.users.services.hbpr_assignments import cadence_status
 from apps.users.services.hbpr_assignments import today as app_today
+from core.mixins.permissions import is_staff_user
 
 from .models import HbprGovernanceEvidence, PIPRecord
 
@@ -200,12 +201,12 @@ def overview(scope, *, reporting_year=None):
     }
 
 
-def partnership(leader, *, reporting_year=None):
+def partnership(leader, *, reporting_year=None, viewer=None):
     """One Albanian TL's own HBPR partnership, or ``{'assignment': None}``.
 
     The AL TL authors the evidence but cannot read the staff-only assignment API,
     so this is where they learn who their HBPR is and what the cadence/EPR state
-    is. It shares ``_evidence_rollup``/``cadence_status`` with the HBPR overview,
+    is. ``viewer`` only decides ``can_edit_cadence``. It shares ``_evidence_rollup``/``cadence_status`` with the HBPR overview,
     so the AL TL's view and the HBPR's view can never disagree.
     """
     from apps.users.services.hbpr_assignments import active_assignment_for_tl
@@ -227,6 +228,9 @@ def partnership(leader, *, reporting_year=None):
             'cadence_display': assignment.cadence_display,
             'cadence_day_of_week': assignment.cadence_day_of_week,
             'cadence_nth_week': assignment.cadence_nth_week,
+            'can_edit_cadence': viewer is not None and (
+                is_staff_user(viewer) or viewer.id == assignment.albanian_tl_id
+            ),
             'effective_from': assignment.effective_from.isoformat(),
             'last_meeting_on': last_meeting_on,
             'next_due_on': (

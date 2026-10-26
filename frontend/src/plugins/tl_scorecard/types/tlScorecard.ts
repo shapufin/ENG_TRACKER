@@ -402,6 +402,10 @@ export interface HbprPartnershipAssignment {
   hbpr: PersonRef;
   cadence: HbprCadence;
   cadence_display?: string;
+  cadence_day_of_week: number | null;
+  cadence_nth_week: number | null;
+  /** Server-decided: the assigned Albanian TL (and staff) may change the schedule. */
+  can_edit_cadence: boolean;
   effective_from: string;
   last_meeting_on: string | null;
   next_due_on: string | null;
@@ -410,6 +414,13 @@ export interface HbprPartnershipAssignment {
   epr_year_end: boolean;
   evidence_count: number;
   last_evidence_on: string | null;
+}
+
+/** Full replacement of the meeting schedule (POST partnership/cadence/). */
+export interface HbprCadencePayload {
+  cadence: HbprCadence;
+  cadence_day_of_week: number | null;
+  cadence_nth_week: number | null;
 }
 
 export interface HbprPartnership {

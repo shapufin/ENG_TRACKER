@@ -394,3 +394,112 @@ class PromotionDecideResponseTests(ActionsBase):
         resp = self.call(PromotionFlagViewSet, 'decide', self.staff, flag.id, {'status': 'promoted'})
         self.assertEqual(resp.status_code, 200, resp.data)
         self.assertEqual(resp.data['notes'], 'tl notes')
+
+
+class CadenceEditTests(ActionsBase):
+    """The assigned Albanian TL changes their own HBPR meeting schedule."""
+
+    def post(self, user, data, query=''):
+        from .viewsets import TLScorecardViewSet
+        request = self.factory.post(f'/x/{query}', data, format='json')
+        force_authenticate(request, user=user)
+        return TLScorecardViewSet.as_view({'post': 'change_cadence'})(request)
+
+    def test_assigned_tl_changes_their_cadence(self):
+        resp = self.post(self.tl, {'cadence': 'monthly', 'cadence_day_of_week': 3, 'cadence_nth_week': 2})
+        self.assertEqual(resp.status_code, 200, resp.data)
+        row = HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl)
+        self.assertEqual((row.cadence, row.cadence_day_of_week, row.cadence_nth_week), ('monthly', 3, 2))
+        self.assertEqual(resp.data['assignment']['cadence'], 'monthly')
+        self.assertIs(resp.data['assignment']['can_edit_cadence'], True)
+
+    def test_other_tl_cannot_change_a_schedule(self):
+        data = {'cadence': 'monthly'}
+        self.assertEqual(self.post(self.other_tl, data).status_code, 400)  # no open assignment of their own
+        self.assertEqual(self.post(self.other_tl, data, f'?leader_id={self.tl.id}').status_code, 403)
+        self.assertEqual(HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl).cadence, 'weekly')
+
+    def test_hbpr_cannot_change_a_cadence(self):
+        resp = self.post(self.hbpr, {'cadence': 'monthly'}, f'?leader_id={self.tl.id}')
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl).cadence, 'weekly')
+
+    def test_invalid_cadence_is_rejected(self):
+        self.assertEqual(self.post(self.tl, {'cadence': 'daily'}).status_code, 400)
+        self.assertEqual(self.post(self.tl, {}).status_code, 400)
+        self.assertEqual(self.post(self.tl, {'cadence': 'weekly', 'cadence_day_of_week': 9}).status_code, 400)
+
+    def test_nth_week_rules_are_400_not_500(self):
+        resp = self.post(self.tl, {'cadence': 'monthly', 'cadence_nth_week': 2, 'cadence_day_of_week': None})
+        self.assertEqual(resp.status_code, 400)
+        resp = self.post(self.tl, {'cadence': 'weekly', 'cadence_nth_week': 2, 'cadence_day_of_week': 1})
+        self.assertEqual(resp.status_code, 400)
+        row = HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl)
+        self.assertEqual((row.cadence, row.cadence_nth_week), ('weekly', None))
+
+    def test_switching_away_from_monthly_week_clears_it(self):
+        self.post(self.tl, {'cadence': 'monthly', 'cadence_day_of_week': 3, 'cadence_nth_week': 2})
+        resp = self.post(self.tl, {'cadence': 'weekly', 'cadence_day_of_week': 1, 'cadence_nth_week': None})
+        self.assertEqual(resp.status_code, 200, resp.data)
+        row = HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl)
+        self.assertEqual((row.cadence, row.cadence_day_of_week, row.cadence_nth_week), ('weekly', 1, None))
+
+    def test_cadence_change_is_audited(self):
+        from django.contrib.contenttypes.models import ContentType
+        from plugins.audit_log.models import AuditLog
+        row = HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl)
+        self.post(self.tl, {'cadence': 'monthly', 'cadence_day_of_week': 3, 'cadence_nth_week': 2})
+        log = AuditLog.objects.get(
+            action='update', object_id=row.id,
+            content_type=ContentType.objects.get_for_model(HbprAlbanianTlAssignment))
+        self.assertEqual(log.user_id, self.tl.id)
+        self.assertEqual(log.old_values['cadence'], 'weekly')
+        self.assertEqual(log.new_values, {'cadence': 'monthly', 'cadence_day_of_week': 3, 'cadence_nth_week': 2})
+
+    def test_failed_change_writes_no_audit_row(self):
+        from plugins.audit_log.models import AuditLog
+        before = AuditLog.objects.count()
+        self.post(self.tl, {'cadence': 'daily'})
+        self.assertEqual(AuditLog.objects.count(), before)
+
+    def test_staff_can_change_a_leader_schedule(self):
+        resp = self.post(self.staff, {'cadence': 'biweekly', 'cadence_day_of_week': 2}, f'?leader_id={self.tl.id}')
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl).cadence, 'biweekly')
+
+    def test_partnership_read_reports_edit_rights(self):
+        from .viewsets import TLScorecardViewSet
+
+        def read(user, query=''):
+            request = self.factory.get(f'/x/{query}')
+            force_authenticate(request, user=user)
+            return TLScorecardViewSet.as_view({'get': 'partnership'})(request).data['assignment']
+
+        self.assertIs(read(self.tl)['can_edit_cadence'], True)
+        self.assertIs(read(self.hbpr, f'?leader_id={self.tl.id}')['can_edit_cadence'], False)
+
+    def test_admin_create_keeps_the_monthly_week(self):
+        from rest_framework.test import APIClient
+        client = APIClient()
+        client.force_authenticate(self.staff)
+        resp = client.post('/api/users/hbpr-assignments/', {
+            'hbpr': self.hbpr.id, 'albanian_tl': self.other_tl.id, 'cadence': 'monthly',
+            'cadence_day_of_week': 3, 'cadence_nth_week': 2, 'effective_from': '2026-01-05',
+        }, format='json')
+        self.assertEqual(resp.status_code, 201, resp.data)
+        row = HbprAlbanianTlAssignment.objects.get(albanian_tl=self.other_tl)
+        self.assertEqual((row.cadence_day_of_week, row.cadence_nth_week), (3, 2))
+
+    def test_admin_create_and_patch_reject_a_bad_schedule_with_400(self):
+        from rest_framework.test import APIClient
+        client = APIClient()
+        client.force_authenticate(self.staff)
+        resp = client.post('/api/users/hbpr-assignments/', {
+            'hbpr': self.hbpr.id, 'albanian_tl': self.other_tl.id, 'cadence': 'weekly',
+            'cadence_nth_week': 2, 'effective_from': '2026-01-05',
+        }, format='json')
+        self.assertEqual(resp.status_code, 400, resp.data)
+        self.assertFalse(HbprAlbanianTlAssignment.objects.filter(albanian_tl=self.other_tl).exists())
+        row = HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl)
+        resp = client.patch(f'/api/users/hbpr-assignments/{row.id}/', {'cadence_nth_week': 2}, format='json')
+        self.assertEqual(resp.status_code, 400, resp.data)
