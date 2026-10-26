@@ -22,6 +22,7 @@ from core.mixins.permissions import (
     resolve_target_user,
 )
 from .models import Client, OvertimeLog
+from .services.client_lifecycle import protected_record_counts
 try:
     from plugins.notifications.idempotency import IdempotentCreateMixin
 except ImportError:
@@ -85,6 +86,24 @@ class ClientViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.M
         """Override to add cache invalidation."""
         instance.delete()
         self.invalidate_related_cache()
+
+    def destroy(self, request, *args, **kwargs):
+        # Checked up front instead of catching ProtectedError: a delete that fails
+        # inside Django's atomic block poisons any transaction the caller is in.
+        # A plain Response, not an APIException: DRF would turn the counts into strings.
+        instance = self.get_object()
+        counts = protected_record_counts(instance)
+        if counts:
+            return Response(
+                {
+                    'detail': 'This client is referenced by records that must be kept. '
+                              'Archive it instead of deleting it.',
+                    'counts': counts,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def available(self, request):

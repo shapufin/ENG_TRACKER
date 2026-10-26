@@ -111,6 +111,40 @@ class RestorePreviewAndCommitTests(TestCase):
         self.assertTrue(Group.objects.filter(pk=self.g3.pk).exists())
 
 
+class DeleteMissingProtectedRowTests(TestCase):
+    """``delete_missing_models`` must turn a PROTECTed row into a clean RestoreError
+    (400 for the superuser), not an unhandled ProtectedError (500)."""
+
+    def test_delete_missing_client_with_overtime_is_a_restore_error(self):
+        import datetime as dt
+
+        from apps.overtime.models.core import Client, OvertimeLog
+
+        admin = User.objects.create_user(username='admin', password='x', is_superuser=True)
+        owner = User.objects.create_user(username='owner', password='x')
+        with tempfile.TemporaryDirectory() as media:
+            with override_settings(MEDIA_ROOT=media):
+                record = backup_service.create_backup(admin, include_media=False)
+
+                client = Client.objects.create(name='Later', code='LATER')
+                OvertimeLog.objects.create(
+                    user=owner, client=client, date=dt.date(2026, 9, 1), hours=2,
+                )
+
+                with record.file.open('rb') as fh:
+                    with self.assertRaises(restore_service.RestoreError):
+                        restore_service.commit(
+                            fh,
+                            approved_models=['overtime.client'],
+                            delete_missing_models=['overtime.client'],
+                            confirmed=True,
+                            user=admin,
+                        )
+
+        self.assertTrue(Client.objects.filter(pk=client.pk).exists())
+        self.assertEqual(OvertimeLog.objects.count(), 1)
+
+
 class FieldFidelityRoundTripTests(TestCase):
     """Prove every field type actually round-trips, not just PK/existence.
 

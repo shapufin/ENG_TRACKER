@@ -7,6 +7,7 @@ from collections import defaultdict
 from django.apps import apps as django_apps
 from django.conf import settings
 from django.db import transaction
+from django.db.models import ProtectedError
 
 from .archive import open_archive, read_db_objects, read_manifest
 from .backup import migration_state_hash
@@ -184,7 +185,13 @@ def commit(
                 continue
             model = _model_from_label(label)
             file_pks = {d.object.pk for d in by_model.get(label, [])}
-            deleted_count, _ = model._default_manager.exclude(pk__in=file_pks).delete()
+            try:
+                deleted_count, _ = model._default_manager.exclude(pk__in=file_pks).delete()
+            except ProtectedError:
+                raise RestoreError(
+                    f'Cannot delete the {label} rows missing from the backup: other '
+                    'records that must be kept still reference them. Nothing was restored.'
+                )
             result['deleted'][label] = deleted_count
 
         for label in topological_save_order(expanded, graph):
