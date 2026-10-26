@@ -61,7 +61,7 @@ Before writing or modifying any code, follow this mandatory 7-step ladder:
 | paid block, paid hour, overtime share, `paid_window`, 0h entry, covered entry, overtime export hours, TL/HR export bundling | `docs/workflow-invariants.md` item 23 + `apps/overtime/paid_blocks.py` | Entries starting inside one paid hour share it; frozen after payroll finalize; bundled TL/HR Excel |
 | timezone, `business_today`, Europe/Tirane, `date.today`, server clock, "what day is it" | `docs/workflow-invariants.md` §Business calendar day | AST guard `core/test_business_today_guard.py` |
 | notification, push, VAPID, kill-switch, notification retention | `docs/workflow-invariants.md` §Notification delivery + Hot Invariants (kill-switch bullet) + `plugins/notifications/` tests | Kill-switch, push after commit, pagination, `prune_notifications` |
-| audit log, `audit_log`, `retention_days`, purge, retention | `docs/workflow-invariants.md` §Business calendar day items 16-17 | Opt-in deletion, boot vs cron |
+| audit log, security audit, login failure, rotate_audit_logs, audit archive, retention | `docs/workflow-invariants.md` items 16-17, 29 | Opt-in deletion, security audit events, monthly gzip archive & pruning |
 | onboarding, OnlyOffice, document editor, office callback | Hot Invariants (OnlyOffice callback URLs) + `plugins/onboarding/test_office_editor.py` | Exact-host fetch guard |
 | confidentiality, teammates' statuses, employee scope, self-only, TL management data | `docs/workflow-invariants.md` §Team confidentiality + Hot Invariants (Team confidentiality) | Ruling 2026-10-20 |
 | payroll, wage, payslip, gross-to-net | `.devin/context/PLUGINS/01-payroll.md` | Payroll lifecycle invariants |

@@ -210,6 +210,7 @@ replica, schedule these on the host with `docker compose exec -T backend python 
 | Notification retention | `prune_notifications` | daily | Deletes read notifications older than `--days` (default 180); unread are kept. Also runs at boot. |
 | Audit log retention | `purge_audit_logs --if-configured` | daily | Deletes older than the plugin's `retention_days`; no-op until an admin sets it. Also runs at boot. |
 | Expired refresh tokens | `flushexpiredtokens` | daily | simplejwt's own command: deletes expired `OutstandingToken` rows (every login and refresh adds one, nothing else removes them). Also runs at boot. |
+| Monthly audit archive | `rotate_audit_logs` | monthly (1st of month) | Compresses full previous month into `media/audit_archives/audit_logs_YYYY_MM.json.gz` and prunes database. UI button also available in `/admin/audit-logs`. |
 | Analytics retention | `purge_analytics_data` | daily | Snapshots and metric points older than `data_retention_days` (default 365). Not run at boot, so it needs the cron. |
 | HBPR assignment archive | `purge_hbpr_archive` | optional | Runs at boot and lazily on the staff-only assignments list. |
 | Application backup | `create_site_backup` | weekly | Site Backup plugin archive (database fixture plus media). Separate from the `db-backup` loop. |
