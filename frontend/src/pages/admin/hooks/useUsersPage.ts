@@ -13,6 +13,7 @@ import type { TLFilter } from "@/types";
 import { useUrlParamState } from "@/hooks/useUrlParamState";
 
 const TL_FILTERS: readonly TLFilter[] = [
+  "all",
   "employee",
   "italian_tl",
   "albanian_tl",

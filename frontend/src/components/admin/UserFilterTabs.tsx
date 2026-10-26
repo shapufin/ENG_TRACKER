@@ -17,6 +17,7 @@ export const UserFilterTabs: React.FC<UserFilterTabsProps> = ({
   showCRAdmin,
 }) => {
   const options = [
+    { value: "all" as TLFilter, label: "All users", icon: Users2 },
     { value: "employee" as TLFilter, label: "Employees", icon: Users2 },
     { value: "italian_tl" as TLFilter, label: "Italian TL", icon: Crown },
     { value: "albanian_tl" as TLFilter, label: "Albanian TL", icon: Crown },

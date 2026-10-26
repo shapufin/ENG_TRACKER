@@ -690,7 +690,14 @@ export interface ApiError {
 
 /** The Admin Users role-tab filter. Lives here (not in the tab component or
  * the page hook) so neither has to import from the other. */
-export type TLFilter = "employee" | "italian_tl" | "albanian_tl" | "hbpr" | "hr" | "cr_admin";
+export type TLFilter =
+  | "all"
+  | "employee"
+  | "italian_tl"
+  | "albanian_tl"
+  | "hbpr"
+  | "hr"
+  | "cr_admin";
 
 /** A user who still has the blocked TL as their italian_tl/albanian_tl —
  * must be reassigned or cleared before that TL role can be revoked. */

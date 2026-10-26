@@ -232,7 +232,7 @@ export const useUserColumns = (
         id: "techs",
         accessorKey: "techs",
         header: "Tech",
-        size: 90,
+        size: 130,
         cell: ({ row }: { row: { original: UserProfile } }) => {
           const techs = row.original.techs_detail;
           if (techs && techs.length > 0) {
@@ -242,11 +242,14 @@ export const useUserColumns = (
                   <Badge
                     key={t.id}
                     variant="outline"
-                    className={`${toneSurfaceClass.accent} text-xs font-normal`}
+                    className={`${toneSurfaceClass.accent} max-w-full truncate text-xs font-normal`}
                   >
-                    {t.name}
+                    <span className="truncate">{t.name}</span>
                     {t.level && (
-                      <span className="ml-1 font-semibold" title={`${t.name} — ${t.level.name}`}>
+                      <span
+                        className="ml-1 shrink-0 font-semibold"
+                        title={`${t.name} — ${t.level.name}`}
+                      >
                         {t.level.code}
                       </span>
                     )}

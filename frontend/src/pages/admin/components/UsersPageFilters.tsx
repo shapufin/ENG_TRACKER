@@ -11,6 +11,7 @@ import type { useUsersPage } from "../hooks/useUsersPage";
 type UsersPageState = ReturnType<typeof useUsersPage>;
 
 const ROLE_LABELS: Record<string, string> = {
+  all: "All users",
   employee: "Employees",
   italian_tl: "Italian TL",
   albanian_tl: "Albanian TL",
@@ -42,7 +43,7 @@ export const UsersPageFilters: React.FC<UsersPageFiltersProps> = ({ state, teams
     });
   const activeTeamLabels = teams.filter((t) => state.teamIds.includes(t.id)).map((t) => t.name);
   const hasActiveFilters =
-    state.tlFilter !== "employee" ||
+    (state.tlFilter !== "employee" && state.tlFilter !== "all") ||
     activeTechLabels.length > 0 ||
     state.noTechOnly ||
     state.crOnly ||
@@ -104,7 +105,7 @@ export const UsersPageFilters: React.FC<UsersPageFiltersProps> = ({ state, teams
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
           <span className="text-muted-foreground">Active:</span>
-          {state.tlFilter !== "employee" && (
+          {state.tlFilter !== "employee" && state.tlFilter !== "all" && (
             <span className={cn(ACTIVE_CHIP, toneSurfaceClass.accent)}>
               role: {ROLE_LABELS[state.tlFilter] ?? state.tlFilter}
             </span>

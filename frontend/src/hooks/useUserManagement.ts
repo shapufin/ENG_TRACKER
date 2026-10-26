@@ -37,7 +37,7 @@ interface UseUserManagementOptions {
  */
 export const useUserManagement = (options?: UseUserManagementOptions) => {
   const qc = useQueryClient();
-  const role = options?.role;
+  const role = options?.role === "all" ? undefined : options?.role;
   const techIds = options?.techIds ?? [];
   const techLevelIds = options?.techLevelIds ?? [];
   const noTechOnly = options?.noTechOnly ?? false;
