@@ -114,6 +114,9 @@ const PackBody: React.FC<{ pack: YearEndEvidencePack }> = ({ pack }) => (
         {formatDate(pack.assignment.effective_from)}
         {pack.assignment.effective_to && ` · ended ${formatDate(pack.assignment.effective_to)}`}
       </p>
+      <p className="text-muted-foreground mt-0.5 text-xs">
+        Expected meetings use the current cadence.
+      </p>
     </div>
 
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

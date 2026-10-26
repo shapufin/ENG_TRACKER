@@ -16,6 +16,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { InfoCallout } from "@/components/ui/InfoCallout";
 import type {
   HbprEvidence,
+  HbprCadencePayload,
   HbprEvidencePayload,
   HbprPartnership,
   YearEndEvidencePack,
@@ -29,6 +30,7 @@ import {
 } from "../hbpr/hbprMeta";
 import { GroupedEvidenceList } from "../partnership/GroupedEvidenceList";
 import { EvidencePackDialog } from "./EvidencePackDialog";
+import { HbprCadenceDialog } from "./HbprCadenceDialog";
 import { HbprEvidenceDialog } from "./HbprEvidenceDialog";
 
 interface HbprPartnershipSectionProps {
@@ -43,6 +45,8 @@ interface HbprPartnershipSectionProps {
   canAuthor: boolean;
   onCreate: (data: HbprEvidencePayload) => Promise<void>;
   onUpdate: (id: number, data: HbprEvidencePayload) => Promise<void>;
+  /** Changes the meeting schedule; offered only when the server says `can_edit_cadence`. */
+  onUpdateCadence: (data: HbprCadencePayload) => Promise<void>;
   /** Fetches the packaged year-end evidence summary for an assignment+year. */
   loadEvidencePack: (assignmentId: number, year: number) => Promise<YearEndEvidencePack>;
 }
@@ -61,11 +65,13 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
   canAuthor,
   onCreate,
   onUpdate,
+  onUpdateCadence,
   loadEvidencePack,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<HbprEvidence | null>(null);
   const [packOpen, setPackOpen] = useState(false);
+  const [cadenceOpen, setCadenceOpen] = useState(false);
 
   const assignment = partnership?.assignment ?? null;
 
@@ -96,6 +102,12 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
               <FileText className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
               Year-end summary
             </Button>
+            {assignment.can_edit_cadence && (
+              <Button variant="outline" size="sm" onClick={() => setCadenceOpen(true)}>
+                <CalendarClock className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                Change schedule
+              </Button>
+            )}
             {canAuthor && (
               <Button variant="outline" size="sm" onClick={openCreate}>
                 <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
@@ -258,6 +270,15 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
               mode={editing ? "edit" : "create"}
               initial={editing ?? undefined}
               onSave={(data) => (editing ? onUpdate(editing.id, data) : onCreate(data))}
+            />
+          )}
+
+          {assignment.can_edit_cadence && cadenceOpen && (
+            <HbprCadenceDialog
+              open
+              onOpenChange={setCadenceOpen}
+              assignment={assignment}
+              onSave={onUpdateCadence}
             />
           )}
 

@@ -846,6 +846,7 @@ class HbprAlbanianTlAssignmentSerializer(serializers.ModelSerializer):
             AssignmentError,
             update_assignment,
         )
+        from django.core.exceptions import ValidationError as DjangoValidationError
         from rest_framework.exceptions import ValidationError as DRFValidationError
 
         kwargs = {"assignment": instance}
@@ -878,6 +879,8 @@ class HbprAlbanianTlAssignmentSerializer(serializers.ModelSerializer):
             return update_assignment(**kwargs, actor=actor)
         except AssignmentError as e:
             raise DRFValidationError({"detail": str(e)})
+        except DjangoValidationError as e:
+            raise DRFValidationError(e.message_dict)
 
     def get_hbpr_detail(self, obj) -> dict:
         user = obj.hbpr

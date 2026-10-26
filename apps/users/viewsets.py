@@ -2269,11 +2269,15 @@ class HbprAssignmentViewSet(viewsets.ModelViewSet):
                 hbpr=data["hbpr"],
                 albanian_tl=data["albanian_tl"],
                 cadence=data["cadence"],
+                cadence_day_of_week=data.get("cadence_day_of_week"),
+                cadence_nth_week=data.get("cadence_nth_week"),
                 effective_from=data["effective_from"],
                 assigned_by=self.request.user,
             )
         except AssignmentError as exc:
             raise DRFValidationError({"detail": str(exc)})
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.message_dict)
         except IntegrityError:
             # Two concurrent first assignments for one TL both pass the
             # service check (an empty row set locks nothing); the partial

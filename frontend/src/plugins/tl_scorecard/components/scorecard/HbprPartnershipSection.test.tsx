@@ -39,6 +39,9 @@ const PARTNERSHIP: HbprPartnership = {
     id: 11,
     hbpr: { id: 5, name: "Elda Partner" },
     cadence: "weekly",
+    cadence_day_of_week: null,
+    cadence_nth_week: null,
+    can_edit_cadence: true,
     effective_from: "2026-01-01",
     last_meeting_on: "2026-03-01",
     next_due_on: "2026-03-08",
@@ -96,6 +99,7 @@ const renderSection = (
 ) => {
   const onCreate = vi.fn().mockResolvedValue(undefined);
   const onUpdate = vi.fn().mockResolvedValue(undefined);
+  const onUpdateCadence = vi.fn().mockResolvedValue(undefined);
   const onRetry = vi.fn();
   const loadEvidencePack = vi.fn().mockResolvedValue(PACK);
   render(
@@ -109,11 +113,12 @@ const renderSection = (
       canAuthor
       onCreate={onCreate}
       onUpdate={onUpdate}
+      onUpdateCadence={onUpdateCadence}
       loadEvidencePack={loadEvidencePack}
       {...overrides}
     />
   );
-  return { onCreate, onUpdate, onRetry, loadEvidencePack };
+  return { onCreate, onUpdate, onUpdateCadence, onRetry, loadEvidencePack };
 };
 
 describe("HbprPartnershipSection", () => {
@@ -125,6 +130,45 @@ describe("HbprPartnershipSection", () => {
     expect(screen.getByText("On track")).toBeInTheDocument();
     expect(screen.getByText("Mid-year EPR: not logged")).toBeInTheDocument();
     expect(screen.getByText("Year-end EPR: not logged")).toBeInTheDocument();
+  });
+
+  it("changes the meeting schedule", async () => {
+    const { onUpdateCadence } = renderSection();
+    fireEvent.click(screen.getByRole("button", { name: /change schedule/i }));
+    fireEvent.click(await screen.findByRole("option", { name: "Monthly" }));
+    fireEvent.click(screen.getByRole("button", { name: /save schedule/i }));
+    await waitFor(() =>
+      expect(onUpdateCadence).toHaveBeenCalledWith({
+        cadence: "monthly",
+        cadence_day_of_week: null,
+        cadence_nth_week: null,
+      })
+    );
+  });
+
+  it("sends a monthly weekday pattern and drops a stale weekday otherwise", async () => {
+    const base = PARTNERSHIP.assignment!;
+    const { onUpdateCadence } = renderSection({
+      partnership: { ...PARTNERSHIP, assignment: { ...base, cadence_day_of_week: 1 } },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /change schedule/i }));
+    fireEvent.click(await screen.findByRole("option", { name: "Monthly" }));
+    fireEvent.click(screen.getByRole("button", { name: /save schedule/i }));
+    await waitFor(() =>
+      expect(onUpdateCadence).toHaveBeenCalledWith({
+        cadence: "monthly",
+        cadence_day_of_week: null,
+        cadence_nth_week: null,
+      })
+    );
+  });
+
+  it("hides the schedule control when the server says no", () => {
+    const base = PARTNERSHIP.assignment!;
+    renderSection({
+      partnership: { ...PARTNERSHIP, assignment: { ...base, can_edit_cadence: false } },
+    });
+    expect(screen.queryByRole("button", { name: /change schedule/i })).not.toBeInTheDocument();
   });
 
   it("tells an unpaired team leader there is no HBPR yet", () => {

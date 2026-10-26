@@ -22,7 +22,12 @@ import { RecordsTab } from "../components/records/RecordsTab";
 import { StartEPRCycleDialog } from "../components/StartEPRCycleDialog";
 import { evidenceForYear } from "../hooks/useHbprWorkspaceQueries";
 import { tlScorecardService } from "../services/tlScorecardService";
-import type { CompleteEprStagePayload, EPRStage, HbprEvidencePayload } from "../types/tlScorecard";
+import type {
+  CompleteEprStagePayload,
+  EPRStage,
+  HbprCadencePayload,
+  HbprEvidencePayload,
+} from "../types/tlScorecard";
 
 const Skeleton: React.FC = () => (
   <div aria-busy="true" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -143,6 +148,17 @@ const TLScorecardAuthoring: React.FC = () => {
   const createEvidenceMutation = useMutation({
     mutationFn: tlScorecardService.createHbprEvidence,
     onSuccess: invalidatePartnership,
+    onError: notifyError,
+  });
+  const updateCadenceMutation = useMutation({
+    mutationFn: (data: HbprCadencePayload) =>
+      tlScorecardService.updatePartnershipCadence(data, year),
+    onSuccess: (response) => {
+      queryClient.setQueryData(["tl-scorecard", "partnership", year], response.data);
+      invalidatePartnership();
+      // The staff assignments list shows the same schedule.
+      queryClient.invalidateQueries({ queryKey: ["admin", "hbpr-assignments"] });
+    },
     onError: notifyError,
   });
   const updateEvidenceMutation = useMutation({
@@ -313,6 +329,9 @@ const TLScorecardAuthoring: React.FC = () => {
           }}
           onUpdate={async (id, data) => {
             await updateEvidenceMutation.mutateAsync({ id, data });
+          }}
+          onUpdateCadence={async (data) => {
+            await updateCadenceMutation.mutateAsync(data);
           }}
           loadEvidencePack={async (assignmentId, packYear) =>
             (await tlScorecardService.getEvidencePack(assignmentId, packYear)).data

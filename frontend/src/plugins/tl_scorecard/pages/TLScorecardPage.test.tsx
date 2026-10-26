@@ -18,6 +18,7 @@ vi.mock("../services/tlScorecardService", () => ({
     listEPRCycles: vi.fn(),
     exportSummary: vi.fn(),
     getPartnership: vi.fn(),
+    updatePartnershipCadence: vi.fn(),
     listHbprEvidence: vi.fn(),
     createHbprEvidence: vi.fn(),
     updateHbprEvidence: vi.fn(),
@@ -300,6 +301,9 @@ describe("TLScorecardPage", () => {
           id: 11,
           hbpr: { id: 5, name: "Elda Partner" },
           cadence: "weekly",
+          cadence_day_of_week: null,
+          cadence_nth_week: null,
+          can_edit_cadence: true,
           effective_from: "2026-01-01",
           last_meeting_on: null,
           next_due_on: "2026-01-08",
@@ -319,6 +323,7 @@ describe("TLScorecardPage", () => {
     expect(screen.getByText("Mid-year EPR: not logged")).toBeInTheDocument();
     // The AL TL authors the evidence.
     expect(screen.getByRole("button", { name: /add log entry/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /change schedule/i })).toBeInTheDocument();
     perms.value = { isAdmin: false };
   });
 
