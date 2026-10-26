@@ -71,7 +71,7 @@ Components without data are dropped and the rest renormalised.
 
 ## Freshness
 
-There is no scheduler. A snapshot is recomputed on read when any of these hold:
+The scheduler service is not used for this (it only runs plugin-declared jobs). A snapshot is recomputed on read when any of these hold:
 it was never computed, its metrics lack the SLA fields (any snapshot written
 before 2026-10-08, so the migration heals itself), a pending deadline has passed,
 team membership changed, or a domain row changed after `computed_at`. The response reports

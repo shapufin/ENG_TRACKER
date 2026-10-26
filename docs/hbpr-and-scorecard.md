@@ -15,7 +15,7 @@ is not a team leader and not HR, and has no overtime, standby, payroll or report
 
 | Area | Behaviour |
 |---|---|
-| Scope | **Stored, not computed.** `HbprAlbanianTlAssignment` (`apps/users/models/hbpr.py`): one open row per AL TL (partial-unique on `effective_to IS NULL`), dated history kept; evidence holds a PROTECT FK, so evidence-bearing rows are never deleted — evidence-free ended rows older than 6 months are purged by `purge_ended_assignments` (no scheduler: the staff-only admin list sweeps on read, `purge_hbpr_archive` runs in the entrypoint reconcile chain). `hbpr_scope.py` returns the assigned AL TLs plus their `get_team_member_ids()` union (active only, viewer excluded); an unassigned HBPR gets an empty scope, not `None`. |
+| Scope | **Stored, not computed.** `HbprAlbanianTlAssignment` (`apps/users/models/hbpr.py`): one open row per AL TL (partial-unique on `effective_to IS NULL`), dated history kept; evidence holds a PROTECT FK, so evidence-bearing rows are never deleted — evidence-free ended rows older than 6 months are purged by `purge_ended_assignments` (the scheduler does not own this: the staff-only admin list sweeps on read, and `purge_hbpr_archive` runs in the entrypoint reconcile chain). `hbpr_scope.py` returns the assigned AL TLs plus their `get_team_member_ids()` union (active only, viewer excluded); an unassigned HBPR gets an empty scope, not `None`. |
 | Writes | All through `apps/users/services/hbpr_assignments.py` (overlap rejected under `select_for_update`; `reassign` is end+create atomically). Admin API `/api/users/hbpr-assignments/` is staff-only: `end` and `reassign` actions, no delete (the retention purge is a service, not an API action), identity/range immutable via PATCH. |
 | Reads | AL-TL governance records via `HbprReadScopeMixin`: **safe methods only**, owner AL TL in scope **and** subject in scope. HBPR never approves a PIP, decides a promotion or writes attendee notes (HR/staff do). Private TL `notes` stay redacted. |
 | Employee one-on-ones | Never reachable through **any** door: the meeting list/detail, `MeetingAttendeeViewSet` (`hbpr_exclude` on `meeting__meeting_type`), the scorecard aggregate (`_mask_one_on_one` nulls `one_on_one_compliance_pct` for anyone who is neither the leader nor staff), exports, and notifications. A guessed id must 404. |
@@ -428,7 +428,7 @@ and user-deletion guards, the admin `current` filter and `is_current`. So a futu
 keeps access until that day, and `reassign` with a future `effective_from` hands over
 without a gap (old ends the day before). The DB unique constraint and `end`/`reassign`
 targeting still key on `effective_to IS NULL` (one *unended* row per Albanian TL). Notifications
-still fire when the end date is set, not on the day it passes (there is no scheduler).
+still fire when the end date is set, not on the day it passes (no scheduler job watches that date).
 
 **Accepted, not changed:** the assignment model and `/admin/hbpr-assignments` live in
 core (`apps/users`) while evidence lives in the plugin (moving a deployed model is the

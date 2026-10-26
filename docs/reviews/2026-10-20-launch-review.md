@@ -32,7 +32,7 @@ Backend (SQLite, local): 3189 tests, OK at the final head (full run after the F-
 
 1. Docker/nginx/gunicorn and Postgres backup-restore are unrehearsed (R-1); CI covers build, `nginx -t`, Trivy and an image smoke only.
 2. D-13: plugin URLs load from the database at process start; a worker that imports the URLconf while Postgres is down serves no plugin routes until recycled. Mitigated by compose ordering and `--max-requests`.
-3. No task queue (SR-01, PERF-12): site backup, large exports and push fan-out run in the request path; start large backups off-peak.
+3. No task queue (SR-01, PERF-12): site backup and push fan-out still run in the request path; start large backups off-peak. Onboarding export ZIPs left this list on 2026-10-26 — they are built by the `scheduler` service and downloaded through nginx, so gunicorn no longer streams them.
 4. DEP-08 (no error monitoring) and DEP-09 (CSP still allows inline scripts; a strict Report-Only twin ships): low exposure, but nothing reports a production fault.
 5. C-8 (stored legacy `calendar_group` values can split groups) and C-11 (engagement snapshots after a timezone change): bounded, admin-rare.
 6. P-5 (import preview, 3 indexed queries per row up to 5000 rows, admin only) and F-2 (two core to plugin imports that block clean removal of those plugins).
@@ -166,7 +166,7 @@ Rule (controller): only security-relevant items that are cheap to fix are BLOCKE
 | B-02 | `AdminGUI/` in the Docker context | BLOCKER, FIXED (D-1) | Cheap, and an image-contents risk. |
 | D-3 follow-up | `usePushNotifications` is unwired (no consumer) | POST-LAUNCH | URL fixed; wiring browser push or deleting the hook is a product decision. The in-app notification list and the server push path are unaffected. |
 | SEC-14 | OnlyOffice callback JWT has no `exp`/replay check | POST-LAUNCH | The file token expires in 300 s and is bound to the document id; a replayed callback re-saves the same document it was issued for. OnlyOffice does not reliably send `iat`/`exp`. |
-| SR-01 | Task queue (RQ/Celery) | POST-LAUNCH | New dependency; ruling D3. Push after commit with a timeout, bounded work in requests, cron for retention. |
+| SR-01 | Task queue (RQ/Celery) | POST-LAUNCH | New dependency; ruling D3. Push after commit with a timeout, bounded work in requests, cron for retention. **Partially superseded 2026-10-26**: a `scheduler` service now runs plugin-declared jobs (onboarding exports, year close) with signed nginx downloads; site backup still needs this. |
 | SR-02 | One authoritative audit log (two `AuditLog` models) | POST-LAUNCH | Migration and read-model redesign; PERF-10 actor loss is fixed. |
 | SR-03 | Request-id and structured logs | POST-LAUNCH | Observability, no correctness impact. |
 | SR-04 | Replace the thread-local current user with explicit passing | POST-LAUNCH | Refactor; the actor is now set from DRF auth (`test_audit_actor`). |
