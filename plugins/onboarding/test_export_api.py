@@ -201,3 +201,33 @@ class DownloadTests(ExportApiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, b'')
         self.assertEqual(response['X-Accel-Redirect'], f'/_protected/exports/onboarding/{export.pk}.zip')
+
+
+class StaleAccessTests(ExportApiTestCase):
+    """An export lives for 24 hours, but access to the client may not."""
+
+    def _link(self, user, export):
+        self.client.force_authenticate(user)
+        return self.client.post(f'{BASE}/exports/{export.pk}/download-link/')
+
+    def test_a_user_unassigned_from_the_client_cannot_get_a_link_any_more(self):
+        export = self._ready_export()
+        self.member.profile.clients.remove(self.acme)
+        self.assertEqual(self._link(self.member, export).status_code, 403)
+
+    def test_archiving_the_client_ends_the_owners_access_but_not_a_superusers(self):
+        export = self._ready_export()
+        self.acme.is_active = False
+        self.acme.save(update_fields=['is_active'])
+        self.assertEqual(self._link(self.member, export).status_code, 403)
+        self.assertEqual(self._link(self.admin, export).status_code, 200)
+
+    def test_an_all_clients_export_stays_with_superusers(self):
+        self.client.force_authenticate(self.admin)
+        export_id = self.client.post(f'{BASE}/exports/all/').data['id']
+        ClientExport.objects.filter(pk=export_id).update(requested_by=self.member)  # demoted owner
+        self.assertEqual(self._link(self.member, ClientExport.objects.get(pk=export_id)).status_code, 403)
+
+    def test_a_user_still_assigned_keeps_access(self):
+        export = self._ready_export()
+        self.assertEqual(self._link(self.member, export).status_code, 200)

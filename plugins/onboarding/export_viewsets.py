@@ -36,6 +36,7 @@ except ImportError:  # the audit_log plugin is optional
 from .models import ClientExport
 from .serializers import ClientExportSerializer
 from .services import exporter
+from .viewsets import _assigned_client_ids
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,7 @@ class ClientExportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
     def download_link(self, request, pk=None):
         """A 120-second, single-use URL the browser can navigate to."""
         export = self.get_object()
+        self._require_current_access(request.user, export)
         expired = export.expires_at is not None and export.expires_at < timezone.now()
         if export.status != 'ready' or expired:
             return Response({'detail': 'This export is not ready to download.'}, status=status.HTTP_409_CONFLICT)
@@ -100,6 +102,19 @@ class ClientExportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
         )
         path = reverse('onboarding-export-download', kwargs={'pk': export.pk})
         return Response({'url': f'{path}?token={token}'})
+
+    @staticmethod
+    def _require_current_access(user, export):
+        """An export outlives a user's access to the client by up to 24 hours, so the
+        link is only minted for someone who could still request this export today."""
+        if user.is_superuser:
+            return
+        client = export.client
+        if export.kind != ClientExport.KIND_CLIENT or client is None or not client.is_active:
+            raise PermissionDenied('You no longer have access to this export.')
+        client_ids = _assigned_client_ids(user)
+        if client_ids is not None and client.pk not in client_ids:
+            raise PermissionDenied('You no longer have access to this export.')
 
     @action(detail=True, methods=['get'], permission_classes=[AllowAny])
     def download(self, request, pk=None):
