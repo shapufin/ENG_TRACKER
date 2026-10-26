@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/PageShell";
@@ -16,6 +18,8 @@ import { mfaErrorMessage, mfaService } from "@/services/mfaService";
 import type { Team, UserProfile } from "@/types";
 
 export const UsersPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const state = useUsersPage();
   const [viewingId, setViewingId] = useState<number | null>(null);
@@ -105,6 +109,8 @@ export const UsersPage: React.FC = () => {
         techsData={state.techs || []}
         italianTLs={state.italianTLs || []}
         albanianTLs={state.albanianTLs || []}
+        currentUser={currentUser}
+        onNavigateToSettings={() => navigate("/settings")}
       />
       <ConfirmDialog
         open={resetMfaProfile !== null}

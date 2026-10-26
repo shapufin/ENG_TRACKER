@@ -48,4 +48,11 @@ describe("HeaderProfileMenu", () => {
     fireEvent.click(screen.getByText("Settings"));
     expect(mockNavigate).toHaveBeenCalledWith("/settings");
   });
+
+  it("navigates to settings when Security & 2FA is clicked", () => {
+    renderMenu();
+    fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
+    fireEvent.click(screen.getByText(/Security & 2FA/i));
+    expect(mockNavigate).toHaveBeenCalledWith("/settings");
+  });
 });
