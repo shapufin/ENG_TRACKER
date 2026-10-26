@@ -18,14 +18,13 @@ from datetime import date
 from pathlib import Path
 
 from django.conf import settings
-from django.db import transaction
 from django.utils import timezone
 
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from core.utils.sheet_titles import safe_sheet_title
 
-from .readiness import apply_year_end_rollover, check_year_readiness, pending_counts
+from .readiness import pending_counts
 
 logger = logging.getLogger(__name__)
 

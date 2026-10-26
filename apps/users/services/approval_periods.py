@@ -11,7 +11,7 @@ from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from core.mixins.permissions import has_team_leader_role
-from core.utils.timezone_local import business_tz, business_today
+from core.utils.timezone_local import business_tz
 from apps.users.models import (
     ApprovalPeriodBoundary,
     ApprovalPeriodClose,
