@@ -74,6 +74,19 @@ same day next month clamped to month end, from the last cadence meeting or the s
 `cadence_status` has exactly one definition
 (`apps/users/services/hbpr_assignments.cadence_status`). Due/overdue is UI-only.
 
+**TL-editable schedule (2026-10-26).** The assigned Albanian TL (and staff) change the
+schedule with `POST /api/plugins/tl_scorecard/partnership/cadence/`
+(`{cadence, cadence_day_of_week, cadence_nth_week}`, a full replacement; `cadence` is
+required, the other two accept `null`). It reuses `update_assignment`; `GET partnership/`
+returns a server-decided `can_edit_cadence` (assigned TL or staff, never the HBPR), and the
+UI shows "Change schedule" only when it is true. The only history is one `audit_log`
+`update` row (old/new triple, written after a successful save, best-effort via a
+function-local import). A change silently re-labels past evidence and changes the year-end
+pack's *expected* count; the pack says so. No notification fires (`_on_assignment_saved`
+reacts only to create/end). Domain `ValidationError`s are 400 on this action and on admin
+create/PATCH, never 500. `CadenceScheduleFields` is core (`components/hbpr/`); the plugin
+imports it, never the reverse.
+
 ## Architecture guardrails (added by the 2026-10-02 hardening pass)
 
 - **Fail-closed scoping.** HBPR-readable scorecard viewsets subclass
