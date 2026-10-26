@@ -1,7 +1,9 @@
 import { useMemo } from "react";
+import { Calendar, Pencil, UserMinus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { RowActions } from "@/components/ui/RowActions";
+import { UserCell } from "@/components/admin/UserCell";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import {
   CADENCE_LABELS,
@@ -28,42 +30,41 @@ export const useHbprAssignmentColumns = (
         id: "hbpr",
         accessorFn: (row) => row.hbpr_detail.name,
         header: "HR Business Partner",
-        size: 190,
         cell: ({ row }) => (
-          <span className="text-foreground font-medium">
-            {row.original.hbpr_detail.name}
-            <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-              #{row.original.hbpr}
-            </span>
-          </span>
+          <UserCell
+            name={row.original.hbpr_detail.name}
+            subtitle={`HBPR · #${row.original.hbpr}`}
+          />
         ),
       },
       {
         id: "albanian_tl",
         accessorFn: (row) => row.albanian_tl_detail.name,
         header: "Albanian team leader",
-        size: 190,
         cell: ({ row }) => (
-          <span className="text-foreground font-medium">
-            {row.original.albanian_tl_detail.name}
-            <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-              #{row.original.albanian_tl}
-            </span>
-          </span>
+          <UserCell
+            name={row.original.albanian_tl_detail.name}
+            subtitle={`Team Leader · #${row.original.albanian_tl}`}
+          />
         ),
       },
       {
         id: "cadence",
         accessorKey: "cadence",
         header: "Cadence",
-        size: 160,
-        cell: ({ row }) => row.original.cadence_display || CADENCE_LABELS[row.original.cadence],
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1.5 text-xs">
+            <Calendar className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="font-medium">
+              {row.original.cadence_display || CADENCE_LABELS[row.original.cadence]}
+            </span>
+          </div>
+        ),
       },
       {
         id: "cadence_status",
         accessorKey: "cadence_status",
         header: "Status",
-        size: 110,
         cell: ({ row }) => (
           <Badge variant={STATUS_TONE[row.original.cadence_status]} className="whitespace-nowrap">
             {CADENCE_STATUS_LABELS[row.original.cadence_status]}
@@ -74,7 +75,6 @@ export const useHbprAssignmentColumns = (
         id: "next_due_on",
         accessorKey: "next_due_on",
         header: "Next due",
-        size: 110,
         cell: ({ row }) => (
           <span className="font-mono whitespace-nowrap tabular-nums">
             {row.original.next_due_on ?? "—"}
@@ -85,7 +85,6 @@ export const useHbprAssignmentColumns = (
         id: "effective_from",
         accessorKey: "effective_from",
         header: "Effective from",
-        size: 139,
         cell: ({ row }) => (
           <span className="font-mono whitespace-nowrap tabular-nums">
             {row.original.effective_from}
@@ -96,7 +95,6 @@ export const useHbprAssignmentColumns = (
         id: "effective_to",
         accessorKey: "effective_to",
         header: "Effective to",
-        size: 122,
         cell: ({ row }) => (
           <span className="font-mono whitespace-nowrap tabular-nums">
             {row.original.effective_to ?? "—"}
@@ -107,7 +105,6 @@ export const useHbprAssignmentColumns = (
         id: "evidence_count",
         accessorKey: "evidence_count",
         header: "Log entries",
-        size: 119,
         cell: ({ row }) =>
           row.original.evidence_count > 0 ? (
             <Badge variant="neutral" className="whitespace-nowrap">
@@ -119,30 +116,29 @@ export const useHbprAssignmentColumns = (
       },
       {
         id: "actions",
-        meta: { actionsDisplay: "column" },
-        header: "Actions",
-        size: 150,
-        cell: ({ row }) =>
-          row.original.is_current ? (
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label={`Edit assignment for ${row.original.albanian_tl_detail.name}`}
-                onClick={() => onEdit(row.original)}
-              >
-                Edit
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label={`End assignment between ${row.original.hbpr_detail.name} and ${row.original.albanian_tl_detail.name}`}
-                onClick={() => onEnd(row.original)}
-              >
-                End
-              </Button>
-            </div>
-          ) : null,
+        header: () => <span className="sr-only">Actions</span>,
+        cell: ({ row }) => {
+          if (!row.original.is_current) return null;
+          return (
+            <RowActions
+              actions={[
+                {
+                  label: `Edit assignment for ${row.original.albanian_tl_detail.name}`,
+                  shortLabel: "Edit",
+                  icon: Pencil,
+                  onClick: () => onEdit(row.original),
+                },
+                {
+                  label: `End assignment between ${row.original.hbpr_detail.name} and ${row.original.albanian_tl_detail.name}`,
+                  shortLabel: "End",
+                  icon: UserMinus,
+                  tone: "warning",
+                  onClick: () => onEnd(row.original),
+                },
+              ]}
+            />
+          );
+        },
       },
     ],
     [onEnd, onEdit]

@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FormField } from "@/components/ui/FormField";
 import { HbprAssignmentDialog } from "./components/HbprAssignmentDialog";
 import type { HbprAssignmentForm } from "./components/HbprAssignmentDialog";
+import { HbprStatsCards } from "./components/HbprStatsCards";
 import { useHbprAssignmentColumns } from "./hooks/useHbprAssignmentColumns";
 import api from "@/lib/api";
 import { hbprAssignmentService } from "@/services/hbprAssignmentService";
@@ -158,7 +159,11 @@ export const HbprAssignmentsPage: React.FC = () => {
     const errors: Record<string, string> = {};
     if (!editing && !form.hbpr) errors.hbpr = "Select an HR Business Partner.";
     if (!editing && !form.albanian_tl) errors.albanian_tl = "Select an Albanian team leader.";
-    if (!form.effective_from) errors.effective_from = "A start date is required.";
+    if (!form.effective_from) {
+      errors.effective_from = "A start date is required.";
+    } else if (editing?.last_meeting_on && form.effective_from > editing.last_meeting_on) {
+      errors.effective_from = `Cannot set start date after already recorded meeting on ${editing.last_meeting_on}.`;
+    }
     setFormErrors(errors);
     if (Object.keys(errors).length) return;
 
@@ -236,6 +241,8 @@ export const HbprAssignmentsPage: React.FC = () => {
       <DataTable
         columns={columns}
         data={data}
+        enableColumnVisibility
+        storageKey="table-visibility-hbpr-assignments"
         searchColumn={SEARCH_PATHS}
         searchPlaceholder="Search assignments..."
         getRowId={(row) => String(row.id)}
@@ -255,6 +262,8 @@ export const HbprAssignmentsPage: React.FC = () => {
         </Button>
       }
     >
+      <HbprStatsCards assignments={rows} />
+
       {rows.length === 0 ? (
         <GlassCard>
           <EmptyState

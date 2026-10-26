@@ -14,8 +14,8 @@ interface FormFieldProps {
   type?: string;
   /** Quiet 12px hint under the field; announced with the field via aria-describedby. */
   helper?: string;
-  min?: number;
-  max?: number;
+  min?: number | string;
+  max?: number | string;
   className?: string;
 }
 

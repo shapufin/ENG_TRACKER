@@ -163,7 +163,7 @@ describe("HbprAssignmentsPage", () => {
 
   it("offers Edit for active assignments and updates cadence and start date", async () => {
     vi.mocked(hbprAssignmentService.list).mockResolvedValue({
-      data: [assignment],
+      data: [{ ...assignment, last_meeting_on: null }],
     } as never);
     vi.mocked(hbprAssignmentService.update).mockResolvedValue({
       data: { ...assignment, cadence: "monthly", cadence_display: "Monthly (2nd Thursday)" },
@@ -188,5 +188,24 @@ describe("HbprAssignmentsPage", () => {
         expect.objectContaining({ effective_from: "2026-10-01" })
       );
     });
+  });
+
+  it("blocks setting start date after an already recorded meeting", async () => {
+    vi.mocked(hbprAssignmentService.list).mockResolvedValue({
+      data: [{ ...assignment, last_meeting_on: "2026-09-01" }],
+    } as never);
+
+    renderPage();
+    const editBtn = await screen.findByRole("button", { name: /edit assignment for enri leader/i });
+    fireEvent.click(editBtn);
+
+    const fromInput = await screen.findByLabelText(/effective from/i);
+    fireEvent.change(fromInput, { target: { value: "2026-10-01" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(
+      await screen.findByText(/cannot set start date after already recorded meeting on 2026-09-01/i)
+    ).toBeInTheDocument();
+    expect(hbprAssignmentService.update).not.toHaveBeenCalled();
   });
 });

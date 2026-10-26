@@ -105,17 +105,32 @@ export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
   const isWeeklyOrBiweekly = form.cadence === "weekly" || form.cadence === "biweekly";
 
   const isNthWeekdayMonthly = isMonthly && form.cadence_nth_week !== null;
+  const hasExistingMeetings = Boolean(
+    mode === "edit" &&
+    (editingAssignment?.last_meeting_on || (editingAssignment?.evidence_count ?? 0) > 0)
+  );
 
   // Auto-calculated upcoming meeting date based on current schedule
   const calculatedDate = useMemo(() => {
-    if (!form.effective_from) return "";
+    const anchor =
+      mode === "edit" && editingAssignment?.last_meeting_on
+        ? editingAssignment.last_meeting_on
+        : form.effective_from;
+    if (!anchor) return "";
     return calculateNextCadenceOccurrence({
       cadence: form.cadence,
       cadenceDayOfWeek: form.cadence_day_of_week,
       cadenceNthWeek: form.cadence_nth_week,
-      anchorDate: form.effective_from,
+      anchorDate: anchor,
     });
-  }, [form.cadence, form.cadence_day_of_week, form.cadence_nth_week, form.effective_from]);
+  }, [
+    mode,
+    editingAssignment?.last_meeting_on,
+    form.cadence,
+    form.cadence_day_of_week,
+    form.cadence_nth_week,
+    form.effective_from,
+  ]);
 
   const selectedHbpr =
     hbprOptions.find((p) => p.id === form.hbpr)?.name ||
@@ -328,9 +343,14 @@ export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
                 <span className="text-foreground font-semibold">
                   {formatDisplayDate(calculatedDate)}
                 </span>
+                {hasExistingMeetings && editingAssignment?.last_meeting_on && (
+                  <span className="text-muted-foreground ml-1.5 text-xs">
+                    (projected from last meeting on {editingAssignment.last_meeting_on})
+                  </span>
+                )}
               </div>
             </div>
-            {calculatedDate !== form.effective_from && (
+            {!hasExistingMeetings && calculatedDate !== form.effective_from && (
               <Button
                 type="button"
                 variant="ghost"
@@ -351,6 +371,11 @@ export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
           value={form.effective_from}
           onChange={(value) => onFieldChange("effective_from", value)}
           error={formErrors.effective_from}
+          helper={
+            hasExistingMeetings && editingAssignment?.last_meeting_on
+              ? `Historical meetings exist (last: ${editingAssignment.last_meeting_on}). Start date is anchored to history and cannot be set after this date.`
+              : undefined
+          }
           type="date"
           required
         />
