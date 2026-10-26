@@ -26,7 +26,7 @@ import type {
   WageBulkCreateResult,
   PayrollWorkday,
 } from "../types";
-import type { PayrollRunScope } from "../types";
+import type { PayrollRunScope, PayrollRunYears } from "../types";
 
 const BASE = "/plugins/payroll";
 
@@ -266,6 +266,19 @@ export const payrollService = {
   async getRunScope(): Promise<PayrollRunScope> {
     const { data } = await api.get<{ run_scope: PayrollRunScope }>(`${BASE}/runs/scope/`);
     return data.run_scope;
+  },
+
+  /**
+   * The server's business year and the years worth offering in the filter.
+   *
+   * The default year must never come from the browser clock: a viewer in another
+   * timezone (or with a wrong machine clock) would open the wrong year.
+   */
+  async getRunYears(): Promise<PayrollRunYears> {
+    const { data } = await api.get<{ business_year: number; years: number[] }>(
+      `${BASE}/runs/scope/`
+    );
+    return { businessYear: data.business_year, years: data.years };
   },
 
   async getRun(id: number): Promise<PayrollRun> {

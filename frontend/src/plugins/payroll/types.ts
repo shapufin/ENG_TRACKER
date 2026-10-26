@@ -248,6 +248,13 @@ export interface ClosureStatus {
 /** Viewer scope for run actions: "company" = all teams (staff, superuser, HR); "team" = own team only. */
 export type PayrollRunScope = "company" | "team";
 
+/** The years the payroll list offers, with the server's default. */
+export interface PayrollRunYears {
+  /** From the server's business clock (Europe/Tirane), never the browser's. */
+  businessYear: number;
+  years: number[];
+}
+
 export interface PayrollRun {
   id: number;
   year: number;

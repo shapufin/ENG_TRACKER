@@ -993,8 +993,21 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def scope(self, request):
-        """The viewer's run-action scope (`company` or `team`) for the UI."""
-        return Response({'run_scope': _payroll_run_scope(request.user)})
+        """The viewer's run scope, plus the years the list should offer.
+
+        ``business_year`` comes from the server clock (Europe/Tirane), never the
+        browser's: the default year must not depend on the viewer's machine, and
+        ``years`` always contains it even before that year has a run.
+        """
+        business_year = business_today().year
+        # PayrollRun is a plain model: it has no soft-delete column.
+        years = set(PayrollRun.objects.values_list('year', flat=True))
+        years.add(business_year)
+        return Response({
+            'run_scope': _payroll_run_scope(request.user),
+            'business_year': business_year,
+            'years': sorted(years, reverse=True),
+        })
 
     def get_queryset(self):
         queryset = super().get_queryset()

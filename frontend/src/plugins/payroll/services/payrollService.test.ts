@@ -46,6 +46,15 @@ describe("payrollService URL contracts", () => {
     expect(api.get).toHaveBeenCalledWith(`${BASE}/rule-sets/`, { params: undefined });
   });
 
+  it("getRunYears reads business_year and years from runs/scope/", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { business_year: 2026, years: [2026, 2025], run_scope: "company" },
+    } as any);
+    const years = await payrollService.getRunYears();
+    expect(api.get).toHaveBeenCalledWith(`${BASE}/runs/scope/`);
+    expect(years).toEqual({ businessYear: 2026, years: [2026, 2025] });
+  });
+
   it("getRuns calls /plugins/payroll/runs/", async () => {
     vi.mocked(api.get).mockResolvedValue({ data: [] } as any);
     await payrollService.getRuns();

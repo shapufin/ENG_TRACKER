@@ -21,6 +21,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StatCard } from "@/components/ui/StatCard";
 import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { CheckCircle2, FilePen, Wallet } from "lucide-react";
@@ -51,8 +58,20 @@ export const PayrollRunsPage: React.FC = () => {
   const { isCompanyScope } = usePayrollRunScope();
   const canManagePayroll = canManage("payroll") && isCompanyScope;
   const [createOpen, setCreateOpen] = useState(false);
-  const [newYear, setNewYear] = useState(new Date().getFullYear());
+  const [newYear, setNewYear] = useState<number | null>(null);
   const [newMonth, setNewMonth] = useState(new Date().getMonth() + 1);
+
+  // The list defaults to the server's business year, never the browser clock:
+  // a viewer in another timezone (or with a wrong machine clock) would open the
+  // wrong year, and the first 50 runs used to hide older ones entirely.
+  const { data: runYears } = useQuery({
+    queryKey: ["payroll", "run-years"],
+    queryFn: () => payrollService.getRunYears(),
+  });
+  const [yearOverride, setYearOverride] = useState<number | null>(null);
+  const businessYear = runYears?.businessYear;
+  const selectedYear = yearOverride ?? businessYear;
+  const yearOptions = runYears?.years ?? (businessYear ? [businessYear] : []);
 
   const {
     data: runs,
@@ -60,12 +79,14 @@ export const PayrollRunsPage: React.FC = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["payroll-runs", { year: undefined, month: undefined }],
-    queryFn: () => payrollService.getRuns(),
+    queryKey: ["payroll-runs", { year: selectedYear }],
+    queryFn: () => payrollService.getRuns({ year: selectedYear }),
+    enabled: selectedYear !== undefined,
   });
 
   const createMutation = useMutation({
-    mutationFn: () => payrollService.createRun({ year: newYear, month: newMonth }),
+    mutationFn: () =>
+      payrollService.createRun({ year: newYear ?? businessYear ?? new Date().getFullYear(), month: newMonth }),
     onSuccess: (run) => {
       queryClient.invalidateQueries({ queryKey: ["payroll-runs"] });
       setCreateOpen(false);
@@ -139,7 +160,10 @@ export const PayrollRunsPage: React.FC = () => {
     );
   const latestNet = latestFinalized?.totals?.total_net;
 
-  if (isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
+  // Until the server names the year the list query is disabled, so this is the
+  // loading state too — otherwise the page flashes zeros for every KPI.
+  if (isLoading || selectedYear === undefined)
+    return <LoadingCard rows={4} className="min-h-[300px]" />;
   if (error) return <ErrorCard title="Failed to load payroll runs" onRetry={refetch} />;
 
   return (
@@ -168,6 +192,24 @@ export const PayrollRunsPage: React.FC = () => {
       </div>
 
       <GlassCard className="p-6">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Label htmlFor="payroll-year">Year</Label>
+          <Select
+            value={selectedYear ? String(selectedYear) : ""}
+            onValueChange={(value) => setYearOverride(Number(value))}
+          >
+            <SelectTrigger id="payroll-year" className="w-32 px-3" aria-label="Payroll year">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {yearOptions.map((year) => (
+                <SelectItem key={year} value={String(year)}>
+                  {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <DataTable
           columns={columns}
           data={runs ?? []}
@@ -190,7 +232,7 @@ export const PayrollRunsPage: React.FC = () => {
                 <Input
                   id="year"
                   type="number"
-                  value={newYear}
+                  value={newYear ?? businessYear ?? ""}
                   onChange={(e) => setNewYear(Number(e.target.value))}
                 />
               </div>
