@@ -19,7 +19,11 @@ import { useHbprAssignmentColumns } from "./hooks/useHbprAssignmentColumns";
 import api from "@/lib/api";
 import { hbprAssignmentService } from "@/services/hbprAssignmentService";
 import { handleApiError } from "@/lib/error-handler";
-import type { HbprAssignment, HbprPersonRef } from "@/types/hbprAssignment";
+import type {
+  HbprAssignment,
+  HbprPersonRef,
+  HbprUpdateAssignmentPayload,
+} from "@/types/hbprAssignment";
 import type { PaginatedResponse } from "@/types";
 import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 
@@ -44,18 +48,18 @@ const emptyForm = (): HbprAssignmentForm => ({
   hbpr: null,
   albanian_tl: null,
   cadence: "weekly",
+  cadence_day_of_week: null,
+  cadence_nth_week: null,
   effective_from: todayIso(),
 });
 
 /**
  * Admin management for explicit HBPR ↔ Albanian TL assignments.
- *
- * Identity and range are immutable once created — the API rejects PATCH on
- * them — so this page creates and ends assignments; it never edits in place.
  */
 export const HbprAssignmentsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<HbprAssignment | null>(null);
   const [form, setForm] = useState<HbprAssignmentForm>(emptyForm);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [ending, setEnding] = useState<HbprAssignment | null>(null);
@@ -113,10 +117,30 @@ export const HbprAssignmentsPage: React.FC = () => {
     onSuccess: () => {
       toast.success("Assignment created");
       setDialogOpen(false);
+      setEditing(null);
       setForm(emptyForm());
       invalidate();
     },
     onError: handleApiError,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: HbprUpdateAssignmentPayload }) =>
+      hbprAssignmentService.update(id, data),
+    onSuccess: () => {
+      toast.success("Assignment updated");
+      setDialogOpen(false);
+      setEditing(null);
+      setForm(emptyForm());
+      invalidate();
+    },
+    onError: (err: unknown) => {
+      const apiErr = err as { response?: { data?: Record<string, unknown> } };
+      if (apiErr.response?.data?.detail) {
+        setFormErrors({ detail: String(apiErr.response.data.detail) });
+      }
+      handleApiError(err);
+    },
   });
 
   const endMutation = useMutation({
@@ -132,24 +156,61 @@ export const HbprAssignmentsPage: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
-    if (!form.hbpr) errors.hbpr = "Select an HR Business Partner.";
-    if (!form.albanian_tl) errors.albanian_tl = "Select an Albanian team leader.";
+    if (!editing && !form.hbpr) errors.hbpr = "Select an HR Business Partner.";
+    if (!editing && !form.albanian_tl) errors.albanian_tl = "Select an Albanian team leader.";
     if (!form.effective_from) errors.effective_from = "A start date is required.";
     setFormErrors(errors);
     if (Object.keys(errors).length) return;
-    createMutation.mutate({
-      hbpr: form.hbpr as number,
-      albanian_tl: form.albanian_tl as number,
-      cadence: form.cadence,
-      effective_from: form.effective_from,
-    });
+
+    if (editing) {
+      updateMutation.mutate({
+        id: editing.id,
+        data: {
+          cadence: form.cadence,
+          cadence_day_of_week: form.cadence_day_of_week,
+          cadence_nth_week: form.cadence_nth_week,
+          effective_from: form.effective_from,
+        },
+      });
+    } else {
+      createMutation.mutate({
+        hbpr: form.hbpr as number,
+        albanian_tl: form.albanian_tl as number,
+        cadence: form.cadence,
+        cadence_day_of_week: form.cadence_day_of_week,
+        cadence_nth_week: form.cadence_nth_week,
+        effective_from: form.effective_from,
+      });
+    }
   };
 
   const handleEnd = useCallback((row: HbprAssignment) => {
     setEnding(row);
     setEndDate(todayIso());
   }, []);
-  const columns = useHbprAssignmentColumns(handleEnd);
+
+  const handleEdit = useCallback((row: HbprAssignment) => {
+    setEditing(row);
+    setForm({
+      hbpr: row.hbpr,
+      albanian_tl: row.albanian_tl,
+      cadence: row.cadence,
+      cadence_day_of_week: row.cadence_day_of_week ?? null,
+      cadence_nth_week: row.cadence_nth_week ?? null,
+      effective_from: row.effective_from,
+    });
+    setFormErrors({});
+    setDialogOpen(true);
+  }, []);
+
+  const handleOpenCreate = () => {
+    setEditing(null);
+    setForm(emptyForm());
+    setFormErrors({});
+    setDialogOpen(true);
+  };
+
+  const columns = useHbprAssignmentColumns(handleEnd, handleEdit);
 
   const rows = useMemo(() => assignmentsQuery.data ?? [], [assignmentsQuery.data]);
   // Active = still in effect or scheduled (no end date, or an end date that has
@@ -188,7 +249,7 @@ export const HbprAssignmentsPage: React.FC = () => {
       title="HBPR assignments"
       subtitle="Pair HR Business Partners with the Albanian team leaders they support."
       actions={
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
+        <Button size="sm" onClick={handleOpenCreate}>
           <Plus className="mr-2 h-4 w-4" />
           New assignment
         </Button>
@@ -227,14 +288,19 @@ export const HbprAssignmentsPage: React.FC = () => {
 
       <HbprAssignmentDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditing(null);
+        }}
+        mode={editing ? "edit" : "create"}
+        editingAssignment={editing}
         hbprOptions={hbprOptions}
         albanianTlOptions={albanianTlOptions}
         form={form}
         formErrors={formErrors}
         onFieldChange={(key, value) => setForm((f) => ({ ...f, [key]: value }))}
         onSubmit={handleSubmit}
-        isSubmitting={createMutation.isPending}
+        isSubmitting={createMutation.isPending || updateMutation.isPending}
       />
 
       <ConfirmDialog

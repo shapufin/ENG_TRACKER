@@ -306,6 +306,7 @@ export interface YearEndEvidencePack {
     albanian_tl_name: string | null;
     hbpr_name: string | null;
     cadence: HbprCadence;
+    cadence_display?: string;
     effective_from: string;
     effective_to: string | null;
   };
@@ -349,6 +350,7 @@ export interface HbprNeedsAttention {
 export interface HbprLeaderRow extends PersonRef {
   assignment_id: number;
   cadence: HbprCadence;
+  cadence_display?: string;
   team_size: number;
   last_meeting_on: string | null;
   next_due_on: string | null;
@@ -372,6 +374,7 @@ export interface HbprEvidence {
   albanian_tl: number;
   hbpr: number;
   cadence: HbprCadence;
+  cadence_display?: string;
   kind: HbprEvidenceKind;
   kind_display: string;
   occurred_on: string;
@@ -398,6 +401,7 @@ export interface HbprPartnershipAssignment {
   id: number;
   hbpr: PersonRef;
   cadence: HbprCadence;
+  cadence_display?: string;
   effective_from: string;
   last_meeting_on: string | null;
   next_due_on: string | null;

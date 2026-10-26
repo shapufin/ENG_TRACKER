@@ -165,6 +165,9 @@ def overview(scope, *, reporting_year=None):
             **_person(assignment.albanian_tl),
             'assignment_id': assignment.id,
             'cadence': assignment.cadence,
+            'cadence_display': assignment.cadence_display,
+            'cadence_day_of_week': assignment.cadence_day_of_week,
+            'cadence_nth_week': assignment.cadence_nth_week,
             'team_size': team_sizes.get(assignment.albanian_tl_id, 0),
             'last_meeting_on': last_meeting_on,
             'next_due_on': (
@@ -221,6 +224,9 @@ def partnership(leader, *, reporting_year=None):
             'id': assignment.id,
             'hbpr': _person(assignment.hbpr),
             'cadence': assignment.cadence,
+            'cadence_display': assignment.cadence_display,
+            'cadence_day_of_week': assignment.cadence_day_of_week,
+            'cadence_nth_week': assignment.cadence_nth_week,
             'effective_from': assignment.effective_from.isoformat(),
             'last_meeting_on': last_meeting_on,
             'next_due_on': (

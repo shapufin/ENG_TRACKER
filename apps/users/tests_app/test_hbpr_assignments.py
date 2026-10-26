@@ -30,6 +30,7 @@ from apps.users.services.hbpr_assignments import (
     purge_ended_assignments,
     reassign_assignment,
     today,
+    update_assignment,
 )
 
 User = get_user_model()
@@ -123,6 +124,57 @@ class AssignmentModelTests(HbprAssignmentTestBase):
         )
         self.assertFalse(ended.is_current)
 
+    def test_next_due_on_nth_weekday_monthly(self):
+        # Oct 2026: Thursdays are 1st (Oct 1), 2nd (Oct 8), 3rd (Oct 15), 4th (Oct 22), 5th/Last (Oct 29)
+        # Nov 2026: Thursdays are 1st (Nov 5), 2nd (Nov 12), 3rd (Nov 19), 4th (Nov 26)
+        assignment = HbprAlbanianTlAssignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl,
+            cadence="monthly", cadence_nth_week=2, cadence_day_of_week=3,
+            effective_from=date(2026, 10, 1),
+        )
+        self.assertEqual(assignment.cadence_display, "Monthly (2nd Thursday)")
+        # 1st meeting before any meeting occurred (in Oct 2026) -> Oct 8
+        self.assertEqual(assignment.next_due_on(last_meeting_on=None), date(2026, 10, 8))
+        # After meeting on Oct 8 -> Nov 2026 2nd Thursday is Nov 12
+        self.assertEqual(assignment.next_due_on(last_meeting_on=date(2026, 10, 8)), date(2026, 11, 12))
+
+        # Check 1st Thursday:
+        assignment.cadence_nth_week = 1
+        self.assertEqual(assignment.cadence_display, "Monthly (1st Thursday)")
+        self.assertEqual(assignment.next_due_on(last_meeting_on=None), date(2026, 10, 1))
+        self.assertEqual(assignment.next_due_on(last_meeting_on=date(2026, 10, 1)), date(2026, 11, 5))
+
+        # Check 3rd Thursday:
+        assignment.cadence_nth_week = 3
+        self.assertEqual(assignment.cadence_display, "Monthly (3rd Thursday)")
+        self.assertEqual(assignment.next_due_on(last_meeting_on=None), date(2026, 10, 15))
+        self.assertEqual(assignment.next_due_on(last_meeting_on=date(2026, 10, 15)), date(2026, 11, 19))
+
+        # Check Last Thursday:
+        assignment.cadence_nth_week = -1
+        self.assertEqual(assignment.cadence_display, "Monthly (Last Thursday)")
+        self.assertEqual(assignment.next_due_on(last_meeting_on=None), date(2026, 10, 29))
+        self.assertEqual(assignment.next_due_on(last_meeting_on=date(2026, 10, 29)), date(2026, 11, 26))
+
+    def test_next_due_on_weekly_and_biweekly_with_weekday(self):
+        # Effective from Monday Oct 5, 2026. Target is Thursday (weekday 3)
+        assignment = HbprAlbanianTlAssignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl,
+            cadence="weekly", cadence_day_of_week=3,
+            effective_from=date(2026, 10, 5),
+        )
+        self.assertEqual(assignment.cadence_display, "Weekly (Thursday)")
+        # First meeting on or after Oct 5 is Thursday Oct 8
+        self.assertEqual(assignment.next_due_on(last_meeting_on=None), date(2026, 10, 8))
+        # After meeting on Oct 8, next is Oct 15
+        self.assertEqual(assignment.next_due_on(last_meeting_on=date(2026, 10, 8)), date(2026, 10, 15))
+
+        # Biweekly on Thursday
+        assignment.cadence = "biweekly"
+        self.assertEqual(assignment.cadence_display, "Biweekly (Thursday)")
+        self.assertEqual(assignment.next_due_on(last_meeting_on=None), date(2026, 10, 8))
+        self.assertEqual(assignment.next_due_on(last_meeting_on=date(2026, 10, 8)), date(2026, 10, 22))
+
 
 class AssignmentServiceTests(HbprAssignmentTestBase):
     def test_create_assignment_persists_and_audits(self):
@@ -134,6 +186,78 @@ class AssignmentServiceTests(HbprAssignmentTestBase):
         self.assertEqual(assignment.cadence, "biweekly")
         self.assertEqual(assignment.assigned_by, self.admin)
         self.assertIsNone(assignment.effective_to)
+
+    def test_update_assignment_updates_cadence_and_schedule(self):
+        assignment = create_assignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl,
+            cadence="weekly", effective_from=date(2026, 10, 1),
+            assigned_by=self.admin,
+        )
+        updated = update_assignment(
+            assignment=assignment,
+            cadence="monthly",
+            cadence_nth_week=3,
+            cadence_day_of_week=3,
+            effective_from=date(2026, 10, 5),
+            actor=self.admin,
+        )
+        self.assertEqual(updated.cadence, "monthly")
+        self.assertEqual(updated.cadence_nth_week, 3)
+        self.assertEqual(updated.cadence_day_of_week, 3)
+        self.assertEqual(updated.effective_from, date(2026, 10, 5))
+        self.assertEqual(updated.cadence_display, "Monthly (3rd Thursday)")
+
+    def test_update_assignment_rejects_overlap_with_past_assignment(self):
+        # 1st assignment: Sep 1 to Sep 30
+        past = create_assignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl,
+            cadence="weekly", effective_from=date(2026, 9, 1),
+            assigned_by=self.admin,
+        )
+        end_assignment(assignment=past, effective_to=date(2026, 9, 30), actor=self.admin)
+
+        # 2nd assignment: Oct 1 onwards
+        current = create_assignment(
+            hbpr=self.hbpr2, albanian_tl=self.al_tl,
+            cadence="weekly", effective_from=date(2026, 10, 1),
+            assigned_by=self.admin,
+        )
+
+        # Attempting to move start date to Sep 25 (overlaps past) should be rejected
+        with self.assertRaises(AssignmentError):
+            update_assignment(
+                assignment=current,
+                effective_from=date(2026, 9, 25),
+            )
+
+    def test_update_assignment_rejects_start_date_after_existing_evidence(self):
+        from plugins.tl_scorecard.models import HbprGovernanceEvidence
+        assignment = create_assignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl,
+            cadence="weekly", effective_from=date(2026, 10, 1),
+            assigned_by=self.admin,
+        )
+        # Log evidence on Oct 8
+        HbprGovernanceEvidence.objects.create(
+            assignment=assignment,
+            kind="cadence_meeting",
+            occurred_on=date(2026, 10, 8),
+            shared_summary="Discussed roadmap",
+            recorded_by=self.al_tl,
+        )
+        # Moving start date to Oct 15 would orphan the Oct 8 meeting -> rejected
+        with self.assertRaises(AssignmentError):
+            update_assignment(
+                assignment=assignment,
+                effective_from=date(2026, 10, 15),
+            )
+        # Moving start date to Oct 5 (before Oct 8) -> allowed
+        update_assignment(
+            assignment=assignment,
+            effective_from=date(2026, 10, 5),
+        )
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.effective_from, date(2026, 10, 5))
 
     def test_second_open_assignment_for_same_tl_is_rejected(self):
         create_assignment(
@@ -668,7 +792,7 @@ class AssignmentApiTests(HbprAssignmentTestBase):
         assignment.refresh_from_db()
         self.assertEqual(assignment.cadence, "biweekly")
 
-    def test_patch_cannot_change_effective_from(self):
+    def test_patch_can_change_effective_from(self):
         assignment = create_assignment(
             hbpr=self.hbpr, albanian_tl=self.al_tl,
             cadence="weekly", effective_from=date(2026, 10, 1),
@@ -676,12 +800,35 @@ class AssignmentApiTests(HbprAssignmentTestBase):
         )
         response = self.client.patch(
             self._detail_url(assignment.pk),
-            {"effective_from": "2026-09-01"},
+            {"effective_from": "2026-10-05"},
             format="json",
         )
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200, response.data)
         assignment.refresh_from_db()
-        self.assertEqual(assignment.effective_from, date(2026, 10, 1))
+        self.assertEqual(assignment.effective_from, date(2026, 10, 5))
+
+    def test_patch_can_set_recurrence_pattern(self):
+        assignment = create_assignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl,
+            cadence="monthly", effective_from=date(2026, 10, 1),
+            assigned_by=self.admin,
+        )
+        response = self.client.patch(
+            self._detail_url(assignment.pk),
+            {
+                "cadence": "monthly",
+                "cadence_nth_week": 2,
+                "cadence_day_of_week": 3,
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.cadence_nth_week, 2)
+        self.assertEqual(assignment.cadence_day_of_week, 3)
+        self.assertEqual(assignment.cadence_display, "Monthly (2nd Thursday)")
+        # In Oct 2026, 2nd Thursday is Oct 8 (>= Oct 1)
+        self.assertEqual(assignment.next_due_on(last_meeting_on=None), date(2026, 10, 8))
 
     def test_patch_cannot_change_effective_to(self):
         assignment = create_assignment(

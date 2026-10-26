@@ -131,7 +131,7 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
                 <p className="text-muted-foreground text-xs">HR business partner</p>
                 <p className="truncate font-semibold">{assignment.hbpr.name}</p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  {CADENCE_LABELS[assignment.cadence]} cadence · paired since{" "}
+                  {assignment.cadence_display || CADENCE_LABELS[assignment.cadence]} · paired since{" "}
                   {formatDate(assignment.effective_from)}
                 </p>
               </div>

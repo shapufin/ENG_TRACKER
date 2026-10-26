@@ -28,6 +28,9 @@ CADENCES = {"weekly", "biweekly", "monthly"}
 ARCHIVE_RETENTION_MONTHS = 6
 
 
+_UNSET = object()
+
+
 class AssignmentError(Exception):
     """Raised when an assignment write violates a domain rule."""
 
@@ -56,7 +59,14 @@ def _validate_dates(effective_from, effective_to=None):
 
 @transaction.atomic
 def create_assignment(
-    *, hbpr, albanian_tl, cadence, effective_from, assigned_by=None
+    *,
+    hbpr,
+    albanian_tl,
+    cadence,
+    effective_from,
+    cadence_day_of_week=None,
+    cadence_nth_week=None,
+    assigned_by=None,
 ) -> HbprAlbanianTlAssignment:
     """Create an assignment; rejects when the AL TL already has any range
     (open or historical) that the new one would overlap."""
@@ -85,6 +95,8 @@ def create_assignment(
         hbpr=hbpr,
         albanian_tl=albanian_tl,
         cadence=cadence,
+        cadence_day_of_week=cadence_day_of_week,
+        cadence_nth_week=cadence_nth_week,
         effective_from=effective_from,
         assigned_by=assigned_by,
     )
@@ -93,8 +105,80 @@ def create_assignment(
 
 
 @transaction.atomic
+def update_assignment(
+    *,
+    assignment: HbprAlbanianTlAssignment,
+    cadence: str | None = None,
+    cadence_day_of_week=_UNSET,
+    cadence_nth_week=_UNSET,
+    effective_from: date | None = None,
+    actor=None,
+) -> HbprAlbanianTlAssignment:
+    """Safely update cadence and/or start date on an active assignment."""
+    assignment = HbprAlbanianTlAssignment.objects.select_for_update().get(
+        pk=assignment.pk
+    )
+    update_fields = ["updated_at"]
+
+    if cadence is not None:
+        _validate_cadence(cadence)
+        assignment.cadence = cadence
+        update_fields.append("cadence")
+
+    if cadence_day_of_week is not _UNSET:
+        assignment.cadence_day_of_week = cadence_day_of_week
+        update_fields.append("cadence_day_of_week")
+
+    if cadence_nth_week is not _UNSET:
+        assignment.cadence_nth_week = cadence_nth_week
+        update_fields.append("cadence_nth_week")
+
+    if effective_from is not None and effective_from != assignment.effective_from:
+        _validate_dates(effective_from, assignment.effective_to)
+
+        # Check 1: does new effective_from overlap past closed assignments for this TL?
+        historical = (
+            HbprAlbanianTlAssignment.objects.select_for_update()
+            .filter(albanian_tl=assignment.albanian_tl)
+            .exclude(pk=assignment.pk)
+        )
+        for row in historical:
+            row_end = row.effective_to
+            if row_end is None or row_end >= effective_from:
+                raise AssignmentError(
+                    "The updated start date overlaps an existing assignment."
+                )
+
+        # Check 2: does new effective_from violate any already recorded evidence?
+        if apps.is_installed("plugins.tl_scorecard"):
+            earliest_evidence = (
+                assignment.governance_evidence.order_by("occurred_on")
+                .values_list("occurred_on", flat=True)
+                .first()
+            )
+            if earliest_evidence and effective_from > earliest_evidence:
+                raise AssignmentError(
+                    f"Cannot set start date after already recorded meeting on {earliest_evidence}."
+                )
+
+        assignment.effective_from = effective_from
+        update_fields.append("effective_from")
+
+    assignment.full_clean()
+    assignment.save(update_fields=list(set(update_fields)))
+    return assignment
+
+
+@transaction.atomic
 def reassign_assignment(
-    *, albanian_tl, new_hbpr, cadence, effective_from, actor=None
+    *,
+    albanian_tl,
+    new_hbpr,
+    cadence,
+    effective_from,
+    cadence_day_of_week=None,
+    cadence_nth_week=None,
+    actor=None,
 ) -> HbprAlbanianTlAssignment:
     """Close the open assignment and create a replacement in one transaction."""
     _validate_participants(new_hbpr, albanian_tl)
@@ -121,6 +205,8 @@ def reassign_assignment(
         hbpr=new_hbpr,
         albanian_tl=albanian_tl,
         cadence=cadence,
+        cadence_day_of_week=cadence_day_of_week,
+        cadence_nth_week=cadence_nth_week,
         effective_from=effective_from,
         assigned_by=actor,
     )
