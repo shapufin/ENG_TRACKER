@@ -242,6 +242,9 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
+    # Bind each token to the password it was issued under: a change or reset
+    # kills access tokens already in the wild, not just the refresh tokens.
+    'CHECK_REVOKE_TOKEN': True,
 }
 
 # CORS configuration

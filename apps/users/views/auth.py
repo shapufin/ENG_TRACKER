@@ -223,16 +223,16 @@ class PasswordChangeView(_SignedInMFAView):
     def post(self, request):
         user = request.user
         new_password = str(request.data.get('new_password') or '')
+        current_password = str(request.data.get('current_password', ''))
         if not new_password:
             return Response({'detail': 'new_password is required.', 'code': 'invalid_password'}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            mfa_service.check_step_up(
-                user, str(request.data.get('current_password', '')), str(request.data.get('code', ''))
-            )
+            mfa_service.check_step_up(user, current_password, str(request.data.get('code', '')))
         except MFAError as exc:
             return _mfa_error(exc)
         try:
-            if user.check_password(new_password):
+            # The current password was just verified, so a plain comparison replaces a second slow hash.
+            if new_password == current_password:
                 raise DjangoValidationError('The new password must be different from the current one.')
             validate_password(new_password, user)
         except DjangoValidationError as exc:

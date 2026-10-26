@@ -1,5 +1,7 @@
 """Self-service password change: POST /api/auth/password/change/."""
 from django.contrib.auth.models import User
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -38,6 +40,27 @@ class ChangePasswordTests(APITestCase):
             '/api/auth/token/refresh/', {'refresh': resp.cookies['refresh_token'].value}, format='json',
         )
         self.assertEqual(fresh.status_code, 200)
+
+    def test_revocation_cost_does_not_grow_with_session_history(self):
+        # Every login and refresh leaves an OutstandingToken; the old per-token
+        # get_or_create made the change take seconds for a long-lived account.
+        for _ in range(40):
+            RefreshToken.for_user(self.user)
+        with CaptureQueriesContext(connection) as queries:
+            resp = self._post(current_password=OLD, new_password=NEW)
+        self.assertEqual(resp.status_code, 200)
+        self.assertLess(len(queries), 40)
+
+    def test_access_token_issued_before_the_change_stops_working(self):
+        self.client.force_authenticate(None)
+        stale = str(RefreshToken.for_user(self.user).access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {stale}')
+        self.assertEqual(self.client.get('/api/auth/mfa/status/').status_code, 200)
+        resp = self._post(current_password=OLD, new_password=NEW)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(self.client.get('/api/auth/mfa/status/').status_code, 401)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {resp.data["access"]}')
+        self.assertEqual(self.client.get('/api/auth/mfa/status/').status_code, 200)
 
     def test_wrong_current_password_is_rejected(self):
         resp = self._post(current_password='Not-My-Password-1', new_password=NEW)
