@@ -32,14 +32,15 @@ ALLOWED_IMPORTS = {
     "apps/overtime/viewsets.py": {"audit_log", "notifications", "payroll"},
     "apps/plugins/management/commands/prepare_e2e_db.py": {"payroll"},
     "apps/plugins/viewsets.py": {"audit_log", "control_room"},
+    "apps/reports/services/audit_archive.py": {"audit_log"},
     "apps/reports/services/export_service.py": {"payroll"},
+    "apps/reports/services/security_audit.py": {"audit_log"},
     "apps/reports/viewsets.py": {"control_room"},
     "apps/standby/admin.py": {"payroll"},
     "apps/standby/viewsets.py": {"audit_log", "notifications", "payroll"},
     # Demo seeder: loaded only when invoked by name, so it cannot break startup.
     "apps/users/management/commands/seed_skills_demo.py": {"skills"},
-    # Security-event audit trail; the import is ``except ImportError: return`` (no plugin, no trail).
-    "apps/users/services/mfa.py": {"audit_log"},
+    # Security-event audit trail; every import is inside a fail-closed ``try`` (no plugin, no trail).
     "apps/users/serializers.py": {"control_room"},
     "apps/users/viewsets.py": {"audit_log", "control_room"},
     "core/mixins/permissions.py": {"control_room"},
