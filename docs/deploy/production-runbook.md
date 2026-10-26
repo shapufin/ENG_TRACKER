@@ -11,7 +11,7 @@ Written for a single-host Docker Compose deployment behind your own TLS proxy.
 | `ALLOWED_HOSTS` | none, required | Comma-separated hostnames. An empty value stops the backend at boot (`ImproperlyConfigured`). |
 | `DB_CONN_MAX_AGE` | `60` | Seconds a worker keeps its Postgres connection open. `CONN_HEALTH_CHECKS` is always on. |
 | `GUNICORN_WORKERS` | `3` | Sync workers per backend container. |
-| `RUN_MIGRATIONS` | `1` | `1` runs `migrate` and the boot-time reconciliation (`sync_plugins`, `seed_plugin_permissions`, `grant_hbpr_plugin_access`, `purge_hbpr_archive`, `prune_notifications`, `purge_audit_logs --if-configured`, `sync_payroll_holidays`, `ensure_superuser`). `0` skips all of them. |
+| `RUN_MIGRATIONS` | `1` | `1` runs `migrate` and the boot-time reconciliation (`sync_plugins`, `seed_plugin_permissions`, `grant_hbpr_plugin_access`, `purge_hbpr_archive`, `prune_notifications`, `purge_audit_logs --if-configured`, `flushexpiredtokens`, `sync_payroll_holidays`, `ensure_superuser`). `0` skips all of them. |
 | `BACKUP_INTERVAL_SECONDS` | `86400` | Pause between `db-backup` runs. |
 | `BACKUP_RETENTION` | `7` | Newest N DB dumps and N media archives kept. |
 
@@ -209,6 +209,7 @@ replica, schedule these on the host with `docker compose exec -T backend python 
 |---|---|---|---|
 | Notification retention | `prune_notifications` | daily | Deletes read notifications older than `--days` (default 180); unread are kept. Also runs at boot. |
 | Audit log retention | `purge_audit_logs --if-configured` | daily | Deletes older than the plugin's `retention_days`; no-op until an admin sets it. Also runs at boot. |
+| Expired refresh tokens | `flushexpiredtokens` | daily | simplejwt's own command: deletes expired `OutstandingToken` rows (every login and refresh adds one, nothing else removes them). Also runs at boot. |
 | Analytics retention | `purge_analytics_data` | daily | Snapshots and metric points older than `data_retention_days` (default 365). Not run at boot, so it needs the cron. |
 | HBPR assignment archive | `purge_hbpr_archive` | optional | Runs at boot and lazily on the staff-only assignments list. |
 | Application backup | `create_site_backup` | weekly | Site Backup plugin archive (database fixture plus media). Separate from the `db-backup` loop. |

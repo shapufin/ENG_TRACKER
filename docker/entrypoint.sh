@@ -90,6 +90,11 @@ if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
     echo "[entrypoint] Purging audit logs past the configured retention..."
     python manage.py purge_audit_logs --if-configured || echo "[entrypoint] Audit log purge skipped (non-fatal)"
 
+    # Every login and refresh leaves an OutstandingToken row and nothing else ever removes
+    # it. Expired rows are useless (they cannot refresh), so drop them; also cron it daily.
+    echo "[entrypoint] Flushing expired refresh tokens..."
+    python manage.py flushexpiredtokens || echo "[entrypoint] Expired token flush skipped (non-fatal)"
+
     # Holidays defined only in Payroll work calendars are copied to HR (and HR ones
     # mirrored back). Idempotent; used to run in PayrollPlugin.ready() on every worker.
     echo "[entrypoint] Syncing HR and Payroll holidays..."
