@@ -7,7 +7,6 @@ onboarding exports, so a multi-GB set never streams through gunicorn.
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
-from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
