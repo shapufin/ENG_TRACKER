@@ -23,7 +23,9 @@ from django.db import connection
 from ..models import BackupRecord
 
 MANIFEST_SCHEMA_VERSION = 1
-EXCLUDED_APPS = ['contenttypes', 'sessions', 'site_backup']
+# ``year_close``: a snapshot set is durable evidence on its own volume, archived by
+# the db-backup loop; zipping it into a site backup would duplicate gigabytes.
+EXCLUDED_APPS = ['contenttypes', 'sessions', 'site_backup', 'year_close']
 # Credentials never travel in a downloadable archive, and a restore must not roll
 # a user's second factor back (revive spent backup codes, re-enable a removed
 # factor). Server moves carry them through the database dump instead.

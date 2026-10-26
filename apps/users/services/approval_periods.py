@@ -118,7 +118,7 @@ def close_year(year: int, *, actor=None, snapshot_ref: str = '') -> ClosedYear:
         closed.snapshot_ref = snapshot_ref
         closed.save(update_fields=['snapshot_ref', 'updated_at'])
     if created:
-        _record_year_event(actor, 'UPDATE', year, 'close_year', extra={'snapshot_ref': snapshot_ref})
+        record_year_event(actor, 'UPDATE', year, 'close_year', extra={'snapshot_ref': snapshot_ref})
     clear_closed_year_cache()
     return closed
 
@@ -133,12 +133,12 @@ def reopen_year(year: int, *, actor=None, reason: str = '') -> bool:
         raise ValidationError('A reason is required to reopen a year.')
     deleted, _ = ClosedYear.objects.filter(year=year).delete()
     if deleted:
-        _record_year_event(actor, 'DELETE', year, 'reopen_year', extra={'reason': reason.strip()})
+        record_year_event(actor, 'DELETE', year, 'reopen_year', extra={'reason': reason.strip()})
     clear_closed_year_cache()
     return bool(deleted)
 
 
-def _record_year_event(actor, action: str, year: int, operation: str, extra: dict | None = None) -> None:
+def record_year_event(actor, action: str, year: int, operation: str, extra: dict | None = None) -> None:
     """Write a year-close event to the audit log. Never blocks the action."""
     try:
         from apps.reports.models import AuditLog

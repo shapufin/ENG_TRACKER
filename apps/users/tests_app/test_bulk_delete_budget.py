@@ -48,7 +48,10 @@ class BulkDeleteQueryTests(TestCase):
         large = len(self._delete(8, 'l'))
         # Measured 2026-10-14: 153/user (157 before the logging counts were removed).
         # Almost all of it is Django's delete cascade over every FK to User.
-        self.assertLessEqual((large - small) / 6, 160)
+        # 2026-10-26: 162/user — ClosedYear, YearSnapshot and YearSnapshotFile each
+        # carry a User FK (the latter two through BaseModel.deleted_by), so the
+        # collector visits three more relations per deleted user. Not a regression.
+        self.assertLessEqual((large - small) / 6, 170)
 
 
 class ProtectedUserDeleteTests(TestCase):
