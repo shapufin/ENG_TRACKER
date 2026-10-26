@@ -41,6 +41,24 @@ export const AuditLogsEnhancedPage: React.FC = () => {
     queryFn: () => auditService.getArchiveStatus(),
   });
 
+  const handleBlobError = async (error: unknown) => {
+    // With responseType: "blob", error.response.data is a Blob (not JSON).
+    // handleApiError expects JSON — convert blob errors before delegating.
+    const axiosErr = error as { response?: { data?: Blob; status?: number } };
+    if (axiosErr.response?.data instanceof Blob) {
+      try {
+        const errorText = await axiosErr.response.data.text();
+        handleApiError({
+          response: { data: JSON.parse(errorText), status: axiosErr.response.status },
+        });
+      } catch {
+        handleApiError(error);
+      }
+    } else {
+      handleApiError(error);
+    }
+  };
+
   const handleExport = async () => {
     try {
       setIsExporting(true);
@@ -54,21 +72,7 @@ export const AuditLogsEnhancedPage: React.FC = () => {
       });
       downloadBlobResponse(response.data, "audit_logs.csv");
     } catch (error) {
-      // With responseType: "blob", error.response.data is a Blob (not JSON).
-      // handleApiError expects JSON — convert blob errors before delegating.
-      const axiosErr = error as { response?: { data?: Blob; status?: number } };
-      if (axiosErr.response?.data instanceof Blob) {
-        try {
-          const errorText = await axiosErr.response.data.text();
-          handleApiError({
-            response: { data: JSON.parse(errorText), status: axiosErr.response.status },
-          });
-        } catch {
-          handleApiError(error);
-        }
-      } else {
-        handleApiError(error);
-      }
+      await handleBlobError(error);
     } finally {
       setIsExporting(false);
     }
@@ -111,7 +115,7 @@ export const AuditLogsEnhancedPage: React.FC = () => {
       downloadBlobResponse(blob, filename);
       toast.success(`Downloaded ${filename}`);
     } catch (err) {
-      handleApiError(err);
+      await handleBlobError(err);
     }
   };
 
