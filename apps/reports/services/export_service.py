@@ -26,6 +26,7 @@ from django.contrib.auth.models import User
 
 from apps.leave_management.models import counted_days
 from core.utils.csv_safe import csv_safe, xlsx_safe_row
+from core.utils.sheet_titles import safe_sheet_title
 
 
 def employee_code(user) -> str:
@@ -346,17 +347,19 @@ class ExportService:
         
         # Process each TL group (sort by TL name; handles None safely)
         first = True
+        used_titles: set[str] = set()
         for tl_id, tl_records in sorted(
             tl_groups.items(), key=lambda kv: self._get_tl_name(kv[0])
         ):
             tl_name = self._get_tl_name(tl_id)
 
+            title = safe_sheet_title(tl_name, used_titles)
             if first:
                 ws = wb.active
-                ws.title = tl_name[:31]
+                ws.title = title
                 first = False
             else:
-                ws = wb.create_sheet(title=tl_name[:31])
+                ws = wb.create_sheet(title=title)
 
             # Headers
             headers = ['Name', 'Date', 'Day', 'Start Time', 'End Time', 'Total Hours', 'Type', 'Description', 'Evidence Type', 'Evidence', 'Reference Code', 'Status']
@@ -465,17 +468,19 @@ class ExportService:
         
         # Process each TL group (sort by TL name; handles None safely)
         first = True
+        used_titles: set[str] = set()
         for tl_id, tl_records in sorted(
             tl_groups.items(), key=lambda kv: self._get_tl_name(kv[0])
         ):
             tl_name = self._get_tl_name(tl_id)
 
+            title = safe_sheet_title(tl_name, used_titles)
             if first:
                 ws = wb.active
-                ws.title = tl_name[:31]
+                ws.title = title
                 first = False
             else:
-                ws = wb.create_sheet(title=tl_name[:31])
+                ws = wb.create_sheet(title=title)
 
             # Headers
             headers = ['Name', 'Start Date', 'End Date', 'Days', 'Type', 'Status', 'Reason', 'Code']
