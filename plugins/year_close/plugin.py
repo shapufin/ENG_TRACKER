@@ -1,6 +1,8 @@
 """Year Close plugin: frozen evidence sets for closed years (plan Y3)."""
 from core.plugins.base import BasePlugin
 
+from .urls import urlpatterns
+
 
 class YearClosePlugin(BasePlugin):
     @property
@@ -25,12 +27,36 @@ class YearClosePlugin(BasePlugin):
     def get_permission_actions(self):
         # Downloading a closed year is a read-only, superuser-only surface (Y4);
         # the build itself is a scheduler/CLI action, not an API one.
-        return ['view']
+        return ['view', 'export']
 
     def get_permission_manifest(self):
         return {
             'view': {'roles': ['admin'], 'public': False},
+            'export': {'roles': ['admin'], 'public': False},
         }
+
+    def get_urls(self):
+        return urlpatterns
+
+    def get_frontend_metadata(self):
+        metadata = super().get_frontend_metadata()
+        metadata.update({
+            "routes": [
+                {
+                    "path": "/admin/previous-years",
+                    "component": "PreviousYearsPage",
+                    "layout": "admin",
+                },
+            ],
+            "injection_slots": [
+                {
+                    "slot": "admin-sidebar-nav-system",
+                    "component": "PreviousYearsSidebarItem",
+                    "section": "system",
+                },
+            ],
+        })
+        return metadata
 
     def get_scheduled_jobs(self):
         # Hourly and cheap when nothing is due: it returns before any heavy query
