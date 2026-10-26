@@ -2,7 +2,19 @@ from rest_framework import serializers
 
 from apps.overtime.models.core import Client
 
-from .models import Document, Folder
+from .models import ClientExport, Document, Folder
+
+
+class ClientExportSerializer(serializers.ModelSerializer):
+    """Never exposes the server path or the download nonce."""
+
+    class Meta:
+        model = ClientExport
+        fields = [
+            'id', 'kind', 'client', 'client_code', 'client_name', 'status', 'folders', 'documents',
+            'bytes', 'sha256', 'error', 'created_at', 'completed_at', 'expires_at',
+        ]
+        read_only_fields = fields
 
 
 class OnboardingClientSerializer(serializers.ModelSerializer):

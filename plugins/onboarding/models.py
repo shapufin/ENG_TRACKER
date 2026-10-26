@@ -118,3 +118,50 @@ class Document(BaseModel):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
+
+
+class ClientExport(models.Model):
+    """A ZIP of one client's (or every client's) onboarding data, built by the scheduler.
+
+    Names and codes are copied as text so the record still makes sense after the
+    client is deleted; the file itself lives under ``settings.EXPORT_ROOT`` (outside
+    MEDIA_ROOT) and is removed when ``expires_at`` passes.
+    """
+    KIND_CLIENT = 'client'
+    KIND_ALL = 'all'
+    KIND_CHOICES = [(KIND_CLIENT, 'One client'), (KIND_ALL, 'All clients')]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'), ('running', 'Running'), ('ready', 'Ready'),
+        ('failed', 'Failed'), ('expired', 'Expired'),
+    ]
+
+    client = models.ForeignKey(
+        Client, null=True, blank=True, on_delete=models.SET_NULL, related_name='onboarding_exports',
+    )
+    client_code = models.CharField(max_length=20, blank=True)
+    client_name = models.CharField(max_length=200, blank=True)
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES, default=KIND_CLIENT)
+    requested_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name='onboarding_exports',
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
+    folders = models.PositiveIntegerField(default=0)
+    documents = models.PositiveIntegerField(default=0)
+    bytes = models.BigIntegerField(default=0)
+    sha256 = models.CharField(max_length=64, blank=True)
+    relative_path = models.CharField(max_length=255, blank=True)
+    error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    # Single-use download link: minted by download-link/, cleared when used.
+    download_nonce = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        db_table = 'onboarding_exports'
+        ordering = ['created_at', 'id']
+        indexes = [models.Index(fields=['status', 'created_at'])]
+
+    def __str__(self):
+        return f'{self.kind} export #{self.pk} ({self.status})'

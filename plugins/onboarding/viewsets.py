@@ -11,12 +11,14 @@ from django.core.files.base import ContentFile
 from django.db import IntegrityError, transaction
 from django.db.models import Count
 from django.http import FileResponse, JsonResponse
+from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.overtime.models.core import Client
+from apps.overtime.services.client_lifecycle import record_client_event
 from core.mixins.permissions import PluginPermissionMixin
 
 from .models import MAX_FOLDER_DEPTH, SEARCH_RESULT_LIMIT, Document, Folder
@@ -29,7 +31,13 @@ from .office_integration import (
     office_editor_enabled,
     verify_office_file_token,
 )
-from .serializers import DocumentSerializer, FolderSerializer, OnboardingClientSerializer
+from .serializers import (
+    ClientExportSerializer,
+    DocumentSerializer,
+    FolderSerializer,
+    OnboardingClientSerializer,
+)
+from .services import exporter, purge
 from .upload_validation import DOCUMENT_POLICY, UploadValidationError, validate_upload
 
 logger = logging.getLogger(__name__)
@@ -157,6 +165,9 @@ def _validation_message(exc):
 
 class OnboardingClientViewSet(PluginPermissionMixin, viewsets.ViewSet):
     plugin_name = 'onboarding'
+    # lifecycle/purge are superuser-only inside the action (staff bypass plugin grants).
+    permission_action_map = {'create_export': 'export', 'lifecycle': 'manage', 'purge': 'manage'}
+    throttle_scope = None  # DRF only accepts a per-action throttle_scope if the class declares one
 
     def list(self, request):
         if request.query_params.get('archived') in ('1', 'true', 'True'):
@@ -169,6 +180,61 @@ class OnboardingClientViewSet(PluginPermissionMixin, viewsets.ViewSet):
         if client_ids is not None:
             qs = qs.filter(id__in=client_ids)
         return Response(OnboardingClientSerializer(qs.order_by('name'), many=True).data)
+
+    @staticmethod
+    def _require_superuser(request):
+        if not request.user.is_superuser:
+            raise PermissionDenied('Only superusers can do this.')
+
+    @action(detail=True, methods=['post'], url_path='exports', url_name='create-export',
+            throttle_scope='export')
+    def create_export(self, request, pk=None):
+        """Queue a ZIP of this client's onboarding data (own clients; superusers any)."""
+        client = get_object_or_404(Client, pk=pk)
+        if not request.user.is_superuser:
+            client_ids = _assigned_client_ids(request.user)
+            if not client.is_active or (client_ids is not None and client.pk not in client_ids):
+                raise PermissionDenied('You cannot export this client.')
+        export = exporter.request_export(request.user, 'client', client)
+        return Response(ClientExportSerializer(export).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'])
+    def lifecycle(self, request, pk=None):
+        """Whether this archived client's onboarding data can be purged, and why not."""
+        self._require_superuser(request)
+        client = get_object_or_404(Client, pk=pk)
+        blockers = purge.purge_blockers(client)
+        export = purge.latest_fresh_export(client)
+        folders, documents = purge.current_counts(client)
+        return Response({
+            'can_purge': not blockers,
+            'blockers': blockers,
+            'folders': folders,
+            'documents': documents,
+            'latest_export': ClientExportSerializer(export).data if export else None,
+        })
+
+    @action(detail=True, methods=['post'])
+    def purge(self, request, pk=None):
+        """Delete the client's folders, documents and files. The client and its records stay."""
+        self._require_superuser(request)
+        client = get_object_or_404(Client, pk=pk)
+        blockers = purge.purge_blockers(client)
+        if blockers:
+            return Response(
+                {'detail': 'Onboarding data cannot be purged yet.', 'blockers': blockers},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if request.data.get('confirm_code') != client.code:
+            return Response(
+                {'confirm_code': 'Type the client code to confirm.'}, status=status.HTTP_400_BAD_REQUEST,
+            )
+        folders, documents = purge.purge_onboarding(client)
+        record_client_event(
+            request, client, 'DELETE', 'purge_onboarding',
+            extra={'folders': folders, 'documents': documents},
+        )
+        return Response({'folders': folders, 'documents': documents})
 
 
 class FolderViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelViewSet):

@@ -27,7 +27,11 @@ EXCLUDED_APPS = ['contenttypes', 'sessions', 'site_backup']
 # Credentials never travel in a downloadable archive, and a restore must not roll
 # a user's second factor back (revive spent backup codes, re-enable a removed
 # factor). Server moves carry them through the database dump instead.
-EXCLUDED_MODELS = ['users.usermfa', 'users.mfabackupcode']
+EXCLUDED_MODELS = [
+    'users.usermfa', 'users.mfabackupcode',
+    # Rows point at ZIPs in EXPORT_ROOT that expire after 24 h and are never backed up.
+    'onboarding.clientexport',
+]
 
 
 def is_excluded(model) -> bool:
