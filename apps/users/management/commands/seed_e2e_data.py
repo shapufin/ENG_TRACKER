@@ -17,11 +17,12 @@ from datetime import date
 
 
 from apps.dashboard.models.calendar import CalendarWorkspace
-from apps.leave_management.models import LeaveBalance
+from apps.leave_management.models import GlobalSettings, LeaveBalance
 from apps.overtime.models import Client, OvertimeLog
 from apps.permissions.models import Role
 from apps.permissions.services.role_service import assign_role
 from apps.users.models import Team, TeamMembership, UserProfile
+from apps.users.models.mfa import UserMFA
 from core.utils.timezone_local import business_today
 
 E2E_PASSWORD = "e2e_pass_2026"
@@ -168,6 +169,21 @@ class Command(BaseCommand):
             if cfg.get("is_albanian_tl_role"):
                 assign_role(user, "albanian_tl")
             users[cfg["username"]] = user
+
+        # MFA enrolment survives a re-seed, and an enrolled fixture user makes
+        # /api/auth/token/ answer without an access token — every later spec then
+        # fails with "Token is invalid" (found 2026-10-26: e2e_employee_c had been
+        # left enrolled, which broke role-workflows' overtime step). The fixture
+        # must be deterministic, so clear it for the seeded users only.
+        UserMFA.objects.filter(user__username__in=[cfg["username"] for cfg in E2E_USERS]).delete()
+        for user in users.values():
+            if user.profile.mfa_required:
+                user.profile.mfa_required = False
+                user.profile.save(update_fields=["mfa_required"])
+        global_settings, _ = GlobalSettings.objects.get_or_create(pk=1)
+        if global_settings.mfa_required:
+            global_settings.mfa_required = False
+            global_settings.save(update_fields=["mfa_required"])
 
         team, _ = Team.objects.get_or_create(
             code=E2E_TEAM["code"], defaults={"name": E2E_TEAM["name"]}
