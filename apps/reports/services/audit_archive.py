@@ -237,9 +237,12 @@ def archive_month(month_str: str | None = None, delete_after: bool = True) -> di
 
         # Delete archived records from the live database
         if delete_after:
-            core_qs.delete()
-            if plugin_qs is not None:
-                plugin_qs.delete()
+            from django.db import transaction
+            with transaction.atomic():
+                AuditLog.objects.filter(timestamp__gte=start_dt, timestamp__lt=end_dt).delete()
+                if plugin_qs is not None:
+                    from plugins.audit_log.models import AuditLog as PluginAuditLog
+                    PluginAuditLog.objects.filter(timestamp__gte=start_dt, timestamp__lt=end_dt).delete()
 
         logger.info(
             f"Archived and rotated {total_count} audit logs for {year}-{month:02d} "
@@ -269,7 +272,10 @@ def get_archive_file(filename: str) -> Path:
     if not ARCHIVE_FILENAME_REGEX.match(clean_name):
         raise ValueError("Invalid archive filename pattern.")
 
-    path = get_archive_dir() / clean_name
+    archive_dir = get_archive_dir().resolve()
+    path = (archive_dir / clean_name).resolve()
+    if not path.is_relative_to(archive_dir):
+        raise ValueError("Archive path traversal forbidden.")
     if not path.is_file() or not path.exists():
         raise FileNotFoundError(f"Archive file '{clean_name}' does not exist.")
 
