@@ -13,9 +13,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from ..serializers import CustomTokenObtainPairSerializer
 from ..services import mfa as mfa_service
 from ..services.mfa import MFAError
+from ..services.tokens import revoke_refresh_tokens
 
 
 def set_refresh_cookie(response, refresh):
@@ -206,6 +209,42 @@ class MFABackupCodesView(_SignedInMFAView):
         codes = mfa_service.generate_backup_codes(request.user)
         mfa_service.audit(request.user, 'mfa_backup_codes_regenerated', f'{request.user.username} regenerated backup codes', request.user)
         return Response({'backup_codes': codes})
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PasswordChangeView(_SignedInMFAView):
+    """POST /api/auth/password/change/ {current_password, new_password, code?}.
+
+    Same step-up as the other credential changes (password, plus a second-factor
+    code when enrolled) so a stolen session cannot take the account over. Every
+    refresh token is revoked and this session gets a fresh one.
+    """
+
+    def post(self, request):
+        user = request.user
+        new_password = str(request.data.get('new_password') or '')
+        if not new_password:
+            return Response({'detail': 'new_password is required.', 'code': 'invalid_password'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            mfa_service.check_step_up(
+                user, str(request.data.get('current_password', '')), str(request.data.get('code', ''))
+            )
+        except MFAError as exc:
+            return _mfa_error(exc)
+        try:
+            if user.check_password(new_password):
+                raise DjangoValidationError('The new password must be different from the current one.')
+            validate_password(new_password, user)
+        except DjangoValidationError as exc:
+            return Response(
+                {'detail': 'Password does not meet the password policy.', 'messages': list(exc.messages)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        user.set_password(new_password)
+        user.save(update_fields=['password'])
+        revoke_refresh_tokens(user)
+        mfa_service.audit(user, 'password_changed', f'{user.username} changed their password', user)
+        return _signed_in_response(user)
 
 
 class CustomTokenRefreshSerializer(TokenRefreshSerializer):

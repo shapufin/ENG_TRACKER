@@ -37,6 +37,7 @@ from apps.users.views.auth import (
     MFASetupView,
     MFAStatusView,
     MFAVerifyView,
+    PasswordChangeView,
     TokenLogoutView,
 )
 
@@ -170,6 +171,7 @@ urlpatterns += [
     path('api/auth/mfa/activate/', MFAActivateView.as_view(), name='mfa_activate'),
     path('api/auth/mfa/disable/', MFADisableView.as_view(), name='mfa_disable'),
     path('api/auth/mfa/backup-codes/', MFABackupCodesView.as_view(), name='mfa_backup_codes'),
+    path('api/auth/password/change/', PasswordChangeView.as_view(), name='password_change'),
 ]
 
 if settings.DEBUG:
