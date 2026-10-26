@@ -7,12 +7,14 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db import transaction
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
 from core.pagination import LargeResultsPagination
 from core.mixins.cache import CacheInvalidationMixin
 from core.mixins.permissions import (
     HbprBlockedMixin,
+    IsSuperuser,
     SuperuserPermissionMixin,
     PersonalOnlyFilterMixin,
     BulkActionMixin,
@@ -22,7 +24,15 @@ from core.mixins.permissions import (
     resolve_target_user,
 )
 from .models import Client, OvertimeLog
-from .services.client_lifecycle import protected_record_counts
+from .services.client_lifecycle import (
+    archive_client,
+    cascade_record_counts,
+    delete_blockers,
+    last_activity,
+    protected_record_counts,
+    record_client_event,
+    unarchive_client,
+)
 try:
     from plugins.notifications.idempotency import IdempotentCreateMixin
 except ImportError:
@@ -68,8 +78,12 @@ class ClientViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.M
 
     def get_permissions(self):
         # Already handled by SuperuserPermissionMixin for superusers
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ['create', 'update', 'partial_update']:
             return [permissions.IsAdminUser()]
+        # Lifecycle actions are superuser-only; a new action would otherwise
+        # default to IsAuthenticated.
+        if self.action in ['destroy', 'archive', 'unarchive', 'lifecycle']:
+            return [IsSuperuser()]
         return super().get_permissions()
 
     def perform_create(self, serializer):
@@ -92,18 +106,71 @@ class ClientViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.M
         # inside Django's atomic block poisons any transaction the caller is in.
         # A plain Response, not an APIException: DRF would turn the counts into strings.
         instance = self.get_object()
-        counts = protected_record_counts(instance)
-        if counts:
+        blockers = delete_blockers(instance)
+        if blockers:
             return Response(
                 {
-                    'detail': 'This client is referenced by records that must be kept. '
-                              'Archive it instead of deleting it.',
-                    'counts': counts,
+                    'detail': 'This client cannot be deleted. Archive it instead, '
+                              'and delete it only when it has no records.',
+                    'blockers': blockers,
+                    'counts': protected_record_counts(instance),
+                    'cascade_counts': cascade_record_counts(instance),
                 },
                 status=status.HTTP_409_CONFLICT,
             )
+        record_client_event(
+            request, instance, 'DELETE', 'delete',
+            old={'code': instance.code, 'name': instance.name},
+        )
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'])
+    def archive(self, request, pk=None):
+        """Retire a client: hidden from pickers and users, records kept."""
+        client = self.get_object()
+        if not client.is_active:
+            return Response({'detail': 'Client is already archived.'}, status=status.HTTP_409_CONFLICT)
+        with transaction.atomic():
+            unassigned = archive_client(client)
+            record_client_event(
+                request, client, 'UPDATE', 'archive',
+                old={'is_active': True}, new={'is_active': False},
+                extra={'users_unassigned': unassigned},
+            )
+        self.invalidate_related_cache()
+        return Response({'id': client.pk, 'is_active': False, 'users_unassigned': unassigned})
+
+    @action(detail=True, methods=['post'])
+    def unarchive(self, request, pk=None):
+        """Reactivate a client. User assignments are not restored."""
+        client = self.get_object()
+        if client.is_active:
+            return Response({'detail': 'Client is not archived.'}, status=status.HTTP_409_CONFLICT)
+        with transaction.atomic():
+            unarchive_client(client)
+            record_client_event(
+                request, client, 'UPDATE', 'unarchive',
+                old={'is_active': False}, new={'is_active': True},
+            )
+        self.invalidate_related_cache()
+        return Response({'id': client.pk, 'is_active': True})
+
+    @action(detail=True, methods=['get'])
+    def lifecycle(self, request, pk=None):
+        """What archiving, purging or deleting this client would touch."""
+        client = self.get_object()
+        blockers = delete_blockers(client)
+        activity = last_activity(client)
+        return Response({
+            'is_active': client.is_active,
+            'assigned_users': client.assigned_users.count(),
+            'counts': protected_record_counts(client),
+            'cascade_counts': cascade_record_counts(client),
+            'last_activity': activity.isoformat() if activity else None,
+            'can_delete': not blockers,
+            'blockers': blockers,
+        })
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def available(self, request):

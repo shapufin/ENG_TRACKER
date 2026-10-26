@@ -19,7 +19,7 @@ from apps.standby.models import StandbyLog
 
 class ClientDeleteGuardTests(APITestCase):
     def setUp(self):
-        self.staff = User.objects.create_user(username='cd_staff', password='x', is_staff=True)
+        self.admin = User.objects.create_superuser(username='cd_admin', password='x')
         self.owner = User.objects.create_user(username='cd_owner', password='x')
         self.client_obj = Client.objects.create(name='Acme', code='ACME')
 
@@ -27,6 +27,10 @@ class ClientDeleteGuardTests(APITestCase):
         return OvertimeLog.objects.create(
             user=self.owner, client=self.client_obj, date=date(2026, 9, 1), hours=2,
         )
+
+    def _archive(self):
+        self.client_obj.is_active = False
+        self.client_obj.save(update_fields=['is_active'])
 
     def _standby(self):
         log = StandbyLog.objects.create(user=self.owner, date=date(2026, 9, 2), hours=8)
@@ -65,7 +69,8 @@ class ClientDeleteGuardTests(APITestCase):
 
     def test_api_delete_blocked_by_standby_link_only(self):
         self._standby()
-        self.client.force_authenticate(self.staff)
+        self._archive()
+        self.client.force_authenticate(self.admin)
         response = self.client.delete(f'/api/overtime/clients/{self.client_obj.pk}/')
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(response.data['counts'], {'standby_logs': 1})
@@ -83,15 +88,17 @@ class ClientDeleteGuardTests(APITestCase):
     def test_api_delete_returns_409_with_counts(self):
         self._overtime()
         self._standby()
-        self.client.force_authenticate(self.staff)
+        self._archive()
+        self.client.force_authenticate(self.admin)
         response = self.client.delete(f'/api/overtime/clients/{self.client_obj.pk}/')
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(response.data['counts'], {'overtime_logs': 1, 'standby_logs': 1})
         self.assertTrue(Client.objects.filter(pk=self.client_obj.pk).exists())
         self.assertEqual(OvertimeLog.objects.count(), 1)
 
-    def test_api_delete_unused_client_returns_204(self):
-        self.client.force_authenticate(self.staff)
+    def test_api_delete_unused_archived_client_returns_204(self):
+        self._archive()
+        self.client.force_authenticate(self.admin)
         response = self.client.delete(f'/api/overtime/clients/{self.client_obj.pk}/')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Client.objects.filter(pk=self.client_obj.pk).exists())

@@ -15,7 +15,9 @@ class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = ['id', 'name', 'code', 'description', 'is_active', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        # Archived and restored only through the archive/unarchive actions, which
+        # also unassign users and write the audit entry.
+        read_only_fields = ['id', 'is_active', 'created_at']
 
 
 class OvertimeLogSerializer(serializers.ModelSerializer):

@@ -83,3 +83,25 @@ class InactiveClientTicketKpiTests(TestCase):
             self.profile, data={'assigned_client_ids': [self.gone.pk, self.live.pk]}, partial=True,
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
+
+
+class ArchiveKeepsExportProfileLinksTests(TestCase):
+    """An export profile with no clients means "unrestricted", so archiving a client
+    must never clear its links (that would widen who can use the profile)."""
+
+    def test_archive_leaves_export_profile_client_links_alone(self):
+        from rest_framework.test import APIClient
+
+        admin = User.objects.create_superuser(username='ak_admin', password='x')
+        client = Client.objects.create(name='Only', code='ONLY')
+        profile = ExportProfile.objects.create(
+            name='Scoped', field_mapping={}, is_active=True, created_by=admin,
+        )
+        profile.assigned_clients.add(client)
+
+        api = APIClient()
+        api.force_authenticate(admin)
+        response = api.post(f'/api/overtime/clients/{client.pk}/archive/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(profile.assigned_clients.all()), [client])

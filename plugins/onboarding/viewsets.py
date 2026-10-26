@@ -13,7 +13,7 @@ from django.db.models import Count
 from django.http import FileResponse, JsonResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.overtime.models.core import Client
@@ -70,6 +70,19 @@ class ClientScopedMixin:
         client_ids = self.assigned_client_ids()
         if client_ids is not None and client_id not in client_ids:
             raise ValidationError({'client': 'You are not assigned to this client.'})
+
+    def check_client_writable(self, client_id):
+        """An archived client's onboarding data is read-only for everyone."""
+        if not Client.objects.filter(pk=client_id, is_active=True).exists():
+            raise ValidationError(
+                {'client': 'This client is archived; its onboarding data is read-only.'}
+            )
+
+    def hide_archived(self, queryset):
+        """Only superusers can see an archived client's folders and documents."""
+        if self.request.user.is_superuser:
+            return queryset
+        return queryset.filter(client__is_active=True)
 
 
 def _resolve_ancestor_chains(client_id, seed_ids):
@@ -146,6 +159,11 @@ class OnboardingClientViewSet(PluginPermissionMixin, viewsets.ViewSet):
     plugin_name = 'onboarding'
 
     def list(self, request):
+        if request.query_params.get('archived') in ('1', 'true', 'True'):
+            if not request.user.is_superuser:
+                raise PermissionDenied('Only superusers can open archived clients.')
+            archived = Client.objects.filter(is_active=False).order_by('name')
+            return Response(OnboardingClientSerializer(archived, many=True).data)
         client_ids = _assigned_client_ids(request.user)
         qs = Client.objects.filter(is_active=True)
         if client_ids is not None:
@@ -166,6 +184,7 @@ class FolderViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelView
         )
         if client_ids is not None:
             qs = qs.filter(client_id__in=client_ids)
+        qs = self.hide_archived(qs)
         client_id = self.request.query_params.get('client_id')
         if client_id:
             qs = qs.filter(client_id=client_id)
@@ -179,6 +198,7 @@ class FolderViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelView
     def perform_create(self, serializer):
         client_id = serializer.validated_data['client'].id
         self.check_client_access(client_id)
+        self.check_client_writable(client_id)
         _validate_same_client(client_id, serializer.validated_data.get('parent'), 'parent')
         try:
             with transaction.atomic():
@@ -189,6 +209,7 @@ class FolderViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelView
     def perform_update(self, serializer):
         client_id = serializer.instance.client_id
         self.check_client_access(client_id)
+        self.check_client_writable(client_id)
         if 'parent' in serializer.validated_data:
             _validate_same_client(client_id, serializer.validated_data['parent'], 'parent')
         try:
@@ -200,6 +221,7 @@ class FolderViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelView
     @action(detail=True, methods=['post'])
     def move(self, request, pk=None):
         folder = self.get_object()
+        self.check_client_writable(folder.client_id)
         parent_id = request.data.get('parent_id')
         if parent_id is None:
             folder.parent = None
@@ -220,6 +242,10 @@ class FolderViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelView
             raise ValidationError({'parent_id': _validation_message(exc)})
         return Response(FolderSerializer(folder).data)
 
+    def perform_destroy(self, instance):
+        self.check_client_writable(instance.client_id)
+        instance.delete()
+
     @action(detail=False, methods=['get'])
     def search(self, request):
         """Search folder/document names across the whole client tree
@@ -233,6 +259,9 @@ class FolderViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelView
         except (TypeError, ValueError):
             raise ValidationError({'client_id': 'client_id must be an integer.'})
         self.check_client_access(client_id)
+        if (not request.user.is_superuser
+                and not Client.objects.filter(pk=client_id, is_active=True).exists()):
+            return Response({'folders': [], 'documents': []})
 
         folders = list(Folder.objects.filter(
             client_id=client_id, name__icontains=query
@@ -303,6 +332,7 @@ class DocumentViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelVi
         qs = Document.objects.select_related('uploaded_by', 'updated_by')
         if client_ids is not None:
             qs = qs.filter(client_id__in=client_ids)
+        qs = self.hide_archived(qs)
         client_id = self.request.query_params.get('client_id')
         if client_id:
             qs = qs.filter(client_id=client_id)
@@ -324,6 +354,7 @@ class DocumentViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelVi
     def perform_create(self, serializer):
         client = serializer.validated_data['client']
         self.check_client_access(client.id)
+        self.check_client_writable(client.id)
         _validate_same_client(client.id, serializer.validated_data.get('folder'), 'folder')
         file_obj = self.request.data.get('file')
         try:
@@ -340,6 +371,7 @@ class DocumentViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelVi
     def perform_update(self, serializer):
         client_id = serializer.instance.client_id
         self.check_client_access(client_id)
+        self.check_client_writable(client_id)
         if 'folder' in serializer.validated_data:
             _validate_same_client(client_id, serializer.validated_data['folder'], 'folder')
         try:
@@ -351,6 +383,7 @@ class DocumentViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelVi
     @action(detail=True, methods=['post'])
     def move(self, request, pk=None):
         document = self.get_object()
+        self.check_client_writable(document.client_id)
         folder_id = request.data.get('folder_id')
         if folder_id is None:
             document.folder = None
@@ -370,6 +403,10 @@ class DocumentViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelVi
         except (IntegrityError, DjangoValidationError) as exc:
             raise ValidationError({'folder_id': _validation_message(exc)})
         return Response(DocumentSerializer(document).data)
+
+    def perform_destroy(self, instance):
+        self.check_client_writable(instance.client_id)
+        instance.delete()
 
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
@@ -403,7 +440,10 @@ class DocumentViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelVi
                 {'error': 'This file type cannot be opened in the office editor.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        can_edit = self._has_plugin_permission(request.user, 'onboarding', 'manage')
+        can_edit = (
+            self._has_plugin_permission(request.user, 'onboarding', 'manage')
+            and document.client.is_active
+        )
         config = build_editor_config(document, request.user, request, can_edit)
         return Response({
             'config': config,
