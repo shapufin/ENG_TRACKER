@@ -8,7 +8,7 @@ import threading
 
 from django.core.management.base import BaseCommand
 
-from core.plugins.scheduler import Scheduler, collect_jobs
+from core.plugins.scheduler import Heartbeat, Scheduler, collect_jobs
 
 
 class Command(BaseCommand):
@@ -32,8 +32,16 @@ class Command(BaseCommand):
         stop = threading.Event()
         for sig in (signal.SIGTERM, signal.SIGINT):
             signal.signal(sig, lambda *_: stop.set())
+        heartbeat = None
+        if options['heartbeat_file']:
+            heartbeat = Heartbeat(options['heartbeat_file'])
+            heartbeat.start()
         self.stdout.write('Scheduler started.')
-        while not stop.is_set():
-            scheduler.run_due()
-            stop.wait(options['tick'])
+        try:
+            while not stop.is_set():
+                scheduler.run_due()
+                stop.wait(options['tick'])
+        finally:
+            if heartbeat:
+                heartbeat.stop()
         self.stdout.write('Scheduler stopped.')

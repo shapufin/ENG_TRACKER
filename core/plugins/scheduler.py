@@ -5,6 +5,7 @@ The stack has no Celery or cron container. ``manage.py run_scheduler`` (the
 in through ``BasePlugin.get_scheduled_jobs()``.
 """
 import logging
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -86,3 +87,27 @@ class Scheduler:
             Path(self._heartbeat_path).touch()
         except OSError:
             logger.warning('Could not touch scheduler heartbeat %s', self._heartbeat_path, exc_info=True)
+
+
+class Heartbeat(threading.Thread):
+    """Touches a file from its own thread, so a long job (a multi-GB export)
+    cannot make the compose healthcheck think the scheduler died."""
+
+    def __init__(self, path: str, interval: float = 10.0):
+        super().__init__(name='scheduler-heartbeat', daemon=True)
+        self._path = path
+        self._interval = interval
+        self._stop_event = threading.Event()
+
+    def run(self) -> None:
+        while True:
+            try:
+                Path(self._path).touch()
+            except OSError:
+                logger.warning('Could not touch scheduler heartbeat %s', self._path, exc_info=True)
+            if self._stop_event.wait(self._interval):
+                return
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        self.join(timeout=5)

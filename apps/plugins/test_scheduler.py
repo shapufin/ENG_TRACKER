@@ -167,3 +167,45 @@ class RunSchedulerCommandTests(SimpleTestCase):
                 mock.patch('core.plugins.scheduler.close_old_connections'):
             call_command('run_scheduler', '--once')
         self.assertEqual(CALLS, ['a'])
+
+
+class HeartbeatTests(SimpleTestCase):
+    """A long job (a multi-GB export) must not make the healthcheck think the
+    scheduler died: the heartbeat is touched from its own thread."""
+
+    def test_heartbeat_keeps_beating_while_the_caller_is_busy(self):
+        import time
+
+        from core.plugins.scheduler import Heartbeat
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'hb')
+            heartbeat = Heartbeat(path, interval=0.01)
+            heartbeat.start()
+            try:
+                self._wait_for(lambda: os.path.exists(path))
+                os.remove(path)
+                time.sleep(0)  # the caller is "busy"; only the thread can recreate it
+                self._wait_for(lambda: os.path.exists(path))
+            finally:
+                heartbeat.stop()
+
+    def test_stop_ends_the_thread(self):
+        from core.plugins.scheduler import Heartbeat
+
+        with tempfile.TemporaryDirectory() as tmp:
+            heartbeat = Heartbeat(os.path.join(tmp, 'hb'), interval=0.01)
+            heartbeat.start()
+            heartbeat.stop()
+            self.assertFalse(heartbeat.is_alive())
+
+    @staticmethod
+    def _wait_for(condition, timeout=2.0):
+        import time
+
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if condition():
+                return
+            time.sleep(0.005)
+        raise AssertionError('condition not met in time')
