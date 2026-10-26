@@ -160,6 +160,13 @@ class PayrollRunAdmin(SuperuserOnlyAdminMixin, admin.ModelAdmin):
     def line_count(self, obj):
         return obj.lines.count()
 
+    def get_readonly_fields(self, request, obj=None):
+        """A finalized run is evidence: status, period and notes stop being editable."""
+        fields = list(super().get_readonly_fields(request, obj))
+        if obj is not None and obj.status == 'finalized':
+            fields += [name for name in ('status', 'year', 'month', 'notes') if name not in fields]
+        return fields
+
     def has_delete_permission(self, request, obj=None):
         """Block deletion of finalized runs via admin."""
         if obj is not None and obj.status == 'finalized':

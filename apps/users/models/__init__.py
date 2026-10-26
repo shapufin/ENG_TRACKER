@@ -4,6 +4,7 @@ Users models module.
 
 from .core import (
     ApprovalPeriodBoundary,
+    ClosedYear,
     ApprovalPeriodClose,
     ApprovalPeriodCloseMember,
     Tech,
@@ -20,6 +21,7 @@ __all__ = [
     'MFABackupCode',
     'UserMFA',
     'ApprovalPeriodBoundary',
+    'ClosedYear',
     'ApprovalPeriodClose',
     'ApprovalPeriodCloseMember',
     'Tech',

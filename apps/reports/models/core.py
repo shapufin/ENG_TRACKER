@@ -143,6 +143,7 @@ class AuditLog(models.Model):
         ('user', 'User'),
         ('team', 'Team'),
         ('client', 'Client'),
+        ('closedyear', 'Closed Year'),
         ('auth', 'Authentication / Security'),
     ]
 

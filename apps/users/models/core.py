@@ -368,6 +368,35 @@ class ApprovalPeriodCloseMember(BaseModel):
         ]
 
 
+class ClosedYear(BaseModel):
+    """A year whose overtime and standby records are frozen (year-close, Y2).
+
+    Written by the year-close engine (Y3) only when every snapshot file is
+    ready, and removed by ``manage.py reopen_year``. Leave is deliberately not
+    covered: cancellations legitimately flow back into closed balances.
+    """
+
+    year = models.PositiveIntegerField(unique=True)
+    closed_at = models.DateTimeField()
+    closed_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='closed_years',
+    )
+    # Set by the close engine to the snapshot set that justifies the lock
+    # (e.g. "2025/v1"). Empty while Y3 is not built.
+    snapshot_ref = models.TextField(blank=True, default='')
+
+    class Meta:
+        db_table = 'closed_years'
+        ordering = ['-year']
+
+    def __str__(self):
+        return f'Closed year {self.year}'
+
+
 def _user_has_related(user, relation):
     """``user.<relation>.exists()`` that reuses a ``prefetch_related`` result.
 

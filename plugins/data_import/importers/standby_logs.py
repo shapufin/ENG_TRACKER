@@ -16,6 +16,7 @@ from core.utils.time_overlap import find_overlapping_entry
 
 from apps.overtime.models import Client
 from apps.overtime.services.client_lifecycle import archived_client_error
+from apps.users.services.approval_periods import closed_year_error
 from apps.standby.models import StandbyLog
 from .authority import StaffOnlyAuthority
 from .base import row_error_from_exception, BaseImporter, ImportField, ImportOption, ImportRowResult, UPDATE_EXISTING_OPTION
@@ -167,6 +168,10 @@ class StandbyLogImporter(StaffOnlyAuthority, BaseImporter):
                 return ImportRowResult(
                     row_index=row_index, status="error", errors=["date is required and must be a valid date."],
                 )
+
+            closed_message = closed_year_error(work_date)
+            if closed_message:
+                return ImportRowResult(row_index=row_index, status="error", errors=[closed_message])
 
             try:
                 start_time = parse_time_string(mapped_row.get("start_time"), "start_time")

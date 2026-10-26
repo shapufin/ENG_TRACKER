@@ -223,6 +223,13 @@ class StaffFilterMixin:
         return queryset
 
 
+def _frozen_year_of(obj) -> int | None:
+    """The closed year that freezes ``obj``, if any (bulk actions, Y2)."""
+    from apps.users.services.approval_periods import closed_year_of
+
+    return closed_year_of(obj)
+
+
 class ApprovalPermissionMixin:
     """Mixin to provide centralized approval permission checking."""
     def _can_approve(self, user, obj):
@@ -288,6 +295,9 @@ class MonthlyLockMixin:
     """
 
     _MONTH_LOCK_ACTIONS = {'update', 'partial_update', 'destroy'}
+    # Writes that a frozen year refuses. ``retrieve`` is deliberately absent:
+    # a closed year is still readable, it is the audit evidence.
+    _YEAR_LOCK_ACTIONS = {'update', 'partial_update', 'destroy', 'approve', 'reject'}
 
     def _is_month_locked(self, obj) -> bool:
         """True if the record's date is in a strictly past month."""
@@ -296,6 +306,22 @@ class MonthlyLockMixin:
             return False
         today = business_today()
         return (record_date.year, record_date.month) < (today.year, today.month)
+
+    def _closed_year_of(self, obj) -> int | None:
+        """The closed year that freezes this record, if any."""
+        from apps.users.services.approval_periods import closed_year_of
+        return closed_year_of(obj)
+
+    def _assert_year_open(self, obj) -> None:
+        """Refuse a write to a frozen year — for everyone, superusers included.
+
+        A closed year is reopened through ``manage.py reopen_year``, never by a
+        role bypass; that is what "frozen evidence" means.
+        """
+        year = self._closed_year_of(obj)
+        if year is not None:
+            from apps.users.services.approval_periods import year_lock_message
+            raise PermissionDenied(year_lock_message(year))
 
     def _is_approval_period_locked(self, obj) -> bool:
         """True when a TL has closed the record's work-date period."""
@@ -312,6 +338,9 @@ class MonthlyLockMixin:
 
     def check_object_permissions(self, request, obj):
         super().check_object_permissions(request, obj)
+        # A frozen year refuses every write before any role bypass is considered.
+        if self.action in self._YEAR_LOCK_ACTIONS:
+            self._assert_year_open(obj)
         if self.action in self._MONTH_LOCK_ACTIONS:
             user = request.user
             # Pending records can be deleted even from a past/closed month —
@@ -347,6 +376,9 @@ class MonthlyLockMixin:
     def _can_delete(self, user, obj):
         if not super()._can_delete(user, obj):
             return False
+        # A frozen year cannot be cleaned up by anyone; reopen it first.
+        if self._closed_year_of(obj) is not None:
+            return False
         # Pending records can be deleted even from a past/closed month
         if self._is_pending(obj):
             return True
@@ -374,7 +406,9 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
             queryset = self.get_queryset().filter(id__in=ids, status='pending').select_for_update(of=('self',))
 
             for obj in queryset:
-                if self._can_approve(request.user, obj):
+                if _frozen_year_of(obj) is not None:
+                    failed_ids.append(obj.id)
+                elif self._can_approve(request.user, obj):
                     obj._skip_notifications = True
                     self.perform_approve(obj, request.user)
                     approved_count += 1
@@ -404,7 +438,9 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
             queryset = self.get_queryset().filter(id__in=ids, status='pending').select_for_update(of=('self',))
 
             for obj in queryset:
-                if self._can_approve(request.user, obj):
+                if _frozen_year_of(obj) is not None:
+                    failed_ids.append(obj.id)
+                elif self._can_approve(request.user, obj):
                     obj._skip_notifications = True
                     self.perform_reject(obj, request.user, rejection_reason)
                     rejected_count += 1

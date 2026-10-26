@@ -36,6 +36,12 @@ class StandbyLogAdmin(SuperuserOnlyAdminMixin, admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if change:
             self._ensure_not_finalized(obj)
+        # A closed year is frozen for everyone, the Django admin included.
+        from apps.users.services.approval_periods import closed_year_error
+
+        closed_message = closed_year_error(getattr(obj, 'date', None))
+        if closed_message:
+            raise ValidationError(closed_message)
         super().save_model(request, obj, form, change)
 
     def delete_model(self, request, obj):
