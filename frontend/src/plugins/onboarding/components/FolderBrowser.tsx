@@ -52,6 +52,8 @@ import { DetailPanel, type DetailPanelItem } from "./DetailPanel";
 interface FolderBrowserProps {
   clientId: number;
   clientName: string;
+  /** Archived clients are browse-and-export only; the API refuses every write. */
+  readOnly?: boolean;
 }
 
 const formatBytes = (bytes: number): string => {
@@ -82,7 +84,8 @@ const FolderTile: React.FC<{
   onRename: () => void;
   onDelete: () => void;
   onInfo: () => void;
-}> = ({ folder, onOpen, onRename, onDelete, onInfo }) => {
+  readOnly?: boolean;
+}> = ({ folder, onOpen, onRename, onDelete, onInfo, readOnly = false }) => {
   const {
     attributes,
     listeners,
@@ -111,8 +114,8 @@ const FolderTile: React.FC<{
         isDragging && "opacity-40"
       )}
       onClick={onOpen}
-      {...attributes}
-      {...listeners}
+      {...(readOnly ? {} : attributes)}
+      {...(readOnly ? {} : listeners)}
       onKeyDown={onActivateKeyDown(onOpen)}
     >
       <div
@@ -144,30 +147,34 @@ const FolderTile: React.FC<{
         >
           <Info className="h-4 w-4" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          aria-label={`Rename ${folder.name}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onRename();
-          }}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-destructive hover:text-destructive h-8 w-8"
-          aria-label={`Delete ${folder.name}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        {!readOnly && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={`Rename ${folder.name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRename();
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive hover:text-destructive h-8 w-8"
+              aria-label={`Delete ${folder.name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
       </div>
     </GlassCard>
   );
@@ -179,7 +186,8 @@ const DocumentTile: React.FC<{
   onRename: () => void;
   onDelete: () => void;
   onInfo: () => void;
-}> = ({ document, onDownload, onRename, onDelete, onInfo }) => {
+  readOnly?: boolean;
+}> = ({ document, onDownload, onRename, onDelete, onInfo, readOnly = false }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `document-${document.id}`,
     data: { kind: "document", id: document.id },
@@ -195,8 +203,8 @@ const DocumentTile: React.FC<{
         isDragging && "opacity-40"
       )}
       onClick={onDownload}
-      {...attributes}
-      {...listeners}
+      {...(readOnly ? {} : attributes)}
+      {...(readOnly ? {} : listeners)}
       onKeyDown={onActivateKeyDown(onDownload)}
     >
       <div
@@ -225,36 +233,44 @@ const DocumentTile: React.FC<{
         >
           <Info className="h-4 w-4" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          aria-label={`Rename ${document.name}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onRename();
-          }}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-destructive hover:text-destructive h-8 w-8"
-          aria-label={`Delete ${document.name}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        {!readOnly && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={`Rename ${document.name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRename();
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive hover:text-destructive h-8 w-8"
+              aria-label={`Delete ${document.name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
       </div>
     </GlassCard>
   );
 };
 
-export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientName }) => {
+export const FolderBrowser: React.FC<FolderBrowserProps> = ({
+  clientId,
+  clientName,
+  readOnly = false,
+}) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
@@ -516,9 +532,11 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-            <FolderPlus className="mr-2 h-4 w-4" /> New folder
-          </Button>
+          {!readOnly && (
+            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+              <FolderPlus className="mr-2 h-4 w-4" /> New folder
+            </Button>
+          )}
         </div>
         <SearchField
           className="sm:w-64"
@@ -544,14 +562,22 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
             )
           ) : (
             <>
-              <UploadDropzone onFiles={handleUploadFiles} />
+              {!readOnly && <UploadDropzone onFiles={handleUploadFiles} />}
 
-              <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <DndContext
+                sensors={readOnly ? [] : sensors}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
                 {isEmpty ? (
                   <EmptyState
                     icon={FilePlus}
                     title="This folder is empty"
-                    description="Create a subfolder or upload a file to get started."
+                    description={
+                      readOnly
+                        ? "Nothing was filed here before the client was archived."
+                        : "Create a subfolder or upload a file to get started."
+                    }
                   />
                 ) : (
                   <motion.div
@@ -578,6 +604,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
                             })
                           }
                           onInfo={() => setSelectedKey({ kind: "folder", id: folder.id })}
+                          readOnly={readOnly}
                         />
                       </motion.div>
                     ))}
@@ -593,6 +620,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
                             setDeleteTarget({ kind: "document", id: doc.id, name: doc.name })
                           }
                           onInfo={() => setSelectedKey({ kind: "document", id: doc.id })}
+                          readOnly={readOnly}
                         />
                       </motion.div>
                     ))}
@@ -623,6 +651,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({ clientId, clientNa
               selectedItem.kind === "document" ? () => handlePreview(selectedItem.data) : undefined
             }
             onEdit={
+              !readOnly &&
               selectedItem.kind === "document" &&
               officeEditorEnabled &&
               isEditableOffice(selectedItem.data.name)

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -6,15 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { handleApiError } from "@/lib/error-handler";
-import { navigateToDownload } from "@/lib/download";
 import type { Client } from "@/types";
+import { useClientExport } from "../hooks/useClientExport";
 import { onboardingService } from "../services/onboardingService";
 
 interface ClientOnboardingLifecycleProps {
   client: Client;
 }
-
-const IN_PROGRESS = ["pending", "running"];
 
 /**
  * Export and purge for one archived client's onboarding data, shown inside the Clients
@@ -23,9 +21,7 @@ const IN_PROGRESS = ["pending", "running"];
  */
 const ClientOnboardingLifecycle: React.FC<ClientOnboardingLifecycleProps> = ({ client }) => {
   const qc = useQueryClient();
-  const [exportId, setExportId] = useState<number | null>(null);
   const [typed, setTyped] = useState("");
-  const downloadedFor = useRef<number | null>(null);
   const infoKey = ["onboarding", "client-lifecycle", client.id];
 
   const info = useQuery({
@@ -33,37 +29,9 @@ const ClientOnboardingLifecycle: React.FC<ClientOnboardingLifecycleProps> = ({ c
     queryFn: () => onboardingService.getClientLifecycle(client.id),
   });
 
-  const exportQuery = useQuery({
-    queryKey: ["onboarding", "export", exportId],
-    queryFn: () => onboardingService.getExport(exportId as number),
-    enabled: exportId !== null,
-    refetchInterval: (query) =>
-      query.state.data && IN_PROGRESS.includes(query.state.data.status) ? 2000 : false,
+  const zip = useClientExport({
+    onDownloaded: () => qc.invalidateQueries({ queryKey: infoKey }),
   });
-
-  const createExport = useMutation({
-    mutationFn: () => onboardingService.createClientExport(client.id),
-    onSuccess: (created) => {
-      downloadedFor.current = null;
-      qc.setQueryData(["onboarding", "export", created.id], created);
-      setExportId(created.id);
-    },
-    onError: (err: unknown) => handleApiError(err),
-  });
-
-  const exported = exportQuery.data;
-  useEffect(() => {
-    if (!exported || exported.status !== "ready" || downloadedFor.current === exported.id) return;
-    downloadedFor.current = exported.id;
-    onboardingService
-      .getExportDownloadUrl(exported.id)
-      .then((url) => {
-        navigateToDownload(url);
-        qc.invalidateQueries({ queryKey: infoKey });
-      })
-      .catch((err: unknown) => handleApiError(err));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- infoKey is derived from client.id
-  }, [exported, qc]);
 
   const purge = useMutation({
     mutationFn: () => onboardingService.purgeClientOnboarding(client.id, typed),
@@ -80,43 +48,47 @@ const ClientOnboardingLifecycle: React.FC<ClientOnboardingLifecycleProps> = ({ c
   if (info.isLoading || !info.data) return null;
   const { folders, documents, can_purge: canPurge, blockers } = info.data;
   if (folders === 0 && documents === 0) {
-    return <p className="text-sm text-muted-foreground">No onboarding data</p>;
+    return <p className="text-muted-foreground text-sm">No onboarding data</p>;
   }
 
-  const working = createExport.isPending || (!!exported && IN_PROGRESS.includes(exported.status));
   const inputId = `purge-client-${client.id}`;
 
   return (
     <section aria-label="Onboarding data" className="space-y-4">
       <div className="space-y-2">
         <h3 className="text-sm font-medium">Onboarding data</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           {folders} folder{folders === 1 ? "" : "s"}, {documents} document
           {documents === 1 ? "" : "s"}
         </p>
-        <Button type="button" variant="outline" disabled={working} onClick={() => createExport.mutate()}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={zip.working}
+          onClick={() => zip.start(() => onboardingService.createClientExport(client.id))}
+        >
           <Download className="mr-2 h-4 w-4" aria-hidden="true" />
           Download ZIP
         </Button>
-        {working && (
-          <p role="status" className="text-sm text-muted-foreground">
+        {zip.working && (
+          <p role="status" className="text-muted-foreground text-sm">
             Preparing the ZIP. The download starts when it is ready.
           </p>
         )}
-        {exported?.status === "failed" && (
-          <p role="alert" className="text-sm text-destructive">
-            Export failed: {exported.error || "unknown error"}
+        {zip.exported?.status === "failed" && (
+          <p role="alert" className="text-destructive text-sm">
+            Export failed: {zip.exported.error || "unknown error"}
           </p>
         )}
       </div>
 
       <div className="space-y-2">
         <h3 className="text-sm font-medium">Purge onboarding data</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Removes the folders, documents and files. The client and all its records stay.
         </p>
         {!canPurge && (
-          <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+          <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
             {blockers.map((blocker) => (
               <li key={blocker}>{blocker}</li>
             ))}

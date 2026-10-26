@@ -65,14 +65,14 @@ const LocationDisplay = () => {
   return <div data-testid="location-pathname">{location.pathname}</div>;
 };
 
-const renderBrowser = () => {
+const renderBrowser = (readOnly = false) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <FolderBrowser clientId={1} clientName="Acme" />
+        <FolderBrowser clientId={1} clientName="Acme" readOnly={readOnly} />
         <LocationDisplay />
       </MemoryRouter>
     </QueryClientProvider>
@@ -98,6 +98,31 @@ describe("FolderBrowser", () => {
       expect(screen.getByText("invoice.pdf")).toBeInTheDocument();
     });
     expect(screen.queryByText("This folder is empty")).not.toBeInTheDocument();
+  });
+
+  it("offers no way to change an archived client's files when read-only", async () => {
+    (onboardingService.getFolders as ReturnType<typeof vi.fn>).mockResolvedValue([folder()]);
+    (onboardingService.getDocuments as ReturnType<typeof vi.fn>).mockResolvedValue([doc()]);
+    renderBrowser(true);
+    await waitFor(() => expect(screen.getByText("Contracts")).toBeInTheDocument());
+
+    // Browsing, details and download stay; every write path is gone, because
+    // the API refuses writes for an archived client anyway.
+    expect(screen.queryByRole("button", { name: "New folder" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Rename Contracts/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Delete Contracts/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Rename invoice.pdf/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Delete invoice.pdf/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /View details for Contracts/ })).toBeInTheDocument();
+  });
+
+  it("keeps the write controls for an active client", async () => {
+    (onboardingService.getFolders as ReturnType<typeof vi.fn>).mockResolvedValue([folder()]);
+    (onboardingService.getDocuments as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    renderBrowser();
+    await waitFor(() => expect(screen.getByText("Contracts")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "New folder" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Rename Contracts/ })).toBeInTheDocument();
   });
 
   it("navigates into a folder via breadcrumb when its tile is clicked", async () => {
@@ -238,7 +263,9 @@ describe("FolderBrowser", () => {
     await waitFor(() => expect(screen.getByText("contract.pdf")).toBeInTheDocument());
 
     fireEvent.click(screen.getByLabelText("View details for contract.pdf"));
-    expect(within(screen.getByLabelText("Item details")).getByRole("button", { name: "Preview" })).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("Item details")).getByRole("button", { name: "Preview" })
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Close details panel"));
     fireEvent.click(screen.getByLabelText("View details for notes.docx"));
@@ -268,6 +295,21 @@ describe("FolderBrowser", () => {
 
     fireEvent.click(screen.getByLabelText("Close details panel"));
     fireEvent.click(screen.getByLabelText("View details for contract.pdf"));
+    expect(
+      within(screen.getByLabelText("Item details")).queryByRole("button", { name: "Edit" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the editor for an archived client, even for an editable office document", async () => {
+    (onboardingService.getFolders as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (onboardingService.getDocuments as ReturnType<typeof vi.fn>).mockResolvedValue([
+      doc({ id: 7, name: "notes.docx" }),
+    ]);
+    renderBrowser(true);
+    await waitFor(() => expect(screen.getByText("notes.docx")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByLabelText("View details for notes.docx"));
+    // Preview and download stay; the editor is a write surface, so it goes.
     expect(
       within(screen.getByLabelText("Item details")).queryByRole("button", { name: "Edit" })
     ).not.toBeInTheDocument();
@@ -331,7 +373,9 @@ describe("FolderBrowser", () => {
     (onboardingService.getDocuments as ReturnType<typeof vi.fn>).mockResolvedValue([
       doc({ name: "contract.pdf" }),
     ]);
-    (onboardingService.downloadDocument as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("boom"));
+    (onboardingService.downloadDocument as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("boom")
+    );
     const fakeTab = { location: { href: "" }, close: vi.fn() };
     const windowOpen = vi.spyOn(window, "open").mockReturnValue(fakeTab as unknown as Window);
 
