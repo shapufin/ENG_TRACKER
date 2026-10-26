@@ -699,6 +699,16 @@ export const ROUTES = [
     extraction: "NONE",
   },
   {
+    path: "/admin/previous-years",
+    label: "admin-previous-years",
+    layout: "admin",
+    roles: ["admin"],
+    expectedHeading: "Previous Years",
+    mockup: "NONE",
+    extraction: "NONE",
+    note: "superuser-only (SuperuserOnlyMixin on the plugin API)",
+  },
+  {
     path: "/admin/backup-restore",
     label: "admin-backup-restore",
     layout: "admin",

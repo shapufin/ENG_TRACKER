@@ -231,6 +231,16 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
       }))
     ),
   },
+  year_close: {
+    PreviousYearsPage: lazy(() =>
+      import("./year_close/pages/PreviousYearsPage").then((m) => ({
+        default: m.PreviousYearsPage,
+      }))
+    ),
+    PreviousYearsSidebarItem: lazy(
+      () => import("./year_close/components/PreviousYearsSidebarItem")
+    ),
+  },
   tl_scorecard: {
     TLScorecardPage: lazy(() =>
       import("./tl_scorecard/pages/TLScorecardPage").then((m) => ({ default: m.TLScorecardPage }))
