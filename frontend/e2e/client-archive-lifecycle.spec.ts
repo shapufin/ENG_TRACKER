@@ -271,10 +271,20 @@ test("a superuser can read an archived client's onboarding, read-only, and downl
   await page.getByRole("switch", { name: "Show archived clients" }).click();
   await expect(page.getByText(/Archived clients are read-only/)).toBeVisible();
 
+  // Wait for the archived list to render before looking for the picker: another
+  // archived client may exist (the other project's probe) and the page defaults
+  // to the first one, so ours has to be selected explicitly.
+  await expect(page.getByRole("button", { name: /Download .* ZIP/ })).toBeVisible();
+  const ownTab = page.getByRole("tab", { name: clientName });
+  if (await ownTab.count()) await ownTab.click();
+  await expect(page.getByRole("button", { name: `Download ${clientName} ZIP` })).toBeVisible();
+
   // Every write control is gone for an archived client.
   await expect(page.getByRole("button", { name: "New folder" })).toHaveCount(0);
 
-  const download = page.waitForEvent("download", { timeout: 20_000 });
+  // Generous: the ZIP is built at request time, and this spec can share the
+  // worker pool with specs that spawn Django subprocesses against the same DB.
+  const download = page.waitForEvent("download", { timeout: 45_000 });
   await page.getByRole("button", { name: `Download ${clientName} ZIP` }).click();
   await download;
 });

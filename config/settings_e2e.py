@@ -27,3 +27,8 @@ REST_FRAMEWORK = {
         scope: None for scope in REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']
     },
 }
+
+# Closing a year is a management action with no API; a spec closes it out of
+# band, so the running server must see it on the next request instead of after
+# the production 60-second cache window.
+CLOSED_YEAR_CACHE_TTL_SECONDS = 0
