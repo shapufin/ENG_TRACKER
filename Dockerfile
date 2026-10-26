@@ -57,7 +57,7 @@ RUN chmod +x /app/docker/entrypoint.sh
 RUN date +%s > /app/.build_id
 
 # Create directories for static + media + logs owned by appuser
-RUN mkdir -p /app/staticfiles /app/media /app/logs \
+RUN mkdir -p /app/staticfiles /app/media /app/logs /app/exports /app/snapshots \
     && chown -R appuser:appuser /app
 
 USER appuser

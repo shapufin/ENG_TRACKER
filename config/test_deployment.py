@@ -948,3 +948,104 @@ class IngressTrustConfigTests(SimpleTestCase):
             self.assertIn('CF-Connecting-IP', source)
         self.assertIn('ENV INGRESS_TRUSTED_CIDR=', dockerfile)
         self.assertIn('INGRESS_REAL_IP_HEADER: ${INGRESS_REAL_IP_HEADER:-CF-Connecting-IP}', compose)
+
+
+class SchedulerFoundationContractTests(SimpleTestCase):
+    """Y1: scheduler service, export/snapshot volumes and nginx-served downloads."""
+
+    @staticmethod
+    def _read(*parts):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        return Path(settings.BASE_DIR).joinpath(*parts).read_text(encoding='utf-8')
+
+    @staticmethod
+    def _env_keys(body):
+        import re
+
+        return set(re.findall(r'^      ([A-Z][A-Z0-9_]+):', body, re.MULTILINE))
+
+    # --- compose ---------------------------------------------------------
+    def test_scheduler_service_runs_the_scheduler_in_the_default_profile(self):
+        body = ComposeContractTests._service('scheduler')
+        self.assertIn('run_scheduler', body)
+        self.assertIn('restart: unless-stopped', body)
+        self.assertIn('no-new-privileges:true', body)
+        self.assertNotIn('profiles:', body)  # exports need it, so it is not optional
+
+    def test_scheduler_never_migrates_and_watches_its_own_heartbeat(self):
+        body = ComposeContractTests._service('scheduler')
+        self.assertIn('RUN_MIGRATIONS: "0"', body)
+        self.assertIn('SCHEDULER_HEARTBEAT_FILE', body)
+        self.assertIn('healthcheck:', body)
+        self.assertNotIn('localhost:8000', body)  # the image HEALTHCHECK curls gunicorn
+
+    def test_scheduler_has_every_backend_environment_variable(self):
+        backend = self._env_keys(ComposeContractTests._service('backend'))
+        scheduler = self._env_keys(ComposeContractTests._service('scheduler'))
+        self.assertEqual(backend - scheduler - {'GUNICORN_WORKERS'}, set())
+
+    def test_backend_and_scheduler_share_the_media_and_file_volumes(self):
+        backend = ComposeContractTests._service('backend')
+        scheduler = ComposeContractTests._service('scheduler')
+        for needle in ('export_files:/app/exports', 'snapshot_files:/app/snapshots'):
+            with self.subTest(needle=needle):
+                self.assertIn(needle, backend)
+                self.assertIn(needle, scheduler)
+        self.assertIn('media_files:/app/media', scheduler)
+
+    def test_frontend_nginx_sees_exports_and_snapshots_read_only(self):
+        body = ComposeContractTests._service('frontend')
+        self.assertIn('export_files:/protected/exports:ro', body)
+        self.assertIn('snapshot_files:/protected/snapshots:ro', body)
+
+    def test_snapshots_are_backed_up_and_exports_are_not(self):
+        body = ComposeContractTests._service('db-backup')
+        self.assertIn('snapshot_files:/snapshots:ro', body)
+        self.assertIn('snapshots_', body)
+        self.assertNotIn('export_files:', body)  # a mount, not the explanatory comment
+
+    def test_the_new_volumes_are_declared(self):
+        compose = self._read('docker-compose.yml')
+        tail = compose[compose.index('\nvolumes:'):]
+        for name in ('export_files:', 'snapshot_files:'):
+            with self.subTest(name=name):
+                self.assertIn(f'\n  {name}', tail)
+
+    # --- nginx -----------------------------------------------------------
+    def test_nginx_serves_protected_files_from_internal_locations_only(self):
+        text = self._read('frontend', 'docker', 'nginx.conf.template')
+        for kind in ('exports', 'snapshots'):
+            with self.subTest(kind=kind):
+                start = text.index(f'location /_protected/{kind}/ {{')
+                block = text[start:text.index('}', start)]
+                self.assertIn('internal;', block)
+                self.assertIn(f'alias /protected/{kind}/;', block)
+                self.assertIn('nosniff', block)
+
+    def test_nginx_does_not_ignore_x_accel_redirect(self):
+        self.assertNotIn('proxy_ignore_headers', self._read('frontend', 'docker', 'nginx.conf.template'))
+
+    # --- image and settings ---------------------------------------------
+    def test_image_creates_the_volume_mount_points_owned_by_appuser(self):
+        text = self._read('Dockerfile')
+        self.assertIn('/app/exports', text)
+        self.assertIn('/app/snapshots', text)
+
+    def test_production_settings_serve_files_through_nginx_outside_media(self):
+        text = self._read('config', 'settings_production.py')
+        self.assertIn("USE_X_ACCEL_REDIRECT = True", text)
+        self.assertIn("EXPORT_JOBS_INLINE = False", text)
+        self.assertIn("os.environ.get('EXPORT_ROOT', '/app/exports')", text)
+        self.assertIn("os.environ.get('SNAPSHOT_ROOT', '/app/snapshots')", text)
+
+    def test_dev_settings_keep_files_outside_media_and_run_jobs_inline(self):
+        from django.conf import settings
+
+        self.assertFalse(settings.USE_X_ACCEL_REDIRECT)
+        self.assertTrue(settings.EXPORT_JOBS_INLINE)
+        for root in (settings.EXPORT_ROOT, settings.SNAPSHOT_ROOT):
+            with self.subTest(root=str(root)):
+                self.assertNotIn(str(settings.MEDIA_ROOT), str(root))

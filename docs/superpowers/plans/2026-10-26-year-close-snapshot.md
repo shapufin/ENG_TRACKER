@@ -2,6 +2,7 @@
 
 **Date**: 2026-10-26 · **Status**: PLANNED · **Spec**: `docs/superpowers/specs/2026-10-26-year-close-snapshot-design.md`
 **Order**: Y1 first (client plan phase A4 needs it), then Y2, Y3, Y4, Y5. Branch per phase.
+**Progress**: Y1 implemented on branch `feat/scheduler-foundation` (off `feat/client-delete-guards`, uncommitted, 2026-10-26): `BasePlugin.get_scheduled_jobs`, `core/plugins/scheduler.py`, `run_scheduler` command, `core/utils/protected_download.py` (signed link + X-Accel), compose `scheduler` service, `export_files`/`snapshot_files` volumes, nginx internal locations, Dockerfile dirs, settings, contract tests. Not yet done for Y1: runbook/migration-checklist/README/`.env.example` docs (Y5), a real `docker compose` boot and nginx syntax check (no Docker on the dev machine). Y2-Y5 pending.
 **Primary goal**: Every year closes by itself into a frozen, downloadable evidence set, and the closed year can no longer be edited, with no manual cron work.
 
 ## Phase 0: Discovery (done 2026-10-26)

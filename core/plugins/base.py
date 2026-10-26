@@ -79,6 +79,16 @@ class BasePlugin(ABC):
             for action in ("view", "manage", "configure", "export")
         }
 
+    def get_scheduled_jobs(self) -> List[tuple]:
+        """Return background jobs the ``run_scheduler`` process should run.
+
+        Each job is ``(name, interval_seconds, "dotted.path.to.callable")``. The
+        callable takes no arguments, must be idempotent and cheap when nothing is
+        due, and only runs while this plugin is enabled. The scheduler prefixes
+        ``name`` with the plugin name.
+        """
+        return []
+
     def get_config_schema(self) -> Dict[str, Any]:
         """
         Returns JSON schema for plugin configuration.

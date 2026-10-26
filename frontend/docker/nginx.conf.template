@@ -218,6 +218,23 @@ server {
         add_header Content-Disposition "attachment" always;
     }
 
+    # Large generated downloads (client onboarding exports, year-close snapshots).
+    # NOT reachable by URL: `internal` means only an X-Accel-Redirect from the
+    # backend can land here, after Django validated a short-lived signed link.
+    # Serving from disk keeps multi-GB files off gunicorn's 120 s worker timeout.
+    # The backend's Content-Disposition / Content-Type headers are preserved.
+    location /_protected/exports/ {
+        internal;
+        alias /protected/exports/;
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    location /_protected/snapshots/ {
+        internal;
+        alias /protected/snapshots/;
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
     # P0-8: proxy Django's static files (admin CSS/JS, collectstatic output,
     # served by WhiteNoise on the backend — config/settings_production.py)
     # to the backend. Without this location, /static/admin/... falls

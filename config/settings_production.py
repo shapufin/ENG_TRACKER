@@ -262,6 +262,15 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # noqa: F405
 # For CDN/S3 deployments, set this to False and use django-storages.
 SERVE_MEDIA_IN_PROD = True
 
+# Exports and year snapshots live on their own volumes, outside MEDIA_ROOT. The
+# frontend nginx mounts them read-only and serves them through internal
+# /_protected/ locations; Django only validates the signed link and answers
+# X-Accel-Redirect, so gunicorn's 120 s worker timeout never cuts a download.
+EXPORT_ROOT = os.environ.get('EXPORT_ROOT', '/app/exports')
+SNAPSHOT_ROOT = os.environ.get('SNAPSHOT_ROOT', '/app/snapshots')
+USE_X_ACCEL_REDIRECT = True
+EXPORT_JOBS_INLINE = False
+
 # SEC-18: Web Push keys come from VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY only.
 # Without them the push features raise ImproperlyConfigured instead of
 # generating throwaway keys into the container filesystem.

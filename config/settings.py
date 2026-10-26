@@ -197,6 +197,18 @@ STATIC_URL = 'static/'
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Generated files that must NOT live under MEDIA_ROOT (Site Backup would zip
+# them and /media/ would serve them). EXPORT_ROOT is transient (expires after a
+# day, never backed up); SNAPSHOT_ROOT is durable (year-close evidence, backed up
+# by the db-backup service). See docs/superpowers/specs/2026-10-26-year-close-snapshot-design.md.
+EXPORT_ROOT = BASE_DIR / 'var' / 'exports'
+SNAPSHOT_ROOT = BASE_DIR / 'var' / 'snapshots'
+# Production hands the file to nginx (X-Accel-Redirect); dev streams it from Django.
+USE_X_ACCEL_REDIRECT = False
+# Dev and tests run background export jobs at creation; production leaves them to
+# the scheduler service.
+EXPORT_JOBS_INLINE = True
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

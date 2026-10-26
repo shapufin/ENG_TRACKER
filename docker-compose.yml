@@ -140,6 +140,10 @@ services:
     volumes:
       - media_files:/app/media
       - static_files:/app/staticfiles
+      # Generated downloads: written here, served by the frontend nginx (read-only
+      # mounts below) after Django validates a signed link.
+      - export_files:/app/exports
+      - snapshot_files:/app/snapshots
     networks:
       - backend_net
       - frontend_net
@@ -158,6 +162,93 @@ services:
         limits:
           cpus: '1.0'
           memory: 2G
+
+  # Runs the background jobs of enabled plugins (onboarding/client exports, the yearly
+  # close). One process, no Celery: see core/plugins/scheduler.py. It is NOT optional --
+  # exports stay "queued" while it is down. Uses the backend image and environment but
+  # never migrates (RUN_MIGRATIONS=0); logs: `docker compose logs -f scheduler`.
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    command: ["python", "manage.py", "run_scheduler"]
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings_production
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
+      FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
+      # Fernet key(s) that encrypt two-factor seeds, comma separated (first encrypts, all
+      # decrypt). Carry it to any new server with SECRET_KEY; losing it locks out enrolled users.
+      MFA_ENCRYPTION_KEYS: ${MFA_ENCRYPTION_KEYS:?MFA_ENCRYPTION_KEYS is required}
+      ONLYOFFICE_DOCUMENT_SERVER_URL: ${ONLYOFFICE_DOCUMENT_SERVER_URL:-}
+      ONLYOFFICE_JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-}
+      USE_REDIS: "true"
+      # P1-5: Redis URL includes password
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-engtracker}
+      DB_USER: ${DB_USER:-engtracker}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      # P1-10: Database SSL — use 'prefer' by default, 'require' for managed DBs
+      DB_SSL_MODE: ${DB_SSL_MODE:-prefer}
+      # DEP-04: persistent DB connections (seconds). Replicas x GUNICORN_WORKERS
+      # connections must stay below Postgres max_connections (default 100).
+      DB_CONN_MAX_AGE: ${DB_CONN_MAX_AGE:-60}
+      # Never migrate here: the backend owns migrations and the boot-time reconciliation.
+      RUN_MIGRATIONS: "0"
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-True}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-}
+      # Leave unset to auto-invalidate cache on every rebuild via the image's
+      # baked BUILD_ID (see Dockerfile/entrypoint.sh). Set CACHE_VERSION here
+      # only to force a manual bump without rebuilding.
+      CACHE_VERSION: ${CACHE_VERSION:-}
+      # Optional: bootstraps the initial superuser on first start (see ensure_superuser command).
+      # Safe to leave set — no-ops once the user exists.
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-}
+      # Touched every tick; the healthcheck below fails when it goes stale.
+      SCHEDULER_HEARTBEAT_FILE: /tmp/scheduler.heartbeat
+    volumes:
+      # Read-only: the jobs read uploaded documents and write only to the volumes below.
+      - media_files:/app/media:ro
+      - export_files:/app/exports
+      - snapshot_files:/app/snapshots
+    networks:
+      # Same networks as the backend so future jobs can reach SMTP / push services.
+      - backend_net
+      - frontend_net
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    # The image HEALTHCHECK curls gunicorn on :8000, which this container does not run.
+    healthcheck:
+      test: ["CMD-SHELL", 'test $$(( $$(date +%s) - $$(stat -c %Y "$$SCHEDULER_HEARTBEAT_FILE") )) -lt 120']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
 
   frontend:
     build:
@@ -191,6 +282,11 @@ services:
     # so `curl localhost:8080` still works for local health checks/debugging.
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-8080}:8080"
+    volumes:
+      # Read-only: nginx serves these through internal /_protected/ locations when
+      # the backend answers X-Accel-Redirect (frontend/docker/nginx.conf.template).
+      - export_files:/protected/exports:ro
+      - snapshot_files:/protected/snapshots:ro
     networks:
       - frontend_net
     security_opt:
@@ -244,6 +340,9 @@ services:
     volumes:
       - db_backup:/backups
       - media_files:/media:ro
+      # Year-close evidence is durable, so it is archived too. Exports are
+      # transient (24 h) and regenerable, so export_files is deliberately NOT mounted.
+      - snapshot_files:/snapshots:ro
     # `$$` is compose's escape for a literal `$` that the shell expands.
     entrypoint: ["sh", "-c"]
     command:
@@ -271,6 +370,15 @@ services:
             rm -f "/backups/media_$$ts.tar.gz.part"
             echo "[db-backup] media archive FAILED, keeping existing backups" >&2
           fi
+          tar -czf "/backups/snapshots_$$ts.tar.gz.part" -C /snapshots .; rc=$$?
+          if [ "$$rc" -le 1 ]; then
+            mv "/backups/snapshots_$$ts.tar.gz.part" "/backups/snapshots_$$ts.tar.gz"
+            ls -1t /backups/snapshots_*.tar.gz | tail -n +"$$((keep + 1))" | xargs -r rm -f
+            echo "[db-backup] snapshot archive snapshots_$$ts.tar.gz written"
+          else
+            rm -f "/backups/snapshots_$$ts.tar.gz.part"
+            echo "[db-backup] snapshot archive FAILED, keeping existing backups" >&2
+          fi
           if [ "$${BACKUP_ONCE:-0}" = "1" ]; then exit 0; fi
           sleep "$$interval"
         done
@@ -285,6 +393,10 @@ volumes:
   media_files:
   static_files:
   db_backup:
+  # Generated downloads. export_files: transient, not backed up. snapshot_files:
+  # durable year-close evidence, archived by db-backup (snapshots_*.tar.gz).
+  export_files:
+  snapshot_files:
 
 networks:
   # P1-5: network segmentation
