@@ -86,4 +86,28 @@ describe("StandbyFormDialog", () => {
     expect(screen.getByText("Edit Standby")).toBeInTheDocument();
     expect(screen.queryByText("User")).not.toBeInTheDocument();
   });
+
+  it("keeps the clients of an archived record visible and ticked", () => {
+    render(
+      <StandbyFormDialog
+        {...baseProps}
+        editing={true}
+        editingLog={
+          {
+            id: 5,
+            client_ids: [3, 9],
+            client_names: ["Active Co", "Retired Co"],
+          } as any
+        }
+        clients={[{ id: 3, name: "Active Co" }]}
+        form={{ ...baseProps.form, client_ids: [3, 9] }}
+      />
+    );
+    // The archived client is not in the picker list, but the record still covers it.
+    expect(screen.getByText("Retired Co")).toBeInTheDocument();
+    expect(screen.getAllByTestId("checkbox")).toHaveLength(2);
+    expect(
+      screen.getAllByTestId("checkbox").every((box) => (box as HTMLInputElement).checked)
+    ).toBe(true);
+  });
 });

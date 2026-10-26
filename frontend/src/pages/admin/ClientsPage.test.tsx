@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ClientsPage } from "./ClientsPage";
 import * as useClientManagement from "./hooks/useClientManagement";
@@ -68,7 +68,9 @@ const withHook = (overrides: Record<string, unknown> = {}) =>
 
 const renderPage = () =>
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <ClientsPage />
     </QueryClientProvider>
   );
@@ -146,7 +148,9 @@ describe("ClientsPage", () => {
     renderPage();
     fireEvent.click(screen.getByRole("button", { name: /^Archived/ }));
     fireEvent.click(screen.getByRole("button", { name: "Unarchive OLD" }));
-    expect(mockHook.unarchiveMutation.mutate).toHaveBeenCalledWith(2);
+    expect(mockHook.unarchiveMutation.mutate).toHaveBeenCalledWith(2, {
+      onSuccess: expect.any(Function),
+    });
     fireEvent.click(screen.getByRole("button", { name: "Archived data OLD" }));
     expect(mockHook.setLifecycleTarget).toHaveBeenCalledWith(archived);
   });
@@ -167,6 +171,30 @@ describe("ClientsPage", () => {
     renderPage();
     expect(await screen.findByText(/3 users will be unassigned/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Archive client" }));
-    expect(mockHook.archiveMutation.mutate).toHaveBeenCalledWith(1);
+    expect(mockHook.archiveMutation.mutate).toHaveBeenCalledWith(1, {
+      onSuccess: expect.any(Function),
+    });
+  });
+
+  it("follows a just-archived client to the Archived view instead of dropping it", () => {
+    withHook({ clients: [active, archived], archiveTarget: active });
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Archive client" }));
+    const [, options] = mockHook.archiveMutation.mutate.mock.calls[0];
+    act(() => options.onSuccess());
+    // The default view is Active, so without the switch the row would vanish.
+    expect(screen.getByText("OLD")).toBeInTheDocument();
+    expect(screen.queryByText("MSC")).not.toBeInTheDocument();
+  });
+
+  it("follows a just-restored client back to the Active view", () => {
+    withHook({ clients: [active, archived] });
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /^Archived/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Unarchive OLD" }));
+    const [, options] = mockHook.unarchiveMutation.mutate.mock.calls[0];
+    act(() => options.onSuccess());
+    expect(screen.getByText("MSC")).toBeInTheDocument();
+    expect(screen.queryByText("OLD")).not.toBeInTheDocument();
   });
 });

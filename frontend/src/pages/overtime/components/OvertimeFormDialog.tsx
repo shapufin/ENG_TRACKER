@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,6 +115,21 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
     canManage("ticket_kpi") &&
     !!TicketLinkSection;
 
+  // Pickers only offer active clients, so a record that already points at an
+  // archived (or no-longer-assigned) client would render an empty field and
+  // could not be saved unchanged. Inject that one client back (G8).
+  const clientOptions = useMemo(() => {
+    const options = [...(clients ?? [])];
+    const recordClient = editingLog?.client;
+    if (editing && recordClient && !options.some((client) => client.id === recordClient)) {
+      options.push({
+        id: recordClient,
+        name: editingLog?.client_name ?? `Client ${recordClient}`,
+      });
+    }
+    return options;
+  }, [clients, editing, editingLog]);
+
   return (
     <FormDialog
       open={open}
@@ -139,7 +154,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
               <SelectValue placeholder="Select client" />
             </SelectTrigger>
             <SelectContent>
-              {clients?.map((c) => (
+              {clientOptions.map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>
                   {c.name}
                 </SelectItem>

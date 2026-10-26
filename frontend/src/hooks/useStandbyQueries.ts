@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { standbyService } from "@/services/standbyService";
-import { overtimeService } from "@/services/overtimeService";
 import { userService } from "@/services/userService";
 import { toast } from "sonner";
 import { handleApiError } from "@/lib/error-handler";
 import { buildCurrentMonthDateParams } from "@/lib/query-date-utils";
 import type { CustomDateRange } from "@/pages/hours_logs/components/useHoursLogPageState";
+import { useActiveClients } from "./useActiveClients";
 import {
   createCreateHandlers,
   createUpdateHandlers,
@@ -61,10 +61,7 @@ export const useStandbyQueries = (options: UseStandbyQueriesOptions) => {
     enabled: options.isAdmin,
   });
 
-  const { data: clients } = useQuery({
-    queryKey: ["overtime", "clients"],
-    queryFn: () => overtimeService.getClients(),
-  });
+  const { data: clients } = useActiveClients();
 
   const refetchStandbyData = async () => {
     await qc.invalidateQueries({ queryKey: ["standby"], refetchType: "active" });

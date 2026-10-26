@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ticketKPIService } from "../../services/ticketKPIService";
-import { overtimeService } from "@/services/overtimeService";
+import { useActiveClients } from "@/hooks/useActiveClients";
 import { toast } from "sonner";
 import type { ExportProfile, UploadPreview } from "../../types/ticketKPI";
 
@@ -20,10 +20,7 @@ export const useTicketKPIAdmin = () => {
     queryFn: () => ticketKPIService.getProfiles(),
   });
 
-  const { data: clients } = useQuery({
-    queryKey: ["overtime", "clients"],
-    queryFn: () => overtimeService.getClients(),
-  });
+  const { data: clients } = useActiveClients();
 
   const createMutation = useMutation({
     mutationFn: (data: Partial<ExportProfile>) => ticketKPIService.createProfile(data),

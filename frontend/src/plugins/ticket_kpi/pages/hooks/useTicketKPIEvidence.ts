@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
-import { overtimeService } from "@/services/overtimeService";
+import { useActiveClients } from "@/hooks/useActiveClients";
 import { handleApiError } from "@/lib/error-handler";
 import { ticketKPIService } from "../../services/ticketKPIService";
 import type { EvidenceType } from "../../types/ticketKPI";
@@ -42,11 +42,7 @@ export const useTicketKPIEvidence = ({ month, userId }: UseTicketKPIEvidenceOpti
     enabled: !!user,
   });
 
-  const { data: clients = [] } = useQuery({
-    queryKey: ["overtime", "clients"],
-    queryFn: () => overtimeService.getClients(),
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: clients = [] } = useActiveClients({ staleTime: 5 * 60 * 1000 });
 
   const availableClients = useMemo<Client[]>(() => {
     const userClientIds = user?.client_ids;

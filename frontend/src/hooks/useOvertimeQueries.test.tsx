@@ -10,7 +10,7 @@ vi.mock("@/services/overtimeService", () => ({
   overtimeService: {
     getLogs: vi.fn(),
     getSummary: vi.fn(),
-    getClients: vi.fn(),
+    getActiveClients: vi.fn(),
     createLog: vi.fn(),
     updateLog: vi.fn(),
     deleteLog: vi.fn(),
@@ -62,7 +62,7 @@ describe("useOvertimeQueries", () => {
   it("loads data and exposes mutations for user", async () => {
     vi.mocked(overtimeService.getLogs).mockResolvedValue({ results: [{ id: 1, user: 5 }] } as any);
     vi.mocked(overtimeService.getSummary).mockResolvedValue({ total: 10 } as any);
-    vi.mocked(overtimeService.getClients).mockResolvedValue([] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([] as any);
     vi.mocked(userService.getUsers).mockResolvedValue({ results: [] } as any);
 
     const queryClient = new QueryClient();
@@ -74,8 +74,26 @@ describe("useOvertimeQueries", () => {
     expect(result.current.createMutation).toBeDefined();
   });
 
+  it("feeds the client picker from the active-clients query, not the admin list", async () => {
+    vi.mocked(overtimeService.getLogs).mockResolvedValue({ results: [] } as any);
+    vi.mocked(overtimeService.getSummary).mockResolvedValue({} as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([
+      { id: 1, name: "Active" },
+    ] as any);
+
+    const queryClient = new QueryClient();
+    const { result } = renderHook(() => useOvertimeQueries({ userId: 1 }), {
+      wrapper: createWrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.clients).toEqual([{ id: 1, name: "Active" }]));
+    expect(overtimeService.getActiveClients).toHaveBeenCalled();
+    // The admin Clients page owns ["overtime","clients"] and must keep archived rows.
+    expect(queryClient.getQueryData(["overtime", "clients"])).toBeUndefined();
+    expect(queryClient.getQueryData(["overtime", "clients", "active"])).toBeDefined();
+  });
+
   it("returns empty logs when userId is undefined", async () => {
-    vi.mocked(overtimeService.getClients).mockResolvedValue([] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([] as any);
     const queryClient = new QueryClient();
     const { result } = renderHook(() => useOvertimeQueries({}), {
       wrapper: createWrapper(queryClient),
@@ -86,7 +104,7 @@ describe("useOvertimeQueries", () => {
   it("calls mutations", async () => {
     vi.mocked(overtimeService.getLogs).mockResolvedValue({ results: [] } as any);
     vi.mocked(overtimeService.getSummary).mockResolvedValue({} as any);
-    vi.mocked(overtimeService.getClients).mockResolvedValue([] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([] as any);
 
     const queryClient = new QueryClient();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");

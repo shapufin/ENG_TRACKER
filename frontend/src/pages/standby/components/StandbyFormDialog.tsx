@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,11 +8,13 @@ import { TimeHoursGrid } from "@/components/ui/TimeHoursGrid";
 import { UserSelectField } from "@/components/common/forms/UserSelectField";
 import { useFormFieldUpdater } from "@/components/common/forms/useFormFieldUpdater";
 import { Checkbox } from "@/components/ui/checkbox";
+import type { StandbyLog } from "@/types";
 
 interface StandbyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editing: boolean;
+  editingLog?: StandbyLog | null;
   isAdmin: boolean;
   form: {
     user: string;
@@ -45,6 +47,7 @@ export const StandbyFormDialog: React.FC<StandbyFormDialogProps> = ({
   open,
   onOpenChange,
   editing,
+  editingLog,
   isAdmin,
   form,
   formErrors,
@@ -57,6 +60,21 @@ export const StandbyFormDialog: React.FC<StandbyFormDialogProps> = ({
   onFormErrorsChange,
 }) => {
   const updateField = useFormFieldUpdater(form, formErrors, onFormChange, onFormErrorsChange);
+
+  // Pickers only offer active clients, so the clients an existing standby
+  // covers would disappear from this list (and become impossible to see or
+  // untick). Inject them from the record itself (G8).
+  const clientOptions = useMemo(() => {
+    const options = [...(clients ?? [])];
+    if (editing && editingLog) {
+      (editingLog.client_ids ?? []).forEach((id, index) => {
+        if (!options.some((client) => client.id === id)) {
+          options.push({ id, name: editingLog.client_names?.[index] ?? `Client ${id}` });
+        }
+      });
+    }
+    return options;
+  }, [clients, editing, editingLog]);
 
   const toggleClient = (clientId: number) => {
     const current = form.client_ids || [];
@@ -108,8 +126,8 @@ export const StandbyFormDialog: React.FC<StandbyFormDialogProps> = ({
         <div className="space-y-2">
           <Label>Clients (optional — select all clients covered by this standby)</Label>
           <div className="no-scrollbar max-h-32 space-y-2 overflow-y-auto rounded-xl border p-2.5">
-            {clients?.length ? (
-              clients.map((c) => (
+            {clientOptions.length ? (
+              clientOptions.map((c) => (
                 <div key={c.id} className="flex items-center gap-2">
                   <Checkbox
                     id={`standby-client-${c.id}`}

@@ -4,7 +4,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { UploadForm } from "../components/UploadForm";
 import { UploadPreviewPanel } from "../components/UploadPreviewPanel";
 import { ticketKPIService } from "../services/ticketKPIService";
-import { overtimeService } from "@/services/overtimeService";
+import { useActiveClients } from "@/hooks/useActiveClients";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import type { UploadPreview } from "../types/ticketKPI";
@@ -32,10 +32,7 @@ export const TicketUploadPage: React.FC = () => {
     queryFn: () => ticketKPIService.getProfiles(),
   });
 
-  const { data: allClients } = useQuery({
-    queryKey: ["overtime", "clients"],
-    queryFn: () => overtimeService.getClients(),
-  });
+  const { data: allClients } = useActiveClients();
 
   // Filter clients to those assigned to the current user (defense-in-depth;
   // backend also scopes ClientViewSet to user.profile.clients for non-admins).
@@ -58,7 +55,10 @@ export const TicketUploadPage: React.FC = () => {
   // opt into "save this mapping" — matches the backend check in
   // TicketUploadViewSet.import_batch.
   const canSaveMapping = Boolean(
-    user && (user.is_staff || user.is_superuser || (selectedProfile && selectedProfile.created_by === user.id))
+    user &&
+    (user.is_staff ||
+      user.is_superuser ||
+      (selectedProfile && selectedProfile.created_by === user.id))
   );
 
   const currentMapping =

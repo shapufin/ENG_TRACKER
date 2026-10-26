@@ -40,6 +40,17 @@ export const overtimeService = {
     return normalizeList(data);
   },
 
+  /**
+   * Only the active clients this user may record against — every form picker.
+   *
+   * Archived clients must never be offered for a new record (the API rejects
+   * them anyway), but an existing record of an archived client still has to
+   * render its own client, so edit dialogs inject that one client back.
+   */
+  async getActiveClients(): Promise<Client[]> {
+    return overtimeService.getClients({ is_active: true });
+  },
+
   /** All active clients — for the Settings self-assignment picker. */
   async getAvailableClients(): Promise<Client[]> {
     const { data } = await api.get<Client[] | PaginatedResponse<Client>>(

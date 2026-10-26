@@ -27,6 +27,12 @@ describe("overtimeService URL contracts", () => {
     expect(api.get).toHaveBeenCalledWith("/overtime/clients/", { params: undefined });
   });
 
+  it("getActiveClients asks the API for active clients only", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: [] } as any);
+    await overtimeService.getActiveClients();
+    expect(api.get).toHaveBeenCalledWith("/overtime/clients/", { params: { is_active: true } });
+  });
+
   it("getLogs calls /overtime/logs/", async () => {
     vi.mocked(api.get).mockResolvedValue({ data: { results: [], count: 0 } } as any);
     await overtimeService.getLogs();

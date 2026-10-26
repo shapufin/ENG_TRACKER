@@ -203,6 +203,7 @@ export const StandbyPage: React.FC = () => {
         open={formOpen}
         onOpenChange={setFormOpen}
         editing={!!editing}
+        editingLog={editing}
         isAdmin={isAdmin}
         form={form}
         formErrors={formErrors}

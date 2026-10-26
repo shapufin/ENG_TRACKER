@@ -18,7 +18,7 @@ vi.mock("@/plugins/ticket_kpi/services/ticketKPIService", () => ({
 }));
 
 vi.mock("@/services/overtimeService", () => ({
-  overtimeService: { getClients: vi.fn() },
+  overtimeService: { getActiveClients: vi.fn() },
 }));
 
 vi.mock("../components/UploadForm", () => ({
@@ -61,7 +61,7 @@ describe("TicketUploadPage", () => {
   it("pre-fills the profile and clients from the last upload", async () => {
     vi.mocked(ticketKPIService.getMyBatches).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.getProfiles).mockResolvedValue([{ id: 7, name: "P" }] as any);
-    vi.mocked(overtimeService.getClients).mockResolvedValue([{ id: 3, name: "C" }] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([{ id: 3, name: "C" }] as any);
     saveLastUploadSelection(1, { profileId: 7, clientIds: [3] });
 
     render(<TicketUploadPage />, { wrapper });
@@ -74,7 +74,7 @@ describe("TicketUploadPage", () => {
   it("does not resurrect a profile that is no longer in the current list", async () => {
     vi.mocked(ticketKPIService.getMyBatches).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.getProfiles).mockResolvedValue([{ id: 8, name: "Other" }] as any);
-    vi.mocked(overtimeService.getClients).mockResolvedValue([] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([] as any);
     saveLastUploadSelection(1, { profileId: 7, clientIds: [] });
 
     render(<TicketUploadPage />, { wrapper });
@@ -86,7 +86,7 @@ describe("TicketUploadPage", () => {
   it("saves the profile and clients after a successful import", async () => {
     vi.mocked(ticketKPIService.getMyBatches).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.getProfiles).mockResolvedValue([{ id: 7, name: "P" }] as any);
-    vi.mocked(overtimeService.getClients).mockResolvedValue([{ id: 3, name: "C" }] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([{ id: 3, name: "C" }] as any);
     vi.mocked(ticketKPIService.analyzeFile).mockResolvedValue({
       data: { total_rows: 1, suggested_profile: { id: 7 }, suggested_month: "2026-03-01" },
     } as any);
@@ -115,7 +115,7 @@ describe("TicketUploadPage", () => {
   it("analyzes and previews file", async () => {
     vi.mocked(ticketKPIService.getMyBatches).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.getProfiles).mockResolvedValue([] as any);
-    vi.mocked(overtimeService.getClients).mockResolvedValue([] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.analyzeFile).mockResolvedValue({
       data: { total_rows: 5, suggested_profile: { id: 1 } },
     } as any);
@@ -133,7 +133,7 @@ describe("TicketUploadPage", () => {
   it("analyzes without a month picked, using the file's suggested_month", async () => {
     vi.mocked(ticketKPIService.getMyBatches).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.getProfiles).mockResolvedValue([] as any);
-    vi.mocked(overtimeService.getClients).mockResolvedValue([] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.analyzeFile).mockResolvedValue({
       data: { total_rows: 5, suggested_profile: { id: 1 }, suggested_month: "2026-03-01" },
     } as any);
@@ -144,17 +144,13 @@ describe("TicketUploadPage", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Analyze"));
     });
-    expect(ticketKPIService.previewUpload).toHaveBeenCalledWith(
-      expect.anything(),
-      1,
-      "2026-03-01"
-    );
+    expect(ticketKPIService.previewUpload).toHaveBeenCalledWith(expect.anything(), 1, "2026-03-01");
   });
 
   it("errors instead of previewing when neither the user nor the file supplied a month", async () => {
     vi.mocked(ticketKPIService.getMyBatches).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.getProfiles).mockResolvedValue([] as any);
-    vi.mocked(overtimeService.getClients).mockResolvedValue([] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.analyzeFile).mockResolvedValue({
       data: { total_rows: 5, suggested_profile: { id: 1 } },
     } as any);
@@ -173,7 +169,7 @@ describe("TicketUploadPage", () => {
   it("shows error when no profile found", async () => {
     vi.mocked(ticketKPIService.getMyBatches).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.getProfiles).mockResolvedValue([] as any);
-    vi.mocked(overtimeService.getClients).mockResolvedValue([] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.analyzeFile).mockResolvedValue({
       data: { total_rows: 5, suggested_profile: null },
     } as any);
@@ -190,7 +186,7 @@ describe("TicketUploadPage", () => {
   it("re-previews with a fixed mapping and carries it into the import", async () => {
     vi.mocked(ticketKPIService.getMyBatches).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.getProfiles).mockResolvedValue([{ id: 1, name: "P" }] as any);
-    vi.mocked(overtimeService.getClients).mockResolvedValue([] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.analyzeFile).mockResolvedValue({
       data: {
         total_rows: 5,
@@ -238,7 +234,7 @@ describe("TicketUploadPage", () => {
   it("handles analyze error", async () => {
     vi.mocked(ticketKPIService.getMyBatches).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.getProfiles).mockResolvedValue([] as any);
-    vi.mocked(overtimeService.getClients).mockResolvedValue([] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([] as any);
     vi.mocked(ticketKPIService.analyzeFile).mockRejectedValue({
       response: { data: { error: "fail" } },
     });

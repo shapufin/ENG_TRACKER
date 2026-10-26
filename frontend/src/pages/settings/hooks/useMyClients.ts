@@ -15,8 +15,8 @@ interface UseMyClientsArgs {
 /**
  * Loads all active clients (for the picker) and tracks the user's selected
  * set. Saving calls the self-assign endpoint, then refreshes auth state and
- * invalidates the scoped `["overtime", "clients"]` query so every form that
- * sources clients from `getClients()` re-fetches with the new assignment.
+ * invalidates the `["overtime", "clients"]` prefix, which is what the pickers
+ * (`getActiveClients()`) and the admin Clients page both read.
  *
  * Local `selected` state is initialized from `assignedClientIds` and reset on
  * a successful save (the only path that changes the assignment in this UI);
@@ -36,7 +36,7 @@ export const useMyClients = ({ assignedClientIds, onAssignedChange }: UseMyClien
     onSuccess: async (_data, savedIds) => {
       setSelected(savedIds);
       await onAssignedChange();
-      // Forms read from the scoped getClients() — invalidate so they re-fetch.
+      // Forms read the scoped, active-only client list — invalidate so they re-fetch.
       await qc.invalidateQueries({ queryKey: ["overtime", "clients"] });
       // Keep the TL's Client Assignment table (Settings) in sync with self-service changes.
       await qc.invalidateQueries({ queryKey: ["team", "members"] });

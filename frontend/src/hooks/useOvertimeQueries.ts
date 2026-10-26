@@ -3,6 +3,7 @@ import { overtimeService } from "@/services/overtimeService";
 import { userService } from "@/services/userService";
 import { buildCurrentMonthDateParams } from "@/lib/query-date-utils";
 import type { CustomDateRange } from "@/pages/hours_logs/components/useHoursLogPageState";
+import { useActiveClients } from "./useActiveClients";
 
 import {
   createCreateHandlers,
@@ -62,10 +63,7 @@ export const useOvertimeQueries = (options: UseOvertimeQueriesOptions) => {
     enabled: !!options.userId,
   });
 
-  const { data: clients } = useQuery({
-    queryKey: ["overtime", "clients"],
-    queryFn: () => overtimeService.getClients(),
-  });
+  const { data: clients } = useActiveClients();
 
   const { data: users } = useQuery({
     queryKey: ["users"],

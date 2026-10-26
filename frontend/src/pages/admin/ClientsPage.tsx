@@ -88,7 +88,11 @@ export const ClientsPage: React.FC = () => {
         onEdit={openEdit}
         canManage={isSuperuser}
         onArchive={setArchiveTarget}
-        onUnarchive={(client) => unarchiveMutation.mutate(client.id)}
+        // Archiving moves the row out of the default "Active" view; follow it so
+        // the client the admin just retired stays on screen instead of vanishing.
+        onUnarchive={(client) =>
+          unarchiveMutation.mutate(client.id, { onSuccess: () => setStatus("active") })
+        }
         onManageArchived={setLifecycleTarget}
       />
 
@@ -106,7 +110,7 @@ export const ClientsPage: React.FC = () => {
       <ArchiveClientDialog
         client={archiveTarget}
         onOpenChange={(open) => !open && setArchiveTarget(null)}
-        onConfirm={(id) => archiveMutation.mutate(id)}
+        onConfirm={(id) => archiveMutation.mutate(id, { onSuccess: () => setStatus("archived") })}
         isArchiving={archiveMutation.isPending}
       />
 
