@@ -58,6 +58,7 @@ export interface UserDetailSavePayload {
   is_albanian_tl_role?: boolean;
   is_cr_admin?: boolean;
   roles?: string[];
+  mfa_required?: boolean;
 }
 
 interface TeamOption {
@@ -89,6 +90,8 @@ interface UserDetailPanelProps {
   techsData?: Tech[];
   italianTLs?: LeaderOption[];
   albanianTLs?: LeaderOption[];
+  currentUser?: { id?: number; username?: string } | null;
+  onNavigateToSettings?: () => void;
 }
 
 type EditableField =
@@ -684,12 +687,24 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
   techsData = [],
   italianTLs = [],
   albanianTLs = [],
+  currentUser = null,
+  onNavigateToSettings,
 }) => {
   const [editing, setEditing] = useState<EditableField | null>(null);
   if (!profile) return null;
 
   const username = profile.user?.username ?? "";
   const userId = profile.user?.id;
+  const isSelf = currentUser
+    ? currentUser.id === userId || currentUser.username === username
+    : false;
+  const goToSettings = () => {
+    if (onNavigateToSettings) {
+      onNavigateToSettings();
+    } else {
+      window.location.href = "/settings";
+    }
+  };
   const teams = profile.teams_detail ?? [];
   const techs = profile.techs_detail ?? [];
   const roles = profile.user?.roles ?? [];
@@ -959,21 +974,61 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
               <DetailDrawerRow
                 label="Two-factor"
                 action={
-                  profile.mfa_enabled && onResetMfa ? (
+                  profile.mfa_enabled ? (
+                    isSelf ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="control-sm"
+                        onClick={goToSettings}
+                        aria-label="Manage two-factor authentication in Settings"
+                      >
+                        Manage in Settings
+                      </Button>
+                    ) : onResetMfa ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="control-sm"
+                        onClick={() => onResetMfa(profile)}
+                        aria-label={`Reset two-factor authentication for ${username}`}
+                      >
+                        Reset two-factor
+                      </Button>
+                    ) : undefined
+                  ) : isSelf ? (
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="control-sm"
+                      onClick={goToSettings}
+                      aria-label="Set up two-factor authentication in Settings"
+                    >
+                      Set up two-factor
+                    </Button>
+                  ) : onSaveField && userId !== undefined ? (
                     <Button
                       type="button"
                       variant="outline"
                       size="control-sm"
-                      onClick={() => onResetMfa(profile)}
-                      aria-label={`Reset two-factor authentication for ${username}`}
+                      disabled={isSaving}
+                      onClick={() => onSaveField(userId, { mfa_required: !profile.mfa_required })}
+                      aria-label={
+                        profile.mfa_required
+                          ? `Remove two-factor requirement for ${username}`
+                          : `Require two-factor authentication for ${username}`
+                      }
                     >
-                      Reset two-factor
+                      {profile.mfa_required ? "Remove requirement" : "Require 2FA"}
                     </Button>
                   ) : undefined
                 }
               >
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={profile.mfa_enabled ? "default" : "secondary"} className="text-xs font-normal">
+                  <Badge
+                    variant={profile.mfa_enabled ? "default" : "secondary"}
+                    className="text-xs font-normal"
+                  >
                     {profile.mfa_enabled ? "On" : "Not set up"}
                   </Badge>
                   {profile.mfa_required && (

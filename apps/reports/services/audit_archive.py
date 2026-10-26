@@ -12,7 +12,7 @@ import json
 import logging
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +23,7 @@ from core.utils.timezone_local import business_today, business_tz
 
 logger = logging.getLogger(__name__)
 
-ARCHIVE_FILENAME_REGEX = re.compile(r'^audit_logs_(\d{4})_(\d{2})\.json\.gz$')
+ARCHIVE_FILENAME_REGEX = re.compile(r'^audit_logs_(\d{4})_(\d{2})(?:_\w+)?\.json\.gz$')
 
 
 def get_archive_dir() -> Path:
@@ -93,12 +93,14 @@ def get_archive_status() -> dict[str, Any]:
     archives = []
     if archive_dir.exists():
         for file in sorted(archive_dir.glob('audit_logs_*.json.gz'), reverse=True):
+            if not ARCHIVE_FILENAME_REGEX.match(file.name):
+                continue
             stat = file.stat()
             archives.append({
                 'filename': file.name,
                 'size_bytes': stat.st_size,
                 'size_formatted': _format_file_size(stat.st_size),
-                'created_at': datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+                'created_at': datetime.fromtimestamp(stat.st_mtime, tz=dt_timezone.utc).isoformat(),
             })
 
     return {
@@ -217,10 +219,20 @@ def archive_month(month_str: str | None = None, delete_after: bool = True) -> di
         if not temp_path.exists() or temp_path.stat().st_size == 0:
             raise IOError("Archive compression failed: file is missing or zero bytes.")
 
-        # Atomic replace
-        if target_path.exists():
-            target_path.unlink()
-        temp_path.replace(target_path)
+        # Atomic replace or safe fallback if target is locked by an OS reader/stream
+        try:
+            if target_path.exists():
+                target_path.unlink()
+            temp_path.replace(target_path)
+        except (PermissionError, OSError) as exc:
+            logger.warning(
+                f"Could not overwrite target file {target_path} ({exc}); generating timestamped archive filename."
+            )
+            stamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"audit_logs_{year}_{month:02d}_{stamp}.json.gz"
+            target_path = archive_dir / filename
+            temp_path.replace(target_path)
+
         final_size = target_path.stat().st_size
 
         # Delete archived records from the live database

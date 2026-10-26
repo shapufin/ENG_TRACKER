@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, ShieldCheck } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getInitials, getUserDisplayName } from "@/components/calendar/initials";
 
@@ -59,6 +59,13 @@ export const HeaderProfileMenu: React.FC<HeaderProfileMenuProps> = ({
             className="hover:bg-accent flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm"
           >
             <Settings className="h-4 w-4" /> Settings
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/settings")}
+            className="hover:bg-accent flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm"
+          >
+            <ShieldCheck className="h-4 w-4" /> Security &amp; 2FA
           </button>
           <button
             type="button"

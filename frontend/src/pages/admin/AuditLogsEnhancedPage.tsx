@@ -78,18 +78,26 @@ export const AuditLogsEnhancedPage: React.FC = () => {
     try {
       setIsArchiving(true);
       const result = await auditService.archivePreviousMonth();
-      if (result.archived_count > 0 && result.filename) {
-        const blob = await auditService.downloadArchive(result.filename);
-        downloadBlobResponse(blob, result.filename);
-        toast.success(
-          `Successfully compressed ${result.archived_count} logs into ${result.filename} and pruned them from the database.`
-        );
-      } else {
-        toast.info(result.message || "No logs available to archive for the previous month.");
-      }
       queryClient.invalidateQueries({ queryKey: ["audit-logs"] });
       refetchArchiveStatus();
       setIsArchiveDialogOpen(false);
+
+      if (result.archived_count > 0 && result.filename) {
+        toast.success(
+          `Successfully compressed ${result.archived_count} logs into ${result.filename} and pruned them from the database.`
+        );
+        // Attempt download independently so a browser download block doesn't mask the successful archiving
+        try {
+          const blob = await auditService.downloadArchive(result.filename);
+          downloadBlobResponse(blob, result.filename);
+        } catch {
+          toast.info(
+            `Archive ${result.filename} saved on server. You can download it anytime from the archive list below.`
+          );
+        }
+      } else {
+        toast.info(result.message || "No logs available to archive for the previous month.");
+      }
     } catch (err) {
       handleApiError(err);
     } finally {

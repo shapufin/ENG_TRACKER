@@ -265,4 +265,110 @@ describe("UserDetailPanel", () => {
       is_cr_admin: false,
     });
   });
+
+  it("shows 'Set up two-factor' when viewing self without 2FA enabled", () => {
+    const onNavigateToSettings = vi.fn();
+    const selfProfile = {
+      ...profile,
+      user: { id: 42, username: "admin", email: "admin@example.com" },
+      mfa_enabled: false,
+      mfa_required: false,
+    } as unknown as UserProfile;
+
+    render(
+      <UserDetailPanel
+        profile={selfProfile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+        currentUser={{ id: 42, username: "admin" }}
+        onNavigateToSettings={onNavigateToSettings}
+      />
+    );
+
+    const setupBtn = screen.getByRole("button", {
+      name: "Set up two-factor authentication in Settings",
+    });
+    expect(setupBtn).toBeInTheDocument();
+    fireEvent.click(setupBtn);
+    expect(onNavigateToSettings).toHaveBeenCalled();
+  });
+
+  it("shows 'Manage in Settings' when viewing self with 2FA enabled", () => {
+    const onNavigateToSettings = vi.fn();
+    const selfProfile = {
+      ...profile,
+      user: { id: 42, username: "admin", email: "admin@example.com" },
+      mfa_enabled: true,
+      mfa_required: false,
+    } as unknown as UserProfile;
+
+    render(
+      <UserDetailPanel
+        profile={selfProfile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+        currentUser={{ id: 42, username: "admin" }}
+        onNavigateToSettings={onNavigateToSettings}
+      />
+    );
+
+    const manageBtn = screen.getByRole("button", {
+      name: "Manage two-factor authentication in Settings",
+    });
+    expect(manageBtn).toBeInTheDocument();
+    fireEvent.click(manageBtn);
+    expect(onNavigateToSettings).toHaveBeenCalled();
+  });
+
+  it("allows admin to toggle require 2FA on another user", () => {
+    const onSaveField = vi.fn();
+    const otherProfile = {
+      ...profile,
+      user: { id: 99, username: "bob", email: "bob@example.com" },
+      mfa_enabled: false,
+      mfa_required: false,
+    } as unknown as UserProfile;
+
+    const { rerender } = render(
+      <UserDetailPanel
+        profile={otherProfile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveField={onSaveField}
+        currentUser={{ id: 42, username: "admin" }}
+      />
+    );
+
+    const requireBtn = screen.getByRole("button", {
+      name: "Require two-factor authentication for bob",
+    });
+    expect(requireBtn).toBeInTheDocument();
+    fireEvent.click(requireBtn);
+    expect(onSaveField).toHaveBeenCalledWith(99, { mfa_required: true });
+
+    // When mfa_required is true
+    const requiredProfile = { ...otherProfile, mfa_required: true } as unknown as UserProfile;
+    rerender(
+      <UserDetailPanel
+        profile={requiredProfile}
+        onOpenChange={vi.fn()}
+        onEdit={vi.fn()}
+        onReset={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveField={onSaveField}
+        currentUser={{ id: 42, username: "admin" }}
+      />
+    );
+
+    const removeBtn = screen.getByRole("button", { name: "Remove two-factor requirement for bob" });
+    expect(removeBtn).toBeInTheDocument();
+    fireEvent.click(removeBtn);
+    expect(onSaveField).toHaveBeenCalledWith(99, { mfa_required: false });
+  });
 });
