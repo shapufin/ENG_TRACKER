@@ -791,6 +791,7 @@ class HbprAlbanianTlAssignmentSerializer(serializers.ModelSerializer):
     next_due_on = serializers.SerializerMethodField()
     cadence_status = serializers.SerializerMethodField()
     evidence_count = serializers.SerializerMethodField()
+    cadence_display = serializers.CharField(read_only=True)
 
     class Meta:
         from apps.users.models.hbpr import HbprAlbanianTlAssignment as _Model
@@ -799,7 +800,8 @@ class HbprAlbanianTlAssignmentSerializer(serializers.ModelSerializer):
         fields = [
             "id", "hbpr", "albanian_tl",
             "hbpr_detail", "albanian_tl_detail",
-            "cadence", "effective_from", "effective_to",
+            "cadence", "cadence_display", "cadence_day_of_week", "cadence_nth_week",
+            "effective_from", "effective_to",
             "assigned_by", "ended_by",
             "is_current", "last_meeting_on", "next_due_on",
             "cadence_status", "evidence_count",
@@ -807,19 +809,14 @@ class HbprAlbanianTlAssignmentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "assigned_by", "ended_by", "is_current", "last_meeting_on",
-            "next_due_on", "cadence_status", "evidence_count",
+            "next_due_on", "cadence_status", "evidence_count", "cadence_display",
             "created_at", "updated_at",
         ]
 
     def update(self, instance, validated_data):
-        # Identity and range are immutable after creation: reassignment and
-        # ending go through the service (reassign/end actions) so overlap
-        # checks and audit fields cannot be bypassed via PATCH.
-        # `effective_from` is included because the DB partial-unique only
-        # constrains OPEN rows — moving the start date backward could silently
-        # overlap a closed historical range with no error. To change the range,
-        # end + create (or use `reassign`).
-        immutable = {"hbpr", "albanian_tl", "effective_from", "effective_to"}
+        # Identity and ending date are immutable via direct update:
+        # Reassignment and ending go through dedicated actions (reassign/end).
+        immutable = {"hbpr", "albanian_tl", "effective_to"}
         attempted = sorted(immutable & set(self.initial_data))
         if attempted:
             from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -833,7 +830,43 @@ class HbprAlbanianTlAssignmentSerializer(serializers.ModelSerializer):
                     for field in attempted
                 }
             )
-        return super().update(instance, validated_data)
+
+        from apps.users.services.hbpr_assignments import (
+            AssignmentError,
+            update_assignment,
+        )
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+
+        kwargs = {"assignment": instance}
+        if "cadence" in validated_data:
+            kwargs["cadence"] = validated_data["cadence"]
+
+        if "cadence_day_of_week" in validated_data:
+            kwargs["cadence_day_of_week"] = validated_data["cadence_day_of_week"]
+        elif (
+            "cadence_day_of_week" in self.initial_data
+            and self.initial_data["cadence_day_of_week"] in (None, "")
+        ):
+            kwargs["cadence_day_of_week"] = None
+
+        if "cadence_nth_week" in validated_data:
+            kwargs["cadence_nth_week"] = validated_data["cadence_nth_week"]
+        elif (
+            "cadence_nth_week" in self.initial_data
+            and self.initial_data["cadence_nth_week"] in (None, "")
+        ):
+            kwargs["cadence_nth_week"] = None
+
+        if "effective_from" in validated_data:
+            kwargs["effective_from"] = validated_data["effective_from"]
+
+        req = self.context.get("request")
+        actor = req.user if req and getattr(req, "user", None) else None
+
+        try:
+            return update_assignment(**kwargs, actor=actor)
+        except AssignmentError as e:
+            raise DRFValidationError({"detail": str(e)})
 
     def get_hbpr_detail(self, obj) -> dict:
         user = obj.hbpr

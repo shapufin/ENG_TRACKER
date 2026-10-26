@@ -33,7 +33,7 @@ export const AssignedLeaderCard: React.FC<AssignedLeaderCardProps> = ({ leader, 
           <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
             <UsersRound className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             {leader.team_size} {leader.team_size === 1 ? "member" : "members"} ·{" "}
-            {CADENCE_LABELS[leader.cadence]}
+            {leader.cadence_display || CADENCE_LABELS[leader.cadence]}
           </p>
         </div>
       </div>

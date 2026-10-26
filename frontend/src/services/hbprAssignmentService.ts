@@ -3,6 +3,7 @@ import type {
   HbprAssignment,
   HbprAssignmentPayload,
   HbprReassignPayload,
+  HbprUpdateAssignmentPayload,
 } from "@/types/hbprAssignment";
 import type { PaginatedResponse } from "@/types";
 
@@ -13,6 +14,10 @@ export const hbprAssignmentService = {
     api.get<HbprAssignment[] | PaginatedResponse<HbprAssignment>>(`${BASE}/`, { params }),
 
   create: (data: HbprAssignmentPayload) => api.post<HbprAssignment>(`${BASE}/`, data),
+
+  /** Safely update cadence, recurrence pattern, or start date. */
+  update: (id: number, data: HbprUpdateAssignmentPayload) =>
+    api.patch<HbprAssignment>(`${BASE}/${id}/`, data),
 
   /** Close an assignment on a date, retaining it as history. */
   end: (id: number, effective_to: string) =>

@@ -391,6 +391,7 @@ def build_year_end_pack(assignment, year: int, evidence_qs) -> dict:
             'albanian_tl_name': _pack_name(assignment.albanian_tl),
             'hbpr_name': _pack_name(assignment.hbpr),
             'cadence': assignment.cadence,
+            'cadence_display': assignment.cadence_display,
             'effective_from': assignment.effective_from.isoformat(),
             'effective_to': assignment.effective_to.isoformat()
             if assignment.effective_to else None,

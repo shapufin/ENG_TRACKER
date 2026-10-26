@@ -1,11 +1,14 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserAvatar } from "@/components/calendar/UserAvatar";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
-import { CADENCE_LABELS, CADENCE_STATUS_LABELS } from "@/types/hbprAssignment";
-import type { HbprAssignment, HbprCadenceStatus } from "@/types/hbprAssignment";
+import {
+  CADENCE_LABELS,
+  CADENCE_STATUS_LABELS,
+  type HbprAssignment,
+  type HbprCadenceStatus,
+} from "@/types/hbprAssignment";
 
 const STATUS_TONE: Record<HbprCadenceStatus, "success" | "warning" | "destructive" | "neutral"> = {
   on_track: "success",
@@ -15,48 +18,36 @@ const STATUS_TONE: Record<HbprCadenceStatus, "success" | "warning" | "destructiv
   ended: "neutral",
 };
 
-/**
- * Column definitions for the Admin → HBPR assignments table.
- * `onEnd` receives the row being ended so the page can seed the confirm dialog.
- *
- * Sizes are the measured header/content width plus slack: the previous values
- * were below their own header's minimum (Cadence, Effective from/to, Log
- * entries), so those columns grew past their declared width and the 9-column
- * table ran 82px wider than its 1440px viewport. The two identity columns
- * truncate their name with a tooltip.
- */
 export const useHbprAssignmentColumns = (
-  onEnd: (row: HbprAssignment) => void
+  onEnd: (row: HbprAssignment) => void,
+  onEdit: (row: HbprAssignment) => void
 ): AppColumnDef<HbprAssignment>[] =>
   useMemo(
     () => [
       {
         id: "hbpr",
-        accessorKey: "hbpr_detail.name",
-        header: "HBPR",
-        size: 130,
+        accessorFn: (row) => row.hbpr_detail.name,
+        header: "HR Business Partner",
+        size: 190,
         cell: ({ row }) => (
-          <span className="flex min-w-0 items-center gap-2.5">
-            <UserAvatar name={row.original.hbpr_detail.name} size="sm" />
-            <span
-              className="text-foreground truncate font-medium"
-              title={row.original.hbpr_detail.name}
-            >
-              {row.original.hbpr_detail.name}
+          <span className="text-foreground font-medium">
+            {row.original.hbpr_detail.name}
+            <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+              #{row.original.hbpr}
             </span>
           </span>
         ),
       },
       {
         id: "albanian_tl",
-        accessorKey: "albanian_tl_detail.name",
-        header: "Albanian TL",
-        size: 130,
+        accessorFn: (row) => row.albanian_tl_detail.name,
+        header: "Albanian team leader",
+        size: 190,
         cell: ({ row }) => (
-          <span className="flex min-w-0 items-center gap-2.5">
-            <UserAvatar name={row.original.albanian_tl_detail.name} size="sm" />
-            <span className="truncate" title={row.original.albanian_tl_detail.name}>
-              {row.original.albanian_tl_detail.name}
+          <span className="text-foreground font-medium">
+            {row.original.albanian_tl_detail.name}
+            <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+              #{row.original.albanian_tl}
             </span>
           </span>
         ),
@@ -65,8 +56,8 @@ export const useHbprAssignmentColumns = (
         id: "cadence",
         accessorKey: "cadence",
         header: "Cadence",
-        size: 108,
-        cell: ({ row }) => CADENCE_LABELS[row.original.cadence],
+        size: 160,
+        cell: ({ row }) => row.original.cadence_display || CADENCE_LABELS[row.original.cadence],
       },
       {
         id: "cadence_status",
@@ -130,19 +121,29 @@ export const useHbprAssignmentColumns = (
         id: "actions",
         meta: { actionsDisplay: "column" },
         header: "Actions",
-        size: 90,
+        size: 150,
         cell: ({ row }) =>
           row.original.is_current ? (
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label={`End assignment between ${row.original.hbpr_detail.name} and ${row.original.albanian_tl_detail.name}`}
-              onClick={() => onEnd(row.original)}
-            >
-              End
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label={`Edit assignment for ${row.original.albanian_tl_detail.name}`}
+                onClick={() => onEdit(row.original)}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label={`End assignment between ${row.original.hbpr_detail.name} and ${row.original.albanian_tl_detail.name}`}
+                onClick={() => onEnd(row.original)}
+              >
+                End
+              </Button>
+            </div>
           ) : null,
       },
     ],
-    [onEnd]
+    [onEnd, onEdit]
   );

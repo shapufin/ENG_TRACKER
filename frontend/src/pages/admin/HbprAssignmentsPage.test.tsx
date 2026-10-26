@@ -11,6 +11,7 @@ vi.mock("@/services/hbprAssignmentService", () => ({
   hbprAssignmentService: {
     list: vi.fn(),
     create: vi.fn(),
+    update: vi.fn(),
     end: vi.fn(),
     reassign: vi.fn(),
   },
@@ -158,5 +159,34 @@ describe("HbprAssignmentsPage", () => {
     await openArchiveTab();
     expect(await screen.findByText(/older than 6 months/i)).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument(); // evidence_count badge
+  });
+
+  it("offers Edit for active assignments and updates cadence and start date", async () => {
+    vi.mocked(hbprAssignmentService.list).mockResolvedValue({
+      data: [assignment],
+    } as never);
+    vi.mocked(hbprAssignmentService.update).mockResolvedValue({
+      data: { ...assignment, cadence: "monthly", cadence_display: "Monthly (2nd Thursday)" },
+    } as never);
+
+    renderPage();
+    const editBtn = await screen.findByRole("button", { name: /edit assignment for enri leader/i });
+    expect(editBtn).toBeInTheDocument();
+    fireEvent.click(editBtn);
+
+    expect(await screen.findByText("Edit HBPR assignment")).toBeInTheDocument();
+    expect(screen.getByText("Elda Partner ↔ Enri Leader")).toBeInTheDocument();
+
+    // Change start date and submit
+    const fromInput = screen.getByLabelText(/effective from/i);
+    fireEvent.change(fromInput, { target: { value: "2026-10-01" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(hbprAssignmentService.update).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ effective_from: "2026-10-01" })
+      );
+    });
   });
 });

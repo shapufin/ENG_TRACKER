@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { CalendarDays, ArrowRight } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { FormField } from "@/components/ui/FormField";
 import { Label } from "@/components/ui/label";
@@ -10,19 +12,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CADENCE_LABELS } from "@/types/hbprAssignment";
-import type { HbprCadence, HbprPersonRef } from "@/types/hbprAssignment";
+import {
+  CADENCE_LABELS,
+  WEEKDAY_OPTIONS,
+  NTH_WEEK_OPTIONS,
+  calculateNextCadenceOccurrence,
+} from "@/types/hbprAssignment";
+import type { HbprAssignment, HbprCadence, HbprPersonRef } from "@/types/hbprAssignment";
 
 export interface HbprAssignmentForm {
   hbpr: number | null;
   albanian_tl: number | null;
   cadence: HbprCadence;
+  cadence_day_of_week: number | null;
+  cadence_nth_week: number | null;
   effective_from: string;
 }
 
 interface HbprAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  mode?: "create" | "edit";
+  editingAssignment?: HbprAssignment | null;
   hbprOptions: HbprPersonRef[];
   albanianTlOptions: HbprPersonRef[];
   form: HbprAssignmentForm;
@@ -57,14 +68,31 @@ const PersonSelect: React.FC<{
   </div>
 );
 
+function formatDisplayDate(iso: string): string {
+  try {
+    const [y, m, d] = iso.split("-").map(Number);
+    const date = new Date(Date.UTC(y, m - 1, d));
+    return new Intl.DateTimeFormat(undefined, {
+      weekday: "long",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    }).format(date);
+  } catch {
+    return iso;
+  }
+}
+
 /**
- * Create an HBPR ↔ Albanian TL assignment. Identity and range are immutable
- * once created (the API rejects PATCH on them), so this is create-only; use
- * End on the page for later changes.
+ * Create or edit an HBPR ↔ Albanian TL assignment with configurable cadence
+ * and automatic date calculations.
  */
 export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
   open,
   onOpenChange,
+  mode = "create",
+  editingAssignment,
   hbprOptions,
   albanianTlOptions,
   form,
@@ -72,70 +100,262 @@ export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
   onFieldChange,
   onSubmit,
   isSubmitting,
-}) => (
-  <FormDialog
-    open={open}
-    onOpenChange={onOpenChange}
-    title="New HBPR assignment"
-    description="Pairs one HR Business Partner with one Albanian team leader."
-    onSubmit={onSubmit}
-    isSubmitting={isSubmitting}
-  >
-    <div className="space-y-4">
-      <PersonSelect
-        id="hbpr-assignment-hbpr"
-        label="HR Business Partner"
-        value={form.hbpr}
-        options={hbprOptions}
-        placeholder="Select an HBPR…"
-        onChange={(id) => onFieldChange("hbpr", id)}
-      />
-      {formErrors.hbpr && <p className="text-tone-danger-text text-sm">{formErrors.hbpr}</p>}
+}) => {
+  const isMonthly = form.cadence === "monthly";
+  const isWeeklyOrBiweekly = form.cadence === "weekly" || form.cadence === "biweekly";
 
-      <PersonSelect
-        id="hbpr-assignment-tl"
-        label="Albanian team leader"
-        value={form.albanian_tl}
-        options={albanianTlOptions}
-        placeholder="Select a team leader…"
-        onChange={(id) => onFieldChange("albanian_tl", id)}
-      />
-      {formErrors.albanian_tl && (
-        <p className="text-tone-danger-text text-sm">{formErrors.albanian_tl}</p>
-      )}
+  const isNthWeekdayMonthly = isMonthly && form.cadence_nth_week !== null;
 
-      <div className="space-y-2">
-        <Label htmlFor="hbpr-assignment-cadence">Meeting cadence</Label>
-        <Select
-          value={form.cadence}
-          onValueChange={(v) => onFieldChange("cadence", v as HbprCadence)}
-        >
-          <SelectTrigger
-            id="hbpr-assignment-cadence"
-            aria-label="Meeting cadence"
-            className="w-full"
+  // Auto-calculated upcoming meeting date based on current schedule
+  const calculatedDate = useMemo(() => {
+    if (!form.effective_from) return "";
+    return calculateNextCadenceOccurrence({
+      cadence: form.cadence,
+      cadenceDayOfWeek: form.cadence_day_of_week,
+      cadenceNthWeek: form.cadence_nth_week,
+      anchorDate: form.effective_from,
+    });
+  }, [form.cadence, form.cadence_day_of_week, form.cadence_nth_week, form.effective_from]);
+
+  const selectedHbpr =
+    hbprOptions.find((p) => p.id === form.hbpr)?.name ||
+    editingAssignment?.hbpr_detail?.name ||
+    "HBPR";
+  const selectedTl =
+    albanianTlOptions.find((p) => p.id === form.albanian_tl)?.name ||
+    editingAssignment?.albanian_tl_detail?.name ||
+    "Albanian TL";
+
+  const handleApplyCalculatedDate = () => {
+    if (calculatedDate) {
+      onFieldChange("effective_from", calculatedDate);
+    }
+  };
+
+  return (
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={mode === "edit" ? "Edit HBPR assignment" : "New HBPR assignment"}
+      description={
+        mode === "edit"
+          ? "Update the meeting cadence schedule or start date."
+          : "Pairs one HR Business Partner with one Albanian team leader."
+      }
+      onSubmit={onSubmit}
+      isSubmitting={isSubmitting}
+    >
+      <div className="space-y-4">
+        {mode === "edit" ? (
+          <div className="bg-muted/40 space-y-1 rounded-lg border p-3 text-sm">
+            <p className="text-muted-foreground text-xs font-medium">Assignment pairing</p>
+            <p className="font-semibold">
+              {selectedHbpr} ↔ {selectedTl}
+            </p>
+          </div>
+        ) : (
+          <>
+            <PersonSelect
+              id="hbpr-assignment-hbpr"
+              label="HR Business Partner"
+              value={form.hbpr}
+              options={hbprOptions}
+              placeholder="Select an HBPR…"
+              onChange={(id) => onFieldChange("hbpr", id)}
+            />
+            {formErrors.hbpr && <p className="text-tone-danger-text text-sm">{formErrors.hbpr}</p>}
+
+            <PersonSelect
+              id="hbpr-assignment-tl"
+              label="Albanian team leader"
+              value={form.albanian_tl}
+              options={albanianTlOptions}
+              placeholder="Select a team leader…"
+              onChange={(id) => onFieldChange("albanian_tl", id)}
+            />
+            {formErrors.albanian_tl && (
+              <p className="text-tone-danger-text text-sm">{formErrors.albanian_tl}</p>
+            )}
+          </>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="hbpr-assignment-cadence">Meeting cadence</Label>
+          <Select
+            value={form.cadence}
+            onValueChange={(v) => {
+              const newCadence = v as HbprCadence;
+              onFieldChange("cadence", newCadence);
+              if (newCadence !== "monthly") {
+                onFieldChange("cadence_nth_week", null);
+              }
+            }}
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(Object.keys(CADENCE_LABELS) as HbprCadence[]).map((cadence) => (
-              <SelectItem key={cadence} value={cadence}>
-                {CADENCE_LABELS[cadence]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+            <SelectTrigger
+              id="hbpr-assignment-cadence"
+              aria-label="Meeting cadence"
+              className="w-full"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(CADENCE_LABELS) as HbprCadence[]).map((cadence) => (
+                <SelectItem key={cadence} value={cadence}>
+                  {CADENCE_LABELS[cadence]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <FormField
-        id="hbpr-assignment-from"
-        label="Effective from"
-        value={form.effective_from}
-        onChange={(value) => onFieldChange("effective_from", value)}
-        error={formErrors.effective_from}
-        type="date"
-        required
-      />
-    </div>
-  </FormDialog>
-);
+        {/* Weekly & Biweekly Day of Week */}
+        {isWeeklyOrBiweekly && (
+          <div className="space-y-2">
+            <Label htmlFor="hbpr-assignment-weekday">Scheduled day of week</Label>
+            <Select
+              value={form.cadence_day_of_week !== null ? String(form.cadence_day_of_week) : "auto"}
+              onValueChange={(v) =>
+                onFieldChange("cadence_day_of_week", v === "auto" ? null : Number(v))
+              }
+            >
+              <SelectTrigger
+                id="hbpr-assignment-weekday"
+                aria-label="Scheduled day of week"
+                className="w-full"
+              >
+                <SelectValue placeholder="Anchor from start date" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Default (Anchor from start date)</SelectItem>
+                {WEEKDAY_OPTIONS.map((day) => (
+                  <SelectItem key={day.value} value={String(day.value)}>
+                    {day.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Monthly Pattern Selection */}
+        {isMonthly && (
+          <div className="bg-muted/20 space-y-3 rounded-lg border p-3">
+            <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Monthly recurrence pattern
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={!isNthWeekdayMonthly ? "default" : "outline"}
+                onClick={() => {
+                  onFieldChange("cadence_nth_week", null);
+                  onFieldChange("cadence_day_of_week", null);
+                }}
+              >
+                Day of month
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={isNthWeekdayMonthly ? "default" : "outline"}
+                onClick={() => {
+                  onFieldChange("cadence_nth_week", 2); // Default to 2nd
+                  if (form.cadence_day_of_week === null) {
+                    onFieldChange("cadence_day_of_week", 3); // Default to Thursday
+                  }
+                }}
+              >
+                Specific weekday
+              </Button>
+            </div>
+
+            {isNthWeekdayMonthly && (
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="space-y-1">
+                  <Label htmlFor="monthly-nth-week" className="text-xs">
+                    Week of month
+                  </Label>
+                  <Select
+                    value={String(form.cadence_nth_week ?? 2)}
+                    onValueChange={(v) => onFieldChange("cadence_nth_week", Number(v))}
+                  >
+                    <SelectTrigger id="monthly-nth-week" aria-label="Week of month">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NTH_WEEK_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={String(opt.value)}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="monthly-weekday" className="text-xs">
+                    Day of week
+                  </Label>
+                  <Select
+                    value={String(form.cadence_day_of_week ?? 3)}
+                    onValueChange={(v) => onFieldChange("cadence_day_of_week", Number(v))}
+                  >
+                    <SelectTrigger id="monthly-weekday" aria-label="Day of week">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WEEKDAY_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={String(opt.value)}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Live Calculated Date Callout */}
+        {calculatedDate && (
+          <div className="bg-surface-sunken flex items-center justify-between rounded-lg border p-2.5 text-xs">
+            <div className="flex min-w-0 items-center gap-2">
+              <CalendarDays className="text-primary h-4 w-4 shrink-0" aria-hidden="true" />
+              <div className="truncate">
+                <span className="text-muted-foreground">Upcoming meeting: </span>
+                <span className="text-foreground font-semibold">
+                  {formatDisplayDate(calculatedDate)}
+                </span>
+              </div>
+            </div>
+            {calculatedDate !== form.effective_from && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-primary hover:text-primary h-7 gap-1 text-xs font-medium"
+                onClick={handleApplyCalculatedDate}
+              >
+                <span>Set as start</span>
+                <ArrowRight className="h-3 w-3" aria-hidden="true" />
+              </Button>
+            )}
+          </div>
+        )}
+
+        <FormField
+          id="hbpr-assignment-from"
+          label="Effective from"
+          value={form.effective_from}
+          onChange={(value) => onFieldChange("effective_from", value)}
+          error={formErrors.effective_from}
+          type="date"
+          required
+        />
+        {formErrors.detail && <p className="text-tone-danger-text text-sm">{formErrors.detail}</p>}
+      </div>
+    </FormDialog>
+  );
+};

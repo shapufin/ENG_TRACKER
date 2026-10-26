@@ -128,7 +128,9 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
                     </div>
                   </th>
                   <td className={cn(BODY_CELL, "tabular-nums")}>{leader.team_size}</td>
-                  <td className={BODY_CELL}>{CADENCE_LABELS[leader.cadence]}</td>
+                  <td className={BODY_CELL}>
+                    {leader.cadence_display || CADENCE_LABELS[leader.cadence]}
+                  </td>
                   <td className={cn(BODY_CELL, "whitespace-nowrap tabular-nums")}>
                     {formatDate(leader.last_meeting_on)}
                   </td>
