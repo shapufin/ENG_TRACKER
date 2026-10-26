@@ -1,23 +1,20 @@
-import React, { useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageShell } from "@/components/layout/PageShell";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
 import { usePlugins } from "@/context/PluginContext";
 import { Badge } from "@/components/ui/badge";
-import { FormDialog } from "@/components/ui/FormDialog";
-import { ModalSection } from "@/components/ui/ModalSection";
-import { LogOut, Lock, User } from "lucide-react";
-import { toast } from "sonner";
+import { LogOut, User } from "lucide-react";
 import { MyClientsSection } from "./components/MyClientsSection";
 import { ClientAssignmentSection } from "./components/ClientAssignmentSection";
 import { NotificationPreferencesSection } from "./components/NotificationPreferencesSection";
 import { PluginCRScopeCard } from "./components/PluginCRScopeCard";
+import { PasswordRow } from "./components/PasswordRow";
 import { TwoFactorSection } from "./components/TwoFactorSection";
 
 export const SettingsPage: React.FC = () => {
@@ -32,27 +29,9 @@ export const SettingsPage: React.FC = () => {
   const notificationsActive = activePlugins.some((plugin) => plugin.name === "notifications");
   const showAssignment = isTeamLeader && !isCRScoped;
   const navigate = useNavigate();
-  const [passwordOpen, setPasswordOpen] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({ current: "", new: "", confirm: "" });
-
   const handleLogout = () => {
     logout();
     navigate("/login");
-  };
-
-  const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passwordForm.new !== passwordForm.confirm) {
-      toast.error("New passwords do not match");
-      return;
-    }
-    if (passwordForm.new.length < 8) {
-      toast.error("Password must be at least 8 characters");
-      return;
-    }
-    toast.info("Password change not yet implemented on backend");
-    setPasswordForm({ current: "", new: "", confirm: "" });
-    setPasswordOpen(false);
   };
 
   const getRoleBadges = (): string[] => {
@@ -111,13 +90,10 @@ export const SettingsPage: React.FC = () => {
               ))}
               {getRoleBadges().length === 0 && <Badge variant="outline">User</Badge>}
             </div>
-            <div className="flex flex-wrap pt-1">
-              {/* Filled primary (not outline): matches the other card action
-                  buttons and stays clearly visible on first visit. */}
-              <Button onClick={() => setPasswordOpen(true)}>
-                <Lock className="mr-2 h-4 w-4" />
-                Change Password
-              </Button>
+            {/* Security: the two account protections, compact but never hidden. */}
+            <div className="space-y-2 border-t pt-4" role="group" aria-label="Security">
+              <PasswordRow />
+              <TwoFactorSection />
             </div>
             {(user?.techs?.length ?? 0) > 0 && (
               <div>
@@ -138,9 +114,6 @@ export const SettingsPage: React.FC = () => {
             )}
           </CardContent>
         </GlassCard>
-
-        {/* Two-factor authentication — optional per person until an admin requires it. */}
-        <TwoFactorSection />
 
         {/* My Clients — self-assign which clients the user works for.
             Hidden for CR-scoped identities: they only view standby for their
@@ -174,55 +147,6 @@ export const SettingsPage: React.FC = () => {
             (last-write-wins). */}
         {showAssignment && <ClientAssignmentSection />}
       </div>
-
-      {/* Change Password — opens in a FormDialog (dialog contract: scroll
-          region, header/footer, labels wired via htmlFor/id). The backend
-          endpoint is not implemented yet; validation behavior is unchanged. */}
-      <FormDialog
-        open={passwordOpen}
-        onOpenChange={setPasswordOpen}
-        title="Change Password"
-        description="Choose a new password for your account."
-        onSubmit={handlePasswordChange}
-        submitLabel="Update Password"
-        size="md"
-      >
-        <ModalSection title="Password credentials" columns={1}>
-          <div className="space-y-2">
-            <Label htmlFor="password-current">Current Password</Label>
-            <Input
-              id="password-current"
-              type="password"
-              autoComplete="current-password"
-              value={passwordForm.current}
-              onChange={(e) => setPasswordForm((f) => ({ ...f, current: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password-new">New Password</Label>
-            <Input
-              id="password-new"
-              type="password"
-              autoComplete="new-password"
-              value={passwordForm.new}
-              onChange={(e) => setPasswordForm((f) => ({ ...f, new: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password-confirm">Confirm New Password</Label>
-            <Input
-              id="password-confirm"
-              type="password"
-              autoComplete="new-password"
-              value={passwordForm.confirm}
-              onChange={(e) => setPasswordForm((f) => ({ ...f, confirm: e.target.value }))}
-              required
-            />
-          </div>
-        </ModalSection>
-      </FormDialog>
 
       {/* Logout Card */}
       <GlassCard delay={0.15}>

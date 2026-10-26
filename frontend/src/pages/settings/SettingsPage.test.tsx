@@ -1,10 +1,9 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { SettingsPage } from "./SettingsPage";
 import * as useAuth from "@/context/AuthContext";
 import * as usePermissions from "@/context/PermissionContext";
 import * as usePlugins from "@/context/PluginContext";
-import { toast } from "sonner";
 
 const navigate = vi.fn();
 const logout = vi.fn();
@@ -20,6 +19,9 @@ vi.mock("./components/MyClientsSection", () => ({
 vi.mock("./components/ClientAssignmentSection", () => ({
   ClientAssignmentSection: () => <div data-testid="client-assignment" />,
 }));
+vi.mock("./components/PasswordRow", () => ({
+  PasswordRow: () => <div data-testid="password-row" />,
+}));
 vi.mock("./components/TwoFactorSection", () => ({
   TwoFactorSection: () => <div data-testid="two-factor" />,
 }));
@@ -29,7 +31,6 @@ vi.mock("./components/NotificationPreferencesSection", () => ({
 vi.mock("@/plugins/control_room/hooks/useControlRoomAccess", () => ({
   useControlRoomMe: vi.fn(),
 }));
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), info: vi.fn() } }));
 
 const user = {
   username: "alice",
@@ -81,53 +82,6 @@ describe("SettingsPage", () => {
     expect(screen.getByText("User")).toBeInTheDocument();
   });
 
-  const getPasswordInputs = () =>
-    document.querySelectorAll('input[type="password"]') as NodeListOf<HTMLInputElement>;
-
-  // Password change lives in a FormDialog opened from the Profile card.
-  const openPasswordDialog = () => {
-    fireEvent.click(screen.getByRole("button", { name: "Change Password" }));
-  };
-
-  it("validates password change", () => {
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
-    vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
-    render(<SettingsPage />);
-    openPasswordDialog();
-    const inputs = getPasswordInputs();
-    fireEvent.change(inputs[0], { target: { value: "old" } });
-    fireEvent.change(inputs[1], { target: { value: "new1" } });
-    fireEvent.change(inputs[2], { target: { value: "new2" } });
-    fireEvent.click(screen.getByText("Update Password"));
-    expect(toast.error).toHaveBeenCalledWith("New passwords do not match");
-  });
-
-  it("validates password length", () => {
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
-    vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
-    render(<SettingsPage />);
-    openPasswordDialog();
-    const inputs = getPasswordInputs();
-    fireEvent.change(inputs[0], { target: { value: "old" } });
-    fireEvent.change(inputs[1], { target: { value: "short" } });
-    fireEvent.change(inputs[2], { target: { value: "short" } });
-    fireEvent.click(screen.getByText("Update Password"));
-    expect(toast.error).toHaveBeenCalledWith("Password must be at least 8 characters");
-  });
-
-  it("submits valid password change", () => {
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
-    vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
-    render(<SettingsPage />);
-    openPasswordDialog();
-    const inputs = getPasswordInputs();
-    fireEvent.change(inputs[0], { target: { value: "oldpass" } });
-    fireEvent.change(inputs[1], { target: { value: "newpassword" } });
-    fireEvent.change(inputs[2], { target: { value: "newpassword" } });
-    fireEvent.click(screen.getByText("Update Password"));
-    expect(toast.info).toHaveBeenCalled();
-  });
-
   it("logs out", () => {
     vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
@@ -137,16 +91,13 @@ describe("SettingsPage", () => {
     expect(navigate).toHaveBeenCalledWith("/login");
   });
 
-  it("associates password field labels with their inputs", () => {
-    // Audit 2026-09-07: <Label> had no htmlFor and inputs had no id, so the
-    // password fields had no programmatic accessible name.
+  it("shows password and two-factor inside the profile card", () => {
     vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
     render(<SettingsPage />);
-    openPasswordDialog();
-    expect(screen.getByLabelText("Current Password")).toBe(getPasswordInputs()[0]);
-    expect(screen.getByLabelText("New Password")).toBe(getPasswordInputs()[1]);
-    expect(screen.getByLabelText("Confirm New Password")).toBe(getPasswordInputs()[2]);
+    const security = screen.getByRole("group", { name: "Security" });
+    expect(within(security).getByTestId("password-row")).toBeInTheDocument();
+    expect(within(security).getByTestId("two-factor")).toBeInTheDocument();
   });
 
   // CR user settings — MyClientsSection hidden, CR Scope card shown,

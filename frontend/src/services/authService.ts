@@ -1,4 +1,4 @@
-import api, { withRefreshLock } from "@/lib/api";
+import api, { setAccessToken, withRefreshLock } from "@/lib/api";
 import type { LoginCredentials, AuthResponse, LoginResponse, MfaSetupData, User } from "@/types";
 import { clearOfflineUserData } from "@/lib/offline/offlineQueue";
 
@@ -37,6 +37,16 @@ export const authService = {
       api.post<{ access: string }>("/auth/token/refresh/", {})
     );
     return data;
+  },
+
+  /** Changes the password. The server revokes every refresh token and hands this session a new one. */
+  async changePassword(currentPassword: string, newPassword: string, code?: string): Promise<void> {
+    const { data } = await api.post<AuthResponse>("/auth/password/change/", {
+      current_password: currentPassword,
+      new_password: newPassword,
+      ...(code ? { code } : {}),
+    });
+    setAccessToken(data.access);
   },
 
   async getCurrentUser(): Promise<User> {

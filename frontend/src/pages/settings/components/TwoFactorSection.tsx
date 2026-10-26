@@ -2,15 +2,10 @@ import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, ShieldCheck, ShieldOff } from "lucide-react";
 import { toast } from "sonner";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { InfoCallout } from "@/components/ui/InfoCallout";
-import { LoadingCard } from "@/components/ui/LoadingCard";
-import { ErrorCard } from "@/components/ui/ErrorCard";
 import {
   Dialog,
   DialogBody,
@@ -25,6 +20,7 @@ import { MfaCodeField } from "@/components/auth/MfaCodeField";
 import { MfaEnrollment } from "@/components/auth/MfaEnrollment";
 import { mfaErrorMessage, mfaService } from "@/services/mfaService";
 import type { MfaSetupData } from "@/types";
+import { SecurityRow } from "./SecurityRow";
 
 const STATUS_KEY = ["mfa", "status"] as const;
 
@@ -311,18 +307,32 @@ const StepUpDialog = ({
   );
 };
 
+/** The Security block's two-factor row: state at a glance, one obvious action. */
 export const TwoFactorSection: React.FC = () => {
   const queryClient = useQueryClient();
   const { data, isLoading, isError } = useQuery({ queryKey: STATUS_KEY, queryFn: mfaService.status });
   const [enableOpen, setEnableOpen] = useState(false);
   const [stepUp, setStepUp] = useState<"disable" | "regenerate" | null>(null);
 
-  if (isLoading) return <LoadingCard rows={2} />;
+  if (isLoading) {
+    return <SecurityRow icon={<ShieldOff />} title="Two-factor authentication" hint="Checking status..." />;
+  }
   if (isError || !data) {
     return (
-      <ErrorCard
-        title="Could not load two-factor status"
-        onRetry={() => queryClient.invalidateQueries({ queryKey: STATUS_KEY })}
+      <SecurityRow
+        tone="danger"
+        icon={<ShieldOff />}
+        title="Two-factor authentication"
+        hint="Could not load its status."
+        actions={
+          <Button
+            variant="outline"
+            size="control-sm"
+            onClick={() => queryClient.invalidateQueries({ queryKey: STATUS_KEY })}
+          >
+            Retry
+          </Button>
+        }
       />
     );
   }
@@ -330,67 +340,53 @@ export const TwoFactorSection: React.FC = () => {
   const lowCodes = data.enabled && data.backup_codes_remaining <= 2;
 
   return (
-    <GlassCard delay={0.05}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {data.enabled ? <ShieldCheck className="h-5 w-5" /> : <ShieldOff className="h-5 w-5" />}
-          Two-factor authentication
-          <Badge variant={data.enabled ? "default" : "secondary"} className="ml-auto">
-            {data.enabled ? "On" : "Off"}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-muted-foreground text-sm">
-          {data.enabled
-            ? "Sign-in asks for a code from your authenticator app after your password."
-            : "Add a second step at sign-in with an authenticator app, so a stolen password alone is not enough."}
-        </p>
-
-        {data.required && !data.enabled && (
-          <InfoCallout tone="warning" label={`${requiredReason(data.required_by)} Turn it on to keep signing in.`} />
-        )}
-        {data.required && data.enabled && (
-          <InfoCallout tone="info" label={`${requiredReason(data.required_by)} It cannot be turned off.`} />
-        )}
-        {lowCodes && (
-          <InfoCallout
-            tone="warning"
-            label="You are running low on backup codes."
-            value={`${data.backup_codes_remaining} left`}
-          />
-        )}
-        {data.enabled && !lowCodes && (
-          <p className="text-muted-foreground text-xs">
-            Backup codes left: <span className="text-foreground font-medium">{data.backup_codes_remaining}</span>
-          </p>
-        )}
-
-        <div className="flex flex-wrap gap-2">
-          {!data.enabled && (
-            <Button onClick={() => setEnableOpen(true)}>
-              <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" />
-              Turn on
-            </Button>
-          )}
-          {data.enabled && (
+    <>
+      <SecurityRow
+        tone={data.enabled ? "success" : "warning"}
+        icon={data.enabled ? <ShieldCheck /> : <ShieldOff />}
+        title="Two-factor authentication"
+        status={<Badge variant={data.enabled ? "default" : "secondary"}>{data.enabled ? "On" : "Off"}</Badge>}
+        hint={
+          data.enabled
+            ? `Sign-in asks for an authenticator code. Backup codes left: ${data.backup_codes_remaining}.`
+            : "Protect your account: a stolen password alone will not be enough."
+        }
+        actions={
+          data.enabled ? (
             <>
-              <Button variant="outline" onClick={() => setStepUp("regenerate")}>
+              <Button variant="outline" size="control-sm" onClick={() => setStepUp("regenerate")}>
                 <KeyRound className="mr-2 h-4 w-4" aria-hidden="true" />
                 New backup codes
               </Button>
               {!data.required && (
-                <Button variant="outline" onClick={() => setStepUp("disable")}>
+                <Button variant="outline" size="control-sm" onClick={() => setStepUp("disable")}>
                   Turn off
                 </Button>
               )}
             </>
-          )}
-        </div>
-      </CardContent>
+          ) : (
+            <Button size="control-sm" onClick={() => setEnableOpen(true)}>
+              <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" />
+              Turn on
+            </Button>
+          )
+        }
+      >
+        {data.required && (
+          <p className="mt-2 text-xs font-medium">
+            {requiredReason(data.required_by)}{" "}
+            {data.enabled ? "It cannot be turned off." : "Turn it on to keep signing in."}
+          </p>
+        )}
+        {lowCodes && (
+          <p className="mt-2 text-xs font-medium">
+            You are running low on backup codes: <span>{data.backup_codes_remaining} left</span>
+          </p>
+        )}
+      </SecurityRow>
 
       {enableOpen && <EnableDialog open={enableOpen} onOpenChange={setEnableOpen} />}
       <StepUpDialog key={stepUp ?? "closed"} mode={stepUp} onOpenChange={(o) => !o && setStepUp(null)} />
-    </GlassCard>
+    </>
   );
 };
