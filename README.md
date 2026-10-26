@@ -213,7 +213,9 @@ npm test
 
 The app ships as a multi-container Docker stack (`docker-compose.yml`):
 backend (Django + gunicorn), frontend (nginx serving the Vite build),
-PostgreSQL, and Redis. First deploy, upgrade, rollback, backups and scheduled
+PostgreSQL, Redis, and a `scheduler` (one long-lived process that runs due
+plugin jobs — onboarding export ZIPs today, year close later; it is required,
+not optional). First deploy, upgrade, rollback, backups and scheduled
 jobs are in [`docs/deploy/production-runbook.md`](docs/deploy/production-runbook.md).
 
 ### Quick deploy (Docker Compose)
@@ -361,7 +363,10 @@ required (no insecure localhost fallback).
   0 2 * * * cd /path/to/project && docker compose --profile backup run --rm db-backup
   ```
   Backups are written to the `db_backup` volume as
-  `engtracker_YYYY-MM-DD_HHMMSS.dump` (custom-format `pg_dump -Fc`).
+  `engtracker_YYYY-MM-DD_HHMMSS.dump` (custom-format `pg_dump -Fc`), plus
+  `media_*.tar.gz` (uploads) and `snapshots_*.tar.gz` (year-close evidence)
+  when the loop runs. Generated **exports** are deliberately not backed up:
+  they are transient (24 h) and can be rebuilt from the database.
   Copy them offsite to an encrypted location. To restore (override the
   entrypoint — the default entrypoint runs `pg_dump`, not `pg_restore`):
   ```bash

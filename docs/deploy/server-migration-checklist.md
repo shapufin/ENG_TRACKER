@@ -10,6 +10,8 @@ throw-away project before you need it: `docker compose -p et-rehearsal ...` with
 |---|---|---|---|
 | Database | `postgres_data` volume | `pg_dump` / `pg_restore` (runbook section 4.1), same Postgres major (16) | Everything |
 | Uploaded files | `media_files` volume | media tar from the `db-backup` job (runbook 4.2) | Documents, logos, evidence |
+| Year-close snapshots | `snapshot_files` volume | snapshots tar from the **same** `db-backup` run as the database (runbook 4.3) | The frozen evidence files stop matching their `MANIFEST.json` checksums, so a closed year can no longer be verified or downloaded |
+| Generated exports | `export_files` volume | **do not carry** | Transient (24 h) and regenerable: request the ZIP again after the move |
 | `SECRET_KEY` | `.env` | password manager | Everyone is signed out; signed values (OnlyOffice document keys) are re-issued |
 | `MFA_ENCRYPTION_KEYS` | `.env` | password manager, **never** in the backup volume | Every user with two-factor on cannot sign in (fails closed) until reset |
 | `DB_PASSWORD`, `REDIS_PASSWORD` | `.env` | any new value is fine | Nothing else depends on them |
@@ -23,17 +25,19 @@ Two-factor replay and lockout state is therefore in Postgres.
 
 ## 2. Cutover, in order
 
-1. On the old server: take a fresh dump and media archive (runbook section 3), copy both off the host.
+1. On the old server: take a fresh dump, media archive **and snapshots archive** (runbook section 3), copy all three off the host. The database dump and the snapshots tar must come from the **same** run.
 2. On the new server: install Docker, **check the clock is NTP-synced** (`timedatectl status`). Two-factor
    codes are time based; a host a minute off rejects honest codes. Container timezone does not matter.
 3. Clone the repo at the same commit as production. Create `.env` from the password manager.
-4. Start only `db`, restore the dump (runbook 4.1), restore media (4.2).
+4. Start only `db`, restore the dump (runbook 4.1), restore media (4.2) and snapshots (4.3).
 5. `docker compose up -d --build`. Read the backend boot log:
    - `All N MFA seeds are readable.` means the key matches. `WARNING: MFA seeds are unreadable` means stop and fix the key.
    - the entrypoint runs migrations and the boot reconciliation steps (runbook 5.1).
-6. Walk the ingress checklist (runbook 5.5): proxy address trusted, `NUM_PROXIES` correct.
-7. `curl -f http://127.0.0.1:8080/api/health/ready/`, then sign in as a superuser and as an enrolled user.
-8. Only then move DNS. Keep the old server untouched until a day of normal use has passed.
+6. Confirm `docker compose ps scheduler` reports `healthy` (it writes a heartbeat file; unhealthy means
+   queued exports are not being built). Exports are not carried over, so request a ZIP once to prove it.
+7. Walk the ingress checklist (runbook 5.5): proxy address trusted, `NUM_PROXIES` correct.
+8. `curl -f http://127.0.0.1:8080/api/health/ready/`, then sign in as a superuser and as an enrolled user.
+9. Only then move DNS. Keep the old server untouched until a day of normal use has passed.
 
 ## 3. Rollback
 

@@ -1,7 +1,9 @@
 # Production runbook
 
 Everything below matches `docker-compose.yml`, `Dockerfile` and `docker/entrypoint.sh`
-as of the 2026-10-20 launch review (`docs/reviews/2026-10-20-launch-review.md`).
+as of the 2026-10-20 launch review (`docs/reviews/2026-10-20-launch-review.md`), plus the
+2026-10-26 scheduler foundation (`scheduler` service, `export_files` / `snapshot_files`
+volumes, nginx-served signed downloads).
 Written for a single-host Docker Compose deployment behind your own TLS proxy.
 
 ## 1. Environment switches
@@ -14,6 +16,9 @@ Written for a single-host Docker Compose deployment behind your own TLS proxy.
 | `RUN_MIGRATIONS` | `1` | `1` runs `migrate` and the boot-time reconciliation (`sync_plugins`, `seed_plugin_permissions`, `grant_hbpr_plugin_access`, `purge_hbpr_archive`, `prune_notifications`, `purge_audit_logs --if-configured`, `flushexpiredtokens`, `sync_payroll_holidays`, `ensure_superuser`). `0` skips all of them. |
 | `BACKUP_INTERVAL_SECONDS` | `86400` | Pause between `db-backup` runs. |
 | `BACKUP_RETENTION` | `7` | Newest N DB dumps and N media archives kept. |
+| `EXPORT_ROOT` | `/app/exports` | Volume for generated ZIP exports. Transient (24 h), regenerable, **never backed up**, outside `MEDIA_ROOT` so Site Backup cannot zip it and `/media/` cannot serve it. |
+| `SNAPSHOT_ROOT` | `/app/snapshots` | Volume for year-close snapshots. Durable evidence: `db-backup` archives it as `snapshots_*.tar.gz`. Also outside `MEDIA_ROOT`. |
+| `EXPORT_JOBS_INLINE` | `False` in production, `True` in dev | Build an export synchronously at request time instead of queueing it for the scheduler. Never enable in production: gunicorn would stream the ZIP. |
 
 ### Connection budget
 
@@ -66,6 +71,11 @@ the `db_backup` volume:
 
 - `engtracker_YYYY-MM-DD_HHMMSS.dump` (`pg_dump -Fc`)
 - `media_YYYY-MM-DD_HHMMSS.tar.gz` (the `media_files` volume)
+- `snapshots_YYYY-MM-DD_HHMMSS.tar.gz` (the `snapshot_files` volume — year-close evidence)
+
+`export_files` is deliberately **not** archived: exports are transient (24 h) and
+can be regenerated from the live data, so backing them up would only duplicate the
+database into the backup set.
 
 Files are written as `*.part` and renamed on success; old files are pruned only
 after a successful write, so a failed run never reduces the number of good
@@ -119,13 +129,29 @@ Run `docker volume ls` to confirm. Files must stay readable by the backend user
 (`appuser`); fix ownership with `chown -R` against that UID if the archive was
 extracted as root.
 
-### 4.3 Verify
+### 4.3 Snapshots (year-close evidence)
+
+Restore the snapshot volume the same way as media, into `snapshot_files`:
+
+```bash
+docker run --rm -v engineering-tracker_snapshot_files:/snapshots \
+  -v engineering-tracker_db_backup:/backups:ro postgres:16 \
+  sh -c 'tar -xzf /backups/snapshots_YYYY-MM-DD_HHMMSS.tar.gz -C /snapshots'
+```
+
+The `YearSnapshotFile` rows come back with the database dump; the files and the
+rows must be restored from the **same** backup run, or the checksums in each
+`MANIFEST.json` stop matching. Ownership: uid 10001, like media.
+
+### 4.4 Verify
 
 1. `curl -f http://127.0.0.1:8080/api/health/ready/` returns 200.
 2. Log in as an admin and open a page that lists records, then open an uploaded
    file from the Media-backed pages.
 3. Check `docker compose logs backend` for tracebacks. Application logs go to
    stdout/stderr (`docker logs`).
+4. `docker compose ps scheduler` is `healthy` (its healthcheck reads the heartbeat
+   file, so an unhealthy scheduler means jobs are not running).
 
 ## 5. Deploy, upgrade, rollback and operations
 
@@ -159,14 +185,20 @@ Steps:
    (first superuser), `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (Web Push; production reads
    them from the environment only), `EMAIL_*`, `ONLYOFFICE_*`, `INGRESS_*`, `DB_SSL_MODE`.
 2. `docker compose up -d --build`. This builds both images, runs the boot sequence above
-   (including `migrate`) and starts gunicorn.
+   (including `migrate`) and starts gunicorn, the `scheduler` and the frontend. The scheduler
+   is not optional: onboarding exports and (later) year close are queued as database rows and
+   only the scheduler builds them, so without it a Download ZIP stays `pending` forever.
 3. Walk the ingress checklist (5.5) before sending users to the site.
 4. `curl -f http://127.0.0.1:8080/api/health/ready/` returns 200.
 5. Log in as the superuser, open Admin, Plugins, enable the plugins you want, then
    `docker compose restart backend`. Plugin URLs are computed once per process; an enabled
    plugin returns 404 until the restart.
-6. Start the scheduled backup: `docker compose --profile backup up -d db-backup` (section 3).
-7. Add the cron jobs in 5.4.
+6. Confirm the generated-file volumes exist and are writable by the app user:
+   `docker compose exec backend sh -c 'touch /app/exports/.probe /app/snapshots/.probe && rm /app/exports/.probe /app/snapshots/.probe'`.
+   nginx mounts them read-only at `/_protected/exports/` and `/_protected/snapshots/`; a
+   permission problem shows up as a 404 from nginx, not as a backend error.
+7. Start the scheduled backup: `docker compose --profile backup up -d db-backup` (section 3).
+8. Add the host cron jobs that the scheduler does **not** cover (section 5.4).
 
 Static files: `collectstatic` is part of the image build (see `Dockerfile`), not of the boot sequence.
 
@@ -200,10 +232,27 @@ then start the old code with `RUN_MIGRATIONS=1`. If no migration was applied, a 
 For a fast local fallback, tag the images before an upgrade:
 `docker tag <project>-backend:latest <project>-backend:pre-upgrade`.
 
-### 5.4 Scheduled jobs (there is no task queue or scheduler)
+### 5.4 Scheduled jobs (scheduler service; host cron for one-offs)
 
-The stack has no Celery or cron container. Boot commands run once per start. For a long-lived
-replica, schedule these on the host with `docker compose exec -T backend python manage.py <command>`:
+The `scheduler` service runs `manage.py run_scheduler`: one long-lived process, no Celery and
+no host cron needed for plugin jobs. It ticks every 5 s, asks every **enabled** plugin for its
+`get_scheduled_jobs()` list, and runs whatever is due. A failing job is logged and does not
+stop the others. It never migrates (`RUN_MIGRATIONS=0`); watch it with
+`docker compose logs -f scheduler`.
+
+It writes a heartbeat file; the container's healthcheck reads that file, so `docker compose ps
+scheduler` showing `unhealthy` means jobs are not running. If the scheduler is down, queued
+exports stay `pending` — the UI shows "queued longer than 2 minutes, check the scheduler".
+
+Plugin jobs it owns:
+
+| Job | Plugin | Interval | Notes |
+|---|---|---|---|
+| `process_client_exports` | onboarding | 10 s | Builds requested ZIPs. `EXPORT_JOBS_INLINE=True` (dev/test only) bypasses it. |
+| `cleanup_exports` | onboarding | hourly | Deletes expired (24 h) export files and rows. |
+
+Boot commands still run once per start. For anything the scheduler does not cover, use host
+cron with `docker compose exec -T backend python manage.py <command>`:
 
 | Job | Command | Cadence | Notes |
 |---|---|---|---|
@@ -214,7 +263,10 @@ replica, schedule these on the host with `docker compose exec -T backend python 
 | Analytics retention | `purge_analytics_data` | daily | Snapshots and metric points older than `data_retention_days` (default 365). Not run at boot, so it needs the cron. |
 | HBPR assignment archive | `purge_hbpr_archive` | optional | Runs at boot and lazily on the staff-only assignments list. |
 | Application backup | `create_site_backup` | weekly | Site Backup plugin archive (database fixture plus media). Separate from the `db-backup` loop. |
-| Database and media dumps | `db-backup` profile | `BACKUP_INTERVAL_SECONDS` | Section 3. Copy offsite yourself. |
+| Database, media and snapshot dumps | `db-backup` profile | `BACKUP_INTERVAL_SECONDS` | Section 3. Copy offsite yourself. |
+
+A one-off run of a plugin job (for a retry) is
+`docker compose exec -T scheduler python manage.py run_scheduler --once`.
 
 Analytics export files in `media/analytics_exports/` have no retention job yet (post-launch).
 
@@ -240,12 +292,17 @@ If the proxy is not trusted, every user shares one 20 r/s bucket and normal dash
   `frontend` are the source. Use your host's Docker log driver if you need retention or shipping.
 - Health: `/api/health/live/` (process up) and `/api/health/ready/` (database and cache reachable)
   need no authentication. Point the uptime monitor at `ready`.
+- Scheduler: `docker compose ps scheduler` must stay `healthy` — its healthcheck fails when the
+  heartbeat file stops advancing (120 s), which is the only signal that queued exports have
+  stopped being built. Alert on it: a dead scheduler looks like "nothing happens" rather than
+  an error.
 - **No error monitoring or APM is installed.** Sentry would need a new dependency and a DSN, which
   is not approved (ruling D4 of the readiness plan: env-gated, post-launch). Until then, watch
   `docker compose logs backend` for tracebacks and keep the uptime probe on `ready`.
-- No task queue: push fan-out runs after commit with a bounded timeout, while backup creation and
-  large exports run inside the request (gunicorn timeout 120 s). Start large backups off-peak. A queue
-  is post-launch work (readiness plan SR-01).
+- No task queue: push fan-out runs after commit with a bounded timeout. Export ZIPs are built by
+  the scheduler, not in the request, and are downloaded through nginx (`/_protected/`) so gunicorn
+  never streams them. Site Backup creation still runs inside the request (gunicorn timeout 120 s),
+  so start large backups off-peak. A real queue is post-launch work (readiness plan SR-01).
 - Plugin URLs are loaded from the database at process start. If Postgres is unreachable when a worker
   first imports the URLconf, that worker serves no plugin routes (404) until it is recycled
   (`--max-requests 1000`) or the container restarts. Compose starts the database first (health-checked
