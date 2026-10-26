@@ -2,6 +2,8 @@ import api from "@/lib/api";
 import { normalizeList } from "@/lib/api-utils";
 import type { PaginatedResponse } from "@/types";
 import type {
+  ClientExport,
+  ClientOnboardingLifecycleInfo,
   Document,
   Folder,
   OfficeEditorConfigResponse,
@@ -75,6 +77,56 @@ export const onboardingService = {
     const { data } = await api.get<Blob>(`${BASE}/documents/${id}/download/`, {
       responseType: "blob",
     });
+    return data;
+  },
+
+  /** Archived clients (superuser only; the default list is active clients). */
+  async getArchivedClients(): Promise<OnboardingClient[]> {
+    const { data } = await api.get<OnboardingClient[] | PaginatedResponse<OnboardingClient>>(
+      `${BASE}/clients/`,
+      { params: { archived: "true" } }
+    );
+    return normalizeList(data);
+  },
+
+  /** Queue a ZIP of one client's onboarding data (built by the scheduler). */
+  async createClientExport(clientId: number): Promise<ClientExport> {
+    const { data } = await api.post<ClientExport>(`${BASE}/clients/${clientId}/exports/`);
+    return data;
+  },
+
+  /** Every client, archived ones included (superuser only). */
+  async createAllClientsExport(): Promise<ClientExport> {
+    const { data } = await api.post<ClientExport>(`${BASE}/exports/all/`);
+    return data;
+  },
+
+  async getExport(id: number): Promise<ClientExport> {
+    const { data } = await api.get<ClientExport>(`${BASE}/exports/${id}/`);
+    return data;
+  },
+
+  /** A 120-second, single-use URL: navigate to it, never fetch it as a blob. */
+  async getExportDownloadUrl(id: number): Promise<string> {
+    const { data } = await api.post<{ url: string }>(`${BASE}/exports/${id}/download-link/`);
+    return data.url;
+  },
+
+  async getClientLifecycle(clientId: number): Promise<ClientOnboardingLifecycleInfo> {
+    const { data } = await api.get<ClientOnboardingLifecycleInfo>(
+      `${BASE}/clients/${clientId}/lifecycle/`
+    );
+    return data;
+  },
+
+  async purgeClientOnboarding(
+    clientId: number,
+    confirmCode: string
+  ): Promise<{ folders: number; documents: number }> {
+    const { data } = await api.post<{ folders: number; documents: number }>(
+      `${BASE}/clients/${clientId}/purge/`,
+      { confirm_code: confirmCode }
+    );
     return data;
   },
 

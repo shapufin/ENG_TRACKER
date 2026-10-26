@@ -1,15 +1,20 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/PageShell";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { Button } from "@/components/ui/button";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import { Plus } from "lucide-react";
 import { ClientDataTable } from "@/components/admin/ClientDataTable";
+import { ArchiveClientDialog } from "@/components/admin/ArchiveClientDialog";
+import { ClientLifecycleDialog } from "@/components/admin/ClientLifecycleDialog";
 import { ClientStatsCards } from "./components/ClientStatsCards";
 import { ClientFormDialog } from "@/components/admin/ClientFormDialog";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useClientManagement } from "./hooks/useClientManagement";
+
+type StatusFilter = "active" | "archived" | "all";
 
 export const ClientsPage: React.FC = () => {
   const {
@@ -20,10 +25,14 @@ export const ClientsPage: React.FC = () => {
     editing,
     form,
     formErrors,
-    confirmDelete,
-    setConfirmDelete,
+    archiveTarget,
+    setArchiveTarget,
+    lifecycleTarget,
+    setLifecycleTarget,
     createMutation,
     updateMutation,
+    archiveMutation,
+    unarchiveMutation,
     deleteMutation,
     handleSubmit,
     openEdit,
@@ -31,6 +40,19 @@ export const ClientsPage: React.FC = () => {
     updateField,
     refetch,
   } = useClientManagement();
+  const { isSuperuser } = usePermissions();
+  const [status, setStatus] = useState<StatusFilter>("active");
+
+  const counts = useMemo(() => {
+    const all = clients ?? [];
+    const activeCount = all.filter((c) => c.is_active).length;
+    return { active: activeCount, archived: all.length - activeCount, all: all.length };
+  }, [clients]);
+
+  const visible = useMemo(() => {
+    if (!clients || status === "all") return clients ?? [];
+    return clients.filter((c) => c.is_active === (status === "active"));
+  }, [clients, status]);
 
   if (isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
   if (!clients) return <ErrorCard title="Failed to load clients" onRetry={refetch} />;
@@ -50,7 +72,25 @@ export const ClientsPage: React.FC = () => {
     >
       <ClientStatsCards clients={clients} />
 
-      <ClientDataTable clients={clients} onEdit={openEdit} onDelete={setConfirmDelete} />
+      <FilterChipRow<StatusFilter>
+        label="Status"
+        selected={[status]}
+        onToggle={setStatus}
+        options={[
+          { value: "active", label: "Active", count: counts.active },
+          { value: "archived", label: "Archived", count: counts.archived },
+          { value: "all", label: "All", count: counts.all },
+        ]}
+      />
+
+      <ClientDataTable
+        clients={visible}
+        onEdit={openEdit}
+        canManage={isSuperuser}
+        onArchive={setArchiveTarget}
+        onUnarchive={(client) => unarchiveMutation.mutate(client.id)}
+        onManageArchived={setLifecycleTarget}
+      />
 
       <ClientFormDialog
         open={formOpen}
@@ -63,13 +103,22 @@ export const ClientsPage: React.FC = () => {
         isSubmitting={createMutation.isPending || updateMutation.isPending}
       />
 
-      <ConfirmDialog
-        open={!!confirmDelete}
-        onOpenChange={() => setConfirmDelete(null)}
-        title="Delete Client"
-        description={`Are you sure you want to delete ${confirmDelete?.name}?`}
-        onConfirm={() => confirmDelete && deleteMutation.mutate(confirmDelete.id)}
+      <ArchiveClientDialog
+        client={archiveTarget}
+        onOpenChange={(open) => !open && setArchiveTarget(null)}
+        onConfirm={(id) => archiveMutation.mutate(id)}
+        isArchiving={archiveMutation.isPending}
       />
+
+      {lifecycleTarget && (
+        <ClientLifecycleDialog
+          client={lifecycleTarget}
+          open
+          onOpenChange={(open) => !open && setLifecycleTarget(null)}
+          onDelete={(id) => deleteMutation.mutate(id)}
+          isDeleting={deleteMutation.isPending}
+        />
+      )}
     </PageShell>
   );
 };

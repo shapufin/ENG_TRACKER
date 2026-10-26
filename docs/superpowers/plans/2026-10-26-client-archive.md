@@ -2,7 +2,7 @@
 
 **Date**: 2026-10-26 · **Status**: PLANNED · **Spec**: `docs/superpowers/specs/2026-10-26-client-archive-design.md`
 **Order**: A1-A3 can start now; A4 needs foundation phase Y1 of `2026-10-26-year-close-snapshot.md`. Branch per phase (new branch off main).
-**Progress**: A1 (`3255729`), A2 (`85b646d`), A3 (`a6bc5e0`) committed on `feat/client-delete-guards`. Y1 committed on `feat/scheduler-foundation` (`7f7af09`). A4 implemented on `feat/client-export` (off Y1, uncommitted, 2026-10-26): `ClientExport` + migration `0003`, exporter + scheduler jobs, export/status/link/download API, `purge` + `lifecycle`, `export` grant, Site Backup exclusion. A5-A6 pending.
+**Progress**: A1 (`3255729`), A2 (`85b646d`), A3 (`a6bc5e0`) committed on `feat/client-delete-guards`. Y1 committed on `feat/scheduler-foundation` (`7f7af09`). A4 committed on `feat/client-export` (`116396b`): `ClientExport` + migration `0003`, exporter + scheduler jobs, export/status/link/download API, `purge` + `lifecycle`, `export` grant, Site Backup exclusion. A5a (Clients admin page: archive/unarchive, archived-data dialog with onboarding export + purge, delete only when empty) implemented on `feat/client-archive-ui` (uncommitted); a post-commit A4 review fix (export links need current client access) is also uncommitted there. **A5b still to do**: pickers `?is_active=true`, overtime/standby edit dialogs keep an archived client, onboarding page Download ZIP / Archived toggle / Export all. A6 pending.
 **Primary goal**: An admin can retire a client without ever losing overtime, payroll evidence or onboarding files, and a superuser can export and clean up onboarding data safely.
 
 ## Phase 0: Discovery (done 2026-10-26)

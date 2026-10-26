@@ -7,6 +7,18 @@
  */
 
 /**
+ * Start a download by navigating to a short-lived signed URL.
+ *
+ * Multi-GB files must not go through a blob (the whole file would sit in browser
+ * memory), and a plain link cannot carry the JWT: the API hands out a single-use
+ * URL and the browser streams the attachment straight to disk. The response is an
+ * attachment, so the current page stays where it is.
+ */
+export const navigateToDownload = (url: string): void => {
+  window.location.assign(url);
+};
+
+/**
  * Trigger a browser download from an Axios blob response.
  *
  * Creates a temporary object URL, appends an invisible anchor, clicks it,

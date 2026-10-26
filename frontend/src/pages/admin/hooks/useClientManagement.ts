@@ -8,14 +8,27 @@ import type { Client } from "@/types";
 
 const EMPTY_FORM = { name: "", code: "", description: "" };
 
+/** Everything that lists or scopes by client; archiving or deleting one changes all of them. */
+const CLIENT_QUERY_KEYS = [
+  ["overtime", "clients"],
+  ["overtime", "available-clients"],
+  ["team", "members"],
+  ["onboarding", "clients"],
+] as const;
+
 export const useClientManagement = () => {
   const qc = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [confirmDelete, setConfirmDelete] = useState<Client | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<Client | null>(null);
+  const [lifecycleTarget, setLifecycleTarget] = useState<Client | null>(null);
   const handleFormError = useFormErrorHandler(setFormErrors);
+
+  const invalidateClients = useCallback(() => {
+    CLIENT_QUERY_KEYS.forEach((queryKey) => qc.invalidateQueries({ queryKey: [...queryKey] }));
+  }, [qc]);
 
   const { data: clients, isLoading } = useQuery({
     queryKey: ["overtime", "clients"],
@@ -29,7 +42,7 @@ export const useClientManagement = () => {
     mutationFn: overtimeService.createClient,
     onSuccess: () => {
       toast.success("Client created");
-      qc.invalidateQueries({ queryKey: ["overtime", "clients"] });
+      invalidateClients();
       setFormOpen(false);
       setFormErrors({});
     },
@@ -41,19 +54,42 @@ export const useClientManagement = () => {
       overtimeService.updateClient(id, payload),
     onSuccess: () => {
       toast.success("Client updated");
-      qc.invalidateQueries({ queryKey: ["overtime", "clients"] });
+      invalidateClients();
       setFormOpen(false);
       setFormErrors({});
     },
     onError: handleFormError,
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: overtimeService.archiveClient,
+    onSuccess: (result) => {
+      toast.success(
+        `Client archived. ${result.users_unassigned} user${result.users_unassigned === 1 ? "" : "s"} unassigned.`
+      );
+      invalidateClients();
+      setArchiveTarget(null);
+    },
+    onError: (err: unknown) => handleApiError(err),
+  });
+
+  const unarchiveMutation = useMutation({
+    mutationFn: overtimeService.unarchiveClient,
+    onSuccess: () => {
+      toast.success("Client restored. Assign it to users again where needed.");
+      invalidateClients();
+    },
+    onError: (err: unknown) => handleApiError(err),
+  });
+
+  // Only reachable from the archived-data dialog, and only for a client with no
+  // records and no onboarding data; the server enforces the same rules.
   const deleteMutation = useMutation({
     mutationFn: overtimeService.deleteClient,
     onSuccess: () => {
       toast.success("Client deleted");
-      qc.invalidateQueries({ queryKey: ["overtime", "clients"] });
-      setConfirmDelete(null);
+      invalidateClients();
+      setLifecycleTarget(null);
     },
     onError: (err: unknown) => handleApiError(err),
   });
@@ -98,10 +134,14 @@ export const useClientManagement = () => {
     editing,
     form,
     formErrors,
-    confirmDelete,
-    setConfirmDelete,
+    archiveTarget,
+    setArchiveTarget,
+    lifecycleTarget,
+    setLifecycleTarget,
     createMutation,
     updateMutation,
+    archiveMutation,
+    unarchiveMutation,
     deleteMutation,
     handleSubmit,
     openEdit,

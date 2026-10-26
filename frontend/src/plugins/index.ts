@@ -222,6 +222,9 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
       import("./onboarding/pages/OnboardingPage").then((m) => ({ default: m.OnboardingPage }))
     ),
     OnboardingSidebarLink: lazy(() => import("./onboarding/components/OnboardingSidebarLink")),
+    ClientOnboardingLifecycle: lazy(
+      () => import("./onboarding/components/ClientOnboardingLifecycle")
+    ),
     DocumentEditorPage: lazy(() =>
       import("./onboarding/pages/DocumentEditorPage").then((m) => ({
         default: m.DocumentEditorPage,

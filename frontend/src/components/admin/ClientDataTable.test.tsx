@@ -24,7 +24,16 @@ const client = (over: Partial<Client>): Client => ({
 
 const renderTable = (clients: Client[]) => {
   localStorage.clear();
-  return render(<ClientDataTable clients={clients} onEdit={vi.fn()} onDelete={vi.fn()} />);
+  return render(
+    <ClientDataTable
+      clients={clients}
+      onEdit={vi.fn()}
+      canManage
+      onArchive={vi.fn()}
+      onUnarchive={vi.fn()}
+      onManageArchived={vi.fn()}
+    />
+  );
 };
 
 describe("ClientDataTable", () => {
@@ -43,5 +52,19 @@ describe("ClientDataTable", () => {
     renderTable([client({ description: "Retail telemetry" }), client({ id: 2, name: "MSC" })]);
     expect(screen.getByRole("columnheader", { name: /description/i })).toBeInTheDocument();
     expect(screen.getByText("Retail telemetry")).toBeInTheDocument();
+  });
+
+  it("shows Active or Archived as the status", () => {
+    renderTable([client({}), client({ id: 2, name: "Old Co", is_active: false })]);
+    expect(screen.getByText("Active", { selector: "td *" })).toBeInTheDocument();
+    expect(screen.getByText("Archived", { selector: "td *" })).toBeInTheDocument();
+  });
+
+  it("offers archive on active rows and restore plus archived data on archived rows", () => {
+    renderTable([client({}), client({ id: 2, name: "Old Co", is_active: false })]);
+    expect(screen.getByRole("button", { name: "Archive Acme Corp" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Unarchive Acme Corp" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Unarchive Old Co" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Archived data Old Co" })).toBeInTheDocument();
   });
 });

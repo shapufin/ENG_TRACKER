@@ -19,6 +19,19 @@ export interface OvertimeHoursPreview {
   paid_window_end: string;
 }
 
+/** What archiving, purging or deleting a client would touch (superuser endpoint). */
+export interface ClientLifecycle {
+  is_active: boolean;
+  assigned_users: number;
+  /** Records that must be kept, keyed by relation (overtime_logs, standby_logs, ...). */
+  counts: Record<string, number>;
+  /** Data a delete would take along (onboarding_folders, onboarding_documents). */
+  cascade_counts: Record<string, number>;
+  last_activity: string | null;
+  can_delete: boolean;
+  blockers: string[];
+}
+
 export const overtimeService = {
   async getClients(params?: Record<string, unknown>): Promise<Client[]> {
     const { data } = await api.get<Client[] | PaginatedResponse<Client>>("/overtime/clients/", {
@@ -47,6 +60,28 @@ export const overtimeService = {
 
   async deleteClient(id: number): Promise<void> {
     await api.delete(`/overtime/clients/${id}/`);
+  },
+
+  /** Retire a client: hidden from users and pickers, every record kept. */
+  async archiveClient(
+    id: number
+  ): Promise<{ id: number; is_active: boolean; users_unassigned: number }> {
+    const { data } = await api.post<{ id: number; is_active: boolean; users_unassigned: number }>(
+      `/overtime/clients/${id}/archive/`
+    );
+    return data;
+  },
+
+  async unarchiveClient(id: number): Promise<{ id: number; is_active: boolean }> {
+    const { data } = await api.post<{ id: number; is_active: boolean }>(
+      `/overtime/clients/${id}/unarchive/`
+    );
+    return data;
+  },
+
+  async getClientLifecycle(id: number): Promise<ClientLifecycle> {
+    const { data } = await api.get<ClientLifecycle>(`/overtime/clients/${id}/lifecycle/`);
+    return data;
   },
 
   async getLogs(params?: {

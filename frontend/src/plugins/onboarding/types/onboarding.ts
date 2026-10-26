@@ -82,3 +82,31 @@ export interface SearchResults {
   folders: SearchFolderResult[];
   documents: SearchDocumentResult[];
 }
+
+export type ExportStatus = "pending" | "running" | "ready" | "failed" | "expired";
+
+export interface ClientExport {
+  id: number;
+  kind: "client" | "all";
+  client: number | null;
+  client_code: string;
+  client_name: string;
+  status: ExportStatus;
+  folders: number;
+  documents: number;
+  bytes: number;
+  sha256: string;
+  error: string;
+  created_at: string;
+  completed_at: string | null;
+  expires_at: string | null;
+}
+
+/** Purge status of an archived client's onboarding data (superuser endpoint). */
+export interface ClientOnboardingLifecycleInfo {
+  can_purge: boolean;
+  blockers: string[];
+  folders: number;
+  documents: number;
+  latest_export: ClientExport | null;
+}

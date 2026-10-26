@@ -1,13 +1,29 @@
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ClientsPage } from "./ClientsPage";
 import * as useClientManagement from "./hooks/useClientManagement";
 
-// PluginImportButton (admin page headers) reads the active-plugin list. With
-// data_import inactive it renders nothing — the same graceful path taken when
-// the plugin is disabled or removed.
+// Plugin-driven buttons and the onboarding slot read the active-plugin list. With
+// none active they render nothing, the same path taken when a plugin is disabled.
 vi.mock("@/context/PluginContext", () => ({
   usePlugins: () => ({ activePlugins: [], isLoading: false }),
+}));
+const permissions = vi.hoisted(() => ({ isSuperuser: true }));
+vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => permissions }));
+vi.mock("@/services/overtimeService", () => ({
+  overtimeService: {
+    getClientLifecycle: vi.fn().mockResolvedValue({
+      is_active: true,
+      assigned_users: 3,
+      counts: {},
+      cascade_counts: {},
+      last_activity: null,
+      can_delete: false,
+      blockers: [],
+    }),
+  },
 }));
 
 class ResizeObserverMock {
@@ -18,6 +34,9 @@ class ResizeObserverMock {
 
 Object.defineProperty(window, "ResizeObserver", { value: ResizeObserverMock, writable: true });
 
+const active = { id: 1, name: "MSC", code: "msc", description: "", is_active: true };
+const archived = { id: 2, name: "OLD", code: "old", description: "", is_active: false };
+
 const mockHook = {
   clients: null,
   isLoading: false,
@@ -26,11 +45,15 @@ const mockHook = {
   editing: null,
   form: { name: "", code: "" },
   formErrors: {},
-  confirmDelete: null,
-  setConfirmDelete: vi.fn(),
+  archiveTarget: null,
+  setArchiveTarget: vi.fn(),
+  lifecycleTarget: null,
+  setLifecycleTarget: vi.fn(),
   createMutation: { isPending: false },
   updateMutation: { isPending: false },
-  deleteMutation: { mutate: vi.fn() },
+  archiveMutation: { mutate: vi.fn(), isPending: false },
+  unarchiveMutation: { mutate: vi.fn(), isPending: false },
+  deleteMutation: { mutate: vi.fn(), isPending: false },
   handleSubmit: vi.fn(),
   openEdit: vi.fn(),
   openCreate: vi.fn(),
@@ -38,61 +61,112 @@ const mockHook = {
   refetch: vi.fn(),
 };
 
-vi.spyOn(useClientManagement, "useClientManagement").mockReturnValue(mockHook as any);
+const withHook = (overrides: Record<string, unknown> = {}) =>
+  vi
+    .spyOn(useClientManagement, "useClientManagement")
+    .mockReturnValue({ ...mockHook, ...overrides } as any);
+
+const renderPage = () =>
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <ClientsPage />
+    </QueryClientProvider>
+  );
 
 describe("ClientsPage", () => {
   beforeEach(() => {
-    vi.spyOn(useClientManagement, "useClientManagement").mockReturnValue({
-      ...mockHook,
-      clients: null,
-    } as any);
+    vi.clearAllMocks();
+    permissions.isSuperuser = true;
+    withHook();
   });
 
   it("renders loading state", () => {
-    vi.spyOn(useClientManagement, "useClientManagement").mockReturnValue({
-      ...mockHook,
-      isLoading: true,
-    } as any);
-    render(<ClientsPage />);
+    withHook({ isLoading: true });
+    renderPage();
     expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 
   it("renders error state when clients is null", () => {
-    render(<ClientsPage />);
+    renderPage();
     expect(screen.getByText("Failed to load clients")).toBeInTheDocument();
   });
 
   it("renders client table and add button", () => {
-    vi.spyOn(useClientManagement, "useClientManagement").mockReturnValue({
-      ...mockHook,
-      clients: [],
-    } as any);
-    render(<ClientsPage />);
+    withHook({ clients: [] });
+    renderPage();
     expect(screen.getByText("Clients")).toBeInTheDocument();
     expect(screen.getByText("Add Client")).toBeInTheDocument();
   });
 
-  it("renders active status as a pill badge, not plain text", () => {
-    vi.spyOn(useClientManagement, "useClientManagement").mockReturnValue({
-      ...mockHook,
-      clients: [
-        { id: 1, name: "MSC", code: "msc", description: "", is_active: true },
-        { id: 2, name: "OLD", code: "old", description: "", is_active: false },
-      ],
-    } as any);
-    const { container } = render(<ClientsPage />);
-    const activeCell = screen.getByText("Yes").closest("td");
-    expect(activeCell?.querySelector(".rounded-full")).not.toBeNull();
-    expect(container.textContent).toContain("No");
-  });
-
   it("opens create dialog", () => {
-    vi.spyOn(useClientManagement, "useClientManagement").mockReturnValue({
-      ...mockHook,
-      clients: [],
-    } as any);
-    render(<ClientsPage />);
+    withHook({ clients: [] });
+    renderPage();
     fireEvent.click(screen.getByText("Add Client"));
     expect(mockHook.openCreate).toHaveBeenCalled();
+  });
+
+  it("shows active clients by default and archived ones under the Archived chip", () => {
+    withHook({ clients: [active, archived] });
+    renderPage();
+    expect(screen.getByText("MSC")).toBeInTheDocument();
+    expect(screen.queryByText("OLD")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Archived/ }));
+    expect(screen.getByText("OLD")).toBeInTheDocument();
+    expect(screen.queryByText("MSC")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^All/ }));
+    expect(screen.getByText("MSC")).toBeInTheDocument();
+    expect(screen.getByText("OLD")).toBeInTheDocument();
+  });
+
+  it("labels the status as a pill: Active or Archived", () => {
+    withHook({ clients: [active, archived] });
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /^All/ }));
+    const activeCell = screen.getByText("Active", { selector: "td *" }).closest("td");
+    expect(activeCell?.querySelector(".rounded-full")).not.toBeNull();
+    expect(screen.getByText("Archived", { selector: "td *" })).toBeInTheDocument();
+  });
+
+  it("lets a superuser archive an active client", () => {
+    withHook({ clients: [active] });
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Archive MSC" }));
+    expect(mockHook.setArchiveTarget).toHaveBeenCalledWith(active);
+  });
+
+  it("never offers a delete button on the list", () => {
+    withHook({ clients: [active, archived] });
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /^All/ }));
+    expect(screen.queryByRole("button", { name: /^Delete/ })).not.toBeInTheDocument();
+  });
+
+  it("lets a superuser restore an archived client and open its archived data", () => {
+    withHook({ clients: [archived] });
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /^Archived/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Unarchive OLD" }));
+    expect(mockHook.unarchiveMutation.mutate).toHaveBeenCalledWith(2);
+    fireEvent.click(screen.getByRole("button", { name: "Archived data OLD" }));
+    expect(mockHook.setLifecycleTarget).toHaveBeenCalledWith(archived);
+  });
+
+  it("hides every lifecycle action from staff who are not superusers", () => {
+    permissions.isSuperuser = false;
+    withHook({ clients: [active, archived] });
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /^All/ }));
+    expect(screen.getAllByRole("button", { name: /^Edit/ })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /^Archive / })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Unarchive/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Archived data/ })).not.toBeInTheDocument();
+  });
+
+  it("explains what archiving does, with the number of users it unassigns", async () => {
+    withHook({ clients: [active], archiveTarget: active });
+    renderPage();
+    expect(await screen.findByText(/3 users will be unassigned/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Archive client" }));
+    expect(mockHook.archiveMutation.mutate).toHaveBeenCalledWith(1);
   });
 });
