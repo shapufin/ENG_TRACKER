@@ -29,6 +29,29 @@ describe("auditService URL contracts", () => {
     });
   });
 
+  it("getArchiveStatus calls /reports/audit-logs/archive_status/", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { target_month: "2026-09" } } as any);
+    await auditService.getArchiveStatus();
+    expect(api.get).toHaveBeenCalledWith("/reports/audit-logs/archive_status/");
+  });
+
+  it("archivePreviousMonth posts to /reports/audit-logs/archive_previous_month/", async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: { success: true } } as any);
+    await auditService.archivePreviousMonth("2026-09");
+    expect(api.post).toHaveBeenCalledWith("/reports/audit-logs/archive_previous_month/", {
+      month: "2026-09",
+    });
+  });
+
+  it("downloadArchive calls /reports/audit-logs/download_archive/ with blob responseType", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: new Blob() } as any);
+    await auditService.downloadArchive("audit_logs_2026_09.json.gz");
+    expect(api.get).toHaveBeenCalledWith("/reports/audit-logs/download_archive/", {
+      params: { filename: "audit_logs_2026_09.json.gz" },
+      responseType: "blob",
+    });
+  });
+
   it("never uses /api/ prefix", async () => {
     vi.mocked(api.get).mockResolvedValue({ data: { results: [], count: 0 } } as any);
     await auditService.getLogs();

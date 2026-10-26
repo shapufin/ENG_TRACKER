@@ -15,6 +15,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from core.utils import get_client_ip
+from apps.reports.services.security_audit import log_security_event
 from ..serializers import CustomTokenObtainPairSerializer
 from ..services import mfa as mfa_service
 from ..services.mfa import MFAError
@@ -45,11 +47,51 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     throttle_scope = 'auth'
 
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
+        username = str(request.data.get('username') or '')
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
+        try:
+            response = super().post(request, *args, **kwargs)
+        except (AuthenticationFailed, serializers.ValidationError):
+            log_security_event(
+                user=None,
+                action='LOGIN_FAILED',
+                description=f"Failed login attempt for username '{username}'",
+                ip_address=ip,
+                user_agent=ua,
+                extra_data={'username': username, 'reason': 'invalid_credentials'},
+                status='failure',
+            )
+            raise
+        except Exception as exc:
+            if username:
+                log_security_event(
+                    user=None,
+                    action='LOGIN_FAILED',
+                    description=f"Failed login attempt for username '{username}'",
+                    ip_address=ip,
+                    user_agent=ua,
+                    extra_data={'username': username, 'reason': str(exc)},
+                    status='failure',
+                )
+            raise
+
         if response.status_code == status.HTTP_200_OK:
             refresh = response.data.pop('refresh', None)
             if refresh:
                 set_refresh_cookie(response, refresh)
+            # If not challenged for MFA, login is fully completed
+            if 'mfa_token' not in response.data:
+                user = get_user_model().objects.filter(username=username).first()
+                log_security_event(
+                    user=user,
+                    action='LOGIN_SUCCESS',
+                    description=f"User '{username}' signed in successfully",
+                    ip_address=ip,
+                    user_agent=ua,
+                    extra_data={'username': username, 'auth_method': 'password'},
+                    status='success',
+                )
         return response
 
 
@@ -93,13 +135,42 @@ class MFAVerifyView(_MFAView):
     """POST /api/auth/token/mfa-verify/ {mfa_token, code}: finish an MFA login."""
 
     def post(self, request):
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
+        user = None
         try:
             user = mfa_service.read_challenge(
                 str(request.data.get('mfa_token', '')), mfa_service.PURPOSE_VERIFY
             )
             mfa_service.verify_second_factor(user, str(request.data.get('code', '')))
         except MFAError as exc:
+            action = 'MFA_LOCKED' if exc.code == 'locked' else 'MFA_FAILED'
+            username = user.username if user else 'Unknown'
+            desc = (
+                f"User '{username}' locked out due to too many invalid MFA attempts"
+                if exc.code == 'locked'
+                else f"Invalid MFA code entered for user '{username}'"
+            )
+            log_security_event(
+                user=user,
+                action=action,
+                description=desc,
+                ip_address=ip,
+                user_agent=ua,
+                extra_data={'username': username, 'code': exc.code},
+                status='failure',
+            )
             return _mfa_error(exc)
+
+        log_security_event(
+            user=user,
+            action='LOGIN_SUCCESS',
+            description=f"User '{user.username}' verified MFA and signed in",
+            ip_address=ip,
+            user_agent=ua,
+            extra_data={'username': user.username, 'auth_method': 'mfa'},
+            status='success',
+        )
         return _signed_in_response(user)
 
 
@@ -122,14 +193,36 @@ class MFALoginActivateView(_MFAView):
     """POST /api/auth/mfa/login/activate/ {mfa_token, code}: enrol and sign in. Backup codes ride along once."""
 
     def post(self, request):
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
+        user = None
         try:
             user = mfa_service.read_challenge(
                 str(request.data.get('mfa_token', '')), mfa_service.PURPOSE_SETUP
             )
             codes = mfa_service.activate(user, str(request.data.get('code', '')))
         except MFAError as exc:
+            username = user.username if user else 'Unknown'
+            log_security_event(
+                user=user,
+                action='MFA_FAILED',
+                description=f"Invalid MFA code during enrolment for user '{username}'",
+                ip_address=ip,
+                user_agent=ua,
+                extra_data={'username': username, 'code': exc.code},
+                status='failure',
+            )
             return _mfa_error(exc)
-        mfa_service.audit(user, 'mfa_enabled', f'{user.username} enrolled a second factor at sign-in', user)
+        mfa_service.audit(user, 'mfa_enabled', f'{user.username} enrolled a second factor at sign-in', user, ip_address=ip, user_agent=ua)
+        log_security_event(
+            user=user,
+            action='LOGIN_SUCCESS',
+            description=f"User '{user.username}' enrolled MFA and signed in",
+            ip_address=ip,
+            user_agent=ua,
+            extra_data={'username': user.username, 'auth_method': 'mfa_activate'},
+            status='success',
+        )
         return _signed_in_response(user, {'backup_codes': codes})
 
 
@@ -165,11 +258,13 @@ class MFAActivateView(_SignedInMFAView):
     """POST /api/auth/mfa/activate/ {code}: confirm the first code; returns the backup codes once."""
 
     def post(self, request):
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
         try:
             codes = mfa_service.activate(request.user, str(request.data.get('code', '')))
         except MFAError as exc:
             return _mfa_error(exc)
-        mfa_service.audit(request.user, 'mfa_enabled', f'{request.user.username} turned on two-factor authentication', request.user)
+        mfa_service.audit(request.user, 'mfa_enabled', f'{request.user.username} turned on two-factor authentication', request.user, ip_address=ip, user_agent=ua)
         return Response({'backup_codes': codes})
 
 
@@ -178,6 +273,8 @@ class MFADisableView(_SignedInMFAView):
     """POST /api/auth/mfa/disable/ {password, code}: turn the factor off (not while it is required)."""
 
     def post(self, request):
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
         if mfa_service.required_source(request.user) is not None:
             return _mfa_error(MFAError(
                 'required', 'Two-factor authentication is required for your account and cannot be turned off.'
@@ -189,7 +286,7 @@ class MFADisableView(_SignedInMFAView):
         except MFAError as exc:
             return _mfa_error(exc)
         mfa_service.remove_mfa(request.user)
-        mfa_service.audit(request.user, 'mfa_disabled', f'{request.user.username} turned off two-factor authentication', request.user)
+        mfa_service.audit(request.user, 'mfa_disabled', f'{request.user.username} turned off two-factor authentication', request.user, ip_address=ip, user_agent=ua)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -198,6 +295,8 @@ class MFABackupCodesView(_SignedInMFAView):
     """POST /api/auth/mfa/backup-codes/ {password, code}: replace the backup codes."""
 
     def post(self, request):
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
         if not mfa_service.is_enrolled(request.user):
             return _mfa_error(MFAError('not_enrolled', 'Two-factor authentication is not set up.'))
         try:
@@ -207,7 +306,7 @@ class MFABackupCodesView(_SignedInMFAView):
         except MFAError as exc:
             return _mfa_error(exc)
         codes = mfa_service.generate_backup_codes(request.user)
-        mfa_service.audit(request.user, 'mfa_backup_codes_regenerated', f'{request.user.username} regenerated backup codes', request.user)
+        mfa_service.audit(request.user, 'mfa_backup_codes_regenerated', f'{request.user.username} regenerated backup codes', request.user, ip_address=ip, user_agent=ua)
         return Response({'backup_codes': codes})
 
 
@@ -224,6 +323,8 @@ class PasswordChangeView(_SignedInMFAView):
         user = request.user
         new_password = str(request.data.get('new_password') or '')
         current_password = str(request.data.get('current_password', ''))
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
         if not new_password:
             return Response({'detail': 'new_password is required.', 'code': 'invalid_password'}, status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -243,7 +344,7 @@ class PasswordChangeView(_SignedInMFAView):
         user.set_password(new_password)
         user.save(update_fields=['password'])
         revoke_refresh_tokens(user)
-        mfa_service.audit(user, 'password_changed', f'{user.username} changed their password', user)
+        mfa_service.audit(user, 'password_changed', f'{user.username} changed their password', user, ip_address=ip, user_agent=ua)
         return _signed_in_response(user)
 
 

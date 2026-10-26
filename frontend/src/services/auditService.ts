@@ -44,6 +44,34 @@ interface AuditLogStatsParams {
   search?: string;
 }
 
+export interface AuditArchiveStatus {
+  target_month: string;
+  target_month_label: string;
+  eligible_count: number;
+  core_count: number;
+  plugin_count: number;
+  archives: Array<{
+    filename: string;
+    size_bytes: number;
+    size_formatted: string;
+    created_at: string;
+  }>;
+}
+
+export interface AuditArchiveResult {
+  success: boolean;
+  archived_count: number;
+  core_count?: number;
+  plugin_count?: number;
+  filename: string;
+  month: string;
+  month_label: string;
+  size_bytes: number;
+  size_formatted?: string;
+  download_url?: string;
+  message?: string;
+}
+
 export const auditService = {
   async getLogs(params: AuditLogQueryParams = {}): Promise<PaginatedResponse<AuditLog>> {
     const { data } = await api.get<PaginatedResponse<AuditLog>>("/reports/audit-logs/", { params });
@@ -58,6 +86,29 @@ export const auditService = {
   async getLogHistory(modelName: string, objectId: string): Promise<AuditLog[]> {
     const { data } = await api.get<AuditLog[]>(`/reports/audit-logs/history/`, {
       params: { model_name: modelName, object_id: objectId },
+    });
+    return data;
+  },
+
+  async getArchiveStatus(): Promise<AuditArchiveStatus> {
+    const { data } = await api.get<AuditArchiveStatus>("/reports/audit-logs/archive_status/");
+    return data;
+  },
+
+  async archivePreviousMonth(month?: string): Promise<AuditArchiveResult> {
+    const { data } = await api.post<AuditArchiveResult>(
+      "/reports/audit-logs/archive_previous_month/",
+      {
+        month,
+      }
+    );
+    return data;
+  },
+
+  async downloadArchive(filename: string): Promise<Blob> {
+    const { data } = await api.get<Blob>("/reports/audit-logs/download_archive/", {
+      params: { filename },
+      responseType: "blob",
     });
     return data;
   },

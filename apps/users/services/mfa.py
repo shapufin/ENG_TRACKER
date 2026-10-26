@@ -307,17 +307,21 @@ def check_step_up(user, password: str, code: str) -> None:
 
 # --- Audit -------------------------------------------------------------------
 
-def audit(actor, action: str, description: str, target=None) -> None:
-    """Record a security event if the optional audit_log plugin is installed.
-
-    ``except ImportError`` only: a missing plugin means "no trail", a bug in the
-    plugin must surface (``log_action`` already guards its own writes).
-    """
+def audit(actor, action: str, description: str, target=None, ip_address=None, user_agent=None) -> None:
+    """Record a security event to core AuditLog and plugin audit log."""
     try:
-        from plugins.audit_log.signals import log_action
-    except ImportError:
-        return
-    log_action(actor, action, description=description, obj=target)
+        from apps.reports.services.security_audit import log_security_event
+        log_security_event(
+            user=actor,
+            action=action.upper(),
+            description=description,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            extra_data={'target': str(target) if target else None},
+            status='success',
+        )
+    except Exception as exc:
+        logger.warning(f"Failed to record audit in mfa_service: {exc}")
 
 
 # --- Reset / disable ---------------------------------------------------------

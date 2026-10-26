@@ -126,6 +126,14 @@ class AuditLog(models.Model):
         ('REJECT', 'Reject'),
         ('BULK_APPROVE', 'Bulk Approve'),
         ('BULK_REJECT', 'Bulk Reject'),
+        ('LOGIN_SUCCESS', 'Login Success'),
+        ('LOGIN_FAILED', 'Login Failed'),
+        ('MFA_FAILED', 'MFA Failed'),
+        ('MFA_LOCKED', 'MFA Locked'),
+        ('MFA_ENABLED', 'MFA Enabled'),
+        ('MFA_DISABLED', 'MFA Disabled'),
+        ('MFA_RESET', 'MFA Reset'),
+        ('PASSWORD_CHANGED', 'Password Changed'),
     ]
 
     MODEL_CHOICES = [
@@ -135,6 +143,7 @@ class AuditLog(models.Model):
         ('user', 'User'),
         ('team', 'Team'),
         ('client', 'Client'),
+        ('auth', 'Authentication / Security'),
     ]
 
     id = models.AutoField(primary_key=True)
@@ -174,8 +183,10 @@ class AuditLog(models.Model):
     @property
     def changes_summary(self) -> str:
         """Generate a human-readable summary of changes."""
+        if self.extra_data and isinstance(self.extra_data, dict) and 'description' in self.extra_data:
+            return str(self.extra_data['description'])
         if not self.old_values or not self.new_values:
-            return f"{self.action} {self.model_name}"
+            return f"{self.get_action_display()} {self.get_model_name_display()}"
 
         changes = []
         for key in self.new_values:
@@ -183,7 +194,7 @@ class AuditLog(models.Model):
             new_val = self.new_values.get(key, 'None')
             if old_val != new_val:
                 changes.append(f"{key}: {old_val} → {new_val}")
-        return "; ".join(changes) if changes else f"{self.action} {self.model_name}"
+        return "; ".join(changes) if changes else f"{self.get_action_display()} {self.get_model_name_display()}"
 
 
 def log_audit_action(

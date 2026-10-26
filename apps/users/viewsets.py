@@ -23,6 +23,7 @@ from django.db.utils import OperationalError
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+from core.utils import get_client_ip
 from .models import Tech, TechLevel, Team, UserProfile, UserTech
 from .models.core import normalize_calendar_group
 from .serializers import (
@@ -454,7 +455,14 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             return Response({'error': 'This user has no second factor to reset.'}, status=status.HTTP_400_BAD_REQUEST)
         mfa_service.remove_mfa(user)
         revoke_refresh_tokens(user)
-        mfa_service.audit(request.user, 'mfa_reset', f'{request.user.username} reset the second factor of {user.username}', user)
+        mfa_service.audit(
+            request.user,
+            'mfa_reset',
+            f'{request.user.username} reset the second factor of {user.username}',
+            user,
+            ip_address=get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        )
         return Response({'detail': 'Second factor removed.'}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser()])
@@ -464,6 +472,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         Expects {'new_password': '...'} in request body.
         Only a superuser may reset a staff or superuser account (own account excepted).
         """
+        from .services import mfa as mfa_service
         user = self.get_object()
         self._forbid_staff_on_staff(request, user, 'Only a superuser can reset a staff or superuser password.')
         new_password = request.data.get('new_password')
@@ -483,6 +492,14 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         user.save()
         # SEC-10: a reset must end sessions that are still alive on the old password.
         revoke_refresh_tokens(user)
+        mfa_service.audit(
+            request.user,
+            'password_changed',
+            f'{request.user.username} reset password for {user.username}',
+            user,
+            ip_address=get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        )
         return Response({'detail': 'Password reset successfully.'}, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['post'], permission_classes=[IsAdminUser()])

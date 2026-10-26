@@ -4,14 +4,14 @@ Reports app viewsets.
 
 import logging
 from datetime import datetime, timedelta
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated, IsAdminUser
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.openapi import OpenApiParameter
@@ -1096,7 +1096,9 @@ class AuditLogViewSet(HbprBlockedMixin, TeamLeaderFilterMixin, viewsets.ReadOnly
         logs_this_week = queryset.filter(timestamp__gte=week_ago).count()
         logs_this_month = queryset.filter(timestamp__gte=month_ago).count()
         unique_users = queryset.aggregate(n=Count('user', distinct=True))['n'] or 0
-        failed_actions = queryset.filter(action__in=['DELETE', 'REJECT', 'BULK_REJECT']).count()
+        failed_actions = queryset.filter(
+            action__in=['DELETE', 'REJECT', 'BULK_REJECT', 'LOGIN_FAILED', 'MFA_FAILED', 'MFA_LOCKED']
+        ).count()
         if total_logs > 0:
             success_rate = round((total_logs - failed_actions) / total_logs * 1000) / 10
         else:
@@ -1111,3 +1113,61 @@ class AuditLogViewSet(HbprBlockedMixin, TeamLeaderFilterMixin, viewsets.ReadOnly
             'failed_actions': failed_actions,
             'success_rate': success_rate,
         })
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
+    def archive_status(self, request):
+        """Return the eligible logs count for previous month rotation and list of existing archives."""
+        from .services.audit_archive import get_archive_status
+        return Response(get_archive_status())
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAdminUser])
+    def archive_previous_month(self, request):
+        """Compress previous month's audit logs into .json.gz and delete from the live database.
+
+        Accepts optional ``month`` (YYYY-MM). If ``?download=1`` is passed,
+        streams the compressed archive directly to the client.
+        """
+        from .services.audit_archive import archive_month, get_archive_file
+
+        month_str = request.data.get('month') or request.query_params.get('month')
+        try:
+            result = archive_month(month_str=month_str, delete_after=True)
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            logger.error(f"Audit log archive error: {exc}", exc_info=True)
+            return Response({'error': f"Failed to rotate audit logs: {str(exc)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        if request.query_params.get('download') == '1' and result.get('archived_count', 0) > 0:
+            file_path = get_archive_file(result['filename'])
+            response = FileResponse(
+                open(file_path, 'rb'),
+                as_attachment=True,
+                filename=result['filename'],
+                content_type='application/gzip',
+            )
+            return response
+
+        result['download_url'] = f"/api/reports/audit-logs/download_archive/?filename={result['filename']}"
+        return Response(result, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
+    def download_archive(self, request):
+        """Download a previously generated .json.gz audit archive."""
+        from .services.audit_archive import get_archive_file
+
+        filename = request.query_params.get('filename') or ''
+        if not filename:
+            return Response({'error': 'Filename is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            file_path = get_archive_file(filename)
+        except (ValueError, FileNotFoundError) as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_404_NOT_FOUND)
+
+        return FileResponse(
+            open(file_path, 'rb'),
+            as_attachment=True,
+            filename=file_path.name,
+            content_type='application/gzip',
+        )

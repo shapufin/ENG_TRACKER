@@ -25,6 +25,11 @@ const ACTION_OPTIONS = [
   { value: "DELETE", label: "Delete" },
   { value: "APPROVE", label: "Approve" },
   { value: "REJECT", label: "Reject" },
+  { value: "LOGIN_SUCCESS", label: "Login Success" },
+  { value: "LOGIN_FAILED", label: "Login Failed" },
+  { value: "MFA_FAILED", label: "MFA Failed" },
+  { value: "MFA_LOCKED", label: "MFA Locked" },
+  { value: "PASSWORD_CHANGED", label: "Password Changed" },
 ];
 
 const MODEL_OPTIONS = [
@@ -32,6 +37,7 @@ const MODEL_OPTIONS = [
   { value: "overtimelog", label: "Overtime Log" },
   { value: "standbylog", label: "Standby Log" },
   { value: "vacationrequest", label: "Vacation Request" },
+  { value: "auth", label: "Authentication / Security" },
 ];
 
 export const AuditLogFilters: React.FC<AuditLogFiltersProps> = ({

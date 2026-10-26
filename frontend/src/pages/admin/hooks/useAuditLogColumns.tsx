@@ -8,9 +8,17 @@ import type { AuditLog } from "@/services/auditService";
 // Server actions arrive upper-case (CREATE/UPDATE/DELETE), so match case-insensitively.
 const getActionTone = (action: string): Tone => {
   const a = action.toLowerCase();
-  if (a.includes("create") || a.includes("add")) return "success";
-  if (a.includes("update") || a.includes("edit")) return "warning";
-  if (a.includes("delete") || a.includes("remove")) return "danger";
+  if (
+    a.includes("fail") ||
+    a.includes("lock") ||
+    a.includes("delete") ||
+    a.includes("remove") ||
+    a.includes("reject")
+  )
+    return "danger";
+  if (a.includes("create") || a.includes("add") || a.includes("success") || a.includes("approve"))
+    return "success";
+  if (a.includes("update") || a.includes("edit") || a.includes("change")) return "warning";
   return "neutral";
 };
 
