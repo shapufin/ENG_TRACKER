@@ -2,7 +2,7 @@
 
 **Date**: 2026-10-26 · **Status**: PLANNED · **Spec**: `docs/superpowers/specs/2026-10-26-client-archive-design.md`
 **Order**: A1-A3 can start now; A4 needs foundation phase Y1 of `2026-10-26-year-close-snapshot.md`. Branch per phase (new branch off main).
-**Progress**: A1 implemented on branch `feat/client-delete-guards` (uncommitted, 2026-10-26); A2-A6 pending.
+**Progress**: A1 committed (`3255729`) and A2 implemented (uncommitted) on branch `feat/client-delete-guards`, 2026-10-26; A3-A6 pending.
 **Primary goal**: An admin can retire a client without ever losing overtime, payroll evidence or onboarding files, and a superuser can export and clean up onboarding data safely.
 
 ## Phase 0: Discovery (done 2026-10-26)

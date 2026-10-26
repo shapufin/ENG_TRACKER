@@ -1,4 +1,6 @@
-"""Rules for what must survive a client delete (plan A1, client archive)."""
+"""Rules for what must survive a client delete, and what an archived client may receive
+(plans A1-A2, client archive)."""
+from django.core.exceptions import ValidationError
 from django.db.models import PROTECT
 
 # Reverse M2M links a delete may drop: user assignments are cleared when a
@@ -26,3 +28,25 @@ def protected_record_counts(client):
         if count:
             counts[name] = count
     return counts
+
+
+def archived_client_error(clients):
+    """Message naming the inactive clients in ``clients``, or ``None`` when all are active.
+
+    Callers pass only the clients being *added* to a record, so editing an old
+    record that already points at an archived client is never blocked.
+    """
+    names = [client.name for client in clients if not client.is_active]
+    if not names:
+        return None
+    return f'Cannot add records to archived client(s): {", ".join(names)}.'
+
+
+def ensure_client_active(client):
+    """Raise a (Django) ``ValidationError`` when ``client`` is archived.
+
+    DRF turns it into a 400 inside ``validate_<field>`` methods.
+    """
+    message = archived_client_error([client])
+    if message:
+        raise ValidationError(message)

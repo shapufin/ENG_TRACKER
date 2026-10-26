@@ -15,6 +15,7 @@ from django.utils import timezone
 from core.utils.time_overlap import find_overlapping_entry
 
 from apps.overtime.models import Client
+from apps.overtime.services.client_lifecycle import archived_client_error
 from apps.standby.models import StandbyLog
 from .authority import StaffOnlyAuthority
 from .base import row_error_from_exception, BaseImporter, ImportField, ImportOption, ImportRowResult, UPDATE_EXISTING_OPTION
@@ -135,7 +136,7 @@ class StandbyLogImporter(StaffOnlyAuthority, BaseImporter):
                 f"No client(s) with code(s): {', '.join(missing)}. Map them to existing "
                 "clients in the Value Transforms panel, or import clients first."
             )
-        return clients, None
+        return clients, archived_client_error(clients)
 
     def commit_row(
         self,

@@ -198,14 +198,14 @@ class TemplateDownloadTests(TestCase):
         self.assertEqual(response["Content-Type"], "text/csv")
         self.assertIn("clients_import_template.csv", response["Content-Disposition"])
         header = self._content(response).decode("utf-8-sig").splitlines()[0]
-        self.assertEqual(header.strip(), "Code *,Name *,Description,Active")
+        self.assertEqual(header.strip(), "Code *,Name *,Description")
 
     def test_csv_template_marks_required_columns_with_an_asterisk(self):
-        """Code and Name are required for clients; Description/Active are not."""
+        """Code and Name are required for clients; Description is not."""
         response = self._template("clients", "csv")
         header = self._content(response).decode("utf-8-sig").splitlines()[0]
         columns = header.strip().split(",")
-        self.assertEqual(columns, ["Code *", "Name *", "Description", "Active"])
+        self.assertEqual(columns, ["Code *", "Name *", "Description"])
 
     def test_csv_template_includes_the_sample_rows(self):
         response = self._template("clients", "csv")
@@ -219,7 +219,7 @@ class TemplateDownloadTests(TestCase):
         self.assertIn("spreadsheetml", response["Content-Type"])
         self.assertIn("clients_import_template.xlsx", response["Content-Disposition"])
         frame = pd.read_excel(io.BytesIO(self._content(response)))
-        self.assertEqual(list(frame.columns), ["Code *", "Name *", "Description", "Active"])
+        self.assertEqual(list(frame.columns), ["Code *", "Name *", "Description"])
         self.assertEqual(len(frame), 2)
 
     def test_csv_is_the_default_format(self):

@@ -114,22 +114,8 @@ class BlankBooleanCellTests(TestCase):
         )
         self.assertFalse(Tech.objects.get(code="INFRA").is_active)
 
-    def test_an_explicit_false_still_disables(self):
-        Client.objects.create(code="ACME", name="Acme", is_active=True)
-        ClientImporter().commit_row(
-            {"__row_index": 1, "code": "ACME", "name": "Acme", "is_active": False},
-            {"update_existing": True},
-        )
-        self.assertFalse(Client.objects.get(code="ACME").is_active)
-
-    def test_an_explicit_true_still_enables(self):
-        Client.objects.create(code="ACME", name="Acme", is_active=False)
-        ClientImporter().commit_row(
-            {"__row_index": 1, "code": "ACME", "name": "Acme", "is_active": True},
-            {"update_existing": True},
-        )
-        self.assertTrue(Client.objects.get(code="ACME").is_active)
-
+    # Clients are archived through the archive action only, never by an import:
+    # see test_inactive_client_writes.py for the explicit-true / explicit-false cases.
     def test_a_new_record_without_an_active_column_keeps_the_model_default(self):
         ClientImporter().commit_row(
             {"__row_index": 1, "code": "NEW", "name": "New"}, {"update_existing": False}

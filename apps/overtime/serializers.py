@@ -6,6 +6,7 @@ from rest_framework import serializers
 from .models import Client, OvertimeLog
 from apps.users.services.tech_assignments import format_assignments
 from .models.core import clean_ticket_references
+from .services.client_lifecycle import ensure_client_active
 
 
 class ClientSerializer(serializers.ModelSerializer):
@@ -65,6 +66,13 @@ class OvertimeLogSerializer(serializers.ModelSerializer):
     
     def validate_ticket_references(self, value):
         return clean_ticket_references(value)
+
+    def validate_client(self, client):
+        # Only a switch to another client is checked: an old record may keep its
+        # archived client when it is edited for other reasons.
+        if not (self.instance and self.instance.client_id == client.pk):
+            ensure_client_active(client)
+        return client
 
     def validate(self, data):
         from apps.users.services.approval_periods import assert_work_date_open
@@ -143,6 +151,10 @@ class OvertimeLogCreateSerializer(serializers.ModelSerializer):
 
     def validate_ticket_references(self, value):
         return clean_ticket_references(value)
+
+    def validate_client(self, client):
+        ensure_client_active(client)
+        return client
 
     def validate(self, data):
         from apps.users.services.approval_periods import assert_work_date_open

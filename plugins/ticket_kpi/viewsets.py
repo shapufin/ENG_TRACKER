@@ -20,6 +20,8 @@ from django.core.files.base import ContentFile
 from django.db import transaction, IntegrityError
 from django.db.models import Q
 
+from apps.overtime.models.core import Client
+from apps.overtime.services.client_lifecycle import archived_client_error
 from apps.users.models import Team
 from django.utils import timezone
 from rest_framework import viewsets, status, permissions, serializers
@@ -573,6 +575,12 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
                         status.HTTP_403_FORBIDDEN,
                         detail=f'You are not assigned to clients: {list(invalid)}.',
                     )
+
+        archived_message = archived_client_error(Client.objects.filter(pk__in=client_ids))
+        if archived_message:
+            return _error_response(
+                'Client archived', status.HTTP_400_BAD_REQUEST, detail=archived_message,
+            )
 
         # Parse the file first (CPU-bound, no DB work) so we don't hold a
         # database transaction open during file I/O.
@@ -1971,8 +1979,12 @@ class KPIEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
 
         return qs.distinct().order_by('-created_at')
 
-    def _validate_client_ids(self, user, client_ids):
-        """Ensure selected clients belong to the user (or any client if unassigned)."""
+    def _validate_client_ids(self, user, client_ids, current_ids=()):
+        """Ensure selected clients belong to the user (or any client if unassigned).
+
+        ``current_ids`` are the clients already linked to the record being edited;
+        only clients added on top of them must be active.
+        """
         if not client_ids:
             return client_ids
         user_client_ids = set()
@@ -1980,7 +1992,6 @@ class KPIEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             user_client_ids = set(user.profile.clients.values_list('id', flat=True))
         if not user_client_ids:
             # Unassigned users may use any active client
-            from apps.overtime.models.core import Client
             return [cid for cid in client_ids if Client.objects.filter(id=cid, is_active=True).exists()]
         selected = set(client_ids)
         invalid = selected - user_client_ids
@@ -1988,6 +1999,11 @@ class KPIEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             raise serializers.ValidationError(
                 f"Invalid client selection: {list(invalid)}. You can only use your assigned clients."
             )
+        archived_message = archived_client_error(
+            Client.objects.filter(pk__in=selected - set(current_ids))
+        )
+        if archived_message:
+            raise serializers.ValidationError(archived_message)
         return client_ids
 
     def _check_evidence_permission(self, evidence):
@@ -2058,7 +2074,10 @@ class KPIEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         client_ids = serializer.validated_data.pop('client_ids', None)
         if client_ids is not None:
             target_user = evidence.user
-            client_ids = self._validate_client_ids(target_user, client_ids)
+            client_ids = self._validate_client_ids(
+                target_user, client_ids,
+                current_ids=evidence.clients.values_list('pk', flat=True),
+            )
 
         evidence = serializer.save()
         if client_ids is not None:

@@ -13,6 +13,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Toke
 from rest_framework_simplejwt.settings import api_settings
 from django.contrib.auth.models import User, update_last_login
 from apps.overtime.serializers import ClientSerializer
+from apps.overtime.services.client_lifecycle import archived_client_error
 from core.mixins.permissions import is_cr_admin
 from .models import Tech, TechLevel, Team, UserProfile, TeamMembership
 from .models.core import _user_has_related, normalize_calendar_group
@@ -614,6 +615,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
         allow_null=True
     )
     clients_detail = ClientSerializer(source='clients', many=True, read_only=True)
+
+    def validate_clients(self, clients):
+        # Only newly added clients are checked, so a profile that still carries
+        # an inactive client can be saved without touching it.
+        linked = set(self.instance.clients.values_list('pk', flat=True)) if self.instance else set()
+        message = archived_client_error([c for c in clients or [] if c.pk not in linked])
+        if message:
+            raise serializers.ValidationError(message)
+        return clients
+
     albanian_tl_name = serializers.SerializerMethodField()
     italian_tl_name = serializers.SerializerMethodField()
     groups = serializers.SerializerMethodField()

@@ -6,6 +6,7 @@ from datetime import timedelta
 
 from rest_framework import serializers
 from apps.overtime.models.core import Client
+from apps.overtime.services.client_lifecycle import archived_client_error
 from .models import (
     ExportProfile,
     TicketImportBatch,
@@ -35,6 +36,13 @@ class ExportProfileSerializer(serializers.ModelSerializer):
         many=True,
         required=False,
     )
+
+    def validate_assigned_client_ids(self, clients):
+        linked = set(self.instance.assigned_clients.values_list('pk', flat=True)) if self.instance else set()
+        message = archived_client_error([c for c in clients if c.pk not in linked])
+        if message:
+            raise serializers.ValidationError(message)
+        return clients
 
     class Meta:
         model = ExportProfile

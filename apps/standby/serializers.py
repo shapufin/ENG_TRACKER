@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from apps.overtime.models import Client
+from apps.overtime.services.client_lifecycle import archived_client_error
 from .models import StandbyLog, StandbyPattern
 from apps.users.services.tech_assignments import format_assignments
 
@@ -153,6 +154,10 @@ class StandbyLogCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     f'Unknown client ID(s): {sorted(missing)}'
                 )
+            linked = set(self.instance.clients.values_list('pk', flat=True)) if self.instance else set()
+            message = archived_client_error(Client.objects.filter(pk__in=set(ids) - linked))
+            if message:
+                raise serializers.ValidationError(message)
         return ids
 
     def create(self, validated_data):
@@ -215,6 +220,10 @@ class StandbyLogUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     f'Unknown client ID(s): {sorted(missing)}'
                 )
+            linked = set(self.instance.clients.values_list('pk', flat=True)) if self.instance else set()
+            message = archived_client_error(Client.objects.filter(pk__in=set(ids) - linked))
+            if message:
+                raise serializers.ValidationError(message)
         return ids
 
     def update(self, instance, validated_data):

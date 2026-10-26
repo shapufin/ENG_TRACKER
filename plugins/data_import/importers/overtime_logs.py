@@ -16,6 +16,7 @@ from django.utils import timezone
 from core.utils.time_overlap import find_overlapping_entry
 
 from apps.overtime.models import Client, OvertimeLog
+from apps.overtime.services.client_lifecycle import archived_client_error
 from .authority import StaffOnlyAuthority
 from .base import row_error_from_exception, BaseImporter, ImportField, ImportOption, ImportRowResult, UPDATE_EXISTING_OPTION
 from .helpers import resolve_user
@@ -168,6 +169,10 @@ class OvertimeLogImporter(StaffOnlyAuthority, BaseImporter):
                         "Value Transforms panel, or import clients first."
                     ],
                 )
+
+            archived_message = archived_client_error([client])
+            if archived_message:
+                return ImportRowResult(row_index=row_index, status="error", errors=[archived_message])
 
             work_date = mapped_row.get("date")
             if not work_date:
