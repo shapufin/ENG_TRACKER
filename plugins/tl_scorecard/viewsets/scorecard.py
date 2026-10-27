@@ -9,6 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 
+from apps.users.models.hbpr import CADENCE_CHOICES, NTH_WEEK_CHOICES
 from apps.users.services.hbpr_scope import get_hbpr_scope, is_hbpr
 from core.mixins.permissions import PluginPermissionMixin, is_hbpr_only
 
@@ -52,12 +53,13 @@ class CadenceChangeSerializer(serializers.Serializer):
 
     ``cadence`` is required because ``update_assignment`` reads ``None`` as
     "leave unchanged". Cross-field rules (nth-week only for monthly, needs a
-    weekday) stay in the model's ``clean()``.
+    weekday) stay in the model's ``clean()``. The vocabularies are the model's
+    own — a second copy here would reject a cadence the model accepts.
     """
 
-    cadence = serializers.ChoiceField(choices=['weekly', 'biweekly', 'monthly'])
+    cadence = serializers.ChoiceField(choices=[code for code, _label in CADENCE_CHOICES])
     cadence_day_of_week = serializers.IntegerField(min_value=0, max_value=6, allow_null=True, required=False)
-    cadence_nth_week = serializers.ChoiceField(choices=[1, 2, 3, 4, -1], allow_null=True, required=False)
+    cadence_nth_week = serializers.ChoiceField(choices=list(NTH_WEEK_CHOICES), allow_null=True, required=False)
 
 
 def _audit_cadence_change(user, assignment, old, new):

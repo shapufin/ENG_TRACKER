@@ -109,6 +109,7 @@ export const CadenceScheduleFields: React.FC<CadenceScheduleFieldsProps> = ({
               type="button"
               size="sm"
               variant={!isNthWeekdayMonthly ? "default" : "outline"}
+              aria-pressed={!isNthWeekdayMonthly}
               onClick={() => {
                 onFieldChange("cadence_nth_week", null);
                 onFieldChange("cadence_day_of_week", null);
@@ -120,6 +121,7 @@ export const CadenceScheduleFields: React.FC<CadenceScheduleFieldsProps> = ({
               type="button"
               size="sm"
               variant={isNthWeekdayMonthly ? "default" : "outline"}
+              aria-pressed={isNthWeekdayMonthly}
               onClick={() => {
                 onFieldChange("cadence_nth_week", 2); // Default to 2nd
                 if (value.cadence_day_of_week === null) {

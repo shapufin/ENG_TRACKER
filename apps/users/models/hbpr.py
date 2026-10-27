@@ -24,6 +24,10 @@ CADENCE_CHOICES = [
     ("monthly", "Monthly"),
 ]
 
+# The monthly "nth weekday" options, in display order. One source: the model's
+# ``clean()`` and every serializer that accepts a schedule read this tuple.
+NTH_WEEK_CHOICES = (1, 2, 3, 4, -1)
+
 _CADENCE_STEP_DAYS = {"weekly": 7, "biweekly": 14}
 
 WEEKDAY_NAMES = [
@@ -152,7 +156,7 @@ class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
         if self.cadence_nth_week is not None:
             if self.cadence != "monthly":
                 raise ValidationError({"cadence_nth_week": "Only valid for monthly cadence."})
-            if self.cadence_nth_week not in (1, 2, 3, 4, -1):
+            if self.cadence_nth_week not in NTH_WEEK_CHOICES:
                 raise ValidationError({"cadence_nth_week": "Must be 1, 2, 3, 4, or -1 (Last)."})
             if self.cadence_day_of_week is None:
                 raise ValidationError({"cadence_day_of_week": "Required when specifying week of month."})

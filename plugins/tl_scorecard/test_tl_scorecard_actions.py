@@ -503,3 +503,29 @@ class CadenceEditTests(ActionsBase):
         row = HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl)
         resp = client.patch(f'/api/users/hbpr-assignments/{row.id}/', {'cadence_nth_week': 2}, format='json')
         self.assertEqual(resp.status_code, 400, resp.data)
+
+    def test_employee_cannot_change_a_cadence(self):
+        """No plugin grant at all: `manage` is denied before the handler runs.
+
+        Deliberately no `?leader_id=` — with one, `_resolve_leader` would 403
+        too and the test could pass without ever reaching the permission gate.
+        """
+        employee = _make_user('employee_act')
+        resp = self.post(employee, {'cadence': 'monthly'})
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl).cadence, 'weekly')
+
+    def test_audit_is_best_effort_when_the_plugin_is_absent(self):
+        """A deployment without audit_log must not fail the change."""
+        import sys
+
+        from plugins.audit_log.models import AuditLog
+
+        from .viewsets.scorecard import _audit_cadence_change
+
+        assignment = HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl)
+        before = AuditLog.objects.count()
+        with mock.patch.dict(sys.modules, {'plugins.audit_log.signals': None}):
+            # Must not raise: the schedule is already saved by the time we log.
+            _audit_cadence_change(self.tl, assignment, {'cadence': 'weekly'}, {'cadence': 'monthly'})
+        self.assertEqual(AuditLog.objects.count(), before)

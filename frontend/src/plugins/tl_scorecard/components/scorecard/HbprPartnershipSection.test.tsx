@@ -146,7 +146,27 @@ describe("HbprPartnershipSection", () => {
     );
   });
 
-  it("sends a monthly weekday pattern and drops a stale weekday otherwise", async () => {
+  it("sends the monthly weekday pattern", async () => {
+    const { onUpdateCadence } = renderSection();
+    fireEvent.click(screen.getByRole("button", { name: /change schedule/i }));
+    fireEvent.click(await screen.findByRole("option", { name: "Monthly" }));
+    // Defaults to 2nd + Thursday when no weekday pattern is stored yet.
+    fireEvent.click(screen.getByRole("button", { name: "Specific weekday" }));
+    expect(screen.getByRole("button", { name: "Specific weekday" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    fireEvent.click(screen.getByRole("button", { name: /save schedule/i }));
+    await waitFor(() =>
+      expect(onUpdateCadence).toHaveBeenCalledWith({
+        cadence: "monthly",
+        cadence_day_of_week: 3,
+        cadence_nth_week: 2,
+      })
+    );
+  });
+
+  it("drops a stale weekday when switching to a day-of-month schedule", async () => {
     const base = PARTNERSHIP.assignment!;
     const { onUpdateCadence } = renderSection({
       partnership: { ...PARTNERSHIP, assignment: { ...base, cadence_day_of_week: 1 } },

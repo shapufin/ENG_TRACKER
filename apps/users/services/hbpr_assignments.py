@@ -15,12 +15,12 @@ from django.db import transaction
 from django.db.models import Q
 
 from apps.permissions.services.role_service import has_role
-from apps.users.models.hbpr import HbprAlbanianTlAssignment
+from apps.users.models.hbpr import CADENCE_CHOICES, HbprAlbanianTlAssignment
 from core.utils.timezone_local import business_today
 
 User = get_user_model()
 
-CADENCES = {"weekly", "biweekly", "monthly"}
+CADENCES = {code for code, _label in CADENCE_CHOICES}
 
 # Ended assignments are audit history, but evidence-free history does not need
 # to live forever: rows whose last day in effect is older than this window are
