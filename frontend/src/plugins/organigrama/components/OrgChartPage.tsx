@@ -290,6 +290,7 @@ const OrgChartInner: React.FC<OrgChartPageProps> = ({
             zoomOnPinch={true}
             preventScrolling={false}
             fitView
+            fitViewOptions={{ padding: isMobile ? 0.08 : 0.15, minZoom: 0.1, maxZoom: 1.5 }}
             attributionPosition="bottom-left"
             proOptions={{ hideAttribution: true }}
           >

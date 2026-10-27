@@ -750,6 +750,7 @@ const CustomChartDesktopInner: React.FC<{
             nodeTypes={nodeTypes}
             edgeTypes={builderEdgeTypes}
             fitView
+            fitViewOptions={{ padding: isMobile ? 0.08 : 0.15, minZoom: 0.1, maxZoom: 1.5 }}
             onNodeClick={handleNodeClick}
             panOnDrag={true}
             zoomOnPinch={true}
@@ -789,7 +790,17 @@ export interface CustomChartViewerProps {
   payload: DraftPayload;
 }
 
-export const CustomChartViewer: React.FC<CustomChartViewerProps> = ({ chart, payload }) => {
+export interface CustomChartViewerProps {
+  chart: OrgChart;
+  payload: DraftPayload;
+  defaultMode?: "graph" | "list";
+}
+
+export const CustomChartViewer: React.FC<CustomChartViewerProps> = ({
+  chart,
+  payload,
+  defaultMode,
+}) => {
   const isSmallScreen = useMediaQuery("(max-width: 767px)");
   const isLandscape = useMediaQuery("(orientation: landscape) and (max-height: 550px)");
   const [userModeOverride, setUserModeOverride] = useState<"graph" | "list" | null>(null);
@@ -801,10 +812,11 @@ export const CustomChartViewer: React.FC<CustomChartViewerProps> = ({ chart, pay
     setUserModeOverride(null);
   }
 
-  // In landscape mode or desktop, automatically open in interactive graph view.
-  // In portrait mobile, default to list unless user toggles graph view.
+  // Graphical layout by default when defaultMode="graph" or on desktop/landscape
   const isGraphMode =
-    userModeOverride === "graph" || (userModeOverride === null && (isLandscape || !isSmallScreen));
+    userModeOverride === "graph" ||
+    (userModeOverride === null &&
+      (defaultMode === "graph" || (defaultMode !== "list" && (isLandscape || !isSmallScreen))));
 
   return (
     <div className="space-y-2">

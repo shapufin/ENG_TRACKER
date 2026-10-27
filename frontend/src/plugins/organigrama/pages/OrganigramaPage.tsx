@@ -27,17 +27,17 @@ export const OrganigramaPage: React.FC = () => {
   const visible = useOrganigramaVisibleCharts();
   const isSmallScreen = useMediaQuery("(max-width: 767px)");
   const isLandscape = useMediaQuery("(orientation: landscape) and (max-height: 550px)");
-  const [liveModeOverride, setLiveModeOverride] = useState<"graph" | "list" | null>(null);
+  const [liveModeOverride, setLiveModeOverride] = useState<"graph" | "list">("graph");
 
-  // Automatically reset user override when orientation changes (e.g. rotating phone into landscape opens graph)
+  // Automatically reset to graph mode when orientation changes
   const [prevLandscape, setPrevLandscape] = useState(isLandscape);
   if (prevLandscape !== isLandscape) {
     setPrevLandscape(isLandscape);
-    setLiveModeOverride(null);
+    setLiveModeOverride("graph");
   }
 
-  const isLiveGraphMode =
-    liveModeOverride === "graph" || (liveModeOverride === null && (isLandscape || !isSmallScreen));
+  // Use graphical layout by default across all devices, with optional list toggle
+  const isLiveGraphMode = liveModeOverride !== "list";
 
   const sources = useMemo<SourceOption[]>(() => {
     const list: SourceOption[] = [];
@@ -121,7 +121,9 @@ export const OrganigramaPage: React.FC = () => {
     }
 
     if (published.data && selectedChart) {
-      return <CustomChartViewer chart={selectedChart} payload={published.data} />;
+      return (
+        <CustomChartViewer chart={selectedChart} payload={published.data} defaultMode="graph" />
+      );
     }
 
     return null;
