@@ -119,7 +119,7 @@ class MeetingAttendeeViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, vie
     hbpr_exclude = ~Q(meeting__meeting_type='one_on_one')
 
     def base_queryset(self):
-        return MeetingAttendee.objects.select_related('meeting', 'user')
+        return MeetingAttendee.objects.select_related('meeting', 'user').order_by('-id')
 
     def own_q(self, user):
         return Q(meeting__organizer=user)

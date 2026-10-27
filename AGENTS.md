@@ -344,3 +344,12 @@ Rules:
 - Downloads reuse the signed-single-use pattern: `POST files/{id}/download-link/` then `GET .../download/?token=`, nonce cleared once, `X-Accel-Redirect` to `/_protected/snapshots/`. Every download is audited; the manifest stays the durable record.
 - Payroll list defaults to `runs/scope/`'s `business_year` (server clock, never the browser) and filters with `getRuns({ year })`, which also stops the first-50-runs truncation from hiding older years. While that year is unknown the query is disabled — render the loading card, or every KPI flashes zero.
 - Gates: `plugins.year_close` 31 OK, `plugins.payroll` (incl. `test_runs_scope_years`) green, full backend 3679 OK, frontend 592 files / 3760 tests, `node --test scripts/admin-routes.test.mjs` and `visual-route-manifest.test.mjs` green (the route must be declared there), control/modal/table-header audits PASS, `frontend/e2e/previous-years.spec.ts` 2/2.
+
+## 2026-10-27 — Full-audit resilience & UI doctrine
+- Rules in `docs/workflow-invariants.md` item 35.
+- DRF viewsets: `MeetingAttendeeViewSet` base queryset explicitly ordered with `.order_by('-id')` to prevent DRF `UnorderedObjectListWarning` and pagination inconsistency across pages. Pinned by `plugins.tl_scorecard.test_tl_scorecard_actions.test_meeting_attendees_list_is_ordered_and_warns_none`.
+- HBPR Cadence: `CadenceChangeSerializer.validate()` rejects `cadence_nth_week` early with HTTP 400 unless `cadence == 'monthly'` (matching model `clean()`). Pinned by `test_cadence_serializer_rejects_nth_week_without_monthly`.
+- Client deletion 409 conflict: `useClientManagement.ts` surfaces backend `blockers` array directly in toast descriptions instead of a generic error. Unit tested in `useClientManagement.test.tsx`.
+- Design System: Zero raw emojis/pictographs in UI copy (`usePluginManagement.ts`, `SidebarInstallButton.tsx`); `check_no_emoji` gate green.
+- Gates: `plugins.tl_scorecard` 53 OK, Vitest `useClientManagement.test.tsx` 2/2, `tsc -b` 0 errors, `table-header-audit.mjs` PASS (0 violations across 946 files), `modal-audit.mjs` PASS.
+

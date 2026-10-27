@@ -529,3 +529,35 @@ class CadenceEditTests(ActionsBase):
             # Must not raise: the schedule is already saved by the time we log.
             _audit_cadence_change(self.tl, assignment, {'cadence': 'weekly'}, {'cadence': 'monthly'})
         self.assertEqual(AuditLog.objects.count(), before)
+
+    def test_cadence_serializer_rejects_nth_week_without_monthly(self):
+        """Cross-field validation in CadenceChangeSerializer fails fast before row lock."""
+        from .viewsets.scorecard import CadenceChangeSerializer
+
+        serializer = CadenceChangeSerializer(data={'cadence': 'weekly', 'cadence_nth_week': 2, 'cadence_day_of_week': 3})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('cadence_nth_week', serializer.errors)
+
+    def test_meeting_attendees_list_is_ordered_and_warns_none(self):
+        """MeetingAttendeeViewSet base queryset is explicitly ordered to avoid pagination warnings."""
+        import warnings
+
+        meeting = Meeting.objects.create(
+            organizer=self.tl,
+            meeting_type='team_meeting',
+            occurred_on=date(2026, 1, 15),
+        )
+        MeetingAttendee.objects.create(meeting=meeting, user=self.member, role='member')
+
+        req = self.factory.get('/api/plugins/tl_scorecard/meeting-attendees/')
+        force_authenticate(req, user=self.staff)
+        view = MeetingAttendeeViewSet.as_view({'get': 'list'})
+        with warnings.catch_warnings(record=True) as captured:
+            warnings.simplefilter('always')
+            resp = view(req)
+            self.assertEqual(resp.status_code, 200)
+            pagination_warnings = [
+                w for w in captured
+                if 'UnorderedObjectListWarning' in str(w.category)
+            ]
+            self.assertEqual(pagination_warnings, [], f"Unexpected pagination warning: {pagination_warnings}")
