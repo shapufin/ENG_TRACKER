@@ -43,6 +43,17 @@ class MembershipChangeTests(APITestCase):
         self.assertEqual(audit.object_id, str(self.team_a.pk))
         self.assertEqual(audit.extra_data['username'], 'emp')
 
+    def test_string_team_ids_are_coerced_so_unchanged_teams_write_nothing(self):
+        resp = self.client.patch(
+            self.url, {'teams': [str(self.team_a.pk), str(self.team_b.pk)]}, format='json',
+        )
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(self._teams(), {'AAA', 'BBB'})
+        self.assertEqual(TeamMembershipHistory.objects.count(), 0)
+        self.assertEqual(
+            AuditLog.objects.filter(extra_data__operation__in=['member_add', 'member_remove']).count(), 0,
+        )
+
     def test_adding_a_team_is_audited_and_unchanged_teams_write_nothing(self):
         team_c = Team.objects.create(name='C', code='CCC')
         self.client.patch(self.url, {'teams': [self.team_a.pk, self.team_b.pk, team_c.pk]}, format='json')

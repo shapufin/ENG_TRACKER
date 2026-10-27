@@ -32,6 +32,16 @@ class TeamChange:
         return bool(self.added or self.removed)
 
 
+def _team_pk(ref):
+    """The team id from a ``Team`` or an id. JSON clients may send it as a string."""
+    if hasattr(ref, 'pk'):
+        return ref.pk
+    try:
+        return int(ref)
+    except (TypeError, ValueError):
+        return ref
+
+
 def _team_leader_ids(team_ids, derived=None):
     """{team_id: {leader user ids}}: the team's ``team_leader`` plus its members' derived TLs."""
     teams = Team.objects.filter(pk__in=team_ids)
@@ -60,7 +70,7 @@ def change_user_teams(profile, team_refs, *, request=None, actor=None, reason='m
     actor = actor or (getattr(request, 'user', None) if request is not None else None)
     if actor is not None and not getattr(actor, 'is_authenticated', False):
         actor = None
-    new_ids = {getattr(ref, 'pk', ref) for ref in team_refs or [] if ref}
+    new_ids = {_team_pk(ref) for ref in team_refs or [] if ref}
     current = {m.team_id: m for m in TeamMembership.objects.filter(user_profile=profile).select_related('team')}
     removed_ids = set(current) - new_ids
     added_ids = new_ids - set(current)

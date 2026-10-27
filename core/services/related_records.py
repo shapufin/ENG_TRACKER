@@ -13,6 +13,8 @@ def relation_counts(instance, include):
         if not include(rel):
             continue
         name = rel.get_accessor_name()
+        if name is None:  # hidden relation (related_name='+'); nothing to count
+            continue
         count = getattr(instance, name).count()
         if count:
             counts[name] = count
