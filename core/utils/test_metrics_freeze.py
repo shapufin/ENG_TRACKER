@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.test import SimpleTestCase, override_settings
@@ -9,6 +10,12 @@ TIRANE = ZoneInfo('Europe/Tirane')
 
 
 class MetricsFreezeTests(SimpleTestCase):
+    def setUp(self):
+        # business_tz() reads a process-wide cache another test may have left behind.
+        patcher = patch('core.utils.metrics_freeze.business_tz', return_value=TIRANE)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_freeze_is_midnight_of_the_10th_of_the_next_month_in_business_tz(self):
         self.assertEqual(freeze_at(date(2026, 9, 17)), datetime(2026, 10, 10, tzinfo=TIRANE))
 

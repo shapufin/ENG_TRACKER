@@ -175,6 +175,12 @@ def normalize_calendar_group(value):
     return '-'.join(str(value or '').lower().split())
 
 
+class TeamQuerySet(models.QuerySet):
+    def active(self):
+        """Teams that are not archived (and not soft-deleted)."""
+        return self.filter(is_active=True, is_deleted=False)
+
+
 class Team(BaseModel):
     """
     Team model for organizing users into groups.
@@ -206,6 +212,15 @@ class Team(BaseModel):
         help_text='Teams with the same calendar_group share calendar visibility'
     )
     description = models.TextField(blank=True)
+    # Retired teams are archived, not deleted: hidden from pickers and closed to new
+    # members, history kept. Set only through apps/users/services/team_lifecycle.py.
+    is_active = models.BooleanField(default=True, db_index=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+    archived_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name='archived_teams'
+    )
+
+    objects = TeamQuerySet.as_manager()
 
     class Meta:
         db_table = 'teams'

@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
 from apps.users.models import Team, TeamMembership, UserProfile
+from apps.users.services.team_lifecycle import archived_error_for_refs
 from apps.users.services.tech_assignments import set_tech_assignments
 
 
@@ -113,6 +114,9 @@ def create_user_with_profile(
         ValueError: if username/email/password validation fails.
     """
     validate_new_user(username, email, password, code=code)
+    archived_message = archived_error_for_refs([*(teams or []), team])
+    if archived_message:
+        raise UserValidationError('teams', archived_message)
 
     user = User.objects.create_user(
         username=username,
@@ -189,6 +193,9 @@ def update_user_profile(
     ``cr_admin`` role is created (idempotent). When False, any existing
         active ``cr_admin`` ``UserRole`` rows are deactivated.
     """
+    archived_message = archived_error_for_refs([*(teams or []), team])
+    if archived_message:
+        raise UserValidationError('teams', archived_message)
     if is_italian_tl_role is not None or is_albanian_tl_role is not None:
         from apps.permissions.services.role_service import (
             TeamLeaderRevokeBlockedError,

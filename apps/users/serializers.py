@@ -19,6 +19,7 @@ from .models import Tech, TechLevel, Team, UserProfile, TeamMembership
 from .models.core import _user_has_related, normalize_calendar_group
 from .services import mfa as mfa_service
 from .services.team_leaders import derive_team_tls
+from .services.team_lifecycle import archived_team_error
 from .services.tech_assignments import (
     TechAssignmentError,
     apply_tech_assignments,
@@ -452,7 +453,7 @@ class TeamSerializer(serializers.ModelSerializer):
     parent_team = serializers.PrimaryKeyRelatedField(read_only=True)
     parent_team_name = serializers.CharField(source='parent_team.name', read_only=True)
     parent_team_id = serializers.PrimaryKeyRelatedField(
-        queryset=Team.objects.all(),
+        queryset=Team.objects.active(),
         source='parent_team',
         write_only=True,
         required=False,
@@ -470,9 +471,10 @@ class TeamSerializer(serializers.ModelSerializer):
             'parent_team', 'parent_team_id', 'parent_team_name',
             'team_leader', 'team_leader_id', 'italian_tl', 'albanian_tl',
             'sub_teams_count', 'members_count',
+            'is_active', 'archived_at', 'archived_by',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'is_active', 'archived_at', 'archived_by', 'created_at', 'updated_at']
 
     def validate_calendar_group(self, value):
         return normalize_calendar_group(value)
@@ -584,6 +586,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+
+    def validate_teams(self, teams):
+        message = archived_team_error(teams or [])
+        if message:
+            raise serializers.ValidationError(message)
+        return teams
+
     teams_detail = serializers.SerializerMethodField()
     techs = TechAssignmentField(required=False)
     techs_detail = serializers.SerializerMethodField()

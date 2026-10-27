@@ -281,9 +281,12 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
         if not team_code:
             return None
         try:
-            return Team.objects.get(code=team_code)
+            team = Team.objects.get(code=team_code)
         except Team.DoesNotExist:
             raise ValueError(f'Team with code "{team_code}" does not exist.')
+        if not team.is_active:
+            raise ValueError(f'Team "{team_code}" is archived and cannot receive members.')
+        return team
 
     def _resolve_techs(self, mapped_row: Dict[str, Any]) -> Optional[list]:
         """Resolve comma-separated tech codes to Tech assignment entries.
