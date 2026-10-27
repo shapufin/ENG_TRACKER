@@ -222,7 +222,7 @@ export const AuditLogsEnhancedPage: React.FC = () => {
                       {archiveStatus.archives.map((a) => (
                         <div
                           key={a.filename}
-                          className="flex items-center justify-between text-[11px]"
+                          className="flex items-center justify-between text-xs"
                         >
                           <span className="max-w-[180px] truncate font-mono">{a.filename}</span>
                           <button
