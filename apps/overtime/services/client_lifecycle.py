@@ -1,11 +1,12 @@
 """Rules for what must survive a client delete, and what an archived client may receive
 (plans A1-A2, client archive)."""
-import logging
 
 from django.core.exceptions import ValidationError
 from django.db.models import CASCADE, PROTECT, Max
 
-logger = logging.getLogger(__name__)
+from core.services.lifecycle import record_lifecycle_event
+from core.services.related_records import relation_counts
+
 
 # Reverse M2M links a delete may drop: user assignments are cleared when a
 # client is archived, so they never need to block anything.
@@ -20,18 +21,12 @@ def protected_record_counts(client):
     importing it. A FK counts only when it is PROTECT; an M2M link always counts
     (Django cannot PROTECT an auto through table) unless it is in ``DELETABLE_LINKS``.
     """
-    counts = {}
-    for rel in client._meta.related_objects:
-        name = rel.get_accessor_name()
+    def blocks(rel):
         if rel.many_to_many:
-            if name in DELETABLE_LINKS:
-                continue
-        elif not (rel.one_to_many and rel.on_delete is PROTECT):
-            continue
-        count = getattr(client, name).count()
-        if count:
-            counts[name] = count
-    return counts
+            return rel.get_accessor_name() not in DELETABLE_LINKS
+        return rel.one_to_many and rel.on_delete is PROTECT
+
+    return relation_counts(client, blocks)
 
 
 def archived_client_error(clients):
@@ -59,14 +54,7 @@ def ensure_client_active(client):
 def cascade_record_counts(client):
     """``{accessor: count}`` of the records a delete would silently take with it
     (reverse CASCADE FKs, today the onboarding folders and documents)."""
-    counts = {}
-    for rel in client._meta.related_objects:
-        if rel.one_to_many and rel.on_delete is CASCADE:
-            name = rel.get_accessor_name()
-            count = getattr(client, name).count()
-            if count:
-                counts[name] = count
-    return counts
+    return relation_counts(client, lambda rel: rel.one_to_many and rel.on_delete is CASCADE)
 
 
 def last_activity(client):
@@ -115,21 +103,4 @@ def record_client_event(request, client, action, operation, old=None, new=None, 
     ``action`` must be one of ``AuditLog.ACTION_CHOICES``; ``operation`` names the
     lifecycle step in ``extra_data``. A failed audit write never blocks the action.
     """
-    try:
-        from apps.reports.models import AuditLog
-        from core.utils import get_client_ip
-
-        AuditLog.objects.create(
-            user=request.user,
-            action=action,
-            model_name='client',
-            object_id=str(client.pk),
-            object_repr=str(client)[:255],
-            old_values=old,
-            new_values=new,
-            ip_address=get_client_ip(request) or None,
-            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
-            extra_data={'operation': operation, **(extra or {})},
-        )
-    except Exception:
-        logger.warning('Could not record client %s audit event for %s', operation, client.pk, exc_info=True)
+    record_lifecycle_event(request, client, 'client', action, operation, old=old, new=new, extra=extra)
