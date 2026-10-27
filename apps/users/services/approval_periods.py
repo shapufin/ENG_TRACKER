@@ -263,6 +263,8 @@ def finalize_period(actor, period: date) -> tuple[ApprovalPeriodClose, bool]:
                     close=close,
                     user_id=user_id,
                     source_team=source_team,
+                    source_team_name=source_team.name if source_team else '',
+                    source_team_code=source_team.code if source_team else '',
                 )
             )
         ApprovalPeriodCloseMember.objects.bulk_create(members)

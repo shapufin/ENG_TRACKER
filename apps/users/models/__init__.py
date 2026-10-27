@@ -13,6 +13,7 @@ from .core import (
     UserProfile,
     UserTech,
     TeamMembership,
+    TeamMembershipHistory,
 )
 from .hbpr import HbprAlbanianTlAssignment
 from .mfa import MFABackupCode, UserMFA
@@ -30,5 +31,6 @@ __all__ = [
     'UserProfile',
     'UserTech',
     'TeamMembership',
+    'TeamMembershipHistory',
     'HbprAlbanianTlAssignment',
 ]

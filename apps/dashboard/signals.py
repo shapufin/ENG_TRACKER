@@ -6,6 +6,8 @@ when a new Team is created, ensuring every team has a corresponding calendar.
 """
 
 import logging
+
+from django.utils import timezone
 from decimal import Decimal
 from django.db.models.signals import post_save, post_delete, pre_delete, pre_save
 from django.dispatch import receiver
@@ -46,7 +48,8 @@ def create_team_calendar_workspace(sender, instance, created, **kwargs):
             # The new team is a new audience: drop the old team's sharing.
             workspace.team = instance
             workspace.is_public = False
-            workspace.save(update_fields=['team', 'is_public'])
+            workspace.detached_at = None
+            workspace.save(update_fields=['team', 'is_public', 'detached_at'])
             workspace.allowed_users.clear()
 
 
@@ -62,6 +65,9 @@ def remove_team_calendar_workspace(sender, instance, **kwargs):
     ).first()
     if workspace and not PublicHoliday.objects.filter(calendar=workspace).exists():
         workspace.delete()
+    elif workspace:
+        workspace.detached_at = timezone.now()
+        workspace.save(update_fields=['detached_at'])
 
 
 def _restore_payroll_workday(h_date):

@@ -202,7 +202,11 @@ def team_member_ids(leader, team, scope=None):
 
 
 def member_sets_for(rows, scope=None):
-    """{(leader_id, team_id): member ids} for snapshot rows, in a fixed number of queries."""
+    """{(leader_id, team_id): member ids} for snapshot rows, in a fixed number of queries.
+
+    Rows whose team was purged (team_id None) are history only and are left out.
+    """
+    rows = [r for r in rows if r.team_id is not None]
     scope = _scope(scope)
     managed = scope.managed({r.leader_id for r in rows})
     members = scope.team_members({r.team_id for r in rows})
@@ -555,6 +559,8 @@ def compute_tl_metric(leader, team, month, scope=None):
         team=team,
         month=month_start.date(),
         defaults={
+            'team_name': team.name,
+            'team_code': team.code,
             'metrics': metrics,
             'team_size': len(member_ids),
             'active_submitters': len(submitter_ids),
@@ -632,7 +638,8 @@ def stale_snapshot_ids(rows, scope=None):
     is one query per request type for the whole batch, so the cost does not
     grow with the number of rows.
     """
-    rows = list(rows)
+    # A row whose team was purged is frozen history: it is never recomputed.
+    rows = [r for r in rows if r.team_id is not None]
     members = member_sets_for(rows, scope)
     all_members = set().union(*members.values()) if members else set()
     computed = [r.computed_at for r in rows if r.computed_at]

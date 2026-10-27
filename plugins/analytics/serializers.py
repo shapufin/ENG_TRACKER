@@ -34,7 +34,10 @@ class AnalyticsSnapshotSerializer(serializers.ModelSerializer):
 class AnalyticsMetricSerializer(serializers.ModelSerializer):
     metric_type_display = serializers.CharField(source='get_metric_type_display', read_only=True)
     user_name = serializers.CharField(source='user.get_full_name', read_only=True, allow_null=True)
-    team_name = serializers.CharField(source='team.name', read_only=True, allow_null=True)
+    team_name = serializers.SerializerMethodField()
+
+    def get_team_name(self, obj):
+        return obj.team.name if obj.team_id else (obj.team_name or None)
 
     class Meta:
         model = AnalyticsMetric

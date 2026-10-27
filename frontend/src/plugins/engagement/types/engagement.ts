@@ -61,7 +61,7 @@ export interface EngagementTeamBreakdownRow {
   id: number;
   leader: number;
   leader_name: string;
-  team: number;
+  team: number | null;
   team_name: string;
   month: string;
   metrics: Record<"leave" | "overtime" | "standby", EngagementTypeMetrics>;

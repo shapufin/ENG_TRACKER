@@ -7,6 +7,8 @@ command, never by request-time aggregation.
 """
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 
 from core.models.abstract import BaseModel
 from apps.users.models import Team
@@ -23,10 +25,15 @@ class TLApprovalMetric(BaseModel):
     )
     team = models.ForeignKey(
         Team,
-        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
         related_name='engagement_metrics',
         db_index=True,
     )
+    # Labels survive the team: `team` goes NULL when it is purged. Such rows are history only.
+    team_name = models.CharField(max_length=100, blank=True, default='')
+    team_code = models.CharField(max_length=10, blank=True, default='')
     month = models.DateField(help_text='First day of the month', db_index=True)
 
     # Per-request-type breakdown: {"leave": {...}, "overtime": {...}, "standby": {...}}
@@ -73,4 +80,9 @@ class TLApprovalMetric(BaseModel):
         ]
 
     def __str__(self):
-        return f"{self.leader.username} / {self.team.name} / {self.month}"
+        return f"{self.leader.username} / {self.team_name} / {self.month}"
+
+
+@receiver(pre_delete, sender=Team)
+def keep_team_labels_on_delete(sender, instance, **kwargs):
+    TLApprovalMetric.objects.filter(team=instance).update(team_name=instance.name, team_code=instance.code)

@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 from core.models.abstract import BaseModel, TimeStampedModel
 
@@ -283,6 +283,28 @@ class TeamMembership(BaseModel):
         return f"{self.user_profile.user.username} - {self.team.name}"
 
 
+class TeamMembershipHistory(models.Model):
+    """A membership that ended. Survives the team and the user: labels are copied."""
+    team = models.ForeignKey(Team, null=True, blank=True, on_delete=models.SET_NULL, related_name='membership_history')
+    team_name = models.CharField(max_length=100)
+    team_code = models.CharField(max_length=10)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='team_membership_history')
+    username = models.CharField(max_length=150)
+    joined_date = models.DateField(null=True, blank=True)
+    is_primary_team = models.BooleanField(default=False)
+    removed_at = models.DateTimeField()
+    removed_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = 'team_membership_history'
+        ordering = ['-removed_at']
+        indexes = [models.Index(fields=['team', 'removed_at']), models.Index(fields=['user', 'removed_at'])]
+
+    def __str__(self):
+        return f'{self.username} left {self.team_name} at {self.removed_at:%Y-%m-%d}'
+
+
 class ApprovalPeriodBoundary(BaseModel):
     """Per-month coordination row for TL approval-period operations."""
     period = models.DateField(unique=True, db_index=True)
@@ -354,6 +376,9 @@ class ApprovalPeriodCloseMember(BaseModel):
         on_delete=models.SET_NULL,
         related_name='approval_period_close_members',
     )
+    # Labels survive the team: source_team goes NULL when the team is purged.
+    source_team_name = models.CharField(max_length=100, blank=True, default='')
+    source_team_code = models.CharField(max_length=10, blank=True, default='')
 
     class Meta:
         db_table = 'approval_period_close_members'
@@ -657,3 +682,11 @@ def save_user_profile(sender, instance, **kwargs):
     """Save the UserProfile whenever the User is saved."""
     if hasattr(instance, 'profile'):
         instance.profile.save()
+
+
+@receiver(pre_delete, sender=Team)
+def keep_team_labels_on_delete(sender, instance, **kwargs):
+    """Copy the team's current name and code onto rows whose FK is about to go NULL."""
+    ApprovalPeriodCloseMember.objects.filter(source_team=instance).update(
+        source_team_name=instance.name, source_team_code=instance.code,
+    )

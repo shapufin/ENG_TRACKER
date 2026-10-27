@@ -34,6 +34,10 @@ class CalendarWorkspace(BaseModel):
         related_name='calendar_workspaces',
         help_text="Primary team for this workspace (optional)"
     )
+    detached_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the team was deleted and this workspace was kept without it"
+    )
 
     # Who can see this calendar
     is_public = models.BooleanField(default=False, help_text="If true, all users can see this calendar")
