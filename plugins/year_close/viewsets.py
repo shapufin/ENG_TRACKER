@@ -5,6 +5,7 @@ write here. Downloads follow the same signed-single-use-link pattern as the
 onboarding exports, so a multi-GB set never streams through gunicorn.
 """
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
 from rest_framework import mixins, status, viewsets
@@ -111,6 +112,13 @@ class YearSnapshotFileViewSet(SuperuserOnlyMixin, mixins.RetrieveModelMixin,
         ).first()
         if row is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
+
+        # The token binds the user, so someone who lost access since the link was
+        # minted must be refused BEFORE the nonce is consumed — otherwise a
+        # refused request would burn the single-use link.
+        user = get_user_model().objects.filter(pk=payload['user_id'], is_active=True).first()
+        if user is None:
+            return Response(status=status.HTTP_403_FORBIDDEN)
 
         # Single use: only the request that clears the nonce gets the file.
         consumed = (

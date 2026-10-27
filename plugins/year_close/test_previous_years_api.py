@@ -78,6 +78,23 @@ class PreviousYearsApiTests(YearCloseFixture):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_a_token_from_a_deactivated_user_is_refused_and_not_burned(self):
+        """The token binds the user, so a user who lost access must not download —
+        and a refused request must not consume the single-use nonce."""
+        self.client.force_authenticate(self.superuser)
+        row = self.snapshot.files.filter(kind='company').first()
+        url = self.client.post(f'/api/plugins/year_close/files/{row.pk}/download-link/').data['url']
+
+        User.objects.filter(pk=self.superuser.pk).update(is_active=False)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        row.refresh_from_db()
+        self.assertNotEqual(row.download_nonce, '', 'a refused request must not burn the link')
+        # A second attempt by a re-activated user still works.
+        User.objects.filter(pk=self.superuser.pk).update(is_active=True)
+        self.assertEqual(self.client.get(url).status_code, status.HTTP_200_OK)
+
     def test_a_failed_file_cannot_be_linked(self):
         self.client.force_authenticate(self.superuser)
         row = self.snapshot.files.filter(kind='company').first()
