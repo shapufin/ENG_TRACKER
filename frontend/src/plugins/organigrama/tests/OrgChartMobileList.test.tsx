@@ -113,6 +113,28 @@ describe("OrgChartMobileList", () => {
     expect(screen.getByText("Enri Demnushi")).toBeInTheDocument();
   });
 
+  it("collapses all and expands all nodes via toolbar buttons", () => {
+    render(<OrgChartMobileList roots={mockTree} />);
+
+    // Initially all nodes are expanded
+    expect(screen.getByText("Enri Demnushi")).toBeInTheDocument();
+    expect(screen.getByText("Aldair Xhelili")).toBeInTheDocument();
+
+    // Click Collapse All
+    fireEvent.click(screen.getByRole("button", { name: "Collapse all nodes" }));
+
+    // Children should be collapsed/hidden
+    expect(screen.queryByText("Enri Demnushi")).not.toBeInTheDocument();
+    expect(screen.queryByText("Aldair Xhelili")).not.toBeInTheDocument();
+
+    // Click Expand All
+    fireEvent.click(screen.getByRole("button", { name: "Expand all nodes" }));
+
+    // Children should be visible again
+    expect(screen.getByText("Enri Demnushi")).toBeInTheDocument();
+    expect(screen.getByText("Aldair Xhelili")).toBeInTheDocument();
+  });
+
   it("sets aria-level on tree items", () => {
     const { container } = render(<OrgChartMobileList roots={mockTree} />);
     const items = container.querySelectorAll('li[role="treeitem"]');

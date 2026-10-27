@@ -69,6 +69,25 @@ function filterTree(roots: TreeNode[], q: string): { filtered: TreeNode[]; match
   return { filtered, matchIds };
 }
 
+/** Recursively collect all path-scoped node IDs that have children. */
+function getAllParentNodeIds(roots: TreeNode[]): Set<string> {
+  const result = new Set<string>();
+  function collect(node: TreeNode, parentId?: string) {
+    const rawId = `${node.type}-${node.id}`;
+    const nodeId = parentId ? `${parentId}__${rawId}` : rawId;
+    if (node.children.length > 0) {
+      result.add(nodeId);
+      for (const child of node.children) {
+        collect(child, nodeId);
+      }
+    }
+  }
+  for (const root of roots) {
+    collect(root);
+  }
+  return result;
+}
+
 /** Build a Dagre graph from the tree and return positioned nodes + edges.
  *  Collapsed nodes have their children excluded from the layout.
  *  Matching nodes (by search query) are highlighted. */
@@ -87,7 +106,10 @@ function layoutTree(
   const q = searchQuery.toLowerCase().trim();
 
   function visit(node: TreeNode, parentId?: string) {
-    const nodeId = `${node.type}-${node.id}`;
+    const rawId = `${node.type}-${node.id}`;
+    // Scope node ID to parent branch path so repeated nodes (e.g. bridging AL TLs or tech nodes)
+    // receive unique node IDs and separate layouts in the Dagre tree.
+    const nodeId = parentId ? `${parentId}__${rawId}` : rawId;
     if (visited.has(nodeId)) return;
     visited.add(nodeId);
 
@@ -211,14 +233,8 @@ const OrgChartInner: React.FC<OrgChartPageProps> = ({
   }, []);
 
   const handleCollapseAll = useCallback(() => {
-    const toCollapse = new Set<string>();
-    for (const node of nodes) {
-      if ((node.data as OrgNodeData).hasChildren) {
-        toCollapse.add(node.id);
-      }
-    }
-    setCollapsedNodes(toCollapse);
-  }, [nodes]);
+    setCollapsedNodes(getAllParentNodeIds(filteredRoots));
+  }, [filteredRoots]);
 
   const handleZoomIn = useCallback(() => reactFlow.zoomIn(), [reactFlow]);
   const handleZoomOut = useCallback(() => reactFlow.zoomOut(), [reactFlow]);

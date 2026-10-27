@@ -118,4 +118,73 @@ describe("OrgChartPage edge geometry (Phase A)", () => {
     fireEvent.change(screen.getByLabelText("Search"), { target: { value: "Andrea" } });
     expect(captured.nodes.map((node) => node.id)).toEqual(["person-1"]);
   });
+
+  it("renders repeated bridging AL TL nodes under multiple roots without dropping branches", () => {
+    const multiRootTree: TreeNode[] = [
+      {
+        type: "person",
+        id: 11,
+        username: "it_musset",
+        full_name: "Andrea Musseta",
+        role_badge: "italian_tl",
+        children: [
+          {
+            type: "person",
+            id: 2,
+            username: "al_tl",
+            full_name: "Enri Demnushi",
+            role_badge: "albanian_tl",
+            children: [
+              {
+                type: "person",
+                id: 12,
+                username: "emp_musset",
+                full_name: "Erland Abazi",
+                role_badge: "employee",
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        type: "person",
+        id: 4,
+        username: "it_negro",
+        full_name: "Andrea Negro",
+        role_badge: "italian_tl",
+        children: [
+          {
+            type: "person",
+            id: 2,
+            username: "al_tl",
+            full_name: "Enri Demnushi",
+            role_badge: "albanian_tl",
+            children: [
+              {
+                type: "person",
+                id: 3,
+                username: "emp_negro",
+                full_name: "Aldair Xhelili",
+                role_badge: "employee",
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    render(React.createElement(OrgChartPage, { roots: multiRootTree }));
+
+    // Both roots and their full subbranches should be present (2 roots + 2 bridging Enri + 2 employees = 6 nodes)
+    expect(captured.nodes.length).toBe(6);
+    const nodeIds = captured.nodes.map((n) => n.id);
+    expect(nodeIds).toContain("person-11");
+    expect(nodeIds).toContain("person-11__person-2");
+    expect(nodeIds).toContain("person-11__person-2__person-12");
+    expect(nodeIds).toContain("person-4");
+    expect(nodeIds).toContain("person-4__person-2");
+    expect(nodeIds).toContain("person-4__person-2__person-3");
+  });
 });
