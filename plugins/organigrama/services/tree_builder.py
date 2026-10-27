@@ -296,54 +296,134 @@ def _assign_employees_to_techs(
 def build_full_tree() -> Dict[str, Any]:
     """Build the full company tree (for admin/HR).
 
-    Batched to avoid N+1: 1 (italian_tls) + 1 (albanian_tls) + 2 (employees +
-    teams/Tech prefetch) + 1 (any "foreign" Italian TLs an Albanian TL's
-    employees report to, across the whole tree) with no per-node queries.
+    Company Hierarchy Architecture:
+    1. Italian TL is ALWAYS top-level (roots).
+    2. Albanian TL is the bridge beneath the Italian TL.
+    3. Employees under an Albanian TL are grouped by their effective Italian TL:
+       emp.italian_tl_id or (emp.albanian_tl.profile.italian_tl_id).
+       - Employees whose Italian TL is IT_A are nested under IT_A -> AL_TL -> (Techs/Direct).
+       - Employees whose Italian TL is IT_B are nested under IT_B -> AL_TL -> (Techs/Direct).
+       - If an Albanian TL manages employees across multiple IT TLs, the AL TL
+         bridges each respective team under that Italian TL.
+       - IT TL is NEVER a child of an AL TL.
+
+    Batched queries:
+    1. All active Italian TLs with tech prefetch
+    2. All active Albanian TLs with tech prefetch
+    3. All active employees under these TLs with teams/tech prefetch
     """
     roots: List[Dict[str, Any]] = []
     total_nodes = 0
 
     # Query 1: all Italian TLs
     italian_tls = _get_italian_tls()
+    it_id_set = {it.id for it in italian_tls}
 
-    # Query 2: all Albanian TLs grouped by italian_tl_id
-    albanian_tls_by_italian = _batch_get_albanian_tls(italian_tls)
-    all_albanian_tls: List[User] = []
-    for al_list in albanian_tls_by_italian.values():
-        all_albanian_tls.extend(al_list)
+    # Query 2: all active Albanian TLs
+    albanian_tls = list(
+        User.objects.filter(_has_role_q("albanian_tl"), is_active=True)
+        .select_related("profile", "profile__italian_tl")
+        .prefetch_related(
+            "profile__tech_assignments__tech", "profile__tech_assignments__level"
+        )
+        .distinct()
+        .order_by("username")
+    )
+    al_id_set = {al.id for al in albanian_tls}
+    al_by_id: Dict[int, User] = {al.id: al for al in albanian_tls}
 
-    # Query 3: all employees grouped by Albanian TL (+ Tech prefetch)
-    employees_by_albanian = _batch_get_employees(all_albanian_tls)
+    # Query 3: all active employees reporting to any AL TL or IT TL
+    employees = list(
+        UserProfile.objects.filter(
+            Q(albanian_tl_id__in=al_id_set)
+            | Q(teams__team_leader_id__in=al_id_set)
+            | Q(italian_tl_id__in=it_id_set),
+            user__is_active=True,
+        )
+        .exclude(user_id__in=al_id_set | it_id_set)
+        .select_related("user", "albanian_tl", "italian_tl")
+        .prefetch_related(
+            "teams", "techs", "tech_assignments__tech", "tech_assignments__level"
+        )
+        .distinct()
+        .order_by("user__username")
+    )
 
-    # Query 4: any Italian TL an employee's own italian_tl FK points to,
-    # batched across every Albanian TL up front — _attach_employees_by_italian_tl
-    # would otherwise issue one query per Albanian TL that has such employees.
-    foreign_it_ids: Set[int] = {
-        emp.italian_tl_id
-        for employees in employees_by_albanian.values()
-        for emp in employees
-        if emp.italian_tl_id is not None
-    }
-    italian_tls_by_id = _fetch_italian_tls_by_id(foreign_it_ids)
+    # Map team_id -> leader_id from prefetched teams for AL TL fallback
+    team_to_leader: Dict[int, int] = {}
+    for profile in employees:
+        for team in profile.teams.all():
+            if team.team_leader_id in al_id_set:
+                team_to_leader.setdefault(team.id, team.team_leader_id)
+
+    by_it_and_al: Dict[tuple, List[UserProfile]] = {}
+    direct_to_it: Dict[int, List[UserProfile]] = {}
+    by_al_no_it: Dict[int, List[UserProfile]] = {}
+
+    for profile in employees:
+        al_id = profile.albanian_tl_id
+        if al_id not in al_id_set:
+            for team in profile.teams.all():
+                mapped = team_to_leader.get(team.id)
+                if mapped is not None:
+                    al_id = mapped
+                    break
+        if al_id not in al_id_set:
+            al_id = None
+
+        # Determine effective Italian TL:
+        # 1. Direct FK on employee
+        # 2. Or fallback to AL TL's own italian_tl FK
+        it_id = profile.italian_tl_id
+        if it_id is None and al_id is not None and al_id in al_by_id:
+            it_id = al_by_id[al_id].profile.italian_tl_id
+
+        if it_id is not None and al_id is not None:
+            by_it_and_al.setdefault((it_id, al_id), []).append(profile)
+        elif it_id is not None and al_id is None:
+            direct_to_it.setdefault(it_id, []).append(profile)
+        elif al_id is not None and it_id is None:
+            by_al_no_it.setdefault(al_id, []).append(profile)
+
+    attached_al_ids: Set[int] = set()
 
     for it_user in italian_tls:
         it_node = _person_node(it_user, it_user.profile)
         total_nodes += 1
 
-        for al_user in albanian_tls_by_italian.get(it_user.id, []):
+        # Relevant AL TLs for this Italian TL:
+        # 1. AL TLs with employees reporting to this IT TL
+        # 2. AL TLs whose own manager is this IT TL
+        relevant_al_ids = {
+            al_id for (it_id, al_id) in by_it_and_al.keys() if it_id == it_user.id
+        }
+        for al in albanian_tls:
+            if al.profile.italian_tl_id == it_user.id:
+                relevant_al_ids.add(al.id)
+
+        for al_id in sorted(relevant_al_ids, key=lambda aid: al_by_id[aid].username):
+            al_user = al_by_id[al_id]
             al_node = _person_node(al_user, al_user.profile)
             total_nodes += 1
+            attached_al_ids.add(al_id)
 
-            employees = employees_by_albanian.get(al_user.id, [])
-            total_nodes += _attach_employees_by_italian_tl(
-                al_node, al_user, employees,
-                already_shown_it_id=it_user.id,
-                italian_tls_by_id=italian_tls_by_id,
-            )
-
+            emps = by_it_and_al.get((it_user.id, al_id), [])
+            total_nodes += _attach_members(al_node, emps)
             it_node["children"].append(al_node)
 
+        if it_user.id in direct_to_it:
+            total_nodes += _attach_members(it_node, direct_to_it[it_user.id])
+
         roots.append(it_node)
+
+    # Any AL TLs without an Italian TL
+    unattached_als = [al for al in albanian_tls if al.id not in attached_al_ids]
+    for al in sorted(unattached_als, key=lambda u: u.username):
+        al_node = _person_node(al, al.profile)
+        total_nodes += 1
+        emps = by_al_no_it.get(al.id, [])
+        total_nodes += _attach_members(al_node, emps)
+        roots.append(al_node)
 
     return {"roots": roots, "scope": "full", "total_nodes": total_nodes}
 
@@ -380,54 +460,6 @@ def _fetch_italian_tls_by_id(italian_tl_ids: Set[int]) -> Dict[int, User]:
     }
 
 
-def _attach_employees_by_italian_tl(
-    al_node: Dict[str, Any],
-    al_user: User,
-    employees: List[UserProfile],
-    already_shown_it_id: int,
-    italian_tls_by_id: Dict[int, User],
-) -> int:
-    """Nest an Albanian TL's employees under their own Italian TL.
-
-    Used by build_full_tree(), inside its per-(Italian TL, Albanian TL)
-    loop. One Albanian TL can be shared across teams that each have a
-    DIFFERENT Italian TL (Italian TL is senior — confirmed org model).
-    Employees whose own ``italian_tl`` FK differs from
-    ``already_shown_it_id`` (the Italian TL already shown one level up —
-    the Albanian TL's own manager, in this caller) get a nested person-node
-    for their own Italian TL. Employees with no ``italian_tl`` FK, or whose
-    FK matches ``already_shown_it_id``, attach directly (grouped by Tech) —
-    this is both the common case and avoids a redundant duplicate node for
-    an Italian TL already visible one level up.
-
-    ``italian_tls_by_id``: a map pre-batched across every Albanian TL in the
-    caller's loop, so this function never issues its own query — see
-    build_full_tree()'s "Query 4" for why.
-    """
-    total_nodes = 0
-    by_italian: Dict[int, List[UserProfile]] = {}
-    direct: List[UserProfile] = []
-    italian_tl_ids: Set[int] = set()
-    for emp_profile in employees:
-        it_tl_id = emp_profile.italian_tl_id
-        if it_tl_id is None or it_tl_id in (already_shown_it_id, al_user.id):
-            direct.append(emp_profile)
-            continue
-        italian_tl_ids.add(it_tl_id)
-        by_italian.setdefault(it_tl_id, []).append(emp_profile)
-
-    if italian_tl_ids:
-        for it_id in sorted(by_italian, key=lambda i: italian_tls_by_id[i].username):
-            it_tl_user = italian_tls_by_id[it_id]
-            it_tl_node = _person_node(it_tl_user, it_tl_user.profile)
-            total_nodes += 1
-            total_nodes += _attach_members(it_tl_node, by_italian[it_id])
-            al_node["children"].append(it_tl_node)
-
-    total_nodes += _attach_members(al_node, direct)
-    return total_nodes
-
-
 def build_subtree(user: User) -> Dict[str, Any]:
     """Build a subtree scoped to a TL (Italian or Albanian).
 
@@ -443,63 +475,91 @@ def build_subtree(user: User) -> Dict[str, Any]:
     roots: List[Dict[str, Any]] = []
 
     if profile.is_italian_tl:
-        # Italian TL: visible set = own managed users (Albanian TLs + direct).
-        visible_ids = profile.get_team_member_ids()
-        albanian_tls = list(
+        # Find all Albanian TLs reporting to this Italian TL or bridging employees reporting to this IT TL
+        direct_al_ids = set(
             User.objects.filter(
                 _has_role_q("albanian_tl"),
-                id__in=visible_ids,
+                profile__italian_tl=user,
                 is_active=True,
+            ).values_list("id", flat=True)
+        )
+        bridging_al_ids = set(
+            UserProfile.objects.filter(
+                italian_tl=user,
+                user__is_active=True,
+                albanian_tl__isnull=False,
+            )
+            .values_list("albanian_tl_id", flat=True)
+            .distinct()
+        )
+        all_al_ids = direct_al_ids | bridging_al_ids
+
+        albanian_tls = list(
+            User.objects.filter(
+                _has_role_q("albanian_tl"), id__in=all_al_ids, is_active=True
             )
             .select_related("profile", "profile__italian_tl")
+            .prefetch_related(
+                "profile__tech_assignments__tech", "profile__tech_assignments__level"
+            )
             .distinct()
             .order_by("username")
         )
+        al_id_set = {al.id for al in albanian_tls}
 
-        # Chain: each Albanian TL's managed users become the employee set.
-        emp_to_al: Dict[int, int] = {}
-        all_emp_ids: Set[int] = set()
-        for al_user in albanian_tls:
-            for uid in al_user.profile.get_team_member_ids():
-                if uid == al_user.id:
-                    continue
-                emp_to_al.setdefault(uid, al_user.id)
-                all_emp_ids.add(uid)
-
-        al_ids = [al.id for al in albanian_tls]
-        employees = (
-            list(
-                UserProfile.objects.filter(
-                    user_id__in=all_emp_ids, user__is_active=True
-                )
-                .select_related("user", "albanian_tl", "italian_tl")
-                .prefetch_related(
-                    "techs", "tech_assignments__tech", "tech_assignments__level"
-                )
-                .distinct()
-                .order_by("user__username")
+        employees = list(
+            UserProfile.objects.filter(
+                Q(italian_tl=user)
+                | Q(albanian_tl_id__in=direct_al_ids, italian_tl__isnull=True)
+                | Q(teams__team_leader_id__in=direct_al_ids, italian_tl__isnull=True),
+                user__is_active=True,
             )
-            if all_emp_ids
-            else []
+            .exclude(user=user)
+            .exclude(user_id__in=al_id_set)
+            .select_related("user", "albanian_tl", "italian_tl")
+            .prefetch_related(
+                "teams", "techs", "tech_assignments__tech", "tech_assignments__level"
+            )
+            .distinct()
+            .order_by("user__username")
         )
-        employees_by_albanian: Dict[int, List[UserProfile]] = {
-            al_id: [] for al_id in al_ids
-        }
-        for emp_profile in employees:
-            leader_id = emp_to_al.get(emp_profile.user_id)
-            if leader_id is not None:
-                employees_by_albanian.setdefault(leader_id, []).append(emp_profile)
+
+        team_to_leader: Dict[int, int] = {}
+        for emp in employees:
+            for team in emp.teams.all():
+                if team.team_leader_id in al_id_set:
+                    team_to_leader.setdefault(team.id, team.team_leader_id)
+
+        by_al: Dict[int, List[UserProfile]] = {al_id: [] for al_id in al_id_set}
+        direct_to_it: List[UserProfile] = []
+
+        for emp in employees:
+            if emp.italian_tl_id is not None and emp.italian_tl_id != user.id:
+                continue
+
+            al_id = emp.albanian_tl_id
+            if al_id not in al_id_set:
+                for team in emp.teams.all():
+                    mapped = team_to_leader.get(team.id)
+                    if mapped is not None:
+                        al_id = mapped
+                        break
+            if al_id in al_id_set:
+                by_al[al_id].append(emp)
+            else:
+                direct_to_it.append(emp)
 
         it_node = _person_node(user, profile)
         total_nodes += 1
         for al_user in albanian_tls:
             al_node = _person_node(al_user, al_user.profile)
             total_nodes += 1
-            total_nodes += _attach_members(
-                al_node,
-                employees_by_albanian.get(al_user.id, []),
-            )
+            total_nodes += _attach_members(al_node, by_al.get(al_user.id, []))
             it_node["children"].append(al_node)
+
+        if direct_to_it:
+            total_nodes += _attach_members(it_node, direct_to_it)
+
         roots.append(it_node)
 
     elif profile.is_albanian_tl:

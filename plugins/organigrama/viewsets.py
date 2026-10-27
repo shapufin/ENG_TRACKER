@@ -59,7 +59,12 @@ from .services.publish_service import (
     unpublish_chart,
     PublishValidationError,
 )
-from .services.tree_builder import build_scoped_tree, _person_node, role_badge
+from .services.tree_builder import (
+    build_scoped_tree,
+    _person_node,
+    role_badge,
+    _has_role_q,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -196,8 +201,24 @@ class OrganigramaViewSet(PluginPermissionMixin, APIView):
             raise PermissionDenied("You do not have access to this node.")
         children = []
         if badge == "italian_tl":
-            albanian_tls = list(
+            al_tl_ids = set(
                 User.objects.filter(profile__italian_tl=node_user, is_active=True)
+                .filter(_has_role_q("albanian_tl"))
+                .values_list("id", flat=True)
+            )
+            bridging_al_ids = (
+                UserProfile.objects.filter(
+                    italian_tl=node_user,
+                    user__is_active=True,
+                    albanian_tl__isnull=False,
+                )
+                .values_list("albanian_tl_id", flat=True)
+                .distinct()
+            )
+            al_tl_ids.update(bridging_al_ids)
+
+            albanian_tls = list(
+                User.objects.filter(id__in=al_tl_ids, is_active=True)
                 .select_related("profile", "profile__italian_tl")
                 .prefetch_related(*_TECH_LEVEL_PREFETCH_VIA_USER)
                 .distinct()

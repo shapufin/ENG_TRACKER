@@ -144,6 +144,60 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         resp = self._get_tree(None)
         self.assertEqual(resp.status_code, 401)
 
+    def test_full_tree_employee_different_italian_tl_placed_under_employee_italian_tl(self):
+        """IT TL is always at top level. An employee whose italian_tl differs from their
+        AL TL's manager must be grouped under that IT TL root -> AL TL bridge -> employee,
+        and NEVER as a nested IT TL child under AL TL."""
+        # Create an employee under al_tl whose italian_tl is it_tl2 (differs from al_tl's manager it_tl)
+        emp_cross = User.objects.create_user(
+            username="emp_cross", password="test123", first_name="Emp", last_name="Cross"
+        )
+        emp_cross.profile.albanian_tl = self.albanian_tl
+        emp_cross.profile.italian_tl = self.italian_tl2
+        emp_cross.profile.save(update_fields=["albanian_tl", "italian_tl"])
+
+        resp = self._get_tree(self.admin)
+        self.assertEqual(resp.status_code, 200)
+        roots = resp.data["roots"]
+
+        # 1. Under it_tl, al_tl must NOT have it_tl2 as a child node!
+        it_node1 = next(r for r in roots if r.get("username") == "it_tl")
+        al_node1 = next(c for c in it_node1["children"] if c.get("username") == "al_tl")
+        child_usernames_under_al1 = [c.get("username") for c in al_node1.get("children", []) if c.get("type") == "person"]
+        self.assertNotIn("it_tl2", child_usernames_under_al1, "Italian TL must never be a child of an Albanian TL!")
+
+        # 2. Under it_tl2 (root), al_tl must be present as the bridge!
+        it_node2 = next(r for r in roots if r.get("username") == "it_tl2")
+        al_node2 = next((c for c in it_node2["children"] if c.get("username") == "al_tl"), None)
+        self.assertIsNotNone(al_node2, "al_tl should be bridged under it_tl2 because emp_cross reports to it_tl2")
+        
+        # emp_cross should be under al_node2
+        emp_cross_found = False
+        for c in al_node2.get("children", []):
+            if c.get("username") == "emp_cross":
+                emp_cross_found = True
+            for gc in c.get("children", []):
+                if gc.get("username") == "emp_cross":
+                    emp_cross_found = True
+        self.assertTrue(emp_cross_found, "emp_cross should be under al_node2 under it_tl2")
+
+    def test_italian_tl_sees_bridged_albanian_tl_in_subtree(self):
+        """An Italian TL viewing their own subtree must see Albanian TLs who manage
+        employees reporting to this Italian TL, even if the AL TL's own manager is someone else."""
+        emp_cross = User.objects.create_user(
+            username="emp_cross2", password="test123", first_name="Emp", last_name="Cross2"
+        )
+        emp_cross.profile.albanian_tl = self.albanian_tl
+        emp_cross.profile.italian_tl = self.italian_tl2
+        emp_cross.profile.save(update_fields=["albanian_tl", "italian_tl"])
+
+        resp = self._get_tree(self.italian_tl2)
+        self.assertEqual(resp.status_code, 200)
+        roots = resp.data["roots"]
+        it_node = next(r for r in roots if r.get("username") == "it_tl2")
+        al_usernames = {c.get("username") for c in it_node["children"] if c.get("type") == "person"}
+        self.assertIn("al_tl", al_usernames, "al_tl should be visible under it_tl2 as the bridge for emp_cross2")
+
     def test_admin_sees_full_tree(self):
         resp = self._get_tree(self.admin)
         self.assertEqual(resp.status_code, 200)
@@ -544,38 +598,25 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         data = resp.data
         roots = data["roots"]
 
+        # it_tl_team2 must be an upper-level root!
+        it_team2_root = next((r for r in roots if r.get("username") == "it_tl_team2"), None)
+        self.assertIsNotNone(it_team2_root, "second_italian_tl must be a top-level root")
+
+        # Under it_tl_team2, al_tl must be present as the bridge
+        al_under_team2 = next((c for c in it_team2_root["children"] if c.get("username") == "al_tl"), None)
+        self.assertIsNotNone(al_under_team2, "al_tl must be bridged under it_tl_team2")
+        team2_usernames = self._collect_usernames(al_under_team2["children"])
+        self.assertIn("emp2", team2_usernames)
+
+        # Under it_tl (first Italian TL), al_tl must NOT have it_tl_team2 as a child node!
         it_root = next(r for r in roots if r.get("username") == "it_tl")
         al_node = next(c for c in it_root["children"] if c.get("username") == "al_tl")
+        nested_it_tl_nodes = [c for c in al_node.get("children", []) if c.get("username") == "it_tl_team2"]
+        self.assertEqual(len(nested_it_tl_nodes), 0, "Italian TL must never appear nested under an Albanian TL")
 
-        it_team2_node = next(
-            (c for c in al_node["children"] if c.get("username") == "it_tl_team2"),
-            None,
-        )
-        self.assertIsNotNone(
-            it_team2_node,
-            "emp2's own Italian TL must appear nested under the Albanian TL, "
-            "not just in the Albanian TL's own subtree view",
-        )
-        it_team2_usernames = self._collect_usernames(it_team2_node["children"])
-        self.assertIn("emp2", it_team2_usernames)
-
-        # emp2 must NOT also appear as a flat/tech direct descendant of the
-        # Albanian TL outside the nested it_tl_team2 node.
+        # emp2 must NOT appear under it_tl's branch
         direct_usernames = self._collect_usernames(al_node["children"])
-        direct_usernames.discard("it_tl_team2")
-        self.assertNotIn("emp2", direct_usernames - it_team2_usernames)
-
-        # The common case (emp1, same Italian TL as the Albanian TL's own
-        # manager) must still attach directly — no redundant duplicate
-        # it_tl node for the already-shown Italian TL.
-        duplicate_it_tl_nodes = [
-            c for c in al_node["children"] if c.get("username") == "it_tl"
-        ]
-        self.assertEqual(
-            duplicate_it_tl_nodes, [],
-            "must not create a redundant nested node for the Italian TL "
-            "already represented one level up",
-        )
+        self.assertNotIn("emp2", direct_usernames)
 
     def test_italian_tl_sees_subtree(self):
         resp = self._get_tree(self.italian_tl)
