@@ -52,6 +52,16 @@ describe("ClientOnboardingLifecycle", () => {
     expect(screen.queryByRole("button", { name: "Download ZIP" })).not.toBeInTheDocument();
   });
 
+  it("shows a loading line while the lifecycle is fetched, instead of an empty panel", () => {
+    // The dialog around this panel is already loaded; a silent null makes the
+    // section pop in with no explanation.
+    vi.mocked(onboardingService.getClientLifecycle).mockReturnValue(
+      new Promise(() => {}) as any
+    );
+    renderIt();
+    expect(screen.getByRole("status")).toHaveTextContent(/Loading/);
+  });
+
   it("downloads the ZIP: request, wait until ready, then follow the single-use link", async () => {
     vi.mocked(onboardingService.getClientLifecycle).mockResolvedValue(info());
     vi.mocked(onboardingService.createClientExport).mockResolvedValue({ id: 9, status: "pending" } as any);

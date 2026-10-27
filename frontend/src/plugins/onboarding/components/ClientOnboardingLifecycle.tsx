@@ -45,7 +45,15 @@ const ClientOnboardingLifecycle: React.FC<ClientOnboardingLifecycleProps> = ({ c
     onError: (err: unknown) => handleApiError(err),
   });
 
-  if (info.isLoading || !info.data) return null;
+  if (info.isLoading || !info.data) {
+    // The dialog around this panel is already loaded; a silent null would make
+    // the section pop in with no explanation.
+    return (
+      <p role="status" className="text-sm text-muted-foreground">
+        Loading onboarding data...
+      </p>
+    );
+  }
   const { folders, documents, can_purge: canPurge, blockers } = info.data;
   if (folders === 0 && documents === 0) {
     return <p className="text-muted-foreground text-sm">No onboarding data</p>;
