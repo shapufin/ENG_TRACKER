@@ -62,7 +62,21 @@ class ScorecardFreezeTests(TestCase):
         self.assertEqual((snap.leader_id, snap.month), (self.leader.pk, SEPT))
         self.assertEqual(sorted(snap.member_ids), sorted([self.m1.pk, self.m2.pk]))
         self.assertGreaterEqual(snap.computed_at, AFTER)
-        self.assertEqual(freeze_scorecard_months(now=AFTER), 0)  # month already done: cheap no-op
+        self.assertEqual(freeze_scorecard_months(now=AFTER), 0)  # every leader is already done
+
+    def test_a_partial_run_is_completed_by_the_next_run(self):
+        other = make_user('other')
+        other_team = Team.objects.create(name='Beta', code='BET', team_leader=other)
+        member = make_user('m3')
+        member.profile.teams.add(other_team)
+        # The first run wrote one leader and then died: the next run must finish the rest.
+        ScorecardMonthSnapshot.objects.create(
+            leader=self.leader, month=SEPT, member_ids=[self.m1.pk, self.m2.pk],
+            payload={'team_size': 2, 'leave': {}, 'overtime': {}, 'meetings': {}},
+            computed_at=AFTER,
+        )
+        self.assertEqual(freeze_scorecard_months(now=AFTER), 1)
+        self.assertTrue(ScorecardMonthSnapshot.objects.filter(leader=other, month=SEPT).exists())
 
     def test_a_frozen_month_ignores_later_membership_changes_but_other_months_stay_live(self):
         freeze_scorecard_months(now=AFTER)

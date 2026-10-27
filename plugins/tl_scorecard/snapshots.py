@@ -8,6 +8,7 @@ the command can backfill one, but it then reflects today's membership.
 from datetime import date, datetime, timedelta
 
 from django.contrib.auth.models import User
+from django.db.models import Q
 from django.utils import timezone
 
 from core.utils.metrics_freeze import freeze_at, is_past_freeze
@@ -16,6 +17,8 @@ from core.utils.timezone_local import business_tz
 from .models import ScorecardMonthSnapshot
 from .scope import scoreable_member_ids
 from .services import month_blocks
+
+TL_ROLE_CODES = ('italian_tl', 'albanian_tl')
 
 
 def target_month(now: datetime) -> date:
@@ -28,23 +31,45 @@ def target_month(now: datetime) -> date:
 
 
 def _leaders():
-    users = User.objects.filter(is_active=True, profile__isnull=False).select_related('profile')
-    return [user for user in users if user.profile.is_team_leader]
+    """Active team leaders, resolved in SQL.
+
+    Mirrors ``UserProfile.is_team_leader`` without calling it per user: that property
+    costs up to three queries for someone who is not a leader, and the scheduler runs
+    this hourly. ``role_codes`` is only a cache of ``UserRole``, so the role rows are
+    authoritative here.
+    """
+    return (
+        User.objects.filter(
+            Q(led_teams__is_active=True)
+            | Q(italian_team_members__isnull=False)
+            | Q(albanian_team_members__isnull=False)
+            | Q(profile__is_italian_tl_role=True)
+            | Q(profile__is_albanian_tl_role=True)
+            | Q(
+                user_roles__is_active=True,
+                user_roles__is_deleted=False,
+                user_roles__role__code__in=TL_ROLE_CODES,
+            ),
+            is_active=True,
+            profile__isnull=False,
+        )
+        .select_related('profile')
+        .distinct()
+    )
 
 
 def freeze_scorecard_months(now: datetime | None = None, month: date | None = None) -> int:
     """Snapshot every team leader's month blocks for ``month`` (default: latest frozen month).
 
-    Returns how many snapshots were written. Idempotent, and cheap when the default
-    month is already done: it returns before touching a single leader. Leaders without
-    scoreable members are skipped. Raises ``ValueError`` for a month that is not past
-    its freeze yet.
+    Returns how many snapshots were written. Idempotent: leaders whose snapshot is
+    already final are skipped by the ``done`` set (one query), never by a global
+    "somebody is done" check — a run that died half-way must be completed by the next
+    one. Leaders without scoreable members are skipped. Raises ``ValueError`` for a
+    month that is not past its freeze yet.
     """
     now = now or timezone.now()
     if month is None:
         month = target_month(now)
-        if ScorecardMonthSnapshot.objects.filter(month=month, computed_at__gte=freeze_at(month)).exists():
-            return 0
     else:
         month = month.replace(day=1)
         if not is_past_freeze(month, now):
@@ -74,5 +99,5 @@ def freeze_scorecard_months(now: datetime | None = None, month: date | None = No
 
 
 def process_freeze_scorecards() -> None:
-    """Scheduler entry (hourly). Returns at once when the latest frozen month is done."""
+    """Scheduler entry (hourly). Leaders already snapshotted are skipped."""
     freeze_scorecard_months(now=timezone.now())
