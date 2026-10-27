@@ -29,10 +29,20 @@
 
 name: engineering-tracker
 
+# json-file is the default driver and has NO rotation: stdout logs grow
+# unbounded (gunicorn access log, scheduler job logs). Cap every service at
+# 3 x 10MB. Applies only on container (re)create — `docker compose up -d`.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
     image: postgres:16
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_DB: ${DB_NAME:-engtracker}
       POSTGRES_USER: ${DB_USER:-engtracker}
@@ -60,6 +70,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    logging: *default-logging
     # P1-5: Redis password required in production
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
@@ -88,6 +99,7 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       db:
         condition: service_healthy
@@ -172,6 +184,7 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       db:
         condition: service_healthy
@@ -271,6 +284,7 @@ services:
       INGRESS_TRUSTED_CIDR: ${INGRESS_TRUSTED_CIDR:-172.28.0.0/24}
       INGRESS_REAL_IP_HEADER: ${INGRESS_REAL_IP_HEADER:-CF-Connecting-IP}
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       backend:
         condition: service_healthy
@@ -325,6 +339,7 @@ services:
     image: postgres:16
     profiles: ["backup"]  # not started by `docker compose up`
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       db:
         condition: service_healthy

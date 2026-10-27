@@ -156,6 +156,33 @@ class SchedulerRunTests(SimpleTestCase):
             scheduler.run_due()
             self.assertTrue(os.path.exists(path))
 
+    def test_a_failing_jobs_provider_is_logged_and_the_tick_recovers(self):
+        # collect_jobs() hits the Plugin table on every tick: a transient DB
+        # error must skip the tick, not kill the process.
+        jobs = [ScheduledJob('x.a', 60, 'apps.plugins.test_scheduler.record_a')]
+        calls = {'n': 0}
+
+        def provider():
+            calls['n'] += 1
+            if calls['n'] == 1:
+                raise RuntimeError('db is gone')
+            return jobs
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'hb')
+            scheduler = Scheduler(provider, clock=self.clock, heartbeat_path=path)
+            with self.assertLogs('core.plugins.scheduler', level='ERROR'):
+                scheduler.run_due()
+            self.assertEqual(CALLS, [])
+            self.assertTrue(os.path.exists(path))
+            scheduler.run_due()
+        self.assertEqual(CALLS, ['a'])
+
+    def test_stale_database_connections_are_closed_every_tick(self):
+        scheduler = self._scheduler([])
+        scheduler.run_due()
+        self.close_connections.assert_called()
+
 
 class RunSchedulerCommandTests(SimpleTestCase):
     def setUp(self):
