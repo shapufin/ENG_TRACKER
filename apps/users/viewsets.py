@@ -40,6 +40,7 @@ from .serializers import (
 from .services.hbpr_scope import get_hbpr_scope
 from .services.profile_loading import with_profile_list_loading
 from .services import team_lifecycle
+from .services.team_membership import change_user_teams, tl_link_followup
 from .services.team_leaders import derive_team_tls
 from .services.tokens import revoke_refresh_tokens
 from .services.tech_assignments import (
@@ -544,7 +545,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             'teams', 'techs', 'italian_tl', 'albanian_tl', 'is_hr',
             'is_italian_tl_role', 'is_albanian_tl_role', 'is_hbpr',
         }
-        unknown_fields = sorted(set(data.keys()) - {'user_ids'} - allowed_fields)
+        unknown_fields = sorted(set(data.keys()) - {'user_ids', 'unassign_removed_tl'} - allowed_fields)
         if unknown_fields:
             return Response(
                 {'error': f'Unsupported bulk fields: {", ".join(unknown_fields)}'},
@@ -747,9 +748,11 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 ).values_list('user_profile_id', 'tech_id'):
                     assigned_by_profile.setdefault(row[0], set()).add(row[1])
 
+            bulk_warnings = []
             for profile in profiles:
+                team_change = None
                 if team_ids is not None:
-                    profile.teams.set(team_ids)
+                    team_change = change_user_teams(profile, team_ids, request=request)
                 if tech_entries is not None:
                     try:
                         validate_tech_assignments(
@@ -779,6 +782,11 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     profile.is_italian_tl_role = data['is_italian_tl_role']
                 if 'is_albanian_tl_role' in data:
                     profile.is_albanian_tl_role = data['is_albanian_tl_role']
+                if team_change:
+                    warned, _ = tl_link_followup(
+                        profile, team_change, unassign=bool(data.get('unassign_removed_tl')), request=request,
+                    )
+                    bulk_warnings.extend(warned)
                 profile.save()
                 _sync_legacy_roles(
                     profile.user,
@@ -795,6 +803,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         return Response({
             'detail': f'Successfully updated {len(profiles)} users.',
             'updated_count': len(profiles),
+            'warnings': bulk_warnings,
         }, status=status.HTTP_200_OK)
 
     def perform_destroy(self, instance):
@@ -1054,8 +1063,14 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         if archived_message:
             transaction.set_rollback(True)
             return Response({'error': archived_message, 'teams': [archived_message]}, status=status.HTTP_400_BAD_REQUEST)
-        if 'teams' in data:
-            profile.teams.set(data['teams'])
+        team_change = None
+        if 'teams' in data or 'team' in data:
+            # One diff for both the list and the legacy single-team field (the single one wins,
+            # as before). Empty / null clears every team.
+            target = data['teams'] or [] if 'teams' in data else None
+            if 'team' in data:
+                target = [data['team']] if data['team'] else []
+            team_change = change_user_teams(profile, target, request=request)
         if 'techs' in data:
             # Passing the profile keeps the pre-existing rule: an inactive Tech
             # is allowed only when this user already has it assigned.
@@ -1064,18 +1079,17 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             except TechAssignmentError as exc:
                 transaction.set_rollback(True)
                 return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        if 'team' in data:
-            # Backward compatibility: if single team provided, set as only team
-            if data['team']:
-                profile.teams.set([data['team']])
-            else:
-                profile.teams.clear()
         if 'albanian_tl' in data:
             profile.albanian_tl_id = data['albanian_tl'] if data['albanian_tl'] else None
         if 'italian_tl' in data:
             profile.italian_tl_id = data['italian_tl'] if data['italian_tl'] else None
         if 'hire_date' in data:
             profile.hire_date = data['hire_date'] or None
+        tl_warnings, removed_leaders = ([], [])
+        if team_change:
+            tl_warnings, removed_leaders = tl_link_followup(
+                profile, team_change, unassign=bool(data.get('unassign_removed_tl')), request=request,
+            )
         # When 'roles' is provided, _sync_roles overwrites the legacy flags
         # below — skip the redundant direct set. Only set flags directly for
         # the legacy path (no 'roles' key in payload).
@@ -1112,7 +1126,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             _set_cr_admin_role(user, active='cr_admin' in data['roles'])
         elif 'is_cr_admin' in data:
             _set_cr_admin_role(user, active=bool(data['is_cr_admin']))
-        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+        body = UserSerializer(user).data
+        if team_change:
+            body = {**body, 'warnings': tl_warnings, 'removed_team_leaders': removed_leaders}
+        return Response(body, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])
     def my_team_members(self, request):

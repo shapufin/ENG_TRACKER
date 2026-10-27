@@ -437,6 +437,17 @@ class ClosedYear(BaseModel):
         return f'Closed year {self.year}'
 
 
+def _leads_active_team(user):
+    """Whether ``user`` is ``team_leader`` of a team that is not archived.
+
+    An archived team keeps its leader (so restoring it is lossless) but confers no
+    TL status. Reuses a ``prefetch_related('led_teams')`` result like ``_user_has_related``.
+    """
+    if 'led_teams' in getattr(user, '_prefetched_objects_cache', {}):
+        return any(team.is_active for team in user.led_teams.all())
+    return user.led_teams.filter(is_active=True).exists()
+
+
 def _user_has_related(user, relation):
     """``user.<relation>.exists()`` that reuses a ``prefetch_related`` result.
 
@@ -613,7 +624,7 @@ class UserProfile(BaseModel):
             return set(cached)
         user = self.user
         membership_team_ids = set(self.teams.values_list('id', flat=True))
-        led_team_ids = set(user.led_teams.values_list('id', flat=True))
+        led_team_ids = set(user.led_teams.filter(is_active=True).values_list('id', flat=True))
         team_ids = membership_team_ids | led_team_ids
 
         filters = Q(italian_tl=user) | Q(albanian_tl=user)
@@ -651,7 +662,7 @@ class UserProfile(BaseModel):
             return True
         if self.is_italian_tl_role or self.is_albanian_tl_role:
             return True
-        if _user_has_related(self.user, 'led_teams'):
+        if _leads_active_team(self.user):
             return True
         return (
             _user_has_related(self.user, 'italian_team_members')
