@@ -110,6 +110,18 @@ describe("ArchiveTeamDialog", () => {
     expect(await screen.findByText(/3 members will be unassigned/)).toBeInTheDocument();
   });
 
+  it("keeps the confirm button disabled until the lifecycle read resolves", () => {
+    vi.mocked(userService.getTeamLifecycle).mockReturnValue(new Promise<TeamLifecycle>(() => {}));
+    wrap(
+      <ArchiveTeamDialog
+        team={{ ...team, is_active: true }}
+        onOpenChange={vi.fn()}
+        onConfirm={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("button", { name: /archive team/i })).toBeDisabled();
+  });
+
   it("lists the reasons the server would refuse and blocks the confirm button", async () => {
     vi.mocked(userService.getTeamLifecycle).mockResolvedValue(
       lifecycle({

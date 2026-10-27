@@ -22,7 +22,7 @@ export const ArchiveTeamDialog: React.FC<ArchiveTeamDialogProps> = ({
   onConfirm,
   isArchiving = false,
 }) => {
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["admin", "teams", "lifecycle", team?.id],
     queryFn: () => userService.getTeamLifecycle(team!.id),
     enabled: !!team,
@@ -51,7 +51,8 @@ export const ArchiveTeamDialog: React.FC<ArchiveTeamDialogProps> = ({
       confirmLabel="Archive team"
       variant="destructive"
       isConfirming={isArchiving}
-      confirmDisabled={blockers.length > 0}
+      // Unknown blockers must not look like "none": wait for the lifecycle read.
+      confirmDisabled={isLoading || !data || blockers.length > 0}
       onConfirm={() => team && onConfirm(team.id)}
     />
   );

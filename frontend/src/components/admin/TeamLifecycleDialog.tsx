@@ -85,8 +85,9 @@ export const TeamLifecycleDialog: React.FC<TeamLifecycleDialogProps> = ({
         <DialogHeader>
           <DialogTitle>{team.name}: team data</DialogTitle>
           <DialogDescription>
-            Archiving keeps every record. An archived team is purged automatically a year after it
-            was archived, once nothing depends on it; its metric history is kept.
+            Archiving keeps every record. An archived team can be purged once a year has passed and
+            nothing depends on it (the purge runs from the monthly cron); its metric history is
+            kept.
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-5">
