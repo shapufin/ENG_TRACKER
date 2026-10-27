@@ -271,10 +271,13 @@ def _querysets_for(year: int, member_ids: list[int]):
 
 def _finalized_lines(year: int, member_ids: list[int]):
     """Distinct finalized payroll lines of these members in ``year``."""
-    try:
-        from plugins.payroll.models import PayrollRunEntry
-    except Exception:  # noqa: BLE001
+    from .readiness import payroll_available
+
+    if not payroll_available():
         return []
+    from plugins.payroll.models import PayrollRunEntry
+
+
     entries = PayrollRunEntry.objects.filter(
         run__year=year, run__status='finalized', user_id__in=member_ids, status='finalized',
     ).select_related('line').distinct()
@@ -284,6 +287,12 @@ def _finalized_lines(year: int, member_ids: list[int]):
             seen.add(entry.line_id)
             lines.append(entry.line)
     return lines
+
+
+def _payslip_name(line) -> str:
+    """A payslip an operator can identify: the person, not a row id."""
+    username = getattr(getattr(line, 'user', None), 'username', None)
+    return f"payslips/{_safe_component(username or line.pk)}.pdf"
 
 
 def _write_zip(target: Path, members: dict[str, bytes]) -> None:
@@ -333,15 +342,14 @@ def build_bundle(year: int, bundle: dict, warnings: list[str]) -> tuple[Path, di
         exporter.clear_cache()
 
     payslips = 0
-    try:
+    from .readiness import payroll_available
+
+    if payroll_available():
         from plugins.payroll.services.export_service import generate_payslip_pdf
-    except Exception:  # noqa: BLE001 - payroll disabled
-        generate_payslip_pdf = None
-    if generate_payslip_pdf is not None:
+
         for line in _finalized_lines(year, bundle['member_ids']):
             stream = generate_payslip_pdf(line)
-            name = f"payslips/{_safe_component(getattr(line, 'user_id', line.pk))}.pdf"
-            files[name] = stream.read() if hasattr(stream, 'read') else bytes(stream)
+            files[_payslip_name(line)] = stream.read() if hasattr(stream, 'read') else bytes(stream)
             payslips += 1
     counts['payslips'] = payslips
 
@@ -367,14 +375,15 @@ def build_company(year: int, warnings: list[str]) -> tuple[Path, dict]:
     """Write the company ZIP: every finalized payroll run of the year, by month."""
     files: dict[str, bytes] = {}
     months = 0
-    try:
+    PayrollRun = None
+    from .readiness import payroll_available
+
+    if payroll_available():
         from plugins.payroll.models import PayrollRun
         from plugins.payroll.services.export_service import (
             generate_payroll_excel,
             generate_payroll_pdf,
         )
-    except Exception:  # noqa: BLE001 - payroll disabled: the company ZIP is still valid
-        PayrollRun = None
 
     if PayrollRun is not None:
         for run in PayrollRun.objects.filter(year=year, status='finalized').order_by('month'):

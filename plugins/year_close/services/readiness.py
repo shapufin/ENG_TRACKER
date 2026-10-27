@@ -5,6 +5,7 @@ missing Payroll/tl_scorecard plugin must never make the close fail.
 """
 from __future__ import annotations
 
+import importlib
 from datetime import date
 
 from django.db.models import Q
@@ -15,20 +16,42 @@ from apps.standby.models import StandbyLog
 from core.utils.timezone_local import business_today
 
 
-def _payroll_models():
-    """(PayrollRun, PayrollRunEntry) or ``None`` when the plugin is unavailable."""
+def plugin_available(name: str, module: str) -> bool:
+    """A plugin counts as present only when it imports AND is enabled.
+
+    ``ImportError`` only: a bug inside the plugin's own import chain must fail
+    loudly, not read as "plugin disabled" and quietly change readiness. A
+    disabled plugin is still installed, so the import alone cannot answer this
+    (same rule as ``payroll_plugin_available`` in data_import, re-implemented
+    here rather than imported across plugins).
+    """
     try:
-        from plugins.payroll.models import PayrollRun, PayrollRunEntry
-    except Exception:  # noqa: BLE001 - disabled or uninstalled plugin
+        importlib.import_module(module)
+    except ImportError:
+        return False
+    from apps.plugins.models import Plugin
+
+    return not Plugin.objects.filter(name=name, is_enabled=False).exists()
+
+
+def payroll_available() -> bool:
+    return plugin_available('payroll', 'plugins.payroll.models')
+
+
+def _payroll_models():
+    """(PayrollRun, PayrollRunEntry) or ``None`` when payroll is absent/disabled."""
+    if not payroll_available():
         return None
+    from plugins.payroll.models import PayrollRun, PayrollRunEntry
+
     return PayrollRun, PayrollRunEntry
 
 
 def _tl_scorecard_models():
-    try:
-        from plugins.tl_scorecard.models import EPRCycle
-    except Exception:  # noqa: BLE001
+    if not plugin_available('tl_scorecard', 'plugins.tl_scorecard.models'):
         return None
+    from plugins.tl_scorecard.models import EPRCycle
+
     return EPRCycle
 
 

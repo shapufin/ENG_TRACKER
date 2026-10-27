@@ -33,6 +33,9 @@ def _lock_snapshot(year: int, retry: bool) -> tuple[YearSnapshot, bool]:
     latest = latest_snapshot(year)
     if latest is not None and latest.status == 'ready' and not retry:
         return latest, False
+    # With --retry the build still runs: it drops file rows whose bundle no
+    # longer exists and rebuilds only what failed. The scheduler's own early
+    # return (process_close_year) is what keeps a ready year cheap.
 
     if latest is not None and latest.status == 'building':
         started = latest.started_at or latest.updated_at
@@ -44,8 +47,13 @@ def _lock_snapshot(year: int, retry: bool) -> tuple[YearSnapshot, bool]:
         return latest, True
 
     version = (latest.version + 1) if latest is not None else 1
-    snapshot = YearSnapshot.objects.create(year=year, version=version, status='building')
-    return snapshot, True
+    # Two workers can both arrive here having seen no row (or the same
+    # superseded one). The unique (year, version) constraint decides the race:
+    # the loser gets the winner's row and must not also build.
+    snapshot, created = YearSnapshot.objects.get_or_create(
+        year=year, version=version, defaults={'status': 'building'},
+    )
+    return snapshot, created
 
 
 def close_year(year: int, *, actor=None, retry: bool = False) -> YearSnapshot:
@@ -110,6 +118,15 @@ def _build(snapshot: YearSnapshot, warnings: list[str], *, retry: bool) -> None:
         ('team' if bundle['kind'] == 'team' else 'unassigned', bundle)
         for bundle in bundles
     ]
+    # A structure change (team deleted, members reassigned) leaves rows behind
+    # that the current plan no longer produces; they would keep the set looking
+    # complete and end up in the manifest as evidence that was never built now.
+    planned = {f'{year}/{builder.bundle_filename(bundle)}' for _, bundle in plan}
+    planned |= {f'{year}/company_{year}.zip', f'{year}/MANIFEST.json'}
+    for row in snapshot.files.exclude(relative_path__in=planned):
+        (builder.snapshot_root() / row.relative_path).unlink(missing_ok=True)
+    snapshot.files.exclude(relative_path__in=planned).delete()
+
     for kind, bundle in plan:
         relative = f'{year}/{builder.bundle_filename(bundle)}'
         file_row, _ = YearSnapshotFile.objects.get_or_create(

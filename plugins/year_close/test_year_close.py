@@ -16,7 +16,7 @@ from apps.standby.models import StandbyLog
 from apps.users.models import ClosedYear, Team, TeamMembership
 from apps.users.services.approval_periods import clear_closed_year_cache
 from core.utils.timezone_local import business_today
-from plugins.year_close.models import YearSnapshot
+from plugins.year_close.models import YearSnapshot, YearSnapshotFile
 from plugins.year_close.services import builder
 from plugins.year_close.services.closer import close_year, latest_snapshot
 from plugins.year_close.services.readiness import check_year_readiness
@@ -72,6 +72,84 @@ class YearCloseFixture(TestCase):
             request_type='vacation', status=status, days_counted=2,
         )
 
+
+
+class CloserRaceTests(YearCloseFixture):
+    """Concurrency and retry semantics of the close orchestration."""
+
+    def test_two_workers_that_both_see_no_snapshot_do_not_crash(self):
+        # Both workers read "no row yet" and both try to create version 1: the
+        # unique (year, version) constraint must turn the second into a no-op,
+        # not an IntegrityError.
+        from plugins.year_close.services import closer
+
+        with patch.object(closer, 'latest_snapshot', return_value=None):
+            first = closer._lock_snapshot(self.year, retry=False)
+        with patch.object(closer, 'latest_snapshot', return_value=None):
+            second = closer._lock_snapshot(self.year, retry=False)
+        self.assertEqual(first[0].version, second[0].version)
+        self.assertTrue(first[1])
+        self.assertFalse(second[1], 'the loser of the race must not also build')
+
+    def test_the_scheduler_never_rebuilds_a_ready_year(self):
+        # The hourly job must stay cheap when nothing is due: a ready year is
+        # answered from the row, without entering the build at all.
+        from plugins.year_close.services import closer
+
+        self.add_overtime(status='rejected')
+        close_year(self.year)
+        with patch.object(closer, 'close_year') as mock_close:
+            closer.process_close_year()
+        mock_close.assert_not_called()
+
+    def test_a_file_row_whose_bundle_no_longer_exists_is_dropped(self):
+        self.add_overtime(status='rejected')
+        snapshot = close_year(self.year)
+        self.assertEqual(snapshot.status, 'ready', snapshot.readiness)
+
+        # A bundle that disappeared (team deleted, structure changed) must not
+        # keep the set looking complete.
+        stale = YearSnapshotFile.objects.create(
+            snapshot=snapshot, kind='team', leader_name='gone', team_name='GONE',
+            relative_path=f'{self.year}/gone__GONE.zip', status='ready',
+            size=10, sha256='a' * 64,
+        )
+        retried = close_year(self.year, retry=True)
+        self.assertEqual(retried.status, 'ready', retried.readiness)
+        self.assertFalse(YearSnapshotFile.objects.filter(pk=stale.pk).exists())
+
+        manifest = json.loads((self.root / str(self.year) / 'MANIFEST.json').read_text('utf-8'))
+        self.assertNotIn(
+            f'{self.year}/gone__GONE.zip', [entry['path'] for entry in manifest['files']]
+        )
+
+
+class GuardTests(YearCloseFixture):
+    """Optional-plugin guards must be ImportError-only, per the repo's own rule."""
+
+    def test_plugin_import_guards_do_not_swallow_real_bugs(self):
+        for path in (
+            'plugins/year_close/services/readiness.py',
+            'plugins/year_close/services/builder.py',
+        ):
+            source = Path(path).read_text(encoding='utf-8')
+            self.assertNotIn(
+                'except Exception', source,
+                f'{path}: an optional-plugin guard must catch ImportError only, '
+                'or a bug inside the plugin reads as "plugin disabled"',
+            )
+
+    def test_payslip_files_are_named_by_username(self):
+        from unittest.mock import Mock
+
+        line = Mock()
+        line.user.username = 'yc_member'
+        line.pk = 5
+        self.assertEqual(builder._payslip_name(line), 'payslips/yc_member.pdf')
+
+
+class PayslipNamingTests(YearCloseFixture):
+    pass
 
 class ReadinessTests(YearCloseFixture):
     def test_a_year_before_february_is_blocked(self):
