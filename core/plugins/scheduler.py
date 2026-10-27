@@ -61,7 +61,18 @@ class Scheduler:
 
     def run_due(self) -> None:
         now = self._clock()
-        for job in self._jobs_provider():
+        # Expire connections past DB_CONN_MAX_AGE before the tick query: the loop
+        # is not request-driven, so nothing else retires them between job runs.
+        close_old_connections()
+        try:
+            jobs = list(self._jobs_provider())
+        except Exception:
+            # A transient DB error must not kill the process. The next tick
+            # retries; Docker restarts are the last resort, not the plan.
+            logger.exception('Could not collect scheduled jobs; skipping this tick')
+            self._touch_heartbeat()
+            return
+        for job in jobs:
             if self._next_run.get(job.name, now) > now:
                 continue
             # Set before running so a failing job waits out its interval too.
