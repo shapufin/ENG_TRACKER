@@ -34,6 +34,10 @@ class CalendarWorkspace(BaseModel):
         related_name='calendar_workspaces',
         help_text="Primary team for this workspace (optional)"
     )
+    detached_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the team was deleted and this workspace was kept without it"
+    )
 
     # Who can see this calendar
     is_public = models.BooleanField(default=False, help_text="If true, all users can see this calendar")
@@ -120,7 +124,9 @@ class CalendarWorkspace(BaseModel):
                     if member_team_ids:
                         q_accessible |= Q(team__in=member_team_ids)
 
-        return cls.objects.filter(q_accessible).distinct()
+        # An archived team's workspace is closed to non-staff, even to an explicitly
+        # allowed user or a calendar-group peer. Staff still see it (admin page).
+        return cls.objects.filter(q_accessible).exclude(team__is_active=False).distinct()
 
     def get_users_for_workspace(self):
         """

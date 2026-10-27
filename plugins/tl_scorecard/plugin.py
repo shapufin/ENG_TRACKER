@@ -9,6 +9,12 @@ from .urls import urlpatterns
 
 
 class TlScorecardPlugin(BasePlugin):
+    def get_scheduled_jobs(self):
+        # Hourly and cheap: returns before touching a leader once the latest frozen month is done.
+        return [
+            ('freeze_scorecard_months', 3600, 'plugins.tl_scorecard.snapshots.process_freeze_scorecards'),
+        ]
+
     @property
     def name(self) -> str:
         return "tl_scorecard"

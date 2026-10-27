@@ -1,9 +1,12 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { FilterChipRow } from "@/components/ui/FilterChipRow";
-import type { TeamLeaderFilter } from "../hooks/useTeamsPageUI";
+import type { TeamLeaderFilter, TeamStatusFilter } from "../hooks/useTeamsPageUI";
 
 interface TeamsPageFiltersProps {
+  status: TeamStatusFilter;
+  onStatusChange: (value: TeamStatusFilter) => void;
+  statusCounts: { active: number; archived: number; all: number };
   leaderFilter: TeamLeaderFilter;
   onLeaderFilterChange: (value: TeamLeaderFilter) => void;
   groups: string[];
@@ -20,6 +23,9 @@ interface TeamsPageFiltersProps {
  * a card of its own.
  */
 export const TeamsPageFilters: React.FC<TeamsPageFiltersProps> = ({
+  status,
+  onStatusChange,
+  statusCounts,
   leaderFilter,
   onLeaderFilterChange,
   groups,
@@ -31,6 +37,16 @@ export const TeamsPageFilters: React.FC<TeamsPageFiltersProps> = ({
 }) => {
   return (
     <div className="border-line-subtle space-y-2 border-b pb-4">
+      <FilterChipRow<TeamStatusFilter>
+        label="Status"
+        options={[
+          { value: "active", label: "Active", count: statusCounts.active },
+          { value: "archived", label: "Archived", count: statusCounts.archived },
+          { value: "all", label: "All", count: statusCounts.all },
+        ]}
+        selected={[status]}
+        onToggle={onStatusChange}
+      />
       <FilterChipRow<TeamLeaderFilter>
         label="Team leaders"
         options={[

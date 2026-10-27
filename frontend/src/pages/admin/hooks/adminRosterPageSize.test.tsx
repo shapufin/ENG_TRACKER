@@ -34,6 +34,8 @@ describe("admin roster pages load the whole list", () => {
 
   it("teams page requests a full page", async () => {
     renderHook(() => useTeamsPageData(), { wrapper });
-    await waitFor(() => expect(userService.getTeams).toHaveBeenCalledWith({ page_size: 1000 }));
+    await waitFor(() =>
+      expect(userService.getTeams).toHaveBeenCalledWith({ page_size: 1000, is_active: "all" })
+    );
   });
 });

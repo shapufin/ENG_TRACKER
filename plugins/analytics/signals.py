@@ -16,6 +16,7 @@ def record_metric(metric_type, value, user=None, team=None, label='', metadata=N
             metric_type=metric_type,
             user=user,
             team=team,
+            team_name=team.name if team else '',
             value=value,
             label=label,
             metadata=metadata or {}

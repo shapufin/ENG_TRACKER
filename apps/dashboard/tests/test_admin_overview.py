@@ -71,6 +71,11 @@ class HeadcountTests(AdminOverviewBase):
 
 
 class CoverageGapTests(AdminOverviewBase):
+    def test_an_archived_team_without_a_leader_is_not_a_coverage_gap(self):
+        baseline = self.get().data["coverage_gaps"]["teams_without_leader"]
+        Team.objects.create(name="Gone", code="GONE", is_active=False)
+        self.assertEqual(self.get().data["coverage_gaps"]["teams_without_leader"], baseline)
+
     def test_teams_without_leader_and_users_without_team_or_tech(self):
         baseline = self.get().data["coverage_gaps"]["teams_without_leader"]
         Team.objects.create(name="NoLead", code="NL")

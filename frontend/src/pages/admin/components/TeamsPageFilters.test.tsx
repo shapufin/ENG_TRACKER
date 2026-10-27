@@ -9,6 +9,9 @@ describe("TeamsPageFilters", () => {
     const onLeaderFilter = vi.fn();
     render(
       <TeamsPageFilters
+        status="active"
+        onStatusChange={vi.fn()}
+        statusCounts={{ active: 5, archived: 1, all: 6 }}
         leaderFilter="all"
         onLeaderFilterChange={onLeaderFilter}
         groups={["msc_siae"]}
@@ -27,6 +30,9 @@ describe("TeamsPageFilters", () => {
     const onGroupFilter = vi.fn();
     render(
       <TeamsPageFilters
+        status="active"
+        onStatusChange={vi.fn()}
+        statusCounts={{ active: 5, archived: 1, all: 6 }}
         leaderFilter="all"
         onLeaderFilterChange={vi.fn()}
         groups={["msc_siae"]}
@@ -44,6 +50,9 @@ describe("TeamsPageFilters", () => {
   it("offers Clear all only while a filter is active", () => {
     const onReset = vi.fn();
     const props = {
+      status: "active" as const,
+      onStatusChange: vi.fn(),
+      statusCounts: { active: 5, archived: 0, all: 5 },
       leaderFilter: "complete" as const,
       onLeaderFilterChange: vi.fn(),
       groups: [],

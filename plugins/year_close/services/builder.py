@@ -14,7 +14,7 @@ import hashlib
 import json
 import logging
 import zipfile
-from datetime import date
+from datetime import date, datetime, time
 from pathlib import Path
 
 from django.conf import settings
@@ -23,6 +23,7 @@ from django.utils import timezone
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from core.utils.sheet_titles import safe_sheet_title
+from core.utils.timezone_local import business_tz
 
 from .readiness import pending_counts
 
@@ -145,8 +146,33 @@ def candidate_pairs() -> list[tuple[int, int]]:
     return sorted(pairs)
 
 
-def _pair_members(pairs: list[tuple[int, int]]) -> dict[tuple[int, int], set[int]]:
-    """Members of each pair: the team's members plus the leader's managed users."""
+def _former_members(team_ids: set[int], year: int) -> dict[int, set[int]]:
+    """``{team_id: user ids}`` who were in the team during ``year`` but no longer are.
+
+    Archiving a team clears its memberships; ``TeamMembershipHistory`` is what keeps its
+    evidence in the team's bundle instead of ``Unassigned``. Someone who left before the
+    year began, or joined after it ended, is not attributed to it.
+    """
+    from django.db.models import Q
+
+    from apps.users.models import TeamMembershipHistory
+
+    first_day, last_day = _year_window(year)
+    # Compare in the business timezone: settings.TIME_ZONE is UTC, so a removal just
+    # after midnight in Tirane on 1 January would otherwise land in the previous year.
+    window_start = datetime.combine(first_day, time.min, tzinfo=business_tz())
+    rows = TeamMembershipHistory.objects.filter(
+        team_id__in=team_ids, user__isnull=False, removed_at__gte=window_start,
+    ).filter(Q(joined_date__isnull=True) | Q(joined_date__lte=last_day))
+    former: dict[int, set[int]] = {}
+    for team_id, user_id in rows.values_list('team_id', 'user_id'):
+        former.setdefault(team_id, set()).add(user_id)
+    return former
+
+
+def _pair_members(pairs: list[tuple[int, int]], year: int | None = None) -> dict[tuple[int, int], set[int]]:
+    """Members of each pair: the team's members plus the leader's managed users,
+    plus (when ``year`` is given) people who left the team during or after that year."""
     from apps.users.models import TeamMembership
 
     members: dict[tuple[int, int], set[int]] = {pair: set() for pair in pairs}
@@ -157,10 +183,12 @@ def _pair_members(pairs: list[tuple[int, int]]) -> dict[tuple[int, int], set[int
     ).values_list('user_profile__user_id', 'team_id'):
         by_team.setdefault(team_id, set()).add(user_id)
 
+    former = _former_members(team_ids, year) if year is not None else {}
     managed = managed_member_ids_bulk({leader_id for leader_id, _ in pairs})
     for pair in pairs:
         leader_id, team_id = pair
         members[pair] |= by_team.get(team_id, set())
+        members[pair] |= former.get(team_id, set())
         members[pair] |= managed.get(leader_id, set())
         members[pair].add(leader_id)
     return members
@@ -193,7 +221,7 @@ def bundles_for_year(year: int) -> list[dict]:
     from apps.users.models import Team
 
     pairs = candidate_pairs()
-    members = _pair_members(pairs)
+    members = _pair_members(pairs, year)
     needing = users_with_rows(year)
 
     owners: dict[int, tuple[int, int]] = {}

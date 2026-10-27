@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 from core.models.abstract import BaseModel, TimeStampedModel
 
@@ -175,6 +175,12 @@ def normalize_calendar_group(value):
     return '-'.join(str(value or '').lower().split())
 
 
+class TeamQuerySet(models.QuerySet):
+    def active(self):
+        """Teams that are not archived (and not soft-deleted)."""
+        return self.filter(is_active=True, is_deleted=False)
+
+
 class Team(BaseModel):
     """
     Team model for organizing users into groups.
@@ -206,6 +212,15 @@ class Team(BaseModel):
         help_text='Teams with the same calendar_group share calendar visibility'
     )
     description = models.TextField(blank=True)
+    # Retired teams are archived, not deleted: hidden from pickers and closed to new
+    # members, history kept. Set only through apps/users/services/team_lifecycle.py.
+    is_active = models.BooleanField(default=True, db_index=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+    archived_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name='archived_teams'
+    )
+
+    objects = TeamQuerySet.as_manager()
 
     class Meta:
         db_table = 'teams'
@@ -283,6 +298,28 @@ class TeamMembership(BaseModel):
         return f"{self.user_profile.user.username} - {self.team.name}"
 
 
+class TeamMembershipHistory(models.Model):
+    """A membership that ended. Survives the team and the user: labels are copied."""
+    team = models.ForeignKey(Team, null=True, blank=True, on_delete=models.SET_NULL, related_name='membership_history')
+    team_name = models.CharField(max_length=100)
+    team_code = models.CharField(max_length=10)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='team_membership_history')
+    username = models.CharField(max_length=150)
+    joined_date = models.DateField(null=True, blank=True)
+    is_primary_team = models.BooleanField(default=False)
+    removed_at = models.DateTimeField()
+    removed_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = 'team_membership_history'
+        ordering = ['-removed_at']
+        indexes = [models.Index(fields=['team', 'removed_at']), models.Index(fields=['user', 'removed_at'])]
+
+    def __str__(self):
+        return f'{self.username} left {self.team_name} at {self.removed_at:%Y-%m-%d}'
+
+
 class ApprovalPeriodBoundary(BaseModel):
     """Per-month coordination row for TL approval-period operations."""
     period = models.DateField(unique=True, db_index=True)
@@ -354,6 +391,9 @@ class ApprovalPeriodCloseMember(BaseModel):
         on_delete=models.SET_NULL,
         related_name='approval_period_close_members',
     )
+    # Labels survive the team: source_team goes NULL when the team is purged.
+    source_team_name = models.CharField(max_length=100, blank=True, default='')
+    source_team_code = models.CharField(max_length=10, blank=True, default='')
 
     class Meta:
         db_table = 'approval_period_close_members'
@@ -395,6 +435,17 @@ class ClosedYear(BaseModel):
 
     def __str__(self):
         return f'Closed year {self.year}'
+
+
+def _leads_active_team(user):
+    """Whether ``user`` is ``team_leader`` of a team that is not archived.
+
+    An archived team keeps its leader (so restoring it is lossless) but confers no
+    TL status. Reuses a ``prefetch_related('led_teams')`` result like ``_user_has_related``.
+    """
+    if 'led_teams' in getattr(user, '_prefetched_objects_cache', {}):
+        return any(team.is_active for team in user.led_teams.all())
+    return user.led_teams.filter(is_active=True).exists()
 
 
 def _user_has_related(user, relation):
@@ -573,7 +624,7 @@ class UserProfile(BaseModel):
             return set(cached)
         user = self.user
         membership_team_ids = set(self.teams.values_list('id', flat=True))
-        led_team_ids = set(user.led_teams.values_list('id', flat=True))
+        led_team_ids = set(user.led_teams.filter(is_active=True).values_list('id', flat=True))
         team_ids = membership_team_ids | led_team_ids
 
         filters = Q(italian_tl=user) | Q(albanian_tl=user)
@@ -611,7 +662,7 @@ class UserProfile(BaseModel):
             return True
         if self.is_italian_tl_role or self.is_albanian_tl_role:
             return True
-        if _user_has_related(self.user, 'led_teams'):
+        if _leads_active_team(self.user):
             return True
         return (
             _user_has_related(self.user, 'italian_team_members')
@@ -657,3 +708,11 @@ def save_user_profile(sender, instance, **kwargs):
     """Save the UserProfile whenever the User is saved."""
     if hasattr(instance, 'profile'):
         instance.profile.save()
+
+
+@receiver(pre_delete, sender=Team)
+def keep_team_labels_on_delete(sender, instance, **kwargs):
+    """Copy the team's current name and code onto rows whose FK is about to go NULL."""
+    ApprovalPeriodCloseMember.objects.filter(source_team=instance).update(
+        source_team_name=instance.name, source_team_code=instance.code,
+    )

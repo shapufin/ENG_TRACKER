@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { userService } from "@/services/userService";
 import { handleApiError } from "@/lib/error-handler";
+import axios from "axios";
 import { useFormErrorHandler } from "@/hooks/useFormErrorHandler";
 import { toast } from "sonner";
 import type { Team } from "@/types";
@@ -20,6 +21,8 @@ export const useTeamsPageForm = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Team | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Team | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<Team | null>(null);
+  const [lifecycleTarget, setLifecycleTarget] = useState<Team | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const handleFormError = useFormErrorHandler(setFormErrors);
@@ -52,13 +55,62 @@ export const useTeamsPageForm = () => {
     onError: handleFormError,
   });
 
+  // Archiving unassigns members, so user lists and team pickers are stale too.
+  const invalidateTeamData = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["admin", "teams"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "calendar-groups"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+  }, [queryClient]);
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) => userService.deleteTeam(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "teams"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "calendar-groups"] });
+      invalidateTeamData();
       toast.success("Team deleted");
       setConfirmDelete(null);
+      setLifecycleTarget(null);
+    },
+    onError: (err: unknown) => {
+      // A team with members, sub-teams or metrics answers 409 with the reasons: show them
+      // and offer the archive path instead of a generic failure.
+      const blockers = axios.isAxiosError(err)
+        ? (err.response?.data?.blockers as string[] | undefined)
+        : undefined;
+      if (axios.isAxiosError(err) && err.response?.status === 409 && blockers?.length) {
+        toast.error("This team cannot be deleted", { description: blockers.join(" ") });
+        setConfirmDelete(null);
+        return;
+      }
+      handleApiError(err);
+    },
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: (id: number) => userService.archiveTeam(id),
+    onSuccess: (result) => {
+      invalidateTeamData();
+      toast.success(
+        `Team archived. ${result.members_unassigned} member${result.members_unassigned === 1 ? "" : "s"} unassigned.`
+      );
+      setArchiveTarget(null);
+    },
+    onError: (err: unknown) => {
+      const blockers = axios.isAxiosError(err)
+        ? (err.response?.data?.blockers as string[] | undefined)
+        : undefined;
+      if (blockers?.length) {
+        toast.error("This team cannot be archived yet", { description: blockers.join(" ") });
+        return;
+      }
+      handleApiError(err);
+    },
+  });
+
+  const unarchiveMutation = useMutation({
+    mutationFn: (id: number) => userService.unarchiveTeam(id),
+    onSuccess: () => {
+      invalidateTeamData();
+      toast.success("Team restored. Its former members were not re-added.");
     },
     onError: (err: unknown) => handleApiError(err),
   });
@@ -105,6 +157,12 @@ export const useTeamsPageForm = () => {
     setEditing,
     confirmDelete,
     setConfirmDelete,
+    archiveTarget,
+    setArchiveTarget,
+    lifecycleTarget,
+    setLifecycleTarget,
+    archiveMutation,
+    unarchiveMutation,
     form,
     setForm,
     formErrors,

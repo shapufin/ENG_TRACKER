@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 
 
@@ -91,11 +91,12 @@ class AnalyticsMetric(models.Model):
     )
     team = models.ForeignKey(
         'users.Team',
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='analytics_metrics'
     )
+    team_name = models.CharField(max_length=100, blank=True, default='')
     
     # Metric data
     value = models.DecimalField(_('Value'), max_digits=15, decimal_places=2)
@@ -431,3 +432,8 @@ class ReportTemplate(models.Model):
 
     def __str__(self):
         return self.name
+
+
+@receiver(pre_delete, sender='users.Team')
+def keep_team_label_on_delete(sender, instance, **kwargs):
+    AnalyticsMetric.objects.filter(team=instance).update(team_name=instance.name)

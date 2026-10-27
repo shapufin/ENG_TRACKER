@@ -12,6 +12,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
 from apps.users.models import Team, TeamMembership, UserProfile
+from apps.users.services.team_lifecycle import archived_error_for_refs
+from apps.users.services.team_membership import change_user_teams, note_member_added
 from apps.users.services.tech_assignments import set_tech_assignments
 
 
@@ -113,6 +115,9 @@ def create_user_with_profile(
         ValueError: if username/email/password validation fails.
     """
     validate_new_user(username, email, password, code=code)
+    archived_message = archived_error_for_refs([*(teams or []), team])
+    if archived_message:
+        raise UserValidationError('teams', archived_message)
 
     user = User.objects.create_user(
         username=username,
@@ -138,7 +143,7 @@ def create_user_with_profile(
     profile.save()
 
     if teams:
-        profile.teams.set(teams)
+        change_user_teams(profile, teams)
     if techs:
         set_tech_assignments(profile, techs)
     if team:
@@ -189,6 +194,9 @@ def update_user_profile(
     ``cr_admin`` role is created (idempotent). When False, any existing
         active ``cr_admin`` ``UserRole`` rows are deactivated.
     """
+    archived_message = archived_error_for_refs([*(teams or []), team])
+    if archived_message:
+        raise UserValidationError('teams', archived_message)
     if is_italian_tl_role is not None or is_albanian_tl_role is not None:
         from apps.permissions.services.role_service import (
             TeamLeaderRevokeBlockedError,
@@ -245,7 +253,7 @@ def update_user_profile(
         )
 
     if teams is not None:
-        profile.teams.set(teams)
+        change_user_teams(profile, teams)
     if techs is not None:
         set_tech_assignments(profile, techs)
     if team is not None:
@@ -260,11 +268,13 @@ def update_user_profile(
 def _assign_team_to_profile(profile: UserProfile, team: Team) -> None:
     """Assign a team to a profile, marking it primary if no primary exists."""
     has_primary = profile.team_memberships.filter(is_primary_team=True).exists()
-    membership, _ = TeamMembership.objects.get_or_create(
+    membership, created = TeamMembership.objects.get_or_create(
         user_profile=profile,
         team=team,
         defaults={'is_primary_team': not has_primary}
     )
+    if created:
+        note_member_added(profile, team)
     if not has_primary and not membership.is_primary_team:
         membership.is_primary_team = True
         membership.save(update_fields=['is_primary_team'])

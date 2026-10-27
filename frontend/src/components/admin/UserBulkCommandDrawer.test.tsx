@@ -202,4 +202,16 @@ describe("UserBulkCommandDrawer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove alice from selection" }));
     expect(onRemoveSelected).toHaveBeenCalledWith(1);
   });
+
+  it("sends unassign_removed_tl with the teams only when the box is checked", () => {
+    renderDrawer();
+    fireEvent.click(screen.getByRole("switch", { name: "Teams" }));
+    fireEvent.click(screen.getByRole("button", { name: "Choose teams" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apply changes" }));
+    expect(onBulkUpdate).toHaveBeenLastCalledWith({ teams: [1, 2] });
+
+    fireEvent.click(screen.getByLabelText(/also clear italian\/albanian tl links/i));
+    fireEvent.click(screen.getByRole("button", { name: "Apply changes" }));
+    expect(onBulkUpdate).toHaveBeenLastCalledWith({ teams: [1, 2], unassign_removed_tl: true });
+  });
 });

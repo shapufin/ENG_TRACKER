@@ -97,8 +97,41 @@ export interface Team {
   sub_teams_count?: number;
   calendar_group: string;
   members_count?: number;
+  /** False once the team is archived (hidden from pickers, members unassigned). */
+  is_active?: boolean;
+  archived_at?: string | null;
+  archived_by?: number | null;
   created_at: string;
   updated_at: string;
+}
+
+/** What archiving, purging or deleting a team would touch (admin endpoint). */
+export interface TeamLifecycle {
+  id: number;
+  is_active: boolean;
+  archived_at: string | null;
+  purge_eligible_at: string | null;
+  last_activity: string | null;
+  members_count: number;
+  archive_blockers: string[];
+  delete_blockers: string[];
+  purge_blockers: string[];
+  /** Records that block a delete, keyed by relation (user_memberships, sub_teams, ...). */
+  counts: Record<string, number>;
+  /** Rows a delete would detach (kept with the team's name), keyed by relation. */
+  cascade_counts: Record<string, number>;
+}
+
+/** A TL link that still points at a leader of a team the user just left. */
+export interface TeamLinkWarning {
+  code: "tl_link_remains";
+  field: "italian_tl" | "albanian_tl";
+  user_id: number;
+  leader_username: string | null;
+  member_id: number;
+  member_username: string;
+  teams: string[];
+  message: string;
 }
 
 export interface CalendarWorkspace {
@@ -113,6 +146,10 @@ export interface CalendarWorkspace {
   team_name?: string;
   team_code?: string;
   team_calendar_group?: string;
+  /** False when the team is archived; its workspace is hidden from non-staff. */
+  team_is_active?: boolean;
+  /** Set when the team was deleted and this workspace was kept without it. */
+  detached_at?: string | null;
   default_view: string;
   show_overtime: boolean;
   show_standby: boolean;

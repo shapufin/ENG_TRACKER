@@ -167,7 +167,14 @@ export const useCalendarManagement = (options?: UseCalendarManagementOptions) =>
     calendarGroups,
     groupStats,
     holidays: holidaysData ?? [],
-    workspaces: workspaceData ?? [],
+    // Say why a workspace is not linked to a live team, so an admin can tell it from the rest.
+    workspaces: (workspaceData ?? []).map((w) =>
+      w.detached_at
+        ? { ...w, name: `${w.name} (team deleted)` }
+        : w.team_is_active === false
+          ? { ...w, name: `${w.name} (team archived)` }
+          : w
+    ),
     isLoading: teamsLoading,
     holidaysLoading,
     updateTeamMutation,

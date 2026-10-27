@@ -11,7 +11,15 @@ import type {
   PaginatedResponse,
   UserStats,
   CalendarGroupStats,
+  TeamLifecycle,
+  TeamLinkWarning,
 } from "@/types";
+
+/** An update that changed teams also reports TL links that outlived the removed team. */
+export type UserUpdateResult = User & {
+  warnings?: TeamLinkWarning[];
+  removed_team_leaders?: number[];
+};
 
 export type ControlRoomEligibleUser = Pick<User, "id" | "username" | "email" | "full_name">;
 
@@ -309,11 +317,13 @@ export const userService = {
     is_italian_tl_role?: boolean;
     is_albanian_tl_role?: boolean;
     is_hbpr?: boolean;
-  }): Promise<{ detail: string; updated_count: number }> {
-    const { data } = await api.post<{ detail: string; updated_count: number }>(
-      "/users/users/bulk_update/",
-      payload
-    );
+    unassign_removed_tl?: boolean;
+  }): Promise<{ detail: string; updated_count: number; warnings?: TeamLinkWarning[] }> {
+    const { data } = await api.post<{
+      detail: string;
+      updated_count: number;
+      warnings?: TeamLinkWarning[];
+    }>("/users/users/bulk_update/", payload);
     return data;
   },
 
@@ -358,9 +368,14 @@ export const userService = {
       is_cr_admin?: boolean;
       roles?: string[];
       mfa_required?: boolean;
+      /** Also clear the italian_tl/albanian_tl links that point at a leader of a removed team. */
+      unassign_removed_tl?: boolean;
     }
-  ): Promise<User> {
-    const { data } = await api.put<User>(`/users/users/${userId}/update_user/`, payload);
+  ): Promise<UserUpdateResult> {
+    const { data } = await api.put<UserUpdateResult>(
+      `/users/users/${userId}/update_user/`,
+      payload
+    );
     return data;
   },
 
@@ -383,6 +398,29 @@ export const userService = {
 
   async deleteTeam(id: number): Promise<void> {
     await api.delete(`/users/teams/${id}/`);
+  },
+
+  /** Retire a team: hidden from pickers, members unassigned (history kept), records kept. */
+  async archiveTeam(
+    id: number
+  ): Promise<{ id: number; is_active: boolean; members_unassigned: number }> {
+    const { data } = await api.post<{ id: number; is_active: boolean; members_unassigned: number }>(
+      `/users/teams/${id}/archive/`
+    );
+    return data;
+  },
+
+  /** Reactivate an archived team. Its former members are not restored. */
+  async unarchiveTeam(id: number): Promise<{ id: number; is_active: boolean }> {
+    const { data } = await api.post<{ id: number; is_active: boolean }>(
+      `/users/teams/${id}/unarchive/`
+    );
+    return data;
+  },
+
+  async getTeamLifecycle(id: number): Promise<TeamLifecycle> {
+    const { data } = await api.get<TeamLifecycle>(`/users/teams/${id}/lifecycle/`);
+    return data;
   },
 
   async getCalendarGroups(): Promise<Array<{ calendar_group: string; team_count: number }>> {

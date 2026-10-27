@@ -6,6 +6,8 @@ when a new Team is created, ensuring every team has a corresponding calendar.
 """
 
 import logging
+
+from django.utils import timezone
 from decimal import Decimal
 from django.db.models.signals import post_save, post_delete, pre_delete, pre_save
 from django.dispatch import receiver
@@ -46,22 +48,19 @@ def create_team_calendar_workspace(sender, instance, created, **kwargs):
             # The new team is a new audience: drop the old team's sharing.
             workspace.team = instance
             workspace.is_public = False
-            workspace.save(update_fields=['team', 'is_public'])
+            workspace.detached_at = None
+            workspace.save(update_fields=['team', 'is_public', 'detached_at'])
             workspace.allowed_users.clear()
 
 
 @receiver(pre_delete, sender=Team)
-def remove_team_calendar_workspace(sender, instance, **kwargs):
-    """Drop the team's auto-created workspace so it is not left orphaned.
+def detach_team_calendar_workspace(sender, instance, **kwargs):
+    """Keep the team's workspace; the FK's SET_NULL detaches it from the deleted team.
 
-    A workspace that already holds holidays is kept (it would otherwise take
-    that data with it); the FK's SET_NULL detaches it from the deleted team.
+    A workspace is never deleted with its team: it may hold holidays and user
+    preferences. ``purge_detached_workspaces`` removes an empty, unused one after a year.
     """
-    workspace = CalendarWorkspace.objects.filter(
-        team=instance, code=f"{instance.code}_calendar"
-    ).first()
-    if workspace and not PublicHoliday.objects.filter(calendar=workspace).exists():
-        workspace.delete()
+    CalendarWorkspace.objects.filter(team=instance, detached_at__isnull=True).update(detached_at=timezone.now())
 
 
 def _restore_payroll_workday(h_date):

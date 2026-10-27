@@ -15,6 +15,16 @@ const baseForm = {
 };
 
 describe("buildRolePayload", () => {
+  it("asks the server to clear removed-team TL links only when the box is checked", () => {
+    expect(buildRolePayload(baseForm)).not.toHaveProperty("unassign_removed_tl");
+    expect(buildRolePayload({ ...baseForm, unassign_removed_tl: true })).toMatchObject({
+      unassign_removed_tl: true,
+    });
+    expect(
+      buildRolePayload({ ...baseForm, is_hbpr: true, unassign_removed_tl: true })
+    ).not.toHaveProperty("unassign_removed_tl");
+  });
+
   it("sends assignments and the full role set for a normal user", () => {
     const payload = buildRolePayload(baseForm);
 

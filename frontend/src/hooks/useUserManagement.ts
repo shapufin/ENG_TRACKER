@@ -144,9 +144,16 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: UpdateVariables) => userService.updateUser(id, payload),
-    onSuccess: () => {
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ["admin"] });
-      toast.success("Updated");
+      if (result?.warnings?.length) {
+        toast.warning("Updated, but a team leader link remains", {
+          description: result.warnings.map((warning) => warning.message).join(" "),
+          duration: 10000,
+        });
+      } else {
+        toast.success("Updated");
+      }
       setUpdateBlockedRevocations(null);
       setPendingUpdate(null);
       options?.onUpdateSuccess?.();

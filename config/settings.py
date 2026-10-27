@@ -187,6 +187,10 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Month M's engagement/scorecard metrics stay provisional until this day of M+1
+# (business timezone), then become immutable. See core/utils/metrics_freeze.py.
+METRICS_FREEZE_DAY = 10
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/

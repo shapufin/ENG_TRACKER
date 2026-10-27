@@ -9,6 +9,8 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Plus } from "lucide-react";
 import { TeamFormDialog } from "@/components/admin/TeamFormDialog";
 import { TeamDataTable } from "@/components/admin/TeamDataTable";
+import { ArchiveTeamDialog } from "@/components/admin/ArchiveTeamDialog";
+import { TeamLifecycleDialog } from "@/components/admin/TeamLifecycleDialog";
 import { TeamStatsCards } from "./components/TeamStatsCards";
 import { TeamsPageFilters } from "./components/TeamsPageFilters";
 import { useTeamsPage } from "./hooks/useTeamsPage";
@@ -25,6 +27,16 @@ export const TeamsPage: React.FC = () => {
     editing,
     confirmDelete,
     setConfirmDelete,
+    archiveTarget,
+    setArchiveTarget,
+    lifecycleTarget,
+    setLifecycleTarget,
+    archiveMutation,
+    unarchiveMutation,
+    status,
+    setStatus,
+    statusCounts,
+    activeTeams,
     form,
     setForm,
     formErrors,
@@ -72,8 +84,8 @@ export const TeamsPage: React.FC = () => {
       }
     >
       <TeamStatsCards
-        total={data.count}
-        members={data.results.reduce((sum, t) => sum + (t.members_count ?? 0), 0)}
+        total={activeTeams.length}
+        members={activeTeams.reduce((sum, t) => sum + (t.members_count ?? 0), 0)}
         noLeader={leaderCounts.incomplete}
         groups={groupsData?.length ?? 0}
       />
@@ -81,6 +93,9 @@ export const TeamsPage: React.FC = () => {
       <TeamDataTable
         header={
           <TeamsPageFilters
+            status={status}
+            onStatusChange={setStatus}
+            statusCounts={statusCounts}
             leaderFilter={leaderFilter}
             onLeaderFilterChange={setLeaderFilter}
             groups={(groupsData ?? []).map((g) => g.calendar_group)}
@@ -97,6 +112,12 @@ export const TeamsPage: React.FC = () => {
         onToggleExpand={toggleExpand}
         onEdit={openEdit}
         onDelete={setConfirmDelete}
+        onArchive={setArchiveTarget}
+        // Restoring moves the row out of the Archived view; follow it back to Active.
+        onUnarchive={(team) =>
+          unarchiveMutation.mutate(team.id, { onSuccess: () => setStatus("active") })
+        }
+        onManageArchived={setLifecycleTarget}
         hoveredPath={hoveredPath}
         onRowMouseEnter={(team) => setHoveredTeam(team.id)}
         onRowMouseLeave={() => setHoveredTeam(null)}
@@ -115,11 +136,28 @@ export const TeamsPage: React.FC = () => {
         isSubmitting={create.isPending || update.isPending}
       />
 
+      <ArchiveTeamDialog
+        team={archiveTarget}
+        onOpenChange={(open) => !open && setArchiveTarget(null)}
+        onConfirm={(id) => archiveMutation.mutate(id, { onSuccess: () => setStatus("archived") })}
+        isArchiving={archiveMutation.isPending}
+      />
+
+      {lifecycleTarget && (
+        <TeamLifecycleDialog
+          team={lifecycleTarget}
+          open
+          onOpenChange={(open) => !open && setLifecycleTarget(null)}
+          onDelete={(id) => deleteMutation.mutate(id)}
+          isDeleting={deleteMutation.isPending}
+        />
+      )}
+
       <ConfirmDialog
         open={!!confirmDelete}
         onOpenChange={() => setConfirmDelete(null)}
         title="Delete Team"
-        description={`Are you sure you want to delete team "${confirmDelete?.name}"?`}
+        description={`Delete team "${confirmDelete?.name}"? A team that was ever used cannot be deleted: archive it instead.`}
         onConfirm={() => confirmDelete && deleteMutation.mutate(confirmDelete.id)}
       />
     </PageShell>

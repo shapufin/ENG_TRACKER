@@ -27,7 +27,7 @@ class AnalyticsMetricAdmin(SuperuserOnlyAdminMixin, admin.ModelAdmin):
         'recorded_at',
     ]
     list_filter = ['metric_type', 'recorded_at']
-    search_fields = ['user__username', 'team__name', 'label']
+    search_fields = ['user__username', 'team__name', 'team_name', 'label']
     date_hierarchy = 'recorded_at'
     readonly_fields = ['recorded_at', 'created_at']
 

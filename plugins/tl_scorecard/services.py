@@ -29,7 +29,9 @@ from .models import (
     PIPRecord,
     PromotionFlag,
     ReviewDelivery,
+    ScorecardMonthSnapshot,
 )
+from core.utils.metrics_freeze import is_frozen, is_past_freeze
 
 def reporting_period(month: date | None) -> date:
     """Normalize any date within a month to that month's first day — the
@@ -418,11 +420,17 @@ def scorecard_trend(user, months: int, end_month: date) -> list[dict]:
     for _ in range(months - 1):
         first = (first - timedelta(days=1)).replace(day=1)
     window = TrendWindow(user, team_member_ids, first, _month_bounds(end)[1])
+    snapshots = None
+    if is_past_freeze(first):  # the oldest point may be final: one query for every point
+        snapshots = {
+            snap.month: snap
+            for snap in ScorecardMonthSnapshot.objects.filter(leader=user, month__gte=first, month__lte=end)
+        }
     points = []
     year_metrics: dict = {}
     cursor = end
     for _ in range(months):
-        points.append(build_scorecard(user, cursor, current_state, year_metrics, window))
+        points.append(build_scorecard(user, cursor, current_state, year_metrics, window, snapshots))
         if cursor.month == 1:
             cursor = cursor.replace(year=cursor.year - 1, month=12)
         else:
@@ -558,9 +566,36 @@ def _current_state_metrics(user, team_member_ids) -> dict:
     }
 
 
+def month_blocks(user, month: date, team_member_ids, window: TrendWindow | None = None) -> dict:
+    """The month-bound part of a scorecard: what the freeze stores."""
+    return {
+        'team_size': len(team_member_ids),
+        'leave': leave_sla_metrics(team_member_ids, month, window),
+        'overtime': ot_turnaround_metrics(team_member_ids, month, window),
+        'meetings': meeting_compliance_metrics(user, team_member_ids, month, window),
+    }
+
+
+def snapshot_blocks(user, month: date, snapshots: dict | None = None) -> dict | None:
+    """The stored month blocks when ``month`` is final, else ``None`` (compute live).
+
+    ``snapshots`` is a ``{month: snapshot}`` preload (the trend), otherwise one lookup.
+    A snapshot written before the freeze is provisional and is not trusted.
+    """
+    if not is_past_freeze(month):
+        return None
+    if snapshots is None:
+        snapshot = ScorecardMonthSnapshot.objects.filter(leader=user, month=month).first()
+    else:
+        snapshot = snapshots.get(month)
+    if snapshot is None or not is_frozen(month, snapshot.computed_at):
+        return None
+    return copy.deepcopy(snapshot.payload)
+
+
 def build_scorecard(
     user, month: date, current_state: dict | None = None, year_metrics: dict | None = None,
-    window: TrendWindow | None = None,
+    window: TrendWindow | None = None, snapshots: dict | None = None,
 ) -> dict:
     """Full scorecard for one TL (`user`) for `month`.
 
@@ -581,12 +616,14 @@ def build_scorecard(
             'promotion': promotion_ratio(team_member_ids, month.year),
         }
     year_part = copy.deepcopy(year_metrics[month.year])  # points are masked in place later
+    month_part = snapshot_blocks(user, month, snapshots)
+    frozen = month_part is not None
+    if not frozen:
+        month_part = month_blocks(user, month, team_member_ids, window)
     return {
         'month': month.isoformat(),
-        'team_size': len(team_member_ids),
-        'leave': leave_sla_metrics(team_member_ids, month, window),
-        'overtime': ot_turnaround_metrics(team_member_ids, month, window),
-        'meetings': meeting_compliance_metrics(user, team_member_ids, month, window),
+        **month_part,
+        'frozen': frozen,
         **year_part,
         **current_state,
     }

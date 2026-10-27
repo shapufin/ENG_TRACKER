@@ -23,6 +23,7 @@ from django.db.utils import OperationalError
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+from core.services.lifecycle import record_lifecycle_event
 from core.utils import get_client_ip
 from .models import Tech, TechLevel, Team, UserProfile, UserTech
 from .models.core import normalize_calendar_group
@@ -38,6 +39,8 @@ from .serializers import (
 )
 from .services.hbpr_scope import get_hbpr_scope
 from .services.profile_loading import with_profile_list_loading
+from .services import team_lifecycle
+from .services.team_membership import change_user_teams, tl_link_followup
 from .services.team_leaders import derive_team_tls
 from .services.tokens import revoke_refresh_tokens
 from .services.tech_assignments import (
@@ -542,7 +545,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             'teams', 'techs', 'italian_tl', 'albanian_tl', 'is_hr',
             'is_italian_tl_role', 'is_albanian_tl_role', 'is_hbpr',
         }
-        unknown_fields = sorted(set(data.keys()) - {'user_ids'} - allowed_fields)
+        unknown_fields = sorted(set(data.keys()) - {'user_ids', 'unassign_removed_tl'} - allowed_fields)
         if unknown_fields:
             return Response(
                 {'error': f'Unsupported bulk fields: {", ".join(unknown_fields)}'},
@@ -573,13 +576,16 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     {'error': 'teams must not contain duplicates'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            existing_team_ids = set(Team.objects.filter(id__in=team_ids).values_list('id', flat=True))
-            invalid_team_ids = sorted(set(team_ids) - existing_team_ids)
+            found_teams = list(Team.objects.filter(id__in=team_ids))
+            invalid_team_ids = sorted(set(team_ids) - {t.id for t in found_teams})
             if invalid_team_ids:
                 return Response(
                     {'error': f'Unknown team IDs: {invalid_team_ids}'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            archived_message = team_lifecycle.archived_team_error(found_teams)
+            if archived_message:
+                return Response({'error': archived_message}, status=status.HTTP_400_BAD_REQUEST)
         else:
             team_ids = None
 
@@ -742,9 +748,11 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 ).values_list('user_profile_id', 'tech_id'):
                     assigned_by_profile.setdefault(row[0], set()).add(row[1])
 
+            bulk_warnings = []
             for profile in profiles:
+                team_change = None
                 if team_ids is not None:
-                    profile.teams.set(team_ids)
+                    team_change = change_user_teams(profile, team_ids, request=request)
                 if tech_entries is not None:
                     try:
                         validate_tech_assignments(
@@ -774,6 +782,11 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     profile.is_italian_tl_role = data['is_italian_tl_role']
                 if 'is_albanian_tl_role' in data:
                     profile.is_albanian_tl_role = data['is_albanian_tl_role']
+                if team_change:
+                    warned, _ = tl_link_followup(
+                        profile, team_change, unassign=bool(data.get('unassign_removed_tl')), request=request,
+                    )
+                    bulk_warnings.extend(warned)
                 profile.save()
                 _sync_legacy_roles(
                     profile.user,
@@ -790,6 +803,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         return Response({
             'detail': f'Successfully updated {len(profiles)} users.',
             'updated_count': len(profiles),
+            'warnings': bulk_warnings,
         }, status=status.HTTP_200_OK)
 
     def perform_destroy(self, instance):
@@ -1043,8 +1057,20 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             )
         if 'code' in data:
             profile.code = data['code']  # UserProfile.save() trims / blanks to NULL
-        if 'teams' in data:
-            profile.teams.set(data['teams'])
+        archived_message = team_lifecycle.archived_error_for_refs(
+            [*(data.get('teams') or []), data.get('team')]
+        )
+        if archived_message:
+            transaction.set_rollback(True)
+            return Response({'error': archived_message, 'teams': [archived_message]}, status=status.HTTP_400_BAD_REQUEST)
+        team_change = None
+        if 'teams' in data or 'team' in data:
+            # One diff for both the list and the legacy single-team field (the single one wins,
+            # as before). Empty / null clears every team.
+            target = data['teams'] or [] if 'teams' in data else None
+            if 'team' in data:
+                target = [data['team']] if data['team'] else []
+            team_change = change_user_teams(profile, target, request=request)
         if 'techs' in data:
             # Passing the profile keeps the pre-existing rule: an inactive Tech
             # is allowed only when this user already has it assigned.
@@ -1053,18 +1079,17 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             except TechAssignmentError as exc:
                 transaction.set_rollback(True)
                 return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        if 'team' in data:
-            # Backward compatibility: if single team provided, set as only team
-            if data['team']:
-                profile.teams.set([data['team']])
-            else:
-                profile.teams.clear()
         if 'albanian_tl' in data:
             profile.albanian_tl_id = data['albanian_tl'] if data['albanian_tl'] else None
         if 'italian_tl' in data:
             profile.italian_tl_id = data['italian_tl'] if data['italian_tl'] else None
         if 'hire_date' in data:
             profile.hire_date = data['hire_date'] or None
+        tl_warnings, removed_leaders = ([], [])
+        if team_change:
+            tl_warnings, removed_leaders = tl_link_followup(
+                profile, team_change, unassign=bool(data.get('unassign_removed_tl')), request=request,
+            )
         # When 'roles' is provided, _sync_roles overwrites the legacy flags
         # below — skip the redundant direct set. Only set flags directly for
         # the legacy path (no 'roles' key in payload).
@@ -1101,7 +1126,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             _set_cr_admin_role(user, active='cr_admin' in data['roles'])
         elif 'is_cr_admin' in data:
             _set_cr_admin_role(user, active=bool(data['is_cr_admin']))
-        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+        body = UserSerializer(user).data
+        if team_change:
+            body = {**body, 'warnings': tl_warnings, 'removed_team_leaders': removed_leaders}
+        return Response(body, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])
     def my_team_members(self, request):
@@ -1953,6 +1981,14 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
             members_count_annotated=Count('members', distinct=True),
         ).order_by('name')
 
+        if self.action == 'list':
+            # Archived teams are hidden unless asked for: ?is_active=false (only archived) or all.
+            archived = self.request.query_params.get('is_active', 'true').strip().lower()
+            if archived in {'false', '0', 'no'}:
+                queryset = queryset.filter(is_active=False)
+            elif archived != 'all':
+                queryset = queryset.filter(is_active=True)
+
         calendar_group_param = self.request.query_params.get('calendar_group')
         has_calendar_group = self.request.query_params.get('has_calendar_group')
 
@@ -1976,7 +2012,7 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         from rest_framework.response import Response
         from apps.users.serializers import TeamSerializer
 
-        queryset = Team.objects.all().annotate(
+        queryset = Team.objects.active().annotate(
             members_count=Count('members', distinct=True)
         ).order_by('name')
 
@@ -2012,6 +2048,57 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         self._reject_calendar_group_write_from_hr(serializer)
         serializer.save()
 
+    def destroy(self, request, *args, **kwargs):
+        # Checked up front instead of catching a database error: a failed delete inside
+        # Django's atomic block poisons the caller's transaction. A plain Response, not an
+        # APIException: DRF would turn the counts into strings.
+        team = self.get_object()
+        blockers = team_lifecycle.delete_blockers(team)
+        if blockers:
+            return Response(
+                {
+                    'detail': 'This team cannot be deleted. Archive it instead; '
+                              'delete only a team that was never used or has nothing left.',
+                    'blockers': blockers,
+                    'counts': team_lifecycle.protected_record_counts(team),
+                    'cascade_counts': team_lifecycle.cascade_record_counts(team),
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        record_lifecycle_event(
+            request, team, 'team', 'DELETE', 'delete',
+            old={'code': team.code, 'name': team.name},
+        )
+        self.perform_destroy(team)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'])
+    def archive(self, request, pk=None):
+        """Retire a team: hidden from pickers, members unassigned (history kept), records kept."""
+        team = self.get_object()
+        blockers = team_lifecycle.archive_blockers(team)
+        if blockers:
+            return Response(
+                {'detail': 'This team cannot be archived yet.', 'blockers': blockers},
+                status=status.HTTP_409_CONFLICT,
+            )
+        unassigned = team_lifecycle.archive_team(team, request)
+        return Response({'id': team.pk, 'is_active': False, 'members_unassigned': unassigned})
+
+    @action(detail=True, methods=['post'])
+    def unarchive(self, request, pk=None):
+        """Reactivate an archived team. Its members are not restored."""
+        team = self.get_object()
+        if team.is_active:
+            return Response({'detail': 'Team is not archived.'}, status=status.HTTP_409_CONFLICT)
+        team_lifecycle.unarchive_team(team, request)
+        return Response({'id': team.pk, 'is_active': True})
+
+    @action(detail=True, methods=['get'])
+    def lifecycle(self, request, pk=None):
+        """What the lifecycle dialog shows: counts, blockers, last activity, purge date."""
+        return Response(team_lifecycle.lifecycle_summary(self.get_object()))
+
     def get_permissions(self):
         # Already handled by SuperuserPermissionMixin for superusers.
         # Team writes are admin-only: the HR-native /hr/teams page and its
@@ -2020,6 +2107,7 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         # IsAuthenticated - HR Reports uses list_for_reports.
         if self.action in (
             'create', 'update', 'partial_update', 'destroy',
+            'archive', 'unarchive', 'lifecycle',
             'bulk_update_calendar_group', 'rename_calendar_group',
             'clear_calendar_group',
         ):
@@ -2091,7 +2179,7 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         """
         Get all root teams (teams without parent).
         """
-        root_teams = Team.objects.filter(parent_team__isnull=True)
+        root_teams = Team.objects.active().filter(parent_team__isnull=True)
         serializer = self.get_serializer(root_teams, many=True)
         return Response(serializer.data)
     

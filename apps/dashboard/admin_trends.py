@@ -103,7 +103,7 @@ def _overtime_by_client(month_start):
 
 def _team_comparison(month_start):
     teams = list(
-        Team.objects.annotate(size=Count("members", filter=Q(members__user__is_active=True), distinct=True))
+        Team.objects.active().annotate(size=Count("members", filter=Q(members__user__is_active=True), distinct=True))
         .order_by("name")
         .values("id", "name", "size")
     )

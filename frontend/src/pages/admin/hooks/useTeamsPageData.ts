@@ -4,7 +4,7 @@ import { userService } from "@/services/userService";
 export const useTeamsPageData = () => {
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "teams"],
-    queryFn: () => userService.getTeams({ page_size: 1000 }),
+    queryFn: () => userService.getTeams({ page_size: 1000, is_active: "all" }),
   });
   const { data: groupsData } = useQuery({
     queryKey: ["admin", "calendar-groups"],
