@@ -124,7 +124,9 @@ class CalendarWorkspace(BaseModel):
                     if member_team_ids:
                         q_accessible |= Q(team__in=member_team_ids)
 
-        return cls.objects.filter(q_accessible).distinct()
+        # An archived team's workspace is closed to non-staff, even to an explicitly
+        # allowed user or a calendar-group peer. Staff still see it (admin page).
+        return cls.objects.filter(q_accessible).exclude(team__is_active=False).distinct()
 
     def get_users_for_workspace(self):
         """

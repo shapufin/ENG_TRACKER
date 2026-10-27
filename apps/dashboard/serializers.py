@@ -129,12 +129,14 @@ class CalendarWorkspaceSerializer(serializers.ModelSerializer):
     team_name = serializers.CharField(source='team.name', read_only=True)
     team_code = serializers.CharField(source='team.code', read_only=True)
     team_calendar_group = serializers.CharField(source='team.calendar_group', read_only=True)
+    team_is_active = serializers.BooleanField(source='team.is_active', read_only=True)
 
     class Meta:
         model = CalendarWorkspace
         fields = ['id', 'name', 'code', 'description', 'color', 'icon', 'is_public', 'team',
-                  'team_name', 'team_code', 'team_calendar_group',
+                  'team_name', 'team_code', 'team_calendar_group', 'team_is_active', 'detached_at',
                   'default_view', 'show_overtime', 'show_standby', 'show_vacation', 'show_holidays']
+        read_only_fields = ['detached_at']
 
 
 class UserCalendarPreferenceSerializer(serializers.ModelSerializer):

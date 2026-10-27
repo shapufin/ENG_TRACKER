@@ -703,7 +703,11 @@ class CalendarWorkspaceViewSet(HbprBlockedMixin, CacheInvalidationMixin, viewset
 
     def get_queryset(self):
         user = self.request.user
-        return CalendarWorkspace.get_accessible_for_user(user).select_related('team').prefetch_related('team__team_leader')
+        queryset = CalendarWorkspace.get_accessible_for_user(user).select_related('team').prefetch_related('team__team_leader')
+        if self.action == 'list' and self.request.query_params.get('detached', '').lower() in {'true', '1', 'yes'}:
+            # Workspaces kept after their team was deleted (admin cleanup view).
+            queryset = queryset.filter(team__isnull=True, detached_at__isnull=False)
+        return queryset
 
     def _ensure_admin(self):
         user = self.request.user
@@ -751,7 +755,7 @@ class CalendarWorkspaceViewSet(HbprBlockedMixin, CacheInvalidationMixin, viewset
         if not hasattr(user, 'profile'):
             return Response([])
 
-        queryset = CalendarWorkspace.objects.all().select_related('team')
+        queryset = CalendarWorkspace.objects.exclude(team__is_active=False).select_related('team')
         team_workspaces = []
 
         # Get team memberships

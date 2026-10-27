@@ -54,20 +54,13 @@ def create_team_calendar_workspace(sender, instance, created, **kwargs):
 
 
 @receiver(pre_delete, sender=Team)
-def remove_team_calendar_workspace(sender, instance, **kwargs):
-    """Drop the team's auto-created workspace so it is not left orphaned.
+def detach_team_calendar_workspace(sender, instance, **kwargs):
+    """Keep the team's workspace; the FK's SET_NULL detaches it from the deleted team.
 
-    A workspace that already holds holidays is kept (it would otherwise take
-    that data with it); the FK's SET_NULL detaches it from the deleted team.
+    A workspace is never deleted with its team: it may hold holidays and user
+    preferences. ``purge_detached_workspaces`` removes an empty, unused one after a year.
     """
-    workspace = CalendarWorkspace.objects.filter(
-        team=instance, code=f"{instance.code}_calendar"
-    ).first()
-    if workspace and not PublicHoliday.objects.filter(calendar=workspace).exists():
-        workspace.delete()
-    elif workspace:
-        workspace.detached_at = timezone.now()
-        workspace.save(update_fields=['detached_at'])
+    CalendarWorkspace.objects.filter(team=instance, detached_at__isnull=True).update(detached_at=timezone.now())
 
 
 def _restore_payroll_workday(h_date):

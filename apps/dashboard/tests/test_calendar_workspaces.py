@@ -328,13 +328,16 @@ class PublicHolidayHRPermissionTests(TestCase):
 
 
 class TeamDeletionWorkspaceCleanupTests(TestCase):
-    def test_deleting_team_removes_its_empty_auto_created_workspace(self):
+    def test_deleting_team_detaches_its_empty_auto_created_workspace(self):
+        # Retention changed in the team lifecycle plan (Phase 4): never deleted with the team.
         team = Team.objects.create(name="Gone Team", code="GONE")
         self.assertTrue(CalendarWorkspace.objects.filter(code="GONE_calendar").exists())
 
         team.delete()
 
-        self.assertFalse(CalendarWorkspace.objects.filter(code="GONE_calendar").exists())
+        workspace = CalendarWorkspace.objects.get(code="GONE_calendar")
+        self.assertIsNone(workspace.team_id)
+        self.assertIsNotNone(workspace.detached_at)
 
     def test_deleting_team_keeps_workspace_that_holds_holidays(self):
         team = Team.objects.create(name="Held Team", code="HELD")
