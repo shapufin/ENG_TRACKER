@@ -2,8 +2,18 @@ import React, { useMemo, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
-import { DataTableActions } from "./DataTableActions";
-import { ChevronRight, ChevronDown, Share2, Users } from "lucide-react";
+import { RowActions } from "@/components/ui/RowActions";
+import {
+  Archive,
+  ArchiveRestore,
+  ChevronRight,
+  ChevronDown,
+  Database,
+  Pencil,
+  Share2,
+  Trash2,
+  Users,
+} from "lucide-react";
 import type { TeamNode } from "@/lib/teamTree";
 
 const SEARCH_COLUMNS = ["name", "code", "description", "italian_tl", "albanian_tl"];
@@ -33,6 +43,9 @@ interface TeamDataTableProps {
   onToggleExpand: (id: number) => void;
   onEdit: (team: TeamNode) => void;
   onDelete?: (team: TeamNode) => void;
+  onArchive?: (team: TeamNode) => void;
+  onUnarchive?: (team: TeamNode) => void;
+  onManageArchived?: (team: TeamNode) => void;
   hoveredPath: Set<number>;
   onRowMouseEnter: (team: TeamNode) => void;
   onRowMouseLeave: () => void;
@@ -48,6 +61,9 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
   onToggleExpand,
   onEdit,
   onDelete,
+  onArchive,
+  onUnarchive,
+  onManageArchived,
   hoveredPath,
   onRowMouseEnter,
   onRowMouseLeave,
@@ -93,6 +109,11 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
                 <span className="inline-block h-5 w-5" />
               )}
               <span className="font-medium whitespace-nowrap">{team.name}</span>
+              {team.is_active === false && (
+                <Badge variant="secondary" className="ml-2 text-xs font-normal">
+                  Archived
+                </Badge>
+              )}
             </div>
           );
         },
@@ -166,17 +187,77 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }: { row: { original: TeamNode } }) => (
-          <DataTableActions
-            item={row.original}
-            itemLabel={row.original.name}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        ),
+        cell: ({ row }: { row: { original: TeamNode } }) => {
+          const team = row.original;
+          const archived = team.is_active === false;
+          return (
+            <RowActions
+              actions={[
+                {
+                  label: `Edit ${team.name}`,
+                  shortLabel: "Edit",
+                  icon: Pencil,
+                  onClick: () => onEdit(team),
+                },
+                ...(archived && onUnarchive
+                  ? [
+                      {
+                        label: `Restore ${team.name}`,
+                        shortLabel: "Restore",
+                        icon: ArchiveRestore,
+                        tone: "success" as const,
+                        onClick: () => onUnarchive(team),
+                      },
+                    ]
+                  : []),
+                ...(archived && onManageArchived
+                  ? [
+                      {
+                        label: `Archived data of ${team.name}`,
+                        shortLabel: "Data",
+                        icon: Database,
+                        onClick: () => onManageArchived(team),
+                      },
+                    ]
+                  : []),
+                ...(!archived && onArchive
+                  ? [
+                      {
+                        label: `Archive ${team.name}`,
+                        shortLabel: "Archive",
+                        icon: Archive,
+                        tone: "warning" as const,
+                        onClick: () => onArchive(team),
+                      },
+                    ]
+                  : []),
+                ...(!archived && onDelete
+                  ? [
+                      {
+                        label: `Delete ${team.name}`,
+                        shortLabel: "Delete",
+                        icon: Trash2,
+                        tone: "danger" as const,
+                        onClick: () => onDelete(team),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          );
+        },
       },
     ],
-    [expanded, onToggleExpand, onEdit, onDelete, hasChildren]
+    [
+      expanded,
+      onToggleExpand,
+      onEdit,
+      onDelete,
+      onArchive,
+      onUnarchive,
+      onManageArchived,
+      hasChildren,
+    ]
   );
 
   return (

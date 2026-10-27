@@ -4,8 +4,22 @@ import { toggleSetItem } from "@/lib/set-utils";
 import type { Team } from "@/types";
 
 export type TeamLeaderFilter = "all" | "complete" | "missing-it" | "missing-al";
+export type TeamStatusFilter = "active" | "archived" | "all";
 
-export const useTeamsPageUI = (teams: Team[] = []) => {
+const isActive = (team: Team) => team.is_active !== false;
+
+export const useTeamsPageUI = (allTeams: Team[] = []) => {
+  const [status, setStatus] = useState<TeamStatusFilter>("active");
+  const statusCounts = useMemo(() => {
+    const active = allTeams.filter(isActive).length;
+    return { active, archived: allTeams.length - active, all: allTeams.length };
+  }, [allTeams]);
+  const teams = useMemo(
+    () =>
+      status === "all" ? allTeams : allTeams.filter((t) => isActive(t) === (status === "active")),
+    [allTeams, status]
+  );
+
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [hoveredTeam, setHoveredTeam] = useState<number | null>(null);
   const [leaderFilter, setLeaderFilter] = useState<TeamLeaderFilter>("all");
@@ -57,6 +71,10 @@ export const useTeamsPageUI = (teams: Team[] = []) => {
   }, [filteredTeams, expanded]);
 
   return {
+    status,
+    setStatus,
+    statusCounts,
+    activeTeams: allTeams.filter(isActive),
     expanded,
     hoveredTeam,
     setHoveredTeam,

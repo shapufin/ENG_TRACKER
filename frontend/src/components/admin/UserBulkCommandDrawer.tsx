@@ -221,6 +221,7 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
 }) => {
   const [applyTeams, setApplyTeams] = useState(false);
   const [teamIds, setTeamIds] = useState<number[]>([]);
+  const [unassignTl, setUnassignTl] = useState(false);
   const [applyTechs, setApplyTechs] = useState(false);
   const [techIds, setTechIds] = useState<number[]>([]);
   const [techLevels, setTechLevels] = useState<Record<number, number | null>>({});
@@ -263,6 +264,7 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
   const resetForm = () => {
     setApplyTeams(false);
     setTeamIds([]);
+    setUnassignTl(false);
     setApplyTechs(false);
     setTechIds([]);
     setTechLevels({});
@@ -282,7 +284,10 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
   const handleApply = () => {
     if (!hasChanges || isMutating) return;
     const payload: Omit<BulkUserUpdatePayload, "user_ids"> = {};
-    if (applyTeams) payload.teams = teamIds;
+    if (applyTeams) {
+      payload.teams = teamIds;
+      if (unassignTl) payload.unassign_removed_tl = true;
+    }
     // Always the {tech, level} shape: the drawer replaces assignments, so an
     // explicit null must clear a level rather than silently keep the old one.
     if (applyTechs)
@@ -401,6 +406,19 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
                   placeholder="Select one or more teams..."
                   disabled={!applyTeams || isMutating}
                 />
+                <label className="mt-2 flex items-start gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={unassignTl}
+                    disabled={!applyTeams || isMutating}
+                    onChange={(event) => setUnassignTl(event.target.checked)}
+                  />
+                  <span>
+                    Also clear Italian/Albanian TL links that point at a leader of a team being
+                    removed. Otherwise those leaders keep seeing the user.
+                  </span>
+                </label>
               </ToggleSectionCard>
             )}
 

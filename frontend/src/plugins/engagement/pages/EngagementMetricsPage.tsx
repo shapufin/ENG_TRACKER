@@ -177,7 +177,7 @@ export const EngagementMetricsPage: React.FC = () => {
 
   const subtitle = `${formatMonthLabel(summary.month)} · ${summary.team_count} team(s)${
     summary.computed_at ? ` · computed ${new Date(summary.computed_at).toLocaleDateString()}` : ""
-  }${summary.refreshed_on_read ? " · just refreshed" : ""}`;
+  }${summary.refreshed_on_read ? " · just refreshed" : ""}${summary.frozen ? " · Frozen" : ""}`;
 
   const status = statusForScore(summary.engagement_score);
 

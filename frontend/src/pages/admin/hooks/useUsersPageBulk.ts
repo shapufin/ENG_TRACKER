@@ -17,6 +17,8 @@ export interface BulkUserUpdatePayload {
   is_italian_tl_role?: boolean;
   is_albanian_tl_role?: boolean;
   is_hbpr?: boolean;
+  /** With `teams`: also clear TL links that point at a leader of a removed team. */
+  unassign_removed_tl?: boolean;
 }
 
 interface UseUsersPageBulkOptions {
@@ -49,9 +51,9 @@ export const useUsersPageBulk = ({
     return filteredData.filter((profile) => selectedIds.has(profile.id));
   }, [filteredData, rowSelection]);
 
-  const [bulkBlockedRevocations, setBulkBlockedRevocations] = useState<
-    BlockedRevocation[] | null
-  >(null);
+  const [bulkBlockedRevocations, setBulkBlockedRevocations] = useState<BlockedRevocation[] | null>(
+    null
+  );
   const [pendingBulkPayload, setPendingBulkPayload] = useState<Omit<
     BulkUserUpdatePayload,
     "user_ids"
@@ -65,6 +67,13 @@ export const useUsersPageBulk = ({
       }),
     onSuccess: (result) => {
       toast.success(`Updated ${result.updated_count} users`);
+      if (result.warnings?.length) {
+        const people = result.warnings.map((w) => w.member_username).join(", ");
+        toast.warning("Some team leader links remain", {
+          description: `${people} still report to a leader of a team they left. Edit the user to clear the link.`,
+          duration: 10000,
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["admin"] });
       setBulkBlockedRevocations(null);
       setPendingBulkPayload(null);

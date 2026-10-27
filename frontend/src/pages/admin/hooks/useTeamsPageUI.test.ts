@@ -90,3 +90,29 @@ describe("useTeamsPageUI filters", () => {
     expect(result.current.visibleData.map((t) => t.id)).toEqual([3]);
   });
 });
+
+describe("useTeamsPageUI status", () => {
+  const WITH_ARCHIVED = [...TEAMS, team({ id: 4, name: "Old", code: "O", is_active: false })];
+
+  it("hides archived teams by default and counts both groups", () => {
+    const { result } = renderHook(() => useTeamsPageUI(WITH_ARCHIVED));
+    expect(result.current.visibleData.map((t) => t.id).sort()).toEqual([1, 2, 3]);
+    expect(result.current.statusCounts).toEqual({ active: 3, archived: 1, all: 4 });
+    expect(result.current.activeTeams).toHaveLength(3);
+  });
+
+  it("shows only archived teams, or everything, on request", () => {
+    const { result } = renderHook(() => useTeamsPageUI(WITH_ARCHIVED));
+    act(() => result.current.setStatus("archived"));
+    expect(result.current.visibleData.map((t) => t.id)).toEqual([4]);
+    act(() => result.current.setStatus("all"));
+    expect(result.current.visibleData).toHaveLength(4);
+  });
+
+  it("keeps the leader counts about the teams in the chosen status", () => {
+    const { result } = renderHook(() => useTeamsPageUI(WITH_ARCHIVED));
+    expect(result.current.leaderCounts.all).toBe(3);
+    act(() => result.current.setStatus("archived"));
+    expect(result.current.leaderCounts.all).toBe(1);
+  });
+});

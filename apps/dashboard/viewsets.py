@@ -186,7 +186,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Active teams
         from apps.users.models import Team
-        active_teams_count = Team.objects.count()
+        active_teams_count = Team.objects.active().count()
 
         # Average overtime per employee
         avg_overtime_hours = (

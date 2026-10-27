@@ -111,24 +111,45 @@ A row computed earlier gets exactly one last recompute, then stops.
 After pulling: `py -3.14 manage.py migrate` (users 0024-0025, dashboard 0013, analytics 0011, engagement
 0004, tl_scorecard 0006); confirm `showmigrations` has no `[ ]`.
 
-## 6. Known gaps and open work
+## 6. Frontend
 
-- **Year close (resolved 2026-10-27).** The build never failed (users outside every pair go to `Unassigned`),
-  but an archive moved a member's evidence out of the team's bundle. `builder._pair_members(pairs, year)` now
-  adds `TeamMembershipHistory` users who were in the team during the year (left on/after 1 Jan of it, joined
-  on/before 31 Dec), so the bundle keeps its people. A purge also waits for the archive year to be closed.
-- Other `Team.objects` call sites (`apps/dashboard/admin_*`, `plugins/control_room`, `ticket_kpi`,
-  `analytics`, importers `teams`/`control_room_access`, `notifications/signals`) still see archived teams;
-  move picker-style lists to `Team.objects.active()`.
-- `apps/dashboard/admin_overview.py` and `plugins/organigrama` still read `led_teams` unfiltered.
-- No frontend yet: archive/unarchive/lifecycle dialog, TL-link warning checkbox, "Frozen" badge,
-  unlinked-workspace filter, and the new response fields in `types/index.ts`.
+- **Teams page** (`/admin/teams`): a Status chip row (Active / Archived / All, default Active) over one dataset
+  loaded with `?is_active=all`; row actions Edit, Archive, Delete for active teams and Edit, Restore, Data for
+  archived ones; an "Archived" badge in the name column. Archive opens `ArchiveTeamDialog` (live member count and
+  the server's archive blockers; confirm disabled while any exist). **Data** opens `TeamLifecycleDialog`
+  (members, archived on, purge-eligible date, last activity, records kept, what a delete would detach, delete
+  blockers, and a delete that needs the typed team code). Archive follows the row to the Archived view and
+  Restore back to Active, like Clients. A 409 on delete or archive shows the server's `blockers` in a toast.
+  Mutations invalidate `["admin","teams"]`, `["admin","calendar-groups"]`, `["admin","users"]`.
+- **Users**: the edit dialog shows "Also clear the Italian/Albanian TL link..." only when a team was removed and a
+  TL link is set; the bulk drawer has the same checkbox under Teams. Both send `unassign_removed_tl`. After a save
+  that left a link, a warning toast carries the server's `warnings[].message`.
+- **Frozen**: engagement summary and scorecard subtitles end with " · Frozen" when the month is final
+  (`summary.frozen`, `scorecard.frozen`). Calendar workspace options of a deleted/archived team are labelled
+  "(team deleted)" / "(team archived)". A dedicated unlinked-workspace page does not exist: use
+  `GET calendar-workspaces/?detached=true`.
+- Types: `Team.is_active/archived_at/archived_by`, `TeamLifecycle`, `TeamLinkWarning`, `CalendarWorkspace.team_is_active/detached_at`.
+
+## 7. Known gaps and open work
+
+- Several `Team.objects` call sites still see archived teams on purpose or by omission: Control Room scope
+  validation and dashboards (`plugins/control_room`; assigning a scope to an archived team is harmless and
+  existing scopes must stay editable), `ticket_kpi`, `notifications/signals`, the `teams` and
+  `control_room_access` importers. Counts that say "active teams" (admin overview, trends, dashboard widget,
+  analytics) now use `Team.objects.active()`.
+- `plugins/organigrama` and `apps/dashboard/admin_overview.py` `led_teams` reads for team-leader detection are
+  unfiltered.
 - Delete stays staff-level (`IsAdminUser`), not superuser-only. No payroll blocker (payroll has no team link).
+- Two pre-existing `CONTROL-HEIGHT` control-audit warnings in `plugins/organigrama/components/CustomChartViewer.tsx`
+  are not from this work.
 
-## 7. Tests
+## 8. Tests
 
 `apps/users/tests_app/test_team_durability.py`, `test_team_lifecycle.py`, `test_team_membership.py`,
 `apps/users/tests_app/test_team_purge_command.py`, `plugins/year_close/test_archived_team.py`,
 `apps/dashboard/tests/test_workspace_retention.py`, `plugins/engagement/test_freeze.py`,
 `plugins/tl_scorecard/test_freeze.py`, `core/utils/test_metrics_freeze.py`,
 `core/services/test_related_records.py`.
+Frontend: `TeamLifecycleDialog.test.tsx`, `UserEditFormDialog.test.tsx`, `UserBulkCommandDrawer.test.tsx`,
+`useTeamsPageUI.test.ts`, `useUsersPage.test.ts`; end to end `frontend/e2e/team-archive-lifecycle.spec.ts`
+(owns a probe team and member; run with the runbook in the e2e memory/README: `prepare_e2e_db` first).

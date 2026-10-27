@@ -210,7 +210,7 @@ class AnalyticsMetricViewSet(PluginPermissionMixin,
 
         # Team and user counts
         from apps.users.models.core import Team
-        Team.objects.count()
+        Team.objects.active().count()
         user_count = User.objects.count()
         active_user_count = User.objects.filter(is_active=True).count()
 

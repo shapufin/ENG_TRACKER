@@ -42,6 +42,8 @@ export interface EngagementSummary {
   decisions_during_leave: number;
   decisions_on_holidays: number;
   refreshed_on_read: boolean;
+  /** True once every snapshot of the month is final (past the metrics freeze). */
+  frozen?: boolean;
   computed_at: string | null;
 }
 

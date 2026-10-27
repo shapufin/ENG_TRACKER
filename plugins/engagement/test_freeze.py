@@ -134,3 +134,19 @@ class ArchivedTeamPairsTests(FreezeBase):
         Team.objects.filter(pk=self.team.pk).update(is_active=False)
         self.assertNotIn(self.team.pk, [t.pk for _, t in leader_team_pairs()])
         self.assertNotIn(self.leader.pk, candidate_leader_ids())
+
+
+class SummaryFrozenTests(FreezeBase):
+    def test_summary_is_frozen_only_when_every_row_is_final(self):
+        from plugins.engagement.viewsets import TLEngagementMetricsViewSet
+
+        final = self.compute_at(AFTER)
+        provisional = TLApprovalMetric(
+            leader=self.leader, team=self.team, month=MONTH, computed_at=BEFORE,
+        )
+        with patch('django.utils.timezone.now', return_value=AFTER):
+            summary = TLEngagementMetricsViewSet._summary_payload
+            self.assertTrue(summary([final], False, MONTH)['frozen'])
+            self.assertFalse(summary([final, provisional], False, MONTH)['frozen'])
+            self.assertFalse(summary([], False, MONTH)['frozen'])
+

@@ -54,6 +54,8 @@ export interface Scorecard {
   leave: LeaveSla;
   overtime: OvertimeTurnaround;
   meetings: MeetingCompliance;
+  /** True when the month blocks come from the frozen snapshot (final). */
+  frozen?: boolean;
   idle: IdleMetrics;
   review_deliveries_ytd: number;
   seniority: SeniorityRatio;

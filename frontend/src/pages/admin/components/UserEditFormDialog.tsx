@@ -25,6 +25,7 @@ interface UserEditFormDialogProps {
     is_albanian_tl_role: boolean;
     is_hbpr?: boolean;
     mfa_required?: boolean;
+    unassign_removed_tl?: boolean;
     hire_date: string;
   };
   formErrors: Record<string, string>;
@@ -67,6 +68,12 @@ export const UserEditFormDialog: React.FC<UserEditFormDialogProps> = ({
       onFormErrorsChange(n);
     }
   };
+
+  // Teams the user had when the dialog opened and no longer has in the form.
+  const removedTeams = (editing?.teams ?? [])
+    .filter((id) => !form.teams.includes(id))
+    .map((id) => (teamsData ?? []).find((team) => team.id === id)?.name ?? `#${id}`);
+  const hasTlLink = form.italian_tl !== "none" || form.albanian_tl !== "none";
 
   return (
     <FormDialog
@@ -117,6 +124,21 @@ export const UserEditFormDialog: React.FC<UserEditFormDialogProps> = ({
         showHireDate
         showMfa
       />
+      {removedTeams.length > 0 && hasTlLink && (
+        <label className="border-line-subtle flex items-start gap-2 rounded-md border p-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={Boolean(form.unassign_removed_tl)}
+            onChange={(event) => updateField("unassign_removed_tl", event.target.checked)}
+          />
+          <span>
+            Also clear the Italian/Albanian TL link that came with the removed team
+            {removedTeams.length === 1 ? "" : "s"} ({removedTeams.join(", ")}). Leaving it in place
+            keeps that leader's access to this user.
+          </span>
+        </label>
+      )}
       {formErrors.non_field_errors && (
         <p className="text-destructive text-xs">{formErrors.non_field_errors}</p>
       )}

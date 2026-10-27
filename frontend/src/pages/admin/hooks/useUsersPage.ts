@@ -66,10 +66,12 @@ export const buildRolePayload = (form: {
   is_italian_tl_role: boolean;
   is_albanian_tl_role: boolean;
   is_cr_admin?: boolean;
+  unassign_removed_tl?: boolean;
 }) => ({
   ...(form.is_hbpr
     ? {}
     : {
+        ...(form.unassign_removed_tl ? { unassign_removed_tl: true } : {}),
         teams: form.teams,
         techs: toTechAssignments(form.techs, form.tech_levels),
         albanian_tl:
@@ -108,6 +110,7 @@ const emptyEditForm = {
   is_cr_admin: false,
   is_hbpr: false,
   mfa_required: false,
+  unassign_removed_tl: false,
   roles: [] as string[],
   hire_date: "",
 };
@@ -373,6 +376,7 @@ export const useUsersPage = () => {
       is_cr_admin: profile.user.is_cr_admin || false,
       is_hbpr: roles.includes("hbpr"),
       mfa_required: profile.mfa_required ?? false,
+      unassign_removed_tl: false,
       roles: roles,
       hire_date: profile.hire_date || "",
     });

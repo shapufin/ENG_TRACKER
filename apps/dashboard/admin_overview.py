@@ -74,7 +74,7 @@ def coverage_gaps(today):
     )
     covered = HbprAlbanianTlAssignment.objects.filter(in_effect_q(today)).values("albanian_tl_id")
     return {
-        "teams_without_leader": Team.objects.filter(team_leader__isnull=True).count(),
+        "teams_without_leader": Team.objects.active().filter(team_leader__isnull=True).count(),
         "users_without_team": employees.filter(profile__teams__isnull=True).count(),
         "users_without_tech": employees.filter(profile__techs__isnull=True).count(),
         "employees_without_tl": employees_without_tl(),

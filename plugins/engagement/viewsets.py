@@ -12,6 +12,7 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
+from core.utils.metrics_freeze import is_frozen
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -123,6 +124,7 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
                 'score_responsiveness': None,
                 'score_consistency': None,
                 'refreshed_on_read': False,
+                'frozen': False,
                 'computed_at': None,
             }
         agg = aggregate_rows(rows)
@@ -131,6 +133,7 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
             'team_count': len(rows),
             **{k: v for k, v in agg.items() if k != 'computed_at'},
             'refreshed_on_read': refreshed,
+            'frozen': all(is_frozen(r.month, r.computed_at) for r in rows),
             'computed_at': agg['computed_at'].isoformat() if agg['computed_at'] else None,
         }
 

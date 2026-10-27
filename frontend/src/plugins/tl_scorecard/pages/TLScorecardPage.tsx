@@ -370,7 +370,7 @@ const TLScorecardAuthoring: React.FC = () => {
 
   return (
     <TLScorecardHeader
-      subtitle={`${monthLabel} · ${scorecard.team_size} team member(s)`}
+      subtitle={`${monthLabel} · ${scorecard.team_size} team member(s)${scorecard.frozen ? " · Frozen" : ""}`}
       tab={tab}
       onTabChange={setTab}
       month={scorecard.month}
