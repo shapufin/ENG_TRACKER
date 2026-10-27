@@ -25,16 +25,29 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
-        teams = 0
+        purged = 0
+        skipped = 0
         for team in Team.objects.filter(is_active=False).order_by('pk'):
-            if team_lifecycle.purge_blockers(team):
+            blockers = team_lifecycle.purge_blockers(team)
+            if blockers:
+                skipped += 1
+                self.stdout.write(f'  Skip {team.code} ({team.name}): {" ".join(blockers)}')
                 continue
-            teams += 1
             self.stdout.write(f'  {"Would purge" if dry_run else "Purging"} team {team.code} ({team.name})')
-            if not dry_run:
-                team_lifecycle.purge_team(team, None)
+            if dry_run:
+                purged += 1
+                continue
+            # purge_team re-checks the blockers under its own transaction: a row that
+            # appeared in between must be reported, not counted as purged.
+            refused = team_lifecycle.purge_team(team, None)
+            if refused:
+                skipped += 1
+                self.stdout.write(f'  Skip {team.code} ({team.name}): {" ".join(refused)}')
+            else:
+                purged += 1
         workspaces = purge_detached_workspaces(dry_run=dry_run)
         verb = 'Would purge' if dry_run else 'Purged'
         self.stdout.write(self.style.SUCCESS(
-            f'{verb} {teams} team(s) and {workspaces} detached workspace(s).'
+            f'{verb} {purged} team(s) and {workspaces} detached workspace(s); '
+            f'{skipped} archived team(s) skipped.'
         ))

@@ -1,6 +1,7 @@
 """Team lifecycle plan, Phase 7: purge_archived_teams and the closed-year rule."""
-from datetime import timedelta
+from datetime import date, timedelta
 from io import StringIO
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
@@ -41,8 +42,25 @@ class PurgeArchivedTeamsTests(TestCase):
         return out.getvalue()
 
     def test_an_archive_year_that_is_not_closed_blocks_the_purge(self):
-        blockers = team_lifecycle.purge_blockers(self.old)
+        with patch('apps.users.services.team_lifecycle._year_close_engine_enabled', return_value=True):
+            blockers = team_lifecycle.purge_blockers(self.old)
         self.assertTrue(any('year' in b and 'closed' in b for b in blockers), blockers)
+
+    def test_without_the_year_close_engine_a_finished_year_does_not_block(self):
+        with patch('apps.users.services.team_lifecycle._year_close_engine_enabled', return_value=False), \
+                patch('apps.users.services.team_lifecycle.business_today', return_value=date(2026, 10, 27)):
+            self.assertEqual(team_lifecycle.purge_blockers(self.old), [])
+
+    def test_without_the_year_close_engine_an_unfinished_year_still_blocks(self):
+        with patch('apps.users.services.team_lifecycle._year_close_engine_enabled', return_value=False):
+            blockers = team_lifecycle.purge_blockers(self.recent)  # archived this year
+        self.assertTrue(any('not ended' in b for b in blockers), blockers)
+
+    def test_a_blocked_team_is_reported_with_its_reasons(self):
+        out = self.run_command('--dry-run')
+        self.assertIn('Skip REC', out)
+        self.assertIn('archived less than 365 days ago', out)
+        self.assertIn('1 archived team(s) skipped', out)
 
     def test_closing_that_year_clears_the_blocker(self):
         self.close_year_of(self.old)

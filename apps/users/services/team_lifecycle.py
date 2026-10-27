@@ -13,9 +13,26 @@ from django.utils import timezone
 
 from core.services.lifecycle import record_lifecycle_event
 from core.services.related_records import relation_counts
+from core.utils.timezone_local import business_today
 
 PURGE_AFTER_DAYS = 365
 PENDING = 'pending'
+
+
+def _year_close_engine_enabled():
+    """Whether the optional year-close plugin is installed and enabled.
+
+    Core must not import the plugin, so the registry row is the only signal. When the
+    engine is absent, waiting for a ``ClosedYear`` row would strand every archived team
+    forever; the purge then falls back to requiring the archive year to be over.
+    """
+    try:
+        from apps.plugins.models import Plugin
+
+        return Plugin.objects.filter(name='year_close', is_enabled=True).exists()
+    except Exception:
+        return False
+
 
 def _real_metric_count(team):
     """Engagement rows that carry numbers: a zero-size, never-used row must not block a delete."""
@@ -149,11 +166,18 @@ def purge_blockers(team, now=None):
     if activity and now - activity < timedelta(days=PURGE_AFTER_DAYS):
         blockers.append(f'Team had activity in the last {PURGE_AFTER_DAYS} days.')
     # Year close attributes a former member's evidence through the history rows of the year
-    # the team was archived in; do not purge until that year is frozen.
+    # the team was archived in; do not purge until that year is frozen. Without the engine
+    # there will never be a row, so only require the year to have ended.
     from apps.users.models import ClosedYear
 
-    if team.archived_at and not ClosedYear.objects.filter(year=team.archived_at.year).exists():
-        blockers.append(f'Year {team.archived_at.year} (the year it was archived) is not closed yet.')
+    if team.archived_at:
+        archived_year = team.archived_at.year
+        if ClosedYear.objects.filter(year=archived_year).exists():
+            pass
+        elif _year_close_engine_enabled():
+            blockers.append(f'Year {archived_year} (the year it was archived) is not closed yet.')
+        elif archived_year >= business_today().year:
+            blockers.append(f'Year {archived_year} (the year it was archived) has not ended yet.')
     for name, count in relation_counts(team, lambda rel: rel.one_to_many and rel.on_delete is CASCADE).items():
         blockers.append(f'Team still has dependents: {name} ({count}).')
     live_sub_teams = team.sub_teams.filter(is_active=True).count()
@@ -189,7 +213,7 @@ def archive_team(team, request):
     from apps.users.models import TeamMembership, TeamMembershipHistory
 
     now = timezone.now()
-    actor = request.user if getattr(request.user, 'is_authenticated', False) else None
+    actor = request.user if request is not None and getattr(request.user, 'is_authenticated', False) else None
     with transaction.atomic():
         memberships = list(TeamMembership.objects.filter(team=team).select_related('user_profile__user'))
         TeamMembershipHistory.objects.bulk_create([

@@ -171,6 +171,13 @@ class TeamLifecycleApiTests(APITestCase):
         self.assertEqual(TeamMembership.objects.filter(team=self.team).count(), 0)  # not restored
         self.assertTrue(AuditLog.objects.filter(model_name='team', extra_data__operation='unarchive').exists())
 
+    def test_archive_service_accepts_no_request(self):
+        team = Team.objects.create(name='NoReq', code='NOR')
+        team_lifecycle.archive_team(team, None)
+        team.refresh_from_db()
+        self.assertFalse(team.is_active)
+        self.assertIsNone(team.archived_by)
+
     def test_is_active_is_read_only_on_update(self):
         resp = self.client.patch(f'{TEAMS}{self.team.pk}/', {'is_active': False}, format='json')
         self.assertEqual(resp.status_code, 200)

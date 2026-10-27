@@ -14,7 +14,7 @@ A team is retired by **archiving** it, the same idea as a Client (`docs/workflow
 | Unarchive `POST .../unarchive/` | Reactivates. Members are **not** restored. | same |
 | Lifecycle `GET .../lifecycle/` | Counts, blockers, last activity, purge date for the dialog. | same |
 | Delete `DELETE users/teams/{id}/` | `409 {detail, blockers, counts, cascade_counts}` unless allowed (below). Never a 500. | `TeamViewSet.destroy` |
-| Purge | `purge_team(team, request)`: archived for **365 days**, no team activity in 365 days, no CASCADE dependents, no active sub-teams, and the **year it was archived in is closed** (`ClosedYear`). Command: `manage.py purge_archived_teams [--dry-run]` (also purges expired detached workspaces). | `team_lifecycle.purge_team` |
+| Purge | `purge_team(team, request)`: archived for **365 days**, no team activity in 365 days, no CASCADE dependents, no active sub-teams, and the **year it was archived in is closed** (`ClosedYear`). When the year-close plugin is disabled the year can never close, so the purge only waits for that year to have ended. Command: `manage.py purge_archived_teams [--dry-run]`; it reports every skipped team with its blockers (also purges expired detached workspaces). | `team_lifecycle.purge_team` |
 
 **Archive is refused (409 `blockers`) when:** the team has active sub-teams (`parent_team` drives
 Italian-to-Albanian TL inheritance), a member would be left with no other active team and no
