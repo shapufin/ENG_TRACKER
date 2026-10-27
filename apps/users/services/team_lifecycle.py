@@ -148,6 +148,12 @@ def purge_blockers(team, now=None):
     activity = last_activity(team)
     if activity and now - activity < timedelta(days=PURGE_AFTER_DAYS):
         blockers.append(f'Team had activity in the last {PURGE_AFTER_DAYS} days.')
+    # Year close attributes a former member's evidence through the history rows of the year
+    # the team was archived in; do not purge until that year is frozen.
+    from apps.users.models import ClosedYear
+
+    if team.archived_at and not ClosedYear.objects.filter(year=team.archived_at.year).exists():
+        blockers.append(f'Year {team.archived_at.year} (the year it was archived) is not closed yet.')
     for name, count in relation_counts(team, lambda rel: rel.one_to_many and rel.on_delete is CASCADE).items():
         blockers.append(f'Team still has dependents: {name} ({count}).')
     live_sub_teams = team.sub_teams.filter(is_active=True).count()

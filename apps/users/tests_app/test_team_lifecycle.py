@@ -9,7 +9,8 @@ from rest_framework.test import APITestCase
 from apps.dashboard.models.calendar import CalendarWorkspace, PublicHoliday
 from apps.overtime.models import Client, OvertimeLog
 from apps.reports.models import AuditLog
-from apps.users.models import Team, TeamMembership, UserProfile
+from apps.users.models import ClosedYear, Team, TeamMembership, UserProfile
+from apps.users.services.approval_periods import clear_closed_year_cache
 from apps.users.models.core import TeamMembershipHistory
 from apps.users.services import team_lifecycle
 from plugins.control_room.models import ControlRoomAccess, ControlRoomTeamScope
@@ -250,6 +251,9 @@ class TeamPurgeTests(TestCase):
             team_name='Old', team_code='OLD', computed_at=timezone.now(),
         )
         later = timezone.now() + timedelta(days=366)
+        ClosedYear.objects.create(year=self.team.archived_at.year, closed_at=timezone.now())
+        clear_closed_year_cache()
+        self.addCleanup(clear_closed_year_cache)
         self.assertEqual(team_lifecycle.purge_team(self.team, self.request, now=later), [])
         self.assertFalse(Team.objects.filter(pk=self.team.pk).exists())
         self.assertEqual(TLApprovalMetric.objects.get().team_name, 'Old')

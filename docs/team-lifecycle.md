@@ -14,7 +14,7 @@ A team is retired by **archiving** it, the same idea as a Client (`docs/workflow
 | Unarchive `POST .../unarchive/` | Reactivates. Members are **not** restored. | same |
 | Lifecycle `GET .../lifecycle/` | Counts, blockers, last activity, purge date for the dialog. | same |
 | Delete `DELETE users/teams/{id}/` | `409 {detail, blockers, counts, cascade_counts}` unless allowed (below). Never a 500. | `TeamViewSet.destroy` |
-| Purge | `purge_team(team, request)`: archived for **365 days**, no team activity in 365 days, no CASCADE dependents, no active sub-teams. Command `purge_archived_teams` is **not built yet**. | `team_lifecycle.purge_team` |
+| Purge | `purge_team(team, request)`: archived for **365 days**, no team activity in 365 days, no CASCADE dependents, no active sub-teams, and the **year it was archived in is closed** (`ClosedYear`). Command: `manage.py purge_archived_teams [--dry-run]` (also purges expired detached workspaces). | `team_lifecycle.purge_team` |
 
 **Archive is refused (409 `blockers`) when:** the team has active sub-teams (`parent_team` drives
 Italian-to-Albanian TL inheritance), a member would be left with no other active team and no
@@ -106,17 +106,17 @@ A row computed earlier gets exactly one last recompute, then stops.
 |---|---|---|
 | Final recompute of engagement snapshots | `finalize_frozen_metrics` | once after deploying the freeze; optional daily cron |
 | Scorecard month freeze | scheduler job `freeze_scorecard_months` (needs the `scheduler` service) | hourly, no-op once the latest frozen month is done |
-| Detached workspace retention | `purge_detached_workspaces()` | wired into `purge_archived_teams` (not built yet) |
-| Archived team purge | `purge_archived_teams` | **not built yet**; opt-in, never at boot (workflow-invariants item 17) |
+| Archived team + detached workspace purge | `purge_archived_teams [--dry-run]` | monthly cron; opt-in, never at boot (workflow-invariants item 17); skips any team with blockers |
 
 After pulling: `py -3.14 manage.py migrate` (users 0024-0025, dashboard 0013, analytics 0011, engagement
 0004, tl_scorecard 0006); confirm `showmigrations` has no `[ ]`.
 
 ## 6. Known gaps and open work
 
-- **Year close** (`plugins/year_close/services/builder.py`) builds pairs from CURRENT memberships and
-  `team_leader`; members of an archived team disappear from pair discovery. Whether that breaks the
-  completeness check is unverified; resolve before relying on archive during an open year.
+- **Year close (resolved 2026-10-27).** The build never failed (users outside every pair go to `Unassigned`),
+  but an archive moved a member's evidence out of the team's bundle. `builder._pair_members(pairs, year)` now
+  adds `TeamMembershipHistory` users who were in the team during the year (left on/after 1 Jan of it, joined
+  on/before 31 Dec), so the bundle keeps its people. A purge also waits for the archive year to be closed.
 - Other `Team.objects` call sites (`apps/dashboard/admin_*`, `plugins/control_room`, `ticket_kpi`,
   `analytics`, importers `teams`/`control_room_access`, `notifications/signals`) still see archived teams;
   move picker-style lists to `Team.objects.active()`.
@@ -128,6 +128,7 @@ After pulling: `py -3.14 manage.py migrate` (users 0024-0025, dashboard 0013, an
 ## 7. Tests
 
 `apps/users/tests_app/test_team_durability.py`, `test_team_lifecycle.py`, `test_team_membership.py`,
+`apps/users/tests_app/test_team_purge_command.py`, `plugins/year_close/test_archived_team.py`,
 `apps/dashboard/tests/test_workspace_retention.py`, `plugins/engagement/test_freeze.py`,
 `plugins/tl_scorecard/test_freeze.py`, `core/utils/test_metrics_freeze.py`,
 `core/services/test_related_records.py`.
