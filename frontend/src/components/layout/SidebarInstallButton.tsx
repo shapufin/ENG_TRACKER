@@ -62,7 +62,7 @@ export function SidebarInstallButton({ collapsed }: SidebarInstallButtonProps) {
           </DialogHeader>
           <DialogBody>
             <DialogDescription asChild>
-              <div className="space-y-3 text-sm text-muted-foreground">
+              <div className="text-muted-foreground space-y-3 text-sm">
                 {isIOS ? (
                   <div className="space-y-2">
                     <p>
@@ -94,7 +94,7 @@ export function SidebarInstallButton({ collapsed }: SidebarInstallButtonProps) {
                         in the address bar.
                       </li>
                       <li>
-                        In Firefox, try the menu (☰) →{" "}
+                        In Firefox, try the application menu →{" "}
                         <strong className="text-foreground">Install site as app</strong> (if
                         available on your platform).
                       </li>

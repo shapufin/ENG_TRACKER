@@ -61,6 +61,17 @@ class CadenceChangeSerializer(serializers.Serializer):
     cadence_day_of_week = serializers.IntegerField(min_value=0, max_value=6, allow_null=True, required=False)
     cadence_nth_week = serializers.ChoiceField(choices=list(NTH_WEEK_CHOICES), allow_null=True, required=False)
 
+    def validate(self, attrs):
+        cadence = attrs.get('cadence')
+        nth_week = attrs.get('cadence_nth_week')
+        day_of_week = attrs.get('cadence_day_of_week')
+        if nth_week is not None:
+            if cadence != 'monthly':
+                raise serializers.ValidationError({'cadence_nth_week': 'Only valid for monthly cadence.'})
+            if day_of_week is None:
+                raise serializers.ValidationError({'cadence_day_of_week': 'Required when specifying week of month.'})
+        return attrs
+
 
 def _audit_cadence_change(user, assignment, old, new):
     """Best-effort audit row without a hard audit_log dependency."""

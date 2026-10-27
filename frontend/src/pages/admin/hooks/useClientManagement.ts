@@ -91,7 +91,25 @@ export const useClientManagement = () => {
       invalidateClients();
       setLifecycleTarget(null);
     },
-    onError: (err: unknown) => handleApiError(err),
+    onError: (err: unknown) => {
+      const resp = (
+        err as {
+          response?: { status?: number; data?: { blockers?: string[]; detail?: string } };
+        }
+      )?.response;
+      if (
+        resp?.status === 409 &&
+        Array.isArray(resp.data?.blockers) &&
+        resp.data.blockers.length > 0
+      ) {
+        toast.error("Cannot delete client", {
+          description: resp.data.blockers.join(" "),
+          duration: 7000,
+        });
+        return;
+      }
+      handleApiError(err);
+    },
   });
 
   const handleSubmit = useCallback(

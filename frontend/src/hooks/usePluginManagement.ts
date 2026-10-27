@@ -59,7 +59,7 @@ export const usePluginManagement = (): UsePluginManagementReturn => {
         );
         toast.success(`Plugin ${result.is_enabled ? "enabled" : "disabled"}`);
         // Plugin URL registration only happens once at backend process boot
-        // (apps/plugins/urls.py runs at import time) — toggling the DB flag
+        // (apps/plugins/urls.py runs at import time): toggling the DB flag
         // here does not re-register routes. Without a restart, an enabled
         // plugin's API 404s even though the UI already shows it active.
         toast.warning(
@@ -79,12 +79,12 @@ export const usePluginManagement = (): UsePluginManagementReturn => {
       setInitializingId(id);
       try {
         const result = await pluginService.initializePlugin(id);
-        toast.success(`✓ ${result.message || "Plugin initialized successfully"}`);
+        toast.success(result.message || "Plugin initialized successfully");
         await fetchPlugins();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         const errorMessage = error?.message || "Failed to initialize plugin tables";
-        toast.error(`❌ ${errorMessage}`);
+        toast.error(errorMessage);
         console.error("Initialize error:", error);
       } finally {
         setInitializingId(null);
