@@ -18,6 +18,8 @@ import dagre from "@dagrejs/dagre";
 import {
   ChevronRight,
   ChevronDown,
+  ChevronsUpDown,
+  ChevronsDownUp,
   Briefcase,
   Building,
   Building2,
@@ -273,17 +275,43 @@ function buildHierarchy(
   return { roots, childrenMap };
 }
 
+function getAllParentNodeUuids(
+  roots: OrgChartNode[],
+  childrenMap: Map<string, OrgChartNode[]>
+): Set<string> {
+  const result = new Set<string>();
+  function collect(node: OrgChartNode) {
+    const children = childrenMap.get(node.node_uuid) ?? [];
+    if (children.length > 0) {
+      result.add(node.node_uuid);
+      for (const child of children) {
+        collect(child);
+      }
+    }
+  }
+  for (const root of roots) {
+    collect(root);
+  }
+  return result;
+}
+
 const MobileNode: React.FC<{
   node: OrgChartNode;
   childrenMap: Map<string, OrgChartNode[]>;
   depth: number;
-}> = ({ node, childrenMap, depth }) => {
-  const [expanded, setExpanded] = useState(true);
+  collapsedNodes: Set<string>;
+  onToggle: (id: string) => void;
+}> = ({ node, childrenMap, depth, collapsedNodes, onToggle }) => {
   const children = childrenMap.get(node.node_uuid) ?? [];
   const hasChildren = children.length > 0;
+  const isCollapsed = collapsedNodes.has(node.node_uuid);
 
   return (
-    <li role="treeitem" aria-level={depth + 1} aria-expanded={hasChildren ? expanded : undefined}>
+    <li
+      role="treeitem"
+      aria-level={depth + 1}
+      aria-expanded={hasChildren ? !isCollapsed : undefined}
+    >
       <div
         className="flex items-center gap-2 py-1.5"
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
@@ -293,12 +321,16 @@ const MobileNode: React.FC<{
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setExpanded((prev) => !prev);
+              onToggle(node.node_uuid);
             }}
             className="text-muted-foreground hover:text-foreground shrink-0 rounded p-0.5"
-            aria-label={expanded ? "Collapse" : "Expand"}
+            aria-label={!isCollapsed ? "Collapse" : "Expand"}
           >
-            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            {!isCollapsed ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
           </button>
         ) : (
           <span className="w-5 shrink-0" />
@@ -319,7 +351,7 @@ const MobileNode: React.FC<{
           {node.status}
         </span>
       </div>
-      {hasChildren && expanded && (
+      {hasChildren && !isCollapsed && (
         <ul role="group">
           {children.map((child) => (
             <MobileNode
@@ -327,6 +359,8 @@ const MobileNode: React.FC<{
               node={child}
               childrenMap={childrenMap}
               depth={depth + 1}
+              collapsedNodes={collapsedNodes}
+              onToggle={onToggle}
             />
           ))}
         </ul>
@@ -340,6 +374,8 @@ const CustomChartMobileList: React.FC<{
   onSwitchToGraph?: () => void;
 }> = ({ payload, onSwitchToGraph }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
+
   const fullHierarchy = useMemo(
     () => buildHierarchy(payload.nodes, payload.edges),
     [payload.nodes, payload.edges]
@@ -355,6 +391,26 @@ const CustomChartMobileList: React.FC<{
     return buildHierarchy(filteredNodes, payload.edges);
   }, [fullHierarchy, payload.nodes, payload.edges, searchQuery]);
 
+  const handleExpandAll = useCallback(() => {
+    setCollapsedNodes(new Set());
+  }, []);
+
+  const handleCollapseAll = useCallback(() => {
+    setCollapsedNodes(getAllParentNodeUuids(roots, childrenMap));
+  }, [roots, childrenMap]);
+
+  const handleToggle = useCallback((id: string) => {
+    setCollapsedNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
   if (fullHierarchy.roots.length === 0) {
     return (
       <div className="text-muted-foreground px-4 py-8 text-center text-sm">
@@ -366,13 +422,30 @@ const CustomChartMobileList: React.FC<{
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <Input
-          placeholder="Search by name, title, or department..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="text-sm"
-          aria-label="Search chart"
-        />
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExpandAll}
+            aria-label="Expand all nodes"
+            title="Expand all"
+            className="h-8 px-2 text-xs"
+          >
+            <ChevronsUpDown className="mr-1 h-3.5 w-3.5" />
+            <span>Expand All</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCollapseAll}
+            aria-label="Collapse all nodes"
+            title="Collapse all"
+            className="h-8 px-2 text-xs"
+          >
+            <ChevronsDownUp className="mr-1 h-3.5 w-3.5" />
+            <span>Collapse All</span>
+          </Button>
+        </div>
         {onSwitchToGraph && (
           <Button
             variant="outline"
@@ -387,6 +460,13 @@ const CustomChartMobileList: React.FC<{
           </Button>
         )}
       </div>
+      <Input
+        placeholder="Search by name, title, or department..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="text-sm"
+        aria-label="Search chart"
+      />
       {roots.length === 0 ? (
         <div className="text-muted-foreground px-4 py-8 text-center text-sm">
           No matching nodes found.
@@ -394,7 +474,14 @@ const CustomChartMobileList: React.FC<{
       ) : (
         <ul role="tree" aria-label="Organizational chart (mobile list view)" className="divide-y">
           {roots.map((root) => (
-            <MobileNode key={root.node_uuid} node={root} childrenMap={childrenMap} depth={0} />
+            <MobileNode
+              key={root.node_uuid}
+              node={root}
+              childrenMap={childrenMap}
+              depth={0}
+              collapsedNodes={collapsedNodes}
+              onToggle={handleToggle}
+            />
           ))}
         </ul>
       )}

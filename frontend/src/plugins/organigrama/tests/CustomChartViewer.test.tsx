@@ -98,6 +98,38 @@ describe("CustomChartViewer", () => {
     expect(screen.getByLabelText("Collapse")).toBeInTheDocument();
   });
 
+  it("supports global Collapse All and Expand All in mobile list view", () => {
+    render(<CustomChartViewer chart={mockChart} payload={mockPayload} />);
+
+    expect(screen.getByText("Engineering")).toBeInTheDocument();
+
+    const collapseAllBtn = screen.getByRole("button", { name: /collapse all nodes/i });
+    fireEvent.click(collapseAllBtn);
+
+    expect(screen.queryByText("Engineering")).not.toBeInTheDocument();
+
+    const expandAllBtn = screen.getByRole("button", { name: /expand all nodes/i });
+    fireEvent.click(expandAllBtn);
+
+    expect(screen.getByText("Engineering")).toBeInTheDocument();
+  });
+
+  it("toggles single node expand/collapse on mobile", () => {
+    render(<CustomChartViewer chart={mockChart} payload={mockPayload} />);
+
+    expect(screen.getByText("Engineering")).toBeInTheDocument();
+
+    const toggleBtn = screen.getByLabelText("Collapse");
+    fireEvent.click(toggleBtn);
+
+    expect(screen.queryByText("Engineering")).not.toBeInTheDocument();
+
+    const expandBtn = screen.getByLabelText("Expand");
+    fireEvent.click(expandBtn);
+
+    expect(screen.getByText("Engineering")).toBeInTheDocument();
+  });
+
   it("nests visual group members in the published mobile viewer", () => {
     const payload: DraftPayload = {
       revision_number: 1,
