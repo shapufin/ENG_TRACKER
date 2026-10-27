@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from core.utils.metrics_freeze import is_frozen
+
 from .models import TLApprovalMetric
 
 
@@ -8,6 +10,11 @@ class TLApprovalMetricSerializer(serializers.ModelSerializer):
     # Live name while the team exists, the stored label once it has been purged.
     team_name = serializers.SerializerMethodField()
     team_code = serializers.SerializerMethodField()
+
+    frozen = serializers.SerializerMethodField()
+
+    def get_frozen(self, obj) -> bool:
+        return is_frozen(obj.month, obj.computed_at)
 
     def get_team_name(self, obj):
         return obj.team.name if obj.team_id else obj.team_name
@@ -22,5 +29,5 @@ class TLApprovalMetricSerializer(serializers.ModelSerializer):
             'metrics', 'team_size', 'active_submitters', 'approval_rate_pct',
             'resubmission_count', 'engagement_score', 'decisions_during_leave',
             'decisions_on_holidays', 'score_speed', 'score_approval_rate',
-            'score_responsiveness', 'score_consistency', 'next_deadline_at', 'computed_at',
+            'score_responsiveness', 'score_consistency', 'next_deadline_at', 'computed_at', 'frozen',
         ]

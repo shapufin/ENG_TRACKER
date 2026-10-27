@@ -25,6 +25,7 @@ from apps.standby.models import StandbyLog
 from apps.users.models import Team, TeamMembership, UserProfile
 
 from .models import TLApprovalMetric
+from core.utils.metrics_freeze import is_frozen, is_past_freeze
 from core.utils.timezone_local import business_tz, business_today
 
 from .sla import deadline_for, responsiveness_score
@@ -224,7 +225,7 @@ def candidate_leader_ids():
     """
     return set(
         User.objects.filter(
-            Q(led_teams__isnull=False)
+            Q(led_teams__is_active=True)
             | Q(italian_team_members__isnull=False)
             | Q(albanian_team_members__isnull=False)
             | Q(profile__is_italian_tl_role=True)
@@ -250,7 +251,7 @@ def leader_team_pairs(leader_ids=None, scope=None):
     ).values_list('user_profile__user_id', 'team_id'):
         member_teams[user_id].add(team_id)
     led = defaultdict(set)
-    for leader_id, team_id in Team.objects.filter(is_deleted=False, team_leader_id__in=leaders).values_list('team_leader_id', 'id'):
+    for leader_id, team_id in Team.objects.filter(is_deleted=False, is_active=True, team_leader_id__in=leaders).values_list('team_leader_id', 'id'):
         led[leader_id].add(team_id)
 
     team_ids = set()
@@ -258,7 +259,7 @@ def leader_team_pairs(leader_ids=None, scope=None):
     for leader_id in leaders:
         team_sets[leader_id] = set(led[leader_id]) | {t for m in managed[leader_id] for t in member_teams[m]}
         team_ids |= team_sets[leader_id]
-    teams = {t.id: t for t in Team.objects.filter(is_deleted=False, id__in=team_ids)}
+    teams = {t.id: t for t in Team.objects.filter(is_deleted=False, is_active=True, id__in=team_ids)}
     return [(leaders[lid], teams[tid]) for lid in sorted(leaders) for tid in sorted(team_sets[lid]) if tid in teams]
 
 
@@ -660,10 +661,18 @@ def stale_snapshot_ids(rows, scope=None):
     stale = set()
     for row in rows:
         member_ids = members[(row.leader_id, row.team_id)]
-        if (
-            not row.computed_at
-            or any(key not in row.metrics.get(type_key, {}) for type_key in REQUEST_TYPES for key in SLA_METRIC_KEYS)
-            or (row.next_deadline_at and now >= row.next_deadline_at)
+        if not row.computed_at or any(
+            key not in row.metrics.get(type_key, {}) for type_key in REQUEST_TYPES for key in SLA_METRIC_KEYS
+        ):
+            stale.add(row.pk)
+        elif is_past_freeze(row.month, now):
+            # Past the freeze a row is final once computed after it: no later change
+            # (membership, a late decision) rewrites it. One computed earlier still
+            # needs that last recompute.
+            if not is_frozen(row.month, row.computed_at, now):
+                stale.add(row.pk)
+        elif (
+            (row.next_deadline_at and now >= row.next_deadline_at)
             or len(member_ids) != row.team_size
             or any(last_touched.get(user_id, row.computed_at) > row.computed_at for user_id in member_ids)
         ):
@@ -673,3 +682,22 @@ def stale_snapshot_ids(rows, scope=None):
 
 def is_stale(snapshot):
     return snapshot.pk in stale_snapshot_ids([snapshot])
+
+
+def finalize_frozen_snapshots(dry_run=False):
+    """Give every snapshot past its freeze its one final recompute. Returns how many.
+
+    Reads do this lazily; this is the deploy-time backfill and a cron safety net.
+    Rows whose team was purged are history and are never touched.
+    """
+    now = _now()
+    scope = ReadScope()
+    count = 0
+    rows = TLApprovalMetric.objects.filter(team__isnull=False, leader__is_active=True).select_related('leader', 'team')
+    for row in rows:
+        if not is_past_freeze(row.month, now) or is_frozen(row.month, row.computed_at, now):
+            continue
+        count += 1
+        if not dry_run:
+            compute_tl_metric(row.leader, row.team, row.month, scope)
+    return count

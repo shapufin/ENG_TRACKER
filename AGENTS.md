@@ -353,3 +353,7 @@ Rules:
 - Design System: Zero raw emojis/pictographs in UI copy (`usePluginManagement.ts`, `SidebarInstallButton.tsx`); `check_no_emoji` gate green.
 - Gates: `plugins.tl_scorecard` 53 OK, Vitest `useClientManagement.test.tsx` 2/2, `tsc -b` 0 errors, `table-header-audit.mjs` PASS (0 violations across 946 files), `modal-audit.mjs` PASS.
 
+## Team lifecycle (2026-10-27)
+Archive-not-delete, history that survives a team delete, one audited membership writer and a metrics
+freeze are specified in `docs/team-lifecycle.md` (tracked). Read it before touching `Team`, team
+membership, engagement snapshots or scorecard months.

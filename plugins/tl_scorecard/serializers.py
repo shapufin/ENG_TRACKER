@@ -110,6 +110,7 @@ class ScorecardSerializer(serializers.Serializer):
     leave = LeaveSlaSerializer(required=False)
     overtime = OvertimeTurnaroundSerializer(required=False)
     meetings = MeetingComplianceSerializer()
+    frozen = serializers.BooleanField(default=False)
     idle = IdleMetricsSerializer()
     review_deliveries_ytd = serializers.IntegerField()
     seniority = SeniorityRatioSerializer()

@@ -9,6 +9,7 @@ across four new models is real new security surface this phase doesn't
 need yet; a link is enough to satisfy "documented" for now.
 """
 from django.contrib.auth.models import User
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -463,3 +464,29 @@ class HbprGovernanceEvidence(TrackedFieldsMixin, BaseModel):
 
     def __str__(self):
         return f'{self.get_kind_display()} — {self.occurred_on}'
+
+
+class ScorecardMonthSnapshot(models.Model):
+    """The month-bound blocks of one TL's scorecard (team size, leave, overtime, meetings),
+    frozen after the metrics freeze (team lifecycle plan, Phase 5).
+
+    Written only by ``snapshots.freeze_scorecard_months`` (scheduler job / command), never
+    on read: a snapshot first computed months later would reflect today's membership.
+    Stored unmasked; HBPR masking is applied by the viewset on the returned copy.
+    Year-to-date and current-state blocks are not stored: they stay live.
+    """
+    leader = models.ForeignKey(User, on_delete=models.CASCADE, related_name='scorecard_snapshots')
+    month = models.DateField(help_text='First day of the month')
+    member_ids = models.JSONField(default=list, help_text='Scoreable members when it was frozen')
+    payload = models.JSONField(default=dict, encoder=DjangoJSONEncoder)
+    computed_at = models.DateTimeField()
+
+    class Meta:
+        db_table = 'tl_scorecard_month_snapshots'
+        ordering = ['-month', 'leader_id']
+        constraints = [
+            models.UniqueConstraint(fields=['leader', 'month'], name='unique_scorecard_snapshot_leader_month'),
+        ]
+
+    def __str__(self):
+        return f'Scorecard {self.leader_id} {self.month:%Y-%m}'
