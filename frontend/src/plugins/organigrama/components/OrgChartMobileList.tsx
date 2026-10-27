@@ -14,10 +14,10 @@ import { Button } from "@/components/ui/button";
 import type { TreeNode, RoleBadge } from "../types";
 
 const ROLE_BADGE_STYLES: Record<RoleBadge, string> = {
-  italian_tl: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-  albanian_tl: "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300",
-  hr: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300",
-  admin: "bg-red-100 text-red-700 dark:bg-rose-500/15 dark:text-rose-300",
+  italian_tl: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300", // ds-allow-hardcode: matches OrgNode.tsx
+  albanian_tl: "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300", // ds-allow-hardcode: matches OrgNode.tsx
+  hr: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300", // ds-allow-hardcode: matches OrgNode.tsx
+  admin: "bg-red-100 text-red-700 dark:bg-rose-500/15 dark:text-rose-300", // ds-allow-hardcode: matches OrgNode.tsx
   employee: "bg-muted text-muted-foreground",
 };
 

@@ -13,7 +13,8 @@ export function convertLiveTreeToGraph(roots: TreeNode[]): { nodes: Node[]; edge
   const visited = new Set<string>();
 
   function walk(node: TreeNode, parentNodeId?: string) {
-    const visitKey = `${node.type}-${node.id}`;
+    const rawKey = `${node.type}-${node.id}`;
+    const visitKey = parentNodeId ? `${parentNodeId}__${rawKey}` : rawKey;
     if (visited.has(visitKey)) return;
     visited.add(visitKey);
 

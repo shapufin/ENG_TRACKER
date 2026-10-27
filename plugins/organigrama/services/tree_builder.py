@@ -96,7 +96,7 @@ def _tech_node(tech: Tech) -> Dict[str, Any]:
 
 def _has_role_q(role_code: str) -> Q:
     """Match UserProfile.is_italian_tl/is_albanian_tl's role check as a
-    queryable Q: the legacy boolean flag, OR an active grant through the
+    queryable Q on the User model: the legacy boolean flag, OR an active grant through the
     Role/UserRole system (the authoritative source — role_codes on the
     profile is only a denormalized cache of it, see
     apps/permissions/services/role_service.py). Checking the boolean flag
@@ -105,6 +105,14 @@ def _has_role_q(role_code: str) -> Q:
     flag_field = f"profile__is_{role_code}_role"
     return Q(**{flag_field: True}) | Q(
         user_roles__role__code=role_code, user_roles__is_active=True
+    )
+
+
+def _profile_has_role_q(role_code: str) -> Q:
+    """Match role check as a queryable Q on the UserProfile model."""
+    flag_field = f"is_{role_code}_role"
+    return Q(**{flag_field: True}) | Q(
+        user__user_roles__role__code=role_code, user__user_roles__is_active=True
     )
 
 
@@ -578,6 +586,7 @@ def build_subtree(user: User) -> Dict[str, Any]:
                 user_id__in=visible_ids, user__is_active=True
             )
             .exclude(user=user)
+            .exclude(_profile_has_role_q("italian_tl"))
             .select_related("user", "albanian_tl", "italian_tl")
             .prefetch_related("techs", "tech_assignments__tech", "tech_assignments__level")
             .distinct()

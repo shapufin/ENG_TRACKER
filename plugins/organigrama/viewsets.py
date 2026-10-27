@@ -64,6 +64,7 @@ from .services.tree_builder import (
     _person_node,
     role_badge,
     _has_role_q,
+    _profile_has_role_q,
 )
 
 logger = logging.getLogger(__name__)
@@ -233,6 +234,7 @@ class OrganigramaViewSet(PluginPermissionMixin, APIView):
             employees = list(
                 UserProfile.objects.filter(user_id__in=managed_ids, user__is_active=True)
                 .exclude(user=node_user)
+                .exclude(_profile_has_role_q("italian_tl"))
                 .select_related("user", "albanian_tl", "italian_tl")
                 .prefetch_related(*_TECH_LEVEL_PREFETCH)
                 .distinct()
