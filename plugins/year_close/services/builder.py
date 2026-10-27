@@ -14,7 +14,7 @@ import hashlib
 import json
 import logging
 import zipfile
-from datetime import date
+from datetime import date, datetime, time
 from pathlib import Path
 
 from django.conf import settings
@@ -23,6 +23,7 @@ from django.utils import timezone
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from core.utils.sheet_titles import safe_sheet_title
+from core.utils.timezone_local import business_tz
 
 from .readiness import pending_counts
 
@@ -157,8 +158,11 @@ def _former_members(team_ids: set[int], year: int) -> dict[int, set[int]]:
     from apps.users.models import TeamMembershipHistory
 
     first_day, last_day = _year_window(year)
+    # Compare in the business timezone: settings.TIME_ZONE is UTC, so a removal just
+    # after midnight in Tirane on 1 January would otherwise land in the previous year.
+    window_start = datetime.combine(first_day, time.min, tzinfo=business_tz())
     rows = TeamMembershipHistory.objects.filter(
-        team_id__in=team_ids, user__isnull=False, removed_at__date__gte=first_day,
+        team_id__in=team_ids, user__isnull=False, removed_at__gte=window_start,
     ).filter(Q(joined_date__isnull=True) | Q(joined_date__lte=last_day))
     former: dict[int, set[int]] = {}
     for team_id, user_id in rows.values_list('team_id', 'user_id'):

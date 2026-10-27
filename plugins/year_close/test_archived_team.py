@@ -1,5 +1,6 @@
 """Team lifecycle plan, Phase 7: archiving a team must not move its evidence to 'Unassigned'."""
-from datetime import timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from django.test import RequestFactory
 from django.utils import timezone
@@ -33,6 +34,17 @@ class ArchivedTeamYearCloseTests(YearCloseFixture):
                          [('team', self.team.pk, self.tl.pk)])
         self.assertEqual(bundles[0]['member_ids'], [self.member.pk])
         self.assertEqual(builder.completeness_gap(self.year, bundles), set())
+
+    def test_a_removal_just_after_midnight_tirane_stays_in_that_year(self):
+        self.archive()
+        from apps.users.models.core import TeamMembershipHistory
+        # 00:30 on 1 January in Tirane is 23:30 on 31 December in UTC.
+        TeamMembershipHistory.objects.filter(user=self.member).update(
+            removed_at=datetime(self.year, 1, 1, 0, 30, tzinfo=ZoneInfo('Europe/Tirane')),
+        )
+        bundles = builder.bundles_for_year(self.year)
+        self.assertEqual([(b['kind'], b['team_id']) for b in bundles], [('team', self.team.pk)])
+        self.assertIn(self.member.pk, bundles[0]['member_ids'])
 
     def test_someone_who_left_before_the_year_started_does_not_follow_the_team(self):
         self.archive()
