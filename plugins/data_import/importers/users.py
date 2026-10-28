@@ -11,6 +11,7 @@ from django.db.models.functions import Lower
 
 from apps.permissions.services.role_service import TeamLeaderRevokeBlockedError
 from apps.users.models import Team, Tech, TechLevel
+from apps.users.services.user_deactivation import deactivation_warnings
 from apps.users.services.user_creation import (
     create_user_with_profile,
     generate_random_password,
@@ -595,6 +596,8 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
                 is_active = self._normalize_bool(mapped_row.get("is_active"))
                 if is_active is not None:
                     update_kwargs["is_active"] = is_active
+                    if not is_active and existing_user.is_active:
+                        warnings.extend(deactivation_warnings(existing_user))
 
                 if team is not None:
                     update_kwargs["team"] = team
