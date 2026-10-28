@@ -10,6 +10,7 @@ from .viewsets import (
     CalendarWorkspaceViewSet,
     PublicHolidayViewSet,
     SiteBrandingViewSet,
+    MaintenanceView,
 )
 
 router = DefaultRouter()
@@ -20,5 +21,6 @@ router.register(r'holidays', PublicHolidayViewSet, basename='publicholiday')
 router.register(r'branding', SiteBrandingViewSet, basename='sitebranding')
 
 urlpatterns = [
+    path('maintenance/', MaintenanceView.as_view(), name='maintenance'),
     path('', include(router.urls)),
 ]

@@ -75,6 +75,18 @@ class CacheKey:
         version = getattr(settings, 'CACHE_VERSION', 1)
         return f"v{version}:dashboard:ref:{list_name}:{fingerprint}"
 
+    @staticmethod
+    def maintenance_state() -> str:
+        """Site-wide maintenance state (see ``core.maintenance.state``).
+
+        Read on every authenticated request, so it is cached with a short TTL
+        and invalidated explicitly on every write. Deliberately outside the
+        ``dashboard:`` namespace: ``dashboard_all()`` invalidations are about
+        data freshness and must not be able to silently drop the kill switch.
+        """
+        version = getattr(settings, 'CACHE_VERSION', 1)
+        return f"v{version}:maintenance:state"
+
 
 class CachePattern:
     """Cache key patterns for bulk invalidation."""

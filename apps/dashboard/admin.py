@@ -1,5 +1,18 @@
 from django.contrib import admin
-from .models import SiteBranding
+from .models import SiteBranding, MaintenanceState
+
+
+@admin.register(MaintenanceState)
+class MaintenanceStateAdmin(admin.ModelAdmin):
+    """Read-mostly view of the switch. The admin GUI owns the write path."""
+    list_display = ['is_active', 'title', 'started_at', 'ends_at', 'updated_at']
+    fields = ['is_active', 'title', 'message', 'started_at', 'ends_at']
+
+    def has_add_permission(self, request):
+        return not MaintenanceState.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(SiteBranding)

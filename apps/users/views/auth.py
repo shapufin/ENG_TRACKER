@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.conf import settings
@@ -16,6 +17,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from core.utils import get_client_ip
+from core.maintenance import MaintenanceModeActive, is_maintenance_active, is_user_exempt
 from apps.reports.services.security_audit import log_security_event
 from ..serializers import CustomTokenObtainPairSerializer
 from ..services import mfa as mfa_service
@@ -142,6 +144,9 @@ class MFAVerifyView(_MFAView):
             user = mfa_service.read_challenge(
                 str(request.data.get('mfa_token', '')), mfa_service.PURPOSE_VERIFY
             )
+            # A challenge issued before the switch must not be completed.
+            if is_maintenance_active() and not is_user_exempt(user):
+                raise MaintenanceModeActive()
             mfa_service.verify_second_factor(user, str(request.data.get('code', '')))
         except MFAError as exc:
             action = 'MFA_LOCKED' if exc.code == 'locked' else 'MFA_FAILED'
@@ -200,6 +205,8 @@ class MFALoginActivateView(_MFAView):
             user = mfa_service.read_challenge(
                 str(request.data.get('mfa_token', '')), mfa_service.PURPOSE_SETUP
             )
+            if is_maintenance_active() and not is_user_exempt(user):
+                raise MaintenanceModeActive()
             codes = mfa_service.activate(user, str(request.data.get('code', '')))
         except MFAError as exc:
             username = user.username if user else 'Unknown'
@@ -354,12 +361,38 @@ class CustomTokenRefreshSerializer(TokenRefreshSerializer):
     an inactive account gets."""
 
     def validate(self, attrs):
+        # Maintenance check BEFORE super(): TokenRefreshSerializer rotates and
+        # blacklists the presented token (BLACKLIST_AFTER_ROTATION), so a
+        # blocked refresh must not consume it — the session resumes when
+        # maintenance ends.
+        if is_maintenance_active():
+            user = self._refresh_user(attrs)
+            if user is not None and not is_user_exempt(user):
+                raise MaintenanceModeActive()
         try:
             return super().validate(attrs)
         except get_user_model().DoesNotExist:
             raise AuthenticationFailed(
                 self.error_messages['no_active_account'], 'no_active_account'
             )
+
+    @staticmethod
+    def _refresh_user(attrs):
+        """The user the presented refresh token belongs to, or None if invalid.
+
+        An invalid/expired token falls through to ``super()`` so the normal 401
+        (and its error code) is what the client sees.
+        """
+        from rest_framework_simplejwt.exceptions import TokenError
+
+        try:
+            token = RefreshToken(attrs['refresh'])
+            user_id = token.payload.get(api_settings.USER_ID_CLAIM)
+            return get_user_model().objects.filter(
+                **{api_settings.USER_ID_FIELD: user_id}
+            ).first()
+        except (TokenError, KeyError):
+            return None
 
 
 class CustomTokenRefreshView(TokenRefreshView):

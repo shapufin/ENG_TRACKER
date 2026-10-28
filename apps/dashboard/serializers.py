@@ -3,6 +3,7 @@ Dashboard app serializers.
 """
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import serializers
 from .models import DashboardWidget, UserDashboardPreference, SiteBranding
 from .models.calendar import CalendarWorkspace, UserCalendarPreference, PublicHoliday
@@ -192,3 +193,38 @@ class SiteBrandingSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.logo.url)
             return obj.logo.url
         return None
+
+
+class MaintenanceStatusSerializer(serializers.Serializer):
+    """Public maintenance payload.
+
+    Deliberately small and PII-free: it is served to anonymous users and is
+    the only API the SPA can rely on while everything else answers 503.
+    Branding rides along so the maintenance screen is branded without a second
+    request (``SiteBranding`` is never created here).
+    """
+    active = serializers.BooleanField()
+    title = serializers.CharField()
+    message = serializers.CharField()
+    started_at = serializers.DateTimeField(allow_null=True)
+    ends_at = serializers.DateTimeField(allow_null=True)
+    updated_at = serializers.DateTimeField(allow_null=True)
+    site_name = serializers.CharField()
+    logo_url = serializers.CharField(allow_null=True)
+
+
+class MaintenanceUpdateSerializer(serializers.Serializer):
+    """Staff-only write payload for the maintenance switch."""
+    is_active = serializers.BooleanField(required=False)
+    title = serializers.CharField(max_length=120, required=False, allow_blank=False)
+    message = serializers.CharField(max_length=600, required=False, allow_blank=True)
+    ends_at = serializers.DateTimeField(required=False, allow_null=True)
+
+    def validate(self, attrs):
+        activating = attrs.get('is_active')
+        ends_at = attrs.get('ends_at')
+        if activating and ends_at is not None and ends_at <= timezone.now():
+            raise serializers.ValidationError(
+                {'ends_at': 'The expected end must be in the future.'}
+            )
+        return attrs

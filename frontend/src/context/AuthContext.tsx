@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { isMfaChallenge, type AuthResponse, type User, type LoginCredentials } from "@/types";
 import { authService } from "@/services/authService";
-import { setAccessToken } from "@/lib/api";
+import { isMaintenanceError, setAccessToken } from "@/lib/api";
 import { AuthContext, type AuthContextType } from "./auth-context-base";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -29,10 +29,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUser(currentUser);
               localStorage.setItem("user", JSON.stringify(currentUser));
             }
-          } catch {
+          } catch (error) {
             // Keep the last authenticated identity during an offline
-            // bootstrap so user-scoped cached data can be displayed.
-            if (!navigator.onLine) {
+            // bootstrap so user-scoped cached data can be displayed, and
+            // during maintenance: a closed platform must not destroy the
+            // session — it resumes when maintenance ends.
+            if (!navigator.onLine || isMaintenanceError(error)) {
               try {
                 if (!cancelled) setUser(JSON.parse(storedUser));
               } catch {

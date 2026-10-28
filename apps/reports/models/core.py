@@ -134,6 +134,8 @@ class AuditLog(models.Model):
         ('MFA_DISABLED', 'MFA Disabled'),
         ('MFA_RESET', 'MFA Reset'),
         ('PASSWORD_CHANGED', 'Password Changed'),
+        ('MAINTENANCE_ON', 'Maintenance On'),
+        ('MAINTENANCE_OFF', 'Maintenance Off'),
     ]
 
     MODEL_CHOICES = [

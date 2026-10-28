@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { LogIn, ShieldCheck } from "lucide-react";
+import { LogIn, ShieldCheck, Wrench } from "lucide-react";
 import { useSiteBranding } from "@/hooks/useSiteBranding";
+import { useMaintenanceStatus } from "@/hooks/useMaintenanceStatus";
+import { isMaintenanceError } from "@/lib/api";
 import { BackupCodesPanel } from "@/components/auth/BackupCodesPanel";
 import { MfaCodeField } from "@/components/auth/MfaCodeField";
 import { MfaEnrollment } from "@/components/auth/MfaEnrollment";
@@ -63,6 +65,7 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
   const { data: branding } = useSiteBranding();
+  const { data: maintenance } = useMaintenanceStatus();
   const [logoFailed, setLogoFailed] = useState(false);
 
   // The backup codes exist only on this screen: warn before a reload or tab close loses them.
@@ -109,8 +112,12 @@ export const LoginPage: React.FC = () => {
       } else {
         setStep("code");
       }
-    } catch {
-      setError("Invalid username or password");
+    } catch (err) {
+      setError(
+        isMaintenanceError(err)
+          ? "The platform is under maintenance. Only administrators can sign in right now."
+          : "Invalid username or password"
+      );
     }
   };
 
@@ -189,6 +196,19 @@ export const LoginPage: React.FC = () => {
             </h1>
             <p className="text-muted-foreground mt-1">{copy.subtitle}</p>
           </div>
+
+          {maintenance?.active && (
+            <div
+              role="status"
+              className="border-tone-warning-border bg-tone-warning-surface text-tone-warning-text mb-4 flex items-start gap-3 rounded border p-3 text-sm"
+            >
+              <Wrench className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>
+                <strong className="font-semibold">Maintenance mode is on.</strong> Only
+                administrators can sign in until the update is complete.
+              </span>
+            </div>
+          )}
 
           {error && (step === "password" || step === "backup") && (
             <div

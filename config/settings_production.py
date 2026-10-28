@@ -118,6 +118,8 @@ REST_FRAMEWORK = {
         'evidence_upload': '60/hour',
         'control_room': '120/hour',
         'health': '60/min',
+        # Public maintenance status polled by the SPA while the site is closed.
+        'maintenance': '120/min',
     },
 }
 

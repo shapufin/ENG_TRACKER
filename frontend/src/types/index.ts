@@ -549,6 +549,22 @@ export interface SiteBranding {
   logo_url: string | null;
 }
 
+/** Public site-wide maintenance state (GET /dashboard/maintenance/).
+ *
+ * `active` is the effective state: the switch is on AND the window has not
+ * expired. Branding rides along because this is the only API the SPA can rely
+ * on while everything else answers 503. */
+export interface MaintenanceStatus {
+  active: boolean;
+  title: string;
+  message: string;
+  started_at: string | null;
+  ends_at: string | null;
+  updated_at: string | null;
+  site_name: string;
+  logo_url: string | null;
+}
+
 export interface TeamDashboardStats {
   pending_team_overtime: number;
   pending_team_standby: number;

@@ -357,3 +357,30 @@ Rules:
 Archive-not-delete, history that survives a team delete, one audited membership writer and a metrics
 freeze are specified in `docs/team-lifecycle.md` (tracked). Read it before touching `Team`, team
 membership, engagement snapshots or scorecard months.
+
+## Maintenance mode (2026-10-27)
+Site-wide kill switch: Admin → Global Settings → **Maintenance**. While on, every non-staff user is
+locked out of sign-in, token refresh, reads and writes (`503 {"code": "maintenance"}`); staff and
+superusers keep working and see an amber banner in the admin shell. `ends_at` self-expires the window.
+Rules in `.devin/context/13-MAINTENANCE.md` (local-only); ops steps in
+`docs/deploy/production-runbook.md` §5.2.1.
+
+- Single source of truth `core/maintenance/` (cached 60 s, explicit invalidation, self-heal on read,
+  fail-open). Enforcement is in **DRF authentication classes** (`DEFAULT_AUTHENTICATION_CLASSES`),
+  not middleware: `AuthenticationMiddleware` sees JWT users as anonymous. Login/refresh/MFA guards
+  live in `apps/users`; refresh is checked **before** rotation so a blocked refresh is not blacklisted.
+- Frontend `MaintenanceGate` sits inside `AuthProvider` and above `PluginProvider`; `/login?admin=1`
+  is the only way to the sign-in form while closed. 503 is not an auth failure: `lib/api.ts` keeps the
+  session, skips the offline cache, and `QueryContext` skips the error toast.
+- Traps recorded: (1) a gate that treats "session still loading" as "locked out" reloads every staff
+  boot — `showing` must require `!authLoading` and the reload must require `!exempt`; (2) the status
+  endpoint needs its own throttle scope (`maintenance: 120/min`) or the 30 s poll drains `anon`
+  (100/hour) and 429s the page; (3) `force_authenticate` bypasses the gate, so gate tests use real
+  JWTs; (4) `drf_spectacular` needs `OpenApiAuthenticationExtension`s for the wrapper classes or every
+  view warns; (5) the row-per-ownership matrix needs the route in `REFERENCE_ROUTES`.
+- Gates: `apps.dashboard.tests.test_maintenance` 26 OK, full backend 3823 OK, `config` 88 OK,
+  `makemigrations --check` clean, ruff clean, frontend 600 files / 3815 tests, `tsc -b` clean,
+  eslint + prettier clean, surface/modal audits PASS (control-audit's 2 hits are pre-existing in
+  organigrama), `admin-routes` + `visual-route-manifest` node tests green, `npm run build` OK.
+- Browser evidence (`.playwright-mcp/maint-*.png`): admin tab light/dark/375, confirm dialog, banner,
+  preview dialog, anonymous maintenance page light/dark/375, blocked employee login copy.

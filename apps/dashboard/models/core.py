@@ -6,6 +6,7 @@ This module contains models for dashboard widgets and user preferences.
 
 from django.db import models
 from django.contrib.auth.models import User
+from core.maintenance.state import clear_maintenance_cache
 from core.models.abstract import BaseModel
 
 
@@ -176,3 +177,51 @@ class SiteBranding(BaseModel):
 
     def __str__(self):
         return self.site_name
+
+
+DEFAULT_MAINTENANCE_TITLE = 'Scheduled maintenance'
+DEFAULT_MAINTENANCE_MESSAGE = (
+    "We're updating the platform to keep it fast and reliable. "
+    'Sign-in and data entry are paused until the update is complete.'
+)
+
+
+class MaintenanceState(BaseModel):
+    """Site-wide maintenance switch. Single-row singleton table.
+
+    While effective-active, only staff/superusers may authenticate or call the
+    API (``core.maintenance``); everyone else gets 503 ``code=maintenance`` and
+    the SPA renders the maintenance screen.
+
+    ``ends_at`` self-expires the window: an admin who forgets to switch it off
+    does not lock the team out indefinitely. The expiry is evaluated on read
+    (``core.maintenance.state``), never by a scheduler.
+    """
+    is_active = models.BooleanField(default=False)
+    title = models.CharField(max_length=120, default=DEFAULT_MAINTENANCE_TITLE)
+    message = models.TextField(default=DEFAULT_MAINTENANCE_MESSAGE)
+    started_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='When the window closes by itself. Empty = until switched off.',
+    )
+    updated_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+        help_text='Last admin to change the switch (audit only, never exposed).',
+    )
+
+    class Meta:
+        db_table = 'dashboard_maintenance_state'
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(pk=1),
+                name='dashboard_maintenance_state_singleton',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        clear_maintenance_cache()
+
+    def __str__(self):
+        return f"Maintenance: {'on' if self.is_active else 'off'}"

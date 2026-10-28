@@ -33,6 +33,25 @@ vi.mock("@/services/dashboardService", () => ({
   },
 }));
 
+vi.mock("@/hooks/useMaintenanceStatus", () => ({
+  MAINTENANCE_STATUS_QUERY_KEY: ["maintenance-status"],
+  useMaintenanceStatus: () => ({
+    data: {
+      active: false,
+      title: "Scheduled maintenance",
+      message: "We are updating the platform.",
+      started_at: null,
+      ends_at: null,
+      updated_at: "2026-10-27T20:00:00Z",
+      site_name: "Engineering Tracker",
+      logo_url: null,
+    },
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+}));
+
 // Radix Switch measures itself with ResizeObserver, which jsdom does not provide.
 class ResizeObserverMock {
   observe() {}
@@ -209,5 +228,13 @@ describe("GlobalSettingsPage", () => {
     activePlugins.value = [{ name: "audit_log" }];
     renderPage();
     expect(await screen.findByText(/Security & Audit Logs/)).toBeTruthy();
+  });
+
+  it("opens the maintenance tab from the admin banner link", async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("tab", { name: /Maintenance/ }));
+
+    expect(await screen.findByLabelText("Put the site into maintenance mode")).toBeInTheDocument();
   });
 });

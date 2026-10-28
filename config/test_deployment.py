@@ -657,7 +657,7 @@ class ProductionThrottleRatesTests(SimpleTestCase):
 
     def _assert_all_set(self, rates):
         for scope in ('anon', 'user', 'auth', 'upload', 'export',
-                      'evidence_upload', 'control_room', 'health'):
+                      'evidence_upload', 'control_room', 'health', 'maintenance'):
             self.assertIn(scope, rates)
         for scope, rate in rates.items():
             self.assertIsNotNone(rate, f"throttle scope {scope!r} is unlimited in production")

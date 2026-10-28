@@ -3,6 +3,29 @@ import { API_BASE_URL } from "./constants";
 import { clearOfflineUserData } from "./offline/offlineQueue";
 import { cacheResponse, getCachedResponse } from "./offline/offlineApiCache";
 
+/**
+ * Site-wide maintenance (503 + `code: "maintenance"` from the backend).
+ *
+ * This is NOT an auth failure: the user's tokens are still valid, the platform
+ * is simply closed. Callers must not log out or fall back to cached data.
+ */
+export function isMaintenanceError(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false;
+  const response = error.response;
+  return (
+    response?.status === 503 &&
+    (response.data as { code?: string } | undefined)?.code === "maintenance"
+  );
+}
+
+export const MAINTENANCE_ACTIVE_EVENT = "maintenance:active";
+
+const announceMaintenance = () => {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(MAINTENANCE_ACTIVE_EVENT));
+  }
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10_000,
@@ -79,7 +102,13 @@ async function performTokenRefresh(): Promise<string> {
       accessToken = data.access;
       return data.access;
     } catch (error) {
-      clearAuthAndRedirect();
+      // Maintenance is not an auth failure: keep the session so it resumes
+      // when the platform reopens.
+      if (isMaintenanceError(error)) {
+        announceMaintenance();
+      } else {
+        clearAuthAndRedirect();
+      }
       throw error;
     } finally {
       refreshPromise = null;
@@ -100,10 +129,14 @@ api.interceptors.request.use(
       if (!refreshPromise) {
         try {
           token = await performTokenRefresh();
-        } catch {
-          // Refresh failed, clear auth storage and redirect
-          clearAuthAndRedirect();
-          return Promise.reject(new Error("Token refresh failed"));
+        } catch (error) {
+          // Refresh failed. A maintenance 503 keeps the session (the gate
+          // shows the maintenance screen); anything else is an auth failure.
+          if (!isMaintenanceError(error)) {
+            clearAuthAndRedirect();
+            return Promise.reject(new Error("Token refresh failed"));
+          }
+          return Promise.reject(error);
         }
       } else {
         token = await performTokenRefresh();
@@ -124,6 +157,13 @@ api.interceptors.response.use(
     response.config.method?.toLowerCase() === "get" ? cacheResponse(response) : response,
   // fallow-ignore-next-line complexity
   async (error: AxiosError) => {
+    // Maintenance must never be answered from the offline cache: the cached
+    // body is stale data from before the platform closed, and swallowing the
+    // 503 would keep the maintenance screen from appearing.
+    if (isMaintenanceError(error)) {
+      announceMaintenance();
+      return Promise.reject(error);
+    }
     const isGet = error.config?.method?.toLowerCase() === "get";
     const isNetworkOrServerDown =
       !error.response || [502, 503, 504].includes(error.response.status);
@@ -150,7 +190,7 @@ api.interceptors.response.use(
           }
           return api(originalRequest);
         } catch (refreshError) {
-          clearAuthAndRedirect();
+          if (!isMaintenanceError(refreshError)) clearAuthAndRedirect();
           return Promise.reject(refreshError);
         }
       }
@@ -162,7 +202,7 @@ api.interceptors.response.use(
         }
         return api(originalRequest);
       } catch (refreshError) {
-        clearAuthAndRedirect();
+        if (!isMaintenanceError(refreshError)) clearAuthAndRedirect();
         return Promise.reject(refreshError);
       }
     }

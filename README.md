@@ -258,6 +258,13 @@ the backend** (`docker compose restart backend`), because plugin URLs are comput
 once at process start. Enabling without a restart leaves the plugin's API routes
 returning 404.
 
+**Maintenance mode.** Admin → Global Settings → **Maintenance** closes the site
+before an upgrade: every non-admin (sign-in, token refresh, reads and writes) gets
+`503 {"code": "maintenance"}` and the maintenance screen, while staff admins keep
+working. Set an expected end and the window expires by itself. Details and the
+break-glass command are in
+[`docs/deploy/production-runbook.md`](docs/deploy/production-runbook.md) §5.2.1.
+
 **Holidays.** The entrypoint also runs `manage.py sync_payroll_holidays` (idempotent: copies
 holidays defined only in Payroll work calendars to HR and mirrors HR ones back).
 

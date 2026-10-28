@@ -221,8 +221,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Django REST Framework configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        # Maintenance-aware wrappers: raise 503 code=maintenance for any
+        # authenticated non-staff user while the site-wide switch is on. This
+        # is the only layer that can stop JWT users (middleware sees them as
+        # anonymous). See core/maintenance/.
+        'core.maintenance.authentication.MaintenanceAwareJWTAuthentication',
+        'core.maintenance.authentication.MaintenanceAwareSessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -248,6 +252,9 @@ REST_FRAMEWORK = {
         'evidence_upload': '60/hour' if not DEBUG else None,
         'control_room': '120/hour' if not DEBUG else None,  # dashboard summary/trend/roster reads
         'health': '60/min' if not DEBUG else None,  # P2-11: readiness probe throttle
+        # Public maintenance status: the SPA polls it every 30s while the site
+        # is closed (see apps/dashboard/viewsets.py::MaintenanceView).
+        'maintenance': '120/min' if not DEBUG else None,
     }
 }
 

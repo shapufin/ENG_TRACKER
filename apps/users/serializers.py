@@ -15,6 +15,7 @@ from django.contrib.auth.models import User, update_last_login
 from apps.overtime.serializers import ClientSerializer
 from apps.overtime.services.client_lifecycle import archived_client_error
 from core.mixins.permissions import is_cr_admin
+from core.maintenance import MaintenanceModeActive, is_maintenance_active, is_user_exempt
 from .models import Tech, TechLevel, Team, UserProfile, TeamMembership
 from .models.core import _user_has_related, normalize_calendar_group
 from .services import mfa as mfa_service
@@ -140,6 +141,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # factor (if any); minting here would leave an OutstandingToken row for
         # a login that never completed.
         TokenObtainSerializer.validate(self, attrs)
+        # Site-wide maintenance: refuse before a challenge is issued, so a
+        # non-staff account can never reach the second factor.
+        if is_maintenance_active() and not is_user_exempt(self.user):
+            raise MaintenanceModeActive()
         challenge = mfa_service.login_challenge(self.user)
         if challenge is not None:
             return challenge

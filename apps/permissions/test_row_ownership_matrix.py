@@ -97,6 +97,7 @@ REFERENCE_ROUTES = {
 _SHARED = 'shared reference or configuration data, no per-user rows'
 for _url in (
     '/api/dashboard/branding/', '/api/dashboard/branding/current/',
+    '/api/dashboard/maintenance/',
     '/api/dashboard/holidays/', '/api/dashboard/widgets/',
     '/api/dashboard/calendar-workspaces/',
     '/api/dashboard/calendar-workspaces/list_for_reports/',

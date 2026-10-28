@@ -10,6 +10,7 @@ import { MobileOverlay } from "./MobileOverlay";
 import { MainContentTransition } from "./MainContentTransition";
 import { useAdminNavItems } from "./hooks/useAdminNavItems";
 import { AdminBreadcrumbNav } from "./AdminBreadcrumbNav";
+import { MaintenanceBanner } from "./MaintenanceBanner";
 import { isAllowedCRAdminPath } from "./adminRouteGuards";
 import { AdminCommandPalette } from "./AdminCommandPalette";
 import { useSiteBranding } from "@/hooks/useSiteBranding";
@@ -100,6 +101,7 @@ export const AdminShell = React.memo(() => {
         </div>
         <MainContentTransition pathname={location.pathname} className="h-full">
           <div className="mx-auto w-full max-w-screen-2xl px-4 py-4 md:px-6 md:py-5 lg:px-8 lg:py-6">
+            <MaintenanceBanner />
             <AdminBreadcrumbNav items={adminNavItems} />
             <Outlet />
           </div>

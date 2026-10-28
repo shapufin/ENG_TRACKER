@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { leaveService } from "@/services/leaveService";
 import { dashboardService } from "@/services/dashboardService";
@@ -38,10 +38,18 @@ import {
   Layers,
   ArrowRight,
   Eye,
+  Wrench,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { SiteBranding } from "@/types";
 import { TwoFactorPolicyCard } from "./components/TwoFactorPolicyCard";
+import { MaintenanceControlCard } from "./components/MaintenanceControlCard";
+
+const TABS = ["branding", "vacation", "workplace", "system", "maintenance"] as const;
+type SettingsTab = (typeof TABS)[number];
+
+const tabFromParam = (value: string | null): SettingsTab =>
+  TABS.includes(value as SettingsTab) ? (value as SettingsTab) : "branding";
 
 const MONTH_NAMES = Array.from({ length: 12 }, (_, i) =>
   new Date(2000, i, 1).toLocaleString("en", { month: "long" })
@@ -517,10 +525,21 @@ const SiteBrandingForm: React.FC<{ branding: SiteBranding }> = ({ branding }) =>
 
 export const GlobalSettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<string>("branding");
+  const [searchParams, setSearchParams] = useSearchParams();
+  // The URL owns the tab (the admin banner links straight to ?tab=maintenance,
+  // and the page is already mounted when that link is clicked from here).
+  const activeTab = tabFromParam(searchParams.get("tab"));
   const { activePlugins } = usePlugins();
   const isPayrollActive = activePlugins.some((p) => p.name === "payroll");
   const isAuditLogActive = activePlugins.some((p) => p.name === "audit_log");
+
+  const onTabChange = (value: string) => {
+    const next = tabFromParam(value);
+    const params = new URLSearchParams(searchParams);
+    if (next === "branding") params.delete("tab");
+    else params.set("tab", next);
+    setSearchParams(params, { replace: true });
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "global-settings"],
@@ -554,8 +573,8 @@ export const GlobalSettingsPage: React.FC = () => {
         </div>
       }
     >
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:w-auto">
+      <Tabs value={activeTab} onValueChange={onTabChange} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:w-auto">
           <TabsTrigger value="branding" className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
             <span>Branding & Identity</span>
@@ -571,6 +590,10 @@ export const GlobalSettingsPage: React.FC = () => {
           <TabsTrigger value="system" className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4" />
             <span>System & Operations</span>
+          </TabsTrigger>
+          <TabsTrigger value="maintenance" className="flex items-center gap-2">
+            <Wrench className="h-4 w-4" />
+            <span>Maintenance</span>
           </TabsTrigger>
         </TabsList>
 
@@ -741,6 +764,15 @@ export const GlobalSettingsPage: React.FC = () => {
               </div>
             </GlassCard>
           </div>
+        </TabsContent>
+
+        {/* Tab 5: Maintenance mode */}
+        <TabsContent
+          value="maintenance"
+          forceMount
+          className={activeTab === "maintenance" ? "block" : "hidden"}
+        >
+          <MaintenanceControlCard />
         </TabsContent>
       </Tabs>
     </PageShell>

@@ -232,6 +232,40 @@ then start the old code with `RUN_MIGRATIONS=1`. If no migration was applied, a 
 For a fast local fallback, tag the images before an upgrade:
 `docker tag <project>-backend:latest <project>-backend:pre-upgrade`.
 
+### 5.2.1 Maintenance mode (close the site before an upgrade)
+
+Turn it on **before** an upgrade that changes data or needs the app to be quiet, and off
+afterwards. Admin panel → Global Settings → **Maintenance** tab.
+
+What happens while it is on:
+
+- Every non-admin is locked out immediately: sign-in, token refresh, reads and writes all
+  answer `503` with `{"code": "maintenance"}`. Staff (`is_staff`) and superusers keep working,
+  so the admin panel and Django admin stay usable. Role-only CR admins are **not** staff and
+  are locked out.
+- Everyone else sees the maintenance screen. It reloads into the app by itself when the
+  switch is turned off (the SPA polls every 30 s).
+- Set an **expected end** as a safety net: the window expires by itself at that time, so a
+  forgotten switch cannot lock the team out indefinitely. Leave it empty only if you are
+  actively watching.
+- `/api/health/live/` and `/api/health/ready/` keep answering, so Docker/orchestrator health
+  checks do not restart containers during the window.
+- The `scheduler` service is not affected: due plugin jobs still run (and write) during
+  maintenance. If a job must not run, disable the plugin or stop the scheduler first.
+
+The switch is stored in the `dashboard_maintenance_state` singleton and cached for up to 60 s
+per worker; every write clears that cache, so turning it on/off is instant. Each change is
+written to the audit log as `MAINTENANCE_ON` / `MAINTENANCE_OFF`.
+
+Break-glass if the admin GUI is unreachable:
+
+```bash
+docker compose exec backend python manage.py shell -c \
+  "from apps.dashboard.models import MaintenanceState as M; \
+   s,_=M.objects.get_or_create(pk=1); s.is_active=False; s.ends_at=None; s.started_at=None; s.save()"
+```
+
+
 ### 5.4 Scheduled jobs (scheduler service; host cron for one-offs)
 
 The `scheduler` service runs `manage.py run_scheduler`: one long-lived process, no Celery and

@@ -30,6 +30,8 @@ const ACTION_OPTIONS = [
   { value: "MFA_FAILED", label: "MFA Failed" },
   { value: "MFA_LOCKED", label: "MFA Locked" },
   { value: "PASSWORD_CHANGED", label: "Password Changed" },
+  { value: "MAINTENANCE_ON", label: "Maintenance On" },
+  { value: "MAINTENANCE_OFF", label: "Maintenance Off" },
 ];
 
 const MODEL_OPTIONS = [

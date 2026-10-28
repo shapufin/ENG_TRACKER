@@ -5,7 +5,10 @@ Dashboard app viewsets.
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
+from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
@@ -33,6 +36,8 @@ from .serializers import (
     UserCalendarPreferenceSerializer,
     PublicHolidaySerializer,
     SiteBrandingSerializer,
+    MaintenanceStatusSerializer,
+    MaintenanceUpdateSerializer,
     WorkspaceUserSerializer,
 )
 from core.utils.timezone_local import business_today
@@ -1106,3 +1111,56 @@ class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
             branding = SiteBranding.objects.create(pk=1)
         serializer = self.get_serializer(branding)
         return Response(serializer.data)
+
+
+class MaintenanceView(APIView):
+    """Site-wide maintenance switch.
+
+    ``GET`` is public and skips authenticators entirely: while maintenance is
+    on, the SPA must be able to read this even with a stale non-staff bearer
+    token attached (any other view answers 503). ``PATCH`` is staff-only and
+    goes through the normal (maintenance-aware) authenticators.
+    """
+
+    permission_classes = [AllowAny]
+    # Its own bucket: the maintenance screen polls this while the site is
+    # closed, and the default `anon` throttle (100/hour per IP) would 429 the
+    # page after ~50 minutes — and would spend a shared office IP's budget on
+    # a call that has nothing to do with anyone's data.
+    throttle_scope = 'maintenance'
+
+    def initialize_request(self, request, *args, **kwargs):
+        # ``get_authenticators`` runs before ``self.request`` is assigned, so
+        # the method has to be captured here.
+        self._is_public_read = request.method == 'GET'
+        return super().initialize_request(request, *args, **kwargs)
+
+    def get_authenticators(self):
+        if getattr(self, '_is_public_read', False):
+            return []
+        return super().get_authenticators()
+
+    def get_throttles(self):
+        return [ScopedRateThrottle()]
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    @extend_schema(responses=MaintenanceStatusSerializer)
+    def get(self, request):
+        from .services.maintenance import status_payload
+        return Response(MaintenanceStatusSerializer(status_payload(request)).data)
+
+    @extend_schema(
+        request=MaintenanceUpdateSerializer,
+        responses=MaintenanceStatusSerializer,
+    )
+    def patch(self, request):
+        from .services.maintenance import apply_update
+
+        serializer = MaintenanceUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        payload = apply_update(serializer.validated_data, request.user, request)
+        return Response(MaintenanceStatusSerializer(payload).data)

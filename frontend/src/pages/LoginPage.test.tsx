@@ -28,6 +28,24 @@ vi.mock("react-router-dom", async () => {
   return { ...actual, useNavigate: () => navigateMock };
 });
 
+const maintenance = vi.hoisted(() => ({ active: false }));
+vi.mock("@/hooks/useMaintenanceStatus", () => ({
+  useMaintenanceStatus: () => ({
+    data: maintenance.active
+      ? {
+          active: true,
+          title: "Upgrade window",
+          message: "Back shortly.",
+          started_at: null,
+          ends_at: null,
+          updated_at: null,
+          site_name: "Engineering Tracker",
+          logo_url: null,
+        }
+      : undefined,
+  }),
+}));
+
 function renderPage() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -167,5 +185,36 @@ describe("LoginPage redirect logic", () => {
     renderPage();
     await submitLogin();
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith("/control-room/dashboard"));
+  });
+});
+
+describe("LoginPage during maintenance", () => {
+  beforeEach(() => {
+    loginMock.mockReset();
+    navigateMock = vi.fn();
+    maintenance.active = false;
+  });
+
+  it("tells the user only administrators can sign in", () => {
+    maintenance.active = true;
+
+    renderPage();
+
+    expect(screen.getByText(/Maintenance mode is on/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
+  });
+
+  it("does not call a blocked login an invalid password", async () => {
+    maintenance.active = true;
+    loginMock.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 503, data: { code: "maintenance" } },
+    });
+
+    renderPage();
+    await submitLogin();
+
+    expect(await screen.findByText(/The platform is under maintenance/)).toBeInTheDocument();
+    expect(screen.queryByText("Invalid username or password")).not.toBeInTheDocument();
   });
 });

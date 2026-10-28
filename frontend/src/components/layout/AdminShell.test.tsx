@@ -32,6 +32,24 @@ vi.mock("./hooks/useAdminNavItems", () => ({
   useAdminNavItems: () => [],
 }));
 
+const maintenance = vi.hoisted(() => ({ active: false }));
+vi.mock("@/hooks/useMaintenanceStatus", () => ({
+  useMaintenanceStatus: () => ({
+    data: maintenance.active
+      ? {
+          active: true,
+          title: "Upgrade window",
+          message: "Back shortly.",
+          started_at: null,
+          ends_at: null,
+          updated_at: null,
+          site_name: "Engineering Tracker",
+          logo_url: null,
+        }
+      : undefined,
+  }),
+}));
+
 import { usePermissions } from "@/context/PermissionContext";
 
 const basePerms: PermissionContextType = {
@@ -124,6 +142,25 @@ describe("AdminShell CR admin routing", () => {
       expect(screen.getByTestId("admin-sidebar")).toBeInTheDocument();
     });
     expect(screen.queryByText("Users Page")).not.toBeInTheDocument();
+  });
+
+  it("shows the maintenance banner only while the site is closed", async () => {
+    vi.mocked(usePermissions).mockReturnValue({ ...basePerms, isAdmin: true });
+
+    maintenance.active = false;
+    const { unmount } = renderShell("/admin/overtime-logs");
+    expect(screen.queryByText(/Maintenance mode is ON/)).not.toBeInTheDocument();
+    unmount();
+
+    maintenance.active = true;
+    renderShell("/admin/overtime-logs");
+
+    expect(await screen.findByText(/Maintenance mode is ON/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Manage/ })).toHaveAttribute(
+      "href",
+      "/admin/global-settings?tab=maintenance"
+    );
+    maintenance.active = false;
   });
 });
 

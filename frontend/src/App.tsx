@@ -1,5 +1,6 @@
 import React from "react";
 import { AuthProvider } from "@/context/AuthContext";
+import { MaintenanceGate } from "@/components/maintenance/MaintenanceGate";
 import { PermissionProvider } from "@/context/PermissionContext";
 import { CalendarWorkspaceProvider } from "@/context/CalendarWorkspaceContext";
 import { Toaster } from "sonner";
@@ -13,21 +14,23 @@ import { InstallAppNotice } from "@/components/offline/InstallAppNotice";
 function App() {
   return (
     <AuthProvider>
-      <PermissionProvider>
-        <PluginProvider>
-          <PluginWidgetProvider>
-            <CalendarWorkspaceProvider>
-              <div className="min-h-screen bg-background">
-                <Toaster position="top-right" richColors closeButton />
-                <AppRoutes />
-                <OfflineIndicator />
-                <ServiceWorkerUpdateNotice />
-                <InstallAppNotice />
-              </div>
-            </CalendarWorkspaceProvider>
-          </PluginWidgetProvider>
-        </PluginProvider>
-      </PermissionProvider>
+      <MaintenanceGate>
+        <PermissionProvider>
+          <PluginProvider>
+            <PluginWidgetProvider>
+              <CalendarWorkspaceProvider>
+                <div className="bg-background min-h-screen">
+                  <Toaster position="top-right" richColors closeButton />
+                  <AppRoutes />
+                  <OfflineIndicator />
+                  <ServiceWorkerUpdateNotice />
+                  <InstallAppNotice />
+                </div>
+              </CalendarWorkspaceProvider>
+            </PluginWidgetProvider>
+          </PluginProvider>
+        </PermissionProvider>
+      </MaintenanceGate>
     </AuthProvider>
   );
 }
