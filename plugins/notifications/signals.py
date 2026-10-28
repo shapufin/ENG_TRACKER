@@ -52,7 +52,8 @@ def _team_recipients(user):
                 team_leader__isnull=False,
             ).values_list('team_leader_id', flat=True)
         )
-    return User.objects.filter(id__in=recipient_ids).distinct()
+    # A deactivated leader cannot read the alert, so it would only go unseen.
+    return User.objects.filter(id__in=recipient_ids, is_active=True).distinct()
 
 
 def _push_best_effort(user, title, message, link):

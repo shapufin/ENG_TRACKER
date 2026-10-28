@@ -143,6 +143,10 @@ After pulling: `py -3.14 manage.py migrate` (users 0024-0025, dashboard 0013, an
 - Closed 2026-10-28: the admin period-close TL list, the Control Room company-wide coverage rows and the
   organigrama Albanian-TL employee lookup now ignore archived teams (they showed phantom TLs / empty teams).
   `UserRole.team` is `SET_NULL` but nothing reads it for scope, so a delete cannot widen a role.
+- **Deactivating a team leader** changes nothing else (so reactivating restores it all): `Team.team_leader` and
+  members' TL links stay. The Users importer now adds a row warning naming the active teams they lead and the
+  members still linked to them (`user_deactivation.deactivation_warnings`), and notification recipients skip
+  inactive users. The `update_user` API action cannot deactivate; Django admin can and shows no warning.
 - Delete stays staff-level (`IsAdminUser`), not superuser-only. No payroll blocker (payroll has no team link).
 - Two pre-existing `CONTROL-HEIGHT` control-audit warnings in `plugins/organigrama/components/CustomChartViewer.tsx`
   are not from this work.
