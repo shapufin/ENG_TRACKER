@@ -7,9 +7,10 @@ banner/hook/service plus the api/AuthContext/QueryContext wiring. Risk-ranked au
 
 ## Result
 
-0 CRITICAL / 1 HIGH / 4 MEDIUM / 10 LOW found; all five HIGH+MEDIUM fixed (test-first), the ten LOW
-items are documented backlog. Five claims were disproved during verification (see
-`.devin/audits/maintenance-2026-10-27/round-1.md` for the full tables — local-only, not tracked).
+0 CRITICAL / 1 HIGH / 4 MEDIUM / 10 LOW found; **all fifteen fixed** — the five HIGH+MEDIUM
+test-first, the ten LOW in the follow-up backlog pass. Five claims were disproved during
+verification (see `.devin/audits/maintenance-2026-10-27/round-1.md` for the full tables —
+local-only, not tracked). Deferred items now live in the tracked `docs/backlog.md`.
 
 ## Fixed
 
@@ -28,12 +29,10 @@ Backend **3828 OK** (baseline 3823 + 5 new), `makemigrations --check` clean, ruf
 (0/960). Browser post-fix: ticking value hidden from assistive tech, live region carries only the
 static deadline, no horizontal overflow at 1440px or 375px, light + dark evidence captured.
 
-## Backlog (LOW, revisit when the area is next touched)
+## Backlog
 
-`site_name` blank validation; a `SiteBranding` query per status poll; the self-heal `UPDATE`
-bypassing `save()` (by design); MFA-step 503 copy; double mount animation; draft copy persistence
-while the switch is off; banner scope (AdminShell only, deliberate); the stale local context file;
-raw action codes in the plugin audit UI and RecentActivityWidget; the runbook's audit wording.
+All ten LOW findings were fixed in the same pass — see `docs/backlog.md` (the tracked backlog
+file) for the item-by-item fix map and the commits. Nothing remains open for this feature.
 
 ## Process notes
 

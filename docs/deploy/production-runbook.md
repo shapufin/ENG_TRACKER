@@ -254,8 +254,13 @@ What happens while it is on:
   maintenance. If a job must not run, disable the plugin or stop the scheduler first.
 
 The switch is stored in the `dashboard_maintenance_state` singleton and cached for up to 60 s
-per worker; every write clears that cache, so turning it on/off is instant. Each change is
-written to the audit log as `MAINTENANCE_ON` / `MAINTENANCE_OFF`.
+per worker; every write clears that cache, so turning it on/off is instant. Every switch change
+is written to the audit log as `MAINTENANCE_ON` / `MAINTENANCE_OFF`, and every refused sign-in
+during a window is logged as `MAINTENANCE_BLOCKED` — never `LOGIN_FAILED`, so a window of
+refusals cannot be mistaken for a brute-force burst. Editing the headline/message of an active
+window is not audited.
+
+Open backlog for this feature (tracked): `docs/backlog.md`.
 
 Break-glass if the admin GUI is unreachable:
 
