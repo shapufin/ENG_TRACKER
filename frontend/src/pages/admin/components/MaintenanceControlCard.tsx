@@ -201,10 +201,7 @@ const MaintenanceCardBody: React.FC<{ status: MaintenanceStatus }> = ({ status }
         </div>
 
         <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-          <Button
-            onClick={() => save.mutate(draft)}
-            disabled={!canSave || save.isPending || !status.active}
-          >
+          <Button onClick={() => save.mutate(draft)} disabled={!canSave || save.isPending}>
             <Save className="mr-2 h-4 w-4" aria-hidden="true" />
             Save message
           </Button>
@@ -215,7 +212,7 @@ const MaintenanceCardBody: React.FC<{ status: MaintenanceStatus }> = ({ status }
           <span className="text-muted-foreground ml-auto text-xs">
             {status.active
               ? "Edits apply to the live screen as soon as you save."
-              : "Message fields are used the next time you switch maintenance on."}
+              : "Saved now and used when you switch maintenance on."}
           </span>
         </div>
 

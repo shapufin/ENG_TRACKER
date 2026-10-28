@@ -100,6 +100,21 @@ describe("MaintenanceControlCard", () => {
     );
   });
 
+  it("lets the admin pre-stage the copy while the switch is off", async () => {
+    renderCard();
+
+    fireEvent.change(screen.getByLabelText("Headline"), { target: { value: "Prestaged" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save message" }));
+
+    await waitFor(() =>
+      expect(maintenanceService.update).toHaveBeenCalledWith({
+        title: "Prestaged",
+        message: "We are updating the platform.",
+        ends_at: null,
+      })
+    );
+  });
+
   it("refuses an expected end in the past", () => {
     renderCard();
 
