@@ -63,7 +63,7 @@ export const MaintenancePage: React.FC<MaintenancePageProps> = ({
         }
         className="relative w-full max-w-xl"
       >
-        <GlassCard glow="primary" className={cn(isPreview ? "p-6" : "p-6 sm:p-10")}>
+        <GlassCard glow="primary" animateOnMount={false} className={cn(isPreview ? "p-6" : "p-6 sm:p-10")}>
           <div className="flex flex-col items-center text-center">
             {status.logo_url && !logoFailed ? (
               <img
