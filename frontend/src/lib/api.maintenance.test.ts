@@ -86,13 +86,16 @@ describe("api interceptor during maintenance", () => {
     // token must not trigger the proactive refresh for it: the refresh answers
     // 503 during maintenance and the request would be rejected before it was
     // ever sent — the maintenance screen would never appear.
-    const adapter = vi.fn(async (config: InternalAxiosRequestConfig) => ({
-      data: statusPayload,
-      status: 200,
-      statusText: "OK",
-      headers: {},
-      config,
-    }) as AxiosResponse);
+    const adapter = vi.fn(
+      async (config: InternalAxiosRequestConfig) =>
+        ({
+          data: statusPayload,
+          status: 200,
+          statusText: "OK",
+          headers: {},
+          config,
+        }) as AxiosResponse
+    );
     api.defaults.adapter = adapter as never;
     vi.spyOn(axios, "post").mockRejectedValue(maintenanceError());
     setAccessToken(expiringToken());

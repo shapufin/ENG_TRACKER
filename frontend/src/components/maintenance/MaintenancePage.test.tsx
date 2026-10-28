@@ -103,9 +103,6 @@ describe("MaintenancePage", () => {
   it("renders the uploaded logo when present", () => {
     const { container } = renderPage({ logo_url: "https://example.test/logo.png" });
 
-    expect(container.querySelector("img")).toHaveAttribute(
-      "src",
-      "https://example.test/logo.png"
-    );
+    expect(container.querySelector("img")).toHaveAttribute("src", "https://example.test/logo.png");
   });
 });

@@ -55,7 +55,10 @@ export const useCountdown = (endsAt: string | null): Countdown => {
 
   return {
     hasDeadline: true,
-    label: days > 0 ? `${days}d ${pad(hours)}h ${pad(minutes)}m` : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`,
+    label:
+      days > 0
+        ? `${days}d ${pad(hours)}h ${pad(minutes)}m`
+        : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`,
     expired: false,
     deadlineLabel,
   };

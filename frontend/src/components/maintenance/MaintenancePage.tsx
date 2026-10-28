@@ -58,7 +58,9 @@ export const MaintenancePage: React.FC<MaintenancePageProps> = ({
       <motion.div
         initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={shouldReduceMotion ? { duration: 0 } : { duration: DURATION.slow, ease: EASE.inOut }}
+        transition={
+          shouldReduceMotion ? { duration: 0 } : { duration: DURATION.slow, ease: EASE.inOut }
+        }
         className="relative w-full max-w-xl"
       >
         <GlassCard glow="primary" className={cn(isPreview ? "p-6" : "p-6 sm:p-10")}>
