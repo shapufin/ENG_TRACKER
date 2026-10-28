@@ -11,27 +11,20 @@ from apps.reports.services.security_audit import log_security_event
 from core.maintenance import clear_maintenance_cache, get_maintenance_state
 from core.utils import get_client_ip
 
-from ..models import MaintenanceState, SiteBranding
-
-
-def _branding(request=None) -> tuple[str, str | None]:
-    """Site name + logo for the maintenance screen. Never creates the row."""
-    branding = SiteBranding.objects.first()
-    if branding is None:
-        return 'Engineering Tracker', None
-    if not branding.logo:
-        return branding.site_name, None
-    # Absolute, like SiteBrandingSerializer: the SPA and the API are separate
-    # origins in dev, and the maintenance screen must render the logo offline
-    # from any route.
-    url = branding.logo.url
-    return branding.site_name, request.build_absolute_uri(url) if request else url
+from ..models import MaintenanceState
 
 
 def status_payload(request=None) -> dict:
-    """Public payload: effective state + branding, no PII."""
+    """Public payload: effective state + branding, no PII.
+
+    Branding comes from the cached state (a branding write clears it), so a
+    warm status GET costs zero queries. The logo path is turned into an
+    absolute URL per request, like ``SiteBrandingSerializer``.
+    """
     state = get_maintenance_state()
-    site_name, logo_url = _branding(request)
+    logo_url = state['logo_path']
+    if logo_url and request is not None:
+        logo_url = request.build_absolute_uri(logo_url)
     return {
         'active': state['active'],
         'title': state['title'],
@@ -39,7 +32,7 @@ def status_payload(request=None) -> dict:
         'started_at': state['started_at'],
         'ends_at': state['ends_at'],
         'updated_at': state['updated_at'],
-        'site_name': site_name,
+        'site_name': state['site_name'],
         'logo_url': logo_url,
     }
 
@@ -81,7 +74,9 @@ def apply_update(data: dict, actor, request) -> dict:
     if state.is_active:
         if not previous_active or state.started_at is None:
             state.started_at = timezone.now()
-    else:
+    elif previous_active:
+        # Only a real off-transition clears the window: a copy edit while off
+        # must preserve a pre-staged ends_at for the next activation.
         state.started_at = None
         state.ends_at = None
 

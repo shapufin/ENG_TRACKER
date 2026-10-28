@@ -82,6 +82,36 @@ class MaintenanceStatusTests(MaintenanceTestBase):
 
         self.assertEqual(response.data['site_name'], 'Acme Tracker')
 
+    def test_blank_site_name_falls_back_to_the_default(self):
+        SiteBranding.objects.create(pk=1, site_name='')
+
+        response = self.client.get(STATUS_URL)
+
+        self.assertEqual(response.data['site_name'], 'Engineering Tracker')
+
+    def test_status_is_served_without_queries_when_cached(self):
+        self.client.get(STATUS_URL)  # warm the cache
+
+        with self.assertNumQueries(0):
+            response = self.client.get(STATUS_URL)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+    def test_branding_rename_is_visible_immediately(self):
+        SiteBranding.objects.create(pk=1, site_name='Old Name')
+        clear_maintenance_cache()
+        self.client.get(STATUS_URL)
+
+        self.client.patch(
+            '/api/dashboard/branding/1/',
+            {'site_name': 'New Name'},
+            format='json',
+            **bearer(self.staff),
+        )
+
+        response = self.client.get(STATUS_URL)
+        self.assertEqual(response.data['site_name'], 'New Name')
+
     def test_status_ok_with_stale_non_staff_token(self):
         enable()
 
@@ -186,6 +216,29 @@ class MaintenanceToggleTests(MaintenanceTestBase):
         state.refresh_from_db()
         self.assertEqual(state.started_at, started_at)
         self.assertEqual(state.title, 'New title')
+
+    def test_message_only_patch_while_off_preserves_a_prestaged_window(self):
+        """A copy edit while off must not wipe a pre-staged expected end: the
+        admin fills the form before flipping the switch."""
+        ends_at = timezone.now() + timedelta(hours=2)
+
+        self.client.patch(
+            STATUS_URL,
+            {'title': 'Prestaged', 'message': 'Ready', 'ends_at': ends_at.isoformat()},
+            format='json',
+            **bearer(self.staff),
+        )
+
+        state = MaintenanceState.objects.get(pk=1)
+        self.assertFalse(state.is_active)
+        self.assertIsNotNone(state.ends_at)
+
+        self.client.patch(STATUS_URL, {'is_active': True}, format='json', **bearer(self.staff))
+
+        state.refresh_from_db()
+        self.assertTrue(state.is_active)
+        self.assertEqual(state.ends_at, ends_at)
+        self.assertIsNotNone(state.started_at)
 
     def test_audit_rows_written(self):
         self.client.patch(STATUS_URL, {'is_active': True}, format='json', **bearer(self.staff))
@@ -336,6 +389,15 @@ class MaintenanceExpiryTests(MaintenanceTestBase):
 
         self.assertFalse(is_maintenance_active())
         self.assertFalse(MaintenanceState.objects.get(pk=1).is_active)
+
+    def test_self_heal_bumps_updated_at(self):
+        state = enable(ends_at=timezone.now() - timedelta(minutes=5))
+        before = state.updated_at
+        clear_maintenance_cache()
+
+        self.assertFalse(is_maintenance_active())
+        state.refresh_from_db()
+        self.assertGreater(state.updated_at, before)
 
     def test_future_window_stays_active(self):
         enable(ends_at=timezone.now() + timedelta(hours=1))

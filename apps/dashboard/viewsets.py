@@ -14,6 +14,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
 from django.db import models, transaction
 from core.mixins.cache import CacheInvalidationMixin
+from core.maintenance import clear_maintenance_cache
 from core.mixins.permissions import (
     HbprBlockedMixin,
     IsHR,
@@ -1092,11 +1093,14 @@ class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
         else:
             serializer.save(pk=1)
         self.invalidate_related_cache()
+        # The maintenance payload embeds branding in its cached state.
+        clear_maintenance_cache()
 
     def perform_update(self, serializer):
         self._ensure_admin()
         serializer.save()
         self.invalidate_related_cache()
+        clear_maintenance_cache()
 
     def perform_destroy(self, instance):
         # Prevent deletion of the singleton

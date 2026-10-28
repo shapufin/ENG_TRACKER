@@ -34,6 +34,8 @@ _INACTIVE = {
     'started_at': None,
     'ends_at': None,
     'updated_at': None,
+    'site_name': 'Engineering Tracker',
+    'logo_path': None,
 }
 
 
@@ -51,9 +53,36 @@ def _normalise_expired() -> None:
     try:
         MaintenanceState.objects.filter(
             is_active=True, ends_at__lte=timezone.now()
-        ).update(is_active=False, started_at=None, ends_at=None)
+        ).update(
+            is_active=False,
+            started_at=None,
+            ends_at=None,
+            # The switch did change state: keep updated_at truthful even though
+            # a queryset update bypasses save() (and its auto_now).
+            updated_at=timezone.now(),
+        )
     except Exception as exc:  # noqa: BLE001 - never let healing break a request
         logger.warning('Could not auto-expire the maintenance window: %s', exc)
+
+
+def _branding_state() -> tuple[str, str | None]:
+    """Site name + raw logo path for the cached state. Never creates the row."""
+    from apps.dashboard.models import SiteBranding
+
+    try:
+        branding = SiteBranding.objects.first()
+    except Exception as exc:  # noqa: BLE001 - branding must not break the gate
+        logger.warning('Site branding unavailable for the maintenance payload: %s', exc)
+        return 'Engineering Tracker', None
+
+    name = (branding.site_name or '').strip() if branding else ''
+    logo_path = None
+    if branding and branding.logo:
+        try:
+            logo_path = branding.logo.url
+        except Exception:  # noqa: BLE001 - no file associated / storage error
+            logo_path = None
+    return name or 'Engineering Tracker', logo_path
 
 
 def _load_state() -> dict:
@@ -70,6 +99,11 @@ def _load_state() -> dict:
         logger.warning('Maintenance state unavailable, assuming off: %s', exc)
         return dict(_INACTIVE)
 
+    # Branding rides in the cached state: the status endpoint is polled every
+    # 30s per client while the site is closed, and a per-poll branding query
+    # would buy nothing. A branding write clears this cache (SiteBrandingViewSet).
+    site_name, logo_path = _branding_state()
+
     if row is None:
         # No row yet: the admin form must still start from the copy the model
         # would use, not from blank fields (a blank headline is invalid).
@@ -77,12 +111,14 @@ def _load_state() -> dict:
             _INACTIVE,
             title=DEFAULT_MAINTENANCE_TITLE,
             message=DEFAULT_MAINTENANCE_MESSAGE,
+            site_name=site_name,
+            logo_path=logo_path,
         )
 
     now = timezone.now()
     if row.is_active and row.ends_at is not None and row.ends_at <= now:
         _normalise_expired()
-        return dict(_INACTIVE)
+        return dict(_INACTIVE, site_name=site_name, logo_path=logo_path)
 
     return {
         'active': bool(row.is_active),
@@ -91,6 +127,8 @@ def _load_state() -> dict:
         'started_at': row.started_at,
         'ends_at': row.ends_at,
         'updated_at': row.updated_at,
+        'site_name': site_name,
+        'logo_path': logo_path,
     }
 
 
