@@ -136,6 +136,7 @@ class AuditLog(models.Model):
         ('PASSWORD_CHANGED', 'Password Changed'),
         ('MAINTENANCE_ON', 'Maintenance On'),
         ('MAINTENANCE_OFF', 'Maintenance Off'),
+        ('MAINTENANCE_BLOCKED', 'Maintenance Blocked'),
     ]
 
     MODEL_CHOICES = [

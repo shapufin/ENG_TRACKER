@@ -207,6 +207,25 @@ class MaintenanceGateTests(MaintenanceTestBase):
         self.assertEqual(response.data['code'], 'maintenance')
         self.assertNotIn('access', response.data)
 
+    def test_maintenance_refusal_is_not_recorded_as_a_failed_login(self):
+        """A closed platform is not a credential failure: a window full of
+        refusals must not read like a brute-force burst in the security audit."""
+        enable()
+
+        response = self.client.post(
+            LOGIN_URL, {'username': 'employee', 'password': 'testpass123'}, format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE, response.data)
+        self.assertFalse(
+            AuditLog.objects.filter(
+                action='LOGIN_FAILED', extra_data__username='employee'
+            ).exists()
+        )
+        blocked = AuditLog.objects.filter(action='MAINTENANCE_BLOCKED')
+        self.assertTrue(blocked.exists())
+        self.assertEqual(blocked.first().extra_data['username'], 'employee')
+
     def test_staff_login_allowed(self):
         enable()
 

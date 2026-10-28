@@ -32,6 +32,7 @@ const ACTION_OPTIONS = [
   { value: "PASSWORD_CHANGED", label: "Password Changed" },
   { value: "MAINTENANCE_ON", label: "Maintenance On" },
   { value: "MAINTENANCE_OFF", label: "Maintenance Off" },
+  { value: "MAINTENANCE_BLOCKED", label: "Maintenance Blocked" },
 ];
 
 const MODEL_OPTIONS = [

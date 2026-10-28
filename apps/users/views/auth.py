@@ -54,6 +54,20 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         ua = request.META.get('HTTP_USER_AGENT', '')
         try:
             response = super().post(request, *args, **kwargs)
+        except MaintenanceModeActive:
+            # A closed platform is not a credential failure: logging these as
+            # LOGIN_FAILED would make every refusal during a window look like a
+            # brute-force burst in the security audit.
+            log_security_event(
+                user=None,
+                action='MAINTENANCE_BLOCKED',
+                description=f"Login refused for username '{username}': the platform is under maintenance",
+                ip_address=ip,
+                user_agent=ua,
+                extra_data={'username': username, 'reason': 'maintenance'},
+                status='failure',
+            )
+            raise
         except (AuthenticationFailed, serializers.ValidationError):
             log_security_event(
                 user=None,
