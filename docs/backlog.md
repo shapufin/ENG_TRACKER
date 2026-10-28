@@ -26,4 +26,10 @@ All ten LOW findings from the round-1 audit were fixed in the same pass (commits
 
 ## Open items
 
-None.
+### Maintenance mode (round 3, 2026-10-28)
+
+| Item | Severity | Fix sketch |
+|---|---|---|
+| Branding changed through Django admin leaves the cached maintenance payload stale for ≤ 60 s (`SiteBrandingViewSet` clears the cache, `SiteBrandingAdmin.save_model` does not) | LOW | move `clear_maintenance_cache()` into `SiteBranding.save()` so every write path invalidates, and drop the two viewset calls; test: warm the status cache, save the row via the ORM, status reflects the new name |
+| "Save message" while the switch is off toasts "Maintenance mode is off", which reads like nothing was saved | LOW | branch the toast on the mutation variables: no `is_active` → "Maintenance copy saved" |
+
