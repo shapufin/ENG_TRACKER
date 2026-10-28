@@ -259,7 +259,7 @@ class FolderViewSet(ClientScopedMixin, PluginPermissionMixin, viewsets.ModelView
             qs = qs.filter(parent_id=parent_id)
         elif 'parent_id' in self.request.query_params:
             qs = qs.filter(parent__isnull=True)
-        return qs
+        return qs.order_by('name', 'id')
 
     def perform_create(self, serializer):
         client_id = serializer.validated_data['client'].id
