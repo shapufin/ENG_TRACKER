@@ -126,7 +126,14 @@ class CalendarWorkspace(BaseModel):
 
         # An archived team's workspace is closed to non-staff, even to an explicitly
         # allowed user or a calendar-group peer. Staff still see it (admin page).
-        return cls.objects.filter(q_accessible).exclude(team__is_active=False).distinct()
+        # A workspace kept after its team was deleted has no team, so the exclude above
+        # misses it: close it explicitly (team-less company calendars have no detached_at).
+        return (
+            cls.objects.filter(q_accessible)
+            .exclude(team__is_active=False)
+            .exclude(detached_at__isnull=False)
+            .distinct()
+        )
 
     def get_users_for_workspace(self):
         """

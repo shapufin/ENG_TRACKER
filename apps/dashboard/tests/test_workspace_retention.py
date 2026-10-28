@@ -131,6 +131,19 @@ class ArchivedTeamWorkspaceVisibilityTests(APITestCase):
         row = next(r for r in rows if r['id'] == self.workspace.pk)
         self.assertFalse(row['team_is_active'])
 
+    def test_detached_workspace_is_hidden_from_non_staff_even_when_shared_or_public(self):
+        outsider = make_user('outsider')
+        CalendarWorkspace.objects.filter(pk=self.workspace.pk).update(is_public=True)
+        self.assertIn(self.workspace.pk, self._ids(outsider))
+        self.team.delete()
+        self.assertNotIn(self.workspace.pk, self._ids(self.member))  # explicit allowed user
+        self.assertNotIn(self.workspace.pk, self._ids(outsider))  # public
+        self.assertFalse(CalendarWorkspace.get_accessible_for_user(outsider).filter(pk=self.workspace.pk).exists())
+
+    def test_teamless_company_workspace_stays_visible(self):
+        company = CalendarWorkspace.objects.create(name='Company', code='company', is_public=True)
+        self.assertIn(company.pk, self._ids(make_user('anyone')))
+
     def test_staff_can_list_only_detached_workspaces(self):
         self.team.delete()
         self.client.force_authenticate(self.admin)
