@@ -484,6 +484,13 @@ class TeamSerializer(serializers.ModelSerializer):
     def validate_calendar_group(self, value):
         return normalize_calendar_group(value)
 
+    def validate_team_leader_id(self, value):
+        # An edit that resends the sitting leader must not fail just because they were
+        # deactivated since; only a new assignment has to be an active account.
+        if value is not None and not value.is_active and not (self.instance and self.instance.team_leader_id == value.pk):
+            raise serializers.ValidationError('Choose an active user as team leader.')
+        return value
+
     def _derived_tls(self, obj):
         # List views pass one precomputed map (``derived_team_tls``); anything
         # else (create/retrieve) derives just this team.

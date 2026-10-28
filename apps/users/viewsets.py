@@ -2249,7 +2249,7 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         if len(calendar_group) > Team._meta.get_field('calendar_group').max_length:
             return Response({'error': 'calendar_group is too long'}, status=400)
 
-        updated = Team.objects.filter(id__in=team_ids).update(calendar_group=calendar_group)
+        updated = Team.objects.active().filter(id__in=team_ids).update(calendar_group=calendar_group)
 
         return Response({
             'updated_count': updated,
