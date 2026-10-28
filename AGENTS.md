@@ -384,3 +384,11 @@ Rules in `.devin/context/13-MAINTENANCE.md` (local-only); ops steps in
   organigrama), `admin-routes` + `visual-route-manifest` node tests green, `npm run build` OK.
 - Browser evidence (`.playwright-mcp/maint-*.png`): admin tab light/dark/375, confirm dialog, banner,
   preview dialog, anonymous maintenance page light/dark/375, blocked employee login copy.
+
+## Maintenance audit (2026-10-28)
+Full audit of the maintenance implementation on `audit/maintenance-2026-10-27`: 0 CRITICAL / 1 HIGH /
+4 MEDIUM / 10 LOW; all five HIGH+MEDIUM fixed test-first (`4ab5da7` status-call refresh skip,
+`6665112` countdown live-region, `6b2d808` MAINTENANCE_BLOCKED audit action, `ef32c99` invariants
+item 37, `90397f2` read-only Django admin), LOW items are documented backlog. Tracked record:
+`docs/reviews/2026-10-28-maintenance-audit.md`. Gates: backend 3828 OK, frontend 3821 tests,
+tsc/eslint/prettier/ruff clean, surface-audit PASS, browser evidence re-captured.
