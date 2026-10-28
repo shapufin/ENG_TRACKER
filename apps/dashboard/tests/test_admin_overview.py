@@ -196,6 +196,13 @@ class PeriodCloseTests(AdminOverviewBase):
         self.assertEqual([t["id"] for t in pc["open_tls"]], [t2.pk])
 
 
+    def test_leader_of_archived_team_is_not_an_open_tl(self):
+        gone = User.objects.create_user("gone", password="x")
+        Team.objects.create(name="Old", code="OLD", team_leader=gone, is_active=False)
+        pc = self.get().data["period_close"]
+        self.assertEqual(pc["tls_total"], 0)
+
+
 class BackupTests(AdminOverviewBase):
     def test_superuser_sees_backup_age_and_staleness(self):
         from plugins.site_backup.models import BackupRecord

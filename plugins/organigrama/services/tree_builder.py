@@ -161,7 +161,7 @@ def _get_employees_for_albanian(albanian_tl: User) -> List[UserProfile]:
         albanian_tl=albanian_tl, user__is_active=True
     )
     # Team members of teams led by this TL
-    led_team_ids = set(albanian_tl.led_teams.values_list("id", flat=True))
+    led_team_ids = set(albanian_tl.led_teams.filter(is_active=True).values_list("id", flat=True))
     if led_team_ids:
         # Combine via Q objects (avoids "cannot combine unique with non-unique")
         profiles = UserProfile.objects.filter(

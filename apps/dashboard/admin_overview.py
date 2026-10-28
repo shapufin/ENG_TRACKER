@@ -166,7 +166,7 @@ def period_close(today):
     tls = list(
         User.objects.filter(is_active=True)
         .filter(
-            Q(led_teams__isnull=False)
+            Q(led_teams__is_active=True)
             | Q(italian_team_members__isnull=False)
             | Q(albanian_team_members__isnull=False)
         )

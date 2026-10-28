@@ -36,10 +36,11 @@ interface TeamLifecycleDialogProps {
   isDeleting: boolean;
 }
 
-const CountRows: React.FC<{ title: string; counts: Record<string, number> }> = ({
-  title,
-  counts,
-}) => {
+const CountRows: React.FC<{
+  title: string;
+  counts: Record<string, number>;
+  labels?: Record<string, string>;
+}> = ({ title, counts, labels = {} }) => {
   const entries = Object.entries(counts);
   return (
     <section aria-label={title} className="space-y-1">
@@ -50,7 +51,7 @@ const CountRows: React.FC<{ title: string; counts: Record<string, number> }> = (
         <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
           {entries.map(([key, count]) => (
             <React.Fragment key={key}>
-              <dt className="text-muted-foreground">{labelOf(key)}</dt>
+              <dt className="text-muted-foreground">{labels[key] ?? labelOf(key)}</dt>
               <dd className="tabular-nums">{count}</dd>
             </React.Fragment>
           ))}
@@ -116,7 +117,11 @@ export const TeamLifecycleDialog: React.FC<TeamLifecycleDialogProps> = ({
                 </p>
               </section>
               <CountRows title="Records kept" counts={data.counts} />
-              <CountRows title="Detached when deleted" counts={data.cascade_counts} />
+              <CountRows
+                title="Detached when deleted"
+                counts={data.cascade_counts}
+                labels={{ calendar_workspaces: "Calendar workspaces" }}
+              />
               {canDelete ? (
                 <section aria-label="Delete team" className="space-y-2">
                   <p className="text-muted-foreground text-sm">
