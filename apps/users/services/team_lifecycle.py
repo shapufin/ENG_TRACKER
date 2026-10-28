@@ -143,6 +143,14 @@ def archive_blockers(team):
     return blockers
 
 
+def unarchive_blockers(team):
+    """Reasons ``team`` cannot be restored yet (empty = it can)."""
+    parent = team.parent_team
+    if parent is not None and not parent.is_active:
+        return [f'Its parent team "{parent.name}" is archived: restore the parent team first.']
+    return []
+
+
 def delete_blockers(team):
     """Reasons ``team`` cannot be hard-deleted yet (empty = it can)."""
     blockers = []

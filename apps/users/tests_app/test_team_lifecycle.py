@@ -171,6 +171,18 @@ class TeamLifecycleApiTests(APITestCase):
         self.assertEqual(TeamMembership.objects.filter(team=self.team).count(), 0)  # not restored
         self.assertTrue(AuditLog.objects.filter(model_name='team', extra_data__operation='unarchive').exists())
 
+    def test_unarchive_blocked_while_parent_team_is_archived(self):
+        child = Team.objects.create(name='Child', code='CHD', parent_team=self.team)
+        self.assertEqual(self.client.post(f'{TEAMS}{child.pk}/archive/').status_code, 200)
+        self.assertEqual(self.client.post(f'{TEAMS}{self.team.pk}/archive/').status_code, 200)
+        resp = self.client.post(f'{TEAMS}{child.pk}/unarchive/')
+        self.assertEqual(resp.status_code, 409)
+        self.assertIn('parent team', resp.data['blockers'][0])
+        child.refresh_from_db()
+        self.assertFalse(child.is_active)
+        self.assertEqual(self.client.post(f'{TEAMS}{self.team.pk}/unarchive/').status_code, 200)
+        self.assertEqual(self.client.post(f'{TEAMS}{child.pk}/unarchive/').status_code, 200)
+
     def test_archive_service_accepts_no_request(self):
         team = Team.objects.create(name='NoReq', code='NOR')
         team_lifecycle.archive_team(team, None)
