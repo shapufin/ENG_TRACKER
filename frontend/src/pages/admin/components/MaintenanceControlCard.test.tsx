@@ -17,6 +17,8 @@ vi.mock("@/services/maintenanceService", () => ({
   maintenanceService: { update: vi.fn() },
 }));
 
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
 class ResizeObserverMock {
   observe() {}
   unobserve() {}
@@ -24,6 +26,7 @@ class ResizeObserverMock {
 }
 Object.defineProperty(window, "ResizeObserver", { value: ResizeObserverMock, writable: true });
 
+import { toast } from "sonner";
 import { maintenanceService } from "@/services/maintenanceService";
 import { MaintenanceControlCard } from "./MaintenanceControlCard";
 
@@ -113,6 +116,16 @@ describe("MaintenanceControlCard", () => {
         ends_at: null,
       })
     );
+  });
+
+  it("says the copy was saved, not that maintenance is off, when pre-staging", async () => {
+    vi.mocked(maintenanceService.update).mockResolvedValue({ ...base } as never);
+    renderCard();
+
+    fireEvent.change(screen.getByLabelText("Headline"), { target: { value: "Prestaged" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save message" }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Maintenance message saved"));
   });
 
   it("refuses an expected end in the past", () => {
