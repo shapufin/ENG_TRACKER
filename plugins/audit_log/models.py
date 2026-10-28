@@ -69,6 +69,9 @@ class AuditLog(models.Model):
         ('control_room_user_updated', _('Control Room User Updated')),
         ('control_room_users_bulk_updated', _('Control Room Users Bulk Updated')),
         ('rule_mutation', _('Rule Mutation')),
+        ('maintenance_on', _('Maintenance On')),
+        ('maintenance_off', _('Maintenance Off')),
+        ('maintenance_blocked', _('Maintenance Blocked')),
     ]
 
     # User who performed the action
