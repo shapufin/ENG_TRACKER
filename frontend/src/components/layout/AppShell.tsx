@@ -15,6 +15,7 @@ import { CommandPalette } from "./CommandPalette";
 import { navItemToPaletteItem } from "./paletteItems";
 import { HeaderProfileMenu } from "./HeaderProfileMenu";
 import { useVisibleNavItems } from "./hooks/useVisibleNavItems";
+import { MaintenanceBanner } from "./MaintenanceBanner";
 import { usePendingApprovalCount } from "@/hooks/usePendingApprovalCount";
 import { useSiteBranding } from "@/hooks/useSiteBranding";
 
@@ -136,6 +137,7 @@ export const AppShell = React.memo(() => {
           <div
             className={`p-4 md:p-6 lg:p-8 ${location.pathname.startsWith("/calendar") ? "w-full" : "mx-auto w-full max-w-screen-2xl"}`}
           >
+            <MaintenanceBanner />
             <Outlet />
           </div>
         </MainContentTransition>

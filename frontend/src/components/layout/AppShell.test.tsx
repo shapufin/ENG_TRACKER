@@ -24,6 +24,24 @@ vi.mock("@/hooks/usePendingApprovalCount", () => ({ usePendingApprovalCount: () 
 vi.mock("@/hooks/useSiteBranding", () => ({
   useSiteBranding: () => ({ data: { site_name: "Engineering Tracker" } }),
 }));
+
+const maintenance = vi.hoisted(() => ({ active: false }));
+vi.mock("@/hooks/useMaintenanceStatus", () => ({
+  useMaintenanceStatus: () => ({
+    data: maintenance.active
+      ? {
+          active: true,
+          title: "Upgrade window",
+          message: "Back shortly.",
+          started_at: null,
+          ends_at: null,
+          updated_at: null,
+          site_name: "Engineering Tracker",
+          logo_url: null,
+        }
+      : undefined,
+  }),
+}));
 vi.mock("@/components/plugins/PluginSlot", () => ({ PluginSlot: () => null }));
 vi.mock("./Sidebar", () => ({ Sidebar: () => <div data-testid="sidebar" /> }));
 vi.mock("./TeamContextPill", () => ({ TeamContextPill: () => null }));
@@ -91,5 +109,18 @@ describe("AppShell command palette", () => {
   it("keeps the header search box", () => {
     renderShell();
     expect(screen.getByLabelText("Search pages box")).toBeInTheDocument();
+  });
+
+  it("shows the maintenance banner only while the site is closed", () => {
+    maintenance.active = false;
+    const { unmount } = renderShell();
+    expect(screen.queryByText(/Maintenance mode is ON/)).not.toBeInTheDocument();
+    unmount();
+
+    maintenance.active = true;
+    renderShell();
+
+    expect(screen.getByText(/Maintenance mode is ON/)).toBeInTheDocument();
+    maintenance.active = false;
   });
 });
