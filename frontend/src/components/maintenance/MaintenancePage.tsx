@@ -100,20 +100,22 @@ export const MaintenancePage: React.FC<MaintenancePageProps> = ({
               {status.message || DEFAULT_MESSAGE}
             </p>
 
-            <div
-              role="status"
-              aria-live="polite"
-              className="border-line-subtle bg-muted/40 mt-6 w-full rounded-lg border px-4 py-4"
-            >
+            <div className="border-line-subtle bg-muted/40 mt-6 w-full rounded-lg border px-4 py-4">
               {countdown.hasDeadline && !countdown.expired ? (
                 <>
                   <p className="text-muted-foreground text-xs font-medium tracking-[0.18em] uppercase">
                     Expected back in
                   </p>
-                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">
+                  {/* The ticking clock is announced nowhere: a live region that
+                      changes every second talks over the page. The static
+                      deadline line below is the one announced summary. */}
+                  <p
+                    aria-hidden="true"
+                    className="mt-1 font-mono text-2xl font-semibold tabular-nums"
+                  >
                     {countdown.label}
                   </p>
-                  <p className="text-muted-foreground mt-1 text-xs">
+                  <p role="status" className="text-muted-foreground mt-1 text-xs">
                     Around {countdown.deadlineLabel}
                   </p>
                 </>
@@ -122,7 +124,7 @@ export const MaintenancePage: React.FC<MaintenancePageProps> = ({
                   <p className="text-muted-foreground text-xs font-medium tracking-[0.18em] uppercase">
                     Status
                   </p>
-                  <p className="mt-1 text-sm font-medium">
+                  <p role="status" className="mt-1 text-sm font-medium">
                     We'll be back as soon as the update is complete.
                   </p>
                 </>

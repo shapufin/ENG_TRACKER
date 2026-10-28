@@ -64,6 +64,19 @@ describe("MaintenancePage", () => {
     expect(screen.getByText("02:30:04")).toBeInTheDocument();
   });
 
+  it("does not announce the ticking value to screen readers", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-27T10:00:00Z"));
+    renderPage({ ends_at: "2026-10-27T12:30:05Z" });
+
+    // The ticking clock is hidden from assistive tech; the live region carries
+    // only the static deadline, so it is announced once, not every second.
+    expect(screen.getByText("02:30:05")).toHaveAttribute("aria-hidden", "true");
+    const live = screen.getByRole("status");
+    expect(live.textContent).toContain("Around");
+    expect(live.textContent).not.toContain("02:30:05");
+  });
+
   it("counts down in days for a longer window", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-27T10:00:00Z"));
