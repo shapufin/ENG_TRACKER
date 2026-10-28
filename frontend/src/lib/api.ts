@@ -124,8 +124,18 @@ api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     let token = accessToken;
 
+    // The maintenance status endpoint ignores auth server-side; refreshing for
+    // it would abort the one call the maintenance screen depends on (a 503
+    // refresh rejects the request before it is sent).
+    const isMaintenanceStatusCall = config.url?.includes("/dashboard/maintenance/");
+
     // Proactive token refresh: if token is expiring soon, refresh before request
-    if (token && isTokenExpiringSoon(token) && !config.url?.includes("/auth/token/refresh/")) {
+    if (
+      token &&
+      !isMaintenanceStatusCall &&
+      isTokenExpiringSoon(token) &&
+      !config.url?.includes("/auth/token/refresh/")
+    ) {
       if (!refreshPromise) {
         try {
           token = await performTokenRefresh();
