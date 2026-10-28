@@ -7,8 +7,14 @@ import { LoginPage } from "./LoginPage";
 
 // Mock AuthContext
 const loginMock = vi.fn();
+const verifyMfaMock = vi.fn();
 vi.mock("@/context/AuthContext", () => ({
-  useAuth: () => ({ login: loginMock }),
+  useAuth: () => ({
+    login: loginMock,
+    verifyMfa: verifyMfaMock,
+    startLoginSetup: vi.fn(),
+    finishLoginSetup: vi.fn(),
+  }),
 }));
 
 // Mock framer-motion to avoid animation delays in tests
@@ -216,5 +222,23 @@ describe("LoginPage during maintenance", () => {
 
     expect(await screen.findByText(/The platform is under maintenance/)).toBeInTheDocument();
     expect(screen.queryByText("Invalid username or password")).not.toBeInTheDocument();
+  });
+
+  it("maps a maintenance 503 on the MFA step to the maintenance copy", async () => {
+    maintenance.active = true;
+    loginMock.mockResolvedValue({ mfa_token: "tok", mfa_required: true });
+    verifyMfaMock.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 503, data: { code: "maintenance" } },
+    });
+
+    renderPage();
+    await submitLogin();
+    fireEvent.change(await screen.findByLabelText(/6-digit code/i), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /verify/i }));
+
+    expect(await screen.findByText(/The platform is under maintenance/)).toBeInTheDocument();
   });
 });

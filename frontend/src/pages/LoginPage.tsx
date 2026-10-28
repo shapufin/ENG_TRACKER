@@ -94,6 +94,10 @@ export const LoginPage: React.FC = () => {
       backToPassword(mfaErrorMessage(err, "Your sign-in timed out. Enter your password again."));
       return;
     }
+    if (isMaintenanceError(err)) {
+      setError("The platform is under maintenance. Only administrators can sign in right now.");
+      return;
+    }
     setError(mfaErrorMessage(err, fallback));
   };
 
