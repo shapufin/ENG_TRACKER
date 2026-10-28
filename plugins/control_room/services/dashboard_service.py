@@ -162,7 +162,7 @@ def build_summary(user: User, date_from: str, date_to: str,
         coverage_team_ids = scope_team_ids
     else:
         coverage_team_ids = set(
-            Team.objects.values_list('id', flat=True)
+            Team.objects.active().values_list('id', flat=True)
         )
 
     # Summary aggregates

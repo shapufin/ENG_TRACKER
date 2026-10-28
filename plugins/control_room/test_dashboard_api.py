@@ -121,6 +121,15 @@ class DashboardSummaryTests(DashboardBase):
         # pending: u1 day1(4) + u3(8) = 12
         self.assertEqual(resp.data['summary']['pending_hours'], 12.0)
 
+    def test_admin_coverage_skips_archived_team(self):
+        archived = _make_team('Team Gone', 'GONE')
+        archived.is_active = False
+        archived.save(update_fields=['is_active'])
+        resp = self._summary(self.admin, date_from=self.day1, date_to=self.day_end)
+        names = {c['team_name'] for c in resp.data['coverage_by_team']}
+        self.assertIn('Team A', names)
+        self.assertNotIn('Team Gone', names)
+
     def test_admin_coverage_by_team(self):
         resp = self._summary(self.admin, date_from=self.day1, date_to=self.day_end)
         self.assertEqual(resp.status_code, 200)
