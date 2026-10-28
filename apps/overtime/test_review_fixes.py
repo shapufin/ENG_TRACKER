@@ -98,6 +98,16 @@ class ReviewFixesTests(TestCase):
         entry.refresh_from_db()
         self.assertEqual(entry.requested_processing_period, self.next_month)
 
+    # 4b. A TL whose authority comes only from led_teams still carries their own late entry over.
+    def test_finalize_includes_led_teams_tl_own_entries(self):
+        leader = User.objects.create_user(username=f'led{uuid4().hex[:6]}', password='x')
+        assign_role(leader, 'italian_tl')
+        team = Team.objects.create(name=f'L{uuid4().hex[:6]}', code=f'L{uuid4().hex[:6]}', team_leader=leader)
+        TeamMembership.objects.create(user_profile=self.emp.profile, team=team)
+        finalize_period(leader, self.month)
+        entry = self._entry(self.month, user=leader)
+        self.assertEqual(entry.requested_processing_period, self.next_month)
+
     # 5. Finalizing a month for an empty scope must not create a close.
     def test_finalize_rejects_empty_managed_scope(self):
         lonely = User.objects.create_superuser(username=f'lone{uuid4().hex[:6]}', password='x', email='l@l.l')

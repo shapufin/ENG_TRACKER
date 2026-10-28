@@ -240,6 +240,8 @@ def finalize_period(actor, period: date) -> tuple[ApprovalPeriodClose, bool]:
         member_ids = _managed_user_ids(actor)
         if not member_ids:
             raise ValidationError('There are no team members in your scope to finalize.')
+        # The closer's own entries carry over too (TLs approve their own OT/standby).
+        member_ids.add(actor.pk)
         close = ApprovalPeriodClose.objects.create(
             boundary=boundary,
             closed_at=timezone.now(),

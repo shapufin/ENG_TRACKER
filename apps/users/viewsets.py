@@ -1641,7 +1641,7 @@ class ApprovalPeriodViewSet(viewsets.ViewSet):
             'closed_at': close.closed_at.isoformat(),
             'closed_by': close.closed_by_id,
             'status': 'finalized',
-            'affected_member_count': close.members.count(),
+            'affected_member_count': close.members.exclude(user_id=close.closed_by_id).count(),
             'affected_team_count': close.members.exclude(source_team_id=None).values('source_team_id').distinct().count(),
         }
 
