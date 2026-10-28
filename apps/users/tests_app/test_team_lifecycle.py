@@ -54,6 +54,18 @@ class TeamLifecycleApiTests(APITestCase):
         self.assertTrue(Team.objects.filter(pk=self.team.pk).exists())
         self.assertEqual(TeamMembership.objects.filter(team=self.team).count(), 1)
 
+    def test_delete_blocked_by_scorecard_records_that_would_lose_their_team(self):
+        # Meeting.team and EngagementSurveyResponse.team are SET_NULL with no stored label,
+        # so a delete would leave governance evidence that no longer says which team it was.
+        from plugins.tl_scorecard.models import EngagementSurveyResponse
+
+        empty = Team.objects.create(name='Pulse', code='PLS')
+        EngagementSurveyResponse.objects.create(respondent=self.member, team=empty, period='2026-09', score=7)
+        resp = self.client.delete(f'{TEAMS}{empty.pk}/')
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.data['counts'], {'engagement_survey_responses': 1})
+        self.assertTrue(Team.objects.filter(pk=empty.pk).exists())
+
     def test_delete_blocked_by_control_room_scope_and_sub_team(self):
         TeamMembership.objects.filter(team=self.team).delete()
         access = ControlRoomAccess.objects.create(user=self.member)

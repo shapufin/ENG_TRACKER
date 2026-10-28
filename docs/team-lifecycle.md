@@ -11,7 +11,7 @@ A team is retired by **archiving** it, the same idea as a Client (`docs/workflow
 | Step | What happens | Code |
 |---|---|---|
 | Archive `POST users/teams/{id}/archive/` (admin) | Writes `TeamMembershipHistory` for every member, removes the memberships, sets `is_active=False`, `archived_at`, `archived_by`, audits. Records of those members are untouched. `team_leader` is kept. | `apps/users/services/team_lifecycle.py` |
-| Unarchive `POST .../unarchive/` | Reactivates. Members are **not** restored. | same |
+| Unarchive `POST .../unarchive/` | Reactivates. Members are **not** restored. Refused with 409 and `blockers` while the parent team is still archived (`unarchive_blockers`), so an active team never sits under an archived parent. | same |
 | Lifecycle `GET .../lifecycle/` | Counts, blockers, last activity, purge date for the dialog. | same |
 | Delete `DELETE users/teams/{id}/` | `409 {detail, blockers, counts, cascade_counts}` unless allowed (below). Never a 500. | `TeamViewSet.destroy` |
 | Purge | `purge_team(team, request)`: archived for **365 days**, no team activity in 365 days, no CASCADE dependents, no active sub-teams, and the **year it was archived in is closed** (`ClosedYear`). When the year-close plugin is disabled the year can never close, so the purge only waits for that year to have ended. Command: `manage.py purge_archived_teams [--dry-run]`; it reports every skipped team with its blockers (also purges expired detached workspaces). | `team_lifecycle.purge_team` |
@@ -52,8 +52,9 @@ All of these become `SET_NULL` with a stored label, so history stays readable:
   `apps/dashboard/services/workspace_retention.purge_detached_workspaces()` removes one only after 365 days,
   with **no** holiday rows (soft-deleted ones count) and no active `UserCalendarPreference`. Re-creating the
   team with the same code reattaches the workspace and clears `detached_at`. Workspaces of an archived team
-  are closed to non-staff (even an explicitly allowed user or a calendar-group peer); staff still see them,
-  `?detached=true` lists the orphans.
+  are closed to non-staff (even an explicitly allowed user or a calendar-group peer), and so are detached
+  workspaces, public or shared (`get_accessible_for_user` excludes `detached_at`, not "team is NULL": company
+  calendars have no team); staff still see them, `?detached=true` lists the orphans.
 
 ## 3. Membership changes
 
@@ -120,7 +121,9 @@ After pulling: `py -3.14 manage.py migrate` (users 0024-0025, dashboard 0013, an
   (members, archived on, purge-eligible date, last activity, records kept, what a delete would detach, delete
   blockers, and a delete that needs the typed team code). Archive follows the row to the Archived view and
   Restore back to Active, like Clients. A 409 on delete or archive shows the server's `blockers` in a toast.
-  Mutations invalidate `["admin","teams"]`, `["admin","calendar-groups"]`, `["admin","users"]`.
+  Mutations invalidate `["admin","teams"]`, `["admin","calendar-groups"]`, `["admin","users"]`,
+  `["admin","profiles"]` (the Users page rows) and `["admin","user-stats"]`. A 409 on Restore (parent team still
+  archived) shows the server's `blockers` too. Client archive invalidates `["admin","profiles"]` for the same reason.
 - **Users**: the edit dialog shows "Also clear the Italian/Albanian TL link..." only when a team was removed and a
   TL link is set; the bulk drawer has the same checkbox under Teams. Both send `unassign_removed_tl`. After a save
   that left a link, a warning toast carries the server's `warnings[].message`.
@@ -144,7 +147,43 @@ After pulling: `py -3.14 manage.py migrate` (users 0024-0025, dashboard 0013, an
 - Two pre-existing `CONTROL-HEIGHT` control-audit warnings in `plugins/organigrama/components/CustomChartViewer.tsx`
   are not from this work.
 
-## 8. Tests
+## 8. Relationship map and checklist for anything new that touches a team
+
+Generated 2026-10-28 from `Team._meta.related_objects`; regenerate it after adding a relation
+(`py -3.14 manage.py shell`, loop `Team._meta.related_objects`, print `field.on_delete`).
+
+| Points at Team | On team delete | On archive | Rule |
+|---|---|---|---|
+| `users.TeamMembership` / `UserProfile.teams` (M2M) | CASCADE | removed, history written | only `team_membership.change_user_teams` writes it |
+| `users.TeamMembershipHistory.team` | SET_NULL + copied label | kept | history is never deleted |
+| `users.Team.parent_team` | SET_NULL | blocked while active sub-teams; a child cannot be restored under an archived parent | hierarchy drives TL inheritance |
+| `dashboard.CalendarWorkspace.team` | SET_NULL, `detached_at` stamped | closed to non-staff | detached is hidden from non-staff too |
+| `analytics.AnalyticsMetric`, `engagement.TLApprovalMetric`, `users.ApprovalPeriodCloseMember` | SET_NULL + copied label | kept as history | a row without a team is never recomputed |
+| `tl_scorecard.Meeting`, `tl_scorecard.EngagementSurveyResponse` | SET_NULL, **no label** | kept | so a delete is **refused** while any exist (`KEPT_EVIDENCE` in `team_lifecycle.py`); give a new SET_NULL relation a label or add it there |
+| `permissions.UserRole.team` | SET_NULL | kept | nothing reads it for scope, so a delete cannot widen a role |
+| `control_room.ControlRoomTeamScope.team` | CASCADE | kept (existing scopes stay editable) | counted as a delete blocker |
+| `Team.team_leader` (User) | n/a | kept, confers no TL status | new leaders must be active users; a leader who left may stay on edit |
+
+**Money and clients.** Payroll has no foreign key to `Team` or `Client` (checked 2026-10-28): a payroll run
+reads overtime logs, and `PayrollRunEntry` freezes what was paid, so archiving or deleting a team or client cannot
+change a payslip. Client relations: `OvertimeLog.client` PROTECT (a client with overtime can never be deleted),
+`StandbyLog`, `KPIEvidence`, `TicketImportBatch`, `ExportProfile` M2M (blocked by a `pre_delete(Client)` guard),
+`onboarding.Folder/Document` CASCADE (blocked until purged first), `onboarding.ClientExport` SET_NULL,
+`UserProfile.clients` (archive unassigns, history of work stays on the records). Archive is the normal retirement.
+
+**Before shipping a feature, plugin or role (PM, etc.) that references a team, answer all of these in the PR:**
+
+1. **Relation:** what is `on_delete`? Prefer `SET_NULL` plus copied `*_name`/`*_code` labels and a `pre_delete(Team)` receiver in the owning app (core never imports a plugin). Add the row to the table above.
+2. **Archived:** does every list, picker, count, scope and "who can see" query use `Team.objects.active()` or `is_active=True`? Does an archived team confer nothing (no TL status, no new members, no visibility)?
+3. **NULL join trap:** `.exclude(team__is_active=False)` keeps rows whose team is NULL. If a row can outlive its team, exclude it explicitly (as `detached_at` does) and test the detached case.
+4. **Scope:** a new role resolves who it covers through `UserProfile.get_team_member_ids()` only, never by filtering teams in the ORM. A role that leads or manages a team follows the TL rules for archived teams.
+5. **Hierarchy:** archive, restore and re-parent keep the tree valid (no active team under an archived parent, no cycles).
+6. **Membership:** every write goes through `change_user_teams`; an archived team rejects new members at every entry point (form, bulk, importer, create).
+7. **Frozen data:** history, metrics and closed years never change because a team was archived or deleted.
+8. **Frontend:** the page invalidates every query key that lists the affected rows (Users page = `["admin","profiles"]`, `["admin","user-stats"]`), shows the server's `blockers` on a 409, and has a way to restore.
+9. **Tests:** archive, restore, delete and "detached/archived is invisible to a non-staff user" each have a test. `apps/users/tests_app/test_team_lifecycle.py` and `apps/dashboard/tests/test_workspace_retention.py` are the templates.
+
+## 9. Tests
 
 `apps/users/tests_app/test_team_durability.py`, `test_team_lifecycle.py`, `test_team_membership.py`,
 `apps/users/tests_app/test_team_purge_command.py`, `plugins/year_close/test_archived_team.py`,
