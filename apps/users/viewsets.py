@@ -2091,6 +2091,12 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         team = self.get_object()
         if team.is_active:
             return Response({'detail': 'Team is not archived.'}, status=status.HTTP_409_CONFLICT)
+        blockers = team_lifecycle.unarchive_blockers(team)
+        if blockers:
+            return Response(
+                {'detail': 'This team cannot be restored yet.', 'blockers': blockers},
+                status=status.HTTP_409_CONFLICT,
+            )
         team_lifecycle.unarchive_team(team, request)
         return Response({'id': team.pk, 'is_active': True})
 
@@ -2243,7 +2249,7 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         if len(calendar_group) > Team._meta.get_field('calendar_group').max_length:
             return Response({'error': 'calendar_group is too long'}, status=400)
 
-        updated = Team.objects.filter(id__in=team_ids).update(calendar_group=calendar_group)
+        updated = Team.objects.active().filter(id__in=team_ids).update(calendar_group=calendar_group)
 
         return Response({
             'updated_count': updated,

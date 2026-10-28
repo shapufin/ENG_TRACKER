@@ -54,6 +54,18 @@ class TeamLifecycleApiTests(APITestCase):
         self.assertTrue(Team.objects.filter(pk=self.team.pk).exists())
         self.assertEqual(TeamMembership.objects.filter(team=self.team).count(), 1)
 
+    def test_delete_blocked_by_scorecard_records_that_would_lose_their_team(self):
+        # Meeting.team and EngagementSurveyResponse.team are SET_NULL with no stored label,
+        # so a delete would leave governance evidence that no longer says which team it was.
+        from plugins.tl_scorecard.models import EngagementSurveyResponse
+
+        empty = Team.objects.create(name='Pulse', code='PLS')
+        EngagementSurveyResponse.objects.create(respondent=self.member, team=empty, period='2026-09', score=7)
+        resp = self.client.delete(f'{TEAMS}{empty.pk}/')
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.data['counts'], {'engagement_survey_responses': 1})
+        self.assertTrue(Team.objects.filter(pk=empty.pk).exists())
+
     def test_delete_blocked_by_control_room_scope_and_sub_team(self):
         TeamMembership.objects.filter(team=self.team).delete()
         access = ControlRoomAccess.objects.create(user=self.member)
@@ -170,6 +182,18 @@ class TeamLifecycleApiTests(APITestCase):
         self.assertIsNone(self.team.archived_at)
         self.assertEqual(TeamMembership.objects.filter(team=self.team).count(), 0)  # not restored
         self.assertTrue(AuditLog.objects.filter(model_name='team', extra_data__operation='unarchive').exists())
+
+    def test_unarchive_blocked_while_parent_team_is_archived(self):
+        child = Team.objects.create(name='Child', code='CHD', parent_team=self.team)
+        self.assertEqual(self.client.post(f'{TEAMS}{child.pk}/archive/').status_code, 200)
+        self.assertEqual(self.client.post(f'{TEAMS}{self.team.pk}/archive/').status_code, 200)
+        resp = self.client.post(f'{TEAMS}{child.pk}/unarchive/')
+        self.assertEqual(resp.status_code, 409)
+        self.assertIn('parent team', resp.data['blockers'][0])
+        child.refresh_from_db()
+        self.assertFalse(child.is_active)
+        self.assertEqual(self.client.post(f'{TEAMS}{self.team.pk}/unarchive/').status_code, 200)
+        self.assertEqual(self.client.post(f'{TEAMS}{child.pk}/unarchive/').status_code, 200)
 
     def test_archive_service_accepts_no_request(self):
         team = Team.objects.create(name='NoReq', code='NOR')

@@ -60,6 +60,8 @@ export const useTeamsPageForm = () => {
     queryClient.invalidateQueries({ queryKey: ["admin", "teams"] });
     queryClient.invalidateQueries({ queryKey: ["admin", "calendar-groups"] });
     queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "profiles"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "user-stats"] });
   }, [queryClient]);
 
   const deleteMutation = useMutation({
@@ -85,6 +87,18 @@ export const useTeamsPageForm = () => {
     },
   });
 
+  // A lifecycle 409 carries the reasons; show them instead of a generic error.
+  const showBlockersOrError = (err: unknown, title: string) => {
+    const blockers = axios.isAxiosError(err)
+      ? (err.response?.data?.blockers as string[] | undefined)
+      : undefined;
+    if (blockers?.length) {
+      toast.error(title, { description: blockers.join(" ") });
+      return;
+    }
+    handleApiError(err);
+  };
+
   const archiveMutation = useMutation({
     mutationFn: (id: number) => userService.archiveTeam(id),
     onSuccess: (result) => {
@@ -94,16 +108,7 @@ export const useTeamsPageForm = () => {
       );
       setArchiveTarget(null);
     },
-    onError: (err: unknown) => {
-      const blockers = axios.isAxiosError(err)
-        ? (err.response?.data?.blockers as string[] | undefined)
-        : undefined;
-      if (blockers?.length) {
-        toast.error("This team cannot be archived yet", { description: blockers.join(" ") });
-        return;
-      }
-      handleApiError(err);
-    },
+    onError: (err: unknown) => showBlockersOrError(err, "This team cannot be archived yet"),
   });
 
   const unarchiveMutation = useMutation({
@@ -112,7 +117,7 @@ export const useTeamsPageForm = () => {
       invalidateTeamData();
       toast.success("Team restored. Its former members were not re-added.");
     },
-    onError: (err: unknown) => handleApiError(err),
+    onError: (err: unknown) => showBlockersOrError(err, "This team cannot be restored yet"),
   });
 
   const openCreate = useCallback(() => {

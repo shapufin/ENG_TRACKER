@@ -14,6 +14,7 @@ const CLIENT_QUERY_KEYS = [
   ["overtime", "available-clients"],
   ["team", "members"],
   ["onboarding", "clients"],
+  ["admin", "profiles"],
 ] as const;
 
 export const useClientManagement = () => {

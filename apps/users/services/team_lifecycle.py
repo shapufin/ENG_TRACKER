@@ -17,6 +17,9 @@ from core.utils.timezone_local import business_today
 
 PURGE_AFTER_DAYS = 365
 PENDING = 'pending'
+# SET_NULL relations whose rows keep no copy of the team's name: deleting the team would leave
+# governance evidence that no longer says which team it was about, so they block like CASCADE.
+KEPT_EVIDENCE = frozenset({'meetings', 'engagement_survey_responses'})
 
 
 def _year_close_engine_enabled():
@@ -48,7 +51,9 @@ def protected_record_counts(team):
     engagement rows with real numbers, and a calendar workspace that holds
     holidays block too.
     """
-    counts = relation_counts(team, lambda rel: rel.one_to_many and rel.on_delete is CASCADE)
+    counts = relation_counts(
+        team, lambda rel: rel.one_to_many and (rel.on_delete is CASCADE or rel.get_accessor_name() in KEPT_EVIDENCE)
+    )
     sub_teams = team.sub_teams.count()
     if sub_teams:
         counts['sub_teams'] = sub_teams
@@ -141,6 +146,14 @@ def archive_blockers(team):
     if _open_hbpr_assignment(team):
         blockers.append("The team leader has an open HBPR assignment: end it before archiving the leader's team.")
     return blockers
+
+
+def unarchive_blockers(team):
+    """Reasons ``team`` cannot be restored yet (empty = it can)."""
+    parent = team.parent_team
+    if parent is not None and not parent.is_active:
+        return [f'Its parent team "{parent.name}" is archived: restore the parent team first.']
+    return []
 
 
 def delete_blockers(team):

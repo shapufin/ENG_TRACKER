@@ -175,6 +175,11 @@ class SiteBranding(BaseModel):
             ),
         ]
 
+    def save(self, *args, **kwargs):
+        # The maintenance status payload caches the branding; Django admin saves land here.
+        super().save(*args, **kwargs)
+        clear_maintenance_cache()
+
     def __str__(self):
         return self.site_name
 

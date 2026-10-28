@@ -60,13 +60,18 @@ const MaintenanceCardBody: React.FC<{ status: MaintenanceStatus }> = ({ status }
 
   const save = useMutation({
     mutationFn: (payload: MaintenanceUpdate) => maintenanceService.update(payload),
-    onSuccess: (data) => {
+    onSuccess: (data, payload) => {
       queryClient.setQueryData(MAINTENANCE_STATUS_QUERY_KEY, data);
       queryClient.invalidateQueries({ queryKey: MAINTENANCE_STATUS_QUERY_KEY });
       setPendingToggle(null);
-      toast.success(
-        data.active ? "Maintenance mode is ON — users are locked out" : "Maintenance mode is off"
-      );
+      if (data.active) {
+        toast.success("Maintenance mode is ON — users are locked out");
+      } else {
+        // Copy saved while the switch is off is staged, not discarded.
+        toast.success(
+          payload.is_active === undefined ? "Maintenance message saved" : "Maintenance mode is off"
+        );
+      }
     },
     onError: (err: unknown) => {
       handleApiError(err);

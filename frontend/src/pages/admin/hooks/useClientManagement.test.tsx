@@ -39,6 +39,27 @@ describe("useClientManagement", () => {
     vi.clearAllMocks();
   });
 
+  it("refreshes the Users page profiles after a client is archived", async () => {
+    // Archiving unassigns every user; a stale profile row would still show the client.
+    vi.mocked(overtimeService.archiveClient).mockResolvedValueOnce({
+      id: 5,
+      is_active: false,
+      users_unassigned: 2,
+    } as never);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    const localWrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useClientManagement(), { wrapper: localWrapper });
+
+    await act(async () => {
+      result.current.archiveMutation.mutate(5);
+    });
+
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "profiles"] });
+  });
+
   it("surfaces structured 409 blockers in error toast when delete fails with kept records", async () => {
     const blockers = [
       "Client still has records that must be kept: overtime_logs (3).",

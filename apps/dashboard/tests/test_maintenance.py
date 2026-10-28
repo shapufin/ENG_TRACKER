@@ -112,6 +112,17 @@ class MaintenanceStatusTests(MaintenanceTestBase):
         response = self.client.get(STATUS_URL)
         self.assertEqual(response.data['site_name'], 'New Name')
 
+    def test_branding_saved_through_the_model_is_visible_immediately(self):
+        # Django admin saves the model directly, bypassing the viewset's cache clear.
+        branding = SiteBranding.objects.create(pk=1, site_name='Old Name')
+        clear_maintenance_cache()
+        self.assertEqual(self.client.get(STATUS_URL).data['site_name'], 'Old Name')
+
+        branding.site_name = 'Admin Name'
+        branding.save()
+
+        self.assertEqual(self.client.get(STATUS_URL).data['site_name'], 'Admin Name')
+
     def test_status_ok_with_stale_non_staff_token(self):
         enable()
 

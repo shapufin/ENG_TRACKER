@@ -1174,6 +1174,54 @@ class TestCalendarGroupNormalisation(APITestCase):
         self.assertEqual(self.team_b.calendar_group, '')
 
 
+class TestTeamWriteRejectsInactiveState(APITestCase):
+    """An archived team takes no calendar-group change; an inactive user cannot lead a team."""
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username='state-admin', password='testpass123', email='state-admin@example.com'
+        )
+        self.client.force_authenticate(user=self.admin)
+
+    def test_bulk_update_calendar_group_skips_archived_teams(self):
+        live = Team.objects.create(name='Live', code='LIV')
+        archived = Team.objects.create(name='Gone', code='GNE', is_active=False)
+        response = self.client.post(
+            '/api/users/teams/bulk_update_calendar_group/',
+            {'team_ids': [live.id, archived.id], 'calendar_group': 'grp'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['updated_count'], 1)
+        archived.refresh_from_db()
+        self.assertEqual(archived.calendar_group, '')
+
+    def test_inactive_user_cannot_be_set_as_team_leader(self):
+        gone = User.objects.create_user(username='gone-tl', password='x', is_active=False)
+        response = self.client.post(
+            '/api/users/teams/', {'name': 'Led', 'code': 'LED', 'team_leader_id': gone.id}, format='json'
+        )
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn('team_leader_id', response.data)
+        self.assertFalse(Team.objects.filter(code='LED').exists())
+
+    def test_edit_keeps_a_leader_deactivated_since_assignment(self):
+        tl = User.objects.create_user(username='left-tl', password='x')
+        team = Team.objects.create(name='Led', code='LED', team_leader=tl)
+        User.objects.filter(pk=tl.pk).update(is_active=False)
+        response = self.client.patch(
+            f'/api/users/teams/{team.id}/', {'name': 'Renamed', 'team_leader_id': tl.id}, format='json'
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+
+    def test_active_user_can_still_be_set_as_team_leader(self):
+        tl = User.objects.create_user(username='live-tl', password='x')
+        response = self.client.post(
+            '/api/users/teams/', {'name': 'Led', 'code': 'LED', 'team_leader_id': tl.id}, format='json'
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+
+
 class TestTeamCreateUpdateAdminOnly(APITestCase):
     """Team writes are admin-only: the HR-native /hr/teams page and its IsHR
     grant on create/update/partial_update were removed. HR keeps read access
