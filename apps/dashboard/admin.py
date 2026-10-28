@@ -4,12 +4,21 @@ from .models import SiteBranding, MaintenanceState
 
 @admin.register(MaintenanceState)
 class MaintenanceStateAdmin(admin.ModelAdmin):
-    """Read-mostly view of the switch. The admin GUI owns the write path."""
+    """Read-only view of the switch.
+
+    The admin GUI owns the write path (``apply_update`` stamps ``started_at``
+    and audits the change): a Django-admin save would arm the switch without a
+    window, silently dropping the auto-expire safety net.
+    """
     list_display = ['is_active', 'title', 'started_at', 'ends_at', 'updated_at']
-    fields = ['is_active', 'title', 'message', 'started_at', 'ends_at']
+    fields = ['is_active', 'title', 'message', 'started_at', 'ends_at', 'updated_by']
+    readonly_fields = fields
 
     def has_add_permission(self, request):
-        return not MaintenanceState.objects.exists()
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
     def has_delete_permission(self, request, obj=None):
         return False

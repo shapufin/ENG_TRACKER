@@ -194,6 +194,23 @@ class MaintenanceToggleTests(MaintenanceTestBase):
         self.assertTrue(AuditLog.objects.filter(action='MAINTENANCE_ON').exists())
         self.assertTrue(AuditLog.objects.filter(action='MAINTENANCE_OFF').exists())
 
+    def test_django_admin_cannot_change_the_switch(self):
+        """The admin GUI owns the write path: a Django-admin save would arm the
+        switch without stamping started_at/ends_at, silently dropping the
+        auto-expire safety net and the 'closed since' display."""
+        from django.contrib.admin import site as admin_site
+        from django.test import RequestFactory
+
+        from apps.dashboard.admin import MaintenanceStateAdmin
+
+        request = RequestFactory().get('/')
+        request.user = self.superuser
+        model_admin = MaintenanceStateAdmin(MaintenanceState, admin_site)
+
+        self.assertFalse(model_admin.has_change_permission(request))
+        self.assertFalse(model_admin.has_add_permission(request))
+        self.assertFalse(model_admin.has_delete_permission(request))
+
 
 class MaintenanceGateTests(MaintenanceTestBase):
     def test_non_staff_login_blocked(self):
