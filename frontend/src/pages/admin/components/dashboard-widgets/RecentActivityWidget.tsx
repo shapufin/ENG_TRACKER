@@ -6,6 +6,7 @@ import { CheckCircle, UserPlus, ShieldCheck } from "lucide-react";
 interface AuditLog {
   id: number;
   action: string;
+  action_display?: string;
   description: string;
 }
 
@@ -52,7 +53,7 @@ export const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({
           return (
             <ActivityItem
               key={log.id}
-              title={log.action}
+              title={log.action_display || log.action}
               subtitle={log.description}
               icon={icon}
               iconWellClass={iconWellClass}
