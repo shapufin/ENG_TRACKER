@@ -6,6 +6,7 @@ drift apart.
 """
 
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 
 from apps.reports.services.security_audit import log_security_event
 from core.maintenance import clear_maintenance_cache, get_maintenance_state
@@ -70,6 +71,13 @@ def apply_update(data: dict, actor, request) -> dict:
 
     if 'is_active' in data:
         state.is_active = bool(data['is_active'])
+
+    # A pre-staged past end must not arm a switch that expires instantly: the
+    # self-heal would turn it off on the very next read and the admin would see
+    # nothing happen. The serializer can only validate an ends_at that rides in
+    # the same payload, so the effective window is checked here.
+    if state.is_active and state.ends_at is not None and state.ends_at <= timezone.now():
+        raise ValidationError({'ends_at': 'The expected end must be in the future.'})
 
     if state.is_active:
         if not previous_active or state.started_at is None:

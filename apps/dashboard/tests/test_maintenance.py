@@ -240,6 +240,25 @@ class MaintenanceToggleTests(MaintenanceTestBase):
         self.assertEqual(state.ends_at, ends_at)
         self.assertIsNotNone(state.started_at)
 
+    def test_activating_with_a_prestaged_past_window_is_refused(self):
+        """A pre-staged past end must not arm a switch that instantly expires:
+        the site would flip on and the self-heal would turn it off again, so the
+        admin sees nothing happen."""
+        self.client.patch(
+            STATUS_URL,
+            {'ends_at': (timezone.now() - timedelta(minutes=5)).isoformat()},
+            format='json',
+            **bearer(self.staff),
+        )
+
+        response = self.client.patch(
+            STATUS_URL, {'is_active': True}, format='json', **bearer(self.staff)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertIn('ends_at', response.data)
+        self.assertFalse(MaintenanceState.objects.get(pk=1).is_active)
+
     def test_audit_rows_written(self):
         self.client.patch(STATUS_URL, {'is_active': True}, format='json', **bearer(self.staff))
         self.client.patch(STATUS_URL, {'is_active': False}, format='json', **bearer(self.staff))
