@@ -1331,7 +1331,7 @@ class KPIEvidenceTests(TestCase):
         owners = {row['user'] for row in response.data['results']}
         self.assertEqual(owners, {self.tl.id, self.member.id})
 
-    def test_hr_list_without_user_id_sees_all_evidence(self):
+    def test_pure_hr_is_refused_the_evidence_list(self):
         outsider = User.objects.create_user(username='evidence_outsider2', password='testpass123')
         hr = User.objects.create_user(username='evidence_hr', password='testpass123')
         hr.profile.is_hr_user = True
@@ -1342,9 +1342,8 @@ class KPIEvidenceTests(TestCase):
                 evidence_type='document', description='scope probe',
             )
         response = self._list_evidence_as(hr)
-        self.assertEqual(response.status_code, 200)
-        owners = {row['user'] for row in response.data['results']}
-        self.assertEqual(owners, {self.member.id, outsider.id})
+        # Pure HR is not part of Ticket KPI (HrOnlyBlockedMixin).
+        self.assertEqual(response.status_code, 403)
 
     def test_evidence_list_accepts_short_month_format(self):
         """Month query param may be YYYY-MM and is normalized to first day."""

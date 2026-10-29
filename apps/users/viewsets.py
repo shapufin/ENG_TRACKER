@@ -1391,6 +1391,17 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
 
     def _apply_role_filter(self, queryset, role):
         """Server-side equivalent of the Admin Users role tabs (UserFilterTabs)."""
+        if role == 'assignable_employee':
+            # HR's TL-assignment list: the `employee` tab minus what that tab keeps
+            # reachable for the Admin Users page — Django staff/superusers, an
+            # `admin` role, and anyone leading an active team. Single-condition
+            # exclude() so each rule is evaluated per related row.
+            return (
+                self._apply_role_filter(queryset, 'employee')
+                .filter(user__is_staff=False, user__is_superuser=False)
+                .exclude(role_codes__icontains='admin')
+                .exclude(user__led_teams__is_active=True)
+            )
         if role == 'italian_tl':
             return queryset.filter(
                 Q(is_italian_tl_role=True)

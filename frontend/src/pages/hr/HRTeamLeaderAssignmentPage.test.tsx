@@ -98,6 +98,38 @@ describe("HRTeamLeaderAssignmentPage", () => {
     expect(screen.getByText("alice")).toBeInTheDocument();
   });
 
+  it("summarises the listed employees by TL assignment", () => {
+    useHRTeamLeaderAssignmentMock.mockReturnValue({
+      ...defaultHookReturn,
+      profiles: [
+        makeProfile({ id: 1, italian_tl: 20 }),
+        makeProfile({ id: 2, albanian_tl: 30 }),
+        makeProfile({ id: 3, italian_tl: 20, albanian_tl: 30 }),
+        makeProfile({ id: 4 }),
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <HRTeamLeaderAssignmentPage />
+      </MemoryRouter>
+    );
+    const card = (label: string) => screen.getByText(label).parentElement?.textContent;
+    expect(card("Employees")).toBe("Employees4");
+    expect(card("With an Italian TL")).toBe("With an Italian TL2");
+    expect(card("With an Albanian TL")).toBe("With an Albanian TL2");
+    expect(card("Without any TL")).toBe("Without any TL1");
+  });
+
+  it("shows the full name with the username beneath it", () => {
+    render(
+      <MemoryRouter>
+        <HRTeamLeaderAssignmentPage />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("Alice A")).toBeInTheDocument();
+    expect(screen.getByText("alice")).toBeInTheDocument();
+  });
+
   it("shows a loading state instead of the table while fetching", () => {
     useHRTeamLeaderAssignmentMock.mockReturnValue({ ...defaultHookReturn, isLoading: true });
     render(

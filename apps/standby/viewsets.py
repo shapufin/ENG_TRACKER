@@ -9,6 +9,7 @@ from core.pagination import LargeResultsPagination
 from core.mixins.cache import CacheInvalidationMixin
 from core.mixins.permissions import (
     HbprBlockedMixin,
+    HrOnlyBlockedMixin,
     SuperuserPermissionMixin,
     PersonalOnlyFilterMixin,
     BulkActionMixin,
@@ -33,7 +34,7 @@ from .serializers import (
 )
 
 
-class StandbyPatternViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.ModelViewSet):
+class StandbyPatternViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.ModelViewSet):
     """
     ViewSet for StandbyPattern model.
     
@@ -74,7 +75,7 @@ class StandbyPatternViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserP
         self.invalidate_related_cache()
 
 
-class StandbyLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermissionMixin, HRReadOnlyMixin, PersonalOnlyFilterMixin, MonthlyLockMixin, BulkActionMixin, viewsets.ModelViewSet):
+class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMixin, SuperuserPermissionMixin, HRReadOnlyMixin, PersonalOnlyFilterMixin, MonthlyLockMixin, BulkActionMixin, viewsets.ModelViewSet):
     """
     ViewSet for StandbyLog model.
     

@@ -11,6 +11,8 @@ export interface PluginMetadata {
     path: string;
     component: string;
     layout: "app" | "admin";
+    /** Pure-HR users are bounced from this route (see HrRestrictedRoute). */
+    hr_only_hidden?: boolean;
   }[];
   injection_slots: {
     slot: string;

@@ -317,6 +317,46 @@ describe("useVisibleNavItems", () => {
   });
 });
 
+describe("useVisibleNavItems pure HR", () => {
+  const pureHR = () =>
+    renderHook(() =>
+      useVisibleNavItems(false, true, false, false, false, false, false, false, undefined, true)
+    );
+
+  it("hides the personal and team surfaces HR does not have", () => {
+    const visible = labels(pureHR().result.current);
+    for (const label of ["Overtime", "Standby", "Calendar", "Ticket KPI"]) {
+      expect(visible).not.toContain(label);
+    }
+  });
+
+  it("keeps what HR works in", () => {
+    const visible = labels(pureHR().result.current);
+    for (const label of [
+      "Dashboard",
+      "Leave",
+      "HR Reports",
+      "Team Leader Assignment",
+      "Settings",
+    ]) {
+      expect(visible).toContain(label);
+    }
+  });
+
+  it("keeps those surfaces for HR who is also a team leader or admin", () => {
+    const tl = renderHook(() =>
+      useVisibleNavItems(false, true, true, false, false, false, false, false, undefined, false)
+    ).result.current;
+    expect(labels(tl)).toEqual(
+      expect.arrayContaining(["Overtime", "Standby", "Calendar", "Ticket KPI"])
+    );
+    const admin = renderHook(() =>
+      useVisibleNavItems(true, true, false, false, false, false, false, false, undefined, false)
+    ).result.current;
+    expect(labels(admin)).toEqual(expect.arrayContaining(["Overtime", "Standby", "Calendar"]));
+  });
+});
+
 describe("useVisibleNavItems plugin gating", () => {
   const kpiLabels = ["Team Performance", "Upload Management", "Ticket KPI"];
 

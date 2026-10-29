@@ -59,11 +59,22 @@ const computeIsHBPROnly = (roles: ReturnType<typeof computeRoles>) => {
   return isHBPR && !isItalianTL && !isAlbanianTL && !isHR && !isAdmin && !isSuperuser && !isCRAdmin;
 };
 
+/**
+ * HR and nothing elevating. Mirrors the backend `is_hr_only`
+ * (`core/mixins/permissions.py`): staff, superusers and TLs (role or derived
+ * flag) are never "HR only", so multi-role users keep their other role's nav.
+ */
+const computeIsHROnly = (roles: ReturnType<typeof computeRoles>) => {
+  const { isHR, isTeamLeader, isAdmin, isSuperuser } = roles;
+  return isHR && !isTeamLeader && !isAdmin && !isSuperuser;
+};
+
 // fallow-ignore-next-line complexity
 const computeBasePermissions = (roles: ReturnType<typeof computeRoles>) => {
   const { isTeamLeader, isHR, isHBPR, isAdmin, isSuperuser, isCRAdmin, isCRUser } = roles;
   return {
     isHBPROnly: computeIsHBPROnly(roles),
+    isHROnly: computeIsHROnly(roles),
     // CR admin (scoped admin) and CR user (scoped observer) are NOT regular
     // employees. Excluding both here prevents them from seeing employee nav
     // items (overtime, standby, calendar, leave) in the user shell.
@@ -94,7 +105,8 @@ const computeDashboards = (roles: ReturnType<typeof computeRoles>) => {
   if (isSuperuser || isAdmin) availableDashboards.push("admin");
   if (isHR) availableDashboards.push("hr");
   if (isTeamLeader) availableDashboards.push("team_leader");
-  if (!isHBPROnly) availableDashboards.push("employee");
+  // Pure HR has no personal overtime/standby/leave, so no personal dashboard.
+  if (!isHBPROnly && !computeIsHROnly(roles)) availableDashboards.push("employee");
 
   let primaryDashboard: DashboardType = "employee";
   if (isSuperuser || isAdmin) {

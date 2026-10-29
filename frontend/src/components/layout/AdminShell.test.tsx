@@ -59,6 +59,7 @@ const basePerms: PermissionContextType = {
   isHR: false,
   isHBPR: false,
   isHBPROnly: false,
+  isHROnly: false,
   isAdmin: false,
   isSuperuser: false,
   isCRAdmin: false,

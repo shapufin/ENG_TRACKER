@@ -27,6 +27,7 @@ export const AppShell = React.memo(() => {
     isHR,
     isHBPR,
     isHBPROnly,
+    isHROnly,
     isTeamLeader,
     isEmployee,
     isSuperuser,
@@ -64,7 +65,8 @@ export const AppShell = React.memo(() => {
     isCRAdmin,
     isCRUser,
     isHBPROnly,
-    activePluginNames
+    activePluginNames,
+    isHROnly
   );
   const handleLogout = useLogout();
   const paletteItems = useMemo(() => visibleItems.map(navItemToPaletteItem), [visibleItems]);

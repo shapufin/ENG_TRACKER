@@ -112,4 +112,26 @@ describe("SkillsSidebarItem", () => {
     renderAt("/skills/history");
     expect(screen.getByText("Skill History")).toBeInTheDocument();
   });
+
+  it("gives pure HR Team Skills only, not the personal items", () => {
+    usePermissionsMock.mockReturnValue({ ...basePerms, isHR: true, isHROnly: true });
+    renderAt();
+    fireEvent.click(screen.getByText("Skills"));
+    expect(screen.getByText("Team Skills")).toBeInTheDocument();
+    expect(screen.queryByText("My Skills")).not.toBeInTheDocument();
+    expect(screen.queryByText("Skill History")).not.toBeInTheDocument();
+  });
+
+  it("keeps the personal items for HR who is also a team leader", () => {
+    usePermissionsMock.mockReturnValue({
+      ...basePerms,
+      isHR: true,
+      isHROnly: false,
+      isTeamLeader: true,
+    });
+    renderAt();
+    fireEvent.click(screen.getByText("Skills"));
+    expect(screen.getByText("My Skills")).toBeInTheDocument();
+    expect(screen.getByText("Skill History")).toBeInTheDocument();
+  });
 });

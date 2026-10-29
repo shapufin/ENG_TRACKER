@@ -376,4 +376,42 @@ describe("useDashboardData", () => {
     expect(leaveService.getRequests).not.toHaveBeenCalled();
     expect(leaveService.getUserBalanceSummary).not.toHaveBeenCalled();
   });
+
+  it("never requests overtime or standby for a pure-HR viewer, but still loads leave", async () => {
+    // Pure HR is refused the overtime/standby APIs (HrOnlyBlockedMixin), so
+    // firing them from the HR dashboard produced 403 toasts.
+    for (const fn of [
+      overtimeService.getLogs,
+      overtimeService.getSummary,
+      standbyService.getLogs,
+      standbyService.getSummary,
+      leaveService.getRequests,
+    ]) {
+      vi.mocked(fn).mockClear();
+    }
+    vi.mocked(leaveService.getRequests).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+
+    renderHook(
+      () =>
+        useDashboardData({
+          userId: 1,
+          isAdmin: false,
+          isHR: true,
+          isHROnly: true,
+          selectedDashboard: "hr",
+        }),
+      { wrapper: createWrapper(new QueryClient()) }
+    );
+
+    await waitFor(() => expect(leaveService.getRequests).toHaveBeenCalled());
+    expect(overtimeService.getLogs).not.toHaveBeenCalled();
+    expect(overtimeService.getSummary).not.toHaveBeenCalled();
+    expect(standbyService.getLogs).not.toHaveBeenCalled();
+    expect(standbyService.getSummary).not.toHaveBeenCalled();
+  });
 });

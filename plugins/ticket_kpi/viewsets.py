@@ -31,7 +31,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.http import FileResponse
 
-from core.mixins.permissions import PluginPermissionMixin
+from core.mixins.permissions import HrOnlyBlockedMixin, PluginPermissionMixin
 
 from .models import (
     ExportProfile,
@@ -156,7 +156,7 @@ def _apply_mapping_overrides(base_mapping: dict, raw_overrides) -> tuple:
 # ADMIN: Export Profile Management
 # ============================================================================
 
-class ExportProfileViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+class ExportProfileViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     """
     Admin-only CRUD for ticket export mapping profiles.
     """
@@ -290,7 +290,7 @@ class ExportProfileViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
 # USER: Upload Flow
 # ============================================================================
 
-class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
+class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.GenericViewSet):
     """
     User-facing upload endpoints.
     """
@@ -905,7 +905,7 @@ class TicketUploadViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
 # DASHBOARD: KPI Queries
 # ============================================================================
 
-class TicketKPIDashboardViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
+class TicketKPIDashboardViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.GenericViewSet):
     """
     Dashboard data for users, team leaders, and HR.
     """
@@ -1640,7 +1640,7 @@ def _parse_user_ids(value):
 # REPORTS: Yearly Export
 # ============================================================================
 
-class TicketKPIReportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
+class TicketKPIReportViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.GenericViewSet):
     """
     Yearly report generation for admin/TL/HR.
     """
@@ -1916,7 +1916,7 @@ class TicketKPIReportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
 # EVIDENCE: KPI evidence uploads and review
 # ============================================================================
 
-class KPIEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+class KPIEvidenceViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     """
     Evidence uploads (PDFs, images, email threads) linked to users, months, and clients.
     """
@@ -2208,7 +2208,7 @@ class KPIEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         return response
 
 
-class TicketOvertimeLinkViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
+class TicketOvertimeLinkViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.ModelViewSet):
     """CRUD and search endpoints for manual KPI/overtime links."""
     plugin_name = 'ticket_kpi'
     permission_classes = [permissions.IsAuthenticated]

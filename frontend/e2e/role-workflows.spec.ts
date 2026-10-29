@@ -32,6 +32,10 @@ function expectations(role: E2ERole | "superuser" | "controlRoom"): Record<strin
   const hr = role === "hr" || role === "teamLeaderHr" || role === "admin" || role === "superuser";
   const admin = role === "admin" || role === "superuser";
   for (const p of APP) out[p] = cr && p !== "/settings" ? "/control-room/dashboard" : "allow";
+  // Pure HR has no personal hours or team calendar (HoursRoute / HrRestrictedRoute).
+  if (role === "hr") {
+    for (const p of ["/overtime", "/standby", "/calendar"]) out[p] = "/dashboard";
+  }
   // DashboardPage sends an admin's selected dashboard to the AdminShell at /admin (intentional).
   if (admin) out["/dashboard"] = "/admin";
   for (const p of TL_ONLY) out[p] = cr ? "/control-room/dashboard" : tl ? "allow" : "/dashboard";
