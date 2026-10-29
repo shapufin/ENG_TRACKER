@@ -3,7 +3,13 @@ import { useState } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TimeInput } from "./TimeInput";
 
-const Harness = ({ initial = "", onValue = vi.fn() }: { initial?: string; onValue?: (v: string) => void }) => {
+const Harness = ({
+  initial = "",
+  onValue = vi.fn(),
+}: {
+  initial?: string;
+  onValue?: (v: string) => void;
+}) => {
   const [value, setValue] = useState(initial);
   return (
     <TimeInput
@@ -17,8 +23,7 @@ const Harness = ({ initial = "", onValue = vi.fn() }: { initial?: string; onValu
   );
 };
 
-const type = (field: HTMLElement, value: string) =>
-  fireEvent.change(field, { target: { value } });
+const type = (field: HTMLElement, value: string) => fireEvent.change(field, { target: { value } });
 
 describe("TimeInput", () => {
   it("turns 09 into 09:00 AM when the field is left", () => {
@@ -70,5 +75,44 @@ describe("TimeInput", () => {
     rerender(<TimeInput aria-label="Start" value="" onChange={vi.fn()} />);
     expect(screen.getByLabelText("Start")).toHaveValue("");
     fireEvent.blur(screen.getByLabelText("Start"));
+  });
+
+  it("auto-separates 2100 into 21:00 and shows PM without premature AM while typing 210", () => {
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    const field = screen.getByLabelText("Start");
+
+    type(field, "2");
+    expect(field).toHaveValue("2");
+    expect(onValue).not.toHaveBeenCalled();
+
+    type(field, "21");
+    expect(field).toHaveValue("21");
+    expect(onValue).not.toHaveBeenCalled();
+
+    type(field, "210");
+    expect(field).toHaveValue("21:0");
+    // Not complete yet — should not prematurely report 02:10 AM
+    expect(onValue).not.toHaveBeenCalled();
+    expect(screen.queryByText("AM")).toBeNull();
+
+    type(field, "2100");
+    expect(field).toHaveValue("21:00");
+    expect(onValue).toHaveBeenLastCalledWith("21:00");
+    expect(screen.getByText("PM")).toBeInTheDocument();
+  });
+
+  it("auto-separates 900 into 9:00 and shows AM", () => {
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    const field = screen.getByLabelText("Start");
+
+    type(field, "900");
+    expect(field).toHaveValue("9:00");
+    expect(onValue).toHaveBeenLastCalledWith("09:00");
+    expect(screen.getByText("AM")).toBeInTheDocument();
+
+    fireEvent.blur(field);
+    expect(field).toHaveValue("09:00");
   });
 });

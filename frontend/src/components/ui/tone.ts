@@ -37,3 +37,13 @@ export const toneOutlineClass: Record<Tone, string> = {
   accent: "border-tone-accent-border bg-transparent text-tone-accent-text hover:bg-tone-accent-surface",
   neutral: "border-tone-neutral-border bg-transparent text-tone-neutral-text hover:bg-tone-neutral-surface",
 };
+
+/** Solid fill for progress bars and meters; reuses the tone text token, which carries the light/dark pair. */
+export const toneFillClass: Record<Tone, string> = {
+  success: "bg-tone-success-text",
+  warning: "bg-tone-warning-text",
+  danger: "bg-tone-danger-text",
+  info: "bg-tone-info-text",
+  accent: "bg-tone-accent-text",
+  neutral: "bg-tone-neutral-text",
+};

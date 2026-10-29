@@ -1,6 +1,7 @@
 import React from "react";
 import { KPICard } from "./KPICard";
 import { FileSpreadsheet, Users, Ticket } from "lucide-react";
+import { toneFillClass } from "@/components/ui/tone";
 
 interface TicketKPITeamStatsProps {
   totalRecords: number;
@@ -20,7 +21,7 @@ export const TicketKPITeamStats: React.FC<TicketKPITeamStatsProps> = ({
       subtitle="In selected period"
       icon={FileSpreadsheet}
       progressPercent={totalRecords > 0 ? 100 : 0}
-      progressColorClass="bg-indigo-500"
+      progressColorClass={toneFillClass.info}
     />
     <KPICard
       title="Team Members"
@@ -28,7 +29,7 @@ export const TicketKPITeamStats: React.FC<TicketKPITeamStatsProps> = ({
       subtitle="With uploads"
       icon={Users}
       progressPercent={uniqueUsers > 0 ? 100 : 0}
-      progressColorClass="bg-purple-500"
+      progressColorClass={toneFillClass.accent}
     />
     <KPICard
       title="Active Months"
@@ -36,7 +37,7 @@ export const TicketKPITeamStats: React.FC<TicketKPITeamStatsProps> = ({
       subtitle="With data"
       icon={Ticket}
       progressPercent={uniqueMonths > 0 ? 100 : 0}
-      progressColorClass="bg-emerald-500"
+      progressColorClass={toneFillClass.success}
     />
   </div>
 );

@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { calculateHours, dayPeriod, parseTypedTime, validateTimeRange } from "./time-utils";
+import {
+  calculateHours,
+  dayPeriod,
+  formatTimeInput,
+  parseTypedTime,
+  validateTimeRange,
+} from "./time-utils";
 
 describe("calculateHours", () => {
   it("returns null for empty inputs", () => {
@@ -100,5 +106,32 @@ describe("dayPeriod", () => {
   it("is empty for a value that is not a time", () => {
     expect(dayPeriod("")).toBe("");
     expect(dayPeriod("9")).toBe("");
+  });
+});
+
+describe("formatTimeInput", () => {
+  it.each([
+    ["", ""],
+    ["2", "2"],
+    ["21", "21"],
+    ["210", "21:0"],
+    ["2100", "21:00"],
+    ["9", "9"],
+    ["90", "9:0"],
+    ["900", "9:00"],
+    ["930", "9:30"],
+    ["0930", "09:30"],
+    ["1430", "14:30"],
+    ["9:", "9:"],
+    ["9:3", "9:3"],
+    ["9:30", "9:30"],
+    ["21:", "21:"],
+    ["21:0", "21:0"],
+    ["21:00", "21:00"],
+    ["9pm", "9pm"],
+    ["11:15a", "11:15a"],
+    ["99", "99"],
+  ])("formats %s as %s", (input, expected) => {
+    expect(formatTimeInput(input)).toBe(expected);
   });
 });

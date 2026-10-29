@@ -1,3 +1,5 @@
+import { csvCell } from "@/lib/csvSafe";
+
 /**
  * Utility to export data to CSV or JSON format.
  */
@@ -26,7 +28,7 @@ export const exportData = <T extends object>(
     const { headers, rowMapper } = csvConfig;
     const rows = data.map(rowMapper);
     const csvContent = [headers, ...rows]
-      .map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
+      .map((r) => r.map(csvCell).join(","))
       .join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv" });

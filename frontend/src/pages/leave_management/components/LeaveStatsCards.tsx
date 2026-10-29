@@ -1,7 +1,7 @@
 import React from "react";
 import { StatCard, STAT_CARD_MICRO_LABEL } from "@/components/ui/StatCard";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
-import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
+import { toneFillClass, toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import { Plane, Check, Calendar } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { LeaveBalance } from "@/types";
@@ -98,7 +98,7 @@ export const LeaveStatsCards: React.FC<LeaveStatsCardsProps> = ({
       iconWellClass: `border ${toneSurfaceClass.warning}`,
       delay: 0,
       progressPercent: pendingPercent,
-      progressColorClass: "bg-amber-500",
+      progressColorClass: toneFillClass.warning,
     },
     {
       icon: Check,
@@ -109,7 +109,7 @@ export const LeaveStatsCards: React.FC<LeaveStatsCardsProps> = ({
       iconWellClass: `border ${toneSurfaceClass.success}`,
       delay: 0.05,
       progressPercent: approvedPercent,
-      progressColorClass: "bg-emerald-500",
+      progressColorClass: toneFillClass.success,
     },
     {
       icon: Plane,
@@ -121,7 +121,7 @@ export const LeaveStatsCards: React.FC<LeaveStatsCardsProps> = ({
       iconWellClass: `border ${toneSurfaceClass.info}`,
       delay: 0.1,
       progressPercent: balancePercent,
-      progressColorClass: "bg-indigo-500",
+      progressColorClass: toneFillClass.info,
     },
     {
       icon: Calendar,
@@ -133,7 +133,7 @@ export const LeaveStatsCards: React.FC<LeaveStatsCardsProps> = ({
       iconWellClass: `border ${toneSurfaceClass.neutral}`,
       delay: 0.12,
       progressPercent: usedPercent,
-      progressColorClass: "bg-rose-500",
+      progressColorClass: toneFillClass.danger,
     },
   ];
 

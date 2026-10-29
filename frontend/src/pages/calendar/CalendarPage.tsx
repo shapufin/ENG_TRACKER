@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { addDays, subDays, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/context/PermissionContext";
@@ -13,6 +13,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { CalendarDays } from "lucide-react";
 import { useCalendarPageData } from "./hooks/useCalendarPageData";
 import { CalendarPageShell } from "./components/CalendarPageShell";
+import { shouldIgnoreCalendarKey } from "./hooks/shouldIgnoreCalendarKey";
 
 const CalendarPageContent: React.FC = () => {
   const { setSelectedWorkspaces, isMultiSelect } = useCalendarWorkspace();
@@ -35,23 +36,29 @@ const CalendarPageContent: React.FC = () => {
     isMultiSelect
   );
 
+  // The listener is attached once; the ref hands it the latest data without re-binding every render.
+  const dataRef = useRef(data);
+  useEffect(() => {
+    dataRef.current = data;
+  });
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (shouldIgnoreCalendarKey(e)) return;
+      const { currentMonth, setCurrentMonth } = dataRef.current;
       const navMap: Record<string, () => Date> = {
-        ArrowLeft: () => subDays(data.currentMonth, 1),
-        ArrowRight: () => addDays(data.currentMonth, 1),
-        ArrowUp: () => subWeeks(data.currentMonth, 1),
-        ArrowDown: () => addWeeks(data.currentMonth, 1),
+        ArrowLeft: () => subDays(currentMonth, 1),
+        ArrowRight: () => addDays(currentMonth, 1),
+        ArrowUp: () => subWeeks(currentMonth, 1),
+        ArrowDown: () => addWeeks(currentMonth, 1),
       };
       if (navMap[e.key]) {
         e.preventDefault();
-        data.setCurrentMonth(navMap[e.key]());
+        setCurrentMonth(navMap[e.key]());
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [data]);
+  }, []);
 
   const handlePrevMonth = () => data.setCurrentMonth((prev: Date) => subMonths(prev, 1));
   const handleNextMonth = () => data.setCurrentMonth((prev: Date) => addMonths(prev, 1));

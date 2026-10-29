@@ -91,7 +91,7 @@ export function parseDDMMYYYYDate(input: string): Date | null {
 
 /**
  * Return true if the given "YYYY-MM-DD" date string is in a strictly past
- * month relative to today (year/month comparison, day is irrelevant).
+ * month relative to today on the business clock (Europe/Tirane) (year/month comparison, day is irrelevant).
  *
  * Used by the monthly edit/delete lock on overtime and standby records:
  * a record dated Jan 15 is editable until Jan 31, then locked on Feb 1.
@@ -102,9 +102,15 @@ export function isPastMonth(isoDate: string | null | undefined): boolean {
   if (!isoDate) return false;
   const d = parseLocalDate(isoDate);
   if (isNaN(d.getTime())) return false;
-  const now = new Date();
-  return (
-    d.getFullYear() < now.getFullYear() ||
-    (d.getFullYear() === now.getFullYear() && d.getMonth() < now.getMonth())
-  );
+  return toLocalISODate(d).slice(0, 7) < currentBusinessMonthKey();
+}
+
+/**
+ * "YYYY-MM" of the current month on the business clock (Europe/Tirane), not the
+ * browser's. Month-lock comparisons must agree with the server near month end.
+ */
+export function currentBusinessMonthKey(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Tirane", year: "numeric", month: "2-digit" })
+    .format(now)
+    .slice(0, 7);
 }

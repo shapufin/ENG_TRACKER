@@ -425,22 +425,20 @@ const CustomChartMobileList: React.FC<{
         <div className="flex items-center gap-1">
           <Button
             variant="outline"
-            size="sm"
+            size="control-sm"
             onClick={handleExpandAll}
             aria-label="Expand all nodes"
             title="Expand all"
-            className="h-8 px-2 text-xs"
           >
             <ChevronsUpDown className="mr-1 h-3.5 w-3.5" />
             <span>Expand All</span>
           </Button>
           <Button
             variant="outline"
-            size="sm"
+            size="control-sm"
             onClick={handleCollapseAll}
             aria-label="Collapse all nodes"
             title="Collapse all"
-            className="h-8 px-2 text-xs"
           >
             <ChevronsDownUp className="mr-1 h-3.5 w-3.5" />
             <span>Collapse All</span>

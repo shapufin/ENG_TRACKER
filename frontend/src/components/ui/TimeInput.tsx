@@ -6,7 +6,7 @@
  */
 import * as React from "react";
 import { Input } from "@/components/ui/input";
-import { dayPeriod, parseTypedTime } from "@/lib/time-utils";
+import { dayPeriod, formatTimeInput, parseTypedTime } from "@/lib/time-utils";
 import { cn } from "@/lib/utils";
 
 type TimeInputProps = Omit<
@@ -21,7 +21,8 @@ type TimeInputProps = Omit<
 
 // A time that cannot be mistaken for the start of a longer one, so it is safe to
 // report while the person is still typing: "0930", "9:30", "9pm". "09" waits for blur.
-const isComplete = (typed: string) => /\d{3}|:|\./.test(typed) || /[ap]/i.test(typed);
+const isComplete = (typed: string) =>
+  /\d{1,2}:\d{2}/.test(typed) || /\d{4}/.test(typed) || /[ap]m?$/i.test(typed);
 
 export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
   ({ value, onChange, showPeriod = true, className, onBlur, ...props }, ref) => {
@@ -33,13 +34,15 @@ export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
       const typed = event.target.value;
-      setText(typed);
       if (typed.trim() === "") {
+        setText("");
         onChange("");
         return;
       }
-      const parsed = parseTypedTime(typed);
-      if (parsed && isComplete(typed)) onChange(parsed);
+      const formatted = formatTimeInput(typed);
+      setText(formatted);
+      const parsed = parseTypedTime(formatted);
+      if (parsed && isComplete(formatted)) onChange(parsed);
     };
 
     const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {

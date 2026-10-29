@@ -1,3 +1,5 @@
+import { currentBusinessMonthKey } from "@/lib/date-format-utils";
+
 export const calcHours = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   logs: any[],
@@ -9,14 +11,12 @@ export const calcHours = (
   statusCheck: boolean = true
 ) => {
   if (!logs) return 0;
-  const today = new Date();
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const monthKey = currentBusinessMonthKey();
   const dateFromFilter = dateFrom ? new Date(dateFrom) : null;
   const dateToFilter = dateTo ? new Date(dateTo) : null;
   const filtered = logs.filter((log) => {
     const logDate = new Date(log.date);
-    const isCurrentMonth = logDate >= startOfMonth && logDate <= endOfMonth;
+    const isCurrentMonth = String(log.date).slice(0, 7) === monthKey;
     if (dateFromFilter && logDate < dateFromFilter) return false;
     if (dateToFilter && logDate > dateToFilter) return false;
     if (filterTeam !== "all") {

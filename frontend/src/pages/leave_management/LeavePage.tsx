@@ -63,7 +63,6 @@ export const LeavePage: React.FC = () => {
     },
     onUpdateSuccess: () => {
       setFormOpen(false);
-      setFormOpen(false);
       resetForm();
     },
     onApproveSuccess: () => {

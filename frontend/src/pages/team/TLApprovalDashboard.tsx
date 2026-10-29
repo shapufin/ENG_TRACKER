@@ -14,6 +14,7 @@ import { TLApprovalDateFilters } from "./components/TLApprovalDateFilters";
 import { TLApprovalTabs } from "./components/TLApprovalTabs";
 import { MonthPicker } from "@/components/ui/MonthPicker";
 import { formatMonthLabel } from "@/lib/monthOptions";
+import { currentBusinessMonthKey } from "@/lib/date-format-utils";
 
 // fallow-ignore-next-line complexity
 export const TLApprovalDashboard: React.FC = () => {
@@ -63,7 +64,7 @@ export const TLApprovalDashboard: React.FC = () => {
 
   // Derived: which month is currently selected (from dateFrom) and is it past?
   const selectedMonthLabel = dateFrom ? formatMonthLabel(dateFrom) : "";
-  const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const currentMonthKey = currentBusinessMonthKey();
   const selectedMonthKey = dateFrom ? dateFrom.slice(0, 7) : "";
   const isPastMonth = selectedMonthKey < currentMonthKey;
   const isFinalized = periodStatus?.status === "finalized";

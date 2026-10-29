@@ -6,6 +6,7 @@ import {
   toLocalISODate,
   parseLocalDate,
   isPastMonth,
+  currentBusinessMonthKey,
 } from "./date-format-utils";
 
 describe("formatDateDDMMYYYY", () => {
@@ -179,5 +180,24 @@ describe("isPastMonth", () => {
     const lastOfPrev = new Date(firstOfCurrent.getTime() - 1);
     const iso = `${lastOfPrev.getFullYear()}-${String(lastOfPrev.getMonth() + 1).padStart(2, "0")}-${String(lastOfPrev.getDate()).padStart(2, "0")}`;
     expect(isPastMonth(iso)).toBe(true);
+  });
+});
+
+describe("currentBusinessMonthKey", () => {
+  it("uses the Tirane month, not UTC, at a month boundary", () => {
+    // 23:30 UTC on Oct 31 is already Nov 1 in Tirane (UTC+1).
+    expect(currentBusinessMonthKey(new Date("2026-10-31T23:30:00Z"))).toBe("2026-11");
+    expect(currentBusinessMonthKey(new Date("2026-10-31T10:00:00Z"))).toBe("2026-10");
+  });
+});
+
+describe("isPastMonth on the business clock", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("treats the Tirane month as current just after local-UTC month end", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-31T23:30:00Z")); // Nov 1 in Tirane
+    expect(isPastMonth("2026-10-15")).toBe(true);
+    expect(isPastMonth("2026-11-01")).toBe(false);
   });
 });

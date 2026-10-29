@@ -34,7 +34,10 @@ export const validateTimeRange = (start: string, end: string): string | null => 
  *  "9pm" or "12am". Returns null when it is not a real time of day.
  */
 export const parseTypedTime = (typed: string): string | null => {
-  const match = typed.trim().toLowerCase().match(/^(\d{1,2})(?:[:.]?(\d{2}))?\s*([ap])?m?$/);
+  const match = typed
+    .trim()
+    .toLowerCase()
+    .match(/^(\d{1,2})(?:[:.]?(\d{2}))?\s*([ap])?m?$/);
   if (!match) {
     return null;
   }
@@ -56,4 +59,63 @@ export const dayPeriod = (time: string): "AM" | "PM" | "" => {
   const match = time.match(/^(\d{2}):\d{2}/);
   if (!match) return "";
   return Number(match[1]) < 12 ? "AM" : "PM";
+};
+
+/**
+ * Format raw input as a user types into a time field.
+ * Automatically inserts the ":" separator for 3+ digits (e.g. "2100" -> "21:00",
+ * "900" -> "9:00", "210" -> "21:0") without breaking deletion or 12h formats ("9pm").
+ */
+export const formatTimeInput = (raw: string): string => {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+
+  // 12-hour format with am/pm (e.g. "9pm", "11:30a") — preserve as-is
+  if (/[ap]m?$/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Already contains a colon or dot separator
+  if (trimmed.includes(":") || trimmed.includes(".")) {
+    const sep = trimmed.includes(":") ? ":" : ".";
+    const parts = trimmed.split(sep);
+    const hh = parts[0].replace(/[^\d]/g, "").slice(0, 2);
+    const mm = parts.slice(1).join("").replace(/[^\d]/g, "").slice(0, 2);
+    return mm !== "" || trimmed.endsWith(sep) ? `${hh}:${mm}` : hh;
+  }
+
+  // Digits only
+  const digits = trimmed.replace(/[^\d]/g, "");
+  if (!digits) return "";
+
+  // 4+ digits: e.g. "2100" -> "21:00", "0930" -> "09:30"
+  if (digits.length >= 4) {
+    return `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
+  }
+
+  // 3 digits: e.g. "900" -> "9:00", "930" -> "9:30", "210" -> "21:0"
+  if (digits.length === 3) {
+    const firstDigit = Number(digits[0]);
+    // Single-digit hour > 2: e.g. "900" -> "9:00", "830" -> "8:30"
+    if (firstDigit > 2) {
+      return `${digits[0]}:${digits.slice(1, 3)}`;
+    }
+    const firstTwo = Number(digits.slice(0, 2));
+    if (firstTwo <= 23) {
+      return `${digits.slice(0, 2)}:${digits[2]}`;
+    }
+    return `${digits[0]}:${digits.slice(1, 3)}`;
+  }
+
+  // 2 digits: e.g. "90" -> "9:0", "93" -> "9:3", "21" -> "21"
+  if (digits.length === 2) {
+    const firstDigit = Number(digits[0]);
+    const secondDigit = Number(digits[1]);
+    if (firstDigit > 2 && secondDigit <= 5) {
+      return `${digits[0]}:${digits[1]}`;
+    }
+    return digits;
+  }
+
+  return digits;
 };

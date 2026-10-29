@@ -1,7 +1,7 @@
 import React from "react";
 import { StatCard, STAT_CARD_MICRO_LABEL, type StatCardProps } from "@/components/ui/StatCard";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
-import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
+import { toneFillClass, toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import { Clock, FileText, CheckCircle, AlertCircle, XCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -36,35 +36,35 @@ const SUMMARY_CONFIG: Record<
     glow: "primary",
     iconColorClass: toneTextClass.info,
     iconWellClass: `border ${toneSurfaceClass.info}`,
-    progressColorClass: "bg-indigo-500",
+    progressColorClass: toneFillClass.info,
   },
   total_entries: {
     icon: FileText,
     glow: "primary",
     iconColorClass: toneTextClass.accent,
     iconWellClass: `border ${toneSurfaceClass.accent}`,
-    progressColorClass: "bg-purple-500",
+    progressColorClass: toneFillClass.accent,
   },
   approved_hours: {
     icon: CheckCircle,
     glow: "success",
     iconColorClass: toneTextClass.success,
     iconWellClass: `border ${toneSurfaceClass.success}`,
-    progressColorClass: "bg-emerald-500",
+    progressColorClass: toneFillClass.success,
   },
   pending_hours: {
     icon: AlertCircle,
     glow: "warning",
     iconColorClass: toneTextClass.warning,
     iconWellClass: `border ${toneSurfaceClass.warning}`,
-    progressColorClass: "bg-amber-500",
+    progressColorClass: toneFillClass.warning,
   },
   rejected_hours: {
     icon: XCircle,
     glow: "destructive",
     iconColorClass: toneTextClass.danger,
     iconWellClass: `border ${toneSurfaceClass.danger}`,
-    progressColorClass: "bg-rose-500",
+    progressColorClass: toneFillClass.danger,
   },
 };
 

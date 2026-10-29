@@ -86,4 +86,23 @@ describe("exportData utility", () => {
     expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
     expect(mockLink.click).toHaveBeenCalled();
   });
+
+  it("neutralises spreadsheet formulas and keeps quoting valid", async () => {
+    const mockLink = createMockLink();
+    vi.mocked(document.createElement).mockReturnValue(asAnchor(mockLink));
+    vi.mocked(URL.createObjectURL).mockReturnValue("blob:url");
+
+    exportData([{ a: "=HYPERLINK(1)", b: '@cmd "x"', c: "plain, text", d: "-5" }], "f", "csv", {
+      headers: ["A", "B", "C", "D"],
+      rowMapper: (r) => [r.a, r.b, r.c, r.d],
+    });
+
+    const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
+    const text = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.readAsText(blob);
+    });
+    expect(text.split("\n")[1]).toBe(`'=HYPERLINK(1),"'@cmd ""x""","plain, text",'-5`);
+  });
 });

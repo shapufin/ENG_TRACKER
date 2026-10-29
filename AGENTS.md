@@ -94,6 +94,7 @@ and serves framework-aware cross-stack queries.
 - Do not introduce raw colors when an existing token is available.
 - Preserve responsive behavior and accessibility.
 - Every interactive control must have an accessible name.
+- Client CSV cells use `csvCell` (`lib/csvSafe.ts`), global `keydown` handlers use a guard like `shouldIgnoreCalendarKey`, the current month comes from `currentBusinessMonthKey()` (Europe/Tirane), progress fills use `toneFillClass` (`docs/workflow-invariants.md` item 38).
 - Preserve API query keys and payload contracts unless explicitly changing them.
 - **Tables**: header typography and the header fill come from
   `frontend/src/components/ui/tableStyles.ts` — never inline in a `<thead>`.
