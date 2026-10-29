@@ -54,6 +54,15 @@ class CryptoTests(TestCase):
             with self.assertRaises(SecretDecryptError):
                 decrypt_text(token)
 
+    def test_ciphertext_written_by_cryptography_47_still_decrypts(self):
+        """Pins Fernet cross-version compatibility: this token was produced under
+        cryptography 47.0.0. If a library bump ever stops reading it, every
+        enrolled user's MFA seed would be orphaned."""
+        key = '35O3aAPWsLAtsX_wabRW-PnVPYV19nUYz986az3eNVg='
+        token = 'gAAAAABq42RZ65gcgSgLNy_rTOl7Ygoet0E4lYGLorsk24kC81Ux7ffmKJ5LTxPVqxejuD2FsMlkPWNpQIfUjwbrRK03RuZuXQBNyLogdNOQv3TPG7HpVUU='
+        with override_settings(MFA_ENCRYPTION_KEYS=[key]):
+            self.assertEqual(decrypt_text(token), 'JBSWY3DPEHPK3PXP')
+
     def test_rotation_keeps_old_ciphertext_readable_and_reencrypts(self):
         from cryptography.fernet import Fernet
         old = encrypt_text('seed')
