@@ -387,4 +387,62 @@ describe("FolderBrowser", () => {
     await waitFor(() => expect(fakeTab.close).toHaveBeenCalled());
     windowOpen.mockRestore();
   });
+
+  it("previews a PDF when clicking the document tile directly instead of downloading", async () => {
+    const blob = new Blob(["%PDF-1.4"], { type: "application/pdf" });
+    (onboardingService.getFolders as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (onboardingService.getDocuments as ReturnType<typeof vi.fn>).mockResolvedValue([
+      doc({ name: "contract.pdf" }),
+    ]);
+    (onboardingService.downloadDocument as ReturnType<typeof vi.fn>).mockResolvedValue(blob);
+    const createObjectURL = vi.fn(() => "blob:mock-url");
+    vi.stubGlobal("URL", { ...URL, createObjectURL, revokeObjectURL: vi.fn() });
+    const fakeTab = { location: { href: "" }, close: vi.fn() };
+    const windowOpen = vi.spyOn(window, "open").mockReturnValue(fakeTab as unknown as Window);
+
+    renderBrowser();
+    await waitFor(() => expect(screen.getByText("contract.pdf")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("contract.pdf"));
+
+    expect(windowOpen).toHaveBeenCalledWith("", "_blank", "noopener");
+    await waitFor(() => expect(fakeTab.location.href).toBe("blob:mock-url"));
+    windowOpen.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
+  it("downloads the file when clicking the Download icon button on the document tile", async () => {
+    const blob = new Blob(["content"], { type: "application/pdf" });
+    (onboardingService.getFolders as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (onboardingService.getDocuments as ReturnType<typeof vi.fn>).mockResolvedValue([
+      doc({ name: "contract.pdf" }),
+    ]);
+    (onboardingService.downloadDocument as ReturnType<typeof vi.fn>).mockResolvedValue(blob);
+    const createObjectURL = vi.fn(() => "blob:download-url");
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", { ...URL, createObjectURL, revokeObjectURL });
+    const clickSpy = vi.fn();
+    const origCreateElement = window.document.createElement.bind(window.document);
+    vi.spyOn(window.document, "createElement").mockImplementation((tagName: string) => {
+      const el = origCreateElement(tagName);
+      if (tagName === "a") {
+        el.click = clickSpy;
+      }
+      return el;
+    });
+
+    renderBrowser();
+    await waitFor(() => expect(screen.getByText("contract.pdf")).toBeInTheDocument());
+
+    const downloadBtn = screen.getByLabelText("Download contract.pdf");
+    expect(downloadBtn).toBeInTheDocument();
+    fireEvent.click(downloadBtn);
+
+    await waitFor(() => {
+      expect(onboardingService.downloadDocument).toHaveBeenCalledWith(1);
+      expect(clickSpy).toHaveBeenCalled();
+    });
+
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
 });

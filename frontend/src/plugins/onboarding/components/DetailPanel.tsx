@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { formatDateTime } from "@/lib/date-format-utils";
 import { useMotionTransition } from "@/lib/motion";
-import { isEditableOffice } from "../lib/officeFiles";
+import { isEditableOffice, isPreviewable } from "../lib/officeFiles";
 import type { Document, Folder } from "../types/onboarding";
 
 export type DetailPanelItem =
@@ -27,11 +27,6 @@ const formatBytes = (bytes: number): string => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
-
-/** Only PDFs render natively in a browser tab. Word/Excel/images have no
- * built-in in-browser viewer here yet — download remains the only option
- * for those until an office-document viewer is wired up. */
-const isPreviewable = (name: string): boolean => name.toLowerCase().endsWith(".pdf");
 
 const MetaRow: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div className="flex items-center justify-between gap-3 py-2 text-sm">

@@ -16,6 +16,8 @@ import {
 } from "@dnd-kit/core";
 import {
   ChevronRight,
+  Download,
+  Eye,
   File as FileIcon,
   FilePlus,
   Folder as FolderIcon,
@@ -46,7 +48,7 @@ import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { RenameDialog } from "./RenameDialog";
 import { SearchResultsList } from "./SearchResultsList";
 import { UploadDropzone } from "./UploadDropzone";
-import { isEditableOffice } from "../lib/officeFiles";
+import { isEditableOffice, isPreviewable } from "../lib/officeFiles";
 import { DetailPanel, type DetailPanelItem } from "./DetailPanel";
 
 interface FolderBrowserProps {
@@ -183,15 +185,36 @@ const FolderTile: React.FC<{
 const DocumentTile: React.FC<{
   document: Document;
   onDownload: () => void;
+  onPreview?: () => void;
+  onEdit?: () => void;
   onRename: () => void;
   onDelete: () => void;
   onInfo: () => void;
   readOnly?: boolean;
-}> = ({ document, onDownload, onRename, onDelete, onInfo, readOnly = false }) => {
+}> = ({
+  document,
+  onDownload,
+  onPreview,
+  onEdit,
+  onRename,
+  onDelete,
+  onInfo,
+  readOnly = false,
+}) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `document-${document.id}`,
     data: { kind: "document", id: document.id },
   });
+
+  const handlePrimaryAction = () => {
+    if (onPreview && isPreviewable(document.name)) {
+      onPreview();
+    } else if (onEdit && isEditableOffice(document.name)) {
+      onEdit();
+    } else {
+      onDownload();
+    }
+  };
 
   return (
     <GlassCard
@@ -202,10 +225,10 @@ const DocumentTile: React.FC<{
         "group flex cursor-pointer items-center gap-3 p-4 transition-all",
         isDragging && "opacity-40"
       )}
-      onClick={onDownload}
+      onClick={handlePrimaryAction}
       {...(readOnly ? {} : attributes)}
       {...(readOnly ? {} : listeners)}
-      onKeyDown={onActivateKeyDown(onDownload)}
+      onKeyDown={onActivateKeyDown(handlePrimaryAction)}
     >
       <div
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg shadow-inner transition-transform duration-200 group-hover:scale-110"
@@ -221,6 +244,32 @@ const DocumentTile: React.FC<{
         <p className="text-muted-foreground text-xs">{formatBytes(document.size_bytes)}</p>
       </div>
       <div className="flex shrink-0 gap-1 opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
+        {onPreview && isPreviewable(document.name) && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            aria-label={`Preview ${document.name}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onPreview();
+            }}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          aria-label={`Download ${document.name}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDownload();
+          }}
+        >
+          <Download className="h-4 w-4" />
+        </Button>
         <Button
           variant="ghost"
           size="icon"
@@ -415,7 +464,9 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
     const previewTab = window.open("", "_blank", "noopener");
     try {
       const blob = await onboardingService.downloadDocument(doc.id);
-      const url = URL.createObjectURL(blob);
+      const pdfBlob =
+        blob.type === "application/pdf" ? blob : new Blob([blob], { type: "application/pdf" });
+      const url = URL.createObjectURL(pdfBlob);
       if (previewTab) {
         previewTab.location.href = url;
       } else {
@@ -436,7 +487,11 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
     setTrail([...folder.ancestors, { id: folder.id, name: folder.name }]);
   };
   const handleOpenSearchDocument = (document: SearchDocumentResult) => {
-    handleDownload(document);
+    if (isPreviewable(document.name)) {
+      handlePreview(document);
+    } else {
+      handleDownload(document);
+    }
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -613,6 +668,8 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
                         <DocumentTile
                           document={doc}
                           onDownload={() => handleDownload(doc)}
+                          onPreview={() => handlePreview(doc)}
+                          onEdit={officeEditorEnabled ? () => handleEdit(doc) : undefined}
                           onRename={() =>
                             setRenameTarget({ kind: "document", id: doc.id, name: doc.name })
                           }
