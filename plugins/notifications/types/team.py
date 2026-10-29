@@ -31,18 +31,22 @@ class TeamActionRequiredNotification(NotificationType):
 
     def title(self, context):
         entity = context['entity_type']
-        return f'Action Required: New {self._TITLE_LABELS[entity]}'
+        label = self._TITLE_LABELS[entity]
+        if context.get('resubmitted'):
+            return f'Action Required: {label} Resubmitted'
+        return f'Action Required: New {label}'
 
     def message(self, context):
         i = context['instance']
         entity = context['entity_type']
         name = i.user.get_full_name()
+        verb = 'resubmitted after editing' if context.get('resubmitted') else 'submitted'
         if entity == 'leave':
-            return f'{name} submitted a leave request for {i.start_date}.'
+            return f'{name} {verb} a leave request for {i.start_date}.'
         elif entity == 'overtime':
-            return f'{name} submitted overtime for {i.date} ({i.hours}h).'
+            return f'{name} {verb} overtime for {i.date} ({i.hours}h).'
         elif entity == 'standby':
-            return f'{name} submitted standby for {i.date}.'
+            return f'{name} {verb} standby for {i.date}.'
         raise ValueError(f'Unknown entity_type: {entity}')
 
 
@@ -71,3 +75,42 @@ class TeamLeaveDeletedNotification(NotificationType):
             f'{i.user.get_full_name()} deleted their leave request for '
             f'{i.start_date}.'
         )
+
+
+class _TeamLogDeletedNotification(NotificationType):
+    """Shared base: a pending overtime/standby log vanished from the queue."""
+    category = 'team'
+    notification_type = 'warning'
+    link = '/team/approvals'
+    noun = ''
+
+    def recipients(self, context):
+        from plugins.notifications.signals import _team_recipients
+        return _team_recipients(context['instance'].user)
+
+    def title(self, context):
+        return f'{self.noun} Deleted'
+
+    def message(self, context):
+        i = context['instance']
+        return f'{i.user.get_full_name()} deleted their {self.noun.lower()} for {i.date}.'
+
+
+class TeamOvertimeDeletedNotification(_TeamLogDeletedNotification):
+    event_type = 'team_overtime_deleted'
+    label = 'Team overtime logs deleted'
+    description = (
+        'Sent to team leaders when a team member deletes a pending overtime '
+        'log, so approvers know why it vanished from their approval queue.'
+    )
+    noun = 'Overtime Log'
+
+
+class TeamStandbyDeletedNotification(_TeamLogDeletedNotification):
+    event_type = 'team_standby_deleted'
+    label = 'Team standby logs deleted'
+    description = (
+        'Sent to team leaders when a team member deletes a pending standby '
+        'log, so approvers know why it vanished from their approval queue.'
+    )
+    noun = 'Standby Log'

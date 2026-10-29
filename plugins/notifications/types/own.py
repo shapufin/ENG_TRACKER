@@ -11,8 +11,8 @@ class LeaveSubmittedNotification(NotificationType):
     event_type = 'own_leave_submitted'
     label = 'My leave submitted'
     description = (
-        'Sent to you right after you submit a leave request. Off by '
-        'default: you know you submitted it, and your TL/HR are notified '
+        'Sent to you right after you submit a leave request. '
+        'Optional: you know you submitted it, and your TL/HR are notified '
         'separately.'
     )
     notification_type = 'info'
@@ -76,8 +76,8 @@ class OvertimeSubmittedNotification(NotificationType):
     event_type = 'own_overtime_submitted'
     label = 'My overtime submitted'
     description = (
-        'Sent to you right after you submit an overtime log. Off by '
-        'default: you know you submitted it, and your TL/HR are notified '
+        'Sent to you right after you submit an overtime log. '
+        'Optional: you know you submitted it, and your TL/HR are notified '
         'separately.'
     )
     notification_type = 'info'
@@ -119,8 +119,8 @@ class StandbySubmittedNotification(NotificationType):
     event_type = 'own_standby_submitted'
     label = 'My standby submitted'
     description = (
-        'Sent to you right after you submit a standby log. Off by '
-        'default: you know you submitted it, and your TL/HR are notified '
+        'Sent to you right after you submit a standby log. '
+        'Optional: you know you submitted it, and your TL/HR are notified '
         'separately.'
     )
     notification_type = 'info'

@@ -241,6 +241,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
                 not self._is_pending(locked)
                 and (self._is_approval_period_locked(locked) or self._is_month_locked(locked))
             )
+            locked._skip_notifications = getattr(instance, '_skip_notifications', False)
             locked.delete()
         self.invalidate_related_cache()
         if was_locked_period and user.is_superuser:
