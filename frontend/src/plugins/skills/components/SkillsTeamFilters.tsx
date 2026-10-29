@@ -21,6 +21,7 @@ import {
 import { PROFICIENCY_LEVELS } from "../utils/proficiencyLevels";
 import { SkillsGapSummary } from "./SkillsGapSummary";
 import { SkillsLevelLegend } from "./SkillsLevelLegend";
+import { SkillsLeaderFilters, type SkillsLeaderFiltersProps } from "./SkillsLeaderFilters";
 import type { SkillCategory, SkillCoverage } from "../types/skills";
 
 interface SkillsTeamFiltersProps {
@@ -38,6 +39,9 @@ interface SkillsTeamFiltersProps {
   isMobile: boolean;
   filtersOpen: boolean;
   onFiltersOpenChange: (open: boolean) => void;
+  /** HR/admin only: TL and Tech narrowing across every team. */
+  leaderFilters?: SkillsLeaderFiltersProps;
+  leaderFiltersActive?: boolean;
 }
 
 const hasActiveFilters = (
@@ -62,8 +66,11 @@ export const SkillsTeamFilters: React.FC<SkillsTeamFiltersProps> = ({
   isMobile,
   filtersOpen,
   onFiltersOpenChange,
+  leaderFilters,
+  leaderFiltersActive,
 }) => {
-  const isActive = hasActiveFilters(search, categoryCode, minLevel, maxLevel);
+  const isActive =
+    hasActiveFilters(search, categoryCode, minLevel, maxLevel) || !!leaderFiltersActive;
 
   return (
     <>
@@ -153,6 +160,7 @@ export const SkillsTeamFilters: React.FC<SkillsTeamFiltersProps> = ({
             </Select>
           </div>
         </div>
+        {leaderFilters && <SkillsLeaderFilters {...leaderFilters} />}
         {gaps.length > 0 && (
           <div className="border-border/70 border-t pt-3">
             <SkillsGapSummary gaps={gaps} />

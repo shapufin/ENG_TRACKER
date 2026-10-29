@@ -314,6 +314,9 @@ class SkillMatrixViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
             'min_level': request.query_params.get('min_level'),
             'max_level': request.query_params.get('max_level'),
             'search': request.query_params.get('search'),
+            'italian_tl': request.query_params.get('italian_tl'),
+            'albanian_tl': request.query_params.get('albanian_tl'),
+            'tech': request.query_params.get('tech'),
         }
         # Clean up empty values
         filters = {k: v for k, v in filters.items() if v}

@@ -16,6 +16,8 @@ export const leaveService = {
     status?: string;
     user?: string;
     request_type?: string;
+    italian_tl?: string;
+    albanian_tl?: string;
     date_from?: string;
     date_to?: string;
     search?: string;

@@ -87,6 +87,9 @@ export interface SkillMatrixFilters {
   min_level?: number;
   max_level?: number;
   search?: string;
+  italian_tl?: number;
+  albanian_tl?: number;
+  tech?: number;
   page?: number;
   page_size?: number;
 }

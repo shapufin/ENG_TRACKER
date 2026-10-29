@@ -139,6 +139,9 @@ export const matrixService = {
       addDefinedParam(params, "min_level", filters.min_level);
       addDefinedParam(params, "max_level", filters.max_level);
       addDefinedParam(params, "search", filters.search);
+      addDefinedParam(params, "italian_tl", filters.italian_tl);
+      addDefinedParam(params, "albanian_tl", filters.albanian_tl);
+      addDefinedParam(params, "tech", filters.tech);
       addDefinedParam(params, "page", filters.page);
       addDefinedParam(params, "page_size", filters.page_size);
     }

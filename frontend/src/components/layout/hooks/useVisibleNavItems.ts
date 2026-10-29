@@ -99,6 +99,8 @@ const allNavItems: NavItem[] = [
     icon: Calendar,
     section: "core",
     hbprHidden: true,
+    // Pure HR works the employee-wide list under "Leave Requests", not a personal page.
+    hrOnlyHidden: true,
   },
   {
     path: "/calendar",
@@ -147,6 +149,13 @@ const allNavItems: NavItem[] = [
     path: "/hr/reports",
     label: "HR Reports",
     icon: Briefcase,
+    section: "hr",
+    roles: ["hr"],
+  },
+  {
+    path: "/hr/leave-requests",
+    label: "Leave Requests",
+    icon: Calendar,
     section: "hr",
     roles: ["hr"],
   },
