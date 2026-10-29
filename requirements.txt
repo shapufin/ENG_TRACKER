@@ -32,7 +32,8 @@ uritemplate==4.2.0
 
 # Multi-factor authentication: Fernet encryption of TOTP seeds, QR rendering.
 # (TOTP itself is stdlib hmac; cryptography was only a transitive pin before.)
-cryptography==47.0.0
+# 50.0.x fixes PYSEC-2026-3552/3553/3554 and the bundled-OpenSSL advisory GHSA-537c-gmf6-5ccf.
+cryptography==50.0.2
 qrcode==8.2
 
 # Web Push notifications

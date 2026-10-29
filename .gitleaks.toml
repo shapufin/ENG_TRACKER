@@ -16,6 +16,10 @@ regexes = [
   # Fixed throwaway passwords in unit tests that run against the test database only.
   '''Orig-Pass-7391x''',
   '''Sturdy-Pass-7391''',
+  # Fixed Fernet key + token in test_mfa_service.py: a ciphertext produced under
+  # cryptography 47.0.0, pinned to prove it still decrypts. Throwaway, test-only.
+  '''35O3aAPWsLAtsX_wabRW-PnVPYV19nUYz986az3eNVg=''',
+  '''gAAAAABq42RZ65gcgSgLNy_rTOl7Ygoet0E4lYGLorsk24kC81Ux7ffmKJ5LTxPVqxejuD2FsMlkPWNpQIfUjwbrRK03RuZuXQBNyLogdNOQv3TPG7HpVUU=''',
 ]
 paths = [
   '''^apps/users/management/commands/seed_e2e_data\.py$''',
