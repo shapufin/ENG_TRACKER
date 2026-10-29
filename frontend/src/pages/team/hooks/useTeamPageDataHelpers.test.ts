@@ -42,9 +42,9 @@ describe("calcVacationDaysLeft", () => {
       { user: 1, leave_type: "vacation", year: 2026, available_days: 4 },
       { user: 1, leave_type: "vacation", year: 2027, available_days: 9 },
     ];
-    vi.setSystemTime(new Date(2027, 2, 31)); // last day of the carry-over window
+    vi.setSystemTime(new Date("2027-03-31T12:00:00Z")); // last day of the carry-over window
     expect(calcVacationDaysLeft(yearly, members, "all")).toBe(4);
-    vi.setSystemTime(new Date(2027, 3, 1));
+    vi.setSystemTime(new Date("2027-04-01T12:00:00Z"));
     expect(calcVacationDaysLeft(yearly, members, "all")).toBe(9);
   });
 

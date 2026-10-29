@@ -7,6 +7,7 @@ import {
   parseLocalDate,
   isPastMonth,
   currentBusinessMonthKey,
+  currentBusinessDateISO,
 } from "./date-format-utils";
 
 describe("formatDateDDMMYYYY", () => {
@@ -199,5 +200,11 @@ describe("isPastMonth on the business clock", () => {
     vi.setSystemTime(new Date("2026-10-31T23:30:00Z")); // Nov 1 in Tirane
     expect(isPastMonth("2026-10-15")).toBe(true);
     expect(isPastMonth("2026-11-01")).toBe(false);
+  });
+});
+
+describe("currentBusinessDateISO", () => {
+  it("returns the Tirane calendar day", () => {
+    expect(currentBusinessDateISO(new Date("2026-10-31T23:30:00Z"))).toBe("2026-11-01");
   });
 });

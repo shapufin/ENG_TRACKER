@@ -167,11 +167,14 @@ class SiteBrandingSerializer(serializers.ModelSerializer):
         fields = ['id', 'site_name', 'logo', 'logo_url']
 
     _LOGO_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
+    _LOGO_MAX_BYTES = 2 * 1024 * 1024
 
     def validate_logo(self, logo):
         """Raster images only (SEC-13): no SVG/HTML, checked by extension and magic bytes."""
         if not logo:
             return logo
+        if logo.size >= self._LOGO_MAX_BYTES:
+            raise serializers.ValidationError('Logo must be smaller than 2 MB.')
         ext = logo.name.rsplit('.', 1)[-1].lower() if '.' in logo.name else ''
         if ext not in self._LOGO_EXTENSIONS:
             raise serializers.ValidationError('Logo must be a PNG, JPEG or WebP image.')

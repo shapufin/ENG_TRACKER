@@ -69,6 +69,22 @@ class SiteBrandingViewSetTests(TestCase):
         self.assertTrue(branding.logo)
         self.assertIsNotNone(response.data["logo_url"])
 
+    def test_logo_over_two_megabytes_is_rejected(self):
+        branding = SiteBranding.objects.create(pk=1, site_name="Acme Tracker")
+        self.client.force_authenticate(self.staff_user)
+        big = SimpleUploadedFile(
+            "logo.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * (2 * 1024 * 1024), content_type="image/png"
+        )
+
+        response = self.client.patch(
+            f"/api/dashboard/branding/{branding.id}/", {"logo": big}, format="multipart"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertIn("logo", response.data)
+        branding.refresh_from_db()
+        self.assertFalse(branding.logo)
+
     def test_updating_site_name_without_logo_leaves_existing_logo_untouched(self):
         """The frontend leaves the file input empty when not changing the
         logo — a PATCH with no `logo` key must not clear the existing one.

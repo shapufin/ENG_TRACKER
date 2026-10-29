@@ -105,12 +105,20 @@ export function isPastMonth(isoDate: string | null | undefined): boolean {
   return toLocalISODate(d).slice(0, 7) < currentBusinessMonthKey();
 }
 
+/** "YYYY-MM-DD" of today on the business clock (Europe/Tirane), not the browser's. */
+export function currentBusinessDateISO(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Tirane",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
 /**
  * "YYYY-MM" of the current month on the business clock (Europe/Tirane), not the
  * browser's. Month-lock comparisons must agree with the server near month end.
  */
 export function currentBusinessMonthKey(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Tirane", year: "numeric", month: "2-digit" })
-    .format(now)
-    .slice(0, 7);
+  return currentBusinessDateISO(now).slice(0, 7);
 }

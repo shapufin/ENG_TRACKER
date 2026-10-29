@@ -70,6 +70,9 @@ class LeaveBalanceSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+        extra_kwargs = {
+            field: {'min_value': 0} for field in ('total_days', 'used_days', 'pending_days')
+        }
 
 
 class LeaveBalanceDetailSerializer(serializers.Serializer):

@@ -1,3 +1,4 @@
+import { currentBusinessDateISO } from "@/lib/date-format-utils";
 import type { UserProfile } from "@/types";
 
 export const calcVacationDaysLeft = (
@@ -7,10 +8,10 @@ export const calcVacationDaysLeft = (
   filterTeam: string
 ) => {
   if (!teamBalances || !membersData.length) return 0;
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const march31 = new Date(currentYear, 2, 31);
-  const targetYear = today <= march31 ? currentYear - 1 : currentYear;
+  // Business clock: the carry-over window runs through the whole of March 31 in Tirane.
+  const today = currentBusinessDateISO();
+  const currentYear = Number(today.slice(0, 4));
+  const targetYear = today <= `${currentYear}-03-31` ? currentYear - 1 : currentYear;
   const targetMembers =
     filterTeam === "all"
       ? membersData
