@@ -5,6 +5,8 @@ led_teams) — never FK-only queries. See CONTEXT.md hot invariant #3.
 """
 from django.contrib.auth.models import User
 
+from core.mixins.permissions import is_hr_only
+
 
 def visible_user_ids(user):
     """Return the set of user IDs whose skill data ``user`` may see.
@@ -35,13 +37,14 @@ def can_edit_user_skill(actor, user_skill):
 
     - Self: always (own skill)
     - TL: if target user is in their team via get_team_member_ids()
-    - HR: yes (broad access for HR management)
+    - HR who is also a TL: yes (broad access for HR management)
+    - Pure HR: no, they view team skills but never change a rating
     - Admin/superuser: yes
     """
     if actor.is_superuser or actor.is_staff:
         return True
     profile = getattr(actor, 'profile', None)
-    if profile is not None and profile.is_hr:
+    if profile is not None and profile.is_hr and not is_hr_only(actor):
         return True
     if user_skill.user_id == actor.id:
         return True
@@ -54,12 +57,12 @@ def can_edit_user_skill(actor, user_skill):
 def can_delete_user_skill(actor, user_skill):
     """Check if ``actor`` can delete (remove) a UserSkill.
 
-    Only self, HR, and admin can remove skills from a profile.
-    TLs can re-rate but NOT add/remove (per design decision).
+    Only self, HR who is also a TL, and admin can remove skills from a profile.
+    Pure HR is read-only; TLs can re-rate but NOT add/remove (per design decision).
     """
     if actor.is_superuser or actor.is_staff:
         return True
     profile = getattr(actor, 'profile', None)
-    if profile is not None and profile.is_hr:
+    if profile is not None and profile.is_hr and not is_hr_only(actor):
         return True
     return user_skill.user_id == actor.id

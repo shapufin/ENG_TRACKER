@@ -40,6 +40,16 @@ describe("useHRTeamLeaderAssignment", () => {
     ] as any);
   });
 
+  it("lists and counts only assignable employees", async () => {
+    const { result } = renderHook(() => useHRTeamLeaderAssignment(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(userService.getProfiles).toHaveBeenCalledWith(
+      expect.objectContaining({ role: "assignable_employee" })
+    );
+    expect(userService.getTechFacets).toHaveBeenCalledWith({ role: "assignable_employee" });
+  });
+
   it("loads profiles, tech facets, and TL lists", async () => {
     const { result } = renderHook(() => useHRTeamLeaderAssignment(), { wrapper });
 

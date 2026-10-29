@@ -4,6 +4,9 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { BulkActionBar } from "@/components/ui/BulkActionBar";
+import { StatCard } from "@/components/ui/StatCard";
+import { UserCell } from "@/components/admin/UserCell";
+import { UserCheck, UserX, Users } from "lucide-react";
 import { TechFacetFilter } from "@/components/admin/TechFacetFilter";
 import { TeamLeaderSelect } from "@/components/admin/TeamLeaderSelect";
 import { useHRTeamLeaderAssignment } from "./hooks/useHRTeamLeaderAssignment";
@@ -52,21 +55,27 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
     }
   };
 
+  const counts = useMemo(
+    () => ({
+      italian: profiles.filter((p) => p.italian_tl).length,
+      albanian: profiles.filter((p) => p.albanian_tl).length,
+      none: profiles.filter((p) => !p.italian_tl && !p.albanian_tl).length,
+    }),
+    [profiles]
+  );
+
   const columns = useMemo<AppColumnDef<UserProfile>[]>(
     () => [
       {
         accessorKey: "user.username",
         header: "User",
-        cell: ({ row }) => (
-          <div>
-            <div className="font-medium">{row.original.user.username}</div>
-            <div className="text-xs text-muted-foreground">
-              {[row.original.user.first_name, row.original.user.last_name]
-                .filter(Boolean)
-                .join(" ")}
-            </div>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const { username, first_name, last_name } = row.original.user;
+          const fullName = [first_name, last_name].filter(Boolean).join(" ");
+          return (
+            <UserCell name={fullName || username} subtitle={fullName ? username : undefined} />
+          );
+        },
       },
       {
         id: "italian_tl",
@@ -120,60 +129,78 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
       {isLoading ? (
         <LoadingCard rows={6} className="min-h-[400px]" />
       ) : (
-        <GlassCard delay={0} className="space-y-4 p-4">
-          <TechFacetFilter
-            facets={techFacets}
-            noTechCount={noTechCount}
-            selectedTechIds={techIds}
-            selectedLevelIds={techLevelIds}
-            noTechOnly={noTechOnly}
-            onTechIdsChange={setTechIds}
-            onLevelIdsChange={setTechLevelIds}
-            onNoTechOnlyChange={setNoTechOnly}
-          />
-          <BulkActionBar
-            selectedCount={selectedProfileIds.length}
-            onClear={() => setRowSelection({})}
-            entityName="users"
-            actions={[]}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="w-40">
-                <TeamLeaderSelect
-                  ariaLabel="Bulk set Italian TL"
-                  value={null}
-                  options={italianTLs}
-                  disabled={isBulkApplying}
-                  onChange={(teamLeaderUserId) =>
-                    handleBulkSetLeader("italian_tl", teamLeaderUserId)
-                  }
-                />
+        <>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard label="Employees" value={profiles.length} icon={Users} glow="primary" />
+            <StatCard
+              label="With an Italian TL"
+              value={counts.italian}
+              icon={UserCheck}
+              glow="success"
+            />
+            <StatCard
+              label="With an Albanian TL"
+              value={counts.albanian}
+              icon={UserCheck}
+              glow="success"
+            />
+            <StatCard label="Without any TL" value={counts.none} icon={UserX} glow="warning" />
+          </div>
+          <GlassCard delay={0} className="space-y-4 p-4">
+            <TechFacetFilter
+              facets={techFacets}
+              noTechCount={noTechCount}
+              selectedTechIds={techIds}
+              selectedLevelIds={techLevelIds}
+              noTechOnly={noTechOnly}
+              onTechIdsChange={setTechIds}
+              onLevelIdsChange={setTechLevelIds}
+              onNoTechOnlyChange={setNoTechOnly}
+            />
+            <BulkActionBar
+              selectedCount={selectedProfileIds.length}
+              onClear={() => setRowSelection({})}
+              entityName="users"
+              actions={[]}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="w-40">
+                  <TeamLeaderSelect
+                    ariaLabel="Bulk set Italian TL"
+                    value={null}
+                    options={italianTLs}
+                    disabled={isBulkApplying}
+                    onChange={(teamLeaderUserId) =>
+                      handleBulkSetLeader("italian_tl", teamLeaderUserId)
+                    }
+                  />
+                </div>
+                <div className="w-40">
+                  <TeamLeaderSelect
+                    ariaLabel="Bulk set Albanian TL"
+                    value={null}
+                    options={albanianTLs}
+                    disabled={isBulkApplying}
+                    onChange={(teamLeaderUserId) =>
+                      handleBulkSetLeader("albanian_tl", teamLeaderUserId)
+                    }
+                  />
+                </div>
               </div>
-              <div className="w-40">
-                <TeamLeaderSelect
-                  ariaLabel="Bulk set Albanian TL"
-                  value={null}
-                  options={albanianTLs}
-                  disabled={isBulkApplying}
-                  onChange={(teamLeaderUserId) =>
-                    handleBulkSetLeader("albanian_tl", teamLeaderUserId)
-                  }
-                />
-              </div>
-            </div>
-          </BulkActionBar>
-          <DataTable
-            columns={columns}
-            data={profiles}
-            searchColumn="user.username"
-            searchPlaceholder="Search users..."
-            getRowId={(row) => String(row.id)}
-            emptyMessage="No users match your filters."
-            enableRowSelection
-            rowSelection={rowSelection}
-            onRowSelectionChange={setRowSelection}
-          />
-        </GlassCard>
+            </BulkActionBar>
+            <DataTable
+              columns={columns}
+              data={profiles}
+              searchColumn="user.username"
+              searchPlaceholder="Search users..."
+              getRowId={(row) => String(row.id)}
+              emptyMessage="No users match your filters."
+              enableRowSelection
+              rowSelection={rowSelection}
+              onRowSelectionChange={setRowSelection}
+            />
+          </GlassCard>
+        </>
       )}
     </PageShell>
   );

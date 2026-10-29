@@ -83,6 +83,7 @@ const TeamManagementPage = React.lazy(() => import("@/pages/team/TeamManagementP
 const TLApprovalDashboard = React.lazy(() => import("@/pages/team/TLApprovalDashboard"));
 import { HRRoute } from "@/components/auth/HRRoute";
 import { HoursRoute } from "@/components/auth/HoursRoute";
+import { HrRestrictedRoute } from "@/components/auth/HrRestrictedRoute";
 import { TLRoute } from "@/components/auth/TLRoute";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { PageLoader } from "@/components/ui/PageLoader";
@@ -106,10 +107,10 @@ const usePluginRouteObjects = (layout: "app" | "admin" | "hr") => {
       .map((route) => {
         const Component = getPluginComponent(plugin.name, route.component);
         if (!Component) return null;
-        return {
-          path: route.path,
-          element: withSuspense(<Component />),
-        };
+        const page = { path: route.path, element: withSuspense(<Component />) };
+        return route.hr_only_hidden
+          ? { element: <HrRestrictedRoute />, children: [page] }
+          : page;
       })
       .filter((route): route is NonNullable<typeof route> => route !== null)
   );
@@ -154,7 +155,10 @@ export const AppRoutes: React.FC = () => {
                   element: <HbprRestrictedRoute />,
                   children: [
                     { path: "/leave-management", element: withSuspense(<LeavePage />) },
-                    { path: "/calendar", element: withSuspense(<CalendarPage />) },
+                    {
+                      element: <HrRestrictedRoute />,
+                      children: [{ path: "/calendar", element: withSuspense(<CalendarPage />) }],
+                    },
                   ],
                 },
                 { path: "/team", element: withSuspense(<TeamManagementPage />) },

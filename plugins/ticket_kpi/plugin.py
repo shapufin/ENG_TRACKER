@@ -60,22 +60,26 @@ class TicketKPIPlugin(BasePlugin):
                 {
                     "path": "/ticket-kpi/upload",
                     "component": "TicketUploadPage",
-                    "layout": "app"
+                    "layout": "app",
+                    "hr_only_hidden": True,
                 },
                 {
                     "path": "/ticket-kpi/dashboard",
                     "component": "TicketKPIDashboardPage",
-                    "layout": "app"
+                    "layout": "app",
+                    "hr_only_hidden": True,
                 },
                 {
                     "path": "/ticket-kpi/team",
                     "component": "TicketKPITeamPage",
-                    "layout": "app"
+                    "layout": "app",
+                    "hr_only_hidden": True,
                 },
                 {
                     "path": "/ticket-kpi/team-management",
                     "component": "TicketKPITeamManagementPage",
-                    "layout": "app"
+                    "layout": "app",
+                    "hr_only_hidden": True,
                 },
                 {
                     "path": "/admin/ticket-kpi/mappings",

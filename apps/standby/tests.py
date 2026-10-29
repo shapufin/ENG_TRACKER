@@ -108,15 +108,24 @@ class StandbyLogViewSetTests(TestCase):
         response = self.client.get('/api/standby/logs/admin_logs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
 
-    def test_admin_logs_allows_hr_read_only(self):
-        """HR has view-all access per the HRReadOnlyMixin architecture and is
-        admitted to the admin pages by the route guard — the GET-only
-        admin_logs endpoint must accept HR as well."""
+    def test_pure_hr_has_no_access_to_standby_logs(self):
+        """Pure HR has no standby: every action of the viewset is refused, the
+        read-only admin_logs endpoint included (hidden menus are not auth)."""
         hr_user = User.objects.create_user(username='sb-hr', password='testpass')
         profile = hr_user.profile
         profile.is_hr_user = True
         profile.save()
         self.client.force_authenticate(user=hr_user)
+        for url in ('/api/standby/logs/', '/api/standby/logs/admin_logs/'):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, url)
+
+    def test_hr_who_is_also_staff_keeps_standby_access(self):
+        hr_staff = User.objects.create_user(username='sb-hr-staff', password='testpass', is_staff=True)
+        profile = hr_staff.profile
+        profile.is_hr_user = True
+        profile.save()
+        self.client.force_authenticate(user=hr_staff)
         response = self.client.get('/api/standby/logs/admin_logs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
 

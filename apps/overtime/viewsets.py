@@ -14,6 +14,7 @@ from core.pagination import LargeResultsPagination
 from core.mixins.cache import CacheInvalidationMixin
 from core.mixins.permissions import (
     HbprBlockedMixin,
+    HrOnlyBlockedMixin,
     IsSuperuser,
     SuperuserPermissionMixin,
     PersonalOnlyFilterMixin,
@@ -186,7 +187,7 @@ class ClientViewSet(CacheInvalidationMixin, SuperuserPermissionMixin, viewsets.M
         return Response(serializer.data)
 
 
-class OvertimeLogViewSet(HbprBlockedMixin, IdempotentCreateMixin, SuperuserPermissionMixin, HRReadOnlyMixin, PersonalOnlyFilterMixin, MonthlyLockMixin, BulkActionMixin, viewsets.ModelViewSet):
+class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMixin, SuperuserPermissionMixin, HRReadOnlyMixin, PersonalOnlyFilterMixin, MonthlyLockMixin, BulkActionMixin, viewsets.ModelViewSet):
     """
     ViewSet for OvertimeLog model.
 

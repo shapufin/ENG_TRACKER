@@ -16,7 +16,7 @@ from django.db import IntegrityError
 from django.db.models import Count, Q
 from rest_framework.exceptions import ValidationError
 
-from core.mixins.permissions import PluginPermissionMixin
+from core.mixins.permissions import PluginPermissionMixin, is_hr_only
 
 from .models import (
     SkillCategory,
@@ -247,7 +247,7 @@ class UserSkillViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         is_self = instance.user_id == user.id
         is_admin = user.is_superuser or user.is_staff
         profile = getattr(user, 'profile', None)
-        is_hr = profile is not None and profile.is_hr
+        is_hr = profile is not None and profile.is_hr and not is_hr_only(user)
         if not (is_self or is_admin or is_hr):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied(

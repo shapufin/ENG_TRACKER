@@ -311,6 +311,34 @@ class UserSkillViewSetTest(ViewSetTestCase, TestCase):
         resp = self._delete(UserSkillViewSet, self.employee, us.id)
         self.assertEqual(resp.status_code, 204)
 
+    def test_pure_hr_sees_team_skills_but_cannot_edit_them(self):
+        us = UserSkill.objects.create(
+            user=self.employee, skill=self.skill1, level=3,
+            last_updated_by=self.employee,
+        )
+        resp = self._list(UserSkillViewSet, self.hr)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            self._action(UserSkillViewSet, self.hr, us.id, 'POST', 'rate', {'level': 5}).status_code,
+            403,
+        )
+        self.assertEqual(
+            self._update(UserSkillViewSet, self.hr, us.id, {'level': 5}).status_code, 403
+        )
+        self.assertEqual(self._delete(UserSkillViewSet, self.hr, us.id).status_code, 403)
+        us.refresh_from_db()
+        self.assertEqual(us.level, 3)
+
+    def test_hr_who_is_also_tl_can_still_rate_team_member(self):
+        self.tl.profile.is_hr_user = True
+        self.tl.profile.save()
+        us = UserSkill.objects.create(
+            user=self.employee, skill=self.skill1, level=3,
+            last_updated_by=self.employee,
+        )
+        resp = self._action(UserSkillViewSet, self.tl, us.id, 'POST', 'rate', {'level': 4})
+        self.assertEqual(resp.status_code, 200)
+
     def test_tl_can_rate_team_member(self):
         us = UserSkill.objects.create(
             user=self.employee, skill=self.skill1, level=3,

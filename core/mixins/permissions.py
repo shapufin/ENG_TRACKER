@@ -193,6 +193,20 @@ class HbprBlockedMixin:
             raise PermissionDenied("This area is not available for your role.")
 
 
+class HrOnlyBlockedMixin:
+    """Deny pure-HR users (`is_hr_only`) on every action of a viewset: HR has no
+    personal overtime/standby, so the API must refuse what the menu hides.
+    Multi-role HR (TL, staff, superuser) is not `is_hr_only` and passes.
+
+    Place first in the base list so it wraps the other permission mixins.
+    """
+
+    def check_permissions(self, request):
+        super().check_permissions(request)
+        if is_hr_only(request.user):
+            raise PermissionDenied("This area is not available for your role.")
+
+
 class IsSuperuser(permissions.BasePermission):
     """Allow only superusers."""
     def has_permission(self, request, view):

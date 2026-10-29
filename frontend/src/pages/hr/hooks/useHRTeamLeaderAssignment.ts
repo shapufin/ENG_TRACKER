@@ -10,6 +10,10 @@ import { toast } from "sonner";
  * does not expose the role/team filters or any other field useUserManagement
  * offers — HR gets exactly this one capability here.
  */
+// Server-side role scope: plain employees only (no staff, superusers, TLs, HR,
+// HBPR or CR admins). Applied to the list AND the tech facet counts.
+const ASSIGNABLE_ROLE = "assignable_employee";
+
 export const useHRTeamLeaderAssignment = () => {
   const qc = useQueryClient();
   const [techIds, setTechIds] = useState<number[]>([]);
@@ -29,6 +33,7 @@ export const useHRTeamLeaderAssignment = () => {
     queryKey: ["hr", "team-leader-assignment", "profiles", { techIds, techLevelIds, noTechOnly }],
     queryFn: () =>
       userService.getProfiles({
+        role: ASSIGNABLE_ROLE,
         tech: techParam,
         tech_level: techLevelParam,
         no_tech: noTechOnly || undefined,
@@ -40,7 +45,7 @@ export const useHRTeamLeaderAssignment = () => {
 
   const { data: techFacets } = useQuery({
     queryKey: ["hr", "team-leader-assignment", "tech-facets"],
-    queryFn: () => userService.getTechFacets(),
+    queryFn: () => userService.getTechFacets({ role: ASSIGNABLE_ROLE }),
     refetchOnMount: true,
     staleTime: 60000,
     refetchOnWindowFocus: false,

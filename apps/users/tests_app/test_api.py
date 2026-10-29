@@ -229,6 +229,23 @@ class TestUserTechAndRoleFacets(APITestCase):
         self.assertIn('facet-django', usernames)
         self.assertNotIn('facet-tl', usernames)
 
+    def test_role_filter_assignable_employee_excludes_staff_and_superusers(self):
+        """HR's TL-assignment list: plain employees only. Unlike the Admin Users
+        `employee` tab (which keeps staff/superusers reachable), nobody who is
+        Django staff or a superuser appears, and elevated roles stay out."""
+        Role.objects.get_or_create(code='hr', defaults={'name': 'hr'})
+        hr_role = User.objects.create_user(username='facet-hr-role', password='x')
+        assign_role(hr_role, 'hr')
+        superuser = User.objects.create_superuser(username='facet-super', password='x')
+
+        response = self.client.get('/api/users/profiles/', {'role': 'assignable_employee'})
+        self.assertEqual(response.status_code, 200)
+        usernames = self._usernames(response)
+        self.assertIn('facet-django', usernames)
+        self.assertIn('facet-none', usernames)
+        for hidden in ('facet-admin', superuser.username, 'facet-hr-role', 'facet-tl'):
+            self.assertNotIn(hidden, usernames)
+
     def test_role_filter_hr_matches_hr_users_only(self):
         Role.objects.get_or_create(code='hr', defaults={'name': 'hr'})
         hr_flag = User.objects.create_user(username='facet-hr-flag', password='x')

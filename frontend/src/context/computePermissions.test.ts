@@ -11,6 +11,7 @@ describe("computePermissions", () => {
       isHR: false,
       isHBPR: false,
       isHBPROnly: false,
+      isHROnly: false,
       isAdmin: false,
       isSuperuser: false,
       isCRAdmin: false,
@@ -166,9 +167,9 @@ describe("computePermissions", () => {
     expect(result.availableDashboards).toContain("employee");
   });
 
-  it("availableDashboards contains employee for HR only", () => {
+  it("availableDashboards is the HR dashboard alone for HR only", () => {
     const result = computePermissions({ is_hr: true });
-    expect(result.availableDashboards).toEqual(["hr", "employee"]);
+    expect(result.availableDashboards).toEqual(["hr"]);
   });
 
   it("availableDashboards contains employee for team leader only", () => {
@@ -327,13 +328,14 @@ describe("computePermissions", () => {
       expect(result.primaryDashboard).toBe("hbpr");
     });
 
-    it("multi-role HBPR keeps the other role's home and the personal dashboard", () => {
+    it("multi-role HBPR keeps the other role's home", () => {
       const tl = computePermissions({ roles: ["hbpr", "italian_tl"] });
       expect(tl.primaryDashboard).toBe("team_leader");
       expect(tl.availableDashboards).toEqual(["team_leader", "employee"]);
       const hr = computePermissions({ roles: ["hbpr", "hr"] });
       expect(hr.primaryDashboard).toBe("hr");
-      expect(hr.availableDashboards).toEqual(["hr", "employee"]);
+      // HBPR+HR is still pure HR (backend `is_hr_only`): no personal dashboard.
+      expect(hr.availableDashboards).toEqual(["hr"]);
     });
 
     it("HBPR with Control Room access is not treated as a CR-only user", () => {
@@ -360,5 +362,38 @@ describe("computePermissions", () => {
     expect(computePermissions({ has_control_room_access: false }).isCRUser).toBe(false);
     expect(computePermissions({}).isCRUser).toBe(false);
     expect(computePermissions(null).isCRUser).toBe(false);
+  });
+
+  describe("HR only", () => {
+    it("is true for HR with no elevating role, and drops the personal dashboard", () => {
+      const r = computePermissions({ roles: ["hr"] });
+      expect(r.isHROnly).toBe(true);
+      expect(r.availableDashboards).toEqual(["hr"]);
+      expect(r.primaryDashboard).toBe("hr");
+    });
+
+    it("falls back to the legacy flag when roles is empty", () => {
+      expect(computePermissions({ roles: [], is_hr: true }).isHROnly).toBe(true);
+    });
+
+    it("stays false for every multi-role HR user and keeps their dashboards", () => {
+      for (const extra of [
+        { roles: ["hr", "italian_tl"] },
+        { roles: ["hr", "albanian_tl"] },
+        { roles: ["hr"], is_team_leader: true },
+        { roles: ["hr"], is_staff: true },
+        { roles: ["hr"], is_superuser: true },
+      ]) {
+        const r = computePermissions(extra);
+        expect(r.isHROnly).toBe(false);
+        expect(r.availableDashboards).toContain("employee");
+      }
+    });
+
+    it("is false for non-HR users", () => {
+      expect(computePermissions({ roles: ["employee"] }).isHROnly).toBe(false);
+      expect(computePermissions({ roles: ["italian_tl"] }).isHROnly).toBe(false);
+      expect(computePermissions({ roles: ["hbpr"] }).isHROnly).toBe(false);
+    });
   });
 });

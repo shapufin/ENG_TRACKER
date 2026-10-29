@@ -10,6 +10,8 @@ interface UseDashboardDataOptions {
   userId?: number;
   isAdmin: boolean;
   isHR: boolean;
+  /** Pure HR (`isHROnly`): no overtime or standby, the API refuses both. */
+  isHROnly?: boolean;
   selectedDashboard: DashboardType;
   /** Rolling 7-day windows back from today: 0 = this week, 1 = last week. */
   weekOffset?: number;
@@ -20,6 +22,7 @@ export const useDashboardData = ({
   userId,
   isAdmin,
   isHR,
+  isHROnly = false,
   selectedDashboard,
   weekOffset = 0,
 }: UseDashboardDataOptions) => {
@@ -30,6 +33,8 @@ export const useDashboardData = ({
   // the single render before DashboardPage's /hbpr redirect mounts — "hbpr"
   // survives as their primaryDashboard routing token for exactly this.
   const canLoadSelfService = !!userId && selectedDashboard !== "hbpr";
+  // Pure HR has leave but no overtime or standby (HrOnlyBlockedMixin 403s them).
+  const canLoadHours = canLoadSelfService && !isHROnly;
 
   const { data: hrStats } = useQuery({
     queryKey: ["dashboard", "hr", userId ?? "anonymous"],
@@ -46,7 +51,7 @@ export const useDashboardData = ({
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
-    enabled: canLoadSelfService,
+    enabled: canLoadHours,
   });
 
   const { data: standbyData, isLoading: standbyLoading } = useQuery({
@@ -55,7 +60,7 @@ export const useDashboardData = ({
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
-    enabled: canLoadSelfService,
+    enabled: canLoadHours,
   });
 
   // Dedicated aggregate queries for the "total hours" dashboard tiles: the
@@ -70,7 +75,7 @@ export const useDashboardData = ({
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
-    enabled: canLoadSelfService,
+    enabled: canLoadHours,
   });
 
   const { data: standbySummary } = useQuery({
@@ -79,7 +84,7 @@ export const useDashboardData = ({
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
-    enabled: canLoadSelfService,
+    enabled: canLoadHours,
   });
 
   const { data: leaveData, isLoading: leaveLoading } = useQuery({

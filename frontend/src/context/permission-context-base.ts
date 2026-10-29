@@ -10,6 +10,8 @@ export interface PermissionContextType {
   isHBPR: boolean;
   /** HBPR and no other elevating role. Mirrors the backend `is_hbpr_only`. */
   isHBPROnly: boolean;
+  /** HR and no other elevating role. Mirrors the backend `is_hr_only`. */
+  isHROnly: boolean;
   isAdmin: boolean;
   isSuperuser: boolean;
   isCRAdmin: boolean;

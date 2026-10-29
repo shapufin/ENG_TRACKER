@@ -50,6 +50,11 @@ export interface NavItem {
    * dead link. Multi-role HBPR+TL/HR/admin users are not HBPR-only and keep
    * these items. */
   hbprHidden?: boolean;
+  /** Hidden from a pure-HR user (`isHROnly`): HR has no personal overtime,
+   * standby or team calendar, and Ticket KPI is not an HR surface. A flag
+   * rather than dropping "hr" from `roles`, so HR who is also admin keeps the
+   * item (admin is not in those items' `roles`). */
+  hrOnlyHidden?: boolean;
   /** Only shown while this plugin is active (same contract as
    * `useAdminNavItems`). Set on every item a plugin owns, otherwise disabling
    * the plugin leaves a dead link. Not enforced when the caller passes no
@@ -78,6 +83,7 @@ const allNavItems: NavItem[] = [
     icon: Clock,
     section: "core",
     roles: ["employee", "team_leader", "hr"],
+    hrOnlyHidden: true,
   },
   {
     path: "/standby",
@@ -85,6 +91,7 @@ const allNavItems: NavItem[] = [
     icon: Briefcase,
     section: "core",
     roles: ["employee", "team_leader", "hr"],
+    hrOnlyHidden: true,
   },
   {
     path: "/leave-management",
@@ -93,7 +100,14 @@ const allNavItems: NavItem[] = [
     section: "core",
     hbprHidden: true,
   },
-  { path: "/calendar", label: "Calendar", icon: CalendarDays, section: "core", hbprHidden: true },
+  {
+    path: "/calendar",
+    label: "Calendar",
+    icon: CalendarDays,
+    section: "core",
+    hbprHidden: true,
+    hrOnlyHidden: true,
+  },
 
   // Leadership (Team oversight & approvals)
   {
@@ -177,6 +191,7 @@ const allNavItems: NavItem[] = [
     // The ticket_kpi plugin is denied to an HBPR (`denied_roles`), so its route
     // never registers for them.
     hbprHidden: true,
+    hrOnlyHidden: true,
   },
 
   // System & Administration
@@ -208,7 +223,8 @@ export const useVisibleNavItems = (
   isCRAdmin: boolean = false,
   isCRUser: boolean = false,
   isHBPROnly: boolean = false,
-  activePluginNames?: string[]
+  activePluginNames?: string[],
+  isHROnly: boolean = false
 ) =>
   useMemo(() => {
     // A CR-only admin (cr_admin role, no other elevated role) uses the
@@ -228,6 +244,7 @@ export const useVisibleNavItems = (
     return allNavItems.filter((item) => {
       if (isCRScoped && !item.crUserVisible) return false;
       if (isHBPROnly && item.hbprHidden) return false;
+      if (isHROnly && item.hrOnlyHidden) return false;
       if (item.pluginName && activePluginNames && !activePluginNames.includes(item.pluginName)) {
         return false;
       }
@@ -248,5 +265,6 @@ export const useVisibleNavItems = (
     isCRAdmin,
     isCRUser,
     isHBPROnly,
+    isHROnly,
     activePluginNames,
   ]);

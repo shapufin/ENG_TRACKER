@@ -19,6 +19,7 @@ export const DashboardPage: React.FC = () => {
     isTeamLeader,
     isHR,
     isHBPROnly,
+    isHROnly,
     isSuperuser,
     availableDashboards,
     primaryDashboard,
@@ -41,6 +42,7 @@ export const DashboardPage: React.FC = () => {
     userId,
     isAdmin,
     isHR,
+    isHROnly,
     selectedDashboard,
     weekOffset,
   });

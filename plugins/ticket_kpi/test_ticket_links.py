@@ -103,7 +103,7 @@ class TicketOvertimeLinkTests(TestCase):
         response = TicketOvertimeLinkViewSet.as_view({'post': 'create'})(request)
         self.assertEqual(response.status_code, 201)
 
-    def test_hr_can_view_all_links_but_cannot_mutate(self):
+    def test_pure_hr_is_refused_every_link_action(self):
         link = TicketOvertimeLink.objects.create(
             overtime_log=self.ot,
             normalized_ticket=self.ticket,
@@ -111,8 +111,7 @@ class TicketOvertimeLinkTests(TestCase):
         )
         list_request = self._request('get', self.hr)
         list_response = TicketOvertimeLinkViewSet.as_view({'get': 'list'})(list_request)
-        self.assertEqual(list_response.status_code, 200)
-        self.assertEqual(list_response.data['count'], 1)
+        self.assertEqual(list_response.status_code, 403)
 
         delete_request = self._request('delete', self.hr, pk=link.id)
         delete_response = TicketOvertimeLinkViewSet.as_view({'delete': 'destroy'})(
