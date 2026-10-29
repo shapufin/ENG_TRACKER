@@ -232,19 +232,41 @@ class TestUserTechAndRoleFacets(APITestCase):
     def test_role_filter_assignable_employee_excludes_staff_and_superusers(self):
         """HR's TL-assignment list: plain employees only. Unlike the Admin Users
         `employee` tab (which keeps staff/superusers reachable), nobody who is
-        Django staff or a superuser appears, and elevated roles stay out."""
+        Django staff or a superuser appears, elevated roles (HR, TL, HBPR) stay out,
+        and users leading teams also stay out."""
         Role.objects.get_or_create(code='hr', defaults={'name': 'hr'})
+        Role.objects.get_or_create(code='hbpr', defaults={'name': 'hbpr'})
+        Role.objects.get_or_create(code='albanian_tl', defaults={'name': 'albanian_tl'})
         hr_role = User.objects.create_user(username='facet-hr-role', password='x')
         assign_role(hr_role, 'hr')
+        hbpr_user = User.objects.create_user(username='facet-hbpr-role', password='x')
+        assign_role(hbpr_user, 'hbpr')
+        al_tl_user = User.objects.create_user(username='facet-al-role', password='x')
+        assign_role(al_tl_user, 'albanian_tl')
+        led_user = User.objects.create_user(username='facet-team-lead', password='x')
+        Team.objects.create(name='TL Team', code='TL-T', team_leader=led_user)
         superuser = User.objects.create_superuser(username='facet-super', password='x')
+        # An archived team confers no TL status, so its former leader stays listed.
+        ex_lead = User.objects.create_user(username='facet-ex-lead', password='x')
+        Team.objects.create(name='Old Team', code='OLD-T', team_leader=ex_lead, is_active=False)
 
-        response = self.client.get('/api/users/profiles/', {'role': 'assignable_employee'})
-        self.assertEqual(response.status_code, 200)
-        usernames = self._usernames(response)
-        self.assertIn('facet-django', usernames)
-        self.assertIn('facet-none', usernames)
-        for hidden in ('facet-admin', superuser.username, 'facet-hr-role', 'facet-tl'):
-            self.assertNotIn(hidden, usernames)
+        for role_param in ('assignable_employee',):
+            response = self.client.get('/api/users/profiles/', {'role': role_param})
+            self.assertEqual(response.status_code, 200)
+            usernames = self._usernames(response)
+            self.assertIn('facet-django', usernames)
+            self.assertIn('facet-none', usernames)
+            self.assertIn('facet-ex-lead', usernames)
+            for hidden in (
+                'facet-admin',
+                superuser.username,
+                'facet-hr-role',
+                'facet-tl',
+                'facet-hbpr-role',
+                'facet-al-role',
+                'facet-team-lead',
+            ):
+                self.assertNotIn(hidden, usernames)
 
     def test_role_filter_hr_matches_hr_users_only(self):
         Role.objects.get_or_create(code='hr', defaults={'name': 'hr'})

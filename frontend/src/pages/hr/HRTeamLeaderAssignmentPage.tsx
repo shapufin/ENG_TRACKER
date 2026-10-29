@@ -70,10 +70,17 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
         accessorKey: "user.username",
         header: "User",
         cell: ({ row }) => {
-          const { username, first_name, last_name } = row.original.user;
+          const { username, first_name, last_name, email } = row.original.user;
           const fullName = [first_name, last_name].filter(Boolean).join(" ");
+          const techList = (row.original.techs_detail ?? [])
+            .map((ta) => `${ta.name || ""}${ta.level ? ` ${ta.level.code}` : ""}`.trim())
+            .filter(Boolean);
           return (
-            <UserCell name={fullName || username} subtitle={fullName ? username : undefined} />
+            <UserCell
+              name={fullName || username}
+              subtitle={fullName ? username : email || undefined}
+              techLevels={techList.length > 0 ? techList : undefined}
+            />
           );
         },
       },
@@ -131,32 +138,48 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard label="Employees" value={profiles.length} icon={Users} glow="primary" />
+            <StatCard
+              label="Employees"
+              value={profiles.length}
+              icon={Users}
+              iconTone="accent"
+              glow="primary"
+            />
             <StatCard
               label="With an Italian TL"
               value={counts.italian}
               icon={UserCheck}
-              glow="success"
+              iconTone="info"
+              glow="primary"
             />
             <StatCard
               label="With an Albanian TL"
               value={counts.albanian}
               icon={UserCheck}
+              iconTone="success"
               glow="success"
             />
-            <StatCard label="Without any TL" value={counts.none} icon={UserX} glow="warning" />
-          </div>
-          <GlassCard delay={0} className="space-y-4 p-4">
-            <TechFacetFilter
-              facets={techFacets}
-              noTechCount={noTechCount}
-              selectedTechIds={techIds}
-              selectedLevelIds={techLevelIds}
-              noTechOnly={noTechOnly}
-              onTechIdsChange={setTechIds}
-              onLevelIdsChange={setTechLevelIds}
-              onNoTechOnlyChange={setNoTechOnly}
+            <StatCard
+              label="Without any TL"
+              value={counts.none}
+              icon={UserX}
+              iconTone="warning"
+              glow="warning"
             />
+          </div>
+          <GlassCard delay={0} className="space-y-4 p-5">
+            <div className="border-border/40 border-b pb-4">
+              <TechFacetFilter
+                facets={techFacets}
+                noTechCount={noTechCount}
+                selectedTechIds={techIds}
+                selectedLevelIds={techLevelIds}
+                noTechOnly={noTechOnly}
+                onTechIdsChange={setTechIds}
+                onLevelIdsChange={setTechLevelIds}
+                onNoTechOnlyChange={setNoTechOnly}
+              />
+            </div>
             <BulkActionBar
               selectedCount={selectedProfileIds.length}
               onClear={() => setRowSelection({})}
@@ -164,7 +187,7 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
               actions={[]}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <div className="w-40">
+                <div className="w-48">
                   <TeamLeaderSelect
                     ariaLabel="Bulk set Italian TL"
                     value={null}
@@ -175,7 +198,7 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
                     }
                   />
                 </div>
-                <div className="w-40">
+                <div className="w-48">
                   <TeamLeaderSelect
                     ariaLabel="Bulk set Albanian TL"
                     value={null}
