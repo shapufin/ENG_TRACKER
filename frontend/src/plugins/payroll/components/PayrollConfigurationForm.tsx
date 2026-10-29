@@ -10,6 +10,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SwitchField } from "@/components/common/forms/SwitchField";
 import {
+  Building2,
+  Calculator,
+  Clock,
+  FileText,
+  Receipt,
+  SlidersHorizontal,
+  type LucideIcon,
+} from "lucide-react";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -35,18 +44,32 @@ const DEFAULT_TAX_PROFILE_CHOICES: ChoiceOption[] = [
 
 const DEFAULT_COUNTRY_CHOICES: ChoiceOption[] = [{ value: "AL", label: "Albania" }];
 
-/** A titled group of related fields inside the configuration card. */
-const FormSection: React.FC<{ title: string; children: React.ReactNode }> = ({
-  title,
-  children,
-}) => {
+const VALIDATION_STATUS_CHOICES: ChoiceOption[] = [
+  { value: "reference", label: "Reference (unofficial reference values)" },
+  { value: "verified", label: "Verified (cross-checked with accounting)" },
+  { value: "official", label: "Official (statutory gazette)" },
+];
+
+/** A titled card representing a group of related fields inside the configuration form. */
+const FormSection: React.FC<{
+  title: string;
+  description?: string;
+  icon?: LucideIcon;
+  children: React.ReactNode;
+}> = ({ title, description, icon: Icon, children }) => {
   const id = React.useId();
   return (
-    <section aria-labelledby={id} className="border-border/60 space-y-3 border-t pt-4">
-      <h3 id={id} className="text-sm font-semibold">
-        {title}
-      </h3>
-      {children}
+    <section aria-labelledby={id}>
+      <GlassCard className="p-6">
+        <div className="mb-4">
+          <h3 id={id} className="text-foreground flex items-center gap-2 text-base font-semibold">
+            {Icon && <Icon className="text-primary h-4 w-4" aria-hidden="true" />}
+            {title}
+          </h3>
+          {description && <p className="text-muted-foreground mt-0.5 text-xs">{description}</p>}
+        </div>
+        {children}
+      </GlassCard>
     </section>
   );
 };
@@ -70,10 +93,14 @@ export const PayrollConfigurationForm: React.FC<PayrollConfigurationFormProps> =
   onFieldChange,
   onSwitchChange,
 }) => (
-  <GlassCard className="mb-6 space-y-6 p-6">
-    <SectionHeading title="Organization & Payroll Defaults" />
-    <FormSection title="Organization">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+  <div className="mb-6 space-y-6">
+    <SectionHeading eyebrow="DEFAULTS" title="Organization & Payroll Defaults" />
+    <FormSection
+      title="Organization"
+      description="Company identity, reporting currency, and payroll jurisdiction."
+      icon={Building2}
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div>
           <Label htmlFor="org">Organization Name</Label>
           <Input
@@ -123,7 +150,12 @@ export const PayrollConfigurationForm: React.FC<PayrollConfigurationFormProps> =
         </div>
       </div>
     </FormSection>
-    <FormSection title="Standby rates">
+
+    <FormSection
+      title="Standby rates"
+      description="Hourly compensation rates applied during scheduled standby duty windows."
+      icon={Clock}
+    >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <Label htmlFor="weekday-standby-rate">Weekday Standby Rate (Lek/hour)</Label>
@@ -153,7 +185,12 @@ export const PayrollConfigurationForm: React.FC<PayrollConfigurationFormProps> =
         </div>
       </div>
     </FormSection>
-    <FormSection title="Rounding & working hours">
+
+    <FormSection
+      title="Rounding & working hours"
+      description="Rules for decimal precision, rounding algorithms, and working hour denominators."
+      icon={Calculator}
+    >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <Label htmlFor="rounding">Rounding Mode</Label>
@@ -240,7 +277,12 @@ export const PayrollConfigurationForm: React.FC<PayrollConfigurationFormProps> =
         </div>
       </div>
     </FormSection>
-    <FormSection title="Tax & rules reference">
+
+    <FormSection
+      title="Tax & rules reference"
+      description="Statutory profile defaults, standard daily hours, and audit citation details."
+      icon={FileText}
+    >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <Label htmlFor="default-tax-profile">Default Tax Profile</Label>
@@ -288,32 +330,55 @@ export const PayrollConfigurationForm: React.FC<PayrollConfigurationFormProps> =
         </div>
         <div>
           <Label htmlFor="rules-validation-status">Validation Status</Label>
-          <Input
-            id="rules-validation-status"
-            value={form.rules_validation_status ?? ""}
-            onChange={(e) => onFieldChange("rules_validation_status", e.target.value)}
+          <Select
+            value={form.rules_validation_status ?? "reference"}
+            onValueChange={(value) => onFieldChange("rules_validation_status", value)}
             disabled={!canConfigurePayroll}
-            placeholder="reference, verified, or official"
-          />
+          >
+            <SelectTrigger id="rules-validation-status">
+              <SelectValue placeholder="Select validation status" />
+            </SelectTrigger>
+            <SelectContent>
+              {VALIDATION_STATUS_CHOICES.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Authority level of current rule set configuration.
+          </p>
         </div>
       </div>
     </FormSection>
-    <FormSection title="Calculation switches">
+
+    <FormSection
+      title="Calculation switches"
+      description="Policy rules for taxable items, contribution assessments, and approval gates."
+      icon={SlidersHorizontal}
+    >
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {BOOLEAN_FIELDS.map(([key, label]) => (
-          <SwitchField
-            key={key}
-            id={`payroll-${key}`}
-            label={label}
-            description="Applied when payroll calculations are generated."
-            checked={Boolean(form[key])}
-            onCheckedChange={(checked) => onSwitchChange(key, checked)}
-            disabled={!canConfigurePayroll}
-          />
+          <div key={key} className="border-border/50 bg-muted/20 rounded-lg border p-3">
+            <SwitchField
+              id={`payroll-${key}`}
+              label={label}
+              description="Applied when payroll calculations are generated."
+              checked={Boolean(form[key])}
+              onCheckedChange={(checked) => onSwitchChange(key, checked)}
+              disabled={!canConfigurePayroll}
+            />
+          </div>
         ))}
       </div>
     </FormSection>
-    <FormSection title="Payslip">
+
+    <FormSection
+      title="Payslip"
+      description="Custom footer text printed at the bottom of generated payslips."
+      icon={Receipt}
+    >
       <div>
         <Label htmlFor="footer">Payslip Footer</Label>
         <Input
@@ -324,5 +389,5 @@ export const PayrollConfigurationForm: React.FC<PayrollConfigurationFormProps> =
         />
       </div>
     </FormSection>
-  </GlassCard>
+  </div>
 );
