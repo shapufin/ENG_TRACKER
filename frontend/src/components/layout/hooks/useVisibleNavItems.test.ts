@@ -332,7 +332,13 @@ describe("useVisibleNavItems pure HR", () => {
 
   it("keeps what HR works in", () => {
     const visible = labels(pureHR().result.current);
-    for (const label of ["Dashboard", "Leave", "HR Reports", "Team Leader Assignment", "Settings"]) {
+    for (const label of [
+      "Dashboard",
+      "Leave",
+      "HR Reports",
+      "Team Leader Assignment",
+      "Settings",
+    ]) {
       expect(visible).toContain(label);
     }
   });
@@ -341,7 +347,9 @@ describe("useVisibleNavItems pure HR", () => {
     const tl = renderHook(() =>
       useVisibleNavItems(false, true, true, false, false, false, false, false, undefined, false)
     ).result.current;
-    expect(labels(tl)).toEqual(expect.arrayContaining(["Overtime", "Standby", "Calendar", "Ticket KPI"]));
+    expect(labels(tl)).toEqual(
+      expect.arrayContaining(["Overtime", "Standby", "Calendar", "Ticket KPI"])
+    );
     const admin = renderHook(() =>
       useVisibleNavItems(true, true, false, false, false, false, false, false, undefined, false)
     ).result.current;

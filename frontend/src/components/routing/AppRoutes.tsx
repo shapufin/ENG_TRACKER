@@ -108,9 +108,7 @@ const usePluginRouteObjects = (layout: "app" | "admin" | "hr") => {
         const Component = getPluginComponent(plugin.name, route.component);
         if (!Component) return null;
         const page = { path: route.path, element: withSuspense(<Component />) };
-        return route.hr_only_hidden
-          ? { element: <HrRestrictedRoute />, children: [page] }
-          : page;
+        return route.hr_only_hidden ? { element: <HrRestrictedRoute />, children: [page] } : page;
       })
       .filter((route): route is NonNullable<typeof route> => route !== null)
   );

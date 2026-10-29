@@ -26,13 +26,10 @@ describe("HrRestrictedRoute", () => {
     expect(screen.getByText("home")).toBeInTheDocument();
   });
 
-  it.each(["isTeamLeader", "isAdmin", "isSuperuser"])(
-    "lets HR who is also %s through",
-    (role) => {
-      renderAt({ isHR: true, isHROnly: false, [role]: true });
-      expect(screen.getByText("calendar page")).toBeInTheDocument();
-    }
-  );
+  it.each(["isTeamLeader", "isAdmin", "isSuperuser"])("lets HR who is also %s through", (role) => {
+    renderAt({ isHR: true, isHROnly: false, [role]: true });
+    expect(screen.getByText("calendar page")).toBeInTheDocument();
+  });
 
   it("lets an ordinary employee through", () => {
     renderAt({});
