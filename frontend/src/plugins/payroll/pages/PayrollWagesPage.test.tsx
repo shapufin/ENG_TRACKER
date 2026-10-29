@@ -119,10 +119,34 @@ describe("PayrollWagesPage", () => {
       expect(screen.getByText("John Doe")).toBeInTheDocument();
       expect(screen.getByText("Alice Smith")).toBeInTheDocument();
       expect(screen.getByText("100,000 Lek")).toBeInTheDocument();
-      expect(screen.getByText("Assigned")).toBeInTheDocument();
-      expect(screen.getByText("Missing wage")).toBeInTheDocument();
+      expect(
+        screen.getByLabelText("Assigned", { selector: '[role="status"]' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText("Missing wage", { selector: '[role="status"]' })
+      ).toBeInTheDocument();
       expect(screen.getByText("Not assigned")).toBeInTheDocument();
     });
+  });
+
+  it("filters rows by assigned and unassigned status using the filter chips", async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByText("John Doe")).toBeInTheDocument());
+
+    // Filter to missing wage (unassigned)
+    fireEvent.click(screen.getByRole("button", { name: /Missing wage/ }));
+    expect(screen.queryByText("John Doe")).not.toBeInTheDocument();
+    expect(screen.getByText("Alice Smith")).toBeInTheDocument();
+
+    // Filter to assigned
+    fireEvent.click(screen.getByRole("button", { name: /^Assigned/ }));
+    expect(screen.getByText("John Doe")).toBeInTheDocument();
+    expect(screen.queryByText("Alice Smith")).not.toBeInTheDocument();
+
+    // Reset to all
+    fireEvent.click(screen.getByRole("button", { name: /All employees/ }));
+    expect(screen.getByText("John Doe")).toBeInTheDocument();
+    expect(screen.getByText("Alice Smith")).toBeInTheDocument();
   });
 
   it("renders wage status as semantic pills (emerald assigned, amber missing — rose is reserved for errors)", async () => {

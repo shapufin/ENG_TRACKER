@@ -12,9 +12,12 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { RowActions } from "@/components/ui/RowActions";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { Download, Pencil, Trash2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Download, Pencil, Trash2, Users2 } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
+import { UserCell } from "@/components/admin/UserCell";
+import { StatCard } from "@/components/ui/StatCard";
+import { FilterChipRow, type FilterChipOption } from "@/components/ui/FilterChipRow";
 import { payrollService } from "../services/payrollService";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { handleApiError } from "@/lib/error-handler";
@@ -25,6 +28,7 @@ import { AssignWageDialog, type AssignWageForm } from "../components/AssignWageD
 import type { EligibleUser, WageAssignment } from "../types";
 
 type WageForm = AssignWageForm;
+type WageFilter = "all" | "assigned" | "unassigned";
 
 interface EmployeeWageRow extends EligibleUser {
   wage: WageAssignment | null;
@@ -44,6 +48,7 @@ export const PayrollWagesPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { canManage } = usePluginPermissions();
   const canManagePayroll = canManage("payroll");
+  const [filter, setFilter] = useState<WageFilter>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<WageForm>(EMPTY_FORM);
@@ -69,7 +74,32 @@ export const PayrollWagesPage: React.FC = () => {
     [eligibleUsersQuery.data, wagesQuery.data]
   );
 
+  const totalCount = rows.length;
+  const assignedRows = useMemo(() => rows.filter((row) => row.wage !== null), [rows]);
   const missingWageRows = useMemo(() => rows.filter((row) => !row.wage), [rows]);
+  const assignedCount = assignedRows.length;
+  const missingCount = missingWageRows.length;
+
+  const filteredRows = useMemo(() => {
+    if (filter === "assigned") return assignedRows;
+    if (filter === "unassigned") return missingWageRows;
+    return rows;
+  }, [rows, filter, assignedRows, missingWageRows]);
+
+  const filterOptions = useMemo<FilterChipOption<WageFilter>[]>(
+    () => [
+      { value: "all", label: "All employees", count: totalCount, icon: Users2 },
+      { value: "assigned", label: "Assigned", count: assignedCount, icon: CheckCircle2 },
+      {
+        value: "unassigned",
+        label: "Missing wage",
+        count: missingCount,
+        icon: AlertCircle,
+        emphasis: "missing",
+      },
+    ],
+    [totalCount, assignedCount, missingCount]
+  );
 
   const downloadMissingWagesCsv = () => {
     exportData(missingWageRows, "wages_missing", "csv", {
@@ -185,10 +215,7 @@ export const PayrollWagesPage: React.FC = () => {
         accessorKey: "full_name",
         header: "Employee / Team Leader",
         cell: ({ row }) => (
-          <div>
-            <div className="font-medium">{row.original.full_name}</div>
-            <div className="text-muted-foreground text-xs">@{row.original.username}</div>
-          </div>
+          <UserCell name={row.original.full_name} subtitle={`@${row.original.username}`} />
         ),
       },
       {
@@ -196,13 +223,17 @@ export const PayrollWagesPage: React.FC = () => {
         header: "Wage Assignment",
         cell: ({ row }) =>
           row.original.wage ? (
-            <div>
-              <div className="font-semibold">
+            <div className="space-y-0.5">
+              <div className="text-foreground font-mono font-semibold tabular-nums">
                 {Number(row.original.wage.gross_monthly_wage).toLocaleString()} Lek
+              </div>
+              <div className="text-muted-foreground text-xs">
+                Effective {row.original.wage.effective_from}
+                {row.original.wage.effective_to ? ` → ${row.original.wage.effective_to}` : ""}
               </div>
             </div>
           ) : (
-            <span className="text-muted-foreground">Not assigned</span>
+            <span className="text-muted-foreground text-xs italic">Not assigned</span>
           ),
       },
       {
@@ -294,13 +325,51 @@ export const PayrollWagesPage: React.FC = () => {
         </>
       }
     >
-      <GlassCard className="p-6">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          label="Total Employees"
+          value={totalCount}
+          icon={Users2}
+          iconTone="accent"
+          onClick={() => setFilter("all")}
+        />
+        <StatCard
+          label="Wages Assigned"
+          value={assignedCount}
+          icon={CheckCircle2}
+          iconTone="success"
+          onClick={() => setFilter("assigned")}
+        />
+        <StatCard
+          label="Missing Wages"
+          value={missingCount}
+          icon={AlertCircle}
+          iconTone={missingCount > 0 ? "warning" : "neutral"}
+          onClick={() => setFilter("unassigned")}
+        />
+      </div>
+
+      <GlassCard className="space-y-4 p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <FilterChipRow
+            label="Filter"
+            options={filterOptions}
+            selected={[filter]}
+            onToggle={(val) => setFilter(val)}
+          />
+        </div>
         <DataTable
           columns={columns}
-          data={rows}
+          data={filteredRows}
           searchColumn="full_name"
           searchPlaceholder="Search employees and team leaders..."
-          emptyMessage="No active employees or team leaders found."
+          emptyMessage={
+            filter === "unassigned"
+              ? "All employees have an active wage assignment."
+              : filter === "assigned"
+                ? "No employees have an assigned wage yet."
+                : "No active employees or team leaders found."
+          }
         />
       </GlassCard>
 
