@@ -77,6 +77,7 @@ class TlScorecardPlugin(BasePlugin):
                     # Employees hold no plugin grant; this page only ever shows
                     # their own records (see MyRecordsViewSet).
                     "self_service": True,
+                    "hr_only_hidden": True,
                 },
                 {
                     # The HBPR's own workspace: assignment-backed governance

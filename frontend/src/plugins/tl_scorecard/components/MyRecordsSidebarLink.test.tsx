@@ -33,6 +33,12 @@ describe("MyRecordsSidebarLink", () => {
     expect(link).toHaveAttribute("data-active", "true");
   });
 
+  it("is hidden for a pure HR user", () => {
+    perms.value = { isHROnly: true, isHR: true };
+    renderLink();
+    expect(screen.queryByText("My records")).toBeNull();
+  });
+
   it("renders for a multi-role HBPR+HR user", () => {
     perms.value = { isHBPROnly: false, isHBPR: true, isHR: true };
     renderLink();

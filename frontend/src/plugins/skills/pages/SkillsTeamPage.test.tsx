@@ -7,6 +7,14 @@ import type { TeamMatrixRow, SkillCoverage, SkillCategory } from "../types/skill
 // PluginImportButton (admin page headers) reads the active-plugin list. With
 // data_import inactive it renders nothing — the same graceful path taken when
 // the plugin is disabled or removed.
+vi.mock("@/context/PermissionContext", () => ({
+  usePermissions: () => ({ isHR: false, isAdmin: false }),
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: () => ({ data: undefined }),
+}));
+
 vi.mock("@/context/PluginContext", () => ({
   usePlugins: () => ({ activePlugins: [], isLoading: false }),
 }));

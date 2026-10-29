@@ -17,7 +17,10 @@ import {
   useSkillCategories,
   useRateUserSkill,
 } from "../hooks/useSkillsQueries";
+import { useQuery } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { usePermissions } from "@/context/PermissionContext";
+import { userService } from "@/services/userService";
 import { getPersistedVisibleSkillIds, getVisibleCoverage } from "../utils/skillMatrixSelectors";
 import type { SkillsViewMode } from "../types/skills";
 import { SkillsTeamToolbar } from "../components/SkillsTeamToolbar";
@@ -41,7 +44,34 @@ export const SkillsTeamPage: React.FC = () => {
   const [categoryCode, setCategoryCode] = useState<string>("all");
   const [minLevel, setMinLevel] = useState<number | undefined>(undefined);
   const [maxLevel, setMaxLevel] = useState<number | undefined>(undefined);
+  const [italianTl, setItalianTl] = useState<string>("all");
+  const [albanianTl, setAlbanianTl] = useState<string>("all");
+  const [tech, setTech] = useState<string>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // A TL sees their own team already; only HR and admins span every team.
+  const { isHR, isAdmin } = usePermissions();
+  const showLeaderFilters = isHR || isAdmin;
+  const { data: italianTLs = [] } = useQuery({
+    queryKey: ["skills", "team-leaders", "italian"],
+    queryFn: () => userService.getItalianTeamLeaders(),
+    enabled: showLeaderFilters,
+    staleTime: 300000,
+    refetchOnWindowFocus: false,
+  });
+  const { data: albanianTLs = [] } = useQuery({
+    queryKey: ["skills", "team-leaders", "albanian"],
+    queryFn: () => userService.getAlbanianTeamLeaders(),
+    enabled: showLeaderFilters,
+    staleTime: 300000,
+    refetchOnWindowFocus: false,
+  });
+  const { data: techFacets } = useQuery({
+    queryKey: ["skills", "tech-facets"],
+    queryFn: () => userService.getTechFacets(),
+    enabled: showLeaderFilters,
+    staleTime: 300000,
+    refetchOnWindowFocus: false,
+  });
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<SkillsViewMode>("matrix");
   const [rateTarget, setRateTarget] = useState<{
@@ -70,6 +100,9 @@ export const SkillsTeamPage: React.FC = () => {
     category: categoryCode !== "all" ? categoryCode : undefined,
     min_level: minLevel,
     max_level: maxLevel,
+    italian_tl: italianTl !== "all" ? Number(italianTl) : undefined,
+    albanian_tl: albanianTl !== "all" ? Number(albanianTl) : undefined,
+    tech: tech !== "all" ? Number(tech) : undefined,
     page,
     page_size: PAGE_SIZE,
   });
@@ -153,6 +186,15 @@ export const SkillsTeamPage: React.FC = () => {
     setCategoryCode("all");
     setMinLevel(undefined);
     setMaxLevel(undefined);
+    setItalianTl("all");
+    setAlbanianTl("all");
+    setTech("all");
+    setPage(1);
+    setFocusedCell({ row: 0, col: 0 });
+  };
+
+  const handleLeaderFilter = (set: (value: string) => void) => (value: string) => {
+    set(value);
     setPage(1);
     setFocusedCell({ row: 0, col: 0 });
   };
@@ -275,6 +317,22 @@ export const SkillsTeamPage: React.FC = () => {
         isMobile={isMobile}
         filtersOpen={filtersOpen}
         onFiltersOpenChange={setFiltersOpen}
+        leaderFiltersActive={italianTl !== "all" || albanianTl !== "all" || tech !== "all"}
+        leaderFilters={
+          showLeaderFilters
+            ? {
+                italianTLs: italianTLs.map((tl) => ({ id: tl.id, name: tl.full_name })),
+                albanianTLs: albanianTLs.map((tl) => ({ id: tl.id, name: tl.full_name })),
+                techs: (techFacets?.techs ?? []).map((t) => ({ id: t.id, name: t.name })),
+                italianTl,
+                albanianTl,
+                tech,
+                onItalianTlChange: handleLeaderFilter(setItalianTl),
+                onAlbanianTlChange: handleLeaderFilter(setAlbanianTl),
+                onTechChange: handleLeaderFilter(setTech),
+              }
+            : undefined
+        }
       />
 
       {/* Matrix workspace panel — mobile card list or desktop 2D sticky grid */}

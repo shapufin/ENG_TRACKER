@@ -152,10 +152,12 @@ export const AppRoutes: React.FC = () => {
                 {
                   element: <HbprRestrictedRoute />,
                   children: [
-                    { path: "/leave-management", element: withSuspense(<LeavePage />) },
                     {
                       element: <HrRestrictedRoute />,
-                      children: [{ path: "/calendar", element: withSuspense(<CalendarPage />) }],
+                      children: [
+                        { path: "/leave-management", element: withSuspense(<LeavePage />) },
+                        { path: "/calendar", element: withSuspense(<CalendarPage />) },
+                      ],
                     },
                   ],
                 },
@@ -177,6 +179,7 @@ export const AppRoutes: React.FC = () => {
                       path: "/hr/team-leaders",
                       element: withSuspense(<HRTeamLeaderAssignmentPage />),
                     },
+                    { path: "/hr/leave-requests", element: withSuspense(<LeaveRequestsPage />) },
                     {
                       path: "/hr/calendars",
                       element: withSuspense(<HRCalendarsPage />),

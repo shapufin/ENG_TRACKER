@@ -8,6 +8,8 @@ export const useLeaveRequestFilters = () => {
   const [filterStatus, setStatus] = useUrlParamState("status", LEAVE_STATUSES, "all");
   const [filterUser, setUser] = useState<string>("all");
   const [filterType, setType] = useState<"all" | "vacation">("all");
+  const [italianTl, setItalianTl] = useState<string>("all");
+  const [albanianTl, setAlbanianTl] = useState<string>("all");
   const [dateFrom, setFrom] = useState("");
   const [dateTo, setTo] = useState("");
   const [searchQuery, setSearch] = useState("");
@@ -27,6 +29,10 @@ export const useLeaveRequestFilters = () => {
     setFilterUser: resetting(setUser),
     filterType,
     setFilterType: resetting(setType),
+    italianTl,
+    setItalianTl: resetting(setItalianTl),
+    albanianTl,
+    setAlbanianTl: resetting(setAlbanianTl),
     dateFrom,
     setDateFrom: resetting(setFrom),
     dateTo,

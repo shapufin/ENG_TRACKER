@@ -355,7 +355,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         queryset = User.objects.filter(
             Q(profile__is_italian_tl_role=True) |
             Q(profile__role_codes__icontains='italian_tl')
-        ).distinct().annotate(
+        ).filter(is_staff=False, is_superuser=False).distinct().annotate(
             member_count=Count('italian_team_members', distinct=True)
         ).select_related('profile').prefetch_related('profile__team_memberships__team')
 
@@ -386,7 +386,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         queryset = User.objects.filter(
             Q(profile__is_albanian_tl_role=True) |
             Q(profile__role_codes__icontains='albanian_tl')
-        ).distinct().annotate(
+        ).filter(is_staff=False, is_superuser=False).distinct().annotate(
             member_count=Count('albanian_team_members', distinct=True)
         ).select_related('profile').prefetch_related('profile__team_memberships__team')
 

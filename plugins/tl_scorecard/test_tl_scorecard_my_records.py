@@ -76,10 +76,10 @@ class MyRecordsTests(TestCase):
         from apps.permissions.models import Role
         from apps.permissions.services.role_service import assign_role
 
-        Role.objects.get_or_create(code='hr', defaults={'name': 'hr'})
-        multi = _make_user('hbpr_hr_mr')
+        Role.objects.get_or_create(code='italian_tl', defaults={'name': 'italian_tl'})
+        multi = _make_user('hbpr_tl_mr')
         assign_role(multi, 'hbpr')
-        assign_role(multi, 'hr')
+        assign_role(multi, 'italian_tl')
         self.assertEqual(self._get(multi).status_code, 200)
 
     def test_shows_only_shared_one_on_ones_about_me(self):
@@ -123,3 +123,13 @@ class MyRecordsTests(TestCase):
         stranger = _make_user('stranger_mr')
         self.assertEqual(
             self._get(stranger).data, {'one_on_ones': [], 'pips': [], 'epr_cycles': []})
+
+
+class MyRecordsPureHrTests(TestCase):
+    def test_pure_hr_is_denied(self):
+        hr = _make_user('hr_mr')
+        hr.profile.is_hr_user = True
+        hr.profile.save()
+        request = APIRequestFactory().get('/x/')
+        force_authenticate(request, user=hr)
+        self.assertEqual(MyRecordsViewSet.as_view({'get': 'list'})(request).status_code, 403)

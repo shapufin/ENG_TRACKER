@@ -620,7 +620,7 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         """One server-filtered page of every leave request for the admin page.
 
         Staff admins and HR only (same guard as the overtime/standby admin
-        lists). Filters: status, user, request_type, date_from (start on or
+        lists). Filters: status, user, request_type, italian_tl, albanian_tl, date_from (start on or
         after), date_to (end on or before) and a whitespace-split search over
         the employee's username, name and the reason. ``status_counts`` covers
         the same filters except ``status`` so the chips stay meaningful.
@@ -644,6 +644,10 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
             queryset = queryset.filter(user_id=params['user'])
         if params.get('request_type'):
             queryset = queryset.filter(request_type=params['request_type'])
+        if params.get('italian_tl'):
+            queryset = queryset.filter(user__profile__italian_tl_id=params['italian_tl'])
+        if params.get('albanian_tl'):
+            queryset = queryset.filter(user__profile__albanian_tl_id=params['albanian_tl'])
         if params.get('date_from'):
             queryset = queryset.filter(start_date__gte=parse_iso_date(params['date_from'], 'date_from'))
         if params.get('date_to'):

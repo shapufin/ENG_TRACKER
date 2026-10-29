@@ -9,9 +9,9 @@ import { usePermissions } from "@/context/PermissionContext";
 
 const MyRecordsSidebarLink: React.FC = () => {
   const location = useLocation();
-  const { isHBPROnly, isAlbanianTL } = usePermissions();
+  const { isHBPROnly, isAlbanianTL, isHROnly } = usePermissions();
 
-  if (isHBPROnly || isAlbanianTL) return null;
+  if (isHBPROnly || isAlbanianTL || isHROnly) return null;
 
   return (
     <SidebarNavLink

@@ -12,6 +12,8 @@ interface LeaveRequestsPageParams {
   status?: string;
   user?: string;
   request_type?: string;
+  italian_tl?: string;
+  albanian_tl?: string;
   date_from?: string;
   date_to?: string;
   search?: string;
@@ -21,6 +23,8 @@ interface Filters {
   filterStatus: string;
   filterUser: string;
   filterType: string;
+  italianTl?: string;
+  albanianTl?: string;
   dateFrom: string;
   dateTo: string;
   searchQuery: string;
@@ -39,6 +43,8 @@ export const buildLeaveRequestFilters = (o: Filters): LeaveRequestsPageParams =>
   ...(o.filterStatus !== "all" && { status: o.filterStatus }),
   ...(o.filterUser !== "all" && { user: o.filterUser }),
   ...(o.filterType !== "all" && { request_type: o.filterType }),
+  ...(o.italianTl && o.italianTl !== "all" && { italian_tl: o.italianTl }),
+  ...(o.albanianTl && o.albanianTl !== "all" && { albanian_tl: o.albanianTl }),
   ...(o.dateFrom && { date_from: o.dateFrom }),
   ...(o.dateTo && { date_to: o.dateTo }),
   ...(o.searchQuery.trim() && { search: o.searchQuery.trim() }),

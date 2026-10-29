@@ -43,12 +43,31 @@ const runBulk =
 
 const LeaveRequestsContent: React.FC = () => {
   const qc = useQueryClient();
-  const { isSuperuser } = usePermissions();
+  const { isSuperuser, isAdmin } = usePermissions();
 
+  // HR cannot list every account (admins included); they pick from plain employees.
   const { data: users } = useQuery({
-    queryKey: ["admin", "users"],
-    queryFn: () => userService.getUsers({ page_size: 500 }),
+    queryKey: ["admin", "users", isAdmin ? "all" : "employees"],
+    queryFn: async () =>
+      isAdmin
+        ? (await userService.getUsers({ page_size: 500 })).results
+        : (
+            await userService.getProfiles({ role: "assignable_employee", page_size: 500 })
+          ).results.map((p) => p.user),
     refetchOnMount: true,
+    staleTime: 300000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: italianTLs } = useQuery({
+    queryKey: ["admin", "team-leaders", "italian"],
+    queryFn: () => userService.getItalianTeamLeaders(),
+    staleTime: 300000,
+    refetchOnWindowFocus: false,
+  });
+  const { data: albanianTLs } = useQuery({
+    queryKey: ["admin", "team-leaders", "albanian"],
+    queryFn: () => userService.getAlbanianTeamLeaders(),
     staleTime: 300000,
     refetchOnWindowFocus: false,
   });
@@ -61,6 +80,10 @@ const LeaveRequestsContent: React.FC = () => {
     setFilterUser,
     filterType,
     setFilterType,
+    italianTl,
+    setItalianTl,
+    albanianTl,
+    setAlbanianTl,
     dateFrom,
     setDateFrom,
     dateTo,
@@ -110,7 +133,17 @@ const LeaveRequestsContent: React.FC = () => {
     setRowSelection,
     clear: clearSelection,
   } = useScopedRowSelection(
-    JSON.stringify([page, filterStatus, filterUser, filterType, dateFrom, dateTo, searchQuery])
+    JSON.stringify([
+      page,
+      filterStatus,
+      filterUser,
+      filterType,
+      italianTl,
+      albanianTl,
+      dateFrom,
+      dateTo,
+      searchQuery,
+    ])
   );
 
   const { bulkApproveMutation, bulkRejectMutation } = useBulkOperations({
@@ -141,6 +174,8 @@ const LeaveRequestsContent: React.FC = () => {
         filterStatus,
         filterUser,
         filterType,
+        italianTl,
+        albanianTl,
         dateFrom,
         dateTo,
         searchQuery,
@@ -205,7 +240,15 @@ const LeaveRequestsContent: React.FC = () => {
             onTypeChange={setFilterType}
             filterUser={filterUser}
             onUserChange={setFilterUser}
-            users={users?.results}
+            users={users}
+            tlFilters={{
+              italianTLs: italianTLs ?? [],
+              italianTl,
+              onItalianTlChange: setItalianTl,
+              albanianTLs: albanianTLs ?? [],
+              albanianTl,
+              onAlbanianTlChange: setAlbanianTl,
+            }}
             dateFrom={dateFrom}
             onDateFromChange={setDateFrom}
             dateTo={dateTo}
@@ -239,8 +282,8 @@ const LeaveRequestsContent: React.FC = () => {
 };
 
 export const LeaveRequestsPage: React.FC = () => {
-  const { isAdmin } = usePermissions();
-  if (!isAdmin) {
+  const { isAdmin, isHR } = usePermissions();
+  if (!isAdmin && !isHR) {
     return <Navigate to="/leave-management" replace />;
   }
   return <LeaveRequestsContent />;

@@ -20,11 +20,46 @@ interface LeaveToolbarFiltersProps {
   filterUser: string;
   onUserChange: (val: string) => void;
   users?: UserType[];
+  /** Present for HR: narrows the list by the employee's assigned TL. */
+  tlFilters?: {
+    italianTLs: TlOption[];
+    italianTl: string;
+    onItalianTlChange: (val: string) => void;
+    albanianTLs: TlOption[];
+    albanianTl: string;
+    onAlbanianTlChange: (val: string) => void;
+  };
   dateFrom: string;
   onDateFromChange: (val: string) => void;
   dateTo: string;
   onDateToChange: (val: string) => void;
 }
+
+interface TlOption {
+  id: number;
+  full_name: string;
+}
+
+const TlSelect: React.FC<{
+  label: string;
+  options: TlOption[];
+  value: string;
+  onChange: (val: string) => void;
+}> = ({ label, options, value, onChange }) => (
+  <Select value={value} onValueChange={onChange}>
+    <SelectTrigger className="w-44" aria-label={label}>
+      <SelectValue placeholder={label} />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">{label}</SelectItem>
+      {options.map((tl) => (
+        <SelectItem key={tl.id} value={String(tl.id)}>
+          {tl.full_name}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+);
 
 const typeOptions = [
   { value: "all", label: "All Types", icon: Filter },
@@ -40,6 +75,7 @@ export const LeaveToolbarFilters: React.FC<LeaveToolbarFiltersProps> = ({
   filterUser,
   onUserChange,
   users,
+  tlFilters,
   dateFrom,
   onDateFromChange,
   dateTo,
@@ -69,6 +105,22 @@ export const LeaveToolbarFilters: React.FC<LeaveToolbarFiltersProps> = ({
           ))}
         </SelectContent>
       </Select>
+      {tlFilters && (
+        <>
+          <TlSelect
+            label="All Italian TLs"
+            options={tlFilters.italianTLs}
+            value={tlFilters.italianTl}
+            onChange={tlFilters.onItalianTlChange}
+          />
+          <TlSelect
+            label="All Albanian TLs"
+            options={tlFilters.albanianTLs}
+            value={tlFilters.albanianTl}
+            onChange={tlFilters.onAlbanianTlChange}
+          />
+        </>
+      )}
       <div className="w-full sm:w-64">
         <DateRangePickers
           dateFrom={dateFrom}

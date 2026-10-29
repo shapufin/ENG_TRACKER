@@ -28,6 +28,14 @@ def build_matrix_queryset(visible_ids, filters=None):
     if not filters:
         return qs.distinct().order_by('username')
 
+    # TL and Tech narrow who appears; they never widen `visible_ids`.
+    if filters.get('italian_tl'):
+        qs = qs.filter(profile__italian_tl_id=filters['italian_tl'])
+    if filters.get('albanian_tl'):
+        qs = qs.filter(profile__albanian_tl_id=filters['albanian_tl'])
+    if filters.get('tech'):
+        qs = qs.filter(profile__tech_assignments__tech_id=filters['tech'])
+
     skill_ids = filters.get('skill_id')
     category_code = filters.get('category')
     min_level = filters.get('min_level')

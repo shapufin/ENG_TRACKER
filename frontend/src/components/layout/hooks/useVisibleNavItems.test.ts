@@ -325,7 +325,7 @@ describe("useVisibleNavItems pure HR", () => {
 
   it("hides the personal and team surfaces HR does not have", () => {
     const visible = labels(pureHR().result.current);
-    for (const label of ["Overtime", "Standby", "Calendar", "Ticket KPI"]) {
+    for (const label of ["Overtime", "Standby", "Calendar", "Ticket KPI", "Leave"]) {
       expect(visible).not.toContain(label);
     }
   });
@@ -334,7 +334,7 @@ describe("useVisibleNavItems pure HR", () => {
     const visible = labels(pureHR().result.current);
     for (const label of [
       "Dashboard",
-      "Leave",
+      "Leave Requests",
       "HR Reports",
       "Team Leader Assignment",
       "Settings",
@@ -348,7 +348,7 @@ describe("useVisibleNavItems pure HR", () => {
       useVisibleNavItems(false, true, true, false, false, false, false, false, undefined, false)
     ).result.current;
     expect(labels(tl)).toEqual(
-      expect.arrayContaining(["Overtime", "Standby", "Calendar", "Ticket KPI"])
+      expect.arrayContaining(["Overtime", "Standby", "Calendar", "Ticket KPI", "Leave"])
     );
     const admin = renderHook(() =>
       useVisibleNavItems(true, true, false, false, false, false, false, false, undefined, false)

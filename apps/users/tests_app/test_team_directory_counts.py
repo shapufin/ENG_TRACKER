@@ -66,3 +66,26 @@ class TeamDirectoryCountTests(APITestCase):
         self.client.force_authenticate(self.employee)
         resp = self.client.get(URL + 'list_for_reports/')
         self.assertTrue(all(r['members_count'] is None for r in resp.data))
+
+
+class TlPickerExcludesAdminsTests(APITestCase):
+    def test_staff_and_superusers_are_not_offered_as_team_leaders(self):
+        from django.contrib.auth.models import User
+        from rest_framework.test import APIClient
+
+        hr = User.objects.create_user(username='pick_hr', password='x')
+        hr.profile.is_hr_user = True
+        hr.profile.save()
+        real = User.objects.create_user(username='pick_tl', password='x')
+        real.profile.is_italian_tl_role = True
+        real.profile.is_albanian_tl_role = True
+        real.profile.save()
+        boss = User.objects.create_superuser(username='pick_root', password='x')
+        boss.profile.is_italian_tl_role = True
+        boss.profile.is_albanian_tl_role = True
+        boss.profile.save()
+        client = APIClient()
+        client.force_authenticate(hr)
+        for name in ('italian_team_leaders', 'albanian_team_leaders'):
+            r = client.get(f'/api/users/users/{name}/')
+            self.assertEqual({x['username'] for x in r.data}, {'pick_tl'}, name)
