@@ -492,6 +492,7 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
 
             for obj in queryset:
                 if self._can_delete(request.user, obj):
+                    obj._skip_notifications = True
                     try:
                         self.perform_destroy(obj)
                         deleted_count += 1

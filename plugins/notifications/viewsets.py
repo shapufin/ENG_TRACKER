@@ -21,7 +21,10 @@ OWN_EVENT_TYPES = {
     'own_overtime_submitted', 'own_overtime_updated',
     'own_standby_submitted', 'own_standby_updated', 'team_period_finalized',
 }
-TEAM_EVENT_TYPES = {'team_action_required', 'team_leave_deleted'}
+TEAM_EVENT_TYPES = {
+    'team_action_required', 'team_leave_deleted',
+    'team_overtime_deleted', 'team_standby_deleted',
+}
 
 
 def _types_in_category(category):

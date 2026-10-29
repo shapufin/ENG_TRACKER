@@ -45,6 +45,8 @@ class NotificationPluginLifecycleTest(TestCase):
             'notifications.overtime_log_notification',
             'notifications.track_standby_state',
             'notifications.standby_log_notification',
+            'notifications.overtime_log_deleted',
+            'notifications.standby_log_deleted',
             'notifications.approval_period_close_notification',
         }
         actual = {

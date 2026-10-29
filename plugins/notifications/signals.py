@@ -122,6 +122,20 @@ def _create_notification(
     return notification
 
 
+def _dispatch_status_change(instance, entity_type, own_notification):
+    """A move back to pending is the owner's own edit of a decided record
+    (the viewsets reset status on edit): the approver must act again, and the
+    author needs no "is now pending" warning about their own action."""
+    if instance.status == 'pending':
+        team.TeamActionRequiredNotification().dispatch({
+            'instance': instance,
+            'entity_type': entity_type,
+            'resubmitted': True,
+        })
+    else:
+        own_notification().dispatch({'instance': instance})
+
+
 # ============================================================================
 # Leave Request — pre_save state tracker
 # ============================================================================
@@ -169,7 +183,7 @@ def leave_request_notification(sender, instance, created, **kwargs):
     else:
         old_status = getattr(instance, '_old_status', None)
         if old_status and old_status != instance.status:
-            own.LeaveUpdatedNotification().dispatch({'instance': instance})
+            _dispatch_status_change(instance, 'leave', own.LeaveUpdatedNotification)
 
         old_values = getattr(instance, '_old_values', None)
         if old_values:
@@ -232,7 +246,15 @@ def overtime_log_notification(sender, instance, created, **kwargs):
     else:
         old_status = getattr(instance, '_old_status', None)
         if old_status and old_status != instance.status:
-            own.OvertimeUpdatedNotification().dispatch({'instance': instance})
+            _dispatch_status_change(instance, 'overtime', own.OvertimeUpdatedNotification)
+
+
+@receiver(post_delete, sender=OvertimeLog, dispatch_uid='notifications.overtime_log_deleted')
+def overtime_log_deleted(sender, instance, **kwargs):
+    # Bulk deletes set _skip_notifications (like bulk approve/reject) so one
+    # request does not fan out a notification per row.
+    if instance.status == 'pending' and not getattr(instance, '_skip_notifications', False):
+        team.TeamOvertimeDeletedNotification().dispatch({'instance': instance})
 
 
 # ============================================================================
@@ -270,7 +292,13 @@ def standby_log_notification(sender, instance, created, **kwargs):
     else:
         old_status = getattr(instance, '_old_status', None)
         if old_status and old_status != instance.status:
-            own.StandbyUpdatedNotification().dispatch({'instance': instance})
+            _dispatch_status_change(instance, 'standby', own.StandbyUpdatedNotification)
+
+
+@receiver(post_delete, sender=StandbyLog, dispatch_uid='notifications.standby_log_deleted')
+def standby_log_deleted(sender, instance, **kwargs):
+    if instance.status == 'pending' and not getattr(instance, '_skip_notifications', False):
+        team.TeamStandbyDeletedNotification().dispatch({'instance': instance})
 
 
 def connect():
@@ -299,6 +327,16 @@ def connect():
         overtime_log_notification,
         sender=OvertimeLog,
         dispatch_uid='notifications.overtime_log_notification',
+    )
+    post_delete.connect(
+        overtime_log_deleted,
+        sender=OvertimeLog,
+        dispatch_uid='notifications.overtime_log_deleted',
+    )
+    post_delete.connect(
+        standby_log_deleted,
+        sender=StandbyLog,
+        dispatch_uid='notifications.standby_log_deleted',
     )
     pre_save.connect(
         track_standby_state,

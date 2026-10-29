@@ -116,7 +116,10 @@ const NotificationBell: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     className="mt-1 h-6 w-fit px-2 text-xs"
-                    onClick={() => handleMarkRead(notification.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMarkRead(notification.id);
+                    }}
                   >
                     <Check className="mr-1 h-3 w-3" /> Mark read
                   </Button>
