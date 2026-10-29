@@ -189,7 +189,7 @@ class Team(BaseModel):
     This enables the Italian TL -> Albanian TL permission inheritance pattern.
     """
     name = models.CharField(max_length=100, unique=True)
-    code = models.CharField(max_length=10, unique=True)
+    code = models.CharField(max_length=50, unique=True)
     parent_team = models.ForeignKey(
         'self',
         null=True,
@@ -302,7 +302,7 @@ class TeamMembershipHistory(models.Model):
     """A membership that ended. Survives the team and the user: labels are copied."""
     team = models.ForeignKey(Team, null=True, blank=True, on_delete=models.SET_NULL, related_name='membership_history')
     team_name = models.CharField(max_length=100)
-    team_code = models.CharField(max_length=10)
+    team_code = models.CharField(max_length=50)
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='team_membership_history')
     username = models.CharField(max_length=150)
     joined_date = models.DateField(null=True, blank=True)
@@ -393,7 +393,7 @@ class ApprovalPeriodCloseMember(BaseModel):
     )
     # Labels survive the team: source_team goes NULL when the team is purged.
     source_team_name = models.CharField(max_length=100, blank=True, default='')
-    source_team_code = models.CharField(max_length=10, blank=True, default='')
+    source_team_code = models.CharField(max_length=50, blank=True, default='')
 
     class Meta:
         db_table = 'approval_period_close_members'

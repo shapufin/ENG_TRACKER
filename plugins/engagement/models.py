@@ -33,7 +33,7 @@ class TLApprovalMetric(BaseModel):
     )
     # Labels survive the team: `team` goes NULL when it is purged. Such rows are history only.
     team_name = models.CharField(max_length=100, blank=True, default='')
-    team_code = models.CharField(max_length=10, blank=True, default='')
+    team_code = models.CharField(max_length=50, blank=True, default='')
     month = models.DateField(help_text='First day of the month', db_index=True)
 
     # Per-request-type breakdown: {"leave": {...}, "overtime": {...}, "standby": {...}}
