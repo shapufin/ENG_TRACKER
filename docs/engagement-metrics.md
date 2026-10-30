@@ -160,6 +160,18 @@ single leader in scope, or "All team leaders in scope" when there are several. T
 filename is `engagement_<scope>_<username>_<period>.<ext>`. The engagement metrics page's
 Export menu offers Excel and PDF for this month and for the full year.
 
+## Metrics guide (2026-10-30)
+
+The metrics page explains itself: a "Metrics guide" button in the header, and a
+"What counts as a breach?" button on the overdue banner, open one dialog with the
+four score parts and weights (within deadline 40%, approval rate 20%,
+responsiveness 20%, consistency 20%), the deadlines above, what a breach is
+(decided after the deadline, or still pending past it; deciding a pending request
+ends its pending count but a late decision stays late), time to approve (TTA),
+the aging buckets and the evidence-only signals. The weights are duplicated in
+`frontend/src/plugins/engagement/components/scoreParts.ts`; keep it equal to
+`COMPONENT_WEIGHTS` in `services.py`.
+
 ## Known limits (accepted, not fixed)
 
 - Team totals sum across teams, so a person in two teams is counted twice in
