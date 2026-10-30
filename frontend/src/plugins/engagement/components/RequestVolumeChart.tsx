@@ -66,7 +66,7 @@ export const RequestVolumeChart: React.FC<RequestVolumeChartProps> = ({ rows }) 
   }
 
   return (
-    <ChartContainer config={config} className="max-h-[320px] w-full">
+    <ChartContainer config={config} className="aspect-auto h-[280px] w-full">
       <BarChart data={data} barGap={4} barCategoryGap="28%">
         <CartesianGrid vertical={false} strokeDasharray="3 6" opacity={0.4} />
         <XAxis dataKey="type" tickLine={false} axisLine={false} />

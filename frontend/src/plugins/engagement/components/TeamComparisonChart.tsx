@@ -40,7 +40,7 @@ export const TeamComparisonChart: React.FC<TeamComparisonChartProps> = ({ rows }
   }
 
   return (
-    <ChartContainer config={config} className="max-h-[280px] w-full">
+    <ChartContainer config={config} className="aspect-auto h-[280px] w-full">
       <BarChart data={data} layout="vertical" margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
         <CartesianGrid horizontal={false} strokeDasharray="3 6" opacity={0.4} />
         <XAxis type="number" domain={[0, 100]} tickLine={false} axisLine={false} />

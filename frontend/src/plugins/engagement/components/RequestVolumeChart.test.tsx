@@ -58,7 +58,10 @@ describe("RequestVolumeChart", () => {
         standby: emptyType(),
       },
     });
-    render(<RequestVolumeChart rows={[withVolume]} />);
+    const { container } = render(<RequestVolumeChart rows={[withVolume]} />);
     expect(screen.queryByText("No requests yet")).not.toBeInTheDocument();
+    // aspect-video would shrink the chart to ~170px in a narrow two-column card.
+    const chart = container.querySelector("[data-chart]");
+    expect(chart).toHaveClass("aspect-auto", "h-[280px]");
   });
 });
