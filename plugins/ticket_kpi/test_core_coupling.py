@@ -65,6 +65,48 @@ class TeamScopeParityTests(TestCase):
         self.assertFalse(_is_tl_for_user(self.tl, self.tl))
 
 
+class ItalianTlScopeTests(TestCase):
+    """Italian TLs sit above the people KPI measures: never in a roster, except as the viewer."""
+
+    @classmethod
+    def setUpTestData(cls):
+        def make(name, **profile):
+            user = User.objects.create_user(username=name, password='x')
+            for field, value in profile.items():
+                setattr(user.profile, field, value)
+            user.profile.save()
+            return user
+
+        cls.al_tl = make('it_al_tl', is_albanian_tl_role=True)
+        cls.it_tl = make('it_it_tl', is_italian_tl_role=True)
+        cls.other_it_tl = make('it_other_it_tl', is_italian_tl_role=True)
+        cls.member = make('it_member')
+        cls.stranger = make('it_stranger')
+        cls.member.profile.albanian_tl = cls.al_tl
+        cls.member.profile.save(update_fields=['albanian_tl'])
+
+        team = Team.objects.create(name='Mixed', code='MIX', team_leader=cls.al_tl)
+        team.members.add(
+            cls.al_tl.profile, cls.it_tl.profile, cls.other_it_tl.profile, cls.member.profile
+        )
+
+    def ids(self, viewer):
+        return set(_get_tl_team_members(viewer).values_list('id', flat=True))
+
+    def test_albanian_tl_roster_leaves_out_italian_tls(self):
+        roster = self.ids(self.al_tl)
+        self.assertIn(self.member.id, roster)
+        self.assertIn(self.al_tl.id, roster)
+        self.assertNotIn(self.it_tl.id, roster)
+        self.assertNotIn(self.other_it_tl.id, roster)
+
+    def test_italian_tl_keeps_their_own_row_but_not_a_peers(self):
+        roster = self.ids(self.it_tl)
+        self.assertIn(self.it_tl.id, roster)
+        self.assertNotIn(self.other_it_tl.id, roster)
+        self.assertNotIn(self.stranger.id, roster)
+
+
 class LinkRepointTests(TestCase):
     """Updating a link must authorize against the link's CURRENT owner too."""
 
