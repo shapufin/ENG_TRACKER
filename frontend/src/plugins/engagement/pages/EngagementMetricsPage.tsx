@@ -19,6 +19,7 @@ import { downloadBlobResponse, parseFilenameFromDisposition } from "@/lib/downlo
 import {
   FileSpreadsheet,
   FileText,
+  CircleHelp,
   Gauge,
   LineChart,
   RefreshCw,
@@ -33,6 +34,7 @@ import { AgingBucketChart } from "../components/AgingBucketChart";
 import { ScoreCompositionTrendChart } from "../components/ScoreCompositionTrendChart";
 import { RequestVolumeChart } from "../components/RequestVolumeChart";
 import { TeamBreakdownTable } from "../components/TeamBreakdownTable";
+import { MetricsGuideDialog } from "../components/MetricsGuideDialog";
 import { useEngagementMetrics } from "./hooks/useEngagementMetrics";
 import { engagementService } from "../services/engagementService";
 
@@ -87,6 +89,7 @@ export const EngagementMetricsPage: React.FC = () => {
   const [teamFilter, setTeamFilter] = useState("");
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
   const { summary, trend, teamBreakdown, isLoading, isFetching, isError, refetch } =
     useEngagementMetrics(month);
 
@@ -230,6 +233,16 @@ export const EngagementMetricsPage: React.FC = () => {
               aria-hidden="true"
             />
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="control-icon-sm"
+            aria-label="Metrics guide"
+            title="Metrics guide"
+            onClick={() => setGuideOpen(true)}
+          >
+            <CircleHelp className="h-4 w-4" aria-hidden="true" />
+          </Button>
           <Button asChild variant="outline" size="control-sm">
             <Link to={month ? `/engagement/visualize?month=${month}` : "/engagement/visualize"}>
               <LineChart className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -296,8 +309,18 @@ export const EngagementMetricsPage: React.FC = () => {
             tone="danger"
             label={`${pendingTotal} request(s) past their deadline — each counts as a breach until it is decided.`}
             value={pendingTotal}
-          />
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="control-sm"
+              onClick={() => setGuideOpen(true)}
+            >
+              What counts as a breach?
+            </Button>
+          </InfoCallout>
         )}
+        <MetricsGuideDialog open={guideOpen} onOpenChange={setGuideOpen} />
         <TTATrendChart data={trend} />
         <div className="grid gap-6 md:grid-cols-2">
           <AgingBucketChart rows={teamBreakdown} />
