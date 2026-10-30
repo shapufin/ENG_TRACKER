@@ -61,6 +61,10 @@ Plan: `docs/superpowers/plans/2026-10-13-leave-carryover-and-holidays.md`.
 
 - Submission: the employee gets `own_*_submitted`; the TL gets `team_action_required` (link `/team/approvals`).
 - Status change: the employee gets `own_*_updated` (success on approve, warning on reject).
+- **Resubmission on owner edit (2026-10-29)**: when a decided record is edited by the owner and reset to `pending` (in Leave, Overtime, or Standby viewsets), `_dispatch_status_change` alerts the team leader via `TeamActionRequiredNotification` with `resubmitted=True` (`"Action Required: <Type> Resubmitted"`, message `"<name> resubmitted after editing <type> for <date>."`). It deliberately suppresses `own_*_updated` to the author so the author is not warned with "is now pending" about their own action.
+- **Pending deletions (2026-10-29)**: deleting a single pending leave, overtime, or standby log alerts the team leader (`team_leave_deleted`, `team_overtime_deleted`, `team_standby_deleted`). Bulk deletes (`BulkActionMixin`) set `_skip_notifications = True` on each object to protect the query budget from fan-out.
+- **Kill-switch**: per event type via `NotificationEventTypeConfig`. Admin-disabled types vanish from `_available_preference_pairs` (the Settings preferences endpoint) by design (`models.py:193`), and `_create_notification` drops them unconditionally.
+- **NotificationBell UI**: interactive controls inside the bell popover (e.g., "Mark read") must call `e.stopPropagation()` so they do not trigger the item card's navigation `onClick`.
 - Delivery follows each recipient's `NotificationPreference`. An employee who turned off in-app `own_leave_updated` will not see leave decisions. That is their setting, not a fault.
 - To verify a flow: take the `Notification` ids before and after the action, then read `GET /api/plugins/notifications/notifications/` and `unread_count/` as the recipient.
 
