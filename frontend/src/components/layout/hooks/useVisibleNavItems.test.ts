@@ -7,7 +7,7 @@ const labels = (result: ReturnType<typeof useVisibleNavItems>) => result.map((it
 describe("useVisibleNavItems", () => {
   it("returns all items for a superuser", () => {
     const { result } = renderHook(() => useVisibleNavItems(false, false, false, false, true));
-    expect(result.current).toHaveLength(18);
+    expect(result.current).toHaveLength(19);
   });
 
   it("returns only public items for an employee", () => {
@@ -105,7 +105,7 @@ describe("useVisibleNavItems", () => {
 
   it("superuser sees all items regardless of other role flags", () => {
     const { result } = renderHook(() => useVisibleNavItems(false, false, false, false, true));
-    expect(result.current).toHaveLength(18);
+    expect(result.current).toHaveLength(19);
   });
 
   it("admin + HR combo sees both admin and HR items", () => {
@@ -261,6 +261,7 @@ describe("useVisibleNavItems", () => {
       "Team Overview": "leadership",
       "HR Reports": "hr",
       "Team Leader Assignment": "hr",
+      "Leave Requests": "hr",
       "Company Holidays": "hr",
       "Wage Assignment": "hr",
       Payroll: "hr",
