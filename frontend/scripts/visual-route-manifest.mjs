@@ -593,6 +593,15 @@ export const ROUTES = [
     extraction: "NONE",
   },
   {
+    path: "/hr/leave-requests",
+    label: "hr-leave-requests",
+    layout: "app",
+    roles: ["hr", "tl_hr", "admin"],
+    expectedHeading: "Leave Requests",
+    mockup: "NONE",
+    extraction: "NONE",
+  },
+  {
     path: "/hr/calendars",
     label: "hr-calendars",
     layout: "app",
