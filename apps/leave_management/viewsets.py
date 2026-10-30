@@ -397,7 +397,11 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
 
             update_kwargs = {}
             if instance.status == 'approved':
-                update_kwargs = {'status': 'pending', 'approved_by': None, 'approved_at': None}
+                # A resubmission restarts the SLA clock; the old deadline is not the TL's fault.
+                update_kwargs = {
+                    'status': 'pending', 'approved_by': None, 'approved_at': None,
+                    'submitted_at': timezone.now(),
+                }
 
             updated_obj = serializer.save(**update_kwargs)
 

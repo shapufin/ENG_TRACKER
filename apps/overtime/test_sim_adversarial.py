@@ -6,6 +6,7 @@ from datetime import time, timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from apps.overtime.models import Client, OvertimeLog
@@ -133,6 +134,28 @@ class OvertimeAbuseTests(APITestCase):
         e.refresh_from_db()
         if r.status_code == 200:
             self.assertEqual(e.status, 'pending')
+
+    def test_resubmitting_an_approved_entry_restarts_its_sla_clock(self):
+        """An edited approved entry is a new submission: it must not inherit the old deadline."""
+        e = self._own(status='approved', approved_by=self.tl)
+        old = timezone.now() - timedelta(days=30)
+        OvertimeLog.objects.filter(pk=e.pk).update(submitted_at=old)
+        self.client.force_authenticate(self.emp)
+        r = self.client.patch(f'{OT}{e.pk}/', {'description': 'changed'}, format='json')
+        self.assertEqual(r.status_code, 200, r.data)
+        e.refresh_from_db()
+        self.assertEqual(e.status, 'pending')
+        self.assertGreater(e.submitted_at, old + timedelta(days=29))
+
+    def test_editing_a_pending_entry_keeps_its_submission_time(self):
+        e = self._own()
+        old = timezone.now() - timedelta(days=3)
+        OvertimeLog.objects.filter(pk=e.pk).update(submitted_at=old)
+        self.client.force_authenticate(self.emp)
+        r = self.client.patch(f'{OT}{e.pk}/', {'description': 'changed'}, format='json')
+        self.assertEqual(r.status_code, 200, r.data)
+        e.refresh_from_db()
+        self.assertEqual(e.submitted_at, old)
 
     def test_owner_cannot_move_an_entry_into_a_past_month(self):
         e = self._own()

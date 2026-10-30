@@ -39,6 +39,13 @@ Public holidays are the global holidays plus holidays of calendars the TL has
 active (`UserCalendarPreference.is_active`). Deadlines do not pause during the
 TL's own vacation.
 
+Resubmission (2026-10-30): when an owner edits an approved leave, overtime or
+standby record it goes back to `pending` and `submitted_at` is reset to now, so
+the deadline restarts. Without the reset the record kept its original
+`submitted_at`, came back already past its deadline and was counted as a breach
+against the TL. Editing a record that is still pending does not touch
+`submitted_at`. Pinned by `apps/overtime/test_sim_adversarial.py`.
+
 ## Judgement per request
 
 - Decided (approved or rejected) on or before the deadline: on time.

@@ -74,7 +74,9 @@ export const MetricsGuideDialog: React.FC<MetricsGuideDialogProps> = ({ open, on
             <p className="text-muted-foreground">
               A request is a breach when it was decided after its deadline, or is still pending past
               it. Deciding a pending request ends its pending count, but a decision made after the
-              deadline stays a late one.
+              deadline stays a late one. When an employee edits an already approved request, it
+              returns to pending and counts as a new submission, so its deadline restarts from the
+              edit.
             </p>
           </section>
 

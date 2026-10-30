@@ -10,6 +10,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
+from django.utils import timezone
 from core.pagination import LargeResultsPagination
 from core.mixins.cache import CacheInvalidationMixin
 from core.mixins.permissions import (
@@ -297,7 +298,11 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
                 )
         reassign = {'requested_processing_period': None} if date != obj.date else {}
         if obj.status == 'approved':
-            serializer.save(status='pending', approved_by=None, approved_at=None, **reassign)
+            # A resubmission restarts the SLA clock; the old deadline is not the TL's fault.
+            serializer.save(
+                status='pending', approved_by=None, approved_at=None,
+                submitted_at=timezone.now(), **reassign,
+            )
         else:
             serializer.save(**reassign)
         self.invalidate_related_cache()

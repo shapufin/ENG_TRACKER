@@ -4,6 +4,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count
+from django.utils import timezone
 from django.db.models.functions import TruncMonth
 from core.pagination import LargeResultsPagination
 from core.mixins.cache import CacheInvalidationMixin
@@ -192,7 +193,11 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
                 )
         reassign = {'requested_processing_period': None} if date != obj.date else {}
         if obj.status == 'approved':
-            instance = serializer.save(status='pending', approved_by=None, approved_at=None, **reassign)
+            # A resubmission restarts the SLA clock; the old deadline is not the TL's fault.
+            instance = serializer.save(
+                status='pending', approved_by=None, approved_at=None,
+                submitted_at=timezone.now(), **reassign,
+            )
         else:
             instance = serializer.save(**reassign)
         # Update M2M clients if provided — read from serializer.validated_data
