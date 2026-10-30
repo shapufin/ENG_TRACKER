@@ -322,7 +322,7 @@ export const EngagementVisualizationPage: React.FC = () => {
         >
           <ChartContainer
             config={trendConfig}
-            className="max-h-[320px] w-full [&_.recharts-line-curve]:drop-shadow-[0_0_6px_hsl(var(--chart-2)/0.7)]"
+            className="aspect-auto h-[320px] w-full [&_.recharts-line-curve]:drop-shadow-[0_0_6px_hsl(var(--chart-2)/0.7)]"
           >
             <ComposedChart data={trend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>
@@ -379,7 +379,7 @@ export const EngagementVisualizationPage: React.FC = () => {
           title="Approval Aging"
           description="Decided requests by time-to-approve, by request type"
         >
-          <ChartContainer config={agingConfig} className="max-h-[320px] w-full">
+          <ChartContainer config={agingConfig} className="aspect-auto h-[320px] w-full">
             <BarChart data={agingData} barGap={4} barCategoryGap="24%">
               <defs>
                 <linearGradient id="vizAgingLeave" x1="0" y1="0" x2="0" y2="1">

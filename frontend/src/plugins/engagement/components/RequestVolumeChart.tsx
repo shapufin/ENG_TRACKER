@@ -66,15 +66,25 @@ export const RequestVolumeChart: React.FC<RequestVolumeChartProps> = ({ rows }) 
   }
 
   return (
-    <ChartContainer config={config} className="max-h-[320px] w-full">
+    <ChartContainer config={config} className="aspect-auto h-[280px] w-full">
       <BarChart data={data} barGap={4} barCategoryGap="28%">
         <CartesianGrid vertical={false} strokeDasharray="3 6" opacity={0.4} />
         <XAxis dataKey="type" tickLine={false} axisLine={false} />
         <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
         <ChartTooltip content={<ChartTooltipContent />} />
         <ChartLegend content={<ChartLegendContent />} />
-        <Bar dataKey="approved" fill="var(--color-approved)" radius={[6, 6, 1, 1]} maxBarSize={40} />
-        <Bar dataKey="rejected" fill="var(--color-rejected)" radius={[6, 6, 1, 1]} maxBarSize={40} />
+        <Bar
+          dataKey="approved"
+          fill="var(--color-approved)"
+          radius={[6, 6, 1, 1]}
+          maxBarSize={40}
+        />
+        <Bar
+          dataKey="rejected"
+          fill="var(--color-rejected)"
+          radius={[6, 6, 1, 1]}
+          maxBarSize={40}
+        />
         <Bar dataKey="pending" fill="var(--color-pending)" radius={[6, 6, 1, 1]} maxBarSize={40} />
       </BarChart>
     </ChartContainer>

@@ -51,7 +51,7 @@ describe("TeamComparisonChart", () => {
   });
 
   it("renders the chart instead of the empty state with rows present", () => {
-    render(
+    const { container } = render(
       <TeamComparisonChart
         rows={[
           row({ team_name: "Team A" }),
@@ -60,5 +60,8 @@ describe("TeamComparisonChart", () => {
       />
     );
     expect(screen.queryByText("No team data yet")).not.toBeInTheDocument();
+    // aspect-video would shrink the chart to ~170px in a narrow two-column card.
+    const chart = container.querySelector("[data-chart]");
+    expect(chart).toHaveClass("aspect-auto", "h-[280px]");
   });
 });

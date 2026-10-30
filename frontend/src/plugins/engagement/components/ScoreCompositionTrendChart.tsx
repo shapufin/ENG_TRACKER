@@ -46,7 +46,7 @@ export const ScoreCompositionTrendChart: React.FC<ScoreCompositionTrendChartProp
   }
 
   return (
-    <ChartContainer config={config} className="max-h-[320px] w-full">
+    <ChartContainer config={config} className="aspect-auto h-[280px] w-full">
       <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid vertical={false} strokeDasharray="3 6" opacity={0.4} />
         <XAxis dataKey="month" tickFormatter={formatMonthTick} tickLine={false} axisLine={false} />

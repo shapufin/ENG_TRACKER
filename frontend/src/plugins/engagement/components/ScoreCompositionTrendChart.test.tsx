@@ -34,7 +34,10 @@ describe("ScoreCompositionTrendChart", () => {
   });
 
   it("renders the chart instead of the empty state when data is present", () => {
-    render(<ScoreCompositionTrendChart data={[point()]} />);
+    const { container } = render(<ScoreCompositionTrendChart data={[point()]} />);
     expect(screen.queryByText("No score history yet")).not.toBeInTheDocument();
+    // aspect-video would shrink the chart to ~170px in a narrow two-column card.
+    const chart = container.querySelector("[data-chart]");
+    expect(chart).toHaveClass("aspect-auto", "h-[280px]");
   });
 });
