@@ -255,6 +255,19 @@ describe("EngagementMetricsPage", () => {
       expect(dialog).toHaveTextContent("still pending past");
     });
 
+    it("returns focus to the button that opened it", async () => {
+      mockMetrics();
+      renderPage();
+      const button = screen.getByRole("button", { name: "Metrics guide" });
+
+      button.focus();
+      fireEvent.click(button);
+      fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(button).toHaveFocus();
+    });
+
     it("opens from the overdue banner too", () => {
       mockMetrics(7);
       renderPage();
