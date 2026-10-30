@@ -4,6 +4,7 @@ Reuses ``UserProfile.get_team_member_ids()`` (3-source: FK + team M2M +
 led_teams) — never FK-only queries. See CONTEXT.md hot invariant #3.
 """
 from django.contrib.auth.models import User
+from django.db.models import Q
 
 from core.mixins.permissions import is_hr_only
 
@@ -30,6 +31,22 @@ def visible_user_ids(user):
         ids.add(user.id)
         return ids
     return {user.id}
+
+
+def matrix_user_ids(user):
+    """``visible_user_ids`` minus Italian TLs, for the team matrix pages.
+
+    An Italian TL is the reporting line above the people the matrix measures,
+    so they are left out of rows, coverage, gaps and exports. Same definition
+    as ``UserProfile.is_italian_tl``: the role, the legacy flag, or having
+    people who report to them.
+    """
+    italian_tls = User.objects.filter(
+        Q(profile__is_italian_tl_role=True)
+        | Q(user_roles__role__code='italian_tl', user_roles__is_active=True)
+        | Q(italian_team_members__isnull=False)
+    ).values('id')
+    return set(visible_user_ids(user)) - {row['id'] for row in italian_tls}
 
 
 def can_edit_user_skill(actor, user_skill):

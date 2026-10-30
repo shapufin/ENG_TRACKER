@@ -1,4 +1,4 @@
-import type { OrgChartNode, OrgChartEdge } from "../types";
+import type { OrgChartNode, OrgChartEdge, TreeNode } from "../types";
 
 /**
  * Build a parent-to-child mapping from explicit hierarchy edges and group containment.
@@ -133,4 +133,31 @@ export async function exportCanvasToPng(
   } catch {
     return false;
   }
+}
+
+/** Distinct Albanian TLs in a live tree, sorted by name (a bridging TL repeats under several roots). */
+export function collectAlbanianTls(roots: TreeNode[]): { id: number; name: string }[] {
+  const found = new Map<number, string>();
+  const visit = (node: TreeNode) => {
+    if (node.type === "person" && node.role_badge === "albanian_tl") {
+      found.set(node.id, node.full_name || node.username || "Unknown");
+    }
+    node.children.forEach(visit);
+  };
+  roots.forEach(visit);
+  return [...found]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Narrow a live tree to the branch of one Albanian TL, keeping the Italian TL above. */
+export function filterByAlbanianTl(roots: TreeNode[], tlId: number): TreeNode[] {
+  const visit = (node: TreeNode): TreeNode | null => {
+    if (node.type === "person" && node.role_badge === "albanian_tl") {
+      return node.id === tlId ? node : null;
+    }
+    const children = node.children.map(visit).filter((c): c is TreeNode => c !== null);
+    return children.length ? { ...node, children } : null;
+  };
+  return roots.map(visit).filter((r): r is TreeNode => r !== null);
 }

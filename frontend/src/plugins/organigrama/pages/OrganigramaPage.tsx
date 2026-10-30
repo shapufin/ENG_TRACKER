@@ -15,6 +15,7 @@ import {
   useOrganigramaVisibleCharts,
   useOrganigramaPublished,
 } from "../hooks/useOrganigramaQueries";
+import { collectAlbanianTls, filterByAlbanianTl } from "../components/viewerHelpers";
 import { OrgChartPage } from "../components/OrgChartPage";
 import { OrgChartMobileList } from "../components/OrgChartMobileList";
 import { CustomChartViewer } from "../components/CustomChartViewer";
@@ -73,6 +74,18 @@ export const OrganigramaPage: React.FC = () => {
     return visible.data?.find((c) => c.id === chartId);
   }, [chartId, visible.data]);
 
+  const [tlFilter, setTlFilter] = useState<number | null>(null);
+  const albanianTls = useMemo(() => collectAlbanianTls(tree.data?.roots ?? []), [tree.data]);
+  // A stale choice (the TL left the tree) falls back to everyone.
+  const activeTl = albanianTls.some((tl) => tl.id === tlFilter) ? tlFilter : null;
+  const liveRoots = useMemo(
+    () =>
+      activeTl === null
+        ? (tree.data?.roots ?? [])
+        : filterByAlbanianTl(tree.data?.roots ?? [], activeTl),
+    [tree.data, activeTl]
+  );
+
   const published = useOrganigramaPublished(chartId);
 
   const isLoading = tree.isLoading || visible.isLoading || published.isLoading;
@@ -107,12 +120,12 @@ export const OrganigramaPage: React.FC = () => {
       }
       return !isLiveGraphMode ? (
         <OrgChartMobileList
-          roots={tree.data.roots}
+          roots={liveRoots}
           onSwitchToGraph={() => setLiveModeOverride("graph")}
         />
       ) : (
         <OrgChartPage
-          roots={tree.data.roots}
+          roots={liveRoots}
           isLandscape={isLandscape}
           isMobile={isSmallScreen}
           onSwitchToList={isSmallScreen ? () => setLiveModeOverride("list") : undefined}
@@ -143,30 +156,50 @@ export const OrganigramaPage: React.FC = () => {
       title={headerLabel}
       subtitle={headerSubtitle || undefined}
       actions={
-        sources.length > 1 ? (
-          <Select
-            value={selectedId === "live" ? "live" : selectedId.toString()}
-            onValueChange={(value) => {
-              if (value === "live") {
-                setUserSelection("live");
-              } else {
-                const id = parseInt(value, 10);
-                if (!Number.isNaN(id)) setUserSelection(id);
-              }
-            }}
-          >
-            <SelectTrigger className="w-full sm:w-[220px]" aria-label="Select chart source">
-              <SelectValue placeholder="Select a chart" />
-            </SelectTrigger>
-            <SelectContent>
-              {sources.map((s) => (
-                <SelectItem key={s.id} value={s.id === "live" ? "live" : s.id.toString()}>
-                  {s.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : undefined
+        <>
+          {selectedId === "live" && albanianTls.length > 1 && (
+            <Select
+              value={activeTl === null ? "all" : activeTl.toString()}
+              onValueChange={(value) => setTlFilter(value === "all" ? null : parseInt(value, 10))}
+            >
+              <SelectTrigger className="w-full sm:w-[220px]" aria-label="Filter by team leader">
+                <SelectValue placeholder="All team leaders" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All team leaders</SelectItem>
+                {albanianTls.map((tl) => (
+                  <SelectItem key={tl.id} value={tl.id.toString()}>
+                    {tl.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {sources.length > 1 && (
+            <Select
+              value={selectedId === "live" ? "live" : selectedId.toString()}
+              onValueChange={(value) => {
+                if (value === "live") {
+                  setUserSelection("live");
+                } else {
+                  const id = parseInt(value, 10);
+                  if (!Number.isNaN(id)) setUserSelection(id);
+                }
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[220px]" aria-label="Select chart source">
+                <SelectValue placeholder="Select a chart" />
+              </SelectTrigger>
+              <SelectContent>
+                {sources.map((s) => (
+                  <SelectItem key={s.id} value={s.id === "live" ? "live" : s.id.toString()}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </>
       }
     >
       {renderContent()}

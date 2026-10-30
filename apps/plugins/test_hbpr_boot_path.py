@@ -14,7 +14,7 @@ from django.test import TestCase
 
 from apps.plugins.models import PluginPermission
 
-DENIED_FOR_HBPR = ('engagement', 'organigrama', 'skills', 'ticket_kpi')
+DENIED_FOR_HBPR = ('engagement', 'skills', 'ticket_kpi')
 # Commands of the entrypoint that mutate plugin/permission state and need no env.
 PLUGIN_STATE_COMMANDS = ('sync_plugins', 'seed_plugin_permissions', 'grant_hbpr_plugin_access')
 
@@ -37,11 +37,15 @@ class BootPathLeavesHbprLockedDown(TestCase):
     def test_entrypoint_runs_every_plugin_state_command_in_order(self):
         self.assertEqual(entrypoint_plugin_commands(), list(PLUGIN_STATE_COMMANDS))
 
-    def test_fresh_boot_denies_hbpr_on_the_four_plugins(self):
+    def test_fresh_boot_denies_hbpr_on_the_three_plugins(self):
         self._boot()
         for plugin in DENIED_FOR_HBPR:
             with self.subTest(plugin=plugin):
                 self.assertIn('hbpr', self._denied(plugin))
+
+    def test_organigrama_is_open_to_hbpr(self):
+        self._boot()
+        self.assertNotIn('hbpr', self._denied('organigrama'))
 
     def test_fresh_boot_grants_hbpr_only_tl_scorecard(self):
         self._boot()

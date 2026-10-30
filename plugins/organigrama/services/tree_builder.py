@@ -32,6 +32,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 
 from apps.users.models.core import Tech, UserProfile
+from apps.users.services.hbpr_scope import get_hbpr_scope, is_hbpr
 from apps.users.services.tech_assignments import format_assignments
 
 logger = logging.getLogger(__name__)
@@ -775,6 +776,42 @@ def build_chain(user: User) -> Dict[str, Any]:
     return {"roots": roots, "scope": "chain", "total_nodes": total_nodes}
 
 
+def hbpr_visible_user_ids(user: User) -> set:
+    """Users an HBPR may see: assigned Albanian TLs, their teams, and the
+    Italian TL above each (shown so the chart keeps its root)."""
+    scope = get_hbpr_scope(user)
+    ids = set(scope.user_ids)
+    ids.update(
+        UserProfile.objects.filter(user_id__in=scope.tl_ids, italian_tl__isnull=False)
+        .values_list("italian_tl_id", flat=True)
+    )
+    ids.update(
+        UserProfile.objects.filter(user_id__in=scope.member_ids, italian_tl__isnull=False)
+        .values_list("italian_tl_id", flat=True)
+    )
+    return ids
+
+
+def _prune_to_ids(nodes: List[Dict[str, Any]], allowed: set) -> List[Dict[str, Any]]:
+    """Keep person nodes in ``allowed`` and any node with a kept descendant."""
+    kept = []
+    for node in nodes:
+        children = _prune_to_ids(node["children"], allowed)
+        if children or (node["type"] == "person" and node["id"] in allowed):
+            kept.append({**node, "children": children})
+    return kept
+
+
+def _count_nodes(nodes: List[Dict[str, Any]]) -> int:
+    return sum(1 + _count_nodes(n["children"]) for n in nodes)
+
+
+def build_hbpr_tree(user: User) -> Dict[str, Any]:
+    """The company tree narrowed to an HBPR's assigned Albanian TLs."""
+    roots = _prune_to_ids(build_full_tree()["roots"], hbpr_visible_user_ids(user))
+    return {"roots": roots, "scope": "subtree", "total_nodes": _count_nodes(roots)}
+
+
 def build_scoped_tree(user: User) -> Dict[str, Any]:
     """
     Build the org tree scoped to the requesting user's role.
@@ -791,5 +828,7 @@ def build_scoped_tree(user: User) -> Dict[str, Any]:
         return build_full_tree()
     elif profile.is_italian_tl or profile.is_albanian_tl:
         return build_subtree(user)
+    elif is_hbpr(user):
+        return build_hbpr_tree(user)
     else:
         return build_chain(user)
