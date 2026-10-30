@@ -4,24 +4,31 @@ import { auditLogService } from "@/services/auditLogService";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { computeAdminDashboardSummary } from "./adminDashboardSummary";
 
+/**
+ * The headline figures change from other people's actions (a TL approving), which an
+ * open admin tab never sees. Unlike the app-wide `refetchOnWindowFocus: false` default,
+ * these refetch on refocus once a minute old.
+ */
+const FRESH_MS = 60 * 1000;
+
 /** One request feeds every overview widget; it only fires while one is enabled. */
 export const useAdminOverview = (enabled: boolean) =>
   useQuery({
     queryKey: ["admin", "overview"],
     queryFn: dashboardService.getAdminOverview,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: FRESH_MS,
+    refetchOnWindowFocus: true,
     enabled,
   });
 
-/** Same staleness policy as the overview; fires only while a trends widget is on. */
+/** Same freshness policy as the overview; fires only while a trends widget is on. */
 export const useAdminTrends = (enabled: boolean, months = 12) =>
   useQuery({
     // months is part of the key; ["admin","trends"] still prefix-matches for invalidation.
     queryKey: ["admin", "trends", months],
     queryFn: () => dashboardService.getAdminTrends(months),
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: FRESH_MS,
+    refetchOnWindowFocus: true,
     enabled,
   });
 
@@ -29,8 +36,8 @@ export const useAdminPeople = (enabled: boolean) =>
   useQuery({
     queryKey: ["admin", "people"],
     queryFn: dashboardService.getAdminPeople,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: FRESH_MS,
+    refetchOnWindowFocus: true,
     enabled,
   });
 
@@ -41,7 +48,8 @@ export const useAdminDashboardQueries = () => {
   const { data: globalStats, isLoading: statsLoading } = useQuery({
     queryKey: ["admin", "global-stats"],
     queryFn: dashboardService.getHRStats,
-    staleTime: 5 * 60 * 1000,
+    staleTime: FRESH_MS,
+    refetchOnWindowFocus: true,
   });
   const { data: auditLogs, isLoading: auditLogsLoading } = useQuery({
     queryKey: ["admin", "audit-logs"],
