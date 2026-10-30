@@ -45,8 +45,8 @@ export const MetricsGuideDialog: React.FC<MetricsGuideDialogProps> = ({ open, on
             <Heading>Engagement score (0-100)</Heading>
             <dl className="space-y-1.5">
               {SCORE_PARTS.map((part) => (
-                <div key={part.label} className="flex gap-3">
-                  <dt className="text-foreground w-40 shrink-0 font-medium">
+                <div key={part.label} className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                  <dt className="text-foreground shrink-0 font-medium sm:w-40">
                     {part.label} <span className="tabular-nums">{part.weight}%</span>
                   </dt>
                   <dd className="text-muted-foreground">{part.text}</dd>
