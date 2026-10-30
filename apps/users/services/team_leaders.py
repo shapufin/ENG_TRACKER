@@ -7,6 +7,7 @@ touches ``Team.team_leader`` (and so never changes TL scope via ``led_teams``).
 from collections import Counter, defaultdict
 
 from django.contrib.auth.models import User
+from django.db.models import Q
 
 from apps.users.models import TeamMembership
 
@@ -47,3 +48,19 @@ def derive_team_tls(team_ids=None):
         team_id: {side: users.get(uid) for side, uid in sides.items()}
         for team_id, sides in winners.items()
     }
+
+
+def italian_tl_user_ids():
+    """Ids of every Italian team leader, by the same rule as ``UserProfile.is_italian_tl``.
+
+    An Italian TL is the reporting line above the people measured by the skills
+    matrix and Ticket KPI, so both leave them out of rosters. Matches the role,
+    the legacy flag, or having people who report to them.
+    """
+    return set(
+        User.objects.filter(
+            Q(profile__is_italian_tl_role=True)
+            | Q(user_roles__role__code='italian_tl', user_roles__is_active=True)
+            | Q(italian_team_members__isnull=False)
+        ).values_list('id', flat=True)
+    )

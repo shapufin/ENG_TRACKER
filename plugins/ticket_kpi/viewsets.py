@@ -23,6 +23,7 @@ from django.db.models import Q
 from apps.overtime.models.core import Client
 from apps.overtime.services.client_lifecycle import archived_client_error
 from apps.users.models import Team
+from apps.users.services.team_leaders import italian_tl_user_ids
 from django.utils import timezone
 from rest_framework import viewsets, status, permissions, serializers
 from rest_framework.exceptions import PermissionDenied
@@ -1495,12 +1496,13 @@ def _get_tl_team_members(user):
 
     Scope comes from core's ``UserProfile.get_team_member_ids()`` (direct
     italian_tl/albanian_tl FKs, shared team membership, led teams) so KPI can
-    never drift from the rest of the app. Includes the TL themselves so their
-    own data appears in team dashboards/reports.
+    never drift from the rest of the app. Italian TLs are the reporting line
+    above the measured people, so other Italian TLs are left out. Includes the
+    TL themselves so their own data appears in team dashboards/reports.
     """
     if not hasattr(user, 'profile') or not user.profile.is_team_leader:
         return User.objects.none()
-    ids = user.profile.get_team_member_ids() | {user.id}
+    ids = (user.profile.get_team_member_ids() - italian_tl_user_ids()) | {user.id}
     return User.objects.filter(id__in=ids).select_related('profile').order_by('username')
 
 
