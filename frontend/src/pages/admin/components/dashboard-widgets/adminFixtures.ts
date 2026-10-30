@@ -114,6 +114,7 @@ export const makeOverview = (over: Partial<AdminOverview> = {}): AdminOverview =
     employees_without_tl: 3,
     al_tls_without_hbpr_assignment: 1,
   },
+  month_hours: { overtime: 20, standby: 7 },
   pending_backlog: {
     overtime: { count: 4, hours: 12.5 },
     standby: { count: 2, hours: 16 },

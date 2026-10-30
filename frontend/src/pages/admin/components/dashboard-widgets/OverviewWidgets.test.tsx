@@ -7,7 +7,7 @@ import { makeOverview } from "./adminFixtures";
 
 const data: AdminOverview = makeOverview();
 
-const stats = { totalUsers: 40, totalTeams: 5, totalPending: 3, overtimeHours: 20 };
+const stats = { totalUsers: 40, totalTeams: 5, totalPending: 3 };
 
 const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 

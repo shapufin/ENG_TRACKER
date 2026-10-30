@@ -38,6 +38,7 @@ const base = (): AdminOverview => ({
     employees_without_tl: 0,
     al_tls_without_hbpr_assignment: 0,
   },
+  month_hours: { overtime: 0, standby: 0 },
   pending_backlog: {
     overtime: { count: 0, hours: 0 },
     standby: { count: 0, hours: 0 },

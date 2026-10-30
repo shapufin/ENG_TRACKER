@@ -24,17 +24,12 @@ describe("computeAdminDashboardSummary", () => {
       totalUsers: 12,
       totalTeams: 4,
       totalPending: 12,
-      overtimeSummary: { total_hours: 10.5 },
       statusData: [
         { name: "Pending OT", value: 2 },
         { name: "Pending SB", value: 4 },
         { name: "Pending Leave", value: 6 },
         { name: "Approved", value: 15 },
         { name: "Rejected", value: 6 },
-      ],
-      hoursData: [
-        { label: "Overtime", hours: 10.5 },
-        { label: "Standby", hours: 4 },
       ],
     });
   });
@@ -44,17 +39,12 @@ describe("computeAdminDashboardSummary", () => {
       totalUsers: 0,
       totalTeams: 0,
       totalPending: 0,
-      overtimeSummary: { total_hours: 0 },
       statusData: [
         { name: "Pending OT", value: 0 },
         { name: "Pending SB", value: 0 },
         { name: "Pending Leave", value: 0 },
         { name: "Approved", value: 0 },
         { name: "Rejected", value: 0 },
-      ],
-      hoursData: [
-        { label: "Overtime", hours: 0 },
-        { label: "Standby", hours: 0 },
       ],
     });
   });

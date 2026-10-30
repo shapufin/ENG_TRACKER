@@ -8,7 +8,7 @@ import { makeOverview } from "./adminFixtures";
 
 const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 
-const stats = { totalUsers: 40, totalTeams: 5, totalPending: 3, overtimeHours: 20 };
+const stats = { totalUsers: 40, totalTeams: 5, totalPending: 3 };
 const overview = (data: AdminOverview | undefined = makeOverview()) => ({
   data,
   isLoading: false,
@@ -17,6 +17,11 @@ const overview = (data: AdminOverview | undefined = makeOverview()) => ({
 });
 
 describe("KpiStripWidget", () => {
+  it("Overtime shows the current month's approved hours from the overview", () => {
+    render(<KpiStripWidget {...stats} overview={overview()} />);
+    expect(screen.getByText("20h")).toBeInTheDocument();
+  });
+
   it("shows all six figures in one card, marked for PDF export", () => {
     const { container } = render(<KpiStripWidget {...stats} overview={overview()} />);
     const group = screen.getByRole("group", { name: "Key figures" });
@@ -68,7 +73,7 @@ describe("KpiStripWidget", () => {
   it("shows skeletons for the stats figures while stats load", () => {
     const { container } = render(<KpiStripWidget {...stats} statsLoading overview={overview()} />);
     expect(screen.queryByText("40")).toBeNull();
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThanOrEqual(4);
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThanOrEqual(3);
   });
 
   it("offers a retry when the overview request fails and leaves the stats alone", () => {

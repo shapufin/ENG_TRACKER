@@ -12,6 +12,7 @@ from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
+from apps.dashboard.admin_trends import month_hours
 from apps.leave_management.models import LeaveBalance, LeaveRequest
 from apps.leave_management.models.core import counted_days
 from apps.leave_management.services.carry_over import ensure_year_end_rollover
@@ -219,6 +220,7 @@ def build_admin_overview(user):
         "headcount": headcount(now),
         "coverage_gaps": coverage_gaps(today),
         "pending_backlog": pending_backlog(),
+        "month_hours": month_hours(today),
         "approval_aging": approval_aging(now),
         "leave_utilization": leave_utilization(today.year),
         "carryover_expiry": carryover_expiry(today),

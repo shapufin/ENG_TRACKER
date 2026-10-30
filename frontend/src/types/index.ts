@@ -475,6 +475,8 @@ export interface AdminOverview {
     employees_without_tl: number;
     al_tls_without_hbpr_assignment: number;
   };
+  /** Approved hours of the current business month (not lifetime totals). */
+  month_hours: { overtime: number; standby: number };
   pending_backlog: {
     overtime: { count: number; hours: number };
     standby: { count: number; hours: number };

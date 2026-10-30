@@ -13,11 +13,14 @@ vi.mock("recharts", async () => {
   };
 });
 
+// jsdom draws no bar labels, so expose the series the widget hands the chart.
+vi.mock("./HoursOverviewBody", () => ({
+  HoursOverviewBody: ({ hoursData }: { hoursData: { label: string; hours: number }[] }) => (
+    <p data-testid="month-hours">{hoursData.map((d) => `${d.label}:${d.hours}`).join(",")}</p>
+  ),
+}));
+
 const base = {
-  hoursData: [
-    { label: "Overtime", hours: 12.5 },
-    { label: "Standby", hours: 16 },
-  ],
   period: "12" as const,
   onPeriodChange: () => {},
   data: makeTrends(),
@@ -31,8 +34,20 @@ describe("HoursTrendWidget", () => {
     expect(screen.queryByRole("group", { name: "Trend period" })).toBeNull();
   });
 
-  it("shows a skeleton on This month while stats load", () => {
-    render(<HoursTrendWidget {...base} statsLoading />);
+  it("This month shows the latest month of the trends data, not a lifetime total", () => {
+    const trends = makeTrends({
+      hours: {
+        overtime: [40, 30, 2],
+        standby: [90, 60, 5],
+        pending_overtime: [0, 0, 0],
+      },
+    });
+    render(<HoursTrendWidget {...base} data={trends} />);
+    expect(screen.getByTestId("month-hours")).toHaveTextContent("Overtime:2,Standby:5");
+  });
+
+  it("shows a skeleton on This month while trends load", () => {
+    render(<HoursTrendWidget {...base} data={undefined} isLoading />);
     expect(screen.getByRole("status", { name: /loading/i })).toBeInTheDocument();
   });
 
