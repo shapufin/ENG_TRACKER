@@ -224,6 +224,62 @@ describe("EngagementMetricsPage", () => {
     expect(screen.getByRole("status", { name: /watch/i })).toBeInTheDocument();
   });
 
+  describe("metrics guide", () => {
+    const mockMetrics = (pending = 0) =>
+      vi.mocked(useEngagementMetrics.useEngagementMetrics).mockReturnValue({
+        summary: baseSummary,
+        trend: baseTrend,
+        teamBreakdown: baseTeamBreakdown.map((row) => ({
+          ...row,
+          metrics: {
+            ...row.metrics,
+            leave: { ...row.metrics.leave, pending_past_deadline: pending },
+          },
+        })),
+        isLoading: false,
+        isFetching: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+
+    it("explains the score weights, TTA and what a breach is", () => {
+      mockMetrics();
+      renderPage();
+
+      fireEvent.click(screen.getByRole("button", { name: "Metrics guide" }));
+
+      const dialog = screen.getByRole("dialog", { name: "How engagement is measured" });
+      expect(dialog).toHaveTextContent("Within deadline");
+      expect(dialog).toHaveTextContent("40%");
+      expect(dialog).toHaveTextContent("Time to approve");
+      expect(dialog).toHaveTextContent("still pending past");
+    });
+
+    it("returns focus to the button that opened it", async () => {
+      mockMetrics();
+      renderPage();
+      const button = screen.getByRole("button", { name: "Metrics guide" });
+
+      button.focus();
+      fireEvent.click(button);
+      fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(button).toHaveFocus();
+    });
+
+    it("opens from the overdue banner too", () => {
+      mockMetrics(7);
+      renderPage();
+
+      fireEvent.click(screen.getByRole("button", { name: "What counts as a breach?" }));
+
+      expect(
+        screen.getByRole("dialog", { name: "How engagement is measured" })
+      ).toBeInTheDocument();
+    });
+  });
+
   describe("control kit", () => {
     const mockMetrics = (trend = baseTrend) =>
       vi.mocked(useEngagementMetrics.useEngagementMetrics).mockReturnValue({
