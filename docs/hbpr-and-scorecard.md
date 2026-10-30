@@ -19,7 +19,7 @@ is not a team leader and not HR, and has no overtime, standby, payroll or report
 | Writes | All through `apps/users/services/hbpr_assignments.py` (overlap rejected under `select_for_update`; `reassign` is end+create atomically). Admin API `/api/users/hbpr-assignments/` is staff-only: `end` and `reassign` actions, no delete (the retention purge is a service, not an API action), identity/range immutable via PATCH. |
 | Reads | AL-TL governance records via `HbprReadScopeMixin`: **safe methods only**, owner AL TL in scope **and** subject in scope. HBPR never approves a PIP, decides a promotion or writes attendee notes (HR/staff do). Private TL `notes` stay redacted. |
 | Employee one-on-ones | Never reachable through **any** door: the meeting list/detail, `MeetingAttendeeViewSet` (`hbpr_exclude` on `meeting__meeting_type`), the scorecard aggregate (`_mask_one_on_one` nulls `one_on_one_compliance_pct` for anyone who is neither the leader nor staff), exports, and notifications. A guessed id must 404. |
-| Denied surfaces | For an HBPR-**only** user: Calendar, Leave, Organigrama, Skills, Ticket KPI, Engagement, My Records, overtime, standby, reports. Plugins use manifest `denied_roles`/`denial_override_roles` on `PluginPermission` (denial beats `is_public`; overrides list only elevated roles, never `employee`); static views use `HbprBlockedMixin`. Multi-role HBPR+HR/TL/CR-admin keeps the other role's access (`is_hbpr_only`, mirrored by the frontend `isHBPROnly`). |
+| Denied surfaces | For an HBPR-**only** user: Calendar, Leave, Skills, Ticket KPI, Engagement, My Records, overtime, standby, reports. Plugins use manifest `denied_roles`/`denial_override_roles` on `PluginPermission` (denial beats `is_public`; overrides list only elevated roles, never `employee`); static views use `HbprBlockedMixin`. Multi-role HBPR+HR/TL/CR-admin keeps the other role's access (`is_hbpr_only`, mirrored by the frontend `isHBPROnly`). |
 | Roles | `hbpr` is a managed role: every `roles` list sent to the admin user APIs must include it or it is revoked. Revoking `hbpr`/`albanian_tl` while an open assignment exists is a structured 400. |
 
 ## Governance evidence and cadence
@@ -106,7 +106,7 @@ imports it, never the reverse.
 - **Boot reconciliation.** `docker/entrypoint.sh` runs `sync_plugins` ->
   `seed_plugin_permissions` -> `grant_hbpr_plugin_access` on every start;
   `apps/plugins/test_hbpr_boot_path.py` reads the entrypoint itself and asserts the end
-  state (HBPR denied on Engagement/Organigrama/Skills/Ticket KPI, granted `tl_scorecard`).
+  state (HBPR denied on Engagement/Skills/Ticket KPI, granted `tl_scorecard`).
   Owners: manifest sync = source of truth, the command = reconciler, `plugins.0010` =
   one-time backfill.
 - **Module layout.** `plugins/tl_scorecard/viewsets/` is a package (`scorecard`, `records`,
@@ -442,3 +442,7 @@ riskiest option for no user-visible gain); `UserViewSet.bulk_update` (complexity
 3. Test on py3.14 (production Django), not just the default interpreter.
 4. `.devin/` is gitignored — durable knowledge goes in this file or `CLAUDE.md`, not only there.
 5. Do not write real credentials into source, tests, plans or logs.
+
+## Organigrama for HBPR (2026-10-30)
+
+HBPR is no longer denied Organigrama. `tree_builder.build_hbpr_tree` prunes the company tree to `get_hbpr_scope().user_ids` plus the Italian TL above each (so the chart keeps its root); the lazy `subtree` check uses the same set (`hbpr_visible_user_ids`). A multi-role TL/HR/staff keeps their own higher scope. The page shows a "Filter by team leader" select when the tree holds more than one Albanian TL. Pinned by `plugins/organigrama/tests/test_hbpr_scope.py`. Skills matrix pages (matrix, coverage, gaps, exports) omit Italian TLs via `matrix_user_ids`.

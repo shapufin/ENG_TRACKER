@@ -37,6 +37,7 @@ from .serializers import (
     SkillLevelLabelsSerializer,
 )
 from .services.team_query import (
+    matrix_user_ids,
     visible_user_ids,
     can_edit_user_skill,
     can_delete_user_skill,
@@ -300,7 +301,7 @@ class SkillMatrixViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
     @action(detail=False, methods=['get'])
     def matrix(self, request):
         """Paginated matrix: one row per user with their skills embedded."""
-        visible = visible_user_ids(request.user)
+        visible = matrix_user_ids(request.user)
         # The frontend joins multi-skill filters as ``skill_id=1,2,3`` (one
         # query param). Split on comma so __in receives a real int list;
         # ``getlist`` alone returns ["1,2,3"] which matches nothing (S1).
@@ -340,7 +341,7 @@ class SkillMatrixViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
         Optional ``?top_n=N`` truncates the payload to the first N skills
         by display order (S3 payload limit). Non-integer → 400.
         """
-        visible = visible_user_ids(request.user)
+        visible = matrix_user_ids(request.user)
         category_code = request.query_params.get('category')
         top_n = _parse_top_n(request)
         stats = build_coverage_stats(visible, category_code, top_n=top_n)
@@ -365,7 +366,7 @@ class SkillGapReportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
         Optional ``?top_n=N`` returns only the N worst gaps (lowest
         coverage_pct). Non-integer → 400 (S3 payload limit).
         """
-        visible = visible_user_ids(request.user)
+        visible = matrix_user_ids(request.user)
         category_code = request.query_params.get('category')
         threshold_str = request.query_params.get('threshold')
         threshold = None
@@ -397,7 +398,7 @@ class SkillExportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
     @action(detail=False, methods=['get'])
     def export(self, request):
         """Stream the team skill matrix as a CSV download."""
-        visible = visible_user_ids(request.user)
+        visible = matrix_user_ids(request.user)
         category_code = request.query_params.get('category')
         search = request.query_params.get('search')
         return export_matrix_csv(visible, category_code, search=search)
@@ -410,7 +411,7 @@ class SkillExportViewSet(PluginPermissionMixin, viewsets.GenericViewSet):
         person, one column per skill. Both stay available — the CSV is the long
         format some scripts already consume.
         """
-        visible = visible_user_ids(request.user)
+        visible = matrix_user_ids(request.user)
         category_code = request.query_params.get('category')
         search = request.query_params.get('search')
         return export_matrix_xlsx(visible, category_code, search=search)

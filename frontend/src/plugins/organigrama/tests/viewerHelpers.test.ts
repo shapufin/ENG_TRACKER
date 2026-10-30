@@ -6,8 +6,10 @@ import {
   BORDER_STYLE_CLASSES,
   nodeMatches,
   filterHierarchy,
+  collectAlbanianTls,
+  filterByAlbanianTl,
 } from "../components/viewerHelpers";
-import type { OrgChartNode, OrgChartEdge } from "../types";
+import type { OrgChartNode, OrgChartEdge, TreeNode } from "../types";
 
 describe("viewerHelpers getInitials", () => {
   it("extracts 2-letter initials for first and last names", () => {
@@ -109,5 +111,38 @@ describe("viewerHelpers nodeMatches & filterHierarchy", () => {
     expect(filteredNodes.length).toBe(2);
     expect(visibleIds.has("ceo")).toBe(true);
     expect(visibleIds.has("eng_lead")).toBe(true);
+  });
+});
+
+describe("viewerHelpers Albanian TL filter", () => {
+  const person = (
+    id: number,
+    name: string,
+    role_badge: TreeNode["role_badge"],
+    children: TreeNode[] = []
+  ): TreeNode => ({ type: "person", id, full_name: name, role_badge, children });
+  const roots: TreeNode[] = [
+    person(1, "Marco", "italian_tl", [
+      person(2, "Bea", "albanian_tl", [person(20, "Ana", "employee")]),
+      person(3, "Arta", "albanian_tl", [person(30, "Eni", "employee")]),
+    ]),
+  ];
+
+  it("lists each Albanian TL once, sorted by name", () => {
+    const twice = [...roots, person(9, "Other", "italian_tl", [person(3, "Arta", "albanian_tl")])];
+    expect(collectAlbanianTls(twice)).toEqual([
+      { id: 3, name: "Arta" },
+      { id: 2, name: "Bea" },
+    ]);
+  });
+
+  it("keeps only the path to the chosen Albanian TL", () => {
+    const [root] = filterByAlbanianTl(roots, 3);
+    expect(root.children.map((c) => c.id)).toEqual([3]);
+    expect(root.children[0].children.map((c) => c.id)).toEqual([30]);
+  });
+
+  it("drops an Italian TL with no chosen branch", () => {
+    expect(filterByAlbanianTl(roots, 99)).toEqual([]);
   });
 });

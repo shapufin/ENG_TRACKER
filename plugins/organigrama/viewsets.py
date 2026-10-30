@@ -65,7 +65,9 @@ from .services.tree_builder import (
     role_badge,
     _has_role_q,
     _profile_has_role_q,
+    hbpr_visible_user_ids,
 )
+from apps.users.services.hbpr_scope import is_hbpr
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +159,8 @@ class OrganigramaViewSet(PluginPermissionMixin, APIView):
             ids = profile.get_team_member_ids()
             ids.add(user.id)
             return ids
+        if is_hbpr(user):
+            return hbpr_visible_user_ids(user)
         ids = {user.id}
         al_tl = profile.albanian_tl
         if al_tl and hasattr(al_tl, "profile"):
