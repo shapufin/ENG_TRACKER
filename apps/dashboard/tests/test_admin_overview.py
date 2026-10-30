@@ -219,3 +219,30 @@ class BackupTests(AdminOverviewBase):
         b = self.get(self.superuser).data["backup"]
         self.assertEqual(b["count"], 0)
         self.assertTrue(b["stale"])
+
+
+class MonthHoursTests(AdminOverviewBase):
+    """``month_hours`` is the current business month only, never lifetime totals."""
+
+    def test_only_this_months_approved_hours_count(self):
+        from core.utils.timezone_local import business_today
+
+        today = business_today()
+        last_month = today.replace(day=1) - timedelta(days=1)
+        for when, hours, state in (
+            (today, "2", "approved"),
+            (today, "3", "pending"),
+            (last_month, "5", "approved"),
+        ):
+            OvertimeLog.objects.create(
+                user=self.emp, client=self.client_obj, date=when, hours=Decimal(hours), status=state
+            )
+        for when, hours in ((today, "4"), (last_month, "6")):
+            StandbyLog.objects.create(user=self.emp, date=when, hours=Decimal(hours), status="approved")
+
+        res = self.get()
+
+        self.assertEqual(res.data["month_hours"], {"overtime": 2.0, "standby": 4.0})
+
+    def test_empty_month_is_zero(self):
+        self.assertEqual(self.get().data["month_hours"], {"overtime": 0.0, "standby": 0.0})

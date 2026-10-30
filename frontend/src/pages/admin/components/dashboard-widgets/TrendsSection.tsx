@@ -11,16 +11,9 @@ import { WhoIsOutWidget } from "./WhoIsOutWidget";
 
 interface TrendsSectionProps {
   isWidgetActive: (id: string) => boolean;
-  /** This month's overtime / standby hours (stats data) for the Hours widget. */
-  hoursData?: { label: string; hours: number }[];
-  statsLoading?: boolean;
 }
 
-const Fetching: React.FC<TrendsSectionProps> = ({
-  isWidgetActive,
-  hoursData = [],
-  statsLoading,
-}) => {
+const Fetching: React.FC<TrendsSectionProps> = ({ isWidgetActive }) => {
   const [period, setPeriod] = useUrlParamState("months", TREND_PERIODS, "12");
   const q = useAdminTrends(true, Number(period));
   const props = {
@@ -32,13 +25,7 @@ const Fetching: React.FC<TrendsSectionProps> = ({
   return (
     <>
       {isWidgetActive("hours-trend") && (
-        <HoursTrendWidget
-          {...props}
-          hoursData={hoursData}
-          statsLoading={statsLoading}
-          period={period}
-          onPeriodChange={setPeriod}
-        />
+        <HoursTrendWidget {...props} period={period} onPeriodChange={setPeriod} />
       )}
       {isWidgetActive("leave-trend") && <LeaveTrendWidget {...props} />}
       {isWidgetActive("ot-by-client") && <OtByClientWidget {...props} />}

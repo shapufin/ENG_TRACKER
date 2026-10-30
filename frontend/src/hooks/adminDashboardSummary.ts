@@ -27,17 +27,12 @@ export const computeAdminDashboardSummary = (globalStats?: DashboardStats) => {
     totalUsers: stats.total_users,
     totalTeams: stats.active_teams_count,
     totalPending,
-    overtimeSummary: { total_hours: stats.total_overtime_hours },
     statusData: [
       { name: "Pending OT", value: stats.pending_overtime },
       { name: "Pending SB", value: stats.pending_standby },
       { name: "Pending Leave", value: stats.pending_leaves },
       { name: "Approved", value: approvedCount },
       { name: "Rejected", value: rejectedCount },
-    ],
-    hoursData: [
-      { label: "Overtime", hours: Number(stats.total_overtime_hours) },
-      { label: "Standby", hours: Number(stats.total_standby_hours) },
     ],
   };
 };

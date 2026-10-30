@@ -72,9 +72,7 @@ const AdminDashboardContent: React.FC = () => {
     totalUsers,
     totalTeams,
     totalPending,
-    overtimeSummary,
     statusData,
-    hoursData,
     auditLogs,
     statsLoading,
     auditLogsLoading,
@@ -144,8 +142,6 @@ const AdminDashboardContent: React.FC = () => {
           totalUsers={totalUsers}
           totalTeams={totalTeams}
           totalPending={totalPending}
-          overtimeSummary={overtimeSummary}
-          hoursData={hoursData}
           statusData={statusData}
           auditLogs={auditLogs}
           statsLoading={statsLoading}

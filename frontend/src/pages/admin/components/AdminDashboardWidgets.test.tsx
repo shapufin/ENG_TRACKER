@@ -42,8 +42,6 @@ const baseProps = {
   totalUsers: 1,
   totalTeams: 1,
   totalPending: 0,
-  overtimeSummary: null,
-  hoursData: [],
   statusData: [],
   auditLogs: [],
   statsLoading: false,

@@ -3,26 +3,28 @@ import { ChartCard } from "@/components/dashboard/ChartCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HoursOverviewBody } from "./HoursOverviewBody";
 import { OtStandbyTrendBody } from "./OtStandbyTrendBody";
+import { WidgetBody } from "./WidgetBody";
 import { TrendPeriodSelect } from "./TrendPeriodSelect";
 import type { TrendPeriod, TrendWidgetProps } from "./trendTypes";
 
 interface HoursTrendWidgetProps extends TrendWidgetProps {
-  /** This month's overtime / standby hours (stats data). */
-  hoursData: { label: string; hours: number }[];
-  statsLoading?: boolean;
   period: TrendPeriod;
   onPeriodChange: (next: TrendPeriod) => void;
 }
 
-/** This month's hours and the monthly trend in one card; the period applies to the trend. */
+/** This month's hours (latest trends point) and the monthly trend in one card; the period applies to the trend. */
 export const HoursTrendWidget: React.FC<HoursTrendWidgetProps> = ({
-  hoursData,
-  statsLoading,
   period,
   onPeriodChange,
   ...trend
 }) => {
   const [tab, setTab] = useState("month");
+  // The last point of each series is the current business month.
+  const latest = (series?: number[]) => series?.[series.length - 1] ?? 0;
+  const hoursData = [
+    { label: "Overtime", hours: latest(trend.data?.hours.overtime) },
+    { label: "Standby", hours: latest(trend.data?.hours.standby) },
+  ];
   return (
     <Tabs value={tab} onValueChange={setTab} className="h-full">
       <ChartCard
@@ -40,7 +42,15 @@ export const HoursTrendWidget: React.FC<HoursTrendWidgetProps> = ({
         }
       >
         <TabsContent value="month" className="mt-0 h-full">
-          <HoursOverviewBody hoursData={hoursData} isLoading={statsLoading} />
+          <WidgetBody
+            title="Hours"
+            isLoading={trend.isLoading}
+            isError={trend.isError}
+            onRetry={trend.onRetry}
+            empty={null}
+          >
+            <HoursOverviewBody hoursData={hoursData} />
+          </WidgetBody>
         </TabsContent>
         <TabsContent value="trend" className="mt-0 h-full">
           <OtStandbyTrendBody {...trend} />

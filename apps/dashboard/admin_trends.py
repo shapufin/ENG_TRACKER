@@ -60,6 +60,15 @@ def _monthly_hours(model, starts, **filters):
     return [by_month.get(s, 0.0) for s in starts]
 
 
+def month_hours(today: date) -> dict:
+    """Approved overtime/standby hours of ``today``'s month (the last point of ``hours``)."""
+    starts = [_month_start(today)]
+    return {
+        "overtime": _monthly_hours(OvertimeLog, starts, status="approved")[0],
+        "standby": _monthly_hours(StandbyLog, starts, status="approved")[0],
+    }
+
+
 def _leave_days(starts):
     """Business days per month by type; a request is clipped to each month it overlaps."""
     series = {"vacation": [0.0] * len(starts), "sick": [0.0] * len(starts)}

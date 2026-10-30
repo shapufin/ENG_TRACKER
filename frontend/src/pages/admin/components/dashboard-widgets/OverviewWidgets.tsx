@@ -11,7 +11,6 @@ export interface OverviewStats {
   totalUsers: number;
   totalTeams: number;
   totalPending: number;
-  overtimeHours: number;
   statsLoading?: boolean;
 }
 
@@ -144,7 +143,6 @@ export const OverviewWidgets: React.FC<OverviewWidgetsProps> = ({
           totalUsers={stats.totalUsers}
           totalTeams={stats.totalTeams}
           totalPending={stats.totalPending}
-          overtimeHours={stats.overtimeHours}
           statsLoading={stats.statsLoading}
           overview={{ data, isLoading, isError: failed, onRetry }}
         />

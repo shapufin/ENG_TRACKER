@@ -26,7 +26,6 @@ interface KpiStripWidgetProps {
   totalUsers: number;
   totalTeams: number;
   totalPending: number;
-  overtimeHours: number;
   statsLoading?: boolean;
   /** State of the shared admin_overview request (leave and carryover come from it). */
   overview: OverviewState;
@@ -93,7 +92,6 @@ export const KpiStripWidget: React.FC<KpiStripWidgetProps> = ({
   totalUsers,
   totalTeams,
   totalPending,
-  overtimeHours,
   statsLoading,
   overview,
 }) => {
@@ -103,6 +101,7 @@ export const KpiStripWidget: React.FC<KpiStripWidgetProps> = ({
   const leave = data?.leave_utilization;
   const carry = data?.carryover_expiry;
   const newHires = data?.headcount.new_hires_30d;
+  const monthOvertime = data?.month_hours.overtime;
 
   const fromOverview = (value: string | undefined) => (loadingOverview ? null : (value ?? "—"));
 
@@ -132,7 +131,7 @@ export const KpiStripWidget: React.FC<KpiStripWidgetProps> = ({
         />
         <Kpi
           label="Overtime"
-          value={stat(`${fmt(overtimeHours)}h`)}
+          value={fromOverview(monthOvertime === undefined ? undefined : `${fmt(monthOvertime)}h`)}
           hint="This month"
           icon={Clock}
           to="/admin/overtime-logs"

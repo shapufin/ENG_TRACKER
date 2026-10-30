@@ -53,8 +53,6 @@ interface AdminDashboardWidgetsProps {
   totalUsers: number;
   totalTeams: number;
   totalPending: number;
-  overtimeSummary?: { total_hours?: number } | null;
-  hoursData: { label: string; hours: number }[];
   statusData: { name: string; value: number }[];
   auditLogs?: AuditLog[];
   statsLoading?: boolean;
@@ -93,8 +91,6 @@ export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
   totalUsers,
   totalTeams,
   totalPending,
-  overtimeSummary,
-  hoursData,
   statusData,
   auditLogs,
   statsLoading,
@@ -142,7 +138,6 @@ export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
               totalUsers,
               totalTeams,
               totalPending,
-              overtimeHours: overtimeSummary?.total_hours ?? 0,
               statsLoading,
             }}
           />
@@ -151,11 +146,7 @@ export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
       if ((TRENDS_WIDGET_IDS as readonly string[]).includes(id)) {
         return (
           <Suspense fallback={<CellFallback />}>
-            <TrendsSection
-              isWidgetActive={only}
-              hoursData={hoursData}
-              statsLoading={statsLoading}
-            />
+            <TrendsSection isWidgetActive={only} />
           </Suspense>
         );
       }
@@ -182,9 +173,7 @@ export const AdminDashboardWidgets: React.FC<AdminDashboardWidgetsProps> = ({
       totalUsers,
       totalTeams,
       totalPending,
-      overtimeSummary?.total_hours,
       statsLoading,
-      hoursData,
       statusData,
       auditLogs,
       auditLogsLoading,
