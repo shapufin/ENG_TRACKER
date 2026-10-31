@@ -158,7 +158,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         Get global statistics for HR/Admin dashboard.
         Returns: total_users, total_overtime_hours, total_standby_hours, pending_overtime, pending_standby, pending_leaves
         """
-        from .hr_overview import global_stats_dict
+        from .aggregates import global_stats_dict
 
         return Response(global_stats_dict())
 

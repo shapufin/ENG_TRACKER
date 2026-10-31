@@ -13,6 +13,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.dashboard.admin_trends import month_hours
+from apps.dashboard.aggregates import status_counts
 from apps.leave_management.models import LeaveBalance, LeaveRequest
 from apps.leave_management.models.core import counted_days
 from apps.leave_management.services.carry_over import ensure_year_end_rollover
@@ -84,18 +85,26 @@ def coverage_gaps(today):
 
 
 def pending_backlog():
-    ot = OvertimeLog.objects.filter(status="pending", is_deleted=False).aggregate(count=Count("id"), hours=Sum("hours"))
-    sb = StandbyLog.objects.filter(status="pending", is_deleted=False).aggregate(count=Count("id"), hours=Sum("hours"))
+    # Counts and pending hours come from the shared `status_counts` so this
+    # block can never disagree with the KPI strip or the approval-queue status
+    # tab about how many requests are waiting.
+    counts = status_counts()
     leave = list(
         LeaveRequest.objects.filter(status="pending", is_deleted=False).values(
             "request_type", "start_date", "end_date", "days_counted"
         )
     )
     return {
-        "overtime": {"count": ot["count"], "hours": _f(ot["hours"])},
-        "standby": {"count": sb["count"], "hours": _f(sb["hours"])},
+        "overtime": {
+            "count": counts["overtime"]["pending"],
+            "hours": counts["overtime"]["pending_hours"],
+        },
+        "standby": {
+            "count": counts["standby"]["pending"],
+            "hours": counts["standby"]["pending_hours"],
+        },
         "leave": {
-            "count": len(leave),
+            "count": counts["leave"]["pending"],
             # Counted days (snapshot / holiday-aware), never (end - start).days
             "days": sum(counted_days(row) for row in leave),
         },
