@@ -4,6 +4,7 @@ import { dashboardService } from "@/services/dashboardService";
 import { overtimeService } from "@/services/overtimeService";
 import { standbyService } from "@/services/standbyService";
 import { leaveService } from "@/services/leaveService";
+import { parseLocalDate } from "@/lib/date-format-utils";
 import { useDashboardCalculations } from "./useDashboardCalculations";
 import type { DashboardType } from "@/context/permission-context-base";
 
@@ -218,7 +219,7 @@ export const useDashboardData = ({
     user: r.user_name,
     userInitials: r.user_name.slice(0, 2).toUpperCase(),
     duration: `${r.hours}h`,
-    date: new Date(r.date).toLocaleDateString("en-US", {
+    date: parseLocalDate(r.date).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -235,7 +236,11 @@ export const useDashboardData = ({
   );
 
   return {
-    hrStats: isHrDashboard ? hrOverview?.stats : undefined,
+    // The HR tile shows this month's average, so it overrides the lifetime `avg_overtime_hours`.
+    hrStats:
+      isHrDashboard && hrOverview
+        ? { ...hrOverview.stats, avg_overtime_hours: hrOverview.month_avg_overtime_hours }
+        : undefined,
     overtimeData,
     standbyData,
     leaveData,

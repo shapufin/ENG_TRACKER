@@ -6,7 +6,7 @@ import { HRDashboardPendingLeave } from "./components/HRDashboardPendingLeave";
 import { HRQuickLinks } from "./components/HRQuickLinks";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
-import type { HROverview } from "@/types";
+import type { DashboardStats, HROverview } from "@/types";
 
 interface HoursTableRow {
   id: number;
@@ -18,8 +18,7 @@ interface HoursTableRow {
 }
 
 interface HRDashboardViewProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  hrStats: any;
+  hrStats: Partial<DashboardStats> | undefined;
   monthlyData: { day: string; month?: string; overtime: number; standby?: number }[];
   statusBars: { label: string; value: number }[];
   recentOvertimeTable: HoursTableRow[];

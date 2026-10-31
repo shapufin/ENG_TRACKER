@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.db.models import Count, Q
 
 from apps.overtime.models import Client
+from apps.permissions.models import UserRole
 from apps.users.models import Team
 
 # Roles whose holders legitimately sit outside every team.
@@ -14,7 +15,11 @@ NON_TEAM_ROLES = ('hr', 'hbpr', 'cr_admin', 'admin')
 
 
 def _users_without_team():
-    outside_team = Q()
+    # Same three sources as the Admin Users role tabs: the role cache, the legacy HR flag
+    # (the legacy update path sets it without touching the cache) and the UserRole rows.
+    outside_team = Q(profile__is_hr_user=True) | Q(
+        pk__in=UserRole.objects.filter(is_active=True, role__code__in=NON_TEAM_ROLES).values('user_id')
+    )
     for role in NON_TEAM_ROLES:
         outside_team |= Q(profile__role_codes__icontains=role)
     users = (

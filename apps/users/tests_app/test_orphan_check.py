@@ -58,6 +58,17 @@ class FindOrphansTests(APITestCase):
         hr.profile.save()
         self.assertEqual(self.found('users_without_team'), set())
 
+    def test_hr_through_the_legacy_flag_or_a_user_role_row_is_not_an_orphan(self):
+        from apps.permissions.models import Role, UserRole
+
+        flagged = make_user('hrflag')
+        flagged.profile.is_hr_user = True  # legacy path: role_codes stays empty
+        flagged.profile.save()
+        assigned = make_user('hrrole')
+        role, _ = Role.objects.get_or_create(code='hr', defaults={'name': 'HR'})
+        UserRole.objects.create(user=assigned, role=role, is_active=True)
+        self.assertEqual(self.found('users_without_team'), set())
+
     def test_member_and_leader_of_only_an_archived_team_are_orphans(self):
         Team.objects.filter(pk=self.team.pk).update(is_active=False)
         self.assertEqual(self.found('users_without_team'), {self.member.id, self.leader.id})

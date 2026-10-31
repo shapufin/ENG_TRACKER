@@ -392,7 +392,8 @@ describe("useDashboardData", () => {
       vi.mocked(fn).mockClear();
     }
     vi.mocked(dashboardService.getHROverview).mockResolvedValue({
-      stats: { pending_overtime: 9, pending_standby: 3, pending_leaves: 2 },
+      stats: { pending_overtime: 9, pending_standby: 3, pending_leaves: 2, avg_overtime_hours: 99 },
+      month_avg_overtime_hours: 1.5,
       status_counts: { pending: 14, approved: 40, rejected: 1 },
       monthly_hours: [
         { month: "2026-10", label: "Oct", overtime: 12, standby: 4 },
@@ -423,6 +424,10 @@ describe("useDashboardData", () => {
       { day: "Oct", month: "2026-10", overtime: 12, standby: 4 },
     ]);
     expect(result.current.recentOvertimeTable[0].user).toBe("Al");
+    // A date-only string is a local calendar day, never UTC midnight shifted a day back.
+    expect(result.current.recentOvertimeTable[0].date).toBe("Oct 1, 2026");
+    // The tile shows this month's average, not the lifetime figure from stats.
+    expect(result.current.hrStats?.avg_overtime_hours).toBe(1.5);
     expect(overtimeService.getLogs).not.toHaveBeenCalled();
     expect(overtimeService.getSummary).not.toHaveBeenCalled();
     expect(standbyService.getLogs).not.toHaveBeenCalled();

@@ -488,6 +488,8 @@ export interface DashboardStats {
  * Org-wide: the personal OT/SB endpoints can never serve pure-HR viewers. */
 export interface HROverview {
   stats: DashboardStats;
+  /** Current month's approved overtime per active user (`stats.avg_overtime_hours` is lifetime). */
+  month_avg_overtime_hours: number;
   /** Pending/approved/rejected across OT + standby + leave, org-wide. */
   status_counts: { pending: number; approved: number; rejected: number };
   /** Approved hours per month, oldest first, 6 points. */

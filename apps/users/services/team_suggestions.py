@@ -31,18 +31,17 @@ def suggest_team_moves():
     if not clients_of:
         return []
 
-    members_of = {}  # team_id -> {profile_id}
+    # A deactivated account keeps its memberships, so it must not count as a teammate.
     teams_of = {}  # profile_id -> {team_id}
-    for team_id, profile_id in TeamMembership.objects.filter(team__is_active=True).values_list(
-        'team_id', 'user_profile_id'
-    ):
-        members_of.setdefault(team_id, set()).add(profile_id)
+    for team_id, profile_id in TeamMembership.objects.filter(
+        team__is_active=True, user_profile__user__is_active=True
+    ).values_list('team_id', 'user_profile_id'):
         teams_of.setdefault(profile_id, set()).add(team_id)
 
     # How many people in each team work each client (every active person, not only the candidates).
-    everyone = UserProfile.clients.through.objects.filter(client__is_active=True).values_list(
-        'userprofile_id', 'client_id'
-    )
+    everyone = UserProfile.clients.through.objects.filter(
+        client__is_active=True, userprofile__user__is_active=True
+    ).values_list('userprofile_id', 'client_id')
     holders = {}  # (team_id, client_id) -> number of members on that client
     for profile_id, client_id in everyone:
         for team_id in teams_of.get(profile_id, ()):
