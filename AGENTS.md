@@ -435,3 +435,11 @@ check on e2e data: 46/13/8 identical everywhere, HR pipeline 67/36/1. Invariant 
 the `GlobalSettingsPage` 2FA test budget to 15 s (pre-existing 5 s-timeout flake under full-suite
 load; the file passes 11/11 isolated). Gates: `apps.dashboard` 225 OK, ruff clean, `manage.py check`
 clean.
+
+Third follow-up (review pass): the HR view now renders `LoadingCard` while `hr_overview` is in
+flight — before this it flashed zeros and two false empty states ("No approved hours", "All leave
+processed"). `useDashboardData` no longer fetches `global_stats` at all (it fired once for the
+transient "admin" selection before the redirect and nothing consumed `hrStats`); the backend log on
+a live `e2e_hr` visit shows only `GET /api/dashboard/widgets/hr_overview/`. Invariant 43(i).
+Gates: `HRDashboardView.test.tsx` 3 cases, dashboard+hook tests 122 OK, full frontend 607 files /
+3903 tests OK, `tsc -b` clean, eslint clean.

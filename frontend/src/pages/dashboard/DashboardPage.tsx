@@ -138,6 +138,7 @@ export const DashboardPage: React.FC = () => {
           recentStandbyTable: dashboardData.recentStandbyTable,
           pendingLeaveItems: dashboardData.pendingLeaveItems,
           pendingLeaveTotal: dashboardData.pendingLeaveTotal,
+          isLoading: dashboardData.hrOverviewLoading,
           isError: dashboardData.hrOverviewError,
           onRetry: () => void dashboardData.refetchHrOverview(),
         }}

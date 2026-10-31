@@ -55,14 +55,10 @@ export const useDashboardData = ({
     enabled: !!userId && isHrDashboard && (isAdmin || isHR),
   });
 
-  const { data: hrStats } = useQuery({
-    queryKey: ["dashboard", "hr", userId ?? "anonymous"],
-    queryFn: () => dashboardService.getHRStats(),
-    refetchOnMount: true,
-    staleTime: 0,
-    refetchOnWindowFocus: false,
-    enabled: !!userId && (isAdmin || isHR) && isPrivilegedDashboard && !isHrDashboard,
-  });
+  // No `global_stats` fetch here: the HR view reads `hr_overview.stats`, and
+  // every other dashboard ignores `hrStats`. The old query only fired for the
+  // transient "admin" selection, one render before DashboardPage redirects to
+  // /admin — a wasted request.
 
   // `ignore_date_filter` is deliberate: without it the list endpoint defaults
   // to the current business month, so every dashboard's "recent" lists and
@@ -148,7 +144,7 @@ export const useDashboardData = ({
     overtimeResults,
     standbyResults,
     leaveResults,
-    hrStats
+    undefined
   );
 
   // Dedicated date-ranged query for the personal dashboard's weekly hours
@@ -244,7 +240,7 @@ export const useDashboardData = ({
   );
 
   return {
-    hrStats: isHrDashboard ? hrOverview?.stats : hrStats,
+    hrStats: isHrDashboard ? hrOverview?.stats : undefined,
     overtimeData,
     standbyData,
     leaveData,
@@ -252,6 +248,9 @@ export const useDashboardData = ({
     standbyLoading,
     leaveLoading,
     ...calculations,
+    // The HR view is the only consumer of these four: every other dashboard
+    // renders its own cards (employee) or its own hook (team leader). The HR
+    // values come from the org aggregate, never from `calculations`.
     monthlyData: isHrDashboard ? hrMonthlyData : calculations.monthlyData,
     statusBars: isHrDashboard ? hrStatusBars : calculations.statusBars,
     recentOvertimeTable: isHrDashboard ? hrRecentOvertime : calculations.recentOvertimeTable,

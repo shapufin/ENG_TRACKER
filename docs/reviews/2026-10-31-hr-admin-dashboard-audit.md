@@ -47,6 +47,8 @@ tables with Approved=0 while the org had 46 pending / 36 approved requests.
 | Dead imports from the refactor (`models` in `viewsets.py`, `_month_start` in `hr_overview.py`); HR Workforce tile still read `total_users` | LOW | `ae24dab` | ruff + `HRDashboardStats.test.tsx` |
 | Three endpoints each computed the same request counts (`global_stats`, `admin_overview.pending_backlog`, `admin_overview.approval_aging` buckets) — the KPI strip, aging chips and aging buckets could silently disagree | MEDIUM | `apps/dashboard/aggregates.py` — `status_counts()` is the single implementation (counts + approved/pending hours in one aggregate per model); every dashboard endpoint derives from it | `test_status_counts.py` (5 agreement tests) |
 | `GlobalSettingsPage` 2FA test flaked at the 5 s default under full-suite load (pre-existing, reddened CI at random) | LOW | 15 s per-test budget on the page-level render, with a comment explaining why | file passes 11/11 isolated |
+| The HR view flashed zeros and two false empty states ("No approved hours", "All leave processed") while the aggregate loaded | MEDIUM | `LoadingCard` while `hr_overview` is in flight | `HRDashboardView.test.tsx` (3 cases) |
+| `useDashboardData` still fetched `global_stats` — dead weight that fired once for the transient "admin" selection before the redirect | LOW | query removed; `hrStats` now comes only from `hr_overview.stats` | `useDashboardData.test.ts` (hr + employee paths) |
 
 ## Gates after the fixes
 

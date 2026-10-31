@@ -5,6 +5,7 @@ import { HRRecentTable } from "./components/HRRecentTable";
 import { HRDashboardPendingLeave } from "./components/HRDashboardPendingLeave";
 import { HRQuickLinks } from "./components/HRQuickLinks";
 import { ErrorCard } from "@/components/ui/ErrorCard";
+import { LoadingCard } from "@/components/ui/LoadingCard";
 import type { HROverview } from "@/types";
 
 interface HoursTableRow {
@@ -27,6 +28,12 @@ interface HRDashboardViewProps {
   pendingLeaveTotal: number;
   /** The hr_overview request failed — every section shows one retry card. */
   isError?: boolean;
+  /**
+   * The aggregate is still in flight. Without this the page briefly renders
+   * zeros, "No approved hours" and "All leave requests have been processed" —
+   * all of them false — before the data lands.
+   */
+  isLoading?: boolean;
   onRetry?: () => void;
 }
 
@@ -39,8 +46,12 @@ export const HRDashboardView: React.FC<HRDashboardViewProps> = ({
   pendingLeaveItems,
   pendingLeaveTotal,
   isError,
+  isLoading,
   onRetry,
 }) => {
+  if (isLoading) {
+    return <LoadingCard title="Loading dashboard…" />;
+  }
   if (isError) {
     return (
       <ErrorCard
