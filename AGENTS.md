@@ -395,3 +395,25 @@ invariants item 37, `90397f2` read-only Django admin; the ten LOW in `cef7524`, 
 `docs/backlog.md` (keep it current — it is the cross-session record). Tracked audit record:
 `docs/reviews/2026-10-28-maintenance-audit.md`. Gates: backend 3833 OK, frontend 3822 tests / 601 files,
 tsc/eslint/prettier/ruff clean, surface-audit PASS, browser evidence re-captured.
+
+## HR + Admin dashboard audit (2026-10-31)
+
+Full audit of the HR dashboard data population and admin dashboard field population on
+`audit/hr-admin-dashboards-2026-10-31` (base `111581d`): 2 CRITICAL / 3 HIGH / 4 MEDIUM / 4 LOW,
+12 fixed in `1b45ea4` (backend) and `342a022` (frontend), 1 LOW deferred to `docs/backlog.md`.
+Root cause: the HR dashboard's OT/SB widgets read the personal list endpoints — pure HR was 403'd
+(`HrOnlyBlockedMixin`), multi-role HR saw own-scope rows, everyone was month-capped. New
+`GET /api/dashboard/widgets/hr_overview/` (`IsHR`) serves org stats, status counts, the 6-month
+approved series, recent rows and pending leave; `global_stats` shares `global_stats_dict()`.
+Also: `is_deleted=False` on every dashboard aggregate, active-user denominators, single-team
+attribution in `_team_comparison`, active-only `_who_is_out`, no fabricated trend chips,
+ErrorCard+retry on the HR view. Invariant: `docs/workflow-invariants.md` item 43. Tracked record:
+`docs/reviews/2026-10-31-hr-admin-dashboard-audit.md`.
+
+Gates: `apps.dashboard` 220 OK (209 + 11 new); affected apps
+(`dashboard overtime standby leave_management users permissions`) 1299 OK; `manage.py check`
+clean; `makemigrations --check` clean; ruff clean on touched files; frontend 3898/3899 with the
+one failure being the pre-existing `GlobalSettingsPage` 2FA 5 s-timeout flake (passes 11/11 in
+isolation, code untouched); `tsc -b` clean; eslint clean on touched files. Browser verified as
+`e2e_hr` (Approved 0 → 36, populated chart/tables, 8 pending leaves) and `e2e_admin` (every
+widget and tab populated).

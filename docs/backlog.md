@@ -24,7 +24,20 @@ All ten LOW findings from the round-1 audit were fixed in the same pass (commits
 | Raw action codes in the plugin audit UI | `maintenance_on/off/blocked` choices added to `plugins.audit_log` (`91c3231`) |
 | Raw action codes in RecentActivityWidget | prefers `action_display`, falls back to the raw code (`7845078`) |
 
+## HR + Admin dashboards (audit 2026-10-31, `docs/reviews/2026-10-31-hr-admin-dashboard-audit.md`)
+
+Twelve of thirteen findings fixed on `audit/hr-admin-dashboards-2026-10-31` (commits `1b45ea4`,
+`342a022`). The HR dashboard now reads the `hr_overview` widget endpoint for org data. One item
+remains open (below); the rest of this audit is closed.
+
 ## Open items
+
+### HR + Admin dashboards (2026-10-31)
+
+| Item | Severity | Fix sketch |
+|---|---|---|
+| The **personal** (employee) dashboard still reads the month-capped personal lists, so "recent activity" and the OT/SB charts empty out on the 1st of each month until the user logs something that month | LOW | mirror the `hr_overview` pattern with a personal aggregate (`dashboard/widgets/personal_overview/`) carrying a date-ranged recent window, or pass `ignore_date_filter=true` + a bounded `date_from` on the dashboard calls; test: freeze the clock at a month boundary and assert last month's rows still render |
+| `admin_logs` docstring says HR may read it, but `HrOnlyBlockedMixin` 403s pure HR on every action (including `admin_logs`) | LOW | deliberate for now — least privilege; if an HR page ever needs the raw OT/SB queue, exempt the action explicitly and pin it with a permission test |
 
 ### Maintenance mode (round 3, 2026-10-28)
 
