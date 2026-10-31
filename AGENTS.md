@@ -443,3 +443,11 @@ transient "admin" selection before the redirect and nothing consumed `hrStats`);
 a live `e2e_hr` visit shows only `GET /api/dashboard/widgets/hr_overview/`. Invariant 43(i).
 Gates: `HRDashboardView.test.tsx` 3 cases, dashboard+hook tests 122 OK, full frontend 607 files /
 3903 tests OK, `tsc -b` clean, eslint clean.
+
+Fourth pass (dead-path cleanup, same branch): the HR move to `hr_overview` orphaned the
+personal-dashboard derivations — `buildMonthlyData`, `buildStatusBars`, `buildOvertimeTable`,
+`buildStandbyTable` were computed on every dashboard render and consumed by nobody (only the HR
+view used those slots, and it now takes them from the org aggregate). Removed from
+`dashboardCalculations`, `useDashboardCalculations` and the hook's return; the HR values are the
+only source. Gates: full frontend 607 files / 3900 tests OK (3 tests deleted with the dead
+functions), `tsc -b` clean, eslint clean.

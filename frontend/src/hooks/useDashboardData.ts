@@ -140,12 +140,7 @@ export const useDashboardData = ({
   const overtimeResults = overtimeData?.results ?? [];
   const standbyResults = standbyData?.results ?? [];
   const leaveResults = leaveData?.results ?? [];
-  const calculations = useDashboardCalculations(
-    overtimeResults,
-    standbyResults,
-    leaveResults,
-    undefined
-  );
+  const calculations = useDashboardCalculations(overtimeResults, standbyResults, leaveResults);
 
   // Dedicated date-ranged query for the personal dashboard's weekly hours
   // chart: overtimeData/standbyData above are capped at dashboardPageSize
@@ -251,10 +246,12 @@ export const useDashboardData = ({
     // The HR view is the only consumer of these four: every other dashboard
     // renders its own cards (employee) or its own hook (team leader). The HR
     // values come from the org aggregate, never from `calculations`.
-    monthlyData: isHrDashboard ? hrMonthlyData : calculations.monthlyData,
-    statusBars: isHrDashboard ? hrStatusBars : calculations.statusBars,
-    recentOvertimeTable: isHrDashboard ? hrRecentOvertime : calculations.recentOvertimeTable,
-    recentStandbyTable: isHrDashboard ? hrRecentStandby : calculations.recentStandbyTable,
+    // These four feed the HR view only; every other dashboard reads its own
+    // hook (the personal view never rendered the org tables/chart).
+    monthlyData: hrMonthlyData,
+    statusBars: hrStatusBars,
+    recentOvertimeTable: hrRecentOvertime,
+    recentStandbyTable: hrRecentStandby,
     pendingLeaveItems: hrOverview?.pending_leave ?? [],
     pendingLeaveTotal: hrOverview?.pending_leave_total ?? 0,
     hrOverviewLoading,
