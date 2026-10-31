@@ -38,6 +38,14 @@ tables with Approved=0 while the org had 46 pending / 36 approved requests.
 | `global_stats` fired even with no consuming widget on the admin layout | LOW | `342a022` — gated on kpi-strip / approval-queue in the saved layout | `useAdminDashboardPage.test.tsx` |
 | Admin "Users" KPI counted inactive accounts vs active-based counts elsewhere on the page | LOW | `342a022` + review pass — KPI and HR Workforce read `active_users` | `KpiStripWidget.test.tsx` |
 
+### Follow-up pass (review of the fixes themselves)
+
+| Finding | Severity | Fix | Test |
+|---|---|---|---|
+| The **personal** dashboard still emptied on the 1st of every month (month-default date filter) — flagged at review, not part of the original scope | LOW | dashboard recent-list calls pass `ignore_date_filter=true` (latest rows regardless of month) | `useDashboardData.test.ts` "asks for the latest rows regardless of month" |
+| No browser test covered the bug class itself (frontend wired to the wrong endpoint; all unit tests mock the service, so they were green before and after the bug) | LOW | `e2e/hr-dashboard.spec.ts` — asserts the rendered pipeline/chart/recents against `hr_overview` **and** that the personal list endpoints never fire | e2e chromium, 1 passed |
+| Dead imports from the refactor (`models` in `viewsets.py`, `_month_start` in `hr_overview.py`); HR Workforce tile still read `total_users` | LOW | `ae24dab` | ruff + `HRDashboardStats.test.tsx` |
+
 ## Gates after the fixes
 
 Backend: `apps.dashboard` **220 OK** (209 baseline + 11 new); affected-apps gate

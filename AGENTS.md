@@ -417,3 +417,11 @@ one failure being the pre-existing `GlobalSettingsPage` 2FA 5 s-timeout flake (p
 isolation, code untouched); `tsc -b` clean; eslint clean on touched files. Browser verified as
 `e2e_hr` (Approved 0 → 36, populated chart/tables, 8 pending leaves) and `e2e_admin` (every
 widget and tab populated).
+
+Follow-up pass on the same branch (review of the fixes themselves): the personal dashboard's recent
+lists now pass `ignore_date_filter=true` (they emptied on the 1st of every month), and
+`frontend/e2e/hr-dashboard.spec.ts` pins the HR wiring against the real API — it asserts the
+rendered pipeline/chart/recents equal the `hr_overview` answer and that the personal list endpoints
+never fire. That browser test is the only layer that can catch an endpoint swap: every unit test
+mocks the service layer and was green both before and after the original bug. Gates: dashboard
+unit tests 118 OK, new e2e 1 passed (chromium), `tsc -b` clean, eslint clean.
