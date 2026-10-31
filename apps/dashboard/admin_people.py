@@ -86,7 +86,8 @@ def _approver_sla(now):
     for _, model in _TYPES:
         rows = (
             model.objects.filter(
-                approved_by__isnull=False, approved_at__gte=since, status__in=("approved", "rejected")
+                approved_by__isnull=False, approved_at__gte=since,
+                status__in=("approved", "rejected"), is_deleted=False,
             )
             .values("approved_by_id")
             .annotate(
@@ -124,7 +125,8 @@ def _rejections(today):
     since = datetime.combine(month_start, datetime.min.time(), tzinfo=timezone.get_current_timezone())
     by_type, reasons = {}, defaultdict(int)
     for key, model in _TYPES:
-        rejected = model.objects.filter(status="rejected", approved_at__gte=since)
+        rejected = model.objects.filter(status="rejected", approved_at__gte=since,
+                                        is_deleted=False)
         by_type[key] = rejected.count()
         for r in (
             rejected.annotate(norm_reason=Lower(Trim("rejection_reason")))

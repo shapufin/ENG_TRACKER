@@ -158,64 +158,23 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         Get global statistics for HR/Admin dashboard.
         Returns: total_users, total_overtime_hours, total_standby_hours, pending_overtime, pending_standby, pending_leaves
         """
-        from django.db.models import Sum
-        from django.db.models.functions import Coalesce
-        from apps.overtime.models import OvertimeLog
-        from apps.standby.models import StandbyLog
-        from apps.leave_management.models import LeaveRequest
+        from .hr_overview import global_stats_dict
 
-        # Total users count
-        total_users = User.objects.count()
+        return Response(global_stats_dict())
 
-        # Overtime stats
-        overtime_stats = OvertimeLog.objects.aggregate(
-            total_hours=Coalesce(Sum('hours', filter=Q(status='approved')), 0.0, output_field=models.FloatField()),
-            pending_count=Count('id', filter=Q(status='pending')),
-            approved_count=Count('id', filter=Q(status='approved')),
-            rejected_count=Count('id', filter=Q(status='rejected')),
-        )
+    @action(detail=False, methods=['get'], permission_classes=[IsHR])
+    def hr_overview(self, request):
+        """Org-wide data for the HR dashboard: stats, request pipeline counts,
+        monthly OT/SB series, recent OT/SB rows and pending leave.
 
-        # Standby stats
-        standby_stats = StandbyLog.objects.aggregate(
-            total_hours=Coalesce(Sum('hours', filter=Q(status='approved')), 0.0, output_field=models.FloatField()),
-            pending_count=Count('id', filter=Q(status='pending')),
-            approved_count=Count('id', filter=Q(status='approved')),
-            rejected_count=Count('id', filter=Q(status='rejected')),
-        )
+        This is the only way pure-HR viewers can see overtime/standby data at
+        all — the personal OT/SB list endpoints 403 them (HrOnlyBlockedMixin)
+        and even multi-role HR gets own-scope rows there
+        (PersonalOnlyFilterMixin). ``IsHR`` admits every HR/admin viewer.
+        """
+        from .hr_overview import build_hr_overview
 
-        # Leave stats
-        leave_stats = LeaveRequest.objects.aggregate(
-            pending_count=Count('id', filter=Q(status='pending')),
-            approved_count=Count('id', filter=Q(status='approved')),
-            rejected_count=Count('id', filter=Q(status='rejected')),
-        )
-
-        # Active teams
-        from apps.users.models import Team
-        active_teams_count = Team.objects.active().count()
-
-        # Average overtime per employee
-        avg_overtime_hours = (
-            overtime_stats['total_hours'] / total_users
-            if total_users > 0 else 0.0
-        )
-
-        return Response({
-            'total_users': total_users,
-            'total_overtime_hours': overtime_stats['total_hours'],
-            'total_standby_hours': standby_stats['total_hours'],
-            'pending_overtime': overtime_stats['pending_count'],
-            'approved_overtime': overtime_stats['approved_count'],
-            'rejected_overtime': overtime_stats['rejected_count'],
-            'pending_standby': standby_stats['pending_count'],
-            'approved_standby': standby_stats['approved_count'],
-            'rejected_standby': standby_stats['rejected_count'],
-            'pending_leaves': leave_stats['pending_count'],
-            'approved_leaves': leave_stats['approved_count'],
-            'rejected_leaves': leave_stats['rejected_count'],
-            'avg_overtime_hours': avg_overtime_hours,
-            'active_teams_count': active_teams_count,
-        })
+        return Response(build_hr_overview())
 
     @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
     def admin_overview(self, request):

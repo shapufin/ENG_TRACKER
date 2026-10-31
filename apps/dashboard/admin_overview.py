@@ -84,10 +84,10 @@ def coverage_gaps(today):
 
 
 def pending_backlog():
-    ot = OvertimeLog.objects.filter(status="pending").aggregate(count=Count("id"), hours=Sum("hours"))
-    sb = StandbyLog.objects.filter(status="pending").aggregate(count=Count("id"), hours=Sum("hours"))
+    ot = OvertimeLog.objects.filter(status="pending", is_deleted=False).aggregate(count=Count("id"), hours=Sum("hours"))
+    sb = StandbyLog.objects.filter(status="pending", is_deleted=False).aggregate(count=Count("id"), hours=Sum("hours"))
     leave = list(
-        LeaveRequest.objects.filter(status="pending").values(
+        LeaveRequest.objects.filter(status="pending", is_deleted=False).values(
             "request_type", "start_date", "end_date", "days_counted"
         )
     )
@@ -115,13 +115,13 @@ def _bucket_counts(qs, field, now):
 
 
 def approval_aging(now):
-    leave = LeaveRequest.objects.filter(status="pending").annotate(
+    leave = LeaveRequest.objects.filter(status="pending", is_deleted=False).annotate(
         submitted=Coalesce("submitted_at", "created_at")
     )
     return {
         "buckets": AGING_BUCKETS,
-        "overtime": _bucket_counts(OvertimeLog.objects.filter(status="pending"), "submitted_at", now),
-        "standby": _bucket_counts(StandbyLog.objects.filter(status="pending"), "submitted_at", now),
+        "overtime": _bucket_counts(OvertimeLog.objects.filter(status="pending", is_deleted=False), "submitted_at", now),
+        "standby": _bucket_counts(StandbyLog.objects.filter(status="pending", is_deleted=False), "submitted_at", now),
         "leave": _bucket_counts(leave, "submitted", now),
     }
 
