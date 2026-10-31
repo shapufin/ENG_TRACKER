@@ -10,6 +10,11 @@ export const useTeamsPageData = () => {
     queryKey: ["admin", "calendar-groups"],
     queryFn: () => userService.getCalendarGroups(),
   });
+  // People who can lead a team, for the edit dialog's leader picker.
+  const { data: leaders } = useQuery({
+    queryKey: ["admin", "team-leaders", "all"],
+    queryFn: () => userService.getTeamLeaders("all"),
+  });
 
-  return { data, isLoading, groupsData };
+  return { data, isLoading, groupsData, leaders: leaders ?? [] };
 };

@@ -8,6 +8,7 @@ import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { userService } from "@/services/userService";
+import { plural } from "@/lib/plural";
 import { SuggestedTeamMoves } from "./components/SuggestedTeamMoves";
 
 interface CheckSectionProps {
@@ -30,7 +31,11 @@ const CheckSection: React.FC<CheckSectionProps> = ({ title, hint, to, icon: Icon
           <p className="text-muted-foreground text-xs">{hint}</p>
         </div>
       </div>
-      <Link to={to} className="text-primary inline-flex min-h-6 items-center text-xs font-medium">
+      <Link
+        to={to}
+        aria-label={`Open page: ${title}`}
+        className="text-primary inline-flex min-h-6 items-center text-xs font-medium whitespace-nowrap"
+      >
         Open page
       </Link>
     </div>
@@ -51,8 +56,6 @@ const CheckSection: React.FC<CheckSectionProps> = ({ title, hint, to, icon: Icon
   </GlassCard>
 );
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-
 export const DataCheckPage: React.FC = () => {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "orphans"],
@@ -61,7 +64,11 @@ export const DataCheckPage: React.FC = () => {
   });
 
   // A failed suggestions read only hides that section: the checks above it still stand.
-  const { data: suggestions = [] } = useQuery({
+  const {
+    data: suggestions = [],
+    isSuccess: suggestionsLoaded,
+    isError: suggestionsError,
+  } = useQuery({
     queryKey: ["admin", "team-suggestions"],
     queryFn: () => userService.getTeamSuggestions(),
     refetchOnWindowFocus: false,
@@ -80,7 +87,7 @@ export const DataCheckPage: React.FC = () => {
 
   return (
     <PageShell title="Data check">
-      {total === 0 && suggestions.length === 0 ? (
+      {total === 0 && suggestionsLoaded && suggestions.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}
           tone="success"
@@ -89,6 +96,11 @@ export const DataCheckPage: React.FC = () => {
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {suggestionsError && (
+            <p className="text-muted-foreground text-xs lg:col-span-2">
+              Team suggestions could not be loaded.
+            </p>
+          )}
           {suggestions.length > 0 && (
             <div className="lg:col-span-2">
               <SuggestedTeamMoves rows={suggestions} />
@@ -125,7 +137,7 @@ export const DataCheckPage: React.FC = () => {
           />
           <CheckSection
             title="Clients nobody works on"
-            hint="Active clients with no assigned person."
+            hint="Active clients with no assigned person. Team leaders assign clients from Settings → Client Assignment."
             to="/admin/clients"
             icon={Briefcase}
             rows={data.unassigned_clients.map((c) => ({ id: c.id, label: `${c.name} (${c.code})` }))}

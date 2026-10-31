@@ -7,6 +7,7 @@ import { leaveService } from "@/services/leaveService";
 import { parseLocalDate } from "@/lib/date-format-utils";
 import { useDashboardCalculations } from "./useDashboardCalculations";
 import type { DashboardType } from "@/context/permission-context-base";
+import type { Tone } from "@/components/ui/tone";
 
 interface UseDashboardDataOptions {
   userId?: number;
@@ -197,13 +198,13 @@ export const useDashboardData = ({
       })),
     [hrOverview]
   );
-  const hrStatusBars = useMemo(
+  const hrStatusBars = useMemo<{ label: string; value: number; tone: Tone }[]>(
     () =>
       hrOverview
         ? [
-            { label: "Pending", value: hrOverview.status_counts.pending },
-            { label: "Approved", value: hrOverview.status_counts.approved },
-            { label: "Rejected", value: hrOverview.status_counts.rejected },
+            { label: "Pending", value: hrOverview.status_counts.pending, tone: "warning" },
+            { label: "Approved", value: hrOverview.status_counts.approved, tone: "success" },
+            { label: "Rejected", value: hrOverview.status_counts.rejected, tone: "danger" },
           ]
         : [],
     [hrOverview]

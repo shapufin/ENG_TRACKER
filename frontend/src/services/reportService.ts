@@ -130,7 +130,11 @@ export const reportService = {
 
   async getInsights(
     params: SummaryReportParams
-  ): Promise<{ overtime_increase: number; leave_utilization: number; standby_coverage: number }> {
+  ): Promise<{
+    overtime_increase: number | null;
+    leave_utilization: number | null;
+    standby_hours: number;
+  }> {
     const { data } = await api.get("/reports/insights/", { params });
     return data;
   },

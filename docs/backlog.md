@@ -35,6 +35,14 @@ open for this feature.
 
 ## Open items
 
+### App-wide audit (2026-10-31, `docs/reviews/2026-10-31-app-audit.md`)
+
+| Item | Severity | Fix sketch |
+|---|---|---|
+| `find_orphans` (`GET users/teams/orphans/`) returns four unbounded lists | LOW | company-scale data is small and a cap would hide rows; add pagination (and page UI) only if a real deployment outgrows a single response |
+| Three older `plural` copies remain (`lib/adminInsights.ts`, `plugins/tl_scorecard/components/hbpr/hbprMeta.ts`, `plugins/tl_scorecard/components/team/TeamMemberDetailPanel.tsx`) | LOW | import `lib/plural.ts` and delete the local copies when those files are next touched |
+| HR "Workforce" StatCard uses the destructive tone (red) for a neutral headcount | LOW | design-system tone decision: use a neutral/info tone once the HR card palette is reviewed |
+
 ### Maintenance mode (round 3, 2026-10-28)
 
 | Item | Severity | Fix sketch |

@@ -179,6 +179,25 @@ class PublicHolidaySerializer(serializers.ModelSerializer):
         model = PublicHoliday
         fields = ['id', 'name', 'date', 'country_code', 'is_global', 'description', 'calendar', 'calendar_name']
 
+    def validate(self, attrs):
+        """Refuse the same holiday twice in the same scope (same name + date)."""
+        name = (attrs.get('name', getattr(self.instance, 'name', '')) or '').strip()
+        date = attrs.get('date', getattr(self.instance, 'date', None))
+        is_global = attrs.get('is_global', getattr(self.instance, 'is_global', True))
+        calendar = attrs.get('calendar', getattr(self.instance, 'calendar', None))
+        duplicates = PublicHoliday.objects.filter(
+            name__iexact=name, date=date, is_global=is_global
+        )
+        if not is_global:
+            duplicates = duplicates.filter(calendar=calendar)
+        if self.instance is not None:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+        if duplicates.exists():
+            raise serializers.ValidationError(
+                {'name': 'A holiday with this name and date already exists.'}
+            )
+        return attrs
+
 
 class SiteBrandingSerializer(serializers.ModelSerializer):
     """Serializer for SiteBranding singleton."""

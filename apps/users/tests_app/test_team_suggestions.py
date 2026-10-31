@@ -41,6 +41,30 @@ class SuggestTeamMovesTests(APITestCase):
             [(t['id'], t['sharing']) for t in row['suggestions'][0]['teams']], [(self.gamma.id, 1)]
         )
 
+    def test_non_team_roles_are_never_suggested(self):
+        # HR/HBPR/CR/admin legitimately sit outside every team (data check rule 44a).
+        hr = make_user('hrperson')
+        hr.profile.role_codes = ['hr']
+        hr.profile.save()
+        hbpr = make_user('hbprperson')
+        hbpr.profile.role_codes = ['hbpr']
+        hbpr.profile.save()
+        for person in (hr, hbpr):
+            person.profile.teams.add(self.alpha)
+            person.profile.clients.add(self.acme)
+        rows = suggest_team_moves()
+        self.assertIsNone(mine(rows, hr))
+        self.assertIsNone(mine(rows, hbpr))
+
+    def test_a_staff_member_does_not_count_as_a_teammate(self):
+        # Staff/superusers are not candidates either; a system admin assigned to a client
+        # must not hide a real move for the team.
+        boss = make_user('boss', is_staff=True)
+        boss.profile.teams.add(self.alpha)
+        boss.profile.clients.add(self.acme)
+        self.ana.profile.clients.add(self.acme)
+        self.assertIsNotNone(mine(suggest_team_moves(), self.ana))
+
     def test_no_suggestion_when_a_teammate_already_works_the_client(self):
         mate = make_user('mate')
         mate.profile.teams.add(self.alpha)

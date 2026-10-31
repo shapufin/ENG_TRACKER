@@ -300,9 +300,9 @@ describe("PayrollRunDetailPage", () => {
     );
     await waitFor(() => {
       expect(screen.getByText("Total Gross")).toBeInTheDocument();
-      expect(screen.getByText("300,000")).toBeInTheDocument();
+      expect(screen.getByText("300,000 Lek")).toBeInTheDocument();
       expect(screen.getByText("Total Net Pay")).toBeInTheDocument();
-      expect(screen.getByText("240,000")).toBeInTheDocument();
+      expect(screen.getByText("240,000 Lek")).toBeInTheDocument();
     });
   });
 

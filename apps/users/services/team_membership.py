@@ -62,8 +62,14 @@ def _audit(request, actor, team, profile, operation):
     )
 
 
-def change_user_teams(profile, team_refs, *, request=None, actor=None, reason='membership changed'):
+def change_user_teams(profile, team_refs, *, request=None, actor=None, reason='membership changed',
+                      add_only=False):
     """Set ``profile``'s teams to ``team_refs`` (ids or ``Team`` objects). Returns a ``TeamChange``.
+
+    ``add_only`` joins the given teams and never writes a replacement set: each missing
+    membership is inserted with ``get_or_create``, so two concurrent adds both survive
+    (the unique constraint makes the insert idempotent) instead of the last writer's
+    stale read winning.
 
     Callers reject archived teams before this (``archived_team_error``).
     """
@@ -72,9 +78,22 @@ def change_user_teams(profile, team_refs, *, request=None, actor=None, reason='m
         actor = None
     new_ids = {_team_pk(ref) for ref in team_refs or [] if ref}
     current = {m.team_id: m for m in TeamMembership.objects.filter(user_profile=profile).select_related('team')}
+    change = TeamChange()
+    if add_only:
+        added_ids = new_ids - set(current)
+        if not added_ids:
+            return change
+        created_ids = [
+            tid for tid in sorted(added_ids)
+            if TeamMembership.objects.get_or_create(user_profile=profile, team_id=tid)[1]
+        ]
+        change.added = list(Team.objects.filter(pk__in=created_ids).order_by('pk'))
+        for team in change.added:
+            _audit(request, actor, team, profile, 'member_add')
+        return change
+
     removed_ids = set(current) - new_ids
     added_ids = new_ids - set(current)
-    change = TeamChange()
     if not removed_ids and not added_ids:
         return change
 

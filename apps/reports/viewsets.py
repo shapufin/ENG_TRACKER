@@ -876,69 +876,59 @@ class InsightsView(HbprBlockedMixin, APIView):
         qs_map = filterset.get_filtered_querysets()
         overtime_qs = qs_map['overtime']
         standby_qs = qs_map['standby']
-        leave_qs = qs_map['leave']
 
         # Calculate overtime increase % (compare current period vs previous period of same length)
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
-
-        overtime_increase = 0.0
+        start_date = end_date = None
         if start_date_str and end_date_str:
             try:
                 start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
                 end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-                period_days = (end_date - start_date).days + 1
-
-                # Previous period
-                prev_start = start_date - timedelta(days=period_days)
-                prev_end = start_date - timedelta(days=1)
-
-                current_hours = overtime_qs.aggregate(total=Sum('hours'))['total'] or 0
-                prev_hours = overtime_qs.filter(
-                    date__gte=prev_start,
-                    date__lte=prev_end
-                ).aggregate(total=Sum('hours'))['total'] or 0
-
-                if prev_hours > 0:
-                    overtime_increase = ((current_hours - prev_hours) / prev_hours) * 100
             except (ValueError, TypeError):
-                overtime_increase = 0.0
+                start_date = end_date = None
 
-        # Calculate leave utilization % (approved business days / total allocated days)
-        # Assuming 20 days per year as standard allocation
-        leave_utilization = 0.0
-        approved_qs = leave_qs.filter(status='approved')
-        if approved_qs.exists():
-            # Business days only — must match LeaveRequest.days_requested / validation.
-            approved_days = sum(v.days_requested for v in approved_qs)
-            # Estimate total allocated (20 days * number of users with leave requests)
-            unique_users = leave_qs.values('user').distinct().count()
-            total_allocated = unique_users * 20
-            if total_allocated > 0:
-                leave_utilization = (approved_days / total_allocated) * 100
+        # Without a range there is no comparison period: null, not a fake 0%.
+        overtime_increase = None
+        if start_date and end_date:
+            period_days = (end_date - start_date).days + 1
+            current_hours = overtime_qs.aggregate(total=Sum('hours'))['total'] or 0
+            prev_hours = overtime_qs.filter(
+                date__gte=start_date - timedelta(days=period_days),
+                date__lte=start_date - timedelta(days=1),
+            ).aggregate(total=Sum('hours'))['total'] or 0
+            # A first period has no baseline; an increase from zero is undefined.
+            if prev_hours > 0:
+                overtime_increase = round(((current_hours - prev_hours) / prev_hours) * 100, 1)
 
-        # Calculate standby coverage % (approved standby hours / total required hours)
-        # Assuming 40 hours/week * 4 weeks = 160 hours per month as baseline
-        standby_coverage = 0.0
-        approved_standby = standby_qs.filter(status='approved').aggregate(total=Sum('hours'))['total'] or 0
-        if approved_standby > 0:
-            # Estimate required hours based on period length
-            if start_date_str and end_date_str:
-                try:
-                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-                    period_weeks = ((end_date - start_date).days + 1) / 7
-                    unique_users = standby_qs.values('user').distinct().count()
-                    required_hours = unique_users * 40 * period_weeks
-                    if required_hours > 0:
-                        standby_coverage = (approved_standby / required_hours) * 100
-                except (ValueError, TypeError):
-                    standby_coverage = 0.0
+        # Leave utilization is the authoritative year-to-date balance figure, not a
+        # 20-day-per-requester guess (that assumption is gone). Balances carry the same
+        # workforce rule and the same row-level scope as every other report figure —
+        # a team leader must not read the company-wide allocation here.
+        from apps.leave_management.models import LeaveBalance
+        year = end_date.year if end_date else business_today().year
+        balances_qs = LeaveBalance.objects.filter(
+            year=year, leave_type='vacation', is_deleted=False, user__is_active=True
+        ).exclude(user__is_staff=True, user__is_superuser=True)
+        balances = apply_visibility_constraints(balances_qs, request.user).aggregate(
+            total=Sum('total_days'), used=Sum('used_days')
+        )
+        allocated = float(balances['total'] or 0)
+        leave_utilization = (
+            round(float(balances['used'] or 0) / allocated * 100, 1) if allocated else None
+        )
+
+        # No required-standby baseline exists in the data, so report the real approved
+        # standby hours for the period instead of an invented "coverage" percentage.
+        standby_hours = round(
+            float(standby_qs.filter(status='approved').aggregate(total=Sum('hours'))['total'] or 0),
+            1,
+        )
 
         return Response({
-            'overtime_increase': round(overtime_increase, 1),
-            'leave_utilization': round(leave_utilization, 1),
-            'standby_coverage': round(standby_coverage, 1),
+            'overtime_increase': overtime_increase,
+            'leave_utilization': leave_utilization,
+            'standby_hours': standby_hours,
         }, status=status.HTTP_200_OK)
 
 

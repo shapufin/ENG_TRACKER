@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
-import { differenceInCalendarDays } from "date-fns";
 import { DescriptionColumn } from "@/components/admin/DescriptionColumn";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UserCell } from "@/components/admin/UserCell";
@@ -38,18 +37,21 @@ interface LeaveRequestsTableProps {
 }
 
 const LeaveRequestRowActions = ({
-  id,
+  request,
   status,
   onApprove,
   onReject,
   onDelete,
 }: {
-  id: number;
+  request: LeaveRequest;
   status: string;
   onApprove: (id: number) => void;
   onReject: (id: number, reason: string) => void;
   onDelete?: (id: number) => void;
 }) => {
+  const id = request.id;
+  const person = request.user_full_name || request.user_name || 'this employee';
+  const period = `${formatDateDDMMYYYY(request.start_date)}–${formatDateDDMMYYYY(request.end_date)}`;
   const [rejectOpen, setRejectOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -64,7 +66,7 @@ const LeaveRequestRowActions = ({
   const deleteAction: RowAction[] = onDelete
     ? [
         {
-          label: `Delete ${id}`,
+          label: `Delete leave request for ${person}`,
           icon: Trash2,
           tone: "danger",
           onClick: () => setDeleteOpen(true),
@@ -97,7 +99,12 @@ const LeaveRequestRowActions = ({
   return (
     <>
       <div className="flex items-center justify-end gap-2">
-        <Button type="button" size="sm" aria-label={`Approve ${id}`} onClick={() => onApprove(id)}>
+        <Button
+          type="button"
+          size="sm"
+          aria-label={`Approve leave for ${person} (${period})`}
+          onClick={() => onApprove(id)}
+        >
           <Check className="h-4 w-4" aria-hidden="true" />
           Approve
         </Button>
@@ -105,7 +112,7 @@ const LeaveRequestRowActions = ({
           type="button"
           size="sm"
           variant="outline"
-          aria-label={`Reject ${id}`}
+          aria-label={`Reject leave for ${person} (${period})`}
           onClick={openReject}
         >
           <X className="h-4 w-4" aria-hidden="true" />
@@ -158,7 +165,12 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         accessorKey: "user_name",
         header: "User",
         size: 150,
-        cell: ({ row }) => <UserCell name={row.original.user_name} />,
+        cell: ({ row }) => (
+          <UserCell
+            name={row.original.user_full_name || row.original.user_name}
+            subtitle={row.original.user_name ? `@${row.original.user_name}` : null}
+          />
+        ),
       },
       {
         id: "type",
@@ -184,20 +196,10 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         cell: ({ row }) => {
           const start = formatDateDDMMYYYY(row.original.start_date);
           const end = formatDateDDMMYYYY(row.original.end_date);
-          const days =
-            differenceInCalendarDays(
-              new Date(row.original.end_date),
-              new Date(row.original.start_date)
-            ) + 1;
           return (
-            <div className="flex flex-col">
-              <span className="text-sm">
-                {start} → {end}
-              </span>
-              <span className="text-muted-foreground text-xs">
-                {days} {days === 1 ? "day" : "days"}
-              </span>
-            </div>
+            <span className="text-sm whitespace-nowrap">
+              {start} → {end}
+            </span>
           );
         },
       },
@@ -245,7 +247,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         size: 210,
         cell: ({ row }) => (
           <LeaveRequestRowActions
-            id={row.original.id}
+            request={row.original}
             status={row.original.status}
             onApprove={onApprove}
             onReject={onReject}

@@ -2,7 +2,7 @@
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
-from apps.users.models import Team, UserProfile
+from apps.users.models import Team, TeamMembershipHistory, UserProfile
 
 
 def make_user(name, **kwargs):
@@ -52,6 +52,14 @@ class AddTeamsTests(APITestCase):
             resp = self.client.put(self.url, {'add_teams': bad}, format='json')
             self.assertEqual(resp.status_code, 400, bad)
         self.assertEqual(self.teams(), {'ALP'})
+
+    def test_an_add_never_records_a_removal(self):
+        # A team joined since the page loaded must survive an add, and an add must never
+        # write membership history (that is the only record of a removed team).
+        self.user.profile.teams.add(self.gamma)
+        self.client.put(self.url, {'add_teams': [self.beta.pk]}, format='json')
+        self.assertEqual(self.teams(), {'ALP', 'GAM', 'BET'})
+        self.assertEqual(TeamMembershipHistory.objects.count(), 0)
 
     def test_an_explicit_teams_list_still_replaces(self):
         self.client.put(self.url, {'teams': [self.gamma.pk]}, format='json')

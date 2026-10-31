@@ -113,6 +113,7 @@ export const PayrollRunLinesTable: React.FC<PayrollRunLinesTableProps> = ({
                         variant="ghost"
                         size="sm"
                         title="Download individual payslip PDF"
+                        aria-label={`Download payslip PDF for ${line.user_full_name}`}
                         onClick={() => onPayslipDownload(line.id)}
                         disabled={payslipLoading && payslipLoadingId === line.id}
                       >

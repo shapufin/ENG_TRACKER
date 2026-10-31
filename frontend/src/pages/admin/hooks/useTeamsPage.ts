@@ -3,7 +3,7 @@ import { useTeamsPageForm } from "./useTeamsPageForm";
 import { useTeamsPageUI } from "./useTeamsPageUI";
 
 export const useTeamsPage = () => {
-  const { data, isLoading, groupsData } = useTeamsPageData();
+  const { data, isLoading, groupsData, leaders } = useTeamsPageData();
   const form = useTeamsPageForm();
   const ui = useTeamsPageUI(data?.results || []);
 
@@ -11,6 +11,7 @@ export const useTeamsPage = () => {
     data,
     isLoading,
     groupsData,
+    leaders,
     ...form,
     ...ui,
   };

@@ -106,6 +106,7 @@ for _url in (
     '/api/leave-management/settings/', '/api/overtime/clients/',
     '/api/overtime/clients/available/', '/api/standby/patterns/',
     '/api/users/techs/', '/api/users/tech-levels/', '/api/users/profiles/tech_facets/',
+    '/api/users/profiles/assignment_counts/',
     '/api/users/teams/calendar_group_stats/', '/api/users/teams/calendar_groups/',
     '/api/plugins/ticket_kpi/profiles/', '/api/plugins/skills/categories/',
     '/api/plugins/skills/skills/', '/api/plugins/skills/level-labels/',

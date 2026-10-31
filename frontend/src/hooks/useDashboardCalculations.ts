@@ -9,14 +9,12 @@ import {
   sumApprovedLeaveDays,
   sumPendingLeaveDays,
 } from "@/lib/dashboardCalculations";
+import type { LeaveRequest, OvertimeLog, StandbyLog } from "@/types";
 
 export const useDashboardCalculations = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  overtimeResults: any[],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  standbyResults: any[],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  leaveResults: any[]
+  overtimeResults: OvertimeLog[],
+  standbyResults: StandbyLog[],
+  leaveResults: LeaveRequest[]
 ) => ({
   overtimeChart: useMemo(() => buildOvertimeChart(overtimeResults), [overtimeResults]),
   standbyChart: useMemo(() => buildStandbyChart(standbyResults), [standbyResults]),

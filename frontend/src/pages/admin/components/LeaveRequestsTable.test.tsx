@@ -41,9 +41,9 @@ describe("LeaveRequestsTable action buttons", () => {
         canDelete
       />
     );
-    expect(screen.getByRole("button", { name: "Approve 1" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reject 1" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Approve leave for/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Reject leave for/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Delete leave request for/ })).toBeInTheDocument();
   });
 
   it("reject opens the reason ConfirmDialog instead of a native prompt()", () => {
@@ -61,7 +61,7 @@ describe("LeaveRequestsTable action buttons", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Reject 1" }));
+    fireEvent.click(screen.getByRole("button", { name: /Reject leave for/ }));
     expect(nativePrompt).not.toHaveBeenCalled();
 
     const dialog = screen.getByRole("dialog", { name: /reject request/i });
@@ -85,7 +85,7 @@ describe("LeaveRequestsTable action buttons", () => {
         canDelete
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Delete 1" }));
+    fireEvent.click(screen.getByRole("button", { name: /Delete leave request for/ }));
     expect(onDelete).not.toHaveBeenCalled();
     const dialog = screen.getByRole("dialog", { name: /delete leave request/i });
     fireEvent.click(within(dialog).getByRole("button", { name: /^delete$/i }));
@@ -102,9 +102,9 @@ describe("LeaveRequestsTable action buttons", () => {
         onReject={vi.fn()}
       />
     );
-    expect(screen.queryByRole("button", { name: "Approve 1" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Reject 1" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Delete 1" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Approve leave for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Reject leave for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Delete leave request for/ })).not.toBeInTheDocument();
   });
 
   it("renders pending approve/reject as always-visible inline buttons with text", () => {
@@ -118,8 +118,8 @@ describe("LeaveRequestsTable action buttons", () => {
         onReject={vi.fn()}
       />
     );
-    expect(screen.getByRole("button", { name: "Approve 1" })).toHaveTextContent("Approve");
-    expect(screen.getByRole("button", { name: "Reject 1" })).toHaveTextContent("Reject");
+    expect(screen.getByRole("button", { name: /Approve leave for/ })).toHaveTextContent("Approve");
+    expect(screen.getByRole("button", { name: /Reject leave for/ })).toHaveTextContent("Reject");
   });
 
   it("calls onApprove immediately without a dialog", () => {
@@ -132,7 +132,7 @@ describe("LeaveRequestsTable action buttons", () => {
         onReject={vi.fn()}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Approve 1" }));
+    fireEvent.click(screen.getByRole("button", { name: /Approve leave for/ }));
     expect(onApprove).toHaveBeenCalledWith(1);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });

@@ -112,6 +112,17 @@ export const userService = {
     return data;
   },
 
+  /** Whole-population totals for the HR TL-assignment tiles (the list is page-capped). */
+  async getAssignmentCounts(params?: Record<string, unknown>): Promise<{
+    total: number;
+    italian: number;
+    albanian: number;
+    without_any: number;
+  }> {
+    const { data } = await api.get("/users/profiles/assignment_counts/", { params });
+    return data;
+  },
+
   async updateProfile(id: number, payload: Partial<UserProfile>): Promise<UserProfile> {
     const { data } = await api.put<UserProfile>(`/users/profiles/${id}/`, payload);
     return data;

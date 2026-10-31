@@ -22,6 +22,7 @@ export const TeamsPage: React.FC = () => {
     data,
     isLoading,
     groupsData,
+    leaders,
     formOpen,
     setFormOpen,
     editing,
@@ -132,6 +133,8 @@ export const TeamsPage: React.FC = () => {
         formErrors={formErrors}
         onFormErrorsChange={setFormErrors}
         groups={groupsData}
+        leaders={leaders}
+        teams={activeTeams}
         onSubmit={handleSubmit}
         isSubmitting={create.isPending || update.isPending}
       />

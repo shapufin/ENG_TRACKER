@@ -69,9 +69,19 @@ class UnifiedReportFilter(filters.FilterSet):
 
     # Public API -----------------------------------------------------------------
     def get_filtered_querysets(self):
-        overtime_qs = OvertimeLog.objects.all()
-        standby_qs = StandbyLog.objects.all()
-        leave_qs = LeaveRequest.objects.all()
+        # Org reports are about active employees: soft-deleted rows, deactivated
+        # accounts and staff/superusers are not part of the workforce (the same
+        # rule the data check and wage assignment use).
+        base = {'is_deleted': False, 'user__is_active': True}
+        overtime_qs = OvertimeLog.objects.filter(**base).exclude(
+            user__is_staff=True, user__is_superuser=True
+        )
+        standby_qs = StandbyLog.objects.filter(**base).exclude(
+            user__is_staff=True, user__is_superuser=True
+        )
+        leave_qs = LeaveRequest.objects.filter(**base).exclude(
+            user__is_staff=True, user__is_superuser=True
+        )
 
         overtime_qs = self._apply_temporal_filters(overtime_qs, 'date')
         standby_qs = self._apply_temporal_filters(standby_qs, 'date')

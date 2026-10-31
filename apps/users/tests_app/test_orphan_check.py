@@ -27,7 +27,7 @@ def seeded():
     return {key: ids(rows) for key, rows in find_orphans().items()}
 
 
-class FindOrphansTests(APITestCase):
+class OrphanBase(APITestCase):
     def setUp(self):
         self.seeded = seeded()
         self.leader = make_user('lead')
@@ -39,6 +39,8 @@ class FindOrphansTests(APITestCase):
         """Ids reported under ``key`` that this test did not start with."""
         return ids(find_orphans()[key]) - self.seeded[key]
 
+
+class FindOrphansTests(OrphanBase):
     def test_clean_data_reports_nothing(self):
         for key in KEYS:
             self.assertEqual(self.found(key), set(), key)
@@ -98,6 +100,58 @@ class FindOrphansTests(APITestCase):
         self.member.profile.clients.add(used)
         self.assertEqual(self.found('unassigned_clients'), {idle.id})
         self.assertNotIn(retired.id, self.found('unassigned_clients'))
+
+
+class InactivePeopleTests(OrphanBase):
+    """A deactivated account keeps its memberships and client links, so it must not fill a slot."""
+
+    def make_inactive(self, name):
+        user = make_user(name)
+        user.is_active = False
+        user.save(update_fields=['is_active'])
+        return user
+
+    def test_a_team_whose_only_members_are_deactivated_is_empty(self):
+        gone = self.make_inactive('gone')
+        dead = Team.objects.create(name='Dead', code='DEAD', team_leader=self.leader)
+        gone.profile.teams.add(dead)
+        self.assertIn(dead.id, self.found('empty_teams'))
+
+    def test_a_team_led_by_a_deactivated_user_has_no_leader(self):
+        self.leader.is_active = False
+        self.leader.save(update_fields=['is_active'])
+        self.assertIn(self.team.id, self.found('teams_without_leader'))
+
+    def test_a_client_worked_only_by_a_deactivated_person_is_unassigned(self):
+        gone = self.make_inactive('gone')
+        client = Client.objects.create(name='OnlyGone', code='OG')
+        gone.profile.clients.add(client)
+        self.assertIn(client.id, self.found('unassigned_clients'))
+
+    def test_member_count_ignores_deactivated_people(self):
+        self.make_inactive('gone').profile.teams.add(self.team)
+        self.team.team_leader = None
+        self.team.save(update_fields=['team_leader'])
+        row = next(r for r in find_orphans()['teams_without_leader'] if r['id'] == self.team.id)
+        self.assertEqual(row['members_count'], 1)
+
+    def test_a_team_whose_members_have_a_team_leader_assignment_has_approvers(self):
+        # `can_approve` also grants through the member's own italian_tl/albanian_tl,
+        # so "nobody approves their leave, overtime or standby" would be false here.
+        self.team.team_leader = None
+        self.team.save(update_fields=['team_leader'])
+        self.member.profile.italian_tl = self.leader
+        self.member.profile.save(update_fields=['italian_tl'])
+        self.assertNotIn(self.team.id, self.found('teams_without_leader'))
+
+    def test_a_deactivated_team_leader_assignment_does_not_count_as_an_approver(self):
+        self.team.team_leader = None
+        self.team.save(update_fields=['team_leader'])
+        self.member.profile.albanian_tl = self.leader
+        self.member.profile.save(update_fields=['albanian_tl'])
+        self.leader.is_active = False
+        self.leader.save(update_fields=['is_active'])
+        self.assertIn(self.team.id, self.found('teams_without_leader'))
 
 
 class OrphanEndpointTests(APITestCase):

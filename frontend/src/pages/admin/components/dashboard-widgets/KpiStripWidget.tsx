@@ -36,7 +36,10 @@ interface KpiStripWidgetProps {
 const fmt = (n: number) => String(Math.round(n * 10) / 10);
 
 const Skeleton: React.FC = () => (
-  <div aria-hidden className="bg-muted/40 mt-1 h-7 w-16 animate-pulse rounded-md" />
+  <div
+    aria-hidden
+    className="bg-muted/40 mt-1 h-7 w-16 animate-pulse rounded-md motion-reduce:animate-none"
+  />
 );
 
 interface KpiProps {

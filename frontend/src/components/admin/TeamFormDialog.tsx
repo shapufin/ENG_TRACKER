@@ -16,6 +16,8 @@ import type { Team } from "@/types";
 
 const NO_GROUP = "none";
 const NEW_GROUP = "__new__";
+const NO_LEADER = "none";
+const NO_PARENT = "none";
 
 interface CalendarGroup {
   calendar_group: string;
@@ -38,6 +40,10 @@ interface TeamFormDialogProps {
   formErrors: Record<string, string>;
   onFormErrorsChange: (errors: Record<string, string>) => void;
   groups: CalendarGroup[] | undefined;
+  /** People who can lead a team (TL role or members assigned). */
+  leaders: { id: number; username: string; full_name?: string }[];
+  /** Active teams, for the parent picker (the edited team is excluded). */
+  teams: Team[];
   onSubmit: (e: React.FormEvent) => void;
   isSubmitting: boolean;
 }
@@ -51,6 +57,8 @@ export const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
   formErrors,
   onFormErrorsChange,
   groups,
+  leaders,
+  teams,
   onSubmit,
   isSubmitting,
 }) => {
@@ -102,6 +110,54 @@ export const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
           onChange={(value) => updateField("description", value)}
           className="sm:col-span-2"
         />
+      </ModalSection>
+      <ModalSection title="Leadership" columns={2}>
+        <div className="space-y-2">
+          <Label htmlFor="team-leader">Team leader</Label>
+          <Select
+            value={form.team_leader_id || NO_LEADER}
+            onValueChange={(value) =>
+              updateField("team_leader_id", value === NO_LEADER ? "" : value)
+            }
+          >
+            <SelectTrigger id="team-leader">
+              <SelectValue placeholder="No leader" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_LEADER}>No leader</SelectItem>
+              {leaders.map((leader) => (
+                <SelectItem key={leader.id} value={String(leader.id)}>
+                  {leader.full_name || leader.username}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-xs">
+            The team leader approves this team&apos;s requests.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="team-parent">Parent team</Label>
+          <Select
+            value={form.parent_team || NO_PARENT}
+            onValueChange={(value) => updateField("parent_team", value === NO_PARENT ? "" : value)}
+          >
+            <SelectTrigger id="team-parent">
+              <SelectValue placeholder="No parent" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_PARENT}>No parent</SelectItem>
+              {teams
+                .filter((team) => team.id !== editing?.id)
+                .map((team) => (
+                  <SelectItem key={team.id} value={String(team.id)}>
+                    {team.name} ({team.code})
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-xs">Sub-teams nest under their parent.</p>
+        </div>
       </ModalSection>
       <ModalSection title="Calendar group" columns={1}>
         <div className="space-y-2">

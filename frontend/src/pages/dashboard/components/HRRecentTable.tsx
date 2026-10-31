@@ -1,32 +1,25 @@
 import React from "react";
-import { MoreHorizontal } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { DashboardSectionShell } from "@/components/dashboard/DashboardSectionShell";
 import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
+export interface HRRecentRow {
+  id: number;
+  user: string;
+  userInitials: string;
+  duration: string;
+  date: string;
+  status: string;
+}
+
 interface HRRecentTableProps {
   title: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any[];
+  data: HRRecentRow[];
 }
 
 export const HRRecentTable: React.FC<HRRecentTableProps> = ({ title, data }) => (
-  <DashboardSectionShell
-    title={title}
-    controls={
-      <Button
-        variant="ghost"
-        size="icon"
-        className="text-muted-foreground h-8 w-8"
-        aria-label={`More options for ${title}`}
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </Button>
-    }
-    bodyClassName="block p-4 pt-0"
-  >
+  <DashboardSectionShell title={title} bodyClassName="block p-4 pt-0">
     <DataTable
       data={data}
       columns={[
@@ -55,6 +48,15 @@ export const HRRecentTable: React.FC<HRRecentTableProps> = ({ title, data }) => 
           accessorKey: "status",
           header: "Status",
           cell: (info) => <StatusBadge variant={info.getValue() as StatusVariant} />,
+        },
+        {
+          accessorKey: "date",
+          header: "Date",
+          cell: (info) => (
+            <span className="text-muted-foreground whitespace-nowrap">
+              {info.getValue() as string}
+            </span>
+          ),
         },
       ]}
     />

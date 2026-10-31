@@ -19,8 +19,17 @@ import { TwoFactorSection } from "./components/TwoFactorSection";
 
 export const SettingsPage: React.FC = () => {
   const { user, logout, refreshUser } = useAuth();
-  const { isCRUser, isCRAdmin, isAdmin, isSuperuser, isHR, isHBPR, isTeamLeader, isHBPROnly } =
-    usePermissions();
+  const {
+    isCRUser,
+    isCRAdmin,
+    isAdmin,
+    isSuperuser,
+    isHR,
+    isHROnly,
+    isHBPR,
+    isTeamLeader,
+    isHBPROnly,
+  } = usePermissions();
   const { activePlugins } = usePlugins();
   const isCROnlyAdmin = isCRAdmin && !isAdmin && !isSuperuser && !isHR && !isTeamLeader;
   const isCRScoped = isCRUser || isCROnlyAdmin;
@@ -116,9 +125,9 @@ export const SettingsPage: React.FC = () => {
         </GlassCard>
 
         {/* My Clients — self-assign which clients the user works for.
-            Hidden for CR-scoped identities: they only view standby for their
-            scoped teams and have no client-selection workflow. */}
-        {!isCRScoped && !isHBPROnly && (
+            Hidden for CR-scoped identities (no client-selection workflow) and
+            pure HR (no overtime/standby forms to scope). */}
+        {!isCRScoped && !isHBPROnly && !isHROnly && (
           <MyClientsSection
             assignedClientIds={user?.client_ids ?? []}
             onAssignedChange={refreshUser}

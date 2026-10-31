@@ -33,7 +33,7 @@ describe("HRDashboardStats", () => {
     expect(getValueByTitle("Workforce")).toContain("0");
   });
 
-  it("renders a progress bar on all four stat cards with computed widths", () => {
+  it("renders a meter only where the ratio is real", () => {
     const hrStats = {
       avg_overtime_hours: 5.5,
       active_teams_count: 3,
@@ -46,28 +46,18 @@ describe("HRDashboardStats", () => {
     const fills = Array.from(
       container.querySelectorAll<HTMLElement>('[data-testid="stat-card-progress-fill"]')
     );
-    expect(fills.length).toBe(4);
-    // Card order: Avg. Overtime, Active Teams, Pending Requests, Workforce.
-    // Avg. Overtime: min(100, round(5.5 / 4 * 100)) = 100
-    expect(fills[0].style.width).toBe("100%");
-    // Active Teams: static status bar.
-    expect(fills[1].style.width).toBe("100%");
-    // Pending Requests: overtime's share of all pending = round(2 / 7 * 100) = 29.
-    expect(fills[2].style.width).toBe("29%");
-    // Workforce: static status bar.
-    expect(fills[3].style.width).toBe("100%");
+    // Only Pending Requests carries a meter: overtime's share of everything pending.
+    expect(fills.length).toBe(1);
+    expect(fills[0].style.width).toBe("29%");
   });
 
-  it("renders default bar widths when hrStats is empty", () => {
+  it("renders the pending meter at zero when nothing is pending", () => {
     const { container } = render(<HRDashboardStats hrStats={{}} />);
     const fills = Array.from(
       container.querySelectorAll<HTMLElement>('[data-testid="stat-card-progress-fill"]')
     );
-    expect(fills.length).toBe(4);
+    expect(fills.length).toBe(1);
     expect(fills[0].style.width).toBe("0%");
-    expect(fills[1].style.width).toBe("0%");
-    expect(fills[2].style.width).toBe("0%");
-    expect(fills[3].style.width).toBe("0%");
   });
 
   it("renders footer strips with real hrStats values", () => {

@@ -136,12 +136,14 @@ def _team_comparison(month_start):
         )
     )
     user_ids.update(u for u, _, _, _ in leave_rows)
-    # One canonical team per user (alphabetically first, same rule as
-    # _team_names): attributing the same person's hours to every team they
-    # belong to double-counts them in the org total.
+    # One canonical ACTIVE team per user (alphabetically first): attributing the same
+    # person's hours to every team they belong to double-counts them in the org total,
+    # and an archived team is not in the chart at all, so it would silently drop them.
     canonical_team: dict[int, int] = {}
     for uid, tid in (
-        TeamMembership.objects.filter(user_profile__user_id__in=user_ids)
+        TeamMembership.objects.filter(
+            user_profile__user_id__in=user_ids, team__is_active=True
+        )
         .order_by("-team__name")
         .values_list("user_profile__user_id", "team_id")
     ):
@@ -211,6 +213,8 @@ def _who_is_out(today):
         status="approved",
         start_date__gt=today,
         start_date__lte=today + timedelta(days=UPCOMING_LEAVE_DAYS),
+        is_deleted=False,
+        user__is_active=True,
     ).count()
     return {
         "date": today.isoformat(),

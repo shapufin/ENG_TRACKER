@@ -12,18 +12,33 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { toneFillClass, type Tone } from "@/components/ui/tone";
+
+interface MonthlyPoint {
+  day: string;
+  month?: string;
+  overtime?: number;
+  standby?: number;
+}
+
+interface StatusBar {
+  label: string;
+  value: number;
+  tone?: Tone;
+}
 
 interface HRDashboardChartsProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  monthlyData: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  statusBars: any[];
+  monthlyData: MonthlyPoint[];
+  statusBars: StatusBar[];
 }
 
 export const HRDashboardCharts: React.FC<HRDashboardChartsProps> = ({
   monthlyData,
   statusBars,
-}) => (
+}) => {
+  // Every bar is a share of the same total, so the widths compare with each other.
+  const total = statusBars.reduce((sum, bar) => sum + bar.value, 0);
+  return (
   <div className="grid gap-6 lg:grid-cols-3">
     <GlassCard className="border-border/70 bg-card lg:col-span-2" data-testid="hr-hours-chart">
       <div className="flex items-center justify-between border-b border-border/70 p-6">
@@ -117,15 +132,12 @@ export const HRDashboardCharts: React.FC<HRDashboardChartsProps> = ({
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
+                data-testid="hr-pipeline-fill"
                 className={cn(
-                  "h-full rounded-full transition-all duration-1000",
-                  bar.label === "Pending"
-                    ? "bg-amber-500/80 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-                    : bar.label === "Approved"
-                      ? "bg-emerald-500/80 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
-                      : "bg-rose-500/80 shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+                  "h-full rounded-full transition-[width] duration-700 motion-reduce:transition-none",
+                  toneFillClass[bar.tone ?? "neutral"]
                 )}
-                style={{ width: `${Math.min(100, (bar.value / 20) * 100)}%` }}
+                style={{ width: `${total > 0 ? Math.round((bar.value / total) * 100) : 0}%` }}
               />
             </div>
           </div>
@@ -133,4 +145,5 @@ export const HRDashboardCharts: React.FC<HRDashboardChartsProps> = ({
       </div>
     </GlassCard>
   </div>
-);
+  );
+};

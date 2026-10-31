@@ -31,7 +31,7 @@ const CardSkeleton: React.FC<{ label: string }> = ({ label }) => (
   <div
     role="status"
     aria-label={`Loading ${label}`}
-    className="border-border bg-card h-24 animate-pulse rounded-xl border"
+    className="border-border bg-card h-24 animate-pulse rounded-xl border motion-reduce:animate-none"
   />
 );
 

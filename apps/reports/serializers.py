@@ -43,9 +43,13 @@ class AuditLogSerializer(serializers.ModelSerializer):
 
 class InsightsSerializer(serializers.Serializer):
     """Serializer for executive summary insights."""
-    overtime_increase = serializers.FloatField(help_text="Percentage increase in overtime")
-    leave_utilization = serializers.FloatField(help_text="Percentage of leave utilized")
-    standby_coverage = serializers.FloatField(help_text="Percentage of standby coverage")
+    overtime_increase = serializers.FloatField(
+        allow_null=True, help_text="Percentage change vs the previous period; null without a date range"
+    )
+    leave_utilization = serializers.FloatField(
+        allow_null=True, help_text="Year-to-date approved vacation days / allocated days; null without balances"
+    )
+    standby_hours = serializers.FloatField(help_text="Approved standby hours in the period")
 
 
 class TopTeamLeaderSerializer(serializers.Serializer):

@@ -88,4 +88,23 @@ describe("CalendarSidebar", () => {
     render(<CalendarSidebar {...baseProps} />);
     expect(screen.queryByText(/d remaining/)).not.toBeInTheDocument();
   });
+
+  it("says so when a client and tech combination matches nobody", () => {
+    const faceted = [
+      {
+        ...users[0],
+        clients_detail: [{ id: 10, name: "Acme", code: "ACM" }],
+        techs_detail: [{ id: 20, name: "DB", code: "DB" }],
+      },
+      {
+        ...users[1],
+        clients_detail: [{ id: 11, name: "Beta", code: "BET" }],
+        techs_detail: [{ id: 21, name: "Web", code: "WEB" }],
+      },
+    ] as User[];
+    render(<CalendarSidebar {...baseProps} allUsers={faceted} onSetUsers={vi.fn()} />);
+    fireEvent.click(screen.getByText("Acme"));
+    fireEvent.click(screen.getByText("Web"));
+    expect(screen.getByText("No one matches these filters.")).toBeInTheDocument();
+  });
 });

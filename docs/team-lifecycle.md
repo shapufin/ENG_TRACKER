@@ -154,7 +154,8 @@ After pulling: `py -3.14 manage.py migrate` (users 0024-0025, dashboard 0013, an
   leader reaches nobody through them. They still read archived rows; add `is_active=True` only if a path appears
   that does not go through membership.
 - **Data check** (`/admin/data-check`, `GET users/teams/orphans/`): people in no active team, active teams without
-  a leader or without members, active clients nobody works on. Read-only; see `workflow-invariants.md` item 44.
+  an active leader or without active members, active clients with no active assignee (deactivation keeps the FK and
+  the membership, so a deactivated person fills no slot). Read-only; see `workflow-invariants.md` item 44.
 - Delete stays staff-level (`IsAdminUser`), not superuser-only. No payroll blocker (payroll has no team link).
 - Two pre-existing `CONTROL-HEIGHT` control-audit warnings in `plugins/organigrama/components/CustomChartViewer.tsx`
   are not from this work.

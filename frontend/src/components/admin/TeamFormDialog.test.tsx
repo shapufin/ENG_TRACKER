@@ -56,12 +56,22 @@ const renderDialog = (overrides: Partial<typeof form> = {}) => {
       formErrors={{}}
       onFormErrorsChange={vi.fn()}
       groups={groups}
+      leaders={[]}
+      teams={[]}
       onSubmit={vi.fn()}
       isSubmitting={false}
     />
   );
   return onFormChange;
 };
+
+describe("TeamFormDialog leadership", () => {
+  it("offers a team leader and parent team control", () => {
+    renderDialog();
+    expect(screen.getByLabelText("Team leader")).toBeInTheDocument();
+    expect(screen.getByLabelText("Parent team")).toBeInTheDocument();
+  });
+});
 
 describe("TeamFormDialog calendar group picker", () => {
   it("lists existing groups with their team counts instead of a free-text box", () => {

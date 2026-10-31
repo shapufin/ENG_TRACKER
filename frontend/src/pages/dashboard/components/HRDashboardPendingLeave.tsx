@@ -3,6 +3,7 @@ import { Plane, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DashboardSectionShell } from "@/components/dashboard/DashboardSectionShell";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import type { HROverview } from "@/types";
 
 interface HRDashboardPendingLeaveProps {
@@ -30,7 +31,7 @@ export const HRDashboardPendingLeave: React.FC<HRDashboardPendingLeaveProps> = (
       {items.map((r) => (
         <div
           key={r.id}
-          className="group flex items-center justify-between rounded-2xl border border-border/70 bg-card p-5 transition-all hover:bg-muted/50"
+          className="group flex items-center justify-between rounded-2xl border border-border/70 bg-card p-5 transition-colors hover:bg-muted/50 motion-reduce:transition-none"
         >
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
@@ -39,12 +40,16 @@ export const HRDashboardPendingLeave: React.FC<HRDashboardPendingLeaveProps> = (
             <div>
               <p className="text-sm font-semibold text-foreground">{r.user_name}</p>
               <p className="text-xs text-muted-foreground">{r.days_requested} days requested</p>
+              <p className="text-muted-foreground text-xs">
+                {`${formatDateDDMMYYYY(r.start_date)}${
+                  r.end_date !== r.start_date ? ` – ${formatDateDDMMYYYY(r.end_date)}` : ""
+                }`}
+              </p>
             </div>
           </div>
           <div
-            role="status"
-            aria-label="Pending"
-            className="h-2 w-2 animate-pulse rounded-full bg-warning"
+            aria-hidden="true"
+            className="bg-warning h-2 w-2 animate-pulse rounded-full motion-reduce:animate-none"
           />
         </div>
       ))}

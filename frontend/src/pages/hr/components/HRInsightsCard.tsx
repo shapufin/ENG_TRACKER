@@ -3,9 +3,11 @@ import { StatCard } from "@/components/ui/StatCard";
 import { TrendingUp, CalendarDays, ShieldCheck } from "lucide-react";
 
 interface InsightsData {
-  overtime_increase: number;
-  leave_utilization: number;
-  standby_coverage: number;
+  /** Null without a date range: there is no previous period to compare with. */
+  overtime_increase: number | null;
+  /** Null when no vacation balance is allocated for the year. */
+  leave_utilization: number | null;
+  standby_hours: number;
 }
 
 interface HRInsightsCardProps {
@@ -15,11 +17,14 @@ interface HRInsightsCardProps {
   actionBar?: React.ReactNode;
 }
 
+const percent = (value: number | null) => (value === null ? "—" : `${value}%`);
+
 export const HRInsightsCard: React.FC<HRInsightsCardProps> = ({ insightsData, actionBar }) => (
-  <div className="grid gap-4 md:grid-cols-4">
+  <div className="grid items-start gap-4 md:grid-cols-4">
     <StatCard
       label="Overtime Increase"
-      value={`${insightsData.overtime_increase}%`}
+      value={percent(insightsData.overtime_increase)}
+      trend={insightsData.overtime_increase === null ? "Select a date range" : "vs previous period"}
       icon={TrendingUp}
       delay={0}
       glow="primary"
@@ -28,7 +33,8 @@ export const HRInsightsCard: React.FC<HRInsightsCardProps> = ({ insightsData, ac
     />
     <StatCard
       label="Leave Utilization"
-      value={`${insightsData.leave_utilization}%`}
+      value={percent(insightsData.leave_utilization)}
+      trend="Year to date"
       icon={CalendarDays}
       delay={0.05}
       glow="success"
@@ -36,8 +42,9 @@ export const HRInsightsCard: React.FC<HRInsightsCardProps> = ({ insightsData, ac
       valueColorClass="text-success"
     />
     <StatCard
-      label="Standby Coverage"
-      value={`${insightsData.standby_coverage}%`}
+      label="Standby Hours"
+      value={`${insightsData.standby_hours}h`}
+      trend="Approved"
       icon={ShieldCheck}
       delay={0.1}
       glow="warning"

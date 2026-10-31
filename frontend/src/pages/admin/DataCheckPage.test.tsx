@@ -19,7 +19,9 @@ const empty: OrphanReport = {
 
 const renderPage = () =>
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <MemoryRouter>
         <DataCheckPage />
       </MemoryRouter>
@@ -58,6 +60,16 @@ describe("DataCheckPage", () => {
     expect(await screen.findByText("Failed to run the data check")).toBeInTheDocument();
   });
 
+  it("does not claim everything is linked when the suggestions read failed", async () => {
+    vi.mocked(userService.getOrphans).mockResolvedValue(empty);
+    vi.mocked(userService.getTeamSuggestions).mockImplementation(() =>
+      Promise.reject(new Error("boom"))
+    );
+    renderPage();
+    expect(await screen.findByText("Team suggestions could not be loaded.")).toBeInTheDocument();
+    expect(screen.queryByText("Everything is linked")).not.toBeInTheDocument();
+  });
+
   it("shows suggested team moves even when the four checks are clean", async () => {
     vi.mocked(userService.getOrphans).mockResolvedValue(empty);
     vi.mocked(userService.getTeamSuggestions).mockResolvedValue([
@@ -75,7 +87,9 @@ describe("DataCheckPage", () => {
       },
     ]);
     renderPage();
-    expect(await screen.findByRole("heading", { name: /Suggested team moves/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /Suggested team moves/ })
+    ).toBeInTheDocument();
     expect(screen.queryByText("Everything is linked")).not.toBeInTheDocument();
   });
 });

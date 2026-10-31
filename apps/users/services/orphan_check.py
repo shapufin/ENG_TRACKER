@@ -7,24 +7,15 @@ from django.contrib.auth.models import User
 from django.db.models import Count, Q
 
 from apps.overtime.models import Client
-from apps.permissions.models import UserRole
 from apps.users.models import Team
-
-# Roles whose holders legitimately sit outside every team.
-NON_TEAM_ROLES = ('hr', 'hbpr', 'cr_admin', 'admin')
+from apps.users.services.non_team_roles import non_team_user_q
 
 
 def _users_without_team():
-    # Same three sources as the Admin Users role tabs: the role cache, the legacy HR flag
-    # (the legacy update path sets it without touching the cache) and the UserRole rows.
-    outside_team = Q(profile__is_hr_user=True) | Q(
-        pk__in=UserRole.objects.filter(is_active=True, role__code__in=NON_TEAM_ROLES).values('user_id')
-    )
-    for role in NON_TEAM_ROLES:
-        outside_team |= Q(profile__role_codes__icontains=role)
+    # Same three sources as the Admin Users role tabs (see non_team_roles.py).
     users = (
         User.objects.filter(is_active=True, is_staff=False, is_superuser=False)
-        .exclude(outside_team)
+        .exclude(non_team_user_q())
         # Single-condition excludes: "has a membership in an ACTIVE team", per related row.
         .exclude(profile__teams__is_active=True)
         .exclude(led_teams__is_active=True)
@@ -36,19 +27,59 @@ def _users_without_team():
     ]
 
 
+def _active_teams():
+    """Active teams with their active-member count (a deactivated account fills no slot)."""
+    return Team.objects.active().annotate(
+        active_member_total=Count('members', filter=Q(members__user__is_active=True), distinct=True)
+    )
+
+
 def _team_rows(queryset):
     return [
-        {'id': t.id, 'name': t.name, 'code': t.code, 'members_count': t.member_total}
-        for t in queryset.annotate(member_total=Count('members', distinct=True)).order_by('name')
+        {'id': t.id, 'name': t.name, 'code': t.code, 'members_count': t.active_member_total}
+        for t in queryset.order_by('name')
     ]
 
 
+def _teams_nobody_can_approve(teams):
+    """Active teams with neither an approval leader nor a member's own TL.
+
+    ``can_approve`` grants approval through ``Team.team_leader`` *and* through the
+    member's own ``italian_tl``/``albanian_tl``, so a team whose members have an
+    active TL does have approvers — reporting it would be a false alarm. A
+    deactivated TL approves nothing, so it does not count as coverage.
+    """
+    covered = Q(
+        members__user__is_active=True,
+        members__italian_tl__isnull=False,
+        members__italian_tl__is_active=True,
+    ) | Q(
+        members__user__is_active=True,
+        members__albanian_tl__isnull=False,
+        members__albanian_tl__is_active=True,
+    )
+    return teams.filter(
+        Q(team_leader__isnull=True) | Q(team_leader__is_active=False)
+    ).exclude(covered)
+
+
 def find_orphans():
-    teams = Team.objects.active()
-    clients = Client.objects.filter(is_active=True, assigned_users__isnull=True).order_by('name')
+    teams = _active_teams()
+    clients = (
+        Client.objects.filter(is_active=True)
+        .annotate(
+            active_assignees=Count(
+                'assigned_users', filter=Q(assigned_users__user__is_active=True), distinct=True
+            )
+        )
+        .filter(active_assignees=0)
+        .order_by('name')
+    )
     return {
         'users_without_team': _users_without_team(),
-        'teams_without_leader': _team_rows(teams.filter(team_leader__isnull=True)),
-        'empty_teams': _team_rows(teams.filter(members__isnull=True)),
+        # A deactivated leader keeps the FK (deactivation changes nothing else), but nobody
+        # approves their team's requests, so it belongs in this list.
+        'teams_without_leader': _team_rows(_teams_nobody_can_approve(teams)),
+        'empty_teams': _team_rows(teams.filter(active_member_total=0)),
         'unassigned_clients': [{'id': c.id, 'name': c.name, 'code': c.code} for c in clients],
     }

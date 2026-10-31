@@ -1084,8 +1084,9 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             return Response({'error': archived_message, 'teams': [archived_message]}, status=status.HTTP_400_BAD_REQUEST)
         team_change = None
         if add_teams and 'teams' not in data and 'team' not in data:
-            current = set(profile.teams.values_list('id', flat=True))
-            team_change = change_user_teams(profile, sorted(current | set(add_teams)), request=request)
+            # Join-only: never rewrite the set the caller did not see. Each missing membership
+            # is inserted (idempotent under the unique constraint), so concurrent adds both win.
+            team_change = change_user_teams(profile, add_teams, request=request, add_only=True)
         if 'teams' in data or 'team' in data:
             # One diff for both the list and the legacy single-team field (the single one wins,
             # as before). Empty / null clears every team.
@@ -1489,6 +1490,19 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
                 & ~Q(role_codes__icontains='cr_admin')
             ).distinct()
         return queryset
+
+    @action(detail=False, methods=['get'])
+    def assignment_counts(self, request):
+        """Totals for the HR TL-assignment tiles (the list itself is page-capped)."""
+        queryset = self.get_queryset()
+        return Response({
+            'total': queryset.count(),
+            'italian': queryset.filter(italian_tl__isnull=False).count(),
+            'albanian': queryset.filter(albanian_tl__isnull=False).count(),
+            'without_any': queryset.filter(
+                italian_tl__isnull=True, albanian_tl__isnull=True
+            ).count(),
+        })
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])
     def tech_facets(self, request):

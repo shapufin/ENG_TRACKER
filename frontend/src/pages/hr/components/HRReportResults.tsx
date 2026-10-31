@@ -39,9 +39,9 @@ interface LeaveItem {
   status_display?: string;
 }
 interface InsightsData {
-  overtime_increase: number;
-  leave_utilization: number;
-  standby_coverage: number;
+  overtime_increase: number | null;
+  leave_utilization: number | null;
+  standby_hours: number;
 }
 
 interface HRReportResultsProps {

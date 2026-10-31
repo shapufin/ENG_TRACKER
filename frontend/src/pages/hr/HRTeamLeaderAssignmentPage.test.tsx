@@ -114,7 +114,7 @@ describe("HRTeamLeaderAssignmentPage", () => {
       </MemoryRouter>
     );
     const card = (label: string) => screen.getByText(label).parentElement?.textContent;
-    expect(card("Employees")).toBe("Employees4");
+    expect(card("Assignable Employees")).toBe("Assignable Employees4");
     expect(card("With an Italian TL")).toBe("With an Italian TL2");
     expect(card("With an Albanian TL")).toBe("With an Albanian TL2");
     expect(card("Without any TL")).toBe("Without any TL1");

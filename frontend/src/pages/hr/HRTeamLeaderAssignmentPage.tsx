@@ -17,6 +17,7 @@ import type { AppColumnDef } from "@/components/ui/tableTypes";
 export const HRTeamLeaderAssignmentPage: React.FC = () => {
   const {
     profiles,
+    assignmentCounts,
     isLoading,
     techFacets,
     noTechCount,
@@ -55,13 +56,17 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
     }
   };
 
+  // Server totals (the list is page-capped); the loaded rows are only a fallback.
   const counts = useMemo(
     () => ({
-      italian: profiles.filter((p) => p.italian_tl).length,
-      albanian: profiles.filter((p) => p.albanian_tl).length,
-      none: profiles.filter((p) => !p.italian_tl && !p.albanian_tl).length,
+      total: assignmentCounts?.total ?? profiles.length,
+      italian: assignmentCounts?.italian ?? profiles.filter((p) => p.italian_tl).length,
+      albanian: assignmentCounts?.albanian ?? profiles.filter((p) => p.albanian_tl).length,
+      none:
+        assignmentCounts?.without_any ??
+        profiles.filter((p) => !p.italian_tl && !p.albanian_tl).length,
     }),
-    [profiles]
+    [assignmentCounts, profiles]
   );
 
   const columns = useMemo<AppColumnDef<UserProfile>[]>(
@@ -139,8 +144,8 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
         <>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
-              label="Employees"
-              value={profiles.length}
+              label="Assignable Employees"
+              value={counts.total}
               icon={Users}
               iconTone="accent"
               glow="primary"

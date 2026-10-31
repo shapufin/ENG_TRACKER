@@ -6,6 +6,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { userService } from "@/services/userService";
 import { handleApiError } from "@/lib/error-handler";
+import { plural } from "@/lib/plural";
 import type { TeamMoveSuggestion } from "@/types";
 
 /** Everything a membership change can leave stale: the Teams and Users pages, calendars and both checks. */
@@ -17,8 +18,6 @@ const STALE_KEYS = [
   ["admin", "orphans"],
   ["admin", "team-suggestions"],
 ] as const;
-
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** "Ana works Acme and nobody on her team does: add her to a team that does." One click, admin only;
  * nobody is added until the admin presses the button. */
@@ -78,6 +77,7 @@ export const SuggestedTeamMoves: React.FC<{ rows: TeamMoveSuggestion[] }> = ({ r
                       <>
                         Add to {team.name}
                         <span className="text-muted-foreground text-xs">
+                          {" · "}
                           {plural(team.sharing, "teammate")}
                         </span>
                       </>

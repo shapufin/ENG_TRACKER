@@ -189,6 +189,41 @@ class WhoIsOutTests(TrendsBase):
         leave(TODAY + timedelta(days=4), st="pending")
         self.assertEqual(self.build()["who_is_out"]["upcoming_leave_14d"], 2)
 
+    def test_upcoming_leave_ignores_deleted_rows_and_deactivated_users(self):
+        gone = User.objects.create_user("gone", password="x", is_active=False)
+        LeaveRequest.objects.create(
+            user=gone, request_type="vacation", start_date=TODAY + timedelta(days=1),
+            end_date=TODAY + timedelta(days=1), status="approved",
+        )
+        live = User.objects.create_user("live", password="x")
+        LeaveRequest.objects.create(
+            user=live, request_type="vacation", start_date=TODAY + timedelta(days=4),
+            end_date=TODAY + timedelta(days=4), status="approved", is_deleted=True,
+        )
+        self.assertEqual(self.build()["who_is_out"]["upcoming_leave_14d"], 0)
+
+
+class TeamComparisonAttributionTests(TrendsBase):
+    def test_hours_follow_an_active_team_when_the_first_alphabetical_team_is_archived(self):
+        retired = Team.objects.create(name="Aaa", code="AAA", is_active=False)
+        active = Team.objects.create(name="Zzz", code="ZZZ")
+        TeamMembership.objects.create(user_profile=self.emp.profile, team=retired)
+        TeamMembership.objects.create(user_profile=self.emp.profile, team=active)
+        self.ot(10)
+        rows = {r["name"]: r for r in self.build()["team_comparison"]}
+        self.assertNotIn("Aaa", rows)
+        self.assertEqual(rows["Zzz"]["overtime_hours"], 10.0)
+
+    def test_a_multi_team_user_is_counted_once(self):
+        first = Team.objects.create(name="First", code="F")
+        second = Team.objects.create(name="Second", code="S")
+        TeamMembership.objects.create(user_profile=self.emp.profile, team=first)
+        TeamMembership.objects.create(user_profile=self.emp.profile, team=second)
+        self.ot(10)
+        rows = {r["name"]: r for r in self.build()["team_comparison"]}
+        self.assertEqual(rows["First"]["overtime_hours"], 10.0)
+        self.assertEqual(rows["Second"]["overtime_hours"], 0.0)
+
 
 class QueryCountTests(TrendsBase):
     def _count(self):

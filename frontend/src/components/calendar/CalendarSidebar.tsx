@@ -95,6 +95,9 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
 
   const visibleList = expanded ? filteredUsers : filteredUsers.slice(0, 8);
   const hiddenCount = Math.max(0, filteredUsers.length - visibleList.length);
+  // A client and tech that no single person has together empties the calendar; say why.
+  const matchedIds = matchingUserIds(allUsers, facets);
+  const noMatches = matchedIds !== null && matchedIds.length === 0;
 
   if (collapsed) {
     return (
@@ -123,6 +126,9 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
         }}
       />
       <CalendarSidebarFacets users={allUsers} selection={facets} onChange={applyFacets} />
+      {noMatches && (
+        <p className="text-muted-foreground px-3 pb-2 text-xs">No one matches these filters.</p>
+      )}
       <CalendarSidebarUserList
         users={visibleList}
         visibleUsers={visibleUsers}

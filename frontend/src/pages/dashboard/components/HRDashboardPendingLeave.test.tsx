@@ -19,10 +19,14 @@ const item = {
 };
 
 describe("HRDashboardPendingLeave", () => {
-  it("renders an accessible label on the amber pending dot (not color-only)", () => {
+  it("shows when the leave was requested for, so HR can act on it", () => {
     render(<HRDashboardPendingLeave items={[item]} total={1} />);
-    const dot = screen.getByRole("status");
-    expect(dot).toHaveAttribute("aria-label", "Pending");
+    expect(screen.getByText("02/11/2026 – 04/11/2026")).toBeInTheDocument();
+  });
+
+  it("keeps the amber dot decorative: the section title and badge already say pending", () => {
+    render(<HRDashboardPendingLeave items={[item]} total={1} />);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("renders no status dot when there are no pending requests", () => {

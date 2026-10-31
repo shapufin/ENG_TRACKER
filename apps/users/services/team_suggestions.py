@@ -8,18 +8,25 @@ disappears by itself once a teammate shares the client or the person joins such 
 from apps.overtime.models import Client
 from apps.users.models import Team, UserProfile
 from apps.users.models.core import TeamMembership
+from apps.users.services.non_team_roles import non_team_user_q
 
 MAX_TEAMS_PER_CLIENT = 3
 
 
 def _candidate_profiles():
     """``{profile_id: {client_id}}`` for active people on active clients (staff and superusers excluded)."""
-    pairs = UserProfile.clients.through.objects.filter(
-        client__is_active=True,
-        userprofile__user__is_active=True,
-        userprofile__user__is_staff=False,
-        userprofile__user__is_superuser=False,
-    ).values_list('userprofile_id', 'client_id')
+    pairs = (
+        UserProfile.clients.through.objects.filter(
+            client__is_active=True,
+            userprofile__user__is_active=True,
+            userprofile__user__is_staff=False,
+            userprofile__user__is_superuser=False,
+        )
+        # HR/HBPR/CR/admin holders legitimately sit outside every team (same rule as
+        # the data check): never suggest a team move for them.
+        .exclude(non_team_user_q('userprofile__user__'))
+        .values_list('userprofile_id', 'client_id')
+    )
     clients_of = {}
     for profile_id, client_id in pairs:
         clients_of.setdefault(profile_id, set()).add(client_id)
@@ -38,10 +45,19 @@ def suggest_team_moves():
     ).values_list('team_id', 'user_profile_id'):
         teams_of.setdefault(profile_id, set()).add(team_id)
 
-    # How many people in each team work each client (every active person, not only the candidates).
-    everyone = UserProfile.clients.through.objects.filter(
-        client__is_active=True, userprofile__user__is_active=True
-    ).values_list('userprofile_id', 'client_id')
+    # How many people in each team work each client (every active person, not only the
+    # candidates). Staff and superusers are not teammates for this purpose: they are not
+    # candidates either, and a system admin assigned to a client must not hide a real move.
+    everyone = (
+        UserProfile.clients.through.objects.filter(
+            client__is_active=True,
+            userprofile__user__is_active=True,
+            userprofile__user__is_staff=False,
+            userprofile__user__is_superuser=False,
+        )
+        .exclude(non_team_user_q('userprofile__user__'))
+        .values_list('userprofile_id', 'client_id')
+    )
     holders = {}  # (team_id, client_id) -> number of members on that client
     for profile_id, client_id in everyone:
         for team_id in teams_of.get(profile_id, ()):
@@ -72,21 +88,27 @@ def suggest_team_moves():
     result = []
     for profile_id, rows in found.items():
         user = profiles[profile_id].user
+        # A client or team archived between the reads is simply not suggested (read-only report).
+        suggestions = []
+        for client_id, options in rows:
+            client = clients.get(client_id)
+            if client is None:
+                continue
+            suggestions.append({
+                'client': {'id': client_id, 'name': client.name, 'code': client.code},
+                'teams': [
+                    {'id': tid, 'name': teams[tid].name, 'code': teams[tid].code, 'sharing': count}
+                    for tid, count in options if tid in teams
+                ],
+            })
+        if not suggestions:
+            continue
         result.append({
             'user_id': user.id,
             'username': user.username,
             'full_name': user.get_full_name() or user.username,
             'team_ids': sorted(teams_of.get(profile_id, ())),
-            'suggestions': [
-                {
-                    'client': {'id': client_id, 'name': clients[client_id].name, 'code': clients[client_id].code},
-                    'teams': [
-                        {'id': tid, 'name': teams[tid].name, 'code': teams[tid].code, 'sharing': count}
-                        for tid, count in options
-                    ],
-                }
-                for client_id, options in rows
-            ],
+            'suggestions': suggestions,
         })
     result.sort(key=lambda row: row['username'])
     return result

@@ -327,7 +327,7 @@ export const PayrollWagesPage: React.FC = () => {
     >
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
-          label="Total Employees"
+          label="Total People"
           value={totalCount}
           icon={Users2}
           iconTone="accent"

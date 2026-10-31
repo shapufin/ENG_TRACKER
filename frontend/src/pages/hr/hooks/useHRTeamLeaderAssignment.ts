@@ -37,6 +37,9 @@ export const useHRTeamLeaderAssignment = () => {
         tech: techParam,
         tech_level: techLevelParam,
         no_tech: noTechOnly || undefined,
+        // The table has no pager: without this the list (and every count derived
+        // from it) silently stops at the paginator's 200-row page.
+        page_size: 1000,
       }),
     refetchOnMount: true,
     staleTime: 60000,
@@ -46,6 +49,15 @@ export const useHRTeamLeaderAssignment = () => {
   const { data: techFacets } = useQuery({
     queryKey: ["hr", "team-leader-assignment", "tech-facets"],
     queryFn: () => userService.getTechFacets({ role: ASSIGNABLE_ROLE }),
+    refetchOnMount: true,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Whole-population totals for the tiles: `profiles` is page-capped.
+  const { data: assignmentCounts } = useQuery({
+    queryKey: ["hr", "team-leader-assignment", "counts"],
+    queryFn: () => userService.getAssignmentCounts({ role: ASSIGNABLE_ROLE }),
     refetchOnMount: true,
     staleTime: 60000,
     refetchOnWindowFocus: false,
@@ -130,6 +142,7 @@ export const useHRTeamLeaderAssignment = () => {
 
   return {
     profiles: profiles?.results ?? [],
+    assignmentCounts,
     isLoading,
     isError,
     error,
