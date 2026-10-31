@@ -12,6 +12,7 @@ import type {
   UserStats,
   CalendarGroupStats,
   TeamLifecycle,
+  OrphanReport,
   TeamLinkWarning,
 } from "@/types";
 
@@ -415,6 +416,11 @@ export const userService = {
     const { data } = await api.post<{ id: number; is_active: boolean }>(
       `/users/teams/${id}/unarchive/`
     );
+    return data;
+  },
+
+  async getOrphans(): Promise<OrphanReport> {
+    const { data } = await api.get<OrphanReport>("/users/teams/orphans/");
     return data;
   },
 

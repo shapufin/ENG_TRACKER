@@ -40,6 +40,7 @@ from .serializers import (
 from .services.hbpr_scope import get_hbpr_scope
 from .services.profile_loading import with_profile_list_loading
 from .services import team_lifecycle
+from .services.orphan_check import find_orphans
 from .services.team_membership import change_user_teams, tl_link_followup
 from .services.team_leaders import derive_team_tls
 from .services.tokens import revoke_refresh_tokens
@@ -2116,6 +2117,11 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         """What the lifecycle dialog shows: counts, blockers, last activity, purge date."""
         return Response(team_lifecycle.lifecycle_summary(self.get_object()))
 
+    @action(detail=False, methods=['get'])
+    def orphans(self, request):
+        """Users, teams and clients nothing points at (read-only, admin page "Data check")."""
+        return Response(find_orphans())
+
     def get_permissions(self):
         # Already handled by SuperuserPermissionMixin for superusers.
         # Team writes are admin-only: the HR-native /hr/teams page and its
@@ -2124,7 +2130,7 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         # IsAuthenticated - HR Reports uses list_for_reports.
         if self.action in (
             'create', 'update', 'partial_update', 'destroy',
-            'archive', 'unarchive', 'lifecycle',
+            'archive', 'unarchive', 'lifecycle', 'orphans',
             'bulk_update_calendar_group', 'rename_calendar_group',
             'clear_calendar_group',
         ):

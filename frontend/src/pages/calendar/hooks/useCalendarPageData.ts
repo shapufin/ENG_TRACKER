@@ -98,6 +98,7 @@ export const useCalendarPageData = (
     handleSidebarToggle,
     toggleUser,
     handleResetVisibleUsers,
+    setVisibleUserIds,
   } = useUserVisibility({ allUsers });
 
   const {
@@ -302,6 +303,7 @@ export const useCalendarPageData = (
     handleSidebarToggle,
     toggleUser,
     handleResetVisibleUsers,
+    setVisibleUserIds,
     groupedUsersWithNames,
     workspaceUsersPartial,
     events,

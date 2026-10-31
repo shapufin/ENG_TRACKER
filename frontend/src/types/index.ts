@@ -105,6 +105,14 @@ export interface Team {
   updated_at: string;
 }
 
+/** Records nothing points at (admin "Data check"). */
+export interface OrphanReport {
+  users_without_team: Array<{ id: number; username: string; full_name: string }>;
+  teams_without_leader: Array<{ id: number; name: string; code: string; members_count: number }>;
+  empty_teams: Array<{ id: number; name: string; code: string; members_count: number }>;
+  unassigned_clients: Array<{ id: number; name: string; code: string }>;
+}
+
 /** What archiving, purging or deleting a team would touch (admin endpoint). */
 export interface TeamLifecycle {
   id: number;
