@@ -11,7 +11,9 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
   const avgOvertime = hrStats?.avg_overtime_hours || 0;
   const activeTeams = hrStats?.active_teams_count || 0;
   const totalRequests = (hrStats?.pending_overtime || 0) + (hrStats?.pending_standby || 0);
-  const workforce = hrStats?.total_users || 0;
+  // Active accounts, matching the admin dashboard's KPI (inactive accounts
+  // would inflate headcount; the API sends both counts).
+  const workforce = hrStats?.active_users ?? hrStats?.total_users ?? 0;
 
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -84,7 +86,7 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
             <span className="font-medium tabular-nums text-muted-foreground">
               {workforce} users
             </span>
-            <span className="text-muted-foreground">Total headcount</span>
+            <span className="text-muted-foreground">Active headcount</span>
           </>
         }
       />

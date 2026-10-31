@@ -20,7 +20,7 @@ from apps.standby.models import StandbyLog
 from apps.users.models import Team
 from core.utils.timezone_local import business_today
 
-from .admin_trends import _monthly_hours, _month_start, _window
+from .admin_trends import _monthly_hours, _window
 
 User = get_user_model()
 

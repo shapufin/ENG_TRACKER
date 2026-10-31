@@ -12,7 +12,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
-from django.db import models, transaction
+from django.db import transaction
 from core.mixins.cache import CacheInvalidationMixin
 from core.maintenance import clear_maintenance_cache
 from core.mixins.permissions import (
