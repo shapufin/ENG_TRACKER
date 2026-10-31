@@ -6,6 +6,7 @@ from apps.standby.models import StandbyLog
 from apps.leave_management.models import LeaveRequest
 from apps.dashboard.models.calendar import CalendarWorkspace
 from core.mixins.permissions import has_hr_role, has_team_leader_role
+from apps.users.services.workforce import workforce_filter
 
 REPORT_TYPE_CHOICES = (
     ('overtime', 'overtime'),
@@ -69,19 +70,12 @@ class UnifiedReportFilter(filters.FilterSet):
 
     # Public API -----------------------------------------------------------------
     def get_filtered_querysets(self):
-        # Org reports are about active employees: soft-deleted rows, deactivated
-        # accounts and staff/superusers are not part of the workforce (the same
-        # rule the data check and wage assignment use).
-        base = {'is_deleted': False, 'user__is_active': True}
-        overtime_qs = OvertimeLog.objects.filter(**base).exclude(
-            user__is_staff=True, user__is_superuser=True
-        )
-        standby_qs = StandbyLog.objects.filter(**base).exclude(
-            user__is_staff=True, user__is_superuser=True
-        )
-        leave_qs = LeaveRequest.objects.filter(**base).exclude(
-            user__is_staff=True, user__is_superuser=True
-        )
+        # Org reports are about the workforce: soft-deleted rows, deactivated accounts and
+        # staff/superusers are not part of it (the rule the data check and wages use).
+        base = {'is_deleted': False, **workforce_filter('user__')}
+        overtime_qs = OvertimeLog.objects.filter(**base)
+        standby_qs = StandbyLog.objects.filter(**base)
+        leave_qs = LeaveRequest.objects.filter(**base)
 
         overtime_qs = self._apply_temporal_filters(overtime_qs, 'date')
         standby_qs = self._apply_temporal_filters(standby_qs, 'date')

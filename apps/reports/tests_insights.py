@@ -4,7 +4,11 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
+from django.utils import timezone
+
 from apps.leave_management.models import LeaveBalance
+from apps.standby.models import StandbyLog
+from core.utils.timezone_local import business_today
 from apps.users.models import UserProfile
 
 URL = '/api/reports/insights/'
@@ -75,3 +79,14 @@ class InsightsTests(APITestCase):
         res = self.client.get(URL)
         self.assertEqual(res.status_code, 200, res.data)
         self.assertEqual(res.data['leave_utilization'], 25.0)
+
+    def test_staff_only_admins_are_not_part_of_the_workforce_figures(self):
+        # exclude(is_staff=True, is_superuser=True) only drops users that are BOTH.
+        admin = make_user('ins_staff_only', is_staff=True)
+        for user, hours in ((admin, '10'), (self.emp, '4')):
+            StandbyLog.objects.create(
+                user=user, date=business_today(), hours=Decimal(hours),
+                status='approved', submitted_at=timezone.now(),
+            )
+        res = self.client.get(URL)
+        self.assertEqual(res.data['standby_hours'], 4.0)

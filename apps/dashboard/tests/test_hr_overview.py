@@ -124,8 +124,26 @@ class DataTests(HrOverviewBase):
 
     def test_month_average_divides_this_months_approved_hours_by_active_users(self):
         res = self.get(self.hr)
-        active = res.data["stats"]["active_users"]
-        self.assertEqual(res.data["month_avg_overtime_hours"], 2.5 / active)
+        # Workforce = hr, emp, other; the staff account is not a person who works overtime.
+        self.assertEqual(res.data["month_avg_overtime_hours"], 2.5 / 3)
+
+    def test_staff_and_deactivated_accounts_stay_out_of_the_hr_figures(self):
+        gone = User.objects.create_user("gone", password="x", is_active=False)
+        for user in (self.staff, gone):
+            OvertimeLog.objects.create(
+                user=user, client=self.client_obj, date=date.today(), hours=Decimal("9"),
+                status="approved", submitted_at=timezone.now(),
+            )
+            LeaveRequest.objects.create(
+                user=user, request_type="vacation", status="pending",
+                start_date=_weekday(date.today() + timedelta(days=30)),
+                end_date=_weekday(date.today() + timedelta(days=31)),
+                submitted_at=timezone.now(),
+            )
+        res = self.get(self.hr)
+        self.assertEqual(res.data["month_avg_overtime_hours"], 2.5 / 3)
+        self.assertEqual({r["user_name"] for r in res.data["recent_overtime"]}, {"Ot Her"})
+        self.assertEqual(res.data["pending_leave_total"], 1)
 
     def test_pending_leave_only_pending(self):
         LeaveRequest.objects.create(

@@ -31,6 +31,7 @@ from core.utils.csv_safe import xlsx_safe_row
 from .filters import UnifiedReportFilter, apply_visibility_constraints
 from .services.export_service import export_service, ExportConfig
 from core.utils.timezone_local import business_today
+from apps.users.services.workforce import workforce_filter
 
 logger = logging.getLogger(__name__)
 
@@ -908,8 +909,8 @@ class InsightsView(HbprBlockedMixin, APIView):
         from apps.leave_management.models import LeaveBalance
         year = end_date.year if end_date else business_today().year
         balances_qs = LeaveBalance.objects.filter(
-            year=year, leave_type='vacation', is_deleted=False, user__is_active=True
-        ).exclude(user__is_staff=True, user__is_superuser=True)
+            year=year, leave_type='vacation', is_deleted=False, **workforce_filter('user__')
+        )
         balances = apply_visibility_constraints(balances_qs, request.user).aggregate(
             total=Sum('total_days'), used=Sum('used_days')
         )
