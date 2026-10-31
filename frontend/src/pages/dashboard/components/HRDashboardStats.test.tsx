@@ -15,12 +15,13 @@ describe("HRDashboardStats", () => {
       active_teams_count: 3,
       pending_overtime: 2,
       pending_standby: 1,
+      pending_leaves: 4,
       total_users: 10,
     };
     render(<HRDashboardStats hrStats={hrStats} />);
     expect(getValueByTitle("Avg. Overtime")).toContain("5.5h");
     expect(getValueByTitle("Active Teams")).toContain("3");
-    expect(getValueByTitle("Total Requests")).toContain("3");
+    expect(getValueByTitle("Pending Requests")).toContain("7");
     expect(getValueByTitle("Workforce")).toContain("10");
   });
 
@@ -28,7 +29,7 @@ describe("HRDashboardStats", () => {
     render(<HRDashboardStats hrStats={{}} />);
     expect(getValueByTitle("Avg. Overtime")).toContain("0h");
     expect(getValueByTitle("Active Teams")).toContain("0");
-    expect(getValueByTitle("Total Requests")).toContain("0");
+    expect(getValueByTitle("Pending Requests")).toContain("0");
     expect(getValueByTitle("Workforce")).toContain("0");
   });
 
@@ -38,6 +39,7 @@ describe("HRDashboardStats", () => {
       active_teams_count: 3,
       pending_overtime: 2,
       pending_standby: 1,
+      pending_leaves: 4,
       total_users: 10,
     };
     const { container } = render(<HRDashboardStats hrStats={hrStats} />);
@@ -45,13 +47,13 @@ describe("HRDashboardStats", () => {
       container.querySelectorAll<HTMLElement>('[data-testid="stat-card-progress-fill"]')
     );
     expect(fills.length).toBe(4);
-    // Card order: Avg. Overtime, Active Teams, Total Requests, Workforce.
+    // Card order: Avg. Overtime, Active Teams, Pending Requests, Workforce.
     // Avg. Overtime: min(100, round(5.5 / 4 * 100)) = 100
     expect(fills[0].style.width).toBe("100%");
     // Active Teams: static status bar.
     expect(fills[1].style.width).toBe("100%");
-    // Total Requests: pending_overtime share = round(2 / 3 * 100) = 67.
-    expect(fills[2].style.width).toBe("67%");
+    // Pending Requests: overtime's share of all pending = round(2 / 7 * 100) = 29.
+    expect(fills[2].style.width).toBe("29%");
     // Workforce: static status bar.
     expect(fills[3].style.width).toBe("100%");
   });
@@ -74,6 +76,7 @@ describe("HRDashboardStats", () => {
       active_teams_count: 3,
       pending_overtime: 2,
       pending_standby: 1,
+      pending_leaves: 4,
       total_users: 10,
     };
     const { container } = render(<HRDashboardStats hrStats={hrStats} />);
@@ -83,6 +86,15 @@ describe("HRDashboardStats", () => {
     expect(screen.getByText("3 teams")).toBeInTheDocument();
     expect(screen.getByText("2 overtime")).toBeInTheDocument();
     expect(screen.getByText("1 standby")).toBeInTheDocument();
+    expect(screen.getByText("4 leave")).toBeInTheDocument();
     expect(screen.getByText("10 users")).toBeInTheDocument();
+  });
+
+  it("counts pending leave, so the tile equals the pipeline's pending figure", () => {
+    // Same numbers the pipeline card shows as Pending (overtime + standby + leave).
+    const hrStats = { pending_overtime: 8, pending_standby: 6, pending_leaves: 6 };
+    render(<HRDashboardStats hrStats={hrStats} />);
+    expect(getValueByTitle("Pending Requests")).toContain("20");
+    expect(screen.queryByText("Total Requests")).not.toBeInTheDocument();
   });
 });
