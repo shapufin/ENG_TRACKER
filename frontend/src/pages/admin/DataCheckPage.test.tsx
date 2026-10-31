@@ -6,7 +6,9 @@ import { DataCheckPage } from "./DataCheckPage";
 import { userService } from "@/services/userService";
 import type { OrphanReport } from "@/types";
 
-vi.mock("@/services/userService", () => ({ userService: { getOrphans: vi.fn() } }));
+vi.mock("@/services/userService", () => ({
+  userService: { getOrphans: vi.fn(), getTeamSuggestions: vi.fn() },
+}));
 
 const empty: OrphanReport = {
   users_without_team: [],
@@ -27,6 +29,7 @@ const renderPage = () =>
 describe("DataCheckPage", () => {
   beforeEach(() => {
     vi.mocked(userService.getOrphans).mockReset();
+    vi.mocked(userService.getTeamSuggestions).mockReset().mockResolvedValue([]);
   });
 
   it("says everything is linked when there is nothing to fix", async () => {
@@ -53,5 +56,26 @@ describe("DataCheckPage", () => {
     vi.mocked(userService.getOrphans).mockImplementation(() => Promise.reject(new Error("boom")));
     renderPage();
     expect(await screen.findByText("Failed to run the data check")).toBeInTheDocument();
+  });
+
+  it("shows suggested team moves even when the four checks are clean", async () => {
+    vi.mocked(userService.getOrphans).mockResolvedValue(empty);
+    vi.mocked(userService.getTeamSuggestions).mockResolvedValue([
+      {
+        user_id: 5,
+        username: "ana",
+        full_name: "Ana Alpha",
+        team_ids: [1],
+        suggestions: [
+          {
+            client: { id: 10, name: "Acme", code: "ACM" },
+            teams: [{ id: 2, name: "Gamma", code: "GAM", sharing: 2 }],
+          },
+        ],
+      },
+    ]);
+    renderPage();
+    expect(await screen.findByRole("heading", { name: /Suggested team moves/ })).toBeInTheDocument();
+    expect(screen.queryByText("Everything is linked")).not.toBeInTheDocument();
   });
 });

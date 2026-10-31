@@ -101,6 +101,8 @@ export interface Team {
   is_active?: boolean;
   archived_at?: string | null;
   archived_by?: number | null;
+  /** Why an active team cannot be archived yet; empty means it can. Only the team list sends it. */
+  archive_blockers?: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -111,6 +113,19 @@ export interface OrphanReport {
   teams_without_leader: Array<{ id: number; name: string; code: string; members_count: number }>;
   empty_teams: Array<{ id: number; name: string; code: string; members_count: number }>;
   unassigned_clients: Array<{ id: number; name: string; code: string }>;
+}
+
+/** Someone works a client nobody on their own teams works (admin "Data check"). */
+export interface TeamMoveSuggestion {
+  user_id: number;
+  username: string;
+  full_name: string;
+  /** Active teams the person is in now, so a move can append to them. */
+  team_ids: number[];
+  suggestions: Array<{
+    client: { id: number; name: string; code: string };
+    teams: Array<{ id: number; name: string; code: string; sharing: number }>;
+  }>;
 }
 
 /** What archiving, purging or deleting a team would touch (admin endpoint). */

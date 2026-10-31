@@ -41,6 +41,7 @@ from .services.hbpr_scope import get_hbpr_scope
 from .services.profile_loading import with_profile_list_loading
 from .services import team_lifecycle
 from .services.orphan_check import find_orphans
+from .services.team_suggestions import suggest_team_moves
 from .services.team_membership import change_user_teams, tl_link_followup
 from .services.team_leaders import derive_team_tls
 from .services.tokens import revoke_refresh_tokens
@@ -1982,6 +1983,10 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
             # Teams are few: derive every team's IT/AL TL in one pass instead
             # of one query pair per row.
             context['derived_team_tls'] = derive_team_tls()
+            # Same pass for the "why can't I archive this" hint on each row.
+            context['archive_blockers'] = team_lifecycle.archive_blockers_bulk(
+                Team.objects.active().select_related('team_leader')
+            )
         return context
 
     def get_queryset(self):
@@ -2122,6 +2127,11 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         """Users, teams and clients nothing points at (read-only, admin page "Data check")."""
         return Response(find_orphans())
 
+    @action(detail=False, methods=['get'])
+    def suggestions(self, request):
+        """People who work a client nobody on their teams works, with the teams that do (read-only)."""
+        return Response(suggest_team_moves())
+
     def get_permissions(self):
         # Already handled by SuperuserPermissionMixin for superusers.
         # Team writes are admin-only: the HR-native /hr/teams page and its
@@ -2130,7 +2140,7 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         # IsAuthenticated - HR Reports uses list_for_reports.
         if self.action in (
             'create', 'update', 'partial_update', 'destroy',
-            'archive', 'unarchive', 'lifecycle', 'orphans',
+            'archive', 'unarchive', 'lifecycle', 'orphans', 'suggestions',
             'bulk_update_calendar_group', 'rename_calendar_group',
             'clear_calendar_group',
         ):

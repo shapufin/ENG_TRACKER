@@ -13,6 +13,7 @@ import type {
   CalendarGroupStats,
   TeamLifecycle,
   OrphanReport,
+  TeamMoveSuggestion,
   TeamLinkWarning,
 } from "@/types";
 
@@ -416,6 +417,11 @@ export const userService = {
     const { data } = await api.post<{ id: number; is_active: boolean }>(
       `/users/teams/${id}/unarchive/`
     );
+    return data;
+  },
+
+  async getTeamSuggestions(): Promise<TeamMoveSuggestion[]> {
+    const { data } = await api.get<TeamMoveSuggestion[]>("/users/teams/suggestions/");
     return data;
   },
 
