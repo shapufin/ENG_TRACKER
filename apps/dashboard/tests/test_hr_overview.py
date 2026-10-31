@@ -122,6 +122,11 @@ class DataTests(HrOverviewBase):
         self.assertEqual(series[-1]["overtime"], 2.5)
         self.assertEqual(series[-1]["standby"], 4.0)
 
+    def test_month_average_divides_this_months_approved_hours_by_active_users(self):
+        res = self.get(self.hr)
+        active = res.data["stats"]["active_users"]
+        self.assertEqual(res.data["month_avg_overtime_hours"], 2.5 / active)
+
     def test_pending_leave_only_pending(self):
         LeaveRequest.objects.create(
             user=self.other, request_type="vacation", status="approved",

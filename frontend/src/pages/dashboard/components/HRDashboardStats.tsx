@@ -34,7 +34,7 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
             <span className="font-medium tabular-nums text-muted-foreground">
               {avgOvertime.toFixed(1)}h average
             </span>
-            <span className="text-muted-foreground">Company-wide</span>
+            <span className="text-muted-foreground">This month</span>
           </>
         }
       />

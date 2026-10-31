@@ -77,6 +77,21 @@ class ArchiveBlockersBulkTests(APITestCase):
         self.assertIn('sub-team', rows['PAR']['archive_blockers'][0])
         self.assertIsNone(rows['GON']['archive_blockers'])
 
+    def test_only_admins_get_blockers_they_carry_pending_counts_and_hbpr_status(self):
+        # Pending counts are confidential (team confidentiality ruling): only the people who can archive see them.
+        hr = make_user('hrviewer')
+        hr.profile.is_hr_user = True
+        hr.profile.save()
+        for viewer in (make_user('plain'), self.leader, self.hbpr_leader, hr):
+            self.client.force_authenticate(viewer)
+            resp = self.client.get(TEAMS)
+            self.assertEqual(resp.status_code, 200, viewer.username)
+            for row in resp.data['results']:
+                self.assertIsNone(row['archive_blockers'], (viewer.username, row['code']))
+        self.client.force_authenticate(make_user('root', is_superuser=True))
+        rows = {r['code']: r for r in self.client.get(TEAMS).data['results']}
+        self.assertIn('sub-team', rows['PAR']['archive_blockers'][0])
+
     def test_detail_does_not_compute_blockers(self):
         resp = self.client.get(f'{TEAMS}{self.parent.pk}/')
         self.assertIsNone(resp.data['archive_blockers'])

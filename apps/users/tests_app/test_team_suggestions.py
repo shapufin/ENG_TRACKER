@@ -91,6 +91,38 @@ class SuggestTeamMovesTests(APITestCase):
             self.assertIsNone(mine(rows, user), user.username)
 
 
+class InactiveTeammateTests(APITestCase):
+    def setUp(self):
+        self.acme = Client.objects.create(name='Acme', code='ACM')
+        self.alpha = Team.objects.create(name='Alpha', code='ALP')
+        self.gamma = Team.objects.create(name='Gamma', code='GAM')
+        self.ana = make_user('ana')
+        self.ana.profile.teams.add(self.alpha)
+        self.ana.profile.clients.add(self.acme)
+        self.bob = make_user('bob')
+        self.bob.profile.teams.add(self.gamma)
+        self.bob.profile.clients.add(self.acme)
+
+    def deactivate(self, user):
+        user.is_active = False
+        user.save()
+
+    def test_a_deactivated_teammate_does_not_hide_the_suggestion(self):
+        gone = make_user('gone')
+        gone.profile.teams.add(self.alpha)
+        gone.profile.clients.add(self.acme)
+        self.deactivate(gone)
+        self.assertIsNotNone(mine(suggest_team_moves(), self.ana))
+
+    def test_a_deactivated_member_is_not_counted_as_sharing(self):
+        gone = make_user('gone')
+        gone.profile.teams.add(self.gamma)
+        gone.profile.clients.add(self.acme)
+        self.deactivate(gone)
+        teams = mine(suggest_team_moves(), self.ana)['suggestions'][0]['teams']
+        self.assertEqual([(t['id'], t['sharing']) for t in teams], [(self.gamma.id, 1)])
+
+
 class SuggestionsEndpointTests(APITestCase):
     def test_admin_gets_rows_and_a_regular_user_is_refused(self):
         self.client.force_authenticate(make_user('adm', is_staff=True))

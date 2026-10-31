@@ -53,4 +53,17 @@ describe("SuggestedTeamMoves", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add Ana Alpha to Gamma" }));
     await waitFor(() => expect(userService.updateUser).toHaveBeenCalledWith(5, { add_teams: [2] }));
   });
+
+  it("marks only the pressed button as adding while every button stays disabled", async () => {
+    vi.mocked(userService.updateUser).mockReturnValue(new Promise(() => {}));
+    renderRows();
+    fireEvent.click(screen.getByRole("button", { name: "Add Ana Alpha to Gamma" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Add Ana Alpha to Gamma" })).toHaveTextContent("Adding"),
+    );
+    expect(screen.getByRole("button", { name: "Add Ana Alpha to Gamma" })).toBeDisabled();
+    const other = screen.getByRole("button", { name: "Add Ana Alpha to Delta" });
+    expect(other).toBeDisabled();
+    expect(other).toHaveTextContent("Add to Delta");
+  });
 });

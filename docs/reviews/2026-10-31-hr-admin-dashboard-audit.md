@@ -75,3 +75,21 @@ This month/Trend) still populates.
 - `is_deleted` is barely exercised outside tests today (all delete paths hard-delete); the new
   filters are invariant-alignment, not a visible-bug fix.
 - The `.devin/audits` folder is gitignored; this file is the tracked record.
+
+## Follow-up audit of PRs #205-#210 (verified 2026-10-31)
+
+A second audit of the data-check, Teams-table and HR-dashboard work was checked against the code; all
+seven findings were real. Fixed on `fix/audit-followups-2026-10-31`:
+
+| Finding | Severity | Fix |
+|---|---|---|
+| `archive_blockers` sent to every caller of `GET /users/teams/` (also a confidentiality leak: pending counts, HBPR status) | HIGH (audit said MEDIUM, query cost only) | Staff and superusers only |
+| Suggestions counted deactivated users as teammates | MEDIUM (audit said HIGH; read-only endpoint) | `is_active` filter on both reads; dead `members_of` removed |
+| Orphan check ignored `is_hr_user` and `UserRole` rows | MEDIUM | Same three sources as the role tabs |
+| HR recent rows: `new Date(iso)` showed the previous day west of UTC | MEDIUM | `parseLocalDate` |
+| HR "Avg. Overtime" was lifetime under a monthly cap | MEDIUM | `month_avg_overtime_hours` |
+| All "Add to" buttons looked identical while one request ran | LOW | Pressed button reads "Adding…" |
+| `hrStats: any` | LOW | `Partial<DashboardStats>` |
+
+Rules recorded in `docs/workflow-invariants.md` items 38(g), 43(f), 44(d), 45(c)-(d).
+

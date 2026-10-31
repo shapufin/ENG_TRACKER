@@ -70,10 +70,18 @@ export const SuggestedTeamMoves: React.FC<{ rows: TeamMoveSuggestion[] }> = ({ r
                     aria-label={`Add ${row.full_name} to ${team.name}`}
                     onClick={() => addMutation.mutate({ row, teamId: team.id, teamName: team.name })}
                   >
-                    Add to {team.name}
-                    <span className="text-muted-foreground text-xs">
-                      {plural(team.sharing, "teammate")}
-                    </span>
+                    {addMutation.isPending &&
+                    addMutation.variables?.row.user_id === row.user_id &&
+                    addMutation.variables.teamId === team.id ? (
+                      "Adding…"
+                    ) : (
+                      <>
+                        Add to {team.name}
+                        <span className="text-muted-foreground text-xs">
+                          {plural(team.sharing, "teammate")}
+                        </span>
+                      </>
+                    )}
                   </Button>
                 ))}
               </span>

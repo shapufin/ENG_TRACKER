@@ -2003,10 +2003,14 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
             # Teams are few: derive every team's IT/AL TL in one pass instead
             # of one query pair per row.
             context['derived_team_tls'] = derive_team_tls()
-            # Same pass for the "why can't I archive this" hint on each row.
-            context['archive_blockers'] = team_lifecycle.archive_blockers_bulk(
-                Team.objects.active().select_related('team_leader')
-            )
+            # Same pass for the "why can't I archive this" hint on each row. Only the people who
+            # can archive get it: the reasons carry pending-request counts and HBPR status, which
+            # are confidential, and every authenticated user may list teams.
+            user = self.request.user
+            if user.is_staff or user.is_superuser:
+                context['archive_blockers'] = team_lifecycle.archive_blockers_bulk(
+                    Team.objects.active().select_related('team_leader')
+                )
         return context
 
     def get_queryset(self):

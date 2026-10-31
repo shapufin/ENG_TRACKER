@@ -98,10 +98,15 @@ def build_hr_overview() -> dict:
     today = business_today()
     counts = status_counts()
     pending_leave, pending_leave_total = _pending_leave()
+    stats = global_stats_dict(counts)
+    monthly = _monthly_series(today)
+    # `stats.avg_overtime_hours` is lifetime; the HR tile is a monthly figure (current month last).
+    active = stats["active_users"]
     return {
-        "stats": global_stats_dict(counts),
+        "stats": stats,
+        "month_avg_overtime_hours": monthly[-1]["overtime"] / active if active else 0.0,
         "status_counts": counts["total"],
-        "monthly_hours": _monthly_series(today),
+        "monthly_hours": monthly,
         "recent_overtime": _recent_hours(OvertimeLog),
         "recent_standby": _recent_hours(StandbyLog),
         "pending_leave": pending_leave,
