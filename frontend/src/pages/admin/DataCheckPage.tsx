@@ -8,6 +8,7 @@ import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { userService } from "@/services/userService";
+import { SuggestedTeamMoves } from "./components/SuggestedTeamMoves";
 
 interface CheckSectionProps {
   title: string;
@@ -59,6 +60,13 @@ export const DataCheckPage: React.FC = () => {
     refetchOnWindowFocus: false,
   });
 
+  // A failed suggestions read only hides that section: the checks above it still stand.
+  const { data: suggestions = [] } = useQuery({
+    queryKey: ["admin", "team-suggestions"],
+    queryFn: () => userService.getTeamSuggestions(),
+    refetchOnWindowFocus: false,
+  });
+
   if (isLoading) return <LoadingCard rows={4} className="min-h-[300px]" />;
   if (isError || !data) {
     return <ErrorCard title="Failed to run the data check" onRetry={() => void refetch()} />;
@@ -72,7 +80,7 @@ export const DataCheckPage: React.FC = () => {
 
   return (
     <PageShell title="Data check">
-      {total === 0 ? (
+      {total === 0 && suggestions.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}
           tone="success"
@@ -81,6 +89,11 @@ export const DataCheckPage: React.FC = () => {
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {suggestions.length > 0 && (
+            <div className="lg:col-span-2">
+              <SuggestedTeamMoves rows={suggestions} />
+            </div>
+          )}
           <CheckSection
             title="People without a team"
             hint="Active employees in no active team. They are missing from every team calendar."

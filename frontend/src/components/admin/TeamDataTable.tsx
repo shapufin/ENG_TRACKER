@@ -227,6 +227,9 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
                         shortLabel: "Archive",
                         icon: Archive,
                         tone: "warning" as const,
+                        // The server says why in the list itself, so the admin sees it before clicking.
+                        disabled: Boolean(team.archive_blockers?.length),
+                        disabledReason: team.archive_blockers?.join(" "),
                         onClick: () => onArchive(team),
                       },
                     ]

@@ -468,11 +468,12 @@ class TeamSerializer(serializers.ModelSerializer):
     members_count = serializers.SerializerMethodField()
     italian_tl = serializers.SerializerMethodField()
     albanian_tl = serializers.SerializerMethodField()
+    archive_blockers = serializers.SerializerMethodField()
 
     class Meta:
         model = Team
         fields = [
-            'id', 'name', 'code', 'description', 'calendar_group',
+            'id', 'name', 'code', 'description', 'calendar_group', 'archive_blockers',
             'parent_team', 'parent_team_id', 'parent_team_name',
             'team_leader', 'team_leader_id', 'italian_tl', 'albanian_tl',
             'sub_teams_count', 'members_count',
@@ -480,6 +481,10 @@ class TeamSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'is_active', 'archived_at', 'archived_by', 'created_at', 'updated_at']
+
+    def get_archive_blockers(self, obj):
+        """Why the team cannot be archived yet. Only the list computes it (batched, see the viewset)."""
+        return self.context.get('archive_blockers', {}).get(obj.id)
 
     def validate_calendar_group(self, value):
         return normalize_calendar_group(value)
