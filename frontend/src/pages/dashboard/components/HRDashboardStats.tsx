@@ -27,14 +27,7 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         value={`${avgOvertime.toFixed(1)}h`}
         icon={Clock}
         glow="primary"
-        footer={
-          <>
-            <span className="font-medium tabular-nums text-muted-foreground">
-              {avgOvertime.toFixed(1)}h average
-            </span>
-            <span className="text-muted-foreground">This month</span>
-          </>
-        }
+        footer={<span className="text-muted-foreground">This month</span>}
       />
       <StatCard
         label="Active Teams"
@@ -42,14 +35,7 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         icon={Users}
         glow="success"
         iconColorClass="text-success"
-        footer={
-          <>
-            <span className="font-medium tabular-nums text-muted-foreground">
-              {activeTeams} teams
-            </span>
-            <span className="text-muted-foreground">Active now</span>
-          </>
-        }
+        footer={<span className="text-muted-foreground">Active now</span>}
       />
       <StatCard
         label="Pending Requests"
@@ -60,8 +46,8 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         footer={
           // Three labels do not fit one row in a narrow (lg) card: wrap them as a group,
           // each label kept whole.
-          <span className="flex flex-wrap gap-x-3 gap-y-0.5 tabular-nums text-muted-foreground">
-            <span className="whitespace-nowrap font-medium">{pendingOvertime} overtime</span>
+          <span className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 tabular-nums">
+            <span className="font-medium whitespace-nowrap">{pendingOvertime} overtime</span>
             <span className="whitespace-nowrap">{pendingStandby} standby</span>
             <span className="whitespace-nowrap">{pendingLeave} leave</span>
           </span>
@@ -73,14 +59,7 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         icon={Activity}
         glow="destructive"
         iconColorClass="text-destructive"
-        footer={
-          <>
-            <span className="font-medium tabular-nums text-muted-foreground">
-              {workforce} users
-            </span>
-            <span className="text-muted-foreground">Active headcount</span>
-          </>
-        }
+        footer={<span className="text-muted-foreground">Active headcount</span>}
       />
     </div>
   );

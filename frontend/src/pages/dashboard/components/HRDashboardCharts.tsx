@@ -92,7 +92,7 @@ export const HRDashboardCharts: React.FC<HRDashboardChartsProps> = ({
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "12px",
                   color: "hsl(var(--card-foreground))",
-                  boxShadow: "0 10px 15px -3px rgba(0,0,0,0.5)",
+                  boxShadow: "var(--shadow-pop)",
                 }}
               />
               <Area
@@ -137,7 +137,7 @@ export const HRDashboardCharts: React.FC<HRDashboardChartsProps> = ({
                   "h-full rounded-full transition-[width] duration-700 motion-reduce:transition-none",
                   toneFillClass[bar.tone ?? "neutral"]
                 )}
-                style={{ width: `${total > 0 ? Math.round((bar.value / total) * 100) : 0}%` }}
+                style={{ width: `${total > 0 ? Math.max(bar.value > 0 ? 1 : 0, Math.round((bar.value / total) * 100)) : 0}%` }}
               />
             </div>
           </div>

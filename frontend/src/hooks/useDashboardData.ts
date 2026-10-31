@@ -4,7 +4,7 @@ import { dashboardService } from "@/services/dashboardService";
 import { overtimeService } from "@/services/overtimeService";
 import { standbyService } from "@/services/standbyService";
 import { leaveService } from "@/services/leaveService";
-import { parseLocalDate } from "@/lib/date-format-utils";
+import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { useDashboardCalculations } from "./useDashboardCalculations";
 import type { DashboardType } from "@/context/permission-context-base";
 import type { Tone } from "@/components/ui/tone";
@@ -220,11 +220,7 @@ export const useDashboardData = ({
     user: r.user_name,
     userInitials: r.user_name.slice(0, 2).toUpperCase(),
     duration: `${r.hours}h`,
-    date: parseLocalDate(r.date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }),
+    date: formatDateDDMMYYYY(r.date),
     status: r.status,
   });
   const hrRecentOvertime = useMemo(

@@ -425,7 +425,7 @@ describe("useDashboardData", () => {
     ]);
     expect(result.current.recentOvertimeTable[0].user).toBe("Al");
     // A date-only string is a local calendar day, never UTC midnight shifted a day back.
-    expect(result.current.recentOvertimeTable[0].date).toBe("Oct 1, 2026");
+    expect(result.current.recentOvertimeTable[0].date).toBe("01/10/2026");
     // The tile shows this month's average, not the lifetime figure from stats.
     expect(result.current.hrStats?.avg_overtime_hours).toBe(1.5);
     expect(overtimeService.getLogs).not.toHaveBeenCalled();

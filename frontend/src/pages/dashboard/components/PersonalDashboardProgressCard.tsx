@@ -300,7 +300,7 @@ export const PersonalDashboardProgressCard: React.FC<PersonalDashboardProgressCa
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "12px",
                   color: "hsl(var(--card-foreground))",
-                  boxShadow: "0 10px 15px -3px rgba(0,0,0,0.5)",
+                  boxShadow: "var(--shadow-pop)",
                 }}
               />
               <Bar

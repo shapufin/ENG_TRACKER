@@ -52,12 +52,13 @@ describe("HRDashboardStats", () => {
     const { container } = render(<HRDashboardStats hrStats={hrStats} />);
     const footers = container.querySelectorAll('[data-testid="stat-card-footer"]');
     expect(footers.length).toBe(4);
-    expect(screen.getByText("5.5h average")).toBeInTheDocument();
-    expect(screen.getByText("3 teams")).toBeInTheDocument();
+    // The headline already shows the number; the footer only adds context.
+    expect(screen.queryByText("5.5h average")).not.toBeInTheDocument();
+    expect(screen.getByText("This month")).toBeInTheDocument();
     expect(screen.getByText("2 overtime")).toBeInTheDocument();
     expect(screen.getByText("1 standby")).toBeInTheDocument();
     expect(screen.getByText("4 leave")).toBeInTheDocument();
-    expect(screen.getByText("10 users")).toBeInTheDocument();
+    expect(screen.getByText("Active headcount")).toBeInTheDocument();
   });
 
   it("counts pending leave, so the tile equals the pipeline's pending figure", () => {
