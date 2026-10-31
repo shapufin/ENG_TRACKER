@@ -338,6 +338,15 @@ export const ROUTES = [
     extraction: "admin-clients",
   },
   {
+    path: "/admin/data-check",
+    label: "admin-data-check",
+    layout: "admin",
+    roles: ["admin", "hr"],
+    expectedHeading: "Data check",
+    mockup: "NONE",
+    extraction: "NONE",
+  },
+  {
     path: "/admin/resource-access",
     label: "admin-resource-access",
     layout: "admin",
