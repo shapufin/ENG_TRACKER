@@ -49,6 +49,7 @@ tables with Approved=0 while the org had 46 pending / 36 approved requests.
 | `GlobalSettingsPage` 2FA test flaked at the 5 s default under full-suite load (pre-existing, reddened CI at random) | LOW | 15 s per-test budget on the page-level render, with a comment explaining why | file passes 11/11 isolated |
 | The HR view flashed zeros and two false empty states ("No approved hours", "All leave processed") while the aggregate loaded | MEDIUM | `LoadingCard` while `hr_overview` is in flight | `HRDashboardView.test.tsx` (3 cases) |
 | `useDashboardData` still fetched `global_stats` — dead weight that fired once for the transient "admin" selection before the redirect | LOW | query removed; `hrStats` now comes only from `hr_overview.stats` | `useDashboardData.test.ts` (hr + employee paths) |
+| The HR move orphaned four derivations computed on every dashboard render and read by nobody (`buildMonthlyData`, `buildStatusBars`, `buildOvertimeTable`, `buildStandbyTable`) | LOW | `815594b` — removed from `dashboardCalculations`, `useDashboardCalculations` and the hook's return | full suite 3900 OK (3 tests deleted with the functions) |
 
 ## Gates after the fixes
 
