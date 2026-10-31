@@ -25,6 +25,6 @@ describe("HRTeamLeaderBarList", () => {
 
   it("renders nothing extra for an empty list", () => {
     render(<HRTeamLeaderBarList leaders={[]} />);
-    expect(screen.getByText("Overtime by Team Leader")).toBeInTheDocument();
+    expect(screen.getByText("Hours by Team Leader")).toBeInTheDocument();
   });
 });

@@ -57,10 +57,6 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         icon={FileSpreadsheet}
         glow="warning"
         iconColorClass="text-warning"
-        progressPercent={
-          pendingRequests > 0 ? Math.round((pendingOvertime / pendingRequests) * 100) : 0
-        }
-        progressColorClass="bg-warning"
         footer={
           // Three labels do not fit one row in a narrow (lg) card: wrap them as a group,
           // each label kept whole.

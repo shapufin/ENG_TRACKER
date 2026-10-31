@@ -24,7 +24,7 @@ export const HRInsightsCard: React.FC<HRInsightsCardProps> = ({ insightsData, ac
     <StatCard
       label="Overtime Increase"
       value={percent(insightsData.overtime_increase)}
-      trend={insightsData.overtime_increase === null ? "Select a date range" : "vs previous period"}
+      trend={insightsData.overtime_increase === null ? "No previous period to compare" : "vs previous period"}
       icon={TrendingUp}
       delay={0}
       glow="primary"

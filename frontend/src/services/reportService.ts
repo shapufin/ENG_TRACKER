@@ -61,9 +61,9 @@ export interface DetailedUserReport {
 export interface DetailedReport {
   group_by: string;
   users: DetailedUserReport[];
-  overtime?: Array<{ month?: string; year?: string; total_hours: number; entries: number }>;
-  standby?: Array<{ month?: string; year?: string; total_hours: number; entries: number }>;
-  leave?: Array<{ month?: string; year?: string; total_days: number; entries: number }>;
+  overtime?: Array<{ time_unit: string; total_hours: number; entries: number }>;
+  standby?: Array<{ time_unit: string; total_hours: number; entries: number }>;
+  leave?: Array<{ time_unit: string; total_days: number; entries: number }>;
 }
 
 export interface TeamOption {

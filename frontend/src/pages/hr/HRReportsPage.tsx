@@ -9,6 +9,7 @@ import { handleApiError } from "@/lib/error-handler";
 import { HRReportFilters } from "./components/HRReportFilters";
 import { HRReportActionBar } from "./components/HRReportActionBar";
 import { HRReportResults } from "./components/HRReportResults";
+import { buildTrendData } from "./trendData";
 
 export const HRReportsPage: React.FC = () => {
   const [start, setStart] = useState("");
@@ -32,6 +33,7 @@ export const HRReportsPage: React.FC = () => {
     summaryLoading,
     detailedData,
     detailedLoading,
+    trendReport,
     leaveList,
     insightsData,
     topTeamLeadersData,
@@ -101,38 +103,7 @@ export const HRReportsPage: React.FC = () => {
     }
   };
 
-  // fallow-ignore-next-line complexity
-  const trendData = (() => {
-    if (!detailedData) return [];
-    const combined = new Map();
-    // fallow-ignore-next-line complexity
-    (detailedData.overtime || []).forEach((d: any) =>
-      combined.set(d.month || d.year, {
-        ...combined.get(d.month || d.year),
-        month: d.month || d.year,
-        overtime: d.total_hours || 0,
-      })
-    );
-    // fallow-ignore-next-line complexity
-    (detailedData.standby || []).forEach((d: any) =>
-      combined.set(d.month || d.year, {
-        ...combined.get(d.month || d.year),
-        month: d.month || d.year,
-        standby: d.total_hours || 0,
-      })
-    );
-    // fallow-ignore-next-line complexity
-    (detailedData.leave || []).forEach((d: any) =>
-      combined.set(d.month || d.year, {
-        ...combined.get(d.month || d.year),
-        month: d.month || d.year,
-        leave: (d.total_days || 0) * 8,
-      })
-    );
-    return Array.from(combined.values()).sort((a, b) =>
-      (a.month || "").localeCompare(b.month || "")
-    );
-  })();
+  const trendData = buildTrendData(trendReport);
 
   const isLoading = summaryLoading || detailedLoading;
 

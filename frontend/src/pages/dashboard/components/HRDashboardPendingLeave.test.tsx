@@ -24,6 +24,14 @@ describe("HRDashboardPendingLeave", () => {
     expect(screen.getByText("02/11/2026 – 04/11/2026")).toBeInTheDocument();
   });
 
+  it("pluralises the requested day count", () => {
+    render(
+      <HRDashboardPendingLeave items={[{ ...item, days_requested: 1 }, item]} total={2} />
+    );
+    expect(screen.getByText("1 day requested")).toBeInTheDocument();
+    expect(screen.getByText("3 days requested")).toBeInTheDocument();
+  });
+
   it("keeps the amber dot decorative: the section title and badge already say pending", () => {
     render(<HRDashboardPendingLeave items={[item]} total={1} />);
     expect(screen.queryByRole("status")).not.toBeInTheDocument();

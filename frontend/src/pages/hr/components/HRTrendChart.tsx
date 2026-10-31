@@ -13,10 +13,8 @@ import {
 
 interface TrendItem {
   month?: string;
-  year?: string;
   overtime?: number;
   standby?: number;
-  leave?: number;
 }
 
 interface HRTrendChartProps {
@@ -38,6 +36,7 @@ export const HRTrendChart: React.FC<HRTrendChartProps> = ({ data }) => (
             axisLine={{ stroke: "hsl(var(--border))" }}
           />
           <YAxis
+            unit="h"
             tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
             axisLine={{ stroke: "hsl(var(--border))" }}
           />
@@ -66,15 +65,6 @@ export const HRTrendChart: React.FC<HRTrendChartProps> = ({ data }) => (
             fill="hsl(var(--chart-3))"
             fillOpacity={0.6}
             name="Standby"
-          />
-          <Area
-            type="monotone"
-            dataKey="leave"
-            stackId="1"
-            stroke="hsl(var(--chart-2))"
-            fill="hsl(var(--chart-2))"
-            fillOpacity={0.6}
-            name="Leave"
           />
         </AreaChart>
       </ResponsiveContainer>

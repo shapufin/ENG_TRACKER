@@ -33,31 +33,11 @@ describe("HRDashboardStats", () => {
     expect(getValueByTitle("Workforce")).toContain("0");
   });
 
-  it("renders a meter only where the ratio is real", () => {
-    const hrStats = {
-      avg_overtime_hours: 5.5,
-      active_teams_count: 3,
-      pending_overtime: 2,
-      pending_standby: 1,
-      pending_leaves: 4,
-      total_users: 10,
-    };
-    const { container } = render(<HRDashboardStats hrStats={hrStats} />);
-    const fills = Array.from(
-      container.querySelectorAll<HTMLElement>('[data-testid="stat-card-progress-fill"]')
+  it("renders no meter: the overtime share of pending requests is not a goal", () => {
+    const { container } = render(
+      <HRDashboardStats hrStats={{ pending_overtime: 2, pending_standby: 1, pending_leaves: 4 }} />
     );
-    // Only Pending Requests carries a meter: overtime's share of everything pending.
-    expect(fills.length).toBe(1);
-    expect(fills[0].style.width).toBe("29%");
-  });
-
-  it("renders the pending meter at zero when nothing is pending", () => {
-    const { container } = render(<HRDashboardStats hrStats={{}} />);
-    const fills = Array.from(
-      container.querySelectorAll<HTMLElement>('[data-testid="stat-card-progress-fill"]')
-    );
-    expect(fills.length).toBe(1);
-    expect(fills[0].style.width).toBe("0%");
+    expect(container.querySelectorAll('[data-testid="stat-card-progress-fill"]').length).toBe(0);
   });
 
   it("renders footer strips with real hrStats values", () => {

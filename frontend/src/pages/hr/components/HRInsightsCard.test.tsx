@@ -3,14 +3,14 @@ import { render, screen } from "@testing-library/react";
 import { HRInsightsCard } from "./HRInsightsCard";
 
 describe("HRInsightsCard", () => {
-  it("shows a dash and asks for a range when there is no comparison", () => {
+  it("shows a dash and says there is nothing to compare when there is no baseline", () => {
     render(
       <HRInsightsCard
         insightsData={{ overtime_increase: null, leave_utilization: 25, standby_hours: 4 }}
       />
     );
     expect(screen.getByText("—")).toBeInTheDocument();
-    expect(screen.getByText("Select a date range")).toBeInTheDocument();
+    expect(screen.getByText("No previous period to compare")).toBeInTheDocument();
     expect(screen.getByText("25%")).toBeInTheDocument();
     expect(screen.getByText("4h")).toBeInTheDocument();
   });

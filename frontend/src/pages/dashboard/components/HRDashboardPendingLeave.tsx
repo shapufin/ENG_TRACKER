@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { DashboardSectionShell } from "@/components/dashboard/DashboardSectionShell";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
+import { plural } from "@/lib/plural";
 import type { HROverview } from "@/types";
 
 interface HRDashboardPendingLeaveProps {
@@ -39,7 +40,7 @@ export const HRDashboardPendingLeave: React.FC<HRDashboardPendingLeaveProps> = (
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">{r.user_name}</p>
-              <p className="text-xs text-muted-foreground">{r.days_requested} days requested</p>
+              <p className="text-xs text-muted-foreground">{plural(r.days_requested, "day")} requested</p>
               <p className="text-muted-foreground text-xs">
                 {`${formatDateDDMMYYYY(r.start_date)}${
                   r.end_date !== r.start_date ? ` – ${formatDateDDMMYYYY(r.end_date)}` : ""

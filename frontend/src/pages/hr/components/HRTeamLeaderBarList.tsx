@@ -24,7 +24,7 @@ export const HRTeamLeaderBarList: React.FC<HRTeamLeaderBarListProps> = ({ leader
   return (
     <GlassCard className="p-5">
       <CardHeader className="p-0 pb-4">
-        <CardTitle className="text-base">Overtime by Team Leader</CardTitle>
+        <CardTitle className="text-base">Hours by Team Leader</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 p-0">
         <motion.div

@@ -70,6 +70,23 @@ export const useHRReportQueries = ({
     enabled: false,
   });
 
+  const { data: trendReport, refetch: refetchTrend } = useQuery<DetailedReport>({
+    queryKey: [
+      "reports",
+      "trend",
+      start,
+      end,
+      selectedItalianTL,
+      selectedAlbanianTL,
+      selectedTeam,
+      selectedWorkspace,
+    ],
+    queryFn: () =>
+      reportService.getDetailed({ ...filterParams, report_type: "combined", group_by: "month" }),
+    ...REPORT_QUERY_OPTIONS,
+    enabled: false,
+  });
+
   const { data: leaveList, refetch: refetchLeaveList } = useQuery({
     queryKey: [
       "hr",
@@ -131,6 +148,7 @@ export const useHRReportQueries = ({
     Promise.all([
       refetchSummary(),
       refetchDetailed(),
+      refetchTrend(),
       refetchLeaveList(),
       refetchInsights(),
       refetchTopTeamLeaders(),
@@ -141,6 +159,7 @@ export const useHRReportQueries = ({
     summaryLoading,
     detailedData,
     detailedLoading,
+    trendReport,
     leaveList,
     insightsData,
     topTeamLeadersData,
