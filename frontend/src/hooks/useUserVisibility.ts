@@ -17,6 +17,7 @@ interface UseUserVisibilityReturn {
   handleSidebarToggle: () => void;
   toggleUser: (id: number) => void;
   handleResetVisibleUsers: () => void;
+  setVisibleUserIds: (ids: number[]) => void;
 }
 
 export const useUserVisibility = ({
@@ -57,6 +58,10 @@ export const useUserVisibility = ({
     setVisibleUsers(new Set(allUsers.map((user) => user.id)));
   }, [allUsers]);
 
+  const setVisibleUserIds = useCallback((ids: number[]) => {
+    setVisibleUsers(new Set(ids));
+  }, []);
+
   const displayedUsers = showAllMembers ? allUsers : allUsers.slice(0, 6);
 
   return {
@@ -68,5 +73,6 @@ export const useUserVisibility = ({
     handleSidebarToggle,
     toggleUser,
     handleResetVisibleUsers,
+    setVisibleUserIds,
   };
 };

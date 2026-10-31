@@ -144,9 +144,17 @@ After pulling: `py -3.14 manage.py migrate` (users 0024-0025, dashboard 0013, an
   organigrama Albanian-TL employee lookup now ignore archived teams (they showed phantom TLs / empty teams).
   `UserRole.team` is `SET_NULL` but nothing reads it for scope, so a delete cannot widen a role.
 - **Deactivating a team leader** changes nothing else (so reactivating restores it all): `Team.team_leader` and
-  members' TL links stay. The Users importer now adds a row warning naming the active teams they lead and the
-  members still linked to them (`user_deactivation.deactivation_warnings`), and notification recipients skip
-  inactive users. The `update_user` API action cannot deactivate; Django admin can and shows no warning.
+  members' TL links stay. The Users importer adds a row warning naming the active teams they lead and the
+  members still linked to them (`user_deactivation.deactivation_warnings`), Django admin shows the same lines as
+  warning messages on save (`LeaderAwareUserAdmin`, 2026-10-31), and notification recipients skip
+  inactive users. The `update_user` API action cannot deactivate. Revoking a TL *role* is a different path: it is
+  refused while members still point at the user, and the admin UI answers with `TlRevokeBlockedDialog`.
+- **Checked 2026-10-31, harmless by construction:** the notification recipient lookup and the Ticket KPI
+  team export both resolve members through `Team.members`, which an archive empties, so an archived team's
+  leader reaches nobody through them. They still read archived rows; add `is_active=True` only if a path appears
+  that does not go through membership.
+- **Data check** (`/admin/data-check`, `GET users/teams/orphans/`): people in no active team, active teams without
+  a leader or without members, active clients nobody works on. Read-only; see `workflow-invariants.md` item 44.
 - Delete stays staff-level (`IsAdminUser`), not superuser-only. No payroll blocker (payroll has no team link).
 - Two pre-existing `CONTROL-HEIGHT` control-audit warnings in `plugins/organigrama/components/CustomChartViewer.tsx`
   are not from this work.

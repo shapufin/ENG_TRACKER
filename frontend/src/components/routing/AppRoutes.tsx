@@ -37,6 +37,9 @@ const TechsPage = React.lazy(() =>
 const ClientsPage = React.lazy(() =>
   import("@/pages/admin/ClientsPage").then((m) => ({ default: m.ClientsPage }))
 );
+const DataCheckPage = React.lazy(() =>
+  import("@/pages/admin/DataCheckPage").then((m) => ({ default: m.DataCheckPage }))
+);
 const HbprAssignmentsPage = React.lazy(() =>
   import("@/pages/admin/HbprAssignmentsPage").then((m) => ({
     default: m.HbprAssignmentsPage,
@@ -204,6 +207,7 @@ export const AppRoutes: React.FC = () => {
                 { path: "/admin/teams", element: withSuspense(<TeamsPage />) },
                 { path: "/admin/techs", element: withSuspense(<TechsPage />) },
                 { path: "/admin/clients", element: withSuspense(<ClientsPage />) },
+                { path: "/admin/data-check", element: withSuspense(<DataCheckPage />) },
                 {
                   path: "/admin/hbpr-assignments",
                   element: withSuspense(<HbprAssignmentsPage />),
