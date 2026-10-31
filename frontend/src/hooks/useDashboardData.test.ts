@@ -18,7 +18,7 @@ vi.mock("@/services/leaveService", () => ({
   leaveService: { getRequests: vi.fn(), getUserBalanceSummary: vi.fn() },
 }));
 vi.mock("@/services/dashboardService", () => ({
-  dashboardService: { getHRStats: vi.fn() },
+  dashboardService: { getHRStats: vi.fn(), getHROverview: vi.fn() },
 }));
 
 describe("useDashboardData", () => {
@@ -377,26 +377,35 @@ describe("useDashboardData", () => {
     expect(leaveService.getUserBalanceSummary).not.toHaveBeenCalled();
   });
 
-  it("never requests overtime or standby for a pure-HR viewer, but still loads leave", async () => {
-    // Pure HR is refused the overtime/standby APIs (HrOnlyBlockedMixin), so
-    // firing them from the HR dashboard produced 403 toasts.
+  it("hr dashboard reads the org aggregate, never the personal list endpoints", async () => {
+    // Pure HR is refused the personal overtime/standby APIs (HrOnlyBlockedMixin)
+    // and multi-role HR gets own-scope rows there — the HR dashboard's org data
+    // comes from the dedicated hr_overview widget endpoint instead.
     for (const fn of [
       overtimeService.getLogs,
       overtimeService.getSummary,
       standbyService.getLogs,
       standbyService.getSummary,
       leaveService.getRequests,
+      dashboardService.getHROverview,
     ]) {
       vi.mocked(fn).mockClear();
     }
-    vi.mocked(leaveService.getRequests).mockResolvedValue({
-      count: 0,
-      next: null,
-      previous: null,
-      results: [],
+    vi.mocked(dashboardService.getHROverview).mockResolvedValue({
+      stats: { pending_overtime: 9, pending_standby: 3, pending_leaves: 2 },
+      status_counts: { pending: 14, approved: 40, rejected: 1 },
+      monthly_hours: [
+        { month: "2026-10", label: "Oct", overtime: 12, standby: 4 },
+      ],
+      recent_overtime: [
+        { id: 1, user_name: "Al", hours: 2, date: "2026-10-01", status: "approved" },
+      ],
+      recent_standby: [],
+      pending_leave: [],
+      pending_leave_total: 0,
     } as never);
 
-    renderHook(
+    const { result } = renderHook(
       () =>
         useDashboardData({
           userId: 1,
@@ -408,10 +417,53 @@ describe("useDashboardData", () => {
       { wrapper: createWrapper(new QueryClient()) }
     );
 
-    await waitFor(() => expect(leaveService.getRequests).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.statusBars[0].value).toBe(14));
+    expect(result.current.statusBars[1].value).toBe(40);
+    expect(result.current.monthlyData).toEqual([
+      { day: "Oct", month: "2026-10", overtime: 12, standby: 4 },
+    ]);
+    expect(result.current.recentOvertimeTable[0].user).toBe("Al");
     expect(overtimeService.getLogs).not.toHaveBeenCalled();
     expect(overtimeService.getSummary).not.toHaveBeenCalled();
     expect(standbyService.getLogs).not.toHaveBeenCalled();
     expect(standbyService.getSummary).not.toHaveBeenCalled();
+    expect(leaveService.getRequests).not.toHaveBeenCalled();
+  });
+
+  it("asks for the latest rows regardless of month, so the 1st of a month is not empty", async () => {
+    // The list endpoint defaults to the current business month. A dashboard
+    // "recent" list that inherits that default sat empty on the 1st of every
+    // month until someone logged something new.
+    for (const fn of [overtimeService.getLogs, standbyService.getLogs]) {
+      vi.mocked(fn).mockClear();
+      vi.mocked(fn).mockResolvedValue({ count: 0, next: null, previous: null, results: [] } as never);
+    }
+    vi.mocked(leaveService.getRequests).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(leaveService.getUserBalanceSummary).mockResolvedValue({} as never);
+
+    renderHook(
+      () =>
+        useDashboardData({
+          userId: 1,
+          isAdmin: false,
+          isHR: false,
+          selectedDashboard: "employee",
+        }),
+      { wrapper: createWrapper(new QueryClient()) }
+    );
+
+    await waitFor(() => expect(overtimeService.getLogs).toHaveBeenCalled());
+    await waitFor(() => expect(standbyService.getLogs).toHaveBeenCalled());
+    expect(vi.mocked(overtimeService.getLogs).mock.calls[0][0]).toMatchObject({
+      ignore_date_filter: "true",
+    });
+    expect(vi.mocked(standbyService.getLogs).mock.calls[0][0]).toMatchObject({
+      ignore_date_filter: "true",
+    });
   });
 });

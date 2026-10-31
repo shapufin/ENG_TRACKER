@@ -84,6 +84,9 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
     Compatible with Analytics plugin (pending→scheduled, approved→completed).
     """
     idempotency_endpoint = 'standby'
+    # `admin_logs` documents HR read access and guards itself with
+    # `has_hr_role`; the mixin must let pure HR reach it (SAFE_METHODS only).
+    hr_read_actions = {'admin_logs'}
     allow_staff_global_view = False
     staff_global_view_actions = {'approve', 'reject', 'bulk_approve', 'bulk_reject', 'bulk_delete', 'team_pending', 'team_logs', 'admin_logs', 'export'}
     queryset = StandbyLog.objects.all().select_related('user', 'approved_by', 'pattern').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level')

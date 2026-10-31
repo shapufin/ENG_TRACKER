@@ -6,7 +6,7 @@ describe("HRDashboardCharts", () => {
   it("shows an empty state instead of a bare grid when there is no monthly data", () => {
     const { container } = render(<HRDashboardCharts monthlyData={[]} statusBars={[]} />);
 
-    expect(screen.getByText("No overtime data for this period.")).toBeInTheDocument();
+    expect(screen.getByText("No approved hours for this period.")).toBeInTheDocument();
     expect(container.querySelector(".recharts-wrapper")).not.toBeInTheDocument();
   });
 
@@ -15,7 +15,7 @@ describe("HRDashboardCharts", () => {
       <HRDashboardCharts monthlyData={null as unknown as []} statusBars={[]} />
     );
 
-    expect(screen.getByText("No overtime data for this period.")).toBeInTheDocument();
+    expect(screen.getByText("No approved hours for this period.")).toBeInTheDocument();
     expect(container.querySelector(".recharts-wrapper")).not.toBeInTheDocument();
   });
 

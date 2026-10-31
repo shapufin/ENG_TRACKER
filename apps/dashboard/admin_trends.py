@@ -51,7 +51,7 @@ def _window(today: date, months: int = MONTHS):
 
 def _monthly_hours(model, starts, **filters):
     rows = (
-        model.objects.filter(date__gte=starts[0], **filters)
+        model.objects.filter(date__gte=starts[0], is_deleted=False, **filters)
         .annotate(m=TruncMonth("date"))
         .values("m")
         .annotate(h=Sum("hours"))
@@ -74,7 +74,8 @@ def _leave_days(starts):
     series = {"vacation": [0.0] * len(starts), "sick": [0.0] * len(starts)}
     end_of_window = _add_months(starts[-1], 1) - timedelta(days=1)
     rows = LeaveRequest.objects.filter(
-        status="approved", end_date__gte=starts[0], start_date__lte=end_of_window
+        status="approved", end_date__gte=starts[0], start_date__lte=end_of_window,
+        is_deleted=False,
     ).values_list("request_type", "start_date", "end_date")
     holidays = global_holiday_dates(starts[0], end_of_window)
     for kind, start, end in rows:
@@ -90,7 +91,8 @@ def _leave_days(starts):
 
 def _overtime_by_client(month_start):
     rows = list(
-        OvertimeLog.objects.filter(status="approved", date__gte=month_start)
+        OvertimeLog.objects.filter(status="approved", date__gte=month_start,
+                                   is_deleted=False)
         .values("client_id", "client__name")
         .annotate(h=Sum("hours"))
         .order_by("-h")
@@ -116,34 +118,48 @@ def _team_comparison(month_start):
         .order_by("name")
         .values("id", "name", "size")
     )
-    hours = {}
+    user_ids = set()
+    per_user_hours = {}
     for key, model in (("ot", OvertimeLog), ("sb", StandbyLog)):
-        hours[key] = {
-            r["user__profile__teams"]: _f(r["h"])
-            for r in model.objects.filter(status="approved", date__gte=month_start)
-            .values("user__profile__teams")
+        per_user_hours[key] = {
+            r["user_id"]: _f(r["h"])
+            for r in model.objects.filter(status="approved", date__gte=month_start,
+                                          is_deleted=False)
+            .values("user_id")
             .annotate(h=Sum("hours"))
         }
+        user_ids.update(per_user_hours[key])
     leave_rows = list(
-        LeaveRequest.objects.filter(status="approved", end_date__gte=month_start).values_list(
+        LeaveRequest.objects.filter(status="approved", end_date__gte=month_start,
+                                    is_deleted=False).values_list(
             "user_id", "start_date", "end_date", "request_type"
         )
     )
-    members = defaultdict(list)
-    if leave_rows:
-        for uid, tid in TeamMembership.objects.filter(
-            user_profile__user_id__in={u for u, _, _, _ in leave_rows}
-        ).values_list("user_profile__user_id", "team_id"):
-            members[uid].append(tid)
+    user_ids.update(u for u, _, _, _ in leave_rows)
+    # One canonical team per user (alphabetically first, same rule as
+    # _team_names): attributing the same person's hours to every team they
+    # belong to double-counts them in the org total.
+    canonical_team: dict[int, int] = {}
+    for uid, tid in (
+        TeamMembership.objects.filter(user_profile__user_id__in=user_ids)
+        .order_by("-team__name")
+        .values_list("user_profile__user_id", "team_id")
+    ):
+        canonical_team[uid] = tid
+    hours = {"ot": defaultdict(float), "sb": defaultdict(float)}
+    for key in ("ot", "sb"):
+        for uid, h in per_user_hours[key].items():
+            tid = canonical_team.get(uid)
+            if tid is not None:
+                hours[key][tid] += h
     month_end = _add_months(month_start, 1) - timedelta(days=1)
     leave = defaultdict(float)
     holidays = global_holiday_dates(month_start, month_end)
     for uid, start, end, kind in leave_rows:
         lo, hi = max(start, month_start), min(end, month_end)
-        if lo <= hi:
-            days = count_request_days(kind, lo, hi, holidays)
-            for tid in members.get(uid, ()):
-                leave[tid] += days
+        tid = canonical_team.get(uid)
+        if lo <= hi and tid is not None:
+            leave[tid] += count_request_days(kind, lo, hi, holidays)
     out = []
     for t in teams:
         ot = hours["ot"].get(t["id"], 0.0)
@@ -178,12 +194,15 @@ def _team_names(user_ids):
 
 def _who_is_out(today):
     leave = list(
-        LeaveRequest.objects.filter(status="approved", start_date__lte=today, end_date__gte=today)
+        LeaveRequest.objects.filter(status="approved", start_date__lte=today,
+                                    end_date__gte=today, is_deleted=False,
+                                    user__is_active=True)
         .select_related("user")
         .order_by("end_date", "user__first_name", "user__username")[:WHO_IS_OUT_LIMIT]
     )
     standby = list(
-        StandbyLog.objects.filter(status="approved", date=today)
+        StandbyLog.objects.filter(status="approved", date=today, is_deleted=False,
+                                  user__is_active=True)
         .select_related("user")
         .order_by("user__first_name", "user__username")[:WHO_IS_OUT_LIMIT]
     )

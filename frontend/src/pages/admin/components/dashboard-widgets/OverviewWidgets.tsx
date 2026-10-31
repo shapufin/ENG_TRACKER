@@ -140,7 +140,9 @@ export const OverviewWidgets: React.FC<OverviewWidgetsProps> = ({
     <>
       {on("kpi-strip") && (
         <KpiStripWidget
-          totalUsers={stats.totalUsers}
+          // Active accounts — the rest of the dashboard (People Mix, coverage
+          // gaps) counts active users; total_users would inflate the KPI.
+          totalUsers={data?.headcount.active_users ?? null}
           totalTeams={stats.totalTeams}
           totalPending={stats.totalPending}
           statsLoading={stats.statsLoading}

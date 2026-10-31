@@ -83,20 +83,27 @@ const renderPage = () => {
 
 describe("GlobalSettingsPage", () => {
   describe("company-wide two-factor requirement", () => {
-    it("asks for confirmation, then saves only the requirement", async () => {
-      permissions.isSuperuser = true;
-      vi.mocked(leaveService.updateSettings).mockClear();
-      vi.mocked(leaveService.updateSettings).mockResolvedValue({} as never);
-      renderPage();
+    // This describe renders the whole settings page three times; under a full
+    // suite the 5 s default timeout flakes (2026-10-31 audit). 15 s is the
+    // honest budget for a page-level render, not a mask for a hang.
+    it(
+      "asks for confirmation, then saves only the requirement",
+      async () => {
+        permissions.isSuperuser = true;
+        vi.mocked(leaveService.updateSettings).mockClear();
+        vi.mocked(leaveService.updateSettings).mockResolvedValue({} as never);
+        renderPage();
 
-      fireEvent.click(await screen.findByLabelText("Require two-factor for all users"));
-      expect(leaveService.updateSettings).not.toHaveBeenCalled();
-      fireEvent.click(await screen.findByRole("button", { name: "Require for everyone" }));
+        fireEvent.click(await screen.findByLabelText("Require two-factor for all users"));
+        expect(leaveService.updateSettings).not.toHaveBeenCalled();
+        fireEvent.click(await screen.findByRole("button", { name: "Require for everyone" }));
 
-      await waitFor(() =>
-        expect(leaveService.updateSettings).toHaveBeenCalledWith({ mfa_required: true })
-      );
-    });
+        await waitFor(() =>
+          expect(leaveService.updateSettings).toHaveBeenCalledWith({ mfa_required: true })
+        );
+      },
+      15_000
+    );
 
     it("cancelling the confirmation changes nothing", async () => {
       permissions.isSuperuser = true;

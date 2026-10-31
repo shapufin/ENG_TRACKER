@@ -132,13 +132,15 @@ export const DashboardPage: React.FC = () => {
         isSuperuser={isSuperuser}
         viewProps={{
           hrStats: dashboardData.hrStats,
-          overtimeData: dashboardData.overtimeData,
-          standbyData: dashboardData.standbyData,
-          leaveData: dashboardData.leaveData,
           monthlyData: dashboardData.monthlyData,
           statusBars: dashboardData.statusBars,
           recentOvertimeTable: dashboardData.recentOvertimeTable,
           recentStandbyTable: dashboardData.recentStandbyTable,
+          pendingLeaveItems: dashboardData.pendingLeaveItems,
+          pendingLeaveTotal: dashboardData.pendingLeaveTotal,
+          isLoading: dashboardData.hrOverviewLoading,
+          isError: dashboardData.hrOverviewError,
+          onRetry: () => void dashboardData.refetchHrOverview(),
         }}
       />
     );

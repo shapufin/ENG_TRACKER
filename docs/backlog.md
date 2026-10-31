@@ -24,6 +24,15 @@ All ten LOW findings from the round-1 audit were fixed in the same pass (commits
 | Raw action codes in the plugin audit UI | `maintenance_on/off/blocked` choices added to `plugins.audit_log` (`91c3231`) |
 | Raw action codes in RecentActivityWidget | prefers `action_display`, falls back to the raw code (`7845078`) |
 
+## HR + Admin dashboards (audit 2026-10-31, `docs/reviews/2026-10-31-hr-admin-dashboard-audit.md`)
+
+All findings from this audit are fixed on `audit/hr-admin-dashboards-2026-10-31` (commits
+`1b45ea4`, `342a022`, `ae24dab` and the follow-up passes): the HR dashboard reads the `hr_overview`
+widget endpoint, the personal dashboard's recent lists no longer empty on the 1st of a month,
+`e2e/hr-dashboard.spec.ts` pins the wiring against the real API, and pure HR can now read the org
+overtime/standby queue (`HrOnlyBlockedMixin.hr_read_actions`, SAFE_METHODS only). Nothing remains
+open for this feature.
+
 ## Open items
 
 ### Maintenance mode (round 3, 2026-10-28)

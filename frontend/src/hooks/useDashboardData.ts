@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardService } from "@/services/dashboardService";
 import { overtimeService } from "@/services/overtimeService";
@@ -28,26 +29,49 @@ export const useDashboardData = ({
 }: UseDashboardDataOptions) => {
   const isPrivilegedDashboard = selectedDashboard === "hr" || selectedDashboard === "admin";
   const dashboardPageSize = isPrivilegedDashboard ? 50 : 5;
+  // The HR dashboard renders ORG data from a dedicated aggregate endpoint —
+  // the personal OT/SB/leave list endpoints can't serve it (pure HR gets 403,
+  // multi-role gets own-scope rows, everyone gets current-month-only).
+  const isHrDashboard = selectedDashboard === "hr";
   // An HBPR-only viewer has no overtime, standby or leave (the API refuses
   // all of them via HbprBlockedMixin), so those queries must not fire even in
   // the single render before DashboardPage's /hbpr redirect mounts — "hbpr"
   // survives as their primaryDashboard routing token for exactly this.
-  const canLoadSelfService = !!userId && selectedDashboard !== "hbpr";
+  const canLoadSelfService = !!userId && !isHrDashboard && selectedDashboard !== "hbpr";
   // Pure HR has leave but no overtime or standby (HrOnlyBlockedMixin 403s them).
   const canLoadHours = canLoadSelfService && !isHROnly;
 
-  const { data: hrStats } = useQuery({
-    queryKey: ["dashboard", "hr", userId ?? "anonymous"],
-    queryFn: () => dashboardService.getHRStats(),
+  const {
+    data: hrOverview,
+    isLoading: hrOverviewLoading,
+    isError: hrOverviewError,
+    refetch: refetchHrOverview,
+  } = useQuery({
+    queryKey: ["dashboard", "hr-overview", userId ?? "anonymous"],
+    queryFn: () => dashboardService.getHROverview(),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
-    enabled: !!userId && (isAdmin || isHR) && isPrivilegedDashboard,
+    enabled: !!userId && isHrDashboard && (isAdmin || isHR),
   });
 
+  // No `global_stats` fetch here: the HR view reads `hr_overview.stats`, and
+  // every other dashboard ignores `hrStats`. The old query only fired for the
+  // transient "admin" selection, one render before DashboardPage redirects to
+  // /admin — a wasted request.
+
+  // `ignore_date_filter` is deliberate: without it the list endpoint defaults
+  // to the current business month, so every dashboard's "recent" lists and
+  // charts sat empty on the 1st of each month until new rows appeared. These
+  // queries want the latest rows regardless of month; the page-size cap still
+  // keeps them cheap.
   const { data: overtimeData, isLoading: overtimeLoading } = useQuery({
     queryKey: ["overtime", userId ?? "anonymous", "dashboard", selectedDashboard],
-    queryFn: () => overtimeService.getLogs({ page_size: dashboardPageSize }),
+    queryFn: () =>
+      overtimeService.getLogs({
+        page_size: dashboardPageSize,
+        ignore_date_filter: "true",
+      }),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -56,7 +80,11 @@ export const useDashboardData = ({
 
   const { data: standbyData, isLoading: standbyLoading } = useQuery({
     queryKey: ["standby", userId ?? "anonymous", "dashboard", selectedDashboard],
-    queryFn: () => standbyService.getLogs({ page_size: dashboardPageSize }),
+    queryFn: () =>
+      standbyService.getLogs({
+        page_size: dashboardPageSize,
+        ignore_date_filter: "true",
+      }),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -112,12 +140,7 @@ export const useDashboardData = ({
   const overtimeResults = overtimeData?.results ?? [];
   const standbyResults = standbyData?.results ?? [];
   const leaveResults = leaveData?.results ?? [];
-  const calculations = useDashboardCalculations(
-    overtimeResults,
-    standbyResults,
-    leaveResults,
-    hrStats
-  );
+  const calculations = useDashboardCalculations(overtimeResults, standbyResults, leaveResults);
 
   // Dedicated date-ranged query for the personal dashboard's weekly hours
   // chart: overtimeData/standbyData above are capped at dashboardPageSize
@@ -162,8 +185,57 @@ export const useDashboardData = ({
     enabled: !!userId && selectedDashboard === "employee",
   });
 
+  // HR-view derivations from the org aggregate (see isHrDashboard above).
+  const hrMonthlyData = useMemo(
+    () =>
+      (hrOverview?.monthly_hours ?? []).map((m) => ({
+        day: m.label,
+        month: m.month,
+        overtime: m.overtime,
+        standby: m.standby,
+      })),
+    [hrOverview]
+  );
+  const hrStatusBars = useMemo(
+    () =>
+      hrOverview
+        ? [
+            { label: "Pending", value: hrOverview.status_counts.pending },
+            { label: "Approved", value: hrOverview.status_counts.approved },
+            { label: "Rejected", value: hrOverview.status_counts.rejected },
+          ]
+        : [],
+    [hrOverview]
+  );
+  const toHoursRow = (r: {
+    id: number;
+    user_name: string;
+    hours: number;
+    date: string;
+    status: string;
+  }) => ({
+    id: r.id,
+    user: r.user_name,
+    userInitials: r.user_name.slice(0, 2).toUpperCase(),
+    duration: `${r.hours}h`,
+    date: new Date(r.date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+    status: r.status,
+  });
+  const hrRecentOvertime = useMemo(
+    () => (hrOverview?.recent_overtime ?? []).map(toHoursRow),
+    [hrOverview]
+  );
+  const hrRecentStandby = useMemo(
+    () => (hrOverview?.recent_standby ?? []).map(toHoursRow),
+    [hrOverview]
+  );
+
   return {
-    hrStats,
+    hrStats: isHrDashboard ? hrOverview?.stats : undefined,
     overtimeData,
     standbyData,
     leaveData,
@@ -171,6 +243,20 @@ export const useDashboardData = ({
     standbyLoading,
     leaveLoading,
     ...calculations,
+    // The HR view is the only consumer of these four: every other dashboard
+    // renders its own cards (employee) or its own hook (team leader). The HR
+    // values come from the org aggregate, never from `calculations`.
+    // These four feed the HR view only; every other dashboard reads its own
+    // hook (the personal view never rendered the org tables/chart).
+    monthlyData: hrMonthlyData,
+    statusBars: hrStatusBars,
+    recentOvertimeTable: hrRecentOvertime,
+    recentStandbyTable: hrRecentStandby,
+    pendingLeaveItems: hrOverview?.pending_leave ?? [],
+    pendingLeaveTotal: hrOverview?.pending_leave_total ?? 0,
+    hrOverviewLoading,
+    hrOverviewError,
+    refetchHrOverview,
     personalOvertimeHours: overtimeSummary?.total_hours ?? calculations.personalOvertimeHours,
     personalStandbyHours: standbySummary?.total_hours ?? calculations.personalStandbyHours,
     vacationBalanceDays:

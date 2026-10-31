@@ -11,7 +11,9 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
   const avgOvertime = hrStats?.avg_overtime_hours || 0;
   const activeTeams = hrStats?.active_teams_count || 0;
   const totalRequests = (hrStats?.pending_overtime || 0) + (hrStats?.pending_standby || 0);
-  const workforce = hrStats?.total_users || 0;
+  // Active accounts, matching the admin dashboard's KPI (inactive accounts
+  // would inflate headcount; the API sends both counts).
+  const workforce = hrStats?.active_users ?? hrStats?.total_users ?? 0;
 
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -20,7 +22,6 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         value={`${avgOvertime.toFixed(1)}h`}
         icon={Clock}
         glow="primary"
-        trend="+12%"
         progressPercent={Math.min(100, Math.round((avgOvertime / 4) * 100))}
         progressColorClass="bg-primary"
         footer={
@@ -38,7 +39,6 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         icon={Users}
         glow="success"
         iconColorClass="text-success"
-        trend="Stable"
         progressPercent={activeTeams > 0 ? 100 : 0}
         progressColorClass="bg-success"
         footer={
@@ -56,7 +56,6 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         icon={FileSpreadsheet}
         glow="warning"
         iconColorClass="text-warning"
-        trend="+5"
         progressPercent={
           totalRequests > 0
             ? Math.round(((hrStats?.pending_overtime ?? 0) / totalRequests) * 100)
@@ -80,7 +79,6 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         icon={Activity}
         glow="destructive"
         iconColorClass="text-destructive"
-        trend="+2"
         progressPercent={workforce > 0 ? 100 : 0}
         progressColorClass="bg-success"
         footer={
@@ -88,7 +86,7 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
             <span className="font-medium tabular-nums text-muted-foreground">
               {workforce} users
             </span>
-            <span className="text-muted-foreground">Total headcount</span>
+            <span className="text-muted-foreground">Active headcount</span>
           </>
         }
       />

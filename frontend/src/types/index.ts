@@ -467,6 +467,8 @@ export interface StandbySummary {
 
 export interface DashboardStats {
   total_users: number;
+  /** Active accounts only; the rest of the dashboard counts active users. */
+  active_users?: number;
   total_overtime_hours: number;
   total_standby_hours: number;
   pending_overtime: number;
@@ -480,6 +482,41 @@ export interface DashboardStats {
   rejected_leaves: number;
   avg_overtime_hours: number;
   active_teams_count: number;
+}
+
+/** Response of GET /dashboard/widgets/hr_overview/ (any HR/admin viewer).
+ * Org-wide: the personal OT/SB endpoints can never serve pure-HR viewers. */
+export interface HROverview {
+  stats: DashboardStats;
+  /** Pending/approved/rejected across OT + standby + leave, org-wide. */
+  status_counts: { pending: number; approved: number; rejected: number };
+  /** Approved hours per month, oldest first, 6 points. */
+  monthly_hours: { month: string; label: string; overtime: number; standby: number }[];
+  recent_overtime: {
+    id: number;
+    user_name: string;
+    hours: number;
+    date: string;
+    status: string;
+  }[];
+  recent_standby: {
+    id: number;
+    user_name: string;
+    hours: number;
+    date: string;
+    status: string;
+  }[];
+  /** Pending leave, oldest submission first; capped server-side. */
+  pending_leave: {
+    id: number;
+    user_name: string;
+    days_requested: number;
+    status: string;
+    start_date: string;
+    end_date: string;
+  }[];
+  /** Org pending-leave total — may exceed pending_leave's cap. */
+  pending_leave_total: number;
 }
 
 /** Response of GET /dashboard/widgets/admin_overview/ (staff/superuser only). */

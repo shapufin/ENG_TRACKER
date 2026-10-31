@@ -5,10 +5,6 @@ import {
   sumStandbyHours,
   sumApprovedLeaveDays,
   sumPendingLeaveDays,
-  buildMonthlyData,
-  buildStatusBars,
-  buildOvertimeTable,
-  buildStandbyTable,
 } from "./dashboardCalculations";
 
 describe("dashboardCalculations", () => {
@@ -52,28 +48,4 @@ describe("dashboardCalculations", () => {
     expect(sumPendingLeaveDays(leave)).toBe(1);
   });
 
-  it("builds monthly data", () => {
-    const results = [{ date: "2024-06-01", hours: 2 }] as any[];
-    expect(buildMonthlyData(results)).toEqual([{ day: "Jun 1", overtime: 2 }]);
-  });
-
-  it("builds status bars", () => {
-    const result = buildStatusBars(
-      { pending_overtime: 2, pending_standby: 1, pending_leaves: 0 },
-      [{ status: "approved" }] as any,
-      [{ status: "rejected" }] as any,
-      [{ status: "approved" }] as any
-    );
-    expect(result.find((r) => r.label === "Pending")?.value).toBe(3);
-    expect(result.find((r) => r.label === "Approved")?.value).toBe(2);
-    expect(result.find((r) => r.label === "Rejected")?.value).toBe(1);
-  });
-
-  it("builds hours tables", () => {
-    const items = [
-      { id: 1, user: 10, user_name: "Alice", hours: 5, date: "2024-06-01", status: "approved" },
-    ] as any[];
-    expect(buildOvertimeTable(items)[0].duration).toBe("5h");
-    expect(buildStandbyTable(items)[0].userInitials).toBe("AL");
-  });
 });

@@ -395,3 +395,68 @@ invariants item 37, `90397f2` read-only Django admin; the ten LOW in `cef7524`, 
 `docs/backlog.md` (keep it current — it is the cross-session record). Tracked audit record:
 `docs/reviews/2026-10-28-maintenance-audit.md`. Gates: backend 3833 OK, frontend 3822 tests / 601 files,
 tsc/eslint/prettier/ruff clean, surface-audit PASS, browser evidence re-captured.
+
+## HR + Admin dashboard audit (2026-10-31)
+
+Full audit of the HR dashboard data population and admin dashboard field population on
+`audit/hr-admin-dashboards-2026-10-31` (base `111581d`): 2 CRITICAL / 3 HIGH / 4 MEDIUM / 4 LOW,
+12 fixed in `1b45ea4` (backend) and `342a022` (frontend), 1 LOW deferred to `docs/backlog.md`.
+Root cause: the HR dashboard's OT/SB widgets read the personal list endpoints — pure HR was 403'd
+(`HrOnlyBlockedMixin`), multi-role HR saw own-scope rows, everyone was month-capped. New
+`GET /api/dashboard/widgets/hr_overview/` (`IsHR`) serves org stats, status counts, the 6-month
+approved series, recent rows and pending leave; `global_stats` shares `global_stats_dict()`.
+Also: `is_deleted=False` on every dashboard aggregate, active-user denominators, single-team
+attribution in `_team_comparison`, active-only `_who_is_out`, no fabricated trend chips,
+ErrorCard+retry on the HR view. Invariant: `docs/workflow-invariants.md` item 43. Tracked record:
+`docs/reviews/2026-10-31-hr-admin-dashboard-audit.md`.
+
+Gates: `apps.dashboard` 220 OK (209 + 11 new); affected apps
+(`dashboard overtime standby leave_management users permissions`) 1299 OK; `manage.py check`
+clean; `makemigrations --check` clean; ruff clean on touched files; frontend 3898/3899 with the
+one failure being the pre-existing `GlobalSettingsPage` 2FA 5 s-timeout flake (passes 11/11 in
+isolation, code untouched); `tsc -b` clean; eslint clean on touched files. Browser verified as
+`e2e_hr` (Approved 0 → 36, populated chart/tables, 8 pending leaves) and `e2e_admin` (every
+widget and tab populated).
+
+Follow-up pass on the same branch (review of the fixes themselves): the personal dashboard's recent
+lists now pass `ignore_date_filter=true` (they emptied on the 1st of every month), and
+`frontend/e2e/hr-dashboard.spec.ts` pins the HR wiring against the real API — it asserts the
+rendered pipeline/chart/recents equal the `hr_overview` answer and that the personal list endpoints
+never fire. That browser test is the only layer that can catch an endpoint swap: every unit test
+mocks the service layer and was green both before and after the original bug. Gates: dashboard
+unit tests 118 OK, new e2e 1 passed (chromium), `tsc -b` clean, eslint clean.
+
+Second follow-up (structural): the admin dashboard's request counts had three independent
+implementations (`global_stats`, `admin_overview.pending_backlog`, `approval_aging` buckets), so the
+KPI strip, the aging chips and the aging buckets could disagree about the same number. They now all
+derive from `apps/dashboard/aggregates.py::status_counts` (one aggregate per model yields counts plus
+approved/pending hours); `test_status_counts.py` pins agreement across all three endpoints. Live
+check on e2e data: 46/13/8 identical everywhere, HR pipeline 67/36/1. Invariant 43(h). Also raised
+the `GlobalSettingsPage` 2FA test budget to 15 s (pre-existing 5 s-timeout flake under full-suite
+load; the file passes 11/11 isolated). Gates: `apps.dashboard` 225 OK, ruff clean, `manage.py check`
+clean.
+
+Third follow-up (review pass): the HR view now renders `LoadingCard` while `hr_overview` is in
+flight — before this it flashed zeros and two false empty states ("No approved hours", "All leave
+processed"). `useDashboardData` no longer fetches `global_stats` at all (it fired once for the
+transient "admin" selection before the redirect and nothing consumed `hrStats`); the backend log on
+a live `e2e_hr` visit shows only `GET /api/dashboard/widgets/hr_overview/`. Invariant 43(i).
+Gates: `HRDashboardView.test.tsx` 3 cases, dashboard+hook tests 122 OK, full frontend 607 files /
+3903 tests OK, `tsc -b` clean, eslint clean.
+
+Fourth pass (dead-path cleanup, same branch): the HR move to `hr_overview` orphaned the
+personal-dashboard derivations — `buildMonthlyData`, `buildStatusBars`, `buildOvertimeTable`,
+`buildStandbyTable` were computed on every dashboard render and consumed by nobody (only the HR
+view used those slots, and it now takes them from the org aggregate). Removed from
+`dashboardCalculations`, `useDashboardCalculations` and the hook's return; the HR values are the
+only source. Gates: full frontend 607 files / 3900 tests OK (3 tests deleted with the dead
+functions), `tsc -b` clean, eslint clean.
+
+Final item (same branch): pure HR can now READ the org overtime/standby queue. `admin_logs` had
+always documented HR access and guarded itself with `has_hr_role`, but `HrOnlyBlockedMixin` 403'd
+pure HR before the action ran — an unreachable contract, and no way for HR to inspect a specific
+record. `HrOnlyBlockedMixin.hr_read_actions` (default empty) now opens exactly `admin_logs` on
+SAFE_METHODS for both viewsets; the personal list, approvals and writes stay 403. Invariant 43(j).
+Gates: `apps.permissions apps.overtime apps.standby apps.dashboard` 610 OK (6 new permission cases,
+2 viewset tests rewritten to the new contract), ruff clean. Live as `e2e_hr`: admin_logs OT/SB 200
+(76 org rows), personal list 403, approve 403.

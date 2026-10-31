@@ -41,7 +41,7 @@ export const useAdminPeople = (enabled: boolean) =>
     enabled,
   });
 
-export const useAdminDashboardQueries = () => {
+export const useAdminDashboardQueries = (statsEnabled = true) => {
   const { canView } = usePluginPermissions();
   const canViewAudit = canView("audit_log");
 
@@ -50,6 +50,9 @@ export const useAdminDashboardQueries = () => {
     queryFn: dashboardService.getHRStats,
     staleTime: FRESH_MS,
     refetchOnWindowFocus: true,
+    // Only the KPI strip and approval-queue status tab consume these figures —
+    // no reason to fetch them on layouts where neither is on.
+    enabled: statsEnabled,
   });
   const { data: auditLogs, isLoading: auditLogsLoading } = useQuery({
     queryKey: ["admin", "audit-logs"],

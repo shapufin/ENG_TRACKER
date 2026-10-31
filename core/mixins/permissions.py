@@ -198,13 +198,26 @@ class HrOnlyBlockedMixin:
     personal overtime/standby, so the API must refuse what the menu hides.
     Multi-role HR (TL, staff, superuser) is not `is_hr_only` and passes.
 
+    ``hr_read_actions`` names org-wide read actions a pure-HR viewer MAY call
+    with a safe method (the overtime/standby ``admin_logs`` queue, whose own
+    guard already admits ``has_hr_role``). Everything else — every write, and
+    the personal list — stays refused.
+
     Place first in the base list so it wraps the other permission mixins.
     """
 
+    hr_read_actions: set[str] = set()
+
     def check_permissions(self, request):
         super().check_permissions(request)
-        if is_hr_only(request.user):
-            raise PermissionDenied("This area is not available for your role.")
+        if not is_hr_only(request.user):
+            return
+        if (
+            request.method in permissions.SAFE_METHODS
+            and getattr(self, 'action', None) in self.hr_read_actions
+        ):
+            return
+        raise PermissionDenied("This area is not available for your role.")
 
 
 class IsSuperuser(permissions.BasePermission):
