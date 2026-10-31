@@ -8,12 +8,14 @@ as staff, which the personal OT/SB endpoints can never serve them
 viewer's own current-month rows).
 """
 
+from django.contrib.auth.models import User
 from django.db.models.functions import Coalesce
 
 from apps.leave_management.models import LeaveRequest
 from apps.leave_management.models.core import count_request_days, global_holiday_dates
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
+from apps.users.services.workforce import workforce_filter
 from core.utils.timezone_local import business_today
 
 from .admin_trends import _monthly_hours, _window
@@ -30,8 +32,8 @@ def _f(value) -> float:
 
 def _monthly_series(today) -> list:
     starts = _window(today, MONTHS)
-    ot = _monthly_hours(OvertimeLog, starts, status="approved")
-    sb = _monthly_hours(StandbyLog, starts, status="approved")
+    ot = _monthly_hours(OvertimeLog, starts, status="approved", **workforce_filter("user__"))
+    sb = _monthly_hours(StandbyLog, starts, status="approved", **workforce_filter("user__"))
     return [
         {
             "month": s.strftime("%Y-%m"),
@@ -49,7 +51,7 @@ def _name(user) -> str:
 
 def _recent_hours(model) -> list:
     rows = (
-        model.objects.filter(is_deleted=False)
+        model.objects.filter(is_deleted=False, **workforce_filter("user__"))
         .select_related("user")
         .order_by("-date", "-id")[:RECENT_LIMIT]
     )
@@ -67,7 +69,7 @@ def _recent_hours(model) -> list:
 
 def _pending_leave() -> tuple[list, int]:
     qs = (
-        LeaveRequest.objects.filter(is_deleted=False, status="pending")
+        LeaveRequest.objects.filter(is_deleted=False, status="pending", **workforce_filter("user__"))
         .select_related("user")
         .order_by(Coalesce("submitted_at", "created_at"), "id")
     )
@@ -101,10 +103,11 @@ def build_hr_overview() -> dict:
     stats = global_stats_dict(counts)
     monthly = _monthly_series(today)
     # `stats.avg_overtime_hours` is lifetime; the HR tile is a monthly figure (current month last).
-    active = stats["active_users"]
+    # Numerator and denominator are the same population: the workforce.
+    people = User.objects.filter(**workforce_filter()).count()
     return {
         "stats": stats,
-        "month_avg_overtime_hours": monthly[-1]["overtime"] / active if active else 0.0,
+        "month_avg_overtime_hours": monthly[-1]["overtime"] / people if people else 0.0,
         "status_counts": counts["total"],
         "monthly_hours": monthly,
         "recent_overtime": _recent_hours(OvertimeLog),

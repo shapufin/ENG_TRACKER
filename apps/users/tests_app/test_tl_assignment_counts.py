@@ -35,3 +35,13 @@ class AssignmentCountsTests(APITestCase):
         self.assertLessEqual(data['italian'], data['total'])
         self.assertLessEqual(data['albanian'], data['total'])
         self.assertLessEqual(data['without_any'], data['total'])
+
+
+class AssignmentCountsScopeTests(APITestCase):
+    def test_a_plain_employee_only_counts_their_own_profile(self):
+        make_user('counts_other')
+        me = make_user('counts_me')
+        self.client.force_authenticate(me)
+        res = self.client.get('/api/users/profiles/assignment_counts/')
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertLessEqual(res.data['total'], 1)
