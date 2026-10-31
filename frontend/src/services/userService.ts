@@ -360,6 +360,8 @@ export const userService = {
       phone?: string;
       code?: string | null;
       teams?: number[];
+      /** Join these teams next to the ones the person is in now (merged on the server). */
+      add_teams?: number[];
       techs?: TechAssignmentInput[];
       albanian_tl?: number | null;
       italian_tl?: number | null;

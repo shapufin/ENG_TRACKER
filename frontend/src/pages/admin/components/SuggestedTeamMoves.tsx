@@ -26,7 +26,7 @@ export const SuggestedTeamMoves: React.FC<{ rows: TeamMoveSuggestion[] }> = ({ r
   const qc = useQueryClient();
   const addMutation = useMutation({
     mutationFn: ({ row, teamId }: { row: TeamMoveSuggestion; teamId: number; teamName: string }) =>
-      userService.updateUser(row.user_id, { teams: [...row.team_ids, teamId] }),
+      userService.updateUser(row.user_id, { add_teams: [teamId] }),
     onSuccess: async (_data, { row, teamName }) => {
       toast.success(`Added ${row.full_name} to ${teamName}`);
       await Promise.all(STALE_KEYS.map((key) => qc.invalidateQueries({ queryKey: [...key] })));

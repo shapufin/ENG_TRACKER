@@ -963,7 +963,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
     def update_user(self, request, pk=None):
         """
         Admin updates a user and their profile in one call.
-        Payload: any of {email, first_name, last_name, phone, team, albanian_tl, italian_tl, is_hr, is_italian_tl_role, is_albanian_tl_role, is_cr_admin}
+        Payload: any of {email, first_name, last_name, phone, team, add_teams, albanian_tl, italian_tl, is_hr, is_italian_tl_role, is_albanian_tl_role, is_cr_admin}
         """
         from .services.user_creation import _set_cr_admin_role, _sync_legacy_roles, _sync_roles
         from apps.permissions.services.role_service import find_blocked_tl_revocations
@@ -1059,13 +1059,33 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             )
         if 'code' in data:
             profile.code = data['code']  # UserProfile.save() trims / blanks to NULL
+        add_teams = None
+        if 'add_teams' in data:
+            # Join teams without replacing the ones the person is in now: the caller only names
+            # what to add, and the server merges it with the CURRENT set inside this transaction,
+            # so a page that was loaded earlier can never overwrite someone else's change.
+            raw = data['add_teams']
+            try:
+                if not isinstance(raw, list):
+                    raise ValueError
+                add_teams = [int(team_id) for team_id in raw]
+            except (TypeError, ValueError):
+                transaction.set_rollback(True)
+                return Response({'error': 'add_teams must be a list of team ids.'}, status=status.HTTP_400_BAD_REQUEST)
+            unknown = sorted(set(add_teams) - set(Team.objects.filter(id__in=add_teams).values_list('id', flat=True)))
+            if unknown:
+                transaction.set_rollback(True)
+                return Response({'error': f'Unknown team IDs: {unknown}'}, status=status.HTTP_400_BAD_REQUEST)
         archived_message = team_lifecycle.archived_error_for_refs(
-            [*(data.get('teams') or []), data.get('team')]
+            [*(data.get('teams') or []), *(add_teams or []), data.get('team')]
         )
         if archived_message:
             transaction.set_rollback(True)
             return Response({'error': archived_message, 'teams': [archived_message]}, status=status.HTTP_400_BAD_REQUEST)
         team_change = None
+        if add_teams and 'teams' not in data and 'team' not in data:
+            current = set(profile.teams.values_list('id', flat=True))
+            team_change = change_user_teams(profile, sorted(current | set(add_teams)), request=request)
         if 'teams' in data or 'team' in data:
             # One diff for both the list and the legacy single-team field (the single one wins,
             # as before). Empty / null clears every team.
