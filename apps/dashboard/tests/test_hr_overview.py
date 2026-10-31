@@ -9,7 +9,9 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -147,3 +149,32 @@ class DataTests(HrOverviewBase):
         for key in ("total_users", "pending_overtime", "pending_standby",
                     "pending_leaves", "avg_overtime_hours", "active_teams_count"):
             self.assertIn(key, res.data["stats"])
+
+    def test_query_count_does_not_grow_with_more_rows_or_owners(self):
+        """A per-row query (an N+1 on the owner, holidays or day counts) would fail this."""
+        self.get(self.hr)  # warm caches that are not about row count
+
+        def count():
+            with CaptureQueriesContext(connection) as ctx:
+                self.assertEqual(self.get(self.hr).status_code, status.HTTP_200_OK)
+            return len(ctx.captured_queries)
+
+        before = count()
+        today = date.today()
+        for i in range(8):
+            owner = User.objects.create_user(f"owner{i}", password="x", first_name=f"O{i}")
+            OvertimeLog.objects.create(
+                user=owner, client=self.client_obj, date=today, hours=Decimal("1"),
+                status="approved", submitted_at=timezone.now(),
+            )
+            StandbyLog.objects.create(
+                user=owner, date=today, hours=Decimal("2"), status="pending",
+                submitted_at=timezone.now(),
+            )
+            LeaveRequest.objects.create(
+                user=owner, request_type="vacation", status="pending",
+                start_date=_weekday(today + timedelta(days=10 + i)),
+                end_date=_weekday(today + timedelta(days=11 + i)),
+                submitted_at=timezone.now(),
+            )
+        self.assertEqual(count(), before)
