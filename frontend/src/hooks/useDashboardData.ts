@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardService } from "@/services/dashboardService";
 import { overtimeService } from "@/services/overtimeService";
@@ -28,13 +29,31 @@ export const useDashboardData = ({
 }: UseDashboardDataOptions) => {
   const isPrivilegedDashboard = selectedDashboard === "hr" || selectedDashboard === "admin";
   const dashboardPageSize = isPrivilegedDashboard ? 50 : 5;
+  // The HR dashboard renders ORG data from a dedicated aggregate endpoint —
+  // the personal OT/SB/leave list endpoints can't serve it (pure HR gets 403,
+  // multi-role gets own-scope rows, everyone gets current-month-only).
+  const isHrDashboard = selectedDashboard === "hr";
   // An HBPR-only viewer has no overtime, standby or leave (the API refuses
   // all of them via HbprBlockedMixin), so those queries must not fire even in
   // the single render before DashboardPage's /hbpr redirect mounts — "hbpr"
   // survives as their primaryDashboard routing token for exactly this.
-  const canLoadSelfService = !!userId && selectedDashboard !== "hbpr";
+  const canLoadSelfService = !!userId && !isHrDashboard && selectedDashboard !== "hbpr";
   // Pure HR has leave but no overtime or standby (HrOnlyBlockedMixin 403s them).
   const canLoadHours = canLoadSelfService && !isHROnly;
+
+  const {
+    data: hrOverview,
+    isLoading: hrOverviewLoading,
+    isError: hrOverviewError,
+    refetch: refetchHrOverview,
+  } = useQuery({
+    queryKey: ["dashboard", "hr-overview", userId ?? "anonymous"],
+    queryFn: () => dashboardService.getHROverview(),
+    refetchOnMount: true,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+    enabled: !!userId && isHrDashboard && (isAdmin || isHR),
+  });
 
   const { data: hrStats } = useQuery({
     queryKey: ["dashboard", "hr", userId ?? "anonymous"],
@@ -42,7 +61,7 @@ export const useDashboardData = ({
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
-    enabled: !!userId && (isAdmin || isHR) && isPrivilegedDashboard,
+    enabled: !!userId && (isAdmin || isHR) && isPrivilegedDashboard && !isHrDashboard,
   });
 
   const { data: overtimeData, isLoading: overtimeLoading } = useQuery({
@@ -162,8 +181,57 @@ export const useDashboardData = ({
     enabled: !!userId && selectedDashboard === "employee",
   });
 
+  // HR-view derivations from the org aggregate (see isHrDashboard above).
+  const hrMonthlyData = useMemo(
+    () =>
+      (hrOverview?.monthly_hours ?? []).map((m) => ({
+        day: m.label,
+        month: m.month,
+        overtime: m.overtime,
+        standby: m.standby,
+      })),
+    [hrOverview]
+  );
+  const hrStatusBars = useMemo(
+    () =>
+      hrOverview
+        ? [
+            { label: "Pending", value: hrOverview.status_counts.pending },
+            { label: "Approved", value: hrOverview.status_counts.approved },
+            { label: "Rejected", value: hrOverview.status_counts.rejected },
+          ]
+        : [],
+    [hrOverview]
+  );
+  const toHoursRow = (r: {
+    id: number;
+    user_name: string;
+    hours: number;
+    date: string;
+    status: string;
+  }) => ({
+    id: r.id,
+    user: r.user_name,
+    userInitials: r.user_name.slice(0, 2).toUpperCase(),
+    duration: `${r.hours}h`,
+    date: new Date(r.date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+    status: r.status,
+  });
+  const hrRecentOvertime = useMemo(
+    () => (hrOverview?.recent_overtime ?? []).map(toHoursRow),
+    [hrOverview]
+  );
+  const hrRecentStandby = useMemo(
+    () => (hrOverview?.recent_standby ?? []).map(toHoursRow),
+    [hrOverview]
+  );
+
   return {
-    hrStats,
+    hrStats: isHrDashboard ? hrOverview?.stats : hrStats,
     overtimeData,
     standbyData,
     leaveData,
@@ -171,6 +239,15 @@ export const useDashboardData = ({
     standbyLoading,
     leaveLoading,
     ...calculations,
+    monthlyData: isHrDashboard ? hrMonthlyData : calculations.monthlyData,
+    statusBars: isHrDashboard ? hrStatusBars : calculations.statusBars,
+    recentOvertimeTable: isHrDashboard ? hrRecentOvertime : calculations.recentOvertimeTable,
+    recentStandbyTable: isHrDashboard ? hrRecentStandby : calculations.recentStandbyTable,
+    pendingLeaveItems: hrOverview?.pending_leave ?? [],
+    pendingLeaveTotal: hrOverview?.pending_leave_total ?? 0,
+    hrOverviewLoading,
+    hrOverviewError,
+    refetchHrOverview,
     personalOvertimeHours: overtimeSummary?.total_hours ?? calculations.personalOvertimeHours,
     personalStandbyHours: standbySummary?.total_hours ?? calculations.personalStandbyHours,
     vacationBalanceDays:

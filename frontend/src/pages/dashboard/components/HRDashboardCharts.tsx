@@ -28,15 +28,17 @@ export const HRDashboardCharts: React.FC<HRDashboardChartsProps> = ({
     <GlassCard className="border-border/70 bg-card lg:col-span-2">
       <div className="flex items-center justify-between border-b border-border/70 p-6">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Overtime Distribution</h3>
-          <p className="text-sm text-muted-foreground">Daily average hours across all teams</p>
+          <h3 className="text-lg font-semibold text-foreground">Approved Hours</h3>
+          <p className="text-sm text-muted-foreground">
+            Overtime and standby per month, company-wide
+          </p>
         </div>
       </div>
-      {(monthlyData ?? []).length === 0 ? (
+      {(monthlyData ?? []).every((m) => !m.overtime && !m.standby) ? (
         <EmptyState
           icon={BarChart3}
-          title="No overtime data for this period."
-          description="Distribution appears once overtime is logged."
+          title="No approved hours for this period."
+          description="The chart appears once overtime or standby is approved."
           className="m-6"
         />
       ) : (
@@ -47,6 +49,10 @@ export const HRDashboardCharts: React.FC<HRDashboardChartsProps> = ({
                 <linearGradient id="colorOvertime" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorStandby" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -77,9 +83,19 @@ export const HRDashboardCharts: React.FC<HRDashboardChartsProps> = ({
               <Area
                 type="monotone"
                 dataKey="overtime"
+                name="Overtime"
                 stroke="hsl(var(--primary))"
                 fillOpacity={1}
                 fill="url(#colorOvertime)"
+                strokeWidth={3}
+              />
+              <Area
+                type="monotone"
+                dataKey="standby"
+                name="Standby"
+                stroke="hsl(var(--chart-2))"
+                fillOpacity={1}
+                fill="url(#colorStandby)"
                 strokeWidth={3}
               />
             </AreaChart>

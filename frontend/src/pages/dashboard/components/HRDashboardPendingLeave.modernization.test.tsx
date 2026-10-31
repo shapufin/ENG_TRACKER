@@ -11,7 +11,7 @@ vi.mock("@/components/ui/badge", () => ({
 
 describe("HRDashboardPendingLeave modernization", () => {
   it("renders the shared icon-centered empty state when no requests are pending", () => {
-    const { container } = render(<HRDashboardPendingLeave leaveData={{ results: [] }} />);
+    const { container } = render(<HRDashboardPendingLeave items={[]} total={0} />);
 
     expect(screen.getByText("All leave requests have been processed.")).toBeInTheDocument();
     expect(container.querySelector("svg")).toBeInTheDocument();

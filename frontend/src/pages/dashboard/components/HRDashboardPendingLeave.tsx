@@ -1,28 +1,33 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { Plane, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DashboardSectionShell } from "@/components/dashboard/DashboardSectionShell";
 import { EmptyState } from "@/components/ui/EmptyState";
+import type { HROverview } from "@/types";
 
 interface HRDashboardPendingLeaveProps {
-  leaveData: any;
+  /** Server-filtered pending rows (oldest submission first, capped). */
+  items: HROverview["pending_leave"];
+  /** Org pending total — may exceed items.length when the cap kicks in. */
+  total: number;
 }
 
-export const HRDashboardPendingLeave: React.FC<HRDashboardPendingLeaveProps> = ({ leaveData }) => {
-  const pending = (leaveData?.results ?? []).filter((r: any) => r.status === "pending");
-
+export const HRDashboardPendingLeave: React.FC<HRDashboardPendingLeaveProps> = ({
+  items,
+  total,
+}) => {
+  const hidden = total - items.length;
   return (
     <DashboardSectionShell
       title="Pending Leave Requests"
       badge={
         <Badge variant="outline" className="border-border text-muted-foreground">
-          Awaiting Decision
+          {total} Awaiting Decision
         </Badge>
       }
       bodyClassName="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3"
     >
-      {pending.map((r: any) => (
+      {items.map((r) => (
         <div
           key={r.id}
           className="group flex items-center justify-between rounded-2xl border border-border/70 bg-card p-5 transition-all hover:bg-muted/50"
@@ -32,9 +37,7 @@ export const HRDashboardPendingLeave: React.FC<HRDashboardPendingLeaveProps> = (
               <Plane className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">
-                {r.user_name || String(r.user)}
-              </p>
+              <p className="text-sm font-semibold text-foreground">{r.user_name}</p>
               <p className="text-xs text-muted-foreground">{r.days_requested} days requested</p>
             </div>
           </div>
@@ -45,7 +48,7 @@ export const HRDashboardPendingLeave: React.FC<HRDashboardPendingLeaveProps> = (
           />
         </div>
       ))}
-      {pending.length === 0 && (
+      {items.length === 0 && (
         <div className="col-span-full">
           <EmptyState
             icon={CheckCircle2}
@@ -53,6 +56,11 @@ export const HRDashboardPendingLeave: React.FC<HRDashboardPendingLeaveProps> = (
             className="p-6"
           />
         </div>
+      )}
+      {hidden > 0 && (
+        <p className="text-muted-foreground col-span-full text-xs">
+          +{hidden} more pending requests — see Leave Requests for the full queue.
+        </p>
       )}
     </DashboardSectionShell>
   );

@@ -20,7 +20,6 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         value={`${avgOvertime.toFixed(1)}h`}
         icon={Clock}
         glow="primary"
-        trend="+12%"
         progressPercent={Math.min(100, Math.round((avgOvertime / 4) * 100))}
         progressColorClass="bg-primary"
         footer={
@@ -38,7 +37,6 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         icon={Users}
         glow="success"
         iconColorClass="text-success"
-        trend="Stable"
         progressPercent={activeTeams > 0 ? 100 : 0}
         progressColorClass="bg-success"
         footer={
@@ -56,7 +54,6 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         icon={FileSpreadsheet}
         glow="warning"
         iconColorClass="text-warning"
-        trend="+5"
         progressPercent={
           totalRequests > 0
             ? Math.round(((hrStats?.pending_overtime ?? 0) / totalRequests) * 100)
@@ -80,7 +77,6 @@ export const HRDashboardStats: React.FC<HRDashboardStatsProps> = ({ hrStats }) =
         icon={Activity}
         glow="destructive"
         iconColorClass="text-destructive"
-        trend="+2"
         progressPercent={workforce > 0 ? 100 : 0}
         progressColorClass="bg-success"
         footer={

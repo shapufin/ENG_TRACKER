@@ -5,6 +5,7 @@ import type {
   AdminPeople,
   AdminTrends,
   DashboardStats,
+  HROverview,
   TeamDashboardStats,
   CalendarWorkspace,
   UserCalendarPreference,
@@ -21,6 +22,11 @@ import type {
 export const dashboardService = {
   async getHRStats(): Promise<DashboardStats> {
     const { data } = await api.get<DashboardStats>("/dashboard/widgets/global_stats/");
+    return data;
+  },
+
+  async getHROverview(): Promise<HROverview> {
+    const { data } = await api.get<HROverview>("/dashboard/widgets/hr_overview/");
     return data;
   },
 

@@ -23,7 +23,8 @@ interface OverviewState {
 }
 
 interface KpiStripWidgetProps {
-  totalUsers: number;
+  /** Active user count from admin_overview; null renders the skeleton. */
+  totalUsers: number | null;
   totalTeams: number;
   totalPending: number;
   statsLoading?: boolean;
@@ -115,7 +116,7 @@ export const KpiStripWidget: React.FC<KpiStripWidgetProps> = ({
       <dl className="divide-border/60 grid grid-cols-2 sm:grid-cols-3 sm:divide-x lg:grid-cols-6">
         <Kpi
           label="Users"
-          value={stat(totalUsers)}
+          value={loadingOverview ? null : (totalUsers ?? "—")}
           icon={Users}
           to="/admin/users"
           hint={newHires === undefined ? undefined : `+${newHires} new · 30d`}

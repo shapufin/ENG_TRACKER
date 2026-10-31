@@ -58,7 +58,7 @@ describe("KpiStripWidget", () => {
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 
-  it("keeps the stats figures while the overview request is loading", () => {
+  it("skeletons the overview-fed figures while the overview request loads", () => {
     render(
       <KpiStripWidget
         {...stats}
@@ -66,14 +66,19 @@ describe("KpiStripWidget", () => {
       />
     );
     expect(screen.getByRole("group", { name: "Key figures" })).toHaveAttribute("aria-busy", "true");
-    expect(screen.getByText("40")).toBeInTheDocument();
+    // Users comes from headcount.active_users — a global_stats value flashed
+    // here would switch meaning when the overview lands.
+    expect(screen.queryByText("40")).toBeNull();
+    expect(screen.getByText("5")).toBeInTheDocument();
     expect(screen.queryByText("25%")).toBeNull();
   });
 
   it("shows skeletons for the stats figures while stats load", () => {
     const { container } = render(<KpiStripWidget {...stats} statsLoading overview={overview()} />);
-    expect(screen.queryByText("40")).toBeNull();
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThanOrEqual(3);
+    // Users is overview-fed and unaffected by statsLoading; Teams/Pending skeleton.
+    expect(screen.getByText("40")).toBeInTheDocument();
+    expect(screen.queryByText("5")).toBeNull();
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThanOrEqual(2);
   });
 
   it("offers a retry when the overview request fails and leaves the stats alone", () => {
