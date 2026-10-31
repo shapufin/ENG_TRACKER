@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from apps.leave_management.models import LeaveBalance
 from apps.standby.models import StandbyLog
+from core.utils.timezone_local import business_today
 from apps.users.models import UserProfile
 
 URL = '/api/reports/insights/'
@@ -84,7 +85,7 @@ class InsightsTests(APITestCase):
         admin = make_user('ins_staff_only', is_staff=True)
         for user, hours in ((admin, '10'), (self.emp, '4')):
             StandbyLog.objects.create(
-                user=user, date=timezone.localdate(), hours=Decimal(hours),
+                user=user, date=business_today(), hours=Decimal(hours),
                 status='approved', submitted_at=timezone.now(),
             )
         res = self.client.get(URL)
