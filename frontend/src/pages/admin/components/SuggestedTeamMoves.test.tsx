@@ -47,10 +47,10 @@ describe("SuggestedTeamMoves", () => {
     expect(screen.getByRole("button", { name: "Add Ana Alpha to Delta" })).toHaveTextContent("1 teammate");
   });
 
-  it("does nothing until Add is pressed, then keeps the teams she already has", async () => {
+  it("does nothing until Add is pressed, then sends only the team to add (the server merges)", async () => {
     renderRows();
     expect(userService.updateUser).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Add Ana Alpha to Gamma" }));
-    await waitFor(() => expect(userService.updateUser).toHaveBeenCalledWith(5, { teams: [1, 3, 2] }));
+    await waitFor(() => expect(userService.updateUser).toHaveBeenCalledWith(5, { add_teams: [2] }));
   });
 });
