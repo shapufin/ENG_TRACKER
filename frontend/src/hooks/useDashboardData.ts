@@ -64,9 +64,18 @@ export const useDashboardData = ({
     enabled: !!userId && (isAdmin || isHR) && isPrivilegedDashboard && !isHrDashboard,
   });
 
+  // `ignore_date_filter` is deliberate: without it the list endpoint defaults
+  // to the current business month, so every dashboard's "recent" lists and
+  // charts sat empty on the 1st of each month until new rows appeared. These
+  // queries want the latest rows regardless of month; the page-size cap still
+  // keeps them cheap.
   const { data: overtimeData, isLoading: overtimeLoading } = useQuery({
     queryKey: ["overtime", userId ?? "anonymous", "dashboard", selectedDashboard],
-    queryFn: () => overtimeService.getLogs({ page_size: dashboardPageSize }),
+    queryFn: () =>
+      overtimeService.getLogs({
+        page_size: dashboardPageSize,
+        ignore_date_filter: "true",
+      }),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -75,7 +84,11 @@ export const useDashboardData = ({
 
   const { data: standbyData, isLoading: standbyLoading } = useQuery({
     queryKey: ["standby", userId ?? "anonymous", "dashboard", selectedDashboard],
-    queryFn: () => standbyService.getLogs({ page_size: dashboardPageSize }),
+    queryFn: () =>
+      standbyService.getLogs({
+        page_size: dashboardPageSize,
+        ignore_date_filter: "true",
+      }),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,

@@ -429,4 +429,41 @@ describe("useDashboardData", () => {
     expect(standbyService.getSummary).not.toHaveBeenCalled();
     expect(leaveService.getRequests).not.toHaveBeenCalled();
   });
+
+  it("asks for the latest rows regardless of month, so the 1st of a month is not empty", async () => {
+    // The list endpoint defaults to the current business month. A dashboard
+    // "recent" list that inherits that default sat empty on the 1st of every
+    // month until someone logged something new.
+    for (const fn of [overtimeService.getLogs, standbyService.getLogs]) {
+      vi.mocked(fn).mockClear();
+      vi.mocked(fn).mockResolvedValue({ count: 0, next: null, previous: null, results: [] } as never);
+    }
+    vi.mocked(leaveService.getRequests).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(leaveService.getUserBalanceSummary).mockResolvedValue({} as never);
+
+    renderHook(
+      () =>
+        useDashboardData({
+          userId: 1,
+          isAdmin: false,
+          isHR: false,
+          selectedDashboard: "employee",
+        }),
+      { wrapper: createWrapper(new QueryClient()) }
+    );
+
+    await waitFor(() => expect(overtimeService.getLogs).toHaveBeenCalled());
+    await waitFor(() => expect(standbyService.getLogs).toHaveBeenCalled());
+    expect(vi.mocked(overtimeService.getLogs).mock.calls[0][0]).toMatchObject({
+      ignore_date_filter: "true",
+    });
+    expect(vi.mocked(standbyService.getLogs).mock.calls[0][0]).toMatchObject({
+      ignore_date_filter: "true",
+    });
+  });
 });

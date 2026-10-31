@@ -25,7 +25,7 @@ export const HRDashboardCharts: React.FC<HRDashboardChartsProps> = ({
   statusBars,
 }) => (
   <div className="grid gap-6 lg:grid-cols-3">
-    <GlassCard className="border-border/70 bg-card lg:col-span-2">
+    <GlassCard className="border-border/70 bg-card lg:col-span-2" data-testid="hr-hours-chart">
       <div className="flex items-center justify-between border-b border-border/70 p-6">
         <div>
           <h3 className="text-lg font-semibold text-foreground">Approved Hours</h3>
@@ -104,7 +104,7 @@ export const HRDashboardCharts: React.FC<HRDashboardChartsProps> = ({
       )}
     </GlassCard>
 
-    <GlassCard className="border-border/70 bg-card">
+    <GlassCard className="border-border/70 bg-card" data-testid="hr-pipeline">
       <div className="flex items-center justify-between border-b border-border/70 p-6">
         <h3 className="text-lg font-semibold text-foreground">Request Pipeline</h3>
       </div>
