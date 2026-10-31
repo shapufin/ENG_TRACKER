@@ -116,6 +116,17 @@ class WageImporterCommitTests(TestCase):
         self.assertEqual(result.errors, ["No existing user matches the provided username."])
         self.assertFalse(WageAssignment.objects.exists())
 
+    def test_superuser_is_rejected(self):
+        User.objects.create_superuser(username="import_su", email="su@test.com", password="x")
+        result = self.importer.commit_row(
+            row(username="import_su", gross_monthly_wage=Decimal("100000"), effective_from=date(2026, 1, 1)),
+            NO_UPDATE,
+            context=self.context,
+        )
+        self.assertEqual(result.status, "error")
+        self.assertEqual(result.errors, ["Superuser accounts are not payroll subjects."])
+        self.assertFalse(WageAssignment.objects.filter(user__username="import_su").exists())
+
     def test_negative_wage_is_rejected(self):
         result = self.importer.commit_row(
             row(
