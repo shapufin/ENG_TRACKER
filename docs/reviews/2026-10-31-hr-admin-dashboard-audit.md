@@ -45,6 +45,8 @@ tables with Approved=0 while the org had 46 pending / 36 approved requests.
 | The **personal** dashboard still emptied on the 1st of every month (month-default date filter) — flagged at review, not part of the original scope | LOW | dashboard recent-list calls pass `ignore_date_filter=true` (latest rows regardless of month) | `useDashboardData.test.ts` "asks for the latest rows regardless of month" |
 | No browser test covered the bug class itself (frontend wired to the wrong endpoint; all unit tests mock the service, so they were green before and after the bug) | LOW | `e2e/hr-dashboard.spec.ts` — asserts the rendered pipeline/chart/recents against `hr_overview` **and** that the personal list endpoints never fire | e2e chromium, 1 passed |
 | Dead imports from the refactor (`models` in `viewsets.py`, `_month_start` in `hr_overview.py`); HR Workforce tile still read `total_users` | LOW | `ae24dab` | ruff + `HRDashboardStats.test.tsx` |
+| Three endpoints each computed the same request counts (`global_stats`, `admin_overview.pending_backlog`, `admin_overview.approval_aging` buckets) — the KPI strip, aging chips and aging buckets could silently disagree | MEDIUM | `apps/dashboard/aggregates.py` — `status_counts()` is the single implementation (counts + approved/pending hours in one aggregate per model); every dashboard endpoint derives from it | `test_status_counts.py` (5 agreement tests) |
+| `GlobalSettingsPage` 2FA test flaked at the 5 s default under full-suite load (pre-existing, reddened CI at random) | LOW | 15 s per-test budget on the page-level render, with a comment explaining why | file passes 11/11 isolated |
 
 ## Gates after the fixes
 

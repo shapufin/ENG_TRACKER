@@ -425,3 +425,13 @@ rendered pipeline/chart/recents equal the `hr_overview` answer and that the pers
 never fire. That browser test is the only layer that can catch an endpoint swap: every unit test
 mocks the service layer and was green both before and after the original bug. Gates: dashboard
 unit tests 118 OK, new e2e 1 passed (chromium), `tsc -b` clean, eslint clean.
+
+Second follow-up (structural): the admin dashboard's request counts had three independent
+implementations (`global_stats`, `admin_overview.pending_backlog`, `approval_aging` buckets), so the
+KPI strip, the aging chips and the aging buckets could disagree about the same number. They now all
+derive from `apps/dashboard/aggregates.py::status_counts` (one aggregate per model yields counts plus
+approved/pending hours); `test_status_counts.py` pins agreement across all three endpoints. Live
+check on e2e data: 46/13/8 identical everywhere, HR pipeline 67/36/1. Invariant 43(h). Also raised
+the `GlobalSettingsPage` 2FA test budget to 15 s (pre-existing 5 s-timeout flake under full-suite
+load; the file passes 11/11 isolated). Gates: `apps.dashboard` 225 OK, ruff clean, `manage.py check`
+clean.
