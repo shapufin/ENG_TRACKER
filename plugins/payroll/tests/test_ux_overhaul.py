@@ -200,6 +200,7 @@ class BulkWageCreateTests(TestCase):
         usernames = [u['username'] for u in response.data]
         self.assertIn('bulk_emp1', usernames)
         self.assertIn('bulk_emp2', usernames)
+        self.assertNotIn('bulk_admin', usernames)
         # All should have has_active_wage field
         for u in response.data:
             self.assertIn('has_active_wage', u)

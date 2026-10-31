@@ -32,8 +32,7 @@ class WageWritePermissionTests(TestCase):
         for action in ('view', 'manage'):
             perm, _ = PluginPermission.objects.get_or_create(plugin_name='payroll', action=action)
             perm.allowed_roles.add(tl_role)
-        hr_manage, _ = PluginPermission.objects.get_or_create(plugin_name='payroll', action='manage')
-        hr_manage.allowed_roles.add(hr_role)
+            perm.allowed_roles.add(hr_role)
         # A payroll manager who is not a team leader and not HR: holds the manage grant only.
         manager_role, _ = Role.objects.get_or_create(code='payroll_manager', defaults={'name': 'Payroll manager'})
         manage_perm, _ = PluginPermission.objects.get_or_create(plugin_name='payroll', action='manage')
@@ -155,3 +154,43 @@ class WageWritePermissionTests(TestCase):
 
         self.assertIsNotNone(_Importer().check_authority(self.tl_manager))
         self.assertIsNone(_Importer().check_authority(self.hr_user))
+
+    def test_eligible_users_excludes_superusers_for_hr(self):
+        User.objects.create_superuser(username='wage_su', email='su@test.com', password='pass')
+        request = self.factory.get('/api/plugins/payroll/wages/eligible_users/')
+        force_authenticate(request, user=self.hr_user)
+        response = WageAssignmentViewSet.as_view({'get': 'eligible_users'})(request)
+        self.assertEqual(response.status_code, 200)
+        usernames = [u['username'] for u in response.data]
+        self.assertNotIn('wage_su', usernames)
+        self.assertIn(self.employee.username, usernames)
+
+    def test_wage_create_rejects_superuser(self):
+        superuser = User.objects.create_superuser(username='wage_su2', email='su2@test.com', password='pass')
+        body = {
+            'user': superuser.id,
+            'gross_monthly_wage': '100000',
+            'effective_from': '2026-01-01',
+            'is_active': True,
+        }
+        request = self.factory.post('/api/plugins/payroll/wages/', body, format='json')
+        force_authenticate(request, user=self.hr_user)
+        response = WageAssignmentViewSet.as_view({'post': 'create'})(request)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Superuser accounts are not payroll subjects.', str(response.data))
+
+    def test_wage_list_excludes_superusers_for_hr(self):
+        superuser = User.objects.create_superuser(username='wage_su3', email='su3@test.com', password='pass')
+        WageAssignment.objects.create(
+            user=superuser,
+            gross_monthly_wage=Decimal('100000'),
+            effective_from=date(2026, 1, 1),
+            is_active=True,
+        )
+        request = self.factory.get('/api/plugins/payroll/wages/')
+        force_authenticate(request, user=self.hr_user)
+        response = WageAssignmentViewSet.as_view({'get': 'list'})(request)
+        self.assertEqual(response.status_code, 200)
+        results = response.data.get('results', response.data) if isinstance(response.data, dict) else response.data
+        returned_users = [row['user'] for row in results]
+        self.assertNotIn(superuser.id, returned_users)

@@ -235,7 +235,7 @@ class WageAssignmentViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         allowed_ids = _allowed_payroll_user_ids(self.request.user)
         if allowed_ids is not None:
             queryset = queryset.filter(user_id__in=allowed_ids)
-        return queryset
+        return queryset.filter(user__is_superuser=False)
 
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
@@ -295,7 +295,7 @@ class WageAssignmentViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     def eligible_users(self, request):
         """Return active users available for wage assignment."""
         allowed_ids = _allowed_payroll_user_ids(request.user)
-        qs = User.objects.filter(is_active=True).order_by('username')
+        qs = User.objects.filter(is_active=True, is_superuser=False).order_by('username')
         if allowed_ids is not None:
             qs = qs.filter(id__in=allowed_ids)
         # Annotate with current active wage info

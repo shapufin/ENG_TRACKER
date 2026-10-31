@@ -229,6 +229,13 @@ class WageImporter(PayrollAuthority, BaseImporter):
                     errors=["No existing user matches the provided username."],
                 )
 
+            if user.is_superuser:
+                return ImportRowResult(
+                    row_index=row_index,
+                    status="error",
+                    errors=["Superuser accounts are not payroll subjects."],
+                )
+
             wage = mapped_row.get("gross_monthly_wage")
             effective_from = mapped_row.get("effective_from")
             effective_to = mapped_row.get("effective_to")

@@ -55,6 +55,11 @@ class WageAssignmentCreateSerializer(serializers.ModelSerializer):
         fields = ['user', 'gross_monthly_wage', 'effective_from', 'effective_to', 'note', 'is_active']
 
     def validate(self, data):
+        user = data.get('user', getattr(self.instance, 'user', None))
+        if user and user.is_superuser:
+            raise serializers.ValidationError({
+                'user': 'Superuser accounts are not payroll subjects.',
+            })
         effective_from = data.get('effective_from')
         effective_to = data.get('effective_to')
         if effective_to and effective_from and effective_to < effective_from:
