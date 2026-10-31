@@ -451,3 +451,12 @@ view used those slots, and it now takes them from the org aggregate). Removed fr
 `dashboardCalculations`, `useDashboardCalculations` and the hook's return; the HR values are the
 only source. Gates: full frontend 607 files / 3900 tests OK (3 tests deleted with the dead
 functions), `tsc -b` clean, eslint clean.
+
+Final item (same branch): pure HR can now READ the org overtime/standby queue. `admin_logs` had
+always documented HR access and guarded itself with `has_hr_role`, but `HrOnlyBlockedMixin` 403'd
+pure HR before the action ran — an unreachable contract, and no way for HR to inspect a specific
+record. `HrOnlyBlockedMixin.hr_read_actions` (default empty) now opens exactly `admin_logs` on
+SAFE_METHODS for both viewsets; the personal list, approvals and writes stay 403. Invariant 43(j).
+Gates: `apps.permissions apps.overtime apps.standby apps.dashboard` 610 OK (6 new permission cases,
+2 viewset tests rewritten to the new contract), ruff clean. Live as `e2e_hr`: admin_logs OT/SB 200
+(76 org rows), personal list 403, approve 403.

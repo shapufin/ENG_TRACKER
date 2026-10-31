@@ -26,19 +26,14 @@ All ten LOW findings from the round-1 audit were fixed in the same pass (commits
 
 ## HR + Admin dashboards (audit 2026-10-31, `docs/reviews/2026-10-31-hr-admin-dashboard-audit.md`)
 
-All thirteen findings from this audit are fixed on `audit/hr-admin-dashboards-2026-10-31`
-(commits `1b45ea4`, `342a022`, `ae24dab`, and the follow-up pass): the HR dashboard reads the
-`hr_overview` widget endpoint, the personal dashboard's recent lists no longer empty on the 1st of
-a month, and `e2e/hr-dashboard.spec.ts` pins the wiring against the real API. One deliberately
-deferred item remains open (below).
+All findings from this audit are fixed on `audit/hr-admin-dashboards-2026-10-31` (commits
+`1b45ea4`, `342a022`, `ae24dab` and the follow-up passes): the HR dashboard reads the `hr_overview`
+widget endpoint, the personal dashboard's recent lists no longer empty on the 1st of a month,
+`e2e/hr-dashboard.spec.ts` pins the wiring against the real API, and pure HR can now read the org
+overtime/standby queue (`HrOnlyBlockedMixin.hr_read_actions`, SAFE_METHODS only). Nothing remains
+open for this feature.
 
 ## Open items
-
-### HR + Admin dashboards (2026-10-31)
-
-| Item | Severity | Fix sketch |
-|---|---|---|
-| `admin_logs` docstring says HR may read it, but `HrOnlyBlockedMixin` 403s pure HR on every action (including `admin_logs`) | LOW | deliberate for now — least privilege; if an HR page ever needs the raw OT/SB queue, exempt the action explicitly and pin it with a permission test |
 
 ### Maintenance mode (round 3, 2026-10-28)
 
