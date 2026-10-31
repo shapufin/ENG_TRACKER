@@ -12,6 +12,8 @@ import type {
   UserStats,
   CalendarGroupStats,
   TeamLifecycle,
+  OrphanReport,
+  TeamMoveSuggestion,
   TeamLinkWarning,
 } from "@/types";
 
@@ -358,6 +360,8 @@ export const userService = {
       phone?: string;
       code?: string | null;
       teams?: number[];
+      /** Join these teams next to the ones the person is in now (merged on the server). */
+      add_teams?: number[];
       techs?: TechAssignmentInput[];
       albanian_tl?: number | null;
       italian_tl?: number | null;
@@ -415,6 +419,16 @@ export const userService = {
     const { data } = await api.post<{ id: number; is_active: boolean }>(
       `/users/teams/${id}/unarchive/`
     );
+    return data;
+  },
+
+  async getTeamSuggestions(): Promise<TeamMoveSuggestion[]> {
+    const { data } = await api.get<TeamMoveSuggestion[]>("/users/teams/suggestions/");
+    return data;
+  },
+
+  async getOrphans(): Promise<OrphanReport> {
+    const { data } = await api.get<OrphanReport>("/users/teams/orphans/");
     return data;
   },
 

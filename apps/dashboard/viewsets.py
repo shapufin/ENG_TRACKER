@@ -823,7 +823,7 @@ class CalendarWorkspaceViewSet(HbprBlockedMixin, CacheInvalidationMixin, viewset
         # Get all workspace users (without select_related to avoid conflict)
         users = workspace.get_users_for_workspace()
 
-        users_list = list(users)
+        users_list = list(users.prefetch_related('profile__clients', 'profile__tech_assignments__tech'))
         serializer = WorkspaceUserSerializer(users_list, many=True, context={'workspace': workspace})
         return Response(serializer.data)
 

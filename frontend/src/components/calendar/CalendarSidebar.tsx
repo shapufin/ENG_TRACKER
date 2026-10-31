@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { CollapsedCalendarSidebar } from "./CollapsedCalendarSidebar";
 import { CalendarSidebarHeader } from "./CalendarSidebarHeader";
+import { CalendarSidebarFacets } from "./CalendarSidebarFacets";
+import { matchingUserIds, NO_FACETS, type FacetSelection } from "./calendarFacets";
 import { CalendarSidebarUserList } from "./CalendarSidebarUserList";
 import { CalendarSidebarFooter } from "./CalendarSidebarFooter";
 import { userDisplayName, teamLabel } from "./calendarSidebarUtils";
@@ -17,6 +19,8 @@ interface CalendarSidebarProps {
   visibleUsers: Set<number>;
   onToggleUser: (id: number) => void;
   onClearUsers: () => void;
+  /** Show exactly these people (used by the client/tech chips). */
+  onSetUsers?: (ids: number[]) => void;
   showStandby: boolean;
   showVacation: boolean;
   showSick: boolean;
@@ -34,6 +38,7 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
   visibleUsers,
   onToggleUser,
   onClearUsers,
+  onSetUsers,
   showStandby,
   showVacation,
   showSick,
@@ -47,6 +52,19 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
 }) => {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
+  // The visible set resets whenever the people change (another workspace): so must the chips.
+  // The selection remembers which people it was made for and reads as empty for any other set.
+  const peopleKey = allUsers.map((user) => user.id).join("|");
+  const [facetState, setFacetState] = useState({ peopleKey, selection: NO_FACETS });
+  const facets = facetState.peopleKey === peopleKey ? facetState.selection : NO_FACETS;
+  const setFacets = (selection: FacetSelection) => setFacetState({ peopleKey, selection });
+
+  const applyFacets = (next: FacetSelection) => {
+    setFacets(next);
+    const ids = matchingUserIds(allUsers, next);
+    if (ids === null) onClearUsers();
+    else onSetUsers?.(ids);
+  };
 
   const filteredUsers = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -100,9 +118,11 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
         onClearUsers={() => {
           setQuery("");
           setExpanded(false);
+          setFacets(NO_FACETS);
           onClearUsers();
         }}
       />
+      <CalendarSidebarFacets users={allUsers} selection={facets} onChange={applyFacets} />
       <CalendarSidebarUserList
         users={visibleList}
         visibleUsers={visibleUsers}

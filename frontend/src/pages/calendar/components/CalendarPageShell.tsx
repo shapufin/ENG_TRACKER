@@ -45,6 +45,7 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
       visibleUsers={data.visibleUsers}
       onToggleUser={data.toggleUser}
       onClearUsers={data.handleResetVisibleUsers}
+      onSetUsers={data.setVisibleUserIds}
       showStandby={data.showStandby}
       showVacation={data.showVacation}
       showSick={data.showSick}

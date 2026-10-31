@@ -8,7 +8,7 @@ plugin-owned relations are found through the reverse accessors.
 """
 from datetime import timedelta
 
-from django.db.models import CASCADE, Max
+from django.db.models import CASCADE, Count, Max
 from django.utils import timezone
 
 from core.services.lifecycle import record_lifecycle_event
@@ -131,6 +131,17 @@ def _open_hbpr_assignment(team):
     return HbprAlbanianTlAssignment.objects.filter(albanian_tl_id=team.team_leader_id).filter(unfinished_q()).exists()
 
 
+def _sub_team_blocker(count):
+    return f'Team still has {count} active sub-team(s): archive or move them first.'
+
+
+def _pending_blocker(key, count):
+    return f'{count} pending {key} request(s) belong to members who would be left without a team leader.'
+
+
+HBPR_BLOCKER = "The team leader has an open HBPR assignment: end it before archiving the leader's team."
+
+
 def archive_blockers(team):
     """Reasons ``team`` cannot be archived yet (empty = it can)."""
     blockers = []
@@ -138,14 +149,82 @@ def archive_blockers(team):
         return ['Team is already archived.']
     live_sub_teams = team.sub_teams.filter(is_active=True).count()
     if live_sub_teams:
-        blockers.append(f'Team still has {live_sub_teams} active sub-team(s): archive or move them first.')
+        blockers.append(_sub_team_blocker(live_sub_teams))
     for key, count in _pending_orphans(team).items():
-        blockers.append(
-            f'{count} pending {key} request(s) belong to members who would be left without a team leader.'
-        )
+        blockers.append(_pending_blocker(key, count))
     if _open_hbpr_assignment(team):
-        blockers.append("The team leader has an open HBPR assignment: end it before archiving the leader's team.")
+        blockers.append(HBPR_BLOCKER)
     return blockers
+
+
+def archive_blockers_bulk(teams):
+    """``{team_id: [reasons]}`` for the active teams in ``teams``, in a fixed number of queries.
+
+    Same rules and wording as ``archive_blockers`` (a test pins the two together); the Teams table
+    uses this so it can say why a row cannot be archived without one request per team.
+    """
+    from apps.leave_management.models import LeaveRequest
+    from apps.overtime.models import OvertimeLog
+    from apps.standby.models import StandbyLog
+    from apps.users.models import Team, UserProfile
+    from apps.users.models.hbpr import HbprAlbanianTlAssignment
+    from apps.users.services.hbpr_assignments import unfinished_q
+
+    active = [t for t in teams if t.is_active]
+    ids = [t.id for t in active]
+    result = {t.id: [] for t in active}
+    if not ids:
+        return result
+
+    sub_counts = dict(
+        Team.objects.filter(is_active=True, parent_team_id__in=ids)
+        .values_list('parent_team_id').annotate(n=Count('id')).order_by()
+    )
+
+    through = UserProfile.teams.through
+    memberships = list(through.objects.filter(team_id__in=ids).values_list('team_id', 'user_profile_id'))
+    profile_ids = {pid for _, pid in memberships}
+    active_team_counts = dict(
+        through.objects.filter(user_profile_id__in=profile_ids, team__is_active=True)
+        .values_list('user_profile_id').annotate(n=Count('team_id', distinct=True)).order_by()
+    )
+    # A member is left stranded when this is their only active team and no TL link covers them.
+    uncovered = {
+        pid: uid
+        for pid, uid in UserProfile.objects.filter(
+            id__in=profile_ids, italian_tl__isnull=True, albanian_tl__isnull=True
+        ).values_list('id', 'user_id')
+        if active_team_counts.get(pid, 0) <= 1
+    }
+    pending = {}
+    if uncovered:
+        for key, model in (('leave', LeaveRequest), ('overtime', OvertimeLog), ('standby', StandbyLog)):
+            pending[key] = dict(
+                model.objects.filter(user_id__in=uncovered.values(), status=PENDING, is_deleted=False)
+                .values_list('user_id').annotate(n=Count('id')).order_by()
+            )
+
+    leaders = {t.team_leader_id for t in active if t.team_leader_id}
+    open_hbpr = set(
+        HbprAlbanianTlAssignment.objects.filter(albanian_tl_id__in=leaders)
+        .filter(unfinished_q()).values_list('albanian_tl_id', flat=True)
+    ) if leaders else set()
+
+    stranded_by_team = {}
+    for team_id, pid in memberships:
+        if pid in uncovered:
+            stranded_by_team.setdefault(team_id, []).append(uncovered[pid])
+
+    for team in active:
+        if sub_counts.get(team.id):
+            result[team.id].append(_sub_team_blocker(sub_counts[team.id]))
+        for key in ('leave', 'overtime', 'standby'):
+            count = sum(pending.get(key, {}).get(uid, 0) for uid in stranded_by_team.get(team.id, []))
+            if count:
+                result[team.id].append(_pending_blocker(key, count))
+        if team.team_leader_id in open_hbpr:
+            result[team.id].append(HBPR_BLOCKER)
+    return result
 
 
 def unarchive_blockers(team):

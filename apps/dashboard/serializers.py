@@ -15,11 +15,33 @@ class WorkspaceUserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     team = serializers.SerializerMethodField()
     teams = serializers.SerializerMethodField()
+    clients_detail = serializers.SerializerMethodField()
+    techs_detail = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'full_name',
-                  'team', 'teams']
+                  'team', 'teams', 'clients_detail', 'techs_detail']
+
+    # The calendar sidebar filters people by what they work on. workspace_users prefetches
+    # profile.clients and profile.tech_assignments, so these read memory, not the database.
+    def get_clients_detail(self, obj):
+        profile = getattr(obj, 'profile', None)
+        if profile is None:
+            return []
+        return [
+            {'id': c.id, 'name': c.name, 'code': c.code}
+            for c in profile.clients.all() if c.is_active
+        ]
+
+    def get_techs_detail(self, obj):
+        profile = getattr(obj, 'profile', None)
+        if profile is None:
+            return []
+        return [
+            {'id': a.tech_id, 'name': a.tech.name, 'code': a.tech.code}
+            for a in profile.tech_assignments.all() if a.tech.is_active
+        ]
 
     def get_full_name(self, obj):
         if obj.first_name or obj.last_name:

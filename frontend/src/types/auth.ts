@@ -26,6 +26,9 @@ export interface User {
   hire_date?: string | null;
   team?: TeamSummary | null;
   teams?: TeamSummary[];
+  /** Active clients and techs a person works on; only the calendar's `workspace_users` sends them. */
+  clients_detail?: Array<{ id: number; name: string; code: string }>;
+  techs_detail?: Array<{ id: number; name: string; code: string }>;
   /** Same shape as UserSerializer.techs, so login and /me/ agree. The JWT's
    * own claim is flatter (level_code) but is never read as the user object. */
   techs?: UserTechAssignment[];

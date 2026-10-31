@@ -30,7 +30,7 @@ const node = (over: Partial<TeamNode>): TeamNode =>
     ...over,
   }) as TeamNode;
 
-const renderTable = (data: TeamNode[]) => {
+const renderTable = (data: TeamNode[], onArchive?: (team: TeamNode) => void) => {
   localStorage.clear();
   return render(
     <TeamDataTable
@@ -39,6 +39,7 @@ const renderTable = (data: TeamNode[]) => {
       onToggleExpand={vi.fn()}
       onEdit={vi.fn()}
       onDelete={vi.fn()}
+      onArchive={onArchive}
       hoveredPath={new Set()}
       onRowMouseEnter={vi.fn()}
       onRowMouseLeave={vi.fn()}
@@ -63,5 +64,31 @@ describe("TeamDataTable", () => {
     renderTable([node({ description: "Managed NOC" }), node({ id: 2, name: "Beta" })]);
     expect(screen.getByRole("columnheader", { name: /description/i })).toBeInTheDocument();
     expect(screen.getByText("Managed NOC")).toBeInTheDocument();
+  });
+
+  describe("Archive action", () => {
+    it("is disabled with the server's reason when the team cannot be archived yet", () => {
+      const onArchive = vi.fn();
+      renderTable(
+        [node({ is_active: true, archive_blockers: ["Team still has 2 active sub-team(s)."] })],
+        onArchive
+      );
+      const button = screen.getByRole("button", { name: "Archive Alpha" });
+      expect(button).toBeDisabled();
+      expect(button).toHaveAccessibleDescription("Team still has 2 active sub-team(s).");
+    });
+
+    it("stays enabled when nothing blocks it, and when the list sent no blockers", () => {
+      const onArchive = vi.fn();
+      renderTable(
+        [
+          node({ is_active: true, archive_blockers: [] }),
+          node({ id: 2, name: "Beta", is_active: true }),
+        ],
+        onArchive
+      );
+      expect(screen.getByRole("button", { name: "Archive Alpha" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Archive Beta" })).toBeEnabled();
+    });
   });
 });
