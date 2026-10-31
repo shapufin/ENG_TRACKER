@@ -108,17 +108,22 @@ class StandbyLogViewSetTests(TestCase):
         response = self.client.get('/api/standby/logs/admin_logs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
 
-    def test_pure_hr_has_no_access_to_standby_logs(self):
-        """Pure HR has no standby: every action of the viewset is refused, the
-        read-only admin_logs endpoint included (hidden menus are not auth)."""
+    def test_pure_hr_reads_only_the_admin_queue(self):
+        """Pure HR has no personal standby, but it may READ the org queue.
+
+        `admin_logs` documents HR read access and guards itself with
+        `has_hr_role`; `HrOnlyBlockedMixin.hr_read_actions` opens exactly that
+        action on SAFE_METHODS. The personal list and every write stay refused.
+        """
         hr_user = User.objects.create_user(username='sb-hr', password='testpass')
         profile = hr_user.profile
         profile.is_hr_user = True
         profile.save()
         self.client.force_authenticate(user=hr_user)
-        for url in ('/api/standby/logs/', '/api/standby/logs/admin_logs/'):
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, url)
+        response = self.client.get('/api/standby/logs/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, '/api/standby/logs/')
+        response = self.client.get('/api/standby/logs/admin_logs/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
 
     def test_hr_who_is_also_staff_keeps_standby_access(self):
         hr_staff = User.objects.create_user(username='sb-hr-staff', password='testpass', is_staff=True)

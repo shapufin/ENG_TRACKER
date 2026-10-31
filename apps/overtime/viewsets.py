@@ -195,6 +195,9 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
     Provides CRUD operations and approval workflow for overtime entries.
     """
     idempotency_endpoint = 'overtime'
+    # `admin_logs` documents HR read access and guards itself with
+    # `has_hr_role`; the mixin must let pure HR reach it (SAFE_METHODS only).
+    hr_read_actions = {'admin_logs'}
     allow_staff_global_view = False
     staff_global_view_actions = {'approve', 'reject', 'bulk_approve', 'bulk_reject', 'bulk_delete', 'export'}
     queryset = OvertimeLog.objects.all().select_related('user', 'client', 'approved_by').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level')
