@@ -26,7 +26,7 @@ describe("HRDashboardPendingLeave", () => {
 
   it("pluralises the requested day count", () => {
     render(
-      <HRDashboardPendingLeave items={[{ ...item, days_requested: 1 }, item]} total={2} />
+      <HRDashboardPendingLeave items={[{ ...item, id: 2, days_requested: 1 }, item]} total={2} />
     );
     expect(screen.getByText("1 day requested")).toBeInTheDocument();
     expect(screen.getByText("3 days requested")).toBeInTheDocument();
