@@ -10,7 +10,7 @@
  * - Static assets (icons, fonts): cache-first with long TTL
  */
 
-const CACHE_VERSION = "engtracker-v4";
+const CACHE_VERSION = "engtracker-v5";
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const STATIC_CACHE = `${CACHE_VERSION}-static`;

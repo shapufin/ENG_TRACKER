@@ -861,15 +861,19 @@ class NginxTemplateHardeningTests(SimpleTestCase):
     def test_missing_asset_404_is_never_cached(self):
         # A tab opened before a deploy asks for a deleted hashed chunk; the 404
         # must not be cached by Cloudflare/browsers or the new build stays hidden.
-        self.assertIn('@asset_missing', self._location('/assets/'))
+        self.assertIn('try_files $uri @asset_missing;', self._location('/assets/'))
         body = self._location('@asset_missing')
         self.assertIn('Cache-Control "no-store"', body)
         self.assertIn('return 404', body)
+        self.assertIn('X-Frame-Options', body)
+        self.assertIn('Permissions-Policy', body)
 
     def test_service_worker_is_revalidated(self):
         body = self._location('/sw.js')
         self.assertIn('Cache-Control "no-cache"', body)
         self.assertIn('X-Content-Type-Options', body)
+        self.assertIn('X-Frame-Options', body)
+        self.assertIn('Permissions-Policy', body)
 
     def test_spa_keeps_enforcing_csp_and_adds_strict_report_only(self):
         body = self._location('/')
