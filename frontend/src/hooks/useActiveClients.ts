@@ -7,7 +7,7 @@ import { overtimeService } from "@/services/overtimeService";
  * both pages used to share one key, and filtering one would have silently
  * filtered the other. Prefix invalidation still reaches this key.
  */
-export const ACTIVE_CLIENTS_QUERY_KEY = ["overtime", "clients", "active"] as const;
+const ACTIVE_CLIENTS_QUERY_KEY = ["overtime", "clients", "active"] as const;
 
 interface UseActiveClientsOptions {
   staleTime?: number;

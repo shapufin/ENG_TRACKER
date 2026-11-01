@@ -786,11 +786,6 @@ const CustomChartDesktop: React.FC<{
 export interface CustomChartViewerProps {
   chart: OrgChart;
   payload: DraftPayload;
-}
-
-export interface CustomChartViewerProps {
-  chart: OrgChart;
-  payload: DraftPayload;
   defaultMode?: "graph" | "list";
 }
 
