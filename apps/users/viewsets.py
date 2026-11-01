@@ -435,6 +435,14 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         ):
             raise PermissionDenied(message)
 
+    @staticmethod
+    def _forbid_non_superuser_on_superuser(request, *targets):
+        """Only a superuser may edit or remove a superuser account (own account excepted)."""
+        if request.user.is_superuser:
+            return
+        if any(t.is_superuser and t.pk != request.user.pk for t in targets):
+            raise PermissionDenied('Only a superuser can change or remove a superuser account.')
+
     @action(detail=True, methods=['get'], permission_classes=[IsAdminUser()])
     def mfa_status(self, request, pk=None):
         """Second-factor state of one account, for the admin user panel."""
@@ -542,6 +550,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 {'error': 'user_ids must not contain duplicates'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        self._forbid_non_superuser_on_superuser(request, *User.objects.filter(id__in=user_ids, is_superuser=True))
 
         allowed_fields = {
             'teams', 'techs', 'italian_tl', 'albanian_tl', 'is_hr',
@@ -809,6 +818,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
     def perform_destroy(self, instance):
+        self._forbid_non_superuser_on_superuser(self.request, instance)
         try:
             instance.delete()
         except models.ProtectedError:
@@ -969,6 +979,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         from apps.permissions.services.role_service import find_blocked_tl_revocations
         from .services.hbpr_assignments import hbpr_revocation_refusal
         user = self.get_object()
+        self._forbid_non_superuser_on_superuser(request, user)
         data = request.data
 
         # Block revoking a TL role (True -> False) while another profile's
