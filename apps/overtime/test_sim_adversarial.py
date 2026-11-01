@@ -17,9 +17,11 @@ OT = '/api/overtime/logs/'
 
 
 def _weekday(d):
-    while d.weekday() >= 5:
-        d -= timedelta(days=1)
-    return d
+    """The latest weekday on or before ``d`` in the same month (early-month weekends keep ``d``)."""
+    back = d
+    while back.weekday() >= 5:
+        back -= timedelta(days=1)
+    return back if back.month == d.month else d
 
 
 class OvertimeAbuseTests(APITestCase):

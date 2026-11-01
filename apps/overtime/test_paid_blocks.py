@@ -19,6 +19,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.overtime.paid_blocks import compute_blocks, split_hours
+from core.utils.timezone_local import business_today
 
 from .models import Client, OvertimeLog
 
@@ -262,8 +263,9 @@ class PaidBlockApiTests(TestCase):
         self.api.force_authenticate(user=self.user)
 
     def _post(self, start, end):
+        # The personal list shows the current month only, so log on today's business date.
         return self.api.post('/api/overtime/logs/', {
-            'date': DAY.isoformat(), 'client': self.client_a.id,
+            'date': business_today().isoformat(), 'client': self.client_a.id,
             'start_time': start, 'end_time': end,
         })
 
