@@ -275,4 +275,3 @@ const PreviousYearsContent: React.FC<{
   );
 };
 
-export default PreviousYearsPage;

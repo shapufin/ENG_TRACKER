@@ -45,14 +45,7 @@ async function get(
 }
 
 /** The endpoints the app itself calls to decide what a role may render. */
-const DENIED_PLUGINS_FOR_HBPR = [
-  "engagement",
-  "organigrama",
-  "skills",
-  "ticket_kpi",
-  "analytics",
-  "control_room",
-];
+const DENIED_PLUGINS_FOR_HBPR = ["engagement", "skills", "ticket_kpi", "analytics", "control_room"];
 
 test.describe("HBPR-only user", () => {
   test.describe.configure({ timeout: 180_000 });
@@ -67,6 +60,8 @@ test.describe("HBPR-only user", () => {
     expect(meta.status).toBe(200);
     const enabled = (meta.body as { name: string }[]).map((row) => row.name);
     expect(enabled).toContain("tl_scorecard");
+    // An HBPR sees the org chart scoped to assigned TLs (docs/hbpr-and-scorecard.md).
+    expect(enabled).toContain("organigrama");
     for (const denied of DENIED_PLUGINS_FOR_HBPR) {
       expect(enabled, `${denied} must not be active for an HBPR`).not.toContain(denied);
     }
@@ -100,7 +95,6 @@ test.describe("HBPR-only user", () => {
       "Calendar",
       "Leave",
       "My records",
-      "Organigrama",
       "Skills",
       "Ticket KPI",
       "Overtime",

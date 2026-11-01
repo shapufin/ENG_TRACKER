@@ -32,10 +32,13 @@ def _assign_tl_role(user, code='italian_tl'):
 
 
 def _leave(user, submitted_at, approved_at=None, status='approved'):
+    start = submitted_at.date() + timedelta(days=5)
+    while start.weekday() >= 5:  # leave must include a business day
+        start += timedelta(days=1)
     request = LeaveRequest.objects.create(
         user=user, request_type='vacation',
-        start_date=submitted_at.date() + timedelta(days=5),
-        end_date=submitted_at.date() + timedelta(days=6),
+        start_date=start,
+        end_date=start + timedelta(days=1),
         status=status,
     )
     LeaveRequest.objects.filter(pk=request.pk).update(submitted_at=submitted_at, approved_at=approved_at)

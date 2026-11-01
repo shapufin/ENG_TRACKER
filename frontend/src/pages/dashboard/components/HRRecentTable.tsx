@@ -4,7 +4,7 @@ import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { DataTable } from "@/components/ui/DataTable";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-export interface HRRecentRow {
+interface HRRecentRow {
   id: number;
   user: string;
   userInitials: string;

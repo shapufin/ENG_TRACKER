@@ -45,7 +45,7 @@ import { toneSurfaceClass } from "@/components/ui/tone";
 import { toTechAssignments } from "@/pages/admin/hooks/useUsersPage";
 import type { Tech, TechAssignmentInput, UserProfile } from "@/types";
 
-export interface UserDetailSavePayload {
+interface UserDetailSavePayload {
   phone?: string;
   code?: string | null;
   hire_date?: string | null;

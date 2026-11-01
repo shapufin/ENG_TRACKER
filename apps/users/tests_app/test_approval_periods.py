@@ -123,6 +123,10 @@ class WorkDateCutoffUpdateTests(TestCase):
         self._patch = patch('django.utils.timezone.now', return_value=datetime(2026, 10, 12, 12, 0, tzinfo=TIRANE))
         self._patch.start()
         self.addCleanup(self._patch.stop)
+        # The monthly lock reads the business clock, which timezone.now() does not drive.
+        lock_clock = patch('core.mixins.permissions.business_today', return_value=date(2026, 10, 12))
+        lock_clock.start()
+        self.addCleanup(lock_clock.stop)
         self.ot = OvertimeLog.objects.create(user=self.employee, client=self.client_obj, date=date(2026, 10, 5), hours=2)
         self.sb = StandbyLog.objects.create(user=self.employee, date=date(2026, 10, 5), hours=8)
 

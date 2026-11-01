@@ -1,4 +1,3 @@
-// fallow-ignore-file circular-dependencies
 /**
  * Core-owned entry point for the onboarding plugin's per-client export and purge panel.
  *
