@@ -159,7 +159,7 @@ class AuditLog(models.Model):
         related_name='audit_logs',
         help_text='User who performed the action'
     )
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
     model_name = models.CharField(max_length=50, choices=MODEL_CHOICES)
     object_id = models.CharField(max_length=50, help_text='ID of the affected object')
     object_repr = models.CharField(max_length=255, help_text='String representation of object')
