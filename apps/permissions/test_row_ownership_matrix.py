@@ -38,7 +38,7 @@ from apps.permissions.models import Role
 from apps.permissions.services.role_service import assign_role
 from apps.plugins.models import Plugin
 from apps.reports.models import GeneratedReport
-from apps.standby.models import StandbyLog
+from apps.standby.models import StandbyLog, StandbyPattern
 from apps.users.models import Team, TeamMembership, UserProfile
 from apps.users.models.hbpr import HbprAlbanianTlAssignment
 from apps.users.services.hbpr_scope import get_hbpr_scope
@@ -104,7 +104,7 @@ for _url in (
     '/api/dashboard/calendar-workspaces/my_teams_workspaces/',
     '/api/dashboard/calendar-workspaces/my_workspaces/',
     '/api/leave-management/settings/', '/api/overtime/clients/',
-    '/api/overtime/clients/available/', '/api/standby/patterns/',
+    '/api/overtime/clients/available/',
     '/api/users/techs/', '/api/users/tech-levels/', '/api/users/profiles/tech_facets/',
     '/api/users/profiles/assignment_counts/',
     '/api/users/teams/calendar_group_stats/', '/api/users/teams/calendar_groups/',
@@ -525,6 +525,9 @@ def populate_rows(cls):
         standby = StandbyLog.objects.create(
             user=owner, date=today, hours=4, description=f'sb {owner.username}')
         standby.clients.add(cls.client_obj)
+        StandbyPattern.objects.create(
+            user=owner, name=f'pattern {owner.username}', recurrence_type='weekly',
+            start_time='20:00', end_time='23:00', valid_from=today)
         LeaveRequest.objects.create(
             user=owner, request_type='vacation', start_date=leave_day, end_date=leave_day,
             days_counted=1, reason=f'leave {owner.username}')

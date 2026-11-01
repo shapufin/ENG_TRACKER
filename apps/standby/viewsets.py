@@ -47,7 +47,15 @@ class StandbyPatternViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, CacheInvalidat
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['user__username', 'name']
     filterset_fields = ['recurrence_type', 'is_active', 'user']
-    
+
+    def get_queryset(self):
+        """A pattern is personal: only its owner (and staff) reaches it."""
+        queryset = super().get_queryset()
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return queryset
+        return queryset.filter(user=user)
+
     def perform_create(self, serializer):
         """Set the user automatically on creation. Staff may target active users."""
         from plugins.audit_log.signals import log_action
@@ -121,6 +129,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
         target_user, impersonated = resolve_target_user(
             self.request.user, self.request.data.get('user')
         )
+        self._ensure_pattern_belongs_to(serializer.validated_data.get('pattern'), target_user.id)
         date = serializer.validated_data.get('date')
         start_time = serializer.validated_data.get('start_time')
         end_time = serializer.validated_data.get('end_time')
@@ -149,6 +158,13 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
                 obj=instance,
             )
         self.invalidate_related_cache()
+
+    @staticmethod
+    def _ensure_pattern_belongs_to(pattern, user_id):
+        from rest_framework.exceptions import ValidationError
+
+        if pattern is not None and pattern.user_id != user_id:
+            raise ValidationError({'pattern': 'This standby pattern belongs to another user.'})
 
     @staticmethod
     def _ensure_not_in_finalized_payroll(instance):
@@ -180,6 +196,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
 
         obj = self.get_object()
         self._ensure_not_in_finalized_payroll(obj)
+        self._ensure_pattern_belongs_to(serializer.validated_data.get('pattern'), obj.user_id)
         date = serializer.validated_data.get('date', obj.date)
         start_time = serializer.validated_data.get('start_time', obj.start_time)
         end_time = serializer.validated_data.get('end_time', obj.end_time)
