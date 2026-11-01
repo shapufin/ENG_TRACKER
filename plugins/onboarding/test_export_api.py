@@ -8,6 +8,8 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
+from django.core.signals import request_finished
+from django.db import close_old_connections
 from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
@@ -120,7 +122,20 @@ class DownloadTests(ExportApiTestCase):
         return self.client.post(f'{BASE}/exports/{export.pk}/download-link/')
 
     def _download(self, url):
-        return APIClient().get(url)  # a browser navigation: no JWT
+        response = APIClient().get(url)  # a browser navigation: no JWT
+        self.addCleanup(self._close, response)
+        return response
+
+    @staticmethod
+    def _close(response):
+        # A closed FileResponse fires request_finished, whose close_old_connections receiver
+        # closes the connection and poisons the rest of the class on PostgreSQL ("connection
+        # already closed"). Hold the response and close it without that receiver.
+        request_finished.disconnect(close_old_connections)
+        try:
+            response.close()
+        finally:
+            request_finished.connect(close_old_connections)
 
     def test_a_link_needs_a_ready_export(self):
         with override_settings(EXPORT_JOBS_INLINE=False):

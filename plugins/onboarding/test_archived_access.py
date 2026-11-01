@@ -4,6 +4,8 @@ import tempfile
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
+from django.core.signals import request_finished
+from django.db import close_old_connections
 from django.test import TestCase, override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -15,6 +17,10 @@ from .viewsets import DocumentViewSet, FolderViewSet, OnboardingClientViewSet
 
 class ArchivedOnboardingAccessTests(TestCase):
     def setUp(self):
+        # A closed FileResponse fires request_finished, whose close_old_connections receiver
+        # closes the connection and poisons later tests on PostgreSQL ("connection already closed").
+        request_finished.disconnect(close_old_connections)
+        self.addCleanup(request_finished.connect, close_old_connections)
         media = tempfile.TemporaryDirectory()
         self.addCleanup(media.cleanup)
         override = override_settings(MEDIA_ROOT=media.name)
