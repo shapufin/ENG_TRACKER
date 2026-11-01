@@ -66,7 +66,7 @@ test("/hr/team-leaders lists plain employees only, with summary cards", async ({
   await loginAsRole(page, "hr");
   await page.goto("/hr/team-leaders");
   await expect(page.getByText("Without any TL")).toBeVisible();
-  await expect(page.getByText("Employees", { exact: true })).toBeVisible();
+  await expect(page.getByText("Assignable Employees", { exact: true })).toBeVisible();
   const body = page.locator("table");
   await expect(body).toContainText("e2e_employee_a");
   for (const hidden of ["e2e_super", "e2e_admin", "e2e_hr", "e2e_tl", "e2e_hbpr"]) {

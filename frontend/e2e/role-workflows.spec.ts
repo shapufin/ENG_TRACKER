@@ -32,9 +32,10 @@ function expectations(role: E2ERole | "superuser" | "controlRoom"): Record<strin
   const hr = role === "hr" || role === "teamLeaderHr" || role === "admin" || role === "superuser";
   const admin = role === "admin" || role === "superuser";
   for (const p of APP) out[p] = cr && p !== "/settings" ? "/control-room/dashboard" : "allow";
-  // Pure HR has no personal hours or team calendar (HoursRoute / HrRestrictedRoute).
+  // Pure HR has no personal hours, team calendar or personal leave page (HoursRoute / HrRestrictedRoute):
+  // it works the employee-wide list under /admin-style "Leave Requests" instead.
   if (role === "hr") {
-    for (const p of ["/overtime", "/standby", "/calendar"]) out[p] = "/dashboard";
+    for (const p of ["/overtime", "/standby", "/calendar", "/leave-management"]) out[p] = "/dashboard";
   }
   // DashboardPage sends an admin's selected dashboard to the AdminShell at /admin (intentional).
   if (admin) out["/dashboard"] = "/admin";

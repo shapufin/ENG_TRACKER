@@ -251,8 +251,8 @@ test.describe("Organigrama plugin", () => {
 
     await expect(page.getByRole("heading", { name: "Organigrama" })).toBeVisible();
 
-    // At mobile width, the mobile list should render (not the React Flow graph).
-    // The mobile list uses semantic tree/list markup with role="tree".
+    // Mobile opens on the graph; the list is one tap away and uses role="tree".
+    await page.getByRole("button", { name: "Switch to list view" }).click();
     await expect(page.locator('ul[role="tree"]').first()).toBeVisible({ timeout: 10_000 });
   });
 
@@ -310,7 +310,8 @@ test.describe("Organigrama plugin", () => {
     await loginAsUser(page, E2E_CREDENTIALS.admin);
     await page.goto("/organigrama");
 
-    // Wait for the mobile tree to render.
+    // Mobile opens on the graph: switch to the list, then wait for the tree.
+    await page.getByRole("button", { name: "Switch to list view" }).click();
     await expect(page.locator('ul[role="tree"]').first()).toBeVisible({ timeout: 10_000 });
 
     // At least one expand/collapse button should be present.
