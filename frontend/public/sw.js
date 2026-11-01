@@ -100,13 +100,18 @@ async function cacheFirstStatic(request) {
   if (cached) return cached;
   try {
     const response = await fetch(request);
-    if (response.ok) {
+    // A deleted hashed chunk can come back as an HTML page; never store that
+    // as a script/stylesheet. Non-ok responses pass through untouched so the
+    // page sees the real status and can recover.
+    const type = response.headers.get("content-type") || "";
+    if (response.ok && !type.includes("text/html")) {
       const cache = await caches.open(STATIC_CACHE);
       cache.put(request, response.clone());
     }
     return response;
   } catch (err) {
-    return new Response("", { status: 503 });
+    // A genuine network failure is a network error, not a fabricated 503 body.
+    return Response.error();
   }
 }
 
