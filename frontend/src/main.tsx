@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryProvider } from "@/context/QueryContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import App from "./App";
+import { handlePreloadError } from "@/lib/chunkReload";
 // Fonts are imported here, not via `@import` in index.css: Tailwind 4 inlines CSS imports
 // without letting Vite rewrite their `url(./files/*.woff2)`, so the font files were never
 // emitted and every font 404ed in production.
@@ -24,6 +25,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+window.addEventListener("vite:preloadError", (event) => handlePreloadError(event));
 
 // Register service worker for PWA + offline support (production only to avoid
 // stale offline caching during local development). In dev, actively unregister
