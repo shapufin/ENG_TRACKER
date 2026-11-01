@@ -18,7 +18,7 @@ export function isMaintenanceError(error: unknown): boolean {
   );
 }
 
-export const MAINTENANCE_ACTIVE_EVENT = "maintenance:active";
+const MAINTENANCE_ACTIVE_EVENT = "maintenance:active";
 
 const announceMaintenance = () => {
   if (typeof window !== "undefined") {

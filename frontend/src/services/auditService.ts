@@ -44,7 +44,7 @@ interface AuditLogStatsParams {
   search?: string;
 }
 
-export interface AuditArchiveStatus {
+interface AuditArchiveStatus {
   target_month: string;
   target_month_label: string;
   eligible_count: number;
@@ -58,7 +58,7 @@ export interface AuditArchiveStatus {
   }>;
 }
 
-export interface AuditArchiveResult {
+interface AuditArchiveResult {
   success: boolean;
   archived_count: number;
   core_count?: number;

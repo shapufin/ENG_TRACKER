@@ -18,7 +18,7 @@ import type {
 } from "@/types";
 
 /** An update that changed teams also reports TL links that outlived the removed team. */
-export type UserUpdateResult = User & {
+type UserUpdateResult = User & {
   warnings?: TeamLinkWarning[];
   removed_team_leaders?: number[];
 };

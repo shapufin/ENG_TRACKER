@@ -91,7 +91,7 @@ export const CADENCE_STATUS_LABELS: Record<HbprCadenceStatus, string> = {
  * nth: 1=1st, 2=2nd, 3=3rd, 4=4th, -1=Last.
  * weekday: 0=Monday ... 6=Sunday.
  */
-export function getNthWeekdayOfMonth(
+function getNthWeekdayOfMonth(
   year: number,
   month: number,
   nth: number,
