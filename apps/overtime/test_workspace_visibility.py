@@ -34,14 +34,17 @@ class WorkspaceIdsVisibilityTests(APITestCase):
         )
         # LeaveRequest needs a business day, so never pin these rows to a weekend.
         today = date.today()
-        while today.weekday() >= 5:
-            today -= timedelta(days=1)
+        leave_day = today
+        while leave_day.weekday() >= 5:  # leave must include a business day
+            leave_day -= timedelta(days=1)
+        if leave_day.month == today.month:  # an early-month weekend keeps overtime in the current month
+            today = leave_day
         cls.ot = OvertimeLog.objects.create(
             user=cls.victim, date=today, hours=2, description='victim ot',
             client=cls.client_obj, status='pending',
         )
         cls.leave = LeaveRequest.objects.create(
-            user=cls.victim, request_type='vacation', start_date=today, end_date=today,
+            user=cls.victim, request_type='vacation', start_date=leave_day, end_date=leave_day,
             reason='victim leave',
         )
 
