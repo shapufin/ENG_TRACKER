@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DataCheckPage } from "./DataCheckPage";
@@ -97,5 +97,43 @@ describe("DataCheckPage", () => {
       await screen.findByRole("heading", { name: /Suggested team moves/ })
     ).toBeInTheDocument();
     expect(screen.queryByText("Everything is linked")).not.toBeInTheDocument();
+  });
+
+  it("filters items when searching", async () => {
+    vi.mocked(userService.getOrphans).mockResolvedValue({
+      ...empty,
+      users_without_team: [
+        { id: 1, username: "loner", full_name: "Lena Loner" },
+        { id: 2, username: "dave", full_name: "Dave Diver" },
+      ],
+    });
+    renderPage();
+    expect(await screen.findByText("Lena Loner")).toBeInTheDocument();
+    expect(screen.getByText("Dave Diver")).toBeInTheDocument();
+
+    const searchInput = screen.getByRole("searchbox", { name: "Search data check items" });
+    fireEvent.change(searchInput, { target: { value: "Lena" } });
+
+    expect(screen.getByText("Lena Loner")).toBeInTheDocument();
+    expect(screen.queryByText("Dave Diver")).not.toBeInTheDocument();
+    expect(screen.getByText("Showing 1 of 2")).toBeInTheDocument();
+  });
+
+  it("filters view when a category tab or stat card is selected", async () => {
+    vi.mocked(userService.getOrphans).mockResolvedValue({
+      ...empty,
+      users_without_team: [{ id: 1, username: "loner", full_name: "Lena Loner" }],
+      teams_without_leader: [{ id: 2, name: "Alpha", code: "ALP", members_count: 3 }],
+    });
+    renderPage();
+    expect(await screen.findByText("Lena Loner")).toBeInTheDocument();
+    expect(screen.getByText("Alpha (ALP)")).toBeInTheDocument();
+
+    // Click "Missing leaders" chip
+    const leadersChip = screen.getByRole("button", { name: /Missing leaders/ });
+    fireEvent.click(leadersChip);
+
+    expect(screen.getByText("Alpha (ALP)")).toBeInTheDocument();
+    expect(screen.queryByText("Lena Loner")).not.toBeInTheDocument();
   });
 });
