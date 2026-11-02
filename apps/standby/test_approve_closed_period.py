@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, datetime
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -7,10 +8,20 @@ from rest_framework.test import APIClient
 from apps.overtime.models import Client, OvertimeLog
 from apps.standby.models import StandbyLog
 from apps.users.models import Team, TeamMembership
+from core.utils.timezone_local import business_tz
 
 
 class ApproveInClosedPeriodTests(TestCase):
     def setUp(self):
+        # The fixtures live in October 2026; entries for a month close on the 2nd of the
+        # next one, so pin the clock instead of depending on the day the suite runs.
+        for target, value in (
+            ('django.utils.timezone.now', datetime(2026, 10, 12, 12, 0, tzinfo=business_tz())),
+            ('core.mixins.permissions.business_today', date(2026, 10, 12)),
+        ):
+            patcher = patch(target, return_value=value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.api = APIClient()
         self.tl = User.objects.create_user(username='ap-tl', password='pass')
         self.tl.profile.is_albanian_tl_role = True
