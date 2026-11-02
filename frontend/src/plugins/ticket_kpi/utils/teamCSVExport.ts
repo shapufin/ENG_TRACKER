@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csvSafe";
 export interface TeamMemberRow {
   user_id: number;
   username: string;
@@ -38,7 +39,7 @@ export const downloadTeamCSV = (month: string, summary?: TeamSummary) => {
     ]),
   ];
   const csv = rows
-    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+    .map((r) => r.map(csvCell).join(","))
     .join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = window.URL.createObjectURL(blob);
