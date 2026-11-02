@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
 from apps.overtime.models import Client
-from apps.users.models import Team, UserProfile
+from apps.users.models import Team, Tech, UserProfile
 from apps.users.services.team_suggestions import suggest_team_moves
 
 URL = '/api/users/teams/suggestions/'
@@ -277,3 +277,54 @@ class OvertimeAndManagerTests(APITestCase):
         # A TL on Delta/Acme must not make Delta look like it works Acme.
         row = mine(suggest_team_moves(), self.ana)
         self.assertIn(self.gamma.id, [row['recommendation']['team']['id']] + [a['team']['id'] for a in row['alternatives']])
+
+
+class TechAwareSuggestionsTests(APITestCase):
+    """Never suggest a team of a different tech."""
+
+    def setUp(self):
+        self.acme = Client.objects.create(name='Acme', code='ACM')
+        self.team_infra = Team.objects.create(name='Infra Team', code='INF_T')
+        self.team_db = Team.objects.create(name='DB Team', code='DB_T')
+        self.tech_infra = Tech.objects.create(name='Infrastructure', code='INFRA')
+        self.tech_db = Tech.objects.create(name='Database', code='DB')
+
+        self.ana = make_user('ana')  # DB engineer
+        self.ana.profile.techs.add(self.tech_db)
+        self.ana.profile.clients.add(self.acme)
+
+        self.bob = make_user('bob')  # Infra engineer in Infra Team
+        self.bob.profile.techs.add(self.tech_infra)
+        self.bob.profile.teams.add(self.team_infra)
+        self.bob.profile.clients.add(self.acme)
+
+        self.carl = make_user('carl')  # DB engineer in DB Team
+        self.carl.profile.techs.add(self.tech_db)
+        self.carl.profile.teams.add(self.team_db)
+        self.carl.profile.clients.add(self.acme)
+
+    def test_different_tech_team_is_never_suggested(self):
+        # Even though Bob works on Acme in Infra Team, Ana (DB) is never suggested Infra Team.
+        # She should only be suggested DB Team!
+        row = mine(suggest_team_moves(), self.ana)
+        self.assertIsNotNone(row)
+        self.assertEqual(row['recommendation']['team']['id'], self.team_db.id)
+        alt_team_ids = [alt['team']['id'] for alt in row['alternatives']]
+        self.assertNotIn(self.team_infra.id, alt_team_ids)
+
+    def test_no_suggestion_if_only_different_tech_team_works_the_client(self):
+        # If DB team did not exist or Carl didn't work on Acme, Ana gets NO suggestions
+        # because the only team on Acme is Infra (different tech).
+        self.carl.profile.clients.remove(self.acme)
+        row = mine(suggest_team_moves(), self.ana)
+        self.assertIsNone(row)
+
+    def test_untyped_user_receives_any_matching_team(self):
+        # Untyped user (no tech assigned) falls back to any team working the client
+        dan = make_user('dan')
+        dan.profile.clients.add(self.acme)
+        row = mine(suggest_team_moves(), dan)
+        self.assertIsNotNone(row)
+        rec_id = row['recommendation']['team']['id']
+        self.assertIn(rec_id, [self.team_infra.id, self.team_db.id])
+

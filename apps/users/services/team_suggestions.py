@@ -21,7 +21,7 @@ from django.db.models import Sum
 
 from apps.overtime.models import Client, OvertimeLog
 from apps.users.models import Team, UserProfile
-from apps.users.models.core import TeamMembership
+from apps.users.models.core import TeamMembership, UserTech
 from apps.users.services.non_team_roles import non_team_user_q
 from apps.users.services.orphan_check import _teams_nobody_can_approve
 from apps.users.services.team_leaders import italian_tl_user_ids
@@ -77,6 +77,22 @@ def suggest_team_moves():
     ).values_list('team_id', 'user_profile_id'):
         teams_of[profile_id].add(team_id)
 
+    # Techs of each active profile: a person in a discipline (e.g. DBA) must never
+    # be suggested a team of a different discipline (e.g. Infrastructure).
+    techs_of = defaultdict(set)  # profile_id -> {tech_id}
+    for profile_id, tech_id in UserTech.objects.filter(
+        user_profile__user__is_active=True,
+        tech__is_active=True,
+    ).values_list('user_profile_id', 'tech_id'):
+        techs_of[profile_id].add(tech_id)
+
+    # Techs of each active team (union of active members' techs)
+    team_techs = defaultdict(set)  # team_id -> {tech_id}
+    for profile_id, tids in teams_of.items():
+        p_techs = techs_of.get(profile_id, set())
+        for tid in tids:
+            team_techs[tid] |= p_techs
+
     # Who in each team works each client (every active person, not only the candidates).
     holders = defaultdict(set)  # (team_id, client_id) -> {profile_id}
     for profile_id, client_id, _user_id in pairs:
@@ -90,20 +106,51 @@ def suggest_team_moves():
     found = {}
     for profile_id, client_ids in clients_of.items():
         own = teams_of.get(profile_id, set())
-        # The person counts as one holder in their own teams, so 2+ means a real teammate.
-        uncovered = {
-            cid for cid in client_ids
-            if not any(len(holders.get((tid, cid), ())) >= 2 for tid in own)
-        }
+        user_techs = techs_of.get(profile_id, set())
+
+        # Uncovered: clients not worked by any teammate in the person's own teams.
+        # If the user has assigned tech(s), only teammates sharing at least one tech count.
+        uncovered = set()
+        for cid in client_ids:
+            covered_in_own = False
+            for tid in own:
+                mates = holders.get((tid, cid), set()) - {profile_id}
+                if not user_techs:
+                    if mates:
+                        covered_in_own = True
+                        break
+                else:
+                    if any(not user_techs.isdisjoint(techs_of.get(mid, set())) for mid in mates):
+                        covered_in_own = True
+                        break
+            if not covered_in_own:
+                uncovered.add(cid)
+
         if not uncovered:
             continue
+
         per_team = {}  # team_id -> (covered client ids, teammate profile ids, [teammate hours])
         for (team_id, cid), people in holders.items():
             if cid in uncovered and team_id not in own:
+                # Never suggest a team of a different tech:
+                if user_techs:
+                    t_techs = team_techs.get(team_id, set())
+                    if not t_techs or user_techs.isdisjoint(t_techs):
+                        continue
+                    matching_people = {
+                        pid for pid in people
+                        if not user_techs.isdisjoint(techs_of.get(pid, set()))
+                    }
+                    if not matching_people:
+                        continue
+                else:
+                    matching_people = people
+
                 covered, mates, team_hours = per_team.setdefault(team_id, (set(), set(), [0.0]))
                 covered.add(cid)
-                mates |= people
-                team_hours[0] += sum(logged(pid, cid) for pid in people)
+                mates |= matching_people
+                team_hours[0] += sum(logged(pid, cid) for pid in matching_people)
+
         if per_team:
             found[profile_id] = (
                 uncovered,
