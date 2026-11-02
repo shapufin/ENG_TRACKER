@@ -51,7 +51,7 @@ const VIEW_MODES = [
 const iconButtonClass =
   "h-11 w-11 shrink-0 rounded-xl border border-border/60 bg-background/50 text-foreground hover:bg-muted md:h-9 md:w-9";
 const actionButtonClass =
-  "h-11 shrink-0 rounded-xl border border-border/60 bg-background/50 px-2.5 text-foreground hover:bg-muted md:h-9";
+  "h-11 shrink-0 rounded-xl border border-border/60 bg-background/50 px-2 text-foreground hover:bg-muted md:h-9";
 
 export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   currentMonth,
@@ -71,10 +71,10 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onClearWorkspaceSelection,
   onRequestTimeOff,
 }) => (
-  <header className="pt-1.5 pb-3" aria-label="Calendar controls">
+  <header className="pt-1.5 pb-2.5" aria-label="Calendar controls">
     {/* Wraps by available width: the app sidebar eats viewport width, so a viewport breakpoint cannot decide the rows. */}
-    <GlassCard className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b-0 p-3">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
+    <GlassCard className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-2 border-b-0 p-2.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
         <WorkspaceSelector className="max-w-xs shrink-0 sm:max-w-none" />
         <div className="flex shrink-0 items-center gap-1">
           <Button
@@ -106,8 +106,9 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <h1 className="shrink-0 text-base font-semibold tracking-tight 2xl:text-xl">
-          {format(currentMonth, "MMMM yyyy")}
+        <h1 className="shrink-0 text-sm font-bold tracking-tight xl:text-base 2xl:text-lg">
+          <span className="hidden sm:inline">{format(currentMonth, "MMMM yyyy")}</span>
+          <span className="sm:hidden">{format(currentMonth, "MMM yyyy")}</span>
         </h1>
         {conflictCount !== undefined && conflictCount > 0 && onOpenConflictsModal ? (
           <Button
@@ -127,7 +128,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         ) : (
           <div
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold whitespace-nowrap",
+              "flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-0.5 text-xs font-semibold whitespace-nowrap",
               toneSurfaceClass.success
             )}
             title="All days have adequate staffing coverage this month"
@@ -138,17 +139,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          size="control"
-          variant="default"
-          className="order-1 shrink-0 rounded-xl px-3 text-sm sm:order-none"
-          onClick={onRequestTimeOff}
-        >
-          <Plus className="mr-1.5 h-3.5 w-3.5" />
-          Request Time Off
-        </Button>
-
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         <div
           className="border-border/60 bg-muted/40 order-3 flex shrink-0 rounded-xl border p-0.5 sm:order-none"
           role="group"
@@ -161,9 +152,9 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               aria-pressed={viewMode === view.value}
               onClick={() => onSetViewMode(view.value)}
               className={cn(
-                "rounded-lg px-2.5 py-2 text-xs font-medium transition md:py-1.5",
+                "rounded-lg px-2 py-1.5 text-xs font-medium transition md:py-1",
                 viewMode === view.value
-                  ? "bg-background text-foreground shadow-sm"
+                  ? "bg-background text-foreground font-semibold shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -189,6 +180,17 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <span className="hidden sm:inline">{density === "compact" ? "Compact" : "Normal"}</span>
           </Button>
         )}
+
+        <Button
+          size="sm"
+          variant="default"
+          className="order-1 shrink-0 rounded-xl px-2.5 text-xs font-semibold sm:order-none md:h-9"
+          onClick={onRequestTimeOff}
+        >
+          <Plus className="mr-1 h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Request Time Off</span>
+          <span className="sm:hidden">Request</span>
+        </Button>
 
         <Button
           size="sm"

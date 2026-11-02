@@ -112,7 +112,7 @@ export const buildCalendarEvents = (
       type: "holiday",
       status: "approved",
       description: holiday.description,
-      compactLabel: "Holiday",
+      compactLabel: holiday.name,
     });
   });
 
