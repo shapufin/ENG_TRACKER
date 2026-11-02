@@ -32,7 +32,6 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({
 
   const isPrivileged = isTeamLeader || isAdmin || isHR;
   const canMultiSelect = isPrivileged && workspaces.length > 1;
-  const effectiveMultiSelect = isMultiSelect && canMultiSelect;
 
   useWorkspaceInit({
     isLoading,
@@ -45,22 +44,33 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({
   });
 
   const handleSelect = (id: number) => {
-    if (effectiveMultiSelect) {
+    if (canMultiSelect) {
       if (selectedWorkspaceIds.includes(id)) {
-        if (selectedWorkspaceIds.length > 1)
-          setSelectedWorkspaces(selectedWorkspaceIds.filter((wid) => wid !== id));
+        if (selectedWorkspaceIds.length > 1) {
+          const next = selectedWorkspaceIds.filter((wid) => wid !== id);
+          setSelectedWorkspaces(next);
+          setIsMultiSelect(next.length > 1);
+        }
       } else {
-        setSelectedWorkspaces([...selectedWorkspaceIds, id]);
+        const next = [...selectedWorkspaceIds, id];
+        setSelectedWorkspaces(next);
+        setIsMultiSelect(true);
       }
     } else {
       setSelectedWorkspaces([id]);
+      setIsMultiSelect(false);
     }
+  };
+
+  const handleSelectionChange = (ids: number[]) => {
+    setSelectedWorkspaces(ids);
+    setIsMultiSelect(ids.length > 1);
   };
 
   if (isLoading)
     return (
       <div className={cn("flex items-center gap-2", className)}>
-        <div className="h-9 w-32 animate-pulse rounded-md bg-muted/50" />
+        <div className="bg-muted/50 h-9 w-32 animate-pulse rounded-md" />
       </div>
     );
 
@@ -68,7 +78,7 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({
     return (
       <div
         className={cn(
-          "flex flex-col gap-3 rounded-lg border border-border/60 bg-card/60 p-4 text-sm text-muted-foreground",
+          "border-border/60 bg-card/60 text-muted-foreground flex flex-col gap-3 rounded-lg border p-4 text-sm",
           className
         )}
       >
@@ -101,10 +111,10 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({
     <WorkspaceDropdown
       workspaces={workspaces}
       selectedIds={selectedWorkspaceIds}
-      isMultiSelect={effectiveMultiSelect}
+      isMultiSelect={canMultiSelect && isMultiSelect}
       canMultiSelect={canMultiSelect}
       onChange={handleSelect}
-      onSelectionChange={setSelectedWorkspaces}
+      onSelectionChange={handleSelectionChange}
       onToggleMultiSelect={() => {
         if (isMultiSelect) setSelectedWorkspaces(selectedWorkspaceIds.slice(0, 1));
         setIsMultiSelect(!isMultiSelect);
