@@ -10,7 +10,7 @@ interface EvidenceExportSectionProps {
 }
 
 /**
- * Focused export surface: the workbook is the evidence package the AL TL hands
+ * Focused export surface: the workbook is the evidence package the Line Manager hands
  * to their manager, so it gets its own section rather than a stray button.
  */
 export const EvidenceExportSection: React.FC<EvidenceExportSectionProps> = ({
@@ -29,7 +29,7 @@ export const EvidenceExportSection: React.FC<EvidenceExportSectionProps> = ({
             Governance report workbook
           </p>
           <p className="text-muted-foreground mt-1 text-xs">
-            Scorecard metrics, governance records and the HBPR↔Albanian-TL partnership log for this
+            Scorecard metrics, governance records and the HBPR↔Line Manager partnership log for this
             month. Employee one-on-one content is never included.
           </p>
         </div>

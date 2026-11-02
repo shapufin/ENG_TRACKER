@@ -1,8 +1,8 @@
 """Tests for the HBPR role helpers and assignment-backed scope.
 
-Scope is explicit: an HBPR sees exactly the Albanian TLs they have an open
+Scope is explicit: an HBPR sees exactly the Line Managers they have an open
 ``HbprAlbanianTlAssignment`` for, plus those TLs' team members. There is no
-global Italian-TL population any more.
+global Manager population any more.
 """
 from datetime import date, timedelta
 
@@ -43,7 +43,7 @@ class HbprScopeTestBase(TestCase):
         self.hbpr = _user('hbpr')
         assign_role(self.hbpr, 'hbpr')
 
-        # The assigned Albanian TL, with an FK report and a shared-team member.
+        # The assigned Line Manager, with an FK report and a shared-team member.
         self.al_tl = _user('al-tl')
         assign_role(self.al_tl, 'albanian_tl')
         self.fk_report = _user('al-report')
@@ -56,7 +56,7 @@ class HbprScopeTestBase(TestCase):
             user_profile=self.team_member.profile, team=self.team, is_primary_team=True,
         )
 
-        # An unrelated Albanian TL (no assignment) and an outsider.
+        # An unrelated Line Manager (no assignment) and an outsider.
         self.other_al_tl = _user('other-al-tl')
         assign_role(self.other_al_tl, 'albanian_tl')
         self.other_report = _user('other-report')
@@ -196,7 +196,7 @@ class GetHbprScopeTests(HbprScopeTestBase):
         self.assertFalse(scope.has_user(self.fk_report.id))
 
     def test_viewer_is_never_in_their_own_scope(self):
-        # An HBPR who is also a report of the assigned AL TL must not see self.
+        # An HBPR who is also a report of the assigned Line Manager must not see self.
         self.hbpr.profile.albanian_tl = self.al_tl
         self.hbpr.profile.save()
         scope = get_hbpr_scope(self.hbpr)

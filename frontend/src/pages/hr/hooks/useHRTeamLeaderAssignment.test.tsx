@@ -120,6 +120,6 @@ describe("useHRTeamLeaderAssignment", () => {
 
     expect(userService.setTeamLeader).toHaveBeenCalledTimes(2);
     expect(vi.mocked(toast.success)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(toast.success)).toHaveBeenCalledWith("Italian TL updated for 2 users");
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith("Manager updated for 2 users");
   });
 });

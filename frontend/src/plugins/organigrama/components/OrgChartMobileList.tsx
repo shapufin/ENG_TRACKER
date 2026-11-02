@@ -22,8 +22,8 @@ const ROLE_BADGE_STYLES: Record<RoleBadge, string> = {
 };
 
 const ROLE_BADGE_LABELS: Record<RoleBadge, string> = {
-  italian_tl: "IT TL",
-  albanian_tl: "AL TL",
+  italian_tl: "Manager",
+  albanian_tl: "Line Manager",
   hr: "HR",
   admin: "Admin",
   employee: "",

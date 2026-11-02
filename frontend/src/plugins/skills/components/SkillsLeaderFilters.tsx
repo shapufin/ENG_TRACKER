@@ -51,21 +51,21 @@ const FilterSelect: React.FC<{
   </div>
 );
 
-/** Italian TL, Albanian TL and Tech: only offered to HR and admins, whose view spans every team. */
+/** Manager, Line Manager and Tech: only offered to HR and admins, whose view spans every team. */
 export const SkillsLeaderFilters: React.FC<SkillsLeaderFiltersProps> = (props) => (
   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
     <FilterSelect
       id="team-italian-tl"
-      label="Italian TL"
-      allLabel="All Italian TLs"
+      label="Manager"
+      allLabel="All Managers"
       options={props.italianTLs}
       value={props.italianTl}
       onChange={props.onItalianTlChange}
     />
     <FilterSelect
       id="team-albanian-tl"
-      label="Albanian TL"
-      allLabel="All Albanian TLs"
+      label="Line Manager"
+      allLabel="All Line Managers"
       options={props.albanianTLs}
       value={props.albanianTl}
       onChange={props.onAlbanianTlChange}

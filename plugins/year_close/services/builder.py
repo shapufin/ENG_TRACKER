@@ -1,6 +1,6 @@
 """Build a frozen evidence set for one year (plan Y3).
 
-The set is one ZIP per (IT TL, team) pair plus one company ZIP, described by
+The set is one ZIP per (Manager, team) pair plus one company ZIP, described by
 ``{year}/MANIFEST.json`` and ``{year}/MANIFEST.sha256``. Bundles are **disjoint
 by user**, so "every row of the year is in exactly one bundle" is a real check
 and not a hope.

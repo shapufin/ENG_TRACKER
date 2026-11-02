@@ -119,7 +119,7 @@ describe("OrgChartPage edge geometry (Phase A)", () => {
     expect(captured.nodes.map((node) => node.id)).toEqual(["person-1"]);
   });
 
-  it("renders repeated bridging AL TL nodes under multiple roots without dropping branches", () => {
+  it("renders repeated bridging Line Manager nodes under multiple roots without dropping branches", () => {
     const multiRootTree: TreeNode[] = [
       {
         type: "person",

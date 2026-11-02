@@ -321,13 +321,13 @@ describe("TLScorecardPage", () => {
     expect(await screen.findByText("HBPR partnership")).toBeInTheDocument();
     expect(await screen.findByText("Elda Partner")).toBeInTheDocument();
     expect(screen.getByText("Mid-year EPR: not logged")).toBeInTheDocument();
-    // The AL TL authors the evidence.
+    // The Line Manager authors the evidence.
     expect(screen.getByRole("button", { name: /add log entry/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /change schedule/i })).toBeInTheDocument();
     perms.value = { isAdmin: false };
   });
 
-  it("tells an unpaired Albanian TL there is no HBPR yet", async () => {
+  it("tells an unpaired Line Manager there is no HBPR yet", async () => {
     mockDefaults();
     renderPage("/tl-scorecard?tab=evidence");
     expect(await screen.findByText("No HR business partner assigned yet")).toBeInTheDocument();

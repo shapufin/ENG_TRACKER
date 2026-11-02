@@ -1496,8 +1496,8 @@ def _get_tl_team_members(user):
 
     Scope comes from core's ``UserProfile.get_team_member_ids()`` (direct
     italian_tl/albanian_tl FKs, shared team membership, led teams) so KPI can
-    never drift from the rest of the app. Italian TLs are the reporting line
-    above the measured people, so other Italian TLs are left out. Includes the
+    never drift from the rest of the app. Managers are the reporting line
+    above the measured people, so other Managers are left out. Includes the
     TL themselves so their own data appears in team dashboards/reports.
     """
     if not hasattr(user, 'profile') or not user.profile.is_team_leader:

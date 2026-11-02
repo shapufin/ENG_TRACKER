@@ -415,7 +415,7 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
                     onChange={(event) => setUnassignTl(event.target.checked)}
                   />
                   <span>
-                    Also clear Italian/Albanian TL links that point at a leader of a team being
+                    Also clear Manager/Line Manager links that point at a leader of a team being
                     removed. Otherwise those leaders keep seeing the user.
                   </span>
                 </label>
@@ -455,13 +455,13 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
               >
                 <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
                   <AssignmentSelect
-                    label="Italian TL"
+                    label="Manager"
                     value={italianTl}
                     leaders={italianTLs}
                     onChange={setItalianTl}
                   />
                   <AssignmentSelect
-                    label="Albanian TL"
+                    label="Line Manager"
                     value={albanianTl}
                     leaders={albanianTLs}
                     onChange={setAlbanianTl}
@@ -482,13 +482,13 @@ export const UserBulkCommandDrawer: React.FC<UserBulkCommandDrawerProps> = ({
                   <>
                     <RoleToggle
                       id="bulk-role-italian"
-                      label="Italian TL role"
+                      label="Manager role"
                       value={italianRole}
                       onChange={setItalianRole}
                     />
                     <RoleToggle
                       id="bulk-role-albanian"
-                      label="Albanian TL role"
+                      label="Line Manager role"
                       value={albanianRole}
                       onChange={setAlbanianRole}
                     />

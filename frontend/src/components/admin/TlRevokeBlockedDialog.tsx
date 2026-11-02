@@ -32,8 +32,8 @@ interface TlRevokeBlockedDialogProps {
 }
 
 const roleLabel: Record<BlockedRevocation["role"], string> = {
-  italian_tl: "Italian TL",
-  albanian_tl: "Albanian TL",
+  italian_tl: "Manager",
+  albanian_tl: "Line Manager",
   hbpr: "HBPR",
 };
 
@@ -42,7 +42,7 @@ const dependentKey = (role: string, profileId: number) => `${role}:${profileId}`
 /** Shown when bulk_update/update_user rejects a role revoke — either TL-role
  * revokes whose dependents still have italian_tl/albanian_tl pointed at the
  * user (reassignable right here), or hbpr/albanian_tl revokes blocked by an
- * open HBPR↔AL-TL assignment (entries with empty dependents + an
+ * open HBPR↔Line Manager assignment (entries with empty dependents + an
  * assignment_count; those resolve on the HBPR assignments page, not here).
  * See apps/users/viewsets.py's blocked_revocations. */
 export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
@@ -103,7 +103,7 @@ export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
           <DialogTitle>Resolve dependencies first</DialogTitle>
           <DialogDescription>
             This role change is blocked: users still report to the TL being removed, or open
-            HBPR↔Albanian TL assignments depend on the role. Reassign each dependent below — and end
+            HBPR↔Line Manager assignments depend on the role. Reassign each dependent below — and end
             open assignments under Admin → HBPR assignments — then retry.
           </DialogDescription>
         </DialogHeader>
@@ -116,7 +116,7 @@ export const TlRevokeBlockedDialog: React.FC<TlRevokeBlockedDialogProps> = ({
                     {blocked.username} — {roleLabel[blocked.role]}
                   </p>
                   <p className="border-border text-muted-foreground rounded-lg border p-2 text-xs">
-                    {blocked.assignment_count ?? 0} open HBPR↔Albanian TL assignment(s) depend on
+                    {blocked.assignment_count ?? 0} open HBPR↔Line Manager assignment(s) depend on
                     this role. End them under Admin → HBPR assignments, then retry.
                   </p>
                 </div>

@@ -1,5 +1,5 @@
-"""HBPR ↔ Albanian TL governance evidence: cadence meetings and the mid-year /
-year-end EPR participation record. Authored by the assigned AL TL only; read and
+"""HBPR ↔ Line Manager governance evidence: cadence meetings and the mid-year /
+year-end EPR participation record. Authored by the assigned Line Manager only; read and
 exported by the assigned HBPR and staff."""
 from datetime import date, timedelta
 
@@ -35,7 +35,7 @@ class EvidenceBase(TestCase):
             hbpr=self.hbpr, albanian_tl=self.tl,
             cadence='weekly', effective_from=date(2020, 1, 1),
         )
-        # An unassigned AL TL + their own assignment to a different HBPR.
+        # An unassigned Line Manager + their own assignment to a different HBPR.
         self.other_tl = _make_user('other_tl_ev')
         assign_role(self.other_tl, 'albanian_tl')
         self.other_hbpr = _make_user('other_hbpr_ev')
@@ -329,7 +329,7 @@ class EvidenceWriteGuardTests(EvidenceBase):
 
 class EvidenceScopeHardeningTests(EvidenceBase):
     """An HBPR reads evidence only for assignments that are actually in scope —
-    the same rule `hbpr_scope` applies (effective, and an active AL TL)."""
+    the same rule `hbpr_scope` applies (effective, and an active Line Manager)."""
 
     def _evidence_for(self, assignment):
         return HbprGovernanceEvidence.objects.create(
@@ -411,7 +411,7 @@ class EvidenceExportTests(EvidenceBase):
             shared = zf.read('xl/sharedStrings.xml').decode('utf-8')
         self.assertIn('Mid-year participation', shared)
         self.assertIn('Follow up', shared)
-        self.assertIn('Albanian TL partnership log', shared)
+        self.assertIn('Line Manager partnership log', shared)
 
     def test_export_excludes_other_assignments_evidence(self):
         import io
@@ -429,7 +429,7 @@ class EvidenceExportTests(EvidenceBase):
 
 
 class EvidenceStaffReadOnlyTests(EvidenceBase):
-    """Evidence is the AL TL's record: staff audit it, they never author it."""
+    """Evidence is the Line Manager's record: staff audit it, they never author it."""
 
     def test_staff_cannot_create_evidence(self):
         resp = self.call('create', self.staff, data=self._cadence())
@@ -451,7 +451,7 @@ class EvidenceStaffReadOnlyTests(EvidenceBase):
 
 class EvidenceExportTenureTests(EvidenceBase):
     """An HBPR exports evidence for the assignments they own, not the history
-    a previous HBPR built up with the same AL TL."""
+    a previous HBPR built up with the same Line Manager."""
 
     def test_new_hbpr_export_excludes_the_previous_hbprs_evidence(self):
         import io
@@ -488,7 +488,7 @@ class EvidenceExportTenureTests(EvidenceBase):
         hbpr_text = shared_strings(successor)
         self.assertIn('Successor era note', hbpr_text)
         self.assertNotIn('Predecessor era note', hbpr_text)
-        # The AL TL and staff still get the full package.
+        # The Line Manager and staff still get the full package.
         for user in (self.tl, self.staff):
             text = shared_strings(user)
             self.assertIn('Predecessor era note', text)

@@ -115,8 +115,8 @@ describe("HRTeamLeaderAssignmentPage", () => {
     );
     const card = (label: string) => screen.getByText(label).parentElement?.textContent;
     expect(card("Assignable Employees")).toBe("Assignable Employees4");
-    expect(card("With an Italian TL")).toBe("With an Italian TL2");
-    expect(card("With an Albanian TL")).toBe("With an Albanian TL2");
+    expect(card("With a Manager")).toBe("With a Manager2");
+    expect(card("With a Line Manager")).toBe("With a Line Manager2");
     expect(card("Without any TL")).toBe("Without any TL1");
   });
 
@@ -140,7 +140,7 @@ describe("HRTeamLeaderAssignmentPage", () => {
     expect(screen.queryByText("alice")).not.toBeInTheDocument();
   });
 
-  it("calls setTeamLeader with the profile id and role when an Italian TL option is picked", () => {
+  it("calls setTeamLeader with the profile id and role when a Manager option is picked", () => {
     const setTeamLeader = vi.fn();
     useHRTeamLeaderAssignmentMock.mockReturnValue({ ...defaultHookReturn, setTeamLeader });
     render(
@@ -156,7 +156,7 @@ describe("HRTeamLeaderAssignmentPage", () => {
     });
   });
 
-  it("calls setTeamLeader with null when No TL is chosen for Albanian TL", () => {
+  it("calls setTeamLeader with null when No TL is chosen for Line Manager", () => {
     const setTeamLeader = vi.fn();
     useHRTeamLeaderAssignmentMock.mockReturnValue({
       ...defaultHookReturn,
@@ -169,7 +169,7 @@ describe("HRTeamLeaderAssignmentPage", () => {
       </MemoryRouter>
     );
     const albanianCell = screen
-      .getByRole("combobox", { name: "Albanian TL for alice" })
+      .getByRole("combobox", { name: "Line Manager for alice" })
       .closest("td") as HTMLElement;
     fireEvent.click(within(albanianCell).getByRole("option", { name: "No TL" }));
     expect(setTeamLeader).toHaveBeenCalledWith({
@@ -190,7 +190,7 @@ describe("HRTeamLeaderAssignmentPage", () => {
     expect(screen.getByLabelText("1 selected")).toBeInTheDocument();
   });
 
-  it("bulk-applies the chosen Italian TL to every selected profile in ONE call", async () => {
+  it("bulk-applies the chosen Manager to every selected profile in ONE call", async () => {
     const setTeamLeaderBulkAsync = vi.fn().mockResolvedValue({ failed: 0, total: 2 });
     const setTeamLeaderAsync = vi.fn();
     useHRTeamLeaderAssignmentMock.mockReturnValue({
@@ -210,7 +210,7 @@ describe("HRTeamLeaderAssignmentPage", () => {
     fireEvent.click(screen.getByLabelText("Select all rows on this page"));
     expect(screen.getByLabelText("2 selected")).toBeInTheDocument();
 
-    const bulkItalianCombobox = screen.getByRole("combobox", { name: "Bulk set Italian TL" });
+    const bulkItalianCombobox = screen.getByRole("combobox", { name: "Bulk set Manager" });
     const bulkItalianContainer = bulkItalianCombobox.closest("div") as HTMLElement;
     fireEvent.click(within(bulkItalianContainer).getByRole("option", { name: "Bob TL" }));
 

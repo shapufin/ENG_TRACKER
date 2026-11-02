@@ -46,7 +46,7 @@ class HbprScorecardBase(TestCase):
         self.hbpr = _make_user('hbpr_sc')
         assign_role(self.hbpr, 'hbpr')
 
-        # In scope: the ASSIGNED Albanian TL + their report.
+        # In scope: the ASSIGNED Line Manager + their report.
         self.tl = _make_user('assigned_tl_sc')
         assign_role(self.tl, 'albanian_tl')
         self.member = _make_user('assigned_member_sc')
@@ -57,7 +57,7 @@ class HbprScorecardBase(TestCase):
             cadence='weekly', effective_from=date(2020, 1, 1),
         )
 
-        # Out of scope: an unassigned Albanian TL + their report.
+        # Out of scope: an unassigned Line Manager + their report.
         self.other_tl = _make_user('unassigned_tl_sc')
         assign_role(self.other_tl, 'albanian_tl')
         self.other_member = _make_user('unassigned_member_sc')
@@ -139,7 +139,7 @@ class HbprScopedReadTests(HbprScorecardBase):
         self.assertNotIn(self.meeting_out.id, ids)
 
     def test_in_scope_record_by_a_staff_member_is_not_exposed(self):
-        # Owner TL must be the assigned AL TL too, not just the subject.
+        # Owner TL must be the assigned Line Manager too, not just the subject.
         pip = PIPRecord.objects.create(
             employee=self.member, tl=self.staff, start_date=date.today())
         self.assertNotIn(pip.id, self._list_ids(PIPRecordViewSet, self.hbpr))
@@ -152,7 +152,7 @@ class HbprScopedReadTests(HbprScorecardBase):
         self.assertEqual(self._list_ids(PIPRecordViewSet, self.tl), {self.pip_in.id})
 
     def test_tl_who_is_also_hbpr_gets_the_union(self):
-        # A user who is both an AL TL and an HBPR sees their own TL rows plus
+        # A user who is both a Line Manager and an HBPR sees their own TL rows plus
         # the population they cover as HBPR.
         assign_role(self.hbpr, 'albanian_tl')
         own_member = _make_user('hbpr_own_member_sc')

@@ -68,8 +68,8 @@ describe("OrgChartMobileList", () => {
 
   it("renders role badges with aria-label", () => {
     render(<OrgChartMobileList roots={mockTree} />);
-    expect(screen.getByText("IT TL")).toBeInTheDocument();
-    expect(screen.getByText("AL TL")).toBeInTheDocument();
+    expect(screen.getByText("Manager")).toBeInTheDocument();
+    expect(screen.getByText("Line Manager")).toBeInTheDocument();
   });
 
   it("renders empty state when no roots", () => {

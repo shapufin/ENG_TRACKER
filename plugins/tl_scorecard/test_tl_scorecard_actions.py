@@ -34,7 +34,7 @@ class ActionsBase(TestCase):
         call_command('seed_plugin_permissions')
         self.hbpr = _make_user('hbpr_act')
         assign_role(self.hbpr, 'hbpr')
-        # The assigned Albanian TL (owns the records) + their report.
+        # The assigned Line Manager (owns the records) + their report.
         self.tl = _make_user('tl_act')
         assign_role(self.tl, 'albanian_tl')
         self.member = _make_user('member_act')
@@ -44,7 +44,7 @@ class ActionsBase(TestCase):
             hbpr=self.hbpr, albanian_tl=self.tl,
             cadence='weekly', effective_from=date(2020, 1, 1),
         )
-        # An unassigned Albanian TL.
+        # An unassigned Line Manager.
         self.other_tl = _make_user('other_tl_act')
         assign_role(self.other_tl, 'albanian_tl')
         self.staff = _make_user('staff_act', is_staff=True)
@@ -397,7 +397,7 @@ class PromotionDecideResponseTests(ActionsBase):
 
 
 class CadenceEditTests(ActionsBase):
-    """The assigned Albanian TL changes their own HBPR meeting schedule."""
+    """The assigned Line Manager changes their own HBPR meeting schedule."""
 
     def post(self, user, data, query=''):
         from .viewsets import TLScorecardViewSet

@@ -148,8 +148,8 @@ force (§Table header contract). Hover-reveal of row actions is also kept: the
 mockup reveals on hover too.
 
 **Known, measured, not fixed this pass:** the users table still needs ~467px of
-horizontal scroll at 1440 because it carries 10 columns (CR Teams, CR, IT TL and
-AL TL are all separate). That is a column-set decision (hide by default vs.
+horizontal scroll at 1440 because it carries 10 columns (CR Teams, CR, Manager and
+Line Manager are all separate). That is a column-set decision (hide by default vs.
 narrow), not a styling one — propose it separately rather than silently dropping
 columns.
 

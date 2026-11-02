@@ -199,7 +199,7 @@ class OrganigramaViewSet(PluginPermissionMixin, APIView):
             raise NotFound("Node not found.")
         profile = getattr(node_user, "profile", None)
         # Delegate TL classification to the shared ``role_badge`` helper so
-        # the Italian/Albanian detection logic cannot drift from the tree
+        # the Manager/Line Manager detection logic cannot drift from the tree
         # builder. A profile without a UserProfile is treated as a leaf.
         badge = role_badge(profile) if profile is not None else "employee"
         if visible_ids is not None and node_user.id not in visible_ids:

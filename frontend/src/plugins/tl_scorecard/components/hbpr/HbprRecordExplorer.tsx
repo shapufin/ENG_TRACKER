@@ -120,7 +120,7 @@ export const HbprRecordExplorer: React.FC<HbprRecordExplorerProps> = ({
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div className="grid grow gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <Label htmlFor="hbpr-filter-leader">Albanian team leader</Label>
+              <Label htmlFor="hbpr-filter-leader">Line Manager</Label>
               <Select
                 value={filters.leader === null ? ALL : String(filters.leader)}
                 onValueChange={(v) => onFilterChange("leader", v === ALL ? null : Number(v))}

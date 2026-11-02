@@ -72,12 +72,12 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
 
   const dialogDescription =
     exportType === "leave"
-      ? "Leave records with per-Italian TL sheet separation."
+      ? "Leave records with per-Manager sheet separation."
       : exportType === "payroll"
         ? "Approved OT & Standby filtered by processing period (not work date). Includes carryover entries and processing-period columns. Use this for HR-to-Payroll reconciliation."
         : exportStatus === "pending"
-          ? "Pending Overtime and Standby records with per-Italian TL sheet separation."
-          : "Approved Overtime and Standby records with per-Italian TL sheet separation.";
+          ? "Pending Overtime and Standby records with per-Manager sheet separation."
+          : "Approved Overtime and Standby records with per-Manager sheet separation.";
 
   return (
     <GlassCard className="flex flex-col justify-center gap-1.5 p-3">
@@ -133,8 +133,8 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
                 {exportType === "payroll" && (
                   <li>Mode: Processing period (carryover-aware, approved only)</li>
                 )}
-                <li>Italian TL: {getTLName(selectedItalianTL, italianTLs)}</li>
-                <li>Albanian TL: {getTLName(selectedAlbanianTL, albanianTLs)}</li>
+                <li>Manager: {getTLName(selectedItalianTL, italianTLs)}</li>
+                <li>Line Manager: {getTLName(selectedAlbanianTL, albanianTLs)}</li>
                 <li>Workspace: {selectedWorkspace === "all" ? "All" : selectedWorkspace}</li>
               </ul>
             </div>

@@ -248,7 +248,7 @@ def revoke_role(user, role_code: str, team=None) -> int:
 def _assert_no_active_hbpr_assignment(user, role_code: str) -> None:
     """Block revoking hbpr/albanian_tl while an open assignment depends on it.
 
-    Mirrors the TL-FK revocation guard: an open HBPR↔AL-TL assignment makes
+    Mirrors the TL-FK revocation guard: an open HBPR↔Line Manager assignment makes
     the role load-bearing for scope resolution, so the caller must end or
     reassign the assignment first.
     """
@@ -263,7 +263,7 @@ def _assert_no_active_hbpr_assignment(user, role_code: str) -> None:
     ).exists():
         raise HbprAssignmentRevokeBlockedError(
             f"Cannot revoke the {role_code} role while an open HBPR↔"
-            "Albanian TL assignment depends on it. End or reassign the "
+            "Line Manager assignment depends on it. End or reassign the "
             "assignment first."
         )
 
@@ -274,7 +274,7 @@ class HbprAssignmentRevokeBlockedError(Exception):
 
 def find_blocked_hbpr_revocations(user, new_state: dict) -> list[dict]:
     """The single source of truth for "would revoking user's hbpr/albanian_tl
-    role strand an open HBPR↔Albanian TL assignment."
+    role strand an open HBPR↔Line Manager assignment."
 
     ``new_state`` maps a subset of {'hbpr', 'albanian_tl'} to the role state
     the user WILL have after the pending change — a role_code absent from

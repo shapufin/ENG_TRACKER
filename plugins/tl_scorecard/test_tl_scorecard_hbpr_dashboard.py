@@ -50,7 +50,7 @@ class HbprWorkspaceOverviewTests(HbprScorecardBase):
         self.assertEqual(row['evidence_count'], 0)
 
     def test_team_size_counts_shared_team_members_like_the_scope(self):
-        # `get_team_member_ids()` also returns members of a team the AL TL
+        # `get_team_member_ids()` also returns members of a team the Line Manager
         # belongs to; such a member is in the read scope, so the count must
         # include them (counting only the direct FK would understate the team).
         from apps.users.models.core import Team

@@ -18,7 +18,7 @@ import type { TeamNode } from "@/lib/teamTree";
 
 const SEARCH_COLUMNS = ["name", "code", "description", "italian_tl", "albanian_tl"];
 
-/** IT/AL TL derived from the team's members; sortable by the TL's name. */
+/** Manager/Line Manager derived from the team's members; sortable by the TL's name. */
 const tlColumn = (side: "italian_tl" | "albanian_tl", header: string) => ({
   id: side,
   header,
@@ -144,8 +144,8 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
             <span className="text-muted-foreground">—</span>
           ),
       },
-      tlColumn("italian_tl", "IT TL"),
-      tlColumn("albanian_tl", "AL TL"),
+      tlColumn("italian_tl", "Manager"),
+      tlColumn("albanian_tl", "Line Manager"),
       {
         id: "members_count",
         accessorKey: "members_count",

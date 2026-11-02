@@ -15,13 +15,13 @@ const E2E_PASSWORD = "e2e_pass_2026";
 export const E2E_CREDENTIALS = {
   employeeA: { username: "e2e_employee_a", password: E2E_PASSWORD },
   employeeB: { username: "e2e_employee_b", password: E2E_PASSWORD },
-  /** Plain employee on the Albanian TL's team (no elevated role). */
+  /** Plain employee on the Line Manager's team (no elevated role). */
   employeeC: { username: "e2e_employee_c", password: E2E_PASSWORD },
   teamLeader: { username: "e2e_tl", password: E2E_PASSWORD },
   hr: { username: "e2e_hr", password: E2E_PASSWORD },
   admin: { username: "e2e_admin", password: E2E_PASSWORD },
   teamLeaderHr: { username: "e2e_tl_hr", password: E2E_PASSWORD },
-  // Albanian TL + the HBPR they are paired with (seeded with an explicit
+  // Line Manager + the HBPR they are paired with (seeded with an explicit
   // HbprAlbanianTlAssignment) — see `seed_e2e_data`.
   albanianTeamLeader: { username: "e2e_tl_b", password: E2E_PASSWORD },
   hbpr: { username: "e2e_hbpr", password: E2E_PASSWORD },

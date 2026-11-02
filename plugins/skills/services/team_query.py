@@ -34,9 +34,9 @@ def visible_user_ids(user):
 
 
 def matrix_user_ids(user):
-    """``visible_user_ids`` minus Italian TLs, for the team matrix pages.
+    """``visible_user_ids`` minus Managers, for the team matrix pages.
 
-    An Italian TL is the reporting line above the people the matrix measures,
+    A Manager is the reporting line above the people the matrix measures,
     so they are left out of rows, coverage, gaps and exports. Same definition
     as ``UserProfile.is_italian_tl``: the role, the legacy flag, or having
     people who report to them.

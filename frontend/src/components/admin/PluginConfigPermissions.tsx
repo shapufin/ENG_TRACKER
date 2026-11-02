@@ -19,7 +19,7 @@ const ROLE_CATEGORIES = [
   {
     key: "team_leader",
     label: "Team Leader",
-    description: "Italian or Albanian team leadership.",
+    description: "Manager or Line Manager leadership.",
     codes: ["italian_tl", "albanian_tl"],
   },
   { key: "hr", label: "HR", description: "Organization-wide HR visibility.", codes: ["hr"] },

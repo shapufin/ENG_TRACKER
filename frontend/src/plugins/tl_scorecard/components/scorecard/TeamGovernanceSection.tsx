@@ -85,7 +85,7 @@ interface TeamGovernanceSectionProps {
 }
 
 /**
- * The team-level governance the Albanian TL owns: communication cadence, idle
+ * The team-level governance the Line Manager owns: communication cadence, idle
  * risk, and the governance/risk records (absence, PIP, promotion, EPR).
  * Employee one-on-ones and employee EPR stay TL-authorable here — the HBPR
  * never sees them.

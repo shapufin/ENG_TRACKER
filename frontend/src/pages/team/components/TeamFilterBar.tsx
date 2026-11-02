@@ -32,7 +32,7 @@ interface TeamFilterBarProps {
 const groupOptions: { label: string; value: "none" | "team" | "italian_tl" }[] = [
   { label: "Ungrouped", value: "none" },
   { label: "By Team", value: "team" },
-  { label: "By Italian TL", value: "italian_tl" },
+  { label: "By Manager", value: "italian_tl" },
 ];
 
 export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({

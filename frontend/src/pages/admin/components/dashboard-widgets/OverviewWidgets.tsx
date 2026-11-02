@@ -44,7 +44,7 @@ const CoverageGapsCard: React.FC<{
     ["Users without a team", gaps.users_without_team],
     ["Users without a tech", gaps.users_without_tech],
     ["Employees without a TL", gaps.employees_without_tl],
-    ["Albanian TLs without HBPR", gaps.al_tls_without_hbpr_assignment],
+    ["Line Managers without HBPR", gaps.al_tls_without_hbpr_assignment],
   ];
   const total = rows.reduce((sum, [, n]) => sum + n, 0);
   return (

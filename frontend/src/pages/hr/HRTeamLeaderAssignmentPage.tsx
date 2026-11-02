@@ -91,10 +91,10 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
       },
       {
         id: "italian_tl",
-        header: "Italian TL",
+        header: "Manager",
         cell: ({ row }) => (
           <TeamLeaderSelect
-            ariaLabel={`Italian TL for ${row.original.user.username}`}
+            ariaLabel={`Manager for ${row.original.user.username}`}
             value={row.original.italian_tl}
             currentName={row.original.italian_tl_name}
             options={italianTLs}
@@ -111,10 +111,10 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
       },
       {
         id: "albanian_tl",
-        header: "Albanian TL",
+        header: "Line Manager",
         cell: ({ row }) => (
           <TeamLeaderSelect
-            ariaLabel={`Albanian TL for ${row.original.user.username}`}
+            ariaLabel={`Line Manager for ${row.original.user.username}`}
             value={row.original.albanian_tl}
             currentName={row.original.albanian_tl_name}
             options={albanianTLs}
@@ -151,14 +151,14 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
               glow="primary"
             />
             <StatCard
-              label="With an Italian TL"
+              label="With a Manager"
               value={counts.italian}
               icon={UserCheck}
               iconTone="info"
               glow="primary"
             />
             <StatCard
-              label="With an Albanian TL"
+              label="With a Line Manager"
               value={counts.albanian}
               icon={UserCheck}
               iconTone="success"
@@ -194,7 +194,7 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2">
                 <div className="w-48">
                   <TeamLeaderSelect
-                    ariaLabel="Bulk set Italian TL"
+                    ariaLabel="Bulk set Manager"
                     value={null}
                     options={italianTLs}
                     disabled={isBulkApplying}
@@ -205,7 +205,7 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
                 </div>
                 <div className="w-48">
                   <TeamLeaderSelect
-                    ariaLabel="Bulk set Albanian TL"
+                    ariaLabel="Bulk set Line Manager"
                     value={null}
                     options={albanianTLs}
                     disabled={isBulkApplying}

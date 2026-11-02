@@ -79,7 +79,7 @@ class UserRole(BaseModel):
     User-Role assignment with team context.
     
     Connects users to roles within specific teams, enabling
-    team-based permission inheritance (Italian TL -> Albanian TL).
+    team-based permission inheritance (Manager -> Line Manager).
     """
     user = models.ForeignKey(
         User,

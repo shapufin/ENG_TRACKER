@@ -34,7 +34,7 @@ describe("liveTreeConverter", () => {
     expect(rootNode).toBeDefined();
     expect(childNode).toBeDefined();
 
-    expect(rootNode?.data.role_title).toBe("ITALIAN TL");
+    expect(rootNode?.data.role_title).toBe("MANAGER");
     expect(childNode?.data.department_label).toBe("Infrastructure L2");
 
     expect(edges[0].source).toBe(rootNode?.id);

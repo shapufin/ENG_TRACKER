@@ -22,7 +22,7 @@ describe("UserFilterTabs", () => {
   it("renders Employees, both TL tabs, HBPR and HR — no CR Admin by default", () => {
     render(<UserFilterTabs filter="employee" onFilterChange={vi.fn()} />);
 
-    for (const label of ["Employees", "Italian TL", "Albanian TL", "HBPR", "HR"]) {
+    for (const label of ["Employees", "Manager", "Line Manager", "HBPR", "HR"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
     expect(screen.queryByRole("button", { name: "CR Admin" })).not.toBeInTheDocument();

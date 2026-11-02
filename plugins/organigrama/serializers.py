@@ -14,6 +14,7 @@ from rest_framework import serializers
 
 from django.db import transaction
 
+from apps.permissions.display_names import role_display_name
 from apps.permissions.models import Group, Role
 from .models import (
     OrgChart,
@@ -28,9 +29,14 @@ from .models import (
 
 
 class RoleMiniSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+
     class Meta:
         model = Role
         fields = ["id", "name", "code"]
+
+    def get_name(self, obj) -> str:
+        return role_display_name(obj.code, obj.name)
 
 
 class GroupMiniSerializer(serializers.ModelSerializer):

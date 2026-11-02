@@ -241,7 +241,7 @@ class WageImporter(PayrollAuthority, BaseImporter):
                 return ImportRowResult(
                     row_index=row_index,
                     status="error",
-                    errors=["Italian Team Leaders are not payroll subjects."],
+                    errors=["Managers are not payroll subjects."],
                 )
 
             wage = mapped_row.get("gross_monthly_wage")

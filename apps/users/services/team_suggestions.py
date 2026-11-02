@@ -10,7 +10,7 @@ the clients a person really works outweigh ones they are only listed on. The bes
 with the highest weight of the person's uncovered clients; ties go to a team somebody can approve
 for, then to the team whose members logged more on those clients, then to more teammates.
 
-Italian TLs are managers who follow their people across teams, so they are never suggested a team
+Managers are managers who follow their people across teams, so they are never suggested a team
 and never count as a teammate.
 """
 from collections import defaultdict
@@ -44,7 +44,7 @@ def _overtime_hours():
 
 def _client_pairs():
     """``(profile_id, client_id, user_id)`` for active people on active clients (staff,
-    superusers, Italian TLs and people whose role sits outside every team, like HR/HBPR/CR/admin,
+    superusers, Managers and people whose role sits outside every team, like HR/HBPR/CR/admin,
     are excluded)."""
     return list(
         UserProfile.clients.through.objects.filter(

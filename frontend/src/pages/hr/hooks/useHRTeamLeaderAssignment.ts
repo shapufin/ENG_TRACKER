@@ -116,7 +116,7 @@ export const useHRTeamLeaderAssignment = () => {
       };
     },
     onSuccess: ({ total, failed }, variables) => {
-      const roleLabel = variables[0]?.role === "italian_tl" ? "Italian TL" : "Albanian TL";
+      const roleLabel = variables[0]?.role === "italian_tl" ? "Manager" : "Line Manager";
       if (failed === 0) {
         toast.success(`${roleLabel} updated for ${total} users`);
       } else {

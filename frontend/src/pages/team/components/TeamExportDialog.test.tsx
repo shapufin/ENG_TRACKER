@@ -53,7 +53,7 @@ describe("TeamExportDialog", () => {
     render(<TeamExportDialog open={true} onOpenChange={vi.fn()} />);
 
     // No team/TL picker — a TL's export is implicitly scoped server-side.
-    expect(screen.queryByText(/italian tl/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/manager/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: /team/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Export" }));

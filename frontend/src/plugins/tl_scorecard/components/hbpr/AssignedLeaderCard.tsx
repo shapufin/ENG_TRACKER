@@ -20,7 +20,7 @@ interface AssignedLeaderCardProps {
   year: number;
 }
 
-/** One assigned Albanian TL as a mobile summary card (the table is desktop-only). */
+/** One assigned Line Manager as a mobile summary card (the table is desktop-only). */
 export const AssignedLeaderCard: React.FC<AssignedLeaderCardProps> = ({ leader, year }) => (
   <GlassCard animateOnMount={false} className="p-4">
     <div className="flex items-start justify-between gap-3">

@@ -149,7 +149,7 @@ const PreviousYearsContent: React.FC<{
       {
         id: "leader_name",
         accessorKey: "leader_name",
-        header: "IT TL",
+        header: "Manager",
         size: 140,
         cell: ({ row }) => row.original.leader_name || "—",
       },

@@ -20,7 +20,7 @@ class GrantHbprPluginAccessTests(TestCase):
         call_command('grant_hbpr_plugin_access')
         self.assertIn('hbpr', self._holders('tl_scorecard'))
         # Engagement was removed from the HBPR scope when the role became
-        # read-only over Albanian-TL governance.
+        # read-only over Line Manager governance.
         self.assertNotIn('hbpr', self._holders('engagement'))
         self.assertNotIn('hbpr', self._holders('payroll'))
 

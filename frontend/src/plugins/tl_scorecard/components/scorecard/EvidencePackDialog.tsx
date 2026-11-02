@@ -176,7 +176,7 @@ const PackBody: React.FC<{ pack: YearEndEvidencePack }> = ({ pack }) => (
 );
 
 /**
- * The packaged per-assignment+year summary the Albanian TL hands to their
+ * The packaged per-assignment+year summary the Line Manager hands to their
  * manager at year-end review: cadence meetings held vs expected and both EPR
  * participations. Read-only — corrections go through the evidence list.
  */

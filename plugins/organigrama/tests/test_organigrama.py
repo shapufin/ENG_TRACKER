@@ -4,8 +4,8 @@ Tests for the Organigrama plugin — company org chart tree endpoint.
 Verifies:
 - Tree endpoint returns 200 for authenticated users.
 - Employee sees only own chain (self → albanian_tl → italian_tl).
-- Albanian TL sees own subtree (direct members + team members).
-- Italian TL sees own subtree (Albanian TLs reporting to them + members).
+- Line Manager sees own subtree (direct members + team members).
+- Manager sees own subtree (Line Managers reporting to them + members).
 - HR/Admin see all roots (full tree).
 - Unauthenticated → 401.
 - Tree shape: person nodes + team nodes + children.
@@ -32,14 +32,14 @@ class OrganigramaTreeTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        # Italian TLs
+        # Managers
         cls.italian_tl = User.objects.create_user(
             username="it_tl", password="test123", first_name="Italian", last_name="Leader"
         )
         cls.italian_tl.profile.is_italian_tl_role = True
         cls.italian_tl.profile.save(update_fields=["is_italian_tl_role"])
 
-        # Albanian TL (reports to Italian TL)
+        # Line Manager (reports to Manager)
         cls.albanian_tl = User.objects.create_user(
             username="al_tl", password="test123", first_name="Albanian", last_name="Leader"
         )
@@ -47,7 +47,7 @@ class OrganigramaTreeTestCase(TestCase):
         cls.albanian_tl.profile.italian_tl = cls.italian_tl
         cls.albanian_tl.profile.save(update_fields=["is_albanian_tl_role", "italian_tl"])
 
-        # Employees (report to Albanian TL)
+        # Employees (report to Line Manager)
         cls.emp1 = User.objects.create_user(
             username="emp1", password="test123", first_name="Emp", last_name="One"
         )
@@ -145,9 +145,9 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         self.assertEqual(resp.status_code, 401)
 
     def test_full_tree_employee_different_italian_tl_placed_under_employee_italian_tl(self):
-        """IT TL is always at top level. An employee whose italian_tl differs from their
-        AL TL's manager must be grouped under that IT TL root -> AL TL bridge -> employee,
-        and NEVER as a nested IT TL child under AL TL."""
+        """Manager is always at top level. An employee whose italian_tl differs from their
+        Line Manager's manager must be grouped under that Manager root -> Line Manager bridge -> employee,
+        and NEVER as a nested Manager child under Line Manager."""
         # Create an employee under al_tl whose italian_tl is it_tl2 (differs from al_tl's manager it_tl)
         emp_cross = User.objects.create_user(
             username="emp_cross", password="test123", first_name="Emp", last_name="Cross"
@@ -164,7 +164,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         it_node1 = next(r for r in roots if r.get("username") == "it_tl")
         al_node1 = next(c for c in it_node1["children"] if c.get("username") == "al_tl")
         child_usernames_under_al1 = [c.get("username") for c in al_node1.get("children", []) if c.get("type") == "person"]
-        self.assertNotIn("it_tl2", child_usernames_under_al1, "Italian TL must never be a child of an Albanian TL!")
+        self.assertNotIn("it_tl2", child_usernames_under_al1, "Manager must never be a child of a Line Manager!")
 
         # 2. Under it_tl2 (root), al_tl must be present as the bridge!
         it_node2 = next(r for r in roots if r.get("username") == "it_tl2")
@@ -182,8 +182,8 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         self.assertTrue(emp_cross_found, "emp_cross should be under al_node2 under it_tl2")
 
     def test_italian_tl_sees_bridged_albanian_tl_in_subtree(self):
-        """An Italian TL viewing their own subtree must see Albanian TLs who manage
-        employees reporting to this Italian TL, even if the AL TL's own manager is someone else."""
+        """A Manager viewing their own subtree must see Line Managers who manage
+        employees reporting to this Manager, even if the Line Manager's own manager is someone else."""
         emp_cross = User.objects.create_user(
             username="emp_cross2", password="test123", first_name="Emp", last_name="Cross2"
         )
@@ -208,7 +208,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         it_root = next(
             (r for r in roots if r.get("username") == "it_tl"), None
         )
-        self.assertIsNotNone(it_root, "Italian TL should be a root node")
+        self.assertIsNotNone(it_root, "Manager should be a root node")
         self.assertEqual(it_root["type"], "person")
         self.assertEqual(it_root["role_badge"], "italian_tl")
 
@@ -221,7 +221,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         al_node = next(
             (c for c in children if c.get("username") == "al_tl"), None
         )
-        self.assertIsNotNone(al_node, "Albanian TL should be under Italian TL")
+        self.assertIsNotNone(al_node, "Line Manager should be under Manager")
         self.assertEqual(al_node["role_badge"], "albanian_tl")
 
     def test_admin_tree_contains_tech_nodes_under_albanian_tl(self):
@@ -260,7 +260,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         self.assertNotIn("emp2", all_usernames)
 
     def test_employee_sees_tech_siblings_in_chain(self):
-        """Employee with shared tech sees tech siblings under same Albanian TL.
+        """Employee with shared tech sees tech siblings under same Line Manager.
 
         emp5 is under al_tl and shares the Infrastructure tech with emp1.
         emp1's chain should include a Tech node containing both emp1 and emp5.
@@ -283,7 +283,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         self.assertIn("al_tl", all_usernames)
         # emp2 has Backup tech, not shared with emp1 → must NOT appear
         self.assertNotIn("emp2", all_usernames)
-        # emp3/emp4 are under a different Albanian TL → must NOT appear
+        # emp3/emp4 are under a different Line Manager → must NOT appear
         self.assertNotIn("emp3", all_usernames)
         self.assertNotIn("emp4", all_usernames)
 
@@ -299,7 +299,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         resp = self._get_tree(self.emp1)
         data = resp.data
         roots = data["roots"]
-        # Italian TL → Albanian TL → Tech node → employees
+        # Manager → Line Manager → Tech node → employees
         it_node = next(r for r in roots if r.get("username") == "it_tl")
         al_node = next(c for c in it_node["children"] if c.get("username") == "al_tl")
         tech_nodes = [c for c in al_node["children"] if c.get("type") == "tech"]
@@ -313,7 +313,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         self.assertIn("emp5b", tech_usernames)
 
     def test_employee_without_tech_sees_direct_child_chain(self):
-        """Employee with no tech assignment appears as direct child of AL TL."""
+        """Employee with no tech assignment appears as direct child of Line Manager."""
         resp = self._get_tree(self.emp2)
         data = resp.data
         roots = data["roots"]
@@ -337,7 +337,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         ]
         self.assertTrue(
             any(c.get("username") == "emp_no_tech" for c in direct_children),
-            "Tech-less employee should be direct child of AL TL",
+            "Tech-less employee should be direct child of Line Manager",
         )
 
     def test_albanian_tl_sees_subtree(self):
@@ -352,15 +352,15 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         self.assertNotIn("standalone", all_usernames)
 
     def test_albanian_tl_subtree_splits_into_one_root_per_italian_tl(self):
-        """One Albanian TL can be shared across teams that each have a
-        different Italian TL. The Albanian TL must never be the tree's
-        root above an Italian TL — even in their own "my org chart" view.
-        Each Italian TL they report to becomes its own root, with the
-        Albanian TL nested under it, showing only that team's employees.
+        """One Line Manager can be shared across teams that each have a
+        different Manager. The Line Manager must never be the tree's
+        root above a Manager — even in their own "my org chart" view.
+        Each Manager they report to becomes its own root, with the
+        Line Manager nested under it, showing only that team's employees.
 
         Regression: emp1/emp2 (from setUpTestData) have no italian_tl FK of
-        their own, so this adds a second team under the same Albanian TL —
-        emp1 keeps italian_tl unset (falls back to the AL TL's own manager,
+        their own, so this adds a second team under the same Line Manager —
+        emp1 keeps italian_tl unset (falls back to the Line Manager's own manager,
         cls.italian_tl), emp2 gets its own italian_tl distinct from that.
         """
         second_italian_tl = User.objects.create_user(
@@ -378,7 +378,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         data = resp.data
         roots = data["roots"]
 
-        # No root is the Albanian TL — every root is an Italian TL.
+        # No root is the Line Manager — every root is a Manager.
         root_usernames = {r.get("username") for r in roots}
         self.assertNotIn("al_tl", root_usernames)
         self.assertIn("it_tl", root_usernames)
@@ -401,10 +401,10 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         self.assertNotIn("emp1", team2_usernames)
 
     def test_albanian_tl_subtree_hides_italian_tl_with_no_employees(self):
-        """An Italian TL the Albanian TL merely reports to, with nobody
+        """A Manager the Line Manager merely reports to, with nobody
         currently assigned under that specific line, must not show as a
-        disconnected, childless root — only Italian TLs with actual
-        employees under this Albanian TL appear.
+        disconnected, childless root — only Managers with actual
+        employees under this Line Manager appear.
         """
         empty_it_tl = User.objects.create_user(
             username="it_tl_empty", password="test123",
@@ -413,10 +413,10 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         empty_it_tl.profile.is_italian_tl_role = True
         empty_it_tl.profile.save(update_fields=["is_italian_tl_role"])
 
-        # Give the Albanian TL an empty manager line...
+        # Give the Line Manager an empty manager line...
         self.albanian_tl.profile.italian_tl = empty_it_tl
         self.albanian_tl.profile.save(update_fields=["italian_tl"])
-        # ...while emp1/emp2 both resolve to a DIFFERENT Italian TL, so
+        # ...while emp1/emp2 both resolve to a DIFFERENT Manager, so
         # empty_it_tl ends up with zero employees.
         self.emp1.profile.italian_tl = self.italian_tl
         self.emp1.profile.save(update_fields=["italian_tl"])
@@ -430,12 +430,12 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
 
         self.assertNotIn(
             "it_tl_empty", root_usernames,
-            "an Italian TL with no employees under this Albanian TL must not appear",
+            "a Manager with no employees under this Line Manager must not appear",
         )
         self.assertIn("it_tl", root_usernames)
 
     def test_albanian_tl_subtree_falls_back_to_self_when_no_employees_anywhere(self):
-        """An Albanian TL with zero employees still sees their own node
+        """A Line Manager with zero employees still sees their own node
         rather than an empty tree.
         """
         lonely_al = User.objects.create_user(
@@ -456,7 +456,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         """A UserProfile.italian_tl_id that no longer resolves to a User row
         (e.g. left over from a partial site-restore) must not crash the
         subtree endpoint with KeyError. The affected employee falls into
-        the Albanian-TL-led unresolved fallback group instead.
+        the Line Manager-led unresolved fallback group instead.
         """
         self.emp2.profile.italian_tl = self.italian_tl2
         self.emp2.profile.save(update_fields=["italian_tl"])
@@ -481,9 +481,9 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         self.assertIn("emp2", all_usernames)
 
     def test_albanian_tl_subtree_unresolved_fallback_when_no_manager(self):
-        """An Albanian TL with no manager (own italian_tl is None) whose
+        """A Line Manager with no manager (own italian_tl is None) whose
         employees also have no italian_tl FK must fall back to the
-        Albanian TL as root for that leftover group, instead of dropping
+        Line Manager as root for that leftover group, instead of dropping
         them from the tree.
         """
         self.albanian_tl.profile.italian_tl = None
@@ -503,13 +503,13 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
 
     def test_employee_with_italian_tl_fk_is_not_misidentified_as_albanian_tl(self):
         """A regular employee can have their own italian_tl FK set (each
-        team has its own Italian TL — a data pattern this session
-        introduced) without an Albanian TL role. They must not be promoted
-        into the tree as if they were an Albanian TL reporting to that
-        Italian TL — that requires is_albanian_tl_role, not just the FK.
+        team has its own Manager — a data pattern this session
+        introduced) without a Line Manager role. They must not be promoted
+        into the tree as if they were a Line Manager reporting to that
+        Manager — that requires is_albanian_tl_role, not just the FK.
         """
-        # emp1 has no Albanian TL role — only an italian_tl FK, same as any
-        # regular employee under the new per-team Italian TL data pattern.
+        # emp1 has no Line Manager role — only an italian_tl FK, same as any
+        # regular employee under the new per-team Manager data pattern.
         self.emp1.profile.italian_tl = self.italian_tl
         self.emp1.profile.save(update_fields=["italian_tl"])
 
@@ -523,7 +523,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         }
         self.assertNotIn(
             "emp1", al_peer_usernames,
-            "emp1 must not appear as an Albanian-TL-level peer under the Italian TL",
+            "emp1 must not appear as a Line Manager-level peer under the Manager",
         )
         al_node = next(c for c in it_root["children"] if c.get("username") == "al_tl")
         self.assertEqual(al_node["role_badge"], "albanian_tl")
@@ -533,7 +533,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         profile's is_italian_tl_role/is_albanian_tl_role boolean is only a
         legacy flag. A TL whose role comes solely from an active UserRole
         grant (no boolean flag set) must still be found and nested under
-        their Italian TL — this is the actual production pattern, not just
+        their Manager — this is the actual production pattern, not just
         a boundary case.
         """
         role_based_it_tl = User.objects.create_user(
@@ -551,10 +551,10 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         role_based_emp.profile.save(update_fields=["albanian_tl"])
 
         italian_tl_role = Role.objects.get_or_create(
-            code="italian_tl", defaults={"name": "Italian TL"}
+            code="italian_tl", defaults={"name": "Manager"}
         )[0]
         albanian_tl_role = Role.objects.get_or_create(
-            code="albanian_tl", defaults={"name": "Albanian TL"}
+            code="albanian_tl", defaults={"name": "Line Manager"}
         )[0]
         UserRole.objects.create(user=role_based_it_tl, role=italian_tl_role, is_active=True)
         UserRole.objects.create(user=role_based_al_tl, role=albanian_tl_role, is_active=True)
@@ -566,22 +566,22 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         it_root = next(
             (r for r in roots if r.get("username") == "it_tl_role_based"), None
         )
-        self.assertIsNotNone(it_root, "role-based Italian TL must appear as a root")
+        self.assertIsNotNone(it_root, "role-based Manager must appear as a root")
         al_node = next(
             (c for c in it_root["children"] if c.get("username") == "al_tl_role_based"),
             None,
         )
         self.assertIsNotNone(
-            al_node, "role-based Albanian TL must appear under their Italian TL"
+            al_node, "role-based Line Manager must appear under their Manager"
         )
         self.assertIn("emp_role_based", self._collect_usernames(al_node["children"]))
 
     def test_admin_full_tree_nests_employees_under_their_own_italian_tl(self):
-        """Same regression as the Albanian-TL subtree, but for the full
-        company tree (admin/HR view). An Albanian TL shared across teams
-        with different Italian TLs must not have every employee flattened
+        """Same regression as the Line Manager subtree, but for the full
+        company tree (admin/HR view). A Line Manager shared across teams
+        with different Managers must not have every employee flattened
         under them — employees whose own italian_tl differs from the
-        Albanian TL's own manager must nest under a second Italian TL node.
+        Line Manager's own manager must nest under a second Manager node.
         """
         second_italian_tl = User.objects.create_user(
             username="it_tl_team2", password="test123",
@@ -608,11 +608,11 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         team2_usernames = self._collect_usernames(al_under_team2["children"])
         self.assertIn("emp2", team2_usernames)
 
-        # Under it_tl (first Italian TL), al_tl must NOT have it_tl_team2 as a child node!
+        # Under it_tl (first Manager), al_tl must NOT have it_tl_team2 as a child node!
         it_root = next(r for r in roots if r.get("username") == "it_tl")
         al_node = next(c for c in it_root["children"] if c.get("username") == "al_tl")
         nested_it_tl_nodes = [c for c in al_node.get("children", []) if c.get("username") == "it_tl_team2"]
-        self.assertEqual(len(nested_it_tl_nodes), 0, "Italian TL must never appear nested under an Albanian TL")
+        self.assertEqual(len(nested_it_tl_nodes), 0, "Manager must never appear nested under a Line Manager")
 
         # emp2 must NOT appear under it_tl's branch
         direct_usernames = self._collect_usernames(al_node["children"])
@@ -666,7 +666,7 @@ class TestTreePerformance(OrganigramaTreeTestCase):
 
 
 class TestTreePerformanceRealistic(TestCase):
-    """Realistic N+1 test: 5 IT TLs, 10 AL TLs, 20 employees.
+    """Realistic N+1 test: 5 Managers, 10 Line Managers, 20 employees.
 
     Batch fetching in build_full_tree() should keep the query count
     at <= 8 (target 6) regardless of how many nodes exist.
@@ -767,7 +767,7 @@ class TestNegativeScoping(OrganigramaTreeTestCase):
     """H3 — verify users cannot see outside their scope."""
 
     def test_employee_cannot_see_other_al_tl_employees(self):
-        """Employee under first AL TL cannot see employees under second AL TL."""
+        """Employee under first Line Manager cannot see employees under second Line Manager."""
         resp = self._get_tree(self.emp1)
         self.assertEqual(resp.status_code, 200)
         usernames = self._collect_usernames(resp.data["roots"])
@@ -776,7 +776,7 @@ class TestNegativeScoping(OrganigramaTreeTestCase):
         self.assertNotIn("al_tl2", usernames)
 
     def test_albanian_tl_cannot_see_other_al_tl_members(self):
-        """Albanian TL cannot see another Albanian TL's members."""
+        """Line Manager cannot see another Line Manager's members."""
         resp = self._get_tree(self.albanian_tl)
         self.assertEqual(resp.status_code, 200)
         usernames = self._collect_usernames(resp.data["roots"])
@@ -787,7 +787,7 @@ class TestNegativeScoping(OrganigramaTreeTestCase):
         self.assertNotIn("al_tl2", usernames)
 
     def test_italian_tl_cannot_see_other_italian_tl_subtree(self):
-        """Italian TL cannot see another Italian TL's subtree."""
+        """Manager cannot see another Manager's subtree."""
         resp = self._get_tree(self.italian_tl)
         self.assertEqual(resp.status_code, 200)
         usernames = self._collect_usernames(resp.data["roots"])
@@ -954,9 +954,9 @@ class TestTechEdgeCases(OrganigramaTreeTestCase):
         )
 
     def test_employee_no_tech_no_al_tl_sees_only_self(self):
-        """Employee with no techs and no Albanian TL sees only themselves."""
+        """Employee with no techs and no Line Manager sees only themselves."""
         user = User.objects.create_user(username="notech_notl", password="test123")
-        # Give them an Italian TL so the chain has 2 levels
+        # Give them a Manager so the chain has 2 levels
         user.profile.italian_tl = self.italian_tl
         user.profile.save(update_fields=["italian_tl"])
 
@@ -964,7 +964,7 @@ class TestTechEdgeCases(OrganigramaTreeTestCase):
         self.assertEqual(resp.status_code, 200)
         roots = resp.data["roots"]
         self.assertEqual(len(roots), 1)
-        # Root = Italian TL, child = employee (no tech node)
+        # Root = Manager, child = employee (no tech node)
         self.assertEqual(roots[0]["type"], "person")
         children = roots[0].get("children", [])
         self.assertEqual(len(children), 1)
@@ -976,7 +976,7 @@ class RoleBadgeTestCase(OrganigramaTreeTestCase):
     """Focused tests for the shared ``role_badge`` classifier.
 
     The viewset's ``_person_children`` and the tree builder's ``_role_badge``
-    previously duplicated the Italian/Albanian TL detection logic. Both now
+    previously duplicated the Manager/Line Manager detection logic. Both now
     delegate to the public ``role_badge`` helper so the detection cannot
     drift. These tests cover each classification branch and the role-code
     cache vs legacy profile flag equivalence.
@@ -1005,11 +1005,11 @@ class RoleBadgeTestCase(OrganigramaTreeTestCase):
     def test_role_code_cache_matches_legacy_profile_flag(self):
         """A profile with role_codes cache but no legacy flag still classifies correctly."""
         from plugins.organigrama.services.tree_builder import role_badge
-        # The Italian TL fixture has the legacy flag set; populate the
+        # The Manager fixture has the legacy flag set; populate the
         # role_codes cache and verify the classification is unchanged.
         self.italian_tl.profile.role_codes = ["italian_tl"]
         self.assertEqual(role_badge(self.italian_tl.profile), "italian_tl")
-        # Albanian TL via role_codes only (clear the legacy flag).
+        # Line Manager via role_codes only (clear the legacy flag).
         self.albanian_tl.profile.is_albanian_tl_role = False
         self.albanian_tl.profile.role_codes = ["albanian_tl"]
         self.assertEqual(role_badge(self.albanian_tl.profile), "albanian_tl")

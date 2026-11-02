@@ -287,7 +287,7 @@ class TestUserTechAndRoleFacets(APITestCase):
     def test_role_filter_employee_includes_team_leader_without_role(self):
         """Documented definition: Employees excludes elevated ROLES only. A
         user who merely leads a Team row (no TL role/flag/FK) stays an
-        employee — no other tab could classify them as IT or AL, so excluding
+        employee — no other tab could classify them as Manager or Line Manager, so excluding
         them here would make them unreachable."""
         leader = User.objects.create_user(username='facet-led-team', password='x')
         Team.objects.create(name='Facet Led Team', code='FACET-LED', team_leader=leader)

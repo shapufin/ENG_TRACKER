@@ -470,7 +470,7 @@ class EscalationCandidateSerializer(serializers.Serializer):
 
 
 class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
-    """Evidence of the HBPR↔AL-TL relationship. ``recorded_by``/``updated_by``
+    """Evidence of the HBPR↔Line Manager relationship. ``recorded_by``/``updated_by``
     are server-set (never taken from the payload); ``next_due_on`` and
     ``cadence_status`` are computed from the owning assignment's cadence."""
 

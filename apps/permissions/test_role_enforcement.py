@@ -19,7 +19,7 @@ class DatabaseRoleEnforcementTests(TestCase):
             code='hr', defaults={'name': 'HR', 'description': 'HR role'}
         )
         self.tl_role, _ = Role.objects.get_or_create(
-            code='italian_tl', defaults={'name': 'Italian TL', 'description': 'TL role'}
+            code='italian_tl', defaults={'name': 'Manager', 'description': 'TL role'}
         )
         self.client = Client.objects.create(name='Role Client', code='ROLE')
 

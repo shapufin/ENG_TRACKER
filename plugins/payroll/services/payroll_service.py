@@ -411,7 +411,7 @@ def _create_run_entries(run: PayrollRun, line: PayrollLine, result) -> None:
 def partition_payable_users(users, year: int, month: int):
     """Split users into (payable, skipped) for a payroll month.
 
-    Superusers and Italian Team Leaders are never payroll subjects. A user
+    Superusers and Managers are never payroll subjects. A user
     whose wage does not cover the month (or overlaps) is skipped with the
     model's own message, instead of aborting the whole run.
     """

@@ -1,4 +1,4 @@
-"""Purge ended HBPR ↔ Albanian TL assignments past the retention window.
+"""Purge ended HBPR ↔ Line Manager assignments past the retention window.
 
 Ended assignments are audit history, but evidence-free history does not need
 to live forever: ``purge_ended_assignments`` deletes rows whose ``effective_to``

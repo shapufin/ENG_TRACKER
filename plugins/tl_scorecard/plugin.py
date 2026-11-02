@@ -82,7 +82,7 @@ class TlScorecardPlugin(BasePlugin):
                 {
                     # The HBPR's own workspace: assignment-backed governance
                     # records, cadence and EPR evidence. Not /tl-scorecard —
-                    # that is the Albanian TL's authoring page.
+                    # that is the Line Manager's authoring page.
                     "path": "/hbpr",
                     "component": "HbprWorkspacePage",
                     "layout": "app",

@@ -114,7 +114,7 @@ describe("viewerHelpers nodeMatches & filterHierarchy", () => {
   });
 });
 
-describe("viewerHelpers Albanian TL filter", () => {
+describe("viewerHelpers Line Manager filter", () => {
   const person = (
     id: number,
     name: string,
@@ -128,7 +128,7 @@ describe("viewerHelpers Albanian TL filter", () => {
     ]),
   ];
 
-  it("lists each Albanian TL once, sorted by name", () => {
+  it("lists each Line Manager once, sorted by name", () => {
     const twice = [...roots, person(9, "Other", "italian_tl", [person(3, "Arta", "albanian_tl")])];
     expect(collectAlbanianTls(twice)).toEqual([
       { id: 3, name: "Arta" },
@@ -136,13 +136,13 @@ describe("viewerHelpers Albanian TL filter", () => {
     ]);
   });
 
-  it("keeps only the path to the chosen Albanian TL", () => {
+  it("keeps only the path to the chosen Line Manager", () => {
     const [root] = filterByAlbanianTl(roots, 3);
     expect(root.children.map((c) => c.id)).toEqual([3]);
     expect(root.children[0].children.map((c) => c.id)).toEqual([30]);
   });
 
-  it("drops an Italian TL with no chosen branch", () => {
+  it("drops a Manager with no chosen branch", () => {
     expect(filterByAlbanianTl(roots, 99)).toEqual([]);
   });
 });

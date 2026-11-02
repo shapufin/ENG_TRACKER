@@ -1,4 +1,4 @@
-"""M-2: the Italian/Albanian TL lists are for staff, HR and team leaders only.
+"""M-2: the Manager/Line Manager lists are for staff, HR and team leaders only.
 
 Team confidentiality (2026-10-20): a TL's name is not confidential, per-team
 member counts are management data.

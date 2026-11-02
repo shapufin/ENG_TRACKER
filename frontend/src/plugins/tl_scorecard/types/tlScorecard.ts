@@ -348,7 +348,7 @@ export interface HbprNeedsAttention {
   recent_evidence: number;
 }
 
-/** One assigned Albanian TL, with cadence and EPR governance state. */
+/** One assigned Line Manager, with cadence and EPR governance state. */
 export interface HbprLeaderRow extends PersonRef {
   assignment_id: number;
   cadence: HbprCadence;
@@ -395,7 +395,7 @@ export interface HbprEvidence {
 }
 
 /**
- * The AL TL's own HBPR partnership (GET partnership/). The AL TL authors the
+ * The Line Manager's own HBPR partnership (GET partnership/). The Line Manager authors the
  * evidence but cannot read the staff-only assignment API, so this is where they
  * learn who their HBPR is and what the cadence state is.
  */
@@ -406,7 +406,7 @@ export interface HbprPartnershipAssignment {
   cadence_display?: string;
   cadence_day_of_week: number | null;
   cadence_nth_week: number | null;
-  /** Server-decided: the assigned Albanian TL (and staff) may change the schedule. */
+  /** Server-decided: the assigned Line Manager (and staff) may change the schedule. */
   can_edit_cadence: boolean;
   effective_from: string;
   last_meeting_on: string | null;
@@ -430,7 +430,7 @@ export interface HbprPartnership {
   assignment: HbprPartnershipAssignment | null;
 }
 
-/** Create/edit payload for governance evidence (the assigned AL TL only). */
+/** Create/edit payload for governance evidence (the assigned Line Manager only). */
 export interface HbprEvidencePayload {
   assignment: number;
   kind: HbprEvidenceKind;

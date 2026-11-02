@@ -1,6 +1,6 @@
-"""The AL TL's own view of their HBPR partnership.
+"""The Line Manager's own view of their HBPR partnership.
 
-The AL TL authors the governance evidence, so they need their assignment, the
+The Line Manager authors the governance evidence, so they need their assignment, the
 HBPR they are paired with, and the cadence/EPR state — none of which the
 staff-only `/api/users/hbpr-assignments/` endpoint exposes to them. This is the
 read side of the Phase 8 "HBPR Partnership" scorecard section.

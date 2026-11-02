@@ -4,6 +4,11 @@ import { builderEdgeProps } from "../components/builderEdgeHelpers";
 import { calculateHierarchyLayout } from "../hooks/useBuilderAutoLayout";
 import { newId } from "../hooks/useBuilderGraphOps";
 
+const ROLE_BADGE_TITLES: Record<string, string> = {
+  italian_tl: "MANAGER",
+  albanian_tl: "LINE MANAGER",
+};
+
 const DEFAULT_WIDTH = 210;
 const DEFAULT_HEIGHT = 88;
 
@@ -27,7 +32,7 @@ export function convertLiveTreeToGraph(roots: TreeNode[]): { nodes: Node[]; edge
 
     const roleTitle =
       isPerson && node.role_badge
-        ? node.role_badge.replace("_", " ").toUpperCase()
+        ? (ROLE_BADGE_TITLES[node.role_badge] ?? node.role_badge.replace("_", " ").toUpperCase())
         : isPerson
           ? "Employee"
           : "Team";

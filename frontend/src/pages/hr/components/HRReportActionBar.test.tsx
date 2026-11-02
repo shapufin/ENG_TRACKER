@@ -67,8 +67,8 @@ describe("HRReportActionBar", () => {
         selectedWorkspace="WS"
       />
     );
-    expect(screen.getByText(/Italian TL: Mario/)).toBeInTheDocument();
-    expect(screen.getByText(/Albanian TL: Bledi/)).toBeInTheDocument();
+    expect(screen.getByText(/^Manager: Mario/)).toBeInTheDocument();
+    expect(screen.getByText(/Line Manager: Bledi/)).toBeInTheDocument();
     expect(screen.getByText(/Workspace: WS/)).toBeInTheDocument();
   });
 
@@ -81,8 +81,8 @@ describe("HRReportActionBar", () => {
         selectedAlbanianTL="99"
       />
     );
-    expect(screen.getByText(/Italian TL: 99/)).toBeInTheDocument();
-    expect(screen.getByText(/Albanian TL: 99/)).toBeInTheDocument();
+    expect(screen.getByText(/^Manager: 99/)).toBeInTheDocument();
+    expect(screen.getByText(/Line Manager: 99/)).toBeInTheDocument();
   });
 
   it("cancels export dialog", () => {

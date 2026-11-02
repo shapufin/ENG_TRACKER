@@ -168,7 +168,7 @@ export const ROUTES = [
     expectedHeading: "TL Scorecard",
     mockup: "NONE",
     extraction: "NONE",
-    note: "AL-TL authoring workspace (2026-10-02 refactor); an HBPR-only viewer is Navigate-redirected to /hbpr before rendering (GUARD_ONLY, proven live E2E)",
+    note: "Line Manager authoring workspace (2026-10-02 refactor); an HBPR-only viewer is Navigate-redirected to /hbpr before rendering (GUARD_ONLY, proven live E2E)",
   },
   {
     path: "/analytics",
@@ -448,7 +448,7 @@ export const ROUTES = [
     expectedHeading: "HBPR assignments",
     mockup: "NONE",
     extraction: "NONE",
-    note: "admin-managed HBPR <-> AL-TL assignments (2026-10-02); /admin/* is SuperuserRoute-gated so hr is excluded by design",
+    note: "admin-managed HBPR <-> Line Manager assignments (2026-10-02); /admin/* is SuperuserRoute-gated so hr is excluded by design",
   },
   // ---- Admin shell plugin routes ----
   {

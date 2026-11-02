@@ -1,8 +1,8 @@
-"""Explicit HBPR ↔ Albanian TL assignment model.
+"""Explicit HBPR ↔ Line Manager assignment model.
 
 The assignment is the single source of truth for HBPR scope: an HBPR sees
-exactly the Albanian TLs they are assigned to, never a global role population.
-One open assignment per AL TL is enforced by a partial unique constraint and
+exactly the Line Managers they are assigned to, never a global role population.
+One open assignment per Line Manager is enforced by a partial unique constraint and
 the write service; history is retained via effective dates.
 """
 
@@ -65,7 +65,7 @@ def get_nth_weekday_of_month(year: int, month: int, nth: int, weekday: int) -> d
 
 
 class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
-    """A dated, admin-managed pairing of one HBPR with one Albanian TL."""
+    """A dated, admin-managed pairing of one HBPR with one Line Manager."""
 
     tracked_fields = ("effective_to",)
 

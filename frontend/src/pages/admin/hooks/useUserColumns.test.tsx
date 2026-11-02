@@ -85,7 +85,7 @@ describe("useUserColumns", () => {
       user: { id: 9, username: "mix", email: "", roles: ["albanian_tl", "hbpr"] } as never,
     });
     render(<>{cell({ row: { original: multiRole } })}</>);
-    expect(screen.getByText("AL TL")).toBeInTheDocument();
+    expect(screen.getByText("Line Manager")).toBeInTheDocument();
     expect(screen.getByText("HBPR")).toBeInTheDocument();
   });
 
@@ -194,8 +194,8 @@ describe("useUserColumns", () => {
         })}
       </>
     );
-    expect(screen.getByText("IT TL")).toHaveClass("bg-tone-info-surface");
-    expect(screen.getByText("IT TL").className).not.toMatch(/blue-|emerald-|violet-/);
+    expect(screen.getByText("Manager")).toHaveClass("bg-tone-info-surface");
+    expect(screen.getByText("Manager").className).not.toMatch(/blue-|emerald-|violet-/);
   });
 
   describe("Grant CR access row action", () => {

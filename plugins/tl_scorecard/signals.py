@@ -160,7 +160,7 @@ def _on_assignment_saved(sender, instance, created, **kwargs):
 
 
 def _on_hbpr_evidence_saved(sender, instance, created, **kwargs):
-    """Tell the assigned HBPR when the AL TL records governance evidence."""
+    """Tell the assigned HBPR when the Line Manager records governance evidence."""
     from . import notification_types as types
     if getattr(instance, '_skip_notifications', False):
         return

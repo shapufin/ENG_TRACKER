@@ -199,7 +199,7 @@ describe("UserDetailPanel", () => {
     expect(onSaveField).not.toHaveBeenCalled();
   });
 
-  it("edits Italian TL inline and cancels cleanly", () => {
+  it("edits Manager inline and cancels cleanly", () => {
     const onSaveField = vi.fn();
     render(
       <UserDetailPanel
@@ -212,13 +212,13 @@ describe("UserDetailPanel", () => {
         italianTLs={[{ id: 3, username: "mario", full_name: "Mario Rossi" }]}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Edit italian tl for alice" }));
-    expect(screen.getByRole("button", { name: "Save italian tl" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Cancel editing italian tl" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit manager for alice" }));
+    expect(screen.getByRole("button", { name: "Save manager" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel editing manager" }));
     expect(onSaveField).not.toHaveBeenCalled();
   });
 
-  it("edits Albanian TL inline and cancels cleanly", () => {
+  it("edits Line Manager inline and cancels cleanly", () => {
     const onSaveField = vi.fn();
     render(
       <UserDetailPanel
@@ -231,9 +231,9 @@ describe("UserDetailPanel", () => {
         albanianTLs={[{ id: 4, username: "ilir", full_name: "Ilir Hoxha" }]}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Edit albanian tl for alice" }));
-    expect(screen.getByRole("button", { name: "Save albanian tl" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Cancel editing albanian tl" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit line manager for alice" }));
+    expect(screen.getByRole("button", { name: "Save line manager" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel editing line manager" }));
     expect(onSaveField).not.toHaveBeenCalled();
   });
 

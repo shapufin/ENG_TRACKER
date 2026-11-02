@@ -56,7 +56,7 @@ describe("computePermissions", () => {
     expect(result.primaryDashboard).toBe("hr");
   });
 
-  it("identifies an Italian team leader", () => {
+  it("identifies a Manager", () => {
     const result = computePermissions({ is_italian_tl_role: true });
     expect(result.isItalianTL).toBe(true);
     expect(result.isTeamLeader).toBe(true);
@@ -66,7 +66,7 @@ describe("computePermissions", () => {
     expect(result.primaryDashboard).toBe("team_leader");
   });
 
-  it("identifies an Albanian team leader", () => {
+  it("identifies a Line Manager", () => {
     const result = computePermissions({ is_albanian_tl_role: true });
     expect(result.isAlbanianTL).toBe(true);
     expect(result.isTeamLeader).toBe(true);

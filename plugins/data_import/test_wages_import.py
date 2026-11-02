@@ -137,7 +137,7 @@ class WageImporterCommitTests(TestCase):
             context=self.context,
         )
         self.assertEqual(result.status, "error")
-        self.assertEqual(result.errors, ["Italian Team Leaders are not payroll subjects."])
+        self.assertEqual(result.errors, ["Managers are not payroll subjects."])
         self.assertFalse(WageAssignment.objects.filter(user__username="import_it_tl").exists())
 
     def test_negative_wage_is_rejected(self):

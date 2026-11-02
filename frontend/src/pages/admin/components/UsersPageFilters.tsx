@@ -13,8 +13,8 @@ type UsersPageState = ReturnType<typeof useUsersPage>;
 const ROLE_LABELS: Record<string, string> = {
   all: "All users",
   employee: "Employees",
-  italian_tl: "Italian TL",
-  albanian_tl: "Albanian TL",
+  italian_tl: "Manager",
+  albanian_tl: "Line Manager",
   hbpr: "HBPR",
   hr: "HR",
   cr_admin: "CR Admin",

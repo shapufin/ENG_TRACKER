@@ -20,7 +20,7 @@ const mockTree: OrgTreeResponse = {
       type: "person",
       id: 1,
       username: "it_tl",
-      full_name: "Italian TL",
+      full_name: "Manager",
       role_badge: "italian_tl",
       children: [],
     },

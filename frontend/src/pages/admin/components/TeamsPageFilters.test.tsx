@@ -22,7 +22,7 @@ describe("TeamsPageFilters", () => {
         hasActiveFilters={false}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: /missing al/i }));
+    fireEvent.click(screen.getByRole("button", { name: /missing line manager/i }));
     expect(onLeaderFilter).toHaveBeenCalledWith("missing-al");
   });
 

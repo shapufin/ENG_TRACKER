@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { FormRoleCheckboxes, FormInputField } from "./userFormFields";
 
 describe("FormRoleCheckboxes", () => {
-  it("renders HR, IT TL, AL TL, and CR Admin as accessible switches", () => {
+  it("renders HR, Manager, Line Manager, and CR Admin as accessible switches", () => {
     const onChange = vi.fn();
     render(
       <FormRoleCheckboxes
@@ -16,8 +16,8 @@ describe("FormRoleCheckboxes", () => {
       />
     );
     expect(screen.getByRole("switch", { name: /HR/i })).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: /IT TL/i })).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: /AL TL/i })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /^Manager/i })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /^Line Manager/i })).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: /CR Admin/i })).toBeInTheDocument();
   });
 
@@ -82,8 +82,8 @@ describe("FormRoleCheckboxes", () => {
     );
     expect(screen.getByRole("switch", { name: /HR/i })).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: /HBPR/i })).toBeInTheDocument();
-    expect(screen.queryByRole("switch", { name: /IT TL/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("switch", { name: /AL TL/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /^Manager/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /^Line Manager/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("switch", { name: /CR Admin/i })).not.toBeInTheDocument();
   });
 });

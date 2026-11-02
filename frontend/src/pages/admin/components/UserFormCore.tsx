@@ -59,8 +59,8 @@ export const UserFormCore: React.FC<UserFormCoreProps> = ({
   // Roles the HBPR switch hides but the form state still holds — they are
   // force-revoked by the roles payload on save, so warn while any is on.
   const hiddenRevocations = [
-    form.is_italian_tl_role && "Italian TL",
-    form.is_albanian_tl_role && "Albanian TL",
+    form.is_italian_tl_role && "Manager",
+    form.is_albanian_tl_role && "Line Manager",
     form.is_cr_admin && "CR Admin",
   ].filter(Boolean) as string[];
   return (
@@ -106,13 +106,13 @@ export const UserFormCore: React.FC<UserFormCoreProps> = ({
               />
             </div>
             <FormTLSelect
-              label="Albanian TL"
+              label="Line Manager"
               value={form.albanian_tl}
               onChange={(v) => updateField("albanian_tl", v)}
               tls={albanianTLs}
             />
             <FormTLSelect
-              label="Italian TL"
+              label="Manager"
               value={form.italian_tl}
               onChange={(v) => updateField("italian_tl", v)}
               tls={italianTLs}

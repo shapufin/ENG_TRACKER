@@ -66,7 +66,7 @@ class TeamScopeParityTests(TestCase):
 
 
 class ItalianTlScopeTests(TestCase):
-    """Italian TLs sit above the people KPI measures: never in a roster, except as the viewer."""
+    """Managers sit above the people KPI measures: never in a roster, except as the viewer."""
 
     @classmethod
     def setUpTestData(cls):

@@ -612,8 +612,8 @@ const EditableRoles: React.FC<{
 
   const hbprMode = Boolean(draft.is_hbpr);
   const hiddenRevocations = [
-    draft.is_italian_tl_role && "Italian TL",
-    draft.is_albanian_tl_role && "Albanian TL",
+    draft.is_italian_tl_role && "Manager",
+    draft.is_albanian_tl_role && "Line Manager",
     draft.is_cr_admin && "CR Admin",
   ].filter(Boolean) as string[];
 
@@ -805,7 +805,7 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
                     variant="default"
                     className={`${toneSurfaceClass.info} h-5 px-1.5 py-0 text-xs`}
                   >
-                    IT TL
+                    Manager
                   </Badge>
                 )}
                 {isAlbanianTL && (
@@ -813,7 +813,7 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
                     variant="default"
                     className={`${toneSurfaceClass.success} h-5 px-1.5 py-0 text-xs`}
                   >
-                    AL TL
+                    Line Manager
                   </Badge>
                 )}
                 {isHbpr && (
@@ -927,7 +927,7 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
           <DetailDrawerSection id="user-leadership" title="Leadership & roles" icon={Shield}>
             <EditableTL
               key={`italian_tl-${editing === "italian_tl" ? "open" : "closed"}`}
-              label="Italian TL"
+              label="Manager"
               field="italian_tl"
               username={username}
               leaderName={profile.italian_tl_name}
@@ -942,7 +942,7 @@ export const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
             />
             <EditableTL
               key={`albanian_tl-${editing === "albanian_tl" ? "open" : "closed"}`}
-              label="Albanian TL"
+              label="Line Manager"
               field="albanian_tl"
               username={username}
               leaderName={profile.albanian_tl_name}

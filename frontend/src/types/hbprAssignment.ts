@@ -8,7 +8,7 @@ export type HbprCadence = "weekly" | "biweekly" | "monthly";
 export type HbprCadenceStatus = "not_started" | "on_track" | "due" | "overdue" | "ended";
 
 /**
- * An explicit, dated HBPR ↔ Albanian TL assignment. One open row per Albanian
+ * An explicit, dated HBPR ↔ Line Manager assignment. One open row per Line
  * TL; history is retained via `effective_to`.
  */
 export interface HbprAssignment {

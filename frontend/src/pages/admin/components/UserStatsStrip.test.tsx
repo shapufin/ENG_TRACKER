@@ -29,8 +29,8 @@ describe("UserStatsStrip", () => {
     renderStrip();
     const pairs: [string, string][] = [
       ["Total users", "12"],
-      ["Italian TL", "3"],
-      ["Albanian TL", "2"],
+      ["Manager", "3"],
+      ["Line Manager", "2"],
       ["No TL", "1"],
       ["No Tech", "4"],
       ["Active today", "9"],
@@ -40,10 +40,10 @@ describe("UserStatsStrip", () => {
     }
   });
 
-  it("makes Italian TL, Albanian TL and No Tech toggles and leaves the rest static", () => {
+  it("makes Manager, Line Manager and No Tech toggles and leaves the rest static", () => {
     renderStrip();
-    for (const name of ["Italian TL", "Albanian TL", "No Tech"]) {
-      expect(screen.getByRole("button", { name: new RegExp(name) })).toHaveAttribute(
+    for (const name of ["Manager", "Line Manager", "No Tech"]) {
+      expect(screen.getByRole("button", { name: new RegExp(`^${name}`) })).toHaveAttribute(
         "aria-pressed",
         "false"
       );
@@ -55,12 +55,12 @@ describe("UserStatsStrip", () => {
 
   it("reports the pressed state and forwards clicks", () => {
     const props = renderStrip({ tlFilter: "albanian_tl", noTechOnly: true });
-    expect(screen.getByRole("button", { name: /Albanian TL/ })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /^Line Manager/ })).toHaveAttribute(
       "aria-pressed",
       "true"
     );
     expect(screen.getByRole("button", { name: /No Tech/ })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: /Italian TL/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Manager/ }));
     expect(props.onTlFilterToggle).toHaveBeenCalledWith("italian_tl");
     fireEvent.click(screen.getByRole("button", { name: /No Tech/ }));
     expect(props.onNoTechToggle).toHaveBeenCalled();

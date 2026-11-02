@@ -16,6 +16,7 @@ to reference the new structure.
 ## Scope
 - Read relevant existing code before editing.
 - Keep changes limited to the requested scope.
+- Say Manager (role `italian_tl`) and Line Manager (role `albanian_tl`) in all user-visible text; never "Italian TL"/"Albanian TL". Codes stay as they are (`docs/workflow-invariants.md` item 52).
 - Preserve existing API contracts unless a breaking change is explicitly requested.
 - Do not modify generated files, secrets, production configuration, or unrelated work.
 - Never commit or push unless explicitly requested.
@@ -312,7 +313,7 @@ Rules:
 
 ## 2026-10-19 — Business timezone, derived TLs, retention (#144 to #157)
 - `business_today()` replaces naive "today" everywhere, with an AST guard (`core/test_business_today_guard.py`); the zone is `GlobalSettings.business_timezone`.
-- Teams show derived Italian and Albanian TLs (`TeamSerializer.italian_tl` / `albanian_tl`); admin Tech and Clients KPI strips; TL wages hidden while Payroll is disabled; `purge_audit_logs` and `purge_analytics_data` enforce retention.
+- Teams show derived Manager and Line Manager (`TeamSerializer.italian_tl` / `albanian_tl`); admin Tech and Clients KPI strips; TL wages hidden while Payroll is disabled; `purge_audit_logs` and `purge_analytics_data` enforce retention.
 
 ## 2026-10-20/21 — Launch review programme
 - Plan `docs/superpowers/plans/2026-10-20-launch-review.md`; register and go/no-go in `docs/reviews/2026-10-20-launch-review.md`. Findings are fixed by ID (B, M, S, C, P, D), one commit each, test first.

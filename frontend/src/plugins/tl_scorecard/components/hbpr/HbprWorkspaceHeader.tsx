@@ -87,7 +87,7 @@ export const HbprWorkspaceHeader: React.FC<HbprWorkspaceHeaderProps> = ({
   return (
     <PageShell
       title="HBPR Workspace"
-      subtitle="Governance partnership with the Albanian team leaders assigned to you"
+      subtitle="Governance partnership with the Line Managers assigned to you"
       titleBadge={
         status && (
           <span

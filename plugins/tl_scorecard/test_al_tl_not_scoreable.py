@@ -1,7 +1,7 @@
-"""An Albanian TL is governed by their HBPR, never scored by an Italian TL.
+"""A Line Manager is governed by their HBPR, never scored by a Manager.
 
-The records/scorecard population is `get_team_member_ids()` minus Albanian TLs
-(`scope.scoreable_member_ids`); an AL TL who sits in an Italian TL's team (direct
+The records/scorecard population is `get_team_member_ids()` minus Line Managers
+(`scope.scoreable_member_ids`); a Line Manager who sits in a Manager's team (direct
 FK or shared team) must not be a subject of PIPs, EPR cycles, flags or metrics.
 """
 from datetime import date

@@ -41,7 +41,7 @@ interface HbprPartnershipSectionProps {
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
-  /** Only the assigned Albanian TL (and staff) may author the evidence. */
+  /** Only the assigned Line Manager (and staff) may author the evidence. */
   canAuthor: boolean;
   onCreate: (data: HbprEvidencePayload) => Promise<void>;
   onUpdate: (id: number, data: HbprEvidencePayload) => Promise<void>;
@@ -52,8 +52,8 @@ interface HbprPartnershipSectionProps {
 }
 
 /**
- * The Albanian TL's HBPR partnership: who their HBPR is, the cadence state, and
- * the governance evidence they author. Read-only for anyone but the AL TL.
+ * The Line Manager's HBPR partnership: who their HBPR is, the cadence state, and
+ * the governance evidence they author. Read-only for anyone but the Line Manager.
  */
 export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
   partnership,
@@ -131,7 +131,7 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
           <EmptyState
             icon={Handshake}
             title="No HR business partner assigned yet"
-            description="An administrator pairs each Albanian team leader with an HR business partner. Once you are paired, your cadence meetings and EPR participation are logged here."
+            description="An administrator pairs each Line Manager with an HR business partner. Once you are paired, your cadence meetings and EPR participation are logged here."
             className="py-10"
           />
         </GlassCard>

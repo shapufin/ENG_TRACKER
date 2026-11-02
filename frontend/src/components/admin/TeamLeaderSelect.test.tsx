@@ -44,7 +44,7 @@ describe("TeamLeaderSelect", () => {
   it("renders every option plus a No TL choice", () => {
     render(
       <TeamLeaderSelect
-        ariaLabel="Italian TL for alice"
+        ariaLabel="Manager for alice"
         value={null}
         options={options}
         onChange={vi.fn()}
@@ -59,7 +59,7 @@ describe("TeamLeaderSelect", () => {
     const onChange = vi.fn();
     render(
       <TeamLeaderSelect
-        ariaLabel="Italian TL for alice"
+        ariaLabel="Manager for alice"
         value={null}
         options={options}
         onChange={onChange}
@@ -73,7 +73,7 @@ describe("TeamLeaderSelect", () => {
     const onChange = vi.fn();
     render(
       <TeamLeaderSelect
-        ariaLabel="Italian TL for alice"
+        ariaLabel="Manager for alice"
         value={2}
         options={options}
         onChange={onChange}
@@ -86,19 +86,19 @@ describe("TeamLeaderSelect", () => {
   it("exposes the aria-label on the trigger for row addressing", () => {
     render(
       <TeamLeaderSelect
-        ariaLabel="Italian TL for alice"
+        ariaLabel="Manager for alice"
         value={null}
         options={options}
         onChange={vi.fn()}
       />
     );
-    expect(screen.getByRole("combobox", { name: "Italian TL for alice" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Manager for alice" })).toBeInTheDocument();
   });
 
   it("shows an inactive fallback instead of a blank when the assignee left the options", () => {
     render(
       <TeamLeaderSelect
-        ariaLabel="Italian TL for alice"
+        ariaLabel="Manager for alice"
         value={9}
         currentName="Former TL"
         options={options}
@@ -111,7 +111,7 @@ describe("TeamLeaderSelect", () => {
   it("falls back to an id label when the assignee name is unknown", () => {
     render(
       <TeamLeaderSelect
-        ariaLabel="Italian TL for alice"
+        ariaLabel="Manager for alice"
         value={9}
         options={options}
         onChange={vi.fn()}

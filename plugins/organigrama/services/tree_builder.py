@@ -6,20 +6,20 @@ Builds a people-centric org tree from two sources:
 2. Technology classification (secondary): UserProfile.techs.
 
 Tree structure (build_full_tree — the admin/HR company-wide view):
-  Italian TL (root, type=person)
-  └── Albanian TL (type=person)
-      ├── Italian TL node (nested, only if an employee's own italian_tl
-      │   FK differs from the Albanian TL's own manager above)
+  Manager (root, type=person)
+  └── Line Manager (type=person)
+      ├── Manager node (nested, only if an employee's own italian_tl
+      │   FK differs from the Line Manager's own manager above)
       │   └── Employee (type=person)
       ├── Tech node (type=tech, if assignments exist)
       │   └── Employee (type=person)
       └── Employee (type=person, direct child if no Tech assignment)
 
-build_subtree()'s Albanian-TL case (a logged-in Albanian TL viewing their
-own chart) does NOT match the shape above: an Albanian TL can cover
-several teams that each have a different Italian TL, and must never be
-the tree's root above one, so it produces one root PER distinct Italian
-TL instead — each `Italian TL -> Albanian TL (repeated per branch) ->
+build_subtree()'s Line Manager case (a logged-in Line Manager viewing their
+own chart) does NOT match the shape above: a Line Manager can cover
+several teams that each have a different Manager, and must never be
+the tree's root above one, so it produces one root PER distinct Manager
+TL instead — each `Manager -> Line Manager (repeated per branch) ->
 that branch's employees only`.
 
 Scoping reuses UserProfile.get_team_member_ids() for TL scope, matching
@@ -48,7 +48,7 @@ def role_badge(profile: UserProfile) -> str:
 
     This is the single source of truth for TL/HR/admin classification across
     the tree builder and the subtree ViewSet — both delegate here so the
-    Italian/Albanian TL detection logic cannot drift between call sites.
+    Manager/Line Manager detection logic cannot drift between call sites.
     """
     role_codes = profile.role_codes or []
     if profile.is_italian_tl_role or "italian_tl" in role_codes:
@@ -118,7 +118,7 @@ def _profile_has_role_q(role_code: str) -> Q:
 
 
 def _get_italian_tls() -> List[User]:
-    """Get all active Italian TLs (role-flagged)."""
+    """Get all active Managers (role-flagged)."""
     return list(
         User.objects.filter(_has_role_q("italian_tl"), is_active=True)
         .select_related("profile")
@@ -131,14 +131,14 @@ def _get_italian_tls() -> List[User]:
 
 
 def _get_albanian_tls_for_italian(italian_tl: User) -> List[User]:
-    """Get active Albanian TLs reporting to a specific Italian TL.
+    """Get active Line Managers reporting to a specific Manager.
 
-    Must filter on the Albanian TL role, not just ``italian_tl`` being
+    Must filter on the Line Manager role, not just ``italian_tl`` being
     set — regular employees can have their own ``italian_tl`` FK too (each
-    team has its own Italian TL), and without this filter an employee with
-    no Albanian TL role would be misidentified as one and wrongly promoted
-    into the tree as a peer of real Albanian TLs, directly under the
-    Italian TL root.
+    team has its own Manager), and without this filter an employee with
+    no Line Manager role would be misidentified as one and wrongly promoted
+    into the tree as a peer of real Line Managers, directly under the
+    Manager root.
     """
     return list(
         User.objects.filter(
@@ -156,7 +156,7 @@ def _get_albanian_tls_for_italian(italian_tl: User) -> List[User]:
 
 
 def _get_employees_for_albanian(albanian_tl: User) -> List[UserProfile]:
-    """Get active employee profiles reporting to an Albanian TL (FK or real Team)."""
+    """Get active employee profiles reporting to a Line Manager (FK or real Team)."""
     # Direct FK assignments
     direct = UserProfile.objects.filter(
         albanian_tl=albanian_tl, user__is_active=True
@@ -180,14 +180,14 @@ def _get_employees_for_albanian(albanian_tl: User) -> List[UserProfile]:
 def _batch_get_albanian_tls(
     italian_tls: List[User],
 ) -> Dict[int, List[User]]:
-    """Batch-fetch all active Albanian TLs for multiple Italian TLs (1 query).
+    """Batch-fetch all active Line Managers for multiple Managers (1 query).
 
     Returns a mapping of {italian_tl_id: [albanian_tl_users]}.
 
-    Must filter on the Albanian TL role, not just ``italian_tl`` being
+    Must filter on the Line Manager role, not just ``italian_tl`` being
     set — see ``_get_albanian_tls_for_italian`` for why: regular employees
     can have their own ``italian_tl`` FK too, and without this filter one
-    would be misidentified as an Albanian TL and wrongly promoted into the
+    would be misidentified as a Line Manager and wrongly promoted into the
     tree as a root-adjacent node.
     """
     if not italian_tls:
@@ -217,14 +217,14 @@ def _batch_get_albanian_tls(
 def _batch_get_employees(
     albanian_tls: List[User],
 ) -> Dict[int, List[UserProfile]]:
-    """Batch-fetch all active employees for multiple Albanian TLs (2 queries).
+    """Batch-fetch all active employees for multiple Line Managers (2 queries).
 
     Employees are matched via direct ``albanian_tl`` FK or membership in a team
-    led by one of the Albanian TLs. Returns a mapping of
+    led by one of the Line Managers. Returns a mapping of
     {albanian_tl_id: [employee_profiles]}.
 
     Grouping: a profile is assigned to its ``albanian_tl`` FK when that FK is
-    one of the supplied Albanian TLs; otherwise it is assigned to the team
+    one of the supplied Line Managers; otherwise it is assigned to the team
     leader of the first matching led-team it belongs to.
     """
     if not albanian_tls:
@@ -306,29 +306,29 @@ def build_full_tree() -> Dict[str, Any]:
     """Build the full company tree (for admin/HR).
 
     Company Hierarchy Architecture:
-    1. Italian TL is ALWAYS top-level (roots).
-    2. Albanian TL is the bridge beneath the Italian TL.
-    3. Employees under an Albanian TL are grouped by their effective Italian TL:
+    1. Manager is ALWAYS top-level (roots).
+    2. Line Manager is the bridge beneath the Manager.
+    3. Employees under a Line Manager are grouped by their effective Manager:
        emp.italian_tl_id or (emp.albanian_tl.profile.italian_tl_id).
-       - Employees whose Italian TL is IT_A are nested under IT_A -> AL_TL -> (Techs/Direct).
-       - Employees whose Italian TL is IT_B are nested under IT_B -> AL_TL -> (Techs/Direct).
-       - If an Albanian TL manages employees across multiple IT TLs, the AL TL
-         bridges each respective team under that Italian TL.
-       - IT TL is NEVER a child of an AL TL.
+       - Employees whose Manager is IT_A are nested under IT_A -> AL_TL -> (Techs/Direct).
+       - Employees whose Manager is IT_B are nested under IT_B -> AL_TL -> (Techs/Direct).
+       - If a Line Manager manages employees across multiple Managers, the Line Manager
+         bridges each respective team under that Manager.
+       - Manager is NEVER a child of a Line Manager.
 
     Batched queries:
-    1. All active Italian TLs with tech prefetch
-    2. All active Albanian TLs with tech prefetch
+    1. All active Managers with tech prefetch
+    2. All active Line Managers with tech prefetch
     3. All active employees under these TLs with teams/tech prefetch
     """
     roots: List[Dict[str, Any]] = []
     total_nodes = 0
 
-    # Query 1: all Italian TLs
+    # Query 1: all Managers
     italian_tls = _get_italian_tls()
     it_id_set = {it.id for it in italian_tls}
 
-    # Query 2: all active Albanian TLs
+    # Query 2: all active Line Managers
     albanian_tls = list(
         User.objects.filter(_has_role_q("albanian_tl"), is_active=True)
         .select_related("profile", "profile__italian_tl")
@@ -341,7 +341,7 @@ def build_full_tree() -> Dict[str, Any]:
     al_id_set = {al.id for al in albanian_tls}
     al_by_id: Dict[int, User] = {al.id: al for al in albanian_tls}
 
-    # Query 3: all active employees reporting to any AL TL or IT TL
+    # Query 3: all active employees reporting to any Line Manager or Manager
     employees = list(
         UserProfile.objects.filter(
             Q(albanian_tl_id__in=al_id_set)
@@ -358,7 +358,7 @@ def build_full_tree() -> Dict[str, Any]:
         .order_by("user__username")
     )
 
-    # Map team_id -> leader_id from prefetched teams for AL TL fallback
+    # Map team_id -> leader_id from prefetched teams for Line Manager fallback
     team_to_leader: Dict[int, int] = {}
     for profile in employees:
         for team in profile.teams.all():
@@ -380,9 +380,9 @@ def build_full_tree() -> Dict[str, Any]:
         if al_id not in al_id_set:
             al_id = None
 
-        # Determine effective Italian TL:
+        # Determine effective Manager:
         # 1. Direct FK on employee
-        # 2. Or fallback to AL TL's own italian_tl FK
+        # 2. Or fallback to Line Manager's own italian_tl FK
         it_id = profile.italian_tl_id
         if it_id is None and al_id is not None and al_id in al_by_id:
             it_id = al_by_id[al_id].profile.italian_tl_id
@@ -400,9 +400,9 @@ def build_full_tree() -> Dict[str, Any]:
         it_node = _person_node(it_user, it_user.profile)
         total_nodes += 1
 
-        # Relevant AL TLs for this Italian TL:
-        # 1. AL TLs with employees reporting to this IT TL
-        # 2. AL TLs whose own manager is this IT TL
+        # Relevant Line Managers for this Manager:
+        # 1. Line Managers with employees reporting to this Manager
+        # 2. Line Managers whose own manager is this Manager
         relevant_al_ids = {
             al_id for (it_id, al_id) in by_it_and_al.keys() if it_id == it_user.id
         }
@@ -425,7 +425,7 @@ def build_full_tree() -> Dict[str, Any]:
 
         roots.append(it_node)
 
-    # Any AL TLs without an Italian TL
+    # Any Line Managers without a Manager
     unattached_als = [al for al in albanian_tls if al.id not in attached_al_ids]
     for al in sorted(unattached_als, key=lambda u: u.username):
         al_node = _person_node(al, al.profile)
@@ -470,12 +470,12 @@ def _fetch_italian_tls_by_id(italian_tl_ids: Set[int]) -> Dict[int, User]:
 
 
 def build_subtree(user: User) -> Dict[str, Any]:
-    """Build a subtree scoped to a TL (Italian or Albanian).
+    """Build a subtree scoped to a TL (Manager or Line Manager).
 
     Scoping reuses ``UserProfile.get_team_member_ids()`` — the same primitive
     used by overtime/standby/analytics — so the org chart's visibility matches
-    the rest of the platform. For an Italian TL the managed set is chained:
-    their direct reports (Albanian TLs) plus each Albanian TL's own managed
+    the rest of the platform. For a Manager the managed set is chained:
+    their direct reports (Line Managers) plus each Line Manager's own managed
     users, so the full reporting chain renders while never leaking users
     outside the canonical scope.
     """
@@ -484,7 +484,7 @@ def build_subtree(user: User) -> Dict[str, Any]:
     roots: List[Dict[str, Any]] = []
 
     if profile.is_italian_tl:
-        # Find all Albanian TLs reporting to this Italian TL or bridging employees reporting to this IT TL
+        # Find all Line Managers reporting to this Manager or bridging employees reporting to this Manager
         direct_al_ids = set(
             User.objects.filter(
                 _has_role_q("albanian_tl"),
@@ -572,14 +572,14 @@ def build_subtree(user: User) -> Dict[str, Any]:
         roots.append(it_node)
 
     elif profile.is_albanian_tl:
-        # Albanian TL: visible set = own managed users (employees + team members).
-        # One Albanian TL can be shared across teams that each have a
-        # DIFFERENT Italian TL (Italian TL is senior — confirmed org model).
-        # The Albanian TL must never appear as the tree's root above an
-        # Italian TL — including here, in their OWN "my org chart" view.
-        # Each Italian TL they report to (their own manager, or a
+        # Line Manager: visible set = own managed users (employees + team members).
+        # One Line Manager can be shared across teams that each have a
+        # DIFFERENT Manager (Manager is senior — confirmed org model).
+        # The Line Manager must never appear as the tree's root above an
+        # Manager — including here, in their OWN "my org chart" view.
+        # Each Manager they report to (their own manager, or a
         # different one via a team whose employees report elsewhere)
-        # becomes its own root, with the Albanian TL nested under it,
+        # becomes its own root, with the Line Manager nested under it,
         # showing only that team's employees.
         visible_ids = profile.get_team_member_ids()
         employees = list(
@@ -604,8 +604,8 @@ def build_subtree(user: User) -> Dict[str, Any]:
                 continue
             by_italian.setdefault(it_tl_id, []).append(emp_profile)
 
-        # Only Italian TLs with actual employees under this Albanian TL
-        # become roots — an Italian TL the Albanian TL merely reports to,
+        # Only Managers with actual employees under this Line Manager
+        # become roots — a Manager the Line Manager merely reports to,
         # with nobody currently assigned under that specific line, would
         # otherwise show as a disconnected, childless box.
         it_ids = set(by_italian.keys())
@@ -631,10 +631,10 @@ def build_subtree(user: User) -> Dict[str, Any]:
                 unresolved.extend(by_italian.get(it_id, []))
 
         if unresolved or not roots:
-            # No Italian TL resolvable anywhere (the Albanian TL has no
-            # manager either), or the Albanian TL currently has no
-            # employees under any Italian TL at all — fall back to the
-            # Albanian TL as root rather than showing an empty tree.
+            # No Manager resolvable anywhere (the Line Manager has no
+            # manager either), or the Line Manager currently has no
+            # employees under any Manager at all — fall back to the
+            # Line Manager as root rather than showing an empty tree.
             al_node = _person_node(user, profile)
             total_nodes += 1
             total_nodes += _attach_members(al_node, unresolved)
@@ -649,7 +649,7 @@ def _build_chain_tech_siblings(
 ) -> List[Dict[str, Any]]:
     """Build Tech-grouped children for an employee's chain view.
 
-    Returns Tech nodes containing the employee plus their AL-TL teammates
+    Returns Tech nodes containing the employee plus their Line Manager teammates
     who share at least one active Tech assignment. Only Techs the employee
     has are rendered. If the employee has no Techs, returns an empty list
     (caller falls back to placing the employee as a direct child).
@@ -660,7 +660,7 @@ def _build_chain_tech_siblings(
     if not employee_tech_ids or not al_tl:
         return []
 
-    # Scope: AL TL's managed members (canonical scope primitive).
+    # Scope: Line Manager's managed members (canonical scope primitive).
     member_ids = al_tl.profile.get_team_member_ids()
     if not member_ids:
         return []
@@ -700,14 +700,14 @@ def _build_chain_tech_siblings(
 
 
 def build_chain(user: User) -> Dict[str, Any]:
-    """Build the chain from an employee up to their Italian TL (root).
+    """Build the chain from an employee up to their Manager (root).
 
     The chain walks: employee → albanian_tl → italian_tl (via the
-    Albanian TL's profile.italian_tl FK, not the employee's own FK).
+    Line Manager's profile.italian_tl FK, not the employee's own FK).
 
     Tech siblings: if the employee has active Tech assignments, they are
-    grouped under Tech nodes alongside AL-TL teammates who share the same
-    Tech. Employees without Tech appear as direct children of their AL TL.
+    grouped under Tech nodes alongside Line Manager teammates who share the same
+    Tech. Employees without Tech appear as direct children of their Line Manager.
     Only Techs the employee has are rendered; teammates without a shared
     Tech are not shown.
     """
@@ -718,13 +718,13 @@ def build_chain(user: User) -> Dict[str, Any]:
     roots: List[Dict[str, Any]] = []
 
     al_tl = profile.albanian_tl
-    # Get Italian TL: prefer employee's own FK, fall back to Albanian TL's FK
+    # Get Manager: prefer employee's own FK, fall back to Line Manager's FK
     it_tl = profile.italian_tl
     if not it_tl and al_tl:
         it_tl = al_tl.profile.italian_tl if hasattr(al_tl, 'profile') else None
 
     if it_tl:
-        # Build: Italian TL → Albanian TL → (Tech groups | self)
+        # Build: Manager → Line Manager → (Tech groups | self)
         it_node = _person_node(it_tl, it_tl.profile)
         total_nodes += 1
 
@@ -745,14 +745,14 @@ def build_chain(user: User) -> Dict[str, Any]:
 
             it_node["children"].append(al_node)
         else:
-            # No Albanian TL, employee reports directly to Italian TL
+            # No Line Manager, employee reports directly to Manager
             self_node = _person_node(user, profile)
             total_nodes += 1
             it_node["children"].append(self_node)
 
         roots.append(it_node)
     elif al_tl:
-        # No Italian TL, but has Albanian TL
+        # No Manager, but has Line Manager
         al_node = _person_node(al_tl, al_tl.profile)
         total_nodes += 1
 
@@ -777,8 +777,8 @@ def build_chain(user: User) -> Dict[str, Any]:
 
 
 def hbpr_visible_user_ids(user: User) -> set:
-    """Users an HBPR may see: assigned Albanian TLs, their teams, and the
-    Italian TL above each (shown so the chart keeps its root)."""
+    """Users an HBPR may see: assigned Line Managers, their teams, and the
+    Manager above each (shown so the chart keeps its root)."""
     scope = get_hbpr_scope(user)
     ids = set(scope.user_ids)
     ids.update(
@@ -807,7 +807,7 @@ def _count_nodes(nodes: List[Dict[str, Any]]) -> int:
 
 
 def build_hbpr_tree(user: User) -> Dict[str, Any]:
-    """The company tree narrowed to an HBPR's assigned Albanian TLs."""
+    """The company tree narrowed to an HBPR's assigned Line Managers."""
     roots = _prune_to_ids(build_full_tree()["roots"], hbpr_visible_user_ids(user))
     return {"roots": roots, "scope": "subtree", "total_nodes": _count_nodes(roots)}
 
@@ -817,7 +817,7 @@ def build_scoped_tree(user: User) -> Dict[str, Any]:
     Build the org tree scoped to the requesting user's role.
 
     - Admin/superuser/HR → full tree
-    - Italian TL / Albanian TL → own subtree
+    - Manager / Line Manager → own subtree
     - Employee → own chain to root
     """
     if not hasattr(user, "profile"):

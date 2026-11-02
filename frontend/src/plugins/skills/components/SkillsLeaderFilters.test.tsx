@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { SkillsLeaderFilters } from "./SkillsLeaderFilters";
 
 describe("SkillsLeaderFilters", () => {
-  it("offers the Italian TL, Albanian TL and Tech filters", () => {
+  it("offers the Manager, Line Manager and Tech filters", () => {
     render(
       <SkillsLeaderFilters
         italianTLs={[{ id: 1, name: "Ita Lead" }]}
@@ -17,8 +17,8 @@ describe("SkillsLeaderFilters", () => {
         onTechChange={vi.fn()}
       />
     );
-    expect(screen.getByLabelText("Italian TL")).toBeInTheDocument();
-    expect(screen.getByLabelText("Albanian TL")).toBeInTheDocument();
+    expect(screen.getByLabelText("Manager")).toBeInTheDocument();
+    expect(screen.getByLabelText("Line Manager")).toBeInTheDocument();
     expect(screen.getByLabelText("Tech")).toBeInTheDocument();
   });
 });

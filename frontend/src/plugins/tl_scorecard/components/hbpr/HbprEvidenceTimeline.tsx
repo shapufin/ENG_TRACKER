@@ -80,7 +80,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
       <GlassCard animateOnMount={false} className="p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <div className="w-full sm:max-w-xs">
-            <Label htmlFor="hbpr-evidence-leader">Albanian team leader</Label>
+            <Label htmlFor="hbpr-evidence-leader">Line Manager</Label>
             <Select
               value={leaderFilter === null ? ALL : String(leaderFilter)}
               onValueChange={(v) => onLeaderFilterChange(v === ALL ? null : Number(v))}
@@ -123,7 +123,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
                 ? `No governance evidence recorded in ${year}`
                 : `No ${EVIDENCE_KIND_GROUP_LABELS[kindFilter]} entries in ${year}`
             }
-            description="The assigned Albanian team leader logs their cadence meetings and EPR participation here."
+            description="The assigned Line Manager logs their cadence meetings and EPR participation here."
             className="py-10"
           />
         </GlassCard>
@@ -155,7 +155,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
                         </span>
                       </div>
                       <p className="text-muted-foreground mt-1 text-xs">
-                        {byId.get(row.albanian_tl)?.name ?? "Albanian team leader"}
+                        {byId.get(row.albanian_tl)?.name ?? "Line Manager"}
                         {row.reporting_year ? ` · reporting ${row.reporting_year}` : ""}
                       </p>
                     </div>

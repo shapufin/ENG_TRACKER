@@ -46,7 +46,7 @@ describe("UserEditFormDialog team removal", () => {
   it("offers to clear the TL link when a team with a TL link is removed", () => {
     const onFormChange = vi.fn();
     renderDialog(baseForm, onFormChange);
-    const box = screen.getByLabelText(/also clear the italian\/albanian tl link/i);
+    const box = screen.getByLabelText(/also clear the manager\/line manager link/i);
     expect(screen.getByText(/\(Alpha\)/)).toBeInTheDocument();
     fireEvent.click(box);
     expect(onFormChange).toHaveBeenCalled();
@@ -54,8 +54,8 @@ describe("UserEditFormDialog team removal", () => {
 
   it("stays quiet when nothing was removed or the user has no TL link", () => {
     renderDialog({ ...baseForm, teams: [1, 2] });
-    expect(screen.queryByLabelText(/also clear the italian\/albanian tl link/i)).toBeNull();
+    expect(screen.queryByLabelText(/also clear the manager\/line manager link/i)).toBeNull();
     renderDialog({ ...baseForm, italian_tl: "none" });
-    expect(screen.queryByLabelText(/also clear the italian\/albanian tl link/i)).toBeNull();
+    expect(screen.queryByLabelText(/also clear the manager\/line manager link/i)).toBeNull();
   });
 });

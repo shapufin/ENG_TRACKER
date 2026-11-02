@@ -18,7 +18,7 @@ const columns = [
   { id: "email", header: "Email", accessorFn: () => "ada@example.com" },
   { id: "cr_teams", header: "CR Teams", accessorFn: () => "-" },
   { id: "hire_date", header: "Hire Date", accessorFn: () => "01/01/2024" },
-  { id: "it_tl", header: "IT TL (Assigned)", accessorFn: () => "-" },
+  { id: "it_tl", header: "Manager (Assigned)", accessorFn: () => "-" },
 ] as unknown as AppColumnDef<UserProfile>[];
 
 describe("UsersPageTable default columns", () => {
@@ -34,7 +34,7 @@ describe("UsersPageTable default columns", () => {
       />
     );
     expect(screen.getByText("Username")).toBeInTheDocument();
-    expect(screen.getByText("IT TL (Assigned)")).toBeInTheDocument();
+    expect(screen.getByText("Manager (Assigned)")).toBeInTheDocument();
     for (const hidden of ["Email", "CR Teams", "Hire Date"]) {
       expect(screen.queryByRole("columnheader", { name: new RegExp(hidden) })).toBeNull();
     }

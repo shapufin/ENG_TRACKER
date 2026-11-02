@@ -67,12 +67,12 @@ export const HRReportFilters: React.FC<HRReportFiltersProps> = ({
         </div>
         <div className="lg:col-span-2">
           <FilterSelect
-            label="Italian TL"
+            label="Manager"
             icon={<Users className="h-3 w-3" />}
             value={selectedItalianTL}
             onChange={onItalianTLChange}
-            placeholder="All Italian TLs"
-            allLabel="All Italian TLs"
+            placeholder="All Managers"
+            allLabel="All Managers"
             noneLabel="None (No Filter)"
             options={italianTLs}
             renderOption={(tl) => `${tl.full_name} (${tl.member_count})`}
@@ -80,12 +80,12 @@ export const HRReportFilters: React.FC<HRReportFiltersProps> = ({
         </div>
         <div className="lg:col-span-2">
           <FilterSelect
-            label="Albanian TL"
+            label="Line Manager"
             icon={<Users className="h-3 w-3" />}
             value={selectedAlbanianTL}
             onChange={onAlbanianTLChange}
-            placeholder="All Albanian TLs"
-            allLabel="All Albanian TLs"
+            placeholder="All Line Managers"
+            allLabel="All Line Managers"
             noneLabel="None (No Filter)"
             options={albanianTLs}
             renderOption={(tl) => `${tl.full_name} (${tl.member_count})`}

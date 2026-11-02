@@ -3,9 +3,9 @@ from apps.users.models.core import UserProfile
 
 
 def scoreable_member_ids(user):
-    """`get_team_member_ids()` minus Albanian TLs.
+    """`get_team_member_ids()` minus Line Managers.
 
-    An Albanian TL is governed by their HBPR through evidence; an Italian TL who
+    A Line Manager is governed by their HBPR through evidence; a Manager who
     shares a team with one (or is their direct `italian_tl`) must not open PIPs,
     EPR cycles, flags or nominations on them, nor have them in team metrics.
     """
