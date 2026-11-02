@@ -25,11 +25,22 @@ from ..services.mfa import MFAError
 from ..services.tokens import revoke_refresh_tokens
 
 
-def set_refresh_cookie(response, refresh):
+def set_refresh_cookie(response, refresh, max_age=None):
     """The one place the httpOnly refresh cookie is written (login, MFA, refresh)."""
+    if max_age is None:
+        try:
+            import time
+            now = int(time.time())
+            ref_token = RefreshToken(refresh)
+            exp = ref_token.payload.get('exp', now + int(api_settings.REFRESH_TOKEN_LIFETIME.total_seconds()))
+            max_age = max(0, exp - now)
+        except Exception:
+            max_age = int(api_settings.REFRESH_TOKEN_LIFETIME.total_seconds())
+
     response.set_cookie(
         'refresh_token',
         refresh,
+        max_age=max_age,
         httponly=True,
         secure=not settings.DEBUG,
         samesite='Lax',
@@ -383,12 +394,45 @@ class CustomTokenRefreshSerializer(TokenRefreshSerializer):
             user = self._refresh_user(attrs)
             if user is not None and not is_user_exempt(user):
                 raise MaintenanceModeActive()
+
+        # Check absolute session limit (e.g. 8h from initial login)
+        import time
+        from datetime import timedelta
+        now = int(time.time())
+        session_exp = None
         try:
-            return super().validate(attrs)
+            current_token = RefreshToken(attrs['refresh'])
+            session_exp = current_token.payload.get('session_exp')
+            if session_exp is None and 'iat' in current_token.payload:
+                abs_timeout = int(getattr(settings, 'SESSION_ABSOLUTE_TIMEOUT', timedelta(hours=8)).total_seconds())
+                session_exp = current_token.payload['iat'] + abs_timeout
+            if session_exp is not None and now >= session_exp:
+                raise AuthenticationFailed(
+                    'Session has expired. Please sign in again.',
+                    'session_expired',
+                )
+        except AuthenticationFailed:
+            raise
+        except Exception:
+            pass
+
+        try:
+            data = super().validate(attrs)
         except get_user_model().DoesNotExist:
             raise AuthenticationFailed(
                 self.error_messages['no_active_account'], 'no_active_account'
             )
+
+        # Preserve session_exp on the rotated token and cap its exp so it does
+        # not exceed the absolute session boundary.
+        if 'refresh' in data and session_exp is not None:
+            new_refresh = RefreshToken(data['refresh'])
+            new_refresh.payload['session_exp'] = session_exp
+            if new_refresh.payload.get('exp', 0) > session_exp:
+                new_refresh.payload['exp'] = session_exp
+            data['refresh'] = str(new_refresh)
+
+        return data
 
     @staticmethod
     def _refresh_user(attrs):
@@ -427,7 +471,15 @@ class CustomTokenRefreshView(TokenRefreshView):
         if response.status_code == status.HTTP_200_OK:
             refresh = response.data.pop('refresh', None)
             if refresh:
-                set_refresh_cookie(response, refresh)
+                import time
+                now = int(time.time())
+                try:
+                    ref_token = RefreshToken(refresh)
+                    exp = ref_token.payload.get('exp', now + int(api_settings.REFRESH_TOKEN_LIFETIME.total_seconds()))
+                    cookie_max_age = max(0, exp - now)
+                except Exception:
+                    cookie_max_age = int(api_settings.REFRESH_TOKEN_LIFETIME.total_seconds())
+                set_refresh_cookie(response, refresh, max_age=cookie_max_age)
         return response
 
 
