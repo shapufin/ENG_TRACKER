@@ -1,3 +1,4 @@
+import { businessToday } from "@/lib/date-format-utils";
 import React, { useEffect, useRef } from "react";
 import { addDays, subDays, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
@@ -11,6 +12,7 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CalendarDays } from "lucide-react";
+import type { CalendarViewMode } from "@/components/calendar/types";
 import { useCalendarPageData } from "./hooks/useCalendarPageData";
 import { CalendarPageShell } from "./components/CalendarPageShell";
 import { shouldIgnoreCalendarKey } from "./hooks/shouldIgnoreCalendarKey";
@@ -62,8 +64,8 @@ const CalendarPageContent: React.FC = () => {
 
   const handlePrevMonth = () => data.setCurrentMonth((prev: Date) => subMonths(prev, 1));
   const handleNextMonth = () => data.setCurrentMonth((prev: Date) => addMonths(prev, 1));
-  const handleToday = () => data.setCurrentMonth(new Date());
-  const handleSetViewMode = (mode: "month" | "week" | "list") => data.setViewMode(mode);
+  const handleToday = () => data.setCurrentMonth(businessToday());
+  const handleSetViewMode = (mode: CalendarViewMode) => data.setViewMode(mode);
 
   if (!data.hasWorkspaceSelection) {
     return (

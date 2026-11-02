@@ -107,4 +107,18 @@ describe("CalendarSidebar", () => {
     fireEvent.click(screen.getByText("Web"));
     expect(screen.getByText("No one matches these filters.")).toBeInTheDocument();
   });
+
+  it("offers the balance button per member only when balances are visible to the viewer", () => {
+    const { rerender } = render(<CalendarSidebar {...baseProps} />);
+    expect(screen.queryByRole("button", { name: /^View / })).not.toBeInTheDocument();
+
+    // An empty map (what an employee gets) offers nothing either.
+    rerender(<CalendarSidebar {...baseProps} remainingDaysByUser={new Map()} />);
+    expect(screen.queryByRole("button", { name: /^View / })).not.toBeInTheDocument();
+
+    // Only members whose balance the viewer can read get the button.
+    rerender(<CalendarSidebar {...baseProps} remainingDaysByUser={new Map([[1, 14]])} />);
+    expect(screen.getByRole("button", { name: "View Alice Smith" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View Bob Jones" })).not.toBeInTheDocument();
+  });
 });

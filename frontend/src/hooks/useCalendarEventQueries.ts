@@ -11,6 +11,10 @@ interface UseCalendarEventQueriesOptions {
   showStandby: boolean;
 }
 
+/** The calendar fetches one capped page (page_size 10000); more rows on the server means events are missing. */
+export const isTruncatedPage = (page?: { count?: number; results?: unknown[] }): boolean =>
+  typeof page?.count === "number" && page.count > (page.results?.length ?? 0);
+
 export const useCalendarEventQueries = ({
   workspaceScope,
   hasWorkspaceSelection,
@@ -67,6 +71,7 @@ export const useCalendarEventQueries = ({
 
   const isLoading = sbLoading || leaveLoading || holidayLoading;
   const hasError = !!sbError || !!leaveError || !!holidayError;
+  const eventsTruncated = isTruncatedPage(standbyData) || isTruncatedPage(leaveRequestsData);
 
   const refetch = useCallback(() => {
     queryClient.refetchQueries({ queryKey: ["standby", "calendar"] });
@@ -81,6 +86,7 @@ export const useCalendarEventQueries = ({
     holidayData,
     isLoading,
     hasError,
+    eventsTruncated,
     refetch,
   };
 };

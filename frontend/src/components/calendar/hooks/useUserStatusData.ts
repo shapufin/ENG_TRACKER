@@ -1,14 +1,16 @@
 import { useMemo } from "react";
-import { isAfter } from "date-fns";
+import { currentBusinessDateISO } from "@/lib/date-format-utils";
 import { deriveVacationBalanceFromBalances } from "@/lib/vacation-balance";
 import type { LeaveBalance, PublicHoliday } from "@/types";
 import { computeProgress, computeCarryOverProgress } from "./userStatusHelpers";
 
-const getUpcomingHolidays = (holidays: PublicHoliday[]) =>
-  (holidays ?? [])
-    .filter((holiday) => isAfter(new Date(holiday.date), new Date()))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+const getUpcomingHolidays = (holidays: PublicHoliday[]) => {
+  const today = currentBusinessDateISO();
+  return (holidays ?? [])
+    .filter((holiday) => holiday.date.slice(0, 10) > today)
+    .sort((a, b) => a.date.slice(0, 10).localeCompare(b.date.slice(0, 10)))
     .slice(0, 3);
+};
 
 // fallow-ignore-next-line complexity
 export const useUserStatusData = (
@@ -27,7 +29,7 @@ export const useUserStatusData = (
   const usedDays = vacationSummary?.usedDays ?? 0;
   const pendingDays = vacationSummary?.pendingDays ?? 0;
   const totalDays = vacationSummary?.totalDays ?? 0;
-  const vacationYear = vacationSummary?.year ?? new Date().getFullYear();
+  const vacationYear = vacationSummary?.year ?? Number(currentBusinessDateISO().slice(0, 4));
   const carryOverDetail = vacationSummary?.carryOver;
   const currentDetail = vacationSummary?.current;
 

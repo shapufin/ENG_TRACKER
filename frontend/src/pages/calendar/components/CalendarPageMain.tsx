@@ -3,6 +3,7 @@ import { addWeeks, subWeeks } from "date-fns";
 import { MonthGrid } from "@/components/calendar/MonthGrid";
 import { WeekView } from "@/components/calendar/WeekView";
 import { ListView } from "@/components/calendar/ListView";
+import { TimelineView } from "@/components/calendar/TimelineView";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { useCalendarPageData } from "../hooks/useCalendarPageData";
 import { calendarSurface } from "@/components/calendar/calendarStyles";
@@ -31,6 +32,7 @@ export const CalendarPageMain: React.FC<CalendarPageMainProps> = ({ data }) => {
                 selectedDate={data.selectedDate}
                 rangeStart={data.rangeStart}
                 rangeEnd={data.rangeEnd}
+                density={data.density}
                 onSelectDate={data.handleSelectDate}
                 onUserClick={data.handleUserClick}
                 onEventActivate={data.handleEventActivate}
@@ -56,6 +58,16 @@ export const CalendarPageMain: React.FC<CalendarPageMainProps> = ({ data }) => {
                 isRangeSelecting={data.isDraggingRange}
                 onPrevWeek={handlePrevWeek}
                 onNextWeek={handleNextWeek}
+              />
+            )}
+            {data.viewMode === "timeline" && (
+              <TimelineView
+                currentMonth={data.currentMonth}
+                users={data.allUsers}
+                events={data.events}
+                onUserClick={data.handleUserClick}
+                onEventActivate={data.handleEventActivate}
+                onRequestTimeOff={data.openBookingDialog}
               />
             )}
             {data.viewMode === "list" && (

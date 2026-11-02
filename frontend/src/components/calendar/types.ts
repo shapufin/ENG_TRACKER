@@ -1,5 +1,7 @@
 export type CalendarEventType = "standby" | "vacation" | "sick" | "holiday";
 export type CalendarEventStatus = "pending" | "approved" | "rejected";
+export type CalendarViewMode = "month" | "week" | "timeline" | "list";
+export type CalendarDensity = "normal" | "compact";
 
 export interface CalendarEvent {
   id: string;

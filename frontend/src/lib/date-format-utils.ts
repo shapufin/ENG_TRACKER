@@ -122,3 +122,9 @@ export function currentBusinessDateISO(now: Date = new Date()): string {
 export function currentBusinessMonthKey(now: Date = new Date()): string {
   return currentBusinessDateISO(now).slice(0, 7);
 }
+
+/** Local midnight of the business (Europe/Tirane) calendar day, for date-fns math on grid days. */
+export function businessToday(now: Date = new Date()): Date {
+  const [y, m, d] = currentBusinessDateISO(now).split("-").map(Number);
+  return new Date(y, m - 1, d);
+}

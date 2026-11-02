@@ -3,7 +3,9 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { CalendarPageShell } from "./CalendarPageShell";
 
 vi.mock("@/components/calendar/CalendarSidebar", () => ({
-  CalendarSidebar: () => <div data-testid="calendar-sidebar" />,
+  CalendarSidebar: ({ snapshotSummary }: { snapshotSummary?: { remainingDays: number } }) => (
+    <div data-testid="calendar-sidebar" data-remaining={snapshotSummary?.remainingDays} />
+  ),
 }));
 vi.mock("./CalendarHeader", () => ({
   CalendarHeader: () => <div data-testid="calendar-header" />,
@@ -90,7 +92,7 @@ describe("CalendarPageShell mobile sidebar", () => {
 });
 
 describe("CalendarPageShell snapshot card", () => {
-  it("renders the vacation snapshot in the desktop sidebar column", () => {
+  it("hands the vacation summary to the sidebar, which owns the single snapshot card", () => {
     vi.mocked(useIsMobile).mockReturnValue(false);
     render(
       <CalendarPageShell
@@ -101,22 +103,21 @@ describe("CalendarPageShell snapshot card", () => {
         }}
       />
     );
-    expect(screen.getByText("My vacation snapshot")).toBeInTheDocument();
-    expect(screen.getByText("73% left")).toBeInTheDocument();
+    expect(screen.getByTestId("calendar-sidebar")).toHaveAttribute("data-remaining", "16");
+    expect(screen.queryByText("My vacation snapshot")).not.toBeInTheDocument();
+  });
+});
+
+describe("CalendarPageShell truncated events", () => {
+  it("warns when the server held more events than the calendar could load", () => {
+    vi.mocked(useIsMobile).mockReturnValue(false);
+    render(<CalendarPageShell {...baseProps} data={{ ...baseData, eventsTruncated: true }} />);
+    expect(screen.getByRole("status", { name: /truncated events warning/i })).toBeInTheDocument();
   });
 
-  it("hides the snapshot when the sidebar is collapsed", () => {
+  it("stays quiet when every event loaded", () => {
     vi.mocked(useIsMobile).mockReturnValue(false);
-    render(
-      <CalendarPageShell
-        {...baseProps}
-        data={{
-          ...baseData,
-          isSidebarCollapsed: true,
-          vacationSummary: { remainingDays: 16, usedDays: 4, pendingDays: 2, totalDays: 22 },
-        }}
-      />
-    );
-    expect(screen.queryByText("My vacation snapshot")).not.toBeInTheDocument();
+    render(<CalendarPageShell {...baseProps} data={{ ...baseData, eventsTruncated: false }} />);
+    expect(screen.queryByRole("status", { name: /truncated events warning/i })).toBeNull();
   });
 });

@@ -2,10 +2,10 @@ import React, { useState } from "react";
 import { X } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CalendarSidebar } from "@/components/calendar/CalendarSidebar";
-import { CalendarSnapshotCard } from "@/components/calendar/CalendarSnapshotCard";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import type { User } from "@/types";
+import type { CalendarViewMode } from "@/components/calendar/types";
 import { CalendarHeader } from "./CalendarHeader";
 import { CalendarBottomCards } from "./CalendarBottomCards";
 import { CalendarPageMain } from "./CalendarPageMain";
@@ -22,7 +22,7 @@ interface CalendarPageShellProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onToday: () => void;
-  onSetViewMode: (mode: "month" | "week" | "list") => void;
+  onSetViewMode: (mode: CalendarViewMode) => void;
 }
 
 export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
@@ -55,6 +55,9 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
       onToggleCollapse={data.handleSidebarToggle}
       groupedUsers={data.groupedUsersWithNames}
       remainingDaysByUser={data.memberRemainingDays}
+      snapshotSummary={data.vacationSummary}
+      formatDays={data.formatDays}
+      onShowSnapshotModal={() => user && data.handleUserClick(user.id)}
     />
   );
 
@@ -71,10 +74,14 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
         isFullscreen={data.isFullscreen}
         selectedWorkspaceIds={selectedWorkspaceIds}
         events={data.events}
+        density={data.density}
+        conflictCount={data.conflictEntries?.length || 0}
         onPrevMonth={onPrevMonth}
         onNextMonth={onNextMonth}
         onToday={onToday}
         onSetViewMode={onSetViewMode}
+        onToggleDensity={() => data.setDensity(data.density === "compact" ? "normal" : "compact")}
+        onOpenConflictsModal={() => data.setConflictsModalOpen(true)}
         onToggleFullscreen={data.handleToggleFullscreen}
         onClearWorkspaceSelection={data.handleClearWorkspaceSelection}
         onRequestTimeOff={data.openBookingDialog}
@@ -99,16 +106,13 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
         className={cn(
           "grid flex-1 gap-3 overflow-hidden transition-all duration-300 ease-out",
           data.isSidebarCollapsed
-            ? "xl:grid-cols-[110px_minmax(0,1fr)]"
-            : "xl:grid-cols-[200px_minmax(0,1fr)]"
+            ? "xl:grid-cols-[48px_minmax(0,1fr)]"
+            : "xl:grid-cols-[192px_minmax(0,1fr)] 2xl:grid-cols-[224px_minmax(0,1fr)]"
         )}
       >
         {!isMobile && (
           <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
             {sidebar}
-            {!data.isSidebarCollapsed && (
-              <CalendarSnapshotCard summary={data.vacationSummary} formatDays={data.formatDays} />
-            )}
           </div>
         )}
 
@@ -124,6 +128,18 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
               </div>
             </GlassCard>
           )}
+          {data.eventsTruncated && (
+            <GlassCard
+              role="status"
+              aria-label="Truncated events warning"
+              className="border-warning/40 bg-warning/10 px-3 py-2"
+            >
+              <div className="text-foreground text-xs">
+                There are more vacation or standby entries than the calendar can load, so some are
+                missing. Narrow the selected teams to see everything.
+              </div>
+            </GlassCard>
+          )}
           <CalendarPageMain data={data} />
           <CalendarBottomCards
             vacationSummary={data.vacationSummary}
@@ -132,6 +148,7 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
             conflictEntries={data.conflictEntries}
             formatDays={data.formatDays}
             onViewAllConflicts={() => data.setConflictsModalOpen(true)}
+            onOpenBalanceModal={() => user && data.handleUserClick(user.id)}
           />
         </div>
       </div>
@@ -145,7 +162,7 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
           />
           <div
             id="calendar-mobile-sidebar"
-            className="bg-card fixed inset-y-0 left-0 z-50 flex w-[280px] max-w-[85vw] flex-col shadow-xl"
+            className="bg-card fixed inset-y-0 left-0 z-50 flex w-70 max-w-[85vw] flex-col shadow-xl"
             role="dialog"
             aria-label="Calendar filters"
           >

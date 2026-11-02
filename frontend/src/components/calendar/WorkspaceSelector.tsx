@@ -104,6 +104,7 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({
       isMultiSelect={effectiveMultiSelect}
       canMultiSelect={canMultiSelect}
       onChange={handleSelect}
+      onSelectionChange={setSelectedWorkspaces}
       onToggleMultiSelect={() => {
         if (isMultiSelect) setSelectedWorkspaces(selectedWorkspaceIds.slice(0, 1));
         setIsMultiSelect(!isMultiSelect);

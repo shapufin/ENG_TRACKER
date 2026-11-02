@@ -63,17 +63,21 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
             <div className="shrink-0 p-5 pb-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="bg-tone-accent-surface flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
-                    <Plane className="text-tone-accent-text h-5 w-5" />
+                  <div className="bg-tone-accent-surface flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-xs">
+                    <Plane className="text-tone-accent-text h-5 w-5 -rotate-45" />
                   </div>
-                  <h2 className="truncate text-xl font-semibold tracking-tight">
-                    Vacation balance
-                  </h2>
+                  <div>
+                    <h2 className="truncate text-xl font-bold tracking-tight">Vacation balance</h2>
+                    <p className="text-muted-foreground text-xs">
+                      Annual leave entitlement &amp; holiday calendar
+                    </p>
+                  </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => onOpenChange(false)}
                   aria-label="Close"
-                  className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground flex h-11 w-11 shrink-0 items-center justify-center rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
+                  className="border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors focus-visible:ring-1 focus-visible:outline-none"
                 >
                   <X className="h-4 w-4" />
                   <span className="sr-only">Close</span>

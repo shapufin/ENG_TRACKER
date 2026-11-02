@@ -6,6 +6,8 @@ import { matchingUserIds, NO_FACETS, type FacetSelection } from "./calendarFacet
 import { CalendarSidebarUserList } from "./CalendarSidebarUserList";
 import { CalendarSidebarFooter } from "./CalendarSidebarFooter";
 import { userDisplayName, teamLabel } from "./calendarSidebarUtils";
+import { CalendarSnapshotCard } from "./CalendarSnapshotCard";
+import type { VacationBalanceBreakdown } from "@/lib/vacation-balance";
 import type { User } from "@/types";
 
 export interface WorkspaceUserGroup {
@@ -31,6 +33,9 @@ interface CalendarSidebarProps {
   onToggleCollapse?: () => void;
   groupedUsers?: WorkspaceUserGroup[];
   remainingDaysByUser?: Map<number, number>;
+  snapshotSummary?: VacationBalanceBreakdown | null;
+  formatDays?: (value: number) => string;
+  onShowSnapshotModal?: () => void;
 }
 
 export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
@@ -49,6 +54,9 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
   onToggleCollapse,
   groupedUsers,
   remainingDaysByUser,
+  snapshotSummary,
+  formatDays,
+  onShowSnapshotModal,
 }) => {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -106,12 +114,14 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
         visibleUsers={visibleUsers}
         onToggleUser={onToggleUser}
         onExpand={onToggleCollapse || (() => {})}
+        snapshotSummary={snapshotSummary}
+        onShowSnapshotModal={onShowSnapshotModal}
       />
     );
   }
 
   return (
-    <aside className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/60 backdrop-blur-xl">
+    <aside className="border-border/70 bg-card/60 flex min-h-0 flex-col overflow-hidden rounded-2xl border backdrop-blur-xl">
       <CalendarSidebarHeader
         userCount={allUsers.length}
         calendarGroup={calendarGroup}
@@ -146,6 +156,15 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
         showSick={showSick}
         onToggleType={onToggleType}
       />
+      {snapshotSummary && (
+        <div className="border-border/60 border-t p-2">
+          <CalendarSnapshotCard
+            summary={snapshotSummary}
+            formatDays={formatDays || ((v) => `${v}d`)}
+            onShowUserModal={onShowSnapshotModal}
+          />
+        </div>
+      )}
     </aside>
   );
 };

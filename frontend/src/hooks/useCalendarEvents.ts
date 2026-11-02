@@ -18,6 +18,7 @@ interface UseCalendarEventsReturn {
   events: import("@/components/calendar/types").CalendarEvent[];
   isLoading: boolean;
   hasError: boolean;
+  eventsTruncated: boolean;
   showStandby: boolean;
   showVacation: boolean;
   showSick: boolean;
@@ -51,8 +52,15 @@ export const useCalendarEvents = ({
     hiddenFilterCount,
   } = useCalendarEventFilters();
 
-  const { standbyData, leaveRequestsData, holidayData, isLoading, hasError, refetch } =
-    useCalendarEventQueries({
+  const {
+    standbyData,
+    leaveRequestsData,
+    holidayData,
+    isLoading,
+    hasError,
+    eventsTruncated,
+    refetch,
+  } = useCalendarEventQueries({
       workspaceScope,
       hasWorkspaceSelection,
       canFetchCalendarData,
@@ -87,6 +95,7 @@ export const useCalendarEvents = ({
     events,
     isLoading,
     hasError,
+    eventsTruncated,
     showStandby,
     showVacation,
     showSick,

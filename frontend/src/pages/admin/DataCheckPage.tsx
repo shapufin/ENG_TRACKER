@@ -168,7 +168,7 @@ export const DataCheckPage: React.FC = () => {
               valueColorClass={
                 data.users_without_team.length === 0
                   ? "text-tone-success-text"
-                  : "text-amber-700 dark:text-amber-400"
+                  : "text-tone-warning-text"
               }
               onClick={() => setActiveTab(activeTab === "users" ? "all" : "users")}
               pressed={activeTab === "users"}
@@ -181,7 +181,7 @@ export const DataCheckPage: React.FC = () => {
               valueColorClass={
                 data.teams_without_leader.length === 0
                   ? "text-tone-success-text"
-                  : "text-amber-700 dark:text-amber-400"
+                  : "text-tone-warning-text"
               }
               onClick={() => setActiveTab(activeTab === "leaders" ? "all" : "leaders")}
               pressed={activeTab === "leaders"}
@@ -194,7 +194,7 @@ export const DataCheckPage: React.FC = () => {
               valueColorClass={
                 data.empty_teams.length === 0
                   ? "text-tone-success-text"
-                  : "text-amber-700 dark:text-amber-400"
+                  : "text-tone-warning-text"
               }
               onClick={() => setActiveTab(activeTab === "empty" ? "all" : "empty")}
               pressed={activeTab === "empty"}
@@ -207,7 +207,7 @@ export const DataCheckPage: React.FC = () => {
               valueColorClass={
                 data.unassigned_clients.length === 0
                   ? "text-tone-success-text"
-                  : "text-amber-700 dark:text-amber-400"
+                  : "text-tone-warning-text"
               }
               onClick={() => setActiveTab(activeTab === "clients" ? "all" : "clients")}
               pressed={activeTab === "clients"}

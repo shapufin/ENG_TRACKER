@@ -2,7 +2,7 @@ import React from "react";
 import { format, isSameMonth } from "date-fns";
 import { CalendarDayCell } from "./CalendarDayCell";
 import { useMonthGrid } from "./hooks/useMonthGrid";
-import type { CalendarEvent } from "./types";
+import type { CalendarDensity, CalendarEvent } from "./types";
 import { calendarGridHeader } from "./calendarStyles";
 
 interface MonthGridProps {
@@ -11,6 +11,7 @@ interface MonthGridProps {
   selectedDate?: Date | null;
   rangeStart?: Date | null;
   rangeEnd?: Date | null;
+  density?: CalendarDensity;
   onSelectDate: (date: Date) => void;
   onUserClick?: (userId: number) => void;
   onEventActivate?: (event: CalendarEvent) => void;
@@ -27,6 +28,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
   selectedDate,
   rangeStart,
   rangeEnd,
+  density,
   onSelectDate,
   onUserClick,
   onEventActivate,
@@ -92,6 +94,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
                 isRangeStart={isRangeStart}
                 isRangeEnd={isRangeEnd}
                 isInRange={isInRange}
+                density={density}
                 onSelect={onSelectDate}
                 onUserClick={onUserClick}
                 onEventActivate={onEventActivate}

@@ -4,11 +4,13 @@ import type { VacationBalanceBreakdown } from "@/lib/vacation-balance";
 interface CalendarSnapshotCardProps {
   summary: VacationBalanceBreakdown | null;
   formatDays: (value: number) => string;
+  onShowUserModal?: () => void;
 }
 
 export const CalendarSnapshotCard: React.FC<CalendarSnapshotCardProps> = ({
   summary,
   formatDays,
+  onShowUserModal,
 }) => {
   if (!summary) return null;
   const { remainingDays, usedDays, pendingDays, totalDays } = summary;
@@ -16,7 +18,18 @@ export const CalendarSnapshotCard: React.FC<CalendarSnapshotCardProps> = ({
   return (
     <section
       aria-label="My vacation snapshot"
-      className="border-line-subtle bg-card rounded-2xl border p-3"
+      role={onShowUserModal ? "button" : undefined}
+      tabIndex={onShowUserModal ? 0 : undefined}
+      onClick={onShowUserModal}
+      onKeyDown={(e) => {
+        if (onShowUserModal && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onShowUserModal();
+        }
+      }}
+      className={`border-line-subtle bg-card rounded-2xl border p-3 ${
+        onShowUserModal ? "hover:border-primary/50 cursor-pointer transition-colors" : ""
+      }`}
     >
       <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
         My vacation snapshot

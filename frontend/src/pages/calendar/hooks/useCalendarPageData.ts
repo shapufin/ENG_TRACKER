@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { leaveService } from "@/services/leaveService";
 import type { LeaveRequest, LeaveBalance, User } from "@/types";
 import { handleApiError } from "@/lib/error-handler";
+import { businessToday } from "@/lib/date-format-utils";
 import { toast } from "sonner";
 import { deriveFullName } from "@/lib/user-utils";
 import { deriveVacationBalanceFromBalances } from "@/lib/vacation-balance";
@@ -15,6 +16,7 @@ import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useUserVisibility } from "@/hooks/useUserVisibility";
 import { useRangeSelection } from "@/hooks/useRangeSelection";
 import { useWorkspaceData } from "@/components/calendar/hooks/useWorkspaceData";
+import type { CalendarViewMode, CalendarDensity } from "@/components/calendar/types";
 
 // fallow-ignore-next-line complexity
 export const useCalendarPageData = (
@@ -26,13 +28,34 @@ export const useCalendarPageData = (
   isMultiSelect: boolean
 ) => {
   const queryClient = useQueryClient();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [viewMode, setViewMode] = useState<"month" | "week" | "list">(() => {
+  const [currentMonth, setCurrentMonth] = useState(() => businessToday());
+  const [viewMode, setViewMode] = useState<CalendarViewMode>(() => {
     if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
       return window.matchMedia("(max-width: 767px)").matches ? "list" : "month";
     }
     return "month";
   });
+  const [density, setDensityState] = useState<CalendarDensity>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("calendar_density");
+        if (stored === "compact" || stored === "normal") return stored;
+      } catch {
+        // Ignore localStorage access errors (e.g. private browsing)
+      }
+    }
+    return "normal";
+  });
+  const setDensity = useCallback((d: CalendarDensity) => {
+    setDensityState(d);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("calendar_density", d);
+      } catch {
+        // Ignore localStorage access errors
+      }
+    }
+  }, []);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -105,6 +128,7 @@ export const useCalendarPageData = (
     events,
     isLoading: eventsLoading,
     hasError: eventsError,
+    eventsTruncated,
     showStandby,
     showVacation,
     showSick,
@@ -135,7 +159,7 @@ export const useCalendarPageData = (
 
   /** Opens the booking dialog without a pre-dragged grid range (header CTA). */
   const openBookingDialog = useCallback(() => {
-    const today = new Date();
+    const today = businessToday();
     applyRangeSelection(today, today);
   }, [applyRangeSelection]);
 
@@ -277,6 +301,8 @@ export const useCalendarPageData = (
     setCurrentMonth,
     viewMode,
     setViewMode,
+    density,
+    setDensity,
     isFullscreen,
     setIsFullscreen,
     dialogOpen,
@@ -306,6 +332,7 @@ export const useCalendarPageData = (
     setVisibleUserIds,
     groupedUsersWithNames,
     workspaceUsersPartial,
+    eventsTruncated,
     events,
     showStandby,
     showVacation,

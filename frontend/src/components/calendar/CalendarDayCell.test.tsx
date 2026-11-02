@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { CalendarDayCell } from "./CalendarDayCell";
 
@@ -117,5 +117,72 @@ describe("CalendarDayCell", () => {
   it("prev-month cell uses sunken dim styling", () => {
     render(<CalendarDayCell date={date} events={[]} isCurrentMonth={false} onSelect={vi.fn()} />);
     expect(screen.getByRole("gridcell").className).toContain("text-muted-foreground/60");
+  });
+
+  it("compact density shows 3 event slots before overflowing", () => {
+    const onSelect = vi.fn();
+    render(
+      <CalendarDayCell
+        date={date}
+        events={events}
+        isCurrentMonth={true}
+        density="compact"
+        onSelect={onSelect}
+      />
+    );
+    expect(screen.getByText("E1")).toBeInTheDocument();
+    expect(screen.getByText("E2")).toBeInTheDocument();
+    expect(screen.getByText("E3")).toBeInTheDocument();
+    expect(screen.queryByText(/\+.*more/)).not.toBeInTheDocument();
+  });
+
+  it("clicking the overflow button triggers onSelect for that day", () => {
+    const onSelect = vi.fn();
+    render(
+      <CalendarDayCell
+        date={date}
+        events={events}
+        isCurrentMonth={true}
+        density="normal"
+        onSelect={onSelect}
+      />
+    );
+    const overflowBtn = screen.getByRole("button", { name: /view 1 more events/i });
+    fireEvent.click(overflowBtn);
+    expect(onSelect).toHaveBeenCalledWith(date);
+  });
+
+  describe("today marker", () => {
+    afterEach(() => vi.useRealTimers());
+
+    it("marks the Tirane business day, not the browser day", () => {
+      const originalTz = process.env.TZ;
+      process.env.TZ = "America/Los_Angeles"; // browser still on Nov 2
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-11-02T23:30:00Z")); // Nov 3 in Tirane
+      try {
+        const { container, rerender } = render(
+          <CalendarDayCell
+            date={new Date(2026, 10, 3)}
+            events={[]}
+            isCurrentMonth={true}
+            onSelect={vi.fn()}
+          />
+        );
+        expect(container.querySelector(".calendar-today-glow")).not.toBeNull();
+        rerender(
+          <CalendarDayCell
+            date={new Date(2026, 10, 2)}
+            events={[]}
+            isCurrentMonth={true}
+            onSelect={vi.fn()}
+          />
+        );
+        expect(container.querySelector(".calendar-today-glow")).toBeNull();
+      } finally {
+        if (originalTz === undefined) delete process.env.TZ;
+        else process.env.TZ = originalTz;
+      }
+    });
   });
 });

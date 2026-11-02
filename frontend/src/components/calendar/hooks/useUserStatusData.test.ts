@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useUserStatusData } from "./useUserStatusData";
 import type { LeaveBalance, PublicHoliday } from "@/types";
@@ -111,5 +111,27 @@ describe("useUserStatusData", () => {
     const result = render([emptyBalance]);
     expect(result.totalDays).toBe(0);
     expect(result.remainingProgress).toBe(0);
+  });
+});
+
+describe("useUserStatusData upcoming holidays on the business clock", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("excludes a holiday that is today in Tirane and keeps tomorrow's", () => {
+    const originalTz = process.env.TZ;
+    process.env.TZ = "America/Los_Angeles";
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-02T23:30:00Z")); // Nov 3 in Tirane
+    try {
+      const holidays = [
+        { id: 1, name: "Today", date: "2026-11-03" },
+        { id: 2, name: "Tomorrow", date: "2026-11-04" },
+      ] as unknown as PublicHoliday[];
+      const { result } = renderHook(() => useUserStatusData([], holidays));
+      expect(result.current.upcomingHolidays.map((h) => h.name)).toEqual(["Tomorrow"]);
+    } finally {
+      if (originalTz === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTz;
+    }
   });
 });

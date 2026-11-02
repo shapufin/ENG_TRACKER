@@ -8,6 +8,7 @@ import {
   isPastMonth,
   currentBusinessMonthKey,
   currentBusinessDateISO,
+  businessToday,
 } from "./date-format-utils";
 
 describe("formatDateDDMMYYYY", () => {
@@ -206,5 +207,20 @@ describe("isPastMonth on the business clock", () => {
 describe("currentBusinessDateISO", () => {
   it("returns the Tirane calendar day", () => {
     expect(currentBusinessDateISO(new Date("2026-10-31T23:30:00Z"))).toBe("2026-11-01");
+  });
+});
+
+describe("businessToday", () => {
+  it("is local midnight of the Tirane calendar day, whatever the browser zone", () => {
+    const originalTz = process.env.TZ;
+    process.env.TZ = "America/Los_Angeles"; // browser still on Nov 2
+    try {
+      const day = businessToday(new Date("2026-11-02T23:30:00Z")); // Nov 3 in Tirane
+      expect([day.getFullYear(), day.getMonth(), day.getDate()]).toEqual([2026, 10, 3]);
+      expect(day.getHours()).toBe(0);
+    } finally {
+      if (originalTz === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTz;
+    }
   });
 });

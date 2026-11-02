@@ -1,6 +1,7 @@
 import React from "react";
 import { format, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
+import { businessToday } from "@/lib/date-format-utils";
 
 interface WeekViewDayHeaderProps {
   days: Date[];
@@ -20,7 +21,7 @@ export const WeekViewDayHeader: React.FC<WeekViewDayHeaderProps> = ({ days }) =>
         <h3
           className={cn(
             "mt-1 text-lg font-semibold",
-            isSameDay(day, new Date()) && "text-tone-info-text"
+            isSameDay(day, businessToday()) && "text-tone-info-text"
           )}
         >
           {format(day, "d")}

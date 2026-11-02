@@ -60,7 +60,8 @@ const UserRow: React.FC<{
           )}
         </span>
       </button>
-      {onShowUserModal && (
+      {/* Balances are only readable by leaders; for everyone else the button opens an empty modal. */}
+      {onShowUserModal && remainingDaysByUser?.has(user.id) && (
         <button
           type="button"
           onClick={() => onShowUserModal(user.id)}

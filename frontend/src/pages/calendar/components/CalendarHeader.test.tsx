@@ -76,12 +76,48 @@ describe("CalendarHeader", () => {
     expect(icalLabel?.className).toContain("2xl:inline");
   });
 
-  it("forces the designed two-row split below 1440px via a hidden break element", () => {
-    const { container } = render(<CalendarHeader {...baseProps} />);
+  it("wraps by available width, not by a viewport breakpoint", () => {
+    render(<CalendarHeader {...baseProps} />);
 
-    const breaker = container.querySelector('[aria-hidden="true"].basis-full');
-    expect(breaker).not.toBeNull();
-    expect(breaker?.className).toContain("min-[1440px]:hidden");
-    expect(breaker?.className).toContain("sm:block");
+    const banner = screen.getByRole("banner", { name: "Calendar controls" });
+    const card = banner.firstElementChild;
+    expect(card?.className).toContain("flex-wrap");
+    expect(card?.className).not.toMatch(/flex-nowrap/);
+    expect(banner.querySelector(".basis-full")).toBeNull();
+  });
+
+  it("shows the staffing state at every width and uses tone tokens", () => {
+    render(<CalendarHeader {...baseProps} />);
+
+    const badge = screen.getByText("Full Staffing").parentElement;
+    expect(badge?.className).not.toContain("hidden");
+    expect(badge?.className).toContain("tone-success");
+    expect(badge?.className).not.toMatch(/emerald|dark:/);
+  });
+
+  it("gives CSV and iCal different icons", () => {
+    render(<CalendarHeader {...baseProps} />);
+
+    const csv = screen.getByRole("button", { name: "Export calendar as CSV" }).querySelector("svg");
+    const ical = screen
+      .getByRole("button", { name: "Export calendar as iCal" })
+      .querySelector("svg");
+    expect(csv?.getAttribute("class")).not.toEqual(ical?.getAttribute("class"));
+  });
+
+  it("keeps the phone toolbar short: fullscreen/reset only from sm, actions ordered before view tabs", () => {
+    render(<CalendarHeader {...baseProps} onToggleDensity={vi.fn()} />);
+
+    for (const name of ["Enter fullscreen", "Clear workspace selection"]) {
+      const cls = screen.getByRole("button", { name }).className;
+      expect(cls).toContain("hidden");
+      expect(cls).toContain("sm:inline-flex");
+    }
+    const order = (el: HTMLElement) => el.className.match(/(?:^|\s)order-(\d)(?:\s|$)/)?.[1];
+    const request = order(screen.getByRole("button", { name: /request time off/i }));
+    const csv = order(screen.getByRole("button", { name: "Export calendar as CSV" }));
+    const views = order(screen.getByRole("group", { name: "Calendar view" }));
+    expect(Number(request)).toBeLessThan(Number(csv));
+    expect(Number(csv)).toBeLessThan(Number(views));
   });
 });

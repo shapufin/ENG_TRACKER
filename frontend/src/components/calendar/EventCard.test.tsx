@@ -63,4 +63,31 @@ describe("EventCard", () => {
     });
     expect(screen.getByText("Standby (8h) · Acme Corp, Globex")).toBeInTheDocument();
   });
+
+  it("renders a streamlined single-row pill when density is compact", () => {
+    render(<EventCard event={{ ...baseEvent, days: 3 }} density="compact" />);
+    expect(screen.getByText("Standby")).toBeInTheDocument();
+    expect(screen.getByText("3d")).toBeInTheDocument();
+  });
+
+  it("keeps the quantity visible in compact mode when the label truncates", () => {
+    render(
+      <EventCard
+        event={{
+          ...baseEvent,
+          // The API serialises decimals as strings.
+          hours: "8.00" as unknown as number,
+          clientNames: ["Acme Corp"],
+          compactLabel: "Standby (8h) · Acme Corp",
+        }}
+        density="compact"
+      />
+    );
+    // Quantity moves to its own non-truncating chip; the full label stays in the tooltip.
+    expect(screen.getByText("8h")).toBeInTheDocument(); // "8.00" is shown without trailing zeros
+    expect(screen.getByText("Standby · Acme Corp")).toHaveAttribute(
+      "title",
+      "Standby (8h) · Acme Corp"
+    );
+  });
 });
