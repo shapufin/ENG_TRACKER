@@ -39,6 +39,33 @@ describe("downloadTeamCSV", () => {
     revokeObjectURL.mockRestore();
   });
 
+  it("neutralises formulas in member names", async () => {
+    let blob: Blob | undefined;
+    vi.spyOn(window.URL, "createObjectURL").mockImplementation((b) => {
+      blob = b as Blob;
+      return "blob:mock";
+    });
+    vi.spyOn(window.URL, "revokeObjectURL").mockImplementation(() => {});
+    vi.spyOn(document, "createElement").mockReturnValue({
+      click: vi.fn(),
+      download: "",
+    } as unknown as HTMLAnchorElement);
+    vi.spyOn(document.body, "appendChild").mockImplementation(vi.fn() as any);
+
+    downloadTeamCSV("2024-06-15", {
+      total_tickets: 1,
+      members: [{ user_id: 1, username: "eve", name: "=HYPERLINK(1)", total_tickets: 1 }],
+    });
+
+    const text = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.readAsText(blob as Blob);
+    });
+    expect(text).toContain("'=HYPERLINK(1),eve,1");
+    vi.restoreAllMocks();
+  });
+
   it("handles missing optional fields", () => {
     const createObjectURL = vi.spyOn(window.URL, "createObjectURL").mockReturnValue("blob:mock");
     const revokeObjectURL = vi.spyOn(window.URL, "revokeObjectURL");
