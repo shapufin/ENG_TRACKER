@@ -17,7 +17,7 @@ export const CalendarPopoverContent: React.FC<CalendarPopoverContentProps> = ({
       className={cn(
         "w-[280px] p-3",
         "bg-popover text-popover-foreground",
-        "rounded-md border border-border shadow-lg",
+        "border-border rounded-md border shadow-lg",
         "z-[9999]"
       )}
       align="start"
@@ -25,6 +25,8 @@ export const CalendarPopoverContent: React.FC<CalendarPopoverContentProps> = ({
       side="bottom"
       avoidCollisions={true}
       style={{ zIndex: 9999 }}
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
     >
       <CalendarPanel value={value} onSelect={onSelect} />
       <Popover.Arrow className="fill-popover" />

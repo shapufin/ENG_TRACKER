@@ -236,6 +236,14 @@ class WageImporter(PayrollAuthority, BaseImporter):
                     errors=["Superuser accounts are not payroll subjects."],
                 )
 
+            from apps.users.services.team_leaders import italian_tl_user_ids
+            if user.id in italian_tl_user_ids():
+                return ImportRowResult(
+                    row_index=row_index,
+                    status="error",
+                    errors=["Italian Team Leaders are not payroll subjects."],
+                )
+
             wage = mapped_row.get("gross_monthly_wage")
             effective_from = mapped_row.get("effective_from")
             effective_to = mapped_row.get("effective_to")

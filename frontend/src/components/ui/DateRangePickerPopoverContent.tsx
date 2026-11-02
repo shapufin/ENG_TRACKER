@@ -20,7 +20,8 @@ interface DateRangePickerPopoverContentProps {
 const toDate = (iso: string) => new Date(iso + "T00:00:00");
 
 /** Keep the earlier date as the start, whichever order the two were given in. */
-const ordered = (a: string, b: string) => (a && b && b < a ? { from: b, to: a } : { from: a, to: b });
+const ordered = (a: string, b: string) =>
+  a && b && b < a ? { from: b, to: a } : { from: a, to: b };
 
 const progressText = (from: string, to: string) => {
   if (!from) return "Pick the start date";
@@ -79,7 +80,7 @@ export const DateRangePickerPopoverContent: React.FC<DateRangePickerPopoverConte
         className={cn(
           "w-[calc(100vw-2rem)] max-w-sm p-3 sm:w-[500px] sm:max-w-none",
           "bg-popover text-popover-foreground",
-          "rounded-md border border-border shadow-lg",
+          "border-border rounded-md border shadow-lg",
           "z-[9999]"
         )}
         align="start"
@@ -87,6 +88,8 @@ export const DateRangePickerPopoverContent: React.FC<DateRangePickerPopoverConte
         side="bottom"
         avoidCollisions={true}
         style={{ zIndex: 9999 }}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
           <div className="sm:w-32 sm:shrink-0">
@@ -107,7 +110,7 @@ export const DateRangePickerPopoverContent: React.FC<DateRangePickerPopoverConte
             </div>
           </div>
 
-          <div className="min-w-0 flex-1 space-y-3 sm:border-l sm:border-border sm:pl-4">
+          <div className="sm:border-border min-w-0 flex-1 space-y-3 sm:border-l sm:pl-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label htmlFor="range-start">Start</Label>
@@ -151,7 +154,7 @@ export const DateRangePickerPopoverContent: React.FC<DateRangePickerPopoverConte
           </div>
         </div>
 
-        <div className="mt-3 flex justify-end gap-2 border-t border-border pt-3">
+        <div className="border-border mt-3 flex justify-end gap-2 border-t pt-3">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             Cancel
           </Button>

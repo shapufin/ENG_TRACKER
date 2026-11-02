@@ -194,3 +194,53 @@ class WageWritePermissionTests(TestCase):
         results = response.data.get('results', response.data) if isinstance(response.data, dict) else response.data
         returned_users = [row['user'] for row in results]
         self.assertNotIn(superuser.id, returned_users)
+
+    def test_eligible_users_excludes_italian_tls_for_hr(self):
+        it_tl = User.objects.create_user(username='wage_it_tl', email='ittl@test.com', password='pass')
+        it_tl.profile.is_italian_tl_role = True
+        it_tl.profile.save(update_fields=['is_italian_tl_role'])
+
+        request = self.factory.get('/api/plugins/payroll/wages/eligible_users/')
+        force_authenticate(request, user=self.hr_user)
+        response = WageAssignmentViewSet.as_view({'get': 'eligible_users'})(request)
+        self.assertEqual(response.status_code, 200)
+        usernames = [u['username'] for u in response.data]
+        self.assertNotIn('wage_it_tl', usernames)
+        self.assertIn(self.employee.username, usernames)
+
+    def test_wage_create_rejects_italian_tl(self):
+        it_tl = User.objects.create_user(username='wage_it_tl2', email='ittl2@test.com', password='pass')
+        it_tl.profile.is_italian_tl_role = True
+        it_tl.profile.save(update_fields=['is_italian_tl_role'])
+
+        body = {
+            'user': it_tl.id,
+            'gross_monthly_wage': '100000',
+            'effective_from': '2026-01-01',
+            'is_active': True,
+        }
+        request = self.factory.post('/api/plugins/payroll/wages/', body, format='json')
+        force_authenticate(request, user=self.hr_user)
+        response = WageAssignmentViewSet.as_view({'post': 'create'})(request)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Italian Team Leaders are not payroll subjects.', str(response.data))
+
+    def test_wage_list_excludes_italian_tls_for_hr(self):
+        it_tl = User.objects.create_user(username='wage_it_tl3', email='ittl3@test.com', password='pass')
+        it_tl.profile.is_italian_tl_role = True
+        it_tl.profile.save(update_fields=['is_italian_tl_role'])
+
+        # Create via objects.create bypassing model clean to simulate legacy/direct row
+        WageAssignment.objects.create(
+            user=it_tl,
+            gross_monthly_wage=Decimal('100000'),
+            effective_from=date(2026, 1, 1),
+            is_active=True,
+        )
+        request = self.factory.get('/api/plugins/payroll/wages/')
+        force_authenticate(request, user=self.hr_user)
+        response = WageAssignmentViewSet.as_view({'get': 'list'})(request)
+        self.assertEqual(response.status_code, 200)
+        results = response.data.get('results', response.data) if isinstance(response.data, dict) else response.data
+        returned_users = [row['user'] for row in results]
+        self.assertNotIn(it_tl.id, returned_users)

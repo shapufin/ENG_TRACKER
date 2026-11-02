@@ -48,7 +48,7 @@ export const ClientMultiSelect: React.FC<ClientMultiSelectProps> = ({
           role="combobox"
           aria-expanded={open}
           aria-label={triggerLabel}
-          className="min-w-[145px] justify-between bg-input-bg pr-2 font-normal"
+          className="bg-input-bg min-w-[145px] justify-between pr-2 font-normal"
         >
           <span className={cn("truncate", value.length === 0 && "text-muted-foreground")}>
             {label}
@@ -57,9 +57,9 @@ export const ClientMultiSelect: React.FC<ClientMultiSelectProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-1" align="start">
-        <div className="max-h-60 overflow-y-auto">
+        <div className="max-h-60 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
           {clients.length === 0 ? (
-            <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+            <div className="text-muted-foreground px-2 py-3 text-center text-xs">
               No clients available.
             </div>
           ) : (
@@ -79,13 +79,13 @@ export const ClientMultiSelect: React.FC<ClientMultiSelectProps> = ({
                     }
                   }}
                   className={cn(
-                    "flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+                    "hover:bg-muted focus-visible:ring-ring flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-sm focus-visible:ring-2 focus-visible:outline-hidden",
                     checked && "bg-primary/5"
                   )}
                 >
                   <Checkbox checked={checked} className="pointer-events-none" />
                   <span className="flex-1 truncate">{c.name}</span>
-                  {checked && <Check className="h-3.5 w-3.5 text-primary" />}
+                  {checked && <Check className="text-primary h-3.5 w-3.5" />}
                 </div>
               );
             })

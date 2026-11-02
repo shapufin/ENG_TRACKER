@@ -50,7 +50,7 @@ Before writing or modifying any code, follow this mandatory 7-step ladder:
 | search bar, input, textarea, select, toolbar, filter, chip, field height, card surface, grey panel | `docs/ui-control-kit.md` (+ `.devin/context/03-FRONTEND-PATTERNS.md` §19) | Control kit, two-surface rule, control-audit + surface-audit gates |
 | button, outline button, light mode, scorecard/hbpr/my-records layout, cloakbrowser verify | `.devin/context/03-FRONTEND-PATTERNS.md` §18 | Button variants + light tokens single source; browser verification recipe |
 | breadcrumb, row actions, kpi card, empty state | `.devin/context/03-FRONTEND-PATTERNS.md` §20 | Lift, density, row actions, breadcrumbs |
-| modal, dialog, form dialog, confirm, drawer | `.devin/context/03-FRONTEND-PATTERNS.md` §13 | Dialog contract + tone scale — then `cd frontend && node scripts/modal-audit.mjs` |
+| modal, dialog, form dialog, confirm, drawer, nested popover/select scroll | `.devin/context/03-FRONTEND-PATTERNS.md` §13 + `docs/workflow-invariants.md` item 50 | Dialog contract + tone scale + onWheel stopPropagation; then `cd frontend && node scripts/modal-audit.mjs` |
 | checkbox, bulk edit, bulk action bar, selection count | `.devin/context/03-FRONTEND-PATTERNS.md` §14 | Reuse the shared checkbox/badge/entrance treatment |
 | animation, motion, transition, hover effect, reduced motion | `.devin/context/03-FRONTEND-PATTERNS.md` §10 | `lib/motion.ts` tokens + reduced-motion gate requirement |
 | status color, tone, palette color, badge color, progress bar, `toneFillClass` | `.devin/context/03-FRONTEND-PATTERNS.md` §15 | tone.ts semantics; check the "not migrated" list first |
@@ -77,7 +77,7 @@ Before writing or modifying any code, follow this mandatory 7-step ladder:
 | client CSV export, `exportData`, formula injection, global keydown, arrow keys | `docs/workflow-invariants.md` item 38 | `csvCell`, key-guard and Tirane month rules |
 | this month, `global_stats`, hours widget, KPI strip, admin dashboard figure, `month_hours` | `docs/workflow-invariants.md` item 39 | Monthly vs lifetime source, focus-refetch exception |
 | engagement guide, metrics guide, TTA, breach, `SCORE_PARTS`, chart `aspect-video` | `docs/engagement-metrics.md` §Metrics guide + `docs/workflow-invariants.md` item 41 | Weights live in two places; fixed-height charts |
-| Italian TL, `italian_tl_user_ids`, Ticket KPI roster, skills matrix scope | `docs/workflow-invariants.md` items 15, 40 | One core helper; viewer keeps own row |
+| Italian TL, `italian_tl_user_ids`, Ticket KPI roster, skills matrix scope, wages page | `docs/workflow-invariants.md` items 15, 40, 49 | One core helper; out of rosters and wage assignments |
 | import, CSV, Excel, bulk upload, data import, sample template, importer | `.devin/context/PLUGINS/06-data-import.md` | Importer contract + per-target authority |
 | backup, restore, site backup | `.devin/context/PLUGINS/07-backup-restore.md` | Backup/restore invariants: PK-based fixture, dependent closure, superuser-only |
 | calendar, workspace, workspace_users | `.devin/context/07-CALENDAR.md` | Calendar privacy + workspace rules |
