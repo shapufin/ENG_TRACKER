@@ -35,11 +35,13 @@ class SuggestTeamMovesTests(APITestCase):
     def test_client_nobody_on_own_team_works_points_at_the_team_that_does(self):
         self.ana.profile.clients.add(self.acme)
         row = mine(suggest_team_moves(), self.ana)
-        self.assertEqual(row['team_ids'], [self.alpha.id])
-        self.assertEqual(row['suggestions'][0]['client']['code'], 'ACM')
-        self.assertEqual(
-            [(t['id'], t['sharing']) for t in row['suggestions'][0]['teams']], [(self.gamma.id, 1)]
-        )
+        self.assertEqual([t['id'] for t in row['current_teams']], [self.alpha.id])
+        rec = row['recommendation']
+        self.assertEqual(rec['team']['id'], self.gamma.id)
+        self.assertEqual([c['code'] for c in rec['clients']], ['ACM'])
+        self.assertEqual(rec['sharing'], 1)
+        self.assertEqual(row['alternatives'], [])
+        self.assertEqual(row['remaining_clients'], [])
 
     def test_non_team_roles_are_never_suggested(self):
         # HR/HBPR/CR/admin legitimately sit outside every team (data check rule 44a).
@@ -80,8 +82,8 @@ class SuggestTeamMovesTests(APITestCase):
         loner = make_user('loner')
         loner.profile.clients.add(self.acme)
         row = mine(suggest_team_moves(), loner)
-        self.assertEqual(row['team_ids'], [])
-        self.assertEqual(row['suggestions'][0]['teams'][0]['id'], self.gamma.id)
+        self.assertEqual(row['current_teams'], [])
+        self.assertEqual(row['recommendation']['team']['id'], self.gamma.id)
 
     def test_best_team_comes_first(self):
         carl = make_user('carl')
@@ -95,8 +97,10 @@ class SuggestTeamMovesTests(APITestCase):
         eve.profile.clients.add(self.acme)
         newcomer = make_user('newcomer')
         newcomer.profile.clients.add(self.acme)
-        teams = mine(suggest_team_moves(), newcomer)['suggestions'][0]['teams']
-        self.assertEqual([(t['id'], t['sharing']) for t in teams], [(self.gamma.id, 2), (self.alpha.id, 1)])
+        row = mine(suggest_team_moves(), newcomer)
+        self.assertEqual(row['recommendation']['team']['id'], self.gamma.id)
+        self.assertEqual(row['recommendation']['sharing'], 2)
+        self.assertEqual([(o['team']['id'], o['sharing']) for o in row['alternatives']], [(self.alpha.id, 1)])
 
     def test_archived_clients_teams_staff_and_inactive_users_are_left_out(self):
         old = Client.objects.create(name='Old', code='OLD', is_active=False)
@@ -113,6 +117,57 @@ class SuggestTeamMovesTests(APITestCase):
         rows = suggest_team_moves()
         for user in (self.ana, staff, gone):
             self.assertIsNone(mine(rows, user), user.username)
+
+
+class RecommendationLogicTests(APITestCase):
+    """One row per person; the team covering most of their clients wins."""
+
+    def setUp(self):
+        self.acme = Client.objects.create(name='Acme', code='ACM')
+        self.beta = Client.objects.create(name='Beta', code='BET')
+        self.gamma_team = Team.objects.create(name='Gamma', code='GAM')
+        self.delta = Team.objects.create(name='Delta', code='DEL')
+        self.ana = make_user('ana')
+        self.ana.profile.clients.add(self.acme, self.beta)
+
+    def work(self, name, team, *clients):
+        user = make_user(name)
+        user.profile.teams.add(team)
+        user.profile.clients.add(*clients)
+        return user
+
+    def test_a_person_with_two_uncovered_clients_gets_one_row_with_the_team_covering_both(self):
+        self.work('g1', self.gamma_team, self.acme, self.beta)
+        self.work('d1', self.delta, self.acme)
+        self.work('d2', self.delta, self.acme)
+        rows = [r for r in suggest_team_moves() if r['user_id'] == self.ana.id]
+        self.assertEqual(len(rows), 1)
+        rec = rows[0]['recommendation']
+        self.assertEqual(rec['team']['id'], self.gamma_team.id)
+        self.assertEqual([c['code'] for c in rec['clients']], ['ACM', 'BET'])
+        self.assertEqual([o['team']['id'] for o in rows[0]['alternatives']], [self.delta.id])
+        self.assertEqual(rows[0]['remaining_clients'], [])
+
+    def test_clients_the_recommended_team_misses_are_reported_as_remaining(self):
+        self.work('g1', self.gamma_team, self.acme)
+        self.work('d1', self.delta, self.beta)
+        self.work('d2', self.delta, self.beta)
+        row = mine(suggest_team_moves(), self.ana)
+        # Both teams cover one client; the larger Delta group wins the tie.
+        self.assertEqual(row['recommendation']['team']['id'], self.delta.id)
+        self.assertEqual([c['code'] for c in row['remaining_clients']], ['ACM'])
+
+    def test_a_team_nobody_can_approve_loses_a_tie_on_coverage(self):
+        from django.contrib.auth.models import User
+        lead = User.objects.create_user('lead', password='x')
+        Team.objects.filter(pk=self.delta.pk).update(team_leader=lead)
+        self.work('g1', self.gamma_team, self.acme, self.beta)
+        self.work('g2', self.gamma_team, self.acme, self.beta)
+        self.work('d1', self.delta, self.acme, self.beta)
+        row = mine(suggest_team_moves(), self.ana)
+        self.assertEqual(row['recommendation']['team']['id'], self.delta.id)
+        self.assertTrue(row['recommendation']['has_approver'])
+        self.assertFalse(row['alternatives'][0]['has_approver'])
 
 
 class InactiveTeammateTests(APITestCase):
@@ -143,8 +198,8 @@ class InactiveTeammateTests(APITestCase):
         gone.profile.teams.add(self.gamma)
         gone.profile.clients.add(self.acme)
         self.deactivate(gone)
-        teams = mine(suggest_team_moves(), self.ana)['suggestions'][0]['teams']
-        self.assertEqual([(t['id'], t['sharing']) for t in teams], [(self.gamma.id, 1)])
+        rec = mine(suggest_team_moves(), self.ana)['recommendation']
+        self.assertEqual((rec['team']['id'], rec['sharing']), (self.gamma.id, 1))
 
 
 class SuggestionsEndpointTests(APITestCase):
@@ -155,3 +210,70 @@ class SuggestionsEndpointTests(APITestCase):
         self.assertIsInstance(resp.data, list)
         self.client.force_authenticate(make_user('plain'))
         self.assertEqual(self.client.get(URL).status_code, 403)
+
+
+class OvertimeAndManagerTests(APITestCase):
+    """Overtime decides which clients matter; Italian TLs follow their people and need no team."""
+
+    def setUp(self):
+        self.acme = Client.objects.create(name='Acme', code='ACM')
+        self.beta = Client.objects.create(name='Beta', code='BET')
+        self.gamma = Team.objects.create(name='Gamma', code='GAM')
+        self.delta = Team.objects.create(name='Delta', code='DEL')
+        self.ana = make_user('ana')
+        self.ana.profile.clients.add(self.acme, self.beta)
+        for name, team, client in (('g1', self.gamma, self.acme), ('d1', self.delta, self.beta)):
+            user = make_user(name)
+            user.profile.teams.add(team)
+            user.profile.clients.add(client)
+
+    def log(self, user, client, hours, days_ago=1):
+        from datetime import timedelta
+        from apps.overtime.models import OvertimeLog
+        from core.utils.timezone_local import business_today
+        return OvertimeLog.objects.create(
+            user=user, client=client, hours=hours, status='approved',
+            date=business_today() - timedelta(days=days_ago),
+        )
+
+    def test_the_client_the_person_really_logs_overtime_on_decides_the_team(self):
+        # Both teams cover one client each; Ana's hours sit on Beta, so Delta wins.
+        self.log(self.ana, self.beta, 12)
+        row = mine(suggest_team_moves(), self.ana)
+        self.assertEqual(row['recommendation']['team']['id'], self.delta.id)
+        self.assertEqual(row['basis'], 'overtime')
+        self.assertEqual(row['recommendation']['clients'][0]['hours'], 12.0)
+        self.assertEqual([c['code'] for c in row['remaining_clients']], ['ACM'])
+
+    def test_overtime_outside_the_window_or_not_approved_does_not_count(self):
+        from apps.overtime.models import OvertimeLog
+        self.log(self.ana, self.beta, 12, days_ago=400)
+        old = self.log(self.ana, self.beta, 9)
+        OvertimeLog.objects.filter(pk=old.pk).update(status='pending')
+        row = mine(suggest_team_moves(), self.ana)
+        self.assertEqual(row['basis'], 'assignment')
+        self.assertEqual(row['person_hours'], 0)
+
+    def test_people_with_overtime_come_first(self):
+        quiet = make_user('aaa')
+        quiet.profile.clients.add(self.acme)
+        self.log(self.ana, self.acme, 5)
+        rows = suggest_team_moves()
+        self.assertEqual(rows[0]['user_id'], self.ana.id)
+
+    def test_an_italian_tl_is_never_suggested_a_team_nor_counted_as_a_teammate(self):
+        from apps.users.services.orphan_check import find_orphans
+        boss = make_user('boss')
+        boss.profile.is_italian_tl_role = True
+        boss.profile.save()
+        boss.profile.clients.add(self.acme)
+        boss.profile.teams.add(self.delta)
+        self.assertIsNone(mine(suggest_team_moves(), boss))
+        # ...and the manager is not reported as "without a team" either.
+        loner = make_user('loner2')
+        loner.profile.is_italian_tl_role = True
+        loner.profile.save()
+        self.assertNotIn(loner.id, [u['id'] for u in find_orphans()['users_without_team']])
+        # A TL on Delta/Acme must not make Delta look like it works Acme.
+        row = mine(suggest_team_moves(), self.ana)
+        self.assertIn(self.gamma.id, [row['recommendation']['team']['id']] + [a['team']['id'] for a in row['alternatives']])

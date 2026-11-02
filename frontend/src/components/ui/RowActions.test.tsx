@@ -23,14 +23,14 @@ describe("RowActions", () => {
     expect(screen.getByRole("button", { name: "Delete user alice" })).toBeInTheDocument();
   });
 
-  it("hover reveal classes include pointer-fine, focus-within and selected variants", () => {
+  it("hover reveal classes include pointer-fine, keyboard-focus and selected variants", () => {
     const { container } = render(
       <RowActions actions={[{ label: "Edit", icon: Pencil, onClick: vi.fn() }]} />
     );
     const cls = (container.firstElementChild as HTMLElement).className;
     expect(cls).toContain("pointer-fine:opacity-0");
     expect(cls).toContain("pointer-fine:group-hover/row:opacity-100");
-    expect(cls).toContain("pointer-fine:group-focus-within/row:opacity-100");
+    expect(cls).toContain("pointer-fine:group-has-[:focus-visible]/row:opacity-100");
     expect(cls).toContain("pointer-fine:group-data-[state=selected]/row:opacity-100");
   });
 

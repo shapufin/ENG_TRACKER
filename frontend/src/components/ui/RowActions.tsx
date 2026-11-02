@@ -36,7 +36,7 @@ const TONE_CLASS: Record<NonNullable<RowAction["tone"]>, string> = {
 
 /** Hidden until the row is hovered/focused/selected, on fine pointers only. */
 const HOVER_REVEAL_CLASS =
-  "pointer-fine:opacity-0 pointer-fine:group-hover/row:opacity-100 pointer-fine:group-focus-within/row:opacity-100 pointer-fine:group-data-[state=selected]/row:opacity-100 transition-opacity duration-150 motion-reduce:transition-none";
+  "pointer-fine:opacity-0 pointer-fine:group-hover/row:opacity-100 pointer-fine:group-has-[:focus-visible]/row:opacity-100 pointer-fine:group-data-[state=selected]/row:opacity-100 transition-opacity duration-150 motion-reduce:transition-none";
 
 const RowActionButton: React.FC<{ action: RowAction }> = ({ action }) => {
   const {
