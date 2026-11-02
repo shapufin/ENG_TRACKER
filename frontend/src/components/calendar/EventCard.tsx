@@ -60,7 +60,7 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
         )}
       >
         {density === "compact" ? (
-          <div className="flex min-w-0 items-center justify-between gap-1">
+          <div className="flex min-w-0 items-center justify-between gap-1 @max-[5rem]:justify-center">
             <div className="flex min-w-0 items-center gap-1 truncate">
               <span
                 className={cn(
@@ -71,7 +71,7 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
                 {initials}
               </span>
               <p
-                className={cn("truncate text-xs font-medium", styles.meta)}
+                className={cn("truncate text-xs font-medium @max-[5rem]:hidden", styles.meta)}
                 title={fullLabel}
               >
                 {compactText}
@@ -79,12 +79,16 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
             </div>
             {event.status === "pending" && (
               <span
-                className="bg-warning h-1.5 w-1.5 shrink-0 rounded-full"
+                className="bg-warning h-1.5 w-1.5 shrink-0 rounded-full @max-[5rem]:hidden"
                 title="Pending approval"
                 aria-hidden
               />
             )}
-            {quantity && <span className="shrink-0 font-mono text-xs opacity-75">{quantity}</span>}
+            {quantity && (
+              <span className="shrink-0 font-mono text-xs opacity-75 @max-[5rem]:hidden">
+                {quantity}
+              </span>
+            )}
           </div>
         ) : (
           <>

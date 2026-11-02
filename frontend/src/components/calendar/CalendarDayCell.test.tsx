@@ -237,4 +237,41 @@ describe("CalendarDayCell", () => {
     rerender(<CalendarDayCell date={mon} events={[]} isCurrentMonth={true} onSelect={vi.fn()} />);
     expect(screen.getByRole("gridcell").className).not.toContain("bg-muted/30");
   });
+
+  describe("hover previews", () => {
+    const conflict = {
+      dateKey: "2024-01-15",
+      coveragePct: 50,
+      away: 2,
+      total: 4,
+      users: [{ id: 1, name: "Alice Smith", type: "vacation" as const, status: "approved" as const }],
+    };
+
+    it("explains the coverage badge on focus", () => {
+      render(
+        <CalendarDayCell
+          date={date}
+          events={[]}
+          isCurrentMonth={true}
+          onSelect={vi.fn()}
+          conflict={conflict}
+        />
+      );
+      fireEvent.focus(screen.getByLabelText(/Staffing conflict/));
+      expect(screen.getAllByText("Coverage conflict").length).toBeGreaterThan(0);
+    });
+
+    it("previews the hidden entries behind +N more", () => {
+      const many = [
+        { id: 1, title: "E1", type: "vacation", userName: "Ann" },
+        { id: 2, title: "E2", type: "vacation", userName: "Ben" },
+        { id: 3, title: "E3", type: "sick", userName: "Cy" },
+      ] as never;
+      render(
+        <CalendarDayCell date={date} events={many} isCurrentMonth={true} onSelect={vi.fn()} />
+      );
+      fireEvent.focus(screen.getByRole("button", { name: /more events/ }));
+      expect(screen.getAllByText("Cy").length).toBeGreaterThan(0);
+    });
+  });
 });

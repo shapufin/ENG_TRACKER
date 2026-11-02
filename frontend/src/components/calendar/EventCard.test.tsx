@@ -90,4 +90,21 @@ describe("EventCard", () => {
       "Standby (8h) · Acme Corp"
     );
   });
+
+  it("keeps only the initials in a narrow cell so the pill never overflows it", () => {
+    render(
+      <EventCard
+        event={{ ...baseEvent, hours: "1.00" as unknown as number, status: "pending" }}
+        density="compact"
+      />
+    );
+    // Container-query classes: no effect without a container, so Week/List keep the full pill.
+    for (const el of [
+      screen.getByText("Standby"),
+      screen.getByText("1h"),
+      screen.getByTitle("Pending approval"),
+    ]) {
+      expect(el.className).toContain("@max-[5rem]:hidden");
+    }
+  });
 });

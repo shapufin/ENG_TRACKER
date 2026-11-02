@@ -4,6 +4,8 @@ import { AlertTriangle } from "lucide-react";
 import { businessToday } from "@/lib/date-format-utils";
 import { cn } from "@/lib/utils";
 import { EventTooltip } from "./EventTooltip";
+import { ConflictTooltip } from "./ConflictTooltip";
+import { OverflowTooltip } from "./OverflowTooltip";
 import type { CalendarDensity, CalendarEvent } from "./types";
 import { EventCard } from "./EventCard";
 import { toneSurfaceClass } from "@/components/ui/tone";
@@ -91,7 +93,7 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
       onTouchStart={handlePointerDown}
       onTouchEnd={handlePointerUp}
       className={cn(
-        "group @container bg-card text-foreground focus-visible:ring-ring/60 relative flex h-full flex-col gap-1 transition duration-200 focus-visible:ring-1 focus-visible:ring-inset",
+        "group bg-card text-foreground focus-visible:ring-ring/60 @container relative flex h-full flex-col gap-1 transition duration-200 focus-visible:ring-1 focus-visible:ring-inset",
         density === "compact"
           ? "min-h-[85px] p-1.5 xl:min-h-[95px] 2xl:min-h-[110px]"
           : "min-h-[100px] p-2 xl:min-h-[110px] 2xl:min-h-[130px]",
@@ -124,18 +126,21 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
           {format(date, "d")}
         </span>
         {conflict && (
-          <span
-            aria-label={`Staffing conflict: ${conflict.away} of ${conflict.total} away, ${conflict.coveragePct}% coverage`}
-            title={`${conflict.away} of ${conflict.total} away, ${conflict.coveragePct}% coverage`}
-            className={cn(
-              "flex items-center gap-1 rounded-md border px-1 py-0.5 font-mono text-xs font-semibold @[5rem]:px-1.5",
-              toneSurfaceClass.warning
-            )}
-          >
-            <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-            {/* The cell is a container: the figure only fits once the cell is about 5rem wide. */}
-            <span className="hidden @[5rem]:inline">{conflict.coveragePct}%</span>
-          </span>
+          <ConflictTooltip conflict={conflict}>
+            <span
+              tabIndex={0}
+              aria-label={`Staffing conflict: ${conflict.away} of ${conflict.total} away, ${conflict.coveragePct}% coverage`}
+              title={`${conflict.away} of ${conflict.total} away, ${conflict.coveragePct}% coverage`}
+              className={cn(
+                "flex items-center gap-1 rounded-md border px-1 py-0.5 font-mono text-xs font-semibold @[5rem]:px-1.5",
+                toneSurfaceClass.warning
+              )}
+            >
+              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+              {/* The cell is a container: the figure only fits once the cell is about 5rem wide. */}
+              <span className="hidden @[5rem]:inline">{conflict.coveragePct}%</span>
+            </span>
+          </ConflictTooltip>
         )}
         {today && (
           <span className="border-info/20 bg-info/10 text-info hidden rounded border px-1.5 py-0.5 text-xs font-bold tracking-widest uppercase @[6rem]:inline">
@@ -159,23 +164,29 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
             event={evt}
             onUserClick={onUserClick}
             onEventActivate={onEventActivate}
+            hasConflict={!!conflict}
           >
             <EventCard event={evt} density={density} />
           </EventTooltip>
         ))}
       </div>
       {overflowEvents > 0 && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(date);
-          }}
-          aria-label={`View ${overflowEvents} more events for ${format(date, "MMMM d")}`}
-          className="text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:ring-ring inline-flex w-fit items-center rounded px-1 py-0.5 text-xs font-semibold tracking-wide uppercase transition focus:outline-none focus-visible:ring-1"
+        <OverflowTooltip
+          events={events.slice(visibleEvents.length)}
+          dateLabel={format(date, "MMM d")}
         >
-          +{overflowEvents} more
-        </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(date);
+            }}
+            aria-label={`View ${overflowEvents} more events for ${format(date, "MMMM d")}`}
+            className="text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:ring-ring inline-flex w-fit items-center rounded px-1 py-0.5 text-xs font-semibold tracking-wide uppercase transition focus:outline-none focus-visible:ring-1"
+          >
+            +{overflowEvents} more
+          </button>
+        </OverflowTooltip>
       )}
     </div>
   );

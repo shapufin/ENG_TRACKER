@@ -28,8 +28,9 @@ Compared the mockup (:3000) with the app at 1440, 1024, 768, 375 and 280 px in a
 - Tablet (1024-1279 px): the member sidebar stacked above the grid and pushed it below the fold. It is now the Filters drawer below 1280 px (`useIsBelowXl`).
 - The month grid forced a 720 px minimum that clipped the Sunday column beside the app sidebar at 1024 px; removed.
 - Day cells: weekend tint; the Today label and the badge figure follow the cell width (container query) so nothing overlaps at 768 px.
-- Not changed: hover popovers (the app already has an event tooltip), per-team calendar colours, command palette.
-- Known limit: in the month view at 375 px, compact pills in the Sunday cell clip slightly. Phones default to the List view.
+- Hover popovers (ported from the mockup): the event card is now concise (person, type dot, date range, quantity, note) with a coverage warning on conflict days; the day badge explains itself (percent on duty, who is away); "+N more" previews the hidden entries. All open on hover or keyboard focus.
+- Narrow cells: below 5rem a pill keeps only the initials (container query), so nothing clips at 375 or 280 px; Week/List keep the full pill.
+- Not changed: per-team calendar colours, command palette, mockup day-summary hover ("N away, M on duty").
 
 ## Gates after round 1
 Full vitest, tsc, eslint, build, control-audit, surface-audit, modal-audit, table-header-audit and the calendar autocheck pass (see the final run in the merge commit).
