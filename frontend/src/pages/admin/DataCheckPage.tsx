@@ -7,6 +7,8 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { IconWell } from "@/components/ui/IconWell";
+import { Badge } from "@/components/ui/badge";
 import { userService } from "@/services/userService";
 import { plural } from "@/lib/plural";
 import { SuggestedTeamMoves } from "./components/SuggestedTeamMoves";
@@ -23,10 +25,15 @@ const CheckSection: React.FC<CheckSectionProps> = ({ title, hint, to, icon: Icon
   <GlassCard className="p-4">
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-start gap-3">
-        <Icon className="text-muted-foreground mt-0.5 h-4 w-4" aria-hidden="true" />
-        <div>
-          <h2 className="text-sm font-semibold">
-            {title} <span className="text-muted-foreground tabular-nums">({rows.length})</span>
+        <IconWell tone={rows.length === 0 ? "success" : "warning"}>
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </IconWell>
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
+            {title}
+            <Badge variant={rows.length === 0 ? "success" : "warning"} className="tabular-nums">
+              ({rows.length})
+            </Badge>
           </h2>
           <p className="text-muted-foreground text-xs">{hint}</p>
         </div>
@@ -40,7 +47,7 @@ const CheckSection: React.FC<CheckSectionProps> = ({ title, hint, to, icon: Icon
       </Link>
     </div>
     {rows.length === 0 ? (
-      <p className="text-muted-foreground mt-3 flex items-center gap-2 text-xs">
+      <p className="text-tone-success-text mt-3 flex items-center gap-2 text-xs">
         <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Nothing to fix.
       </p>
     ) : (

@@ -115,17 +115,34 @@ export interface OrphanReport {
   unassigned_clients: Array<{ id: number; name: string; code: string }>;
 }
 
-/** Someone works a client nobody on their own teams works (admin "Data check"). */
+/** A team that already works some of a person's clients (admin "Data check"). */
+export interface TeamMoveOption {
+  team: { id: number; name: string; code: string };
+  /** False when nobody could approve this team's requests yet. */
+  has_approver: boolean;
+  /** Which of the person's clients this team already works, with the person's own approved overtime hours. */
+  clients: Array<{ id: number; name: string; code: string; hours: number }>;
+  /** Distinct teammates in that team working those clients. */
+  sharing: number;
+  /** Approved overtime hours those teammates logged on those clients in the lookback window. */
+  team_hours: number;
+}
+
+/** Someone works clients nobody on their own teams works (admin "Data check"): one row per person. */
 export interface TeamMoveSuggestion {
   user_id: number;
   username: string;
   full_name: string;
-  /** Active teams the person is in now, so a move can append to them. */
-  team_ids: number[];
-  suggestions: Array<{
-    client: { id: number; name: string; code: string };
-    teams: Array<{ id: number; name: string; code: string; sharing: number }>;
-  }>;
+  current_teams: Array<{ id: number; name: string; code: string }>;
+  /** The team covering most of their uncovered clients. */
+  recommendation: TeamMoveOption;
+  alternatives: TeamMoveOption[];
+  /** Uncovered clients the recommended team does not work: needs a manual look. */
+  remaining_clients: Array<{ id: number; name: string; code: string; hours: number }>;
+  /** "overtime" when the person logged approved hours on these clients, else only a client assignment. */
+  basis: "overtime" | "assignment";
+  person_hours: number;
+  lookback_days: number;
 }
 
 /** What archiving, purging or deleting a team would touch (admin endpoint). */

@@ -9,6 +9,7 @@ from django.db.models import Count, Q
 from apps.overtime.models import Client
 from apps.users.models import Team
 from apps.users.services.non_team_roles import non_team_user_q
+from apps.users.services.team_leaders import italian_tl_user_ids
 
 
 def _users_without_team():
@@ -16,6 +17,8 @@ def _users_without_team():
     users = (
         User.objects.filter(is_active=True, is_staff=False, is_superuser=False)
         .exclude(non_team_user_q())
+        # Italian TLs are managers that follow their people across teams: no team of their own.
+        .exclude(pk__in=italian_tl_user_ids())
         # Single-condition excludes: "has a membership in an ACTIVE team", per related row.
         .exclude(profile__teams__is_active=True)
         .exclude(led_teams__is_active=True)

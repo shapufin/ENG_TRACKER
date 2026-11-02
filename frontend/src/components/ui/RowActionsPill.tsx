@@ -17,7 +17,9 @@
  *
  * Reveal is pure CSS on the `group/row` ancestor, with the same triggers as
  * RowActions. `opacity-0` (not `invisible`) keeps buttons in the tab order, so
- * focusing one reveals the pill through `group-focus-within/row`.
+ * keyboard-focusing one reveals the pill through `group-has-[:focus-visible]/row`.
+ * Plain `focus-within` is wrong here: a mouse click focuses the row (tabIndex 0) or a
+ * button, and focus-within then pins the pill open after the pointer has left.
  */
 import React from "react";
 import { cn } from "@/lib/utils";
@@ -34,7 +36,7 @@ export const RowActionsPill: React.FC<{ children: React.ReactNode }> = ({ childr
       "bg-popover text-popover-foreground border-border shadow-pop flex items-center gap-0.5 rounded-full border px-1.5 py-1",
       "pointer-events-none opacity-0 transition-opacity duration-150 motion-reduce:transition-none",
       "group-hover/row:pointer-events-auto group-hover/row:opacity-100",
-      "group-focus-within/row:pointer-events-auto group-focus-within/row:opacity-100",
+      "group-has-[:focus-visible]/row:pointer-events-auto group-has-[:focus-visible]/row:opacity-100",
       "[&:not(:has(button,a,[role=button]))]:hidden"
     )}
   >

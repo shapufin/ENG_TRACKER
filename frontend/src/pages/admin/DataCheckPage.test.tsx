@@ -77,13 +77,19 @@ describe("DataCheckPage", () => {
         user_id: 5,
         username: "ana",
         full_name: "Ana Alpha",
-        team_ids: [1],
-        suggestions: [
-          {
-            client: { id: 10, name: "Acme", code: "ACM" },
-            teams: [{ id: 2, name: "Gamma", code: "GAM", sharing: 2 }],
-          },
-        ],
+        current_teams: [{ id: 1, name: "Alpha", code: "ALP" }],
+        recommendation: {
+          team: { id: 2, name: "Gamma", code: "GAM" },
+          has_approver: true,
+          clients: [{ id: 10, name: "Acme", code: "ACM", hours: 8 }],
+          sharing: 2,
+          team_hours: 40,
+        },
+        alternatives: [],
+        remaining_clients: [],
+        basis: "overtime",
+        person_hours: 8,
+        lookback_days: 90,
       },
     ]);
     renderPage();

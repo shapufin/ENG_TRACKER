@@ -604,7 +604,7 @@ describe("floating actions pill", () => {
       "opacity-0",
       "pointer-events-none",
       "group-hover/row:opacity-100",
-      "group-focus-within/row:opacity-100",
+      "group-has-[:focus-visible]/row:opacity-100",
     ]) {
       expect(className).toContain(token);
     }
