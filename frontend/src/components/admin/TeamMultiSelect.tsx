@@ -192,7 +192,10 @@ export const TeamMultiSelect: React.FC<TeamMultiSelectProps> = ({
             placeholder="Filter teams..."
             aria-label="Filter teams"
           />
-          <div className="mt-2 max-h-60 overflow-x-hidden overflow-y-auto">
+          <div
+            className="mt-2 max-h-60 overflow-x-hidden overflow-y-auto"
+            onWheel={(e) => e.stopPropagation()}
+          >
             {filtered === null ? (
               // Tree mode (no search) — render hierarchy with indentation.
               roots.length === 0 ? (

@@ -4,6 +4,7 @@ from datetime import date
 from django.db.models import Q
 from rest_framework import serializers
 
+from apps.users.services.team_leaders import italian_tl_user_ids
 from .models import (
     PayrollConfiguration,
     PayrollContributionRate,
@@ -59,6 +60,10 @@ class WageAssignmentCreateSerializer(serializers.ModelSerializer):
         if user and user.is_superuser:
             raise serializers.ValidationError({
                 'user': 'Superuser accounts are not payroll subjects.',
+            })
+        if user and user.id in italian_tl_user_ids():
+            raise serializers.ValidationError({
+                'user': 'Italian Team Leaders are not payroll subjects.',
             })
         effective_from = data.get('effective_from')
         effective_to = data.get('effective_to')

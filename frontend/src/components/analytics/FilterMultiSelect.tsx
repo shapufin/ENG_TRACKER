@@ -115,7 +115,10 @@ export const FilterMultiSelect: React.FC<FilterMultiSelectProps> = ({
             placeholder="Search..."
             aria-label="Search options"
           />
-          <div className="thin-scrollbar mt-2 max-h-60 overflow-y-auto">
+          <div
+            className="thin-scrollbar mt-2 max-h-60 overflow-y-auto"
+            onWheel={(e) => e.stopPropagation()}
+          >
             {filtered.length === 0 ? (
               <div className="text-muted-foreground px-2 py-6 text-center text-xs">
                 No results found.

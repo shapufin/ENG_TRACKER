@@ -127,6 +127,19 @@ class WageImporterCommitTests(TestCase):
         self.assertEqual(result.errors, ["Superuser accounts are not payroll subjects."])
         self.assertFalse(WageAssignment.objects.filter(user__username="import_su").exists())
 
+    def test_italian_tl_is_rejected(self):
+        it_tl = User.objects.create_user(username="import_it_tl", email="ittl@test.com", password="x")
+        it_tl.profile.is_italian_tl_role = True
+        it_tl.profile.save(update_fields=["is_italian_tl_role"])
+        result = self.importer.commit_row(
+            row(username="import_it_tl", gross_monthly_wage=Decimal("100000"), effective_from=date(2026, 1, 1)),
+            NO_UPDATE,
+            context=self.context,
+        )
+        self.assertEqual(result.status, "error")
+        self.assertEqual(result.errors, ["Italian Team Leaders are not payroll subjects."])
+        self.assertFalse(WageAssignment.objects.filter(user__username="import_it_tl").exists())
+
     def test_negative_wage_is_rejected(self):
         result = self.importer.commit_row(
             row(

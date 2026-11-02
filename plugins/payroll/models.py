@@ -221,6 +221,9 @@ class WageAssignment(models.Model):
         super().clean()
         if getattr(self, 'user', None) and self.user.is_superuser:
             raise ValidationError({'user': _('Superuser accounts are not payroll subjects.')})
+        from apps.users.services.team_leaders import italian_tl_user_ids
+        if getattr(self, 'user', None) and self.user_id in italian_tl_user_ids():
+            raise ValidationError({'user': _('Italian Team Leaders are not payroll subjects.')})
         if self.effective_to and self.effective_from and self.effective_to < self.effective_from:
             raise ValidationError({'effective_to': _('Effective to must be on or after effective from.')})
         if self.gross_monthly_wage is not None and self.gross_monthly_wage < 0:

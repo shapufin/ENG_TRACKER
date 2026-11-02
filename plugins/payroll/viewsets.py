@@ -78,6 +78,7 @@ from .services.payroll_service import (
 )
 from .services.calculator import calculate_payroll
 from .services.wage_access import can_write_wages
+from apps.users.services.team_leaders import italian_tl_user_ids
 from core.utils.timezone_local import business_today
 
 logger = logging.getLogger(__name__)
@@ -235,7 +236,10 @@ class WageAssignmentViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         allowed_ids = _allowed_payroll_user_ids(self.request.user)
         if allowed_ids is not None:
             queryset = queryset.filter(user_id__in=allowed_ids)
-        return queryset.filter(user__is_superuser=False)
+        return (
+            queryset.filter(user__is_superuser=False)
+            .exclude(user_id__in=italian_tl_user_ids())
+        )
 
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
@@ -295,7 +299,12 @@ class WageAssignmentViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
     def eligible_users(self, request):
         """Return active users available for wage assignment."""
         allowed_ids = _allowed_payroll_user_ids(request.user)
-        qs = User.objects.filter(is_active=True, is_superuser=False).order_by('username')
+        it_tl_ids = italian_tl_user_ids()
+        qs = (
+            User.objects.filter(is_active=True, is_superuser=False)
+            .exclude(id__in=it_tl_ids)
+            .order_by('username')
+        )
         if allowed_ids is not None:
             qs = qs.filter(id__in=allowed_ids)
         # Annotate with current active wage info
