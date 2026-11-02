@@ -4,7 +4,9 @@ Users app serializers.
 This module contains DRF serializers for User, UserProfile, and Team models.
 """
 
-from datetime import date
+from datetime import date, timedelta
+import time
+from django.conf import settings
 
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -79,6 +81,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['email'] = user.email
         token['first_name'] = user.first_name
         token['last_name'] = user.last_name
+
+        # Absolute session limit: 8h from authentication
+        now = int(time.time())
+        abs_timeout = int(getattr(settings, 'SESSION_ABSOLUTE_TIMEOUT', timedelta(hours=8)).total_seconds())
+        token['session_exp'] = now + abs_timeout
 
         # Add profile data if available
         profile = getattr(user, 'profile', None)

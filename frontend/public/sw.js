@@ -30,7 +30,6 @@ self.addEventListener("install", (event) => {
     caches
       .open(APP_SHELL_CACHE)
       .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
   );
 });
 

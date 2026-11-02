@@ -258,10 +258,14 @@ REST_FRAMEWORK = {
     }
 }
 
+# Session timeout policy: 4h inactivity/idle timeout, 8h absolute maximum session limit
+SESSION_IDLE_TIMEOUT = timedelta(hours=4)
+SESSION_ABSOLUTE_TIMEOUT = timedelta(hours=8)
+
 # Simple JWT configuration
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': SESSION_IDLE_TIMEOUT,
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,

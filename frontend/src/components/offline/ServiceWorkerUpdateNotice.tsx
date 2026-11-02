@@ -1,14 +1,14 @@
 import { RefreshCw } from "lucide-react";
 import { useServiceWorkerUpdate } from "@/hooks/useServiceWorkerUpdate";
 
-export function ServiceWorkerUpdateNotice() {
-  const { hasUpdate, applyUpdate } = useServiceWorkerUpdate();
+export function ServiceWorkerUpdateNotice({ onReload }: { onReload?: () => void } = {}) {
+  const { hasUpdate, applyUpdate } = useServiceWorkerUpdate(onReload);
 
   if (!hasUpdate) return null;
 
   return (
     <div
-      className="fixed bottom-14 left-0 right-0 z-50 border-t border-primary/30 bg-primary/10 px-4 pb-[calc(0.5rem+var(--safe-area-bottom))] pt-2 backdrop-blur"
+      className="border-primary/30 bg-primary/10 fixed right-0 bottom-14 left-0 z-50 border-t px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur"
       role="status"
       aria-live="polite"
     >
@@ -16,7 +16,7 @@ export function ServiceWorkerUpdateNotice() {
         <span>A new version of Engineering Tracker is ready.</span>
         <button
           type="button"
-          className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+          className="text-primary inline-flex items-center gap-1 font-medium hover:underline"
           onClick={applyUpdate}
         >
           <RefreshCw className="h-3.5 w-3.5" />
