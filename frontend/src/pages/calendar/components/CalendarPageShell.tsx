@@ -7,7 +7,6 @@ import { useIsBelowXl } from "@/hooks/useIsBelowXl";
 import type { User } from "@/types";
 import type { CalendarViewMode } from "@/components/calendar/types";
 import { CalendarHeader } from "./CalendarHeader";
-import { CalendarBottomCards } from "./CalendarBottomCards";
 import { CalendarPageMain } from "./CalendarPageMain";
 import { CalendarPageModals } from "./CalendarPageModals";
 import type { useCalendarPageData } from "../hooks/useCalendarPageData";
@@ -110,11 +109,7 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
             : "xl:grid-cols-[192px_minmax(0,1fr)] 2xl:grid-cols-[224px_minmax(0,1fr)]"
         )}
       >
-        {!isMobile && (
-          <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
-            {sidebar}
-          </div>
-        )}
+        {!isMobile && <div className="flex min-h-0 flex-col gap-3 overflow-hidden">{sidebar}</div>}
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
           {data.workspaceUsersPartial && (
@@ -141,15 +136,6 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
             </GlassCard>
           )}
           <CalendarPageMain data={data} />
-          <CalendarBottomCards
-            vacationSummary={data.vacationSummary}
-            carryOverAndBalance={data.carryOverAndBalance}
-            metricBars={data.metricBars}
-            conflictEntries={data.conflictEntries}
-            formatDays={data.formatDays}
-            onViewAllConflicts={() => data.setConflictsModalOpen(true)}
-            onOpenBalanceModal={() => user && data.handleUserClick(user.id)}
-          />
         </div>
       </div>
 

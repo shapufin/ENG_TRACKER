@@ -53,11 +53,11 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
 
   return (
     <div
-      className="border-border/60 bg-card min-w-0 overflow-hidden rounded-xl border"
+      className="border-border/60 bg-card flex h-full min-h-[480px] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border sm:min-h-[580px] lg:min-h-[640px]"
       role="grid"
       aria-label={format(currentMonth, "MMMM yyyy")}
     >
-      <div className={`grid grid-cols-7 ${calendarGridHeader}`} role="row">
+      <div className={`grid shrink-0 grid-cols-7 ${calendarGridHeader}`} role="row">
         {weekDays.map((wd) => (
           <div
             key={wd}
@@ -68,49 +68,51 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
         ))}
       </div>
 
-      {displayRows.map((week, weekIdx) => (
-        <div
-          key={weekIdx}
-          className="border-border/50 bg-border/50 grid grid-cols-7 gap-px border-b last:border-b-0"
-          role="row"
-        >
-          {week.map((date, dayIdx) => {
-            const dayKey = format(date, "yyyy-MM-dd");
-            const dayEvents = getDayEvents(date);
-            const isSelected = selectedKey === dayKey;
-            const isRangeStart = rangeStartKey === dayKey;
-            const isRangeEnd = rangeEndKey === dayKey;
-            const isInRange = !!(
-              rangeStartKey &&
-              rangeEndKey &&
-              dayKey > rangeStartKey &&
-              dayKey < rangeEndKey
-            );
+      <div className="divide-border/50 flex min-h-0 flex-1 flex-col divide-y">
+        {displayRows.map((week, weekIdx) => (
+          <div
+            key={weekIdx}
+            className="border-border/50 bg-border/50 grid flex-1 grid-cols-7 gap-px"
+            role="row"
+          >
+            {week.map((date, dayIdx) => {
+              const dayKey = format(date, "yyyy-MM-dd");
+              const dayEvents = getDayEvents(date);
+              const isSelected = selectedKey === dayKey;
+              const isRangeStart = rangeStartKey === dayKey;
+              const isRangeEnd = rangeEndKey === dayKey;
+              const isInRange = !!(
+                rangeStartKey &&
+                rangeEndKey &&
+                dayKey > rangeStartKey &&
+                dayKey < rangeEndKey
+              );
 
-            return (
-              <CalendarDayCell
-                key={dayIdx}
-                date={date}
-                events={dayEvents}
-                isCurrentMonth={isSameMonth(date, monthStart)}
-                isSelected={isSelected}
-                isRangeStart={isRangeStart}
-                isRangeEnd={isRangeEnd}
-                isInRange={isInRange}
-                density={density}
-                onSelect={onSelectDate}
-                onUserClick={onUserClick}
-                onEventActivate={onEventActivate}
-                onRangeDragStart={onRangeDragStart}
-                onRangeDragEnter={onRangeDragEnter}
-                onRangeDragEnd={onRangeDragEnd}
-                isRangeSelecting={isRangeSelecting}
-                conflict={conflictsByDate?.get(format(date, "yyyy-MM-dd"))}
-              />
-            );
-          })}
-        </div>
-      ))}
+              return (
+                <CalendarDayCell
+                  key={dayIdx}
+                  date={date}
+                  events={dayEvents}
+                  isCurrentMonth={isSameMonth(date, monthStart)}
+                  isSelected={isSelected}
+                  isRangeStart={isRangeStart}
+                  isRangeEnd={isRangeEnd}
+                  isInRange={isInRange}
+                  density={density}
+                  onSelect={onSelectDate}
+                  onUserClick={onUserClick}
+                  onEventActivate={onEventActivate}
+                  onRangeDragStart={onRangeDragStart}
+                  onRangeDragEnter={onRangeDragEnter}
+                  onRangeDragEnd={onRangeDragEnd}
+                  isRangeSelecting={isRangeSelecting}
+                  conflict={conflictsByDate?.get(format(date, "yyyy-MM-dd"))}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

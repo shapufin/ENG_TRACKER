@@ -42,6 +42,16 @@ describe("EventCard", () => {
     expect(card.className).toContain("bg-sky-50");
   });
 
+  it("renders a holiday event with calendar icon and holiday title without user initials", () => {
+    renderCard({
+      type: "holiday",
+      status: "approved",
+      title: "Independence Day",
+    });
+    expect(screen.getByText("Independence Day")).toBeInTheDocument();
+    expect(screen.queryByText("ID")).toBeNull();
+  });
+
   it("shows the pending indicator dot only for pending events", () => {
     const { container, unmount } = renderCard({ status: "pending" });
     expect(container.querySelector('[title="Pending approval"]')).not.toBeNull();

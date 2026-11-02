@@ -19,11 +19,9 @@ export const CalendarPageMain: React.FC<CalendarPageMainProps> = ({ data }) => {
   const handleNextWeek = () => data.setCurrentMonth((prev: Date) => addWeeks(prev, 1));
 
   return (
-    <div
-      className={`relative flex min-h-0 flex-[1_0_auto] flex-col overflow-hidden ${calendarSurface}`}
-    >
-      <div className="relative flex-1 overflow-hidden p-2 sm:p-3">
-        <div className="h-full overflow-x-auto overflow-y-auto pr-1">
+    <div className={`relative flex min-h-0 flex-1 flex-col overflow-hidden ${calendarSurface}`}>
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden p-2 sm:p-3">
+        <div className="flex h-full min-h-0 flex-col overflow-x-auto overflow-y-auto pr-1">
           <TooltipProvider delayDuration={0}>
             {data.viewMode === "month" && (
               <MonthGrid

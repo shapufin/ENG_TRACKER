@@ -1,5 +1,6 @@
 import React from "react";
 import type { HTMLAttributes } from "react";
+import { CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CalendarDensity, CalendarEvent } from "./types";
 import { getInitials } from "./initials";
@@ -16,6 +17,49 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
     // Colors follow the event type so the MonthGrid matches the sidebar
     // legend, WeekView, and ListView (all derive from calendarStyles.ts).
     const styles = calendarEventTypeStyles[event.type];
+
+    if (event.type === "holiday") {
+      return (
+        <div
+          ref={ref}
+          role="button"
+          tabIndex={0}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onActivate?.();
+          }}
+          onKeyDown={(e) => {
+            onKeyDown?.(e);
+            if (e.defaultPrevented) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              onActivate?.();
+            }
+          }}
+          {...props}
+          className={cn(
+            "focus-visible:ring-ring/30 w-full rounded-lg border text-left text-xs leading-tight transition focus-visible:ring-1",
+            density === "compact" ? "px-1.5 py-0.5" : "px-1.5 py-1",
+            styles.surface,
+            "hover:border-foreground/30 dark:hover:border-foreground/40 hover:-translate-y-0.5 hover:shadow-xs",
+            className
+          )}
+        >
+          <div className="flex min-w-0 items-center gap-1.5 truncate">
+            <CalendarDays className="h-3 w-3 shrink-0 text-sky-500" />
+            <p className={cn("truncate text-xs font-medium", styles.meta)} title={event.title}>
+              {event.title}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     const initials = getInitials(event.userName ?? event.title);
     // Compact pills truncate the label, so the "(8h)" / "(3d)" quantity moves to its own chip.
     const fullLabel = event.compactLabel ?? event.title;
