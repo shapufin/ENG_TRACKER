@@ -580,6 +580,26 @@ class UserImporterTests(TestCase):
         tl.profile.refresh_from_db()
         self.assertTrue(tl.profile.is_italian_tl_role)
 
+    def test_alias_suggestions_support_both_manager_and_legacy_tl_headers(self):
+        """User import aliases must accept both new display names (Manager / Line Manager)
+        and legacy headers (Italian TL / Albanian TL) so older CSV exports continue to auto-map.
+        """
+        aliases = self.importer.get_alias_suggestions()
+        self.assertIn("manager", aliases["is_italian_tl"])
+        self.assertIn("italian tl", aliases["is_italian_tl"])
+        self.assertIn("line manager", aliases["is_albanian_tl"])
+        self.assertIn("albanian tl", aliases["is_albanian_tl"])
+
+        self.assertIn("manager username", aliases["italian_tl_username"])
+        self.assertIn("italian tl username", aliases["italian_tl_username"])
+        self.assertIn("reports to manager", aliases["italian_tl_username"])
+        self.assertIn("reports to italian tl", aliases["italian_tl_username"])
+
+        self.assertIn("line manager username", aliases["albanian_tl_username"])
+        self.assertIn("albanian tl username", aliases["albanian_tl_username"])
+        self.assertIn("reports to line manager", aliases["albanian_tl_username"])
+        self.assertIn("reports to albanian tl", aliases["albanian_tl_username"])
+
 
 class LeaveBalanceImporterTests(TestCase):
     def setUp(self):
