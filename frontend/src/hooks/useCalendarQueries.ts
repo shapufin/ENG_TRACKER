@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { dashboardService } from "@/services/dashboardService";
 import { leaveService } from "@/services/leaveService";
@@ -61,6 +61,7 @@ export const useCalendarQueries = ({
     staleTime: 0,
     refetchOnWindowFocus: false,
     enabled: selectedWorkspaceIds.length > 0,
+    placeholderData: keepPreviousData,
   });
 
   const workspaceUsersData = workspaceUsersResult?.groups;

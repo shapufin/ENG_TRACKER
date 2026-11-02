@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { leaveService } from "@/services/leaveService";
 import { dashboardService } from "@/services/dashboardService";
 import { standbyService } from "@/services/standbyService";
@@ -42,6 +42,7 @@ export const useCalendarEventQueries = ({
     enabled: hasWorkspaceSelection && canFetchCalendarData && showStandby,
     staleTime: 0,
     gcTime: 10 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 
   const {
@@ -55,6 +56,7 @@ export const useCalendarEventQueries = ({
     enabled: hasWorkspaceSelection,
     staleTime: 0,
     gcTime: 10 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 
   const {

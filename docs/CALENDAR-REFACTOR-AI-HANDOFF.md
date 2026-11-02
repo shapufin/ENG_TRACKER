@@ -93,6 +93,9 @@ The refactoring incorporates the visual hierarchy, density options, sidebar coll
 | :--------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------- |
 | `frontend/src/components/calendar/types.ts`                      | Added `"timeline"` to `CalendarViewMode`; added `CalendarDensity = "normal" \| "compact"`.               |
 | `frontend/src/pages/calendar/hooks/useCalendarPageData.ts`       | Added persistent `density` state (`localStorage`), view mode handler, and toggle helper.                 |
+| `frontend/src/components/calendar/WorkspaceSelector.tsx`         | Synchronized `isMultiSelect` on checkbox clicks and All/Single actions; prevents reload pruning.         |
+| `frontend/src/hooks/useCalendarQueries.ts`                       | Added `placeholderData: keepPreviousData` so multi-team checklist toggles don't unmount the popover.     |
+| `frontend/src/hooks/useCalendarEventQueries.ts`                  | Added `placeholderData: keepPreviousData` to standby and vacations queries during team scope changes.    |
 | `frontend/src/pages/calendar/components/CalendarHeader.tsx`      | Added Timeline tab, Normal/Compact toggle, `✓ Full Staffing` badge, and `WorkspaceDropdown` integration. |
 | `frontend/src/components/calendar/WorkspaceDropdown.tsx`         | Converted single select into multi-team popover checklist with color dots & badges.                      |
 | `frontend/src/components/calendar/CalendarSidebar.tsx`           | Adjusted width to `w-48 xl:w-56`, added snapshot card slot, tightened typography and padding.            |
