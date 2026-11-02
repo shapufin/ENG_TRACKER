@@ -185,4 +185,56 @@ describe("CalendarDayCell", () => {
       }
     });
   });
+
+  describe("staffing conflict", () => {
+    const conflict = { dateKey: "2024-01-15", coveragePct: 50, away: 2, total: 4, users: [] };
+
+    it("shows the coverage badge and a warning outline on a conflict day", () => {
+      const { container } = render(
+        <CalendarDayCell
+          date={date}
+          events={[]}
+          isCurrentMonth={true}
+          onSelect={vi.fn()}
+          conflict={conflict}
+        />
+      );
+      const badge = screen.getByLabelText("Staffing conflict: 2 of 4 away, 50% coverage");
+      expect(badge).toHaveTextContent("50%");
+      expect(screen.getByRole("gridcell").className).toContain("tone-warning");
+      expect(container.querySelector("svg")).not.toBeNull();
+    });
+
+    it("drops the figure, not the badge, when the cell is too narrow to hold it", () => {
+      render(
+        <CalendarDayCell
+          date={date}
+          events={[]}
+          isCurrentMonth={true}
+          onSelect={vi.fn()}
+          conflict={conflict}
+        />
+      );
+      expect(screen.getByRole("gridcell").className).toContain("@container");
+      expect(screen.getByText("50%").className).toContain("@[5rem]:inline");
+      expect(screen.getByText("50%").className).toContain("hidden");
+    });
+
+    it("shows nothing extra on a normal day", () => {
+      render(<CalendarDayCell date={date} events={[]} isCurrentMonth={true} onSelect={vi.fn()} />);
+      expect(screen.queryByLabelText(/staffing conflict/i)).toBeNull();
+      expect(screen.getByRole("gridcell").className).not.toContain("tone-warning");
+    });
+  });
+
+  it("tints weekends of the current month so working days read first", () => {
+    const sat = new Date(2024, 0, 13);
+    const mon = new Date(2024, 0, 15);
+    const { rerender } = render(
+      <CalendarDayCell date={sat} events={[]} isCurrentMonth={true} onSelect={vi.fn()} />
+    );
+    expect(screen.getByRole("gridcell").className).toContain("bg-muted/30");
+    rerender(<CalendarDayCell date={mon} events={[]} isCurrentMonth={true} onSelect={vi.fn()} />);
+    expect(screen.getByRole("gridcell").className).not.toContain("bg-muted/30");
+  });
 });

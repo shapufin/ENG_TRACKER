@@ -22,6 +22,15 @@ Scope: calendar layout refactor against the `team-vacation-&-shared-calendar-hub
 - Mockup extras: holiday pills already render in month cells (events of type holiday). The squad filter is the Teams dropdown. Per-day "Conflict (n%)" needs a coverage threshold the app does not define, so it is a product decision, not an audit fix.
 - Pre-existing, unrelated: `apps.standby.test_approve_closed_period` fails on main as well.
 
+## Mockup parity pass (after the owner asked for a side-by-side audit)
+Compared the mockup (:3000) with the app at 1440, 1024, 768, 375 and 280 px in a real browser.
+- Conflicts: the app counted any 2+ people on leave (pending included) and capped the header badge at 3. It now uses the mockup rule: approved vacation/sick leave, per workspace roster, coverage at or below 50%, weekends and public holidays skipped, one-person rosters ignored. One function (`lib/calendarCoverage.ts`) feeds the day badge, header count, card and modal, so they agree; the modal shows coverage. Coverage uses raw leave, not the visibility filters.
+- Tablet (1024-1279 px): the member sidebar stacked above the grid and pushed it below the fold. It is now the Filters drawer below 1280 px (`useIsBelowXl`).
+- The month grid forced a 720 px minimum that clipped the Sunday column beside the app sidebar at 1024 px; removed.
+- Day cells: weekend tint; the Today label and the badge figure follow the cell width (container query) so nothing overlaps at 768 px.
+- Not changed: hover popovers (the app already has an event tooltip), per-team calendar colours, command palette.
+- Known limit: in the month view at 375 px, compact pills in the Sunday cell clip slightly. Phones default to the List view.
+
 ## Gates after round 1
 Full vitest, tsc, eslint, build, control-audit, surface-audit, modal-audit, table-header-audit and the calendar autocheck pass (see the final run in the merge commit).
 Browser re-measure: header card scrollWidth equals clientWidth at 1440 (was 1268 vs 1110) and at 280 (1px sub-pixel); page overflow 0 at 375 and 280; timeline names stay pinned at scrollLeft 286; "All" selects 3 of 3 teams.

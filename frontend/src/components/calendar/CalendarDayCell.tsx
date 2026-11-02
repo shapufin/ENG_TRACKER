@@ -1,10 +1,13 @@
 import React from "react";
 import { format, isSameDay } from "date-fns";
+import { AlertTriangle } from "lucide-react";
 import { businessToday } from "@/lib/date-format-utils";
 import { cn } from "@/lib/utils";
 import { EventTooltip } from "./EventTooltip";
 import type { CalendarDensity, CalendarEvent } from "./types";
 import { EventCard } from "./EventCard";
+import { toneSurfaceClass } from "@/components/ui/tone";
+import type { DayConflict } from "@/lib/calendarCoverage";
 
 interface CalendarDayCellProps {
   date: Date;
@@ -22,6 +25,8 @@ interface CalendarDayCellProps {
   onRangeDragEnter?: (date: Date) => void;
   onRangeDragEnd?: (date: Date) => void;
   isRangeSelecting?: boolean;
+  /** Staffing conflict for this day (coverage at or below 50%). */
+  conflict?: DayConflict;
 }
 
 export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
@@ -40,7 +45,9 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
   onRangeDragEnter,
   onRangeDragEnd,
   isRangeSelecting,
+  conflict,
 }) => {
+  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
   const today = isSameDay(date, businessToday());
   const isPlainCell = !today && !isSelected && !isRangeStart && !isRangeEnd && !isInRange;
 
@@ -84,12 +91,14 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
       onTouchStart={handlePointerDown}
       onTouchEnd={handlePointerUp}
       className={cn(
-        "group bg-card text-foreground focus-visible:ring-ring/60 relative flex h-full flex-col gap-1 transition duration-200 focus-visible:ring-1 focus-visible:ring-inset",
+        "group @container bg-card text-foreground focus-visible:ring-ring/60 relative flex h-full flex-col gap-1 transition duration-200 focus-visible:ring-1 focus-visible:ring-inset",
         density === "compact"
           ? "min-h-[85px] p-1.5 xl:min-h-[95px] 2xl:min-h-[110px]"
           : "min-h-[100px] p-2 xl:min-h-[110px] 2xl:min-h-[130px]",
         isPlainCell && "hover:bg-card-raised",
         !isCurrentMonth && "bg-card text-muted-foreground/60",
+        isCurrentMonth && isWeekend && "bg-muted/30",
+        conflict && "border-tone-warning-border z-10 border-2",
         today && "calendar-today-glow border-info/40 border",
         isSelected && "border-primary/80 bg-primary/15 dark:bg-primary/[0.12] border",
         isRangeStart && "ring-primary/70 dark:ring-primary/50 ring-2 ring-inset",
@@ -114,8 +123,22 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
         >
           {format(date, "d")}
         </span>
+        {conflict && (
+          <span
+            aria-label={`Staffing conflict: ${conflict.away} of ${conflict.total} away, ${conflict.coveragePct}% coverage`}
+            title={`${conflict.away} of ${conflict.total} away, ${conflict.coveragePct}% coverage`}
+            className={cn(
+              "flex items-center gap-1 rounded-md border px-1 py-0.5 font-mono text-xs font-semibold @[5rem]:px-1.5",
+              toneSurfaceClass.warning
+            )}
+          >
+            <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+            {/* The cell is a container: the figure only fits once the cell is about 5rem wide. */}
+            <span className="hidden @[5rem]:inline">{conflict.coveragePct}%</span>
+          </span>
+        )}
         {today && (
-          <span className="border-info/20 bg-info/10 text-info hidden rounded border px-1.5 py-0.5 text-xs font-bold tracking-widest uppercase sm:inline">
+          <span className="border-info/20 bg-info/10 text-info hidden rounded border px-1.5 py-0.5 text-xs font-bold tracking-widest uppercase @[6rem]:inline">
             Today
           </span>
         )}

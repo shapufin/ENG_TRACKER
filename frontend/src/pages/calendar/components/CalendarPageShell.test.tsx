@@ -20,11 +20,11 @@ vi.mock("./CalendarPageModals", () => ({
   CalendarPageModals: () => <div data-testid="page-modals" />,
 }));
 
-vi.mock("@/hooks/useIsMobile", () => ({
-  useIsMobile: vi.fn(() => true),
+vi.mock("@/hooks/useIsBelowXl", () => ({
+  useIsBelowXl: vi.fn(() => true),
 }));
 
-import { useIsMobile } from "@/hooks/useIsMobile";
+import { useIsBelowXl } from "@/hooks/useIsBelowXl";
 
 const baseData = {
   isFullscreen: false,
@@ -67,7 +67,7 @@ const baseProps = {
 
 describe("CalendarPageShell mobile sidebar", () => {
   it("hides the sidebar behind a Filters toggle on mobile", () => {
-    vi.mocked(useIsMobile).mockReturnValue(true);
+    vi.mocked(useIsBelowXl).mockReturnValue(true);
     render(<CalendarPageShell {...baseProps} />);
 
     expect(screen.getByRole("button", { name: /filters/i })).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe("CalendarPageShell mobile sidebar", () => {
   });
 
   it("shows the sidebar as an overlay when the Filters button is activated", () => {
-    vi.mocked(useIsMobile).mockReturnValue(true);
+    vi.mocked(useIsBelowXl).mockReturnValue(true);
     render(<CalendarPageShell {...baseProps} />);
 
     fireEvent.click(screen.getByRole("button", { name: /filters/i }));
@@ -83,7 +83,7 @@ describe("CalendarPageShell mobile sidebar", () => {
   });
 
   it("renders the sidebar inline on desktop without a Filters button", () => {
-    vi.mocked(useIsMobile).mockReturnValue(false);
+    vi.mocked(useIsBelowXl).mockReturnValue(false);
     render(<CalendarPageShell {...baseProps} />);
 
     expect(screen.queryByRole("button", { name: /filters/i })).not.toBeInTheDocument();
@@ -93,7 +93,7 @@ describe("CalendarPageShell mobile sidebar", () => {
 
 describe("CalendarPageShell snapshot card", () => {
   it("hands the vacation summary to the sidebar, which owns the single snapshot card", () => {
-    vi.mocked(useIsMobile).mockReturnValue(false);
+    vi.mocked(useIsBelowXl).mockReturnValue(false);
     render(
       <CalendarPageShell
         {...baseProps}
@@ -110,13 +110,13 @@ describe("CalendarPageShell snapshot card", () => {
 
 describe("CalendarPageShell truncated events", () => {
   it("warns when the server held more events than the calendar could load", () => {
-    vi.mocked(useIsMobile).mockReturnValue(false);
+    vi.mocked(useIsBelowXl).mockReturnValue(false);
     render(<CalendarPageShell {...baseProps} data={{ ...baseData, eventsTruncated: true }} />);
     expect(screen.getByRole("status", { name: /truncated events warning/i })).toBeInTheDocument();
   });
 
   it("stays quiet when every event loaded", () => {
-    vi.mocked(useIsMobile).mockReturnValue(false);
+    vi.mocked(useIsBelowXl).mockReturnValue(false);
     render(<CalendarPageShell {...baseProps} data={{ ...baseData, eventsTruncated: false }} />);
     expect(screen.queryByRole("status", { name: /truncated events warning/i })).toBeNull();
   });

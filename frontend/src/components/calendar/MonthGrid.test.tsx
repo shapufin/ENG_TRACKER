@@ -27,11 +27,11 @@ vi.mock("./CalendarDayCell", () => ({
 }));
 
 describe("MonthGrid mobile responsiveness", () => {
-  it("does not force a fixed 720px min-width on mobile", () => {
+  it("never forces a 720px minimum, so the Sunday column is not clipped beside the app sidebar", () => {
     render(<MonthGrid currentMonth={new Date("2024-06-15")} events={[]} onSelectDate={() => {}} />);
 
     const grid = screen.getByRole("grid");
-    expect(grid.className).not.toMatch(/(^|\s)min-w-\[720px\]/);
-    expect(grid.className).toContain("md:min-w-[720px]");
+    expect(grid.className).not.toMatch(/min-w-\[720px\]/);
+    expect(grid.className).toContain("min-w-0");
   });
 });

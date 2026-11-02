@@ -6,6 +6,8 @@ import { ConflictCard } from "./ConflictCard";
 export interface ConflictEntry {
   date: string;
   description: string;
+  /** Share of the roster still at work that day; present when the entry comes from the coverage rule. */
+  coveragePct?: number;
   users: Array<{
     id: number;
     name: string;

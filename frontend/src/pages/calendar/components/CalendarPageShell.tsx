@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CalendarSidebar } from "@/components/calendar/CalendarSidebar";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/useIsMobile";
+import { useIsBelowXl } from "@/hooks/useIsBelowXl";
 import type { User } from "@/types";
 import type { CalendarViewMode } from "@/components/calendar/types";
 import { CalendarHeader } from "./CalendarHeader";
@@ -35,7 +35,7 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
   onToday,
   onSetViewMode,
 }) => {
-  const isMobile = useIsMobile();
+  const isMobile = useIsBelowXl();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const showMobileSidebar = isMobile && mobileSidebarOpen;
 

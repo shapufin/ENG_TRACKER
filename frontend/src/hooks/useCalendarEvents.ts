@@ -19,6 +19,8 @@ interface UseCalendarEventsReturn {
   isLoading: boolean;
   hasError: boolean;
   eventsTruncated: boolean;
+  /** Unfiltered leave requests, for staffing coverage that must not depend on the visibility filters. */
+  leaveRequests: import("@/types").LeaveRequest[];
   showStandby: boolean;
   showVacation: boolean;
   showSick: boolean;
@@ -96,6 +98,7 @@ export const useCalendarEvents = ({
     isLoading,
     hasError,
     eventsTruncated,
+    leaveRequests: leaveRequestsData?.results ?? [],
     showStandby,
     showVacation,
     showSick,

@@ -42,8 +42,13 @@ export const ConflictCard: React.FC<ConflictCardProps> = ({ conflict }) => (
           <span className="font-medium">{conflict.date}</span>
         </div>
         <Badge variant="outline" className={toneSurfaceClass.danger}>
-          {conflict.users.length} member{conflict.users.length !== 1 ? "s" : ""}
+          {conflict.coveragePct !== undefined
+            ? `${conflict.coveragePct}% coverage`
+            : `${conflict.users.length} member${conflict.users.length !== 1 ? "s" : ""}`}
         </Badge>
+      </div>
+      <div className="mb-3 -mt-1">
+        <p className="text-muted-foreground text-xs">{conflict.description}</p>
       </div>
       <Separator className="bg-border dark:bg-line-subtle mb-3" />
       <div className="space-y-2">

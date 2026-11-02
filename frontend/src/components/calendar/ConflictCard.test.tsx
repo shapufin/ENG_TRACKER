@@ -36,4 +36,19 @@ describe("ConflictCard", () => {
   it("does not use raw bg-white surfaces in light mode", () => {
     expect(html(<ConflictCard conflict={conflict} />)).not.toContain("bg-white/50");
   });
+
+  it("leads with coverage and the roster count when the entry carries them", () => {
+    const { getByText } = render(
+      <ConflictCard
+        conflict={{ ...conflict, coveragePct: 50, description: "2/4 on leave (50% coverage)" }}
+      />
+    );
+    expect(getByText("50% coverage")).toBeInTheDocument();
+    expect(getByText("2/4 on leave (50% coverage)")).toBeInTheDocument();
+  });
+
+  it("falls back to the member count without coverage", () => {
+    const { getByText } = render(<ConflictCard conflict={conflict} />);
+    expect(getByText("3 members")).toBeInTheDocument();
+  });
 });

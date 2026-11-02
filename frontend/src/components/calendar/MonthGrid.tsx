@@ -3,6 +3,7 @@ import { format, isSameMonth } from "date-fns";
 import { CalendarDayCell } from "./CalendarDayCell";
 import { useMonthGrid } from "./hooks/useMonthGrid";
 import type { CalendarDensity, CalendarEvent } from "./types";
+import type { DayConflict } from "@/lib/calendarCoverage";
 import { calendarGridHeader } from "./calendarStyles";
 
 interface MonthGridProps {
@@ -20,6 +21,7 @@ interface MonthGridProps {
   onRangeDragEnter?: (date: Date) => void;
   onRangeDragEnd?: (date: Date) => void;
   isRangeSelecting?: boolean;
+  conflictsByDate?: ReadonlyMap<string, DayConflict>;
 }
 
 export const MonthGrid: React.FC<MonthGridProps> = ({
@@ -37,6 +39,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
   onRangeDragEnter,
   onRangeDragEnd,
   isRangeSelecting,
+  conflictsByDate,
 }) => {
   const { monthStart, displayRows, weekDays, getDayEvents } = useMonthGrid({
     currentMonth,
@@ -50,7 +53,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
 
   return (
     <div
-      className="border-border/60 bg-card min-w-0 overflow-hidden rounded-xl border md:min-w-[720px]"
+      className="border-border/60 bg-card min-w-0 overflow-hidden rounded-xl border"
       role="grid"
       aria-label={format(currentMonth, "MMMM yyyy")}
     >
@@ -102,6 +105,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
                 onRangeDragEnter={onRangeDragEnter}
                 onRangeDragEnd={onRangeDragEnd}
                 isRangeSelecting={isRangeSelecting}
+                conflict={conflictsByDate?.get(format(date, "yyyy-MM-dd"))}
               />
             );
           })}

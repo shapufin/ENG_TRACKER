@@ -10,7 +10,7 @@ import { deriveFullName } from "@/lib/user-utils";
 import { deriveVacationBalanceFromBalances } from "@/lib/vacation-balance";
 
 import { buildMetricBars, computeCarryOverAndBalance, formatDays } from "@/lib/calendarPageMetrics";
-import { buildConflictEntries, buildAllConflictEntries } from "@/lib/calendarPageConflicts";
+import { buildDayConflicts, conflictEntriesForMonth } from "@/lib/calendarCoverage";
 import { useCalendarQueries } from "@/hooks/useCalendarQueries";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useUserVisibility } from "@/hooks/useUserVisibility";
@@ -129,6 +129,7 @@ export const useCalendarPageData = (
     isLoading: eventsLoading,
     hasError: eventsError,
     eventsTruncated,
+    leaveRequests,
     showStandby,
     showVacation,
     showSick,
@@ -293,8 +294,20 @@ export const useCalendarPageData = (
   const vacationSummary = useMemo(() => deriveVacationBalanceFromBalances(balances), [balances]);
   const carryOverAndBalance = useMemo(() => computeCarryOverAndBalance(balances), [balances]);
   const metricBars = useMemo(() => buildMetricBars(vacationSummary), [vacationSummary]);
-  const conflictEntries = useMemo(() => buildConflictEntries(events), [events]);
-  const allConflictEntries = useMemo(() => buildAllConflictEntries(events), [events]);
+  const holidayDates = useMemo(
+    () => new Set((holidayData ?? []).map((h) => h.date.slice(0, 10))),
+    [holidayData]
+  );
+  const dayConflicts = useMemo(
+    () => buildDayConflicts({ leaves: leaveRequests, groups: groupedUsersWithNames, holidayDates }),
+    [leaveRequests, groupedUsersWithNames, holidayDates]
+  );
+  // One rule feeds the grid badges, the header count, the card and the modal, so they always agree.
+  const conflictEntries = useMemo(
+    () => conflictEntriesForMonth(dayConflicts, currentMonth),
+    [dayConflicts, currentMonth]
+  );
+  const allConflictEntries = conflictEntries;
 
   return {
     currentMonth,
@@ -333,6 +346,7 @@ export const useCalendarPageData = (
     groupedUsersWithNames,
     workspaceUsersPartial,
     eventsTruncated,
+    dayConflicts,
     events,
     showStandby,
     showVacation,

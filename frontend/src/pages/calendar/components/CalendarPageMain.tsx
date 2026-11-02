@@ -41,6 +41,7 @@ export const CalendarPageMain: React.FC<CalendarPageMainProps> = ({ data }) => {
                 onRangeDragEnter={data.handleRangeMove}
                 onRangeDragEnd={data.finalizeRangeSelection}
                 isRangeSelecting={data.isDraggingRange}
+                conflictsByDate={data.dayConflicts}
               />
             )}
             {data.viewMode === "week" && (

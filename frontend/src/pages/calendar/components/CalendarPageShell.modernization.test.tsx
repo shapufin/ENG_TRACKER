@@ -10,7 +10,7 @@ vi.mock("./CalendarHeader", () => ({ CalendarHeader: () => <div /> }));
 vi.mock("./CalendarBottomCards", () => ({ CalendarBottomCards: () => <div /> }));
 vi.mock("./CalendarPageMain", () => ({ CalendarPageMain: () => <div /> }));
 vi.mock("./CalendarPageModals", () => ({ CalendarPageModals: () => <div /> }));
-vi.mock("@/hooks/useIsMobile", () => ({ useIsMobile: () => false }));
+vi.mock("@/hooks/useIsBelowXl", () => ({ useIsBelowXl: () => false }));
 
 describe("CalendarPageShell modernization", () => {
   it("uses a flat GlassCard for the partial-workspace warning", () => {
