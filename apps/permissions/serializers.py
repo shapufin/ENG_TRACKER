@@ -4,6 +4,7 @@ Permissions app serializers.
 
 from django.db import IntegrityError
 from rest_framework import serializers
+from .display_names import role_display_name
 from .models import (
     Group, Role, Permission, UserRole, UserGroup,
     RolePermission
@@ -29,9 +30,14 @@ class GroupSerializer(serializers.ModelSerializer):
 
 
 class RoleSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+
     class Meta:
         model = Role
         fields = ['id', 'name', 'code', 'description', 'created_at']
+
+    def get_name(self, obj) -> str:
+        return role_display_name(obj.code, obj.name)
 
 
 class PermissionSerializer(serializers.ModelSerializer):
@@ -42,12 +48,15 @@ class PermissionSerializer(serializers.ModelSerializer):
 
 class UserRoleSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.username', read_only=True)
-    role_name = serializers.CharField(source='role.name', read_only=True)
+    role_name = serializers.SerializerMethodField()
     team_name = serializers.CharField(source='team.name', read_only=True)
-    
+
     class Meta:
         model = UserRole
         fields = ['id', 'user', 'user_name', 'role', 'role_name', 'team', 'team_name', 'is_active']
+
+    def get_role_name(self, obj) -> str:
+        return role_display_name(obj.role.code, obj.role.name)
 
 
 class UserGroupSerializer(serializers.ModelSerializer):
@@ -85,7 +94,7 @@ class UserGroupSerializer(serializers.ModelSerializer):
 
 
 class RolePermissionSerializer(serializers.ModelSerializer):
-    role_name = serializers.CharField(source='role.name', read_only=True)
+    role_name = serializers.SerializerMethodField()
     permission_codename = serializers.CharField(source='permission.codename', read_only=True)
     permission_module = serializers.CharField(source='permission.module', read_only=True)
     permission_action = serializers.CharField(source='permission.action', read_only=True)
@@ -93,5 +102,8 @@ class RolePermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = RolePermission
         fields = ['id', 'role', 'role_name', 'permission', 'permission_codename', 'permission_module', 'permission_action']
+
+    def get_role_name(self, obj) -> str:
+        return role_display_name(obj.role.code, obj.role.name)
 
 

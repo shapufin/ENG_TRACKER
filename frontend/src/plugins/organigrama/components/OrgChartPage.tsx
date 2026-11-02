@@ -107,7 +107,7 @@ function layoutTree(
 
   function visit(node: TreeNode, parentId?: string) {
     const rawId = `${node.type}-${node.id}`;
-    // Scope node ID to parent branch path so repeated nodes (e.g. bridging AL TLs or tech nodes)
+    // Scope node ID to parent branch path so repeated nodes (e.g. bridging Line Managers or tech nodes)
     // receive unique node IDs and separate layouts in the Dagre tree.
     const nodeId = parentId ? `${parentId}__${rawId}` : rawId;
     if (visited.has(nodeId)) return;

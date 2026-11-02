@@ -17,7 +17,7 @@ A team is retired by **archiving** it, the same idea as a Client (`docs/workflow
 | Purge | `purge_team(team, request)`: archived for **365 days**, no team activity in 365 days, no CASCADE dependents, no active sub-teams, and the **year it was archived in is closed** (`ClosedYear`). When the year-close plugin is disabled the year can never close, so the purge only waits for that year to have ended. Command: `manage.py purge_archived_teams [--dry-run]`; it reports every skipped team with its blockers (also purges expired detached workspaces). | `team_lifecycle.purge_team` |
 
 **Archive is refused (409 `blockers`) when:** the team has active sub-teams (`parent_team` drives
-Italian-to-Albanian TL inheritance), a member would be left with no other active team and no
+Manager-to-Line Manager inheritance), a member would be left with no other active team and no
 `italian_tl`/`albanian_tl` while having a pending leave/overtime/standby request, or the team leader has an
 open HBPR assignment.
 
@@ -124,7 +124,7 @@ After pulling: `py -3.14 manage.py migrate` (users 0024-0025, dashboard 0013, an
   Mutations invalidate `["admin","teams"]`, `["admin","calendar-groups"]`, `["admin","users"]`,
   `["admin","profiles"]` (the Users page rows) and `["admin","user-stats"]`. A 409 on Restore (parent team still
   archived) shows the server's `blockers` too. Client archive invalidates `["admin","profiles"]` for the same reason.
-- **Users**: the edit dialog shows "Also clear the Italian/Albanian TL link..." only when a team was removed and a
+- **Users**: the edit dialog shows "Also clear the Manager/Line Manager link..." only when a team was removed and a
   TL link is set; the bulk drawer has the same checkbox under Teams. Both send `unassign_removed_tl`. After a save
   that left a link, a warning toast carries the server's `warnings[].message`.
 - **Frozen**: engagement summary and scorecard subtitles end with " · Frozen" when the month is final
@@ -141,7 +141,7 @@ After pulling: `py -3.14 manage.py migrate` (users 0024-0025, dashboard 0013, an
   `control_room_access` importers. Counts that say "active teams" (admin overview, trends, dashboard widget,
   analytics) now use `Team.objects.active()`.
 - Closed 2026-10-28: the admin period-close TL list, the Control Room company-wide coverage rows and the
-  organigrama Albanian-TL employee lookup now ignore archived teams (they showed phantom TLs / empty teams).
+  organigrama Line Manager employee lookup now ignore archived teams (they showed phantom TLs / empty teams).
   `UserRole.team` is `SET_NULL` but nothing reads it for scope, so a delete cannot widen a role.
 - **Deactivating a team leader** changes nothing else (so reactivating restores it all): `Team.team_leader` and
   members' TL links stay. The Users importer adds a row warning naming the active teams they lead and the

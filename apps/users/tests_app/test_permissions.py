@@ -324,7 +324,7 @@ class JWTDualReadClaimsTests(TestCase):
 
     def setUp(self):
         from apps.permissions.models import Role, UserRole
-        Role.objects.get_or_create(code='italian_tl', defaults={'name': 'Italian TL'})
+        Role.objects.get_or_create(code='italian_tl', defaults={'name': 'Manager'})
         self.user = User.objects.create_user(username='jwt-dual-read', password='testpass')
         # Assign DB role WITHOUT setting the legacy flag.
         role = Role.objects.get(code='italian_tl')

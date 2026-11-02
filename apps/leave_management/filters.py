@@ -16,13 +16,13 @@ class LeaveRequestFilter(filters.FilterSet):
         fields = ['user', 'status', 'request_type', 'start_date', 'is_italian_tl_role', 'is_albanian_tl_role']
 
     def filter_italian_tl_role(self, queryset, name, value):
-        """Filter by Italian TL role with null-safety."""
+        """Filter by Manager role with null-safety."""
         if value is None or value == '':
             return queryset
         return queryset.filter(user__profile__is_italian_tl_role=bool(value))
 
     def filter_albanian_tl_role(self, queryset, name, value):
-        """Filter by Albanian TL role with null-safety."""
+        """Filter by Line Manager role with null-safety."""
         if value is None or value == '':
             return queryset
         return queryset.filter(user__profile__is_albanian_tl_role=bool(value))

@@ -2,7 +2,7 @@
 Organigrama plugin definition.
 
 Read-only plugin that renders the company organizational hierarchy as a
-people-centric tree: Italian TLs → Albanian TLs → Employees, with optional
+people-centric tree: Managers → Line Managers → Employees, with optional
 independent technology grouping (Infrastructure, Backup, DB, etc.).
 
 No models of its own — reads the users-domain Tech catalog, UserProfile TL
@@ -25,7 +25,7 @@ class OrganigramaPlugin(BasePlugin):
     def description(self) -> str:
         return (
             "Read-only company organizational chart. Renders the hierarchy "
-            "from existing Italian TL / Albanian TL assignments and optional "
+            "from existing Manager / Line Manager assignments and optional "
             "team sub-structure. No new models or fields."
         )
 
@@ -45,7 +45,7 @@ class OrganigramaPlugin(BasePlugin):
             "view": {
                 "roles": ["employee", "italian_tl", "albanian_tl", "hr", "cr_admin"],
                 # HBPR users get the org chart, narrowed to their assigned
-                # Albanian TLs by tree_builder.build_hbpr_tree.
+                # Line Managers by tree_builder.build_hbpr_tree.
                 # Public=True so the sidebar link and tree API are visible to
                 # ALL authenticated users, including those without UserRole rows.
                 # The org chart is read-only and scoped by get_team_member_ids(),

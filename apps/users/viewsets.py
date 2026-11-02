@@ -296,7 +296,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])
     def team_leaders(self, request):
         """
-        Get all users who are team leaders (Italian or Albanian TLs).
+        Get all users who are team leaders (Managers or Line Managers).
         Query params:
           - type: 'italian', 'albanian', or 'all' (default: all)
         Includes users with the TL role flag OR users who have team members assigned.
@@ -349,7 +349,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])
     def italian_team_leaders(self, request):
         """
-        Get all users who are Italian team leaders, with their member counts.
+        Get all users who are Managers, with their member counts.
         Includes users with the role flag OR users with team members assigned.
         Staff and HR only get member counts; team leaders get names; others are refused.
         """
@@ -380,7 +380,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])
     def albanian_team_leaders(self, request):
         """
-        Get all users who are Albanian team leaders, with their member counts.
+        Get all users who are Line Managers, with their member counts.
         Includes users with the role flag OR users with team members assigned.
         Staff and HR only get member counts; team leaders get names; others are refused.
         """
@@ -710,7 +710,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # Same pre-check for the HBPR↔Albanian-TL assignment FK — an
+            # Same pre-check for the HBPR↔Line Manager assignment FK — an
             # is_hbpr=False or is_albanian_tl_role=False bulk revoke would
             # otherwise hit the guard inside revoke_role mid-loop and 500.
             hbpr_new_state = {}
@@ -728,13 +728,13 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             if blocked_hbpr:
                 summary = '; '.join(
                     f"{b['username']} ({b['role']}): {b['assignment_count']} "
-                    f"open HBPR↔Albanian TL assignment(s)"
+                    f"open HBPR↔Line Manager assignment(s)"
                     for b in blocked_hbpr
                 )
                 return Response(
                     {
                         'error': (
-                            'Cannot revoke role while an open HBPR↔Albanian TL '
+                            'Cannot revoke role while an open HBPR↔Line Manager '
                             'assignment depends on it: ' + summary
                         ),
                         'blocked_revocations': blocked_hbpr,
@@ -855,7 +855,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 continue
 
             try:
-                # HBPR↔AL-TL assignments PROTECT both participants: an
+                # HBPR↔Line Manager assignments PROTECT both participants: an
                 # assigned user must have their assignments ended (history
                 # retained) before the account can be deleted. Checked before
                 # anything is cleared so a refusal changes nothing.
@@ -869,7 +869,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     failed_users.append({
                         'id': user.id,
                         'reason': (
-                            'User has open HBPR↔Albanian TL assignments; '
+                            'User has open HBPR↔Line Manager assignments; '
                             'end or reassign them first.'
                         ),
                     })
@@ -884,8 +884,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     albanian_cleared = UserProfile.objects.filter(albanian_tl=user).update(albanian_tl=None)
                     led_cleared = Team.objects.filter(team_leader=user).update(team_leader=None)
                     logger.info(
-                        f"User {user.id} references cleared: {italian_cleared} Italian TL, "
-                        f"{albanian_cleared} Albanian TL, {led_cleared} led teams"
+                        f"User {user.id} references cleared: {italian_cleared} Manager, "
+                        f"{albanian_cleared} Line Manager, {led_cleared} led teams"
                     )
                     user.delete()
                 deleted_count += 1
@@ -1031,7 +1031,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Same pre-check for the HBPR↔Albanian-TL assignment FK (before any
+        # Same pre-check for the HBPR↔Line Manager assignment FK (before any
         # mutation, so a refusal leaves the profile untouched).
         hbpr_refusal = hbpr_revocation_refusal(user, data)
         if hbpr_refusal:
@@ -1254,7 +1254,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])
     def italian_team_members(self, request):
         """
-        Get team members for a specific Italian TL.
+        Get team members for a specific Manager.
         Query param: italian_tl_id (required)
         """
         italian_tl_id = request.query_params.get('italian_tl_id')
@@ -1277,7 +1277,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
     def stats(self, request):
         """
         Get user statistics for admin dashboard.
-        Returns counts for total users, Italian TLs, Albanian TLs, users with no TL, and active today.
+        Returns counts for total users, Managers, Line Managers, users with no TL, and active today.
         """
         
         current_date = business_today()
@@ -1285,14 +1285,14 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         # Total users
         total_users = User.objects.count()
         
-        # Italian TL count (role flag OR has assigned members OR database role)
+        # Manager count (role flag OR has assigned members OR database role)
         italian_tl_count = User.objects.filter(
             Q(profile__is_italian_tl_role=True) |
             Q(profile__role_codes__icontains='italian_tl') |
             Q(italian_team_members__isnull=False)
         ).distinct().count()
         
-        # Albanian TL count (role flag OR has assigned members OR database role)
+        # Line Manager count (role flag OR has assigned members OR database role)
         albanian_tl_count = User.objects.filter(
             Q(profile__is_albanian_tl_role=True) |
             Q(profile__role_codes__icontains='albanian_tl') |
@@ -2038,7 +2038,7 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         if self.action == 'list':
-            # Teams are few: derive every team's IT/AL TL in one pass instead
+            # Teams are few: derive every team's Manager/Line Manager in one pass instead
             # of one query pair per row.
             context['derived_team_tls'] = derive_team_tls()
             # Same pass for the "why can't I archive this" hint on each row. Only the people who
@@ -2380,7 +2380,7 @@ class TeamViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
 
 
 class HbprAssignmentViewSet(viewsets.ModelViewSet):
-    """Admin-managed HBPR ↔ Albanian TL assignments.
+    """Admin-managed HBPR ↔ Line Manager assignments.
 
     Staff/admin only. No destructive delete: history is closed via the
     ``end`` action so governance evidence keeps a resolvable FK.
@@ -2468,8 +2468,8 @@ class HbprAssignmentViewSet(viewsets.ModelViewSet):
             raise DRFValidationError(
                 {
                     "detail": (
-                        "An open assignment already exists for this Albanian "
-                        "TL. End or reassign it first."
+                        "An open assignment already exists for this Line "
+                        "Manager. End or reassign it first."
                     )
                 }
             )

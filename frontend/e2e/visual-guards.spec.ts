@@ -64,7 +64,7 @@ test("hr admin-shell surfaces redirect to the dashboard (admin gate)", async ({ 
 
 test("HBPR-only guard redirects (scorecard authoring, calendar, leave)", async ({ page }) => {
   await loginAsRole(page, "hbpr");
-  // The AL-TL authoring page bounces to the HBPR's own workspace, before any of
+  // The Line Manager authoring page bounces to the HBPR's own workspace, before any of
   // its queries fire; Calendar and Leave are HbprRestrictedRoute-wrapped and go
   // straight to /hbpr too (that IS their home — no /dashboard for an HBPR).
   await expectRedirect(page, "/tl-scorecard", "/hbpr");

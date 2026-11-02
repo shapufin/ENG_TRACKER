@@ -135,7 +135,7 @@ export async function exportCanvasToPng(
   }
 }
 
-/** Distinct Albanian TLs in a live tree, sorted by name (a bridging TL repeats under several roots). */
+/** Distinct Line Managers in a live tree, sorted by name (a bridging TL repeats under several roots). */
 export function collectAlbanianTls(roots: TreeNode[]): { id: number; name: string }[] {
   const found = new Map<number, string>();
   const visit = (node: TreeNode) => {
@@ -150,7 +150,7 @@ export function collectAlbanianTls(roots: TreeNode[]): { id: number; name: strin
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Narrow a live tree to the branch of one Albanian TL, keeping the Italian TL above. */
+/** Narrow a live tree to the branch of one Line Manager, keeping the Manager above. */
 export function filterByAlbanianTl(roots: TreeNode[], tlId: number): TreeNode[] {
   const visit = (node: TreeNode): TreeNode | null => {
     if (node.type === "person" && node.role_badge === "albanian_tl") {

@@ -5,8 +5,8 @@ import type { PluginDetails } from "./pluginConfigTypes";
 
 const roles = [
   { id: 1, code: "employee", name: "Employee" },
-  { id: 2, code: "italian_tl", name: "Italian Team Leader" },
-  { id: 3, code: "albanian_tl", name: "Albanian Team Leader" },
+  { id: 2, code: "italian_tl", name: "Manager" },
+  { id: 3, code: "albanian_tl", name: "Line Manager" },
   { id: 4, code: "hr", name: "HR" },
   { id: 5, code: "cr_admin", name: "Control Room Admin" },
 ] as any;
@@ -61,7 +61,7 @@ describe("PluginConfigPermissions", () => {
     );
 
     expect(screen.getByText("Team Leader")).toBeInTheDocument();
-    expect(screen.queryByText("Italian Team Leader")).not.toBeInTheDocument();
+    expect(screen.queryByText("Manager")).not.toBeInTheDocument();
     expect(screen.queryByText("Configure")).not.toBeInTheDocument();
     expect(screen.queryByText("Export")).not.toBeInTheDocument();
     expect(screen.getByText("Control Room users")).toBeInTheDocument();

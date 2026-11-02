@@ -1,4 +1,4 @@
-"""HBPR <-> Albanian TL governance evidence."""
+"""HBPR <-> Line Manager governance evidence."""
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -21,10 +21,10 @@ from core.mixins.permissions import is_staff_user
 
 
 class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
-    """Evidence of the HBPR ↔ Albanian TL governance relationship.
+    """Evidence of the HBPR ↔ Line Manager governance relationship.
 
-    Authored by the **assigned AL TL only**; read and exported by the assigned
-    HBPR and staff. There is no destroy — the evidence is the AL TL's record to
+    Authored by the **assigned Line Manager only**; read and exported by the assigned
+    HBPR and staff. There is no destroy — the evidence is the Line Manager's record to
     hand to their manager, so corrections go through audited updates.
     """
 
@@ -58,14 +58,14 @@ class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet
                 # and historical (an ended assignment's evidence is still theirs)
                 # — but a FUTURE-dated assignment grants nothing yet, mirroring
                 # hbpr_scope's `effective_from <= today` rule, and a deactivated
-                # AL TL's assignment is out of scope too.
+                # Line Manager's assignment is out of scope too.
                 qs = qs.filter(
                     assignment__hbpr=user,
                     assignment__effective_from__lte=today(),
                     assignment__albanian_tl__is_active=True,
                 )
             else:
-                # An Albanian TL reads the evidence recorded on their own
+                # A Line Manager reads the evidence recorded on their own
                 # assignments.
                 qs = qs.filter(assignment__albanian_tl=user)
         return qs
@@ -112,10 +112,10 @@ class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet
 
     def perform_create(self, serializer):
         assignment = serializer.validated_data['assignment']
-        # Staff audit this evidence; only the assigned AL TL authors it.
+        # Staff audit this evidence; only the assigned Line Manager authors it.
         if assignment.albanian_tl_id != self.request.user.id:
             raise PermissionDenied(
-                'Only the assigned Albanian TL can record this evidence.'
+                'Only the assigned Line Manager can record this evidence.'
             )
         self._ensure_in_window(assignment, serializer.validated_data.get('occurred_on'))
         serializer.save(recorded_by=self.request.user)
@@ -130,7 +130,7 @@ class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet
         instance = serializer.instance
         if instance.assignment.albanian_tl_id != self.request.user.id:
             raise PermissionDenied(
-                'Only the assigned Albanian TL can edit this evidence.'
+                'Only the assigned Line Manager can edit this evidence.'
             )
         self._ensure_in_window(
             serializer.validated_data.get('assignment', instance.assignment),
@@ -145,7 +145,7 @@ class HbprGovernanceEvidenceViewSet(PluginPermissionMixin, viewsets.ModelViewSet
 
     @action(detail=False, methods=['get'], url_path='year-end-pack')
     def year_end_pack(self, request):
-        """Packaged per-assignment+year summary the AL TL hands to their
+        """Packaged per-assignment+year summary the Line Manager hands to their
         manager: cadence meetings held vs expected, both EPR participations.
         Readable by the assigned TL, the owning HBPR and staff."""
         try:

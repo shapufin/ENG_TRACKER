@@ -82,7 +82,7 @@ interface TLScorecardHeaderProps {
   children: React.ReactNode;
 }
 
-/** Shell for the Albanian TL's authoring workspace: title, sections and tabs. */
+/** Shell for the Line Manager's authoring workspace: title, sections and tabs. */
 export const TLScorecardHeader: React.FC<TLScorecardHeaderProps> = ({
   subtitle,
   tab,

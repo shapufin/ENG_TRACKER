@@ -1,6 +1,6 @@
-"""Display-only Italian/Albanian TL per team, derived from its members.
+"""Display-only Manager/Line Manager per team, derived from its members.
 
-Members of a team normally share one Italian and one Albanian TL, so the
+Members of a team normally share one Manager and one Line Manager, so the
 team's TLs are the ones most members point at. Nothing is stored: this never
 touches ``Team.team_leader`` (and so never changes TL scope via ``led_teams``).
 """
@@ -51,9 +51,9 @@ def derive_team_tls(team_ids=None):
 
 
 def italian_tl_user_ids():
-    """Ids of every Italian team leader, by the same rule as ``UserProfile.is_italian_tl``.
+    """Ids of every Manager, by the same rule as ``UserProfile.is_italian_tl``.
 
-    An Italian TL is the reporting line above the people measured by the skills
+    A Manager is the reporting line above the people measured by the skills
     matrix and Ticket KPI, so both leave them out of rosters. Matches the role,
     the legacy flag, or having people who report to them.
     """

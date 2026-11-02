@@ -2,7 +2,7 @@
 
 Carries wage and leave data, so the access rules are the point: a TL sees
 their own scoreable members, staff may name a leader, and an HBPR never gets
-it (not even for an in-scope Albanian TL).
+it (not even for an in-scope Line Manager).
 """
 import sys
 from datetime import date, timedelta
@@ -57,7 +57,7 @@ class TeamMembersBase(TestCase):
 
         self.hbpr = make_user('team_hbpr')
         assign_role(self.hbpr, 'hbpr')
-        # In-scope Albanian TL for the HBPR (assignment is the only grant).
+        # In-scope Line Manager for the HBPR (assignment is the only grant).
         self.assigned_al_tl = make_user('team_assigned_al_tl')
         assign_role(self.assigned_al_tl, 'albanian_tl')
         HbprAlbanianTlAssignment.objects.create(

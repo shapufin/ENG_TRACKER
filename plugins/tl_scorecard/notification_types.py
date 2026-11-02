@@ -15,12 +15,12 @@ User = get_user_model()
 
 _RECORDS_LINK = '/tl-scorecard?tab=records'
 # HBPR governance notifications open the dedicated HBPR workspace, not the
-# AL-TL scorecard (which is the TL's own authoring surface).
+# Line Manager scorecard (which is the TL's own authoring surface).
 _HBPR_LINK = '/hbpr?view=records'
 
 
 class _HbprAudience:
-    """Recipients are the active HBPR assigned to the record's owning AL TL,
+    """Recipients are the active HBPR assigned to the record's owning Line Manager,
     provided the subject is that TL or one of their current team members."""
     owner_field = 'tl_id'
 
@@ -112,7 +112,7 @@ class EprStageShared(_RecordsItem):
 class PipAwaitingApproval(_HbprAudience, NotificationType):
     event_type = 'scorecard_pip_pending'
     label = 'Improvement plan awaiting approval'
-    description = 'Sent to the HR business partner assigned to an Albanian TL when the TL opens an improvement plan.'
+    description = 'Sent to the HR business partner assigned to a Line Manager when the TL opens an improvement plan.'
     category = 'oversight'
     notification_type = 'warning'
     push_by_default = False
@@ -156,7 +156,7 @@ class PipDecided(NotificationType):
 class PipClosed(_HbprAudience, NotificationType):
     event_type = 'scorecard_pip_closed'
     label = 'Improvement plan closed'
-    description = 'Sent to the HR business partner assigned to an Albanian TL when an active improvement plan is completed or cancelled.'
+    description = 'Sent to the HR business partner assigned to a Line Manager when an active improvement plan is completed or cancelled.'
     category = 'oversight'
     notification_type = 'info'
     push_by_default = False
@@ -177,7 +177,7 @@ class PipClosed(_HbprAudience, NotificationType):
 class FlagRaised(_HbprAudience, NotificationType):
     event_type = 'scorecard_flag_raised'
     label = 'Idle or absence flag raised'
-    description = 'Sent to the HR business partner assigned to an Albanian TL when the TL flags idle time or an unexplained absence.'
+    description = 'Sent to the HR business partner assigned to a Line Manager when the TL flags idle time or an unexplained absence.'
     category = 'oversight'
     notification_type = 'warning'
     push_by_default = False
@@ -199,7 +199,7 @@ class FlagRaised(_HbprAudience, NotificationType):
 class PromotionNominated(_HbprAudience, NotificationType):
     event_type = 'scorecard_promotion_nominated'
     label = 'Promotion nominated'
-    description = 'Sent to the HR business partner assigned to an Albanian TL when the TL nominates someone for promotion.'
+    description = 'Sent to the HR business partner assigned to a Line Manager when the TL nominates someone for promotion.'
     category = 'oversight'
     notification_type = 'info'
     push_by_default = False
@@ -216,10 +216,10 @@ class PromotionNominated(_HbprAudience, NotificationType):
 
 
 class HbprCadenceEvidenceRecorded(NotificationType):
-    """The assigned AL TL recorded a cadence meeting with the HBPR."""
+    """The assigned Line Manager recorded a cadence meeting with the HBPR."""
     event_type = 'scorecard_hbpr_cadence_evidence'
     label = 'Meeting with your team leader was recorded'
-    description = 'Sent to the assigned HBPR when the Albanian TL records a cadence meeting for their partnership.'
+    description = 'Sent to the assigned HBPR when the Line Manager records a cadence meeting for their partnership.'
     category = 'oversight'
     notification_type = 'info'
     push_by_default = False
@@ -246,10 +246,10 @@ class HbprCadenceEvidenceRecorded(NotificationType):
 
 
 class HbprEprEvidenceRecorded(NotificationType):
-    """The assigned AL TL recorded HBPR participation in a mid-year/year-end EPR."""
+    """The assigned Line Manager recorded HBPR participation in a mid-year/year-end EPR."""
     event_type = 'scorecard_hbpr_epr_evidence'
     label = 'EPR participation was recorded'
-    description = 'Sent to the assigned HBPR when the Albanian TL records their mid-year or year-end EPR participation.'
+    description = 'Sent to the assigned HBPR when the Line Manager records their mid-year or year-end EPR participation.'
     category = 'oversight'
     notification_type = 'info'
     push_by_default = False
@@ -276,10 +276,10 @@ class HbprEprEvidenceRecorded(NotificationType):
 
 
 class HbprReviewDelivered(NotificationType):
-    """The AL TL logged a management review delivery — a governance update."""
+    """The Line Manager logged a management review delivery — a governance update."""
     event_type = 'scorecard_hbpr_review_delivered'
     label = 'A management review was delivered'
-    description = 'Sent to the assigned HBPR when the Albanian TL logs a management review delivery.'
+    description = 'Sent to the assigned HBPR when the Line Manager logs a management review delivery.'
     category = 'oversight'
     notification_type = 'info'
     push_by_default = False
@@ -331,7 +331,7 @@ class HbprAssignmentChanged(NotificationType):
     """An admin assigned a team leader to the HBPR, or ended the assignment."""
     event_type = 'scorecard_hbpr_assignment_changed'
     label = 'Team leader assignment changed'
-    description = 'Sent to an HBPR when an Albanian TL is assigned to them or the assignment ends.'
+    description = 'Sent to an HBPR when a Line Manager is assigned to them or the assignment ends.'
     category = 'oversight'
     notification_type = 'info'
     push_by_default = False
@@ -360,7 +360,7 @@ class FlagResolved(_HbprAudience, NotificationType):
     """An idle flag was resolved or an absence was addressed."""
     event_type = 'scorecard_flag_resolved'
     label = 'Idle or absence flag resolved'
-    description = 'Sent to the HR business partner assigned to an Albanian TL when the TL resolves an idle flag or addresses an absence.'
+    description = 'Sent to the HR business partner assigned to a Line Manager when the TL resolves an idle flag or addresses an absence.'
     category = 'oversight'
     notification_type = 'info'
     push_by_default = False
@@ -386,7 +386,7 @@ class EprStageCompleted(NotificationType):
     """A team member's EPR cycle reached a new stage."""
     event_type = 'scorecard_epr_stage_completed'
     label = 'EPR stage completed'
-    description = "Sent to the HR business partner assigned to an Albanian TL when one of the TL's team members completes an EPR stage."
+    description = "Sent to the HR business partner assigned to a Line Manager when one of the TL's team members completes an EPR stage."
     category = 'oversight'
     notification_type = 'info'
     push_by_default = False
@@ -412,7 +412,7 @@ class HbprMeetingChanged(NotificationType):
     """A governance meeting (never an employee one-on-one) was added or changed."""
     event_type = 'scorecard_hbpr_meeting_changed'
     label = 'Governance meeting changed'
-    description = 'Sent to the HR business partner assigned to an Albanian TL when the TL records or changes a team or TL-sync meeting.'
+    description = 'Sent to the HR business partner assigned to a Line Manager when the TL records or changes a team or TL-sync meeting.'
     category = 'oversight'
     notification_type = 'info'
     push_by_default = False

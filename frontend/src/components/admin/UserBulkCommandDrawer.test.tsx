@@ -101,8 +101,8 @@ describe("UserBulkCommandDrawer", () => {
     renderDrawer();
 
     clickRole("HR");
-    clickRole("Italian TL role");
-    clickRole("Italian TL role"); // on → off
+    clickRole("Manager role");
+    clickRole("Manager role"); // on → off
     fireEvent.click(screen.getByRole("button", { name: "Apply changes" }));
 
     expect(onBulkUpdate).toHaveBeenCalledWith({
@@ -147,8 +147,8 @@ describe("UserBulkCommandDrawer", () => {
     expect(screen.queryByText("Team leader assignments")).not.toBeInTheDocument();
     expect(screen.getByText("Roles")).toBeInTheDocument();
     expect(screen.getByText("HBPR role")).toBeInTheDocument();
-    expect(screen.queryByText("Italian TL role")).not.toBeInTheDocument();
-    expect(screen.queryByText("Albanian TL role")).not.toBeInTheDocument();
+    expect(screen.queryByText("Manager role")).not.toBeInTheDocument();
+    expect(screen.queryByText("Line Manager role")).not.toBeInTheDocument();
     expect(screen.getByText("HR")).toBeInTheDocument();
   });
 
@@ -173,7 +173,7 @@ describe("UserBulkCommandDrawer", () => {
     expect(screen.getByText("Teams")).toBeInTheDocument();
     expect(screen.getByText("Team leader assignments")).toBeInTheDocument();
     expect(screen.getByText("HBPR role")).toBeInTheDocument();
-    expect(screen.getByText("Italian TL role")).toBeInTheDocument();
+    expect(screen.getByText("Manager role")).toBeInTheDocument();
   });
 
   it("marks sections Unchanged until staged, then Updating", () => {
@@ -210,7 +210,7 @@ describe("UserBulkCommandDrawer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Apply changes" }));
     expect(onBulkUpdate).toHaveBeenLastCalledWith({ teams: [1, 2] });
 
-    fireEvent.click(screen.getByLabelText(/also clear italian\/albanian tl links/i));
+    fireEvent.click(screen.getByLabelText(/also clear manager\/line manager links/i));
     fireEvent.click(screen.getByRole("button", { name: "Apply changes" }));
     expect(onBulkUpdate).toHaveBeenLastCalledWith({ teams: [1, 2], unassign_removed_tl: true });
   });

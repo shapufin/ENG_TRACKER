@@ -17,7 +17,7 @@ def _users_without_team():
     users = (
         User.objects.filter(is_active=True, is_staff=False, is_superuser=False)
         .exclude(non_team_user_q())
-        # Italian TLs are managers that follow their people across teams: no team of their own.
+        # Managers are managers that follow their people across teams: no team of their own.
         .exclude(pk__in=italian_tl_user_ids())
         # Single-condition excludes: "has a membership in an ACTIVE team", per related row.
         .exclude(profile__teams__is_active=True)

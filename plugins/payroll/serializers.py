@@ -63,7 +63,7 @@ class WageAssignmentCreateSerializer(serializers.ModelSerializer):
             })
         if user and user.id in italian_tl_user_ids():
             raise serializers.ValidationError({
-                'user': 'Italian Team Leaders are not payroll subjects.',
+                'user': 'Managers are not payroll subjects.',
             })
         effective_from = data.get('effective_from')
         effective_to = data.get('effective_to')

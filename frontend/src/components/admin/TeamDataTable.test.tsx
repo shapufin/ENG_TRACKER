@@ -48,10 +48,10 @@ const renderTable = (data: TeamNode[], onArchive?: (team: TeamNode) => void) => 
 };
 
 describe("TeamDataTable", () => {
-  it("shows the derived IT and AL leaders in their own columns", () => {
+  it("shows the derived Manager and Line Manager in their own columns", () => {
     renderTable([node({})]);
-    expect(screen.getByRole("columnheader", { name: /^IT TL/ })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: /^AL TL/ })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /^Manager/ })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /^Line Manager/ })).toBeInTheDocument();
     expect(screen.getByText("Ida Rossi")).toBeInTheDocument();
   });
 

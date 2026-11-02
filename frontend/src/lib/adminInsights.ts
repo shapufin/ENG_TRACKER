@@ -86,8 +86,8 @@ export function deriveAdminInsights(o: AdminOverview): AdminInsight[] {
       "gap-hbpr",
       g.al_tls_without_hbpr_assignment,
       "warning",
-      "Albanian TLs without HBPR",
-      `${plural(g.al_tls_without_hbpr_assignment, "Albanian TL")} ha${g.al_tls_without_hbpr_assignment === 1 ? "s" : "ve"} no HBPR assignment in effect.`,
+      "Line Managers without HBPR",
+      `${plural(g.al_tls_without_hbpr_assignment, "Line Manager")} ha${g.al_tls_without_hbpr_assignment === 1 ? "s" : "ve"} no HBPR assignment in effect.`,
       "/admin/hbpr-assignments",
       "Assign"
     );

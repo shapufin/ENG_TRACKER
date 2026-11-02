@@ -335,7 +335,7 @@ class ExportService:
         records = bundle_paid_blocks(records)
         records.sort(key=lambda x: (x['user'].username, x['type'], x['date'], x['start_time'] or time.min))
         
-        # Group by Italian TL
+        # Group by Manager
         tl_groups = defaultdict(list)
         for rec in records:
             tl_id = rec['italian_tl'].id if rec['italian_tl'] else None
@@ -456,7 +456,7 @@ class ExportService:
         # (was date-first, which interleaved users across dates).
         records.sort(key=lambda x: (x['user'].username, x['start_date']))
         
-        # Group by Italian TL
+        # Group by Manager
         tl_groups = defaultdict(list)
         for rec in records:
             tl_id = rec['italian_tl'].id if rec['italian_tl'] else None

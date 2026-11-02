@@ -213,7 +213,7 @@ class SuggestionsEndpointTests(APITestCase):
 
 
 class OvertimeAndManagerTests(APITestCase):
-    """Overtime decides which clients matter; Italian TLs follow their people and need no team."""
+    """Overtime decides which clients matter; Managers follow their people and need no team."""
 
     def setUp(self):
         self.acme = Client.objects.create(name='Acme', code='ACM')

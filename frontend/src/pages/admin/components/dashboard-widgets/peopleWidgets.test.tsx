@@ -31,7 +31,7 @@ describe("RoleDistributionBody", () => {
   it("lists the role counts and warns on employees without a TL", () => {
     render(<RoleDistributionBody data={makePeople()} />);
     const row = (name: string) => screen.getByText(name).closest("li")!;
-    expect(row("Italian TLs")).toHaveTextContent("3");
+    expect(row("Managers")).toHaveTextContent("3");
     expect(row("HR")).toHaveTextContent("1");
     expect(row("Employees without a TL")).toHaveTextContent("4");
     expect(row("Employees without a TL").className).toMatch(/tone-warning/);

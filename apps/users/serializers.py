@@ -272,7 +272,7 @@ class UserSerializer(serializers.ModelSerializer):
         return f"{obj.first_name} {obj.last_name}".strip() or obj.username
 
     def get_is_italian_tl_role(self, obj) -> bool:
-        """Check if user has the Italian TL role or assigned Italian reports."""
+        """Check if user has the Manager role or assigned reports."""
         roles = getattr(getattr(obj, 'profile', None), 'role_codes', []) or []
         if 'italian_tl' in roles:
             return True
@@ -281,7 +281,7 @@ class UserSerializer(serializers.ModelSerializer):
         return _user_has_related(obj, 'italian_team_members')
 
     def get_is_albanian_tl_role(self, obj) -> bool:
-        """Check if user has the Albanian TL role or assigned Albanian reports."""
+        """Check if user has the Line Manager role or assigned reports."""
         roles = getattr(getattr(obj, 'profile', None), 'role_codes', []) or []
         if 'albanian_tl' in roles:
             return True
@@ -758,13 +758,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return team.code if team else None
 
     def get_albanian_tl_name(self, obj) -> str | None:
-        """Safely get Albanian TL name."""
+        """Safely get Line Manager name."""
         if obj.albanian_tl:
             return obj.albanian_tl.get_full_name()
         return None
 
     def get_italian_tl_name(self, obj) -> str | None:
-        """Safely get Italian TL name."""
+        """Safely get Manager name."""
         if obj.italian_tl:
             return obj.italian_tl.get_full_name()
         return None
@@ -820,7 +820,7 @@ class TeamMembershipSerializer(serializers.ModelSerializer):
 
 
 class HbprAlbanianTlAssignmentSerializer(serializers.ModelSerializer):
-    """Admin-managed HBPR ↔ Albanian TL assignment with cadence state.
+    """Admin-managed HBPR ↔ Line Manager assignment with cadence state.
 
     ``last_meeting_on``/``evidence_count`` are annotated by the ViewSet from
     the TL-scorecard governance-evidence table; they are ``None``/0 when the

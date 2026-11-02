@@ -40,9 +40,9 @@ describe("UserFormCore HBPR minimal mode", () => {
     renderCore();
     expect(screen.getByTestId("team-multi-select")).toBeInTheDocument();
     expect(screen.getByTestId("tech-multi-select")).toBeInTheDocument();
-    expect(screen.getByText("Albanian TL")).toBeInTheDocument();
-    expect(screen.getByText("Italian TL")).toBeInTheDocument();
-    for (const name of [/HR/i, /IT TL/i, /AL TL/i, /CR Admin/i, /HBPR/i]) {
+    expect(screen.getByText("Line Manager")).toBeInTheDocument();
+    expect(screen.getByText("Manager")).toBeInTheDocument();
+    for (const name of [/HR/i, /^Manager/i, /^Line Manager/i, /CR Admin/i, /HBPR/i]) {
       expect(screen.getByRole("switch", { name })).toBeInTheDocument();
     }
   });
@@ -51,18 +51,18 @@ describe("UserFormCore HBPR minimal mode", () => {
     renderCore({ is_hbpr: true });
     expect(screen.queryByTestId("team-multi-select")).not.toBeInTheDocument();
     expect(screen.queryByTestId("tech-multi-select")).not.toBeInTheDocument();
-    expect(screen.queryByText("Albanian TL")).not.toBeInTheDocument();
-    expect(screen.queryByText("Italian TL")).not.toBeInTheDocument();
+    expect(screen.queryByText("Line Manager")).not.toBeInTheDocument();
+    expect(screen.queryByText("Manager")).not.toBeInTheDocument();
     expect(screen.getByRole("switch", { name: /HR/i })).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: /HBPR/i })).toBeInTheDocument();
-    expect(screen.queryByRole("switch", { name: /IT TL/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("switch", { name: /AL TL/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /Manager/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /Line Manager/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("switch", { name: /CR Admin/i })).not.toBeInTheDocument();
   });
 
   it("warns which hidden roles will be revoked on save", () => {
     renderCore({ is_hbpr: true, is_albanian_tl_role: true, is_cr_admin: true });
-    expect(screen.getByText(/will revoke: Albanian TL, CR Admin/)).toBeInTheDocument();
+    expect(screen.getByText(/will revoke: Line Manager, CR Admin/)).toBeInTheDocument();
   });
 
   it("shows no warning when no hidden roles are held", () => {

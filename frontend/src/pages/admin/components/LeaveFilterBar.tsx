@@ -108,13 +108,13 @@ export const LeaveToolbarFilters: React.FC<LeaveToolbarFiltersProps> = ({
       {tlFilters && (
         <>
           <TlSelect
-            label="All Italian TLs"
+            label="All Managers"
             options={tlFilters.italianTLs}
             value={tlFilters.italianTl}
             onChange={tlFilters.onItalianTlChange}
           />
           <TlSelect
-            label="All Albanian TLs"
+            label="All Line Managers"
             options={tlFilters.albanianTLs}
             value={tlFilters.albanianTl}
             onChange={tlFilters.onAlbanianTlChange}

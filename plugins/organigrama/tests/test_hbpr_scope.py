@@ -1,4 +1,4 @@
-"""An HBPR sees the org chart, limited to the Albanian TLs assigned to them."""
+"""An HBPR sees the org chart, limited to the Line Managers assigned to them."""
 from datetime import date
 
 from django.contrib.auth.models import User

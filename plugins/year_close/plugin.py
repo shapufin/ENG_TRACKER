@@ -16,7 +16,7 @@ class YearClosePlugin(BasePlugin):
     @property
     def description(self) -> str:
         return (
-            'Freezes a closed year into downloadable evidence: one ZIP per IT TL and '
+            'Freezes a closed year into downloadable evidence: one ZIP per Manager and '
             'team plus a company set, with manifests and checksums.'
         )
 

@@ -20,12 +20,12 @@ describe("OrgNode role badges", () => {
         />
       </ReactFlowProvider>
     );
-    const badge = screen.getByLabelText("Role: IT TL");
+    const badge = screen.getByLabelText("Role: Manager");
     expect(badge.className).toContain("dark:bg-blue-500/15");
     expect(badge.className).toContain("dark:text-blue-300");
   });
 
-  it("renders AL TL badges with a dark-mode translucent treatment", () => {
+  it("renders Line Manager badges with a dark-mode translucent treatment", () => {
     render(
       <ReactFlowProvider>
         <OrgNode
@@ -33,7 +33,7 @@ describe("OrgNode role badges", () => {
         />
       </ReactFlowProvider>
     );
-    const badge = screen.getByLabelText("Role: AL TL");
+    const badge = screen.getByLabelText("Role: Line Manager");
     expect(badge.className).toContain("dark:bg-purple-500/15");
     expect(badge.className).toContain("dark:text-purple-300");
   });

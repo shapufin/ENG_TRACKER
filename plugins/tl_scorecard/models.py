@@ -378,7 +378,7 @@ class EPRStageRecord(TrackedFieldsMixin, BaseModel):
 
 
 class HbprGovernanceEvidence(TrackedFieldsMixin, BaseModel):
-    """Evidence of the HBPR ↔ Albanian TL governance relationship.
+    """Evidence of the HBPR ↔ Line Manager governance relationship.
 
     Two shapes, one table:
 
@@ -388,8 +388,8 @@ class HbprGovernanceEvidence(TrackedFieldsMixin, BaseModel):
       TL's mid-year / year-end EPR. ``reporting_year`` is required and the row
       is unique per ``(assignment, kind, reporting_year)``.
 
-    Authored by the assigned AL TL only (the HBPR participates but is
-    read-only); read and exported by the assigned HBPR and staff. The AL TL
+    Authored by the assigned Line Manager only (the HBPR participates but is
+    read-only); read and exported by the assigned HBPR and staff. The Line Manager
     later hands the evidence to their manager, so rows are never deleted —
     ``recorded_by``/``updated_by`` keep the audit trail.
     """

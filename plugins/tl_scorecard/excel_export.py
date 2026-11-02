@@ -254,10 +254,10 @@ def _build_governance_sheet(wb, fmt, governance):
 
 
 def _build_hbpr_evidence_sheet(wb, fmt, evidence):
-    """HBPR ↔ Albanian TL governance evidence.
+    """HBPR ↔ Line Manager governance evidence.
 
     Cadence meetings and the mid-year / year-end EPR participation records the
-    AL TL authored for the HBPR relationship. Employee one-on-one meetings are
+    Line Manager authored for the HBPR relationship. Employee one-on-one meetings are
     never part of this data set.
     """
     ws = wb.add_worksheet("HBPR partnership log")
@@ -274,7 +274,7 @@ def _build_hbpr_evidence_sheet(wb, fmt, evidence):
         "Kind", "Occurred on", "Year", "Shared summary",
         "Action items", "Reference",
     ]
-    ws.merge_range(0, 0, 0, len(headers) - 1, "HBPR ↔ Albanian TL partnership log", fmt.header)
+    ws.merge_range(0, 0, 0, len(headers) - 1, "HBPR ↔ Line Manager partnership log", fmt.header)
     for col, label in enumerate(headers):
         ws.write(1, col, label, fmt.label)
 

@@ -76,15 +76,15 @@ export const FormRoleCheckboxes: React.FC<FormRoleCheckboxesProps> = ({
       <>
         <SwitchField
           id={`${prefix}_it_tl`}
-          label="IT TL"
-          description="Italian team leader"
+          label="Manager role"
+          description="Approves and leads teams as a Manager"
           checked={is_italian_tl_role}
           onCheckedChange={(v) => onChange("is_italian_tl_role", v)}
         />
         <SwitchField
           id={`${prefix}_al_tl`}
-          label="AL TL"
-          description="Albanian team leader"
+          label="Line Manager role"
+          description="Approves and leads teams as a Line Manager"
           checked={is_albanian_tl_role}
           onCheckedChange={(v) => onChange("is_albanian_tl_role", v)}
         />

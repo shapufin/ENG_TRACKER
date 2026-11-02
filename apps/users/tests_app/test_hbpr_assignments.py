@@ -1,8 +1,8 @@
-"""Tests for the explicit HBPR ↔ Albanian TL assignment model and admin API.
+"""Tests for the explicit HBPR ↔ Line Manager assignment model and admin API.
 
 The assignment is the single source of truth for HBPR scope: an HBPR sees
-exactly the Albanian TLs they are assigned to (and those TLs' team members),
-never a global role population. One open assignment per AL TL is enforced in
+exactly the Line Managers they are assigned to (and those TLs' team members),
+never a global role population. One open assignment per Line Manager is enforced in
 the write service; history is retained via effective dates.
 """
 
@@ -45,8 +45,8 @@ class HbprAssignmentTestBase(TestCase):
     def setUpTestData(cls):
         for code, name in [
             ("hbpr", "HBPR"),
-            ("albanian_tl", "Albanian TL"),
-            ("italian_tl", "Italian TL"),
+            ("albanian_tl", "Line Manager"),
+            ("italian_tl", "Manager"),
             ("employee", "Employee"),
         ]:
             Role.objects.get_or_create(code=code, defaults={"name": name})

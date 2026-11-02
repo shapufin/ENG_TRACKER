@@ -159,7 +159,7 @@ class HbprEscalationLeakTests(Phase6Base):
             user=self.al_member, request_type='vacation', start_date=start,
             end_date=start + timedelta(days=1), status='pending')
         LeaveRequest.objects.update(submitted_at=timezone.now() - timedelta(days=20))
-        # A PIP the AL TL wrote about someone outside the HBPR's population.
+        # A PIP the Line Manager wrote about someone outside the HBPR's population.
         pip = PIPRecord.objects.create(
             employee=self.outsider, tl=self.al_tl, start_date=self.today)
         PIPRecord.objects.filter(pk=pip.pk).update(created_at=timezone.now() - timedelta(days=60))

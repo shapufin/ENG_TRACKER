@@ -129,13 +129,13 @@ WIDENED_ROUTES = {
         'CR admin picker returns minimum identity data by design; '
         'plugins/control_room/test_cr_admin_role.py and the action docstring'),
     '/api/plugins/tl_scorecard/partnership/': (
-        'the AL TL sees the name of their own HBPR partner: '
+        'the Line Manager sees the name of their own HBPR partner: '
         'docs/hbpr-and-scorecard.md (Evidence tab, HBPR partnership section)'),
     '/api/plugins/tl_scorecard/hbpr-evidence/year-end-pack/': (
-        'the AL TL hands the pack, which names the HBPR partner, to their manager: '
+        'the Line Manager hands the pack, which names the HBPR partner, to their manager: '
         'docs/hbpr-and-scorecard.md (Year-end evidence pack)'),
     '/api/plugins/tl_scorecard/hbpr-evidence/': (
-        'evidence is authored by the AL TL about their own HBPR partnership, so rows '
+        'evidence is authored by the Line Manager about their own HBPR partnership, so rows '
         'name the partner: docs/hbpr-and-scorecard.md (partnership log)'),
 }
 # Reference routes whose design is company-wide: exempt from the owner / team-B scan.

@@ -248,7 +248,7 @@ describe("HbprWorkspacePage", () => {
 
   it("shows leader avatars and keeps dates on one line", async () => {
     renderPage();
-    await screen.findByText("Assigned Albanian team leaders");
+    await screen.findByText("Assigned Line Managers");
     // Avatar title + truncated name carry the same title.
     expect(screen.getAllByTitle("Alb TL").length).toBeGreaterThan(1);
     for (const cell of screen.getAllByText(/Mar 1, \d{4}|Jan 31, \d{4}/)) {
@@ -273,7 +273,7 @@ describe("HbprWorkspacePage", () => {
       })
     );
     renderPage();
-    expect(await screen.findByText("No Albanian team leaders assigned yet")).toBeInTheDocument();
+    expect(await screen.findByText("No Line Managers assigned yet")).toBeInTheDocument();
     expect(screen.queryByText("Needs your attention")).not.toBeInTheDocument();
   });
 

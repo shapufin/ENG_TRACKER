@@ -330,7 +330,7 @@ def _pack_name(user):
 
 def build_year_end_pack(assignment, year: int, evidence_qs) -> dict:
     """Held-vs-expected cadence + EPR participations for one assignment+year
-    — the packaged summary the AL TL hands to their manager at year-end.
+    — the packaged summary the Line Manager hands to their manager at year-end.
 
     Expected-meeting window: ``max(effective_from, Jan 1)`` →
     ``min(effective_to, Dec 31, today)`` (a current assignment can't owe a

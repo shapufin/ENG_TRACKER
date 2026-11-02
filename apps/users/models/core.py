@@ -186,7 +186,7 @@ class Team(BaseModel):
     Team model for organizing users into groups.
     
     Supports hierarchical team structure where a team can have a parent team.
-    This enables the Italian TL -> Albanian TL permission inheritance pattern.
+    This enables the Manager -> Line Manager permission inheritance pattern.
     """
     name = models.CharField(max_length=100, unique=True)
     code = models.CharField(max_length=50, unique=True)
@@ -649,7 +649,7 @@ class UserProfile(BaseModel):
     @property
     def is_team_leader(self):
         """
-        Check if user is any type of team leader (Albanian or Italian).
+        Check if user is any type of team leader (Line Manager or Manager).
 
         Database role codes are checked first (0 DB queries — role_codes is
         a denormalized JSON cache on the profile). Legacy flag fields are
@@ -683,14 +683,14 @@ class UserProfile(BaseModel):
 
     @property
     def is_albanian_tl(self):
-        """Check if user is an Albanian team leader (database role or legacy flag)."""
+        """Check if user is a Line Manager (database role or legacy flag)."""
         if 'albanian_tl' in (self.role_codes or []):
             return True
         return self.is_albanian_tl_role or _user_has_related(self.user, 'albanian_team_members')
 
     @property
     def is_italian_tl(self):
-        """Check if user is an Italian team leader (database role or legacy flag)."""
+        """Check if user is a Manager (database role or legacy flag)."""
         if 'italian_tl' in (self.role_codes or []):
             return True
         return self.is_italian_tl_role or _user_has_related(self.user, 'italian_team_members')

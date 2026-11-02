@@ -133,7 +133,7 @@ export const UserEditFormDialog: React.FC<UserEditFormDialogProps> = ({
             onChange={(event) => updateField("unassign_removed_tl", event.target.checked)}
           />
           <span>
-            Also clear the Italian/Albanian TL link that came with the removed team
+            Also clear the Manager/Line Manager link that came with the removed team
             {removedTeams.length === 1 ? "" : "s"} ({removedTeams.join(", ")}). Leaving it in place
             keeps that leader's access to this user.
           </span>

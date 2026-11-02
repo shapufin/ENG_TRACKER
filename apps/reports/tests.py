@@ -833,7 +833,7 @@ class ExportVisibilityTests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
         wb = openpyxl.load_workbook(io.BytesIO(response.content))
-        # Export groups by Italian TL into separate sheets; check all sheets
+        # Export groups by Manager into separate sheets; check all sheets
         all_evidence = []
         all_ref_codes = []
         for ws in wb.worksheets:

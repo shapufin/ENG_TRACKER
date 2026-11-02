@@ -108,19 +108,19 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
             ),
             ImportField(
                 key="is_italian_tl",
-                label="Is Italian TL",
+                label="Is Manager",
                 required=False,
                 field_type="bool",
             ),
             ImportField(
                 key="is_albanian_tl",
-                label="Is Albanian TL",
+                label="Is Line Manager",
                 required=False,
                 field_type="bool",
             ),
             ImportField(
                 key="italian_tl_username",
-                label="Italian TL Username",
+                label="Manager Username",
                 required=False,
                 field_type="string",
                 help_text="Username of an existing user who leads this person. "
@@ -129,7 +129,7 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
             ),
             ImportField(
                 key="albanian_tl_username",
-                label="Albanian TL Username",
+                label="Line Manager Username",
                 required=False,
                 field_type="string",
                 help_text="Username of an existing user who leads this person. "
@@ -175,10 +175,10 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
             "team_code": ["team code", "team_code", "team", "department", "dept"],
             "tech_codes": ["tech codes", "tech_codes", "tech", "technology", "technologies", "specialty", "specialties"],
             "is_hr": ["hr", "is_hr", "hr user", "is_hr_user"],
-            "is_italian_tl": ["italian tl", "is_italian_tl", "italian team leader", "is_italian_tl_role"],
-            "is_albanian_tl": ["albanian tl", "is_albanian_tl", "albanian team leader", "is_albanian_tl_role"],
-            "italian_tl_username": ["italian tl username", "italian_tl_username", "italian_tl", "italian tl user", "reports to italian tl"],
-            "albanian_tl_username": ["albanian tl username", "albanian_tl_username", "albanian_tl", "albanian tl user", "reports to albanian tl"],
+            "is_italian_tl": ["manager", "is_italian_tl", "italian team leader", "is_italian_tl_role"],
+            "is_albanian_tl": ["line manager", "is_albanian_tl", "albanian team leader", "is_albanian_tl_role"],
+            "italian_tl_username": ["manager username", "italian_tl_username", "italian_tl", "manager user", "reports to manager"],
+            "albanian_tl_username": ["line manager username", "albanian_tl_username", "albanian_tl", "line manager user", "reports to line manager"],
             "phone": ["phone", "phone number", "telephone", "mobile"],
             "code": ["code", "employee code", "employee_code", "employee id", "employee_id", "emp id", "emp_id", "badge", "badge number"],
             "hire_date": ["hire date", "hire_date", "start date", "started", "date hired"],
@@ -353,8 +353,8 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
     ) -> Dict[str, Any]:
         """Record every username in the file so a forward TL reference resolves.
 
-        The TL chain is mutually referential in real data — every Italian TL
-        reports to the one Albanian TL, who in turn reports to an Italian TL — so
+        The TL chain is mutually referential in real data — every Manager
+        reports to the one Line Manager, who in turn reports to a Manager — so
         no row order satisfies it. A leader named in the same file is deferred to
         ``finalize_batch``, the same way the teams importer defers
         ``parent_team_code``.

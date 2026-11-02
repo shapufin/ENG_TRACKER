@@ -191,7 +191,7 @@ describe("TlRevokeBlockedDialog", () => {
 
     expect(screen.getByText(/elda/)).toBeInTheDocument();
     expect(
-      screen.getByText(/open HBPR↔Albanian TL assignment\(s\) depend on this role/)
+      screen.getByText(/open HBPR↔Line Manager assignment\(s\) depend on this role/)
     ).toBeInTheDocument();
     // Nothing to reassign inside the dialog — Retry is usable immediately.
     expect(screen.getByRole("button", { name: "Retry" })).not.toBeDisabled();

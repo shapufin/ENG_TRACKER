@@ -223,7 +223,7 @@ class WageWritePermissionTests(TestCase):
         force_authenticate(request, user=self.hr_user)
         response = WageAssignmentViewSet.as_view({'post': 'create'})(request)
         self.assertEqual(response.status_code, 400)
-        self.assertIn('Italian Team Leaders are not payroll subjects.', str(response.data))
+        self.assertIn('Managers are not payroll subjects.', str(response.data))
 
     def test_wage_list_excludes_italian_tls_for_hr(self):
         it_tl = User.objects.create_user(username='wage_it_tl3', email='ittl3@test.com', password='pass')

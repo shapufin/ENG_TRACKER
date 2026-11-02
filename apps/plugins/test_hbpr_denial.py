@@ -29,8 +29,8 @@ class PluginDenialTestBase(TestCase):
     def setUpTestData(cls):
         for code, name in [
             ("hbpr", "HBPR"),
-            ("albanian_tl", "Albanian TL"),
-            ("italian_tl", "Italian TL"),
+            ("albanian_tl", "Line Manager"),
+            ("italian_tl", "Manager"),
             ("hr", "HR"),
             ("employee", "Employee"),
             ("cr_admin", "CR Admin"),

@@ -229,7 +229,7 @@ export const tlScorecardService = {
   getHbprOverview: (year?: number) =>
     api.get<HbprOverview>(`${BASE}/hbpr/overview/`, { params: year ? { year } : undefined }),
 
-  /** Governance evidence for the viewer's assignments (HBPR and the AL TL). */
+  /** Governance evidence for the viewer's assignments (HBPR and the Line Manager). */
   /** One server-side page of one governance record kind (scope + redaction by the API). */
   getHbprRecordsPage: (params: HbprRecordsQuery) =>
     api.get<{ count: number; results: unknown[] }>(`${BASE}/hbpr/records/`, { params }),
@@ -259,14 +259,14 @@ export const tlScorecardService = {
     params: { year?: number; kind?: HbprEvidenceKind; assignment?: number } = {}
   ) => listAllPages<HbprEvidence>(`${BASE}/hbpr-evidence/`, params),
 
-  /** The AL TL's own HBPR partnership (staff/HBPR must pass a leaderId). */
+  /** The Line Manager's own HBPR partnership (staff/HBPR must pass a leaderId). */
   getPartnership: (leaderId?: number, year?: number) => {
     const params: Record<string, number> = leaderParams(leaderId);
     if (year) params.year = year;
     return api.get<HbprPartnership>(`${BASE}/partnership/`, { params });
   },
 
-  /** The assigned AL TL changes their own meeting schedule; returns the fresh partnership. */
+  /** The assigned Line Manager changes their own meeting schedule; returns the fresh partnership. */
   updatePartnershipCadence: (data: HbprCadencePayload, year?: number) =>
     api.post<HbprPartnership>(`${BASE}/partnership/cadence/`, data, {
       params: year ? { year } : undefined,

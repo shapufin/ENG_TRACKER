@@ -55,7 +55,7 @@ const emptyForm = (): HbprAssignmentForm => ({
 });
 
 /**
- * Admin management for explicit HBPR ↔ Albanian TL assignments.
+ * Admin management for explicit HBPR ↔ Line Manager assignments.
  */
 export const HbprAssignmentsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -158,7 +158,7 @@ export const HbprAssignmentsPage: React.FC = () => {
     e.preventDefault();
     const errors: Record<string, string> = {};
     if (!editing && !form.hbpr) errors.hbpr = "Select an HR Business Partner.";
-    if (!editing && !form.albanian_tl) errors.albanian_tl = "Select an Albanian team leader.";
+    if (!editing && !form.albanian_tl) errors.albanian_tl = "Select a Line Manager.";
     if (!form.effective_from) {
       errors.effective_from = "A start date is required.";
     } else if (editing?.last_meeting_on && form.effective_from > editing.last_meeting_on) {
@@ -254,7 +254,7 @@ export const HbprAssignmentsPage: React.FC = () => {
   return (
     <PageShell
       title="HBPR assignments"
-      subtitle="Pair HR Business Partners with the Albanian team leaders they support."
+      subtitle="Pair HR Business Partners with the Line Managers they support."
       actions={
         <Button size="sm" onClick={handleOpenCreate}>
           <Plus className="mr-2 h-4 w-4" />
@@ -269,7 +269,7 @@ export const HbprAssignmentsPage: React.FC = () => {
           <EmptyState
             icon={Handshake}
             title="No assignments yet"
-            description="Create an assignment to give an HBPR visibility of an Albanian team leader."
+            description="Create an assignment to give an HBPR visibility of a Line Manager."
           />
         </GlassCard>
       ) : (

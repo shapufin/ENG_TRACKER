@@ -44,7 +44,7 @@ describe("useTeamsPageUI filters", () => {
     expect(result.current.visibleData.map((t) => t.id)).toEqual([1]);
   });
 
-  it("narrows to teams missing an Italian or an Albanian TL", () => {
+  it("narrows to teams missing a Manager or a Line Manager", () => {
     const { result } = renderHook(() => useTeamsPageUI(TEAMS));
     act(() => result.current.setLeaderFilter("missing-it"));
     expect(result.current.visibleData.map((t) => t.id)).toEqual([3]);

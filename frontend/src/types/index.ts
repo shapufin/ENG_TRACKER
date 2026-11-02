@@ -91,7 +91,7 @@ export interface Team {
   parent_team_name?: string;
   team_leader: User | null;
   team_leader_id?: number | null;
-  /** Display-only: the IT/AL TL most of the team's active members share. */
+  /** Display-only: the Manager/Line Manager most of the team's active members share. */
   italian_tl?: Pick<User, "id" | "username" | "first_name" | "last_name"> | null;
   albanian_tl?: Pick<User, "id" | "username" | "first_name" | "last_name"> | null;
   sub_teams_count?: number;
@@ -844,7 +844,7 @@ export interface TlDependent {
 /** One TL revoke that bulk_update/update_user rejected because dependents
  * still point at them. See apps/users/viewsets.py's blocked_revocations.
  * HBPR-guard entries (role hbpr/albanian_tl, dependents empty) carry
- * assignment_count for the open HBPR↔AL-TL assignments blocking the revoke. */
+ * assignment_count for the open HBPR↔Line Manager assignments blocking the revoke. */
 export interface BlockedRevocation {
   user_id: number;
   username: string;

@@ -216,7 +216,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         """Per-member summary (wage, leave, EPR, governance) for the leader's team.
 
         Carries pay and leave, so an HBPR is refused outright (even for an
-        in-scope Albanian TL), and anyone else may read only their own team
+        in-scope Line Manager), and anyone else may read only their own team
         unless they are staff. One-on-one dates are the leader's or staff's only.
         """
         user = request.user
@@ -250,7 +250,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
     def partnership(self, request):
         """The resolved leader's own HBPR partnership (assignment + cadence/EPR).
 
-        An Albanian TL authors the governance evidence but cannot read the
+        A Line Manager authors the governance evidence but cannot read the
         staff-only `/api/users/hbpr-assignments/`, so this is where they see who
         their HBPR is and what the cadence state is. Same leader resolution as
         `scorecard`/`export`.
@@ -266,7 +266,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
     @action(detail=False, methods=['post'], url_path='partnership/cadence')
     def change_cadence(self, request):
-        """The assigned Albanian TL (or staff) changes the HBPR meeting schedule.
+        """The assigned Line Manager (or staff) changes the HBPR meeting schedule.
 
         Reuses ``update_assignment`` as-is; the audit row is the only history.
         Returns the same payload as ``partnership`` so the page can swap it in.
@@ -351,12 +351,12 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         governance = governance_records(leader, team_member_ids, month.year, subject_ids)
         period_label = date.fromisoformat(scorecard['month']).strftime('%B %Y')
 
-        # HBPR ↔ AL-TL governance evidence for this leader (the AL TL authors
+        # HBPR ↔ Line Manager governance evidence for this leader (the Line Manager authors
         # it; employee one-on-ones are never part of this data set).
         evidence_qs = HbprGovernanceEvidence.objects.filter(assignment__albanian_tl=leader)
         if not is_staff_user(request.user) and leader.id != request.user.id:
             # An HBPR exports the evidence of the assignments they own, not what
-            # a predecessor built up with the same AL TL.
+            # a predecessor built up with the same Line Manager.
             evidence_qs = evidence_qs.filter(assignment__hbpr=request.user)
         evidence_rows = [
             {

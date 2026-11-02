@@ -52,7 +52,7 @@ describe("AssignedLeadersTable", () => {
   it("shows the empty state and no table when no leaders are assigned", () => {
     renderTable([]);
 
-    expect(screen.getByText(/no albanian team leaders assigned/i)).toBeInTheDocument();
+    expect(screen.getByText(/no line managers assigned/i)).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 

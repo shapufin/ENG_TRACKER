@@ -477,17 +477,17 @@ class ExportExcelView(HbprBlockedMixin, APIView):
             wb = openpyxl.Workbook()
 
             if group_by_tl:
-                # Create sheets per Italian TL
+                # Create sheets per Manager
                 # Filter out None values to avoid in_bulk error
                 ital_tl_ids = [id for id in users_qs.values_list('profile__italian_tl', flat=True).distinct() if id is not None]
                 tl_users_map = User.objects.in_bulk(ital_tl_ids) if ital_tl_ids else {}
                 
-                # Check if users without Italian TL exist
+                # Check if users without Manager exist
                 users_without_tl = users_qs.filter(profile__italian_tl__isnull=True)
                 
                 first = True
                 
-                # Process users with Italian TL
+                # Process users with Manager
                 for tl_id in ital_tl_ids:
                     tl_user = tl_users_map.get(tl_id)
                     tl_name = f"{tl_user.first_name} {tl_user.last_name}" if tl_user else "Unknown TL"
@@ -499,7 +499,7 @@ class ExportExcelView(HbprBlockedMixin, APIView):
                     else:
                         ws = wb.create_sheet(title=tl_name[:31])
 
-                    headers = ['User ID', 'Username', 'Full Name', 'Team', 'Albanian TL']
+                    headers = ['User ID', 'Username', 'Full Name', 'Team', 'Line Manager']
                     headers.extend(['OT Total', 'OT Appr.', 'OT Ent.'])
                     headers.extend(['SB Total', 'SB Appr.', 'SB Ent.'])
                     headers.extend(['Leave Total', 'Leave Appr.', 'Leave Ent.'])
@@ -523,10 +523,10 @@ class ExportExcelView(HbprBlockedMixin, APIView):
                         row.extend([leave['total_days'] or 0, leave_approved.get(u.id, 0) or 0, leave['entries']])
                         ws.append(xlsx_safe_row(row))
                 
-                # Create sheet for users without Italian TL if any exist
+                # Create sheet for users without Manager if any exist
                 if users_without_tl.exists():
-                    ws = wb.create_sheet(title="No Italian TL")
-                    headers = ['User ID', 'Username', 'Full Name', 'Team', 'Albanian TL']
+                    ws = wb.create_sheet(title="No Manager")
+                    headers = ['User ID', 'Username', 'Full Name', 'Team', 'Line Manager']
                     headers.extend(['OT Total', 'OT Appr.', 'OT Ent.'])
                     headers.extend(['SB Total', 'SB Appr.', 'SB Ent.'])
                     headers.extend(['Leave Total', 'Leave Appr.', 'Leave Ent.'])
@@ -552,7 +552,7 @@ class ExportExcelView(HbprBlockedMixin, APIView):
                 # Single sheet for specific report type
                 ws = wb.active
                 ws.title = report_type.capitalize()
-                headers = ['User ID', 'Username', 'Full Name', 'Team', 'Italian TL', 'Albanian TL']
+                headers = ['User ID', 'Username', 'Full Name', 'Team', 'Manager', 'Line Manager']
                 if report_type == 'overtime':
                     headers.extend(['OT Total Hours', 'OT Approved', 'OT Entries'])
                 elif report_type == 'standby':
@@ -627,7 +627,7 @@ class ExportExcelView(HbprBlockedMixin, APIView):
 
 @extend_schema(
     summary="Export Overtime and Standby Records",
-    description="Export detailed OT and Standby records with per-Italian TL sheet separation. Defaults to approved entries; pass status=pending to export pending records instead.",
+    description="Export detailed OT and Standby records with per-Manager sheet separation. Defaults to approved entries; pass status=pending to export pending records instead.",
     parameters=[
         OpenApiParameter(name='start_date', type=str, location=OpenApiParameter.QUERY),
         OpenApiParameter(name='end_date', type=str, location=OpenApiParameter.QUERY),
@@ -642,7 +642,7 @@ class ExportExcelView(HbprBlockedMixin, APIView):
     },
 )
 class ExportOTStandbyView(HbprBlockedMixin, APIView):
-    """Export detailed Overtime and Standby records as Excel (.xlsx) file with per-Italian TL sheets."""
+    """Export detailed Overtime and Standby records as Excel (.xlsx) file with per-Manager sheets."""
     permission_classes = [CanViewReports]
 
     def get(self, request):
@@ -766,7 +766,7 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
 
 @extend_schema(
     summary="Export Leave Records",
-    description="Export detailed Leave records with per-Italian TL sheet separation. Only approved entries included.",
+    description="Export detailed Leave records with per-Manager sheet separation. Only approved entries included.",
     parameters=[
         OpenApiParameter(name='start_date', type=str, location=OpenApiParameter.QUERY),
         OpenApiParameter(name='end_date', type=str, location=OpenApiParameter.QUERY),
@@ -779,7 +779,7 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
     },
 )
 class ExportLeaveView(HbprBlockedMixin, APIView):
-    """Export detailed Leave records as Excel (.xlsx) file with per-Italian TL sheets."""
+    """Export detailed Leave records as Excel (.xlsx) file with per-Manager sheets."""
     permission_classes = [CanViewReports]
 
     def get(self, request):
@@ -960,7 +960,7 @@ class TopTeamLeadersView(HbprBlockedMixin, APIView):
         overtime_qs = qs_map['overtime'].filter(status='approved')
         standby_qs = qs_map['standby'].filter(status='approved')
 
-        # Aggregate by Italian Team Leader
+        # Aggregate by Manager
         tl_stats = {}
         for user_id, hours in overtime_qs.values_list('user__profile__italian_tl').annotate(
             total=Sum('hours')

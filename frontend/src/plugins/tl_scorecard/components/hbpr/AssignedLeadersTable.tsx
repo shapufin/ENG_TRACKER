@@ -44,15 +44,15 @@ interface AssignedLeadersTableProps {
   year: number;
 }
 
-/** Assigned Albanian TLs: a semantic table on desktop, summary cards on mobile. */
+/** Assigned Line Managers: a semantic table on desktop, summary cards on mobile. */
 export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ leaders, year }) => {
   if (leaders.length === 0) {
     return (
       <GlassCard animateOnMount={false} className="p-0">
         <EmptyState
           icon={UsersRound}
-          title="No Albanian team leaders assigned yet"
-          description="An administrator assigns Albanian team leaders to an HBPR from the HBPR assignments page."
+          title="No Line Managers assigned yet"
+          description="An administrator assigns Line Managers to an HBPR from the HBPR assignments page."
           className="py-10"
         />
       </GlassCard>
@@ -60,7 +60,7 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
   }
 
   return (
-    <section aria-label="Assigned Albanian team leaders" className="space-y-3">
+    <section aria-label="Assigned Line Managers" className="space-y-3">
       <ul className="grid gap-3 md:hidden">
         {leaders.map((leader) => (
           <li key={leader.assignment_id}>
@@ -72,7 +72,7 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
       <GlassCard animateOnMount={false} className="hidden overflow-hidden p-0 md:block">
         <div className="border-line-subtle flex items-center justify-between gap-3 border-b px-5 py-3.5">
           <h2 className="text-foreground flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
-            Assigned Albanian team leaders
+            Assigned Line Managers
             <span className="bg-tone-success-text h-1.5 w-1.5 rounded-full" aria-hidden="true" />
           </h2>
           <span className="text-muted-foreground text-xs">
@@ -82,12 +82,12 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">
-              Assigned Albanian team leaders and their governance state
+              Assigned Line Managers and their governance state
             </caption>
             <thead>
               <tr className={TABLE_HEAD_ROW_CLASS}>
                 <th scope="col" className={HEAD_CELL}>
-                  Albanian TL
+                  Line Manager
                 </th>
                 <th scope="col" className={HEAD_CELL}>
                   Team

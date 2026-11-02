@@ -86,7 +86,7 @@ class UserWriteAuthorizationTests(APITestCase):
 
 
 class HbprRevocationGuardTests(APITestCase):
-    """Revoking hbpr/albanian_tl while an open HBPR↔AL-TL assignment exists
+    """Revoking hbpr/albanian_tl while an open HBPR↔Line Manager assignment exists
     must return a structured 400 — never a 500 with partially-applied writes."""
 
     def setUp(self):

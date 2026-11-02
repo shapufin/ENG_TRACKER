@@ -209,7 +209,7 @@ class Command(BaseCommand):
             profile.italian_tl = users["e2e_tl"]
             profile.save(update_fields=["italian_tl"])
 
-        # Second, independent team (Albanian TL) so scoping tests can prove one
+        # Second, independent team (Line Manager) so scoping tests can prove one
         # TL never sees the other team's people.
         team_b, _ = Team.objects.get_or_create(
             code=E2E_TEAM_B["code"], defaults={"name": E2E_TEAM_B["name"]}
@@ -226,15 +226,15 @@ class Command(BaseCommand):
         employee_c = users["e2e_employee_c"].profile
         employee_c.albanian_tl = users["e2e_tl_b"]
         employee_c.save(update_fields=["albanian_tl"])
-        # The live org chart is Italian TL -> Albanian TL -> employees; hang Team B's leader
+        # The live org chart is Manager -> Line Manager -> employees; hang Team B's leader
         # under Team A's so the chart has real depth (expand/collapse, scoped chains).
         tl_b = users["e2e_tl_b"].profile
         tl_b.italian_tl = users["e2e_tl"]
         tl_b.save(update_fields=["italian_tl"])
 
-        # Explicit HBPR ↔ Albanian TL assignment — the single source of truth
+        # Explicit HBPR ↔ Line Manager assignment — the single source of truth
         # for HBPR scope since 2026-10-01. e2e_hbpr partners with e2e_tl_b;
-        # the Italian TL is deliberately NOT in scope any more.
+        # the Manager is deliberately NOT in scope any more.
         from apps.users.models.hbpr import HbprAlbanianTlAssignment
 
         if not HbprAlbanianTlAssignment.objects.filter(

@@ -56,10 +56,10 @@ export const TeamGroupedTables = <T extends GroupableRow>({
           const tlName =
             meta?.italianTlName && meta.italianTlName.length > 0
               ? meta.italianTlName
-              : "Unassigned Italian TL";
+              : "Unassigned Manager";
           const key = `itl-${slugify(tlName)}`;
           if (!sections.has(key))
-            sections.set(key, { key, title: `ITALIAN TL — ${tlName.toUpperCase()}`, rows: [] });
+            sections.set(key, { key, title: `MANAGER — ${tlName.toUpperCase()}`, rows: [] });
           sections.get(key)!.rows.push(row);
         }
       });
@@ -103,7 +103,7 @@ export const TeamGroupedTables = <T extends GroupableRow>({
                   variant="secondary"
                   className="w-fit rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase"
                 >
-                  {memberGroupMode === "team" ? "Team" : "Italian TL"}
+                  {memberGroupMode === "team" ? "Team" : "Manager"}
                 </Badge>
                 <p className="text-lg font-semibold tracking-tight">
                   {section.title}

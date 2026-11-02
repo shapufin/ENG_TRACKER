@@ -8,7 +8,7 @@ intended state:
 
 - add ``hbpr`` to ``tl_scorecard`` view;
 - remove ``hbpr`` from ``engagement`` view (the role is read-only over
-  Albanian-TL governance and has no Engagement access).
+  Line Manager governance and has no Engagement access).
 
 It is a reconciler, not a one-shot: an admin who removes the tl_scorecard grant
 will see it re-asserted on the next boot. That is deliberate — the grant is

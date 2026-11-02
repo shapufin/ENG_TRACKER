@@ -56,10 +56,10 @@ class SeedE2EDataTests(TestCase):
 
         scope = get_hbpr_scope(User.objects.get(username="e2e_hbpr"))
         ids = {u.username: u.id for u in User.objects.filter(username__startswith="e2e_")}
-        # Assigned to e2e_tl_b: that Albanian TL and their team are in scope.
+        # Assigned to e2e_tl_b: that Line Manager and their team are in scope.
         for name in ("e2e_tl_b", "e2e_employee_c"):
             self.assertTrue(scope.has_user(ids[name]), name)
-        # The Italian TL is no longer in scope (no assignment to them), and the
+        # The Manager is no longer in scope (no assignment to them), and the
         # HBPR is never in their own scope.
         for name in ("e2e_tl", "e2e_employee_a", "e2e_employee_b", "e2e_hbpr"):
             self.assertFalse(scope.has_user(ids[name]), name)
@@ -99,7 +99,7 @@ class SeedE2EDataTests(TestCase):
             )
 
     def test_org_chart_has_depth_italian_tl_then_albanian_tl_then_employee(self):
-        # The live org chart is Italian TL -> Albanian TL -> employees; a fixture without that
+        # The live org chart is Manager -> Line Manager -> employees; a fixture without that
         # chain renders childless roots (nothing to expand/collapse).
         from plugins.organigrama.services.tree_builder import build_full_tree
 

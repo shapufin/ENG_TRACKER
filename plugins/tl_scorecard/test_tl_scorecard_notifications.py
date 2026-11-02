@@ -36,7 +36,7 @@ class ScorecardNotificationTests(TestCase):
             Role.objects.get_or_create(code=code, defaults={'name': code})
         self.hbpr = _make_user('hbpr_n')
         assign_role(self.hbpr, 'hbpr')
-        # The assigned Albanian TL (owns the records) + their report.
+        # The assigned Line Manager (owns the records) + their report.
         self.tl = _make_user('tl_n')
         assign_role(self.tl, 'albanian_tl')
         self.emp = _make_user('emp_n', first_name='Giulia', last_name='Rossi')
@@ -46,7 +46,7 @@ class ScorecardNotificationTests(TestCase):
             hbpr=self.hbpr, albanian_tl=self.tl,
             cadence='weekly', effective_from=date(2020, 1, 1),
         )
-        # An UNASSIGNED Albanian TL + their report: must never notify the HBPR.
+        # An UNASSIGNED Line Manager + their report: must never notify the HBPR.
         self.al_tl = _make_user('al_tl_n')
         assign_role(self.al_tl, 'albanian_tl')
         self.al_emp = _make_user('al_emp_n')

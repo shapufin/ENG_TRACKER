@@ -1,4 +1,4 @@
-# HBPR ↔ Albanian-TL governance and TL Scorecard
+# HBPR ↔ Line Manager governance and TL Scorecard
 
 Current design as of 2026-10-02 (all ten phases of the HBPR megaplan landed). This
 file is **git-tracked** and is the durable source of truth for operators and for every
@@ -10,14 +10,14 @@ cadence, or the governance notifications.
 ## What HBPR is
 
 `hbpr` is the role of the HR Business Partner for Italy. It is a **read-only governance
-observer** of the Albanian team leaders (AL TLs) an admin explicitly assigns to them. It
+observer** of the Line Managers (Line Managers) an admin explicitly assigns to them. It
 is not a team leader and not HR, and has no overtime, standby, payroll or reports.
 
 | Area | Behaviour |
 |---|---|
-| Scope | **Stored, not computed.** `HbprAlbanianTlAssignment` (`apps/users/models/hbpr.py`): one open row per AL TL (partial-unique on `effective_to IS NULL`), dated history kept; evidence holds a PROTECT FK, so evidence-bearing rows are never deleted — evidence-free ended rows older than 6 months are purged by `purge_ended_assignments` (the scheduler does not own this: the staff-only admin list sweeps on read, and `purge_hbpr_archive` runs in the entrypoint reconcile chain). `hbpr_scope.py` returns the assigned AL TLs plus their `get_team_member_ids()` union (active only, viewer excluded); an unassigned HBPR gets an empty scope, not `None`. |
+| Scope | **Stored, not computed.** `HbprAlbanianTlAssignment` (`apps/users/models/hbpr.py`): one open row per Line Manager (partial-unique on `effective_to IS NULL`), dated history kept; evidence holds a PROTECT FK, so evidence-bearing rows are never deleted — evidence-free ended rows older than 6 months are purged by `purge_ended_assignments` (the scheduler does not own this: the staff-only admin list sweeps on read, and `purge_hbpr_archive` runs in the entrypoint reconcile chain). `hbpr_scope.py` returns the assigned Line Managers plus their `get_team_member_ids()` union (active only, viewer excluded); an unassigned HBPR gets an empty scope, not `None`. |
 | Writes | All through `apps/users/services/hbpr_assignments.py` (overlap rejected under `select_for_update`; `reassign` is end+create atomically). Admin API `/api/users/hbpr-assignments/` is staff-only: `end` and `reassign` actions, no delete (the retention purge is a service, not an API action), identity/range immutable via PATCH. |
-| Reads | AL-TL governance records via `HbprReadScopeMixin`: **safe methods only**, owner AL TL in scope **and** subject in scope. HBPR never approves a PIP, decides a promotion or writes attendee notes (HR/staff do). Private TL `notes` stay redacted. |
+| Reads | Line Manager governance records via `HbprReadScopeMixin`: **safe methods only**, owner Line Manager in scope **and** subject in scope. HBPR never approves a PIP, decides a promotion or writes attendee notes (HR/staff do). Private TL `notes` stay redacted. |
 | Employee one-on-ones | Never reachable through **any** door: the meeting list/detail, `MeetingAttendeeViewSet` (`hbpr_exclude` on `meeting__meeting_type`), the scorecard aggregate (`_mask_one_on_one` nulls `one_on_one_compliance_pct` for anyone who is neither the leader nor staff), exports, and notifications. A guessed id must 404. |
 | Denied surfaces | For an HBPR-**only** user: Calendar, Leave, Skills, Ticket KPI, Engagement, My Records, overtime, standby, reports. Plugins use manifest `denied_roles`/`denial_override_roles` on `PluginPermission` (denial beats `is_public`; overrides list only elevated roles, never `employee`); static views use `HbprBlockedMixin`. Multi-role HBPR+HR/TL/CR-admin keeps the other role's access (`is_hbpr_only`, mirrored by the frontend `isHBPROnly`). |
 | Roles | `hbpr` is a managed role: every `roles` list sent to the admin user APIs must include it or it is revoked. Revoking `hbpr`/`albanian_tl` while an open assignment exists is a structured 400. |
@@ -26,18 +26,18 @@ is not a team leader and not HR, and has no overtime, standby, payroll or report
 
 `HbprGovernanceEvidence` (`plugins/tl_scorecard/models.py`): `cadence_meeting`
 (repeatable, `reporting_year` NULL) and `epr_mid_year`/`epr_year_end` (year required,
-unique per assignment/kind/year). Authored by the **assigned AL TL only**; read and
+unique per assignment/kind/year). Authored by the **assigned Line Manager only**; read and
 exported by the assigned HBPR and staff. **Staff are read-only auditors.** No destroy:
 corrections are audited updates (`updated_by`). An HBPR sees/exports only evidence of
 assignments **they** own (a successor never receives a predecessor's evidence). API:
 `/api/plugins/tl_scorecard/hbpr-evidence/`.
 
 **Year-end evidence pack** — `GET .../hbpr-evidence/year-end-pack/?assignment=&year=`
-returns the packaged summary the AL TL hands to their manager at year-end review:
+returns the packaged summary the Line Manager hands to their manager at year-end review:
 cadence meetings held vs **expected** (computed from the assignment's active window
 inside the year — `max(effective_from, Jan 1)` → `min(effective_to, Dec 31, today)`;
 weekly→⌈days/7⌉, biweekly→⌈days/14⌉, monthly→months touched), coverage %, the meeting
-rows, and both EPR participations. Readable by the assigned AL TL, the owning HBPR and
+rows, and both EPR participations. Readable by the assigned Line Manager, the owning HBPR and
 staff; the action consumes the viewset's scoped queryset **without** the `?year=` row
 filter (it collides with `reporting_year` and would drop every cadence row —
 `_scoped_queryset` exists for exactly this).
@@ -74,7 +74,7 @@ same day next month clamped to month end, from the last cadence meeting or the s
 `cadence_status` has exactly one definition
 (`apps/users/services/hbpr_assignments.cadence_status`). Due/overdue is UI-only.
 
-**TL-editable schedule (2026-10-26).** The assigned Albanian TL (and staff) change the
+**TL-editable schedule (2026-10-26).** The assigned Line Manager (and staff) change the
 schedule with `POST /api/plugins/tl_scorecard/partnership/cadence/`
 (`{cadence, cadence_day_of_week, cadence_nth_week}`, a full replacement; `cadence` is
 required, the other two accept `null`). It reuses `update_assignment`; `GET partnership/`
@@ -118,7 +118,7 @@ imports it, never the reverse.
 Registry types share one user-facing key via `preference_group` (resolved in
 `__init_subclass__`; `REGISTRY` holds classes). Five HBPR groups, independent in-app and
 push switches each: `hbpr_meetings`, `hbpr_epr`, `hbpr_pip_promotion`, `hbpr_team_risks`,
-`hbpr_record_updates`. Triggers (all after commit; recipients = the owner AL TL's open
+`hbpr_record_updates`. Triggers (all after commit; recipients = the owner Line Manager's open
 assignment, never a global fan-out; generic copy; one-on-ones never notify):
 
 - meetings: cadence evidence recorded **or edited**; assignment created/ended;
@@ -145,7 +145,7 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   reused, never copied (`plugins/tl_scorecard/hbpr_records.py`); evidence uses the
   evidence viewset's DRF `page` plus `period_year` and `leader` filters. `kind` is
   required (the mixed "all types" view was dropped).
-- `/tl-scorecard` is the AL-TL authoring workspace (`components/scorecard/*`); an
+- `/tl-scorecard` is the Line Manager authoring workspace (`components/scorecard/*`); an
   HBPR-only viewer is redirected to `/hbpr` before any query fires. The page is
   four URL-backed tabs — `?tab=` overview (default: scorecard metrics +
   governance actions) / team / records / evidence — and each tab's queries are
@@ -212,7 +212,7 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
 - **EPR progress:** `GET /api/plugins/tl_scorecard/epr-progress/?year=` (2000–2100,
   default current year) returns `stages`, `cycles_started`, `cycles_with_5plus_goals`,
   `stages_completed` and `stages_with_evidence` for `scoreable_member_ids(leader)`.
-  Albanian TLs are excluded, as everywhere in the scorecard.
+  Line Managers are excluded, as everywhere in the scorecard.
 
 ## Operations
 
@@ -285,9 +285,9 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   the backend SLA; `services_hbpr` uses the app day helper.
 
 - **2026-10-03, admin Users/HBPR UX (PRs #11–#13) + review follow-ups:** the Users page role
-  tabs are now Employees (default) | Italian TL | Albanian TL | HBPR | HR | CR Admin (CR
+  tabs are now Employees (default) | Manager | Line Manager | HBPR | HR | CR Admin (CR
   gated on the control_room plugin) — no All/No TL tab. `Employees` means "no elevated
-  **role**" (no IT/AL TL, HR, HBPR or CR admin) and deliberately still lists Django
+  **role**" (no Manager/Line Manager, HR, HBPR or CR admin) and deliberately still lists Django
   staff/superusers and users who only lead a `Team` row: neither holds an elevated role and
   no other tab can classify them, so excluding them would make them unreachable
   (`viewsets._apply_role_filter`, pinned by
@@ -393,14 +393,14 @@ other workstreams added without manifest rows (`/hr/team-leaders`, `/hr/calendar
   guard working (their overtime/standby/leave must never be requested — the
   API refuses via `HbprBlockedMixin`).
 
-- **2026-10-06, AL TL is not scored by an IT TL; "Evidence" → "Partnership log":** every
+- **2026-10-06, Line Manager is not scored by a Manager; "Evidence" → "Partnership log":** every
   record write/read and scorecard metric used `get_team_member_ids()`, which includes an
-  Albanian TL who sits in an Italian TL's team (direct `italian_tl` FK or shared team), so
-  an IT TL could open PIPs, EPR cycles, flags and nominations on them and count them in team
+  Line Manager who sits in a Manager's team (direct `italian_tl` FK or shared team), so
+  a Manager could open PIPs, EPR cycles, flags and nominations on them and count them in team
   metrics. All of it now goes through `plugins/tl_scorecard/scope.scoreable_member_ids()`
-  (team ids minus `albanian_tl` role holders); an AL TL is governed only through the HBPR
-  partnership. The `My records` sidebar link is hidden for AL TLs (they are never a subject
-  of those records). User-facing copy no longer says "evidence" for the HBPR↔AL TL surface:
+  (team ids minus `albanian_tl` role holders); a Line Manager is governed only through the HBPR
+  partnership. The `My records` sidebar link is hidden for Line Managers (they are never a subject
+  of those records). User-facing copy no longer says "evidence" for the HBPR↔Line Manager surface:
   tab/section = **Partnership log**, entries = *log entries*, the year-end deliverable =
   **Year-end summary**, workbook sheet = "HBPR partnership log". Code identifiers, API
   routes and `?view=evidence` deep links are unchanged on purpose. Pinned by
@@ -427,7 +427,7 @@ null or `>= d`) — one definition, `in_effect_q()` / `unfinished_q()` in
 and user-deletion guards, the admin `current` filter and `is_current`. So a future end date
 keeps access until that day, and `reassign` with a future `effective_from` hands over
 without a gap (old ends the day before). The DB unique constraint and `end`/`reassign`
-targeting still key on `effective_to IS NULL` (one *unended* row per Albanian TL). Notifications
+targeting still key on `effective_to IS NULL` (one *unended* row per Line Manager). Notifications
 still fire when the end date is set, not on the day it passes (no scheduler job watches that date).
 
 **Accepted, not changed:** the assignment model and `/admin/hbpr-assignments` live in
@@ -445,4 +445,4 @@ riskiest option for no user-visible gain); `UserViewSet.bulk_update` (complexity
 
 ## Organigrama for HBPR (2026-10-30)
 
-HBPR is no longer denied Organigrama. `tree_builder.build_hbpr_tree` prunes the company tree to `get_hbpr_scope().user_ids` plus the Italian TL above each (so the chart keeps its root); the lazy `subtree` check uses the same set (`hbpr_visible_user_ids`). A multi-role TL/HR/staff keeps their own higher scope. The page shows a "Filter by team leader" select when the tree holds more than one Albanian TL. Pinned by `plugins/organigrama/tests/test_hbpr_scope.py`. Skills matrix pages (matrix, coverage, gaps, exports) omit Italian TLs via `matrix_user_ids`.
+HBPR is no longer denied Organigrama. `tree_builder.build_hbpr_tree` prunes the company tree to `get_hbpr_scope().user_ids` plus the Manager above each (so the chart keeps its root); the lazy `subtree` check uses the same set (`hbpr_visible_user_ids`). A multi-role TL/HR/staff keeps their own higher scope. The page shows a "Filter by team leader" select when the tree holds more than one Line Manager. Pinned by `plugins/organigrama/tests/test_hbpr_scope.py`. Skills matrix pages (matrix, coverage, gaps, exports) omit Managers via `matrix_user_ids`.

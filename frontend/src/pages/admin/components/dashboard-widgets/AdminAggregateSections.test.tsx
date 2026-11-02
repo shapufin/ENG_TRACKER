@@ -130,7 +130,7 @@ describe("PeopleSection", () => {
     );
     expect(await screen.findByText("People Mix")).toBeInTheDocument();
     expect(screen.getByText("Rejection Analysis")).toBeInTheDocument();
-    expect(await screen.findByText("Italian TLs")).toBeInTheDocument();
+    expect(await screen.findByText("Managers")).toBeInTheDocument();
     expect(dashboardService.getAdminPeople).toHaveBeenCalledTimes(1);
   });
 });

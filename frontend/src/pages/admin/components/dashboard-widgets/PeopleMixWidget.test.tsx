@@ -8,14 +8,14 @@ describe("PeopleMixWidget", () => {
     const { container } = render(<PeopleMixWidget data={makePeople()} />);
     expect(screen.getByRole("tab", { name: "Roles", selected: true })).toBeInTheDocument();
     expect(container.querySelector("[data-chart-section='people-mix']")).not.toBeNull();
-    expect(screen.getByText("Italian TLs").closest("li")).toHaveTextContent("3");
+    expect(screen.getByText("Managers").closest("li")).toHaveTextContent("3");
   });
 
   it("switches to Tech", async () => {
     render(<PeopleMixWidget data={makePeople()} />);
     fireEvent.mouseDown(screen.getByRole("tab", { name: "Tech" }));
     expect(screen.getByRole("group", { name: "NOC" })).toBeInTheDocument();
-    expect(screen.queryByText("Italian TLs")).toBeNull();
+    expect(screen.queryByText("Managers")).toBeNull();
   });
 
   it("shows the tech empty state", async () => {

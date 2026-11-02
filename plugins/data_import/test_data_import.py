@@ -392,8 +392,8 @@ class UserImporterTests(TestCase):
     def test_a_tl_appearing_later_in_the_file_is_linked_by_finalize_batch(self):
         """Mutual references make single-pass ordering impossible.
 
-        Real data: every Italian TL reports to the one Albanian TL, and that
-        Albanian TL reports to an Italian TL. No row order satisfies both, so a
+        Real data: every Manager reports to the one Line Manager, and that
+        Line Manager reports to a Manager. No row order satisfies both, so a
         leader named in the same file is deferred, exactly as the teams importer
         defers ``parent_team_code``.
         """

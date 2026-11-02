@@ -18,7 +18,7 @@ interface TeamsPageFiltersProps {
 }
 
 /**
- * IT/AL TL and calendar-group facet chips. Rendered as the header strip of the
+ * Manager/Line Manager and calendar-group facet chips. Rendered as the header strip of the
  * teams table card (page and card are the only two surface levels), never as
  * a card of its own.
  */
@@ -54,13 +54,13 @@ export const TeamsPageFilters: React.FC<TeamsPageFiltersProps> = ({
           { value: "complete", label: "Both TLs", count: counts.complete },
           {
             value: "missing-it",
-            label: "Missing IT TL",
+            label: "Missing Manager",
             count: counts.missingIt,
             emphasis: "missing",
           },
           {
             value: "missing-al",
-            label: "Missing AL TL",
+            label: "Missing Line Manager",
             count: counts.missingAl,
             emphasis: "missing",
           },

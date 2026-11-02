@@ -10,7 +10,7 @@ decides a promotion; HR/staff do). Every write keeps the own-rows rule, so HBPR
 scope never widens what someone can edit, delete or action.
 
 A record is in the HBPR slice when its owning TL is one of the viewer's assigned
-Albanian TLs AND its subject is in that assignment's population — owner and
+Line Managers AND its subject is in that assignment's population — owner and
 subject both, so a record about an in-scope person written up by a TL outside
 the assignment stays hidden.
 

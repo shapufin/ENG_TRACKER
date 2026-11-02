@@ -1,9 +1,9 @@
 /**
- * HBPR ↔ Albanian-TL governance: end-to-end role isolation.
+ * HBPR ↔ Line Manager governance: end-to-end role isolation.
  *
  * Covers the whole redesigned surface against the real stack:
  *  - an HBPR-only user gets `/hbpr` and is denied/hidden everywhere else;
- *  - the assigned Albanian TL sees the partnership and authors the evidence;
+ *  - the assigned Line Manager sees the partnership and authors the evidence;
  *  - an admin manages the assignments;
  *  - a plain employee never sees HBPR governance data.
  *
@@ -74,7 +74,7 @@ test.describe("HBPR-only user", () => {
     await expect(
       page
         .getByText("Needs your attention")
-        .or(page.getByText("No Albanian team leaders assigned yet"))
+        .or(page.getByText("No Line Managers assigned yet"))
     ).toBeVisible();
   });
 
@@ -124,7 +124,7 @@ test.describe("HBPR-only user", () => {
 
     const overview = await get(request, token, "/api/plugins/tl_scorecard/hbpr/overview/");
     expect(overview.status).toBe(200);
-    // The seeded AL TL is the only assignment.
+    // The seeded Line Manager is the only assignment.
     expect(overview.body.leaders.map((l: { name: string }) => l.name)).toEqual(["E2E TeamLeaderB"]);
 
     const meetings = await get(request, token, "/api/plugins/tl_scorecard/meetings/");
@@ -141,7 +141,7 @@ test.describe("HBPR-only user", () => {
     const overview = await get(request, token, "/api/plugins/tl_scorecard/hbpr/overview/");
     expect(overview.status).toBe(200);
     const leaderId = overview.body.leaders[0]?.id as number | undefined;
-    expect(leaderId, "the seeded assignment must surface its AL TL").toBeDefined();
+    expect(leaderId, "the seeded assignment must surface its Line Manager").toBeDefined();
 
     const response = await request.get(
       `${API}/api/plugins/tl_scorecard/export/?leader_id=${leaderId}`,
@@ -223,7 +223,7 @@ test.describe("HBPR-only user", () => {
   });
 });
 
-test.describe("Assigned Albanian TL", () => {
+test.describe("Assigned Line Manager", () => {
   test.describe.configure({ timeout: 180_000 });
 
   test("sees the HBPR partnership and can author evidence", async ({ page, request }) => {
@@ -255,7 +255,7 @@ test.describe("Assigned Albanian TL", () => {
     expect(created.status()).toBe(201);
     const createdRow = (await created.json()) as { id: number };
 
-    // The governance loop closes: the assigned HBPR reads what the AL TL wrote.
+    // The governance loop closes: the assigned HBPR reads what the Line Manager wrote.
     const hbprToken = await fetchApiToken(E2E_CREDENTIALS.hbpr);
     const hbprView = await get(
       request,
@@ -266,7 +266,7 @@ test.describe("Assigned Albanian TL", () => {
     const evidenceRows = hbprView.body.results ?? hbprView.body;
     expect(
       evidenceRows.some((row: { id: number }) => row.id === createdRow.id),
-      "the assigned HBPR must see the evidence its AL TL authored"
+      "the assigned HBPR must see the evidence its Line Manager authored"
     ).toBe(true);
   });
 
@@ -351,7 +351,7 @@ test.describe("Admin", () => {
     const hbprId = open.hbpr_detail?.id ?? open.hbpr;
     const tlId = open.albanian_tl_detail?.id ?? open.albanian_tl;
 
-    // One open assignment per AL TL: a second create is a structured 400.
+    // One open assignment per Line Manager: a second create is a structured 400.
     const duplicate = await request.post(base, {
       headers: auth,
       data: {

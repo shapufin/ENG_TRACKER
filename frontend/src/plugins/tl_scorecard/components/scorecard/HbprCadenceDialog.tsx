@@ -15,7 +15,7 @@ interface HbprCadenceDialogProps {
 }
 
 /**
- * Lets the assigned Albanian TL change how often they meet their HBPR. The
+ * Lets the assigned Line Manager change how often they meet their HBPR. The
  * change is audit-logged server-side; past entries keep their dates.
  */
 export const HbprCadenceDialog: React.FC<HbprCadenceDialogProps> = ({

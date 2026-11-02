@@ -1,4 +1,4 @@
-"""Transactional lifecycle for HBPR ↔ Albanian TL assignments.
+"""Transactional lifecycle for HBPR ↔ Line Manager assignments.
 
 All writes funnel through this service so the one-open-assignment rule and
 overlap rejection are enforced with row locks, not serializer-only checks.
@@ -68,7 +68,7 @@ def create_assignment(
     cadence_nth_week=None,
     assigned_by=None,
 ) -> HbprAlbanianTlAssignment:
-    """Create an assignment; rejects when the AL TL already has any range
+    """Create an assignment; rejects when the Line Manager already has any range
     (open or historical) that the new one would overlap."""
     _validate_participants(hbpr, albanian_tl)
     _validate_cadence(cadence)
@@ -84,8 +84,8 @@ def create_assignment(
         if row_end is None or row_end >= effective_from:
             if row_end is None:
                 raise AssignmentError(
-                    "An open assignment already exists for this Albanian "
-                    "TL. End or reassign it first."
+                    "An open assignment already exists for this Line "
+                    "Manager. End or reassign it first."
                 )
             raise AssignmentError(
                 "The new assignment overlaps an existing historical range."
@@ -265,7 +265,7 @@ def in_effect_q(on_date: date | None = None) -> Q:
 
 
 def active_assignment_for_tl(albanian_tl_id, *, on_date: date | None = None):
-    """The assignment in effect for one AL TL on ``on_date`` (default today), or None."""
+    """The assignment in effect for one Line Manager on ``on_date`` (default today), or None."""
     return (
         HbprAlbanianTlAssignment.objects.filter(
             in_effect_q(on_date), albanian_tl_id=albanian_tl_id
@@ -331,12 +331,12 @@ def hbpr_revocation_refusal(user, data) -> dict | None:
     if not blocked:
         return None
     summary = '; '.join(
-        f"{b['role']}: {b['assignment_count']} open HBPR↔Albanian TL assignment(s) depend on this role"
+        f"{b['role']}: {b['assignment_count']} open HBPR↔Line Manager assignment(s) depend on this role"
         for b in blocked
     )
     return {
         'error': (
-            'Cannot revoke role while an open HBPR↔Albanian TL assignment depends on it: '
+            'Cannot revoke role while an open HBPR↔Line Manager assignment depends on it: '
             + summary
         ),
         # Canonical key: getBlockedRevocations reads `blocked_revocations`, so

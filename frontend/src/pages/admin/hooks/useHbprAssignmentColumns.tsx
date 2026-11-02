@@ -40,7 +40,7 @@ export const useHbprAssignmentColumns = (
       {
         id: "albanian_tl",
         accessorFn: (row) => row.albanian_tl_detail.name,
-        header: "Albanian team leader",
+        header: "Line Manager",
         cell: ({ row }) => (
           <UserCell
             name={row.original.albanian_tl_detail.name}

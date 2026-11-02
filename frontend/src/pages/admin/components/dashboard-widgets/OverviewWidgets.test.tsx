@@ -48,7 +48,7 @@ describe("OverviewWidgets", () => {
     renderAll();
     const counts = screen
       .getAllByText(
-        /^(Teams without a leader|Users without a team|Users without a tech|Employees without a TL|Albanian TLs without HBPR)$/
+        /^(Teams without a leader|Users without a team|Users without a tech|Employees without a TL|Line Managers without HBPR)$/
       )
       .map((el) => el.nextElementSibling as HTMLElement);
     expect(counts).toHaveLength(5);

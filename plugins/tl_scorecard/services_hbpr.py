@@ -1,7 +1,7 @@
 """HBPR workspace aggregates, computed in a handful of grouped queries.
 
 Everything is limited to the viewer's ``HbprScope`` with the same rule the record
-viewsets use: the owning TL is one of the viewer's assigned Albanian TLs AND the
+viewsets use: the owning TL is one of the viewer's assigned Line Managers AND the
 subject is in that assignment's population, so a record a TL wrote about someone
 outside the assignment is never counted.
 
@@ -40,7 +40,7 @@ def parse_reporting_year(raw):
     """Validate an optional ``?year=`` (2000–2100); ``None``/empty = current year.
 
     Raises ``ValueError`` with a message the viewset turns into a 400 — shared by
-    the HBPR overview and the AL-TL partnership so both reject the same inputs.
+    the HBPR overview and the Line Manager partnership so both reject the same inputs.
     """
     if raw in (None, ''):
         return None
@@ -107,7 +107,7 @@ def people(scope, search='', limit=50, offset=0):
 
 
 def _team_sizes(assignments, scope):
-    """AL TL id -> number of in-scope members under that TL.
+    """Line Manager id -> number of in-scope members under that TL.
 
     Uses the same ``get_team_member_ids()`` sources the scope population uses
     (direct `italian_tl`/`albanian_tl` FK **and** shared-team membership), then
@@ -202,12 +202,12 @@ def overview(scope, *, reporting_year=None):
 
 
 def partnership(leader, *, reporting_year=None, viewer=None):
-    """One Albanian TL's own HBPR partnership, or ``{'assignment': None}``.
+    """One Line Manager's own HBPR partnership, or ``{'assignment': None}``.
 
-    The AL TL authors the evidence but cannot read the staff-only assignment API,
+    The Line Manager authors the evidence but cannot read the staff-only assignment API,
     so this is where they learn who their HBPR is and what the cadence/EPR state
     is. ``viewer`` only decides ``can_edit_cadence``. It shares ``_evidence_rollup``/``cadence_status`` with the HBPR overview,
-    so the AL TL's view and the HBPR's view can never disagree.
+    so the Line Manager's view and the HBPR's view can never disagree.
     """
     from apps.users.services.hbpr_assignments import active_assignment_for_tl
 

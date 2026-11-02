@@ -41,7 +41,7 @@ const Skeleton: React.FC = () => (
 const notifyError = (error: unknown) => toast.error(errorMessage(error));
 
 /**
- * The Albanian TL's authoring workspace. Owns URL state and queries only — the
+ * The Line Manager's authoring workspace. Owns URL state and queries only — the
  * sections are `components/scorecard/*`.
  */
 const TLScorecardAuthoring: React.FC = () => {

@@ -421,7 +421,7 @@ class PluginPermissionMatrixTests(TestCase):
             code='hr', defaults={'name': 'HR'}
         )
         self.tl_role, _ = Role.objects.get_or_create(
-            code='italian_tl', defaults={'name': 'Italian TL'}
+            code='italian_tl', defaults={'name': 'Manager'}
         )
         self.group = Group.objects.create(name='Matrix Group', code='matrix-group')
         self.plugin = Plugin.objects.create(

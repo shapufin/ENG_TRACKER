@@ -81,7 +81,7 @@ function formatDisplayDate(iso: string): string {
 }
 
 /**
- * Create or edit an HBPR ↔ Albanian TL assignment with configurable cadence
+ * Create or edit an HBPR ↔ Line Manager assignment with configurable cadence
  * and automatic date calculations.
  */
 export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
@@ -131,7 +131,7 @@ export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
   const selectedTl =
     albanianTlOptions.find((p) => p.id === form.albanian_tl)?.name ||
     editingAssignment?.albanian_tl_detail?.name ||
-    "Albanian TL";
+    "Line Manager";
 
   const handleApplyCalculatedDate = () => {
     if (calculatedDate) {
@@ -147,7 +147,7 @@ export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
       description={
         mode === "edit"
           ? "Update the meeting cadence schedule or start date."
-          : "Pairs one HR Business Partner with one Albanian team leader."
+          : "Pairs one HR Business Partner with one Line Manager."
       }
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
@@ -174,7 +174,7 @@ export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
 
             <PersonSelect
               id="hbpr-assignment-tl"
-              label="Albanian team leader"
+              label="Line Manager"
               value={form.albanian_tl}
               options={albanianTlOptions}
               placeholder="Select a team leader…"

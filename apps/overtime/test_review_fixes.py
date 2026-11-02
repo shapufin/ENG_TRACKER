@@ -29,7 +29,7 @@ class ReviewFixesTests(TestCase):
         self.month = today.replace(day=1)
         self.next_month = next_period(self.month)
         self.client_obj = Client.objects.create(name=f'C{uuid4().hex[:8]}', code=f'C{uuid4().hex[:8]}')
-        Role.objects.get_or_create(code='italian_tl', defaults={'name': 'Italian TL'})
+        Role.objects.get_or_create(code='italian_tl', defaults={'name': 'Manager'})
         self.admin = User.objects.create_superuser(username=f'adm{uuid4().hex[:6]}', password='x', email='a@a.a')
         self.emp = User.objects.create_user(username=f'emp{uuid4().hex[:6]}', password='x')
         self.tl = User.objects.create_user(username=f'tl{uuid4().hex[:6]}', password='x')

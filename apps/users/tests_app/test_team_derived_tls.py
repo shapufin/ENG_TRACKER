@@ -1,4 +1,4 @@
-"""Teams expose the Italian/Albanian TL their members share (display-only)."""
+"""Teams expose the Manager/Line Manager their members share (display-only)."""
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 

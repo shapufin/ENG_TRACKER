@@ -1,9 +1,9 @@
 """HBPR (HR Business Partner, Italy) role helpers and assignment scope.
 
-Scope is **explicit, not computed**: an HBPR sees exactly the Albanian TLs they
+Scope is **explicit, not computed**: an HBPR sees exactly the Line Managers they
 have an open ``HbprAlbanianTlAssignment`` for, plus those TLs' current
-``UserProfile.get_team_member_ids()`` union. There is no global "all Italian
-TLs" population any more — the assignment table is the single source of truth.
+``UserProfile.get_team_member_ids()`` union. There is no global "all Managers"
+population any more — the assignment table is the single source of truth.
 
 This module is core: it must never import from ``plugins.*``.
 """
@@ -47,8 +47,8 @@ def is_hbpr(user) -> bool:
 def _assignment_population(hbpr) -> tuple[frozenset, frozenset, frozenset]:
     """Return ``(assignment_ids, tl_ids, member_ids)`` for one HBPR.
 
-    Only *open* assignments whose AL TL is active count. ``member_ids`` is the
-    union of each assigned AL TL's ``get_team_member_ids()`` (which does not
+    Only *open* assignments whose Line Manager is active count. ``member_ids`` is the
+    union of each assigned Line Manager's ``get_team_member_ids()`` (which does not
     itself filter by ``is_active``), minus the TLs themselves and minus
     deactivated users — mirroring the old population's active-only rule.
     """
@@ -110,7 +110,7 @@ def get_hbpr_scope(user) -> 'HbprScope | None':
 def hbpr_user_ids_for(subject_user, owner_id=None) -> list:
     """Ids of active HBPR users who cover a record (notification recipients).
 
-    ``owner_id`` is the AL TL who owns the record. The covering HBPR is the
+    ``owner_id`` is the Line Manager who owns the record. The covering HBPR is the
     owner of that TL's open assignment. Returns ``[]`` when the owner has no
     open assignment, the HBPR is inactive, or the subject is neither the owner
     nor one of the owner's current team members — mirroring the read rule, so a
@@ -140,7 +140,7 @@ def hbpr_user_ids_for(subject_user, owner_id=None) -> list:
 
 
 def hbpr_user_ids_covering(subject_user) -> list:
-    """Ids of active HBPR users whose assigned Albanian TLs cover ``subject_user``.
+    """Ids of active HBPR users whose assigned Line Managers cover ``subject_user``.
 
     For records with no owning-TL column (an employee's EPR cycle): scope reaches
     a member through the direct FK *and* a shared team, so the owner is found by

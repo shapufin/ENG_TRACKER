@@ -30,7 +30,7 @@ export const TeamStatsCards: React.FC<TeamStats> = ({ total, members, noLeader, 
     {
       label: "Missing TL",
       value: noLeader,
-      sub: "Teams missing an IT or AL TL",
+      sub: "Teams missing a Manager or Line Manager",
       icon: UserX,
       glow: "none" as const,
       iconTone: "warning" as const,

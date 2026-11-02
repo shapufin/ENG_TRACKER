@@ -13,8 +13,8 @@ export const RoleDistributionBody: React.FC<PeopleWidgetProps> = ({
   const r = data?.roles;
   const rows: [string, number, boolean][] = r
     ? [
-        ["Italian TLs", r.italian_tl, false],
-        ["Albanian TLs", r.albanian_tl, false],
+        ["Managers", r.italian_tl, false],
+        ["Line Managers", r.albanian_tl, false],
         ["HR", r.hr, false],
         ["HBPR", r.hbpr, false],
         ["Staff", r.staff, false],

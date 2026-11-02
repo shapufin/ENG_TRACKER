@@ -21,7 +21,7 @@ const todayIso = () => new Date().toISOString().slice(0, 10);
 interface HbprEvidenceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** The assignment the evidence belongs to (the AL TL's open partnership). */
+  /** The assignment the evidence belongs to (the Line Manager's open partnership). */
   assignmentId: number;
   onSave: (data: HbprEvidencePayload) => Promise<void>;
   mode?: "create" | "edit";
@@ -30,8 +30,8 @@ interface HbprEvidenceDialogProps {
 }
 
 /**
- * Records the AL TL's governance evidence: a recurring cadence meeting, or their
- * participation in the mid-year / year-end EPR. Only the assigned AL TL (and
+ * Records the Line Manager's governance evidence: a recurring cadence meeting, or their
+ * participation in the mid-year / year-end EPR. Only the assigned Line Manager (and
  * staff) may author it — the HBPR participates but is read-only.
  */
 export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
@@ -87,7 +87,7 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Edit log entry" : "Add log entry"}
-      description="Logged by the assigned Albanian team leader. Your HBPR and staff can read it."
+      description="Logged by the assigned Line Manager. Your HBPR and staff can read it."
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
       submitLabel={isEdit ? "Save changes" : "Save entry"}

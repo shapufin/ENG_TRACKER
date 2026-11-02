@@ -13,7 +13,7 @@ Sign in with the username and password your administrator gave you. What you see
 | **Employee** | Log overtime and standby, request leave, see your own balances and records (**My records**), and see when teammates are away on the **Calendar**. You never see teammates' request statuses. |
 | **Team leader** | Everything an employee can, plus **Pending Approvals** (`/team/approvals`): approve or reject your team's overtime, standby and leave one by one or in bulk, and finalize a month. |
 | **HR** | Company-wide holidays, leave and reports, and payroll (view, manage, export). |
-| **HBPR** | Read-only governance view of the Albanian team leaders assigned to you (`/hbpr`). |
+| **HBPR** | Read-only governance view of the Line Managers assigned to you (`/hbpr`). |
 | **Admin** | The admin panel: users, teams, clients, logs, reports, plugins and system settings. |
 
 **Everyday tasks**

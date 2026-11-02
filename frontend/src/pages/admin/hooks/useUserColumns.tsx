@@ -35,7 +35,7 @@ const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
         variant="default"
         className={`${toneSurfaceClass.info} h-5 shrink-0 px-1.5 py-0 text-xs font-normal`}
       >
-        {compact ? "IT" : "IT TL"}
+        {compact ? "IT" : "Manager"}
       </Badge>
     );
   }
@@ -46,7 +46,7 @@ const renderTLRoleCell = ({ profile }: { profile: UserProfile }) => {
         variant="default"
         className={`${toneSurfaceClass.success} h-5 shrink-0 px-1.5 py-0 text-xs font-normal`}
       >
-        {compact ? "AL" : "AL TL"}
+        {compact ? "AL" : "Line Manager"}
       </Badge>
     );
   }
@@ -295,7 +295,7 @@ export const useUserColumns = (
       {
         id: "it_tl_assigned",
         accessorKey: "italian_tl_name",
-        header: "IT TL (Assigned)",
+        header: "Manager (Assigned)",
         size: 145,
         cell: ({ row }) =>
           row.original.italian_tl_name ? (
@@ -307,7 +307,7 @@ export const useUserColumns = (
       {
         id: "al_tl_assigned",
         accessorKey: "albanian_tl_name",
-        header: "AL TL (Assigned)",
+        header: "Line Manager (Assigned)",
         size: 150,
         cell: ({ row }) =>
           row.original.albanian_tl_name ? (
@@ -320,7 +320,7 @@ export const useUserColumns = (
         id: "actions",
         // No `size`: the column is sized by its icons (2026-10-10 refinement).
         // The previous reserved `size: 120` was ~4x the width the buttons need
-        // and pushed IT/AL TL off-screen on a 1440px viewport.
+        // and pushed Manager/Line Manager off-screen on a 1440px viewport.
         header: () => <span className="sr-only">Actions</span>,
         cell: ({ row }) => {
           const username = row.original.user?.username;

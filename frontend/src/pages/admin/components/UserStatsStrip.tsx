@@ -24,7 +24,7 @@ const PRESSED_CLASS = "border-primary/40 bg-primary/10";
 const IDLE_CLASS = "border-transparent";
 
 /**
- * One slim row of headline counts. The Italian TL, Albanian TL and No Tech
+ * One slim row of headline counts. The Manager, Line Manager and No Tech
  * counts are toggles that drive the same role/tech filters as the filter bar
  * (the list narrows server-side). Total, No TL and Active today are display
  * only: the server has no filter behind them.
@@ -39,13 +39,13 @@ export const UserStatsStrip: React.FC<UserStatsStripProps> = ({
 }) => {
   const toggles = [
     {
-      label: "Italian TL",
+      label: "Manager",
       value: stats.italian_tl_count,
       pressed: tlFilter === "italian_tl",
       onClick: () => onTlFilterToggle("italian_tl"),
     },
     {
-      label: "Albanian TL",
+      label: "Line Manager",
       value: stats.albanian_tl_count,
       pressed: tlFilter === "albanian_tl",
       onClick: () => onTlFilterToggle("albanian_tl"),
