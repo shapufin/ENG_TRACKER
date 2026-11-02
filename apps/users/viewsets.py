@@ -264,6 +264,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     {'error': 'Not in your team scope'},
                     status=status.HTTP_403_FORBIDDEN,
                 )
+        self._forbid_non_superuser_on_superuser(request, target)
 
         client_ids = request.data.get('client_ids')
         if not isinstance(client_ids, list):
@@ -816,6 +817,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             'updated_count': len(profiles),
             'warnings': bulk_warnings,
         }, status=status.HTTP_200_OK)
+
+    def perform_update(self, serializer):
+        self._forbid_non_superuser_on_superuser(self.request, serializer.instance)
+        super().perform_update(serializer)
 
     def perform_destroy(self, instance):
         self._forbid_non_superuser_on_superuser(self.request, instance)
@@ -1626,6 +1631,14 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
         setattr(profile, f'{role}_id', leader_id)
         profile.save(update_fields=[f'{role}_id'])
         return Response(UserProfileSerializer(profile).data)
+
+    def perform_update(self, serializer):
+        UserViewSet._forbid_non_superuser_on_superuser(self.request, serializer.instance.user)
+        super().perform_update(serializer)
+
+    def perform_destroy(self, instance):
+        UserViewSet._forbid_non_superuser_on_superuser(self.request, instance.user)
+        super().perform_destroy(instance)
 
     def get_permissions(self):
         # Already handled by SuperuserPermissionMixin for superusers
