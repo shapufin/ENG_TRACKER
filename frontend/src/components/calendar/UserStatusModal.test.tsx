@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { render, fireEvent } from "@testing-library/react";
 import { UserStatusModal } from "./UserStatusModal";
 
 vi.mock("./hooks/useUserStatusData", () => ({
@@ -83,5 +83,63 @@ describe("UserStatusModal responsive grids", () => {
     expect(document.querySelector('[data-testid="carry-over"]')).not.toBeNull();
     expect(document.querySelector('[data-testid="holidays"]')).not.toBeNull();
     expect(document.querySelector('[data-testid="current-year"]')).toBeNull();
+  });
+
+  it("switches to Leave History tab and displays user leave events", () => {
+    const { getByRole, getByText } = render(
+      <UserStatusModal
+        open
+        onOpenChange={vi.fn()}
+        user={
+          {
+            id: 1,
+            username: "enri",
+            email: "enri@example.com",
+            first_name: "Enri",
+            last_name: "Demnushi",
+          } as any
+        }
+        userEvents={[
+          {
+            id: "vac-101",
+            title: "Vac: 2d",
+            type: "vacation",
+            status: "approved",
+            start: "2026-11-10",
+            end: "2026-11-12",
+            days: 2,
+            description: "Family trip",
+          } as any,
+        ]}
+      />
+    );
+
+    fireEvent.click(getByRole("button", { name: /Leave History/ }));
+    expect(getByText("vacation")).toBeInTheDocument();
+    expect(getByText("(2 days)")).toBeInTheDocument();
+    expect(getByText('"Family trip"')).toBeInTheDocument();
+    expect(getByText("approved")).toBeInTheDocument();
+  });
+
+  it("switches to Policy & Rules tab and displays coverage and carryover policies", () => {
+    const { getByRole, getByText } = render(
+      <UserStatusModal
+        open
+        onOpenChange={vi.fn()}
+        user={
+          {
+            id: 1,
+            username: "enri",
+            email: "enri@example.com",
+            first_name: "Enri",
+            last_name: "Demnushi",
+          } as any
+        }
+      />
+    );
+
+    fireEvent.click(getByRole("button", { name: /Policy & Rules/ }));
+    expect(getByText("Allowance & Carryover Rules")).toBeInTheDocument();
+    expect(getByText("Team Coverage Minimums")).toBeInTheDocument();
   });
 });

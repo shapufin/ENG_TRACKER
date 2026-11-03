@@ -293,5 +293,19 @@ describe("CalendarDayCell", () => {
       fireEvent.focus(screen.getByRole("button", { name: /more events/ }));
       expect(screen.getAllByText("Cy").length).toBeGreaterThan(0);
     });
+
+    it("applies accented sky/info background when day has a holiday", () => {
+      const holidayEvent = [{ id: 10, title: "Public Holiday", type: "holiday" }] as any;
+      const { container } = render(
+        <CalendarDayCell
+          date={date}
+          events={holidayEvent}
+          isCurrentMonth={true}
+          onSelect={vi.fn()}
+        />
+      );
+      const cell = container.firstElementChild as HTMLElement;
+      expect(cell.className).toContain("bg-info/10");
+    });
   });
 });

@@ -54,40 +54,42 @@ describe("EventCard", () => {
     expect(screen.queryByText("ID")).toBeNull();
   });
 
-  it("shows the pending indicator dot only for pending events", () => {
+  it("shows status indicator dots: green for approved, orange for pending, red for rejected", () => {
     const { container, unmount } = renderCard({ status: "pending" });
     expect(container.querySelector('[title="Pending approval"]')).not.toBeNull();
     unmount();
 
     const approved = renderCard({ status: "approved" });
-    expect(approved.container.querySelector('[title="Pending approval"]')).toBeNull();
+    expect(approved.container.querySelector('[title="Approved"]')).not.toBeNull();
+    approved.unmount();
+
+    const rejected = renderCard({ status: "rejected" });
+    expect(rejected.container.querySelector('[title="Rejected"]')).not.toBeNull();
   });
 
-  it("renders the compact label", () => {
+  it("renders the clean label without parenthetical hours", () => {
     renderCard();
-    expect(screen.getByText("Standby (8h)")).toBeInTheDocument();
+    expect(screen.getByText("Standby")).toBeInTheDocument();
   });
 
-  it("shows client names in a standby event's compact label", () => {
+  it("shows client names in a standby event's label without parenthetical hours", () => {
     renderCard({
       clientNames: ["Acme Corp", "Globex"],
       compactLabel: "Standby (8h) · Acme Corp, Globex",
     });
-    expect(screen.getByText("Standby (8h) · Acme Corp, Globex")).toBeInTheDocument();
+    expect(screen.getByText("Standby · Acme Corp, Globex")).toBeInTheDocument();
   });
 
   it("renders a streamlined single-row pill when density is compact", () => {
     render(<EventCard event={{ ...baseEvent, days: 3 }} density="compact" />);
     expect(screen.getByText("Standby")).toBeInTheDocument();
-    expect(screen.getByText("3d")).toBeInTheDocument();
   });
 
-  it("keeps the quantity visible in compact mode when the label truncates", () => {
+  it("preserves fullLabel in the tooltip title while showing clean label on pill", () => {
     render(
       <EventCard
         event={{
           ...baseEvent,
-          // The API serialises decimals as strings.
           hours: "8.00" as unknown as number,
           clientNames: ["Acme Corp"],
           compactLabel: "Standby (8h) · Acme Corp",
@@ -95,8 +97,6 @@ describe("EventCard", () => {
         density="compact"
       />
     );
-    // Quantity moves to its own non-truncating chip; the full label stays in the tooltip.
-    expect(screen.getByText("8h")).toBeInTheDocument(); // "8.00" is shown without trailing zeros
     expect(screen.getByText("Standby · Acme Corp")).toHaveAttribute(
       "title",
       "Standby (8h) · Acme Corp"
@@ -111,11 +111,7 @@ describe("EventCard", () => {
       />
     );
     // Container-query classes: no effect without a container, so Week/List keep the full pill.
-    for (const el of [
-      screen.getByText("Standby"),
-      screen.getByText("1h"),
-      screen.getByTitle("Pending approval"),
-    ]) {
+    for (const el of [screen.getByText("Standby"), screen.getByTitle("Pending approval")]) {
       expect(el.className).toContain("@max-[5rem]:hidden");
     }
   });

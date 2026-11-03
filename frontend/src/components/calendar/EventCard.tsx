@@ -69,16 +69,25 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
     }
 
     const initials = getInitials(event.userName ?? event.title);
-    // Compact pills truncate the label, so the "(8h)" / "(3d)" quantity moves to its own chip.
+    // Strip parenthetical duration e.g. "(15h)" or "(8h)" from standby to keep the cell pill clean and uncluttered.
+    // The exact duration and details are displayed in the hover popover / modal.
     const fullLabel = event.compactLabel ?? event.title;
-    const compactText = fullLabel.replace(/\s*\([^)]*\)/, "");
-    const hours = Number(event.hours);
-    const quantity =
-      typeof event.days === "number"
-        ? `${event.days}d`
-        : event.hours != null && Number.isFinite(hours)
-          ? `${hours}h`
-          : null;
+    const cleanLabel =
+      event.type === "standby" ? fullLabel.replace(/\s*\(\d+(?:\.\d+)?h\)/, "").trim() : fullLabel;
+
+    const statusTitle =
+      event.status === "approved"
+        ? "Approved"
+        : event.status === "pending"
+          ? "Pending approval"
+          : "Rejected";
+
+    const statusColor =
+      event.status === "approved"
+        ? "bg-emerald-500"
+        : event.status === "pending"
+          ? "bg-amber-500"
+          : "bg-rose-500";
 
     return (
       <div
@@ -113,74 +122,44 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
           className
         )}
       >
-        {density === "compact" ? (
-          <div className="flex min-w-0 items-center justify-between gap-1 @max-[5rem]:justify-center">
-            <div className="flex min-w-0 items-center gap-1 truncate">
-              <span
-                className={cn(
-                  "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded text-[9px] font-bold",
-                  styles.chip
-                )}
-              >
-                {initials}
-              </span>
-              <p
-                className={cn(
-                  "truncate text-[10px] font-semibold sm:text-[11px] @max-[5rem]:hidden",
-                  styles.meta
-                )}
-                title={fullLabel}
-              >
-                {compactText}
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              {event.status === "pending" && (
-                <span
-                  className="bg-warning h-1.5 w-1.5 shrink-0 rounded-full @max-[5rem]:hidden"
-                  title="Pending approval"
-                  aria-hidden
-                />
+        <div
+          className={cn(
+            "flex min-w-0 items-center justify-between gap-1",
+            density === "compact" && "@max-[5rem]:justify-center"
+          )}
+        >
+          <div className="flex min-w-0 items-center gap-1 truncate">
+            <span
+              className={cn(
+                "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded text-[9px] font-bold",
+                styles.chip
               )}
-              {quantity && (
-                <span className="shrink-0 font-mono text-[9px] opacity-75 @max-[5rem]:hidden">
-                  {quantity}
-                </span>
+            >
+              {initials}
+            </span>
+            <p
+              className={cn(
+                "truncate text-[10px] font-semibold sm:text-[11px]",
+                density === "compact" && "@max-[5rem]:hidden",
+                styles.meta
               )}
-            </div>
+              title={fullLabel}
+            >
+              {cleanLabel}
+            </p>
           </div>
-        ) : (
-          <div className="flex min-w-0 items-center justify-between gap-1">
-            <div className="flex min-w-0 items-center gap-1 truncate">
-              <span
-                className={cn(
-                  "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded text-[9px] font-bold",
-                  styles.chip
-                )}
-              >
-                {initials}
-              </span>
-              <p
-                className={cn("truncate text-[10px] font-semibold sm:text-[11px]", styles.meta)}
-                title={fullLabel}
-              >
-                {fullLabel}
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              {event.status === "pending" && (
-                <span
-                  className="bg-warning h-1.5 w-1.5 shrink-0 rounded-full"
-                  title="Pending approval"
-                  aria-hidden
-                />
+          <div className="flex shrink-0 items-center gap-1">
+            <span
+              className={cn(
+                "h-1.5 w-1.5 shrink-0 rounded-full",
+                statusColor,
+                density === "compact" && "@max-[5rem]:hidden"
               )}
-              {quantity && (
-                <span className="shrink-0 font-mono text-[9px] opacity-75">{quantity}</span>
-              )}
-            </div>
+              title={statusTitle}
+              aria-hidden
+            />
           </div>
-        )}
+        </div>
       </div>
     );
   }
