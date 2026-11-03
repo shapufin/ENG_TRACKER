@@ -13,7 +13,10 @@ interface EventCardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
-  ({ event, density = "normal", className, onActivate, onKeyDown, ...props }, ref) => {
+  (
+    { event, density = "normal", className, onActivate, onKeyDown, onClick, onMouseDown, ...props },
+    ref
+  ) => {
     // Colors follow the event type so the MonthGrid matches the sidebar
     // legend, WeekView, and ListView (all derive from calendarStyles.ts).
     const styles = calendarEventTypeStyles[event.type];
@@ -27,10 +30,12 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
           onMouseDown={(e) => {
             e.stopPropagation();
             e.preventDefault();
+            onMouseDown?.(e);
           }}
           onClick={(e) => {
             e.stopPropagation();
             onActivate?.();
+            onClick?.(e);
           }}
           onKeyDown={(e) => {
             onKeyDown?.(e);
@@ -80,10 +85,12 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
         onMouseDown={(e) => {
           e.stopPropagation();
           e.preventDefault();
+          onMouseDown?.(e);
         }}
         onClick={(e) => {
           e.stopPropagation();
           onActivate?.();
+          onClick?.(e);
         }}
         onKeyDown={(e) => {
           onKeyDown?.(e);

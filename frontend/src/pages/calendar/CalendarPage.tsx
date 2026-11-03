@@ -18,7 +18,7 @@ import { CalendarPageShell } from "./components/CalendarPageShell";
 import { shouldIgnoreCalendarKey } from "./hooks/shouldIgnoreCalendarKey";
 
 const CalendarPageContent: React.FC = () => {
-  const { setSelectedWorkspaces, isMultiSelect } = useCalendarWorkspace();
+  const { setSelectedWorkspaces, isMultiSelect, toggleWorkspace } = useCalendarWorkspace();
   const { validIds } = useValidWorkspaceIds();
   const { canViewWorkspaceMembers, canViewTeamData } = usePermissions();
   const { user } = useAuth();
@@ -108,6 +108,7 @@ const CalendarPageContent: React.FC = () => {
       onNextMonth={handleNextMonth}
       onToday={handleToday}
       onSetViewMode={handleSetViewMode}
+      onToggleWorkspace={toggleWorkspace}
     />
   );
 };

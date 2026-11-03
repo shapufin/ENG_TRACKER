@@ -7,6 +7,7 @@ import { getWeekDays, groupEventsByDay } from "./weekViewUtils";
 import type { CalendarEvent } from "./types";
 import type { User } from "@/types";
 import { calendarSurface } from "./calendarStyles";
+import type { DayConflict } from "@/lib/calendarCoverage";
 
 interface WeekViewProps {
   currentDate: Date;
@@ -22,6 +23,8 @@ interface WeekViewProps {
   isRangeSelecting?: boolean;
   onPrevWeek?: () => void;
   onNextWeek?: () => void;
+  conflictsByDate?: ReadonlyMap<string, DayConflict>;
+  onEventActivate?: (event: CalendarEvent) => void;
 }
 
 export const WeekView: React.FC<WeekViewProps> = ({
@@ -38,6 +41,8 @@ export const WeekView: React.FC<WeekViewProps> = ({
   isRangeSelecting,
   onPrevWeek,
   onNextWeek,
+  conflictsByDate,
+  onEventActivate,
 }) => {
   const weekStart = useMemo(() => getWeekDays(currentDate)[0], [currentDate]);
   const weekEnd = addDays(weekStart, 6);
@@ -53,7 +58,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
         onPrevWeek={onPrevWeek}
         onNextWeek={onNextWeek}
       />
-      <WeekViewDayHeader days={weekDays} />
+      <WeekViewDayHeader days={weekDays} conflictsByDate={conflictsByDate} />
       <div className="flex-1 overflow-auto">
         {users.map((user) => (
           <WeekViewUserRow
@@ -69,6 +74,8 @@ export const WeekView: React.FC<WeekViewProps> = ({
             onRangeDragEnter={onRangeDragEnter}
             onRangeDragEnd={onRangeDragEnd}
             isRangeSelecting={isRangeSelecting}
+            onEventActivate={onEventActivate}
+            conflictsByDate={conflictsByDate}
           />
         ))}
       </div>

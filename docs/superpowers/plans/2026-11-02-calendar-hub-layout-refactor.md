@@ -2,6 +2,8 @@
 
 > **Summary**: Refactor the production Calendar surface (`frontend/src/pages/calendar/` and `frontend/src/components/calendar/`) to adopt the high-density layout, synchronized team layers, compact sidebar, concise hover popovers, and Gantt timeline view from the `team-vacation-&-shared-calendar-hub` mockup, strictly respecting existing Django backend boundaries.
 
+> **SUPERSEDED IN PART (2026-11-03):** the code no longer matches several specs below (sidebar width `w-48 xl:w-56`, pinned snapshot card, `ConcisePopover`). Current truth: `docs/workflow-invariants.md` item 53 and `2026-11-03-calendar-hub-parity-round2.md`. Real outcomes: flat `bg-card` cards, auto-collapsed app sidebar, no pinned snapshot, `min-h-0` instead of `min-h-screen`, popovers = `EventTooltip`/`ConflictTooltip`/`OverflowTooltip`.
+
 ---
 
 ## 1. Objective & Success Criteria

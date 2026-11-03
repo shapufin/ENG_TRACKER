@@ -2,6 +2,7 @@ import React from "react";
 import { UserStatusModal } from "@/components/calendar/UserStatusModal";
 import { EventActionModal } from "@/components/calendar/EventActionModal";
 import { ConflictsModal } from "@/components/calendar/ConflictsModal";
+import { DayEventsDialog } from "@/components/calendar/DayEventsDialog";
 import { CalendarFormDialog } from "./CalendarFormDialog";
 import type { User } from "@/types";
 import type { useCalendarPageData } from "../hooks/useCalendarPageData";
@@ -45,6 +46,16 @@ export const CalendarPageModals: React.FC<CalendarPageModalsProps> = ({
       }
       vacationBalances={data.selectedUserBalances}
       holidays={data.holidayData}
+    />
+
+    <DayEventsDialog
+      open={Boolean(data.dayEventsDate)}
+      onOpenChange={data.handleDayEventsOpenChange}
+      date={data.dayEventsDate}
+      events={data.dayEvents}
+      conflict={data.dayConflict}
+      onEventActivate={data.handleEventActivate}
+      onRequestTimeOff={data.requestTimeOffForDay}
     />
 
     <EventActionModal

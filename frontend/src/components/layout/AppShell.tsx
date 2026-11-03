@@ -54,6 +54,11 @@ export const AppShell = React.memo(() => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  // The calendar is the one page that wants the whole width, so it runs
+  // full-bleed and auto-collapses this sidebar. The user's previous choice is
+  // held here and restored when they leave.
+  const isCalendar = location.pathname.startsWith("/calendar");
+  const collapsedBeforeCalendar = useRef<boolean | null>(null);
   const { activePlugins } = usePlugins();
   const activePluginNames = useMemo(() => activePlugins.map((p) => p.name), [activePlugins]);
   const visibleItems = useVisibleNavItems(
@@ -82,6 +87,29 @@ export const AppShell = React.memo(() => {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  // Entering /calendar collapses the app sidebar and leaving restores whatever
+  // the user had before. Desktop only (below `md` the sidebar is an overlay),
+  // and deliberately keyed on the route alone: including `collapsed` would
+  // re-collapse the sidebar the moment the user expands it by hand.
+  useEffect(() => {
+    if (
+      typeof window.matchMedia !== "function" ||
+      !window.matchMedia("(min-width: 768px)").matches
+    ) {
+      return;
+    }
+    if (isCalendar) {
+      collapsedBeforeCalendar.current = collapsed;
+      setCollapsed(true);
+      return;
+    }
+    if (collapsedBeforeCalendar.current !== null) {
+      setCollapsed(collapsedBeforeCalendar.current);
+      collapsedBeforeCalendar.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCalendar]);
   // Pending-approvals nav badge (mockup: amber count pill). Reuses the
   // approval dashboard's pending-months cache; 0 renders no badge.
   const { total: pendingApprovalTotal } = usePendingApprovalCount(isTeamLeader);
@@ -135,9 +163,17 @@ export const AppShell = React.memo(() => {
             <HeaderProfileMenu user={user} roleSubtitle={roleSubtitle} onLogout={handleLogout} />
           </div>
         </div>
-        <MainContentTransition pathname={location.pathname} className="h-full">
+        <MainContentTransition
+          pathname={location.pathname}
+          className={isCalendar ? "flex h-full min-h-0 flex-col" : "h-full"}
+          fill={isCalendar}
+        >
           <div
-            className={`p-4 md:p-6 lg:p-8 ${location.pathname.startsWith("/calendar") ? "w-full" : "mx-auto w-full max-w-screen-2xl"}`}
+            className={
+              isCalendar
+                ? "flex min-h-0 w-full flex-1 flex-col overflow-hidden"
+                : "mx-auto w-full max-w-screen-2xl p-4 md:p-6 lg:p-8"
+            }
           >
             <MaintenanceBanner />
             <Outlet />

@@ -6,6 +6,7 @@ import { EventTooltip } from "./EventTooltip";
 import { userDisplayName, eventColors, parseISOToLocal } from "./weekViewUtils";
 import type { CalendarEvent } from "./types";
 import type { User } from "@/types";
+import type { DayConflict } from "@/lib/calendarCoverage";
 
 interface WeekViewUserRowProps {
   user: User;
@@ -19,7 +20,48 @@ interface WeekViewUserRowProps {
   onRangeDragEnter?: (date: Date) => void;
   onRangeDragEnd?: (date: Date) => void;
   isRangeSelecting?: boolean;
+  onEventActivate?: (event: CalendarEvent) => void;
+  conflictsByDate?: ReadonlyMap<string, DayConflict>;
 }
+
+/** Event pill. EventTooltip injects `onActivate` (and the tooltip trigger props/ref) into it. */
+const WeekEventPill = React.forwardRef<
+  HTMLDivElement,
+  { event: CalendarEvent; onActivate?: () => void } & React.HTMLAttributes<HTMLDivElement>
+>(({ event, onActivate, ...rest }, ref) => (
+  <div
+    {...rest}
+    ref={ref}
+    role="button"
+    tabIndex={0}
+    onClick={(e) => {
+      e.stopPropagation();
+      onActivate?.();
+    }}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
+        onActivate?.();
+      }
+    }}
+    onMouseDown={(e) => e.stopPropagation()}
+    className={cn(
+      "focus-visible:ring-ring/60 cursor-pointer rounded-xl border px-2 py-1.5 text-xs font-medium shadow-sm transition hover:scale-[1.02] focus-visible:ring-2 focus-visible:outline-hidden",
+      eventColors[event.type]
+    )}
+  >
+    <div className="truncate" title={event.compactLabel}>
+      {event.compactLabel}
+    </div>
+    <div className="mt-0.5 text-xs opacity-70">
+      {event.start !== event.end
+        ? `${format(parseISOToLocal(event.start), "MMM d")} → ${format(parseISOToLocal(event.end), "MMM d")}`
+        : format(parseISOToLocal(event.start), "MMM d")}
+    </div>
+  </div>
+));
+WeekEventPill.displayName = "WeekEventPill";
 
 export const WeekViewUserRow: React.FC<WeekViewUserRowProps> = ({
   user,
@@ -33,6 +75,8 @@ export const WeekViewUserRow: React.FC<WeekViewUserRowProps> = ({
   onRangeDragEnter,
   onRangeDragEnd,
   isRangeSelecting,
+  onEventActivate,
+  conflictsByDate,
 }) => {
   const userName = userDisplayName(user);
   return (
@@ -116,27 +160,22 @@ export const WeekViewUserRow: React.FC<WeekViewUserRowProps> = ({
               "border-border/60 hover:bg-table-hover min-h-[92px] border-r p-2 transition last:border-r-0",
               isRangeStart || isRangeEnd
                 ? "bg-primary/15 ring-primary/60 ring-2 ring-inset"
-                : isInRange && "bg-primary/10"
+                : isInRange
+                  ? "bg-primary/10"
+                  : dayEvents.length === 0 &&
+                    conflictsByDate?.has(dayKey) &&
+                    "bg-tone-warning-surface/40"
             )}
           >
             <div className="flex flex-col gap-1.5">
               {dayEvents.map((event) => (
-                <EventTooltip key={event.id} event={event} onUserClick={onUserClick}>
-                  <div
-                    className={cn(
-                      "cursor-pointer rounded-xl border px-2 py-1.5 text-xs font-medium shadow-sm transition hover:scale-[1.02]",
-                      eventColors[event.type]
-                    )}
-                  >
-                    <div className="truncate" title={event.compactLabel}>
-                      {event.compactLabel}
-                    </div>
-                    <div className="mt-0.5 text-xs opacity-70">
-                      {event.start !== event.end
-                        ? `${format(parseISOToLocal(event.start), "MMM d")} → ${format(parseISOToLocal(event.end), "MMM d")}`
-                        : format(parseISOToLocal(event.start), "MMM d")}
-                    </div>
-                  </div>
+                <EventTooltip
+                  key={event.id}
+                  event={event}
+                  onUserClick={onUserClick}
+                  onEventActivate={onEventActivate}
+                >
+                  <WeekEventPill event={event} />
                 </EventTooltip>
               ))}
             </div>

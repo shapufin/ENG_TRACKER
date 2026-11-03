@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronLeft, ChevronDown, Users } from "lucide-react";
+import { ChevronLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchField } from "@/components/ui/SearchField";
 
@@ -9,61 +9,54 @@ interface CalendarSidebarHeaderProps {
   query: string;
   onQueryChange: (query: string) => void;
   onCollapse: () => void;
-  onClearUsers: () => void;
 }
 
+/**
+ * The sidebar's identity and search. Kept to two short rows so the roster below
+ * keeps the height — the calendar's own grid is the primary surface.
+ */
 export const CalendarSidebarHeader: React.FC<CalendarSidebarHeaderProps> = ({
   userCount,
   calendarGroup,
   query,
   onQueryChange,
   onCollapse,
-  onClearUsers,
 }) => (
-  <div className="border-border/60 border-b p-3">
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2">
-        <Users className="text-primary h-4 w-4" />
-        <h2 className="text-sm font-semibold">Members</h2>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-semibold">
+  <div className="border-border/60 border-b p-2.5">
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <Users className="text-primary h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        <h2 className="truncate text-xs font-semibold">Team Directory</h2>
+        <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-1.5 py-0.5 font-mono text-xs font-semibold">
           {userCount}
         </span>
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="border-border/60 bg-background/30 h-9 w-9 rounded-lg border md:h-7 md:w-7"
-          onClick={onCollapse}
-          aria-label="Collapse team sidebar"
-        >
-          <ChevronLeft className="text-muted-foreground h-3.5 w-3.5" />
-        </Button>
       </div>
+      <Button
+        type="button"
+        size="control-icon-sm"
+        variant="ghost"
+        className="border-border/60 shrink-0 border"
+        onClick={onCollapse}
+        aria-label="Collapse team sidebar"
+        title="Collapse the directory to widen the calendar"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+      </Button>
     </div>
+
     {calendarGroup && (
-      <p className="text-muted-foreground mt-1 text-xs font-medium tracking-wider uppercase">
+      <p className="text-muted-foreground mt-1 truncate text-xs font-medium tracking-wider uppercase">
         {calendarGroup}
       </p>
     )}
+
     <SearchField
-      className="mt-3"
+      className="mt-2"
       controlSize="sm"
       value={query}
       onChange={onQueryChange}
-      placeholder="Search member..."
+      placeholder="Search..."
       aria-label="Search member"
     />
-    <Button
-      type="button"
-      variant="outline"
-      size="control-sm"
-      className="mt-3 w-full justify-between text-xs"
-      onClick={onClearUsers}
-    >
-      All members
-      <ChevronDown className="text-muted-foreground h-3.5 w-3.5" />
-    </Button>
   </div>
 );

@@ -14,6 +14,10 @@ vi.mock("@/components/calendar/ConflictsModal", () => ({
   ConflictsModal: ({ open }: { open: boolean }) =>
     open ? <div data-testid="conflicts-modal">Conflicts</div> : null,
 }));
+vi.mock("@/components/calendar/DayEventsDialog", () => ({
+  DayEventsDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="day-events-dialog">DayEvents</div> : null,
+}));
 vi.mock("./CalendarFormDialog", () => ({
   CalendarFormDialog: ({ open }: { open: boolean }) =>
     open ? <div data-testid="calendar-form-dialog">CalendarForm</div> : null,
@@ -40,6 +44,12 @@ const baseData: any = {
   conflictsModalOpen: false,
   setConflictsModalOpen: vi.fn(),
   allConflictEntries: [],
+  dayEventsDate: null,
+  dayEvents: [],
+  dayConflict: undefined,
+  handleDayEventsOpenChange: vi.fn(),
+  onEventActivate: vi.fn(),
+  requestTimeOffForDay: vi.fn(),
 };
 
 describe("CalendarPageModals", () => {
@@ -90,6 +100,17 @@ describe("CalendarPageModals", () => {
       />
     );
     expect(screen.getByTestId("conflicts-modal")).toBeInTheDocument();
+  });
+
+  it("renders DayEventsDialog when a day is selected for details", () => {
+    render(
+      <CalendarPageModals
+        user={null}
+        canViewTeamData={false}
+        data={{ ...baseData, dayEventsDate: new Date(2026, 10, 17) }}
+      />
+    );
+    expect(screen.getByTestId("day-events-dialog")).toBeInTheDocument();
   });
 
   it("renders dialog title with selected dates", () => {

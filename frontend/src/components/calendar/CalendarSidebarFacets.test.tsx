@@ -11,14 +11,41 @@ const person = (id: number, clients: [number, string][], techs: [number, string]
     techs_detail: techs.map(([tid, name]) => ({ id: tid, name, code: name, level: null })),
   }) as unknown as User;
 
-const users = [
-  person(1, [[10, "Acme"]], [[20, "DB"]]),
-  person(2, [[11, "Beta"]], [[20, "DB"]]),
-];
+const users = [person(1, [[10, "Acme"]], [[20, "DB"]]), person(2, [[11, "Beta"]], [[20, "DB"]])];
+
+/** The chips live behind a disclosure so the roster keeps the height. */
+const openFilters = () => fireEvent.click(screen.getByRole("button", { name: /^Filters/ }));
 
 describe("CalendarSidebarFacets", () => {
+  it("starts collapsed so the roster keeps the vertical space", () => {
+    render(<CalendarSidebarFacets users={users} selection={NO_FACETS} onChange={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: /^Filters/ })).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    );
+    expect(screen.queryByText("Client")).not.toBeInTheDocument();
+  });
+
+  it("stays open while a facet is applied", () => {
+    render(
+      <CalendarSidebarFacets
+        users={users}
+        selection={{ client: "10", tech: null }}
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: /^Filters/ })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
+    expect(screen.getByRole("button", { name: /Acme/ })).toBeInTheDocument();
+  });
+
   it("draws a row only when it offers a real choice", () => {
     render(<CalendarSidebarFacets users={users} selection={NO_FACETS} onChange={vi.fn()} />);
+    openFilters();
     expect(screen.getByText("Client")).toBeInTheDocument();
     expect(screen.queryByText("Tech")).not.toBeInTheDocument(); // one tech: nothing to choose
   });
@@ -35,6 +62,7 @@ describe("CalendarSidebarFacets", () => {
     const { rerender } = render(
       <CalendarSidebarFacets users={users} selection={NO_FACETS} onChange={onChange} />
     );
+    openFilters();
     fireEvent.click(screen.getByRole("button", { name: /Acme/ }));
     expect(onChange).toHaveBeenLastCalledWith({ client: "10", tech: null });
 

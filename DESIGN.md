@@ -177,7 +177,7 @@ unverified Page Gate debt as the current verification baseline.
 | `/standby` | All | `StandbyPage` | same shared `hours_logs/` infra as Overtime | Structurally identical pattern to Overtime — not re-read line-by-line, inherits the same verification |
 | `/leave-management` | All | `LeavePage` | `DataTable`, `FormDialog`, `ConfirmDialog` | **Verified this session** — clean, no native dialogs, proper loading state |
 | `/admin/leave-requests` `LeaveRequestsTable` | A | — | `ConfirmDialog`, `Input` | **CRITICAL fixed this session** — reject action called native `prompt()` directly, banned by §11; now routes through a local `ConfirmDialog`+`Input` component mirroring the file's own `DeleteLeaveRequestButton` pattern |
-| `/calendar` | All | `CalendarPage` | calendar-specific hue system (§15 exempt) | — |
+| `/calendar` | All | `CalendarPage` → `CalendarPageShell` | `CalendarHeader` (flat toolbar, `control-sm` only), `CalendarSidebar` (`CalendarSidebarLayers` + `CalendarSidebarFacets` + `CalendarSidebarUserList`), `MonthGrid`, `CalendarBottomCards` (tone tokens); calendar event hues stay exempt (§15) | **Redesigned 2026-11-02** — first full-bleed route: `MainContentTransition fill`, no shell padding, app sidebar auto-collapses on desktop and restores on leave. Month grid fits the viewport (no `min-h-*` on the day cell, no internal scroll at 839×721). Team Layers drive workspace selection through the existing `toggleWorkspace()`. Bottom metrics strip revived with the pre-existing prop API. Rules and traps: `docs/workflow-invariants.md` item 53. |
 | `/team/approvals` | TL | `TLApprovalDashboard` | `TLApprovalStats`, `ConfirmDialog`, `MonthPicker`, tabbed `DataTable` | **Verified this session** — has a real permission-denied `GlassCard` state, no native `confirm()`, sensible stats→filters→tabs→table hierarchy |
 | `/team` | TL | `TeamOverviewPage` | `StatCard` grid, `TeamOverviewCard` | **Verified this session** — 4 hero numbers fixed for `font-mono` |
 | `/hr/reports` | TL | `HRReportsPage` | `HRInsightsCard`, `HRReportActionBar`, `HRReportResults` | **Verified this session** — export bar merged into insight-card row |
@@ -229,8 +229,10 @@ not status, and collapsing them loses real information (§15 in
 03-FRONTEND-PATTERNS.md has the full reasoning per file):
 
 - `components/calendar/calendarStyles.ts` and its consumers (`EventCard`,
-  `ConflictCard`, `CarryOverCard`, `CalendarBottomCards`, etc.) — 5 distinct
-  event/status hues.
+  `ConflictCard`, `CarryOverCard`, `WeekView`, `ListView`, `MonthGrid`, etc.) —
+  5 distinct event/status hues. `CalendarBottomCards` left this list on
+  2026-11-02: its numbers are balance/carry-over/conflict semantics, not event
+  types, so it uses `toneFillClass`/`toneSurfaceClass`.
 - `components/calendar/UserAvatar.tsx` — 6-color user-ID rotation.
 - `plugins/skills/utils/proficiencyLevels.ts` / `categoryAccents.ts` and their
   consumers (`SkillsDenseMatrix`, `SkillsHeatmapGrid`, `SkillsMatrixTable`,

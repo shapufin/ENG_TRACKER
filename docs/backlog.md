@@ -50,3 +50,9 @@ open for this feature.
 | Branding changed through Django admin leaves the cached maintenance payload stale for ≤ 60 s (`SiteBrandingViewSet` clears the cache, `SiteBrandingAdmin.save_model` does not) | LOW | move `clear_maintenance_cache()` into `SiteBranding.save()` so every write path invalidates, and drop the two viewset calls; test: warm the status cache, save the row via the ORM, status reflects the new name |
 | "Save message" while the switch is off toasts "Maintenance mode is off", which reads like nothing was saved | LOW | branch the toast on the mutation variables: no `is_active` → "Maintenance copy saved" |
 
+### Login throttling behind a shared NAT (2026-11-02, found verifying `/calendar`)
+
+| Item | Severity | Fix sketch |
+|---|---|---|
+| `AnonRateThrottle` (`anon: 100/hour`, `config/settings.py`) applies to **every** unauthenticated request, and `POST /api/auth/token/` + `/api/auth/token/refresh/` are unauthenticated. DRF runs all throttle classes, so the already-declared `throttle_scope = 'auth'` (`20/min` outside DEBUG, `apps/users/views/auth.py` lines 60 and 464) does **not** replace it — the 100/hour anon budget is the binding limit. An office behind one NAT IP (or many clients refreshing together) can trip it, and DRF's answer is a raw `"Expected available in N seconds."` 429 with no user-facing explanation. Dev runs hit it constantly: a 27-login Playwright suite exhausts the hour. | MEDIUM (production, unverified at real login volume) | measure real token/refresh requests per IP per hour first (nginx log + `INGRESS_REAL_IP_HEADER`); then exclude the auth paths from `AnonRateThrottle` and rely on the `auth` scope with a realistic burst rate, and map the 429 to explicit copy ("too many attempts — try again in a minute") instead of the raw countdown. Do not simply raise `anon` for everything: it also protects unauthenticated reads. |
+

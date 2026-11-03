@@ -43,6 +43,11 @@ export const useCalendarEventQueries = ({
     staleTime: 0,
     gcTime: 10 * 60 * 1000,
     placeholderData: keepPreviousData,
+    // Deliberate exception to the app-wide "no background polling" default:
+    // conflicts and coverage are derived from these two feeds, and a shared
+    // calendar that only refreshes on reload shows a stale staffing picture for
+    // whoever else booked time off. Foreground only (React Query's default).
+    refetchInterval: 60_000,
   });
 
   const {
@@ -57,6 +62,8 @@ export const useCalendarEventQueries = ({
     staleTime: 0,
     gcTime: 10 * 60 * 1000,
     placeholderData: keepPreviousData,
+    /** Same deliberate 60s foreground poll as the standby feed (coverage + conflicts). */
+    refetchInterval: 60_000,
   });
 
   const {

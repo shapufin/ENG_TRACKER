@@ -1,5 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { EventTooltip } from "./EventTooltip";
 import { EventCard } from "./EventCard";
 import type { CalendarEvent } from "./types";
 
@@ -116,5 +118,19 @@ describe("EventCard", () => {
     ]) {
       expect(el.className).toContain("@max-[5rem]:hidden");
     }
+  });
+
+  it("still activates when a Radix tooltip trigger injects its own onClick", () => {
+    // The trigger's props are spread onto the pill; they used to replace the pill's own click handler.
+    const onEventActivate = vi.fn();
+    render(
+      <TooltipProvider>
+        <EventTooltip event={baseEvent} onEventActivate={onEventActivate}>
+          <EventCard event={baseEvent} />
+        </EventTooltip>
+      </TooltipProvider>
+    );
+    fireEvent.click(screen.getByRole("button"));
+    expect(onEventActivate).toHaveBeenCalledWith(baseEvent);
   });
 });

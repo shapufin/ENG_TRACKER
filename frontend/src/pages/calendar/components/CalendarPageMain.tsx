@@ -7,6 +7,7 @@ import { TimelineView } from "@/components/calendar/TimelineView";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { useCalendarPageData } from "../hooks/useCalendarPageData";
 import { calendarSurface } from "@/components/calendar/calendarStyles";
+import { cn } from "@/lib/utils";
 
 type CalendarData = ReturnType<typeof useCalendarPageData>;
 
@@ -20,8 +21,15 @@ export const CalendarPageMain: React.FC<CalendarPageMainProps> = ({ data }) => {
 
   return (
     <div className={`relative flex min-h-0 flex-1 flex-col overflow-hidden ${calendarSurface}`}>
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden p-2 sm:p-3">
-        <div className="flex h-full min-h-0 flex-col overflow-x-auto overflow-y-auto pr-1">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden p-1.5">
+        <div
+          className={cn(
+            "flex h-full min-h-0 flex-col",
+            // A month must fit the viewport; the other views can be taller than
+            // the frame, so they scroll inside it.
+            data.viewMode === "month" ? "overflow-hidden" : "overflow-x-auto overflow-y-auto pr-1"
+          )}
+        >
           <TooltipProvider delayDuration={0}>
             {data.viewMode === "month" && (
               <MonthGrid
@@ -32,6 +40,7 @@ export const CalendarPageMain: React.FC<CalendarPageMainProps> = ({ data }) => {
                 rangeEnd={data.rangeEnd}
                 density={data.density}
                 onSelectDate={data.handleSelectDate}
+                onShowDayEvents={data.openDayEvents}
                 onUserClick={data.handleUserClick}
                 onEventActivate={data.handleEventActivate}
                 viewMode={data.viewMode}
@@ -57,6 +66,8 @@ export const CalendarPageMain: React.FC<CalendarPageMainProps> = ({ data }) => {
                 isRangeSelecting={data.isDraggingRange}
                 onPrevWeek={handlePrevWeek}
                 onNextWeek={handleNextWeek}
+                onEventActivate={data.handleEventActivate}
+                conflictsByDate={data.dayConflicts}
               />
             )}
             {data.viewMode === "timeline" && (
@@ -67,6 +78,8 @@ export const CalendarPageMain: React.FC<CalendarPageMainProps> = ({ data }) => {
                 onUserClick={data.handleUserClick}
                 onEventActivate={data.handleEventActivate}
                 onRequestTimeOff={data.openBookingDialog}
+                onSelectDate={data.handleSelectDate}
+                conflictsByDate={data.dayConflicts}
               />
             )}
             {data.viewMode === "list" && (

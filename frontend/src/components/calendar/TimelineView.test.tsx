@@ -131,9 +131,7 @@ describe("TimelineView", () => {
     // 23:30 UTC on Nov 2 is already Nov 3 in Tirane.
     vi.setSystemTime(new Date("2026-11-02T23:30:00Z"));
     try {
-      render(
-        <TimelineView currentMonth={new Date(2026, 10, 15)} users={mockUsers} events={[]} />
-      );
+      render(<TimelineView currentMonth={new Date(2026, 10, 15)} users={mockUsers} events={[]} />);
       expect(screen.getByText("3").parentElement?.className).toContain("bg-primary");
       expect(screen.getByText("2").parentElement?.className).not.toContain("bg-primary");
     } finally {
@@ -157,5 +155,56 @@ describe("TimelineView", () => {
     expect(screen.getByText("Vacation")).toBeInTheDocument();
     expect(screen.getByText("Sick")).toBeInTheDocument();
     expect(screen.getByText("Standby")).toBeInTheDocument();
+  });
+
+  it("badges and tints only conflict day columns", () => {
+    const conflicts = new Map([
+      ["2026-11-06", { dateKey: "2026-11-06", coveragePct: 40, away: 3, total: 5, users: [] }],
+    ]);
+    render(
+      <TimelineView
+        currentMonth={new Date(2026, 10, 1)}
+        users={mockUsers}
+        events={mockEvents}
+        conflictsByDate={conflicts}
+      />
+    );
+    expect(screen.getAllByLabelText("Staffing conflict: 3 of 5 away, 40% coverage")).toHaveLength(
+      1
+    );
+    expect(document.querySelectorAll(String.raw`.bg-tone-warning-surface\/40`).length).toBe(2); // header cell + the one member without an event that day
+    // a ~31px day column cannot hold the percent text: the badge is icon-only there
+    expect(screen.getByLabelText("Staffing conflict: 3 of 5 away, 40% coverage").textContent).toBe(
+      ""
+    );
+  });
+
+  it("shows no conflict badge without conflictsByDate", () => {
+    render(
+      <TimelineView currentMonth={new Date(2026, 10, 1)} users={mockUsers} events={mockEvents} />
+    );
+    expect(screen.queryByLabelText(/Staffing conflict/)).toBeNull();
+  });
+
+  it("empty cell books that day; an event cell opens details, not a booking", () => {
+    const onSelectDate = vi.fn();
+    const onEventActivate = vi.fn();
+    render(
+      <TimelineView
+        currentMonth={new Date(2026, 10, 1)}
+        users={mockUsers}
+        events={mockEvents}
+        onSelectDate={onSelectDate}
+        onEventActivate={onEventActivate}
+      />
+    );
+    const empty = screen.getAllByLabelText(/^Book time off for .* on 2026-11-02$/)[0];
+    fireEvent.click(empty);
+    expect(onSelectDate).toHaveBeenCalledTimes(1);
+    expect(onSelectDate.mock.calls[0][0]).toEqual(new Date(2026, 10, 2));
+    const eventCell = document.querySelector("button[aria-label*='(vacation)']") as HTMLElement;
+    fireEvent.click(eventCell);
+    expect(onEventActivate).toHaveBeenCalledTimes(1);
+    expect(onSelectDate).toHaveBeenCalledTimes(1);
   });
 });
