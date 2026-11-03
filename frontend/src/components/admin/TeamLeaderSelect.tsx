@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableCombobox, type ComboboxOption } from "@/components/ui/SearchableCombobox";
 
 interface TeamLeaderOption {
   id: number;
@@ -24,8 +18,18 @@ interface TeamLeaderSelectProps {
   onChange: (teamLeaderUserId: number | null) => void;
 }
 
-/** Inline TL picker — commits immediately on change, no separate save
- * step. Used by the HR TL-assignment page and the TL-revoke-blocked
+const NO_TL = "none";
+
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join("");
+
+/** Inline TL picker with type-ahead. Commits immediately on change, no separate
+ * save step. Used by the HR TL-assignment page and the TL-revoke-blocked
  * reassignment dialog. */
 export const TeamLeaderSelect: React.FC<TeamLeaderSelectProps> = ({
   ariaLabel,
@@ -37,28 +41,28 @@ export const TeamLeaderSelect: React.FC<TeamLeaderSelectProps> = ({
 }) => {
   const isKnown = value == null || options.some((tl) => tl.id === value);
   const fallbackLabel = currentName?.trim() || (value != null ? `Former TL (#${value})` : null);
+
+  const items: ComboboxOption[] = [
+    { value: NO_TL, label: "No TL" },
+    ...(!isKnown && fallbackLabel
+      ? [{ value: String(value), label: `${fallbackLabel} (inactive)`, disabled: true }]
+      : []),
+    ...options.map((tl) => ({
+      value: String(tl.id),
+      label: tl.full_name,
+      initials: initialsOf(tl.full_name),
+    })),
+  ];
+
   return (
-    <Select
-      value={isKnown ? (value ? String(value) : "none") : String(value)}
-      onValueChange={(v) => onChange(v === "none" ? null : Number(v))}
+    <SearchableCombobox
+      ariaLabel={ariaLabel}
+      options={items}
+      value={value == null ? NO_TL : String(value)}
+      onChange={(next) => onChange(next === null || next === NO_TL ? null : Number(next))}
+      placeholder="No TL"
+      searchPlaceholder="Search leaders..."
       disabled={disabled}
-    >
-      <SelectTrigger aria-label={ariaLabel} className="w-full">
-        <SelectValue placeholder="No TL" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="none">No TL</SelectItem>
-        {!isKnown && fallbackLabel && (
-          <SelectItem value={String(value)} disabled>
-            {fallbackLabel} (inactive)
-          </SelectItem>
-        )}
-        {options.map((tl) => (
-          <SelectItem key={tl.id} value={String(tl.id)}>
-            {tl.full_name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    />
   );
 };

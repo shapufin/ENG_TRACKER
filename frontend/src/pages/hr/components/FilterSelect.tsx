@@ -1,12 +1,6 @@
 import React from "react";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableCombobox, type ComboboxOption } from "@/components/ui/SearchableCombobox";
 
 interface FilterSelectProps<T extends { id: number | string }> {
   label: string;
@@ -30,24 +24,25 @@ export const FilterSelect = <T extends { id: number | string }>({
   noneLabel,
   options,
   renderOption,
-}: FilterSelectProps<T>) => (
-  <div className="space-y-2">
-    <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
-      {icon} {label}
-    </Label>
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="bg-background/50 px-3">
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">{allLabel}</SelectItem>
-        {noneLabel && <SelectItem value="none">{noneLabel}</SelectItem>}
-        {options?.map((item) => (
-          <SelectItem key={item.id} value={String(item.id)}>
-            {renderOption(item)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-);
+}: FilterSelectProps<T>) => {
+  const items: ComboboxOption[] = [
+    { value: "all", label: allLabel },
+    ...(noneLabel ? [{ value: "none", label: noneLabel }] : []),
+    ...(options ?? []).map((item) => ({ value: String(item.id), label: renderOption(item) })),
+  ];
+  return (
+    <div className="space-y-2">
+      <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
+        {icon} {label}
+      </Label>
+      <SearchableCombobox
+        ariaLabel={label}
+        options={items}
+        value={value}
+        onChange={(next) => onChange(next ?? "all")}
+        placeholder={placeholder}
+        searchPlaceholder={`Search ${label.toLowerCase()}...`}
+      />
+    </div>
+  );
+};

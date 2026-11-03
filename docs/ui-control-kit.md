@@ -87,3 +87,7 @@ stored as `version: 2` (`widgets` = 12-column `lg` placements, optional `layouts
 layouts are migrated by `gridLayout.migrate`. Drag and resize exist only in explicit **Edit layout** mode,
 on the All tab, from a visible grip (keyboard: Alt+Arrow moves, Alt+Shift+Arrow resizes). Below 768px the
 grid is a plain stack. One `updateLayout` per gesture, through the ordered save queue.
+
+## Searchable picker (2026-11-03)
+
+`components/ui/SearchableCombobox.tsx` is the single-select picker with type-ahead: label plus description are searched, options may carry initials, a disabled option stays visible but unselectable, `clearable` adds a clear button. It consumes `controlSurface`, so it aligns with Input, SelectTrigger and DateRangePicker. Use it for people, team and leader lists; keep `Select` for short fixed lists. `TeamLeaderSelect` and the HR report `FilterSelect` use it. Tests drive it by opening the `combobox` and clicking an `option`; do not mock `ui/select` for it. Follow-ups still on plain Select: `UserSelectField`, `MemberSelectField`, `SkillsLeaderFilters`.
