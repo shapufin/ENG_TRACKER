@@ -17,7 +17,7 @@ import { plural } from "@/lib/plural";
 import { cn } from "@/lib/utils";
 import { SuggestedTeamMoves } from "./components/SuggestedTeamMoves";
 
-export type DataCheckTab = "all" | "users" | "leaders" | "empty" | "clients" | "suggestions";
+type DataCheckTab = "all" | "users" | "leaders" | "empty" | "clients" | "suggestions";
 
 interface CheckSectionProps {
   title: string;
@@ -192,9 +192,7 @@ export const DataCheckPage: React.FC = () => {
               icon={Users}
               iconTone={data.empty_teams.length === 0 ? "success" : "warning"}
               valueColorClass={
-                data.empty_teams.length === 0
-                  ? "text-tone-success-text"
-                  : "text-tone-warning-text"
+                data.empty_teams.length === 0 ? "text-tone-success-text" : "text-tone-warning-text"
               }
               onClick={() => setActiveTab(activeTab === "empty" ? "all" : "empty")}
               pressed={activeTab === "empty"}

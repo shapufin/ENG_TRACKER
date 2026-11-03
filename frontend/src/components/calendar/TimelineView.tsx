@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { toneFillClass } from "@/components/ui/tone";
 import { cn } from "@/lib/utils";
 import { currentBusinessDateISO } from "@/lib/date-format-utils";
+import type { DayConflict } from "@/lib/calendarCoverage";
+import { ConflictBadge } from "./ConflictBadge";
 import { UserAvatar } from "./UserAvatar";
 import { userDisplayName, teamLabel } from "./calendarSidebarUtils";
 import type { CalendarEvent } from "./types";
@@ -17,12 +19,23 @@ interface TimelineViewProps {
   onUserClick?: (userId: number) => void;
   onEventActivate?: (event: CalendarEvent) => void;
   onRequestTimeOff?: () => void;
+  /** Empty cell: starts a booking for that day (an event cell opens its details instead). */
+  onSelectDate?: (date: Date) => void;
+  conflictsByDate?: ReadonlyMap<string, DayConflict>;
 }
 
 const EVENT_STYLE = {
-  vacation: { cell: "bg-tone-success-surface text-tone-success-text", letter: "V", tone: "success" },
+  vacation: {
+    cell: "bg-tone-success-surface text-tone-success-text",
+    letter: "V",
+    tone: "success",
+  },
   sick: { cell: "bg-tone-danger-surface text-tone-danger-text", letter: "S", tone: "danger" },
-  standby: { cell: "bg-tone-warning-surface text-tone-warning-text", letter: "SB", tone: "warning" },
+  standby: {
+    cell: "bg-tone-warning-surface text-tone-warning-text",
+    letter: "SB",
+    tone: "warning",
+  },
 } as const;
 
 const LEGEND = [
@@ -40,6 +53,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   onUserClick,
   onEventActivate,
   onRequestTimeOff,
+  onSelectDate,
+  conflictsByDate,
 }) => {
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -130,6 +145,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
           </div>
           {days.map((day) => {
             const holiday = holidayByDate.get(day.dateStr);
+            const conflict = conflictsByDate?.get(day.dateStr);
             return (
               <div
                 key={day.dayNum}
@@ -139,10 +155,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                     ? "bg-primary text-primary-foreground font-bold shadow-xs"
                     : day.isWeekend
                       ? "bg-muted text-muted-foreground"
-                      : "text-foreground"
+                      : "text-foreground",
+                  conflict && "border-tone-warning-border bg-tone-warning-surface/40 border-2"
                 )}
               >
                 <span className="text-xs font-bold">{day.dayNum}</span>
+                {conflict && <ConflictBadge conflict={conflict} compact />}
                 {holiday && (
                   <span
                     className={cn("mt-0.5 h-1.5 w-1.5 rounded-full", toneFillClass.info)}
@@ -191,15 +209,26 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                   </div>
 
                   {days.map((day) => {
-                    const active = spans.find((s) => day.dateStr >= s.start && day.dateStr <= s.end);
+                    const active = spans.find(
+                      (s) => day.dateStr >= s.start && day.dateStr <= s.end
+                    );
                     if (!active) {
+                      const emptyClass = cn(
+                        "border-border/40 h-10 border-r",
+                        day.isWeekend && "bg-muted/30",
+                        conflictsByDate?.has(day.dateStr) && "bg-tone-warning-surface/40"
+                      );
+                      if (!onSelectDate) return <div key={day.dayNum} className={emptyClass} />;
                       return (
-                        <div
+                        <button
                           key={day.dayNum}
+                          type="button"
+                          onClick={() => onSelectDate(new Date(year, month, day.dayNum))}
                           className={cn(
-                            "border-border/40 h-10 border-r",
-                            day.isWeekend && "bg-muted/30"
+                            emptyClass,
+                            "hover:bg-primary/10 focus-visible:ring-ring transition-colors focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-inset"
                           )}
+                          aria-label={`Book time off for ${name} on ${day.dateStr}`}
                         />
                       );
                     }

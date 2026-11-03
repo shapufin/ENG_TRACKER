@@ -14,6 +14,7 @@ interface MonthGridProps {
   rangeEnd?: Date | null;
   density?: CalendarDensity;
   onSelectDate: (date: Date) => void;
+  onShowDayEvents?: (date: Date) => void;
   onUserClick?: (userId: number) => void;
   onEventActivate?: (event: CalendarEvent) => void;
   viewMode?: "month" | "week" | "list";
@@ -32,6 +33,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
   rangeEnd,
   density,
   onSelectDate,
+  onShowDayEvents,
   onUserClick,
   onEventActivate,
   viewMode = "month",
@@ -53,7 +55,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
 
   return (
     <div
-      className="border-border/60 bg-card flex h-full min-h-[480px] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border sm:min-h-[580px] lg:min-h-[640px]"
+      className="bg-card flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       role="grid"
       aria-label={format(currentMonth, "MMMM yyyy")}
     >
@@ -61,7 +63,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
         {weekDays.map((wd) => (
           <div
             key={wd}
-            className="text-muted-foreground py-2.5 text-center font-mono text-xs font-bold tracking-[0.3em] uppercase"
+            className="text-muted-foreground py-2 text-center font-mono text-xs font-bold tracking-[0.3em] uppercase"
           >
             {wd}
           </div>
@@ -100,6 +102,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
                   isInRange={isInRange}
                   density={density}
                   onSelect={onSelectDate}
+                  onShowDayEvents={onShowDayEvents}
                   onUserClick={onUserClick}
                   onEventActivate={onEventActivate}
                   onRangeDragStart={onRangeDragStart}

@@ -152,6 +152,24 @@ describe("CalendarDayCell", () => {
     expect(onSelect).toHaveBeenCalledWith(date);
   });
 
+  it("prefers onShowDayEvents for the overflow button over booking onSelect", () => {
+    const onSelect = vi.fn();
+    const onShowDayEvents = vi.fn();
+    render(
+      <CalendarDayCell
+        date={date}
+        events={events}
+        isCurrentMonth={true}
+        density="normal"
+        onSelect={onSelect}
+        onShowDayEvents={onShowDayEvents}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /view 1 more events/i }));
+    expect(onShowDayEvents).toHaveBeenCalledWith(date);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
   describe("today marker", () => {
     afterEach(() => vi.useRealTimers());
 
@@ -244,7 +262,9 @@ describe("CalendarDayCell", () => {
       coveragePct: 50,
       away: 2,
       total: 4,
-      users: [{ id: 1, name: "Alice Smith", type: "vacation" as const, status: "approved" as const }],
+      users: [
+        { id: 1, name: "Alice Smith", type: "vacation" as const, status: "approved" as const },
+      ],
     };
 
     it("explains the coverage badge on focus", () => {

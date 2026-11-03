@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CalendarHeader } from "./CalendarHeader";
+import { exportToCSV, exportToICal } from "@/lib/calendar-export";
 
 vi.mock("@/components/calendar/WorkspaceSelector", () => ({
   WorkspaceSelector: () => <div data-testid="workspace-selector" />,
@@ -26,6 +27,10 @@ const baseProps = {
 };
 
 describe("CalendarHeader", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("exposes the active calendar view with aria-pressed", () => {
     render(<CalendarHeader {...baseProps} />);
 
@@ -40,84 +45,114 @@ describe("CalendarHeader", () => {
     expect(screen.getByRole("banner", { name: "Calendar controls" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Previous month" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next month" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Export calendar as CSV" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export calendar" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Clear workspace selection" })).toBeEnabled();
   });
 
-  it("renders the toolbar in the shared glass surface", () => {
-    render(<CalendarHeader {...baseProps} />);
-
-    expect(
-      screen.getByRole("banner", { name: "Calendar controls" }).querySelector(".shadow-card")
-    ).toBeInTheDocument();
-  });
-
-  it("provides touch-sized icon controls on mobile", () => {
-    render(<CalendarHeader {...baseProps} />);
-
-    const prevButton = screen.getByRole("button", { name: "Previous month" });
-    expect(prevButton.className).toContain("h-11");
-    expect(prevButton.className).toContain("w-11");
-    expect(prevButton.className).toContain("md:h-9");
-    expect(prevButton.className).toContain("md:w-9");
-  });
-
-  it("shows export text labels only at 2xl so the strip holds one line on laptops", () => {
-    render(<CalendarHeader {...baseProps} />);
-
-    const csvButton = screen.getByRole("button", { name: "Export calendar as CSV" });
-    const csvLabel = csvButton.querySelector("span");
-    expect(csvLabel?.className).toContain("hidden");
-    expect(csvLabel?.className).toContain("2xl:inline");
-
-    const icalButton = screen.getByRole("button", { name: "Export calendar as iCal" });
-    const icalLabel = icalButton.querySelector("span");
-    expect(icalLabel?.className).toContain("hidden");
-    expect(icalLabel?.className).toContain("2xl:inline");
-  });
-
-  it("wraps by available width, not by a viewport breakpoint", () => {
+  it("is a flat toolbar, not a card surface", () => {
     render(<CalendarHeader {...baseProps} />);
 
     const banner = screen.getByRole("banner", { name: "Calendar controls" });
-    const card = banner.firstElementChild;
-    expect(card?.className).toContain("flex-wrap");
-    expect(card?.className).not.toMatch(/flex-nowrap/);
-    expect(banner.querySelector(".basis-full")).toBeNull();
+    // The month grid owns the only card surface on this page.
+    expect(banner.querySelector(".shadow-card")).toBeNull();
+    expect(banner.querySelector("[class*='rounded-2xl']")).toBeNull();
   });
 
-  it("shows the staffing state at every width and uses tone tokens", () => {
-    render(<CalendarHeader {...baseProps} />);
-
-    const badge = screen.getByText("Full Staffing").parentElement;
-    expect(badge?.className).not.toContain("hidden");
-    expect(badge?.className).toContain("tone-success");
-    expect(badge?.className).not.toMatch(/emerald|dark:/);
-  });
-
-  it("gives CSV and iCal different icons", () => {
-    render(<CalendarHeader {...baseProps} />);
-
-    const csv = screen.getByRole("button", { name: "Export calendar as CSV" }).querySelector("svg");
-    const ical = screen
-      .getByRole("button", { name: "Export calendar as iCal" })
-      .querySelector("svg");
-    expect(csv?.getAttribute("class")).not.toEqual(ical?.getAttribute("class"));
-  });
-
-  it("keeps the phone toolbar short: fullscreen/reset only from sm, actions ordered before view tabs", () => {
+  it("never hand-writes a control height (control-kit rule)", () => {
     render(<CalendarHeader {...baseProps} onToggleDensity={vi.fn()} />);
 
-    for (const name of ["Enter fullscreen", "Clear workspace selection"]) {
+    for (const name of [
+      "Previous month",
+      "Next month",
+      "Export calendar",
+      "Enter fullscreen",
+      "Toggle calendar density",
+    ]) {
       const cls = screen.getByRole("button", { name }).className;
-      expect(cls).toContain("hidden");
-      expect(cls).toContain("sm:inline-flex");
+      expect(cls).not.toMatch(/(^|\s)h-(8|9|10|11|12)(\s|$)/);
+      expect(cls).not.toMatch(/(^|\s)w-(8|9|10|11|12)(\s|$)/);
     }
-    const order = (el: HTMLElement) => el.className.match(/(?:^|\s)order-(\d)(?:\s|$)/)?.[1];
-    const request = order(screen.getByRole("button", { name: /request time off/i }));
-    const csv = order(screen.getByRole("button", { name: "Export calendar as CSV" }));
-    const views = order(screen.getByRole("group", { name: "Calendar view" }));
-    expect(Number(request)).toBeLessThan(Number(csv));
-    expect(Number(csv)).toBeLessThan(Number(views));
+  });
+
+  it("keeps the month title in an h1 inside the header (e2e selector)", () => {
+    render(<CalendarHeader {...baseProps} />);
+
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent("June 2024");
+    expect(heading.closest("header")).toHaveAttribute("aria-label", "Calendar controls");
+  });
+
+  it("wires the month navigation and today controls", () => {
+    render(<CalendarHeader {...baseProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+    fireEvent.click(screen.getByRole("button", { name: "Today" }));
+
+    expect(baseProps.onPrevMonth).toHaveBeenCalledTimes(1);
+    expect(baseProps.onNextMonth).toHaveBeenCalledTimes(1);
+    expect(baseProps.onToday).toHaveBeenCalledTimes(1);
+  });
+
+  it("collapses CSV and iCal into one export menu that calls the right exporter", async () => {
+    render(<CalendarHeader {...baseProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Export calendar" }));
+
+    const csv = await screen.findByRole("button", { name: "Export calendar as CSV" });
+    fireEvent.click(csv);
+    await waitFor(() => expect(exportToCSV).toHaveBeenCalledTimes(1));
+    expect(exportToICal).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Export calendar" }));
+    const ical = await screen.findByRole("button", { name: "Export calendar as iCal" });
+    fireEvent.click(ical);
+    await waitFor(() => expect(exportToICal).toHaveBeenCalledTimes(1));
+  });
+
+  it("shows the conflict count as a labelled action", () => {
+    const onOpenConflictsModal = vi.fn();
+    render(
+      <CalendarHeader
+        {...baseProps}
+        conflictCount={3}
+        onOpenConflictsModal={onOpenConflictsModal}
+      />
+    );
+
+    const chip = screen.getByRole("button", { name: "3 team conflicts" });
+    fireEvent.click(chip);
+    expect(onOpenConflictsModal).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows full staffing with tone tokens when there are no conflicts", () => {
+    render(<CalendarHeader {...baseProps} conflictCount={0} onOpenConflictsModal={vi.fn()} />);
+
+    const badge = screen.getByLabelText("Full staffing coverage");
+    expect(badge.className).toContain("tone-success");
+    expect(badge.className).not.toMatch(/emerald|dark:/);
+  });
+
+  it("switches the fullscreen label with the state", () => {
+    const { rerender } = render(<CalendarHeader {...baseProps} />);
+    expect(screen.getByRole("button", { name: "Enter fullscreen" })).toBeInTheDocument();
+
+    rerender(<CalendarHeader {...baseProps} isFullscreen />);
+    expect(screen.getByRole("button", { name: "Exit fullscreen" })).toBeInTheDocument();
+  });
+
+  it("fires the toolbar actions", () => {
+    const onToggleDensity = vi.fn();
+    render(<CalendarHeader {...baseProps} onToggleDensity={onToggleDensity} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle calendar density" }));
+    fireEvent.click(screen.getByRole("button", { name: "Enter fullscreen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear workspace selection" }));
+    fireEvent.click(screen.getByRole("button", { name: /request time off/i }));
+
+    expect(onToggleDensity).toHaveBeenCalledTimes(1);
+    expect(baseProps.onToggleFullscreen).toHaveBeenCalledTimes(1);
+    expect(baseProps.onClearWorkspaceSelection).toHaveBeenCalledTimes(1);
+    expect(baseProps.onRequestTimeOff).toHaveBeenCalledTimes(1);
   });
 });

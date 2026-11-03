@@ -61,16 +61,22 @@ describe("CalendarSidebar", () => {
 
   it("filters users by query", () => {
     render(<CalendarSidebar {...baseProps} />);
-    const input = screen.getByPlaceholderText("Search member...");
+    const input = screen.getByPlaceholderText("Search...");
     fireEvent.change(input, { target: { value: "alice" } });
     expect(screen.getByText("Alice Smith")).toBeInTheDocument();
     expect(screen.queryByText("Bob Jones")).not.toBeInTheDocument();
   });
 
-  it("clears users via header", () => {
+  it("clears the selection from the staff heading", () => {
     render(<CalendarSidebar {...baseProps} />);
     fireEvent.click(screen.getByText("All members"));
     expect(baseProps.onClearUsers).toHaveBeenCalled();
+  });
+
+  it("names the directory and counts its staff", () => {
+    render(<CalendarSidebar {...baseProps} />);
+    expect(screen.getByText("Team Directory")).toBeInTheDocument();
+    expect(screen.getByText("Staff (2)")).toBeInTheDocument();
   });
 
   it("toggles expanded via footer", () => {
@@ -103,6 +109,7 @@ describe("CalendarSidebar", () => {
       },
     ] as User[];
     render(<CalendarSidebar {...baseProps} allUsers={faceted} onSetUsers={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /^Filters/ }));
     fireEvent.click(screen.getByText("Acme"));
     fireEvent.click(screen.getByText("Web"));
     expect(screen.getByText("No one matches these filters.")).toBeInTheDocument();

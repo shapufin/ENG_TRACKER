@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { GlassCard } from "@/components/ui/GlassCard";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toneOutlineClass, toneSurfaceClass } from "@/components/ui/tone";
 import { WorkspaceSelector } from "@/components/calendar/WorkspaceSelector";
 import {
@@ -11,6 +11,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Download,
   FileSpreadsheet,
   Maximize2,
   Minimize2,
@@ -39,6 +40,8 @@ interface CalendarHeaderProps {
   onToggleFullscreen: () => void;
   onClearWorkspaceSelection: () => void;
   onRequestTimeOff: () => void;
+  /** Rendered first in the toolbar row (the sub-xl Filters button), so it costs no extra row. */
+  leading?: React.ReactNode;
 }
 
 const VIEW_MODES = [
@@ -48,11 +51,11 @@ const VIEW_MODES = [
   { value: "list", label: "List" },
 ] as const;
 
-const iconButtonClass =
-  "h-11 w-11 shrink-0 rounded-xl border border-border/60 bg-background/50 text-foreground hover:bg-muted md:h-9 md:w-9";
-const actionButtonClass =
-  "h-11 shrink-0 rounded-xl border border-border/60 bg-background/50 px-2 text-foreground hover:bg-muted md:h-9";
-
+/**
+ * A flat toolbar, not a card: the calendar is full-bleed and the month grid
+ * needs every pixel of height it can get. Controls come from the control kit
+ * (`control-sm` / `control-icon-sm`), so no height is hand-written here.
+ */
 export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   currentMonth,
   viewMode,
@@ -70,78 +73,84 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onToggleFullscreen,
   onClearWorkspaceSelection,
   onRequestTimeOff,
-}) => (
-  <header className="pt-1.5 pb-2.5" aria-label="Calendar controls">
-    {/* Wraps by available width: the app sidebar eats viewport width, so a viewport breakpoint cannot decide the rows. */}
-    <GlassCard className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-2 border-b-0 p-2.5">
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
-        <WorkspaceSelector className="max-w-xs shrink-0 sm:max-w-none" />
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            className={iconButtonClass}
-            onClick={onPrevMonth}
-            aria-label="Previous month"
-            title="Previous month"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className={actionButtonClass}
-            onClick={onToday}
-            title="Jump to today"
-          >
-            Today
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className={iconButtonClass}
-            onClick={onNextMonth}
-            aria-label="Next month"
-            title="Next month"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-        <h1 className="shrink-0 text-sm font-bold tracking-tight xl:text-base 2xl:text-lg">
-          <span className="hidden sm:inline">{format(currentMonth, "MMMM yyyy")}</span>
-          <span className="sm:hidden">{format(currentMonth, "MMM yyyy")}</span>
-        </h1>
-        {conflictCount !== undefined && conflictCount > 0 && onOpenConflictsModal ? (
-          <Button
-            variant="outline"
-            size="control-sm"
-            onClick={onOpenConflictsModal}
-            className={cn(
-              "shrink-0 gap-1.5 text-xs font-bold whitespace-nowrap",
-              toneOutlineClass.warning
-            )}
-            title={`${conflictCount} team coverage conflicts detected this month`}
-            aria-label={`${conflictCount} team conflicts`}
-          >
-            <AlertTriangle className="h-3.5 w-3.5" />
-            <span>{conflictCount} Conflicts</span>
-          </Button>
-        ) : (
-          <div
-            className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-0.5 text-xs font-semibold whitespace-nowrap",
-              toneSurfaceClass.success
-            )}
-            title="All days have adequate staffing coverage this month"
-          >
-            <Check className="h-3.5 w-3.5" />
-            <span>Full Staffing</span>
-          </div>
-        )}
+  leading,
+}) => {
+  const [exportOpen, setExportOpen] = useState(false);
+  const hasConflicts = conflictCount !== undefined && conflictCount > 0 && !!onOpenConflictsModal;
+
+  const runExport = (kind: "csv" | "ical") => {
+    setExportOpen(false);
+    const filename = `calendar-${currentBusinessDateISO()}`;
+    if (kind === "csv") exportToCSV(events, filename);
+    else exportToICal(events, filename);
+  };
+
+  return (
+    <header
+      className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-2 py-1.5"
+      aria-label="Calendar controls"
+    >
+      {leading}
+      <WorkspaceSelector className="max-w-[16rem] shrink-0" />
+
+      <div className="flex shrink-0 items-center">
+        <Button
+          size="control-icon-sm"
+          variant="ghost"
+          onClick={onPrevMonth}
+          aria-label="Previous month"
+          title="Previous month"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </Button>
+        <Button size="control-sm" variant="ghost" onClick={onToday} title="Jump to today">
+          Today
+        </Button>
+        <Button
+          size="control-icon-sm"
+          variant="ghost"
+          onClick={onNextMonth}
+          aria-label="Next month"
+          title="Next month"
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+      <h1 className="shrink-0 text-sm font-semibold tracking-tight 2xl:text-base">
+        <span className="hidden sm:inline">{format(currentMonth, "MMMM yyyy")}</span>
+        <span className="sm:hidden">{format(currentMonth, "MMM yyyy")}</span>
+      </h1>
+
+      {hasConflicts ? (
+        <Button
+          variant="outline"
+          size="control-sm"
+          onClick={onOpenConflictsModal}
+          className={cn("shrink-0 gap-1.5 text-xs font-semibold", toneOutlineClass.warning)}
+          title={`${conflictCount} team coverage conflicts detected this month`}
+          aria-label={`${conflictCount} team conflicts`}
+        >
+          <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+          <span>{conflictCount}</span>
+        </Button>
+      ) : (
         <div
-          className="border-border/60 bg-muted/40 order-3 flex shrink-0 rounded-xl border p-0.5 sm:order-none"
+          className={cn(
+            "flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold whitespace-nowrap",
+            toneSurfaceClass.success
+          )}
+          title="All days have adequate staffing coverage this month"
+          aria-label="Full staffing coverage"
+        >
+          <Check className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="hidden lg:inline">Full Staffing</span>
+        </div>
+      )}
+
+      <div className="ml-auto flex flex-wrap items-center gap-1">
+        <div
+          className="border-border/60 bg-muted/40 flex shrink-0 rounded-lg border p-0.5"
           role="group"
           aria-label="Calendar view"
         >
@@ -152,7 +161,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               aria-pressed={viewMode === view.value}
               onClick={() => onSetViewMode(view.value)}
               className={cn(
-                "rounded-lg px-2 py-1.5 text-xs font-medium transition md:py-1",
+                "rounded-md px-2 py-1 text-xs font-medium transition",
                 viewMode === view.value
                   ? "bg-background text-foreground font-semibold shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
@@ -165,77 +174,86 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
         {onToggleDensity && (
           <Button
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="control-icon-sm"
             onClick={onToggleDensity}
-            className={cn(
-              actionButtonClass,
-              "order-4 gap-1.5 text-xs font-medium sm:order-none",
-              density === "compact" && "border-primary/50 bg-primary/10 text-primary"
-            )}
+            className={cn(density === "compact" && "text-primary bg-primary/10")}
             title={density === "compact" ? "Switch to Normal density" : "Switch to Compact density"}
             aria-label="Toggle calendar density"
           >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{density === "compact" ? "Compact" : "Normal"}</span>
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
           </Button>
         )}
 
-        <Button
-          size="sm"
-          variant="default"
-          className="order-1 shrink-0 rounded-xl px-2.5 text-xs font-semibold sm:order-none md:h-9"
-          onClick={onRequestTimeOff}
-        >
-          <Plus className="mr-1 h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Request Time Off</span>
-          <span className="sm:hidden">Request</span>
-        </Button>
+        <Popover open={exportOpen} onOpenChange={setExportOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="control-icon-sm"
+              aria-label="Export calendar"
+              title="Export calendar"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-44 p-1">
+            <button
+              type="button"
+              onClick={() => runExport("csv")}
+              className="hover:bg-muted focus-visible:ring-ring flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium focus:outline-none focus-visible:ring-1"
+              aria-label="Export calendar as CSV"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" aria-hidden="true" />
+              CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => runExport("ical")}
+              className="hover:bg-muted focus-visible:ring-ring flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium focus:outline-none focus-visible:ring-1"
+              aria-label="Export calendar as iCal"
+            >
+              <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+              iCal
+            </button>
+          </PopoverContent>
+        </Popover>
 
         <Button
-          size="sm"
+          size="control-icon-sm"
           variant="ghost"
-          className={cn(actionButtonClass, "order-2 sm:order-none")}
-          onClick={() => exportToCSV(events, `calendar-${currentBusinessDateISO()}`)}
-          aria-label="Export calendar as CSV"
-          title="Export CSV"
-        >
-          <FileSpreadsheet className="h-4 w-4 2xl:mr-2" />
-          <span className="hidden 2xl:inline">CSV</span>
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className={cn(actionButtonClass, "order-2 sm:order-none")}
-          onClick={() => exportToICal(events, `calendar-${currentBusinessDateISO()}`)}
-          aria-label="Export calendar as iCal"
-          title="Export iCal"
-        >
-          <CalendarDays className="h-4 w-4 2xl:mr-2" />
-          <span className="hidden 2xl:inline">iCal</span>
-        </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          className={cn(iconButtonClass, "order-5 hidden sm:order-none sm:inline-flex")}
           onClick={onToggleFullscreen}
           aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
         >
-          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          {isFullscreen ? (
+            <Minimize2 className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <Maximize2 className="h-4 w-4" aria-hidden="true" />
+          )}
         </Button>
         <Button
-          size="icon"
+          size="control-icon-sm"
           variant="ghost"
-          className={cn(iconButtonClass, "order-5 hidden sm:order-none sm:inline-flex")}
+          className="hidden sm:inline-flex"
           onClick={onClearWorkspaceSelection}
           disabled={!selectedWorkspaceIds.length}
           aria-label="Clear workspace selection"
           title="Clear workspace selection"
         >
-          <RotateCcw className="h-4 w-4" />
+          <RotateCcw className="h-4 w-4" aria-hidden="true" />
+        </Button>
+
+        <Button
+          size="control-sm"
+          variant="default"
+          className="shrink-0 text-xs font-semibold"
+          onClick={onRequestTimeOff}
+        >
+          <Plus className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+          <span className="hidden sm:inline">Request time off</span>
+          <span className="sm:hidden">Request</span>
         </Button>
       </div>
-    </GlassCard>
-  </header>
-);
+    </header>
+  );
+};

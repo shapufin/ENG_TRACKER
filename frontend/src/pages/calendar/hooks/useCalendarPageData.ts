@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { parseISO } from "date-fns";
+import { parseISO, format } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { leaveService } from "@/services/leaveService";
 import type { LeaveRequest, LeaveBalance, User } from "@/types";
@@ -16,7 +16,9 @@ import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useUserVisibility } from "@/hooks/useUserVisibility";
 import { useRangeSelection } from "@/hooks/useRangeSelection";
 import { useWorkspaceData } from "@/components/calendar/hooks/useWorkspaceData";
-import type { CalendarViewMode, CalendarDensity } from "@/components/calendar/types";
+import type { CalendarSidebarLayer } from "@/components/calendar/CalendarSidebarLayers";
+import { buildWorkspaceLayers } from "./buildWorkspaceLayers";
+import type { CalendarViewMode, CalendarDensity, CalendarEvent } from "@/components/calendar/types";
 
 // fallow-ignore-next-line complexity
 export const useCalendarPageData = (
@@ -66,6 +68,7 @@ export const useCalendarPageData = (
     import("@/components/calendar/types").CalendarEvent | null
   >(null);
   const [conflictsModalOpen, setConflictsModalOpen] = useState(false);
+  const [dayEventsDate, setDayEventsDate] = useState<Date | null>(null);
 
   const effectiveWorkspaceIds = useMemo(
     () => (isMultiSelect ? selectedWorkspaceIds : selectedWorkspaceIds.slice(0, 1)),
@@ -105,6 +108,20 @@ export const useCalendarPageData = (
       workspaceName: workspaceNameById.get(group.workspaceId) || `Workspace ${group.workspaceId}`,
     }));
   }, [groupedWorkspaceUsers, workspaceNameById]);
+
+  /**
+   * The sidebar's Team Layers. Selecting a layer is the same action as picking a
+   * workspace in the header selector, so this is the only place the two stay in
+   * sync — the roster endpoint only returns members for *selected* workspaces,
+   * which is why a count is absent until that layer is on.
+   */
+  const workspaceLayers = useMemo<CalendarSidebarLayer[]>(() => {
+    const countByWorkspace = new Map<number, number>();
+    groupedWorkspaceUsers.forEach((group) =>
+      countByWorkspace.set(group.workspaceId, group.users.length)
+    );
+    return buildWorkspaceLayers(workspacesData ?? [], countByWorkspace, effectiveWorkspaceIds);
+  }, [workspacesData, groupedWorkspaceUsers, effectiveWorkspaceIds]);
 
   const allUsers = useMemo(() => {
     if (!hasWorkspaceSelection) return [] as User[];
@@ -309,6 +326,34 @@ export const useCalendarPageData = (
   );
   const allConflictEntries = conflictEntries;
 
+  /**
+   * "+N more" in a day cell opens the day's full list instead of the booking
+   * dialog (the cell click keeps booking). The match rule mirrors the grid's
+   * own event map: an entry covers a day when the day falls inside its span.
+   */
+  const dayEventsKey = dayEventsDate ? format(dayEventsDate, "yyyy-MM-dd") : null;
+  const dayEvents = useMemo(
+    () =>
+      dayEventsKey
+        ? events.filter(
+            (evt) => evt.start.slice(0, 10) <= dayEventsKey && dayEventsKey <= evt.end.slice(0, 10)
+          )
+        : ([] as CalendarEvent[]),
+    [events, dayEventsKey]
+  );
+  const dayConflict = useMemo(
+    () => (dayEventsKey ? dayConflicts.get(dayEventsKey) : undefined),
+    [dayConflicts, dayEventsKey]
+  );
+  const openDayEvents = useCallback((date: Date) => setDayEventsDate(date), []);
+  const handleDayEventsOpenChange = useCallback((open: boolean) => {
+    if (!open) setDayEventsDate(null);
+  }, []);
+  const requestTimeOffForDay = useCallback(
+    (date: Date) => applyRangeSelection(date, date),
+    [applyRangeSelection]
+  );
+
   return {
     currentMonth,
     setCurrentMonth,
@@ -332,6 +377,12 @@ export const useCalendarPageData = (
     setActionModalEvent,
     conflictsModalOpen,
     setConflictsModalOpen,
+    dayEventsDate,
+    dayEvents,
+    dayConflict,
+    openDayEvents,
+    handleDayEventsOpenChange,
+    requestTimeOffForDay,
     hasWorkspaceSelection,
     workspaceScope,
     isLoading,
@@ -344,6 +395,7 @@ export const useCalendarPageData = (
     handleResetVisibleUsers,
     setVisibleUserIds,
     groupedUsersWithNames,
+    workspaceLayers,
     workspaceUsersPartial,
     eventsTruncated,
     dayConflicts,

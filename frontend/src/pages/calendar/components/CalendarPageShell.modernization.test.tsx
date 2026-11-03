@@ -24,6 +24,7 @@ describe("CalendarPageShell modernization", () => {
         onNextMonth={() => {}}
         onToday={() => {}}
         onSetViewMode={() => {}}
+        onToggleWorkspace={() => {}}
       />
     );
 
@@ -43,6 +44,7 @@ describe("CalendarPageShell modernization", () => {
         onNextMonth={() => {}}
         onToday={() => {}}
         onSetViewMode={() => {}}
+        onToggleWorkspace={() => {}}
       />
     );
 

@@ -3,12 +3,14 @@ import { X } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CalendarSidebar } from "@/components/calendar/CalendarSidebar";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { useIsBelowXl } from "@/hooks/useIsBelowXl";
 import type { User } from "@/types";
 import type { CalendarViewMode } from "@/components/calendar/types";
 import { CalendarHeader } from "./CalendarHeader";
 import { CalendarPageMain } from "./CalendarPageMain";
 import { CalendarPageModals } from "./CalendarPageModals";
+import { CalendarBottomCards } from "./CalendarBottomCards";
 import type { useCalendarPageData } from "../hooks/useCalendarPageData";
 
 type CalendarData = ReturnType<typeof useCalendarPageData>;
@@ -22,6 +24,8 @@ interface CalendarPageShellProps {
   onNextMonth: () => void;
   onToday: () => void;
   onSetViewMode: (mode: CalendarViewMode) => void;
+  /** Selecting a Team Layer is the same action as the header's workspace picker. */
+  onToggleWorkspace: (id: number) => void;
 }
 
 export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
@@ -33,6 +37,7 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
   onNextMonth,
   onToday,
   onSetViewMode,
+  onToggleWorkspace,
 }) => {
   const isMobile = useIsBelowXl();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -57,14 +62,16 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
       snapshotSummary={data.vacationSummary}
       formatDays={data.formatDays}
       onShowSnapshotModal={() => user && data.handleUserClick(user.id)}
+      layers={data.workspaceLayers}
+      onToggleLayer={onToggleWorkspace}
     />
   );
 
   return (
     <div
       className={cn(
-        "bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground min-h-screen font-sans antialiased",
-        data.isFullscreen && "fixed inset-0 z-50 overflow-y-auto"
+        "bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground flex min-h-0 flex-1 flex-col font-sans antialiased",
+        data.isFullscreen && "fixed inset-0 z-50"
       )}
     >
       <CalendarHeader
@@ -84,34 +91,34 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
         onToggleFullscreen={data.handleToggleFullscreen}
         onClearWorkspaceSelection={data.handleClearWorkspaceSelection}
         onRequestTimeOff={data.openBookingDialog}
+        leading={
+          isMobile ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="control-sm"
+              onClick={() => setMobileSidebarOpen(true)}
+              aria-label="Open filters"
+              aria-expanded={mobileSidebarOpen}
+              aria-controls="calendar-mobile-sidebar"
+            >
+              Filters
+            </Button>
+          ) : undefined
+        }
       />
-
-      {isMobile && (
-        <div className="border-border/60 flex items-center gap-2 border-b px-3 py-2">
-          <button
-            type="button"
-            onClick={() => setMobileSidebarOpen(true)}
-            className="border-border/60 bg-background/50 text-foreground hover:bg-muted inline-flex h-11 items-center gap-2 rounded-lg border px-3 text-sm font-medium"
-            aria-label="Open filters"
-            aria-expanded={mobileSidebarOpen}
-            aria-controls="calendar-mobile-sidebar"
-          >
-            Filters
-          </button>
-        </div>
-      )}
 
       <div
         className={cn(
-          "grid flex-1 gap-3 overflow-hidden transition-all duration-300 ease-out",
+          "grid min-h-0 flex-1 gap-2 overflow-hidden p-2 transition-all duration-300 ease-out",
           data.isSidebarCollapsed
             ? "xl:grid-cols-[48px_minmax(0,1fr)]"
             : "xl:grid-cols-[192px_minmax(0,1fr)] 2xl:grid-cols-[224px_minmax(0,1fr)]"
         )}
       >
-        {!isMobile && <div className="flex min-h-0 flex-col gap-3 overflow-hidden">{sidebar}</div>}
+        {!isMobile && <div className="flex min-h-0 flex-col overflow-hidden">{sidebar}</div>}
 
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           {data.workspaceUsersPartial && (
             <GlassCard
               role="status"
@@ -138,6 +145,16 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
           <CalendarPageMain data={data} />
         </div>
       </div>
+
+      <CalendarBottomCards
+        vacationSummary={data.vacationSummary}
+        carryOverAndBalance={data.carryOverAndBalance}
+        metricBars={data.metricBars}
+        conflictEntries={data.conflictEntries}
+        formatDays={data.formatDays}
+        onViewAllConflicts={() => data.setConflictsModalOpen(true)}
+        onOpenBalanceModal={() => user && data.handleUserClick(user.id)}
+      />
 
       {showMobileSidebar && (
         <>

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { CollapsedCalendarSidebar } from "./CollapsedCalendarSidebar";
 import { CalendarSidebarHeader } from "./CalendarSidebarHeader";
+import { CalendarSidebarLayers, type CalendarSidebarLayer } from "./CalendarSidebarLayers";
 import { CalendarSidebarFacets } from "./CalendarSidebarFacets";
 import { matchingUserIds, NO_FACETS, type FacetSelection } from "./calendarFacets";
 import { CalendarSidebarUserList } from "./CalendarSidebarUserList";
@@ -36,6 +37,9 @@ interface CalendarSidebarProps {
   snapshotSummary?: VacationBalanceBreakdown | null;
   formatDays?: (value: number) => string;
   onShowSnapshotModal?: () => void;
+  /** Visible workspaces, shown as switchable layers above the roster. */
+  layers?: CalendarSidebarLayer[];
+  onToggleLayer?: (id: number) => void;
 }
 
 export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
@@ -57,6 +61,8 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
   snapshotSummary,
   formatDays,
   onShowSnapshotModal,
+  layers,
+  onToggleLayer,
 }) => {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -121,20 +127,17 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
   }
 
   return (
-    <aside className="border-border/70 bg-card/60 flex min-h-0 flex-col overflow-hidden rounded-2xl border backdrop-blur-xl">
+    <aside className="border-border/60 bg-card flex min-h-0 flex-col overflow-hidden rounded-xl border">
       <CalendarSidebarHeader
         userCount={allUsers.length}
         calendarGroup={calendarGroup}
         query={query}
         onQueryChange={setQuery}
         onCollapse={onToggleCollapse || (() => {})}
-        onClearUsers={() => {
-          setQuery("");
-          setExpanded(false);
-          setFacets(NO_FACETS);
-          onClearUsers();
-        }}
       />
+      {layers && layers.length > 0 && onToggleLayer && (
+        <CalendarSidebarLayers layers={layers} onToggleLayer={onToggleLayer} />
+      )}
       <CalendarSidebarFacets users={allUsers} selection={facets} onChange={applyFacets} />
       {noMatches && (
         <p className="text-muted-foreground px-3 pb-2 text-xs">No one matches these filters.</p>
@@ -146,6 +149,13 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
         onShowUserModal={onShowUserModal}
         groupedUsers={filteredGroups}
         remainingDaysByUser={remainingDaysByUser}
+        staffCount={filteredUsers.length}
+        onShowAll={() => {
+          setQuery("");
+          setExpanded(false);
+          setFacets(NO_FACETS);
+          onClearUsers();
+        }}
       />
       <CalendarSidebarFooter
         hiddenCount={hiddenCount}

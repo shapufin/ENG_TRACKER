@@ -21,6 +21,8 @@ interface CalendarDayCellProps {
   isInRange?: boolean;
   density?: CalendarDensity;
   onSelect: (date: Date) => void;
+  /** Opens the day's full entry list from "+N more"; falls back to `onSelect`. */
+  onShowDayEvents?: (date: Date) => void;
   onUserClick?: (userId: number) => void;
   onEventActivate?: (event: CalendarEvent) => void;
   onRangeDragStart?: (date: Date) => void;
@@ -41,6 +43,7 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
   isInRange,
   density = "normal",
   onSelect,
+  onShowDayEvents,
   onUserClick,
   onEventActivate,
   onRangeDragStart,
@@ -94,9 +97,7 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
       onTouchEnd={handlePointerUp}
       className={cn(
         "group bg-card text-foreground focus-visible:ring-ring/60 @container relative flex h-full flex-col gap-1 transition duration-200 focus-visible:ring-1 focus-visible:ring-inset",
-        density === "compact"
-          ? "min-h-[85px] p-1.5 xl:min-h-[95px] 2xl:min-h-[110px]"
-          : "min-h-[100px] p-2 xl:min-h-[110px] 2xl:min-h-[130px]",
+        density === "compact" ? "min-h-0 p-1.5" : "min-h-0 p-2",
         isPlainCell && "hover:bg-card-raised",
         !isCurrentMonth && "bg-card text-muted-foreground/60",
         isCurrentMonth && isWeekend && "bg-muted/30",
@@ -179,7 +180,7 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onSelect(date);
+              (onShowDayEvents ?? onSelect)(date);
             }}
             aria-label={`View ${overflowEvents} more events for ${format(date, "MMMM d")}`}
             className="text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:ring-ring inline-flex w-fit items-center rounded px-1 py-0.5 text-xs font-semibold tracking-wide uppercase transition focus:outline-none focus-visible:ring-1"

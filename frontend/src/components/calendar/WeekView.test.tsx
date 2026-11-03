@@ -8,8 +8,12 @@ vi.mock("./WeekViewHeader", () => ({
 vi.mock("./WeekViewDayHeader", () => ({
   WeekViewDayHeader: () => <div data-testid="day-header" />,
 }));
+const rowProps = vi.hoisted(() => ({ last: null as Record<string, unknown> | null }));
 vi.mock("./WeekViewUserRow", () => ({
-  WeekViewUserRow: () => <div data-testid="user-row" />,
+  WeekViewUserRow: (props: Record<string, unknown>) => {
+    rowProps.last = props;
+    return <div data-testid="user-row" />;
+  },
 }));
 vi.mock("./weekViewUtils", () => ({
   getWeekDays: () => [
@@ -34,5 +38,23 @@ describe("WeekView mobile responsiveness", () => {
     expect(root).toBeTruthy();
     expect(root.className).not.toMatch(/(^|\s)min-w-\[900px\]/);
     expect(root.className).toContain("md:min-w-[900px]");
+  });
+});
+
+describe("WeekView pass-through", () => {
+  it("hands event activation and conflicts down to each user row", () => {
+    const onEventActivate = vi.fn();
+    const conflictsByDate = new Map();
+    render(
+      <WeekView
+        currentDate={new Date("2024-06-15")}
+        users={[{ id: 1 } as never]}
+        events={[]}
+        onEventActivate={onEventActivate}
+        conflictsByDate={conflictsByDate}
+      />
+    );
+    expect(rowProps.last?.onEventActivate).toBe(onEventActivate);
+    expect(rowProps.last?.conflictsByDate).toBe(conflictsByDate);
   });
 });

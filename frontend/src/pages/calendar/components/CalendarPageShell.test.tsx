@@ -8,7 +8,9 @@ vi.mock("@/components/calendar/CalendarSidebar", () => ({
   ),
 }));
 vi.mock("./CalendarHeader", () => ({
-  CalendarHeader: () => <div data-testid="calendar-header" />,
+  CalendarHeader: ({ leading }: { leading?: React.ReactNode }) => (
+    <div data-testid="calendar-header">{leading}</div>
+  ),
 }));
 vi.mock("./CalendarBottomCards", () => ({
   CalendarBottomCards: () => <div data-testid="bottom-cards" />,
@@ -63,6 +65,7 @@ const baseProps = {
   onNextMonth: vi.fn(),
   onToday: vi.fn(),
   onSetViewMode: vi.fn(),
+  onToggleWorkspace: vi.fn(),
 };
 
 describe("CalendarPageShell mobile sidebar", () => {
