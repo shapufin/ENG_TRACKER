@@ -48,16 +48,19 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
           }}
           {...props}
           className={cn(
-            "focus-visible:ring-ring/30 w-full rounded-lg border text-left text-xs leading-tight transition focus-visible:ring-1",
-            density === "compact" ? "px-1.5 py-0.5" : "px-1.5 py-1",
+            "focus-visible:ring-ring/30 w-full rounded-md border text-left text-[11px] leading-tight transition focus-visible:ring-1",
+            "px-1 py-0.5 sm:px-1.5",
             styles.surface,
-            "hover:border-foreground/30 dark:hover:border-foreground/40 hover:-translate-y-0.5 hover:shadow-xs",
+            "hover:border-foreground/30 dark:hover:border-foreground/40 hover:-translate-y-0.5 hover:shadow-2xs",
             className
           )}
         >
-          <div className="flex min-w-0 items-center gap-1.5 truncate">
-            <CalendarDays className="h-3 w-3 shrink-0 text-sky-500" />
-            <p className={cn("truncate text-xs font-medium", styles.meta)} title={event.title}>
+          <div className="flex min-w-0 items-center gap-1 truncate">
+            <CalendarDays className="h-2.5 w-2.5 shrink-0 text-sky-500" />
+            <p
+              className={cn("truncate text-[10px] font-semibold sm:text-[11px]", styles.meta)}
+              title={event.title}
+            >
               {event.title}
             </p>
           </div>
@@ -103,10 +106,10 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
         }}
         {...props}
         className={cn(
-          "focus-visible:ring-ring/30 w-full rounded-lg border text-left text-xs leading-tight transition focus-visible:ring-1",
-          density === "compact" ? "px-1.5 py-0.5" : "px-1.5 py-1",
+          "focus-visible:ring-ring/30 w-full rounded-md border text-left text-[11px] leading-tight transition focus-visible:ring-1",
+          "px-1 py-0.5 sm:px-1.5",
           styles.surface,
-          "hover:border-foreground/30 dark:hover:border-foreground/40 hover:-translate-y-0.5 hover:shadow-md",
+          "hover:border-foreground/30 dark:hover:border-foreground/40 hover:-translate-y-0.5 hover:shadow-2xs",
           className
         )}
       >
@@ -115,58 +118,68 @@ export const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
             <div className="flex min-w-0 items-center gap-1 truncate">
               <span
                 className={cn(
-                  "flex h-4 w-4 shrink-0 items-center justify-center rounded text-xs font-bold",
+                  "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded text-[9px] font-bold",
                   styles.chip
                 )}
               >
                 {initials}
               </span>
               <p
-                className={cn("truncate text-xs font-medium @max-[5rem]:hidden", styles.meta)}
+                className={cn(
+                  "truncate text-[10px] font-semibold sm:text-[11px] @max-[5rem]:hidden",
+                  styles.meta
+                )}
                 title={fullLabel}
               >
                 {compactText}
               </p>
             </div>
-            {event.status === "pending" && (
-              <span
-                className="bg-warning h-1.5 w-1.5 shrink-0 rounded-full @max-[5rem]:hidden"
-                title="Pending approval"
-                aria-hidden
-              />
-            )}
-            {quantity && (
-              <span className="shrink-0 font-mono text-xs opacity-75 @max-[5rem]:hidden">
-                {quantity}
-              </span>
-            )}
+            <div className="flex shrink-0 items-center gap-1">
+              {event.status === "pending" && (
+                <span
+                  className="bg-warning h-1.5 w-1.5 shrink-0 rounded-full @max-[5rem]:hidden"
+                  title="Pending approval"
+                  aria-hidden
+                />
+              )}
+              {quantity && (
+                <span className="shrink-0 font-mono text-[9px] opacity-75 @max-[5rem]:hidden">
+                  {quantity}
+                </span>
+              )}
+            </div>
           </div>
         ) : (
-          <>
-            <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 items-center justify-between gap-1">
+            <div className="flex min-w-0 items-center gap-1 truncate">
               <span
                 className={cn(
-                  "flex h-4 w-4 shrink-0 items-center justify-center rounded text-xs font-bold",
+                  "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded text-[9px] font-bold",
                   styles.chip
                 )}
               >
                 {initials}
               </span>
+              <p
+                className={cn("truncate text-[10px] font-semibold sm:text-[11px]", styles.meta)}
+                title={fullLabel}
+              >
+                {fullLabel}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
               {event.status === "pending" && (
                 <span
-                  className="bg-warning ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
+                  className="bg-warning h-1.5 w-1.5 shrink-0 rounded-full"
                   title="Pending approval"
                   aria-hidden
                 />
               )}
+              {quantity && (
+                <span className="shrink-0 font-mono text-[9px] opacity-75">{quantity}</span>
+              )}
             </div>
-            <p
-              className={cn("mt-0.5 truncate text-xs", styles.meta)}
-              title={event.compactLabel ?? event.title}
-            >
-              {event.compactLabel ?? event.title}
-            </p>
-          </>
+          </div>
         )}
       </div>
     );
