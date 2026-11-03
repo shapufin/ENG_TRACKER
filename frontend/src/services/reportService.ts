@@ -128,9 +128,7 @@ export const reportService = {
     return data;
   },
 
-  async getInsights(
-    params: SummaryReportParams
-  ): Promise<{
+  async getInsights(params: SummaryReportParams): Promise<{
     overtime_increase: number | null;
     leave_utilization: number | null;
     standby_hours: number;
@@ -154,6 +152,7 @@ export const reportService = {
     italian_tl_ids?: string;
     albanian_tl_ids?: string;
     workspace_ids?: string;
+    team_ids?: string;
     status?: "approved" | "pending";
     date_mode?: "work_date" | "processing_period";
   }): Promise<Blob> {
@@ -170,6 +169,7 @@ export const reportService = {
     italian_tl_ids?: string;
     albanian_tl_ids?: string;
     workspace_ids?: string;
+    team_ids?: string;
     status?: "approved" | "pending";
   }): Promise<Blob> {
     const { data } = await api.get<Blob>("/reports/export-ot-standby/", {
@@ -185,6 +185,7 @@ export const reportService = {
     italian_tl_ids?: string;
     albanian_tl_ids?: string;
     workspace_ids?: string;
+    team_ids?: string;
   }): Promise<Blob> {
     const { data } = await api.get<Blob>("/reports/export-leave/", {
       params,

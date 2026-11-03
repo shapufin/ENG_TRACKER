@@ -1089,3 +1089,77 @@ class ExportExcelFilterValidationTests(TestCase):
     def test_valid_filter_still_exports(self):
         response = self.client.get('/api/reports/export-excel/', {'start_date': '2026-01-01'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class ExportTeamFilterTests(TestCase):
+    """The HR page offers a Team filter, so every export must honour it.
+
+    Regression: ExportOTStandbyView and ExportLeaveView read italian/albanian TL and
+    workspace ids but ignored team_ids, so an export for one team contained everyone.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.staff = User.objects.create_user(
+            username='team-filter-staff', password='testpass', is_staff=True,
+        )
+        self.in_team = User.objects.create_user(
+            username='tf-in', password='testpass', first_name='Inside', last_name='Member',
+        )
+        self.out_team = User.objects.create_user(
+            username='tf-out', password='testpass', first_name='Outside', last_name='Member',
+        )
+        self.team = Team.objects.create(name='Filter Team', code='FLT')
+        self.other_team = Team.objects.create(name='Other Team', code='OTH')
+        TeamMembership.objects.create(
+            user_profile=self.in_team.profile, team=self.team, is_primary_team=True,
+        )
+        TeamMembership.objects.create(
+            user_profile=self.out_team.profile, team=self.other_team, is_primary_team=True,
+        )
+        client_model = Client.objects.create(name='Filter Client', code='FLC')
+        for user, day in ((self.in_team, 10), (self.out_team, 11)):
+            OvertimeLog.objects.create(
+                user=user, client=client_model, date=date(2026, 7, day), hours=4, status='approved',
+            )
+        for user, start in ((self.in_team, 1), (self.out_team, 5)):
+            LeaveRequest.objects.create(
+                user=user, request_type='vacation', start_date=date(2026, 7, start),
+                end_date=date(2026, 7, start + 2), status='approved', reason='team filter',
+            )
+        self.client.force_authenticate(user=self.staff)
+
+    def _text(self, url, **params):
+        response = self.client.get(
+            url, {'start_date': '2026-07-01', 'end_date': '2026-07-31', **params},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
+        wb = openpyxl.load_workbook(io.BytesIO(response.content))
+        return ' '.join(
+            str(cell.value)
+            for ws in wb.worksheets
+            for row in ws.iter_rows()
+            for cell in row
+            if cell.value is not None
+        )
+
+    def test_ot_standby_export_is_limited_to_selected_team(self):
+        text = self._text('/api/reports/export-ot-standby/', team_ids=str(self.team.id))
+        self.assertIn('Inside Member', text)
+        self.assertNotIn('Outside Member', text)
+
+    def test_leave_export_is_limited_to_selected_team(self):
+        text = self._text('/api/reports/export-leave/', team_ids=str(self.team.id))
+        self.assertIn('Inside', text)
+        self.assertNotIn('Outside', text)
+
+    def test_export_without_team_ids_still_includes_everyone(self):
+        text = self._text('/api/reports/export-ot-standby/')
+        self.assertIn('Inside Member', text)
+        self.assertIn('Outside Member', text)
+
+    def test_export_accepts_several_team_ids(self):
+        both = f'{self.team.id},{self.other_team.id}'
+        text = self._text('/api/reports/export-ot-standby/', team_ids=both)
+        self.assertIn('Inside Member', text)
+        self.assertIn('Outside Member', text)

@@ -26,7 +26,9 @@ interface HRReportActionBarProps {
   end: string;
   selectedItalianTL: string;
   selectedAlbanianTL: string;
+  selectedTeam?: string;
   selectedWorkspace: string;
+  teams?: { id: number; name: string }[];
   italianTLs?: TeamLeaderOption[];
   albanianTLs?: TeamLeaderOption[];
 }
@@ -51,7 +53,9 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
   end,
   selectedItalianTL,
   selectedAlbanianTL,
+  selectedTeam = "all",
   selectedWorkspace,
+  teams,
   italianTLs,
   albanianTLs,
 }) => {
@@ -135,6 +139,12 @@ export const HRReportActionBar: React.FC<HRReportActionBarProps> = ({
                 )}
                 <li>Manager: {getTLName(selectedItalianTL, italianTLs)}</li>
                 <li>Line Manager: {getTLName(selectedAlbanianTL, albanianTLs)}</li>
+                <li>
+                  Team:{" "}
+                  {selectedTeam === "all"
+                    ? "All"
+                    : (teams?.find((t) => String(t.id) === selectedTeam)?.name ?? selectedTeam)}
+                </li>
                 <li>Workspace: {selectedWorkspace === "all" ? "All" : selectedWorkspace}</li>
               </ul>
             </div>

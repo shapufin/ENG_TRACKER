@@ -42,6 +42,34 @@ def apply_visibility_constraints(queryset, user):
     return queryset.filter(user_id__in=visible_ids)
 
 
+def parse_int_list(value):
+    if not value:
+        return []
+    result = []
+    # Support both comma and colon separators for backwards compatibility
+    for token in value.replace(',', ' ').replace(':', ' ').split():
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            result.append(int(token))
+        except ValueError:
+            continue
+    return result
+
+
+def apply_team_filter(queryset, raw_team_ids):
+    """Limit a user-owned queryset to members of the given teams (no-op when empty).
+
+    Shared by the report filter and the export views so the HR Team filter means
+    the same thing on screen and in the downloaded file.
+    """
+    team_ids = parse_int_list(raw_team_ids)
+    if not team_ids:
+        return queryset
+    return queryset.filter(user__profile__teams__id__in=team_ids).distinct()
+
+
 class UnifiedReportFilter(filters.FilterSet):
     """Single entry point for validating and applying report query filters.
 
@@ -93,12 +121,10 @@ class UnifiedReportFilter(filters.FilterSet):
             standby_qs = standby_qs.filter(user__profile__albanian_tl_id=albanian_tl_id)
             leave_qs = leave_qs.filter(user__profile__albanian_tl_id=albanian_tl_id)
 
-        team_ids = self._parse_int_list(self.data.get('team_ids'))
-        if team_ids:
-            filter_kwargs = {'user__profile__teams__id__in': team_ids}
-            overtime_qs = overtime_qs.filter(**filter_kwargs).distinct()
-            standby_qs = standby_qs.filter(**filter_kwargs).distinct()
-            leave_qs = leave_qs.filter(**filter_kwargs).distinct()
+        team_raw = self.data.get('team_ids')
+        overtime_qs = apply_team_filter(overtime_qs, team_raw)
+        standby_qs = apply_team_filter(standby_qs, team_raw)
+        leave_qs = apply_team_filter(leave_qs, team_raw)
 
         overtime_qs = self._apply_visibility_constraints(overtime_qs)
         standby_qs = self._apply_visibility_constraints(standby_qs)
@@ -147,19 +173,7 @@ class UnifiedReportFilter(filters.FilterSet):
         return queryset.filter(user_id__in=workspace_user_ids)
 
     def _parse_int_list(self, value):
-        if not value:
-            return []
-        result = []
-        # Support both comma and colon separators for backwards compatibility
-        for token in value.replace(',', ' ').replace(':', ' ').split():
-            token = token.strip()
-            if not token:
-                continue
-            try:
-                result.append(int(token))
-            except ValueError:
-                continue
-        return result
+        return parse_int_list(value)
 
     def _get_workspace_user_ids(self):
         raw = self.data.get('workspace_ids')

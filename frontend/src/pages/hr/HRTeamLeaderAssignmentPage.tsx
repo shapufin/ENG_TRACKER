@@ -4,6 +4,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { BulkActionBar } from "@/components/ui/BulkActionBar";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { StatCard } from "@/components/ui/StatCard";
 import { UserCell } from "@/components/admin/UserCell";
 import { UserCheck, UserX, Users } from "lucide-react";
@@ -13,6 +14,10 @@ import { useHRTeamLeaderAssignment } from "./hooks/useHRTeamLeaderAssignment";
 import type { UserProfile } from "@/types";
 import type { RowSelectionState } from "@tanstack/react-table";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
+
+type BulkChange = { role: "italian_tl" | "albanian_tl"; teamLeaderUserId: number | null };
+
+const BULK_ROLE_LABEL = { italian_tl: "Manager", albanian_tl: "Line Manager" } as const;
 
 export const HRTeamLeaderAssignmentPage: React.FC = () => {
   const {
@@ -40,10 +45,9 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
     .filter((id) => rowSelection[id])
     .map(Number);
 
-  const handleBulkSetLeader = async (
-    role: "italian_tl" | "albanian_tl",
-    teamLeaderUserId: number | null
-  ) => {
+  const [pendingBulk, setPendingBulk] = useState<BulkChange | null>(null);
+
+  const handleBulkSetLeader = async ({ role, teamLeaderUserId }: BulkChange) => {
     if (selectedProfileIds.length === 0 || isBulkApplying) return;
     setIsBulkApplying(true);
     try {
@@ -53,7 +57,19 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
       if (failed === 0) setRowSelection({});
     } finally {
       setIsBulkApplying(false);
+      setPendingBulk(null);
     }
+  };
+
+  const bulkDescription = (change: BulkChange) => {
+    const label = BULK_ROLE_LABEL[change.role];
+    const options = change.role === "italian_tl" ? italianTLs : albanianTLs;
+    const count = selectedProfileIds.length;
+    const people = `${count} ${count === 1 ? "employee" : "employees"}`;
+    const name = options.find((tl) => tl.id === change.teamLeaderUserId)?.full_name;
+    return name
+      ? `Assign ${name} as ${label} to ${people}.`
+      : `Remove the ${label} from ${people}.`;
   };
 
   // Server totals (the list is page-capped); the loaded rows are only a fallback.
@@ -199,7 +215,7 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
                     options={italianTLs}
                     disabled={isBulkApplying}
                     onChange={(teamLeaderUserId) =>
-                      handleBulkSetLeader("italian_tl", teamLeaderUserId)
+                      setPendingBulk({ role: "italian_tl", teamLeaderUserId })
                     }
                   />
                 </div>
@@ -210,7 +226,7 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
                     options={albanianTLs}
                     disabled={isBulkApplying}
                     onChange={(teamLeaderUserId) =>
-                      handleBulkSetLeader("albanian_tl", teamLeaderUserId)
+                      setPendingBulk({ role: "albanian_tl", teamLeaderUserId })
                     }
                   />
                 </div>
@@ -228,6 +244,16 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
               onRowSelectionChange={setRowSelection}
             />
           </GlassCard>
+          <ConfirmDialog
+            open={pendingBulk !== null}
+            onOpenChange={(open) => {
+              if (!open) setPendingBulk(null);
+            }}
+            title="Confirm bulk assignment"
+            description={pendingBulk ? bulkDescription(pendingBulk) : undefined}
+            onConfirm={() => pendingBulk && handleBulkSetLeader(pendingBulk)}
+            isConfirming={isBulkApplying}
+          />
         </>
       )}
     </PageShell>

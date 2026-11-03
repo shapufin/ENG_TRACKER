@@ -28,7 +28,7 @@ from core.mixins.permissions import (
     is_cr_admin,
 )
 from core.utils.csv_safe import xlsx_safe_row
-from .filters import UnifiedReportFilter, apply_visibility_constraints
+from .filters import UnifiedReportFilter, apply_team_filter, apply_visibility_constraints
 from .services.export_service import export_service, ExportConfig
 from core.utils.timezone_local import business_today
 from apps.users.services.workforce import workforce_filter
@@ -634,6 +634,7 @@ class ExportExcelView(HbprBlockedMixin, APIView):
         OpenApiParameter(name='italian_tl_ids', type=str, location=OpenApiParameter.QUERY),
         OpenApiParameter(name='albanian_tl_ids', type=str, location=OpenApiParameter.QUERY),
         OpenApiParameter(name='workspace_ids', type=str, location=OpenApiParameter.QUERY),
+        OpenApiParameter(name='team_ids', type=str, location=OpenApiParameter.QUERY),
         OpenApiParameter(name='status', type=str, location=OpenApiParameter.QUERY,
                          description='Filter by status: "approved" (default) or "pending".'),
     ],
@@ -656,6 +657,7 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
             italian_tl_ids = request.query_params.get('italian_tl_ids', '')
             albanian_tl_ids = request.query_params.get('albanian_tl_ids', '')
             workspace_ids = request.query_params.get('workspace_ids', '')
+            team_ids = request.query_params.get('team_ids', '')
             # status: 'approved' (default) or 'pending'
             status_filter = request.query_params.get('status', 'approved')
             if status_filter not in ('approved', 'pending'):
@@ -704,6 +706,7 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
                 from apps.dashboard.models import CalendarWorkspace
                 workspace_users = CalendarWorkspace.objects.filter(id__in=workspace_id_list).values_list('allowed_users__id', flat=True)
                 ot_qs = ot_qs.filter(user_id__in=workspace_users)
+            ot_qs = apply_team_filter(ot_qs, team_ids)
             # Apply role-based visibility (prevents TL/employee from exporting
             # records outside their scope — matches UnifiedReportFilter).
             ot_qs = apply_visibility_constraints(ot_qs, request.user)
@@ -730,6 +733,7 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
                 from apps.dashboard.models import CalendarWorkspace
                 workspace_users = CalendarWorkspace.objects.filter(id__in=workspace_id_list).values_list('allowed_users__id', flat=True)
                 sb_qs = sb_qs.filter(user_id__in=workspace_users)
+            sb_qs = apply_team_filter(sb_qs, team_ids)
             # Apply role-based visibility (same as ot_qs above).
             sb_qs = apply_visibility_constraints(sb_qs, request.user)
 
@@ -773,6 +777,7 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
         OpenApiParameter(name='italian_tl_ids', type=str, location=OpenApiParameter.QUERY),
         OpenApiParameter(name='albanian_tl_ids', type=str, location=OpenApiParameter.QUERY),
         OpenApiParameter(name='workspace_ids', type=str, location=OpenApiParameter.QUERY),
+        OpenApiParameter(name='team_ids', type=str, location=OpenApiParameter.QUERY),
     ],
     responses={
         (200, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'): OpenApiTypes.BINARY
@@ -792,12 +797,13 @@ class ExportLeaveView(HbprBlockedMixin, APIView):
             italian_tl_ids = request.query_params.get('italian_tl_ids', '')
             albanian_tl_ids = request.query_params.get('albanian_tl_ids', '')
             workspace_ids = request.query_params.get('workspace_ids', '')
+            team_ids = request.query_params.get('team_ids', '')
 
             # Parse comma-separated IDs (skip 'none' string - treat as no filter)
             italian_tl_id_list = None
             if italian_tl_ids and italian_tl_ids != 'none':
                 italian_tl_id_list = [int(id) for id in italian_tl_ids.split(',') if id]
-            
+
             albanian_tl_id_list = None
             if albanian_tl_ids and albanian_tl_ids != 'none':
                 albanian_tl_id_list = [int(id) for id in albanian_tl_ids.split(',') if id]
@@ -822,6 +828,7 @@ class ExportLeaveView(HbprBlockedMixin, APIView):
                 from apps.dashboard.models import CalendarWorkspace
                 workspace_users = CalendarWorkspace.objects.filter(id__in=workspace_id_list).values_list('allowed_users__id', flat=True)
                 leave_qs = leave_qs.filter(user_id__in=workspace_users)
+            leave_qs = apply_team_filter(leave_qs, team_ids)
             # Apply role-based visibility (prevents TL/employee from exporting
             # records outside their scope — matches UnifiedReportFilter).
             leave_qs = apply_visibility_constraints(leave_qs, request.user)

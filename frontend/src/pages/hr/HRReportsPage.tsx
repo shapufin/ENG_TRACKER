@@ -71,6 +71,7 @@ export const HRReportsPage: React.FC = () => {
             ? undefined
             : selectedAlbanianTL,
         workspace_ids: selectedWorkspace === "all" ? undefined : selectedWorkspace,
+        team_ids: selectedTeam === "all" ? undefined : selectedTeam,
       };
       const blob =
         type === "ot-standby"
@@ -159,7 +160,9 @@ export const HRReportsPage: React.FC = () => {
               end={end}
               selectedItalianTL={selectedItalianTL}
               selectedAlbanianTL={selectedAlbanianTL}
+              selectedTeam={selectedTeam}
               selectedWorkspace={selectedWorkspace}
+              teams={teams}
               italianTLs={italianTLs}
               albanianTLs={albanianTLs}
             />

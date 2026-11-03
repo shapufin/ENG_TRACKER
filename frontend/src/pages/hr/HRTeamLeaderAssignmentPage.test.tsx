@@ -11,7 +11,7 @@ vi.mock("./hooks/useHRTeamLeaderAssignment", () => ({
   useHRTeamLeaderAssignment: () => useHRTeamLeaderAssignmentMock(),
 }));
 
-// Same simplified Select mock as TeamLeaderSelect.test.tsx — real Radix
+// Same simplified Select mock as TeamLeaderSelect.test.tsx, since real Radix
 // Select can't be reliably driven via fireEvent in JSDOM.
 vi.mock("@/components/ui/select", () => {
   const SelectContext = React.createContext<{ onValueChange?: (value: string) => void }>({});
@@ -214,6 +214,13 @@ describe("HRTeamLeaderAssignmentPage", () => {
     const bulkItalianContainer = bulkItalianCombobox.closest("div") as HTMLElement;
     fireEvent.click(within(bulkItalianContainer).getByRole("option", { name: "Bob TL" }));
 
+    // Nothing is written until the confirm dialog (count + leader) is accepted.
+    expect(setTeamLeaderBulkAsync).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/2 employees/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Bob TL/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirm" }));
+
     // One batched call (one toast + one invalidation in the hook), and the
     // per-row mutation is never fanned out.
     await waitFor(() => expect(setTeamLeaderBulkAsync).toHaveBeenCalledTimes(1));
@@ -222,5 +229,27 @@ describe("HRTeamLeaderAssignmentPage", () => {
       { profileId: 2, role: "italian_tl", teamLeaderUserId: 20 },
     ]);
     expect(setTeamLeaderAsync).not.toHaveBeenCalled();
+  });
+
+  it("does not bulk-apply when the confirm dialog is cancelled", async () => {
+    const setTeamLeaderBulkAsync = vi.fn().mockResolvedValue({ failed: 0, total: 1 });
+    useHRTeamLeaderAssignmentMock.mockReturnValue({ ...defaultHookReturn, setTeamLeaderBulkAsync });
+    render(
+      <MemoryRouter>
+        <HRTeamLeaderAssignmentPage />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByLabelText("Select row"));
+    const bulkContainer = screen
+      .getByRole("combobox", { name: "Bulk set Line Manager" })
+      .closest("div") as HTMLElement;
+    fireEvent.click(within(bulkContainer).getByRole("option", { name: "No TL" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/Remove the Line Manager from 1 employee/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(setTeamLeaderBulkAsync).not.toHaveBeenCalled();
   });
 });
