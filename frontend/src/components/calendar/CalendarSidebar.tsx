@@ -138,7 +138,15 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
       {layers && layers.length > 0 && onToggleLayer && (
         <CalendarSidebarLayers layers={layers} onToggleLayer={onToggleLayer} />
       )}
-      <CalendarSidebarFacets users={allUsers} selection={facets} onChange={applyFacets} />
+      <CalendarSidebarFacets
+        users={allUsers}
+        selection={facets}
+        onChange={applyFacets}
+        showStandby={showStandby}
+        showVacation={showVacation}
+        showSick={showSick}
+        onToggleType={onToggleType}
+      />
       {noMatches && (
         <p className="text-muted-foreground px-3 pb-2 text-xs">No one matches these filters.</p>
       )}
