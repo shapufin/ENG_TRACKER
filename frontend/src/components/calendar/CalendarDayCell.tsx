@@ -54,6 +54,7 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
 }) => {
   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
   const today = isSameDay(date, businessToday());
+  const hasHoliday = events.some((e) => e.type === "holiday");
   const isPlainCell = !today && !isSelected && !isRangeStart && !isRangeEnd && !isInRange;
 
   const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
@@ -100,7 +101,8 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
         "min-h-0 p-1 sm:p-1.5",
         isPlainCell && "hover:bg-card-raised",
         !isCurrentMonth && "bg-card text-muted-foreground/60",
-        isCurrentMonth && isWeekend && "bg-muted/30",
+        isCurrentMonth && hasHoliday && "bg-info/10 dark:bg-info/15",
+        isCurrentMonth && !hasHoliday && isWeekend && "bg-muted/30",
         conflict && "border-tone-warning-border z-10 border-2",
         today && "calendar-today-glow border-info/40 border",
         isSelected && "border-primary/80 bg-primary/15 dark:bg-primary/[0.12] border",

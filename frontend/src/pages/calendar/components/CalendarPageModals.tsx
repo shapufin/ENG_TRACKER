@@ -46,6 +46,7 @@ export const CalendarPageModals: React.FC<CalendarPageModalsProps> = ({
       }
       vacationBalances={data.selectedUserBalances}
       holidays={data.holidayData}
+      userEvents={data.events?.filter((e) => e.userId === data.activeModalUser?.id)}
     />
 
     <DayEventsDialog
