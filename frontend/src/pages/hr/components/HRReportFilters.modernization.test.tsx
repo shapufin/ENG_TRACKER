@@ -20,6 +20,7 @@ describe("HRReportFilters modernization", () => {
         onWorkspaceChange={() => {}}
         isLoading={false}
         onGenerate={() => {}}
+        onResetFilters={() => {}}
       />
     );
 

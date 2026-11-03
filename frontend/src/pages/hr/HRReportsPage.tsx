@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useHRReportManagement } from "@/hooks/useHRReportManagement";
 import { reportService } from "@/services/reportService";
 import { PageShell } from "@/components/layout/PageShell";
-import { toLocalISODate } from "@/lib/date-format-utils";
+import { currentBusinessMonthKey, getMonthEndISO, toLocalISODate } from "@/lib/date-format-utils";
 
 import { handleApiError } from "@/lib/error-handler";
 import { HRReportFilters } from "./components/HRReportFilters";
@@ -12,14 +12,14 @@ import { HRReportResults } from "./components/HRReportResults";
 import { buildTrendData } from "./trendData";
 
 export const HRReportsPage: React.FC = () => {
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  // Business month (Europe/Tirane), never the browser's clock.
+  const [start, setStart] = useState(() => `${currentBusinessMonthKey()}-01`);
+  const [end, setEnd] = useState(() => getMonthEndISO(`${currentBusinessMonthKey()}-01`) ?? "");
   const [selectedItalianTL, setSelectedItalianTL] = useState<string>("all");
   const [selectedAlbanianTL, setSelectedAlbanianTL] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [hasGenerated, setHasGenerated] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportType, setExportType] = useState<"ot-standby" | "leave" | "payroll">("ot-standby");
   const [exportStatus, setExportStatus] = useState<"approved" | "pending">("approved");
@@ -47,10 +47,11 @@ export const HRReportsPage: React.FC = () => {
     selectedWorkspace,
   });
 
-  const onGenerate = () => {
-    setHasGenerated(true);
+  // First visit shows the current month straight away; later filter edits wait for Generate.
+  useEffect(() => {
     handleGenerate();
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // fallow-ignore-next-line complexity
   const downloadDetailedExport = async (
@@ -132,11 +133,16 @@ export const HRReportsPage: React.FC = () => {
           teams={teams}
           workspaces={workspaces}
           isLoading={isLoading}
-          onGenerate={onGenerate}
+          onGenerate={handleGenerate}
+          onResetFilters={() => {
+            setSelectedItalianTL("all");
+            setSelectedAlbanianTL("all");
+            setSelectedTeam("all");
+            setSelectedWorkspace("all");
+          }}
         />
 
         <HRReportResults
-          hasGenerated={hasGenerated}
           isLoading={isLoading}
           insightsData={insightsData}
           topTeamLeadersData={topTeamLeadersData}

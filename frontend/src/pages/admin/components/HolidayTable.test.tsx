@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { HolidayTable } from "./HolidayTable";
 
 // DataTable (TanStack) needs ResizeObserver, which jsdom lacks.
@@ -64,5 +64,33 @@ describe("HolidayTable", () => {
     render(<HolidayTable holidays={[]} isLoading onEdit={noop} onDelete={noop} />);
 
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("filters holidays by name, date, country or scope through the table search", () => {
+    const rows = [
+      ...HOLIDAYS,
+      {
+        id: 2,
+        name: "Independence Day",
+        formattedDate: "2026-11-28",
+        country_code: "AL",
+        is_global: false,
+        scope: "Workspace",
+      },
+    ];
+    render(<HolidayTable holidays={rows} isLoading={false} onEdit={noop} onDelete={noop} />);
+    const search = screen.getByRole("searchbox");
+
+    fireEvent.change(search, { target: { value: "independ" } });
+    expect(screen.queryByText("Christmas")).not.toBeInTheDocument();
+    expect(screen.getByText("Independence Day")).toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: "IT" } });
+    expect(screen.getByText("Christmas")).toBeInTheDocument();
+    expect(screen.queryByText("Independence Day")).not.toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: "workspace" } });
+    expect(screen.getByText("Independence Day")).toBeInTheDocument();
+    expect(screen.queryByText("Christmas")).not.toBeInTheDocument();
   });
 });

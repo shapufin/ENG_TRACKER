@@ -54,7 +54,7 @@ export const HolidayTable: React.FC<HolidayTableProps> = ({
         header: "Country",
         cell: ({ row }) => (
           <span className="text-muted-foreground text-sm tracking-wide uppercase">
-            {row.original.country_code || "—"}
+            {row.original.country_code || "-"}
           </span>
         ),
       },
@@ -92,7 +92,13 @@ export const HolidayTable: React.FC<HolidayTableProps> = ({
 
   return (
     <GlassCard className="p-4">
-      <DataTable columns={columns} data={holidays} emptyMessage="No holidays defined yet." />
+      <DataTable
+        columns={columns}
+        data={holidays}
+        searchColumn={["name", "formattedDate", "country_code", "scope"]}
+        searchPlaceholder="Search holidays..."
+        emptyMessage="No holidays match your search."
+      />
     </GlassCard>
   );
 };

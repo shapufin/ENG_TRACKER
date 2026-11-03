@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { TrendingUp } from "lucide-react";
 import type { DetailedUserReport } from "@/services/reportService";
 import { HRInsightsCard } from "./HRInsightsCard";
 import { HRTopLeadersCard } from "./HRTopLeadersCard";
@@ -45,7 +43,6 @@ interface InsightsData {
 }
 
 interface HRReportResultsProps {
-  hasGenerated: boolean;
   isLoading: boolean;
   insightsData?: InsightsData | null;
   topTeamLeadersData?: LeaderItem[] | null;
@@ -65,7 +62,6 @@ interface HRReportResultsProps {
 }
 
 export const HRReportResults: React.FC<HRReportResultsProps> = ({
-  hasGenerated,
   isLoading,
   insightsData,
   topTeamLeadersData,
@@ -77,18 +73,6 @@ export const HRReportResults: React.FC<HRReportResultsProps> = ({
   onSearchQueryChange,
   actionBar,
 }) => {
-  if (!hasGenerated) {
-    return (
-      <GlassCard>
-        <EmptyState
-          icon={TrendingUp}
-          title="HR Strategic Analysis"
-          description="Filter by Team Leaders and date range to analyze organizational performance."
-        />
-      </GlassCard>
-    );
-  }
-
   if (isLoading)
     return (
       <div className="space-y-6">
@@ -117,11 +101,6 @@ export const HRReportResults: React.FC<HRReportResultsProps> = ({
       </div>
     );
 
-  const filteredUsersData = (detailedData?.users || []).filter((u) => {
-    const s = searchQuery.toLowerCase();
-    return u.full_name.toLowerCase().includes(s) || u.username.toLowerCase().includes(s);
-  });
-
   const filteredLeaveList = (leaveList?.results || []).filter((v) => {
     const s = searchQuery.toLowerCase();
     return (v.user_full_name || v.user_name || "").toLowerCase().includes(s);
@@ -136,13 +115,13 @@ export const HRReportResults: React.FC<HRReportResultsProps> = ({
         <div className="space-y-5 lg:col-span-8">
           {hasLeaders && <HRTeamLeaderBarList leaders={topTeamLeadersData!} />}
           {trendData.length > 0 && <HRTrendChart data={trendData} />}
-          <HRPersonnelTable users={filteredUsersData} />
         </div>
         <aside className="space-y-5 lg:col-span-4">
           {hasLeaders && <HRTopLeadersCard leaders={topTeamLeadersData!} />}
           <HRReportStatusCard leaders={topTeamLeadersData ?? []} teams={teams} />
         </aside>
       </div>
+      <HRPersonnelTable users={detailedData?.users ?? []} />
       <div className="space-y-4">
         <HRSearchControls searchQuery={searchQuery} onSearchQueryChange={onSearchQueryChange} />
         <HRLeaveTable leaves={filteredLeaveList} />
