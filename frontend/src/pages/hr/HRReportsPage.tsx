@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useHRReportManagement } from "@/hooks/useHRReportManagement";
 import { reportService } from "@/services/reportService";
 import { PageShell } from "@/components/layout/PageShell";
@@ -46,6 +46,21 @@ export const HRReportsPage: React.FC = () => {
     selectedTeam,
     selectedWorkspace,
   });
+
+  // The rankings list Managers (italian_tl). Clicking one sets the Manager filter and re-runs
+  // the report once that state is committed: the hook's refetch is bound to the filters of
+  // the last render, so calling it in the click handler would fetch the old selection.
+  const rerunAfterLeaderPick = useRef(false);
+  const selectLeader = (leaderId: number) => {
+    rerunAfterLeaderPick.current = true;
+    setSelectedItalianTL(String(leaderId));
+  };
+  useEffect(() => {
+    if (!rerunAfterLeaderPick.current) return;
+    rerunAfterLeaderPick.current = false;
+    handleGenerate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItalianTL]);
 
   // First visit shows the current month straight away; later filter edits wait for Generate.
   useEffect(() => {
@@ -150,6 +165,12 @@ export const HRReportsPage: React.FC = () => {
           detailedData={detailedData}
           leaveList={leaveList}
           teams={teams}
+          selectedLeaderId={
+            selectedItalianTL === "all" || selectedItalianTL === "none"
+              ? null
+              : Number(selectedItalianTL)
+          }
+          onSelectLeader={selectLeader}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
           actionBar={
