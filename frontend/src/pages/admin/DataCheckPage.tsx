@@ -17,7 +17,7 @@ import { plural } from "@/lib/plural";
 import { cn } from "@/lib/utils";
 import { SuggestedTeamMoves } from "./components/SuggestedTeamMoves";
 
-export type DataCheckTab = "all" | "users" | "leaders" | "empty" | "clients" | "suggestions";
+type DataCheckTab = "all" | "users" | "leaders" | "empty" | "clients" | "suggestions";
 
 interface CheckSectionProps {
   title: string;
