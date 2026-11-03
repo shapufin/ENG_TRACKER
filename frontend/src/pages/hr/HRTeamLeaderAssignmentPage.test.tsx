@@ -1,4 +1,3 @@
-import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -11,31 +10,11 @@ vi.mock("./hooks/useHRTeamLeaderAssignment", () => ({
   useHRTeamLeaderAssignment: () => useHRTeamLeaderAssignmentMock(),
 }));
 
-// Same simplified Select mock as TeamLeaderSelect.test.tsx — real Radix
-// Select can't be reliably driven via fireEvent in JSDOM.
-vi.mock("@/components/ui/select", () => {
-  const SelectContext = React.createContext<{ onValueChange?: (value: string) => void }>({});
-  return {
-    Select: ({ children, onValueChange }: any) => (
-      <SelectContext.Provider value={{ onValueChange }}>{children}</SelectContext.Provider>
-    ),
-    SelectContent: ({ children }: any) => <div>{children}</div>,
-    SelectItem: ({ value, children }: any) => {
-      const context = React.useContext(SelectContext);
-      return (
-        <button type="button" role="option" onClick={() => context.onValueChange?.(value)}>
-          {children}
-        </button>
-      );
-    },
-    SelectTrigger: ({ children, "aria-label": ariaLabel }: any) => (
-      <button type="button" role="combobox" aria-label={ariaLabel}>
-        {children}
-      </button>
-    ),
-    SelectValue: ({ children, placeholder }: any) => <span>{children || placeholder}</span>,
-  };
-});
+// Opens a picker by its accessible name and chooses an option.
+const pick = (combobox: string, option: string | RegExp) => {
+  fireEvent.click(screen.getByRole("combobox", { name: combobox }));
+  fireEvent.click(screen.getByRole("option", { name: option }));
+};
 
 const makeProfile = (overrides: Partial<UserProfile> = {}): UserProfile =>
   ({
@@ -148,7 +127,7 @@ describe("HRTeamLeaderAssignmentPage", () => {
         <HRTeamLeaderAssignmentPage />
       </MemoryRouter>
     );
-    fireEvent.click(screen.getByRole("option", { name: "Bob TL" }));
+    pick("Manager for alice", /Bob TL/);
     expect(setTeamLeader).toHaveBeenCalledWith({
       profileId: 1,
       role: "italian_tl",
@@ -168,10 +147,7 @@ describe("HRTeamLeaderAssignmentPage", () => {
         <HRTeamLeaderAssignmentPage />
       </MemoryRouter>
     );
-    const albanianCell = screen
-      .getByRole("combobox", { name: "Line Manager for alice" })
-      .closest("td") as HTMLElement;
-    fireEvent.click(within(albanianCell).getByRole("option", { name: "No TL" }));
+    pick("Line Manager for alice", "No TL");
     expect(setTeamLeader).toHaveBeenCalledWith({
       profileId: 1,
       role: "albanian_tl",
@@ -210,9 +186,14 @@ describe("HRTeamLeaderAssignmentPage", () => {
     fireEvent.click(screen.getByLabelText("Select all rows on this page"));
     expect(screen.getByLabelText("2 selected")).toBeInTheDocument();
 
-    const bulkItalianCombobox = screen.getByRole("combobox", { name: "Bulk set Manager" });
-    const bulkItalianContainer = bulkItalianCombobox.closest("div") as HTMLElement;
-    fireEvent.click(within(bulkItalianContainer).getByRole("option", { name: "Bob TL" }));
+    pick("Bulk set Manager", /Bob TL/);
+
+    // Nothing is written until the confirm dialog (count + leader) is accepted.
+    expect(setTeamLeaderBulkAsync).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/2 employees/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Bob TL/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirm" }));
 
     // One batched call (one toast + one invalidation in the hook), and the
     // per-row mutation is never fanned out.
@@ -222,5 +203,24 @@ describe("HRTeamLeaderAssignmentPage", () => {
       { profileId: 2, role: "italian_tl", teamLeaderUserId: 20 },
     ]);
     expect(setTeamLeaderAsync).not.toHaveBeenCalled();
+  });
+
+  it("does not bulk-apply when the confirm dialog is cancelled", async () => {
+    const setTeamLeaderBulkAsync = vi.fn().mockResolvedValue({ failed: 0, total: 1 });
+    useHRTeamLeaderAssignmentMock.mockReturnValue({ ...defaultHookReturn, setTeamLeaderBulkAsync });
+    render(
+      <MemoryRouter>
+        <HRTeamLeaderAssignmentPage />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByLabelText("Select row"));
+    pick("Bulk set Line Manager", "No TL");
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/Remove the Line Manager from 1 employee/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(setTeamLeaderBulkAsync).not.toHaveBeenCalled();
   });
 });

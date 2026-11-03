@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { Calendar, Users, FileSpreadsheet } from "lucide-react";
+import { ActiveFilterChips, type ActiveFilterChip } from "@/components/ui/ActiveFilterChips";
 import { FilterSelect } from "./FilterSelect";
 import type { TeamLeaderOption } from "@/hooks/useHRReportManagement";
 
@@ -26,6 +27,8 @@ interface HRReportFiltersProps {
   workspaces?: { id: number; name: string; user_count: number }[];
   isLoading: boolean;
   onGenerate: () => void;
+  /** Puts Manager, Line Manager, Team and Workspace back to All (dates stay). */
+  onResetFilters: () => void;
 }
 
 export const HRReportFilters: React.FC<HRReportFiltersProps> = ({
@@ -47,9 +50,51 @@ export const HRReportFilters: React.FC<HRReportFiltersProps> = ({
   workspaces,
   isLoading,
   onGenerate,
+  onResetFilters,
 }) => {
+  const nameOf = (value: string, noneName: string, find: () => string | undefined) =>
+    value === "none" ? noneName : (find() ?? value);
+  const chips: ActiveFilterChip[] = [
+    {
+      id: "italian",
+      label: "Manager",
+      value: nameOf(
+        selectedItalianTL,
+        "None",
+        () => italianTLs?.find((t) => String(t.id) === selectedItalianTL)?.full_name
+      ),
+      active: selectedItalianTL !== "all",
+      onRemove: () => onItalianTLChange("all"),
+    },
+    {
+      id: "albanian",
+      label: "Line Manager",
+      value: nameOf(
+        selectedAlbanianTL,
+        "None",
+        () => albanianTLs?.find((t) => String(t.id) === selectedAlbanianTL)?.full_name
+      ),
+      active: selectedAlbanianTL !== "all",
+      onRemove: () => onAlbanianTLChange("all"),
+    },
+    {
+      id: "team",
+      label: "Team",
+      value: teams?.find((t) => String(t.id) === selectedTeam)?.name ?? selectedTeam,
+      active: selectedTeam !== "all",
+      onRemove: () => onTeamChange("all"),
+    },
+    {
+      id: "workspace",
+      label: "Workspace",
+      value: workspaces?.find((w) => String(w.id) === selectedWorkspace)?.name ?? selectedWorkspace,
+      active: selectedWorkspace !== "all",
+      onRemove: () => onWorkspaceChange("all"),
+    },
+  ].filter((chip) => chip.active);
+
   return (
-    <GlassCard className="p-4">
+    <GlassCard className="space-y-3 p-4">
       <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-12">
         <div className="space-y-2 lg:col-span-3">
           <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
@@ -125,6 +170,7 @@ export const HRReportFilters: React.FC<HRReportFiltersProps> = ({
           </Button>
         </div>
       </div>
+      <ActiveFilterChips chips={chips} onReset={onResetFilters} />
     </GlassCard>
   );
 };

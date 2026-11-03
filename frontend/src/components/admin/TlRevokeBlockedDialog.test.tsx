@@ -1,4 +1,3 @@
-import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { TlRevokeBlockedDialog } from "./TlRevokeBlockedDialog";
@@ -12,32 +11,11 @@ vi.mock("@/lib/error-handler", () => ({ handleApiError: vi.fn() }));
 import { userService } from "@/services/userService";
 import { handleApiError } from "@/lib/error-handler";
 
-// Same simplified Select mock as TeamLeaderSelect.test.tsx.
-vi.mock("@/components/ui/select", () => {
-  const SelectContext = React.createContext<{ onValueChange?: (value: string) => void }>({});
-  return {
-    Select: ({ children, onValueChange, disabled }: any) => (
-      <SelectContext.Provider value={{ onValueChange }}>
-        <div data-disabled={disabled}>{children}</div>
-      </SelectContext.Provider>
-    ),
-    SelectContent: ({ children }: any) => <div>{children}</div>,
-    SelectItem: ({ value, children }: any) => {
-      const context = React.useContext(SelectContext);
-      return (
-        <button type="button" role="option" onClick={() => context.onValueChange?.(value)}>
-          {children}
-        </button>
-      );
-    },
-    SelectTrigger: ({ children, "aria-label": ariaLabel }: any) => (
-      <button type="button" role="combobox" aria-label={ariaLabel}>
-        {children}
-      </button>
-    ),
-    SelectValue: ({ children, placeholder }: any) => <span>{children || placeholder}</span>,
-  };
-});
+// Opens the n-th picker (0 = group bulk picker, then one per dependent) and chooses an option.
+const pick = (picker: number, name: string | RegExp) => {
+  fireEvent.click(screen.getAllByRole("combobox")[picker]);
+  fireEvent.click(screen.getByRole("option", { name }));
+};
 
 const blockedRevocations: BlockedRevocation[] = [
   {
@@ -91,7 +69,7 @@ describe("TlRevokeBlockedDialog", () => {
     const retryButton = screen.getByRole("button", { name: "Retry" });
     expect(retryButton).toBeDisabled();
 
-    fireEvent.click(screen.getAllByRole("option", { name: "Dave TL" })[1]);
+    pick(1, /Dave TL/);
     await waitFor(() => expect(userService.setTeamLeader).toHaveBeenCalledTimes(1));
     expect(retryButton).toBeDisabled();
   });
@@ -110,13 +88,12 @@ describe("TlRevokeBlockedDialog", () => {
       />
     );
 
-    const options = screen.getAllByRole("option", { name: "Dave TL" });
-    fireEvent.click(options[1]);
+    pick(1, /Dave TL/);
     await waitFor(() =>
       expect(userService.setTeamLeader).toHaveBeenCalledWith(10, "italian_tl", 5)
     );
 
-    fireEvent.click(screen.getAllByRole("option", { name: "No TL" })[2]);
+    pick(2, "No TL");
     await waitFor(() =>
       expect(userService.setTeamLeader).toHaveBeenCalledWith(11, "italian_tl", null)
     );
@@ -139,7 +116,7 @@ describe("TlRevokeBlockedDialog", () => {
         onRetry={vi.fn()}
       />
     );
-    fireEvent.click(screen.getAllByRole("option", { name: "Dave TL" })[1]);
+    pick(1, /Dave TL/);
     await waitFor(() => expect(handleApiError).toHaveBeenCalled());
     expect(screen.getByRole("button", { name: "Retry" })).toBeDisabled();
   });
@@ -158,7 +135,7 @@ describe("TlRevokeBlockedDialog", () => {
       />
     );
 
-    fireEvent.click(screen.getAllByRole("option", { name: "Dave TL" })[0]);
+    pick(0, /Dave TL/);
 
     await waitFor(() => expect(userService.setTeamLeader).toHaveBeenCalledTimes(2));
     expect(userService.setTeamLeader).toHaveBeenCalledWith(10, "italian_tl", 5);

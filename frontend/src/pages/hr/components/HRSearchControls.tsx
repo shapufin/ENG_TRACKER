@@ -14,8 +14,8 @@ export const HRSearchControls: React.FC<HRSearchControlsProps> = ({
   <FilterToolbar>
     <FilterToolbar.Search>
       <SearchField
-        placeholder="Search personnel..."
-        aria-label="Search personnel"
+        placeholder="Search leave requests..."
+        aria-label="Search leave requests"
         value={searchQuery}
         onChange={onSearchQueryChange}
       />

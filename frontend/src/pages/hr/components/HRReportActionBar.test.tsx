@@ -72,6 +72,23 @@ describe("HRReportActionBar", () => {
     expect(screen.getByText(/Workspace: WS/)).toBeInTheDocument();
   });
 
+  it("lists the selected team in the export dialog summary", () => {
+    render(
+      <HRReportActionBar
+        {...baseProps}
+        exportDialogOpen={true}
+        selectedTeam="3"
+        teams={[{ id: 3, name: "Filter Team" }]}
+      />
+    );
+    expect(screen.getByText(/Team: Filter Team/)).toBeInTheDocument();
+  });
+
+  it("shows every team when none is selected", () => {
+    render(<HRReportActionBar {...baseProps} exportDialogOpen={true} />);
+    expect(screen.getByText(/Team: All/)).toBeInTheDocument();
+  });
+
   it("renders export dialog with unknown TL fallback", () => {
     render(
       <HRReportActionBar
@@ -172,9 +189,7 @@ describe("HRReportActionBar", () => {
 
   it("shows payroll export dialog with processing-period description", () => {
     render(<HRReportActionBar {...baseProps} exportDialogOpen={true} exportType="payroll" />);
-    expect(
-      screen.getByRole("heading", { name: "Export by Payroll Period" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Export by Payroll Period" })).toBeInTheDocument();
     expect(screen.getByText(/carryover-aware/i)).toBeInTheDocument();
   });
 });
