@@ -32,17 +32,17 @@ export const CalendarSidebarFooter: React.FC<CalendarSidebarFooterProps> = ({
   const state = typeState(showStandby, showVacation, showSick);
 
   return (
-    <div className="space-y-3 border-t border-border/60 p-3">
+    <div className="border-border/60 space-y-1.5 border-t p-2">
       {hiddenCount > 0 && !expanded && (
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 w-full text-xs text-muted-foreground"
+          className="text-muted-foreground h-6.5 w-full text-[11px]"
           onClick={onToggleExpanded}
         >
           Show {hiddenCount} more
-          <ChevronDown className="ml-1 h-3.5 w-3.5" />
+          <ChevronDown className="ml-1 h-3 w-3" />
         </Button>
       )}
       {expanded && (
@@ -50,28 +50,33 @@ export const CalendarSidebarFooter: React.FC<CalendarSidebarFooterProps> = ({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 w-full text-xs text-muted-foreground"
+          className="text-muted-foreground h-6.5 w-full text-[11px]"
           onClick={onToggleExpanded}
         >
           Show less
-          <ChevronDown className="ml-1 h-3.5 w-3.5 rotate-180" />
+          <ChevronDown className="ml-1 h-3 w-3 rotate-180" />
         </Button>
       )}
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-        {typeFilters.map((filter) => (
-          <button
-            key={filter.key}
-            type="button"
-            onClick={() => onToggleType(filter.key)}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 transition md:px-0 md:py-0",
-              state[filter.key] ? "text-foreground" : "opacity-40"
-            )}
-          >
-            <span className={cn("h-2 w-2 rounded-full", filter.dot)} />
-            {filter.label}
-          </button>
-        ))}
+      <div className="pt-0.5">
+        <div className="text-muted-foreground mb-1 text-[9px] font-semibold tracking-wider uppercase">
+          Legend
+        </div>
+        <div className="text-muted-foreground grid grid-cols-2 gap-1 text-[10px]">
+          {typeFilters.map((filter) => (
+            <button
+              key={filter.key}
+              type="button"
+              onClick={() => onToggleType(filter.key)}
+              className={cn(
+                "inline-flex items-center gap-1.5 truncate rounded py-0.5 text-left transition",
+                state[filter.key] ? "text-foreground font-medium" : "opacity-40"
+              )}
+            >
+              <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", filter.dot)} />
+              <span className="truncate">{filter.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
