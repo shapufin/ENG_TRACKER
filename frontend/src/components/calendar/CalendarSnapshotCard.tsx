@@ -1,4 +1,5 @@
 import React from "react";
+import { Plane } from "lucide-react";
 import type { VacationBalanceBreakdown } from "@/lib/vacation-balance";
 
 interface CalendarSnapshotCardProps {
@@ -27,44 +28,60 @@ export const CalendarSnapshotCard: React.FC<CalendarSnapshotCardProps> = ({
           onShowUserModal();
         }
       }}
-      className={`border-line-subtle bg-card rounded-2xl border p-3 ${
-        onShowUserModal ? "hover:border-primary/50 cursor-pointer transition-colors" : ""
+      className={`border-border/60 from-primary/5 to-primary/10 hover:border-primary/40 group rounded-xl border bg-gradient-to-br p-2 transition-all ${
+        onShowUserModal ? "cursor-pointer" : ""
       }`}
     >
-      <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-        My vacation snapshot
-      </p>
-      <div className="mt-1 flex items-baseline justify-between gap-2">
-        <span className="text-foreground font-mono text-2xl font-bold tabular-nums">
-          {formatDays(remainingDays)}
-          <span className="text-muted-foreground text-xs font-normal">
-            {" "}
-            / {formatDays(totalDays)}d
-          </span>
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-primary flex items-center gap-1 text-[9px] font-bold tracking-wider uppercase">
+          <Plane className="h-2.5 w-2.5" />
+          Snapshot
         </span>
-        <span className="text-tone-success-text font-mono text-xs font-bold">
+        <span className="text-tone-success-text font-mono text-[10px] font-bold">
           {pct(remainingDays)}% left
         </span>
       </div>
+
+      <div className="flex items-baseline justify-between">
+        <div className="flex items-baseline gap-1">
+          <span className="text-foreground font-mono text-base font-extrabold tracking-tight tabular-nums">
+            {formatDays(remainingDays)}
+          </span>
+          <span className="text-muted-foreground font-mono text-[10px] font-medium">
+            {" "}
+            / {formatDays(totalDays)}d
+          </span>
+        </div>
+        <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-[9px]">
+          <span>
+            Used: <strong className="text-foreground font-semibold">{formatDays(usedDays)}d</strong>
+          </span>
+          <span>
+            Pending:{" "}
+            <strong className="text-tone-warning-text font-semibold">
+              {formatDays(pendingDays)}d
+            </strong>
+          </span>
+        </div>
+      </div>
+
       <div
         role="img"
         aria-label={`Vacation balance: ${formatDays(remainingDays)} of ${formatDays(totalDays)} days remaining`}
-        className="border-line-subtle bg-surface-sunken mt-2 flex h-2 w-full overflow-hidden rounded-full border"
+        className="bg-muted border-border/40 mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full border"
       >
-        <div className="bg-success h-full" style={{ width: `${pct(remainingDays)}%` }} />
-        <div className="bg-warning h-full" style={{ width: `${pct(pendingDays)}%` }} />
-        <div className="bg-destructive h-full" style={{ width: `${pct(usedDays)}%` }} />
-      </div>
-      <div className="text-muted-foreground mt-2 flex items-center justify-between text-xs">
-        <span>
-          Used: <strong className="text-foreground font-semibold">{formatDays(usedDays)}d</strong>
-        </span>
-        <span>
-          Pending:{" "}
-          <strong className="text-tone-warning-text font-semibold">
-            {formatDays(pendingDays)}d
-          </strong>
-        </span>
+        <div
+          className="bg-success h-full transition-all"
+          style={{ width: `${pct(remainingDays)}%` }}
+        />
+        <div
+          className="bg-warning h-full transition-all"
+          style={{ width: `${pct(pendingDays)}%` }}
+        />
+        <div
+          className="bg-destructive h-full transition-all"
+          style={{ width: `${pct(usedDays)}%` }}
+        />
       </div>
     </section>
   );

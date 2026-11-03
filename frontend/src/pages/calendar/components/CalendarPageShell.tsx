@@ -113,7 +113,7 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
           "grid min-h-0 flex-1 gap-2 overflow-hidden p-2 transition-all duration-300 ease-out",
           data.isSidebarCollapsed
             ? "xl:grid-cols-[48px_minmax(0,1fr)]"
-            : "xl:grid-cols-[192px_minmax(0,1fr)] 2xl:grid-cols-[224px_minmax(0,1fr)]"
+            : "xl:grid-cols-[240px_minmax(0,1fr)] 2xl:grid-cols-[256px_minmax(0,1fr)]"
         )}
       >
         {!isMobile && <div className="flex min-h-0 flex-col overflow-hidden">{sidebar}</div>}

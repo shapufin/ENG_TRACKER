@@ -32,13 +32,13 @@ export const CalendarSidebarFacets: React.FC<CalendarSidebarFacetsProps> = ({
   const expanded = open || activeCount > 0;
 
   return (
-    <div className="border-border/60 border-b px-2 py-2">
+    <div className="border-border/60 border-b px-2 py-1.5">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={expanded}
         aria-controls="calendar-sidebar-facets"
-        className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-xs font-semibold tracking-wide uppercase transition"
+        className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between gap-1.5 rounded-md px-1 py-1 text-[10px] font-bold tracking-wider uppercase transition"
       >
         <span className="flex min-w-0 items-center gap-1.5">
           <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

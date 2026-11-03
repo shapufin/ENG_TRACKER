@@ -23,11 +23,13 @@ export const CalendarSidebarHeader: React.FC<CalendarSidebarHeaderProps> = ({
   onCollapse,
 }) => (
   <div className="border-border/60 border-b p-2.5">
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex items-center justify-between gap-1.5">
       <div className="flex min-w-0 items-center gap-1.5">
         <Users className="text-primary h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-        <h2 className="truncate text-xs font-semibold">Team Directory</h2>
-        <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-1.5 py-0.5 font-mono text-xs font-semibold">
+        <h2 className="text-foreground truncate text-[11px] font-bold tracking-wider uppercase">
+          Team Directory
+        </h2>
+        <span className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold">
           {userCount}
         </span>
       </div>
@@ -35,7 +37,7 @@ export const CalendarSidebarHeader: React.FC<CalendarSidebarHeaderProps> = ({
         type="button"
         size="control-icon-sm"
         variant="ghost"
-        className="border-border/60 shrink-0 border"
+        className="border-border/60 h-6.5 w-6.5 shrink-0 rounded-lg border p-0"
         onClick={onCollapse}
         aria-label="Collapse team sidebar"
         title="Collapse the directory to widen the calendar"
@@ -45,7 +47,7 @@ export const CalendarSidebarHeader: React.FC<CalendarSidebarHeaderProps> = ({
     </div>
 
     {calendarGroup && (
-      <p className="text-muted-foreground mt-1 truncate text-xs font-medium tracking-wider uppercase">
+      <p className="text-muted-foreground mt-1 truncate font-mono text-[10px] font-medium tracking-wider uppercase">
         {calendarGroup}
       </p>
     )}

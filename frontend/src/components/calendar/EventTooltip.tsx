@@ -46,11 +46,13 @@ export const EventTooltip: React.FC<EventTooltipProps> = ({
   const dateDisplay = event.start === event.end ? startDate : `${startDate} → ${endDate}`;
   const tone = typeTone[event.type];
 
-  // Clone child to inject onActivate prop
+  // Clone child to inject onActivate prop (guard DOM elements to prevent React warning)
+  const isDomElement = typeof (children as React.ReactElement).type === "string";
   const childWithActivate = React.cloneElement(
-    children as React.ReactElement,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { onActivate: () => onEventActivate?.(event) } as any
+    children as React.ReactElement<{ onClick?: () => void; onActivate?: () => void }>,
+    isDomElement
+      ? { onClick: () => onEventActivate?.(event) }
+      : { onActivate: () => onEventActivate?.(event) }
   );
 
   const hours = Number(event.hours);

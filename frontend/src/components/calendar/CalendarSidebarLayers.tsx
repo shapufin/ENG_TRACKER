@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown, Layers } from "lucide-react";
+import { Check, ChevronDown, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toneFillClass } from "@/components/ui/tone";
 
@@ -45,7 +45,7 @@ export const CalendarSidebarLayers: React.FC<CalendarSidebarLayersProps> = ({
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
         aria-controls="calendar-sidebar-layers"
-        className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-xs font-semibold tracking-wide uppercase transition"
+        className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between gap-1.5 rounded-md px-1 py-1 text-[10px] font-bold tracking-wider uppercase transition"
       >
         <span className="flex min-w-0 items-center gap-1.5">
           <Layers className="text-primary h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -70,10 +70,21 @@ export const CalendarSidebarLayers: React.FC<CalendarSidebarLayersProps> = ({
               aria-pressed={layer.active}
               title={layer.code ? `${layer.name} (${layer.code})` : layer.name}
               className={cn(
-                "hover:bg-card focus-visible:ring-ring/60 flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-xs transition focus-visible:ring-1 focus-visible:outline-hidden",
+                "hover:bg-card focus-visible:ring-ring/60 flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs transition focus-visible:ring-1 focus-visible:outline-hidden",
                 !layer.active && "opacity-60"
               )}
             >
+              <span
+                className={cn(
+                  "flex h-3 w-3 shrink-0 items-center justify-center rounded border transition-colors",
+                  layer.active
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-muted-foreground/40 bg-transparent"
+                )}
+                aria-hidden="true"
+              >
+                {layer.active && <Check className="h-2 w-2 stroke-[3]" />}
+              </span>
               <span
                 className={cn(
                   "h-1.5 w-1.5 shrink-0 rounded-full",
@@ -81,12 +92,12 @@ export const CalendarSidebarLayers: React.FC<CalendarSidebarLayersProps> = ({
                 )}
                 aria-hidden="true"
               />
-              <span className="text-foreground min-w-0 flex-1 truncate font-medium">
+              <span className="text-foreground min-w-0 flex-1 truncate text-[11px] font-medium">
                 {layer.name}
               </span>
               {layer.count !== undefined && (
-                <span className="text-muted-foreground shrink-0 font-mono text-xs">
-                  {layer.count}
+                <span className="text-muted-foreground shrink-0 font-mono text-[10px]">
+                  {layer.count}p
                 </span>
               )}
             </button>

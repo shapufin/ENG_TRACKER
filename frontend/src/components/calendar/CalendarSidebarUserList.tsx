@@ -26,54 +26,69 @@ const UserRow: React.FC<{
   remainingDaysByUser?: Map<number, number>;
 }> = ({ user, isVisible, onToggleUser, onShowUserModal, remainingDaysByUser }) => {
   const name = userDisplayName(user);
+  const team = teamLabel(user);
+  const hasRemaining = remainingDaysByUser?.has(user.id);
+  const remaining = remainingDaysByUser?.get(user.id);
+
   return (
     <div
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 transition",
+        "flex w-full items-center justify-between gap-1.5 rounded-lg border px-2 py-1.5 transition-all",
         isVisible
-          ? "border-primary/60 bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.15)]"
-          : "border-line-subtle bg-card-raised"
+          ? "border-border/80 bg-card shadow-2xs"
+          : "border-border/40 bg-muted/20 opacity-60"
       )}
     >
       <button
         type="button"
         onClick={() => onToggleUser(user.id)}
-        className="hover:bg-background/40 focus-visible:ring-ring/60 flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left transition focus-visible:ring-2 focus-visible:outline-hidden"
+        className="hover:bg-accent/40 focus-visible:ring-ring/60 flex min-w-0 flex-1 items-center gap-1.5 rounded-md text-left transition focus-visible:ring-2 focus-visible:outline-hidden"
         aria-pressed={isVisible}
         aria-label={`${isVisible ? "Hide" : "Show"} ${name}`}
       >
-        <UserAvatar size="xs" name={name} email={user.email} colorSeed={user.id} />
-        <span className="min-w-0 flex-1">
-          <span className="text-foreground block truncate text-xs font-semibold" title={name}>
+        <UserAvatar
+          size="xs"
+          name={name}
+          email={user.email}
+          colorSeed={user.id}
+          className="h-6 w-6 shrink-0 rounded-md text-[10px]"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="text-foreground truncate text-[11px] font-bold" title={name}>
             {name}
-          </span>
-          <span
-            className="text-muted-foreground block truncate text-xs font-medium tracking-wide uppercase"
-            title={teamLabel(user)}
-          >
-            {teamLabel(user)}
-          </span>
-          {remainingDaysByUser?.has(user.id) && (
-            <span
-              className="text-tone-success-text block truncate font-mono text-xs font-medium"
-              title={`${remainingDaysByUser.get(user.id)} days remaining`}
+          </div>
+          {team && (
+            <div
+              className="text-muted-foreground truncate font-mono text-[9px] tracking-wider uppercase"
+              title={team}
             >
-              {remainingDaysByUser.get(user.id)}d remaining
-            </span>
+              {team}
+            </div>
           )}
-        </span>
+        </div>
       </button>
-      {/* Balances are only readable by leaders; for everyone else the button opens an empty modal. */}
-      {onShowUserModal && remainingDaysByUser?.has(user.id) && (
-        <button
-          type="button"
-          onClick={() => onShowUserModal(user.id)}
-          className="text-muted-foreground hover:bg-background/60 hover:text-foreground focus-visible:ring-ring/60 rounded-md p-1 transition focus-visible:ring-2 focus-visible:outline-hidden"
-          aria-label={`View ${name}`}
-        >
-          <Eye className="h-3.5 w-3.5" />
-        </button>
-      )}
+
+      <div className="flex shrink-0 items-center gap-1">
+        {hasRemaining && (
+          <span
+            className="text-tone-success-text font-mono text-[10px] font-semibold"
+            title={`${remaining} days remaining`}
+          >
+            {remaining}d remaining
+          </span>
+        )}
+        {onShowUserModal && hasRemaining && (
+          <button
+            type="button"
+            onClick={() => onShowUserModal(user.id)}
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/60 rounded p-0.5 transition-colors focus-visible:ring-1 focus-visible:outline-hidden"
+            aria-label={`View ${name}`}
+            title={`View balance for ${name}`}
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 };
@@ -89,14 +104,14 @@ export const CalendarSidebarUserList: React.FC<CalendarSidebarUserListProps> = (
   onShowAll,
 }) => {
   const heading = (
-    <div className="border-border/60 flex shrink-0 items-center justify-between gap-2 border-b px-2.5 py-1.5">
-      <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+    <div className="border-border/60 flex shrink-0 items-center justify-between gap-1.5 border-b px-2.5 py-1">
+      <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
         Staff ({staffCount})
       </span>
       <button
         type="button"
         onClick={onShowAll}
-        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/60 rounded-md px-1 py-0.5 text-xs font-medium transition focus-visible:ring-1 focus-visible:outline-hidden"
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/60 rounded px-1 py-0.5 text-[10px] font-semibold transition focus-visible:ring-1 focus-visible:outline-hidden"
       >
         All members
       </button>
@@ -110,15 +125,15 @@ export const CalendarSidebarUserList: React.FC<CalendarSidebarUserListProps> = (
         {groupedUsers && groupedUsers.length > 0
           ? groupedUsers.map((group) => (
               <div key={group.workspaceId} className="space-y-1">
-                <div className="bg-card/95 sticky top-0 z-10 flex items-center gap-2 px-2 py-1 backdrop-blur-sm">
-                  <span className="bg-primary block h-2 w-2 rounded-full" aria-hidden="true" />
+                <div className="bg-card/95 sticky top-0 z-10 flex items-center gap-1.5 px-2 py-0.5 backdrop-blur-sm">
+                  <span className="bg-primary block h-1.5 w-1.5 rounded-full" aria-hidden="true" />
                   <span
-                    className="text-muted-foreground truncate text-xs font-semibold tracking-wide uppercase"
+                    className="text-muted-foreground truncate text-[10px] font-bold tracking-wider uppercase"
                     title={group.workspaceName}
                   >
                     {group.workspaceName}
                   </span>
-                  <span className="text-muted-foreground ml-auto font-mono text-xs tabular-nums">
+                  <span className="text-muted-foreground ml-auto font-mono text-[10px] tabular-nums">
                     {group.users.length}
                   </span>
                 </div>
