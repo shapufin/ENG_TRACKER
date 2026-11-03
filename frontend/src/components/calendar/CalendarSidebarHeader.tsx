@@ -1,7 +1,6 @@
 import React from "react";
-import { ChevronLeft, Users } from "lucide-react";
+import { ChevronLeft, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SearchField } from "@/components/ui/SearchField";
 
 interface CalendarSidebarHeaderProps {
   userCount: number;
@@ -22,7 +21,7 @@ export const CalendarSidebarHeader: React.FC<CalendarSidebarHeaderProps> = ({
   onQueryChange,
   onCollapse,
 }) => (
-  <div className="border-border/60 border-b p-2.5">
+  <div className="border-border/60 border-b p-2 sm:p-2.5">
     <div className="flex items-center justify-between gap-1.5">
       <div className="flex min-w-0 items-center gap-1.5">
         <Users className="text-primary h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -52,13 +51,16 @@ export const CalendarSidebarHeader: React.FC<CalendarSidebarHeaderProps> = ({
       </p>
     )}
 
-    <SearchField
-      className="mt-2"
-      controlSize="sm"
-      value={query}
-      onChange={onQueryChange}
-      placeholder="Search..."
-      aria-label="Search member"
-    />
+    <div className="relative mt-2">
+      <Search className="text-muted-foreground absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2" />
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+        placeholder="Search..."
+        aria-label="Search member"
+        className="border-border/60 bg-muted/30 placeholder:text-muted-foreground text-foreground focus:ring-primary/40 h-7 w-full rounded-lg border pr-2 pl-6.5 text-[11px] focus:ring-1 focus:outline-hidden"
+      />
+    </div>
   </div>
 );

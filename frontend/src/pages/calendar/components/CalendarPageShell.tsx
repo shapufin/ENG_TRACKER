@@ -108,22 +108,24 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
         }
       />
 
-      <div
-        className={cn(
-          "grid min-h-0 flex-1 gap-2 overflow-hidden p-2 transition-all duration-300 ease-out",
-          data.isSidebarCollapsed
-            ? "xl:grid-cols-[48px_minmax(0,1fr)]"
-            : "xl:grid-cols-[240px_minmax(0,1fr)] 2xl:grid-cols-[256px_minmax(0,1fr)]"
+      <div className="border-border/60 flex min-h-0 flex-1 overflow-hidden border-t">
+        {!isMobile && (
+          <div
+            className={cn(
+              "border-border/60 flex min-h-0 flex-col overflow-hidden border-r transition-all duration-300 ease-out",
+              data.isSidebarCollapsed ? "w-12 shrink-0" : "w-60 shrink-0 2xl:w-64"
+            )}
+          >
+            {sidebar}
+          </div>
         )}
-      >
-        {!isMobile && <div className="flex min-h-0 flex-col overflow-hidden">{sidebar}</div>}
 
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+        <main className="bg-card/20 flex min-h-0 flex-1 flex-col overflow-hidden">
           {data.workspaceUsersPartial && (
             <GlassCard
               role="status"
               aria-label="Partial workspace data warning"
-              className="border-warning/40 bg-warning/10 px-3 py-2"
+              className="border-warning/40 bg-warning/10 m-2 shrink-0 px-3 py-2"
             >
               <div className="text-foreground text-xs">
                 Some workspace members could not be loaded. The calendar may be incomplete.
@@ -134,7 +136,7 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
             <GlassCard
               role="status"
               aria-label="Truncated events warning"
-              className="border-warning/40 bg-warning/10 px-3 py-2"
+              className="border-warning/40 bg-warning/10 m-2 shrink-0 px-3 py-2"
             >
               <div className="text-foreground text-xs">
                 There are more vacation or standby entries than the calendar can load, so some are
@@ -142,19 +144,20 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
               </div>
             </GlassCard>
           )}
-          <CalendarPageMain data={data} />
-        </div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <CalendarPageMain data={data} />
+          </div>
+          <CalendarBottomCards
+            vacationSummary={data.vacationSummary}
+            carryOverAndBalance={data.carryOverAndBalance}
+            metricBars={data.metricBars}
+            conflictEntries={data.conflictEntries}
+            formatDays={data.formatDays}
+            onViewAllConflicts={() => data.setConflictsModalOpen(true)}
+            onOpenBalanceModal={() => user && data.handleUserClick(user.id)}
+          />
+        </main>
       </div>
-
-      <CalendarBottomCards
-        vacationSummary={data.vacationSummary}
-        carryOverAndBalance={data.carryOverAndBalance}
-        metricBars={data.metricBars}
-        conflictEntries={data.conflictEntries}
-        formatDays={data.formatDays}
-        onViewAllConflicts={() => data.setConflictsModalOpen(true)}
-        onOpenBalanceModal={() => user && data.handleUserClick(user.id)}
-      />
 
       {showMobileSidebar && (
         <>

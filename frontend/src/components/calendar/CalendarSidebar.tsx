@@ -127,7 +127,7 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
   }
 
   return (
-    <aside className="border-border/60 bg-card flex min-h-0 flex-col overflow-hidden rounded-xl border">
+    <aside className="bg-card flex min-h-0 flex-1 flex-col overflow-hidden">
       <CalendarSidebarHeader
         userCount={allUsers.length}
         calendarGroup={calendarGroup}

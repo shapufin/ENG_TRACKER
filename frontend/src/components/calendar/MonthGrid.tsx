@@ -63,7 +63,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
         {weekDays.map((wd) => (
           <div
             key={wd}
-            className="text-muted-foreground py-2 text-center font-mono text-xs font-bold tracking-[0.3em] uppercase"
+            className="text-muted-foreground py-1.5 text-center font-mono text-[10px] font-bold tracking-wider uppercase sm:text-[11px]"
           >
             {wd}
           </div>

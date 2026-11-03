@@ -97,7 +97,7 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
       onTouchEnd={handlePointerUp}
       className={cn(
         "group bg-card text-foreground focus-visible:ring-ring/60 @container relative flex h-full flex-col gap-1 transition duration-200 focus-visible:ring-1 focus-visible:ring-inset",
-        density === "compact" ? "min-h-0 p-1.5" : "min-h-0 p-2",
+        "min-h-0 p-1 sm:p-1.5",
         isPlainCell && "hover:bg-card-raised",
         !isCurrentMonth && "bg-card text-muted-foreground/60",
         isCurrentMonth && isWeekend && "bg-muted/30",
@@ -112,20 +112,27 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
       )}
     >
       <div className="flex w-full items-center justify-between">
-        <span
-          className={cn(
-            "flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold",
-            isSelected
-              ? "bg-primary text-primary-foreground"
-              : today
-                ? "bg-info text-info-foreground"
-                : isCurrentMonth
-                  ? "text-foreground"
-                  : "text-muted-foreground/50"
+        <div className="flex items-center gap-1">
+          <span
+            className={cn(
+              "flex h-4.5 w-4.5 items-center justify-center rounded-full font-mono text-[11px] font-semibold sm:h-5 sm:w-5",
+              isSelected
+                ? "bg-primary text-primary-foreground"
+                : today
+                  ? "bg-info text-info-foreground"
+                  : isCurrentMonth
+                    ? "text-foreground"
+                    : "text-muted-foreground/50"
+            )}
+          >
+            {format(date, "d")}
+          </span>
+          {today && (
+            <span className="border-info/20 bg-info/10 text-info py-0.2 hidden rounded px-1 font-mono text-[9px] font-bold tracking-wide uppercase @[5rem]:inline">
+              Today
+            </span>
           )}
-        >
-          {format(date, "d")}
-        </span>
+        </div>
         {conflict && (
           <ConflictTooltip conflict={conflict}>
             <span
@@ -133,25 +140,19 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
               aria-label={`Staffing conflict: ${conflict.away} of ${conflict.total} away, ${conflict.coveragePct}% coverage`}
               title={`${conflict.away} of ${conflict.total} away, ${conflict.coveragePct}% coverage`}
               className={cn(
-                "flex items-center gap-1 rounded-md border px-1 py-0.5 font-mono text-xs font-semibold @[5rem]:px-1.5",
+                "py-0.2 flex items-center gap-1 rounded-md border px-1 font-mono text-[10px] font-semibold @[5rem]:px-1.5",
                 toneSurfaceClass.warning
               )}
             >
-              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-              {/* The cell is a container: the figure only fits once the cell is about 5rem wide. */}
+              <AlertTriangle className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
               <span className="hidden @[5rem]:inline">{conflict.coveragePct}%</span>
             </span>
           </ConflictTooltip>
         )}
-        {today && (
-          <span className="border-info/20 bg-info/10 text-info hidden rounded border px-1.5 py-0.5 text-xs font-bold tracking-widest uppercase @[6rem]:inline">
-            Today
-          </span>
-        )}
         {isCurrentMonth && !today && (
           <span
             aria-hidden="true"
-            className="text-tone-info-text pointer-events-none hidden text-xs font-semibold opacity-0 transition-opacity duration-150 group-hover:opacity-100 md:inline"
+            className="text-muted-foreground pointer-events-none hidden text-[10px] font-semibold opacity-0 transition-opacity duration-150 group-hover:opacity-100 md:inline"
           >
             + Book
           </span>
