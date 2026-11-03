@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { HRReportsPage } from "./HRReportsPage";
 
 const useHRReportManagementMock = vi.fn();
@@ -66,5 +66,35 @@ describe("HRReportsPage", () => {
     render(<HRReportsPage />);
     expect(handleGenerate).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("HR Strategic Analysis")).not.toBeInTheDocument();
+  });
+
+  it("filters the whole report to a leader clicked in the ranking and re-runs it", () => {
+    useHRReportManagementMock.mockReturnValue({
+      ...useHRReportManagementMock.getMockImplementation?.(),
+      italianTLs: [{ id: 2, full_name: "Andrea Negro", member_count: 5 }],
+      albanianTLs: [],
+      teams: [],
+      workspaces: [],
+      summaryLoading: false,
+      detailedData: undefined,
+      detailedLoading: false,
+      trendReport: undefined,
+      leaveList: undefined,
+      insightsData: undefined,
+      topTeamLeadersData: [
+        { id: 2, rank: 1, name: "Andrea Negro", team_name: "MSC_TEAM", total_hours: 279 },
+      ],
+      handleGenerate,
+    });
+    render(<HRReportsPage />);
+    expect(handleGenerate).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Andrea Negro/ })[0]);
+
+    expect(useHRReportManagementMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ selectedItalianTL: "2" })
+    );
+    expect(screen.getByText("Manager: Andrea Negro")).toBeInTheDocument();
+    expect(handleGenerate).toHaveBeenCalledTimes(2);
   });
 });

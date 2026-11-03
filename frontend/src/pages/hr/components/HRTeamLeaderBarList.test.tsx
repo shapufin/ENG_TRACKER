@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { HRTeamLeaderBarList } from "./HRTeamLeaderBarList";
 
 const leaders = [
@@ -26,5 +26,29 @@ describe("HRTeamLeaderBarList", () => {
   it("renders nothing extra for an empty list", () => {
     render(<HRTeamLeaderBarList leaders={[]} />);
     expect(screen.getByText("Hours by Team Leader")).toBeInTheDocument();
+  });
+
+  it("selects a leader when their bar is clicked", () => {
+    const onSelect = vi.fn();
+    render(<HRTeamLeaderBarList leaders={leaders} onSelect={onSelect} />);
+    fireEvent.click(screen.getByRole("button", { name: /Andrea Negro/ }));
+    expect(onSelect).toHaveBeenCalledWith(2);
+  });
+
+  it("marks the selected leader as pressed", () => {
+    render(<HRTeamLeaderBarList leaders={leaders} onSelect={vi.fn()} selectedId={3} />);
+    expect(screen.getByRole("button", { name: /Enri Demnushi/ })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.getByRole("button", { name: /Andrea Negro/ })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+  });
+
+  it("stays plain text when no handler is given", () => {
+    render(<HRTeamLeaderBarList leaders={leaders} />);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

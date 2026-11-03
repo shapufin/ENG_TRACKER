@@ -57,6 +57,10 @@ interface HRReportResultsProps {
   teams?: { id: number; name: string }[];
   searchQuery: string;
   onSearchQueryChange: (v: string) => void;
+  /** Leader (Manager id) currently filtering the report, highlighted in both rankings. */
+  selectedLeaderId?: number | null;
+  /** Click on a leader in either ranking. */
+  onSelectLeader?: (leaderId: number) => void;
   /** Export mini-card, merged into the insights row as its 4th slot. */
   actionBar?: React.ReactNode;
 }
@@ -71,6 +75,8 @@ export const HRReportResults: React.FC<HRReportResultsProps> = ({
   teams = [],
   searchQuery,
   onSearchQueryChange,
+  selectedLeaderId,
+  onSelectLeader,
   actionBar,
 }) => {
   if (isLoading)
@@ -113,11 +119,23 @@ export const HRReportResults: React.FC<HRReportResultsProps> = ({
       {insightsData && <HRInsightsCard insightsData={insightsData} actionBar={actionBar} />}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         <div className="space-y-5 lg:col-span-8">
-          {hasLeaders && <HRTeamLeaderBarList leaders={topTeamLeadersData!} />}
+          {hasLeaders && (
+            <HRTeamLeaderBarList
+              leaders={topTeamLeadersData!}
+              onSelect={onSelectLeader}
+              selectedId={selectedLeaderId}
+            />
+          )}
           {trendData.length > 0 && <HRTrendChart data={trendData} />}
         </div>
         <aside className="space-y-5 lg:col-span-4">
-          {hasLeaders && <HRTopLeadersCard leaders={topTeamLeadersData!} />}
+          {hasLeaders && (
+            <HRTopLeadersCard
+              leaders={topTeamLeadersData!}
+              onSelect={onSelectLeader}
+              selectedId={selectedLeaderId}
+            />
+          )}
           <HRReportStatusCard leaders={topTeamLeadersData ?? []} teams={teams} />
         </aside>
       </div>
