@@ -125,7 +125,7 @@ export const CalendarSidebarUserList: React.FC<CalendarSidebarUserListProps> = (
         {groupedUsers && groupedUsers.length > 0
           ? groupedUsers.map((group) => (
               <div key={group.workspaceId} className="space-y-1">
-                <div className="bg-card/95 sticky top-0 z-10 flex items-center gap-1.5 px-2 py-0.5 backdrop-blur-sm">
+                <div className="flex items-center gap-1.5 px-2 pt-1 pb-0.5">
                   <span className="bg-primary block h-1.5 w-1.5 rounded-full" aria-hidden="true" />
                   <span
                     className="text-muted-foreground truncate text-[10px] font-bold tracking-wider uppercase"

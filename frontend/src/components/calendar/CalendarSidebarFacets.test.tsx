@@ -77,4 +77,43 @@ describe("CalendarSidebarFacets", () => {
     fireEvent.click(screen.getByRole("button", { name: /Acme/ }));
     expect(onChange).toHaveBeenLastCalledWith(NO_FACETS);
   });
+
+  it("renders event type toggles when onToggleType is provided and fires callback", () => {
+    const onToggleType = vi.fn();
+    render(
+      <CalendarSidebarFacets
+        users={users}
+        selection={NO_FACETS}
+        onChange={vi.fn()}
+        showStandby={true}
+        showVacation={true}
+        showSick={true}
+        onToggleType={onToggleType}
+      />
+    );
+    openFilters();
+    expect(screen.getByText("Legend / Event Types")).toBeInTheDocument();
+    const vacationBtn = screen.getByRole("button", { name: /Vacation/ });
+    expect(vacationBtn).toBeInTheDocument();
+    fireEvent.click(vacationBtn);
+    expect(onToggleType).toHaveBeenCalledWith("vacation");
+  });
+
+  it("opens automatically and shows active count when a type filter is disabled", () => {
+    render(
+      <CalendarSidebarFacets
+        users={users}
+        selection={NO_FACETS}
+        onChange={vi.fn()}
+        showStandby={true}
+        showVacation={true}
+        showSick={false}
+        onToggleType={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("button", { name: /^Filters \(1\)/ })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
+  });
 });
