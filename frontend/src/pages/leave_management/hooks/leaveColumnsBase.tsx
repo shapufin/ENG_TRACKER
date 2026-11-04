@@ -1,6 +1,7 @@
 import { Plane } from "lucide-react";
 import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
+import { leaveDaysLabel } from "@/components/leave/leaveDuration";
 import type { LeaveRequest } from "@/types";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 
@@ -44,10 +45,7 @@ export const leaveRequestBaseColumns = <T extends LeaveRequest>(
     accessorKey: "days_requested",
     header: "Days",
     size: 84,
-    cell: ({ row }) =>
-      row.original.is_half_day
-        ? `${row.original.days_requested} (${row.original.half_day_period === "afternoon" ? "PM" : "AM"})`
-        : row.original.days_requested,
+    cell: ({ row }) => leaveDaysLabel(row.original),
   },
   {
     accessorKey: "status",

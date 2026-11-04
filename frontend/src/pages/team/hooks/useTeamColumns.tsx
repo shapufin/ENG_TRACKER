@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { leaveDaysLabel } from "@/components/leave/leaveDuration";
 import { Badge } from "@/components/ui/badge";
 import { LeaveBalanceBadge } from "@/components/ui/LeaveBalanceBadge";
 import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
@@ -161,7 +162,7 @@ export const useTeamColumns = (
         accessorKey: "days_requested",
         header: "Days",
         size: 84,
-        cell: ({ row }) => row.original.days_requested,
+        cell: ({ row }) => leaveDaysLabel(row.original),
       },
       {
         accessorKey: "user_leave_balance",
