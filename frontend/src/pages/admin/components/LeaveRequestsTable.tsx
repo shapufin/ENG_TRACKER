@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { leaveDaysLabel } from "@/components/leave/leaveDuration";
 import { Badge } from "@/components/ui/badge";
 import { LeaveBalanceBadge } from "@/components/ui/LeaveBalanceBadge";
 import { DataTable } from "@/components/ui/DataTable";
@@ -210,7 +211,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         size: 86,
         cell: ({ row }) => (
           <span>
-            {row.original.days_requested}{" "}
+            {leaveDaysLabel(row.original)}{" "}
             {Number(row.original.days_requested) === 1 ? "day" : "days"}
           </span>
         ),

@@ -1,4 +1,5 @@
 import React from "react";
+import { leaveDaysLabel } from "@/components/leave/leaveDuration";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toneSurfaceClass } from "@/components/ui/tone";
@@ -149,7 +150,7 @@ const getStandbyFields = (record: StandbyLog): DetailField[] => [
 const getLeaveFields = (record: LeaveRequest): DetailField[] => [
   { label: "Start Date", value: formatDateDDMMYYYY(record.start_date), icon: Calendar },
   { label: "End Date", value: formatDateDDMMYYYY(record.end_date), icon: Calendar },
-  { label: "Days Requested", value: record.days_requested, icon: Timer },
+  { label: "Days Requested", value: leaveDaysLabel(record), icon: Timer },
   { label: "Type", value: record.request_type_display || record.request_type || "-", icon: Tag },
   { label: "Reason", value: record.reason || "-", icon: FileText },
   {

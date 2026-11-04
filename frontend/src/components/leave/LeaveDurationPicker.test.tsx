@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { LeaveDurationPicker } from "./LeaveDurationPicker";
-import { durationFields, durationOf } from "./leaveDuration";
+import { durationFields, durationOf, leaveDaysLabel } from "./leaveDuration";
 
 describe("LeaveDurationPicker", () => {
   it("marks the current duration as the one checked radio", () => {
@@ -37,6 +37,12 @@ describe("LeaveDurationPicker", () => {
 
     expect(screen.getByRole("radio", { name: /morning/i })).toHaveAttribute("tabindex", "0");
     expect(screen.getByRole("radio", { name: /full/i })).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("labels a half day with its period in table cells", () => {
+    expect(leaveDaysLabel({ days_requested: 0.5, is_half_day: true, half_day_period: "morning" })).toBe("0.5 (AM)");
+    expect(leaveDaysLabel({ days_requested: 0.5, is_half_day: true, half_day_period: "afternoon" })).toBe("0.5 (PM)");
+    expect(leaveDaysLabel({ days_requested: 3 })).toBe("3");
   });
 
   it("maps to and from request fields", () => {
