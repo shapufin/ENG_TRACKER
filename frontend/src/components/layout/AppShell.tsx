@@ -11,6 +11,7 @@ import { TeamContextPill } from "./TeamContextPill";
 import { MobileOverlay } from "./MobileOverlay";
 import { MainContentTransition } from "./MainContentTransition";
 import { HeaderSearch } from "./HeaderSearch";
+import { MfaPromptModal } from "@/components/auth/MfaPromptModal";
 import { CommandPalette } from "./CommandPalette";
 import { navItemToPaletteItem } from "./paletteItems";
 import { HeaderProfileMenu } from "./HeaderProfileMenu";
@@ -180,6 +181,7 @@ export const AppShell = React.memo(() => {
           </div>
         </MainContentTransition>
       </main>
+      <MfaPromptModal />
       <CommandPalette
         items={paletteItems}
         open={paletteOpen}

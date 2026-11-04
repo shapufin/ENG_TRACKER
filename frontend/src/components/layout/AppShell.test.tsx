@@ -19,6 +19,7 @@ vi.mock("@/context/PermissionContext", () => ({
     isCRUser: false,
   }),
 }));
+vi.mock("@/components/auth/MfaPromptModal", () => ({ MfaPromptModal: () => null }));
 vi.mock("@/hooks/useLogout", () => ({ useLogout: () => vi.fn() }));
 vi.mock("@/hooks/usePendingApprovalCount", () => ({ usePendingApprovalCount: () => 0 }));
 vi.mock("@/hooks/useSiteBranding", () => ({

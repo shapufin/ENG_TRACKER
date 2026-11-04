@@ -13,6 +13,7 @@ vi.mock("@/context/PermissionContext", () => ({
 vi.mock("@/context/PluginContext", () => ({
   usePlugins: () => ({ activePlugins: [], isLoading: false }),
 }));
+vi.mock("@/components/auth/MfaPromptModal", () => ({ MfaPromptModal: () => null }));
 vi.mock("@/hooks/useLogout", () => ({ useLogout: () => vi.fn() }));
 vi.mock("@/hooks/useSiteBranding", () => ({
   useSiteBranding: () => ({ data: { site_name: "Admin Panel" } }),
