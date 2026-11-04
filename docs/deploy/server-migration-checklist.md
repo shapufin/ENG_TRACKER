@@ -39,6 +39,13 @@ Two-factor replay and lockout state is therefore in Postgres.
 8. `curl -f http://127.0.0.1:8080/api/health/ready/`, then sign in as a superuser and as an enrolled user.
 9. Only then move DNS. Keep the old server untouched until a day of normal use has passed.
 
+### Which restore path?
+
+Use the `pg_restore` path above for a real move: it is the only one that carries two-factor seeds, sequences and
+year-close evidence. `python manage.py restore_site_backup` (Site Backup plugin archive) is for a clean
+install or staging seed where losing two-factor enrolment is acceptable. It needs migrations applied from the
+same commit as the archive and does not restore snapshots. Details: `docs/site-backup-and-restore.md`.
+
 ## 3. Rollback
 
 DNS back to the old server. If users wrote data on the new one, dump it and restore on the old one

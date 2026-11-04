@@ -6,7 +6,8 @@ from collections import defaultdict
 
 from django.apps import apps as django_apps
 from django.conf import settings
-from django.db import transaction
+from django.core.management.color import no_style
+from django.db import connection, transaction
 from django.db.models import ProtectedError
 
 from .archive import open_archive, read_db_objects, read_manifest
@@ -208,11 +209,29 @@ def commit(
             result['created'][label] = created
             result['updated'][label] = updated
 
+        _reset_sequences(expanded)
+
         if restore_media:
             result['media_extracted'] = _extract_media(archive)
 
     _log_restore(user, manifest, expanded, result)
     return result
+
+
+def _reset_sequences(labels) -> None:
+    """Advance PK sequences past the restored rows.
+
+    ``deserialized.save()`` writes explicit PKs, which PostgreSQL does not
+    count against the sequence (``loaddata`` resets them for the same reason);
+    without this the first normal insert after a restore hits a duplicate key.
+    SQLite returns no statements.
+    """
+    models = [_model_from_label(label) for label in labels]
+    statements = connection.ops.sequence_reset_sql(no_style(), models)
+    if statements:
+        with connection.cursor() as cursor:
+            for statement in statements:
+                cursor.execute(statement)
 
 
 def _log_restore(user, manifest, restored_models, result) -> None:
