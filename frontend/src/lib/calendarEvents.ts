@@ -71,9 +71,17 @@ export const buildCalendarEvents = (
     leaveRequests.forEach((req) => {
       if (!isVisible(req.user)) return;
       if (req.request_type === "vacation" && showVacation) {
+        const halfDayPeriod = req.is_half_day
+          ? req.half_day_period === "afternoon"
+            ? "afternoon"
+            : "morning"
+          : undefined;
+        const period = halfDayPeriod === "afternoon" ? "PM" : "AM";
         items.push({
           id: `vac-${req.id}`,
-          title: `Vac: ${req.days_requested}d`,
+          title: halfDayPeriod ? `Vac: ½d (${period})` : `Vac: ${req.days_requested}d`,
+          isHalfDay: !!halfDayPeriod,
+          halfDayPeriod,
           start: req.start_date,
           end: req.end_date,
           type: "vacation",
@@ -82,7 +90,9 @@ export const buildCalendarEvents = (
           userName: resolveUserName(userLookup, req.user, req.user_full_name ?? req.user_name),
           days: req.days_requested,
           description: req.reason,
-          compactLabel: `Vacation (${req.days_requested}d)`,
+          compactLabel: halfDayPeriod
+            ? `Vacation (½ day ${period})`
+            : `Vacation (${req.days_requested}d)`,
         });
       }
       if (req.request_type === "sick" && showSick) {

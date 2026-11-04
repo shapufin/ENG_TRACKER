@@ -36,8 +36,10 @@ export const ListViewRow: React.FC<ListViewRowProps> = ({
               {format(parseISO(event.start), "MMM d, yyyy")}
             </p>
             <p className="text-muted-foreground mt-0.5 text-xs">
-              {event.start === event.end
-                ? "1 day"
+              {event.isHalfDay
+                ? `Half day (${event.halfDayPeriod === "afternoon" ? "afternoon" : "morning"})`
+                : event.start === event.end
+                  ? "1 day"
                 : `${format(parseISO(event.start), "MMM d")} → ${format(parseISO(event.end), "MMM d")}`}
             </p>
           </div>

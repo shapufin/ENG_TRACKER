@@ -389,7 +389,10 @@ export interface LeaveRequest {
   request_type_display?: string;
   start_date: string;
   end_date: string;
+  /** 0.5 for a half day. */
   days_requested: number;
+  is_half_day?: boolean;
+  half_day_period?: "morning" | "afternoon" | null;
   reason: string;
   status: Status | "cancelled";
   status_display?: string;

@@ -40,7 +40,15 @@ export const leaveRequestBaseColumns = <T extends LeaveRequest>(
     size: 112,
     cell: (info) => formatDateDDMMYYYY(info.getValue() as string),
   },
-  { accessorKey: "days_requested", header: "Days", size: 84 },
+  {
+    accessorKey: "days_requested",
+    header: "Days",
+    size: 84,
+    cell: ({ row }) =>
+      row.original.is_half_day
+        ? `${row.original.days_requested} (${row.original.half_day_period === "afternoon" ? "PM" : "AM"})`
+        : row.original.days_requested,
+  },
   {
     accessorKey: "status",
     header: "Status",

@@ -57,6 +57,8 @@ export const leaveService = {
     start_date: string;
     end_date: string;
     reason?: string;
+    is_half_day?: boolean;
+    half_day_period?: "morning" | "afternoon" | null;
   }): Promise<LeaveRequest> {
     return requestWithOfflineQueue(
       async () => {

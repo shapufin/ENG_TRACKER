@@ -76,16 +76,16 @@ def _leave_days(starts):
     rows = LeaveRequest.objects.filter(
         status="approved", end_date__gte=starts[0], start_date__lte=end_of_window,
         is_deleted=False,
-    ).values_list("request_type", "start_date", "end_date")
+    ).values_list("request_type", "start_date", "end_date", "is_half_day")
     holidays = global_holiday_dates(starts[0], end_of_window)
-    for kind, start, end in rows:
+    for kind, start, end, half in rows:
         if kind not in series:
             continue
         for i, m_start in enumerate(starts):
             m_end = _add_months(m_start, 1) - timedelta(days=1)
             lo, hi = max(start, m_start), min(end, m_end)
             if lo <= hi:
-                series[kind][i] += count_request_days(kind, lo, hi, holidays)
+                series[kind][i] += float(count_request_days(kind, lo, hi, holidays, is_half_day=half))
     return series
 
 
@@ -132,10 +132,10 @@ def _team_comparison(month_start):
     leave_rows = list(
         LeaveRequest.objects.filter(status="approved", end_date__gte=month_start,
                                     is_deleted=False).values_list(
-            "user_id", "start_date", "end_date", "request_type"
+            "user_id", "start_date", "end_date", "request_type", "is_half_day"
         )
     )
-    user_ids.update(u for u, _, _, _ in leave_rows)
+    user_ids.update(row[0] for row in leave_rows)
     # One canonical ACTIVE team per user (alphabetically first): attributing the same
     # person's hours to every team they belong to double-counts them in the org total,
     # and an archived team is not in the chart at all, so it would silently drop them.
@@ -157,11 +157,11 @@ def _team_comparison(month_start):
     month_end = _add_months(month_start, 1) - timedelta(days=1)
     leave = defaultdict(float)
     holidays = global_holiday_dates(month_start, month_end)
-    for uid, start, end, kind in leave_rows:
+    for uid, start, end, kind, half in leave_rows:
         lo, hi = max(start, month_start), min(end, month_end)
         tid = canonical_team.get(uid)
         if lo <= hi and tid is not None:
-            leave[tid] += count_request_days(kind, lo, hi, holidays)
+            leave[tid] += float(count_request_days(kind, lo, hi, holidays, is_half_day=half))
     out = []
     for t in teams:
         ot = hours["ot"].get(t["id"], 0.0)

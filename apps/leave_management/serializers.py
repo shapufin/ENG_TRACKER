@@ -5,6 +5,20 @@ Leave management app serializers.
 from rest_framework import serializers
 from .models import LeaveBalance, LeaveRequest, GlobalSettings, count_request_days
 
+HALF_DAY_PERIODS = ("morning", "afternoon")
+
+
+def validate_half_day(request_type, start_date, end_date, is_half_day, period):
+    """Shared half-day rules for create and edit."""
+    if not is_half_day:
+        return
+    if request_type != "vacation":
+        raise serializers.ValidationError("Only vacation can be taken as a half day.")
+    if start_date != end_date:
+        raise serializers.ValidationError("Half-day leave must be on a single date.")
+    if period not in HALF_DAY_PERIODS:
+        raise serializers.ValidationError("Select morning or afternoon for half-day leave.")
+
 
 class GlobalSettingsSerializer(serializers.ModelSerializer):
     """Serializer for GlobalSettings singleton."""
@@ -118,7 +132,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
     request_type_display = serializers.CharField(source='get_request_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     approved_by_name = serializers.CharField(source='approved_by.username', read_only=True)
-    days_requested = serializers.IntegerField(read_only=True)
+    days_requested = serializers.FloatField(read_only=True)
     team_id = serializers.SerializerMethodField()
     team_name = serializers.SerializerMethodField()
     
@@ -131,7 +145,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             'id', 'user', 'user_name', 'user_code', 'user_full_name',
             'team_id', 'team_name',
             'request_type', 'request_type_display',
-            'start_date', 'end_date', 'days_requested',
+            'start_date', 'end_date', 'days_requested', 'is_half_day', 'half_day_period',
             'reason',
             'status', 'status_display',
             'approved_by', 'approved_by_name', 'approved_at', 'rejection_reason',
@@ -146,6 +160,20 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             'user', 'status', 'rejection_reason',
         ]
     
+    def validate(self, data):
+        instance = self.instance
+
+        def pick(name):
+            return data[name] if name in data else getattr(instance, name, None)
+
+        is_half = pick('is_half_day')
+        validate_half_day(
+            pick('request_type'), pick('start_date'), pick('end_date'), is_half, pick('half_day_period')
+        )
+        if not is_half:
+            data['half_day_period'] = None
+        return data
+
     def get_user_full_name(self, obj) -> str:
         return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.username
 
@@ -194,7 +222,11 @@ class LeaveRequestCreateSerializer(serializers.ModelSerializer):
         if data['end_date'] < data['start_date']:
             raise serializers.ValidationError("End date must be after start date.")
         request_type = data.get('request_type', 'vacation')
-        if count_request_days(request_type, data['start_date'], data['end_date']) == 0:
+        is_half = data.get('is_half_day', False)
+        validate_half_day(request_type, data['start_date'], data['end_date'], is_half, data.get('half_day_period'))
+        if not is_half:
+            data['half_day_period'] = None
+        if count_request_days(request_type, data['start_date'], data['end_date'], is_half_day=is_half) == 0:
             raise serializers.ValidationError("Leave must include at least one business day.")
 
         # Balance check will be done in viewset after user is injected

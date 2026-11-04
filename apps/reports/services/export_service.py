@@ -447,6 +447,7 @@ class ExportService:
                 'start_date': leave.start_date,
                 'request_type': leave.request_type,
                 'days_counted': leave.days_counted,
+                'half_day_period': leave.half_day_period if leave.is_half_day else None,
                 'end_date': leave.end_date,
                 'status': leave.status,
                 'reason': leave.reason or '',
@@ -500,7 +501,8 @@ class ExportService:
                     start_date_str,
                     end_date_str,
                     days,
-                    rec['request_type'].capitalize(),
+                    rec['request_type'].capitalize()
+                    + (f" (half day, {rec['half_day_period']})" if rec['half_day_period'] else ''),
                     rec['status'].capitalize(),
                     rec['reason'],
                     employee_code(user),

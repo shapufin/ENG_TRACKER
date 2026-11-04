@@ -177,7 +177,7 @@ def find_carry_balance(user_id: int, start_date):
     ).first()
 
 
-def plan_vacation_split(user_id: int, start_date, end_date) -> dict:
+def plan_vacation_split(user_id: int, start_date, end_date, is_half_day: bool = False) -> dict:
     """Split a vacation request into carry-over days and current-year days.
 
     Carry is used first, but only for weekdays up to and including its expiry,
@@ -185,12 +185,12 @@ def plan_vacation_split(user_id: int, start_date, end_date) -> dict:
     current year. This is the single rule used by validation, deduction and the
     preview endpoint.
     """
-    counted = count_leave_days(start_date, end_date)
+    counted = count_leave_days(start_date, end_date, is_half_day=is_half_day)
     carry = find_carry_balance(user_id, start_date)
     carry_days = ZERO
     if carry is not None and counted > 0:
         eligible_to = min(end_date, carry.expires_at)
-        eligible = count_leave_days(start_date, eligible_to)
+        eligible = count_leave_days(start_date, eligible_to, is_half_day=is_half_day)
         carry_days = min(Decimal(carry.get_effective_available_days()), Decimal(eligible))
     return {
         'counted': counted,

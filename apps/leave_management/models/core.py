@@ -59,37 +59,58 @@ def global_holiday_dates(start_date, end_date) -> set:
     )
 
 
-def count_leave_days(start_date, end_date, holidays=None) -> int:
+HALF_DAY = Decimal('0.5')
+
+
+def plain_days(days):
+    """JSON-safe day count: whole numbers stay ``int``, a half day becomes ``0.5``.
+
+    DRF's encoder writes ``Decimal`` as a string, so API and report totals use this.
+    """
+    days = Decimal(str(days))
+    return int(days) if days == days.to_integral_value() else float(days)
+
+
+def count_leave_days(start_date, end_date, holidays=None, is_half_day=False):
     """Vacation days: Mon–Fri inclusive, minus global public holidays in range.
+
+    A half day is one weekday that is not a global holiday and counts ``0.5``.
 
     Global = ``PublicHoliday.calendar IS NULL`` (HR-set, shown on every calendar).
     Workspace-only holidays never reduce a vacation balance. Every vacation
     count (validation, deduction, release, serializers, reports) uses this.
     """
+    if is_half_day and start_date != end_date:
+        return 0
     weekdays = count_business_days(start_date, end_date)
     if weekdays == 0:
         return 0
     if holidays is None:
         holidays = global_holiday_dates(start_date, end_date)
+    if is_half_day:
+        return 0 if start_date in holidays else HALF_DAY
     holiday_weekdays = sum(1 for day in holidays if start_date <= day <= end_date and day.weekday() < 5)
     return weekdays - holiday_weekdays
 
 
-def count_request_days(request_type, start_date, end_date, holidays=None) -> int:
+def count_request_days(request_type, start_date, end_date, holidays=None, is_half_day=False):
     """Single source for a request's counted days: vacation is holiday-aware, sick is not."""
     if request_type == 'vacation':
-        return count_leave_days(start_date, end_date, holidays)
+        return count_leave_days(start_date, end_date, holidays, is_half_day)
     return count_business_days(start_date, end_date)
 
 
-def counted_days(row, holidays=None) -> int:
+def counted_days(row, holidays=None):
     """Counted days for a ``values()`` row (needs request_type, start/end, days_counted).
 
     Prefers the frozen snapshot, so report totals match what balances moved.
     """
     if row.get('days_counted') is not None:
-        return int(row['days_counted'])
-    return count_request_days(row['request_type'], row['start_date'], row['end_date'], holidays)
+        return plain_days(row['days_counted'])
+    return plain_days(count_request_days(
+        row['request_type'], row['start_date'], row['end_date'], holidays,
+        is_half_day=row.get('is_half_day', False),
+    ))
 
 
 class GlobalSettings(BaseModel):
@@ -312,11 +333,22 @@ class LeaveRequest(BaseModel):
         help_text='Counted days snapshot (holiday-aware for vacation)',
     )
 
+    # A half day is one weekday, vacation only, and counts 0.5. Two halves
+    # (morning + afternoon) of one day make a full day and may coexist.
+    HALF_DAY_CHOICES = [
+        ('morning', 'Morning (AM)'),
+        ('afternoon', 'Afternoon (PM)'),
+    ]
+    is_half_day = models.BooleanField(default=False)
+    half_day_period = models.CharField(max_length=20, choices=HALF_DAY_CHOICES, null=True, blank=True)
+
     @property
     def days_requested(self):
         if self.days_counted is not None:
-            return int(self.days_counted)
-        return count_request_days(self.request_type, self.start_date, self.end_date)
+            return plain_days(self.days_counted)
+        return plain_days(count_request_days(
+            self.request_type, self.start_date, self.end_date, is_half_day=self.is_half_day
+        ))
 
     # Request details
     reason = models.TextField(blank=True)
@@ -332,7 +364,14 @@ class LeaveRequest(BaseModel):
         if start_date and end_date:
             if end_date < start_date:
                 raise ValidationError({'end_date': 'End date must not precede start date.'})
-            if count_request_days(self.request_type, start_date, end_date) == 0:
+            if self.is_half_day:
+                if self.request_type != 'vacation':
+                    raise ValidationError({'is_half_day': 'Only vacation can be taken as a half day.'})
+                if start_date != end_date:
+                    raise ValidationError({'end_date': 'Half-day leave must be on a single date.'})
+                if self.half_day_period not in ('morning', 'afternoon'):
+                    raise ValidationError({'half_day_period': 'Select morning or afternoon for half-day leave.'})
+            if count_request_days(self.request_type, start_date, end_date, is_half_day=self.is_half_day) == 0:
                 raise ValidationError({'end_date': 'Leave must include at least one business day.'})
     
     # Status and approval
@@ -399,11 +438,15 @@ class LeaveRequest(BaseModel):
     def _counted_inputs_changed(self):
         """True when the stored dates or type differ from the in-memory ones."""
         stored = LeaveRequest.objects.filter(pk=self.pk).values_list(
-            'start_date', 'end_date', 'request_type'
+            'start_date', 'end_date', 'request_type', 'is_half_day', 'half_day_period'
         ).first()
-        return stored is None or stored != (*self._parsed_dates(), self.request_type)
+        return stored is None or stored != (
+            *self._parsed_dates(), self.request_type, self.is_half_day, self.half_day_period
+        )
 
     def save(self, *args, **kwargs):
+        if not self.is_half_day:
+            self.half_day_period = None
         is_new = self._state.adding
         inputs_changed = not is_new and self._counted_inputs_changed()
         # Validate dates only when they are new or edited: a row stored before the
@@ -412,7 +455,9 @@ class LeaveRequest(BaseModel):
             self.clean()
         if self.days_counted is None or inputs_changed:
             start, end = self._parsed_dates()
-            self.days_counted = Decimal(count_request_days(self.request_type, start, end))
+            self.days_counted = Decimal(count_request_days(
+                self.request_type, start, end, is_half_day=self.is_half_day
+            ))
         super().save(*args, **kwargs)
         if is_new and self.submitted_at is None:
             self.submitted_at = self.created_at
