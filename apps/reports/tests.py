@@ -1163,3 +1163,16 @@ class ExportTeamFilterTests(TestCase):
         text = self._text('/api/reports/export-ot-standby/', team_ids=both)
         self.assertIn('Inside Member', text)
         self.assertIn('Outside Member', text)
+
+    def test_export_handles_non_integer_tokens_gracefully(self):
+        # Should gracefully ignore invalid tokens and not crash with 500
+        response_ot = self.client.get(
+            '/api/reports/export-ot-standby/',
+            {'italian_tl_ids': '1,invalid,', 'albanian_tl_ids': 'bad', 'workspace_ids': 'none'},
+        )
+        self.assertEqual(response_ot.status_code, status.HTTP_200_OK)
+        response_leave = self.client.get(
+            '/api/reports/export-leave/',
+            {'italian_tl_ids': 'foo,bar', 'workspace_ids': '1:2'},
+        )
+        self.assertEqual(response_leave.status_code, status.HTTP_200_OK)

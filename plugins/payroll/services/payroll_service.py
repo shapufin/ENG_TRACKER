@@ -596,19 +596,57 @@ def get_period_closure_status(run: PayrollRun) -> dict:
         ).values_list('user_id', flat=True)
     )
     unclosed_users = []
+    lm_groups = {}
     for user_id, user in sorted(users.items(), key=lambda item: item[1].username):
-        if user_id in closed_user_ids:
-            continue
         profile = getattr(user, 'profile', None)
         line_manager = getattr(profile, 'albanian_tl', None)
         manager = getattr(profile, 'italian_tl', None)
-        unclosed_users.append({
-            'id': user.id,
-            'username': user.username,
-            'full_name': user.get_full_name(),
-            'line_manager': line_manager.username if line_manager else None,
-            'manager': manager.username if manager else None,
+        is_closed = user_id in closed_user_ids
+        if not is_closed:
+            unclosed_users.append({
+                'id': user.id,
+                'username': user.username,
+                'full_name': user.get_full_name(),
+                'line_manager': line_manager.username if line_manager else None,
+                'manager': manager.username if manager else None,
+            })
+
+        lm_key = line_manager.id if line_manager else None
+        if lm_key not in lm_groups:
+            lm_groups[lm_key] = {
+                'id': line_manager.id if line_manager else None,
+                'username': line_manager.username if line_manager else None,
+                'full_name': (line_manager.get_full_name() or line_manager.username) if line_manager else 'Unassigned',
+                'total_members': 0,
+                'closed_members': 0,
+                'unclosed_users': [],
+            }
+        group = lm_groups[lm_key]
+        group['total_members'] += 1
+        if is_closed:
+            group['closed_members'] += 1
+        else:
+            group['unclosed_users'].append({
+                'id': user.id,
+                'username': user.username,
+                'full_name': user.get_full_name(),
+                'line_manager': line_manager.username if line_manager else None,
+                'manager': manager.username if manager else None,
+            })
+
+    line_managers = []
+    for lm_key, data in lm_groups.items():
+        is_all_closed = (data['total_members'] > 0 and data['closed_members'] == data['total_members'])
+        line_managers.append({
+            'id': data['id'],
+            'username': data['username'] or 'unassigned',
+            'full_name': data['full_name'],
+            'total_members': data['total_members'],
+            'closed_members': data['closed_members'],
+            'all_closed': is_all_closed,
+            'unclosed_users': data['unclosed_users'],
         })
+    line_managers.sort(key=lambda item: (item['all_closed'], (item['full_name'] or '').lower()))
 
     sources = {}
     for kind, model in (('overtime', OvertimeLog), ('standby', StandbyLog)):
@@ -637,6 +675,7 @@ def get_period_closure_status(run: PayrollRun) -> dict:
         'total_users': len(users),
         'closed_users': len(users) - len(unclosed_users),
         'unclosed_users': unclosed_users,
+        'line_managers': line_managers,
         'entries_without_source_closure': entries_without_source_closure,
     }
 

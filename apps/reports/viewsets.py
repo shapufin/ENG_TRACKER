@@ -28,7 +28,7 @@ from core.mixins.permissions import (
     is_cr_admin,
 )
 from core.utils.csv_safe import xlsx_safe_row
-from .filters import UnifiedReportFilter, apply_team_filter, apply_visibility_constraints
+from .filters import UnifiedReportFilter, apply_team_filter, apply_visibility_constraints, parse_int_list
 from .services.export_service import export_service, ExportConfig
 from core.utils.timezone_local import business_today
 from apps.users.services.workforce import workforce_filter
@@ -670,17 +670,21 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
             processing_period_mode = date_mode == 'processing_period'
 
             # Parse comma-separated IDs (skip 'none' string - treat as no filter)
-            italian_tl_id_list = None
-            if italian_tl_ids and italian_tl_ids != 'none':
-                italian_tl_id_list = [int(id) for id in italian_tl_ids.split(',') if id]
-
-            albanian_tl_id_list = None
-            if albanian_tl_ids and albanian_tl_ids != 'none':
-                albanian_tl_id_list = [int(id) for id in albanian_tl_ids.split(',') if id]
-
-            workspace_id_list = None
-            if workspace_ids and workspace_ids != 'none':
-                workspace_id_list = [int(id) for id in workspace_ids.split(',') if id]
+            italian_tl_id_list = (
+                parse_int_list(italian_tl_ids)
+                if italian_tl_ids and italian_tl_ids != 'none'
+                else None
+            )
+            albanian_tl_id_list = (
+                parse_int_list(albanian_tl_ids)
+                if albanian_tl_ids and albanian_tl_ids != 'none'
+                else None
+            )
+            workspace_id_list = (
+                parse_int_list(workspace_ids)
+                if workspace_ids and workspace_ids != 'none'
+                else None
+            )
 
             logger.info(f"[OT/Standby Export] Starting export - date range: {start_date} to {end_date}, italian_tls: {italian_tl_id_list}, status: {status_filter}, date_mode: {date_mode}")
 
@@ -800,17 +804,21 @@ class ExportLeaveView(HbprBlockedMixin, APIView):
             team_ids = request.query_params.get('team_ids', '')
 
             # Parse comma-separated IDs (skip 'none' string - treat as no filter)
-            italian_tl_id_list = None
-            if italian_tl_ids and italian_tl_ids != 'none':
-                italian_tl_id_list = [int(id) for id in italian_tl_ids.split(',') if id]
-
-            albanian_tl_id_list = None
-            if albanian_tl_ids and albanian_tl_ids != 'none':
-                albanian_tl_id_list = [int(id) for id in albanian_tl_ids.split(',') if id]
-            
-            workspace_id_list = None
-            if workspace_ids and workspace_ids != 'none':
-                workspace_id_list = [int(id) for id in workspace_ids.split(',') if id]
+            italian_tl_id_list = (
+                parse_int_list(italian_tl_ids)
+                if italian_tl_ids and italian_tl_ids != 'none'
+                else None
+            )
+            albanian_tl_id_list = (
+                parse_int_list(albanian_tl_ids)
+                if albanian_tl_ids and albanian_tl_ids != 'none'
+                else None
+            )
+            workspace_id_list = (
+                parse_int_list(workspace_ids)
+                if workspace_ids and workspace_ids != 'none'
+                else None
+            )
 
             logger.info(f"[Leave Export] Starting export - date range: {start_date} to {end_date}, italian_tls: {italian_tl_id_list}")
 

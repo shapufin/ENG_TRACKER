@@ -284,6 +284,51 @@ describe("PayrollRunDetailPage", () => {
     expect(screen.queryByText(/Month cutoff reached/)).not.toBeInTheDocument();
   });
 
+  it("renders Line Manager team closure cards with finalized and pending statuses", async () => {
+    vi.mocked(payrollService.payrollService.getPeriodClosureStatus).mockResolvedValue({
+      ...mockClosureStatus,
+      all_closed: false,
+      closed_users: 4,
+      total_users: 5,
+      unclosed_users: [lateUser],
+      line_managers: [
+        {
+          id: 10,
+          username: "artur",
+          full_name: "Artur TL",
+          total_members: 2,
+          closed_members: 1,
+          all_closed: false,
+          unclosed_users: [lateUser],
+        },
+        {
+          id: 11,
+          username: "marco",
+          full_name: "Marco TL",
+          total_members: 3,
+          closed_members: 3,
+          all_closed: true,
+          unclosed_users: [],
+        },
+      ],
+    });
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    expect(await screen.findByText("Line Manager Team Closures")).toBeInTheDocument();
+    expect(screen.getByText("Line Managers finalized:")).toBeInTheDocument();
+    expect(screen.getByText("1/2")).toBeInTheDocument();
+    expect(screen.getByText("Artur TL")).toBeInTheDocument();
+    expect(screen.getByText("1/2 closed")).toBeInTheDocument();
+    expect(screen.getByText("Marco TL")).toBeInTheDocument();
+    expect(screen.getByText("Finalized")).toBeInTheDocument();
+  });
+
   it("keeps finalization enabled once the month cutoff passed", async () => {
     vi.mocked(payrollService.payrollService.getPeriodClosureStatus).mockResolvedValue({
       ...mockClosureStatus,

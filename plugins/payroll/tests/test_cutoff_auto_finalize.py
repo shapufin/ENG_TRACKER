@@ -70,6 +70,11 @@ class CutoffAutoFinalizeTests(TestCase):
             'id': self.staffer.id, 'username': 'staffer', 'full_name': 'Sta Ffer',
             'line_manager': 'artur', 'manager': 'marco',
         }])
+        self.assertEqual(len(status['line_managers']), 1)
+        self.assertEqual(status['line_managers'][0]['username'], 'artur')
+        self.assertEqual(status['line_managers'][0]['total_members'], 1)
+        self.assertEqual(status['line_managers'][0]['closed_members'], 0)
+        self.assertFalse(status['line_managers'][0]['all_closed'])
 
     def test_status_reports_the_cutoff_as_passed(self):
         run = self._september_run()

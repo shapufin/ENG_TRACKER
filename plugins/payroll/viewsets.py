@@ -1298,6 +1298,8 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         self._ensure_unrestricted()
         try:
             run = cancel_run(run, request.user)
+        except DjangoValidationError as e:
+            return Response({'detail': e.messages[0]}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error('Payroll cancellation failed: %s', e, exc_info=True)
             return Response(

@@ -2,7 +2,7 @@
  * PayrollRunDetailPage — view, generate, finalize, and export a single run.
  * Orchestrator: fetches data and delegates rendering to sub-components.
  */
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/layout/PageShell";
@@ -18,6 +18,19 @@ import { handleApiError } from "@/lib/error-handler";
 import { PayrollRunSummary } from "../components/PayrollRunSummary";
 import { PayrollRunLinesTable } from "../components/PayrollRunLinesTable";
 import { PayrollRunActions } from "../components/PayrollRunActions";
+import type { LineManagerClosure } from "../types";
+
+const formatUserOwnership = (user: {
+  username: string;
+  line_manager?: string | null;
+  manager?: string | null;
+}) => {
+  const owners = [
+    user.line_manager && `Line Manager: @${user.line_manager}`,
+    user.manager && `Manager: @${user.manager}`,
+  ].filter(Boolean);
+  return owners.length ? `${user.username} (${owners.join(", ")})` : user.username;
+};
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-primary/10 text-foreground",
@@ -71,6 +84,33 @@ export const PayrollRunDetailPage: React.FC = () => {
     queryFn: () => payrollService.getPeriodClosureStatus(runId),
     enabled: !!runId && run?.status === "draft",
   });
+
+  const lineManagers: LineManagerClosure[] = useMemo(() => {
+    if (!closureStatus) return [];
+    if (closureStatus.line_managers && closureStatus.line_managers.length > 0) {
+      return closureStatus.line_managers;
+    }
+    // Fallback: group unclosed_users by line_manager if line_managers is omitted
+    const groups = new Map<string, LineManagerClosure>();
+    for (const u of closureStatus.unclosed_users) {
+      const key = u.line_manager || "unassigned";
+      if (!groups.has(key)) {
+        groups.set(key, {
+          id: null,
+          username: u.line_manager,
+          full_name: u.line_manager ? `@${u.line_manager}` : "Unassigned",
+          total_members: 0,
+          closed_members: 0,
+          all_closed: false,
+          unclosed_users: [],
+        });
+      }
+      const entry = groups.get(key)!;
+      entry.total_members += 1;
+      entry.unclosed_users.push(u);
+    }
+    return Array.from(groups.values());
+  }, [closureStatus]);
 
   const generateMutation = useMutation({
     mutationFn: () => payrollService.generateRun(runId),
@@ -196,44 +236,90 @@ export const PayrollRunDetailPage: React.FC = () => {
             </p>
           )}
           {closureStatus && (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge
-                  className={
-                    closureStatus.all_closed
-                      ? "bg-success/10 text-foreground"
-                      : "bg-warning/10 text-foreground"
-                  }
-                >
-                  {closureStatus.all_closed ? "All TL scopes closed" : "TL scopes unclosed"}
-                </Badge>
-                <span className="text-muted-foreground text-sm">
-                  {closureStatus.closed_users} of {closureStatus.total_users} users closed
-                </span>
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    className={
+                      closureStatus.all_closed
+                        ? "bg-success/10 text-foreground"
+                        : "bg-warning/10 text-foreground"
+                    }
+                  >
+                    {closureStatus.all_closed ? "All TL scopes closed" : "TL scopes unclosed"}
+                  </Badge>
+                  <span className="text-muted-foreground text-sm">
+                    {closureStatus.closed_users} of {closureStatus.total_users} users closed
+                  </span>
+                </div>
+                {lineManagers.length > 0 && (
+                  <span className="text-muted-foreground text-xs font-medium">
+                    Line Managers finalized:{" "}
+                    <span className="text-foreground font-semibold">
+                      {lineManagers.filter((lm) => lm.all_closed).length}/{lineManagers.length}
+                    </span>
+                  </span>
+                )}
               </div>
+
               {!closureStatus.all_closed && closureStatus.cutoff_passed && (
-                <p className="text-foreground mt-2 text-sm">
+                <p className="text-foreground text-sm">
                   Month cutoff reached (the 2nd). Finalizing closes the remaining users
                   automatically.
                 </p>
               )}
-              {!closureStatus.all_closed && closureStatus.unclosed_users.length > 0 && (
-                <p className="text-foreground mt-2 text-sm">
-                  Unclosed users:{" "}
-                  {closureStatus.unclosed_users
-                    .map((user) => {
-                      const owners = [
-                        user.line_manager && `Line Manager: @${user.line_manager}`,
-                        user.manager && `Manager: @${user.manager}`,
-                      ].filter(Boolean);
-                      return owners.length
-                        ? `${user.username} (${owners.join(", ")})`
-                        : user.username;
-                    })
-                    .join(", ")}
-                </p>
+
+              {lineManagers.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                    Line Manager Team Closures
+                  </p>
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                    {lineManagers.map((lm) => (
+                      <div
+                        key={lm.username || lm.full_name}
+                        className={`flex flex-col justify-between rounded-lg border p-3 text-xs transition-colors ${
+                          lm.all_closed
+                            ? "border-success/30 bg-success/5"
+                            : "border-warning/30 bg-warning/5"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            className="text-foreground truncate font-semibold"
+                            title={lm.full_name}
+                          >
+                            {lm.full_name}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={
+                              lm.all_closed
+                                ? "border-success/40 bg-success/15 text-foreground text-[11px]"
+                                : "border-warning/40 bg-warning/15 text-foreground text-[11px]"
+                            }
+                          >
+                            {lm.all_closed
+                              ? "Finalized"
+                              : `${lm.closed_members}/${lm.total_members} closed`}
+                          </Badge>
+                        </div>
+                        {!lm.all_closed && lm.unclosed_users.length > 0 && (
+                          <div className="border-border/50 text-muted-foreground mt-2 border-t pt-2">
+                            <span className="text-foreground text-[11px] font-semibold">
+                              Pending:{" "}
+                            </span>
+                            <span className="text-[11px]">
+                              {lm.unclosed_users.map(formatUserOwnership).join(", ")}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
-            </>
+            </div>
           )}
         </GlassCard>
       )}
