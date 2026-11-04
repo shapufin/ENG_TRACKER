@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 from django.apps import AppConfig
 
@@ -26,7 +27,18 @@ class PluginsConfig(AppConfig):
         from django.core.exceptions import ImproperlyConfigured
         from django.db.utils import Error as DBError
         try:
-            active_plugins = plugin_registry.get_active_plugins()
+            # One read of the plugin switch table: a plugin's signal handlers must exist
+            # before the first request, and which plugins are enabled lives only in the DB.
+            # Django warns about any query here; each worker boots on its own (gunicorn is
+            # not preloaded), so no connection is shared across a fork. Scoped to this one
+            # message so a genuinely new query elsewhere in ready() still warns.
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    'ignore',
+                    message='Accessing the database during app initialization',
+                    category=RuntimeWarning,
+                )
+                active_plugins = plugin_registry.get_active_plugins()
         except (DBError, ImproperlyConfigured):
             # Plugin table doesn't exist yet (fresh install, mid-migration).
             # ready() will run later via plugin_registry.activate_plugin()

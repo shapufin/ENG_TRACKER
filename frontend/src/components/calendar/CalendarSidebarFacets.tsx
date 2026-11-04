@@ -57,7 +57,7 @@ export const CalendarSidebarFacets: React.FC<CalendarSidebarFacetsProps> = ({
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={expanded}
         aria-controls="calendar-sidebar-facets"
-        className="text-muted-foreground hover:text-foreground flex w-full cursor-pointer items-center justify-between gap-1.5 rounded-md px-1 py-1 text-[10px] font-bold tracking-wider uppercase transition"
+        className="text-muted-foreground hover:text-foreground flex w-full cursor-pointer items-center justify-between gap-1.5 rounded-md px-1 py-1 text-xs font-bold tracking-wider uppercase transition"
       >
         <span className="flex min-w-0 items-center gap-1.5">
           <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -73,7 +73,7 @@ export const CalendarSidebarFacets: React.FC<CalendarSidebarFacetsProps> = ({
         <div id="calendar-sidebar-facets" className="mt-1.5 flex flex-col gap-2">
           {hasTypeFilters && onToggleType && (
             <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-[9px] font-semibold tracking-wider uppercase">
+              <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                 Legend / Event Types
               </span>
               <div className="flex flex-wrap gap-1">
@@ -86,7 +86,7 @@ export const CalendarSidebarFacets: React.FC<CalendarSidebarFacetsProps> = ({
                       onClick={() => onToggleType(filter.key)}
                       aria-pressed={active}
                       className={cn(
-                        "inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-medium transition",
+                        "inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium transition",
                         active
                           ? "border-border bg-card text-foreground font-semibold shadow-2xs"
                           : "border-border/40 text-muted-foreground/60 opacity-40 hover:opacity-75"

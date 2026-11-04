@@ -33,11 +33,11 @@ export const CalendarSnapshotCard: React.FC<CalendarSnapshotCardProps> = ({
       }`}
     >
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-primary flex items-center gap-1 text-[9px] font-bold tracking-wider uppercase">
+        <span className="text-primary flex items-center gap-1 text-xs font-bold tracking-wider uppercase">
           <Plane className="h-2.5 w-2.5" />
           Snapshot
         </span>
-        <span className="text-tone-success-text font-mono text-[10px] font-bold">
+        <span className="text-tone-success-text font-mono text-xs font-bold">
           {pct(remainingDays)}% left
         </span>
       </div>
@@ -47,12 +47,12 @@ export const CalendarSnapshotCard: React.FC<CalendarSnapshotCardProps> = ({
           <span className="text-foreground font-mono text-base font-extrabold tracking-tight tabular-nums">
             {formatDays(remainingDays)}
           </span>
-          <span className="text-muted-foreground font-mono text-[10px] font-medium">
+          <span className="text-muted-foreground font-mono text-xs font-medium">
             {" "}
             / {formatDays(totalDays)}d
           </span>
         </div>
-        <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-[9px]">
+        <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs">
           <span>
             Used: <strong className="text-foreground font-semibold">{formatDays(usedDays)}d</strong>
           </span>

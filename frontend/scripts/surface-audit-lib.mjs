@@ -78,8 +78,10 @@ export const ALLOW = {
   // 12% vs 15% primary): no single token carries both.
   "components/calendar/ConflictCard.tsx": ["DARK-OVERRIDE"],
   "components/calendar/EventActionButtons.tsx": ["DARK-OVERRIDE"],
-  "components/calendar/CalendarDayCell.tsx": ["DARK-OVERRIDE", "DARK-EXTRA"],
-  "components/calendar/EventCard.tsx": ["DARK-OVERRIDE"],
+  "components/calendar/CalendarDayCell.tsx": ["DARK-OVERRIDE", "DARK-EXTRA", "MICRO-TEXT"],
+  "components/calendar/EventCard.tsx": ["DARK-OVERRIDE", "MICRO-TEXT"],
+  // Fixed-size month-grid cells and weekday header: 12px does not fit the 7-column day cell or its event chips.
+  "components/calendar/MonthGrid.tsx": ["MICRO-TEXT"],
   "plugins/skills/components/SkillsDenseMatrix.tsx": ["DARK-OVERRIDE"],
   "plugins/skills/components/SkillsHeatmapGrid.tsx": ["DARK-OVERRIDE"],
   "plugins/skills/components/SkillsMemberColumn.tsx": ["DARK-OVERRIDE"],

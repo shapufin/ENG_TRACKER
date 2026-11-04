@@ -1,6 +1,7 @@
 import React from "react";
-import { ChevronLeft, Search, Users } from "lucide-react";
+import { ChevronLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SearchField } from "@/components/ui/SearchField";
 
 interface CalendarSidebarHeaderProps {
   userCount: number;
@@ -25,10 +26,10 @@ export const CalendarSidebarHeader: React.FC<CalendarSidebarHeaderProps> = ({
     <div className="flex items-center justify-between gap-1.5">
       <div className="flex min-w-0 items-center gap-1.5">
         <Users className="text-primary h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-        <h2 className="text-foreground truncate text-[11px] font-bold tracking-wider uppercase">
+        <h2 className="text-foreground truncate text-xs font-bold tracking-wider uppercase">
           Team Directory
         </h2>
-        <span className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold">
+        <span className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 font-mono text-xs font-semibold">
           {userCount}
         </span>
       </div>
@@ -46,20 +47,18 @@ export const CalendarSidebarHeader: React.FC<CalendarSidebarHeaderProps> = ({
     </div>
 
     {calendarGroup && (
-      <p className="text-muted-foreground mt-1 truncate font-mono text-[10px] font-medium tracking-wider uppercase">
+      <p className="text-muted-foreground mt-1 truncate font-mono text-xs font-medium tracking-wider uppercase">
         {calendarGroup}
       </p>
     )}
 
-    <div className="relative mt-2">
-      <Search className="text-muted-foreground absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2" />
-      <input
-        type="text"
+    <div className="mt-2">
+      <SearchField
         value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
+        onChange={onQueryChange}
         placeholder="Search..."
         aria-label="Search member"
-        className="border-border/60 bg-muted/30 placeholder:text-muted-foreground text-foreground focus:ring-primary/40 h-7 w-full rounded-lg border pr-2 pl-6.5 text-[11px] focus:ring-1 focus:outline-hidden"
+        controlSize="sm"
       />
     </div>
   </div>
