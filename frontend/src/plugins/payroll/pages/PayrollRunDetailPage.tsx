@@ -211,10 +211,26 @@ export const PayrollRunDetailPage: React.FC = () => {
                   {closureStatus.closed_users} of {closureStatus.total_users} users closed
                 </span>
               </div>
+              {!closureStatus.all_closed && closureStatus.cutoff_passed && (
+                <p className="text-foreground mt-2 text-sm">
+                  Month cutoff reached (the 2nd). Finalizing closes the remaining users
+                  automatically.
+                </p>
+              )}
               {!closureStatus.all_closed && closureStatus.unclosed_users.length > 0 && (
                 <p className="text-foreground mt-2 text-sm">
                   Unclosed users:{" "}
-                  {closureStatus.unclosed_users.map((user) => user.username).join(", ")}
+                  {closureStatus.unclosed_users
+                    .map((user) => {
+                      const owners = [
+                        user.line_manager && `Line Manager: @${user.line_manager}`,
+                        user.manager && `Manager: @${user.manager}`,
+                      ].filter(Boolean);
+                      return owners.length
+                        ? `${user.username} (${owners.join(", ")})`
+                        : user.username;
+                    })
+                    .join(", ")}
                 </p>
               )}
             </>

@@ -236,7 +236,16 @@ export interface ClosureStatus {
   all_closed: boolean;
   total_users: number;
   closed_users: number;
-  unclosed_users: Array<{ id: number; username: string }>;
+  /** ISO instant the month's submission window shuts and the system closes what TLs left open. */
+  cutoff_date: string;
+  cutoff_passed: boolean;
+  unclosed_users: Array<{
+    id: number;
+    username: string;
+    full_name: string;
+    line_manager: string | null;
+    manager: string | null;
+  }>;
   entries_without_source_closure: Array<{
     source_kind: string;
     source_id: number;

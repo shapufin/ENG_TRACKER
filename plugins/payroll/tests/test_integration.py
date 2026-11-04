@@ -1,6 +1,8 @@
 """Integration tests for the Payroll plugin service and ViewSets."""
-from datetime import date, time
+from datetime import date, datetime, time
 from decimal import Decimal
+from unittest import mock
+from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -110,7 +112,10 @@ class PayrollServiceTests(TestCase):
         readiness = get_period_closure_status(run)
         self.assertFalse(readiness['all_closed'])
         self.assertEqual(readiness['unclosed_users'], [
-            {'id': self.employee.id, 'username': self.employee.username},
+            {
+                'id': self.employee.id, 'username': self.employee.username,
+                'full_name': 'Test Employee', 'line_manager': None, 'manager': None,
+            },
         ])
         self.assertEqual(readiness['entries_without_source_closure'][0]['source_id'], entry.id)
 
@@ -144,7 +149,10 @@ class PayrollServiceTests(TestCase):
         config.require_tl_closed_before_finalize = True
         config.save(update_fields=['require_tl_closed_before_finalize'])
 
-        with self.assertRaisesRegex(ValidationError, self.employee.username):
+        # Before the month cutoff (Oct 2) only a TL close unblocks; after it the system closes.
+        before_cutoff = datetime(2026, 10, 1, 12, 0, tzinfo=ZoneInfo('Europe/Tirane'))
+        with mock.patch('django.utils.timezone.now', return_value=before_cutoff), \
+                self.assertRaisesRegex(ValidationError, self.employee.username):
             finalize_run(run, self.admin)
         run.refresh_from_db()
         self.assertEqual(run.status, 'draft')

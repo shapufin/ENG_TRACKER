@@ -69,11 +69,21 @@ const mockRun = {
 
 const mockFinalizedRun = { ...mockRun, status: "finalized" as const };
 
+const lateUser = {
+  id: 9,
+  username: "late.user",
+  full_name: "Late User",
+  line_manager: "artur",
+  manager: "marco",
+};
+
 const mockClosureStatus = {
   period: "2026-07-01",
   all_closed: true,
   total_users: 3,
   closed_users: 3,
+  cutoff_date: "2026-08-02T00:00:00+02:00",
+  cutoff_passed: false,
   unclosed_users: [],
   entries_without_source_closure: [],
   requires_tl_closed_before_finalize: true,
@@ -234,7 +244,7 @@ describe("PayrollRunDetailPage", () => {
       ...mockClosureStatus,
       all_closed: false,
       closed_users: 2,
-      unclosed_users: [{ id: 9, username: "late.user" }],
+      unclosed_users: [lateUser],
     });
     vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
     vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines);
@@ -253,12 +263,56 @@ describe("PayrollRunDetailPage", () => {
     });
   });
 
+  it("names the managers to chase before the cutoff", async () => {
+    vi.mocked(payrollService.payrollService.getPeriodClosureStatus).mockResolvedValue({
+      ...mockClosureStatus,
+      all_closed: false,
+      closed_users: 2,
+      unclosed_users: [lateUser],
+    });
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    expect(
+      await screen.findByText(/late\.user \(Line Manager: @artur, Manager: @marco\)/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Month cutoff reached/)).not.toBeInTheDocument();
+  });
+
+  it("keeps finalization enabled once the month cutoff passed", async () => {
+    vi.mocked(payrollService.payrollService.getPeriodClosureStatus).mockResolvedValue({
+      ...mockClosureStatus,
+      all_closed: false,
+      closed_users: 2,
+      cutoff_passed: true,
+      unclosed_users: [lateUser],
+    });
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    expect(await screen.findByText(/Month cutoff reached/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Finalize" })).toBeEnabled();
+    expect(
+      screen.queryByText("Finalize is disabled until all team-leader scopes are closed.")
+    ).not.toBeInTheDocument();
+  });
+
   it("allows finalization with a closure warning when the rule is advisory", async () => {
     vi.mocked(payrollService.payrollService.getPeriodClosureStatus).mockResolvedValue({
       ...mockClosureStatus,
       all_closed: false,
       closed_users: 2,
-      unclosed_users: [{ id: 9, username: "late.user" }],
+      unclosed_users: [lateUser],
       requires_tl_closed_before_finalize: false,
     });
     vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);

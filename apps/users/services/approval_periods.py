@@ -274,6 +274,92 @@ def finalize_period(actor, period: date) -> tuple[ApprovalPeriodClose, bool]:
     return close, True
 
 
+AUTO_CUTOFF_SCOPE_TYPE = 'auto_cutoff'
+
+
+def auto_finalize_approval_periods(
+    period: date,
+    *,
+    now: datetime | None = None,
+    user_ids=None,
+) -> tuple[ApprovalPeriodClose | None, int]:
+    """Close the period for everyone a TL has not closed, once the cutoff passed.
+
+    Security net, not a shortcut: at 00:00 on the 2nd of the following month
+    (Europe/Tirane) the submission window shuts, and an absent or forgetful TL
+    must not leave payroll blocked. Before that instant this is a no-op, so the
+    normal rule (a TL finalizes their own scope) holds. One system close per
+    period (``system:auto-cutoff:<period>``) collects every user added by a
+    call; repeating it only adds users that still have no close.
+
+    ``user_ids`` limits the sweep (payroll passes the users on its run);
+    without it, every active non-superuser is swept.
+
+    Returns ``(close, newly_closed_count)``; ``(None, 0)`` before the cutoff.
+    """
+    period = normalize_period(period)
+    now = now or timezone.now()
+    if now.astimezone(business_tz()) < work_date_cutoff(period):
+        return None, 0
+
+    from django.contrib.auth import get_user_model
+
+    with transaction.atomic():
+        boundary = _get_boundary_locked(period)
+        close, _ = ApprovalPeriodClose.objects.get_or_create(
+            boundary=boundary,
+            scope_key=f'system:auto-cutoff:{period.isoformat()}',
+            defaults={'closed_at': now, 'closed_by': None, 'scope_type': AUTO_CUTOFF_SCOPE_TYPE},
+        )
+        users = get_user_model().objects.exclude(
+            approval_period_close_memberships__close__boundary=boundary,
+        )
+        if user_ids is None:
+            users = users.filter(is_active=True, is_superuser=False)
+        else:
+            users = users.filter(pk__in=user_ids)
+        users = users.select_related('profile').prefetch_related('profile__team_memberships__team')
+
+        members = []
+        for user in users:
+            profile = getattr(user, 'profile', None)
+            source_team = profile.get_primary_team() if profile else None
+            members.append(
+                ApprovalPeriodCloseMember(
+                    close=close,
+                    user=user,
+                    source_team=source_team,
+                    source_team_name=source_team.name if source_team else '',
+                    source_team_code=source_team.code if source_team else '',
+                )
+            )
+        ApprovalPeriodCloseMember.objects.bulk_create(members)
+
+    if members:
+        record_auto_finalize_event(close, period, len(members))
+    return close, len(members)
+
+
+def record_auto_finalize_event(close: ApprovalPeriodClose, period: date, count: int) -> None:
+    """Write the system close to the audit log. Never blocks the close."""
+    try:
+        from apps.reports.models import AuditLog
+
+        # A savepoint: callers (payroll finalize) run inside a transaction, which a
+        # failed insert would otherwise poison even though we swallow the error.
+        with transaction.atomic():
+            AuditLog.objects.create(
+                user=None,
+                action='UPDATE',
+                model_name='approvalperiodclose',
+                object_id=str(close.pk),
+                object_repr=f'Auto-cutoff close {period:%Y-%m}',
+                new_values={'operation': 'approval_period_auto_finalize', 'period': period.isoformat(), 'users': count},
+            )
+    except Exception:
+        logger.warning('Could not record auto-finalize audit event for %s', period, exc_info=True)
+
+
 def get_actor_close(actor, period: date) -> ApprovalPeriodClose | None:
     """Return the actor's close snapshot for a period, if it exists."""
     period = normalize_period(period)

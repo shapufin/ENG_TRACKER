@@ -479,3 +479,4 @@ Gates: `apps.permissions apps.overtime apps.standby apps.dashboard` 610 OK (6 ne
 
 
 - Site backup (2026-11-04): `commit()` resets PostgreSQL sequences; `restore_site_backup` is the headless restore; there is no schema-hash override. See `docs/site-backup-and-restore.md` and `docs/workflow-invariants.md` item 55.
+- Month cutoff (2026-11-04): one closer (Line Manager OR Manager) is enough; from 00:00 on the 2nd of M+1 (Europe/Tirane) the system closes the rest via `auto_finalize_approval_periods` (finalize_run, hourly payroll job, management command). Closure status adds cutoff + manager names. See `docs/workflow-invariants.md` item 56.

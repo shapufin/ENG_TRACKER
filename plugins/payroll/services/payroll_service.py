@@ -21,6 +21,11 @@ from django.utils import timezone
 
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
+from apps.users.services.approval_periods import (
+    auto_finalize_approval_periods,
+    work_date_cutoff,
+)
+from core.utils.timezone_local import business_today, business_tz
 
 from ..models import (
     PayrollConfiguration,
@@ -548,6 +553,26 @@ def _update_run_totals(run: PayrollRun):
     run.totals = aggregate_line_totals(run.lines.all())
 
 
+def auto_finalize_previous_month() -> None:
+    """Scheduler job: apply the month cutoff company-wide, hourly and idempotent.
+
+    A no-op until 00:00 on the 2nd; from then on it closes the previous month
+    for anyone no TL closed, so the closure gate never waits on an absent TL.
+    """
+    previous = business_today().replace(day=1) - timedelta(days=1)
+    auto_finalize_approval_periods(previous)
+
+
+def _closure_label(user: dict) -> str:
+    """``username`` plus the people HR should chase to close that user's month."""
+    owners = [
+        f'{label}: {user[key]}'
+        for key, label in (('line_manager', 'Line Manager'), ('manager', 'Manager'))
+        if user.get(key)
+    ]
+    return f"{user['username']} ({', '.join(owners)})" if owners else user['username']
+
+
 def get_period_closure_status(run: PayrollRun) -> dict:
     """Return TL approval-period closure readiness for every payroll line user.
 
@@ -558,18 +583,32 @@ def get_period_closure_status(run: PayrollRun) -> dict:
 
     period = date(run.year, run.month, 1)
     entries = list(run.source_entries.select_related('user').all())
-    users = {line.user_id: line.user for line in run.lines.select_related('user').all()}
+    users = {
+        line.user_id: line.user
+        for line in run.lines.select_related(
+            'user__profile__albanian_tl', 'user__profile__italian_tl',
+        )
+    }
     closed_user_ids = set(
         ApprovalPeriodCloseMember.objects.filter(
             user_id__in=users,
             close__boundary__period=period,
         ).values_list('user_id', flat=True)
     )
-    unclosed_users = [
-        {'id': user.id, 'username': user.username}
-        for user_id, user in sorted(users.items(), key=lambda item: item[1].username)
-        if user_id not in closed_user_ids
-    ]
+    unclosed_users = []
+    for user_id, user in sorted(users.items(), key=lambda item: item[1].username):
+        if user_id in closed_user_ids:
+            continue
+        profile = getattr(user, 'profile', None)
+        line_manager = getattr(profile, 'albanian_tl', None)
+        manager = getattr(profile, 'italian_tl', None)
+        unclosed_users.append({
+            'id': user.id,
+            'username': user.username,
+            'full_name': user.get_full_name(),
+            'line_manager': line_manager.username if line_manager else None,
+            'manager': manager.username if manager else None,
+        })
 
     sources = {}
     for kind, model in (('overtime', OvertimeLog), ('standby', StandbyLog)):
@@ -589,9 +628,12 @@ def get_period_closure_status(run: PayrollRun) -> dict:
                 'user_id': entry.user_id,
             })
 
+    cutoff = work_date_cutoff(period)
     return {
         'all_closed': not unclosed_users,
         'period': period,
+        'cutoff_date': cutoff.isoformat(),
+        'cutoff_passed': timezone.now().astimezone(business_tz()) >= cutoff,
         'total_users': len(users),
         'closed_users': len(users) - len(unclosed_users),
         'unclosed_users': unclosed_users,
@@ -647,10 +689,16 @@ def finalize_run(run: PayrollRun, user) -> PayrollRun:
         config = PayrollConfiguration.get_singleton()
         _ensure_draft_inputs_current(locked_run, config)
         if config.require_tl_closed_before_finalize:
+            # From the month's cutoff the system closes whoever no TL closed, so an
+            # absent TL can never block payroll. Before it, the TLs must close.
+            auto_finalize_approval_periods(
+                date(locked_run.year, locked_run.month, 1),
+                user_ids=locked_run.lines.values_list('user_id', flat=True),
+            )
             closure_status = get_period_closure_status(locked_run)
             if not closure_status['all_closed']:
                 usernames = ', '.join(
-                    user['username'] for user in closure_status['unclosed_users']
+                    _closure_label(user) for user in closure_status['unclosed_users']
                 )
                 raise ValidationError(
                     f"Cannot finalize payroll run {locked_run.period_label}: "
