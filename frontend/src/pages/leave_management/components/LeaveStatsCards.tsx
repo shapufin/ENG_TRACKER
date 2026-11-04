@@ -48,7 +48,7 @@ const StatCardContent: React.FC<CardConfig & { isLoading: boolean }> = ({
       isLoading ? (
         <span className="animate-pulse">...</span>
       ) : (
-        <AnimatedNumber value={value} suffix={suffix} />
+        <AnimatedNumber value={value} suffix={suffix} decimals={Number.isInteger(value) ? 0 : 1} />
       )
     }
     icon={Icon}

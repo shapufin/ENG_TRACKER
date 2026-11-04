@@ -2,12 +2,16 @@ import React from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { LeaveDurationPicker } from "@/components/leave/LeaveDurationPicker";
+import { durationFields, durationOf, type LeaveDuration } from "@/components/leave/leaveDuration";
 
 interface LeaveFormData {
   request_type: "vacation" | "sick";
   start_date: string;
   end_date: string;
   reason: string;
+  is_half_day?: boolean;
+  half_day_period?: "morning" | "afternoon" | null;
 }
 
 interface FormErrors {
@@ -39,6 +43,16 @@ export const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
   const updateField = <K extends keyof LeaveFormData>(key: K, value: LeaveFormData[K]) => {
     onChange({ ...formData, [key]: value });
   };
+  const isHalfDay = formData.request_type === "vacation" && formData.is_half_day;
+  // A half day is one date: the end date follows the start date.
+  const changeStart = (start: string) =>
+    onChange({ ...formData, start_date: start, end_date: isHalfDay ? start : formData.end_date });
+  const changeDuration = (duration: LeaveDuration) =>
+    onChange({
+      ...formData,
+      ...durationFields(duration),
+      end_date: duration === "full" ? formData.end_date : formData.start_date,
+    });
 
   return (
     <div className="space-y-3">
@@ -74,7 +88,13 @@ export const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
                 key={option.value}
                 type="button"
                 aria-pressed={selected}
-                onClick={() => updateField("request_type", option.value)}
+                onClick={() =>
+                  onChange({
+                    ...formData,
+                    request_type: option.value,
+                    ...(option.value === "sick" && formData.is_half_day ? durationFields("full") : {}),
+                  })
+                }
                 className={`flex min-h-[44px] items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all ${
                   selected
                     ? "border-primary/60 bg-primary/10 text-foreground shadow-sm ring-2 ring-primary/20"
@@ -91,6 +111,13 @@ export const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
           <p className="mt-1 text-xs text-destructive">{formErrors.request_type}</p>
         )}
       </div>
+      {formData.request_type === "vacation" && (
+        <LeaveDurationPicker
+          value={durationOf(formData.is_half_day, formData.half_day_period)}
+          onChange={changeDuration}
+        />
+      )}
+      {isHalfDay && <p className="text-xs text-muted-foreground">Deducts 0.5 days from your balance.</p>}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label htmlFor="leave-start-date" className="text-xs font-medium">
@@ -100,7 +127,7 @@ export const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
             <DatePicker
               id="leave-start-date"
               value={formData.start_date}
-              onChange={(v) => updateField("start_date", v)}
+              onChange={changeStart}
               placeholder="DD/MM/YYYY"
             />
             {formErrors.start_date && (
@@ -108,6 +135,7 @@ export const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
             )}
           </div>
         </div>
+        {!isHalfDay && (
         <div>
           <Label htmlFor="leave-end-date" className="text-xs font-medium">
             End date
@@ -124,6 +152,7 @@ export const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({
             )}
           </div>
         </div>
+        )}
       </div>
       <div>
         <Label htmlFor="leave-reason" className="text-xs font-medium">

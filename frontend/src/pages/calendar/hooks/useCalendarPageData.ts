@@ -1,3 +1,4 @@
+import { durationFields, type LeaveDuration } from "@/components/leave/leaveDuration";
 import { useState, useMemo, useCallback } from "react";
 import { parseISO, format } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -62,6 +63,7 @@ export const useCalendarPageData = (
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [requestType, setRequestType] = useState<LeaveRequest["request_type"]>("vacation");
+  const [duration, setDuration] = useState<LeaveDuration>("full");
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState<User | null>(null);
   const [actionModalEvent, setActionModalEvent] = useState<
@@ -291,11 +293,14 @@ export const useCalendarPageData = (
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDates) return;
+    const halfDay = requestType === "vacation" && duration !== "full";
     createRequest.mutate({
       request_type: requestType,
       start_date: selectedDates.start,
-      end_date: selectedDates.end,
+      // A half day is one date, whatever range was dragged out.
+      end_date: halfDay ? selectedDates.start : selectedDates.end,
       reason,
+      ...durationFields(halfDay ? duration : "full"),
     });
   };
 
@@ -304,6 +309,7 @@ export const useCalendarPageData = (
     if (!open) {
       setReason("");
       setRequestType("vacation");
+      setDuration("full");
     }
   };
 
@@ -369,6 +375,8 @@ export const useCalendarPageData = (
     setReason,
     requestType,
     setRequestType,
+    duration,
+    setDuration,
     userModalOpen,
     setUserModalOpen,
     selectedUserForModal,

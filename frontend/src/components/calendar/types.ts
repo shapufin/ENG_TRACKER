@@ -16,6 +16,8 @@ export interface CalendarEvent {
   userTechLevels?: string[];
   hours?: number;
   days?: number;
+  isHalfDay?: boolean;
+  halfDayPeriod?: "morning" | "afternoon";
   description?: string;
   clientNames?: string[];
   compactLabel: string;

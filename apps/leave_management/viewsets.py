@@ -33,6 +33,7 @@ from core.mixins.permissions import (
     resolve_target_user,
 )
 from .models import LeaveBalance, LeaveRequest, GlobalSettings, count_leave_days
+from .models.core import plain_days
 from .services.carry_over import (
     carry_over_expiry_for,
     ensure_year_end_rollover,
@@ -382,7 +383,13 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         start_date = incoming.get('start_date', instance.start_date)
         end_date = incoming.get('end_date', instance.end_date)
 
-        self._ensure_no_overlap(target_user, start_date, end_date, exclude_request_id=instance.id)
+        is_half_day = incoming.get('is_half_day', instance.is_half_day)
+        half_day_period = incoming.get('half_day_period', instance.half_day_period)
+
+        self._ensure_no_overlap(
+            target_user, start_date, end_date, exclude_request_id=instance.id,
+            is_half_day=is_half_day, half_day_period=half_day_period,
+        )
         self._ensure_year_open(instance.start_date, start_date)
 
         with transaction.atomic():
@@ -393,7 +400,7 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
                 self._release_balance(instance)
 
             if request_type == 'vacation':
-                self._validate_vacation_request(target_user, start_date, end_date)
+                self._validate_vacation_request(target_user, start_date, end_date, is_half_day)
 
             update_kwargs = {}
             if instance.status == 'approved':
@@ -582,9 +589,9 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
             start = end = None
         if not start or not end or end < start:
             raise ValidationError({'end_date': 'Provide a start_date and an end_date on or after it.'})
-        plan = plan_vacation_split(request.user.id, start, end)
+        plan = plan_vacation_split(request.user.id, start, end, bool(request.data.get('is_half_day')))
         return Response({
-            'days_counted': plan['counted'],
+            'days_counted': plain_days(plan['counted']),
             'carry_days': float(plan['carry_days']),
             'current_days': float(plan['current_days']),
             'carry_expires_at': plan['carry_expires_at'],
@@ -600,10 +607,14 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         start_date = serializer.validated_data.get('start_date')
         end_date = serializer.validated_data.get('end_date')
 
-        self._ensure_no_overlap(target_user, start_date, end_date)
+        is_half_day = serializer.validated_data.get('is_half_day', False)
+        self._ensure_no_overlap(
+            target_user, start_date, end_date,
+            is_half_day=is_half_day, half_day_period=serializer.validated_data.get('half_day_period'),
+        )
         if request_type == 'vacation':
             self._ensure_year_open(start_date)
-            self._validate_vacation_request(target_user, start_date, end_date)
+            self._validate_vacation_request(target_user, start_date, end_date, is_half_day)
 
         with transaction.atomic():
             obj = serializer.save(user=target_user)
@@ -702,7 +713,9 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
             carry_lock = find_carry_balance(request_obj.user_id, request_obj.start_date)
             if carry_lock is not None:
                 LeaveBalance.objects.select_for_update().filter(pk=carry_lock.pk).first()
-            plan = plan_vacation_split(request_obj.user_id, request_obj.start_date, request_obj.end_date)
+            plan = plan_vacation_split(
+                request_obj.user_id, request_obj.start_date, request_obj.end_date, request_obj.is_half_day
+            )
             carry_days = plan['carry_days']
             carry_row = None
             if carry_days > 0:
@@ -780,14 +793,14 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         obj.refresh_from_db()
         self.invalidate_related_cache()
 
-    def _validate_vacation_request(self, user, start_date, end_date):
+    def _validate_vacation_request(self, user, start_date, end_date, is_half_day=False):
         if not start_date or not end_date:
             raise ValidationError('Vacation requests require start and end dates.')
         if end_date < start_date:
             raise ValidationError('End date must be after start date.')
 
         # Must match LeaveRequest.days_requested (holiday-aware business days).
-        days_requested = count_leave_days(start_date, end_date)
+        days_requested = count_leave_days(start_date, end_date, is_half_day=is_half_day)
         if days_requested <= 0:
             raise ValidationError('Vacation requests must include at least one weekday.')
 
@@ -795,7 +808,7 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         ensure_current_year_balance(user, year)
 
         # Same split rule as deduction: carry covers weekdays up to its expiry.
-        plan = plan_vacation_split(user.id, start_date, end_date)
+        plan = plan_vacation_split(user.id, start_date, end_date, is_half_day)
         current = LeaveBalance.objects.filter(
             user=user, leave_type='vacation', is_carry_over=False, year=year,
         ).first()
@@ -808,12 +821,14 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
                     f"(valid to {plan['carry_expires_at']}), "
                 )
             raise ValidationError(
-                f"Insufficient leave balance. Requested {days_requested}d: {carry_part}"
+                f"Insufficient leave balance. Requested {plain_days(days_requested)}d: {carry_part}"
                 f"{float(plan['current_days'])}d from the {year} balance, "
                 f"which has {float(current_available)}d available."
             )
 
-    def _ensure_no_overlap(self, user, start_date, end_date, exclude_request_id=None):
+    def _ensure_no_overlap(
+        self, user, start_date, end_date, exclude_request_id=None, is_half_day=False, half_day_period=None
+    ):
         if not user or not start_date or not end_date:
             return
 
@@ -826,7 +841,17 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         if exclude_request_id:
             conflicts = conflicts.exclude(id=exclude_request_id)
 
-        if conflicts.exists():
+        existing = list(conflicts[:2])
+        if not existing:
+            return
+        # The one allowed overlap: a morning half and an afternoon half of the same day.
+        if (
+            is_half_day and len(existing) == 1 and existing[0].is_half_day
+            and existing[0].start_date == start_date
+            and existing[0].half_day_period != half_day_period
+        ):
+            return
+        if existing:
             raise ValidationError('Overlapping leave request already exists for the selected dates.')
 
     def _ensure_current_year_balance(self, user, year):

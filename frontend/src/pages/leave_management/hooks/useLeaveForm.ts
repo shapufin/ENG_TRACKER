@@ -8,6 +8,8 @@ interface LeaveFormState {
   start_date: string;
   end_date: string;
   reason: string;
+  is_half_day?: boolean;
+  half_day_period?: "morning" | "afternoon" | null;
 }
 
 interface FormErrors {
@@ -21,6 +23,8 @@ const DEFAULT_FORM_STATE: LeaveFormState = {
   start_date: "",
   end_date: "",
   reason: "",
+  is_half_day: false,
+  half_day_period: null,
 };
 
 export const useLeaveForm = () => {
@@ -47,6 +51,8 @@ export const useLeaveForm = () => {
       start_date: req.start_date,
       end_date: req.end_date,
       reason: req.reason || "",
+      is_half_day: !!req.is_half_day,
+      half_day_period: req.half_day_period ?? null,
     });
     setFormOpen(true);
   };

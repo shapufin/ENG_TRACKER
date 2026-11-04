@@ -4,11 +4,15 @@ import { csvCell } from "./csvSafe";
 
 const HEADERS = ["User", "Type", "Start Date", "End Date", "Days", "Status", "Reason"];
 
+/** Request type, with the half-day period named so the export keeps what the screen shows. */
+export const leaveTypeLabel = (r: LeaveRequest) =>
+  r.is_half_day ? `${r.request_type} (half day, ${r.half_day_period ?? "morning"})` : r.request_type;
+
 export const buildLeaveRequestsCsv = (requests: LeaveRequest[]): string => {
   const rows = requests.map((r) =>
     [
       r.user_name || "Unknown",
-      r.request_type,
+      leaveTypeLabel(r),
       r.start_date,
       r.end_date,
       r.days_requested,

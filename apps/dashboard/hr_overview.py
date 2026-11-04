@@ -12,7 +12,7 @@ from django.contrib.auth.models import User
 from django.db.models.functions import Coalesce
 
 from apps.leave_management.models import LeaveRequest
-from apps.leave_management.models.core import count_request_days, global_holiday_dates
+from apps.leave_management.models.core import count_request_days, global_holiday_dates, plain_days
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from apps.users.services.workforce import workforce_filter
@@ -86,7 +86,9 @@ def _pending_leave() -> tuple[list, int]:
         {
             "id": r.id,
             "user_name": _name(r.user),
-            "days_requested": count_request_days(r.request_type, r.start_date, r.end_date, holidays),
+            "days_requested": plain_days(
+                count_request_days(r.request_type, r.start_date, r.end_date, holidays, is_half_day=r.is_half_day)
+            ),
             "status": r.status,
             "start_date": r.start_date.isoformat(),
             "end_date": r.end_date.isoformat(),

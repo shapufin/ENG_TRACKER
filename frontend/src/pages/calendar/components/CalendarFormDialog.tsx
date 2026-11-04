@@ -11,6 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LeaveDurationPicker } from "@/components/leave/LeaveDurationPicker";
+import type { LeaveDuration } from "@/components/leave/leaveDuration";
 import type { LeaveRequest } from "@/types";
 
 interface CarryOverData {
@@ -24,6 +26,8 @@ interface CalendarFormDialogProps {
   title: string;
   requestType: LeaveRequest["request_type"];
   onRequestTypeChange: (value: LeaveRequest["request_type"]) => void;
+  duration: LeaveDuration;
+  onDurationChange: (value: LeaveDuration) => void;
   selectedDates: { start: string; end: string } | null;
   onDateRangeChange: (start: string, end: string) => void;
   reason: string;
@@ -46,6 +50,8 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
   title,
   requestType,
   onRequestTypeChange,
+  duration,
+  onDurationChange,
   selectedDates,
   onDateRangeChange,
   reason,
@@ -84,6 +90,14 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
             </SelectContent>
           </Select>
         </div>
+        {requestType === "vacation" && (
+          <LeaveDurationPicker
+            className="sm:col-span-2"
+            idPrefix="calendar-duration"
+            value={duration}
+            onChange={onDurationChange}
+          />
+        )}
         <div className="space-y-2">
           <Label htmlFor="calendar-request-dates" className="text-xs font-medium">
             Event dates
@@ -98,6 +112,7 @@ export const CalendarFormDialog: React.FC<CalendarFormDialogProps> = ({
         </div>
         {requestType === "vacation" ? (
           <p className="text-muted-foreground text-xs sm:col-span-2">
+            {duration !== "full" ? "Deducts 0.5 days (only the first selected date is used). " : ""}
             Balance:{" "}
             {carryOverAndBalance.carryOver
               ? `${carryOverAndBalance.carryOver.effective_available_days ?? carryOverAndBalance.carryOver.available_days} carry-over + `

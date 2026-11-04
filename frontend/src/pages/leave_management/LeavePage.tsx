@@ -18,6 +18,7 @@ import { getRemainingDays } from "./hooks/leaveBalanceUtils";
 import { useLeaveColumns } from "./hooks/useLeaveColumns";
 import { LeaveStatsCards } from "./components/LeaveStatsCards";
 import { LeaveRequestForm } from "./components/LeaveRequestForm";
+import { leaveTypeLabel } from "@/lib/export-leave-requests";
 
 // fallow-ignore-next-line complexity
 export const LeavePage: React.FC = () => {
@@ -117,7 +118,7 @@ export const LeavePage: React.FC = () => {
       rowMapper: (r: LeaveRequest) => [
         String(r.id),
         r.user_name || String(r.user),
-        r.request_type,
+        leaveTypeLabel(r),
         r.start_date,
         r.end_date,
         String(r.days_requested),

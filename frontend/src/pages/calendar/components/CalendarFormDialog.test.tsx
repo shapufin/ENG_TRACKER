@@ -8,6 +8,8 @@ const baseProps = {
   title: "New Vacation",
   requestType: "vacation" as const,
   onRequestTypeChange: vi.fn(),
+  duration: "full" as const,
+  onDurationChange: vi.fn(),
   selectedDates: { start: "2026-09-10", end: "2026-09-10" },
   onDateRangeChange: vi.fn(),
   reason: "",
@@ -18,6 +20,42 @@ const baseProps = {
   error: null,
   onSubmit: vi.fn(),
 };
+
+describe("CalendarFormDialog duration", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      }
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("offers full day, morning and afternoon for vacation and reports the pick", () => {
+    const onDurationChange = vi.fn();
+    render(<CalendarFormDialog {...baseProps} onDurationChange={onDurationChange} />);
+
+    fireEvent.click(screen.getByRole("radio", { name: /afternoon/i }));
+
+    expect(onDurationChange).toHaveBeenCalledWith("afternoon");
+  });
+
+  it("hides the duration for sick leave", () => {
+    render(<CalendarFormDialog {...baseProps} requestType="sick" />);
+    expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
+  });
+
+  it("says a half day deducts 0.5 days", () => {
+    render(<CalendarFormDialog {...baseProps} duration="morning" />);
+    expect(screen.getByText(/deducts 0\.5 days/i)).toBeInTheDocument();
+  });
+});
 
 describe("CalendarFormDialog date range picker", () => {
   beforeEach(() => {
