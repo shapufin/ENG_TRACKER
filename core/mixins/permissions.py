@@ -841,6 +841,11 @@ class PersonalOnlyFilterMixin(WorkspaceFilterMixin):
     """
     allow_staff_global_view = True
     staff_global_view_actions: set[str] = set()
+    calendar_peer_visible = False
+
+    def _peers_visible_in_calendar(self):
+        calendar = self.request.query_params.get('calendar', '').lower() in {'1', 'true', 'yes'}
+        return bool(self.calendar_peer_visible and calendar)
 
     def _staff_can_view_all(self, user):
         """Return True if staff/HR are allowed to see all records for this viewset."""
@@ -931,10 +936,11 @@ class PersonalOnlyFilterMixin(WorkspaceFilterMixin):
             staff_queryset = self._apply_workspace_filter(base_queryset)
             return self._apply_date_filter(staff_queryset)
 
-        # If workspace_ids is provided, we allow seeing others in those workspaces
-        # (provided the user has access to the workspaces, which _apply_workspace_filter handles)
-        # Use _apply_personal_workspace_filter to ensure requester's own records are always visible
-        if self.request.query_params.get('workspace_ids'):
+        # Peers' rows through ?workspace_ids= are team-calendar data only: a viewset
+        # opts in with ``calendar_peer_visible`` and the request must say
+        # ``calendar=true``. Compensation rows (overtime) stay self-only, or any
+        # employee could read a colleague's hours by naming a shared workspace.
+        if self.request.query_params.get('workspace_ids') and self._peers_visible_in_calendar():
             queryset = self._apply_personal_workspace_filter(base_queryset, user)
             return self._apply_date_filter(queryset)
 

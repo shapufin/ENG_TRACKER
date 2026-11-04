@@ -1026,6 +1026,11 @@ class AuditLogViewSet(HbprBlockedMixin, TeamLeaderFilterMixin, viewsets.ReadOnly
     search_fields = ['user__username', 'object_repr', 'changes_summary']
     filterset_fields = ['action', 'model_name', 'user']
 
+    def filter_for_regular_user(self, queryset, user):
+        # The mixin's default widens to workspace peers on ?workspace_ids=; an audit
+        # trail is never calendar data, so an employee reads only their own rows.
+        return queryset.filter(user=user)
+
     @action(detail=False, methods=['get'])
     def export(self, request):
         """Export audit logs as streaming CSV, respecting active filters.

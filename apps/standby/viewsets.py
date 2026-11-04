@@ -91,6 +91,8 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
     Provides CRUD operations and approval workflow for standby entries.
     Compatible with Analytics plugin (pending→scheduled, approved→completed).
     """
+    # The team calendar shows who is on standby (work coverage), not pay data.
+    calendar_peer_visible = True
     idempotency_endpoint = 'standby'
     # `admin_logs` documents HR read access and guards itself with
     # `has_hr_role`; the mixin must let pure HR reach it (SAFE_METHODS only).
