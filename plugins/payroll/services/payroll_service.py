@@ -722,9 +722,28 @@ def cancel_run(run: PayrollRun, user) -> PayrollRun:
             raise ValidationError(
                 f'Only draft runs can be cancelled. Current status: {locked_run.status}.'
             )
+        # A cancelled run is a tombstone. Its draft rows would otherwise keep blocking
+        # deletion of the source entries and users they reference (PROTECT) and keep
+        # feeding stale settlement labels into exports.
+        locked_run.source_entries.filter(status='draft').delete()
+        locked_run.lines.all().delete()
+        locked_run.totals = {}
         locked_run.status = 'cancelled'
-        locked_run.save(update_fields=['status', 'updated_at'])
+        locked_run.save(update_fields=['status', 'totals', 'updated_at'])
         return locked_run
+
+
+def purge_cancelled_run_leftovers() -> dict:
+    """Clean runs cancelled before ``cancel_run`` removed its own rows.
+
+    Idempotent. Only draft rows of cancelled runs are touched; a finalized run
+    can never be cancelled, so nothing frozen is reachable here.
+    """
+    with transaction.atomic():
+        entries, _ = PayrollRunEntry.objects.filter(run__status='cancelled', status='draft').delete()
+        lines, _ = PayrollLine.objects.filter(run__status='cancelled').delete()
+        PayrollRun.objects.filter(status='cancelled').exclude(totals={}).update(totals={})
+    return {'entries': entries, 'lines': lines}
 
 
 def regenerate_single_line(run: PayrollRun, user) -> PayrollLine:
