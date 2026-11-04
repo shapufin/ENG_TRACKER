@@ -34,6 +34,12 @@ class PayrollPlugin(BasePlugin):
     def get_urls(self):
         return urlpatterns
 
+    def get_scheduled_jobs(self):
+        # Hourly and cheap: one query until the previous month's cutoff passes.
+        return [
+            ('auto_finalize_periods', 3600, 'plugins.payroll.services.payroll_service.auto_finalize_previous_month'),
+        ]
+
     def get_permission_actions(self):
         return ["view", "manage", "configure", "export"]
 

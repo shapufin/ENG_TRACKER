@@ -43,8 +43,11 @@ export const PayrollRunActions: React.FC<PayrollRunActionsProps> = ({
 }) => {
   const [confirmFinalize, setConfirmFinalize] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // From the month cutoff the server closes whoever is left, so only an early finalize is blocked.
   const closureBlocksFinalize =
-    closureStatus?.requires_tl_closed_before_finalize === true && !closureStatus.all_closed;
+    closureStatus?.requires_tl_closed_before_finalize === true &&
+    !closureStatus.all_closed &&
+    !closureStatus.cutoff_passed;
   const closureWarning =
     closureStatus && !closureStatus.all_closed
       ? `TL closure is incomplete for ${closureStatus.unclosed_users.length} user${closureStatus.unclosed_users.length === 1 ? "" : "s"}.`
