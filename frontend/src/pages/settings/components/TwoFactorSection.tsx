@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, ShieldCheck, ShieldOff } from "lucide-react";
 import { toast } from "sonner";
@@ -313,6 +314,20 @@ export const TwoFactorSection: React.FC = () => {
   const { data, isLoading, isError } = useQuery({ queryKey: STATUS_KEY, queryFn: mfaService.status });
   const [enableOpen, setEnableOpen] = useState(false);
   const [stepUp, setStepUp] = useState<"disable" | "regenerate" | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // The logon prompt (MfaPromptModal) and the #two-factor anchor land here with the enrolment dialog open.
+  const wantsSetup =
+    (location.state as { openMfaSetup?: boolean } | null)?.openMfaSetup || location.hash === "#two-factor";
+  const canSetUp = data?.enabled === false;
+  useEffect(() => {
+    if (!wantsSetup || !canSetUp) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEnableOpen(true);
+    // Through the router, so the state is really gone and closing the dialog does not reopen it.
+    navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null });
+  }, [wantsSetup, canSetUp, navigate, location.pathname, location.search]);
 
   if (isLoading) {
     return <SecurityRow icon={<ShieldOff />} title="Two-factor authentication" hint="Checking status..." />;
@@ -340,7 +355,7 @@ export const TwoFactorSection: React.FC = () => {
   const lowCodes = data.enabled && data.backup_codes_remaining <= 2;
 
   return (
-    <>
+    <div id="two-factor">
       <SecurityRow
         tone={data.enabled ? "success" : "warning"}
         icon={data.enabled ? <ShieldCheck /> : <ShieldOff />}
@@ -387,6 +402,6 @@ export const TwoFactorSection: React.FC = () => {
 
       {enableOpen && <EnableDialog open={enableOpen} onOpenChange={setEnableOpen} />}
       <StepUpDialog key={stepUp ?? "closed"} mode={stepUp} onOpenChange={(o) => !o && setStepUp(null)} />
-    </>
+    </div>
   );
 };

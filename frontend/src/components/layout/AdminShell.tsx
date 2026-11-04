@@ -12,6 +12,7 @@ import { useAdminNavItems } from "./hooks/useAdminNavItems";
 import { AdminBreadcrumbNav } from "./AdminBreadcrumbNav";
 import { MaintenanceBanner } from "./MaintenanceBanner";
 import { isAllowedCRAdminPath } from "./adminRouteGuards";
+import { MfaPromptModal } from "@/components/auth/MfaPromptModal";
 import { AdminCommandPalette } from "./AdminCommandPalette";
 import { useSiteBranding } from "@/hooks/useSiteBranding";
 
@@ -74,6 +75,7 @@ export const AdminShell = React.memo(() => {
         onLogout={handleLogout}
         onOpenPalette={() => setPaletteOpen(true)}
       />
+      <MfaPromptModal />
       <AdminCommandPalette
         items={adminNavItems}
         open={paletteOpen}

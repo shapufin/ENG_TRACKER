@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 
 import { TwoFactorSection } from "./TwoFactorSection";
 import { mfaService } from "@/services/mfaService";
@@ -32,15 +33,47 @@ vi.mock("@/services/mfaService", async () => {
 const off = { enabled: false, required: false, required_by: null, backup_codes_remaining: 0 };
 const on = { enabled: true, required: false, required_by: null, backup_codes_remaining: 10 };
 
-const renderCard = () =>
+const renderCard = (entry: string | { pathname: string; state?: unknown; hash?: string } = "/settings") =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <TwoFactorSection />
+      <MemoryRouter initialEntries={[entry]}>
+        <TwoFactorSection />
+      </MemoryRouter>
     </QueryClientProvider>
   );
 
 describe("TwoFactorSection", () => {
   beforeEach(() => vi.resetAllMocks());
+
+  it("opens the enrolment dialog when sent here by the logon prompt", async () => {
+    vi.mocked(mfaService.status).mockResolvedValue(off);
+    renderCard({ pathname: "/settings", state: { openMfaSetup: true } });
+
+    expect(await screen.findByRole("heading", { name: /turn on two-factor authentication/i })).toBeInTheDocument();
+  });
+
+  it("opens the enrolment dialog for the #two-factor anchor", async () => {
+    vi.mocked(mfaService.status).mockResolvedValue(off);
+    renderCard({ pathname: "/settings", hash: "#two-factor" });
+
+    expect(await screen.findByRole("heading", { name: /turn on two-factor authentication/i })).toBeInTheDocument();
+  });
+
+  it("does not reopen once the dialog is cancelled", async () => {
+    vi.mocked(mfaService.status).mockResolvedValue(off);
+    renderCard({ pathname: "/settings", state: { openMfaSetup: true } });
+
+    fireEvent.click(await screen.findByRole("button", { name: /cancel/i }));
+    await waitFor(() => expect(screen.queryByRole("heading", { name: /turn on two-factor authentication/i })).not.toBeInTheDocument());
+  });
+
+  it("does not open for an already enrolled user", async () => {
+    vi.mocked(mfaService.status).mockResolvedValue(on);
+    renderCard({ pathname: "/settings", state: { openMfaSetup: true } });
+
+    await screen.findByText("On");
+    expect(screen.queryByRole("heading", { name: /turn on two-factor authentication/i })).not.toBeInTheDocument();
+  });
 
   it("enrols: password, then first code, then backup codes that must be acknowledged", async () => {
     vi.mocked(mfaService.status).mockResolvedValue(off);
