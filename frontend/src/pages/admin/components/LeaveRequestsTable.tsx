@@ -51,7 +51,7 @@ const LeaveRequestRowActions = ({
   onDelete?: (id: number) => void;
 }) => {
   const id = request.id;
-  const person = request.user_full_name || request.user_name || 'this employee';
+  const person = request.user_full_name || request.user_name || "this employee";
   const period = `${formatDateDDMMYYYY(request.start_date)}–${formatDateDDMMYYYY(request.end_date)}`;
   const [rejectOpen, setRejectOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -193,7 +193,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         id: "dates",
         accessorKey: "dates",
         header: "Period",
-        size: 150,
+        size: 210,
         cell: ({ row }) => {
           const start = formatDateDDMMYYYY(row.original.start_date);
           const end = formatDateDDMMYYYY(row.original.end_date);

@@ -27,6 +27,7 @@ export const HRTeamLeaderBarList: React.FC<HRTeamLeaderBarListProps> = ({
 }) => {
   const sorted = [...leaders].sort((a, b) => b.total_hours - a.total_hours);
   const maxHours = sorted[0]?.total_hours || 1;
+  const grandTotal = sorted.reduce((sum, l) => sum + l.total_hours, 0);
   const reduceMotion = useReducedMotion();
 
   return (
@@ -47,6 +48,11 @@ export const HRTeamLeaderBarList: React.FC<HRTeamLeaderBarListProps> = ({
                   <span className="text-foreground font-semibold">{leader.name}</span>
                   <span className="text-foreground font-mono font-bold tabular-nums">
                     {leader.total_hours.toFixed(1)}h
+                    {grandTotal > 0 && (
+                      <span className="text-muted-foreground ml-2 font-normal">
+                        {Math.round((leader.total_hours / grandTotal) * 100)}%
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div className="bg-input-bg h-2.5 w-full overflow-hidden rounded-full">

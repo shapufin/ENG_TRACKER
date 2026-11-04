@@ -13,6 +13,8 @@ interface SearchFieldProps {
   onClear?: () => void;
   controlSize?: ControlSize;
   autoFocus?: boolean;
+  /** Pressing "/" outside a field, dialog or menu focuses this field. Opt in on the page's one primary search. */
+  slashFocus?: boolean;
   disabled?: boolean;
   name?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
@@ -31,6 +33,7 @@ export const SearchField = ({
   onClear,
   controlSize,
   autoFocus,
+  slashFocus,
   disabled,
   name,
   inputMode,
@@ -78,6 +81,26 @@ export const SearchField = ({
     window.addEventListener("keydown", onEscape, true);
     return () => window.removeEventListener("keydown", onEscape, true);
   }, [hasValue]);
+
+  React.useEffect(() => {
+    if (!slashFocus) return;
+    const onSlash = (event: KeyboardEvent) => {
+      if (event.key !== "/" || event.defaultPrevented) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable)
+      ) {
+        return;
+      }
+      if (document.querySelector('[role="dialog"],[role="menu"],[role="listbox"]')) return;
+      event.preventDefault();
+      inputRef.current?.focus();
+    };
+    window.addEventListener("keydown", onSlash);
+    return () => window.removeEventListener("keydown", onSlash);
+  }, [slashFocus]);
 
   return (
     <div className={cn("relative w-full", className)}>

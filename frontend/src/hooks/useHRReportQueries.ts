@@ -12,6 +12,16 @@ interface UseHRReportQueriesOptions {
   selectedWorkspace: string;
 }
 
+const TREND_MONTHS = 6;
+
+/** First day of the month `TREND_MONTHS - 1` months before `end`'s month (string math, no clock). */
+export const trendWindowStart = (end: string): string => {
+  const [y, m] = end.split("-").map(Number);
+  if (!y || !m) return end;
+  const index = y * 12 + (m - 1) - (TREND_MONTHS - 1);
+  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}-01`;
+};
+
 export const useHRReportQueries = ({
   start,
   end,
@@ -74,7 +84,7 @@ export const useHRReportQueries = ({
     queryKey: [
       "reports",
       "trend",
-      start,
+      trendWindowStart(end),
       end,
       selectedItalianTL,
       selectedAlbanianTL,
@@ -82,7 +92,12 @@ export const useHRReportQueries = ({
       selectedWorkspace,
     ],
     queryFn: () =>
-      reportService.getDetailed({ ...filterParams, report_type: "combined", group_by: "month" }),
+      reportService.getDetailed({
+        ...filterParams,
+        start_date: trendWindowStart(end),
+        report_type: "combined",
+        group_by: "month",
+      }),
     ...REPORT_QUERY_OPTIONS,
     enabled: false,
   });

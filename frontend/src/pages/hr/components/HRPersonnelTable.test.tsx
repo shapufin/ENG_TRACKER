@@ -83,4 +83,13 @@ describe("HRPersonnelTable", () => {
     render(<HRPersonnelTable users={[]} />);
     expect(screen.getByText("No users found.")).toBeInTheDocument();
   });
+
+  it("quick sort presets order the rows", () => {
+    render(<HRPersonnelTable users={users} />);
+    expect(names()).toEqual(["Alice Rossi", "Bob Hoxha"]);
+    fireEvent.click(screen.getByRole("button", { name: "Highest Overtime" }));
+    expect(names()).toEqual(["Bob Hoxha", "Alice Rossi"]);
+    fireEvent.click(screen.getByRole("button", { name: "A-Z" }));
+    expect(names()).toEqual(["Alice Rossi", "Bob Hoxha"]);
+  });
 });

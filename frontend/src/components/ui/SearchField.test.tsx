@@ -99,4 +99,42 @@ describe("SearchField", () => {
     fireEvent.keyDown(screen.getByRole("searchbox"), { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
   });
+
+  describe("slashFocus", () => {
+    it("focuses the field when / is pressed on the page", () => {
+      render(<SearchField value="" onChange={() => {}} aria-label="s" slashFocus />);
+      fireEvent.keyDown(document.body, { key: "/" });
+      expect(screen.getByRole("searchbox")).toHaveFocus();
+    });
+
+    it("does nothing without the opt-in", () => {
+      render(<SearchField value="" onChange={() => {}} aria-label="s" />);
+      fireEvent.keyDown(document.body, { key: "/" });
+      expect(screen.getByRole("searchbox")).not.toHaveFocus();
+    });
+
+    it("ignores / typed into another field", () => {
+      render(
+        <>
+          <input aria-label="other" />
+          <SearchField value="" onChange={() => {}} aria-label="s" slashFocus />
+        </>
+      );
+      const other = screen.getByLabelText("other");
+      other.focus();
+      fireEvent.keyDown(other, { key: "/" });
+      expect(other).toHaveFocus();
+    });
+
+    it("ignores / while a dialog is open", () => {
+      render(
+        <>
+          <div role="dialog" />
+          <SearchField value="" onChange={() => {}} aria-label="s" slashFocus />
+        </>
+      );
+      fireEvent.keyDown(document.body, { key: "/" });
+      expect(screen.getByRole("searchbox")).not.toHaveFocus();
+    });
+  });
 });
