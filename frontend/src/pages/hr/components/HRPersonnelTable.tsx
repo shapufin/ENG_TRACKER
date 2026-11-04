@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/DataTable";
+import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import {
   Dialog,
   DialogBody,
@@ -18,6 +19,21 @@ import type { DetailedUserReport } from "@/services/reportService";
 interface HRPersonnelTableProps {
   users: DetailedUserReport[];
 }
+
+type SortPreset = "name" | "overtime" | "standby" | "leave";
+
+const SORT_PRESETS: { value: SortPreset; label: string }[] = [
+  { value: "name", label: "A-Z" },
+  { value: "overtime", label: "Highest Overtime" },
+  { value: "standby", label: "Highest Standby" },
+  { value: "leave", label: "Most Leaves" },
+];
+
+const presetValue: Record<Exclude<SortPreset, "name">, (u: DetailedUserReport) => number> = {
+  overtime: (u) => u.overtime?.total_hours ?? 0,
+  standby: (u) => u.standby?.total_hours ?? 0,
+  leave: (u) => u.leave?.total_days ?? 0,
+};
 
 const Pair: React.FC<{ total: number; approved: number }> = ({ total, approved }) => (
   <span className="font-mono tabular-nums">
@@ -68,6 +84,18 @@ const HRPersonnelDetailPanel: React.FC<{ user: DetailedUserReport; onClose: () =
 
 export const HRPersonnelTable: React.FC<HRPersonnelTableProps> = ({ users }) => {
   const [selected, setSelected] = useState<DetailedUserReport | null>(null);
+  const [preset, setPreset] = useState<SortPreset>("name");
+
+  // A preset orders the rows we hand to the table; a header click still re-sorts on top of it.
+  const ordered = useMemo(
+    () =>
+      [...users].sort((a, b) =>
+        preset === "name"
+          ? a.full_name.localeCompare(b.full_name)
+          : presetValue[preset](b) - presetValue[preset](a)
+      ),
+    [users, preset]
+  );
 
   const columns = useMemo<AppColumnDef<DetailedUserReport>[]>(
     () => [
@@ -147,9 +175,15 @@ export const HRPersonnelTable: React.FC<HRPersonnelTableProps> = ({ users }) => 
       <CardHeader className="p-0">
         <CardTitle className="text-sm font-semibold">Identity Breakdown (Aggregated)</CardTitle>
       </CardHeader>
+      <FilterChipRow
+        label="Quick sort"
+        options={SORT_PRESETS}
+        selected={[preset]}
+        onToggle={setPreset}
+      />
       <DataTable
         columns={columns}
-        data={users}
+        data={ordered}
         getRowId={(u) => String(u.user_id)}
         searchColumn={["full_name", "username"]}
         searchPlaceholder="Search people..."

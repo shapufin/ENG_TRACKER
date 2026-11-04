@@ -23,6 +23,14 @@ describe("HRTeamLeaderBarList", () => {
     expect(screen.getByText("7.0h")).toBeInTheDocument();
   });
 
+  it("prints each leader's share of the total hours", () => {
+    render(<HRTeamLeaderBarList leaders={leaders} />);
+    // 279 / 340.5 = 82%, 54.5 / 340.5 = 16%, 7 / 340.5 = 2%
+    expect(screen.getByText("82%")).toBeInTheDocument();
+    expect(screen.getByText("16%")).toBeInTheDocument();
+    expect(screen.getByText("2%")).toBeInTheDocument();
+  });
+
   it("renders nothing extra for an empty list", () => {
     render(<HRTeamLeaderBarList leaders={[]} />);
     expect(screen.getByText("Hours by Team Leader")).toBeInTheDocument();

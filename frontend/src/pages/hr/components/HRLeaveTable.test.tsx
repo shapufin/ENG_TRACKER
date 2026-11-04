@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { HRLeaveTable } from "./HRLeaveTable";
 
 const leaves = [
@@ -16,6 +16,18 @@ const leaves = [
 ];
 
 describe("HRLeaveTable", () => {
+  beforeEach(() => {
+    // DataTable observes its scroll container; JSDOM has no ResizeObserver.
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      }
+    );
+  });
+
   it("renders empty state", () => {
     render(<HRLeaveTable leaves={[]} />);
     expect(screen.getByText("No leave requests found.")).toBeInTheDocument();
@@ -41,5 +53,21 @@ describe("HRLeaveTable", () => {
       <HRLeaveTable leaves={[{ ...leaves[0], user_full_name: undefined, user_name: undefined }]} />
     );
     expect(screen.getByText("Unknown")).toBeInTheDocument();
+  });
+
+  it("sorts by days when the Days header is clicked", () => {
+    render(
+      <HRLeaveTable
+        leaves={[
+          { ...leaves[0], id: 1, user_full_name: "Alice Smith", days_requested: 5 },
+          { ...leaves[0], id: 2, user_full_name: "Bob Hoxha", days_requested: 2 },
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /days/i }));
+    const first = () => within(screen.getAllByRole("row")[1]);
+    const before = first().queryByText(/Alice|Bob/)?.textContent;
+    fireEvent.click(screen.getByRole("button", { name: /days/i }));
+    expect(first().queryByText(/Alice|Bob/)?.textContent).not.toBe(before);
   });
 });

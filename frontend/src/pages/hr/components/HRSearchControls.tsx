@@ -16,6 +16,7 @@ export const HRSearchControls: React.FC<HRSearchControlsProps> = ({
       <SearchField
         placeholder="Search leave requests..."
         aria-label="Search leave requests"
+        slashFocus
         value={searchQuery}
         onChange={onSearchQueryChange}
       />

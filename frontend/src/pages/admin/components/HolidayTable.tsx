@@ -91,7 +91,13 @@ export const HolidayTable: React.FC<HolidayTableProps> = ({
   }
 
   return (
-    <GlassCard className="p-4">
+    <GlassCard className="space-y-3 p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-sm font-semibold">Holiday Catalog</h3>
+        <span className="text-muted-foreground text-xs tabular-nums">
+          {holidays.length} {holidays.length === 1 ? "holiday" : "holidays"}
+        </span>
+      </div>
       <DataTable
         columns={columns}
         data={holidays}

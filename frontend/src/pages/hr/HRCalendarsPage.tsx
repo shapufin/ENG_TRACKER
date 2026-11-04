@@ -37,11 +37,7 @@ export const HRCalendarsPage: React.FC = () => {
 
   return (
     <PageShell title="Company Holidays" subtitle="Manage global and workspace holidays.">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-muted-foreground text-xs font-semibold uppercase">Holiday Catalog</p>
-          <h3 className="text-lg font-semibold">Global & Workspace Holidays</h3>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-4">
         <div className="flex flex-wrap gap-2">
           {isPayrollActive && (
             <Button

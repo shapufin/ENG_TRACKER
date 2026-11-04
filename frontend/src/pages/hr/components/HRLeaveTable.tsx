@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable } from "@/components/ui/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { TABLE_ROW_HOVER_CLASS } from "@/components/ui/tableStyles";
+import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
-import { HRTableShell } from "./HRTableShell";
 
 interface LeaveItem {
   id: number;
@@ -20,37 +22,72 @@ interface HRLeaveTableProps {
   leaves: LeaveItem[];
 }
 
-export const HRLeaveTable: React.FC<HRLeaveTableProps> = ({ leaves }) => (
-  <HRTableShell
-    title="Leave Requests"
-    headers={[
-      { label: "Employee" },
-      { label: "Type" },
-      { label: "Period" },
-      { label: "Days", align: "right" },
-      { label: "Status", align: "center" },
-    ]}
-  >
-    {leaves.length > 0 ? (
-      leaves.map((v) => (
-        <tr key={v.id} className={TABLE_ROW_HOVER_CLASS}>
-          <td className="px-6 py-4 font-medium">{v.user_full_name || v.user_name || "Unknown"}</td>
-          <td className="px-6 py-4">{v.request_type_display || "Vacation"}</td>
-          <td className="px-6 py-4">
-            {formatDateDDMMYYYY(v.start_date)} - {formatDateDDMMYYYY(v.end_date)}
-          </td>
-          <td className="px-6 py-4 text-right font-mono">{v.days_requested}</td>
-          <td className="px-6 py-4 text-center">
-            <StatusBadge variant={v.status} label={v.status_display || v.status} />
-          </td>
-        </tr>
-      ))
-    ) : (
-      <tr>
-        <td colSpan={5} className="text-muted-foreground px-6 py-8 text-center">
-          No leave requests found.
-        </td>
-      </tr>
-    )}
-  </HRTableShell>
-);
+export const HRLeaveTable: React.FC<HRLeaveTableProps> = ({ leaves }) => {
+  const columns = useMemo<AppColumnDef<LeaveItem>[]>(
+    () => [
+      {
+        id: "employee",
+        header: "Employee",
+        accessorFn: (v) => v.user_full_name || v.user_name || "Unknown",
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {row.original.user_full_name || row.original.user_name || "Unknown"}
+          </span>
+        ),
+      },
+      {
+        id: "type",
+        header: "Type",
+        accessorFn: (v) => v.request_type_display || "Vacation",
+      },
+      {
+        id: "period",
+        header: "Period",
+        // ISO dates sort chronologically as strings.
+        accessorFn: (v) => v.start_date,
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap">
+            {formatDateDDMMYYYY(row.original.start_date)} -{" "}
+            {formatDateDDMMYYYY(row.original.end_date)}
+          </span>
+        ),
+      },
+      {
+        id: "days",
+        header: "Days",
+        accessorFn: (v) => v.days_requested,
+        cell: ({ row }) => (
+          <span className="font-mono whitespace-nowrap tabular-nums">
+            {row.original.days_requested}
+          </span>
+        ),
+      },
+      {
+        id: "status",
+        header: "Status",
+        accessorFn: (v) => v.status,
+        cell: ({ row }) => (
+          <StatusBadge
+            variant={row.original.status}
+            label={row.original.status_display || row.original.status}
+          />
+        ),
+      },
+    ],
+    []
+  );
+
+  return (
+    <GlassCard className="space-y-4 p-5">
+      <CardHeader className="p-0">
+        <CardTitle className="text-sm font-semibold">Leave Requests</CardTitle>
+      </CardHeader>
+      <DataTable
+        columns={columns}
+        data={leaves}
+        getRowId={(v) => String(v.id)}
+        emptyMessage="No leave requests found."
+      />
+    </GlassCard>
+  );
+};

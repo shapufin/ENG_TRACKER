@@ -93,4 +93,4 @@ Already at parity or better in the app: KPI cards with real numbers, merged Expo
 
 Deferred: `/hr/leave-requests`, payroll pages, HR dashboard (not in the mockup); light-theme pass; 280px pass; anything in `components/calendar`.
 Open questions for the owner: (1) should reports auto-load a default range (cost: 5 queries on visit) or keep manual Generate; (2) does the export backend support a team filter (H-2 is a backend check first); (3) does the report API support an employee-name or department filter (M-8).
-Next step: `/plan` (separate document), batches ordered H-2 first (data scope), then C-1/H-7/H-8, then M-2/M-4/M-5/M-7.
+Next step: done. See `docs/audits/2026-11-04-hr-mockup-parity-plan.md` (live re-verification, remaining gaps, and what shipped).
