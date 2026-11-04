@@ -33,6 +33,7 @@ describe("RestorePreviewTable", () => {
         onToggleApprove={vi.fn()}
         deleteMissingModels={new Set()}
         onToggleDeleteMissing={vi.fn()}
+        onToggleAll={vi.fn()}
       />
     );
     expect(screen.getByText(/no rows to restore/i)).toBeInTheDocument();
@@ -47,6 +48,7 @@ describe("RestorePreviewTable", () => {
         onToggleApprove={onToggleApprove}
         deleteMissingModels={new Set()}
         onToggleDeleteMissing={vi.fn()}
+        onToggleAll={vi.fn()}
       />
     );
     fireEvent.click(screen.getByRole("checkbox", { name: "Restore auth.group" }));
@@ -61,6 +63,7 @@ describe("RestorePreviewTable", () => {
         onToggleApprove={vi.fn()}
         deleteMissingModels={new Set()}
         onToggleDeleteMissing={vi.fn()}
+        onToggleAll={vi.fn()}
       />
     );
     const forcedCheckbox = screen.getByRole("checkbox", { name: "Restore auth.permission" });
@@ -77,6 +80,7 @@ describe("RestorePreviewTable", () => {
         onToggleApprove={vi.fn()}
         deleteMissingModels={new Set()}
         onToggleDeleteMissing={vi.fn()}
+        onToggleAll={vi.fn()}
       />
     );
     expect(
@@ -95,6 +99,7 @@ describe("RestorePreviewTable", () => {
         onToggleApprove={vi.fn()}
         deleteMissingModels={new Set()}
         onToggleDeleteMissing={onToggleDeleteMissing}
+        onToggleAll={vi.fn()}
       />
     );
     const deleteMissingCheckbox = screen.getByRole("checkbox", {
@@ -113,8 +118,42 @@ describe("RestorePreviewTable", () => {
         onToggleApprove={vi.fn()}
         deleteMissingModels={new Set()}
         onToggleDeleteMissing={vi.fn()}
+        onToggleAll={vi.fn()}
       />
     );
     expect(screen.getByText("n/a")).toBeInTheDocument();
+  });
+
+  it("selects every model from the header checkbox and shows a partial state", () => {
+    const onToggleAll = vi.fn();
+    const { rerender } = render(
+      <RestorePreviewTable
+        modelGroups={modelGroups}
+        approvedModels={new Set(["auth.permission"])}
+        onToggleApprove={vi.fn()}
+        deleteMissingModels={new Set()}
+        onToggleDeleteMissing={vi.fn()}
+        onToggleAll={onToggleAll}
+      />
+    );
+    const all = screen.getByRole("checkbox", { name: "Restore all models" });
+    expect(all).toHaveAttribute("data-state", "indeterminate");
+    fireEvent.click(all);
+    expect(onToggleAll).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <RestorePreviewTable
+        modelGroups={modelGroups}
+        approvedModels={new Set(["auth.group", "auth.permission"])}
+        onToggleApprove={vi.fn()}
+        deleteMissingModels={new Set()}
+        onToggleDeleteMissing={vi.fn()}
+        onToggleAll={onToggleAll}
+      />
+    );
+    expect(screen.getByRole("checkbox", { name: "Restore all models" })).toHaveAttribute(
+      "data-state",
+      "checked"
+    );
   });
 });

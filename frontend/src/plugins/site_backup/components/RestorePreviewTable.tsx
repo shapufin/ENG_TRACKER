@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TriStateCheckbox } from "@/components/ui/TriStateCheckbox";
 import { Badge } from "@/components/ui/badge";
 import {
   TABLE_BODY_CELL_CLASS,
@@ -18,6 +19,8 @@ interface RestorePreviewTableProps {
   onToggleApprove: (model: string) => void;
   deleteMissingModels: Set<string>;
   onToggleDeleteMissing: (model: string) => void;
+  /** Approve every model, or clear the approvals when all are already approved. */
+  onToggleAll: () => void;
 }
 
 /** Every model transitively forced in by an approved model's FK dependents. */
@@ -40,8 +43,11 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
   onToggleApprove,
   deleteMissingModels,
   onToggleDeleteMissing,
+  onToggleAll,
 }) => {
   const forcedModels = useForcedModels(modelGroups, approvedModels);
+
+  const allApproved = modelGroups.every((group) => approvedModels.has(group.model));
 
   if (modelGroups.length === 0) {
     return (
@@ -57,7 +63,11 @@ export const RestorePreviewTable: React.FC<RestorePreviewTableProps> = ({
         <thead>
           <tr className={TABLE_HEAD_ROW_CLASS}>
             <th className={TABLE_HEAD_CELL_CHECKBOX_CLASS}>
-              <span className="sr-only">Restore</span>
+              <TriStateCheckbox
+                checked={allApproved ? true : approvedModels.size > 0 ? "indeterminate" : false}
+                onCheckedChange={onToggleAll}
+                aria-label="Restore all models"
+              />
             </th>
             <th className={TABLE_HEAD_CELL_CLASS}>Model</th>
             <th className={cn(TABLE_HEAD_CELL_CLASS, "text-right")}>New</th>

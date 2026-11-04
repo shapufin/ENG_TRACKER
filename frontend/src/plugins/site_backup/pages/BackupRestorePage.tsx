@@ -28,6 +28,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
+import { InfoCallout } from "@/components/ui/InfoCallout";
 import { LoadingStateWrapper } from "@/components/ui/LoadingStateWrapper";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -298,6 +299,17 @@ const RestoreTab: React.FC = () => {
     });
   };
 
+  const toggleAll = () => {
+    if (!preview) return;
+    const everyModel = preview.model_groups.map((group) => group.model);
+    if (everyModel.every((model) => approvedModels.has(model))) {
+      setApprovedModels(new Set());
+      setDeleteMissingModels(new Set());
+    } else {
+      setApprovedModels(new Set(everyModel));
+    }
+  };
+
   const canRestore = approvedModels.size > 0 && understood;
 
   return (
@@ -414,6 +426,7 @@ const RestoreTab: React.FC = () => {
             onToggleApprove={toggleApprove}
             deleteMissingModels={deleteMissingModels}
             onToggleDeleteMissing={toggleDeleteMissing}
+            onToggleAll={toggleAll}
           />
 
           <div className="border-line-subtle flex flex-wrap items-center justify-between gap-3 border-t pt-4">
@@ -516,6 +529,11 @@ export const BackupRestorePage: React.FC = () => {
       title="Backup & Restore"
       subtitle="Manual full-site backups and a selective, preview-first restore."
     >
+      <InfoCallout
+        tone="warning"
+        icon={<ShieldAlert className="h-4 w-4" />}
+        label="Application archives hold database rows and uploaded media. They leave out two-factor credentials, active sessions and year-close snapshots, so they are not a full server clone. For a server move, restore the database dump as described in docs/deploy/server-migration-checklist.md."
+      />
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="bg-muted">
           {tabs.map((t) => (

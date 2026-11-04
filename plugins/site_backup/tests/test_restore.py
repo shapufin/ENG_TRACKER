@@ -370,3 +370,42 @@ class ExtractMediaGuardTests(TestCase):
                 self.assertEqual(restore_service._extract_media(archive), 1)
             with open(os.path.join(tmp, 'sub', 'a.txt'), 'rb') as f:
                 self.assertEqual(f.read(), b'hello')
+
+
+class RestoreSequenceResetTests(TestCase):
+    """Raw saves with explicit PKs do not advance PostgreSQL sequences (loaddata resets them)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='admin', password='password', is_superuser=True)
+        Group.objects.create(name='g1')
+        media_root_cm = tempfile.TemporaryDirectory()
+        self.addCleanup(media_root_cm.cleanup)
+        override = override_settings(MEDIA_ROOT=media_root_cm.name)
+        override.enable()
+        self.addCleanup(override.disable)
+        self.record = backup_service.create_backup(self.user, include_media=False)
+
+    def test_commit_resets_sequences_for_every_restored_model(self):
+        from django.db import connection
+
+        with patch.object(connection.ops, 'sequence_reset_sql', return_value=[]) as reset:
+            with self.record.file.open('rb') as fh:
+                restore_service.commit(fh, approved_models=['auth.group'], confirmed=True, user=self.user)
+
+        reset.assert_called_once()
+        restored = reset.call_args.args[1]
+        self.assertIn(Group, restored)
+
+    def test_generated_sequence_sql_is_executed(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        marker = 'SELECT 424242'
+        with patch.object(connection.ops, 'sequence_reset_sql', return_value=[marker]):
+            with CaptureQueriesContext(connection) as queries:
+                with self.record.file.open('rb') as fh:
+                    restore_service.commit(
+                        fh, approved_models=['auth.group'], confirmed=True, user=self.user
+                    )
+
+        self.assertIn(marker, [q['sql'] for q in queries.captured_queries])

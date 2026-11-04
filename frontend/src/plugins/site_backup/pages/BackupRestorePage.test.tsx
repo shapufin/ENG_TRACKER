@@ -86,6 +86,14 @@ describe("BackupRestorePage", () => {
     expect(screen.getByText("Access Denied")).toBeInTheDocument();
   });
 
+  it("warns that an application backup is not a full server clone", () => {
+    usePermissions.mockReturnValue({ isSuperuser: true });
+    listBackups.mockResolvedValue([]);
+    renderPage();
+    expect(screen.getByText(/two-factor credentials/i)).toBeInTheDocument();
+    expect(screen.getByText(/server-migration-checklist/i)).toBeInTheDocument();
+  });
+
   it("lists backups for superusers", async () => {
     usePermissions.mockReturnValue({ isSuperuser: true });
     listBackups.mockResolvedValue([
