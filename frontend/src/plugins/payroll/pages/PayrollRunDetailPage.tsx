@@ -20,17 +20,8 @@ import { PayrollRunLinesTable } from "../components/PayrollRunLinesTable";
 import { PayrollRunActions } from "../components/PayrollRunActions";
 import type { LineManagerClosure } from "../types";
 
-const formatUserOwnership = (user: {
-  username: string;
-  line_manager?: string | null;
-  manager?: string | null;
-}) => {
-  const owners = [
-    user.line_manager && `Line Manager: @${user.line_manager}`,
-    user.manager && `Manager: @${user.manager}`,
-  ].filter(Boolean);
-  return owners.length ? `${user.username} (${owners.join(", ")})` : user.username;
-};
+const lineManagerName = (lm: LineManagerClosure) =>
+  lm.id === null && !lm.username ? "No Line Manager" : lm.full_name;
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-primary/10 text-foreground",
@@ -111,6 +102,7 @@ export const PayrollRunDetailPage: React.FC = () => {
     }
     return Array.from(groups.values());
   }, [closureStatus]);
+  const pendingLineManagers = lineManagers.filter((lm) => !lm.all_closed);
 
   const generateMutation = useMutation({
     mutationFn: () => payrollService.generateRun(runId),
@@ -269,50 +261,38 @@ export const PayrollRunDetailPage: React.FC = () => {
                 </p>
               )}
 
-              {lineManagers.length > 0 && (
+              {pendingLineManagers.length > 0 && (
                 <div className="mt-2 space-y-2">
                   <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                    Line Manager Team Closures
+                    Line Managers yet to finalize
                   </p>
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                    {lineManagers.map((lm) => (
-                      <div
+                  <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {pendingLineManagers.map((lm) => (
+                      <details
                         key={lm.username || lm.full_name}
-                        className={`flex flex-col justify-between rounded-lg border p-3 text-xs transition-colors ${
-                          lm.all_closed
-                            ? "border-success/30 bg-success/5"
-                            : "border-warning/30 bg-warning/5"
-                        }`}
+                        className="border-warning/30 bg-warning/5 rounded-lg border text-xs"
                       >
-                        <div className="flex items-center justify-between gap-2">
+                        <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2">
                           <span
                             className="text-foreground truncate font-semibold"
-                            title={lm.full_name}
+                            title={lineManagerName(lm)}
                           >
-                            {lm.full_name}
+                            {lineManagerName(lm)}
                           </span>
                           <Badge
                             variant="outline"
-                            className={
-                              lm.all_closed
-                                ? "border-success/40 bg-success/15 text-foreground text-xs"
-                                : "border-warning/40 bg-warning/15 text-foreground text-xs"
-                            }
+                            className="border-warning/40 bg-warning/15 text-foreground text-xs"
                           >
-                            {lm.all_closed
-                              ? "Finalized"
-                              : `${lm.closed_members}/${lm.total_members} closed`}
+                            {lm.closed_members}/{lm.total_members} closed
                           </Badge>
-                        </div>
-                        {!lm.all_closed && lm.unclosed_users.length > 0 && (
-                          <div className="border-border/50 text-muted-foreground mt-2 border-t pt-2">
-                            <span className="text-foreground text-xs font-semibold">Pending: </span>
-                            <span className="text-xs">
-                              {lm.unclosed_users.map(formatUserOwnership).join(", ")}
-                            </span>
-                          </div>
+                        </summary>
+                        {lm.unclosed_users.length > 0 && (
+                          <p className="border-border/50 text-muted-foreground border-t px-3 py-2 text-xs">
+                            <span className="text-foreground font-semibold">Pending: </span>
+                            {lm.unclosed_users.map((u) => u.username).join(", ")}
+                          </p>
                         )}
-                      </div>
+                      </details>
                     ))}
                   </div>
                 </div>

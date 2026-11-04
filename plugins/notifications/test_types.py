@@ -62,7 +62,9 @@ class RegistryConsistencyTest(TestCase):
         core = {et for et, _label in NotificationPreference.EVENT_TYPES}
         for event_type, type_cls in get_all_types().items():
             if event_type not in core:
-                self.assertIn(type_cls.category, ('own', 'team', 'oversight'), event_type)
+                self.assertIn(
+                    type_cls.category, ('own', 'team', 'oversight', 'hr'), event_type
+                )
                 continue
             if type_cls.category == 'own':
                 self.assertIn(

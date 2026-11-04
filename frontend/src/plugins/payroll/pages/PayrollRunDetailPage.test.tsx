@@ -278,9 +278,8 @@ describe("PayrollRunDetailPage", () => {
       </MemoryRouter>,
       { wrapper }
     );
-    expect(
-      await screen.findByText(/late\.user \(Line Manager: @artur, Manager: @marco\)/)
-    ).toBeInTheDocument();
+    expect(await screen.findByText("@artur")).toBeInTheDocument();
+    expect(screen.getByText("late.user", { exact: false })).toBeInTheDocument();
     expect(screen.queryByText(/Month cutoff reached/)).not.toBeInTheDocument();
   });
 
@@ -320,13 +319,43 @@ describe("PayrollRunDetailPage", () => {
       </MemoryRouter>,
       { wrapper }
     );
-    expect(await screen.findByText("Line Manager Team Closures")).toBeInTheDocument();
+    expect(await screen.findByText("Line Managers yet to finalize")).toBeInTheDocument();
     expect(screen.getByText("Line Managers finalized:")).toBeInTheDocument();
     expect(screen.getByText("1/2")).toBeInTheDocument();
     expect(screen.getByText("Artur TL")).toBeInTheDocument();
     expect(screen.getByText("1/2 closed")).toBeInTheDocument();
-    expect(screen.getByText("Marco TL")).toBeInTheDocument();
-    expect(screen.getByText("Finalized")).toBeInTheDocument();
+    // A finalized Line Manager is not listed, and pending users are names only.
+    expect(screen.queryByText("Marco TL")).not.toBeInTheDocument();
+    expect(screen.queryByText("Finalized")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Line Manager: @/)).not.toBeInTheDocument();
+  });
+
+  it("labels users without a Line Manager", async () => {
+    vi.mocked(payrollService.payrollService.getPeriodClosureStatus).mockResolvedValue({
+      ...mockClosureStatus,
+      all_closed: false,
+      closed_users: 2,
+      line_managers: [
+        {
+          id: null,
+          username: "unassigned",
+          full_name: "Unassigned",
+          total_members: 1,
+          closed_members: 0,
+          all_closed: false,
+          unclosed_users: [lateUser],
+        },
+      ],
+    });
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    expect(await screen.findByText("Unassigned")).toBeInTheDocument();
   });
 
   it("keeps finalization enabled once the month cutoff passed", async () => {
