@@ -38,13 +38,26 @@ class PreferenceVisibilityTests(TestCase):
             assign_role(user, code)
         return user
 
-    def test_hr_only_user_sees_own_types_only(self):
+    def test_hr_only_user_sees_hr_types_only(self):
+        # Pure HR has no overtime/standby/leave of their own: only the
+        # month-closure group applies.
         hr = self._user('hr_only', roles=['hr'])
         keys = self._keys(hr)
-        self.assertTrue(set(OWN_EVENT_TYPES) <= keys)
-        self.assertFalse(keys & {'team_action_required', 'team_leave_deleted'})
+        self.assertEqual(keys, _category_keys('hr'))
+        self.assertTrue({'hr_period_scope_closed', 'hr_period_ready'} <= keys)
+        self.assertFalse(keys & set(OWN_EVENT_TYPES))
         self.assertFalse(keys & _category_keys('team'))
         self.assertFalse(keys & _category_keys('oversight'))
+
+    def test_hr_who_is_also_staff_keeps_own_types_and_gets_hr_types(self):
+        user = self._user('staff_hr', roles=['hr'], is_staff=True)
+        keys = self._keys(user)
+        self.assertTrue(set(OWN_EVENT_TYPES) <= keys)
+        self.assertTrue(_category_keys('hr') <= keys)
+
+    def test_non_hr_user_never_sees_hr_types(self):
+        keys = self._keys(self._user('plain'))
+        self.assertFalse(keys & _category_keys('hr'))
 
     def test_team_leader_and_hr_does_not_see_hbpr_groups(self):
         user = self._user('tl_hr', roles=['albanian_tl', 'hr'])

@@ -11,7 +11,12 @@ from .models import (
     NotificationPreference,
     PushSubscription,
 )
-from core.mixins.permissions import PluginEnabledMixin, is_hbpr_only
+from core.mixins.permissions import (
+    PluginEnabledMixin,
+    has_hr_role,
+    is_hbpr_only,
+    is_hr_only,
+)
 from .types.base import REGISTRY, get_all_types
 from .vapid_utils import get_public_key
 
@@ -114,6 +119,12 @@ class NotificationViewSet(PluginEnabledMixin, viewsets.ModelViewSet):
             event_types |= _types_in_category('team')
         if is_oversight_recipient:
             event_types |= _types_in_category('oversight')
+        if has_hr_role(user):
+            event_types |= _types_in_category('hr')
+        if is_hr_only(user):
+            # Pure HR has no overtime/standby/leave of their own either; the
+            # month-closure group is what they act on.
+            event_types = _types_in_category('hr')
         if is_hbpr_only(user):
             # An HBPR-only user has no leave/overtime/standby of their own
             # (those surfaces are denied), so the employee categories are
