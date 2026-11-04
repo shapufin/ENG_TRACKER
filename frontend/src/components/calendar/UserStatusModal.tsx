@@ -119,7 +119,7 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
               >
                 Leave History
                 {leaveHistory.length > 0 && (
-                  <span className="bg-muted text-muted-foreground py-0.2 text-micro ml-1.5 rounded-full px-1.5 font-mono">
+                  <span className="bg-muted text-muted-foreground py-0.2 ml-1.5 rounded-full px-1.5 font-mono text-xs">
                     {leaveHistory.length}
                   </span>
                 )}
@@ -302,17 +302,17 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                                   {entry.type === "sick" ? "Sick leave" : "Vacation"}
                                 </span>
                                 {entry.days !== null && (
-                                  <span className="text-muted-foreground text-micro-lg font-mono">
+                                  <span className="text-muted-foreground font-mono text-xs">
                                     · {formatCompactDays(entry.days)} d
                                   </span>
                                 )}
                                 {entry.requests > 1 && (
-                                  <span className="text-muted-foreground text-micro-lg font-mono">
+                                  <span className="text-muted-foreground font-mono text-xs">
                                     · {entry.requests} requests
                                   </span>
                                 )}
                               </div>
-                              <p className="text-muted-foreground text-micro-lg mt-1 flex items-center gap-1.5 font-mono">
+                              <p className="text-muted-foreground mt-1 flex items-center gap-1.5 font-mono text-xs">
                                 <CalendarDays className="h-3 w-3 shrink-0" aria-hidden="true" />
                                 {formatLeaveRange(entry.start, entry.end)}
                               </p>
@@ -322,10 +322,10 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                                 </p>
                               )}
                             </div>
-                            {/* Template literal, not cn(): tailwind-merge treats both `text-micro`
+                            {/* Template literal, not cn(): tailwind-merge treats both `text-xs`
                                 and the tone's `text-tone-*-text` as text colours and drops the size. */}
                             <span
-                              className={`text-micro shrink-0 rounded-full border px-2 py-0.5 font-mono font-semibold uppercase ${toneSurfaceClass[statusTone]}`}
+                              className={`shrink-0 rounded-full border px-2 py-0.5 font-mono text-xs font-semibold uppercase ${toneSurfaceClass[statusTone]}`}
                             >
                               {entry.status}
                             </span>

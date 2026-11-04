@@ -295,8 +295,8 @@ export const PayrollRunDetailPage: React.FC = () => {
                             variant="outline"
                             className={
                               lm.all_closed
-                                ? "border-success/40 bg-success/15 text-foreground text-[11px]"
-                                : "border-warning/40 bg-warning/15 text-foreground text-[11px]"
+                                ? "border-success/40 bg-success/15 text-foreground text-xs"
+                                : "border-warning/40 bg-warning/15 text-foreground text-xs"
                             }
                           >
                             {lm.all_closed
@@ -306,10 +306,8 @@ export const PayrollRunDetailPage: React.FC = () => {
                         </div>
                         {!lm.all_closed && lm.unclosed_users.length > 0 && (
                           <div className="border-border/50 text-muted-foreground mt-2 border-t pt-2">
-                            <span className="text-foreground text-[11px] font-semibold">
-                              Pending:{" "}
-                            </span>
-                            <span className="text-[11px]">
+                            <span className="text-foreground text-xs font-semibold">Pending: </span>
+                            <span className="text-xs">
                               {lm.unclosed_users.map(formatUserOwnership).join(", ")}
                             </span>
                           </div>

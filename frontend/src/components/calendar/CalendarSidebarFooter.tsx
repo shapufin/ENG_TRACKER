@@ -26,7 +26,7 @@ export const CalendarSidebarFooter: React.FC<CalendarSidebarFooterProps> = ({
           type="button"
           variant="ghost"
           size="sm"
-          className="text-muted-foreground h-6.5 w-full text-[11px]"
+          className="text-muted-foreground h-6.5 w-full text-xs"
           onClick={onToggleExpanded}
         >
           Show {hiddenCount} more
@@ -38,7 +38,7 @@ export const CalendarSidebarFooter: React.FC<CalendarSidebarFooterProps> = ({
           type="button"
           variant="ghost"
           size="sm"
-          className="text-muted-foreground h-6.5 w-full text-[11px]"
+          className="text-muted-foreground h-6.5 w-full text-xs"
           onClick={onToggleExpanded}
         >
           Show less

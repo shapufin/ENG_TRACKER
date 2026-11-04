@@ -51,15 +51,15 @@ const UserRow: React.FC<{
           name={name}
           email={user.email}
           colorSeed={user.id}
-          className="h-6 w-6 shrink-0 rounded-md text-[10px]"
+          className="h-6 w-6 shrink-0 rounded-md text-xs"
         />
         <div className="min-w-0 flex-1">
-          <div className="text-foreground truncate text-[11px] font-bold" title={name}>
+          <div className="text-foreground truncate text-xs font-bold" title={name}>
             {name}
           </div>
           {team && (
             <div
-              className="text-muted-foreground truncate font-mono text-[9px] tracking-wider uppercase"
+              className="text-muted-foreground truncate font-mono text-xs tracking-wider uppercase"
               title={team}
             >
               {team}
@@ -71,7 +71,7 @@ const UserRow: React.FC<{
       <div className="flex shrink-0 items-center gap-1">
         {hasRemaining && (
           <span
-            className="text-tone-success-text font-mono text-[10px] font-semibold"
+            className="text-tone-success-text font-mono text-xs font-semibold"
             title={`${remaining} days remaining`}
           >
             {remaining}d remaining
@@ -105,13 +105,13 @@ export const CalendarSidebarUserList: React.FC<CalendarSidebarUserListProps> = (
 }) => {
   const heading = (
     <div className="border-border/60 flex shrink-0 items-center justify-between gap-1.5 border-b px-2.5 py-1">
-      <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
+      <span className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
         Staff ({staffCount})
       </span>
       <button
         type="button"
         onClick={onShowAll}
-        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/60 rounded px-1 py-0.5 text-[10px] font-semibold transition focus-visible:ring-1 focus-visible:outline-hidden"
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/60 rounded px-1 py-0.5 text-xs font-semibold transition focus-visible:ring-1 focus-visible:outline-hidden"
       >
         All members
       </button>
@@ -128,12 +128,12 @@ export const CalendarSidebarUserList: React.FC<CalendarSidebarUserListProps> = (
                 <div className="flex items-center gap-1.5 px-2 pt-1 pb-0.5">
                   <span className="bg-primary block h-1.5 w-1.5 rounded-full" aria-hidden="true" />
                   <span
-                    className="text-muted-foreground truncate text-[10px] font-bold tracking-wider uppercase"
+                    className="text-muted-foreground truncate text-xs font-bold tracking-wider uppercase"
                     title={group.workspaceName}
                   >
                     {group.workspaceName}
                   </span>
-                  <span className="text-muted-foreground ml-auto font-mono text-[10px] tabular-nums">
+                  <span className="text-muted-foreground ml-auto font-mono text-xs tabular-nums">
                     {group.users.length}
                   </span>
                 </div>

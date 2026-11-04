@@ -45,7 +45,7 @@ export const CalendarSidebarLayers: React.FC<CalendarSidebarLayersProps> = ({
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
         aria-controls="calendar-sidebar-layers"
-        className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between gap-1.5 rounded-md px-1 py-1 text-[10px] font-bold tracking-wider uppercase transition"
+        className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between gap-1.5 rounded-md px-1 py-1 text-xs font-bold tracking-wider uppercase transition"
       >
         <span className="flex min-w-0 items-center gap-1.5">
           <Layers className="text-primary h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -92,11 +92,11 @@ export const CalendarSidebarLayers: React.FC<CalendarSidebarLayersProps> = ({
                 )}
                 aria-hidden="true"
               />
-              <span className="text-foreground min-w-0 flex-1 truncate text-[11px] font-medium">
+              <span className="text-foreground min-w-0 flex-1 truncate text-xs font-medium">
                 {layer.name}
               </span>
               {layer.count !== undefined && (
-                <span className="text-muted-foreground shrink-0 font-mono text-[10px]">
+                <span className="text-muted-foreground shrink-0 font-mono text-xs">
                   {layer.count}p
                 </span>
               )}

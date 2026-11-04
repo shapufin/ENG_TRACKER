@@ -155,7 +155,7 @@ class DownloadTests(ExportApiTestCase):
         response = self._download(url)
         self.assertEqual(response.status_code, 200)
         body = b''.join(response.streaming_content)
-        response.close()
+        self._close(response)
         with zipfile.ZipFile(io.BytesIO(body)) as archive:
             self.assertEqual(archive.read('ACME - Acme/a.pdf'), b'acme-data')
         self.assertIn('attachment', response['Content-Disposition'])
@@ -165,7 +165,7 @@ class DownloadTests(ExportApiTestCase):
         export = self._ready_export()
         url = self._link(self.member, export).data['url']
         first = self._download(url)
-        first.close()
+        self._close(first)
         self.assertEqual(first.status_code, 200)
         self.assertEqual(self._download(url).status_code, 403)
 
@@ -175,7 +175,7 @@ class DownloadTests(ExportApiTestCase):
         new = self._link(self.member, export).data['url']
         self.assertEqual(self._download(old).status_code, 403)
         response = self._download(new)
-        response.close()
+        self._close(response)
         self.assertEqual(response.status_code, 200)
 
     def test_an_expired_or_forged_token_is_refused(self):
@@ -203,7 +203,7 @@ class DownloadTests(ExportApiTestCase):
         url = self._link(self.member, export).data['url']
         with mock.patch('plugins.onboarding.export_viewsets.log_action') as audit:
             response = self._download(url)
-            response.close()
+            self._close(response)
         audit.assert_called_once()
         self.assertEqual(audit.call_args.kwargs['action'], 'export')
         self.assertEqual(audit.call_args.kwargs['user'], self.member)

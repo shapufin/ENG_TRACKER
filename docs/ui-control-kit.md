@@ -76,7 +76,8 @@ Keep it short; each entry names a rule a token cannot express. Anything else is 
   `EventActionButtons`, `CalendarDayCell`, `EventCard`, `SkillsDenseMatrix`, `SkillsHeatmapGrid`,
   `SkillsMemberColumn` (DARK-OVERRIDE).
 - MICRO-TEXT, fixed boxes where 12px does not fit: `NotificationBell` (16px count circle), `ProgressRing`
-  (ring centre), `ProficiencyBadge` `size="sm"` (pinned by its test).
+  (ring centre), `ProficiencyBadge` `size="sm"` (pinned by its test), and the month grid's fixed cells
+  (`CalendarDayCell`, `EventCard`, `MonthGrid`). The calendar sidebar, snapshot card and status modal use `text-xs`.
 - Control audit bespoke inputs: `CommandPalette`, `HeaderSearch` (own chrome) and file Dropzones may use a raw
   `<input>`; `HeaderSearch` is the one remaining `type="search"` outside `SearchField`.
 
