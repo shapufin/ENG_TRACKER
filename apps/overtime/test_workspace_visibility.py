@@ -3,8 +3,9 @@
 Behavior pinned here (no code change was needed):
 - a workspace the viewer cannot access (private, foreign team) exposes nothing,
   even when its id is passed explicitly;
-- a *public* workspace exposes its members' rows by design (team-calendar
-  transparency); that is the recorded D2 default, so this test documents it.
+- a *public* workspace no longer exposes its members' overtime: the 2026-10-20
+  team-confidentiality ruling supersedes the earlier D2 default (overtime is pay
+  data, not calendar data). Peer standby/leave stay visible on the calendar only.
 """
 from datetime import date, timedelta
 from uuid import uuid4
@@ -68,7 +69,7 @@ class WorkspaceIdsVisibilityTests(APITestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertNotIn(self.leave.id, self._ids(resp))
 
-    def test_public_workspace_exposes_member_rows_by_design(self):
+    def test_public_workspace_does_not_expose_member_overtime(self):
         resp = self.client.get('/api/overtime/logs/', {'workspace_ids': str(self.public_ws.id)})
         self.assertEqual(resp.status_code, 200)
-        self.assertIn(self.ot.id, self._ids(resp))
+        self.assertNotIn(self.ot.id, self._ids(resp))

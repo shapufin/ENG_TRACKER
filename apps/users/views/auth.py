@@ -6,6 +6,7 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_seriali
 from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
@@ -462,6 +463,11 @@ class CustomTokenRefreshView(TokenRefreshView):
     """
     serializer_class = CustomTokenRefreshSerializer
     throttle_scope = 'auth'
+    # Refresh needs a valid signed refresh token, so guessing is not the threat;
+    # the shared ``anon`` 100/hour bucket would lock a whole office behind one
+    # NAT/proxy IP out after ~50 active users (30-minute access tokens).
+    # Login keeps the default classes (anon + auth) as its brute-force cap.
+    throttle_classes = [ScopedRateThrottle]
 
     def post(self, request, *args, **kwargs):
         data = request.data.copy()

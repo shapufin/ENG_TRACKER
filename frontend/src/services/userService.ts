@@ -299,20 +299,6 @@ export const userService = {
     return data;
   },
 
-  async getItalianTeamMembers(italianTlId: number): Promise<UserProfile[]> {
-    const { data } = await api.get<UserProfile[]>("/users/users/italian_team_members/", {
-      params: { italian_tl_id: italianTlId },
-    });
-    return data;
-  },
-
-  async getAlbanianTeamMembers(albanianTlId: number): Promise<UserProfile[]> {
-    const { data } = await api.get<UserProfile[]>("/users/users/albanian_team_members/", {
-      params: { albanian_tl_id: albanianTlId },
-    });
-    return data;
-  },
-
   async resetPassword(userId: number, newPassword: string): Promise<{ detail: string }> {
     const { data } = await api.post(`/users/users/${userId}/reset_password/`, {
       new_password: newPassword,

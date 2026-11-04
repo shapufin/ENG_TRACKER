@@ -1254,7 +1254,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])
     def italian_team_members(self, request):
         """
-        Get team members for a specific Manager.
+        Get team members for a specific Manager (self, HR or staff only).
         Query param: italian_tl_id (required)
         """
         italian_tl_id = request.query_params.get('italian_tl_id')
@@ -1264,6 +1264,23 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 {'error': 'italian_tl_id query parameter is required.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        try:
+            italian_tl_id = int(italian_tl_id)
+        except (TypeError, ValueError):
+            return Response(
+                {'error': 'italian_tl_id must be an integer.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # A team roster is TL management data: only the Manager themself, HR, staff
+        # or a superuser may read it (team confidentiality ruling, 2026-10-20).
+        if not (
+            request.user.id == italian_tl_id
+            or request.user.is_staff
+            or request.user.is_superuser
+            or has_hr_role(request.user)
+        ):
+            raise PermissionDenied('You can only view your own team.')
 
         members = (
             with_profile_list_loading(UserProfile.objects.filter(italian_tl_id=italian_tl_id))
