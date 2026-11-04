@@ -1,10 +1,9 @@
-import React, { useState } from "react";
-import { format, parseISO } from "date-fns";
+import React, { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plane, Info, X } from "lucide-react";
+import { CalendarDays, HeartPulse, Plane, Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toneTextClass } from "@/components/ui/tone";
+import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import type { LeaveBalance, User as UserType, PublicHoliday } from "@/types";
 import type { CalendarEvent } from "./types";
 import { UserAvatar } from "./UserAvatar";
@@ -12,7 +11,7 @@ import { StatCard } from "./StatCard";
 import { CarryOverCard } from "./CarryOverCard";
 import { UpcomingHolidays } from "./UpcomingHolidays";
 import { useUserStatusData } from "./hooks/useUserStatusData";
-import { formatCompactDays } from "./hooks/userStatusHelpers";
+import { formatCompactDays, formatLeaveRange, groupLeaveHistory } from "./hooks/userStatusHelpers";
 
 interface UserStatusModalProps {
   open: boolean;
@@ -50,6 +49,7 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
 
   const primaryTeam = user.teams?.[0]?.name;
   const userName = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim();
+  const leaveHistory = useMemo(() => groupLeaveHistory(userEvents), [userEvents]);
   const remainingPct = Math.round(remainingProgress);
   // Normalized shares so the stacked bar always sums to exactly 100 even for
   // inconsistent snapshots (remaining + used + pending != total).
@@ -118,9 +118,9 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                 )}
               >
                 Leave History
-                {userEvents && userEvents.length > 0 && (
-                  <span className="bg-muted text-muted-foreground py-0.2 ml-1.5 rounded-full px-1.5 font-mono text-[10px]">
-                    {userEvents.length}
+                {leaveHistory.length > 0 && (
+                  <span className="bg-muted text-muted-foreground py-0.2 text-micro ml-1.5 rounded-full px-1.5 font-mono">
+                    {leaveHistory.length}
                   </span>
                 )}
                 {activeTab === "history" && (
@@ -269,72 +269,70 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
 
               {activeTab === "history" && (
                 <div className="mt-3">
-                  {!userEvents || userEvents.length === 0 ? (
+                  {leaveHistory.length === 0 ? (
                     <div className="border-border bg-muted/40 text-muted-foreground rounded-2xl border border-dashed p-8 text-center text-xs">
-                      No previous time-off logged for this period.
+                      No vacation or sick leave logged for this period.
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      {userEvents.map((evt) => {
-                        const start = parseISO(evt.start);
-                        const end = parseISO(evt.end);
-                        const dateFormat =
-                          start.getFullYear() === end.getFullYear() ? "MMM d" : "PP";
-                        const dateRange =
-                          evt.start === evt.end
-                            ? format(start, dateFormat)
-                            : `${format(start, dateFormat)} → ${format(end, dateFormat)}`;
-                        const duration =
-                          typeof evt.days === "number"
-                            ? `${evt.days} ${evt.days === 1 ? "day" : "days"}`
-                            : evt.hours != null
-                              ? `${evt.hours} ${evt.hours === 1 ? "hour" : "hours"}`
-                              : null;
-
-                        const statusStyle =
-                          evt.status === "approved"
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                            : evt.status === "pending"
-                              ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
-                              : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-300";
+                    <ul className="space-y-2">
+                      {leaveHistory.map((entry) => {
+                        const statusTone =
+                          entry.status === "approved"
+                            ? "success"
+                            : entry.status === "pending"
+                              ? "warning"
+                              : "danger";
+                        const Icon = entry.type === "sick" ? HeartPulse : Plane;
 
                         return (
-                          <div
-                            key={evt.id}
-                            className="border-line-subtle bg-card flex items-center justify-between gap-3 rounded-xl border p-3"
+                          <li
+                            key={entry.id}
+                            className="border-line-subtle bg-card flex items-start justify-between gap-3 rounded-xl border p-3"
                           >
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-foreground text-xs font-bold capitalize">
-                                  {evt.type}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <Icon
+                                  className={cn(
+                                    "h-3.5 w-3.5 shrink-0",
+                                    toneTextClass[entry.type === "sick" ? "danger" : "accent"]
+                                  )}
+                                  aria-hidden="true"
+                                />
+                                <span className="text-foreground text-xs font-bold">
+                                  {entry.type === "sick" ? "Sick leave" : "Vacation"}
                                 </span>
-                                {duration && (
-                                  <span className="text-muted-foreground font-mono text-[11px]">
-                                    ({duration})
+                                {entry.days !== null && (
+                                  <span className="text-muted-foreground text-micro-lg font-mono">
+                                    · {formatCompactDays(entry.days)} d
+                                  </span>
+                                )}
+                                {entry.requests > 1 && (
+                                  <span className="text-muted-foreground text-micro-lg font-mono">
+                                    · {entry.requests} requests
                                   </span>
                                 )}
                               </div>
-                              <p className="text-muted-foreground mt-0.5 font-mono text-[11px]">
-                                {dateRange}
+                              <p className="text-muted-foreground text-micro-lg mt-1 flex items-center gap-1.5 font-mono">
+                                <CalendarDays className="h-3 w-3 shrink-0" aria-hidden="true" />
+                                {formatLeaveRange(entry.start, entry.end)}
                               </p>
-                              {evt.description && (
-                                <p className="text-muted-foreground mt-1 text-xs italic">
-                                  "{evt.description}"
+                              {entry.notes.length > 0 && (
+                                <p className="text-muted-foreground mt-1 line-clamp-2 text-xs italic">
+                                  &ldquo;{entry.notes.join(" · ")}&rdquo;
                                 </p>
                               )}
                             </div>
+                            {/* Template literal, not cn(): tailwind-merge treats both `text-micro`
+                                and the tone's `text-tone-*-text` as text colours and drops the size. */}
                             <span
-                              className={cn(
-                                "shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase",
-                                statusStyle
-                              )}
+                              className={`text-micro shrink-0 rounded-full border px-2 py-0.5 font-mono font-semibold uppercase ${toneSurfaceClass[statusTone]}`}
                             >
-                              {evt.status}
+                              {entry.status}
                             </span>
-                          </div>
+                          </li>
                         );
                       })}
-                    </div>
+                    </ul>
                   )}
                 </div>
               )}
@@ -346,9 +344,9 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                       Allowance &amp; Carryover Rules
                     </h4>
                     <p className="text-muted-foreground mt-1.5 text-xs leading-relaxed">
-                      Full-time engineering team members receive annual vacation entitlement per
-                      calendar year. Up to 5 unused days may be carried over into the following
-                      year, expiring on March 31st.
+                      Full-time engineering team members receive an annual vacation entitlement per
+                      calendar year. Every unused day carries over into the following year — there
+                      is no cap — and expires on March 31st.
                     </p>
                   </div>
                   <div className="border-line-subtle bg-card rounded-2xl border p-4">

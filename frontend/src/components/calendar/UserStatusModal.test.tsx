@@ -115,10 +115,80 @@ describe("UserStatusModal responsive grids", () => {
     );
 
     fireEvent.click(getByRole("button", { name: /Leave History/ }));
-    expect(getByText("vacation")).toBeInTheDocument();
-    expect(getByText("(2 days)")).toBeInTheDocument();
-    expect(getByText('"Family trip"')).toBeInTheDocument();
+    expect(getByText("Vacation")).toBeInTheDocument();
+    expect(getByText("· 2 d")).toBeInTheDocument();
+    expect(getByText("Nov 10 – 12, 2026")).toBeInTheDocument();
+    expect(getByText(/Family trip/)).toBeInTheDocument();
     expect(getByText("approved")).toBeInTheDocument();
+  });
+
+  it("hides standby shifts and collapses adjacent leave into one date range", () => {
+    const { getByRole, getByText, queryByText } = render(
+      <UserStatusModal
+        open
+        onOpenChange={vi.fn()}
+        user={{ id: 1, username: "enri", email: "", first_name: "Enri", last_name: "D" } as any}
+        userEvents={[
+          {
+            id: "sb-1",
+            title: "SB: 8h",
+            type: "standby",
+            status: "approved",
+            start: "2026-11-09",
+            end: "2026-11-09",
+            hours: 8,
+          } as any,
+          {
+            id: "vac-1",
+            type: "vacation",
+            status: "approved",
+            start: "2026-11-10",
+            end: "2026-11-10",
+            days: 1,
+          } as any,
+          {
+            id: "vac-2",
+            type: "vacation",
+            status: "approved",
+            start: "2026-11-11",
+            end: "2026-11-11",
+            days: 1,
+          } as any,
+        ]}
+      />
+    );
+
+    fireEvent.click(getByRole("button", { name: /Leave History/ }));
+
+    expect(queryByText("Standby")).not.toBeInTheDocument();
+    expect(getByText("Nov 10 – 11, 2026")).toBeInTheDocument();
+    expect(getByText("· 2 d")).toBeInTheDocument();
+    // The tab badge counts leave runs, not every calendar entry.
+    expect(getByRole("button", { name: /Leave History/ }).textContent).toContain("1");
+  });
+
+  it("shows an empty state when only standby exists", () => {
+    const { getByRole, getByText } = render(
+      <UserStatusModal
+        open
+        onOpenChange={vi.fn()}
+        user={{ id: 1, username: "enri", email: "", first_name: "Enri", last_name: "D" } as any}
+        userEvents={
+          [
+            {
+              id: "sb-1",
+              type: "standby",
+              status: "approved",
+              start: "2026-11-09",
+              end: "2026-11-09",
+            },
+          ] as any
+        }
+      />
+    );
+
+    fireEvent.click(getByRole("button", { name: /Leave History/ }));
+    expect(getByText("No vacation or sick leave logged for this period.")).toBeInTheDocument();
   });
 
   it("switches to Policy & Rules tab and displays coverage and carryover policies", () => {
@@ -141,5 +211,8 @@ describe("UserStatusModal responsive grids", () => {
     fireEvent.click(getByRole("button", { name: /Policy & Rules/ }));
     expect(getByText("Allowance & Carryover Rules")).toBeInTheDocument();
     expect(getByText("Team Coverage Minimums")).toBeInTheDocument();
+    // Carry-over has no cap: every unused day rolls over until it expires.
+    expect(getByText(/there is no cap/i)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/5 unused days/i);
   });
 });
