@@ -231,6 +231,22 @@ export interface PayrollLine {
   updated_at: string;
 }
 
+export interface LineManagerClosure {
+  id: number | null;
+  username: string | null;
+  full_name: string;
+  total_members: number;
+  closed_members: number;
+  all_closed: boolean;
+  unclosed_users: Array<{
+    id: number;
+    username: string;
+    full_name: string;
+    line_manager?: string | null;
+    manager?: string | null;
+  }>;
+}
+
 export interface ClosureStatus {
   period: string;
   all_closed: boolean;
@@ -246,6 +262,7 @@ export interface ClosureStatus {
     line_manager: string | null;
     manager: string | null;
   }>;
+  line_managers?: LineManagerClosure[];
   entries_without_source_closure: Array<{
     source_kind: string;
     source_id: number;
