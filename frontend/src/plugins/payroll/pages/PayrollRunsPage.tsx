@@ -35,6 +35,7 @@ import { payrollService, describeSkippedUsers } from "../services/payrollService
 import type { PayrollRun } from "../types";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { usePayrollRunScope } from "../hooks/usePayrollRunScope";
+import { AutomatedLifecycleNotice } from "../components/AutomatedLifecycleNotice";
 import { handleApiError } from "@/lib/error-handler";
 import { toast } from "sonner";
 
@@ -55,8 +56,8 @@ export const PayrollRunsPage: React.FC = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { canManage } = usePluginPermissions();
-  const { isCompanyScope } = usePayrollRunScope();
-  const canManagePayroll = canManage("payroll") && isCompanyScope;
+  const { isCompanyScope, canMutateRuns } = usePayrollRunScope();
+  const canManagePayroll = canManage("payroll") && isCompanyScope && canMutateRuns;
   const [createOpen, setCreateOpen] = useState(false);
   const [newYear, setNewYear] = useState<number | null>(null);
   const [newMonth, setNewMonth] = useState(new Date().getMonth() + 1);
@@ -86,7 +87,10 @@ export const PayrollRunsPage: React.FC = () => {
 
   const createMutation = useMutation({
     mutationFn: () =>
-      payrollService.createRun({ year: newYear ?? businessYear ?? new Date().getFullYear(), month: newMonth }),
+      payrollService.createRun({
+        year: newYear ?? businessYear ?? new Date().getFullYear(),
+        month: newMonth,
+      }),
     onSuccess: (run) => {
       queryClient.invalidateQueries({ queryKey: ["payroll-runs"] });
       setCreateOpen(false);
@@ -176,6 +180,7 @@ export const PayrollRunsPage: React.FC = () => {
         ) : undefined
       }
     >
+      <AutomatedLifecycleNotice />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Runs" value={runs?.length ?? 0} icon={Wallet} />
         <StatCard label="Drafts" value={draftCount} icon={FilePen} />

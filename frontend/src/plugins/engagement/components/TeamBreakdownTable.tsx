@@ -77,7 +77,18 @@ export const TeamBreakdownTable: React.FC<TeamBreakdownTableProps> = ({ rows }) 
         accessorKey: "engagement_score",
         header: "Score",
         cell: ({ row }) => (
-          <span className="tabular-nums">{score(row.original.engagement_score)}</span>
+          <span className="tabular-nums">
+            {score(row.original.engagement_score)}
+            {(row.original.late_closure_penalty ?? 0) > 0 &&
+              row.original.engagement_score !== null && (
+                <span
+                  className="text-tone-danger-text ml-1 text-xs"
+                  title="The month was closed by the system after the cutoff instead of by the leader. These points are already deducted from the score."
+                >
+                  (-{row.original.late_closure_penalty} late close)
+                </span>
+              )}
+          </span>
         ),
       },
       {

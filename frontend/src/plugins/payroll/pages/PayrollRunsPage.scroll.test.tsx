@@ -45,7 +45,10 @@ beforeEach(() => {
     isLoading: false,
   });
   vi.spyOn(payrollService.payrollService, "getRuns").mockResolvedValue([]);
-  vi.spyOn(payrollService.payrollService, "getRunScope").mockResolvedValue("company");
+  vi.spyOn(payrollService.payrollService, "getRunAccess").mockResolvedValue({
+    run_scope: "company",
+    can_mutate_runs: true,
+  });
   // The list defaults to the server's business year, so the page asks for it.
   vi.spyOn(payrollService.payrollService, "getRunYears").mockResolvedValue({
     businessYear: 2026,

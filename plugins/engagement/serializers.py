@@ -29,5 +29,6 @@ class TLApprovalMetricSerializer(serializers.ModelSerializer):
             'metrics', 'team_size', 'active_submitters', 'approval_rate_pct',
             'resubmission_count', 'engagement_score', 'decisions_during_leave',
             'decisions_on_holidays', 'score_speed', 'score_approval_rate',
-            'score_responsiveness', 'score_consistency', 'next_deadline_at', 'computed_at', 'frozen',
+            'score_responsiveness', 'score_consistency', 'closure_on_time', 'late_closure_penalty',
+            'next_deadline_at', 'computed_at', 'frozen',
         ]

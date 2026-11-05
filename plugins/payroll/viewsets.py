@@ -102,6 +102,19 @@ def _allowed_payroll_user_ids(user):
     return allowed
 
 
+def can_mutate_runs(user) -> bool:
+    """HR may read and export runs but not change them by hand.
+
+    The lifecycle is automatic (month-end draft, finalize when everyone is closed
+    or at the cutoff), so create/regenerate/finalize/cancel/delete stay with staff
+    and superusers. Team-scoped leaders keep their existing, scoped line regenerate.
+    """
+    if user.is_staff or user.is_superuser:
+        return True
+    profile = getattr(user, 'profile', None)
+    return not (profile and profile.is_hr)
+
+
 def _payroll_run_scope(user):
     """'company' when the viewer may act on every team's payroll, else 'team'.
     Derived from `_allowed_payroll_user_ids` so the UI and the API cannot disagree."""
@@ -1000,6 +1013,19 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         'scope': 'view',
     }
 
+    RUN_MUTATION_ACTIONS = frozenset({
+        'create', 'update', 'partial_update', 'destroy',
+        'generate', 'generate_line', 'finalize', 'cancel',
+    })
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if self.action in self.RUN_MUTATION_ACTIONS and not can_mutate_runs(request.user):
+            raise PermissionDenied(
+                'Payroll runs are created and finalized automatically. '
+                'Only administrators can change a run by hand.'
+            )
+
     @action(detail=False, methods=['get'])
     def scope(self, request):
         """The viewer's run scope, plus the years the list should offer.
@@ -1014,6 +1040,7 @@ class PayrollRunViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         years.add(business_year)
         return Response({
             'run_scope': _payroll_run_scope(request.user),
+            'can_mutate_runs': can_mutate_runs(request.user),
             'business_year': business_year,
             'years': sorted(years, reverse=True),
         })

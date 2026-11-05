@@ -59,6 +59,27 @@ describe("NotificationBell", () => {
     await waitFor(() => expect(screen.getByText("Test")).toBeInTheDocument());
   });
 
+  it("shows the urgent badge for a month-closure reminder only", async () => {
+    vi.mocked(notificationService.getNotifications).mockResolvedValue([
+      {
+        ...baseNotification,
+        id: 7,
+        title: "Urgent: finalize",
+        dedupe_key: "tl-urgent-close:2026-10:user:5",
+      },
+      { ...baseNotification, id: 8, title: "Ordinary", dedupe_key: "period-close:1:user:5" },
+    ]);
+    vi.mocked(notificationService.getUnreadCount).mockResolvedValue({ count: 2 });
+    render(
+      <MemoryRouter>
+        <NotificationBell />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByRole("button"));
+    await waitFor(() => expect(screen.getByText("Ordinary")).toBeInTheDocument());
+    expect(screen.getAllByText("Urgent")).toHaveLength(1);
+  });
+
   it("marks a notification as read", async () => {
     vi.mocked(notificationService.getNotifications).mockResolvedValue([baseNotification]);
     vi.mocked(notificationService.getUnreadCount).mockResolvedValue({ count: 1 });

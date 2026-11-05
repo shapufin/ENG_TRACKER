@@ -1736,13 +1736,17 @@ class ApprovalPeriodViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def status(self, request):
         self._require_scope(request)
-        from apps.users.services.approval_periods import get_actor_close, next_period, normalize_period
+        from apps.users.services.approval_periods import (
+            LATE_CLOSURE_PENALTY_POINTS, get_actor_close, next_period, normalize_period, work_date_cutoff,
+        )
 
         period = self._parse_period(request.query_params.get('period'))
         close = get_actor_close(request.user, period)
         return Response({
             'period': normalize_period(period).isoformat(),
             'requested_processing_period': next_period(normalize_period(period)).isoformat(),
+            'cutoff_at': work_date_cutoff(period).isoformat(),
+            'late_closure_penalty_points': LATE_CLOSURE_PENALTY_POINTS,
             'status': 'finalized' if close else 'open',
             'close': self._serialize_close(close),
         })

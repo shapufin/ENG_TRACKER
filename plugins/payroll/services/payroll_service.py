@@ -25,7 +25,7 @@ from apps.users.services.approval_periods import (
     auto_finalize_approval_periods,
     work_date_cutoff,
 )
-from core.utils.timezone_local import business_today, business_tz
+from core.utils.timezone_local import business_tz
 
 from ..models import (
     PayrollConfiguration,
@@ -553,16 +553,6 @@ def _update_run_totals(run: PayrollRun):
     run.totals = aggregate_line_totals(run.lines.all())
 
 
-def auto_finalize_previous_month() -> None:
-    """Scheduler job: apply the month cutoff company-wide, hourly and idempotent.
-
-    A no-op until 00:00 on the 2nd; from then on it closes the previous month
-    for anyone no TL closed, so the closure gate never waits on an absent TL.
-    """
-    previous = business_today().replace(day=1) - timedelta(days=1)
-    auto_finalize_approval_periods(previous)
-
-
 def _closure_label(user: dict) -> str:
     """``username`` plus the people HR should chase to close that user's month."""
     owners = [
@@ -855,3 +845,156 @@ def regenerate_single_line(run: PayrollRun, user) -> PayrollLine:
         run.totals = locked_run.totals
 
     return line
+
+
+# ---------------------------------------------------------------------------
+# Automatic lifecycle
+# ---------------------------------------------------------------------------
+# Draft at the last working day of the month; finalized as soon as every run user
+# is closed, or at the cutoff when the system closes whoever is left. Manual
+# create/regenerate/finalize stay as the staff/superuser emergency path.
+def _payable_wage_users() -> list:
+    from django.contrib.auth import get_user_model
+
+    wage_user_ids = set(
+        WageAssignment.objects.filter(is_active=True).values_list('user_id', flat=True)
+    )
+    return list(get_user_model().objects.filter(id__in=wage_user_ids, is_active=True))
+
+
+def create_automatic_draft_run(year: int, month: int) -> Optional[PayrollRun]:
+    """Create and fill the draft run of a month, or ``None`` when nothing is due.
+
+    Skipped when ANY run already exists for the month, a cancelled one included:
+    a cancel is an admin decision the scheduler must not undo every hour. Also
+    skipped without a rule set or without payable users.
+    """
+    from django.db import IntegrityError
+
+    config = PayrollConfiguration.get_singleton()
+    rule_set = PayrollRuleSet.resolve_for_date(date(year, month, 1), config.default_tax_profile)
+    if rule_set is None:
+        logger.warning('Automatic payroll draft %s-%02d skipped: no active rule set.', year, month)
+        return None
+    if PayrollRun.objects.filter(year=year, month=month).exists():
+        return None
+    users, _skipped = partition_payable_users(_payable_wage_users(), year, month)
+    if not users:
+        return None
+    try:
+        with transaction.atomic():
+            run = PayrollRun.objects.create(
+                year=year, month=month, status='draft', rule_set=rule_set,
+                notes='Created automatically on the last working day of the month.',
+                created_by=None,
+            )
+            generate_draft_run(run, users)
+    except IntegrityError:
+        return None  # another worker created it first
+    return run
+
+
+def auto_finalize_run(run: PayrollRun, reason: str) -> bool:
+    """Refresh the draft from today's approved entries, then finalize it as the system.
+
+    ``reason`` is ``'early'`` (every run user closed) or ``'cutoff'``. Returns
+    False and logs when the run cannot be finalized, so the scheduler never dies.
+    """
+    try:
+        users, _skipped = partition_payable_users(_payable_wage_users(), run.year, run.month)
+        if users:
+            generate_draft_run(run, users)
+        run = finalize_run(run, None)
+    except Exception:
+        logger.exception('Automatic finalize of payroll run %s (%s) failed.', run.pk, reason)
+        return False
+    _notify_hr_auto_finalized(run, reason)
+    return True
+
+
+def _notify_hr_auto_finalized(run: PayrollRun, reason: str) -> None:
+    try:
+        from plugins.notifications.types.hr_period import HrPayrollAutoFinalizedNotification
+    except ImportError:
+        return
+    try:
+        HrPayrollAutoFinalizedNotification().dispatch({'run': run, 'reason': reason})
+    except Exception:
+        logger.warning('Could not notify HR of the automatic finalize of run %s.', run.pk, exc_info=True)
+
+
+def _notify_unclosed_leaders(run: PayrollRun, closure_status: dict, cutoff_day: date) -> None:
+    """Urgent reminder to whoever must still close: the Line Manager, else the Manager."""
+    from django.contrib.auth import get_user_model
+
+    try:
+        from plugins.notifications.types.tl_urgent import TlPeriodClosureUrgentNotification
+    except ImportError:
+        return
+    usernames = {
+        user['line_manager'] or user['manager']
+        for user in closure_status['unclosed_users']
+        if user['line_manager'] or user['manager']
+    }
+    if not usernames:
+        return
+    leaders = list(get_user_model().objects.filter(username__in=usernames, is_active=True))
+    try:
+        TlPeriodClosureUrgentNotification().dispatch({
+            'period': date(run.year, run.month, 1),
+            'cutoff_day': cutoff_day,
+            'leaders': leaders,
+        })
+    except Exception:
+        logger.warning('Could not send urgent closure notices for run %s.', run.pk, exc_info=True)
+
+
+def advance_payroll_period(year: int, month: int, now=None) -> str:
+    """Move one month's payroll forward as far as the clock and the closes allow.
+
+    Idempotent and safe to call from the scheduler or a close signal. Returns
+    what happened: ``'waiting'``, ``'drafted'``, ``'urgent'``, ``'finalized'``
+    or ``'failed'`` (the last two only when a run was finalized or tried).
+    """
+    from core.utils.working_days import month_cutoff_date, month_end_working_day
+
+    now = now or timezone.now()
+    today = now.astimezone(business_tz()).date()
+    if today < month_end_working_day(year, month):
+        return 'waiting'
+
+    period = date(year, month, 1)
+    cutoff_passed = now.astimezone(business_tz()) >= work_date_cutoff(period)
+    run = PayrollRun.objects.filter(year=year, month=month).exclude(status='cancelled').first()
+    if run is None:
+        # No retroactive payroll: once the cutoff passed, a missing run is for an admin.
+        if cutoff_passed or PayrollRun.objects.filter(year=year, month=month).exists():
+            return 'waiting'
+        run = create_automatic_draft_run(year, month)
+        if run is None:
+            return 'waiting'
+    if run.status != 'draft':
+        return 'waiting'
+
+    if cutoff_passed:
+        auto_finalize_approval_periods(period, now=now, user_ids=run.lines.values_list('user_id', flat=True))
+        return 'finalized' if auto_finalize_run(run, 'cutoff') else 'failed'
+    closure_status = get_period_closure_status(run)
+    if closure_status['all_closed'] and closure_status['total_users']:
+        return 'finalized' if auto_finalize_run(run, 'early') else 'failed'
+    _notify_unclosed_leaders(run, closure_status, month_cutoff_date(year, month))
+    return 'urgent'
+
+
+def payroll_lifecycle_tick(now=None) -> None:
+    """Scheduler job (hourly, idempotent): the company-wide cutoff sweep, then the lifecycle
+    of the previous and the current month. One failing month never blocks the other."""
+    now = now or timezone.now()
+    today = now.astimezone(business_tz()).date()
+    auto_finalize_approval_periods(today.replace(day=1) - timedelta(days=1), now=now)
+    previous = today.replace(day=1) - timedelta(days=1)
+    for year, month in ((previous.year, previous.month), (today.year, today.month)):
+        try:
+            advance_payroll_period(year, month, now=now)
+        except Exception:
+            logger.exception('Payroll lifecycle failed for %s-%02d.', year, month)

@@ -76,6 +76,10 @@ export interface EngagementTeamBreakdownRow {
   score_approval_rate: number | null;
   score_responsiveness: number | null;
   score_consistency: number | null;
+  /** Null until the month cutoff passes. False when the system, not the leader, closed the month. */
+  closure_on_time?: boolean | null;
+  /** Points already deducted from `engagement_score` for a late month closure. */
+  late_closure_penalty?: number;
   decisions_during_leave: number;
   decisions_on_holidays: number;
   next_deadline_at: string | null;

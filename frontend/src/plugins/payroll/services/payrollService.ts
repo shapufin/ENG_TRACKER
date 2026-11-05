@@ -26,7 +26,7 @@ import type {
   WageBulkCreateResult,
   PayrollWorkday,
 } from "../types";
-import type { PayrollRunScope, PayrollRunYears } from "../types";
+import type { PayrollRunAccess, PayrollRunYears } from "../types";
 
 const BASE = "/plugins/payroll";
 
@@ -262,10 +262,14 @@ export const payrollService = {
     return normalizeList(data);
   },
 
-  /** Whether the viewer may act on every team's payroll ("company") or only their own team ("team"). */
-  async getRunScope(): Promise<PayrollRunScope> {
-    const { data } = await api.get<{ run_scope: PayrollRunScope }>(`${BASE}/runs/scope/`);
-    return data.run_scope;
+  /**
+   * What the viewer may do with whole runs: act on every team's payroll ("company") or only
+   * their own team ("team"), and whether they may change a run by hand (HR may not: the
+   * lifecycle is automatic).
+   */
+  async getRunAccess(): Promise<PayrollRunAccess> {
+    const { data } = await api.get<PayrollRunAccess>(`${BASE}/runs/scope/`);
+    return { run_scope: data.run_scope, can_mutate_runs: data.can_mutate_runs === true };
   },
 
   /**

@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { type NotificationRecord } from "../service";
-import { Bell, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
+import { isUrgentNotification } from "../urgent";
+import { Bell, CheckCircle2, AlertCircle, AlarmClock, XCircle } from "lucide-react";
 
 interface NotificationItemProps {
   notification: NotificationRecord;
@@ -37,22 +38,36 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
     onMarkRead(notification.id);
   };
 
+  const isUrgent = isUrgentNotification(notification);
+
   return (
     <div
       onClick={handleClick}
       className={cn(
         "hover:bg-muted/50 flex gap-4 p-4 transition-colors",
         !notification.is_read && "bg-primary/5",
+        isUrgent && "border-l-tone-danger-border bg-tone-danger-surface border-l-4",
         notification.link && "cursor-pointer"
       )}
     >
-      <div className="mt-1 shrink-0">{getTypeIcon(notification.notification_type)}</div>
+      <div className="mt-1 shrink-0">
+        {isUrgent ? (
+          <AlarmClock className="text-tone-danger-text h-5 w-5" />
+        ) : (
+          getTypeIcon(notification.notification_type)
+        )}
+      </div>
       <div className="flex-1 space-y-1">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-2">
             <h4 className={cn("text-sm font-semibold", !notification.is_read && "text-primary")}>
               {notification.title}
             </h4>
+            {isUrgent && (
+              <Badge className="bg-tone-danger-text h-4 px-1 text-xs text-white uppercase">
+                Urgent action
+              </Badge>
+            )}
             {!notification.is_read && <Badge className="h-4 px-1 text-xs uppercase">New</Badge>}
           </div>
           <span className="text-muted-foreground text-xs whitespace-nowrap">

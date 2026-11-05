@@ -169,10 +169,21 @@ def next_period(period: date) -> date:
     return date(period.year, period.month + 1, 1)
 
 
+# Engagement points a leader loses when the system, not they, closed their month.
+LATE_CLOSURE_PENALTY_POINTS = 15.0
+
+
 def work_date_cutoff(work_date: date) -> datetime:
-    """Start of the 2nd of the month after the work date's month, in the business timezone."""
-    following = next_period(normalize_period(work_date))
-    return datetime(following.year, following.month, 2, tzinfo=business_tz())
+    """Start of the cutoff day for the work date's month, in the business timezone.
+
+    The cutoff day is the 2nd of the following month, moved to the next working
+    day when that is a weekend or a global public holiday.
+    """
+    from core.utils.working_days import month_cutoff_date
+
+    period = normalize_period(work_date)
+    cutoff = month_cutoff_date(period.year, period.month)
+    return datetime(cutoff.year, cutoff.month, cutoff.day, tzinfo=business_tz())
 
 
 def is_work_date_open(work_date: date, now: datetime | None = None) -> bool:

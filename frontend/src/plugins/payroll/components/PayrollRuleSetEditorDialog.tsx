@@ -378,13 +378,13 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
       submitLabel={mode === "edit" ? "Save calculation" : "Create version"}
       size="xl"
     >
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         {mode === "edit"
           ? "Changes affect future payroll calculations only. Historical payroll runs remain unchanged."
           : "This creates a new effective-dated calculation and keeps the original version unchanged. Use a unique code and version, and choose an effective date that does not duplicate another active calculation."}
       </p>
       {error && (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+        <p className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border p-3 text-sm">
           {error}
         </p>
       )}
@@ -455,13 +455,16 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="text-muted-foreground mt-1 text-xs">
                 Which income-tax rule set to apply for this calculation.
               </p>
             </div>
             <div>
               <Label htmlFor="rule-country">Country</Label>
-              <Select value={form.country} onValueChange={(value) => updateParent("country", value)}>
+              <Select
+                value={form.country}
+                onValueChange={(value) => updateParent("country", value)}
+              >
                 <SelectTrigger id="rule-country">
                   <SelectValue />
                 </SelectTrigger>
@@ -491,7 +494,7 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="text-muted-foreground mt-1 text-xs">
                 How trustworthy these numbers are — mark "Official" once confirmed against a
                 government source.
               </p>
@@ -535,7 +538,7 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
             {brackets.map((bracket, index) => (
               <div
                 key={bracket.id ?? `new-bracket-${index}`}
-                className="grid grid-cols-1 gap-3 rounded-md border border-border/60 p-3 md:grid-cols-5"
+                className="border-border/60 grid grid-cols-1 gap-3 rounded-md border p-3 md:grid-cols-5"
               >
                 <div>
                   <Label>From (Lek)</Label>
@@ -611,7 +614,7 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
                   variant="ghost"
                   size="icon"
                   aria-label={`Remove tax bracket ${index + 1}`}
-                  className="mt-5 text-destructive"
+                  className="text-destructive mt-5"
                   onClick={() =>
                     setBrackets((items) => items.filter((_, itemIndex) => itemIndex !== index))
                   }
@@ -620,7 +623,7 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
                 </Button>
               </div>
             ))}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               The last bracket should have no upper limit. Brackets must start at Lek 0 and have no
               gaps.
             </p>
@@ -644,7 +647,7 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
             {contributions.map((contribution, index) => (
               <div
                 key={contribution.id ?? `new-contribution-${index}`}
-                className="space-y-3 rounded-md border border-border/60 p-3"
+                className="border-border/60 space-y-3 rounded-md border p-3"
               >
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   <div>
@@ -758,7 +761,7 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
                     variant="ghost"
                     size="icon"
                     aria-label={`Remove contribution ${index + 1}`}
-                    className="mt-5 justify-self-start text-destructive"
+                    className="text-destructive mt-5 justify-self-start"
                     onClick={() =>
                       setContributions((items) =>
                         items.filter((_, itemIndex) => itemIndex !== index)
@@ -792,7 +795,7 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
             {overtimeCategories.map((category, index) => (
               <div
                 key={category.id ?? `new-category-${index}`}
-                className="space-y-3 rounded-md border border-border/60 p-3"
+                className="border-border/60 space-y-3 rounded-md border p-3"
               >
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   <div>

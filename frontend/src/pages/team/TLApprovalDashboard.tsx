@@ -102,6 +102,26 @@ export const TLApprovalDashboard: React.FC = () => {
         </div>
       }
     >
+      {periodStatus?.status === "open" && (
+        <GlassCard role="status" className="border-warning/40 bg-warning/5 mb-4 p-4">
+          <p className="text-sm font-medium">Month finalization deadline</p>
+          <p className="text-muted-foreground text-sm">
+            Finalize {selectedMonthLabel} before{" "}
+            <strong>
+              {new Date(periodStatus.cutoff_at).toLocaleDateString(undefined, {
+                timeZone: "Europe/Tirane",
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </strong>
+            . After that the system closes it for you and your engagement score drops by{" "}
+            {periodStatus.late_closure_penalty_points} points.
+          </p>
+        </GlassCard>
+      )}
+
       {isFinalized && periodStatus.close && (
         <GlassCard className="border-warning/40 bg-warning/5 mb-4 p-4">
           <p className="text-sm font-medium">

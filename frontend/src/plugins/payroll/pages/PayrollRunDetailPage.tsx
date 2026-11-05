@@ -13,6 +13,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { payrollService, describeSkippedUsers } from "../services/payrollService";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { usePayrollRunScope } from "../hooks/usePayrollRunScope";
+import { AutomatedLifecycleNotice } from "../components/AutomatedLifecycleNotice";
 import { toast } from "sonner";
 import { handleApiError } from "@/lib/error-handler";
 import { PayrollRunSummary } from "../components/PayrollRunSummary";
@@ -42,10 +43,10 @@ export const PayrollRunDetailPage: React.FC = () => {
   const runsListPath = location.pathname.slice(0, location.pathname.lastIndexOf("/"));
   const queryClient = useQueryClient();
   const { canManage, canExport } = usePluginPermissions();
-  const { isCompanyScope } = usePayrollRunScope();
+  const { isCompanyScope, canMutateRuns } = usePayrollRunScope();
   // Whole-run actions (regenerate, finalize, delete, exports) and per-line
   // regenerate act on every team's lines, so team-scoped viewers never see them.
-  const canManagePayroll = canManage("payroll") && isCompanyScope;
+  const canManagePayroll = canManage("payroll") && isCompanyScope && canMutateRuns;
   const canExportPayroll = canExport("payroll") && isCompanyScope;
   const runId = Number(id);
 
@@ -208,6 +209,8 @@ export const PayrollRunDetailPage: React.FC = () => {
         <Badge className={STATUS_COLORS[run.status] ?? ""}>{run.status}</Badge>
       </div>
 
+      {isDraft && <AutomatedLifecycleNotice />}
+
       {isDraft && (
         <GlassCard
           role="status"
@@ -256,8 +259,7 @@ export const PayrollRunDetailPage: React.FC = () => {
 
               {!closureStatus.all_closed && closureStatus.cutoff_passed && (
                 <p className="text-foreground text-sm">
-                  Month cutoff reached (the 2nd). Finalizing closes the remaining users
-                  automatically.
+                  Month cutoff reached. Finalizing closes the remaining users automatically.
                 </p>
               )}
 
@@ -309,7 +311,7 @@ export const PayrollRunDetailPage: React.FC = () => {
         isLoading={linesLoading}
         isDraft={isDraft}
         canExport={canExportPayroll}
-        canManage={canManage("payroll")}
+        canManage={canManage("payroll") && canMutateRuns}
         onPayslipDownload={(lineId) => payslipMutation.mutate(lineId)}
         payslipLoading={payslipMutation.isPending}
         payslipLoadingId={payslipMutation.variables ?? null}

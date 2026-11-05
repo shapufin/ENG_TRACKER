@@ -35,9 +35,9 @@ class PayrollPlugin(BasePlugin):
         return urlpatterns
 
     def get_scheduled_jobs(self):
-        # Hourly and cheap: one query until the previous month's cutoff passes.
+        # Hourly and idempotent: month-end draft, urgent reminders, early and cutoff finalize.
         return [
-            ('auto_finalize_periods', 3600, 'plugins.payroll.services.payroll_service.auto_finalize_previous_month'),
+            ('lifecycle', 3600, 'plugins.payroll.services.payroll_service.payroll_lifecycle_tick'),
         ]
 
     def get_permission_actions(self):
@@ -142,10 +142,15 @@ class PayrollPlugin(BasePlugin):
         return True
 
     def ready(self):
-        """No startup work: the HR/Payroll holiday backfill runs from the boot path
-        (`manage.py sync_payroll_holidays` in docker/entrypoint.sh), not on every
-        worker import."""
+        """Connect the close-signal hook. The HR/Payroll holiday backfill is not
+        here: it runs from the boot path (`manage.py sync_payroll_holidays` in
+        docker/entrypoint.sh), not on every worker import."""
+        from . import signals
+
+        signals.connect()
 
     def disable(self):
-        """Cleanup when plugin is disabled. Phase 1: no signals."""
+        """Stop reacting to approval-period closes."""
+        from . import signals
 
+        signals.disconnect()

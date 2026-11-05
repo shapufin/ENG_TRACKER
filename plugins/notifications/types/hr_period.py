@@ -81,8 +81,49 @@ class HrPeriodReadyNotification(NotificationType):
     def message(self, context):
         return (
             f'Every user is closed for {_month_label(context["close"])}. '
-            'The payroll run can now be finalized.'
+            'The payroll run finalizes automatically.'
         )
 
     def dedupe_key(self, context, user):
         return f'hr-period-ready:{context["close"].period:%Y-%m}:user:{user.id}'
+
+
+class HrPayrollAutoFinalizedNotification(NotificationType):
+    event_type = 'hr_payroll_auto_finalized'
+    label = 'Payroll finalized automatically'
+    description = (
+        'Sent to HR when the system finalizes a month\'s payroll run by itself: '
+        'early, once every user is closed, or at the cutoff.'
+    )
+    category = 'hr'
+    notification_type = 'success'
+    link = LINK
+
+    def recipients(self, context):
+        User = get_user_model()
+        return (
+            User.objects.filter(is_active=True)
+            .filter(
+                Q(profile__is_hr_user=True)
+                | Q(user_roles__role__code='hr', user_roles__is_active=True)
+            )
+            .distinct()
+        )
+
+    def title(self, context):
+        run = context['run']
+        return f'Payroll for {run.period_label} was finalized automatically'
+
+    def message(self, context):
+        run = context['run']
+        when = (
+            'every user was closed' if context.get('reason') == 'early'
+            else 'the month cutoff passed'
+        )
+        return (
+            f'The {run.period_label} payroll run was finalized by the system because {when}. '
+            'Exports are ready.'
+        )
+
+    def dedupe_key(self, context, user):
+        return f'hr-payroll-auto-finalized:{context["run"].pk}:user:{user.id}'
