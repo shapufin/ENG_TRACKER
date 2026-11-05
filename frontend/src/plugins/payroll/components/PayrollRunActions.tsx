@@ -3,6 +3,7 @@
  */
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { ClosureStatus } from "../types";
 
@@ -91,6 +92,11 @@ export const PayrollRunActions: React.FC<PayrollRunActionsProps> = ({
           >
             Finalize
           </Button>
+        )}
+        {isDraft && !canManage && (
+          <Badge variant="outline" className="text-muted-foreground">
+            Draft in progress: automated lifecycle active
+          </Badge>
         )}
         {canExport && (
           <Button

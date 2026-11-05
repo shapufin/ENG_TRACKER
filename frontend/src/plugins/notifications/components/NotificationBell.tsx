@@ -6,6 +6,7 @@ import { notificationService, type NotificationRecord } from "../service";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { isUrgentNotification } from "../urgent";
 
 const NotificationBell: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
@@ -101,11 +102,20 @@ const NotificationBell: React.FC = () => {
                 className={cn(
                   "hover:bg-muted/50 flex flex-col gap-1 border-b p-4 transition-colors",
                   !notification.is_read && "bg-primary/5",
+                  isUrgentNotification(notification) &&
+                    "border-l-tone-danger-border bg-tone-danger-surface border-l-4",
                   notification.link && "cursor-pointer"
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className="text-xs leading-none font-medium">{notification.title}</span>
+                  <span className="text-xs leading-none font-medium">
+                    {isUrgentNotification(notification) && (
+                      <span className="bg-tone-danger-text mr-1.5 rounded px-1 py-0.5 text-xs font-semibold text-white uppercase">
+                        Urgent
+                      </span>
+                    )}
+                    {notification.title}
+                  </span>
                   <span className="text-muted-foreground shrink-0 text-xs">
                     {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                   </span>

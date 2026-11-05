@@ -709,7 +709,7 @@ export const GlobalSettingsPage: React.FC = () => {
                 <div className="border-border/50 flex items-center justify-between border-b py-1.5">
                   <span className="text-muted-foreground text-xs">Monthly Approval Cut-off:</span>
                   <span className="text-foreground text-xs font-semibold">
-                    00:00 on the 2nd of M+1
+                    00:00 on the 2nd of M+1 (next working day if not one)
                   </span>
                 </div>
                 <div className="border-border/50 flex items-center justify-between border-b py-1.5">

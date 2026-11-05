@@ -28,6 +28,9 @@ export type ControlRoomEligibleUser = Pick<User, "id" | "username" | "email" | "
 interface ApprovalPeriodCloseStatus {
   period: string;
   requested_processing_period: string;
+  /** Start of the cutoff working day: after it the system closes the month for the leader. */
+  cutoff_at: string;
+  late_closure_penalty_points: number;
   status: "open" | "finalized";
   close: {
     id: number;

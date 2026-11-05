@@ -58,6 +58,17 @@ class TLApprovalMetric(BaseModel):
     score_responsiveness = models.FloatField(null=True, blank=True)
     score_consistency = models.FloatField(null=True, blank=True)
 
+    closure_on_time = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text='Whether every active user of this scope was closed by a leader before the month cutoff. '
+                  'NULL until the cutoff passes or when there is nobody to close.',
+    )
+    late_closure_penalty = models.FloatField(
+        default=0.0,
+        help_text='Engagement points deducted because the system, not the leader, closed the month.',
+    )
+
     next_deadline_at = models.DateTimeField(
         null=True,
         blank=True,

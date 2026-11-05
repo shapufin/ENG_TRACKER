@@ -15,7 +15,7 @@ from apps.users.services.approval_periods import finalize_period
 from plugins.payroll.models import PayrollConfiguration, PayrollRuleSet, PayrollRun, WageAssignment
 from plugins.payroll.plugin import PayrollPlugin
 from plugins.payroll.services.payroll_service import (
-    auto_finalize_previous_month,
+    payroll_lifecycle_tick,
     finalize_run,
     generate_draft_run,
     get_period_closure_status,
@@ -111,11 +111,11 @@ class CutoffAutoFinalizeTests(TestCase):
 
     def test_scheduler_job_closes_everyone_only_once_the_cutoff_passed(self):
         with at(datetime(2026, 11, 1, 12, 0, tzinfo=TIRANE)):
-            auto_finalize_previous_month()
+            payroll_lifecycle_tick()
         self.assertFalse(ApprovalPeriodCloseMember.objects.exists())
 
         with at(datetime(2026, 11, 2, 0, 0, tzinfo=TIRANE)):
-            auto_finalize_previous_month()
+            payroll_lifecycle_tick()
         self.assertTrue(
             ApprovalPeriodCloseMember.objects.filter(
                 user=self.bystander, close__boundary__period=date(2026, 10, 1),
@@ -124,5 +124,5 @@ class CutoffAutoFinalizeTests(TestCase):
 
     def test_plugin_registers_the_hourly_job(self):
         ((name, interval, target),) = PayrollPlugin().get_scheduled_jobs()
-        self.assertEqual((name, interval), ('auto_finalize_periods', 3600))
-        self.assertIs(import_string(target), auto_finalize_previous_month)
+        self.assertEqual((name, interval), ('lifecycle', 3600))
+        self.assertIs(import_string(target), payroll_lifecycle_tick)

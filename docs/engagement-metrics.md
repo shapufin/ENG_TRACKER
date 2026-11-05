@@ -71,6 +71,8 @@ is recomputed on the next read.
 
 Components without data are dropped and the rest renormalised.
 
+**Late month closure (-15 points).** After the month cutoff (day 2 of the next month, moved to the next working day) a leader whose scope the system had to close, or who closed it after the cutoff, loses 15 points from the composite (`late_closure_penalty`, `closure_on_time`; floor 0; a score with no data stays empty). Either the Line Manager or the Manager closing on time covers the scope. Superusers and inactive users are never expected to be closed. Shown on the team breakdown next to the score.
+
 ## Evidence (shown, not scored)
 
 - Decisions made while the TL was on their own approved leave.

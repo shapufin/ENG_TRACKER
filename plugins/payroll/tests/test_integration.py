@@ -592,13 +592,15 @@ class PayrollHRScopeTests(TestCase):
     def setUp(self):
         self.factory = APIRequestFactory()
 
-    def test_hr_can_generate_payroll_run_with_a_wageless_user_in_scope(self):
+    def test_administrator_generates_payroll_run_with_a_wageless_user_in_scope(self):
         """The wageless employee must be silently excluded (matching the
-        existing staff/superuser wage-filter behavior), not crash the run."""
+        existing staff/superuser wage-filter behavior), not crash the run.
+        Runs are administrator-only since the automatic lifecycle (HR is refused)."""
+        admin = User.objects.create_user(username='run_admin', password='pass', is_staff=True)
         request = self.factory.post('/api/plugins/payroll/runs/', {
             'year': 2026, 'month': 3,
         }, format='json')
-        force_authenticate(request, user=self.hr_user)
+        force_authenticate(request, user=admin)
         response = PayrollRunViewSet.as_view({'post': 'create'})(request)
 
         self.assertEqual(response.status_code, 201, response.data)

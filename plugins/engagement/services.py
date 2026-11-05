@@ -22,7 +22,8 @@ from apps.dashboard.models.calendar import PublicHoliday, UserCalendarPreference
 from apps.leave_management.models import LeaveRequest
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
-from apps.users.models import Team, TeamMembership, UserProfile
+from apps.users.models import ApprovalPeriodCloseMember, Team, TeamMembership, UserProfile
+from apps.users.services.approval_periods import LATE_CLOSURE_PENALTY_POINTS, work_date_cutoff
 
 from .models import TLApprovalMetric
 from core.utils.metrics_freeze import is_frozen, is_past_freeze
@@ -524,6 +525,34 @@ def _decisions_on_holidays(leader, member_ids, month_start, month_end, holidays)
     return len(counted)
 
 
+def closure_outcome(member_ids, month, now):
+    """``(closed_on_time, penalty)`` for one scope and month.
+
+    Judged only once the month cutoff passed. On time means every active
+    non-superuser of the scope was closed by a leader (the Line Manager or the
+    Manager) before the cutoff; a user the system swept at the cutoff, or who
+    nobody closed, makes the month late.
+    """
+    cutoff = work_date_cutoff(month)
+    if now < cutoff:
+        return None, 0.0
+    expected = set(
+        User.objects.filter(pk__in=member_ids, is_active=True, is_superuser=False).values_list('pk', flat=True)
+    )
+    if not expected:
+        return None, 0.0
+    closed_in_time = set(
+        ApprovalPeriodCloseMember.objects.filter(
+            user_id__in=expected,
+            close__boundary__period=month.replace(day=1),
+            close__closed_at__lt=cutoff,
+        ).exclude(close__scope_type='auto_cutoff').values_list('user_id', flat=True)
+    )
+    if expected <= closed_in_time:
+        return True, 0.0
+    return False, LATE_CLOSURE_PENALTY_POINTS
+
+
 def compute_tl_metric(leader, team, month, scope=None):
     """Compute (or refresh) one (leader, team, month) snapshot. Idempotent."""
     month_start, month_end = month_bounds(month)
@@ -554,6 +583,9 @@ def compute_tl_metric(leader, team, month, scope=None):
     approval_rate_pct = round((total_approved / total_decided) * 100, 2) if total_decided else None
 
     engagement_score, sub_scores = compute_engagement_score(metrics, all_fractions)
+    closure_on_time, late_closure_penalty = closure_outcome(member_ids, month_start.date(), now)
+    if late_closure_penalty and engagement_score is not None:
+        engagement_score = round(max(0.0, engagement_score - late_closure_penalty), 2)
 
     snapshot, _ = TLApprovalMetric.objects.update_or_create(
         leader=leader,
@@ -568,6 +600,8 @@ def compute_tl_metric(leader, team, month, scope=None):
             'approval_rate_pct': approval_rate_pct,
             'resubmission_count': sum(m['resubmission_count'] for m in metrics.values()),
             'engagement_score': engagement_score,
+            'closure_on_time': closure_on_time,
+            'late_closure_penalty': late_closure_penalty,
             'decisions_during_leave': _decisions_during_leave(leader, member_ids, month_start, month_end),
             'decisions_on_holidays': _decisions_on_holidays(leader, member_ids, month_start, month_end, holidays),
             'next_deadline_at': next_deadline,
@@ -659,6 +693,7 @@ def stale_snapshot_ids(rows, scope=None):
 
     now = _now()
     stale = set()
+    cutoffs = {month: work_date_cutoff(month) for month in {r.month for r in rows}}  # one lookup per month
     for row in rows:
         member_ids = members[(row.leader_id, row.team_id)]
         if not row.computed_at or any(
@@ -672,7 +707,8 @@ def stale_snapshot_ids(rows, scope=None):
             if not is_frozen(row.month, row.computed_at, now):
                 stale.add(row.pk)
         elif (
-            (row.next_deadline_at and now >= row.next_deadline_at)
+            row.computed_at < cutoffs[row.month] <= now  # the closure verdict arrived
+            or (row.next_deadline_at and now >= row.next_deadline_at)
             or len(member_ids) != row.team_size
             or any(last_touched.get(user_id, row.computed_at) > row.computed_at for user_id in member_ids)
         ):

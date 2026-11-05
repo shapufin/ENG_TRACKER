@@ -81,7 +81,10 @@ beforeEach(() => {
     error: null,
     isLoading: false,
   });
-  vi.spyOn(payrollService.payrollService, "getRunScope").mockResolvedValue("company");
+  vi.spyOn(payrollService.payrollService, "getRunAccess").mockResolvedValue({
+    run_scope: "company",
+    can_mutate_runs: true,
+  });
   // The list defaults to the server's business year, so the page asks for it.
   vi.spyOn(payrollService.payrollService, "getRunYears").mockResolvedValue({
     businessYear: 2026,
@@ -240,7 +243,10 @@ describe("PayrollRunsPage", () => {
   });
 
   it("hides New Payroll Run from a team-scoped viewer", async () => {
-    vi.spyOn(payrollService.payrollService, "getRunScope").mockResolvedValue("team");
+    vi.spyOn(payrollService.payrollService, "getRunAccess").mockResolvedValue({
+      run_scope: "team",
+      can_mutate_runs: true,
+    });
     vi.spyOn(payrollService.payrollService, "getRuns").mockResolvedValue([]);
     render(
       <MemoryRouter>
@@ -248,11 +254,28 @@ describe("PayrollRunsPage", () => {
       </MemoryRouter>,
       { wrapper }
     );
-    await waitFor(() => expect(payrollService.payrollService.getRunScope).toHaveBeenCalled());
+    await waitFor(() => expect(payrollService.payrollService.getRunAccess).toHaveBeenCalled());
     expect(screen.queryByText("New Payroll Run")).not.toBeInTheDocument();
   });
 
-  it("shows New Payroll Run to a company-scoped (HR) viewer", async () => {
+  it("hides New Payroll Run from HR and explains the automated lifecycle", async () => {
+    vi.spyOn(payrollService.payrollService, "getRunAccess").mockResolvedValue({
+      run_scope: "company",
+      can_mutate_runs: false,
+    });
+    vi.spyOn(payrollService.payrollService, "getRuns").mockResolvedValue([]);
+    render(
+      <MemoryRouter>
+        <PayrollRunsPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    expect(await screen.findByText(/Automated payroll lifecycle/)).toBeInTheDocument();
+    await waitFor(() => expect(payrollService.payrollService.getRunAccess).toHaveBeenCalled());
+    expect(screen.queryByText("New Payroll Run")).not.toBeInTheDocument();
+  });
+
+  it("shows New Payroll Run to a company-scoped administrator", async () => {
     vi.spyOn(payrollService.payrollService, "getRuns").mockResolvedValue([]);
     render(
       <MemoryRouter>

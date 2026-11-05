@@ -145,7 +145,10 @@ beforeEach(() => {
   vi.spyOn(payrollService.payrollService, "getPeriodClosureStatus").mockResolvedValue(
     mockClosureStatus
   );
-  vi.spyOn(payrollService.payrollService, "getRunScope").mockResolvedValue("company");
+  vi.spyOn(payrollService.payrollService, "getRunAccess").mockResolvedValue({
+    run_scope: "company",
+    can_mutate_runs: true,
+  });
 });
 
 describe("PayrollRunDetailPage", () => {
@@ -537,8 +540,33 @@ describe("PayrollRunDetailPage", () => {
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/admin/payroll/runs"));
   });
 
+  it("gives HR no mutation buttons on a draft run but keeps the view", async () => {
+    vi.spyOn(payrollService.payrollService, "getRunAccess").mockResolvedValue({
+      run_scope: "company",
+      can_mutate_runs: false,
+    });
+    vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
+    vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue(mockLines as any);
+    render(
+      <MemoryRouter>
+        <PayrollRunDetailPage />
+      </MemoryRouter>,
+      { wrapper }
+    );
+    expect(
+      await screen.findByText(/Draft in progress: automated lifecycle active/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Regenerate")).not.toBeInTheDocument();
+    expect(screen.queryByText("Delete draft")).not.toBeInTheDocument();
+    expect(screen.queryByText("Finalize")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate" })).not.toBeInTheDocument();
+  });
+
   it("shows per-line Generate only for lines the team viewer may regenerate", async () => {
-    vi.spyOn(payrollService.payrollService, "getRunScope").mockResolvedValue("team");
+    vi.spyOn(payrollService.payrollService, "getRunAccess").mockResolvedValue({
+      run_scope: "team",
+      can_mutate_runs: true,
+    });
     vi.spyOn(payrollService.payrollService, "getRun").mockResolvedValue(mockRun);
     vi.spyOn(payrollService.payrollService, "getRunLines").mockResolvedValue([
       mockLines[0],
@@ -551,7 +579,7 @@ describe("PayrollRunDetailPage", () => {
       { wrapper }
     );
     await waitFor(() => expect(screen.getByText("Back")).toBeInTheDocument());
-    await waitFor(() => expect(payrollService.payrollService.getRunScope).toHaveBeenCalled());
+    await waitFor(() => expect(payrollService.payrollService.getRunAccess).toHaveBeenCalled());
     expect(screen.queryByText("Regenerate")).not.toBeInTheDocument();
     expect(screen.queryByText("Delete draft")).not.toBeInTheDocument();
     expect(screen.queryByText("Finalize")).not.toBeInTheDocument();

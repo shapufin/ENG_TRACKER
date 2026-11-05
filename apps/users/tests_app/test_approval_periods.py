@@ -49,8 +49,14 @@ class WorkDateCutoffTests(TestCase):
         self.assertTrue(is_work_date_open(date(2026, 9, 15), now=now))
 
     def test_december_rolls_to_january(self):
-        self.assertTrue(is_work_date_open(date(2026, 12, 5), now=datetime(2027, 1, 1, 23, 59, tzinfo=TIRANE)))
-        self.assertFalse(is_work_date_open(date(2026, 12, 5), now=datetime(2027, 1, 2, 0, 0, tzinfo=TIRANE)))
+        # 2027-01-02 is a Saturday, so the cutoff moves to Monday the 4th.
+        self.assertTrue(is_work_date_open(date(2026, 12, 5), now=datetime(2027, 1, 3, 23, 59, tzinfo=TIRANE)))
+        self.assertFalse(is_work_date_open(date(2026, 12, 5), now=datetime(2027, 1, 4, 0, 0, tzinfo=TIRANE)))
+
+    def test_cutoff_moves_off_a_weekend_day_two(self):
+        # 2026-08-02 is a Sunday: July stays open until Monday 08-03 00:00.
+        self.assertTrue(is_work_date_open(date(2026, 7, 15), now=datetime(2026, 8, 2, 12, 0, tzinfo=TIRANE)))
+        self.assertFalse(is_work_date_open(date(2026, 7, 15), now=datetime(2026, 8, 3, 0, 0, tzinfo=TIRANE)))
 
     def test_assert_raises_with_month_message(self):
         from rest_framework.exceptions import ValidationError

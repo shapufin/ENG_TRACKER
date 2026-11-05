@@ -9,6 +9,7 @@ export interface NotificationRecord {
   notification_type: "info" | "success" | "warning" | "error";
   is_read: boolean;
   link?: string;
+  dedupe_key?: string | null;
   created_at: string;
 }
 

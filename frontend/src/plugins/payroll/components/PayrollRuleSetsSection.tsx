@@ -35,7 +35,7 @@ export const PayrollRuleSetsSection: React.FC<PayrollRuleSetsSectionProps> = ({
     <div className="mb-4 flex items-center justify-between">
       <div>
         <SectionHeading title="Payroll Calculations" />
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-xs">
           Status is based on today. Payroll runs use the rule set effective on the first day of the
           selected month.
         </p>
@@ -64,12 +64,12 @@ export const PayrollRuleSetsSection: React.FC<PayrollRuleSetsSectionProps> = ({
         ))}
       </div>
     ) : ruleSets && ruleSets.length > 0 ? (
-      <p className="py-4 text-center text-muted-foreground">
+      <p className="text-muted-foreground py-4 text-center">
         All calculations are superseded.{" "}
         {supersededCount > 0 && "Enable “Show superseded” above to view them."}
       </p>
     ) : (
-      <p className="py-4 text-center text-muted-foreground">
+      <p className="text-muted-foreground py-4 text-center">
         No payroll calculations are configured yet. Contact an administrator to set up the first
         calculation.
       </p>
