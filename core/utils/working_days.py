@@ -15,19 +15,15 @@ from datetime import date, timedelta
 _MAX_SPAN_DAYS = 31
 
 
-def _holidays_around(start: date, days: int) -> set[date]:
+def _holidays(start: date, end: date) -> set[date]:
     from apps.leave_management.models.core import global_holiday_dates
 
-    return global_holiday_dates(start - timedelta(days=days), start + timedelta(days=days))
-
-
-def is_working_day(day: date) -> bool:
-    return day.weekday() < 5 and day not in _holidays_around(day, 0)
+    return global_holiday_dates(start, end)
 
 
 def next_working_day(day: date) -> date:
     """``day`` itself when it is a working day, otherwise the next one."""
-    holidays = _holidays_around(day, _MAX_SPAN_DAYS)
+    holidays = _holidays(day, day + timedelta(days=_MAX_SPAN_DAYS))
     for _ in range(_MAX_SPAN_DAYS):
         if day.weekday() < 5 and day not in holidays:
             return day
@@ -37,7 +33,7 @@ def next_working_day(day: date) -> date:
 
 def previous_working_day(day: date) -> date:
     """``day`` itself when it is a working day, otherwise the one before."""
-    holidays = _holidays_around(day, _MAX_SPAN_DAYS)
+    holidays = _holidays(day - timedelta(days=_MAX_SPAN_DAYS), day)
     for _ in range(_MAX_SPAN_DAYS):
         if day.weekday() < 5 and day not in holidays:
             return day

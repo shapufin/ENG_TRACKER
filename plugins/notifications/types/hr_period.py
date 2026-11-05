@@ -12,18 +12,18 @@ from .base import NotificationType
 LINK = '/hr/payroll/runs'
 
 
+# HR membership lives in two places (the role row and the legacy profile flag).
+_IS_HR = Q(profile__is_hr_user=True) | Q(user_roles__role__code='hr', user_roles__is_active=True)
+
+
+def _hr_users():
+    """Active HR users."""
+    return get_user_model().objects.filter(is_active=True).filter(_IS_HR).distinct()
+
+
 def _hr_recipients(close):
-    """Active HR users (role row or legacy profile flag), minus the closer."""
-    User = get_user_model()
-    return (
-        User.objects.filter(is_active=True)
-        .filter(
-            Q(profile__is_hr_user=True)
-            | Q(user_roles__role__code='hr', user_roles__is_active=True)
-        )
-        .exclude(pk=close.closed_by_id)
-        .distinct()
-    )
+    """HR users minus the closer."""
+    return _hr_users().exclude(pk=close.closed_by_id)
 
 
 def _month_label(close):
@@ -81,7 +81,7 @@ class HrPeriodReadyNotification(NotificationType):
     def message(self, context):
         return (
             f'Every user is closed for {_month_label(context["close"])}. '
-            'The payroll run finalizes automatically.'
+            'The payroll run will be finalized automatically.'
         )
 
     def dedupe_key(self, context, user):
@@ -100,15 +100,7 @@ class HrPayrollAutoFinalizedNotification(NotificationType):
     link = LINK
 
     def recipients(self, context):
-        User = get_user_model()
-        return (
-            User.objects.filter(is_active=True)
-            .filter(
-                Q(profile__is_hr_user=True)
-                | Q(user_roles__role__code='hr', user_roles__is_active=True)
-            )
-            .distinct()
-        )
+        return _hr_users()
 
     def title(self, context):
         run = context['run']
@@ -127,3 +119,35 @@ class HrPayrollAutoFinalizedNotification(NotificationType):
 
     def dedupe_key(self, context, user):
         return f'hr-payroll-auto-finalized:{context["run"].pk}:user:{user.id}'
+
+
+class HrPayrollAutoFinalizeFailedNotification(NotificationType):
+    event_type = 'hr_payroll_auto_finalize_failed'
+    label = 'Automatic payroll finalize failed'
+    description = (
+        "Sent to HR and administrators when the system could not finalize a month's "
+        'payroll run by itself, so an administrator can step in.'
+    )
+    category = 'hr'
+    notification_type = 'error'
+    link = LINK
+
+    def recipients(self, context):
+        return (
+            get_user_model().objects.filter(is_active=True)
+            .filter(_IS_HR | Q(is_staff=True) | Q(is_superuser=True))
+            .distinct()
+        )
+
+    def title(self, context):
+        return f'Automatic payroll finalize failed for {context["run"].period_label}'
+
+    def message(self, context):
+        return (
+            f'The system could not finalize the {context["run"].period_label} payroll run: '
+            f'{(context.get("error") or "unknown error").rstrip(".")}. An administrator must review the draft '
+            'and finalize it by hand.'
+        )
+
+    def dedupe_key(self, context, user):
+        return f'hr-payroll-auto-failed:{context["run"].pk}:user:{user.id}'
