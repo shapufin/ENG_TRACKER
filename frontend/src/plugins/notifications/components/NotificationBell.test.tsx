@@ -164,6 +164,7 @@ describe("NotificationBell", () => {
         <NotificationBell />
       </MemoryRouter>
     );
+    await waitFor(() => expect(notificationService.getUnreadCount).toHaveBeenCalled());
     expect(screen.getByRole("button", { name: /notifications/i })).toBeInTheDocument();
   });
 });

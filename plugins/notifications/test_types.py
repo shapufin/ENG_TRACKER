@@ -3,6 +3,7 @@ import datetime
 from unittest.mock import patch
 
 from django.test import TestCase
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 from plugins.notifications.models import (
@@ -433,7 +434,7 @@ class PeriodFinalizedRecipientsTest(TestCase):
         )
         self.close = ApprovalPeriodClose.objects.create(
             boundary=self.boundary,
-            closed_at=datetime.datetime(2026, 8, 11, 14, 30),
+            closed_at=timezone.make_aware(datetime.datetime(2026, 8, 11, 14, 30)),
             closed_by=self.closer,
         )
         ApprovalPeriodCloseMember.objects.create(close=self.close, user=self.member1)
@@ -540,7 +541,7 @@ class DispatchBehaviorTest(TestCase):
         )
         close = ApprovalPeriodClose.objects.create(
             boundary=boundary,
-            closed_at=datetime.datetime(2026, 8, 11, 14, 30),
+            closed_at=timezone.make_aware(datetime.datetime(2026, 8, 11, 14, 30)),
             closed_by=closer,
         )
         ApprovalPeriodCloseMember.objects.create(close=close, user=self.user)
@@ -553,6 +554,20 @@ class DispatchBehaviorTest(TestCase):
                 dedupe_key=f'period-close:{close.pk}:user:{self.user.id}',
             ).count(),
             1,
+        )
+
+    def test_repeated_dedupe_key_pushes_only_once(self):
+        from plugins.notifications.signals import _create_notification
+        with patch('plugins.notifications.signals._push_best_effort') as push:
+            for _ in range(2):
+                with self.captureOnCommitCallbacks(execute=True):
+                    _create_notification(
+                        self.user, 'T', 'M', 'period_finalized',
+                        dedupe_key='push-once-key',
+                    )
+        self.assertEqual(push.call_count, 1)
+        self.assertEqual(
+            Notification.objects.filter(user=self.user, dedupe_key='push-once-key').count(), 1
         )
 
     def test_notification_type_method_resolution(self):
