@@ -121,6 +121,7 @@ def generate_draft_runs_for_periods(
             WageAssignment,
         )
         from plugins.payroll.services.payroll_service import generate_draft_run
+        from plugins.payroll.viewsets import can_mutate_runs
     except ImportError:
         return {
             "attempted": False,
@@ -133,6 +134,16 @@ def generate_draft_runs_for_periods(
     runs_created: List[Dict[str, Any]] = []
     runs_skipped: List[Dict[str, Any]] = []
     users_without_wage: List[Dict[str, Any]] = []
+
+    if not can_mutate_runs(actor):
+        # Same rule as the payroll run endpoints: HR does not create runs by hand.
+        return {
+            "attempted": False,
+            "reason": "Payroll runs are created automatically; only administrators can create one by hand.",
+            "runs_created": [],
+            "runs_skipped": [],
+            "users_without_wage": [],
+        }
 
     for (year, month), users in sorted(periods_users.items()):
         period_label = f"{year}-{month:02d}"

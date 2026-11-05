@@ -901,26 +901,40 @@ def auto_finalize_run(run: PayrollRun, reason: str) -> bool:
     False and logs when the run cannot be finalized, so the scheduler never dies.
     """
     try:
-        users, _skipped = partition_payable_users(_payable_wage_users(), run.year, run.month)
+        # Refresh only the people already in the draft: its user set was decided when it
+        # was created (or by an administrator), the cutoff must not widen or reset it.
+        in_draft = set(run.lines.values_list('user_id', flat=True))
+        users, _skipped = partition_payable_users(
+            [user for user in _payable_wage_users() if user.pk in in_draft], run.year, run.month,
+        )
         if users:
             generate_draft_run(run, users)
         run = finalize_run(run, None)
-    except Exception:
+    except Exception as exc:
         logger.exception('Automatic finalize of payroll run %s (%s) failed.', run.pk, reason)
+        _notify_hr(run, 'failed', reason=reason, error=str(exc))
         return False
-    _notify_hr_auto_finalized(run, reason)
+    _notify_hr(run, 'finalized', reason=reason)
     return True
 
 
-def _notify_hr_auto_finalized(run: PayrollRun, reason: str) -> None:
+def _notify_hr(run: PayrollRun, outcome: str, **context) -> None:
+    """Tell HR (and administrators on a failure) what the automation did. Never raises."""
     try:
-        from plugins.notifications.types.hr_period import HrPayrollAutoFinalizedNotification
+        from plugins.notifications.types.hr_period import (
+            HrPayrollAutoFinalizedNotification,
+            HrPayrollAutoFinalizeFailedNotification,
+        )
     except ImportError:
         return
+    notification = (
+        HrPayrollAutoFinalizedNotification if outcome == 'finalized'
+        else HrPayrollAutoFinalizeFailedNotification
+    )
     try:
-        HrPayrollAutoFinalizedNotification().dispatch({'run': run, 'reason': reason})
+        notification().dispatch({'run': run, **context})
     except Exception:
-        logger.warning('Could not notify HR of the automatic finalize of run %s.', run.pk, exc_info=True)
+        logger.warning('Could not notify about the automatic %s of run %s.', outcome, run.pk, exc_info=True)
 
 
 def _notify_unclosed_leaders(run: PayrollRun, closure_status: dict, cutoff_day: date) -> None:
