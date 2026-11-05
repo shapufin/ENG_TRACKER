@@ -82,6 +82,7 @@ def _create_notification(
     types (the HBPR governance groups). The admin kill-switch stays per-event.
     """
     notification = None
+    created = True
     pref_key = preference_key or event_type
 
     # Plugin-level kill-switch: a disabled notifications plugin emits nothing,
@@ -104,7 +105,7 @@ def _create_notification(
             'link': link,
         }
         if dedupe_key:
-            notification, _ = Notification.objects.get_or_create(
+            notification, created = Notification.objects.get_or_create(
                 user=user,
                 dedupe_key=dedupe_key,
                 defaults=defaults,
@@ -112,7 +113,9 @@ def _create_notification(
         else:
             notification = Notification.objects.create(user=user, **defaults)
 
-    if _preference_enabled(user, pref_key, 'push'):
+    # A deduped repeat (hourly lifecycle tick) must not re-push what the user
+    # already received.
+    if created and _preference_enabled(user, pref_key, 'push'):
         # PERF-08: push is HTTP to a third party; run it after the surrounding
         # transaction commits (and never if it rolls back) instead of inside the
         # request's DB transaction. In-app rows stay synchronous: they are the

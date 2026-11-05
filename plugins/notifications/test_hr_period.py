@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 
 from apps.permissions.services.role_service import assign_role
 from apps.users.models import (
@@ -35,7 +36,7 @@ class HrPeriodNotificationTests(TestCase):
         boundary = ApprovalPeriodBoundary.objects.create(period=datetime.date(2026, 10, 1))
         self.close = ApprovalPeriodClose.objects.create(
             boundary=boundary,
-            closed_at=datetime.datetime(2026, 11, 2, 9, 0),
+            closed_at=timezone.make_aware(datetime.datetime(2026, 11, 2, 9, 0)),
             closed_by=self.lm,
         )
         ApprovalPeriodCloseMember.objects.create(close=self.close, user=self.employee)

@@ -27,8 +27,14 @@ class WorkDateCutoffTests(TestCase):
 
     def test_closed_message_names_the_real_cutoff_day(self):
         from rest_framework.exceptions import ValidationError
-        with self.assertRaisesMessage(ValidationError, 'until the 2nd of the following month'):
+        with self.assertRaisesMessage(ValidationError, 'are closed. Records for a month can be added until'):
             assert_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE))
+
+    def test_closed_message_shows_postponed_cutoff_when_2nd_is_weekend(self):
+        from rest_framework.exceptions import ValidationError
+        # 2 Jan 2027 is a Saturday: the cutoff moves to Monday 4 Jan.
+        with self.assertRaisesMessage(ValidationError, '04 January 2027'):
+            assert_work_date_open(date(2026, 12, 15), now=datetime(2027, 1, 4, 0, 0, tzinfo=TIRANE))
 
     def test_current_month_always_open(self):
         self.assertTrue(is_work_date_open(date(2026, 10, 1), now=datetime(2026, 10, 20, 12, 0, tzinfo=TIRANE)))
