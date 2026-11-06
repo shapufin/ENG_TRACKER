@@ -7,6 +7,8 @@ export default defineConfig({
   testIgnore: ["**/pwa.spec.ts", "**/offline-data.spec.ts"],
   fullyParallel: false,
   retries: process.env.CI ? 2 : 0,
+  // CI e2e runs on SQLite (settings_e2e): parallel workers hit "database is locked".
+  workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "github" : "list",
   globalSetup: "./e2e/global-setup.ts",
   use: {
