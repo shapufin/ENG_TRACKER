@@ -68,6 +68,16 @@ export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 
+/** In-memory access token for non-axios callers (the offline queue replay), refreshed if expiring. */
+export async function getFreshAccessToken(): Promise<string | null> {
+  if (accessToken && !isTokenExpiringSoon(accessToken)) return accessToken;
+  try {
+    return await performTokenRefresh();
+  } catch {
+    return null;
+  }
+}
+
 function clearAuthAndRedirect() {
   clearOfflineUserData();
   localStorage.removeItem("user");

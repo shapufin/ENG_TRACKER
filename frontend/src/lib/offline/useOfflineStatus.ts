@@ -21,11 +21,13 @@ import {
 } from "./offlineQueue";
 import { hasStaleOfflineData } from "./offlineApiCache";
 import { API_BASE_URL } from "@/lib/constants";
+import { getFreshAccessToken } from "@/lib/api";
 
 const API_BASE = API_BASE_URL;
 
-function fetchQueuedMutation(url: string, options: RequestInit): Promise<Response> {
-  const token = localStorage.getItem("access_token");
+// The access token lives in memory only (never localStorage), so replay asks api.ts for it.
+export async function fetchQueuedMutation(url: string, options: RequestInit): Promise<Response> {
+  const token = await getFreshAccessToken();
   return fetch(API_BASE + url, {
     ...options,
     credentials: "include",
