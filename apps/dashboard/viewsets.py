@@ -1070,8 +1070,9 @@ class SiteBrandingViewSet(CacheInvalidationMixin, viewsets.ModelViewSet):
         """Get the current site branding settings."""
         branding = SiteBranding.objects.first()
         if not branding:
-            # Create default branding if none exists
-            branding = SiteBranding.objects.create(pk=1)
+            # Concurrent first requests both miss first(); get_or_create keeps
+            # the loser from failing on the pk=1 unique constraint (500).
+            branding, _ = SiteBranding.objects.get_or_create(pk=1)
         serializer = self.get_serializer(branding)
         return Response(serializer.data)
 
