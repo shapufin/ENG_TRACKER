@@ -3,6 +3,8 @@ import { useLeaveQueries } from "@/hooks/useLeaveQueries";
 import { useAuth } from "@/context/AuthContext";
 import { Plus, FileDown, Download, X } from "lucide-react";
 import type { LeaveRequest } from "@/types";
+import { RecordDetailModal } from "@/components/team/RecordDetailModal";
+import { usePhoneRecordDetail } from "@/components/team/usePhoneRecordDetail";
 import { usePermissions } from "@/context/PermissionContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +50,7 @@ export const LeavePage: React.FC = () => {
     openEdit,
     validateForm,
   } = useLeaveForm();
+  const detail = usePhoneRecordDetail<LeaveRequest>();
 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
@@ -175,11 +178,18 @@ export const LeavePage: React.FC = () => {
               enableColumnVisibility
               storageKey="table-visibility-vacations-page"
               mobileCard={LEAVE_CARD}
+              onRowClick={detail.onRowClick}
               columns={columns}
             />
           </GlassCard>
         </>
       )}
+
+      <RecordDetailModal
+        open={detail.record !== null}
+        onOpenChange={detail.onOpenChange}
+        record={detail.record}
+      />
 
       <FormDialog
         mobileSheet

@@ -7,6 +7,8 @@ import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Plus } from "lucide-react";
 import type { OvertimeLog } from "@/types";
+import { RecordDetailModal } from "@/components/team/RecordDetailModal";
+import { usePhoneRecordDetail } from "@/components/team/usePhoneRecordDetail";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { useBulkOperations } from "@/hooks/useBulkOperations";
 import { useOvertimeForm } from "./hooks/useOvertimeForm";
@@ -50,6 +52,7 @@ export const OvertimePage: React.FC = () => {
     setForm,
     setFormErrors,
   } = useOvertimeForm();
+  const detail = usePhoneRecordDetail<OvertimeLog>();
   const sharedPreview = useOvertimeHoursPreview({
     date: formOpen ? form.date : "",
     startTime: form.start_time,
@@ -207,10 +210,17 @@ export const OvertimePage: React.FC = () => {
         onRowSelectionChange={setRowSelection}
         storageKey="table-visibility-overtime-page"
         mobileCard={OVERTIME_CARD}
+        onRowClick={detail.onRowClick}
         {...(canApprove && {
           searchColumn: "client_name",
           searchPlaceholder: "Search by client...",
         })}
+      />
+
+      <RecordDetailModal
+        open={detail.record !== null}
+        onOpenChange={detail.onOpenChange}
+        record={detail.record}
       />
 
       <OvertimeFormDialog

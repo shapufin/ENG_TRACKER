@@ -18,6 +18,8 @@ interface HoursLogDataTableProps<T extends { id: number; status?: string }> {
   toolbarActions?: React.ReactNode;
   /** Phone card layout (below 768px); pages opt in by naming their column ids. */
   mobileCard?: DataTableCardSpec;
+  /** Row/card tap (the pages open the record detail on phones only). */
+  onRowClick?: (row: T) => void;
 }
 
 const STATUS_OPTIONS = [
@@ -36,6 +38,7 @@ export const HoursLogDataTable = <T extends { id: number; status?: string }>({
   searchPlaceholder,
   toolbarActions,
   mobileCard,
+  onRowClick,
 }: HoursLogDataTableProps<T>) => {
   const [status, setStatus] = React.useState<string | null>(null);
   const options = STATUS_OPTIONS.map((o) => ({
@@ -71,6 +74,7 @@ export const HoursLogDataTable = <T extends { id: number; status?: string }>({
         getRowId={(row) => row.id.toString()}
         toolbarActions={toolbarActions}
         mobileCard={mobileCard}
+        onRowClick={onRowClick}
         {...(searchColumn && { searchColumn, searchPlaceholder })}
       />
     </GlassCard>
