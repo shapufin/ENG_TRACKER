@@ -147,7 +147,16 @@ export const TeamBreakdownTable: React.FC<TeamBreakdownTableProps> = ({ rows }) 
         <p className="text-muted-foreground text-xs">{rows.length} team(s)</p>
       </div>
       <div className="p-4">
-        <DataTable columns={columns} data={rows} />
+        <DataTable
+          columns={columns}
+          data={rows}
+          mobileCard={{
+            title: "team",
+            hero: "score",
+            status: "status",
+            meta: ["leader", "size", "approval", "breaches", "pending", "resubmissions"],
+          }}
+        />
       </div>
     </GlassCard>
   );
