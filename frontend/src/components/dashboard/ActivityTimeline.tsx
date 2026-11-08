@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Clock, XCircle, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { formatDateTime } from "@/lib/date-format-utils";
 import { cn } from "@/lib/utils";
@@ -26,7 +27,11 @@ interface ActivityTimelineProps {
   delay?: number;
 }
 
+const PHONE_VISIBLE = 5;
+
 export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ items, delay = 0 }) => {
+  const [expanded, setExpanded] = React.useState(false);
+  const collapsible = items.length > PHONE_VISIBLE;
   return (
     <GlassCard delay={delay} className="flex flex-col overflow-hidden">
       <div className="border-border/60 border-b p-4">
@@ -43,7 +48,10 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ items, delay
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: delay + i * 0.06, duration: 0.3 }}
-                className="relative flex items-start gap-3"
+                className={cn(
+                  "relative flex items-start gap-3",
+                  !expanded && i >= PHONE_VISIBLE && "max-md:hidden"
+                )}
               >
                 <div
                   className={cn(
@@ -67,6 +75,18 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ items, delay
             );
           })}
         </div>
+        {collapsible && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="control-sm"
+            className="mt-3 w-full md:hidden"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? "Show less" : `Show all ${items.length}`}
+          </Button>
+        )}
       </div>
     </GlassCard>
   );
