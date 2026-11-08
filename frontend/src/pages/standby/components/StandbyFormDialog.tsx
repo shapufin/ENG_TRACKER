@@ -86,6 +86,7 @@ export const StandbyFormDialog: React.FC<StandbyFormDialogProps> = ({
 
   return (
     <FormDialog
+      mobileSheet
       open={open}
       onOpenChange={onOpenChange}
       title={editing ? "Edit Standby" : "New Standby"}

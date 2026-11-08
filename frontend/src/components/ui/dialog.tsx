@@ -63,6 +63,14 @@ const CENTER_FRAME =
 const RIGHT_FRAME =
   "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right fixed inset-y-0 right-0 left-auto top-0 z-50 h-dvh max-h-dvh w-full translate-x-0 translate-y-0 rounded-none border-y-0 border-r-0 border-l";
 
+/**
+ * "bottom": a sheet pinned to the bottom edge below md (thumb reach), the same
+ * centred modal as CENTER_FRAME from md up. The `max-md:` utilities are
+ * variant-prefixed, so they are separate merge groups and win by media-query
+ * order; the enter/exit animation is switched to a slide-up in the same way.
+ */
+const BOTTOM_FRAME = `${CENTER_FRAME} max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:left-0 max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-b-none max-md:rounded-t-3xl max-md:border-x-0 max-md:border-b-0 max-md:max-h-[92dvh] max-md:data-[state=open]:slide-in-from-bottom max-md:data-[state=open]:slide-in-from-left-0 max-md:data-[state=open]:zoom-in-100 max-md:data-[state=closed]:slide-out-to-bottom max-md:data-[state=closed]:slide-out-to-left-0 max-md:data-[state=closed]:zoom-out-100`;
+
 interface DialogContentProps extends React.ComponentPropsWithoutRef<
   typeof DialogPrimitive.Content
 > {
@@ -77,8 +85,8 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<
   padded?: boolean;
   /** Hide the built-in close button (for dialogs with a custom header close). */
   hideClose?: boolean;
-  /** "center" (default) modal, or "right" full-height side panel. */
-  side?: "center" | "right";
+  /** "center" (default) modal, "right" full-height side panel, or "bottom" phone sheet (centred from md). */
+  side?: "center" | "right" | "bottom";
 }
 
 const DialogContent = React.forwardRef<
@@ -106,7 +114,7 @@ const DialogContent = React.forwardRef<
         className={cn(
           // Placement + motion (see CENTER_FRAME / RIGHT_FRAME)
           SHARED_MOTION,
-          side === "right" ? RIGHT_FRAME : CENTER_FRAME,
+          side === "right" ? RIGHT_FRAME : side === "bottom" ? BOTTOM_FRAME : CENTER_FRAME,
           // Surface
           "bg-popover text-popover-foreground shadow-2xl",
           padded &&

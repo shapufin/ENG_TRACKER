@@ -23,6 +23,36 @@ describe("Dialog mobile presentation", () => {
   });
 });
 
+describe("DialogContent side=bottom (phone sheet)", () => {
+  it("pins to the bottom edge below md and stays the centred modal from md", () => {
+    renderDialog(
+      <DialogContent side="bottom">
+        <DialogTitle>Sheet</DialogTitle>
+      </DialogContent>
+    );
+
+    const cls = screen.getByRole("dialog").className;
+    // Phone: full-width sheet on the bottom edge, rounded on top only, slides up.
+    expect(cls).toContain("max-md:bottom-0");
+    expect(cls).toContain("max-md:rounded-t-3xl");
+    expect(cls).toContain("max-md:rounded-b-none");
+    expect(cls).toContain("max-md:data-[state=open]:slide-in-from-bottom");
+    // From md up it keeps the centred frame, so desktop dialogs do not change.
+    expect(cls).toContain("left-[50%]");
+    expect(cls).toContain("top-[50%]");
+  });
+
+  it("leaves the default centred modal untouched", () => {
+    renderDialog(
+      <DialogContent>
+        <DialogTitle>Centre</DialogTitle>
+      </DialogContent>
+    );
+
+    expect(screen.getByRole("dialog").className).not.toContain("max-md:bottom-0");
+  });
+});
+
 describe("DialogContent size scale", () => {
   it.each([
     ["sm", "max-w-md"],
