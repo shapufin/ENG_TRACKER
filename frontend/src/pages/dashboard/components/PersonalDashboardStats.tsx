@@ -26,7 +26,7 @@ export const PersonalDashboardStats: React.FC<PersonalDashboardStatsProps> = ({
       delay={0}
       footer={
         <>
-          <span className="font-medium tabular-nums text-muted-foreground">
+          <span className="text-muted-foreground font-medium tabular-nums">
             {personalOvertimeHours}h tracked
           </span>
           <span className="text-muted-foreground">This period</span>
@@ -42,7 +42,7 @@ export const PersonalDashboardStats: React.FC<PersonalDashboardStatsProps> = ({
       delay={0.05}
       footer={
         <>
-          <span className="font-medium tabular-nums text-muted-foreground">
+          <span className="text-muted-foreground font-medium tabular-nums">
             {personalStandbyHours}h tracked
           </span>
           <span className="text-muted-foreground">This period</span>
@@ -59,7 +59,7 @@ export const PersonalDashboardStats: React.FC<PersonalDashboardStatsProps> = ({
       delay={0.1}
       footer={
         <>
-          <span className="font-medium tabular-nums text-muted-foreground">
+          <span className="text-muted-foreground font-medium tabular-nums">
             {vacationBalanceDays}d left
           </span>
           <span className="text-muted-foreground">See Calendar</span>
