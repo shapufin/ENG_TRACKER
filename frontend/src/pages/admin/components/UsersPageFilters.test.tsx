@@ -82,3 +82,20 @@ describe("UsersPageFilters layout", () => {
     expect(state.setTeamIds).toHaveBeenCalledWith([7]);
   });
 });
+
+describe("UsersPageFilters on phones", () => {
+  it("keeps the role, tech and team chips behind a Filters toggle", () => {
+    renderFilters({ tlFilter: "hr" });
+    const groups = screen.getByTestId("users-filter-groups");
+    expect(groups).toHaveClass("max-md:hidden");
+
+    const toggle = screen.getByRole("button", { name: /Filters/ });
+    expect(toggle).toHaveClass("md:hidden");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveTextContent("1");
+
+    fireEvent.click(toggle);
+    expect(groups).not.toHaveClass("max-md:hidden");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
+});

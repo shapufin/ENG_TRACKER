@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
+import { SlidersHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { UserFilterTabs } from "@/components/admin/UserFilterTabs";
 import { TechFacetFilter } from "@/components/admin/TechFacetFilter";
 import { FilterChipRow } from "@/components/ui/FilterChipRow";
@@ -48,59 +50,80 @@ export const UsersPageFilters: React.FC<UsersPageFiltersProps> = ({ state, teams
     state.noTechOnly ||
     state.crOnly ||
     activeTeamLabels.length > 0;
+  const [open, setOpen] = useState(false);
+  const activeCount =
+    (state.tlFilter !== "employee" && state.tlFilter !== "all" ? 1 : 0) +
+    (state.crOnly ? 1 : 0) +
+    (state.noTechOnly ? 1 : 0) +
+    activeTechLabels.length +
+    activeTeamLabels.length;
   // profilesCount is the server-side total for every active filter.
   const matchCount = state.profilesCount;
 
   return (
     <div className="border-line-subtle space-y-2 border-b pb-4">
-      {/* UserFilterTabs is itself the labelled "Role" row; the CR chip joins it. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <UserFilterTabs
-          filter={state.tlFilter}
-          onFilterChange={state.setTlFilter}
-          showCRAdmin={state.crActive}
+      {/* Phones: three chip rows would push the table below the fold, so they sit behind a toggle. */}
+      <Button
+        type="button"
+        variant="outline"
+        size="control-sm"
+        className="md:hidden"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <SlidersHorizontal className="mr-2 h-4 w-4" aria-hidden="true" />
+        Filters{activeCount > 0 ? ` (${activeCount})` : ""}
+      </Button>
+      <div data-testid="users-filter-groups" className={cn("space-y-2", !open && "max-md:hidden")}>
+        {/* UserFilterTabs is itself the labelled "Role" row; the CR chip joins it. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <UserFilterTabs
+            filter={state.tlFilter}
+            onFilterChange={state.setTlFilter}
+            showCRAdmin={state.crActive}
+          />
+          {state.crActive && (
+            <CRUsersFilterButton
+              active={state.crOnly}
+              onToggle={() => state.setCrOnly(!state.crOnly)}
+            />
+          )}
+        </div>
+
+        <TechFacetFilter
+          facets={state.techFacets}
+          noTechCount={state.noTechCount}
+          selectedTechIds={state.techIds}
+          selectedLevelIds={state.techLevelIds}
+          noTechOnly={state.noTechOnly}
+          onTechIdsChange={state.setTechIds}
+          onLevelIdsChange={state.setTechLevelIds}
+          onNoTechOnlyChange={state.setNoTechOnly}
         />
-        {state.crActive && (
-          <CRUsersFilterButton
-            active={state.crOnly}
-            onToggle={() => state.setCrOnly(!state.crOnly)}
+
+        {teams.length > 0 && (
+          <FilterChipRow
+            label="Team"
+            options={[
+              { value: "all", label: "All teams" },
+              ...teams.map((t) => ({ value: String(t.id), label: t.name })),
+            ]}
+            selected={state.teamIds.length === 0 ? ["all"] : state.teamIds.map(String)}
+            onToggle={(val) => {
+              if (val === "all") {
+                state.setTeamIds([]);
+                return;
+              }
+              const id = Number(val);
+              state.setTeamIds(
+                state.teamIds.includes(id)
+                  ? state.teamIds.filter((tid) => tid !== id)
+                  : [...state.teamIds, id]
+              );
+            }}
           />
         )}
       </div>
-
-      <TechFacetFilter
-        facets={state.techFacets}
-        noTechCount={state.noTechCount}
-        selectedTechIds={state.techIds}
-        selectedLevelIds={state.techLevelIds}
-        noTechOnly={state.noTechOnly}
-        onTechIdsChange={state.setTechIds}
-        onLevelIdsChange={state.setTechLevelIds}
-        onNoTechOnlyChange={state.setNoTechOnly}
-      />
-
-      {teams.length > 0 && (
-        <FilterChipRow
-          label="Team"
-          options={[
-            { value: "all", label: "All teams" },
-            ...teams.map((t) => ({ value: String(t.id), label: t.name })),
-          ]}
-          selected={state.teamIds.length === 0 ? ["all"] : state.teamIds.map(String)}
-          onToggle={(val) => {
-            if (val === "all") {
-              state.setTeamIds([]);
-              return;
-            }
-            const id = Number(val);
-            state.setTeamIds(
-              state.teamIds.includes(id)
-                ? state.teamIds.filter((tid) => tid !== id)
-                : [...state.teamIds, id]
-            );
-          }}
-        />
-      )}
 
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
