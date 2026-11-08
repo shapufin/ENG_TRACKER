@@ -40,7 +40,9 @@ describe("InstallAppNotice", () => {
 
     const notice = screen.getByRole("status");
     expect(notice).not.toHaveClass("top-0");
-    expect(notice).toHaveClass("bottom-3");
+    expect(notice).toHaveClass("md:bottom-3");
+    // Sits above the phone tab bar whenever one is mounted.
+    expect(notice.className).toContain("var(--bottom-nav-h");
   });
 
   it("shows iOS installation instructions", async () => {

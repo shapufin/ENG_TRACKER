@@ -8,7 +8,7 @@ export function ServiceWorkerUpdateNotice({ onReload }: { onReload?: () => void 
 
   return (
     <div
-      className="border-primary/30 bg-primary/10 fixed right-0 bottom-14 left-0 z-50 border-t px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur"
+      className="border-primary/30 bg-primary/10 fixed right-0 bottom-[var(--bottom-nav-h,3.5rem)] left-0 z-50 border-t px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur md:bottom-14"
       role="status"
       aria-live="polite"
     >

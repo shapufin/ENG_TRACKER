@@ -20,7 +20,7 @@ export function OfflineIndicator() {
   if (isOnline && pendingCount === 0 && showingStaleData) {
     return (
       <div
-        className="border-border bg-tone-warning-surface fixed right-0 bottom-0 left-0 z-50 border-t px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur"
+        className="border-border bg-tone-warning-surface fixed right-0 bottom-[var(--bottom-nav-h,0px)] left-0 z-50 border-t px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur md:bottom-0"
         role="status"
         aria-live="polite"
       >
@@ -35,7 +35,7 @@ export function OfflineIndicator() {
   if (isOnline && pendingCount > 0) {
     return (
       <div
-        className="border-border bg-card/95 fixed right-0 bottom-0 left-0 z-50 border-t px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur"
+        className="border-border bg-card/95 fixed right-0 bottom-[var(--bottom-nav-h,0px)] left-0 z-50 border-t px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur md:bottom-0"
         role="status"
         aria-live="polite"
       >
@@ -71,7 +71,7 @@ export function OfflineIndicator() {
   return (
     <div
       className={cn(
-        "border-border bg-destructive/10 fixed right-0 bottom-0 left-0 z-50 border-t px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur"
+        "border-border bg-destructive/10 fixed right-0 bottom-[var(--bottom-nav-h,0px)] left-0 z-50 border-t px-4 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))] backdrop-blur md:bottom-0"
       )}
       role="status"
       aria-live="polite"
