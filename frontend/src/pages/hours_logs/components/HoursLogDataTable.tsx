@@ -2,6 +2,7 @@ import React from "react";
 import type { RowSelectionState, OnChangeFn } from "@tanstack/react-table";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { FilterChipRow } from "@/components/ui/FilterChipRow";
 
 interface HoursLogDataTableProps<T extends { id: number; status?: string }> {
@@ -15,6 +16,8 @@ interface HoursLogDataTableProps<T extends { id: number; status?: string }> {
   searchPlaceholder?: string;
   /** Extra toolbar controls rendered on the same row as Search and Columns. */
   toolbarActions?: React.ReactNode;
+  /** Phone card layout (below 768px); pages opt in by naming their column ids. */
+  mobileCard?: DataTableCardSpec;
 }
 
 const STATUS_OPTIONS = [
@@ -32,6 +35,7 @@ export const HoursLogDataTable = <T extends { id: number; status?: string }>({
   searchColumn,
   searchPlaceholder,
   toolbarActions,
+  mobileCard,
 }: HoursLogDataTableProps<T>) => {
   const [status, setStatus] = React.useState<string | null>(null);
   const options = STATUS_OPTIONS.map((o) => ({
@@ -66,6 +70,7 @@ export const HoursLogDataTable = <T extends { id: number; status?: string }>({
         storageKey={storageKey}
         getRowId={(row) => row.id.toString()}
         toolbarActions={toolbarActions}
+        mobileCard={mobileCard}
         {...(searchColumn && { searchColumn, searchPlaceholder })}
       />
     </GlassCard>

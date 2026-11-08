@@ -3,10 +3,28 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { DataTable } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { TLBulkActions } from "@/components/team/TLBulkActions";
 import type { RowSelectionState } from "@tanstack/react-table";
 
 type Tab = "overtime" | "standby" | "leave";
+
+/** Phone card layout per tab: the employee leads because a leader approves people, not rows. */
+const MOBILE_CARD: Record<Tab, DataTableCardSpec> = {
+  overtime: {
+    title: "user_name",
+    hero: "hours",
+    status: "status",
+    meta: ["client_name", "date", "description"],
+  },
+  standby: { title: "user_name", hero: "hours", status: "status", meta: ["date", "description"] },
+  leave: {
+    title: "user_name",
+    hero: "days_requested",
+    status: "status",
+    meta: ["request_type", "start_date", "end_date", "reason"],
+  },
+};
 
 interface TLApprovalTabPanelProps {
   type: Tab;
@@ -81,6 +99,7 @@ export const TLApprovalTabPanel: React.FC<TLApprovalTabPanelProps> = ({
             enableColumnVisibility
             storageKey={storageKey}
             defaultColumnVisibility={defaultColumnVisibility}
+            mobileCard={MOBILE_CARD[type]}
           />
         )}
       </div>

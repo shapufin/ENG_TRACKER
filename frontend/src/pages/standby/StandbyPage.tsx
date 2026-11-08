@@ -22,6 +22,13 @@ import { DateRangeHistoryButton } from "@/pages/hours_logs/components/DateRangeH
 import { HoursLogBulkActionBar } from "@/pages/hours_logs/components/HoursLogDialogs";
 import { HoursLogConfirmDialogs } from "@/pages/hours_logs/components/HoursLogConfirmDialogs";
 
+const STANDBY_CARD = {
+  title: "date",
+  hero: "hours",
+  status: "status",
+  meta: ["user_full_name", "payroll_period", "description"],
+};
+
 // fallow-ignore-next-line complexity
 export const StandbyPage: React.FC = () => {
   const { userId, canApprove, isAdmin, isSuperuser, canViewTeamData, queryClient } =
@@ -193,6 +200,7 @@ export const StandbyPage: React.FC = () => {
         rowSelection={rowSelection}
         onRowSelectionChange={setRowSelection}
         storageKey="table-visibility-standby-page"
+        mobileCard={STANDBY_CARD}
         {...(canApprove && {
           searchColumn: "user_full_name",
           searchPlaceholder: "Search by employee...",

@@ -23,6 +23,13 @@ import { HoursLogBulkActionBar } from "@/pages/hours_logs/components/HoursLogDia
 import { HoursLogConfirmDialogs } from "@/pages/hours_logs/components/HoursLogConfirmDialogs";
 import { useOvertimeHoursPreview, previewNote } from "./hooks/useOvertimeHoursPreview";
 
+const OVERTIME_CARD = {
+  title: "client_name",
+  hero: "hours",
+  status: "status",
+  meta: ["user_full_name", "date", "payroll_period", "description"],
+};
+
 // fallow-ignore-next-line complexity
 export const OvertimePage: React.FC = () => {
   const { userId, canApprove, isAdmin, isSuperuser, canViewTeamData, queryClient } =
@@ -199,6 +206,7 @@ export const OvertimePage: React.FC = () => {
         rowSelection={rowSelection}
         onRowSelectionChange={setRowSelection}
         storageKey="table-visibility-overtime-page"
+        mobileCard={OVERTIME_CARD}
         {...(canApprove && {
           searchColumn: "client_name",
           searchPlaceholder: "Search by client...",

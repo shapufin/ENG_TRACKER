@@ -115,6 +115,27 @@ describe("HoursLogExportButtons", () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
   });
 
+  it("collapses both exports into one Export menu on phones", async () => {
+    render(
+      <HoursLogExportButtons
+        logs={logs}
+        filename="ot"
+        csvHeaders={["User", "Hours"]}
+        rowMapper={(l) => [l.user, String(l.hours)]}
+      />
+    );
+
+    const trigger = screen.getByRole("button", { name: "Export" });
+    expect(trigger).toHaveClass("md:hidden");
+    fireEvent.click(trigger);
+    fireEvent.click(await screen.findByRole("button", { name: "CSV" }));
+    expect(exportData).toHaveBeenCalledWith(logs, "ot", "csv", expect.any(Object));
+
+    fireEvent.click(trigger);
+    fireEvent.click(await screen.findByRole("button", { name: "JSON" }));
+    expect(exportData).toHaveBeenCalledWith(logs, "ot", "json");
+  });
+
   it("wraps the export action row on narrow screens", () => {
     const { container } = render(
       <HoursLogExportButtons
