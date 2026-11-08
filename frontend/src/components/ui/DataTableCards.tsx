@@ -116,7 +116,7 @@ export const DataTableCards = <TData extends object>({
                 )}
                 {actions && (
                   // No hover state on touch: keep icon buttons visible and 44px.
-                  <div className="flex items-center justify-end [&_button]:min-h-11 [&_button]:min-w-11 [&>div]:opacity-100">
+                  <div className="flex items-center justify-end [&_button]:min-h-11 [&_button]:min-w-11 [&_div]:opacity-100">
                     {actions}
                   </div>
                 )}

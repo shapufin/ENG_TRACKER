@@ -20,6 +20,13 @@ import { LeaveStatsCards } from "./components/LeaveStatsCards";
 import { LeaveRequestForm } from "./components/LeaveRequestForm";
 import { leaveTypeLabel } from "@/lib/export-leave-requests";
 
+const LEAVE_CARD = {
+  title: "request_type",
+  hero: "days_requested",
+  status: "status",
+  meta: ["user_name", "start_date", "end_date"],
+};
+
 // fallow-ignore-next-line complexity
 export const LeavePage: React.FC = () => {
   const { user } = useAuth();
@@ -167,6 +174,7 @@ export const LeavePage: React.FC = () => {
               data={requests}
               enableColumnVisibility
               storageKey="table-visibility-vacations-page"
+              mobileCard={LEAVE_CARD}
               columns={columns}
             />
           </GlassCard>
