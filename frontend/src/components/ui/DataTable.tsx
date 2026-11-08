@@ -38,6 +38,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { ColumnVisibilityMenu } from "./ColumnVisibilityMenu";
 import { EmptyState } from "./EmptyState";
 import { RowActionsPill } from "./RowActionsPill";
+import { DataTableCards, MOBILE_CARD_QUERY, type DataTableCardSpec } from "./DataTableCards";
 
 /** The actions column is never user-hideable; drop any persisted or emitted `actions` key. */
 const withoutActions = (visibility: ColumnVisibilityState): ColumnVisibilityState =>
@@ -83,6 +84,8 @@ interface DataTableProps<TData extends RowData> {
   getRowId?: (row: TData, index: number) => string;
   /** Extra toolbar controls (e.g. a filter Chip) rendered between the search and Columns. */
   toolbarActions?: React.ReactNode;
+  /** Opt-in phone layout: below 768px each row renders as a card built from these column ids. */
+  mobileCard?: DataTableCardSpec;
 }
 
 // fallow-ignore-next-line complexity
@@ -107,6 +110,7 @@ export const DataTable = function DataTable<TData extends RowData>({
   defaultColumnVisibility,
   onColumnVisibilityChange,
   storageKey,
+  mobileCard,
   getRowId,
   toolbarActions,
 }: DataTableProps<TData>) {
@@ -232,6 +236,7 @@ export const DataTable = function DataTable<TData extends RowData>({
   const rows = table.getRowModel().rows;
 
   // Fine pointers get the floating pill; coarse pointers (and environments without matchMedia) keep the column.
+  const showCards = useMediaQuery(MOBILE_CARD_QUERY) && Boolean(mobileCard);
   const isFinePointer = useMediaQuery("(pointer: fine)");
   const actionsInPill =
     isFinePointer && columns.some((c) => c.id === "actions" && c.meta?.actionsDisplay !== "column");
@@ -434,95 +439,109 @@ export const DataTable = function DataTable<TData extends RowData>({
       {/* Bordered table card: scroll region + attached result footer, so the
       count never floats detached below the table. */}
       <div className="border-border/70 bg-background/20 overflow-hidden rounded-xl border">
-        <div className="relative">
-          {showLeftShadow && (
-            <div className="from-card pointer-events-none absolute inset-y-0 left-0 z-10 w-8 rounded-l-md bg-linear-to-r to-transparent" />
-          )}
-          {showRightShadow && (
-            <div className="from-card pointer-events-none absolute inset-y-0 right-0 z-10 w-8 rounded-r-md bg-linear-to-l to-transparent" />
-          )}
-          <div ref={scrollRef} className="overflow-x-auto">
-            <table className="text-dense w-full min-w-max">
-              <thead>
-                <tr className={TABLE_HEAD_ROW_CLASS}>
-                  {enableRowSelection && (
-                    <th className={TABLE_HEAD_CELL_CHECKBOX_CLASS}>
-                      <Checkbox
-                        checked={table.getIsAllPageRowsSelected()}
-                        onCheckedChange={(value) => table.toggleAllPageRowsSelected(Boolean(value))}
-                        aria-label="Select all rows on this page"
-                      />
-                    </th>
-                  )}
-                  {table.getHeaderGroups().flatMap((hg) =>
-                    // fallow-ignore-next-line complexity
-                    hg.headers.map((header) =>
-                      header.column.id === "actions" && actionsInPill ? (
-                        <th key={header.id} className="w-0 px-0 py-0" aria-hidden="true" />
-                      ) : (
-                        <th
-                          key={header.id}
-                          className={cn(
-                            TABLE_HEAD_CELL_CLASS,
-                            header.column.id === "actions" && TABLE_ACTIONS_HEAD_CLASS
-                          )}
-                          style={
-                            header.column.columnDef.size
-                              ? { width: header.column.columnDef.size }
-                              : undefined
+        {showCards && mobileCard ? (
+          <DataTableCards
+            rows={rows}
+            spec={mobileCard}
+            emptyMessage={emptyMessage}
+            enableRowSelection={enableRowSelection}
+            allSelected={table.getIsAllPageRowsSelected()}
+            onToggleAll={(value) => table.toggleAllPageRowsSelected(value)}
+            onRowClick={onRowClick}
+          />
+        ) : (
+          <div className="relative">
+            {showLeftShadow && (
+              <div className="from-card pointer-events-none absolute inset-y-0 left-0 z-10 w-8 rounded-l-md bg-linear-to-r to-transparent" />
+            )}
+            {showRightShadow && (
+              <div className="from-card pointer-events-none absolute inset-y-0 right-0 z-10 w-8 rounded-r-md bg-linear-to-l to-transparent" />
+            )}
+            <div ref={scrollRef} className="overflow-x-auto">
+              <table className="text-dense w-full min-w-max">
+                <thead>
+                  <tr className={TABLE_HEAD_ROW_CLASS}>
+                    {enableRowSelection && (
+                      <th className={TABLE_HEAD_CELL_CHECKBOX_CLASS}>
+                        <Checkbox
+                          checked={table.getIsAllPageRowsSelected()}
+                          onCheckedChange={(value) =>
+                            table.toggleAllPageRowsSelected(Boolean(value))
                           }
-                          aria-sort={
-                            header.column.getCanSort()
-                              ? header.column.getIsSorted() === "asc"
-                                ? "ascending"
-                                : header.column.getIsSorted() === "desc"
-                                  ? "descending"
-                                  : "none"
-                              : undefined
-                          }
-                        >
-                          {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                            <button
-                              type="button"
-                              className="focus-visible:ring-focus flex min-h-11 items-center gap-1 rounded-sm transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:outline-hidden"
-                              onClick={header.column.getToggleSortingHandler()}
-                              aria-label={`Sort by ${header.column.id}`}
-                              title={`Sort by ${header.column.id}`}
-                            >
-                              {flexRender(header.column.columnDef.header, header.getContext())}
-                              <span className="ml-0.5 shrink-0">
-                                {header.column.getIsSorted() === "asc" ? (
-                                  <ArrowUp className="h-3 w-3" />
-                                ) : header.column.getIsSorted() === "desc" ? (
-                                  <ArrowDown className="h-3 w-3" />
-                                ) : (
-                                  <ArrowUpDown className="h-3 w-3 opacity-40" />
-                                )}
-                              </span>
-                            </button>
-                          ) : (
-                            flexRender(header.column.columnDef.header, header.getContext())
-                          )}
-                        </th>
+                          aria-label="Select all rows on this page"
+                        />
+                      </th>
+                    )}
+                    {table.getHeaderGroups().flatMap((hg) =>
+                      // fallow-ignore-next-line complexity
+                      hg.headers.map((header) =>
+                        header.column.id === "actions" && actionsInPill ? (
+                          <th key={header.id} className="w-0 px-0 py-0" aria-hidden="true" />
+                        ) : (
+                          <th
+                            key={header.id}
+                            className={cn(
+                              TABLE_HEAD_CELL_CLASS,
+                              header.column.id === "actions" && TABLE_ACTIONS_HEAD_CLASS
+                            )}
+                            style={
+                              header.column.columnDef.size
+                                ? { width: header.column.columnDef.size }
+                                : undefined
+                            }
+                            aria-sort={
+                              header.column.getCanSort()
+                                ? header.column.getIsSorted() === "asc"
+                                  ? "ascending"
+                                  : header.column.getIsSorted() === "desc"
+                                    ? "descending"
+                                    : "none"
+                                : undefined
+                            }
+                          >
+                            {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                              <button
+                                type="button"
+                                className="focus-visible:ring-focus flex min-h-11 items-center gap-1 rounded-sm transition-colors hover:opacity-80 focus-visible:ring-2 focus-visible:outline-hidden"
+                                onClick={header.column.getToggleSortingHandler()}
+                                aria-label={`Sort by ${header.column.id}`}
+                                title={`Sort by ${header.column.id}`}
+                              >
+                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                <span className="ml-0.5 shrink-0">
+                                  {header.column.getIsSorted() === "asc" ? (
+                                    <ArrowUp className="h-3 w-3" />
+                                  ) : header.column.getIsSorted() === "desc" ? (
+                                    <ArrowDown className="h-3 w-3" />
+                                  ) : (
+                                    <ArrowUpDown className="h-3 w-3 opacity-40" />
+                                  )}
+                                </span>
+                              </button>
+                            ) : (
+                              flexRender(header.column.columnDef.header, header.getContext())
+                            )}
+                          </th>
+                        )
                       )
-                    )
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-border/50 divide-y">
-                {rows.length ? (
-                  renderedRows
-                ) : (
-                  <tr>
-                    <td colSpan={totalCols}>
-                      <EmptyState icon={Search} title={emptyMessage} />
-                    </td>
+                    )}
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-border/50 divide-y">
+                  {rows.length ? (
+                    renderedRows
+                  ) : (
+                    <tr>
+                      <td colSpan={totalCols}>
+                        <EmptyState icon={Search} title={emptyMessage} />
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="border-border/70 bg-muted/30 flex items-center justify-between gap-2 border-t px-4 py-2">
           <p className="text-muted-foreground text-xs">
