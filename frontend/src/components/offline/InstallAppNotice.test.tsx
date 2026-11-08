@@ -35,6 +35,14 @@ describe("InstallAppNotice", () => {
     expect(dismiss).toHaveBeenCalledOnce();
   });
 
+  it("sits at the bottom so it never covers the app header or its menu button", () => {
+    render(<InstallAppNotice />);
+
+    const notice = screen.getByRole("status");
+    expect(notice).not.toHaveClass("top-0");
+    expect(notice).toHaveClass("bottom-3");
+  });
+
   it("shows iOS installation instructions", async () => {
     vi.mocked(useInstallPrompt).mockReturnValue({
       isIOS: true,
