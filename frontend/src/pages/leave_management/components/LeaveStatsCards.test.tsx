@@ -27,6 +27,15 @@ describe("LeaveStatsCards", () => {
     expect(screen.getByText("8d")).toBeInTheDocument();
   });
 
+  it("uses two columns on phones and tablets and four only on wide screens", () => {
+    const { container } = render(
+      <LeaveStatsCards pendingCount={1} approvedCount={1} balances={[]} isLoading={false} />
+    );
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid).toHaveClass("grid-cols-2", "lg:grid-cols-4");
+    expect(grid).not.toHaveClass("md:grid-cols-4");
+  });
+
   it("wraps every icon in a tone well", () => {
     const { container } = render(
       <LeaveStatsCards pendingCount={2} approvedCount={4} balances={[]} isLoading={false} />

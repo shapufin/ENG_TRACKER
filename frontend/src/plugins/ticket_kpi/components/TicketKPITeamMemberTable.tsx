@@ -37,7 +37,7 @@ export const TicketKPITeamMemberTable: React.FC<TicketKPITeamMemberTableProps> =
         accessorKey: "avg_resolution_hours",
         header: "Avg Resolution",
         cell: ({ row }) =>
-          row.original.avg_resolution_hours !== undefined
+          row.original.avg_resolution_hours != null
             ? `${row.original.avg_resolution_hours}h`
             : "N/A",
       },
@@ -45,9 +45,7 @@ export const TicketKPITeamMemberTable: React.FC<TicketKPITeamMemberTableProps> =
         accessorKey: "sla_compliance_pct",
         header: "SLA %",
         cell: ({ row }) =>
-          row.original.sla_compliance_pct !== undefined
-            ? `${row.original.sla_compliance_pct}%`
-            : "N/A",
+          row.original.sla_compliance_pct != null ? `${row.original.sla_compliance_pct}%` : "N/A",
       },
       {
         id: "fields_populated",

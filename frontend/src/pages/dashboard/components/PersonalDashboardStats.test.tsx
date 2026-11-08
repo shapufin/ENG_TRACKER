@@ -19,6 +19,21 @@ describe("PersonalDashboardStats", () => {
     expect(container.querySelector('[class*="bg-card/50"]')).toBeNull();
   });
 
+  it("truncates a long username instead of overflowing the System Status card", () => {
+    render(
+      <PersonalDashboardStats
+        user={{ username: "e2e_employee_a_with_a_very_long_name" } as never}
+        personalOvertimeHours={0}
+        personalStandbyHours={0}
+        vacationBalanceDays={0}
+      />
+    );
+
+    const name = screen.getByText("e2e_employee_a_with_a_very_long_name");
+    expect(name).toHaveClass("truncate");
+    expect(name).toHaveAttribute("title", "e2e_employee_a_with_a_very_long_name");
+  });
+
   it("renders footer strips with real tracked values", () => {
     const { container } = render(
       <PersonalDashboardStats
