@@ -122,6 +122,11 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
           enableRowSelection
           rowSelection={rowSelection}
           onRowSelectionChange={onRowSelectionChange}
+          mobileCard={{
+            title: "user_name",
+            hero: "record_count",
+            meta: ["month", "profile_name", "created_at", "reviewed"],
+          }}
         />
       </CardContent>
     </Card>

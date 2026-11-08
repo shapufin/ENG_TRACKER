@@ -74,6 +74,11 @@ export const TicketKPITeamMemberTable: React.FC<TicketKPITeamMemberTableProps> =
         getRowClassName={() => "cursor-pointer group"}
         onRowClick={(row) => onMemberClick?.(row)}
         emptyMessage="No member data for this month."
+        mobileCard={{
+          title: "name",
+          hero: "total_tickets",
+          meta: ["avg_resolution_hours", "sla_compliance_pct", "fields_populated"],
+        }}
       />
     </div>
   );
