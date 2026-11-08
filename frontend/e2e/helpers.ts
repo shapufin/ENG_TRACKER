@@ -81,7 +81,18 @@ export async function loginAsUser(
   // token from this key; the app itself never uses it (see fetchApiToken).
   const apiToken = await fetchApiToken(creds);
   await page.evaluate((token) => localStorage.setItem("access_token", token), apiToken);
-  return page.evaluate(() => JSON.parse(localStorage.getItem("user")!));
+  const user = await page.evaluate<{ id: number; username: string }>(() =>
+    JSON.parse(localStorage.getItem("user")!)
+  );
+  // Seeded users have no second factor, so the logon prompt (MfaPromptModal)
+  // would cover the page and intercept every click. Use the app's own snooze.
+  await page.evaluate(
+    (id) => sessionStorage.setItem(`mfa_prompt_dismissed:${id}`, "true"),
+    user.id
+  );
+  const remind = page.getByRole("button", { name: "Remind me later" });
+  if (await remind.isVisible()) await remind.click();
+  return user;
 }
 
 export function loginAsRole(page: Page, role: E2ERole) {

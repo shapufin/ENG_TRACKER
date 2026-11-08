@@ -1,62 +1,91 @@
-# Mobile and tablet refactor: tracking log
+# Mobile and tablet refactor: what we did, and what is left
 
-Goal: make the employee, leader, HR and admin pages usable at 393px (phone) and 820px (tablet), borrowing ideas from the AI Studio mockup (`engineering-time-tracker-(mobile)/`, untracked wireframe, not a spec) without breaking permissions, confidentiality or the existing table, dialog and control contracts. Rules for future code: `docs/workflow-invariants.md` item 61.
+Started 2026-11-08. Rules for future code live in `docs/workflow-invariants.md` item 61; this file is the record: why, what shipped (with PRs), how it works, how to verify it, and what is still open.
 
-Started 2026-11-08. Audit evidence (screenshots) lives in the untracked `engineering-time-tracker-(mobile)/shots/` (`real-*` = before, `after-*` = after); re-capture with the recipe at the end.
+## 1. Goal and constraints
 
-## Status by PR
+- Make the employee and leader pages usable at 393px (phone) and 820px (tablet), and borrow ideas from the AI Studio mockup (`engineering-time-tracker-(mobile)/`, untracked, with its own `DESIGN.md`).
+- The mockup is a **wireframe, not a spec**: it has no real roles, and it shows money, leave categories (Annual/Medical/Casual), "Approve All" and a role toggle that do not exist in the data model. Anything that would show teammates' statuses to employees is forbidden by the team confidentiality rule.
+- "Do not break the app visually on mobile, just make it better": every change is opt-in per page or CSS-only below a breakpoint, desktop is unchanged, and permissions, locks and approvals stay in the one place they were already decided.
 
-| PR | Change | State |
-|---|---|---|
-| #254 | Phone cards for Overtime, Standby, Leave, TL Approvals; one Export menu on phones; `DataTable` `mobileCard` | merged |
-| #256 | Install banner moved to the bottom (it covered the header and blocked the hamburger) | merged |
-| #257 | KPI cards: no label/icon overlap at 820px, two columns on phones; Dashboard System Status truncation | merged |
-| #259 | Ticket KPI member table: `N/A` instead of `nullh` / `null%` | merged |
-| #255 | Team Overview cards | merged |
-| #258 | Ticket KPI team uploads/members and Engagement by team cards | merged |
-| #260 | Phone dashboard shortcuts (Overtime, Standby, Leave) | merged |
-| #261 | Phone bottom tab bar (More opens the drawer); notices sit above it | merged |
-| #263 | Bottom-sheet Overtime, Standby and Leave forms on phones (`DialogContent` `side="bottom"`, `FormDialog` `mobileSheet`) | merged |
-| #262 | This log, invariant 61, CLAUDE.md router row | merged |
-| #265 | Calendar list on phones: per-day agenda (`ListViewAgenda`) | merged |
-| #266 | Dashboard KPI cards as a 2x2 grid on phones | merged |
-| #267 | `ScrollFadeX` edge fade on the Scorecard and HBPR tab strips | merged |
-| #268 | Dashboard: pending items above upcoming time off on phones | merged |
-| #269 | Dashboard: activity feed collapsed to five items on phones (Show all / Show less) | merged |
-| #270 | Weekly Generator opens as a bottom sheet on phones | merged |
+## 2. The problem we found (audit)
 
-Status check: `gh pr list --repo shapufin/ENG_TRACKER --search "mobile OR phone in:title"`. Merge rule used: Frontend and Backend checks pass; CI E2E is not a signal (see Known issues), so layout PRs are also run locally against the `mobile-chromium` project.
+Before the work, phones got the desktop UI squeezed in: tables 600 to 1,400px wide inside a 325px card (status, hours and actions off-screen), a hamburger as the only navigation, a top install banner that covered the header and blocked the hamburger, KPI cards five across with labels on their icons at 820px, forms as small centred modals, a Calendar that opened on a cut-off list, tab strips with a silently clipped last tab, and a Dashboard where the useful things were far down. "Before" screenshots are `real-*` in the untracked `engineering-time-tracker-(mobile)/shots/`; "after" are `after-*`.
 
-## What changed for users
-- Tables that were 600-1,400px wide inside a 325px card are cards on phones, with status, hours/days and approve/reject/edit/delete visible; wider screens keep the table.
-- A tab bar on phones (Dashboard, Overtime, Standby, Leave; leaders get Pending Approvals with its count; More opens the full menu).
-- Dashboard opens with one-tap shortcuts on phones.
-- Install notice no longer covers the header; offline and update notices sit above the tab bar.
+## 3. What shipped (all merged to `main`)
 
-## Dark mode and 320px pass (2026-11-08, employee pages)
-Overtime, Leave, Standby and Dashboard in dark at 320px and 393px: `dark` class applies, no horizontal overflow outside intended scrollers, cards readable. Findings: the status filter chip row ("Pending / Approved / Rejected") scrolls sideways by design and the last chip is partly hidden at 320px; KPI label and icon touch at 320px (no overlap). Not yet repeated for leader, HR and admin pages or the tab bar (PR #261) in dark.
+| PR | Change |
+|---|---|
+| #254 | `DataTable` `mobileCard`: phone cards for Overtime, Standby, Leave and TL Approvals; one Export menu on phones |
+| #255 | Team Overview cards |
+| #256 | Install banner moved to a bottom card (it covered the header) |
+| #257 | KPI cards: no label/icon overlap at 820px, two columns on phones; System Status username truncates |
+| #258 | Ticket KPI team uploads/members and Engagement by team cards |
+| #259 | Ticket KPI member table shows `N/A` instead of `nullh` / `null%` |
+| #260 | Dashboard one-tap shortcuts (Overtime, Standby, Leave) |
+| #261 | Phone bottom tab bar (More opens the drawer); offline/update/install notices sit above it |
+| #262, #264, #271 | This log, invariant 61, CLAUDE.md router row, PR tables |
+| #263 | Bottom-sheet Overtime, Standby and Leave forms (`DialogContent side="bottom"`, `FormDialog mobileSheet`) |
+| #265 | Calendar list on phones: per-day agenda (`ListViewAgenda`) |
+| #266 | Dashboard KPI cards as a 2x2 grid |
+| #267 | `ScrollFadeX`: edge fade on the Scorecard and HBPR tab strips |
+| #268 | Dashboard: pending items above upcoming time off |
+| #269 | Dashboard: activity feed shows five items with Show all / Show less |
+| #270 | Weekly Generator opens as a bottom sheet |
+| #272 | E2E login helper snoozes the two-factor prompt (it blocked 21 calendar specs) |
 
-## Not done (priority order)
-1. Dark mode and 320px for the leader/HR/admin pages and the tab bar; the status chip row is a deliberate one-line scroller on phones (`FilterChipRow`), so the last chip is partly hidden at 320px with no edge fade: add a fade hint.
-2. Bottom sheet: Weekly Generator done (#270); the admin forms remain (the variant exists; `FormDialog` takes `mobileSheet`). Not yet verified: the slide-up animation (only the end state) and dark mode.
-3. ~~Calendar phone view~~ done: below 768px the List view renders `ListViewAgenda` (one heading per day, one card per event) instead of the table; same data, search and user click. Month view is fine at 820px. Workspace privacy rules (`useValidWorkspaceIds`) unchanged.
-4. Dashboard: 2x2 KPI grid done (`PersonalDashboardStats`, gap 12px; footers wrap and the username truncates at 320px, accepted). Pending items now sit above upcoming time off below lg. The activity feed shows five items with a toggle on phones (#269).
-5. Tab strip scroll hints done for TL Scorecard and HBPR workspace (`ScrollFadeX`: edge fades only while content is hidden). Global Settings does not scroll (it wraps in a grid), so it needs no hint; wrapping to three rows on phones is still open.
-6. Organigrama toolbar clips its download button; canvas is 1,700px tall for two nodes. Analytics "Advanced filters" is clipped.
-7. Admin tables (Users, Teams, Audit Logs, HBPR Assignments, Standby Logs, Leave Balances, Control Room access, Notifications): keep in-card scroll; pin the first column; Admin Users filter chips take ~8 lines (collapse into a Filters sheet).
-8. Mockup ideas deliberately not copied: Annual/Medical/Casual leave split, standby money amounts, "Approve All", role toggle, weekly bar chart (no such data), anything showing teammates' statuses to employees (team confidentiality).
+## 4. How it works (the pieces)
 
-## Known issues found along the way
-- CI E2E (`E2E (Playwright)`) fails on `main` after 45 minutes on the Admin dashboard specs and never reaches the `mobile-chromium` project.
-- `e2e/hr-isolation.spec.ts` (pure HR sidebar, HR+TL keeps overtime) fails on `main` in `mobile-chromium` because the sidebar is off-canvas on phones.
-- `e2e/role-workflows.spec.ts` "admin users table: search filters" fails on `main` in `mobile-chromium`; the "employeeA routes" test is flaky.
-- A force-push is denied in agent sessions; stacked branches are refreshed with a merge of `main` instead of a rebase.
+- **Cards** (`components/ui/DataTableCards.tsx`, `DataTable` prop `mobileCard`): below 768px (`MOBILE_CARD_QUERY`) a row renders as a card with `title`, `hero`, `status`, `meta[]` and `actions` chosen by column id. The card reuses the table's own cell renderers and actions column, so permissions, month locks, paid-hours blocks, half-day amounts and approve/reject conditions cannot drift. Checkboxes and select-all stay (bulk actions work), actions stay visible at 44px, the whole card calls `onRowClick`. A page with no `mobileCard` is unchanged. Opted in: Overtime, Standby, Leave, TL Approvals, Team Overview, Ticket KPI team (members, uploads), Engagement by team.
+- **Tab bar** (`components/layout/MobileBottomNav.tsx`): pins the first four visible of Dashboard, Pending Approvals, Overtime, Standby, Leave, HR Leave Requests, HR Payroll, taken from the sidebar's `visibleItems` so role, plugin and pure-HR/HBPR/CR gating has one source. Fewer than three pinned pages hides it. It publishes `--bottom-nav-h` so every fixed bottom element can sit above it (`bottom-[var(--bottom-nav-h,0px)] md:bottom-0`).
+- **Bottom sheets**: `DialogContent side="bottom"` is a sheet below `md` and the normal modal from `md`; `FormDialog mobileSheet` opts a form in (Overtime, Standby, Leave, Weekly Generator).
+- **Dashboard** (`pages/dashboard/`): `DashboardQuickActions` (gated by the same visible-nav source), 2x2 `PersonalDashboardStats`, pending above time off (`max-lg:order-first`), `ActivityTimeline` collapse (`max-md:hidden` past five).
+- **Calendar**: `ListView` renders `ListViewAgenda` on phones (a heading per day, a card per event); tablet and desktop keep the table. Workspace privacy (`useValidWorkspaceIds`) is untouched.
+- **Scroll hint**: `ScrollFadeX` is a scrollbar-less horizontal scroller that fades an edge only while content is hidden past it.
 
-## Verify a change (recipe)
-1. `cd frontend`: `npx tsc --noEmit`, `npx eslint <files>`, `npx prettier --check <changed files>`, `npx vitest run <paths>`, `node scripts/table-header-audit.mjs`, `node scripts/control-audit.mjs --strict --exclude=src/plugins/engagement`, `node scripts/surface-audit.mjs --strict --exclude=src/plugins/engagement`.
-2. Local e2e DB and servers (never `db.sqlite3`): `DJANGO_SETTINGS_MODULE=config.settings_e2e py -3.14 manage.py prepare_e2e_db` then `seed_e2e_data`, then `runserver 127.0.0.1:8000` and `npm run dev -- --host 127.0.0.1`. Accounts `e2e_employee_a`, `e2e_tl`, `e2e_hr`, `e2e_admin`, password `e2e_pass_2026`.
-3. Browser at 393x852 and 820x1180, light and dark: no `documentElement.scrollWidth` above the viewport, touch targets 44px, dismiss the two-factor prompt with "Remind me later".
+## 5. Did we match the mockup? (honest scorecard)
+
+| Mockup idea | Status |
+|---|---|
+| Touch cards instead of wide tables | Done for the employee and leader tables (see list above); dense admin tables are deliberately not converted |
+| 4 pinned tabs plus a hub | Done (tab bar, More opens the drawer). Pinning is automatic, not user-customisable |
+| Quick actions on the dashboard | Done |
+| Bottom sheets for forms | Done for Overtime, Standby, Leave, Weekly Generator; admin forms and record details still centred modals |
+| Two-tier surfaces, 44px targets, dark mode | Held (existing surface/control audits pass); employee pages checked dark at 320/393 |
+| Modern header with search, profile, dark toggle, role switch | **Not done on phones.** The real header on phones is hamburger, title and bell; search and profile menu exist only from `md` (`HeaderSearch`, `HeaderProfileMenu`). Role switch is not copied (no such feature) |
+| Quick launcher (search every menu, pin to bar) | **Not done.** `CommandPalette` exists but is not reachable on phones |
+| Record detail sheet when tapping a card | **Not done.** Cards open the same dialog the table row does |
+| Tab customizer | Not built |
+
+So: the layout problems (tables, navigation, notices, forms, Calendar, Dashboard order) are fixed and the phone UI is clearly better, but the mockup's **header (search + profile) and launcher** are the biggest gaps between "improved" and "modern like the mockup". They are the next priority.
+
+## 6. Verification we ran
+
+- Unit tests next to every new component (cards, tab bar, notices, sheets, agenda, `ScrollFadeX`, dashboard pieces); `tsc`, ESLint, Prettier on touched files, `table-header`, `control` and `surface` audits, `modal-audit`.
+- Live checks at 393/820 (and 320 for sheets, dashboard, dark mode) with no horizontal overflow outside intended scrollers.
+- `calendar.spec.ts` in `mobile-chromium` at 393px: 5 of 5 pass after #272 (before it, 21 of 27 failed at every viewport because the two-factor prompt covered the page).
+- Not checked in a browser: #268 (order), #269 (feed toggle), #270 (Weekly Generator sheet); the slide-up animation of sheets; dark mode for leader, HR and admin pages and the tab bar.
+
+## 7. Open work (priority order)
+
+1. **Phone header: search and profile menu** (reuse `HeaderSearch`/`CommandPalette` and `HeaderProfileMenu`; opens the launcher) and a record-detail sheet on card tap.
+2. Dark mode and 320px for leader, HR and admin pages and the tab bar; fade hint on the status chip row (`FilterChipRow` scrolls by design and clips its last chip at 320px).
+3. Bottom sheets for admin forms.
+4. Organigrama toolbar clips its download button and the canvas is 1,700px tall for two nodes; Analytics "Advanced filters" is clipped.
+5. Dense admin tables (Users, Teams, Audit Logs, HBPR Assignments, Standby Logs, Leave Balances, Control Room access, Notifications): in-card scroll, pinned first column, Admin Users filter chips (about 8 lines) into a Filters sheet. Global Settings tabs wrap to three rows on phones.
+6. Not copying from the mockup: Annual/Medical/Casual split, standby money, "Approve All", role toggle, weekly bar chart, anything showing teammates' statuses.
+
+## 8. Known issues found along the way
+
+- CI E2E fails on `main` after 45 minutes on the Admin dashboard specs and never reaches the `mobile-chromium` project, so it is not a merge signal; merge rule used: Frontend and Backend (and PostgreSQL 16) pass, and layout PRs are run locally in `mobile-chromium` first.
+- `e2e/hr-isolation.spec.ts` fails on `main` in `mobile-chromium` (sidebar is off-canvas on phones); `role-workflows.spec.ts` "admin users table: search filters" fails on `main` there; the "employeeA routes" test is flaky.
+- Force-push is denied in agent sessions; stacked branches are refreshed by merging `main`.
+- CI runs `prettier --check` on changed files only: run Prettier on the files you touched, never a whole directory.
+
+## 9. Verify a change (recipe)
+
+1. `cd frontend`: `npx tsc --noEmit`, `npx eslint <files>`, `npx prettier --check <files>`, `npx vitest run <paths>`, `node scripts/table-header-audit.mjs`, `node scripts/control-audit.mjs --strict --exclude=src/plugins/engagement`, `node scripts/surface-audit.mjs --strict --exclude=src/plugins/engagement`, `node scripts/modal-audit.mjs`.
+2. Local e2e DB and servers (never `db.sqlite3`): `DJANGO_SETTINGS_MODULE=config.settings_e2e py -3.14 manage.py prepare_e2e_db`, then `seed_e2e_data`, then `runserver 127.0.0.1:8000` and `npm run dev -- --host 127.0.0.1`. Accounts and password: see `frontend/e2e/helpers.ts`.
+3. Browser at 393x852 and 820x1180, light and dark: `documentElement.scrollWidth` must not exceed the viewport, touch targets 44px, dismiss the two-factor prompt with "Remind me later".
 4. `npx playwright test --project=mobile-chromium e2e/<spec>` for specs touching the page.
-
-## Mockup reference
-`engineering-time-tracker-(mobile)/DESIGN.md` (untracked): TouchCard rule, 4 pinned tabs plus hub, quick launcher, bottom sheets, two surface tiers. Kept ideas: cards, tab bar, quick actions. Not built yet: command launcher, tab customizer, bottom sheets.
+5. Status of PRs: `gh pr list --repo shapufin/ENG_TRACKER --search "mobile OR phone in:title"`.
