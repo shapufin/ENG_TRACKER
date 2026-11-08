@@ -3,10 +3,16 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { HoursLogDataTable } from "./HoursLogDataTable";
 
 vi.mock("@/components/ui/DataTable", () => ({
-  DataTable: ({ data }: { data: { id: number; status: string }[] }) => (
+  DataTable: ({
+    data,
+    onRowClick,
+  }: {
+    data: { id: number; status: string }[];
+    onRowClick?: (row: { id: number; status: string }) => void;
+  }) => (
     <ul>
       {data.map((r) => (
-        <li key={r.id}>{`row-${r.id}`}</li>
+        <li key={r.id} onClick={() => onRowClick?.(r)}>{`row-${r.id}`}</li>
       ))}
     </ul>
   ),
@@ -45,5 +51,23 @@ describe("HoursLogDataTable status chips", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Approved/ }));
     expect(screen.getAllByRole("listitem")).toHaveLength(3);
+  });
+});
+
+describe("HoursLogDataTable row tap", () => {
+  it("passes the tapped row to onRowClick", () => {
+    const onRowClick = vi.fn();
+    render(
+      <HoursLogDataTable
+        columns={[]}
+        data={data}
+        rowSelection={{}}
+        onRowSelectionChange={vi.fn()}
+        storageKey="t"
+        onRowClick={onRowClick}
+      />
+    );
+    fireEvent.click(screen.getByText("row-2"));
+    expect(onRowClick).toHaveBeenCalledWith(data[1]);
   });
 });

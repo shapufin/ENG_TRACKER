@@ -212,7 +212,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg" hideClose padded={false}>
+      <DialogContent side="bottom" size="lg" hideClose padded={false}>
         <DialogTitle className="sr-only">Record Details</DialogTitle>
         <DialogDescription className="sr-only">
           View details for {recordType} record for {userName}

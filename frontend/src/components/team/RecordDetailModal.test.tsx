@@ -73,7 +73,11 @@ describe("RecordDetailModal", () => {
   });
 
   it("shows the paid block an overtime entry shares", () => {
-    const shared = { ...overtimeRecord, paid_window_start: "08:00:00", paid_window_end: "09:00:00" };
+    const shared = {
+      ...overtimeRecord,
+      paid_window_start: "08:00:00",
+      paid_window_end: "09:00:00",
+    };
     render(<RecordDetailModal open={true} onOpenChange={vi.fn()} record={shared} />);
     expect(screen.getByText("Paid Block")).toBeInTheDocument();
     expect(screen.getByText("08:00-09:00")).toBeInTheDocument();
@@ -131,5 +135,10 @@ describe("RecordDetailModal", () => {
     // The dialog uses hideClose, so its own header close is the only one.
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("opens as a bottom sheet on phones", () => {
+    render(<RecordDetailModal open={true} onOpenChange={vi.fn()} record={overtimeRecord} />);
+    expect(screen.getByRole("dialog").className).toContain("max-md:bottom-0");
   });
 });

@@ -7,6 +7,8 @@ import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Plus, CalendarDays } from "lucide-react";
 import type { StandbyLog } from "@/types";
+import { RecordDetailModal } from "@/components/team/RecordDetailModal";
+import { usePhoneRecordDetail } from "@/components/team/usePhoneRecordDetail";
 import { useBulkOperations } from "@/hooks/useBulkOperations";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { useStandbyForm } from "./hooks/useStandbyForm";
@@ -57,6 +59,7 @@ export const StandbyPage: React.FC = () => {
     updatePreviewRow,
     resetPreviewRow,
   } = useStandbyForm();
+  const detail = usePhoneRecordDetail<StandbyLog>();
 
   const {
     deleteOpen,
@@ -201,10 +204,17 @@ export const StandbyPage: React.FC = () => {
         onRowSelectionChange={setRowSelection}
         storageKey="table-visibility-standby-page"
         mobileCard={STANDBY_CARD}
+        onRowClick={detail.onRowClick}
         {...(canApprove && {
           searchColumn: "user_full_name",
           searchPlaceholder: "Search by employee...",
         })}
+      />
+
+      <RecordDetailModal
+        open={detail.record !== null}
+        onOpenChange={detail.onOpenChange}
+        record={detail.record}
       />
 
       <StandbyFormDialog
