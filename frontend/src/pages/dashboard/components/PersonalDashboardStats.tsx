@@ -68,7 +68,11 @@ export const PersonalDashboardStats: React.FC<PersonalDashboardStatsProps> = ({
     />
     <StatCard
       label="System Status"
-      value={user?.username || "Active"}
+      value={
+        <span className="truncate" title={user?.username || "Active"}>
+          {user?.username || "Active"}
+        </span>
+      }
       icon={Shield}
       glow="destructive"
       iconColorClass="text-destructive"

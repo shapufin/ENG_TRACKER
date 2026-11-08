@@ -34,6 +34,23 @@ describe("OvertimeSummaryCards", () => {
     expect(container.querySelector(".bg-linear-to-br")).toBeNull();
   });
 
+  it("uses two columns on phones and tablets and five only on wide screens", () => {
+    const { container } = render(
+      <OvertimeSummaryCards
+        summary={{
+          total_hours: 1,
+          total_entries: 1,
+          approved_hours: 1,
+          pending_hours: 0,
+          rejected_hours: 0,
+        }}
+      />
+    );
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid).toHaveClass("grid-cols-2", "lg:grid-cols-5");
+    expect(grid).not.toHaveClass("md:grid-cols-5");
+  });
+
   it("wraps every icon in a tone well with a micro label", () => {
     const { container } = render(
       <OvertimeSummaryCards
