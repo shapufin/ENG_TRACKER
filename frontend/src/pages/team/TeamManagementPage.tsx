@@ -24,6 +24,25 @@ import { TeamExportDialog } from "./components/TeamExportDialog";
 import { TeamGroupedTables } from "./components/TeamGroupedTables";
 import { handleRejectConfirm } from "./teamManagementHelpers";
 
+const TEAM_OVERTIME_CARD = {
+  title: "user_name",
+  hero: "hours",
+  status: "status",
+  meta: ["client_name", "date", "description"],
+};
+const TEAM_STANDBY_CARD = {
+  title: "user_name",
+  hero: "hours",
+  status: "status",
+  meta: ["date", "description"],
+};
+const TEAM_LEAVE_CARD = {
+  title: "user_name",
+  hero: "days_requested",
+  status: "status",
+  meta: ["request_type", "start_date", "end_date", "user_leave_balance", "reason"],
+};
+
 // fallow-ignore-next-line complexity
 const TeamManagementPage: React.FC = () => {
   const {
@@ -221,6 +240,7 @@ const TeamManagementPage: React.FC = () => {
                 emptyCopy="No overtime entries match your filters."
                 memberGroupMode={memberGroupMode}
                 userMetaMap={userMetaMap}
+                mobileCard={TEAM_OVERTIME_CARD}
               />
             </LoadingStateWrapper>
           </TabsContent>
@@ -232,6 +252,7 @@ const TeamManagementPage: React.FC = () => {
                 emptyCopy="No standby entries match your filters."
                 memberGroupMode={memberGroupMode}
                 userMetaMap={userMetaMap}
+                mobileCard={TEAM_STANDBY_CARD}
               />
             </LoadingStateWrapper>
           </TabsContent>
@@ -243,6 +264,7 @@ const TeamManagementPage: React.FC = () => {
                 emptyCopy="No leave requests match your filters."
                 memberGroupMode={memberGroupMode}
                 userMetaMap={userMetaMap}
+                mobileCard={TEAM_LEAVE_CARD}
               />
             </LoadingStateWrapper>
           </TabsContent>

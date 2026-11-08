@@ -5,6 +5,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Inbox } from "lucide-react";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 
 interface GroupableRow {
   id: number;
@@ -23,6 +24,8 @@ interface TeamGroupedTablesProps<T extends GroupableRow> {
   emptyCopy: string;
   memberGroupMode: "none" | "team" | "italian_tl";
   userMetaMap: Map<number, { teamNames: string[]; italianTlName?: string | null }>;
+  /** Phone card layout passed to every table, grouped or not. */
+  mobileCard?: DataTableCardSpec;
 }
 
 // fallow-ignore-next-line complexity
@@ -32,6 +35,7 @@ export const TeamGroupedTables = <T extends GroupableRow>({
   emptyCopy,
   memberGroupMode,
   userMetaMap,
+  mobileCard,
 }: TeamGroupedTablesProps<T>) => {
   const buildGroupSections = useCallback(
     (data: T[]): GroupSection<T>[] => {
@@ -83,6 +87,7 @@ export const TeamGroupedTables = <T extends GroupableRow>({
           data={rows}
           columns={columnsBuilder(rows)}
           getRowId={(row) => row.id.toString()}
+          mobileCard={mobileCard}
         />
       </GlassCard>
     );
@@ -120,6 +125,7 @@ export const TeamGroupedTables = <T extends GroupableRow>({
               data={section.rows}
               columns={columnsBuilder(section.rows)}
               getRowId={(row) => row.id.toString()}
+              mobileCard={mobileCard}
             />
           </GlassCard>
         );
