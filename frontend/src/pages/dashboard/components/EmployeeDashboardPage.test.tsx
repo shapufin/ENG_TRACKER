@@ -6,6 +6,9 @@ import { EmployeeDashboardPage } from "./EmployeeDashboardPage";
 import type { User } from "@/types";
 import type { DashboardType } from "@/context/permission-context-base";
 
+// Quick actions read permission and plugin context, which this page test does not provide.
+vi.mock("./DashboardQuickActions", () => ({ DashboardQuickActions: () => null }));
+
 const baseUser: User = {
   id: 1,
   first_name: "Alice",

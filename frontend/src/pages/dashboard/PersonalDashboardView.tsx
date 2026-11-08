@@ -1,6 +1,7 @@
 import React from "react";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
 import type { LeaveRequest, OvertimeLog, StandbyLog, User } from "@/types";
+import { DashboardQuickActions } from "./components/DashboardQuickActions";
 import { PersonalDashboardStats } from "./components/PersonalDashboardStats";
 import { PersonalDashboardLeavesCard } from "./components/PersonalDashboardLeavesCard";
 import { PersonalDashboardProgressCard } from "./components/PersonalDashboardProgressCard";
@@ -54,6 +55,8 @@ export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
   onWeekOffsetChange,
 }) => (
   <div className="flex flex-col gap-8">
+    <DashboardQuickActions />
+
     <PersonalDashboardStats
       user={user}
       personalOvertimeHours={personalOvertimeHours}
