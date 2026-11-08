@@ -138,7 +138,7 @@ export const LeaveStatsCards: React.FC<LeaveStatsCardsProps> = ({
   ];
 
   return (
-    <div className="grid gap-3 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {cards.map((cfg) => (
         <StatCardContent key={cfg.label} {...cfg} isLoading={isLoading} />
       ))}

@@ -92,7 +92,7 @@ export const OvertimeSummaryCards: React.FC<OvertimeSummaryCardsProps> = ({
       isTeamLeader && totalHours > 0 ? (summary.rejected_hours / totalHours) * 100 : undefined,
   };
   return (
-    <div className="grid gap-4 md:grid-cols-5">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-5 [&>:last-child:nth-child(odd)]:col-span-2 lg:[&>:last-child:nth-child(odd)]:col-span-1">
       {summaryKeys.map((k, i) => {
         const cfg = SUMMARY_CONFIG[k];
         return (
