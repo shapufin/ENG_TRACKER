@@ -33,7 +33,7 @@ Overtime, Leave, Standby and Dashboard in dark at 320px and 393px: `dark` class 
 ## Not done (priority order)
 1. Dark mode and 320px for the leader/HR/admin pages and the tab bar; the status chip row is a deliberate one-line scroller on phones (`FilterChipRow`), so the last chip is partly hidden at 320px with no edge fade: add a fade hint.
 2. Bottom sheet for the remaining dialogs: Weekly Generator and the admin forms (the variant exists; `FormDialog` takes `mobileSheet`). Not yet verified: the slide-up animation (only the end state) and dark mode.
-3. Calendar phone view: opens on a List table with Type/Status cut off; wants a per-day agenda. Month view is fine at 820px. Workspace privacy rules (`useValidWorkspaceIds`) unchanged.
+3. ~~Calendar phone view~~ done: below 768px the List view renders `ListViewAgenda` (one heading per day, one card per event) instead of the table; same data, search and user click. Month view is fine at 820px. Workspace privacy rules (`useValidWorkspaceIds`) unchanged.
 4. Dashboard: 2x2 KPI grid (footers are cramped at ~170px), pending items above recent time off, collapse the activity feed.
 5. Scorecard and Global Settings tab strips: scroll hint; Global Settings wraps to three rows.
 6. Organigrama toolbar clips its download button; canvas is 1,700px tall for two nodes. Analytics "Advanced filters" is clipped.
