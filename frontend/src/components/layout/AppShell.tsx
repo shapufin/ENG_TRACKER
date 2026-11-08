@@ -9,6 +9,7 @@ import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { TeamContextPill } from "./TeamContextPill";
 import { MobileOverlay } from "./MobileOverlay";
+import { MobileBottomNav } from "./MobileBottomNav";
 import { MainContentTransition } from "./MainContentTransition";
 import { HeaderSearch } from "./HeaderSearch";
 import { MfaPromptModal } from "@/components/auth/MfaPromptModal";
@@ -180,6 +181,12 @@ export const AppShell = React.memo(() => {
             <Outlet />
           </div>
         </MainContentTransition>
+        <MobileBottomNav
+          items={visibleItems}
+          badgeMap={pendingApprovalTotal > 0 ? { "/team/approvals": pendingApprovalTotal } : {}}
+          onOpenMore={() => setMobileOpen(true)}
+          moreOpen={mobileOpen}
+        />
       </main>
       <MfaPromptModal />
       <CommandPalette

@@ -12,7 +12,7 @@ export function InstallAppNotice() {
 
   return (
     <aside
-      className="border-primary/30 bg-card fixed inset-x-3 bottom-3 z-40 mb-[var(--safe-area-bottom)] rounded-xl border px-4 pb-3 shadow-lg"
+      className="border-primary/30 bg-card fixed inset-x-3 bottom-[calc(var(--bottom-nav-h,var(--safe-area-bottom))+0.75rem)] z-40 rounded-xl border px-4 pb-3 shadow-lg md:bottom-3 md:mb-[var(--safe-area-bottom)]"
       role="status"
       aria-live="polite"
     >
