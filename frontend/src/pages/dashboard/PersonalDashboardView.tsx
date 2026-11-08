@@ -82,8 +82,12 @@ export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
     />
 
     <div className="grid gap-6 lg:grid-cols-2">
-      <PersonalDashboardLeavesCard upcomingLeaves={upcomingLeaves} />
-      <PersonalDashboardPendingCard personalPendingItems={personalPendingItems} />
+      <div>
+        <PersonalDashboardLeavesCard upcomingLeaves={upcomingLeaves} />
+      </div>
+      <div className="max-lg:order-first">
+        <PersonalDashboardPendingCard personalPendingItems={personalPendingItems} />
+      </div>
     </div>
 
     <ActivityTimeline items={personalTimelineItems} delay={0.18} />
