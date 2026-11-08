@@ -34,6 +34,21 @@ describe("PersonalDashboardStats", () => {
     expect(name).toHaveAttribute("title", "e2e_employee_a_with_a_very_long_name");
   });
 
+  it("lays the four cards out as a 2x2 grid on phones", () => {
+    const { container } = render(
+      <PersonalDashboardStats
+        user={{ username: "alice" } as never}
+        personalOvertimeHours={0}
+        personalStandbyHours={0}
+        vacationBalanceDays={0}
+      />
+    );
+
+    const grid = container.firstElementChild;
+    expect(grid).toHaveClass("grid-cols-2", "lg:grid-cols-4");
+    expect(grid).not.toHaveClass("sm:grid-cols-2");
+  });
+
   it("renders footer strips with real tracked values", () => {
     const { container } = render(
       <PersonalDashboardStats

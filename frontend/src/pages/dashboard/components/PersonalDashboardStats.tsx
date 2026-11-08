@@ -17,7 +17,7 @@ export const PersonalDashboardStats: React.FC<PersonalDashboardStatsProps> = ({
   personalStandbyHours,
   vacationBalanceDays,
 }) => (
-  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+  <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
     <StatCard
       label="Overtime Hours"
       value={<AnimatedNumber value={personalOvertimeHours} suffix="h" />}
