@@ -35,7 +35,7 @@ Overtime, Leave, Standby and Dashboard in dark at 320px and 393px: `dark` class 
 2. Bottom sheet for the remaining dialogs: Weekly Generator and the admin forms (the variant exists; `FormDialog` takes `mobileSheet`). Not yet verified: the slide-up animation (only the end state) and dark mode.
 3. ~~Calendar phone view~~ done: below 768px the List view renders `ListViewAgenda` (one heading per day, one card per event) instead of the table; same data, search and user click. Month view is fine at 820px. Workspace privacy rules (`useValidWorkspaceIds`) unchanged.
 4. Dashboard: 2x2 KPI grid done (`PersonalDashboardStats`, 2 columns from phone width, gap 12px). Footers wrap to two lines per cell and the username truncates at 320px; accepted. Still open: pending items above recent time off, collapse the activity feed.
-5. Scorecard and Global Settings tab strips: scroll hint; Global Settings wraps to three rows.
+5. Tab strip scroll hints done for TL Scorecard and HBPR workspace (`ScrollFadeX`: edge fades only while content is hidden). Global Settings does not scroll (it wraps in a grid), so it needs no hint; wrapping to three rows on phones is still open.
 6. Organigrama toolbar clips its download button; canvas is 1,700px tall for two nodes. Analytics "Advanced filters" is clipped.
 7. Admin tables (Users, Teams, Audit Logs, HBPR Assignments, Standby Logs, Leave Balances, Control Room access, Notifications): keep in-card scroll; pin the first column; Admin Users filter chips take ~8 lines (collapse into a Filters sheet).
 8. Mockup ideas deliberately not copied: Annual/Medical/Casual leave split, standby money amounts, "Approve All", role toggle, weekly bar chart (no such data), anything showing teammates' statuses to employees (team confidentiality).

@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { ScrollFadeX } from "@/components/ui/ScrollFadeX";
 import { useQuery } from "@tanstack/react-query";
 import { FolderArchive, LayoutDashboard, LineChart, ListChecks, Users } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
@@ -123,7 +124,7 @@ export const TLScorecardHeader: React.FC<TLScorecardHeaderProps> = ({
     }
   >
     <div className="space-y-6">
-      <div className="no-scrollbar -mx-1 overflow-x-auto px-1 py-1">
+      <ScrollFadeX className="-mx-1 px-1 py-1">
         <Tabs value={tab} onValueChange={(value) => onTabChange(value as TLScorecardTab)}>
           <TabsList aria-label="Scorecard sections" className="h-auto gap-1 rounded-full p-1">
             {TABS.map(({ value, label, icon: Icon }) => (
@@ -134,7 +135,7 @@ export const TLScorecardHeader: React.FC<TLScorecardHeaderProps> = ({
             ))}
           </TabsList>
         </Tabs>
-      </div>
+      </ScrollFadeX>
       {children}
     </div>
   </PageShell>

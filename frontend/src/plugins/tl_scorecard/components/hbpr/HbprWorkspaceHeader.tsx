@@ -1,4 +1,5 @@
 import React from "react";
+import { ScrollFadeX } from "@/components/ui/ScrollFadeX";
 import { PageShell } from "@/components/layout/PageShell";
 import { Label } from "@/components/ui/label";
 import {
@@ -131,7 +132,7 @@ export const HbprWorkspaceHeader: React.FC<HbprWorkspaceHeaderProps> = ({
       }
     >
       <div className="space-y-6">
-        <div className="no-scrollbar -mx-1 min-w-0 overflow-x-auto px-1">
+        <ScrollFadeX className="-mx-1 min-w-0 px-1">
           <Tabs value={view} onValueChange={(value) => onViewChange(value as HbprView)}>
             <TabsList ref={listRef} aria-label="HBPR workspace sections">
               {VIEWS.map((v) => (
@@ -145,7 +146,7 @@ export const HbprWorkspaceHeader: React.FC<HbprWorkspaceHeaderProps> = ({
               ))}
             </TabsList>
           </Tabs>
-        </div>
+        </ScrollFadeX>
         {children}
       </div>
     </PageShell>
