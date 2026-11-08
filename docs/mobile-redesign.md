@@ -18,6 +18,12 @@ Started 2026-11-08. Audit evidence (screenshots) lives in the untracked `enginee
 | #261 | Phone bottom tab bar (More opens the drawer); notices sit above it | merged |
 | #263 | Bottom-sheet Overtime, Standby and Leave forms on phones (`DialogContent` `side="bottom"`, `FormDialog` `mobileSheet`) | merged |
 | #262 | This log, invariant 61, CLAUDE.md router row | merged |
+| #265 | Calendar list on phones: per-day agenda (`ListViewAgenda`) | merged |
+| #266 | Dashboard KPI cards as a 2x2 grid on phones | merged |
+| #267 | `ScrollFadeX` edge fade on the Scorecard and HBPR tab strips | merged |
+| #268 | Dashboard: pending items above upcoming time off on phones | merged |
+| #269 | Dashboard: activity feed collapsed to five items on phones (Show all / Show less) | merged |
+| #270 | Weekly Generator opens as a bottom sheet on phones | merged |
 
 Status check: `gh pr list --repo shapufin/ENG_TRACKER --search "mobile OR phone in:title"`. Merge rule used: Frontend and Backend checks pass; CI E2E is not a signal (see Known issues), so layout PRs are also run locally against the `mobile-chromium` project.
 
@@ -32,9 +38,9 @@ Overtime, Leave, Standby and Dashboard in dark at 320px and 393px: `dark` class 
 
 ## Not done (priority order)
 1. Dark mode and 320px for the leader/HR/admin pages and the tab bar; the status chip row is a deliberate one-line scroller on phones (`FilterChipRow`), so the last chip is partly hidden at 320px with no edge fade: add a fade hint.
-2. Bottom sheet for the remaining dialogs: Weekly Generator and the admin forms (the variant exists; `FormDialog` takes `mobileSheet`). Not yet verified: the slide-up animation (only the end state) and dark mode.
+2. Bottom sheet: Weekly Generator done (#270); the admin forms remain (the variant exists; `FormDialog` takes `mobileSheet`). Not yet verified: the slide-up animation (only the end state) and dark mode.
 3. ~~Calendar phone view~~ done: below 768px the List view renders `ListViewAgenda` (one heading per day, one card per event) instead of the table; same data, search and user click. Month view is fine at 820px. Workspace privacy rules (`useValidWorkspaceIds`) unchanged.
-4. Dashboard: 2x2 KPI grid done (`PersonalDashboardStats`, gap 12px; footers wrap and the username truncates at 320px, accepted). Pending items now sit above upcoming time off below lg. Still open: collapse the activity feed.
+4. Dashboard: 2x2 KPI grid done (`PersonalDashboardStats`, gap 12px; footers wrap and the username truncates at 320px, accepted). Pending items now sit above upcoming time off below lg. The activity feed shows five items with a toggle on phones (#269).
 5. Tab strip scroll hints done for TL Scorecard and HBPR workspace (`ScrollFadeX`: edge fades only while content is hidden). Global Settings does not scroll (it wraps in a grid), so it needs no hint; wrapping to three rows on phones is still open.
 6. Organigrama toolbar clips its download button; canvas is 1,700px tall for two nodes. Analytics "Advanced filters" is clipped.
 7. Admin tables (Users, Teams, Audit Logs, HBPR Assignments, Standby Logs, Leave Balances, Control Room access, Notifications): keep in-card scroll; pin the first column; Admin Users filter chips take ~8 lines (collapse into a Filters sheet).
