@@ -12,6 +12,7 @@ import { MobileOverlay } from "./MobileOverlay";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { MainContentTransition } from "./MainContentTransition";
 import { HeaderSearch } from "./HeaderSearch";
+import { MobileHeaderActions } from "./MobileHeaderActions";
 import { MfaPromptModal } from "@/components/auth/MfaPromptModal";
 import { CommandPalette } from "./CommandPalette";
 import { navItemToPaletteItem } from "./paletteItems";
@@ -151,6 +152,12 @@ export const AppShell = React.memo(() => {
           </div>
           <div className="flex items-center gap-2">
             <PluginSlot slot="header-mobile" />
+            <MobileHeaderActions
+              user={user}
+              roleSubtitle={roleSubtitle}
+              onOpenSearch={() => setPaletteOpen(true)}
+              onLogout={handleLogout}
+            />
           </div>
         </div>
         <div className="border-border/60 bg-card/10 hidden border-b px-8 py-3 backdrop-blur-sm md:flex md:items-center md:justify-between md:gap-4">
