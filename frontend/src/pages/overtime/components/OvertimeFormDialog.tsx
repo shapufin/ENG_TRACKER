@@ -132,6 +132,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
 
   return (
     <FormDialog
+      mobileSheet
       open={open}
       onOpenChange={onOpenChange}
       title={editing ? "Edit Overtime" : "New Overtime"}

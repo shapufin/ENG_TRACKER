@@ -24,6 +24,8 @@ interface FormDialogProps {
   submitDisabled?: boolean;
   /** Dialog width. Defaults to "lg" (672px) — enough room for 2-column forms. */
   size?: DialogSize;
+  /** Phone bottom sheet (thumb reach). Off by default so other forms stay centred. */
+  mobileSheet?: boolean;
 }
 
 export const FormDialog: React.FC<FormDialogProps> = ({
@@ -37,9 +39,14 @@ export const FormDialog: React.FC<FormDialogProps> = ({
   submitLabel = "Save",
   submitDisabled = false,
   size = "lg",
+  mobileSheet = false,
 }) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent size={size} aria-describedby={undefined}>
+    <DialogContent
+      size={size}
+      side={mobileSheet ? "bottom" : "center"}
+      aria-describedby={undefined}
+    >
       <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

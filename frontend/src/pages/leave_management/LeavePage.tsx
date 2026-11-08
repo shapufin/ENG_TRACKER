@@ -182,6 +182,7 @@ export const LeavePage: React.FC = () => {
       )}
 
       <FormDialog
+        mobileSheet
         open={formOpen}
         onOpenChange={setFormOpen}
         title={editing ? "Edit Request" : "New Request"}
