@@ -25,8 +25,11 @@ Status check: `gh pr list --repo shapufin/ENG_TRACKER --search "mobile OR phone 
 - Dashboard opens with one-tap shortcuts on phones.
 - Install notice no longer covers the header; offline and update notices sit above the tab bar.
 
+## Dark mode and 320px pass (2026-11-08, employee pages)
+Overtime, Leave, Standby and Dashboard in dark at 320px and 393px: `dark` class applies, no horizontal overflow outside intended scrollers, cards readable. Findings: the status filter chip row ("Pending / Approved / Rejected") is clipped at 320px (last chip cut, row does not wrap); KPI label and icon touch at 320px (no overlap). Not yet repeated for leader, HR and admin pages or the tab bar (PR #261) in dark.
+
 ## Not done (priority order)
-1. Dark mode and 320px width pass for every change above (only light mode at 393/820 was checked).
+1. Dark mode and 320px for the leader/HR/admin pages and the tab bar; wrap or scroll the status chip row at 320px.
 2. Bottom-sheet dialogs: `Dialog` `side="bottom"` variant for the Overtime, Standby, Weekly Generator and Leave forms (Dialog contract plus `modal-audit.mjs` apply).
 3. Calendar phone view: opens on a List table with Type/Status cut off; wants a per-day agenda. Month view is fine at 820px. Workspace privacy rules (`useValidWorkspaceIds`) unchanged.
 4. Dashboard: 2x2 KPI grid (footers are cramped at ~170px), pending items above recent time off, collapse the activity feed.
