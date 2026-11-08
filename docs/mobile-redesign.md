@@ -16,8 +16,8 @@ Started 2026-11-08. Audit evidence (screenshots) lives in the untracked `enginee
 | #258 | Ticket KPI team uploads/members and Engagement by team cards | merged |
 | #260 | Phone dashboard shortcuts (Overtime, Standby, Leave) | merged |
 | #261 | Phone bottom tab bar (More opens the drawer); notices sit above it | merged |
-| #263 | Bottom-sheet Overtime, Standby and Leave forms on phones (`DialogContent` `side="bottom"`, `FormDialog` `mobileSheet`) | open |
-| #262 | This log, invariant 61, CLAUDE.md router row | open |
+| #263 | Bottom-sheet Overtime, Standby and Leave forms on phones (`DialogContent` `side="bottom"`, `FormDialog` `mobileSheet`) | merged |
+| #262 | This log, invariant 61, CLAUDE.md router row | merged |
 
 Status check: `gh pr list --repo shapufin/ENG_TRACKER --search "mobile OR phone in:title"`. Merge rule used: Frontend and Backend checks pass; CI E2E is not a signal (see Known issues), so layout PRs are also run locally against the `mobile-chromium` project.
 
