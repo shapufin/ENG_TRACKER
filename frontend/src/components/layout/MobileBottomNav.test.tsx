@@ -119,4 +119,16 @@ describe("MobileBottomNav", () => {
       "Standby",
     ]);
   });
+
+  it("lets every tab shrink so a long leader label cannot push More off a 320px screen", () => {
+    renderNav([
+      item("/dashboard", "Dashboard"),
+      item("/team/approvals", "Pending Approvals"),
+      item("/overtime", "Overtime"),
+      item("/standby", "Standby"),
+    ]);
+
+    for (const link of screen.getAllByRole("link")) expect(link).toHaveClass("min-w-0");
+    expect(screen.getByRole("button", { name: /more/i })).toHaveClass("min-w-0");
+  });
 });
