@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { ActivityTimeline } from "./ActivityTimeline";
 
 vi.mock("@/lib/date-format-utils", () => ({
@@ -26,5 +26,27 @@ describe("ActivityTimeline", () => {
   it("falls back to the raw timestamp when formatting yields nothing", () => {
     render(<ActivityTimeline items={[{ ...ITEM, id: "leave-2", timestamp: "not-a-date" }]} />);
     expect(screen.getByText("not-a-date")).toBeInTheDocument();
+  });
+
+  it("keeps only the first five items visible on phones until expanded", () => {
+    const items = Array.from({ length: 8 }, (_, i) => ({
+      ...ITEM,
+      id: `leave-${i}`,
+      user: `user${i}`,
+    }));
+    render(<ActivityTimeline items={items} />);
+
+    const row = (name: string) => screen.getByText(name).closest(".relative");
+    expect(row("user4")).not.toHaveClass("max-md:hidden");
+    expect(row("user5")).toHaveClass("max-md:hidden");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all 8" }));
+    expect(row("user5")).not.toHaveClass("max-md:hidden");
+    expect(screen.getByRole("button", { name: "Show less" })).toBeInTheDocument();
+  });
+
+  it("offers no toggle when five or fewer items exist", () => {
+    render(<ActivityTimeline items={[{ ...ITEM }]} />);
+    expect(screen.queryByRole("button", { name: /show/i })).not.toBeInTheDocument();
   });
 });
