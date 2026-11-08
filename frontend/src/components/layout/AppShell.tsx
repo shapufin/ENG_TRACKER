@@ -10,6 +10,8 @@ import { Sidebar } from "./Sidebar";
 import { TeamContextPill } from "./TeamContextPill";
 import { MobileOverlay } from "./MobileOverlay";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { CustomizeTabsSheet } from "./CustomizeTabsSheet";
+import { usePinnedTabs } from "./hooks/usePinnedTabs";
 import { MainContentTransition } from "./MainContentTransition";
 import { HeaderSearch } from "./HeaderSearch";
 import { MobileHeaderActions } from "./MobileHeaderActions";
@@ -56,6 +58,7 @@ export const AppShell = React.memo(() => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   // The calendar is the one page that wants the whole width, so it runs
   // full-bleed and auto-collapses this sidebar. The user's previous choice is
@@ -77,6 +80,7 @@ export const AppShell = React.memo(() => {
     isHROnly
   );
   const handleLogout = useLogout();
+  const { pinnedPaths, customized, setPinned, reset } = usePinnedTabs(user?.id, visibleItems);
   const paletteItems = useMemo(() => visibleItems.map(navItemToPaletteItem), [visibleItems]);
 
   // Ctrl/Cmd+K toggles the page palette; preventDefault beats the browser's own Ctrl+K.
@@ -157,6 +161,7 @@ export const AppShell = React.memo(() => {
               roleSubtitle={roleSubtitle}
               onOpenSearch={() => setPaletteOpen(true)}
               onLogout={handleLogout}
+              onCustomizeTabs={() => setCustomizeOpen(true)}
             />
           </div>
         </div>
@@ -190,11 +195,21 @@ export const AppShell = React.memo(() => {
         </MainContentTransition>
         <MobileBottomNav
           items={visibleItems}
+          pinnedPaths={pinnedPaths}
           badgeMap={pendingApprovalTotal > 0 ? { "/team/approvals": pendingApprovalTotal } : {}}
           onOpenMore={() => setMobileOpen(true)}
           moreOpen={mobileOpen}
         />
       </main>
+      <CustomizeTabsSheet
+        open={customizeOpen}
+        onOpenChange={setCustomizeOpen}
+        items={visibleItems}
+        pinnedPaths={pinnedPaths}
+        customized={customized}
+        onSave={setPinned}
+        onReset={reset}
+      />
       <MfaPromptModal />
       <CommandPalette
         items={paletteItems}

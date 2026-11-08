@@ -7,6 +7,7 @@ interface MobileHeaderActionsProps {
   roleSubtitle?: string;
   onOpenSearch: () => void;
   onLogout: () => void;
+  onCustomizeTabs: () => void;
 }
 
 /** Phone header actions: page launcher (command palette) and the account menu. */
@@ -15,6 +16,7 @@ export const MobileHeaderActions: React.FC<MobileHeaderActionsProps> = ({
   roleSubtitle,
   onOpenSearch,
   onLogout,
+  onCustomizeTabs,
 }) => (
   <>
     <button
@@ -25,6 +27,11 @@ export const MobileHeaderActions: React.FC<MobileHeaderActionsProps> = ({
     >
       <Search className="h-5 w-5" />
     </button>
-    <HeaderProfileMenu user={user} roleSubtitle={roleSubtitle} onLogout={onLogout} />
+    <HeaderProfileMenu
+      user={user}
+      roleSubtitle={roleSubtitle}
+      onLogout={onLogout}
+      onCustomizeTabs={onCustomizeTabs}
+    />
   </>
 );
