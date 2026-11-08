@@ -12,10 +12,12 @@ Started 2026-11-08. Audit evidence (screenshots) lives in the untracked `enginee
 | #256 | Install banner moved to the bottom (it covered the header and blocked the hamburger) | merged |
 | #257 | KPI cards: no label/icon overlap at 820px, two columns on phones; Dashboard System Status truncation | merged |
 | #259 | Ticket KPI member table: `N/A` instead of `nullh` / `null%` | merged |
-| #255 | Team Overview cards | see Status check below |
-| #258 | Ticket KPI team uploads/members and Engagement by team cards | see Status check below |
-| #260 | Phone dashboard shortcuts (Overtime, Standby, Leave) | see Status check below |
-| #261 | Phone bottom tab bar (More opens the drawer); notices sit above it | see Status check below |
+| #255 | Team Overview cards | merged |
+| #258 | Ticket KPI team uploads/members and Engagement by team cards | merged |
+| #260 | Phone dashboard shortcuts (Overtime, Standby, Leave) | merged |
+| #261 | Phone bottom tab bar (More opens the drawer); notices sit above it | merged |
+| #263 | Bottom-sheet Overtime, Standby and Leave forms on phones (`DialogContent` `side="bottom"`, `FormDialog` `mobileSheet`) | open |
+| #262 | This log, invariant 61, CLAUDE.md router row | open |
 
 Status check: `gh pr list --repo shapufin/ENG_TRACKER --search "mobile OR phone in:title"`. Merge rule used: Frontend and Backend checks pass; CI E2E is not a signal (see Known issues), so layout PRs are also run locally against the `mobile-chromium` project.
 
@@ -26,11 +28,11 @@ Status check: `gh pr list --repo shapufin/ENG_TRACKER --search "mobile OR phone 
 - Install notice no longer covers the header; offline and update notices sit above the tab bar.
 
 ## Dark mode and 320px pass (2026-11-08, employee pages)
-Overtime, Leave, Standby and Dashboard in dark at 320px and 393px: `dark` class applies, no horizontal overflow outside intended scrollers, cards readable. Findings: the status filter chip row ("Pending / Approved / Rejected") is clipped at 320px (last chip cut, row does not wrap); KPI label and icon touch at 320px (no overlap). Not yet repeated for leader, HR and admin pages or the tab bar (PR #261) in dark.
+Overtime, Leave, Standby and Dashboard in dark at 320px and 393px: `dark` class applies, no horizontal overflow outside intended scrollers, cards readable. Findings: the status filter chip row ("Pending / Approved / Rejected") scrolls sideways by design and the last chip is partly hidden at 320px; KPI label and icon touch at 320px (no overlap). Not yet repeated for leader, HR and admin pages or the tab bar (PR #261) in dark.
 
 ## Not done (priority order)
-1. Dark mode and 320px for the leader/HR/admin pages and the tab bar; wrap or scroll the status chip row at 320px.
-2. Bottom-sheet dialogs: `Dialog` `side="bottom"` variant for the Overtime, Standby, Weekly Generator and Leave forms (Dialog contract plus `modal-audit.mjs` apply).
+1. Dark mode and 320px for the leader/HR/admin pages and the tab bar; the status chip row is a deliberate one-line scroller on phones (`FilterChipRow`), so the last chip is partly hidden at 320px with no edge fade: add a fade hint.
+2. Bottom sheet for the remaining dialogs: Weekly Generator and the admin forms (the variant exists; `FormDialog` takes `mobileSheet`). Not yet verified: the slide-up animation (only the end state) and dark mode.
 3. Calendar phone view: opens on a List table with Type/Status cut off; wants a per-day agenda. Month view is fine at 820px. Workspace privacy rules (`useValidWorkspaceIds`) unchanged.
 4. Dashboard: 2x2 KPI grid (footers are cramped at ~170px), pending items above recent time off, collapse the activity feed.
 5. Scorecard and Global Settings tab strips: scroll hint; Global Settings wraps to three rows.
