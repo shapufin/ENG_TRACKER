@@ -4,6 +4,9 @@ import type { CalendarEvent } from "./types";
 import type { User } from "@/types";
 import { ListViewHeader } from "./ListViewHeader";
 import { ListViewRow } from "./ListViewRow";
+import { ListViewAgenda } from "./ListViewAgenda";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { MOBILE_CARD_QUERY } from "@/components/ui/DataTableCards";
 import { ListViewEmptyState } from "./ListViewEmptyState";
 import {
   calendarEventStatusStyles,
@@ -35,6 +38,7 @@ const HEADERS = ["Date", "User", "Type", "Details", "Status"];
 
 export const ListView: React.FC<ListViewProps> = ({ events, users, onUserClick }) => {
   const [query, setQuery] = useState("");
+  const isPhone = useMediaQuery(MOBILE_CARD_QUERY);
 
   const userLookup = useMemo(() => {
     return users.reduce<Record<number, User>>((acc, user) => {
@@ -61,33 +65,45 @@ export const ListView: React.FC<ListViewProps> = ({ events, users, onUserClick }
       <ListViewHeader query={query} onQueryChange={setQuery} />
 
       <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full min-w-0 border-collapse md:min-w-[720px]">
-          <thead className="bg-card/95 sticky top-0 z-20 backdrop-blur-xl">
-            <tr className="border-border/70 border-b">
-              {HEADERS.map((header) => (
-                <th
-                  key={header}
-                  className="text-muted-foreground px-5 py-4 text-left text-xs font-semibold tracking-[0.2em] uppercase"
-                >
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
+        {isPhone ? (
+          <ListViewAgenda
+            events={filteredEvents}
+            userLookup={userLookup}
+            typeColors={typeColors}
+            statusColors={statusColors}
+            onUserClick={onUserClick}
+          />
+        ) : (
+          <table
+            className="w-full min-w-0 border-collapse md:min-w-[720px]" // ds-allow-hardcode: tablet+ keeps its 720px minimum
+          >
+            <thead className="bg-card/95 sticky top-0 z-20 backdrop-blur-xl">
+              <tr className="border-border/70 border-b">
+                {HEADERS.map((header) => (
+                  <th
+                    key={header}
+                    className="text-muted-foreground px-5 py-4 text-left text-xs font-semibold tracking-[0.2em] uppercase"
+                  >
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-          <tbody>
-            {filteredEvents.map((event) => (
-              <ListViewRow
-                key={event.id}
-                event={event}
-                user={userLookup[event.userId || 0]}
-                typeColors={typeColors}
-                statusColors={statusColors}
-                onUserClick={onUserClick}
-              />
-            ))}
-          </tbody>
-        </table>
+            <tbody>
+              {filteredEvents.map((event) => (
+                <ListViewRow
+                  key={event.id}
+                  event={event}
+                  user={userLookup[event.userId || 0]}
+                  typeColors={typeColors}
+                  statusColors={statusColors}
+                  onUserClick={onUserClick}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
 
         {filteredEvents.length === 0 && <ListViewEmptyState />}
       </div>
