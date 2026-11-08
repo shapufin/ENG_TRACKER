@@ -95,6 +95,7 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
       size="lg"
+      mobileSheet
     >
       <div className="space-y-4">
         {isAdmin && (

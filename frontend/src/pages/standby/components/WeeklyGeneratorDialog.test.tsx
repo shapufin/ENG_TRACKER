@@ -101,4 +101,9 @@ describe("WeeklyGeneratorDialog", () => {
     expect(thead?.className).not.toContain("bg-muted/90");
     expect(thead?.className).not.toContain("backdrop-blur-sm");
   });
+
+  it("opens as a bottom sheet on phones", () => {
+    render(<WeeklyGeneratorDialog {...makeProps()} />);
+    expect(screen.getByRole("dialog").className).toContain("max-md:bottom-0");
+  });
 });
