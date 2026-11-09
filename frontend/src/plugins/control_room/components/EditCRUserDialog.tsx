@@ -97,6 +97,7 @@ export const EditCRUserDialog: React.FC<EditCRUserDialogProps> = ({
 
   return (
     <FormDialog
+      mobileSheet
       open={open}
       onOpenChange={handleOpenChange}
       title={username ? `Edit ${username}` : "Edit CR User"}
@@ -152,7 +153,7 @@ export const EditCRUserDialog: React.FC<EditCRUserDialogProps> = ({
           value={form.team_ids}
           onChange={(ids) => updateField("team_ids", ids)}
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Empty scope means no visibility (not global). Admin/staff always have global access.
         </p>
       </div>

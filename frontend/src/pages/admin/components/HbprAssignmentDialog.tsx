@@ -141,6 +141,7 @@ export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
 
   return (
     <FormDialog
+      mobileSheet
       open={open}
       onOpenChange={onOpenChange}
       title={mode === "edit" ? "Edit HBPR assignment" : "New HBPR assignment"}

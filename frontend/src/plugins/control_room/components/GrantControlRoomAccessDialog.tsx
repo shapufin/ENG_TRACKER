@@ -67,6 +67,7 @@ export const GrantControlRoomAccessDialog: React.FC<GrantControlRoomAccessDialog
 
   return (
     <FormDialog
+      mobileSheet
       open={open}
       onOpenChange={handleOpenChange}
       title="Grant Control Room access"

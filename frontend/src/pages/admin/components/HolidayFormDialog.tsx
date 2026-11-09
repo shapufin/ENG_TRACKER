@@ -53,6 +53,7 @@ export const HolidayFormDialog: React.FC<HolidayFormDialogProps> = ({
 
   return (
     <FormDialog
+      mobileSheet
       open={open}
       onOpenChange={onOpenChange}
       title={editingName ? `Edit ${editingName}` : "Add Holiday"}

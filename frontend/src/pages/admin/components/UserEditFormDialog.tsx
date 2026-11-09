@@ -77,6 +77,7 @@ export const UserEditFormDialog: React.FC<UserEditFormDialogProps> = ({
 
   return (
     <FormDialog
+      mobileSheet
       open={open}
       onOpenChange={onOpenChange}
       title={editing ? `Edit ${editing.user?.username}` : "Edit User"}

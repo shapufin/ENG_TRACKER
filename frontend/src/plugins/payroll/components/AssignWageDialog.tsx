@@ -44,6 +44,7 @@ export const AssignWageDialog: React.FC<AssignWageDialogProps> = ({
   submitDisabled,
 }) => (
   <FormDialog
+    mobileSheet
     open={open}
     onOpenChange={onOpenChange}
     title={mode === "edit" ? "Edit Wage Assignment" : "Assign Wage"}

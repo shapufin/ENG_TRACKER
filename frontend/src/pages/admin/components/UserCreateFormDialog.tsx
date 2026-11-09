@@ -162,6 +162,7 @@ export const UserCreateFormDialog: React.FC<UserCreateFormDialogProps> = ({
 
   return (
     <FormDialog
+      mobileSheet
       open={open}
       onOpenChange={handleOpenChange}
       title="Create User"
