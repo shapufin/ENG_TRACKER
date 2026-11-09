@@ -47,7 +47,7 @@ const DirectReportStack: React.FC = () => {
   const overflow = members.length - visible.length;
   return (
     <span className="inline-flex items-center gap-2">
-      <span aria-hidden="true" className="text-border">
+      <span aria-hidden="true" className="text-border max-sm:hidden">
         •
       </span>
       <span role="group" aria-label="Direct reports" className="inline-flex items-center">

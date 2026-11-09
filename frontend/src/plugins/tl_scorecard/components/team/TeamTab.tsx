@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ShieldAlert, Target, UserMinus, Users } from "lucide-react";
 import { UserCell } from "@/components/admin/UserCell";
 import { DataTable } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -73,6 +74,11 @@ const EprStepper: React.FC<{ member: TeamMemberSummary }> = ({ member }) => {
       </span>
     </div>
   );
+};
+
+const TEAM_CARD: DataTableCardSpec = {
+  title: "full_name",
+  meta: ["leave_available", "epr", "governance", "wage"],
 };
 
 const buildColumns = (): AppColumnDef<TeamMemberSummary>[] => [
@@ -201,6 +207,7 @@ export const TeamTab: React.FC = () => {
           searchPlaceholder="Search team members"
           getRowId={(row) => String(row.id)}
           onRowClick={setSelected}
+          mobileCard={TEAM_CARD}
           emptyMessage="No team members match your search."
         />
       </GlassCard>
