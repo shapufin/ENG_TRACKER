@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import {
   Dialog,
@@ -15,6 +16,13 @@ import {
 import { toneTextClass } from "@/components/ui/tone";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import type { DetailedUserReport } from "@/services/reportService";
+
+/** Phone card: person and team, then the monthly totals. */
+const PERSONNEL_CARD: DataTableCardSpec = {
+  title: "identity",
+  status: "team",
+  meta: ["overtime", "standby", "leave", "balance"],
+};
 
 interface HRPersonnelTableProps {
   users: DetailedUserReport[];
@@ -189,6 +197,7 @@ export const HRPersonnelTable: React.FC<HRPersonnelTableProps> = ({ users }) => 
         searchPlaceholder="Search people..."
         emptyMessage="No users found."
         onRowClick={setSelected}
+        mobileCard={PERSONNEL_CARD}
       />
       {selected && <HRPersonnelDetailPanel user={selected} onClose={() => setSelected(null)} />}
     </GlassCard>

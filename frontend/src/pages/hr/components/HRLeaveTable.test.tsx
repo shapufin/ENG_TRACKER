@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
+import { MOBILE_CARD_QUERY } from "@/components/ui/DataTableCards";
 import { HRLeaveTable } from "./HRLeaveTable";
 
 const leaves = [
@@ -69,5 +70,24 @@ describe("HRLeaveTable", () => {
     const before = first().queryByText(/Alice|Bob/)?.textContent;
     fireEvent.click(screen.getByRole("button", { name: /days/i }));
     expect(first().queryByText(/Alice|Bob/)?.textContent).not.toBe(before);
+  });
+
+  it("shows each request as a card on phones, with type, period and days", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation((query: string) => ({
+        matches: query === MOBILE_CARD_QUERY,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }))
+    );
+    render(<HRLeaveTable leaves={leaves} />);
+
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    const card = within(screen.getByRole("listitem"));
+    expect(card.getByText("Alice Smith")).toBeInTheDocument();
+    expect(card.getByText("Vacation")).toBeInTheDocument();
+    expect(card.getByText("15/06/2024 - 20/06/2024")).toBeInTheDocument();
   });
 });
