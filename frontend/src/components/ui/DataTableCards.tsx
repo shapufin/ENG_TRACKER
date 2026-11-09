@@ -1,4 +1,4 @@
-import React from "react";
+import React, { type KeyboardEvent } from "react";
 import { flexRender } from "@tanstack/react-table";
 import { Checkbox } from "./checkbox";
 import { EmptyState } from "./EmptyState";
@@ -76,7 +76,7 @@ export const DataTableCards = <TData extends object>({
           const titleValue =
             (row.original as Record<string, unknown>)[spec.title] ??
             (cells.some((c) => c.column.id === spec.title) ? row.getValue(spec.title) : undefined);
-          const titleText = String(titleValue ?? row.id);
+          const titleText = String(titleValue ?? "row");
           const actions = render(actionsId);
           return (
             <li
@@ -84,6 +84,15 @@ export const DataTableCards = <TData extends object>({
               data-state={row.getIsSelected() ? "selected" : undefined}
               className="data-[state=selected]:bg-muted/40 flex gap-3 px-4 py-3"
               onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+              {...(onRowClick && {
+                role: "button",
+                tabIndex: 0,
+                onKeyDown: (e: KeyboardEvent<HTMLLIElement>) => {
+                  if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+                  e.preventDefault();
+                  onRowClick(row.original);
+                },
+              })}
             >
               {enableRowSelection && (
                 <Checkbox
@@ -120,7 +129,10 @@ export const DataTableCards = <TData extends object>({
                 )}
                 {actions && (
                   // No hover state on touch: keep icon buttons visible and 44px.
-                  <div className="flex items-center justify-end [&_button]:min-h-11 [&_button]:min-w-11 [&_div]:opacity-100">
+                  <div
+                    className="flex items-center justify-end [&_button]:min-h-11 [&_button]:min-w-11 [&_div]:opacity-100"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {actions}
                   </div>
                 )}
