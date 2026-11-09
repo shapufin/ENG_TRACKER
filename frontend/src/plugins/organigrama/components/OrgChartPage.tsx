@@ -269,7 +269,7 @@ const OrgChartInner: React.FC<OrgChartPageProps> = ({
           isLandscape
             ? "h-[calc(100dvh-5.5rem)]"
             : isMobile
-              ? "h-[calc(100dvh-10rem)]"
+              ? "h-[min(32rem,calc(100dvh-12rem))]"
               : "h-[calc(100vh-16rem)]"
         )}
       >
