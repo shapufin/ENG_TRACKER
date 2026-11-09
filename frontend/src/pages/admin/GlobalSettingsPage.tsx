@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollFadeX } from "@/components/ui/ScrollFadeX";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
@@ -574,28 +575,30 @@ export const GlobalSettingsPage: React.FC = () => {
       }
     >
       <Tabs value={activeTab} onValueChange={onTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:w-auto">
-          <TabsTrigger value="branding" className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
-            <span>Branding & Identity</span>
-          </TabsTrigger>
-          <TabsTrigger value="vacation" className="flex items-center gap-2">
-            <CalendarCheck className="h-4 w-4" />
-            <span>Vacation & Carry-Over</span>
-          </TabsTrigger>
-          <TabsTrigger value="workplace" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            <span>Workplace & Hours</span>
-          </TabsTrigger>
-          <TabsTrigger value="system" className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4" />
-            <span>System & Operations</span>
-          </TabsTrigger>
-          <TabsTrigger value="maintenance" className="flex items-center gap-2">
-            <Wrench className="h-4 w-4" />
-            <span>Maintenance</span>
-          </TabsTrigger>
-        </TabsList>
+        <ScrollFadeX className="-mx-1 px-1 md:overflow-visible">
+          <TabsList className="flex w-max min-w-full md:grid md:w-full md:grid-cols-5 lg:w-auto">
+            <TabsTrigger value="branding" className="flex shrink-0 items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              <span>Branding & Identity</span>
+            </TabsTrigger>
+            <TabsTrigger value="vacation" className="flex shrink-0 items-center gap-2">
+              <CalendarCheck className="h-4 w-4" />
+              <span>Vacation & Carry-Over</span>
+            </TabsTrigger>
+            <TabsTrigger value="workplace" className="flex shrink-0 items-center gap-2">
+              <Clock className="h-4 w-4" />
+              <span>Workplace & Hours</span>
+            </TabsTrigger>
+            <TabsTrigger value="system" className="flex shrink-0 items-center gap-2">
+              <ShieldCheck className="h-4 w-4" />
+              <span>System & Operations</span>
+            </TabsTrigger>
+            <TabsTrigger value="maintenance" className="flex shrink-0 items-center gap-2">
+              <Wrench className="h-4 w-4" />
+              <span>Maintenance</span>
+            </TabsTrigger>
+          </TabsList>
+        </ScrollFadeX>
 
         {/* Tab 1: Branding & Identity */}
         <TabsContent
