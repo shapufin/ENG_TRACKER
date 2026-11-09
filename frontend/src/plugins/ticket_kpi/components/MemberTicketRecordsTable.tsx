@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { RotateCcw, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { MOBILE_CARD_QUERY } from "@/components/ui/DataTableCards";
 import { useTicketKPITickets } from "../pages/hooks/useTicketKPITickets";
 import type { TicketQueryFilters, TicketRecord } from "../types/ticketKPI";
 
@@ -288,6 +290,59 @@ const TicketRecordsTableBody: React.FC<TableBodyProps> = ({
   </tbody>
 );
 
+type CardsProps = TableBodyProps;
+
+const CARD_HEADLINE = new Set(["ticket_id", "title", "status", "sla_breached"]);
+
+/** Phone layout: one card per ticket, same cell renderers as the table. */
+const TicketRecordCards: React.FC<CardsProps> = ({
+  columns,
+  results,
+  isLoading,
+  isError,
+  hasActiveFilters,
+}) => {
+  if (isLoading || isError || results.length === 0) {
+    const message = isLoading
+      ? "Loading tickets…"
+      : isError
+        ? "Failed to load ticket records. Try adjusting filters or reloading."
+        : hasActiveFilters
+          ? "No tickets match the current filters."
+          : "No ticket records for this month.";
+    return <p className="text-muted-foreground px-4 py-10 text-center text-sm">{message}</p>;
+  }
+  const details = columns.filter((f) => !CARD_HEADLINE.has(f));
+  return (
+    <ul className="divide-border/30 divide-y">
+      {results.map((row) => (
+        <li key={row.id} className="space-y-2 px-4 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-xs tabular-nums">
+                {renderCell("ticket_id", row)}
+              </p>
+              <p className="text-sm font-medium break-words">{row.title || "—"}</p>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              {renderCell("status", row)}
+              {row.sla_breached != null && renderCell("sla_breached", row)}
+            </div>
+          </div>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+            {details.map((field) => (
+              <React.Fragment key={field}>
+                <dt className="text-muted-foreground">{labelFor(field)}</dt>
+                <dd className="min-w-0 break-words">{renderCell(field, row)}</dd>
+              </React.Fragment>
+            ))}
+          </dl>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
 type PaginationProps = {
   page: number;
   pageSize: number;
@@ -401,6 +456,7 @@ export const MemberTicketRecordsTable: React.FC<MemberTicketRecordsTableProps> =
     [filterOptions]
   );
 
+  const isPhone = useMediaQuery(MOBILE_CARD_QUERY);
   const results = data?.results ?? [];
   const hasActiveFilters = !!(
     filters.status ||
@@ -439,26 +495,36 @@ export const MemberTicketRecordsTable: React.FC<MemberTicketRecordsTableProps> =
 
       {/* Table */}
       <GlassCard className="p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-max text-sm">
-            <thead>
-              <tr className={TABLE_HEAD_ROW_CLASS}>
-                {columns.map((field) => (
-                  <th key={field} className={TABLE_HEAD_CELL_CLASS}>
-                    {labelFor(field)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <TicketRecordsTableBody
-              columns={columns}
-              results={results}
-              isLoading={isLoading}
-              isError={isError}
-              hasActiveFilters={hasActiveFilters}
-            />
-          </table>
-        </div>
+        {isPhone ? (
+          <TicketRecordCards
+            columns={columns}
+            results={results}
+            isLoading={isLoading}
+            isError={isError}
+            hasActiveFilters={hasActiveFilters}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-max text-sm">
+              <thead>
+                <tr className={TABLE_HEAD_ROW_CLASS}>
+                  {columns.map((field) => (
+                    <th key={field} className={TABLE_HEAD_CELL_CLASS}>
+                      {labelFor(field)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <TicketRecordsTableBody
+                columns={columns}
+                results={results}
+                isLoading={isLoading}
+                isError={isError}
+                hasActiveFilters={hasActiveFilters}
+              />
+            </table>
+          </div>
+        )}
       </GlassCard>
 
       {/* Server-side pagination */}
