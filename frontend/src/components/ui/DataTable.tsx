@@ -341,7 +341,12 @@ export const DataTable = function DataTable<TData extends RowData>({
                   cell.column.columnDef.size
                     ? cell.column.id === "actions"
                       ? { width: cell.column.columnDef.size }
-                      : { width: cell.column.columnDef.size, maxWidth: cell.column.columnDef.size }
+                      : cell.column.id === "description"
+                        ? { minWidth: cell.column.columnDef.size }
+                        : {
+                            width: cell.column.columnDef.size,
+                            maxWidth: cell.column.columnDef.size,
+                          }
                     : undefined
                 }
               >
@@ -486,7 +491,14 @@ export const DataTable = function DataTable<TData extends RowData>({
                             )}
                             style={
                               header.column.columnDef.size
-                                ? { width: header.column.columnDef.size }
+                                ? header.column.id === "actions"
+                                  ? { width: header.column.columnDef.size }
+                                  : header.column.id === "description"
+                                    ? { minWidth: header.column.columnDef.size }
+                                    : {
+                                        width: header.column.columnDef.size,
+                                        maxWidth: header.column.columnDef.size,
+                                      }
                                 : undefined
                             }
                             aria-sort={
@@ -519,7 +531,14 @@ export const DataTable = function DataTable<TData extends RowData>({
                                 </span>
                               </button>
                             ) : (
-                              flexRender(header.column.columnDef.header, header.getContext())
+                              <div
+                                className={cn(
+                                  "flex min-h-11 items-center",
+                                  header.column.id === "actions" ? "justify-end" : "justify-start"
+                                )}
+                              >
+                                {flexRender(header.column.columnDef.header, header.getContext())}
+                              </div>
                             )}
                           </th>
                         )

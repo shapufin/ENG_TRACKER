@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { UserCell } from "@/components/admin/UserCell";
+import { TicketIdBadges } from "@/components/ui/TicketIdBadges";
 import { ApprovalActionsWithView } from "@/components/admin/ApprovalActionsWithView";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { leaveRequestBaseColumns } from "@/pages/leave_management/hooks/leaveColumnsBase";
@@ -34,22 +35,9 @@ export const useTLApprovalColumns = ({
       {
         id: "ticket_references",
         header: "Ticket ID",
-        size: 110,
+        size: 130,
         accessorFn: (row) => row.ticket_references?.join(", ") ?? "",
-        cell: ({ row }) => {
-          const refs = row.original.ticket_references;
-          if (!refs || refs.length === 0) {
-            return <span className="text-muted-foreground">-</span>;
-          }
-          return (
-            <span
-              className="truncate font-mono text-xs max-md:break-words max-md:whitespace-normal"
-              title={refs.join(", ")}
-            >
-              {refs.join(", ")}
-            </span>
-          );
-        },
+        cell: ({ row }) => <TicketIdBadges references={row.original.ticket_references} />,
       },
       {
         accessorKey: "date",
@@ -60,23 +48,24 @@ export const useTLApprovalColumns = ({
       {
         accessorKey: "hours",
         header: "Hours",
-        size: 87,
+        size: 130,
         cell: ({ row }) => <OvertimeHoursBadge log={row.original} />,
       },
       {
         id: "payroll_period",
         header: "Payroll",
-        size: 130,
+        size: 110,
         cell: ({ row }) =>
           row.original.is_carried_over ? (
             <Badge
               variant="outline"
+              className="whitespace-nowrap"
               title={`Submitted: ${row.original.submitted_at ?? "server timestamp"}`}
             >
-              Carried to {row.original.requested_period_label ?? "next"}
+              Next month
             </Badge>
           ) : (
-            <span className="text-muted-foreground">Same month</span>
+            <span className="text-muted-foreground whitespace-nowrap">Same month</span>
           ),
       },
       {

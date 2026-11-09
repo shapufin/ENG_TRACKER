@@ -95,15 +95,44 @@ describe("useOvertimeColumns ticket_references", () => {
     expect(missingContainer.textContent).toBe("-");
   });
 
-  it("renders comma-separated ticket references when present", () => {
+  it("renders ticket badges when present", () => {
     const col = getTicketColumn();
     const { container } = render(
       (col.cell as any)({
         row: { original: log({ ticket_references: ["INC-100", "INC-102"] }) },
       })
     );
-    expect(container.textContent).toBe("INC-100, INC-102");
-    const span = container.querySelector("span");
-    expect(span).toHaveAttribute("title", "INC-100, INC-102");
+    expect(screen.getByText("INC-100")).toBeInTheDocument();
+    expect(screen.getByText("INC-102")).toBeInTheDocument();
+    expect(container.firstChild).toHaveAttribute("title", "INC-100, INC-102");
+  });
+});
+
+describe("useOvertimeColumns payroll_period", () => {
+  function getPayrollColumn() {
+    const { result } = renderHook(() =>
+      useOvertimeColumns(true, false, vi.fn(), vi.fn(), vi.fn(), vi.fn())
+    );
+    const col = result.current.find((c) => c.id === "payroll_period");
+    expect(col).toBeDefined();
+    return col!;
+  }
+
+  it("renders Next month badge for carried over records", () => {
+    const col = getPayrollColumn();
+    render(
+      (col.cell as any)({
+        row: { original: log({ is_carried_over: true, requested_period_label: "11/2026" }) },
+      })
+    );
+    const badge = screen.getByText("Next month");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute("title", "Carried to 11/2026");
+  });
+
+  it("renders Same month text for regular records", () => {
+    const col = getPayrollColumn();
+    render((col.cell as any)({ row: { original: log({ is_carried_over: false }) } }));
+    expect(screen.getByText("Same month")).toBeInTheDocument();
   });
 });
