@@ -112,4 +112,23 @@ describe("DataTable mobile cards", () => {
     expect(screen.getByText("Nothing here")).toBeInTheDocument();
     expect(screen.getByText("0 results")).toBeInTheDocument();
   });
+
+  it("names a card by a nested accessor column, so its checkbox label is the person", () => {
+    mockViewport(true);
+    type Nested = { id: number; user: { username: string } };
+    const nested: AppColumnDef<Nested>[] = [{ accessorKey: "user.username", header: "User" }];
+    render(
+      <DataTable
+        columns={nested}
+        data={[{ id: 7, user: { username: "alice" } }]}
+        mobileCard={{ title: "user_username" }}
+        enableRowSelection
+        rowSelection={{}}
+        onRowSelectionChange={vi.fn()}
+        getRowId={(r) => String(r.id)}
+      />
+    );
+
+    expect(screen.getByRole("checkbox", { name: "Select alice" })).toBeInTheDocument();
+  });
 });

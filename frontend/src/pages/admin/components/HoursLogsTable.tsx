@@ -15,6 +15,15 @@ import { OvertimeHoursBadge } from "@/pages/overtime/components/OvertimeHoursBad
 import type { StatusVariant } from "@/components/ui/StatusBadge";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import type { DataTableServerMode } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
+
+/** Phone card: who and when, hours and status, then the standby time range and notes. */
+const HOURS_LOG_CARD: DataTableCardSpec = {
+  title: "user_name",
+  hero: "hours",
+  status: "status",
+  meta: ["date", "time_range", "description"],
+};
 
 interface HoursLog {
   id: number;
@@ -187,6 +196,7 @@ export const HoursLogsTable = <T extends HoursLog>({
         toolbarActions={toolbar}
         storageKey={storageKey}
         getRowId={(row) => row.id.toString()}
+        mobileCard={HOURS_LOG_CARD}
       />
     </GlassCard>
   );

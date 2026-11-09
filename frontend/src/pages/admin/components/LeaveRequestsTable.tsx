@@ -18,7 +18,15 @@ import { UserCell } from "@/components/admin/UserCell";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import type { LeaveRequest } from "@/types";
 import type { DataTableServerMode } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { LEAVE_REQUESTS_PAGE_SIZE } from "../hooks/useLeaveRequestsServerData";
+
+/** Phone card: person and status, the period facts, then Approve/Reject. */
+const LEAVE_REQUEST_CARD: DataTableCardSpec = {
+  title: "user_name",
+  status: "status",
+  meta: ["type", "dates", "days", "user_leave_balance"],
+};
 
 interface LeaveRequestsTableProps {
   requests: LeaveRequest[];
@@ -279,6 +287,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         // in the Columns menu (never dropped).
         defaultColumnVisibility={{ reason: false }}
         getRowId={(row) => row.id.toString()}
+        mobileCard={LEAVE_REQUEST_CARD}
       />
     </GlassCard>
   );

@@ -5,6 +5,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { PluginPermissionGuard } from "@/components/auth/PluginPermissionGuard";
 import { auditService, type AuditLog } from "@/services/auditService";
 import api from "@/lib/api";
@@ -18,6 +19,14 @@ import { AuditLogDetailDialog } from "./components/AuditLogDetailDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuditLogColumns } from "./hooks/useAuditLogColumns";
+
+/** Phone card: who did what, then when, where and to which object; Details is the footer. */
+const AUDIT_LOG_CARD: DataTableCardSpec = {
+  title: "user_name",
+  status: "action",
+  meta: ["timestamp", "model_name_display", "object_repr", "ip_address"],
+  actions: "details",
+};
 
 export const AuditLogsEnhancedPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -171,7 +180,7 @@ export const AuditLogsEnhancedPage: React.FC = () => {
             ) : logs.length === 0 ? (
               <EmptyState icon={Clock} title="No audit logs found" />
             ) : (
-              <DataTable columns={columns} data={logs} />
+              <DataTable columns={columns} data={logs} mobileCard={AUDIT_LOG_CARD} />
             )}
           </div>
         </GlassCard>
@@ -220,10 +229,7 @@ export const AuditLogsEnhancedPage: React.FC = () => {
                     </span>
                     <div className="mt-1 max-h-24 space-y-1 overflow-y-auto">
                       {archiveStatus.archives.map((a) => (
-                        <div
-                          key={a.filename}
-                          className="flex items-center justify-between text-xs"
-                        >
+                        <div key={a.filename} className="flex items-center justify-between text-xs">
                           <span className="max-w-[180px] truncate font-mono">{a.filename}</span>
                           <button
                             type="button"

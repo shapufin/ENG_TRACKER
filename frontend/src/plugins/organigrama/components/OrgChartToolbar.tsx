@@ -53,7 +53,7 @@ export const OrgChartToolbar: React.FC<OrgChartToolbarProps> = ({
           aria-label="Search organizational chart"
         />
       </FilterToolbar.Search>
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         <Button
           variant="outline"
           size="control-sm"

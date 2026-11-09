@@ -1,11 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 
 import { HbprAssignmentsPage } from "./HbprAssignmentsPage";
 import { hbprAssignmentService } from "@/services/hbprAssignmentService";
 import api from "@/lib/api";
+import { MOBILE_CARD_QUERY } from "@/components/ui/DataTableCards";
 
 vi.mock("@/services/hbprAssignmentService", () => ({
   hbprAssignmentService: {
@@ -207,5 +208,36 @@ describe("HbprAssignmentsPage", () => {
       await screen.findByText(/cannot set start date after already recorded meeting on 2026-09-01/i)
     ).toBeInTheDocument();
     expect(hbprAssignmentService.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("HbprAssignmentsPage phone cards", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.get).mockResolvedValue({ data: { results: [] } } as never);
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation((query: string) => ({
+        matches: query === MOBILE_CARD_QUERY,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }))
+    );
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("shows an assignment as a card with the partner, manager, dates and the row actions", async () => {
+    vi.mocked(hbprAssignmentService.list).mockResolvedValue({ data: [assignment] } as never);
+    renderPage();
+    const card = await screen.findByRole("listitem");
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(within(card).getByText("Elda Partner")).toBeInTheDocument();
+    expect(within(card).getByText("Enri Leader")).toBeInTheDocument();
+    expect(within(card).getByText("On track")).toBeInTheDocument();
+    expect(within(card).getByText("2026-09-08")).toBeInTheDocument();
+    expect(
+      within(card).getByRole("button", { name: /edit assignment for enri leader/i })
+    ).toBeInTheDocument();
   });
 });

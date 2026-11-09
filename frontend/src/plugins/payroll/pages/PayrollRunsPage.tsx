@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { DataTable } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +50,13 @@ const STATUS_LABEL: Record<PayrollRun["status"], string> = {
   draft: "Draft",
   finalized: "Finalized",
   cancelled: "Cancelled",
+};
+
+/** Phone card: the period and its status, then headcount, net and rule set. */
+const RUN_CARD: DataTableCardSpec = {
+  title: "period",
+  status: "status",
+  meta: ["line_count", "net", "rule_set_name"],
 };
 
 export const PayrollRunsPage: React.FC = () => {
@@ -221,6 +229,7 @@ export const PayrollRunsPage: React.FC = () => {
           getRowId={(row) => String(row.id)}
           onRowClick={(run) => navigate(`${location.pathname}/${run.id}`)}
           emptyMessage="No payroll runs yet. Create one to get started."
+          mobileCard={RUN_CARD}
         />
       </GlassCard>
 

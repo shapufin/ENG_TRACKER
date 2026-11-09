@@ -2,9 +2,17 @@ import React, { useMemo } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
+
+/** Phone card: who and status up top, then type, period and days. */
+const LEAVE_CARD: DataTableCardSpec = {
+  title: "employee",
+  status: "status",
+  meta: ["type", "period", "days"],
+};
 
 interface LeaveItem {
   id: number;
@@ -87,6 +95,7 @@ export const HRLeaveTable: React.FC<HRLeaveTableProps> = ({ leaves }) => {
         data={leaves}
         getRowId={(v) => String(v.id)}
         emptyMessage="No leave requests found."
+        mobileCard={LEAVE_CARD}
       />
     </GlassCard>
   );
