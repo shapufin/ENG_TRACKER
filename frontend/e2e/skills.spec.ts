@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, request as playwrightRequest, test } from "@playwright/test";
 import { E2E_CREDENTIALS, loginAsUser, logoutViaUI } from "./helpers";
 
 const API_BASE = "http://127.0.0.1:8000/api";
@@ -6,11 +6,19 @@ const API_BASE = "http://127.0.0.1:8000/api";
 // The SPA keeps the JWT access token in memory only (lib/api.ts) — it is
 // NOT in localStorage. Authenticate via the public token endpoint instead.
 async function getApiToken(page: import("@playwright/test").Page): Promise<string> {
-  const response = await page.request.post(`${API_BASE}/auth/token/`, {
-    data: E2E_CREDENTIALS.admin,
-  });
-  if (!response.ok()) throw new Error(`API login failed: ${response.status()}`);
-  return ((await response.json()) as { access: string }).access;
+  // An isolated request context: `page.request` shares the browser's cookie jar,
+  // so an admin login here would swap the page's refresh cookie to the admin
+  // and the next reload would run as admin (and show their 2FA prompt).
+  const api = await playwrightRequest.newContext();
+  try {
+    const response = await api.post(`${API_BASE}/auth/token/`, {
+      data: E2E_CREDENTIALS.admin,
+    });
+    if (!response.ok()) throw new Error(`API login failed: ${response.status()}`);
+    return ((await response.json()) as { access: string }).access;
+  } finally {
+    await api.dispose();
+  }
 }
 
 async function apiRequest(
@@ -20,21 +28,26 @@ async function apiRequest(
   token: string,
   body?: unknown
 ) {
-  const response = await page.request.fetch(url, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    data: body ? JSON.stringify(body) : undefined,
-  });
-  let json: unknown;
+  const api = await playwrightRequest.newContext();
   try {
-    json = await response.json();
-  } catch {
-    json = null;
+    const response = await api.fetch(url, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      data: body ? JSON.stringify(body) : undefined,
+    });
+    let json: unknown;
+    try {
+      json = await response.json();
+    } catch {
+      json = null;
+    }
+    return { status: response.status(), body: json };
+  } finally {
+    await api.dispose();
   }
-  return { status: response.status(), body: json };
 }
 
 async function ensureSkillsData(page: import("@playwright/test").Page) {
