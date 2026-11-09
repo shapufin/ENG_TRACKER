@@ -16,6 +16,7 @@ afterEach(() => vi.unstubAllGlobals());
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ControlRoomAccessPage } from "./ControlRoomAccessPage";
+import { MOBILE_CARD_QUERY } from "@/components/ui/DataTableCards";
 
 // PluginImportButton (admin page headers) reads the active-plugin list. With
 // data_import inactive it renders nothing — the same graceful path taken when
@@ -144,5 +145,50 @@ describe("ControlRoomAccessPage modernization", () => {
     expect(screen.queryByText("Access management") !== null).toBe(allowed);
     expect(screen.queryByText("home") !== null).toBe(!allowed);
     mockAccess.roles = { isCRAdmin: true, isAdmin: false, isSuperuser: false };
+  });
+});
+
+describe("ControlRoomAccessPage phone cards", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation((query: string) => ({
+        matches: query === MOBILE_CARD_QUERY,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }))
+    );
+  });
+
+  it("shows each access record as a card with its status and the same row actions", () => {
+    mockAccess.list = [
+      {
+        id: 1,
+        user: 1,
+        username: "alice",
+        user_name: "Alice A",
+        email: "",
+        is_active: true,
+        team_scopes: [],
+        team_ids: [],
+        created_by_name: null,
+        created_at: "2026-01-01",
+      },
+    ];
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <ControlRoomAccessPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    const card = screen.getByRole("listitem");
+    expect(within(card).getByText("Alice A")).toBeInTheDocument();
+    expect(within(card).getByText("Active")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Edit alice" })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Revoke alice" })).toBeInTheDocument();
+    mockAccess.list = [];
   });
 });

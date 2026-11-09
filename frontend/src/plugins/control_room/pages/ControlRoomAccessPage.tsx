@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import { DataTable } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { RowActions } from "@/components/ui/RowActions";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PageShell } from "@/components/layout/PageShell";
@@ -33,6 +34,13 @@ import { BulkControlRoomAccessDialog } from "../components/BulkControlRoomAccess
 import { ControlRoomAccessBulkBar } from "../components/ControlRoomAccessBulkBar";
 import { useControlRoomAccessPage } from "../hooks/useControlRoomAccessPage";
 import type { ControlRoomAccess } from "../types";
+
+/** Phone card: the user with their status, then team visibility and who added them. */
+const ACCESS_CARD: DataTableCardSpec = {
+  title: "user",
+  status: "status",
+  meta: ["scope", "created"],
+};
 
 type AccessTableRow = ControlRoomAccess & { search_text: string };
 
@@ -366,6 +374,7 @@ const ControlRoomAccessPageContent: React.FC = () => {
                 getRowClassName={(access) => (!access.is_active ? "opacity-70" : "")}
                 pageSize={25}
                 emptyMessage="No access records found."
+                mobileCard={ACCESS_CARD}
               />
             </>
           )}
