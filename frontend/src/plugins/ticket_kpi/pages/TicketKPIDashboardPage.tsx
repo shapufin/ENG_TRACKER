@@ -35,7 +35,7 @@ const LoadingState: React.FC = () => (
   <PageShell title="Ticket KPI Dashboard">
     <div className="space-y-6" aria-busy="true">
       <span className="sr-only">Loading...</span>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-muted/40 h-28 animate-pulse rounded-lg border" />
         ))}
