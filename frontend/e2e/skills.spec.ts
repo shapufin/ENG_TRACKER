@@ -1,55 +1,62 @@
-import { expect, test } from "@playwright/test";
+import { expect, request as playwrightRequest, test } from "@playwright/test";
 import { E2E_CREDENTIALS, loginAsUser, logoutViaUI } from "./helpers";
 
 const API_BASE = "http://127.0.0.1:8000/api";
 
 // The SPA keeps the JWT access token in memory only (lib/api.ts) — it is
 // NOT in localStorage. Authenticate via the public token endpoint instead.
-async function getApiToken(page: import("@playwright/test").Page): Promise<string> {
-  const response = await page.request.post(`${API_BASE}/auth/token/`, {
-    data: E2E_CREDENTIALS.admin,
-  });
-  if (!response.ok()) throw new Error(`API login failed: ${response.status()}`);
-  return ((await response.json()) as { access: string }).access;
-}
-
-async function apiRequest(
-  page: import("@playwright/test").Page,
-  method: "GET" | "POST",
-  url: string,
-  token: string,
-  body?: unknown
-) {
-  const response = await page.request.fetch(url, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    data: body ? JSON.stringify(body) : undefined,
-  });
-  let json: unknown;
+async function getApiToken(): Promise<string> {
+  // An isolated request context: `page.request` shares the browser's cookie jar,
+  // so an admin login here would swap the page's refresh cookie to the admin
+  // and the next reload would run as admin (and show their 2FA prompt).
+  const api = await playwrightRequest.newContext();
   try {
-    json = await response.json();
-  } catch {
-    json = null;
+    const response = await api.post(`${API_BASE}/auth/token/`, {
+      data: E2E_CREDENTIALS.admin,
+    });
+    if (!response.ok()) throw new Error(`API login failed: ${response.status()}`);
+    return ((await response.json()) as { access: string }).access;
+  } finally {
+    await api.dispose();
   }
-  return { status: response.status(), body: json };
 }
 
-async function ensureSkillsData(page: import("@playwright/test").Page) {
-  const token = await getApiToken(page);
+async function apiRequest(method: "GET" | "POST", url: string, token: string, body?: unknown) {
+  const api = await playwrightRequest.newContext();
+  try {
+    const response = await api.fetch(url, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      data: body ? JSON.stringify(body) : undefined,
+    });
+    let json: unknown;
+    try {
+      json = await response.json();
+    } catch {
+      json = null;
+    }
+    return { status: response.status(), body: json };
+  } finally {
+    await api.dispose();
+  }
+}
+
+async function ensureSkillsData() {
+  const token = await getApiToken();
   // Create a category (idempotent — if it exists, the 400 is fine).
   // code is auto-generated from the uppercased name; display_order is no
   // longer a serializer field. Send only accepted fields.
-  await apiRequest(page, "POST", `${API_BASE}/plugins/skills/categories/`, token, {
+  await apiRequest("POST", `${API_BASE}/plugins/skills/categories/`, token, {
     name: "E2E Backend",
     description: "E2E test category",
     is_active: true,
   });
   // Fetch categories to get the ID. The serializer uppercases the name and
   // auto-generates code from it, so look up by name (stable identifier).
-  const cats = await apiRequest(page, "GET", `${API_BASE}/plugins/skills/categories/`, token);
+  const cats = await apiRequest("GET", `${API_BASE}/plugins/skills/categories/`, token);
   const categoryId = (
     cats.body as { results?: { id: number; name: string }[] } | null
   )?.results?.find((c) => c.name.toUpperCase() === "E2E BACKEND")?.id;
@@ -57,7 +64,7 @@ async function ensureSkillsData(page: import("@playwright/test").Page) {
 
   // Create a skill (idempotent). code is auto-generated; target_level and
   // display_order are no longer serializer fields.
-  await apiRequest(page, "POST", `${API_BASE}/plugins/skills/skills/`, token, {
+  await apiRequest("POST", `${API_BASE}/plugins/skills/skills/`, token, {
     name: "E2E Python",
     category: categoryId,
     description: "",
@@ -72,7 +79,7 @@ test.describe("Skills pages", () => {
 
   test("admin can view the Skills Catalog with categories and skills", async ({ page }) => {
     await loginAsUser(page, E2E_CREDENTIALS.admin);
-    await ensureSkillsData(page);
+    await ensureSkillsData();
 
     await page.goto("/admin/skills/catalog");
 
@@ -90,7 +97,7 @@ test.describe("Skills pages", () => {
     // Catalog writes are HR/admin-only. Seed with an admin session, then verify
     // the team-leader read surface with a separate authenticated session.
     await loginAsUser(page, E2E_CREDENTIALS.admin);
-    await ensureSkillsData(page);
+    await ensureSkillsData();
     await logoutViaUI(page);
     await loginAsUser(page, E2E_CREDENTIALS.teamLeader);
 
@@ -110,7 +117,7 @@ test.describe("Skills pages", () => {
   }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile-chromium", "Mobile-only coverage");
     await loginAsUser(page, E2E_CREDENTIALS.admin);
-    await ensureSkillsData(page);
+    await ensureSkillsData();
     await logoutViaUI(page);
     await loginAsUser(page, E2E_CREDENTIALS.teamLeader);
     await page.setViewportSize({ width: 393, height: 844 });
@@ -153,7 +160,7 @@ test.describe("Skills pages", () => {
 
   test("no horizontal overflow at 320px width on Team Skills", async ({ page }) => {
     await loginAsUser(page, E2E_CREDENTIALS.teamLeader);
-    await ensureSkillsData(page);
+    await ensureSkillsData();
 
     await page.setViewportSize({ width: 320, height: 568 });
     await page.goto("/skills/team");
@@ -184,7 +191,7 @@ test.describe("Skills pages", () => {
   test("KPI cards visible on team skills page for TL", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "Desktop-only coverage");
     await loginAsUser(page, E2E_CREDENTIALS.admin);
-    await ensureSkillsData(page);
+    await ensureSkillsData();
     await logoutViaUI(page);
     await loginAsUser(page, E2E_CREDENTIALS.teamLeader);
     await page.goto("/skills/team");
@@ -201,7 +208,7 @@ test.describe("Skills pages", () => {
   test("catalog split-pane: category sidebar sticky on desktop", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "Desktop-only coverage");
     await loginAsUser(page, E2E_CREDENTIALS.admin);
-    await ensureSkillsData(page);
+    await ensureSkillsData();
     await page.goto("/admin/skills/catalog");
     await expect(page.getByRole("heading", { name: /Skills Catalog/i })).toBeVisible({
       timeout: 15_000,
