@@ -50,20 +50,21 @@ export const useStandbyColumns = (
       {
         id: "payroll_period",
         header: "Payroll",
-        size: 120,
+        size: 110,
         cell: ({ row }) =>
           row.original.is_carried_over ? (
             <Badge
               variant="outline"
-              title={`Submitted period: ${row.original.requested_period_label ?? "next period"}`}
+              className="whitespace-nowrap"
+              title={`Carried to ${row.original.requested_period_label ?? "next period"}`}
             >
-              Carried to {row.original.requested_period_label ?? "next"}
+              Next month
             </Badge>
           ) : (
-            <span className="text-muted-foreground">Same month</span>
+            <span className="text-muted-foreground whitespace-nowrap">Same month</span>
           ),
       },
-      { accessorKey: "description", header: "Description", size: 110 },
+      { accessorKey: "description", header: "Description", size: 180 },
       {
         accessorKey: "status",
         header: "Status",
@@ -80,8 +81,7 @@ export const useStandbyColumns = (
           canEdit: (row) => isAdmin || !isPastMonth(row.date),
           canDelete: (row) => isSuperuser || row.status === "pending" || !isPastMonth(row.date),
         }),
-        // Widest row: approve + reject + edit + delete icons.
-        size: 150,
+        size: 110,
       },
     ],
     [canViewTeamData, canApprove, onApprove, onReject, onEdit, onDelete, isAdmin, isSuperuser]

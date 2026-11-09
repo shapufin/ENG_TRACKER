@@ -25,7 +25,7 @@ export function OvertimeHoursBadge({ log }: Props) {
       </Badge>
       {window && (
         <span
-          className="text-muted-foreground text-xs"
+          className="text-muted-foreground text-xs whitespace-nowrap"
           title="Entries that start within the same paid hour share it."
         >
           {hours === 0 ? `Covered by ${window}` : `Block ${window}`}
