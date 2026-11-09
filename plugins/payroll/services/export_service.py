@@ -17,12 +17,21 @@ logger = logging.getLogger(__name__)
 # Must match the fixed dropdown labels in
 # frontend/src/plugins/payroll/components/PayrollRuleSetEditorDialog.tsx:41-45
 # so the same category reads the same way in Settings, the PDF, and Excel.
+# (The editor lists only selectable categories; band codes below are export-only.)
 OVERTIME_CATEGORY_LABELS = {
     'weekday_day': 'Weekday — Daytime',
     'weekday_night': 'Weekday — Night',
     'weekend_day': 'Weekend — Daytime',
     'weekend_night': 'Weekend — Night',
     'holiday': 'Public Holiday',
+    # Banded pricing (rule sets with overtime_pricing='banded'); these appear
+    # only in line breakdowns, never as selectable rule-set categories.
+    'ot_day': 'Overtime — Daytime',
+    'ot_evening': 'Overtime — Evening',
+    'ot_night': 'Overtime — Night',
+    'wh_ot_day': 'Weekend/Holiday Overtime — Daytime',
+    'wh_ot_evening': 'Weekend/Holiday Overtime — Evening',
+    'wh_ot_night': 'Weekend/Holiday Overtime — Night',
 }
 
 

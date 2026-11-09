@@ -1,5 +1,6 @@
 import React from "react";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ModalSection } from "@/components/ui/ModalSection";
 import { TeamMultiSelect } from "@/components/admin/TeamMultiSelect";
@@ -81,6 +82,13 @@ export const UserFormCore: React.FC<UserFormCoreProps> = ({
             />
           </div>
         )}
+        <div className="space-y-2">
+          <Label>Employment type</Label>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked disabled aria-label="Full-time, 40 hours per week" />
+            Full-time (40 h/week)
+          </label>
+        </div>
         {!hbprMode && (
           <>
             <div className="space-y-2">

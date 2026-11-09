@@ -304,6 +304,31 @@ class PayrollRuleSet(models.Model):
         _('Validation Status'), max_length=30, default='reference',
         help_text=_('reference, verified, or official.'),
     )
+    OVERTIME_PRICING_CHOICES = [
+        ('category', _('Per category (legacy)')),
+        ('banded', _('Per time band, additive premiums')),
+    ]
+    overtime_pricing = models.CharField(
+        _('Overtime pricing'), max_length=10,
+        choices=OVERTIME_PRICING_CHOICES, default='category',
+        help_text=_('banded: each overtime entry is split at the band hours and '
+                    'priced 1 + overtime + weekend/holiday + band premium.'),
+    )
+    ot_premium = models.DecimalField(
+        _('Overtime premium'), max_digits=5, decimal_places=2, default=Decimal('0'),
+    )
+    weekend_holiday_premium = models.DecimalField(
+        _('Weekend/holiday premium'), max_digits=5, decimal_places=2, default=Decimal('0'),
+    )
+    evening_premium = models.DecimalField(
+        _('Evening premium'), max_digits=5, decimal_places=2, default=Decimal('0'),
+    )
+    night_premium = models.DecimalField(
+        _('Night premium'), max_digits=5, decimal_places=2, default=Decimal('0'),
+    )
+    evening_start_hour = models.PositiveSmallIntegerField(_('Evening starts'), default=18)
+    night_start_hour = models.PositiveSmallIntegerField(_('Night starts'), default=22)
+    night_end_hour = models.PositiveSmallIntegerField(_('Night ends'), default=6)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -677,13 +677,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'clients', 'clients_detail',
             'albanian_tl', 'albanian_tl_name', 'italian_tl', 'italian_tl_name',
             'is_hr_user', 'is_italian_tl_role', 'is_albanian_tl_role', 'phone', 'code', 'hire_date', 'groups',
+            'employment_type', 'weekly_contract_hours',
             'mfa_required', 'mfa_enabled',
             'current_month_overtime_hours', 'current_month_standby_hours',
             'created_at', 'updated_at'
         ]
         # mfa_required is written only through UserViewSet.update_user, which
         # applies the staff-on-staff rule; this serializer must never set it.
-        read_only_fields = ['id', 'mfa_required', 'created_at', 'updated_at']
+        read_only_fields = [
+            'id', 'mfa_required', 'employment_type', 'weekly_contract_hours',
+            'created_at', 'updated_at',
+        ]
 
     def validate_code(self, value):
         """Trim, store blank as NULL, and refuse a code another profile holds."""

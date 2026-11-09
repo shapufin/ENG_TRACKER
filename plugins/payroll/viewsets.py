@@ -704,6 +704,11 @@ class PayrollRuleSetViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
             'name': source.name, 'country': source.country, 'effective_to': source.effective_to,
             'is_active': source.is_active, 'tax_profile': source.tax_profile, 'source': source.source,
             'notes': source.notes, 'validation_status': source.validation_status,
+            'overtime_pricing': source.overtime_pricing, 'ot_premium': source.ot_premium,
+            'weekend_holiday_premium': source.weekend_holiday_premium,
+            'evening_premium': source.evening_premium, 'night_premium': source.night_premium,
+            'evening_start_hour': source.evening_start_hour,
+            'night_start_hour': source.night_start_hour, 'night_end_hour': source.night_end_hour,
         }
         values.update(serializer.validated_data)
         if values.get('is_active') and PayrollRuleSet.has_active_effective_date_conflict(

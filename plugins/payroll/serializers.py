@@ -222,10 +222,26 @@ class PayrollRuleSetCreateSerializer(serializers.ModelSerializer):
         model = PayrollRuleSet
         fields = ['code', 'name', 'version', 'country', 'effective_from',
                   'effective_to', 'is_active', 'tax_profile', 'source', 'notes',
-                  'validation_status']
+                  'validation_status', 'overtime_pricing', 'ot_premium',
+                  'weekend_holiday_premium', 'evening_premium', 'night_premium',
+                  'evening_start_hour', 'night_start_hour', 'night_end_hour']
         validators = []
 
     def validate(self, data):
+        def current(name):
+            return data.get(name, getattr(self.instance, name, PayrollRuleSet._meta.get_field(name).default))
+
+        if current('overtime_pricing') == 'banded':
+            for name in ('ot_premium', 'weekend_holiday_premium', 'evening_premium', 'night_premium'):
+                if current(name) < 0:
+                    raise serializers.ValidationError({name: 'Premium must not be negative.'})
+            night_end, evening, night = (
+                current('night_end_hour'), current('evening_start_hour'), current('night_start_hour'),
+            )
+            if not (0 <= night_end < evening < night <= 23):
+                raise serializers.ValidationError({
+                    'evening_start_hour': 'Band hours must satisfy night end < evening start < night start (0-23).',
+                })
         if self.instance is not None and self.instance.runs.exists():
             raise serializers.ValidationError(
                 'This rule set is referenced by a payroll run and is immutable. '

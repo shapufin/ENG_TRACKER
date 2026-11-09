@@ -24,6 +24,8 @@ from datetime import date, time
 from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN, ROUND_DOWN
 from typing import Optional
 
+from .overtime_bands import OvertimeBandRules, slice_overtime_entry
+
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -110,6 +112,8 @@ class PayrollCalculationInput:
     # Metadata
     rule_set_code: str = ''
     rule_set_version: str = ''
+    # Banded overtime pricing; ``None`` keeps the legacy per-category path.
+    overtime_band_rules: Optional[OvertimeBandRules] = None
 
 
 @dataclass
@@ -407,7 +411,7 @@ def calculate_payroll(inp: PayrollCalculationInput) -> PayrollCalculationResult:
     carryover = {}
     entry_details: list[dict] = []
 
-    def record_entry(kind, entry, amount, category=None):
+    def record_entry(kind, entry, amount, category=None, slices=None):
         source_period = entry.date.replace(day=1)
         requested_period = entry.requested_period or source_period
         resolved_period = date(inp.year, inp.month, 1)
@@ -424,6 +428,8 @@ def calculate_payroll(inp: PayrollCalculationInput) -> PayrollCalculationResult:
             'amount': str(amount),
             'category': category,
         }
+        if slices is not None:
+            detail['slices'] = slices
         entry_details.append(detail)
         if carried:
             key = f'{source_period.isoformat()}:{requested_period.isoformat()}'
@@ -444,6 +450,35 @@ def calculate_payroll(inp: PayrollCalculationInput) -> PayrollCalculationResult:
             bucket[f'{kind}_amount'] += amount
 
     for entry in overtime_entries:
+        if inp.overtime_band_rules is not None:
+            slices, band_warnings = slice_overtime_entry(
+                entry.hours, entry.start_time, entry.end_time,
+                _is_weekend(entry.date) or entry.date in inp.holiday_dates,
+                inp.overtime_band_rules,
+            )
+            warnings.extend(f'Overtime on {entry.date}: {w[0].lower()}{w[1:]}' for w in band_warnings)
+            entry_amount = Decimal('0')
+            slice_details = []
+            for piece in slices:
+                piece_amount = piece.hours * base_hourly_rate * piece.multiplier
+                entry_amount += piece_amount
+                slice_details.append({
+                    'code': piece.code, 'hours': str(piece.hours),
+                    'multiplier': str(piece.multiplier), 'amount': str(piece_amount),
+                })
+                existing = next((b for b in overtime_breakdown if b.code == piece.code), None)
+                if existing:
+                    existing.hours += piece.hours
+                    existing.amount += piece_amount
+                else:
+                    overtime_breakdown.append(OvertimeCategoryResult(
+                        code=piece.code, hours=piece.hours,
+                        multiplier=piece.multiplier, amount=piece_amount,
+                    ))
+            total_overtime_hours += entry.hours
+            total_overtime_amount += entry_amount
+            record_entry('overtime', entry, entry_amount, 'banded', slices=slice_details)
+            continue
         cat_code, entry_warnings = classify_overtime(
             entry, inp.overtime_categories, inp.holiday_dates,
             inp.missing_timestamp_fallback_category,

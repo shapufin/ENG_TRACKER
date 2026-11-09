@@ -22,7 +22,7 @@ import {
   parseOptionalDecimal,
   percentToFraction,
 } from "../utils/ruleSetFormUtils";
-import type { PayrollRuleSet, PayrollRuleSetAtomicSavePayload } from "../types";
+import type { OvertimePricing, PayrollRuleSet, PayrollRuleSetAtomicSavePayload } from "../types";
 
 interface Props {
   open: boolean;
@@ -44,6 +44,17 @@ const OT_CATEGORY_OPTIONS = [
   { value: "weekend_night", label: "Weekend — Night" },
   { value: "holiday", label: "Public Holiday" },
 ];
+const BAND_PREMIUM_FIELDS = [
+  { field: "ot_premium", label: "Overtime premium" },
+  { field: "weekend_holiday_premium", label: "Weekend / holiday premium" },
+  { field: "evening_premium", label: "Evening premium" },
+  { field: "night_premium", label: "Night premium" },
+] as const;
+const BAND_HOUR_FIELDS = [
+  { field: "night_end_hour", label: "Night ends" },
+  { field: "evening_start_hour", label: "Evening starts" },
+  { field: "night_start_hour", label: "Night starts" },
+] as const;
 const CONTRIBUTION_TYPE_OPTIONS = [
   { value: "social", label: "Social security" },
   { value: "health", label: "Health insurance" },
@@ -93,6 +104,14 @@ const makeParent = (source: PayrollRuleSet, mode: Props["mode"]): ParentForm => 
   source: source.source,
   notes: source.notes,
   validation_status: source.validation_status,
+  overtime_pricing: source.overtime_pricing,
+  ot_premium: fractionToPercent(source.ot_premium),
+  weekend_holiday_premium: fractionToPercent(source.weekend_holiday_premium),
+  evening_premium: fractionToPercent(source.evening_premium),
+  night_premium: fractionToPercent(source.night_premium),
+  evening_start_hour: source.evening_start_hour,
+  night_start_hour: source.night_start_hour,
+  night_end_hour: source.night_end_hour,
 });
 
 const makeBrackets = (source: PayrollRuleSet): BracketForm[] =>
@@ -160,6 +179,25 @@ const validateParent = (form: ParentForm): string | null => {
   }
   if (form.effective_to && form.effective_to < form.effective_from) {
     return "The end date must be on or after the start date.";
+  }
+  if (form.overtime_pricing === "banded") {
+    const premiums = [
+      form.ot_premium,
+      form.weekend_holiday_premium,
+      form.evening_premium,
+      form.night_premium,
+    ];
+    if (premiums.some((value) => parseOptionalDecimal(value) === null || Number(value) < 0)) {
+      return "Each overtime premium must be a percentage of 0 or more.";
+    }
+    if (
+      !(
+        form.night_end_hour < form.evening_start_hour &&
+        form.evening_start_hour < form.night_start_hour
+      )
+    ) {
+      return "Band hours must run night end, then evening start, then night start.";
+    }
   }
   return null;
 };
@@ -302,7 +340,13 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
     return {
       mode,
       expected_updated_at: source?.updated_at,
-      parent_fields: form as ParentForm,
+      parent_fields: {
+        ...(form as ParentForm),
+        ot_premium: percentToFraction(form?.ot_premium),
+        weekend_holiday_premium: percentToFraction(form?.weekend_holiday_premium),
+        evening_premium: percentToFraction(form?.evening_premium),
+        night_premium: percentToFraction(form?.night_premium),
+      },
       tax_brackets: orderedBrackets.map((bracket, order) => ({
         ...(mode === "edit" && bracket.id ? { id: bracket.id } : {}),
         lower_bound: bracket.lower_bound,
@@ -506,6 +550,58 @@ export const PayrollRuleSetEditorDialog: React.FC<Props> = ({
               />
               Set as active for new payroll runs
             </label>
+          </ModalSection>
+
+          <ModalSection
+            title="Overtime pricing"
+            description="Per category uses the overtime categories below. Per time band splits each entry at the band hours and adds the premiums."
+            columns={2}
+          >
+            <div>
+              <Label htmlFor="rule-ot-pricing">Pricing mode</Label>
+              <Select
+                value={form.overtime_pricing}
+                onValueChange={(value) =>
+                  updateParent("overtime_pricing", value as OvertimePricing)
+                }
+              >
+                <SelectTrigger id="rule-ot-pricing">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="category">Per category</SelectItem>
+                  <SelectItem value="banded">Per time band</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {form.overtime_pricing === "banded" && (
+              <>
+                {BAND_PREMIUM_FIELDS.map(({ field, label }) => (
+                  <div key={field}>
+                    <Label htmlFor={`rule-${field}`}>{label} (%)</Label>
+                    <Input
+                      id={`rule-${field}`}
+                      inputMode="decimal"
+                      value={form[field]}
+                      onChange={(event) => updateParent(field, event.target.value)}
+                    />
+                  </div>
+                ))}
+                {BAND_HOUR_FIELDS.map(({ field, label }) => (
+                  <div key={field}>
+                    <Label htmlFor={`rule-${field}`}>{label} (hour, 0-23)</Label>
+                    <Input
+                      id={`rule-${field}`}
+                      type="number"
+                      min={0}
+                      max={23}
+                      value={form[field]}
+                      onChange={(event) => updateParent(field, Number(event.target.value))}
+                    />
+                  </div>
+                ))}
+              </>
+            )}
           </ModalSection>
 
           <ModalSection title="Notes" columns={1}>

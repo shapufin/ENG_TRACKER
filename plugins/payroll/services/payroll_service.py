@@ -36,6 +36,7 @@ from ..models import (
     PayrollWorkCalendar,
     WageAssignment,
 )
+from .overtime_bands import OvertimeBandRules
 from .calculator import (
     ContributionRateInput,
     OvertimeCategoryInput,
@@ -93,6 +94,20 @@ def _build_overtime_category_inputs(rule_set: PayrollRuleSet) -> list[OvertimeCa
         )
         for c in cats
     ]
+
+
+def _build_overtime_band_rules(rule_set: PayrollRuleSet) -> Optional[OvertimeBandRules]:
+    if rule_set.overtime_pricing != 'banded':
+        return None
+    return OvertimeBandRules(
+        ot_premium=rule_set.ot_premium,
+        weekend_holiday_premium=rule_set.weekend_holiday_premium,
+        evening_premium=rule_set.evening_premium,
+        night_premium=rule_set.night_premium,
+        evening_start_hour=rule_set.evening_start_hour,
+        night_start_hour=rule_set.night_start_hour,
+        night_end_hour=rule_set.night_end_hour,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -377,6 +392,7 @@ def build_calculation_input(
         standby_is_contribution_bearing=config.standby_is_contribution_bearing,
         rule_set_code=rule_set.code,
         rule_set_version=rule_set.version,
+        overtime_band_rules=_build_overtime_band_rules(rule_set),
     )
 
 
