@@ -6,6 +6,7 @@ type Row = {
   end_date?: string;
   user_full_name?: string;
   user_name?: string;
+  user_code?: string | null;
   description?: string;
   reason?: string;
 };
@@ -20,31 +21,44 @@ const matchesTeam = (row: Row, filterTeam: string, userTeamMap: Map<number, numb
 };
 
 // fallow-ignore-next-line complexity
-const matchesDateRange = (
-  dateValue: string | undefined,
-  dateFrom: string,
-  dateTo: string,
-  cmp: "from" | "to"
-) => {
-  if (!dateValue) return true;
-  const date = new Date(dateValue);
-  if (cmp === "from" && dateFrom) return date >= new Date(dateFrom);
-  if (cmp === "to" && dateTo) return date <= new Date(dateTo);
+const matchesDate = (row: Row, dateFrom: string, dateTo: string) => {
+  if (row.date) {
+    const d = row.date.slice(0, 10);
+    if (dateFrom && d < dateFrom) return false;
+    if (dateTo && d > dateTo) return false;
+    return true;
+  }
+  if (row.start_date || row.end_date) {
+    const start = (row.start_date || row.end_date)!.slice(0, 10);
+    const end = (row.end_date || row.start_date)!.slice(0, 10);
+    if (dateFrom && end < dateFrom) return false;
+    if (dateTo && start > dateTo) return false;
+    return true;
+  }
   return true;
 };
 
-const matchesDate = (row: Row, dateFrom: string, dateTo: string) =>
-  matchesDateRange(row.date, dateFrom, dateTo, "from") &&
-  matchesDateRange(row.date, dateFrom, dateTo, "to") &&
-  matchesDateRange(row.start_date, dateFrom, dateTo, "from") &&
-  matchesDateRange(row.end_date, dateFrom, dateTo, "to");
-
 // fallow-ignore-next-line complexity
-const matchesSearch = (row: Row, normalizedSearch: string) => {
+const matchesSearch = (
+  row: Row,
+  normalizedSearch: string,
+  userSearchMap?: Map<number, string[]>
+) => {
   if (!normalizedSearch) return true;
-  const userName = (row.user_full_name || row.user_name || "").toLowerCase();
-  const desc = (row.description || row.reason || "").toLowerCase();
-  return userName.includes(normalizedSearch) || desc.includes(normalizedSearch);
+  if (row.user_full_name?.toLowerCase().includes(normalizedSearch)) return true;
+  if (row.user_name?.toLowerCase().includes(normalizedSearch)) return true;
+  if (row.user_code?.toLowerCase().includes(normalizedSearch)) return true;
+  if (row.description?.toLowerCase().includes(normalizedSearch)) return true;
+  if (row.reason?.toLowerCase().includes(normalizedSearch)) return true;
+
+  if (userSearchMap) {
+    const tokens = userSearchMap.get(row.user);
+    if (tokens?.some((token) => token.includes(normalizedSearch))) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 const rowDate = (row: Row) => new Date((row.date || row.start_date)!).getTime();
@@ -58,9 +72,18 @@ export const filterTeamRows = <T extends Row>(
     dateTo: string;
     normalizedSearch: string;
     userTeamMap: Map<number, number[]>;
+    userSearchMap?: Map<number, string[]>;
   }
 ) => {
-  const { filterStatus, filterTeam, dateFrom, dateTo, normalizedSearch, userTeamMap } = options;
+  const {
+    filterStatus,
+    filterTeam,
+    dateFrom,
+    dateTo,
+    normalizedSearch,
+    userTeamMap,
+    userSearchMap,
+  } = options;
   if (!rows) return [] as T[];
   return rows
     .filter(
@@ -68,7 +91,7 @@ export const filterTeamRows = <T extends Row>(
         matchesStatus(row, filterStatus) &&
         matchesTeam(row, filterTeam, userTeamMap) &&
         matchesDate(row, dateFrom, dateTo) &&
-        matchesSearch(row, normalizedSearch)
+        matchesSearch(row, normalizedSearch, userSearchMap)
     )
     .sort((a, b) => rowDate(b) - rowDate(a));
 };

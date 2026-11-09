@@ -39,6 +39,21 @@ export const useTeamPageData = (
     return map;
   }, [membersData]);
 
+  const userSearchMap = useMemo(() => {
+    const map = new Map<number, string[]>();
+    membersData.forEach((member) => {
+      const tokens: string[] = [];
+      if (member.user?.username) tokens.push(member.user.username.toLowerCase());
+      const fullName =
+        member.user?.full_name ||
+        `${member.user?.first_name || ""} ${member.user?.last_name || ""}`.trim();
+      if (fullName) tokens.push(fullName.toLowerCase());
+      if (member.code) tokens.push(member.code.toLowerCase());
+      map.set(member.user.id, tokens);
+    });
+    return map;
+  }, [membersData]);
+
   const availableTeams = useMemo(() => {
     const teamSet = new Map<number, { id: number; name: string }>();
     membersData.forEach((member) => {
@@ -65,8 +80,16 @@ export const useTeamPageData = (
   );
 
   const filterOptions = useMemo(
-    () => ({ filterStatus, filterTeam, dateFrom, dateTo, normalizedSearch, userTeamMap }),
-    [filterStatus, filterTeam, dateFrom, dateTo, normalizedSearch, userTeamMap]
+    () => ({
+      filterStatus,
+      filterTeam,
+      dateFrom,
+      dateTo,
+      normalizedSearch,
+      userTeamMap,
+      userSearchMap,
+    }),
+    [filterStatus, filterTeam, dateFrom, dateTo, normalizedSearch, userTeamMap, userSearchMap]
   );
 
   const filteredOvertime = useMemo(
