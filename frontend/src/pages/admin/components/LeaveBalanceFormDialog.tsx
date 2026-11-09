@@ -65,6 +65,7 @@ export const LeaveBalanceFormDialog: React.FC<LeaveBalanceFormDialogProps> = ({
 
   return (
     <FormDialog
+      mobileSheet
       open={open}
       onOpenChange={onOpenChange}
       title={editingName ? `Edit ${editingName}` : "New Balance"}

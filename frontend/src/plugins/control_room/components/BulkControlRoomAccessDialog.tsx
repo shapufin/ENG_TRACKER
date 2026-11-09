@@ -66,6 +66,7 @@ export const BulkControlRoomAccessDialog: React.FC<BulkControlRoomAccessDialogPr
 
   return (
     <FormDialog
+      mobileSheet
       open={open}
       onOpenChange={handleOpenChange}
       title={`Bulk update ${selectedCount} access record${selectedCount === 1 ? "" : "s"}`}
@@ -75,7 +76,7 @@ export const BulkControlRoomAccessDialog: React.FC<BulkControlRoomAccessDialogPr
       submitLabel="Apply changes"
     >
       <FormErrorBanner message={error} />
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         Choose only the settings you want to change. Unchanged settings are left as they are.
       </p>
 
@@ -108,7 +109,7 @@ export const BulkControlRoomAccessDialog: React.FC<BulkControlRoomAccessDialogPr
               disabled={isSubmitting}
               placeholder="Choose the new team scope..."
             />
-            <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-xs text-foreground">
+            <div className="border-warning/40 bg-warning/10 text-foreground flex items-start gap-2 rounded-md border p-3 text-xs">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
                 This replaces each selected user's current scope. An empty selection means no

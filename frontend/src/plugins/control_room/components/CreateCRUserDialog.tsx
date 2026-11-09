@@ -104,6 +104,7 @@ export const CreateCRUserDialog: React.FC<CreateCRUserDialogProps> = ({
 
   return (
     <FormDialog
+      mobileSheet
       open={open}
       onOpenChange={handleOpenChange}
       title="Create Control Room User"
@@ -122,7 +123,7 @@ export const CreateCRUserDialog: React.FC<CreateCRUserDialogProps> = ({
           onChange={(e) => updateField("username", e.target.value)}
           autoComplete="off"
         />
-        {errors.username && <p className="text-xs text-destructive">{errors.username}</p>}
+        {errors.username && <p className="text-destructive text-xs">{errors.username}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -153,7 +154,7 @@ export const CreateCRUserDialog: React.FC<CreateCRUserDialogProps> = ({
           onChange={(e) => updateField("email", e.target.value)}
           autoComplete="off"
         />
-        {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+        {errors.email && <p className="text-destructive text-xs">{errors.email}</p>}
       </div>
 
       <div className="space-y-2">
@@ -165,7 +166,7 @@ export const CreateCRUserDialog: React.FC<CreateCRUserDialogProps> = ({
           onChange={(e) => updateField("password", e.target.value)}
           autoComplete="new-password"
         />
-        {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+        {errors.password && <p className="text-destructive text-xs">{errors.password}</p>}
       </div>
 
       <div className="space-y-2">
@@ -175,7 +176,7 @@ export const CreateCRUserDialog: React.FC<CreateCRUserDialogProps> = ({
           value={form.team_ids}
           onChange={(ids) => updateField("team_ids", ids)}
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Empty scope means no visibility (not global). Admin/staff always have global access.
         </p>
       </div>

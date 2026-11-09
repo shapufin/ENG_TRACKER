@@ -27,6 +27,7 @@ export const ClientFormDialog: React.FC<ClientFormDialogProps> = ({
   isSubmitting,
 }) => (
   <FormDialog
+    mobileSheet
     open={open}
     onOpenChange={onOpenChange}
     title={editing ? "Edit Client" : "New Client"}

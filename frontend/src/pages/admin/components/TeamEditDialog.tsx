@@ -35,6 +35,7 @@ export const TeamEditDialog: React.FC<TeamEditDialogProps> = ({
 }) => {
   return (
     <FormDialog
+      mobileSheet
       open={open}
       onOpenChange={onOpenChange}
       title={editingTeam ? `Edit ${editingTeam.name}` : "Edit Team Calendar"}

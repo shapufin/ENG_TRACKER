@@ -25,6 +25,7 @@ export const TechFormDialog: React.FC<TechFormDialogProps> = ({
   isSubmitting,
 }) => (
   <FormDialog
+    mobileSheet
     open={open}
     onOpenChange={onOpenChange}
     title={editing ? `Edit ${editing.name}` : "Add Tech"}
