@@ -54,7 +54,7 @@ export const HRLeaveTable: React.FC<HRLeaveTableProps> = ({ leaves }) => {
         // ISO dates sort chronologically as strings.
         accessorFn: (v) => v.start_date,
         cell: ({ row }) => (
-          <span className="whitespace-nowrap">
+          <span className="whitespace-nowrap max-md:whitespace-normal">
             {formatDateDDMMYYYY(row.original.start_date)} -{" "}
             {formatDateDDMMYYYY(row.original.end_date)}
           </span>

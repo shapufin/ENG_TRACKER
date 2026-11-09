@@ -206,7 +206,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
           const start = formatDateDDMMYYYY(row.original.start_date);
           const end = formatDateDDMMYYYY(row.original.end_date);
           return (
-            <span className="text-sm whitespace-nowrap">
+            <span className="text-sm whitespace-nowrap max-md:whitespace-normal">
               {start} → {end}
             </span>
           );

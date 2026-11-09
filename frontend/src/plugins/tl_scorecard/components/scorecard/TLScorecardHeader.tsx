@@ -58,13 +58,13 @@ const DirectReportStack: React.FC = () => {
             email={m.user.username}
             colorSeed={m.user.id}
             size="xs"
-            className="ring-card -ml-1.5 ring-2 first:ml-0"
+            className="ring-card -ml-1 ring-2 first:ml-0"
           />
         ))}
         {overflow > 0 && (
           <span
             aria-label={`${overflow} more team members`}
-            className="bg-muted text-muted-foreground ring-card -ml-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ring-2"
+            className="bg-muted text-muted-foreground ring-card -ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ring-2"
           >
             +{overflow}
           </span>
