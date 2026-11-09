@@ -19,6 +19,12 @@ interface MobileBottomNavProps {
   moreOpen?: boolean;
 }
 
+/** Phone-only shorter labels so a tab never truncates; the link keeps the full label as its name. */
+const PHONE_LABEL: Record<string, string> = {
+  "/dashboard": "Home",
+  "/team/approvals": "Pending",
+};
+
 const isActive = (pathname: string, path: string) =>
   pathname === path || (path !== "/dashboard" && pathname.startsWith(`${path}/`));
 
@@ -65,18 +71,19 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             <Link
               key={path}
               to={path}
+              aria-label={PHONE_LABEL[path] ? label : undefined}
               aria-current={active ? "page" : undefined}
               className={cn(tab, active ? "text-primary" : "text-muted-foreground")}
             >
               <span className="relative">
                 <Icon className="h-5 w-5" aria-hidden="true" />
                 {badge ? (
-                  <span className="bg-tone-warning-surface text-tone-warning-text absolute -top-1.5 -right-3 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-semibold">
+                  <span className="bg-tone-warning-surface text-tone-warning-text ring-card absolute -top-2 -right-4 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-semibold ring-2">
                     {badge}
                   </span>
                 ) : null}
               </span>
-              <span className="max-w-full truncate">{label}</span>
+              <span className="max-w-full truncate">{PHONE_LABEL[path] ?? label}</span>
             </Link>
           );
         })}

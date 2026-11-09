@@ -265,7 +265,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
           </div>
 
           {/* Content */}
-          <div className="no-scrollbar grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+          <div className="no-scrollbar grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
             {fields.map((field, index) => {
               const Icon = field.icon;
               const isLongText = LONG_TEXT_FIELD_LABELS.has(field.label);

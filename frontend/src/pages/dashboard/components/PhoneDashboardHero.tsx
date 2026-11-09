@@ -36,7 +36,7 @@ export const PhoneDashboardHero: React.FC<PhoneDashboardHeroProps> = ({
           className="border-warning/40 bg-warning/10 text-foreground focus-visible:ring-ring flex min-h-11 items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
         >
           <span className="flex items-center gap-2">
-            <AlertCircle className="text-warning h-4 w-4 shrink-0" aria-hidden="true" />
+            <AlertCircle className="text-tone-warning-text h-4 w-4 shrink-0" aria-hidden="true" />
             {pendingCount} pending {pendingCount === 1 ? "approval" : "approvals"}
           </span>
           <span className="flex items-center gap-1">

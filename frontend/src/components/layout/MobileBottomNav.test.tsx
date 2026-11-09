@@ -115,9 +115,22 @@ describe("MobileBottomNav", () => {
 
     expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual([
       "Calendar",
-      "Dashboard",
+      "Home",
       "Standby",
     ]);
+  });
+
+  it("shows short phone labels but keeps the full label as the link name", () => {
+    renderNav([
+      item("/dashboard", "Dashboard"),
+      item("/team/approvals", "Pending Approvals"),
+      item("/overtime", "Overtime"),
+    ]);
+
+    const approvals = screen.getByRole("link", { name: "Pending Approvals" });
+    expect(approvals).toHaveTextContent("Pending");
+    expect(approvals).not.toHaveTextContent("Approvals");
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveTextContent("Home");
   });
 
   it("lets every tab shrink so a long leader label cannot push More off a 320px screen", () => {
