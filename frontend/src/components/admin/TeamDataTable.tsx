@@ -15,6 +15,13 @@ import {
   Users,
 } from "lucide-react";
 import type { TeamNode } from "@/lib/teamTree";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
+
+/** Phone card: team name up top, then code, leaders, size and the row actions. */
+const TEAM_CARD: DataTableCardSpec = {
+  title: "name",
+  meta: ["code", "italian_tl", "albanian_tl", "members_count", "calendar_group", "sub_teams_count"],
+};
 
 const SEARCH_COLUMNS = ["name", "code", "description", "italian_tl", "albanian_tl"];
 
@@ -277,6 +284,7 @@ export const TeamDataTable: React.FC<TeamDataTableProps> = ({
         // An all-empty Description column pushes Actions off a 1440px card; it appears as soon as one team has text.
         defaultColumnVisibility={{ description: hasDescriptions }}
         pageSize={1000}
+        mobileCard={TEAM_CARD}
         getRowClassName={(team: TeamNode) =>
           hoveredPath.has(team.id)
             ? "bg-muted/60 cursor-pointer"

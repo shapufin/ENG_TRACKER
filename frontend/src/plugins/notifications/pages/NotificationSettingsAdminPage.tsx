@@ -17,6 +17,7 @@ import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { handleApiError } from "@/lib/error-handler";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { notificationService, type NotificationTypeConfig } from "../service";
 
 // Admin-facing query key: exact, never the bare ["admin"] prefix.
@@ -36,6 +37,13 @@ const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
   { value: "on", label: "On" },
   { value: "off", label: "Off" },
 ];
+
+/** Phone card: the type, its on/off switch, then who gets it and whether users can opt out. */
+const NOTIFICATION_CARD: DataTableCardSpec = {
+  title: "notification",
+  status: "status",
+  meta: ["audience", "type"],
+};
 
 const ALWAYS_ON_COPY = "Always delivered — not shown in user settings";
 
@@ -205,6 +213,7 @@ export const NotificationSettingsAdminPage: React.FC = () => {
               columns={columns}
               data={group}
               getRowId={(item) => item.key}
+              mobileCard={NOTIFICATION_CARD}
               emptyMessage="No notification types match these filters."
             />
           </GlassCard>
