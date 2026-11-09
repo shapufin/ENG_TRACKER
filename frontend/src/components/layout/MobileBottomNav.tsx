@@ -64,7 +64,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     "flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-xs font-medium focus-visible:ring-focus focus-visible:ring-2 focus-visible:outline-hidden touch-manipulation";
 
   return (
-    <div className="border-border/70 bg-card shrink-0 border-t pb-[var(--safe-area-bottom)] md:hidden">
+    <div className="border-border/70 bg-card sticky bottom-0 z-30 shrink-0 border-t pb-[var(--safe-area-bottom)] md:hidden">
       <nav aria-label="Primary" className="flex items-stretch">
         {pinned.map(({ path, label, icon: Icon }) => {
           const active = isActive(pathname, path);
