@@ -50,7 +50,7 @@ describe("TicketKPITeamMemberTable", () => {
     );
 
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    const card = screen.getByRole("listitem");
+    const card = screen.getByRole("button", { name: /Alice Doe/ });
     expect(within(card).getByText("Alice Doe")).toBeInTheDocument();
     expect(within(card).getByText("12")).toBeInTheDocument();
     expect(within(card).getByText("3.5h")).toBeInTheDocument();
