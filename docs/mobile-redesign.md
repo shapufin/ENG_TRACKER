@@ -38,11 +38,20 @@ Before the work, phones got the desktop UI squeezed in: tables 600 to 1,400px wi
 | #276 | Customizable tab bar: pin 3 or 4 pages from the account menu (per user, stored on the device) |
 | #277 | Tapping an Overtime, Standby or Leave card opens the full record as a bottom sheet |
 | #278 | Admin Users as phone cards with a collapsible Filters toggle |
-| Phase 2 | Phone greeting card and pending strip on the employee dashboard; Pending Approvals counts as one row of three; breach banner wraps on phones |
+| #279 | Phone greeting card and pending strip on the employee dashboard; Pending Approvals counts as one row of three; breach banner wraps on phones |
+| #280 | TL Dashboard stat cards 2x2 on phones |
+| #281 | Scorecard team roster as phone cards |
+| #282 | Ticket KPI stat cards two across |
+| #283 | Ticket KPI records as phone cards; Skills KPI cards two across |
+| #284 | Admin Teams, Audit Logs and Notification types as phone cards |
+| #285 | Organigrama toolbar and canvas height, Analytics filters wrap, Global Settings tabs as one scroll strip |
+| #286 | HR pages (leave requests, payroll runs, wages, team leaders, reports) as phone cards |
+| #287 | Admin HBPR Assignments, Standby Logs (and Overtime Logs), Leave Balances, Control Room access as phone cards |
+| #288 | QA sweep: tab labels Home / Pending, TL card footers, chip row fade, record sheet rows, hero strip contrast |
 
 ## 4. How it works (the pieces)
 
-- **Cards** (`components/ui/DataTableCards.tsx`, `DataTable` prop `mobileCard`): below 768px (`MOBILE_CARD_QUERY`) a row renders as a card with `title`, `hero`, `status`, `meta[]` and `actions` chosen by column id. The card reuses the table's own cell renderers and actions column, so permissions, month locks, paid-hours blocks, half-day amounts and approve/reject conditions cannot drift. Checkboxes and select-all stay (bulk actions work), actions stay visible at 44px, the whole card calls `onRowClick`. A page with no `mobileCard` is unchanged. Opted in: Overtime, Standby, Leave, TL Approvals, Team Overview, Ticket KPI team (members, uploads), Engagement by team.
+- **Cards** (`components/ui/DataTableCards.tsx`, `DataTable` prop `mobileCard`): below 768px (`MOBILE_CARD_QUERY`) a row renders as a card with `title`, `hero`, `status`, `meta[]` and `actions` chosen by column id. The card reuses the table's own cell renderers and actions column, so permissions, month locks, paid-hours blocks, half-day amounts and approve/reject conditions cannot drift. Checkboxes and select-all stay (bulk actions work), actions stay visible at 44px, the whole card calls `onRowClick`. A page with no `mobileCard` is unchanged. Opted in: Overtime, Standby, Leave, TL Approvals, Team Overview, Ticket KPI team, Engagement by team, Admin Users/Teams/Audit Logs/Notifications/HBPR Assignments/Standby and Overtime Logs/Leave Balances/Control Room access, HR leave/payroll/wages/team leaders/reports, Scorecard team. Hand-rolled tables get a local card list (Ticket KPI records).
 - **Tab bar** (`components/layout/MobileBottomNav.tsx`): pins the first four visible of Dashboard, Pending Approvals, Overtime, Standby, Leave, HR Leave Requests, HR Payroll, taken from the sidebar's `visibleItems` so role, plugin and pure-HR/HBPR/CR gating has one source. Fewer than three pinned pages hides it. It publishes `--bottom-nav-h` so every fixed bottom element can sit above it (`bottom-[var(--bottom-nav-h,0px)] md:bottom-0`).
 - **Bottom sheets**: `DialogContent side="bottom"` is a sheet below `md` and the normal modal from `md`; `FormDialog mobileSheet` opts a form in (Overtime, Standby, Leave, Weekly Generator).
 - **Dashboard** (`pages/dashboard/`): `DashboardQuickActions` (gated by the same visible-nav source), 2x2 `PersonalDashboardStats`, pending above time off (`max-lg:order-first`), `ActivityTimeline` collapse (`max-md:hidden` past five).
@@ -53,10 +62,10 @@ Before the work, phones got the desktop UI squeezed in: tables 600 to 1,400px wi
 
 | Mockup idea | Status |
 |---|---|
-| Touch cards instead of wide tables | Done for the employee and leader tables (see list above); dense admin tables are deliberately not converted |
-| 4 pinned tabs plus a hub | Done (tab bar, More opens the drawer). Pinning is automatic, not user-customisable |
+| Touch cards instead of wide tables | Done for the employee, leader, HR and admin tables (Users, Teams, Audit Logs, Notifications, HBPR Assignments, Standby/Overtime Logs, Leave Balances, Control Room access, HR leave/payroll/wages/team leaders/reports, Scorecard team, Ticket KPI) |
+| 4 pinned tabs plus a hub | Done (tab bar, More opens the drawer). Pinning is customisable per user from the account menu (#276) |
 | Quick actions on the dashboard | Done |
-| Bottom sheets for forms | Done for Overtime, Standby, Leave, Weekly Generator; admin forms and record details still centred modals |
+| Bottom sheets for forms | Done for Overtime, Standby, Leave, Weekly Generator and the record detail (#277); admin forms are still centred modals |
 | Two-tier surfaces, 44px targets, dark mode | Held (existing surface/control audits pass); employee pages checked dark at 320/393 |
 | Modern header with search, profile, dark toggle, role switch | Done except the dark toggle and role switch (#274). Role switch is not copied (no such feature) |
 | Quick launcher (search every menu, pin to bar) | Done: the header search opens `CommandPalette`; pinning via #276 |
@@ -74,16 +83,16 @@ So: the layout problems (tables, navigation, notices, forms, Calendar, Dashboard
 
 ## 7. Open work (priority order)
 
-1. **Phone header: search and profile menu** (reuse `HeaderSearch`/`CommandPalette` and `HeaderProfileMenu`; opens the launcher) and a record-detail sheet on card tap.
-2. Dark mode and 320px for leader, HR and admin pages and the tab bar; fade hint on the status chip row (`FilterChipRow` scrolls by design and clips its last chip at 320px).
-3. Bottom sheets for admin forms.
-4. Organigrama toolbar clips its download button and the canvas is 1,700px tall for two nodes; Analytics "Advanced filters" is clipped.
-5. Dense admin tables (Users, Teams, Audit Logs, HBPR Assignments, Standby Logs, Leave Balances, Control Room access, Notifications): in-card scroll, pinned first column, Admin Users filter chips (about 8 lines) into a Filters sheet. Global Settings tabs wrap to three rows on phones.
-6. Not copying from the mockup: Annual/Medical/Casual split, standby money, "Approve All", role toggle, weekly bar chart, anything showing teammates' statuses.
+1. Bottom sheets for admin forms (user create/edit, team, holiday, client).
+2. Not seen in a browser: Ticket KPI records cards with real data (the e2e DB has no tickets), Skills Matrix / Dense / Heatmap / List on a phone, the dashboard "Review" strip scroll, Approve/Reject inside HR leave cards, light mode and 320px on the admin and HR pages.
+3. Contrast from shared tokens: avatar initials (about 2.7:1) and the warning badge (4.01:1); Scorecard avatar stack hides initials where circles overlap; the TL dashboard tab switcher wraps "Team Workspace" at 320px.
+4. Mockup look (gradient hero on every page, rounder surfaces, pill badges) is a design decision, not a bug: ask before changing shared tokens.
+5. E2E on `main` fails on `preferences.spec.ts:49` and `skills.spec.ts:154`; fix or quarantine them (see section 8).
+6. Not copying from the mockup: Annual/Medical/Casual split, standby money, "Approve All", role toggle, anything showing teammates' statuses.
 
 ## 8. Known issues found along the way
 
-- CI E2E fails on `main` after 45 minutes on the Admin dashboard specs and never reaches the `mobile-chromium` project, so it is not a merge signal; merge rule used: Frontend and Backend (and PostgreSQL 16) pass, and layout PRs are run locally in `mobile-chromium` first.
+- CI E2E fails on `main` on `e2e/preferences.spec.ts:49` and `e2e/skills.spec.ts:154` (Team Skills 320px heading times out in CI; locally there is no overflow), both before this refactor started. Older note: CI E2E failed after 45 minutes on the Admin dashboard specs and never reaches the `mobile-chromium` project, so it is not a merge signal; merge rule used: Frontend and Backend (and PostgreSQL 16) pass, and layout PRs are run locally in `mobile-chromium` first.
 - `e2e/hr-isolation.spec.ts` fails on `main` in `mobile-chromium` (sidebar is off-canvas on phones); `role-workflows.spec.ts` "admin users table: search filters" fails on `main` there; the "employeeA routes" test is flaky.
 - Force-push is denied in agent sessions; stacked branches are refreshed by merging `main`.
 - CI runs `prettier --check` on changed files only: run Prettier on the files you touched, never a whole directory.
