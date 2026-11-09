@@ -72,6 +72,8 @@ declare module "@tanstack/table-core" {
   > {
     /** "column" keeps an `id: "actions"` column visible on fine pointers. Set it on any column whose cells hold Approve/Reject or other decision controls. */
     actionsDisplay?: "pill" | "column";
+    /** When true, cell allows content/table to stretch flexibly (minWidth: size, without maxWidth cap). */
+    flex?: boolean;
   }
 }
 /* eslint-enable @typescript-eslint/no-unused-vars */

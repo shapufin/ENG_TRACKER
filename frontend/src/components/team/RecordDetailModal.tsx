@@ -100,7 +100,6 @@ const getOvertimeFields = (record: OvertimeLog): DetailField[] => {
   }
   fields.push(
     { label: "Client", value: record.client_name || "-", icon: Building },
-    { label: "Description", value: record.description || "-", icon: FileText },
     { label: "Evidence Type", value: record.evidence_type || "-", icon: Tag }
   );
   if (record.evidence_type === "ticket") {
@@ -136,7 +135,6 @@ const getOvertimeFields = (record: OvertimeLog): DetailField[] => {
 const getStandbyFields = (record: StandbyLog): DetailField[] => [
   ...getBaseLogFields(record),
   { label: "Pattern", value: record.pattern_name || "-", icon: Layers },
-  { label: "Description", value: record.description || "-", icon: FileText },
   { label: "Evidence", value: record.evidence || "-", icon: Paperclip },
   { label: "Approved By", value: record.approved_by_name || "-", icon: User },
   {
@@ -152,7 +150,6 @@ const getLeaveFields = (record: LeaveRequest): DetailField[] => [
   { label: "End Date", value: formatDateDDMMYYYY(record.end_date), icon: Calendar },
   { label: "Days Requested", value: leaveDaysLabel(record), icon: Timer },
   { label: "Type", value: record.request_type_display || record.request_type || "-", icon: Tag },
-  { label: "Reason", value: record.reason || "-", icon: FileText },
   {
     label: "Balance Left",
     value: record.user_leave_balance ? `${record.user_leave_balance}d` : "-",
@@ -204,6 +201,8 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
   const recordType = getRecordType(record);
   const userName = record.user_full_name || record.user_name || "Unknown";
   const recordIcon = getRecordIcon(record);
+  const descriptionLabel = isLeaveRequest(record) ? "Reason" : "Description";
+  const descriptionText = isLeaveRequest(record) ? record.reason : record.description;
   const fields = isOvertimeLog(record)
     ? getOvertimeFields(record)
     : isStandbyLog(record)
@@ -265,58 +264,83 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
           </div>
 
           {/* Content */}
-          <div className="no-scrollbar grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-            {fields.map((field, index) => {
-              const Icon = field.icon;
-              const isLongText = LONG_TEXT_FIELD_LABELS.has(field.label);
-
-              return (
-                <div
-                  key={index}
-                  className={cn(
-                    "group relative overflow-hidden rounded-xl",
-                    "border-border border",
-                    "bg-muted/40",
-                    "transition-all duration-300",
-                    "hover:border-accent-violet/30 hover:bg-accent"
-                  )}
-                >
-                  <div className="flex items-center gap-3 p-3">
-                    <div
-                      className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-lg",
-                        "border-accent-violet/10 border",
-                        "bg-accent-violet/10",
-                        "transition-all duration-300",
-                        "group-hover:bg-accent-violet/15 group-hover:scale-105"
-                      )}
-                    >
-                      <Icon className="text-accent-violet h-4 w-4" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="text-muted-foreground mb-0.5 text-xs font-medium tracking-wide uppercase">
-                        {field.label}
-                      </p>
-                      <p
-                        className={
-                          isLongText
-                            ? "text-foreground text-sm font-medium break-words"
-                            : "text-foreground truncate text-sm font-medium"
-                        }
-                        title={String(field.value ?? "-")}
-                      >
-                        {field.value ?? "-"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                    <div className="bg-accent-violet absolute inset-y-0 left-0 w-[1.5px]" />
-                  </div>
+          <div className="no-scrollbar flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+            {/* Dedicated Description / Reason Spotlight Card */}
+            <div className="border-border/80 bg-muted/40 group hover:border-accent-violet/30 hover:bg-accent/30 relative overflow-hidden rounded-xl border p-4 transition-all duration-300">
+              <div className="mb-2 flex items-center gap-2">
+                <div className="border-accent-violet/20 bg-accent-violet/10 flex h-7 w-7 items-center justify-center rounded-lg border">
+                  <FileText className="text-accent-violet h-4 w-4" />
                 </div>
-              );
-            })}
+                <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                  {descriptionLabel}
+                </span>
+              </div>
+              <p className="text-foreground pl-9 text-sm leading-relaxed font-medium break-words">
+                {descriptionText && descriptionText !== "-" ? (
+                  descriptionText
+                ) : (
+                  <span className="text-muted-foreground font-normal italic">
+                    No {descriptionLabel.toLowerCase()} provided
+                  </span>
+                )}
+              </p>
+              <div className="bg-accent-violet absolute inset-y-0 left-0 w-[2.5px]" />
+            </div>
+
+            {/* Grid of metadata fields */}
+            <div className="grid auto-rows-min grid-cols-1 gap-2 sm:grid-cols-2">
+              {fields.map((field, index) => {
+                const Icon = field.icon;
+                const isLongText = LONG_TEXT_FIELD_LABELS.has(field.label);
+
+                return (
+                  <div
+                    key={index}
+                    className={cn(
+                      "group relative overflow-hidden rounded-xl",
+                      "border-border border",
+                      "bg-muted/40",
+                      "transition-all duration-300",
+                      "hover:border-accent-violet/30 hover:bg-accent"
+                    )}
+                  >
+                    <div className="flex items-center gap-3 p-3">
+                      <div
+                        className={cn(
+                          "flex h-8 w-8 items-center justify-center rounded-lg",
+                          "border-accent-violet/10 border",
+                          "bg-accent-violet/10",
+                          "transition-all duration-300",
+                          "group-hover:bg-accent-violet/15 group-hover:scale-105"
+                        )}
+                      >
+                        <Icon className="text-accent-violet h-4 w-4" />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-muted-foreground mb-0.5 text-xs font-medium tracking-wide uppercase">
+                          {field.label}
+                        </p>
+                        <p
+                          className={
+                            isLongText
+                              ? "text-foreground text-sm font-medium break-words"
+                              : "text-foreground truncate text-sm font-medium"
+                          }
+                          title={String(field.value ?? "-")}
+                        >
+                          {field.value ?? "-"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                      <div className="bg-accent-violet absolute inset-y-0 left-0 w-[1.5px]" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </DialogContent>
