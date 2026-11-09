@@ -16,7 +16,7 @@ BANDED = {
     'weekend_holiday_premium': Decimal('0.25'),
     'evening_premium': Decimal('0.20'),
     'night_premium': Decimal('0.50'),
-    'evening_start_hour': 18,
+    'evening_start_hour': 19,
     'night_start_hour': 22,
     'night_end_hour': 6,
 }
@@ -49,7 +49,7 @@ class RuleSetBandedFieldsTests(TestCase):
         self.assertEqual(
             (rule_set.evening_start_hour, rule_set.night_start_hour, rule_set.night_end_hour),
             (18, 22, 6),
-        )
+        )  # model default only; banded seeds/rules pass 19 explicitly
 
     def test_clone_copies_banded_fields(self):
         source = self._banded_set()
@@ -116,7 +116,7 @@ from plugins.payroll.services.overtime_bands import (  # noqa: E402
 RULES = OvertimeBandRules(
     ot_premium=Decimal('0.25'), weekend_holiday_premium=Decimal('0.25'),
     evening_premium=Decimal('0.20'), night_premium=Decimal('0.50'),
-    evening_start_hour=18, night_start_hour=22, night_end_hour=6,
+    evening_start_hour=19, night_start_hour=22, night_end_hour=6,
 )
 
 
@@ -142,8 +142,8 @@ class SliceOvertimeEntryTests(SimpleTestCase):
                 self.assertEqual(result, [(code, Decimal('1'), Decimal(multiplier))])
                 self.assertEqual(warnings, [])
 
-    def test_weekday_17_to_19_splits_day_and_evening(self):
-        result, _ = _slices('2', time(17), time(19))
+    def test_weekday_18_to_20_splits_day_and_evening(self):
+        result, _ = _slices('2', time(18), time(20))
         self.assertEqual(result, [
             ('ot_day', Decimal('1'), Decimal('1.25')),
             ('ot_evening', Decimal('1'), Decimal('1.45')),
@@ -157,15 +157,33 @@ class SliceOvertimeEntryTests(SimpleTestCase):
         ])
 
     def test_boundaries_belong_to_the_starting_minute(self):
-        self.assertEqual([c for c, *_ in _slices('12', time(6), time(18))[0]], ['ot_day'])
-        self.assertEqual([c for c, *_ in _slices('4', time(18), time(22))[0]], ['ot_evening'])
+        self.assertEqual([c for c, *_ in _slices('13', time(6), time(19))[0]], ['ot_day'])
+        self.assertEqual([c for c, *_ in _slices('3', time(19), time(22))[0]], ['ot_evening'])
         self.assertEqual([c for c, *_ in _slices('8', time(22), time(6))[0]], ['ot_night'])
 
     def test_overnight_wraps_across_all_bands(self):
         result, _ = _slices('15', time(18), time(9))
         codes = {c: h for c, h, _ in result}
-        self.assertEqual(codes, {'ot_day': Decimal('3'), 'ot_evening': Decimal('4'),
+        self.assertEqual(codes, {'ot_day': Decimal('4'), 'ot_evening': Decimal('3'),
                                  'ot_night': Decimal('8')})
+
+    def test_18_to_19_is_still_the_day_band(self):
+        self.assertEqual(_slices('1', time(18), time(19))[0], [('ot_day', Decimal('1'), Decimal('1.25'))])
+
+    def test_saturday_night_shift_turns_into_sunday_pay_after_midnight(self):
+        # 22:00-04:00, Saturday -> Sunday: 2 h weekday night, 4 h Sunday night.
+        slices, _ = slice_overtime_entry(Decimal('6'), time(22), time(4), False, RULES,
+                                         next_day_weekend_or_holiday=True)
+        self.assertEqual([(s.code, s.hours, s.multiplier) for s in slices], [
+            ('ot_night', Decimal('2'), Decimal('1.75')),
+            ('wh_ot_night', Decimal('4'), Decimal('2.00')),
+        ])
+
+    def test_sunday_night_shift_turns_into_weekday_pay_after_midnight(self):
+        slices, _ = slice_overtime_entry(Decimal('6'), time(22), time(4), True, RULES,
+                                         next_day_weekend_or_holiday=False)
+        self.assertEqual([(s.code, s.hours) for s in slices],
+                         [('wh_ot_night', Decimal('2')), ('ot_night', Decimal('4'))])
 
     def test_start_equals_end_is_a_24_hour_span(self):
         result, _ = _slices('24', time(9), time(9))
@@ -173,19 +191,19 @@ class SliceOvertimeEntryTests(SimpleTestCase):
         self.assertEqual({c for c, *_ in result}, {'ot_day', 'ot_evening', 'ot_night'})
 
     def test_pro_rata_paid_share_across_a_boundary(self):
-        result, _ = _slices('1', time(17, 30), time(18, 30))
+        result, _ = _slices('1', time(18, 30), time(19, 30))
         self.assertEqual(result, [
             ('ot_day', Decimal('0.5'), Decimal('1.25')),
             ('ot_evening', Decimal('0.5'), Decimal('1.45')),
         ])
 
     def test_paid_share_smaller_than_span_is_distributed_pro_rata(self):
-        result, _ = _slices('1.5', time(17), time(20))
+        result, _ = _slices('1.5', time(18), time(21))
         self.assertEqual([(c, h) for c, h, _ in result],
                          [('ot_day', Decimal('0.5')), ('ot_evening', Decimal('1.0'))])
 
     def test_slice_hours_always_sum_to_entry_hours(self):
-        result, _ = _slices('1', time(17, 20), time(19, 40))
+        result, _ = _slices('1', time(18, 20), time(20, 40))
         self.assertEqual(sum(h for _, h, _ in result), Decimal('1'))
 
     def test_missing_timestamps_price_whole_entry_in_day_band_with_warning(self):
@@ -235,8 +253,8 @@ class BandedCalculatorTests(SimpleTestCase):
         self.assertEqual(result.overtime_amount, (Decimal('2') * BASE * Decimal('1.25')).quantize(Decimal('0.01')))
         self.assertEqual([b.code for b in result.overtime_breakdown], ['weekday_day'])
 
-    def test_weekday_17_to_19_example(self):
-        entry = OvertimeEntryInput(MONDAY, Decimal('2'), time(17), time(19), source_id=1)
+    def test_weekday_18_to_20_example(self):
+        entry = OvertimeEntryInput(MONDAY, Decimal('2'), time(18), time(20), source_id=1)
         result = _calc([entry])
         self.assertEqual(result.overtime_amount, Decimal('1086.21'))
         self.assertEqual({b.code: b.hours for b in result.overtime_breakdown},
@@ -259,6 +277,12 @@ class BandedCalculatorTests(SimpleTestCase):
         result = _calc([entry], holidays={MONDAY})
         self.assertEqual([b.code for b in result.overtime_breakdown], ['wh_ot_day'])
 
+    def test_saturday_night_shift_wiring_uses_next_day_for_sunday_part(self):
+        entry = OvertimeEntryInput(date(2026, 1, 3), Decimal('6'), time(22), time(4), source_id=1)
+        result = _calc([entry])
+        self.assertEqual({b.code: b.hours for b in result.overtime_breakdown},
+                         {'ot_night': Decimal('2'), 'wh_ot_night': Decimal('4')})
+
     def test_breakdown_merges_same_code_across_entries(self):
         entries = [
             OvertimeEntryInput(MONDAY, Decimal('1'), time(9), time(10), source_id=1),
@@ -270,7 +294,7 @@ class BandedCalculatorTests(SimpleTestCase):
         self.assertEqual(result.overtime_hours, Decimal('3'))
 
     def test_entry_detail_amount_is_sum_of_slices_and_lists_them(self):
-        entry = OvertimeEntryInput(MONDAY, Decimal('2'), time(17), time(19), source_id=7)
+        entry = OvertimeEntryInput(MONDAY, Decimal('2'), time(18), time(20), source_id=7)
         result = _calc([entry])
         detail = result.entry_details[0]
         self.assertEqual(Decimal(detail['amount']), BASE * Decimal('2.70'))
@@ -334,7 +358,7 @@ class BandedRunPersistenceTests(TestCase):
             user=cls.employee, gross_monthly_wage=Decimal('70000'),
             effective_from=date(2026, 1, 1), is_active=True,
         )
-        for day, start, end in ((2, _time(17), _time(19)), (1, _time(20), _time(0))):
+        for day, start, end in ((2, _time(18), _time(20)), (1, _time(20), _time(0))):
             OvertimeLog.objects.create(
                 user=cls.employee, client=cls.client_obj, date=date(2026, 3, day),
                 start_time=start, end_time=end, hours=1,
@@ -409,7 +433,7 @@ class SeedBandedRulesCommandTests(TestCase):
             (new.ot_premium, new.weekend_holiday_premium, new.evening_premium, new.night_premium),
             (Decimal('0.25'), Decimal('0.25'), Decimal('0.20'), Decimal('0.50')),
         )
-        self.assertEqual((new.evening_start_hour, new.night_start_hour, new.night_end_hour), (18, 22, 6))
+        self.assertEqual((new.evening_start_hour, new.night_start_hour, new.night_end_hour), (19, 22, 6))
         self.assertEqual(new.validation_status, 'reference')
         self.assertEqual(new.effective_from, date(2026, 12, 1))
         self.assertEqual(new.tax_brackets.count(), self.source.tax_brackets.count())
@@ -425,6 +449,18 @@ class SeedBandedRulesCommandTests(TestCase):
         self._seed()
         self._seed()
         self.assertEqual(PayrollRuleSet.objects.filter(overtime_pricing='banded').count(), 1)
+
+    def test_replaces_publishes_a_corrected_set_and_deactivates_the_old_one(self):
+        old = self._seed()
+        PayrollRuleSet.objects.filter(pk=old.pk).update(evening_start_hour=18)
+        call_command('seed_payroll_banded_rules', effective_from='2026-12-01',
+                     code='AL_BANDED_OT_2026_12_V2', replaces=old.code, verbosity=0)
+        old.refresh_from_db()
+        new = PayrollRuleSet.objects.get(code='AL_BANDED_OT_2026_12_V2')
+        self.assertFalse(old.is_active)
+        self.assertEqual(old.evening_start_hour, 18)
+        self.assertTrue(new.is_active)
+        self.assertEqual((new.version, new.evening_start_hour), ('1.1', 19))
 
     def test_rejects_a_date_that_is_not_a_month_start(self):
         with self.assertRaises(CommandError):

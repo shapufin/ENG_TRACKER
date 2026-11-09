@@ -125,7 +125,7 @@ multiplier's job, not standby's).
 
 **Banded overtime pricing** (`PayrollRuleSet.overtime_pricing = 'banded'`,
 `services/overtime_bands.py`): instead of one category per entry, each entry is
-sliced at the rule set's band hours (day `[06,18)`, evening `[18,22)`, night
+sliced at the rule set's band hours (day `[06,18)`, evening `[19,22)`, night
 `[22,06)` wrapping midnight; a minute belongs to the band of its starting
 minute) and every slice is priced
 `hours × base_hourly_rate × (1 + ot_premium + weekend_holiday_premium + band premium)`.
@@ -146,7 +146,7 @@ dry run by default, `--apply --confirm REPRICE-FINALIZED` to write, JSON backup
 first (`--restore FILE` undoes it), closed years / differing brackets /
 non-reproducible runs skipped, one transaction per run. Never reprice any other way.
 
-**Employment type.** `UserProfile.employment_type` is `full_time` for everyone (read-only, locked checkbox in the user form) and `weekly_contract_hours` is 40. It marks the 40 h contract; an approved overtime request IS the "beyond schedule" declaration, so no weekly accumulator exists and the calculator does not read the field yet. Working hours are 09:00-18:00, which is why the evening band starts at 18:00. Adding another type (e.g. `half_time`) needs its overtime percentages confirmed first (open question) and a calculator branch.
+**Employment type.** `UserProfile.employment_type` is `full_time` for everyone (read-only, locked checkbox in the user form) and `weekly_contract_hours` is 40. It marks the 40 h contract; an approved overtime request IS the "beyond schedule" declaration, so no weekly accumulator exists and the calculator does not read the field yet. The company table starts the evening band at 19:00 (corrected 2026-11-10 from 18:00). Adding another type (e.g. `half_time`) needs its overtime percentages confirmed first (open question) and a calculator branch.
 
 Gross-to-net: contribution bases (OT/standby contribute per the
 `*_is_contribution_bearing` flags), employee/employer social + health with

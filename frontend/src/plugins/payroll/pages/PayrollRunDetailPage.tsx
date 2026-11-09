@@ -193,6 +193,7 @@ export const PayrollRunDetailPage: React.FC = () => {
           canManage={canManagePayroll}
           canExport={canExportPayroll}
           closureStatus={closureStatus}
+          ruleSetId={run.rule_set}
           onGenerate={() => generateMutation.mutate()}
           onFinalize={() => finalizeMutation.mutate()}
           onDelete={() => deleteMutation.mutate()}

@@ -20,7 +20,7 @@ The calculation sequence:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, time
+from datetime import date, time, timedelta
 from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN, ROUND_DOWN
 from typing import Optional
 
@@ -455,6 +455,10 @@ def calculate_payroll(inp: PayrollCalculationInput) -> PayrollCalculationResult:
                 entry.hours, entry.start_time, entry.end_time,
                 _is_weekend(entry.date) or entry.date in inp.holiday_dates,
                 inp.overtime_band_rules,
+                next_day_weekend_or_holiday=(
+                    _is_weekend(entry.date + timedelta(days=1))
+                    or entry.date + timedelta(days=1) in inp.holiday_dates
+                ),
             )
             warnings.extend(f'Overtime on {entry.date}: {w[0].lower()}{w[1:]}' for w in band_warnings)
             entry_amount = Decimal('0')
