@@ -28,7 +28,7 @@ const TEAM_OVERTIME_CARD = {
   title: "user_name",
   hero: "hours",
   status: "status",
-  meta: ["client_name", "date", "description"],
+  meta: ["client_name", "date", "ticket_references", "description"],
 };
 const TEAM_STANDBY_CARD = {
   title: "user_name",

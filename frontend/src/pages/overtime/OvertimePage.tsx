@@ -29,7 +29,7 @@ const OVERTIME_CARD = {
   title: "client_name",
   hero: "hours",
   status: "status",
-  meta: ["user_full_name", "date", "payroll_period", "description"],
+  meta: ["user_full_name", "date", "payroll_period", "ticket_references", "description"],
 };
 
 // fallow-ignore-next-line complexity

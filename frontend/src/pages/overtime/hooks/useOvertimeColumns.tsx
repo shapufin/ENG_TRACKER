@@ -40,6 +40,26 @@ export const useOvertimeColumns = (
         : []),
       { accessorKey: "client_name", header: "Client", size: 110 },
       {
+        id: "ticket_references",
+        header: "Ticket ID",
+        size: 110,
+        accessorFn: (row) => row.ticket_references?.join(", ") ?? "",
+        cell: ({ row }) => {
+          const refs = row.original.ticket_references;
+          if (!refs || refs.length === 0) {
+            return <span className="text-muted-foreground">-</span>;
+          }
+          return (
+            <span
+              className="truncate font-mono text-xs max-md:break-words max-md:whitespace-normal"
+              title={refs.join(", ")}
+            >
+              {refs.join(", ")}
+            </span>
+          );
+        },
+      },
+      {
         accessorKey: "hours",
         header: "Hours",
         size: 87,
