@@ -42,11 +42,15 @@ export const DashboardSwitcher: React.FC<DashboardSwitcherProps> = ({
     >
       <TabsList className="h-auto max-w-full flex-wrap">
         {availableDashboards.map((dashboard) => (
-          <TabsTrigger key={dashboard} value={dashboard}>
+          <TabsTrigger key={dashboard} value={dashboard} className="whitespace-nowrap">
             {DASHBOARD_SEGMENT_LABEL[dashboard]}
           </TabsTrigger>
         ))}
-        {showWorkspaceTab && <TabsTrigger value={WORKSPACE_TAB}>Team Workspace</TabsTrigger>}
+        {showWorkspaceTab && (
+          <TabsTrigger value={WORKSPACE_TAB} className="whitespace-nowrap">
+            Team Workspace
+          </TabsTrigger>
+        )}
       </TabsList>
     </Tabs>
   );

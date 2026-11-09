@@ -189,7 +189,7 @@ const TicketRecordsFilterBar: React.FC<FilterBarProps> = ({
   <FilterToolbar>
     <FilterToolbar.Search className="max-w-xs">
       <SearchField
-        placeholder="Search ticket id, title, assignee…"
+        placeholder="Search tickets…"
         aria-label="Search tickets"
         value={filters.search ?? ""}
         onChange={(v) => updateFilter("search", v)}

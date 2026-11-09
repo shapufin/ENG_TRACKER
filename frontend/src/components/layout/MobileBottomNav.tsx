@@ -23,6 +23,8 @@ interface MobileBottomNavProps {
 const PHONE_LABEL: Record<string, string> = {
   "/dashboard": "Home",
   "/team/approvals": "Pending",
+  "/hr/leave-requests": "Requests",
+  "/hr/payroll/runs": "Payroll",
 };
 
 const isActive = (pathname: string, path: string) =>

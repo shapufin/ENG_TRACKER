@@ -18,13 +18,14 @@ const sizeMap: Record<NonNullable<UserAvatarProps["size"]>, string> = {
   lg: "h-12 w-12 text-base",
 };
 
+// Tone tokens carry the light/dark pair and clear 4.5:1 for their text on their surface.
 const palette = [
-  "bg-blue-500/20 text-blue-500",
-  "bg-emerald-500/20 text-emerald-600",
-  "bg-primary/20 text-primary",
-  "bg-amber-500/20 text-amber-600 dark:text-amber-400",
-  "bg-rose-500/20 text-rose-500",
-  "bg-cyan-500/20 text-cyan-600",
+  "bg-tone-info-surface text-tone-info-text",
+  "bg-tone-success-surface text-tone-success-text",
+  "bg-tone-accent-surface text-tone-accent-text",
+  "bg-tone-warning-surface text-tone-warning-text",
+  "bg-tone-danger-surface text-tone-danger-text",
+  "bg-tone-neutral-surface text-tone-neutral-text",
 ];
 
 const getInitials = (name?: string, email?: string) => {
