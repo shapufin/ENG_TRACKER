@@ -5,6 +5,14 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import type { UserProfile } from "@/types";
 import type { RowSelectionState, OnChangeFn } from "@tanstack/react-table";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
+
+/** Phone card: name and role up top, then team, tech and the assigned leaders. */
+const USER_CARD: DataTableCardSpec = {
+  title: "username",
+  status: "tl_role",
+  meta: ["team", "techs", "it_tl_assigned", "al_tl_assigned"],
+};
 
 interface UsersPageTableProps {
   columns: AppColumnDef<UserProfile>[];
@@ -47,6 +55,7 @@ export const UsersPageTable: React.FC<UsersPageTableProps> = ({
       onRowSelectionChange={onRowSelectionChange}
       getRowId={(row) => String(row.id)}
       emptyMessage="No users match your filters."
+      mobileCard={USER_CARD}
       toolbarActions={toolbarActions}
     />
   </GlassCard>
