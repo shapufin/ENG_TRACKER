@@ -39,7 +39,7 @@ export const TicketIdBadges: React.FC<TicketIdBadgesProps> = ({ references, maxV
         <Badge
           key={ref}
           variant="outline"
-          className="px-1.5 py-0 font-mono text-[11px] font-normal whitespace-nowrap"
+          className="px-1.5 py-0 font-mono text-xs font-normal whitespace-nowrap"
         >
           {ref}
         </Badge>
@@ -47,7 +47,7 @@ export const TicketIdBadges: React.FC<TicketIdBadgesProps> = ({ references, maxV
       {remaining > 0 && (
         <Badge
           variant="secondary"
-          className="px-1.5 py-0 font-mono text-[11px] font-normal whitespace-nowrap"
+          className="px-1.5 py-0 font-mono text-xs font-normal whitespace-nowrap"
           title={`${remaining} more: ${references.slice(maxVisible).join(", ")}`}
         >
           +{remaining}

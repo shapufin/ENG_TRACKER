@@ -26,12 +26,12 @@ Usage:
 """
 import json
 from dataclasses import replace
-from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 
 from apps.overtime.models import OvertimeLog
 from apps.users.services.approval_periods import is_year_closed
@@ -263,7 +263,7 @@ class Command(BaseCommand):
     def _write_backup(self, plans, backup_dir) -> Path:
         directory = Path(backup_dir)
         directory.mkdir(parents=True, exist_ok=True)
-        path = directory / f'reprice_{datetime.now():%Y%m%d_%H%M%S}.json'
+        path = directory / f'reprice_{timezone.now():%Y%m%d_%H%M%S}.json'
         payload = {'format': 1, 'runs': []}
         for plan in plans:
             run = plan['run']

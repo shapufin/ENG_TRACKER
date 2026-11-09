@@ -70,3 +70,16 @@ describe("UserFormCore HBPR minimal mode", () => {
     expect(screen.queryByText(/will revoke/)).not.toBeInTheDocument();
   });
 });
+
+describe("UserFormCore employment type", () => {
+  it("shows Full-time (40 h/week) checked and locked, in both modes", () => {
+    const { unmount } = renderCore();
+    const box = screen.getByRole("checkbox", { name: /full-time/i });
+    expect(box).toBeChecked();
+    expect(box).toBeDisabled();
+    expect(screen.getByText("Full-time (40 h/week)")).toBeInTheDocument();
+    unmount();
+    renderCore({ is_hbpr: true });
+    expect(screen.getByRole("checkbox", { name: /full-time/i })).toBeDisabled();
+  });
+});

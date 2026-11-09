@@ -574,6 +574,20 @@ class UserProfile(BaseModel):
         help_text='Optional unique employee code (case-insensitive). Blank is stored as NULL.',
     )
 
+    EMPLOYMENT_TYPE_CHOICES = [('full_time', 'Full time')]
+    # Contract hours per week for each employment type (labour code: 40 h).
+    WEEKLY_CONTRACT_HOURS = {'full_time': 40}
+    employment_type = models.CharField(
+        max_length=20,
+        choices=EMPLOYMENT_TYPE_CHOICES,
+        default='full_time',
+        help_text='Full time is the only type for now (40 h/week). Never written from the API.',
+    )
+
+    @property
+    def weekly_contract_hours(self) -> int:
+        return self.WEEKLY_CONTRACT_HOURS[self.employment_type]
+
     class Meta:
         db_table = 'user_profiles'
         indexes = [
