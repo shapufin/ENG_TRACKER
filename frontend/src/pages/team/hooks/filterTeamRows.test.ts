@@ -156,6 +156,16 @@ describe("filterTeamRows", () => {
     ).toEqual(["2026-08-03"]);
   });
 
+  it("safely handles rows missing date fields without sorting errors", () => {
+    const data = [
+      { user: 1, status: "approved", date: "2026-08-03" },
+      { user: 2, status: "approved" },
+      { user: 3, status: "approved", start_date: "2026-08-05" },
+    ];
+    const result = filterTeamRows(data, options);
+    expect(result.map((r) => r.user)).toEqual([3, 1, 2]);
+  });
+
   it("returns an empty list for unavailable rows", () => {
     expect(filterTeamRows(undefined, options)).toEqual([]);
   });

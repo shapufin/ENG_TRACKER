@@ -61,7 +61,12 @@ const matchesSearch = (
   return false;
 };
 
-const rowDate = (row: Row) => new Date((row.date || row.start_date)!).getTime();
+const rowDate = (row: Row) => {
+  const raw = row.date || row.start_date || row.end_date;
+  if (!raw) return 0;
+  const time = new Date(raw).getTime();
+  return Number.isNaN(time) ? 0 : time;
+};
 
 export const filterTeamRows = <T extends Row>(
   rows: T[] | undefined,
