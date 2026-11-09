@@ -47,7 +47,7 @@ export const TLApprovalStats: React.FC<TLApprovalStatsProps> = ({
         delay={0}
         interactive={isClickable}
         className={cn(
-          "flex items-center gap-4 p-4",
+          "flex flex-col items-start gap-2 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4",
           isClickable && "hover:border-primary/50 cursor-pointer"
         )}
         onClick={isClickable ? () => onCardClick!(type) : undefined}
@@ -74,7 +74,8 @@ export const TLApprovalStats: React.FC<TLApprovalStatsProps> = ({
           </p>
           <p className="text-xl font-bold">{loading ? "..." : count}</p>
           <p className="text-muted-foreground text-xs">
-            {hasPendingMonths ? "Pending · click to jump" : "Pending"}
+            Pending
+            {hasPendingMonths && <span className="max-sm:hidden"> · click to jump</span>}
           </p>
         </div>
       </GlassCard>
@@ -82,7 +83,7 @@ export const TLApprovalStats: React.FC<TLApprovalStatsProps> = ({
   };
 
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-3 gap-2 sm:gap-3">
       {renderCard(
         "overtime",
         overtimeCount,

@@ -33,6 +33,12 @@ Before the work, phones got the desktop UI squeezed in: tables 600 to 1,400px wi
 | #269 | Dashboard: activity feed shows five items with Show all / Show less |
 | #270 | Weekly Generator opens as a bottom sheet |
 | #272 | E2E login helper snoozes the two-factor prompt (it blocked 21 calendar specs) |
+| #274 | Phone header: search button (opens the command palette) and account menu |
+| #275 | Tab bar: tabs can shrink so "More" is not cut off at 320px |
+| #276 | Customizable tab bar: pin 3 or 4 pages from the account menu (per user, stored on the device) |
+| #277 | Tapping an Overtime, Standby or Leave card opens the full record as a bottom sheet |
+| #278 | Admin Users as phone cards with a collapsible Filters toggle |
+| Phase 2 | Phone greeting card and pending strip on the employee dashboard; Pending Approvals counts as one row of three; breach banner wraps on phones |
 
 ## 4. How it works (the pieces)
 
@@ -52,10 +58,10 @@ Before the work, phones got the desktop UI squeezed in: tables 600 to 1,400px wi
 | Quick actions on the dashboard | Done |
 | Bottom sheets for forms | Done for Overtime, Standby, Leave, Weekly Generator; admin forms and record details still centred modals |
 | Two-tier surfaces, 44px targets, dark mode | Held (existing surface/control audits pass); employee pages checked dark at 320/393 |
-| Modern header with search, profile, dark toggle, role switch | **Not done on phones.** The real header on phones is hamburger, title and bell; search and profile menu exist only from `md` (`HeaderSearch`, `HeaderProfileMenu`). Role switch is not copied (no such feature) |
-| Quick launcher (search every menu, pin to bar) | **Not done.** `CommandPalette` exists but is not reachable on phones |
-| Record detail sheet when tapping a card | **Not done.** Cards open the same dialog the table row does |
-| Tab customizer | Not built |
+| Modern header with search, profile, dark toggle, role switch | Done except the dark toggle and role switch (#274). Role switch is not copied (no such feature) |
+| Quick launcher (search every menu, pin to bar) | Done: the header search opens `CommandPalette`; pinning via #276 |
+| Record detail sheet when tapping a card | Done (#277) |
+| Tab customizer | Done (#276) |
 
 So: the layout problems (tables, navigation, notices, forms, Calendar, Dashboard order) are fixed and the phone UI is clearly better, but the mockup's **header (search + profile) and launcher** are the biggest gaps between "improved" and "modern like the mockup". They are the next priority.
 

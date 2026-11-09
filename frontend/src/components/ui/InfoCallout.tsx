@@ -27,7 +27,7 @@ export const InfoCallout = ({
 }: InfoCalloutProps) => (
   <div
     className={cn(
-      "flex items-center gap-2 rounded-xl border px-3 py-2 text-sm",
+      "flex items-center gap-2 rounded-xl border px-3 py-2 text-sm max-sm:flex-wrap",
       toneSurfaceClass[tone],
       className
     )}
@@ -38,7 +38,7 @@ export const InfoCallout = ({
         {icon}
       </span>
     )}
-    <span className="min-w-0 flex-1">{label}</span>
+    <span className="min-w-0 flex-1 max-sm:basis-40">{label}</span>
     {value !== undefined && (
       <span className="shrink-0 font-mono font-bold tabular-nums">{value}</span>
     )}
