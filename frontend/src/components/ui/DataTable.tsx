@@ -341,7 +341,7 @@ export const DataTable = function DataTable<TData extends RowData>({
                   cell.column.columnDef.size
                     ? cell.column.id === "actions"
                       ? { width: cell.column.columnDef.size }
-                      : cell.column.id === "description"
+                      : cell.column.id === "description" || cell.column.columnDef.meta?.flex
                         ? { minWidth: cell.column.columnDef.size }
                         : {
                             width: cell.column.columnDef.size,
@@ -493,7 +493,8 @@ export const DataTable = function DataTable<TData extends RowData>({
                               header.column.columnDef.size
                                 ? header.column.id === "actions"
                                   ? { width: header.column.columnDef.size }
-                                  : header.column.id === "description"
+                                  : header.column.id === "description" ||
+                                      header.column.columnDef.meta?.flex
                                     ? { minWidth: header.column.columnDef.size }
                                     : {
                                         width: header.column.columnDef.size,

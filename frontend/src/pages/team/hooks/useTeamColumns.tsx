@@ -26,7 +26,8 @@ export const useTeamColumns = (
       {
         accessorKey: "user_name",
         header: "Employee",
-        size: 140,
+        size: 170,
+        meta: { flex: true },
         cell: ({ row }) => (
           <UserCell
             name={row.original.user_full_name || row.original.user_name}
@@ -37,7 +38,7 @@ export const useTeamColumns = (
       {
         accessorKey: "date",
         header: "Date",
-        size: 80,
+        size: 95,
         cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
       },
       {
@@ -60,15 +61,9 @@ export const useTeamColumns = (
         cell: ({ row }) => <TicketIdBadges references={row.original.ticket_references} />,
       },
       {
-        accessorKey: "description",
-        header: "Description",
-        size: 110,
-        cell: ({ row }) => row.original.description || "-",
-      },
-      {
         accessorKey: "status",
         header: "Status",
-        size: 90,
+        size: 95,
         cell: ({ row }) => <StatusBadge variant={row.original.status as StatusVariant} />,
       },
       {
@@ -91,7 +86,8 @@ export const useTeamColumns = (
       {
         accessorKey: "user_name",
         header: "Employee",
-        size: 140,
+        size: 170,
+        meta: { flex: true },
         cell: ({ row }) => (
           <UserCell
             name={row.original.user_full_name || row.original.user_name}
@@ -102,13 +98,13 @@ export const useTeamColumns = (
       {
         accessorKey: "date",
         header: "Date",
-        size: 80,
+        size: 95,
         cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
       },
       {
         accessorKey: "hours",
         header: "Hours",
-        size: 87,
+        size: 100,
         cell: ({ row }) => (
           <Badge variant="secondary" className="rounded-full font-mono text-xs">
             {row.original.hours}h
@@ -116,15 +112,9 @@ export const useTeamColumns = (
         ),
       },
       {
-        accessorKey: "description",
-        header: "Description",
-        size: 110,
-        cell: ({ row }) => row.original.description || "-",
-      },
-      {
         accessorKey: "status",
         header: "Status",
-        size: 90,
+        size: 95,
         cell: ({ row }) => <StatusBadge variant={row.original.status as StatusVariant} />,
       },
       {
@@ -146,7 +136,8 @@ export const useTeamColumns = (
       {
         accessorKey: "user_name",
         header: "Employee",
-        size: 140,
+        size: 170,
+        meta: { flex: true },
         cell: ({ row }) => (
           <UserCell
             name={row.original.user_full_name || row.original.user_name}
@@ -157,25 +148,25 @@ export const useTeamColumns = (
       {
         accessorKey: "start_date",
         header: "Start Date",
-        size: 112,
+        size: 105,
         cell: ({ row }) => formatDateDDMMYYYY(row.original.start_date),
       },
       {
         accessorKey: "end_date",
         header: "End Date",
-        size: 112,
+        size: 105,
         cell: ({ row }) => formatDateDDMMYYYY(row.original.end_date),
       },
       {
         accessorKey: "days_requested",
         header: "Days",
-        size: 84,
+        size: 85,
         cell: ({ row }) => leaveDaysLabel(row.original),
       },
       {
         accessorKey: "user_leave_balance",
         header: "Balance Left",
-        size: 128,
+        size: 115,
         cell: ({ row }) => <LeaveBalanceBadge balance={row.original.user_leave_balance} />,
       },
       {
@@ -189,15 +180,9 @@ export const useTeamColumns = (
         ),
       },
       {
-        accessorKey: "reason",
-        header: "Reason",
-        size: 110,
-        cell: ({ row }) => row.original.reason || "-",
-      },
-      {
         accessorKey: "status",
         header: "Status",
-        size: 127,
+        size: 95,
         cell: ({ row }) => <StatusBadge variant={row.original.status as StatusVariant} />,
       },
       {

@@ -28,19 +28,19 @@ const TEAM_OVERTIME_CARD = {
   title: "user_name",
   hero: "hours",
   status: "status",
-  meta: ["client_name", "date", "ticket_references", "description"],
+  meta: ["client_name", "date", "ticket_references"],
 };
 const TEAM_STANDBY_CARD = {
   title: "user_name",
   hero: "hours",
   status: "status",
-  meta: ["date", "description"],
+  meta: ["date"],
 };
 const TEAM_LEAVE_CARD = {
   title: "user_name",
   hero: "days_requested",
   status: "status",
-  meta: ["request_type", "start_date", "end_date", "user_leave_balance", "reason"],
+  meta: ["request_type", "start_date", "end_date", "user_leave_balance"],
 };
 
 // fallow-ignore-next-line complexity
