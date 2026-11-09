@@ -35,32 +35,34 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
       : null;
 
   return (
-    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
-      <StatCard
-        label="Pending Approvals"
-        labelClassName={STAT_CARD_MICRO_LABEL}
-        value={pendingTotal}
-        icon={AlertCircle}
-        glow="destructive"
-        iconColorClass={toneTextClass.danger}
-        iconWellClass={`border ${toneSurfaceClass.danger}`}
-        progressPercent={pendingTotal > 0 ? 100 : 0}
-        progressColorClass="bg-tone-danger-text"
-        footer={
-          <>
-            <span
-              className={
-                pendingTotal > 0
-                  ? `font-semibold ${toneTextClass.danger}`
-                  : `font-semibold ${toneTextClass.success}`
-              }
-            >
-              {pendingTotal > 0 ? "Requires your action" : "Queue clear"}
-            </span>
-            {teamClause && <span className="text-muted-foreground">{teamClause}</span>}
-          </>
-        }
-      />
+    <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-5">
+      <div className="col-span-2 xl:col-span-1">
+        <StatCard
+          label="Pending Approvals"
+          labelClassName={STAT_CARD_MICRO_LABEL}
+          value={pendingTotal}
+          icon={AlertCircle}
+          glow="destructive"
+          iconColorClass={toneTextClass.danger}
+          iconWellClass={`border ${toneSurfaceClass.danger}`}
+          progressPercent={pendingTotal > 0 ? 100 : 0}
+          progressColorClass="bg-tone-danger-text"
+          footer={
+            <>
+              <span
+                className={
+                  pendingTotal > 0
+                    ? `font-semibold ${toneTextClass.danger}`
+                    : `font-semibold ${toneTextClass.success}`
+                }
+              >
+                {pendingTotal > 0 ? "Requires your action" : "Queue clear"}
+              </span>
+              {teamClause && <span className="text-muted-foreground">{teamClause}</span>}
+            </>
+          }
+        />
+      </div>
       <StatCard
         label="Pending Standby"
         labelClassName={STAT_CARD_MICRO_LABEL}
