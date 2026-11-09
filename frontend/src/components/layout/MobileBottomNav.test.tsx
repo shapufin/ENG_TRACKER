@@ -102,6 +102,24 @@ describe("MobileBottomNav", () => {
     expect(screen.queryByRole("link", { name: "Standby" })).not.toBeInTheDocument();
   });
 
+  it("pins the pages the user chose, in their order", () => {
+    renderNav(
+      [
+        item("/dashboard", "Dashboard"),
+        item("/overtime", "Overtime"),
+        item("/standby", "Standby"),
+        item("/calendar", "Calendar"),
+      ],
+      { pinnedPaths: ["/calendar", "/dashboard", "/standby"] }
+    );
+
+    expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual([
+      "Calendar",
+      "Dashboard",
+      "Standby",
+    ]);
+  });
+
   it("lets every tab shrink so a long leader label cannot push More off a 320px screen", () => {
     renderNav([
       item("/dashboard", "Dashboard"),

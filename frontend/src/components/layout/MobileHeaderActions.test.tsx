@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { MobileHeaderActions } from "./MobileHeaderActions";
 
-const renderActions = (onOpenSearch = vi.fn(), onLogout = vi.fn()) => {
+const renderActions = (onOpenSearch = vi.fn(), onLogout = vi.fn(), onCustomizeTabs = vi.fn()) => {
   render(
     <MemoryRouter>
       <MobileHeaderActions
@@ -11,6 +11,7 @@ const renderActions = (onOpenSearch = vi.fn(), onLogout = vi.fn()) => {
         roleSubtitle="Employee"
         onOpenSearch={onOpenSearch}
         onLogout={onLogout}
+        onCustomizeTabs={onCustomizeTabs}
       />
     </MemoryRouter>
   );

@@ -55,4 +55,18 @@ describe("HeaderProfileMenu", () => {
     fireEvent.click(screen.getByText(/Security & 2FA/i));
     expect(mockNavigate).toHaveBeenCalledWith("/settings");
   });
+
+  it("shows Customize tab bar only when a handler is given, and calls it", () => {
+    renderMenu();
+    fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
+    expect(screen.queryByRole("button", { name: /customize tab bar/i })).not.toBeInTheDocument();
+  });
+
+  it("calls onCustomizeTabs from the account menu", () => {
+    const onCustomizeTabs = vi.fn();
+    renderMenu({ onCustomizeTabs });
+    fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
+    fireEvent.click(screen.getByRole("button", { name: /customize tab bar/i }));
+    expect(onCustomizeTabs).toHaveBeenCalledTimes(1);
+  });
 });

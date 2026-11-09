@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Settings, ShieldCheck } from "lucide-react";
+import { LayoutPanelTop, LogOut, Settings, ShieldCheck } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getInitials, getUserDisplayName } from "@/components/calendar/initials";
 
@@ -14,12 +14,15 @@ interface HeaderProfileMenuProps {
   } | null;
   roleSubtitle?: string;
   onLogout: () => void;
+  /** Phone only: opens the tab bar customiser. Omitted where there is no tab bar. */
+  onCustomizeTabs?: () => void;
 }
 
 export const HeaderProfileMenu: React.FC<HeaderProfileMenuProps> = ({
   user,
   roleSubtitle,
   onLogout,
+  onCustomizeTabs,
 }) => {
   const navigate = useNavigate();
   const displayName = getUserDisplayName(user);
@@ -67,6 +70,15 @@ export const HeaderProfileMenu: React.FC<HeaderProfileMenuProps> = ({
           >
             <ShieldCheck className="h-4 w-4" /> Security &amp; 2FA
           </button>
+          {onCustomizeTabs && (
+            <button
+              type="button"
+              onClick={onCustomizeTabs}
+              className="hover:bg-accent flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm"
+            >
+              <LayoutPanelTop className="h-4 w-4" /> Customize tab bar
+            </button>
+          )}
           <button
             type="button"
             onClick={onLogout}

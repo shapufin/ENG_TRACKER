@@ -3,25 +3,16 @@ import { Link, useLocation } from "react-router-dom";
 import { MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "./hooks/useVisibleNavItems";
+import { DEFAULT_PINNED_ORDER, MAX_PINNED, MIN_PINNED } from "./hooks/usePinnedTabs";
 
-/** First four visible entries win, so a leader gets Approvals and an employee gets Standby. */
-const PINNED_ORDER = [
-  "/dashboard",
-  "/team/approvals",
-  "/overtime",
-  "/standby",
-  "/leave-management",
-  "/hr/leave-requests",
-  "/hr/payroll/runs",
-];
-const MAX_PINNED = 4;
-const MIN_PINNED = 3;
 /** Total bar height incl. the home-indicator inset; fixed notices read it so none covers the tabs. */
 const BAR_HEIGHT = "calc(3.5rem + var(--safe-area-bottom, 0px))";
 
 interface MobileBottomNavProps {
   /** The sidebar's own visible items: a page the sidebar hides is never pinned. */
   items: NavItem[];
+  /** Pages to pin, in order (the user's choice); defaults to the role-based daily pages. */
+  pinnedPaths?: string[];
   /** Pending counts keyed by nav path. */
   badgeMap?: Record<string, number>;
   onOpenMore: () => void;
@@ -37,13 +28,15 @@ const isActive = (pathname: string, path: string) =>
  */
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   items,
+  pinnedPaths = DEFAULT_PINNED_ORDER,
   badgeMap = {},
   onOpenMore,
   moreOpen = false,
 }) => {
   const { pathname } = useLocation();
   const byPath = new Map(items.map((item) => [item.path, item]));
-  const pinned = PINNED_ORDER.map((path) => byPath.get(path))
+  const pinned = pinnedPaths
+    .map((path) => byPath.get(path))
     .filter((item): item is NavItem => Boolean(item))
     .slice(0, MAX_PINNED);
   const show = pinned.length >= MIN_PINNED;
