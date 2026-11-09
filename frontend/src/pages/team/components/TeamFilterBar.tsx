@@ -110,7 +110,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
               onDateToChange(to);
             }}
             placeholder="Filter by date"
-            className="w-auto min-w-[220px]"
+            className="w-full min-w-[220px] sm:w-auto"
           />
         </div>
       </FilterToolbar>

@@ -42,11 +42,12 @@ export const useTeamPageData = (
   const userSearchMap = useMemo(() => {
     const map = new Map<number, string[]>();
     membersData.forEach((member) => {
+      if (!member.user?.id) return;
       const tokens: string[] = [];
-      if (member.user?.username) tokens.push(member.user.username.toLowerCase());
+      if (member.user.username) tokens.push(member.user.username.toLowerCase());
       const fullName =
-        member.user?.full_name ||
-        `${member.user?.first_name || ""} ${member.user?.last_name || ""}`.trim();
+        member.user.full_name ||
+        `${member.user.first_name || ""} ${member.user.last_name || ""}`.trim();
       if (fullName) tokens.push(fullName.toLowerCase());
       if (member.code) tokens.push(member.code.toLowerCase());
       map.set(member.user.id, tokens);
