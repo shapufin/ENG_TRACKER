@@ -131,4 +131,42 @@ describe("DataTable mobile cards", () => {
 
     expect(screen.getByRole("checkbox", { name: "Select alice" })).toBeInTheDocument();
   });
+  it("opens a card from the keyboard and ignores keys pressed on its own buttons", () => {
+    mockViewport(true);
+    const onRowClick = vi.fn();
+    render(<DataTable columns={columns} data={rows} mobileCard={spec} onRowClick={onRowClick} />);
+
+    const cards = screen.getAllByRole("button", { name: /Acme|Globex/ });
+    fireEvent.keyDown(cards[0], { key: "Enter" });
+    expect(onRowClick).toHaveBeenCalledWith(rows[0]);
+
+    fireEvent.keyDown(screen.getByRole("button", { name: "Edit 2" }), { key: "Enter" });
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not open the card when an action is tapped", () => {
+    mockViewport(true);
+    const onRowClick = vi.fn();
+    render(<DataTable columns={columns} data={rows} mobileCard={spec} onRowClick={onRowClick} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit 1" }));
+    expect(onEdit).toHaveBeenCalledWith(1);
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
+
+  it("labels a card checkbox generically when its title column is hidden", () => {
+    mockViewport(true);
+    render(
+      <DataTable
+        columns={columns}
+        data={rows}
+        mobileCard={{ title: "missing" }}
+        enableRowSelection
+        rowSelection={{}}
+        onRowSelectionChange={vi.fn()}
+        getRowId={(r) => String(r.id)}
+      />
+    );
+    expect(screen.getAllByRole("checkbox", { name: "Select row" })).toHaveLength(2);
+  });
 });

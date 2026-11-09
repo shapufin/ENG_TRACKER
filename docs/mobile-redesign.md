@@ -48,6 +48,11 @@ Before the work, phones got the desktop UI squeezed in: tables 600 to 1,400px wi
 | #286 | HR pages (leave requests, payroll runs, wages, team leaders, reports) as phone cards |
 | #287 | Admin HBPR Assignments, Standby Logs (and Overtime Logs), Leave Balances, Control Room access as phone cards |
 | #288 | QA sweep: tab labels Home / Pending, TL card footers, chip row fade, record sheet rows, hero strip contrast |
+| #289, #290 | Team Overview fixes: username search, date range filter, sort fallback, responsive filter bar |
+| #291 | Docs: PR table, scorecard, open work |
+| #292 | 14 admin and Control Room forms open as bottom sheets on phones (`FormDialog mobileSheet`) |
+| #293 | E2E fixes: pure-HR preferences spec, skills seeding no longer swaps the browser cookie |
+| audit | Tappable cards are keyboard-operable (`role="button"`, Enter/Space); action taps no longer open the record |
 
 ## 4. How it works (the pieces)
 
