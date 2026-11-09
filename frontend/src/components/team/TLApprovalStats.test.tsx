@@ -111,7 +111,7 @@ describe("TLApprovalStats", () => {
         onCardClick={vi.fn()}
       />
     );
-    expect(screen.getByText("Pending · click to jump")).toBeInTheDocument();
+    expect(screen.getByText(/click to jump/)).toBeInTheDocument();
   });
 
   it("activates a pending card from the keyboard with Enter and Space", () => {

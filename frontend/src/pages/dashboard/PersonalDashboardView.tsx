@@ -1,6 +1,7 @@
 import React from "react";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
 import type { LeaveRequest, OvertimeLog, StandbyLog, User } from "@/types";
+import { PhoneDashboardHero } from "./components/PhoneDashboardHero";
 import { DashboardQuickActions } from "./components/DashboardQuickActions";
 import { PersonalDashboardStats } from "./components/PersonalDashboardStats";
 import { PersonalDashboardLeavesCard } from "./components/PersonalDashboardLeavesCard";
@@ -55,6 +56,13 @@ export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
   onWeekOffsetChange,
 }) => (
   <div className="flex flex-col gap-8">
+    <PhoneDashboardHero
+      user={user}
+      personalOvertimeHours={personalOvertimeHours}
+      personalStandbyHours={personalStandbyHours}
+      pendingCount={personalPendingItems?.length ?? 0}
+    />
+
     <DashboardQuickActions />
 
     <PersonalDashboardStats
@@ -85,7 +93,7 @@ export const PersonalDashboardView: React.FC<PersonalDashboardViewProps> = ({
       <div>
         <PersonalDashboardLeavesCard upcomingLeaves={upcomingLeaves} />
       </div>
-      <div className="max-lg:order-first">
+      <div id="my-pending" className="scroll-mt-20 max-lg:order-first">
         <PersonalDashboardPendingCard personalPendingItems={personalPendingItems} />
       </div>
     </div>
