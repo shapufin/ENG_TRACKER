@@ -15,7 +15,7 @@ const MOBILE_CARD: Record<Tab, DataTableCardSpec> = {
     title: "user_name",
     hero: "hours",
     status: "status",
-    meta: ["client_name", "date", "description"],
+    meta: ["client_name", "date", "ticket_references", "description"],
   },
   standby: { title: "user_name", hero: "hours", status: "status", meta: ["date", "description"] },
   leave: {

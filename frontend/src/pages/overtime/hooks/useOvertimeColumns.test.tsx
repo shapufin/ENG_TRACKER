@@ -66,3 +66,44 @@ describe("useOvertimeColumns actions", () => {
     expect(screen.getByRole("button", { name: "Delete 7" })).toBeEnabled();
   });
 });
+
+describe("useOvertimeColumns ticket_references", () => {
+  function getTicketColumn() {
+    const { result } = renderHook(() =>
+      useOvertimeColumns(true, false, vi.fn(), vi.fn(), vi.fn(), vi.fn())
+    );
+    const col = result.current.find((c) => c.id === "ticket_references");
+    expect(col).toBeDefined();
+    return col!;
+  }
+
+  it("defines Ticket ID column with proper id and header", () => {
+    const col = getTicketColumn();
+    expect(col.header).toBe("Ticket ID");
+  });
+
+  it("renders a hyphen when ticket_references is empty or missing", () => {
+    const col = getTicketColumn();
+    const { container: emptyContainer } = render(
+      (col.cell as any)({ row: { original: log({ ticket_references: [] }) } })
+    );
+    expect(emptyContainer.textContent).toBe("-");
+
+    const { container: missingContainer } = render(
+      (col.cell as any)({ row: { original: log({ ticket_references: undefined as any }) } })
+    );
+    expect(missingContainer.textContent).toBe("-");
+  });
+
+  it("renders comma-separated ticket references when present", () => {
+    const col = getTicketColumn();
+    const { container } = render(
+      (col.cell as any)({
+        row: { original: log({ ticket_references: ["INC-100", "INC-102"] }) },
+      })
+    );
+    expect(container.textContent).toBe("INC-100, INC-102");
+    const span = container.querySelector("span");
+    expect(span).toHaveAttribute("title", "INC-100, INC-102");
+  });
+});
