@@ -61,7 +61,7 @@ export const AdminShell = React.memo(() => {
   }, []);
 
   return (
-    <div className="bg-background text-foreground flex h-screen">
+    <div className="bg-background text-foreground flex h-dvh h-screen">
       <MobileOverlay isOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <AdminSidebar
@@ -83,7 +83,7 @@ export const AdminShell = React.memo(() => {
         userId={user?.id}
       />
 
-      <main className="admin-canvas flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="admin-canvas flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <div className="border-border/30 bg-card/30 flex items-center gap-3 border-b px-3 pt-[calc(0.75rem+var(--safe-area-top))] pb-3 backdrop-blur-sm md:hidden">
           <button
             ref={mobileMenuButtonRef}

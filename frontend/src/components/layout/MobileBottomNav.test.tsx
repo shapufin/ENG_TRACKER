@@ -36,7 +36,7 @@ describe("MobileBottomNav", () => {
   it("pins four daily pages plus More, only below md, and marks the current page", () => {
     const { container } = renderNav(employee);
 
-    expect(container.firstElementChild).toHaveClass("md:hidden");
+    expect(container.firstElementChild).toHaveClass("sticky", "bottom-0", "z-30", "md:hidden");
     const nav = screen.getByRole("navigation", { name: "Primary" });
     const links = nav.querySelectorAll("a");
     expect([...links].map((a) => a.getAttribute("href"))).toEqual([

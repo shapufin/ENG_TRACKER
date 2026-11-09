@@ -19,7 +19,7 @@ function App() {
           <PluginProvider>
             <PluginWidgetProvider>
               <CalendarWorkspaceProvider>
-                <div className="bg-background min-h-screen">
+                <div className="bg-background min-h-dvh min-h-screen">
                   <Toaster position="top-right" richColors closeButton />
                   <AppRoutes />
                   <OfflineIndicator />

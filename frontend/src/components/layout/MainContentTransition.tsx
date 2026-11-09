@@ -23,7 +23,7 @@ export const MainContentTransition: React.FC<MainContentTransitionProps> = ({
 }) => {
   const transition = useMotionTransition({ duration: DURATION.base, ease: EASE.out });
   return (
-    <div className={cn("flex-1", fill ? "flex min-h-0 flex-col overflow-hidden" : "overflow-auto")}>
+    <div className={cn("min-h-0 flex-1", fill ? "flex flex-col overflow-hidden" : "overflow-auto")}>
       <AnimatePresence mode="wait">
         <motion.div
           key={pathname}
