@@ -15,7 +15,7 @@ async function fetchPreferences(page: import("@playwright/test").Page) {
 test.describe("Role-aware notification preferences", () => {
   test.describe.configure({ timeout: 45_000 });
 
-  test("employee sees only personal categories", async ({ page }) => {
+  test("employee sees only categories for their role", async ({ page }) => {
     await loginAsUser(page, E2E_CREDENTIALS.employeeA);
     const result = await fetchPreferences(page);
     expect(result.status).toBe(200);
@@ -46,7 +46,9 @@ test.describe("Role-aware notification preferences", () => {
   }
 
   for (const role of ["hr", "admin"] as const) {
-    test(`${role} without a team-leader role sees only personal categories`, async ({ page }) => {
+    test(`${role} without a team-leader role sees only categories for their role`, async ({
+      page,
+    }) => {
       await loginAsUser(page, E2E_CREDENTIALS[role]);
       const result = await fetchPreferences(page);
       expect(result.status).toBe(200);
@@ -55,9 +57,13 @@ test.describe("Role-aware notification preferences", () => {
           (item: { event_type: string }) => item.event_type === "team_action_required"
         )
       ).toBe(false);
+      // Pure HR has no leave/overtime/standby of their own (backend
+      // `is_hr_only` narrows them to the HR categories), so the personal
+      // categories only apply to admin here.
       expect(
         result.body.some((item: { event_type: string }) => item.event_type === "own_leave_updated")
-      ).toBe(true);
+      ).toBe(role === "admin");
+      expect(result.body.length).toBeGreaterThan(0);
     });
   }
 
