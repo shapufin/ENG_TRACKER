@@ -2,6 +2,7 @@ import * as React from "react";
 import type { LucideIcon } from "lucide-react";
 import { FacetRow } from "@/components/admin/FacetRow";
 import { Chip } from "@/components/ui/Chip";
+import { ScrollFadeX } from "@/components/ui/ScrollFadeX";
 import { cn } from "@/lib/utils";
 
 export interface FilterChipOption<V extends string = string> {
@@ -31,7 +32,7 @@ export function FilterChipRow<V extends string>({
 }: FilterChipRowProps<V>) {
   return (
     <FacetRow label={label}>
-      <div className="no-scrollbar flex w-full snap-x flex-nowrap items-center gap-2 overflow-x-auto sm:w-auto sm:flex-wrap sm:overflow-visible">
+      <ScrollFadeX className="flex w-full snap-x flex-nowrap items-center gap-2 overflow-x-auto sm:w-auto sm:flex-wrap sm:overflow-visible">
         {options.map((option) => {
           const pressed = selected.includes(option.value);
           const Icon = option.icon;
@@ -57,7 +58,7 @@ export function FilterChipRow<V extends string>({
             </Chip>
           );
         })}
-      </div>
+      </ScrollFadeX>
     </FacetRow>
   );
 }

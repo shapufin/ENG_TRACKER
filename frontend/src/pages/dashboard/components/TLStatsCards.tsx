@@ -78,7 +78,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
             <span className="text-muted-foreground font-medium">
               {Math.round(sbPercent)}% queue mix
             </span>
-            <span className="text-muted-foreground">On-call shifts</span>
+            <span className="text-muted-foreground max-sm:hidden">On-call shifts</span>
           </>
         }
       />
@@ -97,7 +97,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
             <span className="text-muted-foreground font-medium">
               {Math.round(vacPercent)}% queue mix
             </span>
-            <span className="text-muted-foreground">Planned absence</span>
+            <span className="text-muted-foreground max-sm:hidden">Planned absence</span>
           </>
         }
       />
@@ -116,7 +116,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
             <span className="text-muted-foreground font-medium">
               {Math.round(otPercent)}% queue mix
             </span>
-            <span className="text-muted-foreground">Extra capacity</span>
+            <span className="text-muted-foreground max-sm:hidden">Extra capacity</span>
           </>
         }
       />
@@ -136,7 +136,7 @@ export const TLStatsCards: React.FC<TLStatsCardsProps> = ({
               <span className={`font-semibold ${toneTextClass.success}`}>
                 {Math.round(approvedPercent)}% of all requests
               </span>
-              <span className="text-muted-foreground">Recently approved</span>
+              <span className="text-muted-foreground max-sm:hidden">Recently approved</span>
             </>
           ) : (
             <span className="text-muted-foreground">Recently approved</span>

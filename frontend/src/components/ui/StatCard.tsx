@@ -7,7 +7,8 @@ import type { Tone } from "./tone";
 import { cn } from "@/lib/utils";
 
 /** Uppercase micro-label shared by every metric card (scorecard language). */
-export const STAT_CARD_MICRO_LABEL = "font-semibold uppercase tracking-wider";
+export const STAT_CARD_MICRO_LABEL =
+  "font-semibold uppercase tracking-wider max-[360px]:tracking-normal";
 
 export interface StatDelta {
   /** Display text, already formatted from real data, e.g. "+4 new hires · 30d". */

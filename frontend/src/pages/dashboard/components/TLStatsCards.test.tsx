@@ -51,6 +51,12 @@ describe("TLStatsCards modernization", () => {
     expect(getByText("Extra capacity")).toBeInTheDocument();
   });
 
+  it("hides the secondary footer text below sm so a footer never wraps on a phone", () => {
+    const { getByText } = renderCards();
+    for (const text of ["On-call shifts", "Planned absence", "Extra capacity", "Recently approved"])
+      expect(getByText(text)).toHaveClass("max-sm:hidden");
+  });
+
   it("shows team context in the approvals footer when team size is known", () => {
     const { getByText } = render(
       <TLStatsCards

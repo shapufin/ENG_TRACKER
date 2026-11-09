@@ -14,6 +14,12 @@ describe("FilterChipRow", () => {
     expect(screen.getByRole("group", { name: "Tech" })).toBeInTheDocument();
   });
 
+  it("scrolls on phones with an edge-fade hint instead of clipping the last chip", () => {
+    render(<FilterChipRow label="Tech" options={options} selected={[]} onToggle={vi.fn()} />);
+    const scroller = screen.getByRole("group", { name: "Tech" }).querySelector("[data-fade-end]");
+    expect(scroller).toHaveClass("overflow-x-auto", "sm:flex-wrap");
+  });
+
   it("marks selected chips aria-pressed", () => {
     render(<FilterChipRow label="Tech" options={options} selected={["a"]} onToggle={vi.fn()} />);
     expect(screen.getByRole("button", { name: /Alpha/ })).toHaveAttribute("aria-pressed", "true");
