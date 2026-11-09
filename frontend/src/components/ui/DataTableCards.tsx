@@ -72,7 +72,11 @@ export const DataTableCards = <TData extends object>({
             const cell = id ? cells.find((c) => c.column.id === id) : undefined;
             return cell ? flexRender(cell.column.columnDef.cell, cell.getContext()) : null;
           };
-          const titleText = String((row.original as Record<string, unknown>)[spec.title] ?? row.id);
+          // Accessor columns with a nested key ("user.username") are not fields of the row.
+          const titleValue =
+            (row.original as Record<string, unknown>)[spec.title] ??
+            (cells.some((c) => c.column.id === spec.title) ? row.getValue(spec.title) : undefined);
+          const titleText = String(titleValue ?? row.id);
           const actions = render(actionsId);
           return (
             <li

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { BulkActionBar } from "@/components/ui/BulkActionBar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -16,6 +17,12 @@ import type { RowSelectionState } from "@tanstack/react-table";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 type BulkChange = { role: "italian_tl" | "albanian_tl"; teamLeaderUserId: number | null };
+
+/** Phone card: the user, then the two leader pickers (same selects as the table). */
+const TL_ASSIGNMENT_CARD: DataTableCardSpec = {
+  title: "user_username",
+  meta: ["italian_tl", "albanian_tl"],
+};
 
 const BULK_ROLE_LABEL = { italian_tl: "Manager", albanian_tl: "Line Manager" } as const;
 
@@ -242,6 +249,7 @@ export const HRTeamLeaderAssignmentPage: React.FC = () => {
               enableRowSelection
               rowSelection={rowSelection}
               onRowSelectionChange={setRowSelection}
+              mobileCard={TL_ASSIGNMENT_CARD}
             />
           </GlassCard>
           <ConfirmDialog

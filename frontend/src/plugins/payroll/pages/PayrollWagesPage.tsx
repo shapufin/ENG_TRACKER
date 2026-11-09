@@ -14,6 +14,7 @@ import { RowActions } from "@/components/ui/RowActions";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AlertCircle, CheckCircle2, Download, Pencil, Trash2, Users2 } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { PluginImportButton } from "@/components/admin/PluginImportButton";
 import { UserCell } from "@/components/admin/UserCell";
 import { StatCard } from "@/components/ui/StatCard";
@@ -43,6 +44,13 @@ const EMPTY_FORM: WageForm = {
 };
 
 const todayISO = () => toLocalISODate(new Date());
+
+/** Phone card: the person and wage status, the assignment, then Assign/Edit/Delete. */
+const WAGE_CARD: DataTableCardSpec = {
+  title: "full_name",
+  status: "status",
+  meta: ["assignment"],
+};
 
 export const PayrollWagesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -363,6 +371,7 @@ export const PayrollWagesPage: React.FC = () => {
           data={filteredRows}
           searchColumn="full_name"
           searchPlaceholder="Search employees and team leaders..."
+          mobileCard={WAGE_CARD}
           emptyMessage={
             filter === "unassigned"
               ? "All employees have an active wage assignment."
