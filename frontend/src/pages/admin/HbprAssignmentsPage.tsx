@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -32,6 +33,20 @@ const QUERY_KEY = ["admin", "hbpr-assignments"];
 
 // Module constant: an inline array would be a fresh identity every render and
 // defeat DataTable's searchPaths memo.
+/** Phone card: the HR Business Partner, then the Line Manager, cadence and dates. */
+const HBPR_CARD: DataTableCardSpec = {
+  title: "hbpr",
+  status: "cadence_status",
+  meta: [
+    "albanian_tl",
+    "cadence",
+    "next_due_on",
+    "effective_from",
+    "effective_to",
+    "evidence_count",
+  ],
+};
+
 const SEARCH_PATHS = ["hbpr_detail.name", "albanian_tl_detail.name"];
 
 /** Count badge in the same style as the FilterChipRow chip counts. */
@@ -247,6 +262,7 @@ export const HbprAssignmentsPage: React.FC = () => {
         searchPlaceholder="Search assignments..."
         getRowId={(row) => String(row.id)}
         emptyMessage={emptyMessage}
+        mobileCard={HBPR_CARD}
       />
     </GlassCard>
   );

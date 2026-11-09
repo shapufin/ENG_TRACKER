@@ -12,6 +12,7 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 import { CalendarClock, Plus } from "lucide-react";
 import { FilterChipRow } from "@/components/ui/FilterChipRow";
 import type { LeaveBalance } from "@/types";
+import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { usePermissions } from "@/context/PermissionContext";
 import { useLeaveBalanceForm } from "./hooks/useLeaveBalanceForm";
 import { useLeaveBalanceColumns } from "./hooks/useLeaveBalanceColumns";
@@ -23,6 +24,22 @@ import {
 import { LeaveBalanceKpis } from "./components/LeaveBalanceKpis";
 import { LeaveBalanceFormDialog } from "./components/LeaveBalanceFormDialog";
 import { LeaveBalanceAuditDialog } from "./components/LeaveBalanceAuditDialog";
+
+/** Phone card: employee and type up top, then every figure with its column label. */
+const LEAVE_BALANCE_CARD: DataTableCardSpec = {
+  title: "user_name",
+  status: "leave_type",
+  meta: [
+    "year",
+    "total_days",
+    "used_days",
+    "pending_days",
+    "available_days",
+    "effective_available_days",
+    "utilization",
+    "expires_at",
+  ],
+};
 
 const LeaveBalancesContent: React.FC = () => {
   const {
@@ -170,6 +187,7 @@ const LeaveBalancesContent: React.FC = () => {
           defaultColumnVisibility={{ is_carry_over: false }}
           searchColumn="user_name"
           searchPlaceholder="Search balances..."
+          mobileCard={LEAVE_BALANCE_CARD}
         />
         <p aria-live="polite" className="text-muted-foreground mt-2 text-xs">
           {visibleBalances.length} balance{visibleBalances.length === 1 ? "" : "s"}

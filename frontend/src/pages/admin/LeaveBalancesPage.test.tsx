@@ -7,10 +7,22 @@ vi.mock("@/hooks/useLeaveBalances", () => ({ useLeaveBalances: vi.fn() }));
 vi.mock("./hooks/useLeaveBalanceForm", () => ({ useLeaveBalanceForm: vi.fn() }));
 vi.mock("./hooks/useLeaveBalanceColumns", () => ({ useLeaveBalanceColumns: vi.fn() }));
 vi.mock("@/components/ui/DataTable", () => ({
-  DataTable: ({ data, toolbarActions }: { data: unknown[]; toolbarActions?: React.ReactNode }) => (
+  DataTable: ({
+    data,
+    toolbarActions,
+    mobileCard,
+  }: {
+    data: unknown[];
+    toolbarActions?: React.ReactNode;
+    mobileCard?: { title: string; status?: string; meta?: string[] };
+  }) => (
     <div>
       {toolbarActions}
-      <div data-testid="data-table" data-rows={data.length} />
+      <div
+        data-testid="data-table"
+        data-rows={data.length}
+        data-card={mobileCard ? JSON.stringify(mobileCard) : undefined}
+      />
     </div>
   ),
 }));
@@ -119,6 +131,18 @@ describe("LeaveBalancesPage", () => {
     expect(screen.getByText("Add Balance")).toBeInTheDocument();
   });
 
+  it("opts the table into phone cards that show every balance figure", () => {
+    vi.mocked(usePermissions).mockReturnValue({ isAdmin: true } as any);
+    vi.mocked(useLeaveBalanceForm).mockReturnValue(mockForm as any);
+    vi.mocked(useLeaveBalances).mockReturnValue(mockBalances as any);
+    render(<LeaveBalancesPage />);
+    const card = JSON.parse(screen.getByTestId("data-table").getAttribute("data-card") ?? "{}");
+    expect(card.title).toBe("user_name");
+    expect(card.meta).toEqual(
+      expect.arrayContaining(["total_days", "used_days", "available_days", "expires_at"])
+    );
+  });
+
   describe("expiring carry-over filter", () => {
     const soon = new Date();
     soon.setDate(soon.getDate() + 10);
@@ -170,9 +194,36 @@ describe("LeaveBalancesPage", () => {
 
   describe("year and type filters", () => {
     const rows = [
-      { id: 1, user_name: "A", year: 2025, leave_type: "vacation", total_days: 20, used_days: 10, pending_days: 0, available_days: 10 },
-      { id: 2, user_name: "B", year: 2026, leave_type: "vacation", total_days: 8, used_days: 2, pending_days: 1, available_days: 5 },
-      { id: 3, user_name: "C", year: 2026, leave_type: "sick", total_days: 4, used_days: 0, pending_days: 0, available_days: 4 },
+      {
+        id: 1,
+        user_name: "A",
+        year: 2025,
+        leave_type: "vacation",
+        total_days: 20,
+        used_days: 10,
+        pending_days: 0,
+        available_days: 10,
+      },
+      {
+        id: 2,
+        user_name: "B",
+        year: 2026,
+        leave_type: "vacation",
+        total_days: 8,
+        used_days: 2,
+        pending_days: 1,
+        available_days: 5,
+      },
+      {
+        id: 3,
+        user_name: "C",
+        year: 2026,
+        leave_type: "sick",
+        total_days: 4,
+        used_days: 0,
+        pending_days: 0,
+        available_days: 4,
+      },
     ];
     const setup = () => {
       vi.mocked(usePermissions).mockReturnValue({ isAdmin: true } as any);
