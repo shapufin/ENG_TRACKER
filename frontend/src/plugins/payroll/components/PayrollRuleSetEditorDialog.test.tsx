@@ -32,6 +32,14 @@ const source: PayrollRuleSet = {
   source: "Reference",
   notes: "",
   validation_status: "reference",
+  overtime_pricing: "category",
+  ot_premium: "0",
+  weekend_holiday_premium: "0",
+  evening_premium: "0",
+  night_premium: "0",
+  evening_start_hour: 19,
+  night_start_hour: 22,
+  night_end_hour: 6,
   has_payroll_runs: false,
   effective_status: "current",
   tax_brackets: [
@@ -146,5 +154,64 @@ describe("PayrollRuleSetEditorDialog", () => {
     expect(screen.getByLabelText("Tax bracket 2 lower income")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Remove tax bracket 2" }));
     expect(screen.queryByLabelText("Tax bracket 2 lower income")).not.toBeInTheDocument();
+  });
+
+  it("hides band fields in category mode and sends premiums as fractions in banded mode", async () => {
+    vi.clearAllMocks();
+    vi.mocked(payrollService.saveRuleSet).mockResolvedValue(source);
+    const banded: PayrollRuleSet = {
+      ...source,
+      overtime_pricing: "banded",
+      ot_premium: "0.25",
+      weekend_holiday_premium: "0.25",
+      evening_premium: "0.20",
+      night_premium: "0.50",
+    };
+    const { unmount } = render(
+      <PayrollRuleSetEditorDialog
+        open
+        onOpenChange={vi.fn()}
+        source={source}
+        mode="edit"
+        onSaved={vi.fn()}
+      />
+    );
+    expect(screen.queryByLabelText("Evening premium (%)")).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <PayrollRuleSetEditorDialog
+        open
+        onOpenChange={vi.fn()}
+        source={banded}
+        mode="edit"
+        onSaved={vi.fn()}
+      />
+    );
+    expect(screen.getByLabelText("Evening premium (%)")).toHaveValue("20");
+    expect(screen.getByLabelText("Evening starts (hour, 0-23)")).toHaveValue(19);
+    fireEvent.click(screen.getByRole("button", { name: "Save calculation" }));
+
+    await waitFor(() => expect(payrollService.saveRuleSet).toHaveBeenCalled());
+    const parent = vi.mocked(payrollService.saveRuleSet).mock.calls[0][1].parent_fields;
+    expect(parent.overtime_pricing).toBe("banded");
+    expect(parent.ot_premium).toBe("0.25");
+    expect(parent.night_premium).toBe("0.5");
+    expect(parent.evening_start_hour).toBe(19);
+  });
+
+  it("rejects band hours that are out of order", () => {
+    render(
+      <PayrollRuleSetEditorDialog
+        open
+        onOpenChange={vi.fn()}
+        source={{ ...source, overtime_pricing: "banded", evening_start_hour: 23 }}
+        mode="edit"
+        onSaved={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save calculation" }));
+    expect(screen.getByText(/Band hours must run/)).toBeInTheDocument();
+    expect(payrollService.saveRuleSet).not.toHaveBeenCalled();
   });
 });

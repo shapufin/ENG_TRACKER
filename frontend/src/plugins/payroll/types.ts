@@ -76,6 +76,8 @@ export interface PayrollOvertimeCategory {
   order: number;
 }
 
+export type OvertimePricing = "category" | "banded";
+
 export interface PayrollRuleSet {
   id: number;
   code: string;
@@ -89,6 +91,14 @@ export interface PayrollRuleSet {
   source: string;
   notes: string;
   validation_status: string;
+  overtime_pricing: OvertimePricing;
+  ot_premium: string;
+  weekend_holiday_premium: string;
+  evening_premium: string;
+  night_premium: string;
+  evening_start_hour: number;
+  night_start_hour: number;
+  night_end_hour: number;
   has_payroll_runs: boolean;
   effective_status: "current" | "upcoming" | "superseded" | "inactive";
   tax_brackets: PayrollTaxBracket[];
@@ -113,6 +123,14 @@ export interface PayrollRuleSetAtomicSavePayload {
     source: string;
     notes: string;
     validation_status: string;
+    overtime_pricing: OvertimePricing;
+    ot_premium: string;
+    weekend_holiday_premium: string;
+    evening_premium: string;
+    night_premium: string;
+    evening_start_hour: number;
+    night_start_hour: number;
+    night_end_hour: number;
   };
   tax_brackets: Array<{
     id?: number;

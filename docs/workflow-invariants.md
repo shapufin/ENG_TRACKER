@@ -75,6 +75,7 @@ Plan: `docs/superpowers/plans/2026-10-13-leave-carryover-and-holidays.md`.
 - Tests that finalize runs unrelated to the gate must set the flag to False in `setUpTestData`. Gate tests set it explicitly.
 - An employee with only a Line Manager can be closed by that TL, because Managers and Line Managers share finalize permission. Business rule: every employee should still have at least one Manager.
 - **Superusers are never payroll subjects (`is_superuser=True`).** They must never have wage assignments, be returned by `eligible_users`, or show on `PayrollWagesPage` (missing or assigned). Serializers, importers, and querysets reject and filter them closed by default.
+- **Banded overtime pricing is forward-only (2026-11-09).** A rule set priced `overtime_pricing='banded'` slices each overtime entry by time band with additive premiums from the set itself (`plugins/payroll/services/overtime_bands.py`); `category` sets keep the legacy path. A draft run pins its rule set, the ONLY sanctioned way to reprice finalized runs is `manage.py reprice_finalized_payroll` (owner-requested 2026-11-09: dry run by default, confirm phrase, backup + `--restore`, skips closed years and non-reproducible runs); no other `.update()`/script/CLI over `PayrollLine`, `PayrollRunEntry`, paid OT rows. `seed_payroll_banded_rules` only creates. Details: `docs/payroll.md` §4.
 
 ## E2E environment
 
