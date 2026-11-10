@@ -18,6 +18,7 @@ A whole-server move uses the left column: `docs/deploy/server-migration-checklis
 - Restore is blocked unless the target's hash equals the manifest's. There is deliberately no override: run the commit the backup was taken from, apply its migrations, restore, then upgrade.
 - `dependent_closure` forces in every model that references an approved model; `topological_save_order` writes parents first. Rows missing from the backup are deleted only for models listed in `delete_missing_models`.
 - The whole database write runs in one transaction; media is extracted last with a zip-slip guard and a 4 GiB cap.
+- **`commit()` saves via `deserialized.save()` (`raw=True`)**, which fires `pre_save`/`post_save` with `raw=True`. Every receiver that creates sibling rows (`create_user_profile`, `save_user_profile`, `create_team_calendar_workspace`, `auto_create_leave_balance`, `_refresh_role_cache`) or dispatches notifications/KPI/history side effects checks `if kwargs.get('raw'): return` so restoring deleted/missing users, teams, balances, or logs does not collide on unique constraints or emit alerts.
 - **PostgreSQL sequences are reset at the end of `commit()`** (`_reset_sequences`, the same call `loaddata` makes). Saving explicit PKs does not advance them, so without it the first insert after a restore fails with a duplicate key.
 - Superuser-only (`SuperuserOnlyMixin`); restores are audit-logged.
 
@@ -36,7 +37,7 @@ Options: `--models a.b,c.d` instead of `--all`; `--delete-missing` removes rows 
 
 ## Keeping it working as the app grows
 
-`plugins/site_backup/tests/test_backup_coverage_guard.py` runs a full backup-and-restore round trip over every model, checks every model has a save order, and fails if a field named like a secret (`token`, `secret`, `seed`, `password`...) would travel in an archive. When it fails, decide whether the data belongs in an archive: exclude the model in `services/backup.py` (`EXCLUDED_MODELS`) or list the field in `REVIEWED_SECRET_LOOKALIKES` with a reason. Checklist for any change that adds a model, app, volume or secret: `docs/workflow-invariants.md` item 55.
+`plugins/site_backup/tests/test_backup_coverage_guard.py` runs a full backup-and-restore round trip over every model, checks every model has a save order, and fails if a field named like a secret (`token`, `secret`, `seed`, `password`...) would travel in an archive. When it fails, decide whether the data belongs in an archive: exclude the model in `services/backup.py` (`EXCLUDED_MODELS`) or list the field in `REVIEWED_SECRET_LOOKALIKES` with a reason. `plugins/site_backup/tests/test_restore.py::RestoreMissingSignalDrivenRowsTests` pins raw-restore round-trips after deleting signal-driven models (`User`, `UserProfile`, `Team`, `CalendarWorkspace`, `LeaveBalance`, `OvertimeLog`). Checklist for any change that adds a model, app, volume or secret: `docs/workflow-invariants.md` item 55.
 
 ## Caveats
 
