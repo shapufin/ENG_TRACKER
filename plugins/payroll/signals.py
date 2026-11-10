@@ -25,7 +25,7 @@ def advance_period_after_close(close_id):
 @receiver(post_save, sender=ApprovalPeriodClose, dispatch_uid=DISPATCH_UID)
 def advance_period_on_close(sender, instance, created, **kwargs):
     # The system's own cutoff close is handled by the scheduler tick.
-    if not created or instance.scope_type == 'auto_cutoff':
+    if kwargs.get('raw') or not created or instance.scope_type == 'auto_cutoff':
         return
     transaction.on_commit(lambda: advance_period_after_close(instance.pk))
 

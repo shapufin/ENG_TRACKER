@@ -36,6 +36,8 @@ def _classify_source(actor, target_user):
 
 def _track_rating_state(sender, instance, **kwargs):
     """pre_save: capture the original level for post_save comparison."""
+    if kwargs.get('raw'):
+        return
     if instance.pk:
         try:
             original = UserSkill.objects.get(pk=instance.pk)
@@ -48,6 +50,8 @@ def _track_rating_state(sender, instance, **kwargs):
 
 def _log_rating_change(sender, instance, created, **kwargs):
     """post_save: create a SkillRatingHistory row when the level changes."""
+    if kwargs.get('raw'):
+        return
     old_level = getattr(instance, '_original_level', None)
     new_level = instance.level
 

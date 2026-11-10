@@ -145,7 +145,7 @@ def _dispatch_status_change(instance, entity_type, own_notification):
 
 @receiver(pre_save, sender=LeaveRequest, dispatch_uid='notifications.track_leave_request_state')
 def track_leave_request_state(sender, instance, **kwargs):
-    if getattr(instance, '_skip_notifications', False):
+    if kwargs.get('raw') or getattr(instance, '_skip_notifications', False):
         return
     if instance.pk:
         try:
@@ -170,7 +170,7 @@ def track_leave_request_state(sender, instance, **kwargs):
 
 @receiver(post_save, sender=LeaveRequest, dispatch_uid='notifications.leave_request_notification')
 def leave_request_notification(sender, instance, created, **kwargs):
-    if getattr(instance, '_skip_notifications', False):
+    if kwargs.get('raw') or getattr(instance, '_skip_notifications', False):
         return
     # LeaveRequest.save() re-saves a new row with update_fields=['submitted_at'];
     # that bookkeeping save is not a user edit and must not dispatch.
@@ -220,7 +220,7 @@ def leave_request_deleted(sender, instance, **kwargs):
 
 @receiver(pre_save, sender=OvertimeLog, dispatch_uid='notifications.track_overtime_state')
 def track_overtime_state(sender, instance, **kwargs):
-    if getattr(instance, '_skip_notifications', False):
+    if kwargs.get('raw') or getattr(instance, '_skip_notifications', False):
         return
     if instance.pk:
         try:
@@ -238,7 +238,7 @@ def track_overtime_state(sender, instance, **kwargs):
 
 @receiver(post_save, sender=OvertimeLog, dispatch_uid='notifications.overtime_log_notification')
 def overtime_log_notification(sender, instance, created, **kwargs):
-    if getattr(instance, '_skip_notifications', False):
+    if kwargs.get('raw') or getattr(instance, '_skip_notifications', False):
         return
     if created:
         own.OvertimeSubmittedNotification().dispatch({'instance': instance})
@@ -266,7 +266,7 @@ def overtime_log_deleted(sender, instance, **kwargs):
 
 @receiver(pre_save, sender=StandbyLog, dispatch_uid='notifications.track_standby_state')
 def track_standby_state(sender, instance, **kwargs):
-    if getattr(instance, '_skip_notifications', False):
+    if kwargs.get('raw') or getattr(instance, '_skip_notifications', False):
         return
     if instance.pk:
         try:
@@ -284,7 +284,7 @@ def track_standby_state(sender, instance, **kwargs):
 
 @receiver(post_save, sender=StandbyLog, dispatch_uid='notifications.standby_log_notification')
 def standby_log_notification(sender, instance, created, **kwargs):
-    if getattr(instance, '_skip_notifications', False):
+    if kwargs.get('raw') or getattr(instance, '_skip_notifications', False):
         return
     if created:
         own.StandbySubmittedNotification().dispatch({'instance': instance})

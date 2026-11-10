@@ -24,6 +24,8 @@ def create_team_calendar_workspace(sender, instance, created, **kwargs):
     Automatically create a CalendarWorkspace when a new Team is created.
     The workspace will be linked to the team and have a code based on the team code.
     """
+    if kwargs.get('raw'):
+        return
     if created:
         workspace_code = f"{instance.code}_calendar"
         workspace_name = f"{instance.name} Calendar"
@@ -91,6 +93,8 @@ def _restore_payroll_workday(h_date):
 @receiver(pre_save, sender=PublicHoliday)
 def capture_previous_holiday_state(sender, instance, **kwargs):
     """Capture previous date so if a holiday date changes, the old date is restored in Payroll."""
+    if kwargs.get('raw'):
+        return
     if instance.pk:
         try:
             old = PublicHoliday.objects.filter(pk=instance.pk).values('date', 'calendar').first()
@@ -104,6 +108,8 @@ def capture_previous_holiday_state(sender, instance, **kwargs):
 @receiver(post_save, sender=PublicHoliday)
 def sync_public_holiday_to_payroll(sender, instance, **kwargs):
     """When a global public holiday is saved, mirror it to any existing PayrollWorkCalendar."""
+    if kwargs.get('raw'):
+        return
     if instance.calendar is not None:
         prev_cal = getattr(instance, '_previous_calendar', None)
         prev_date = getattr(instance, '_previous_date', None)

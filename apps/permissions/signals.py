@@ -14,8 +14,9 @@ from core.utils.cache import invalidate_permission_cache_for_user
 def invalidate_user_role_cache(sender, instance, **kwargs):
     """Invalidate cache and refresh the denormalized role-code cache."""
     invalidate_permission_cache_for_user(instance.user)
-    from .services.role_service import _refresh_role_cache
-    _refresh_role_cache(instance.user)
+    if not kwargs.get('raw'):
+        from .services.role_service import _refresh_role_cache
+        _refresh_role_cache(instance.user)
 
 
 @receiver([post_save, post_delete], sender='permissions.UserGroup')

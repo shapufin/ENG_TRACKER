@@ -63,7 +63,7 @@ def deliver_close_notifications(close_id):
     dispatch_uid='notifications.approval_period_close_notification',
 )
 def approval_period_close_notification(sender, instance, created, **kwargs):
-    if not created:
+    if kwargs.get('raw') or not created:
         return
     transaction.on_commit(lambda: deliver_close_notifications(instance.pk))
 
