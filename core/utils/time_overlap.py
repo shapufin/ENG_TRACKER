@@ -37,6 +37,18 @@ def ranges_overlap(a_start, a_end, b_start, b_end) -> bool:
     return a[0] < b[1] and b[0] < a[1]
 
 
+def _span(day, start_time, end_time):
+    """Absolute ``(start, end)`` datetimes of an entry dated ``day``.
+
+    An overnight range (end <= start) ends on the next calendar day.
+    """
+    start = datetime.combine(day, start_time)
+    end = datetime.combine(day, end_time)
+    if end <= start:
+        end += timedelta(days=1)
+    return start, end
+
+
 def find_overlapping_entry(
     queryset,
     user_id,
@@ -45,24 +57,31 @@ def find_overlapping_entry(
     end_time,
     exclude_pk=None,
 ):
-    """Return the first existing entry on the same date for the same user
-    whose time range overlaps the given (start_time, end_time).
+    """Return the first existing entry of the same user whose time range
+    overlaps the given (start_time, end_time) dated ``date``.
 
-    Returns None if no overlap is found, or if start_time/end_time is missing.
-    Entries without their own start_time/end_time are skipped (no range to
-    compare). Rejected entries are excluded — a rejected time slot is
-    released and the user can create a new entry in the same range.
+    Ranges are compared as absolute datetimes, so an overnight entry (end <=
+    start, ending the next morning) also clashes with entries dated the next
+    day, and an entry dated the day before that runs past midnight clashes
+    with this one. Returns None if no overlap is found, or if
+    start_time/end_time is missing. Entries without their own
+    start_time/end_time are skipped (no range to compare). Rejected entries
+    are excluded - a rejected time slot is released and the user can create a
+    new entry in the same range.
     """
     if not start_time or not end_time:
         return None
-    qs = queryset.filter(user_id=user_id, date=date)
+    new_start, new_end = _span(date, start_time, end_time)
+    qs = queryset.filter(
+        user_id=user_id, date__gte=date - timedelta(days=1), date__lte=date + timedelta(days=1),
+    )
     if exclude_pk is not None:
         qs = qs.exclude(pk=exclude_pk)
-    for existing in qs.only('pk', 'start_time', 'end_time', 'status'):
+    for existing in qs.only('pk', 'date', 'start_time', 'end_time', 'status'):
         if existing.status == 'rejected':
             continue
         if existing.start_time and existing.end_time:
-            if ranges_overlap(start_time, end_time,
-                              existing.start_time, existing.end_time):
+            start, end = _span(existing.date, existing.start_time, existing.end_time)
+            if new_start < end and start < new_end:
                 return existing
     return None

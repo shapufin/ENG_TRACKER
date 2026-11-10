@@ -22,8 +22,10 @@ export const useClientAssignment = () => {
   const qc = useQueryClient();
 
   const { data: members = [], isLoading: membersLoading } = useQuery({
-    queryKey: ["team", "members"],
-    queryFn: () => userService.getMyTeamMembers(),
+    // Own key: the unfiltered roster lives under ["team", "members"]. Managers are
+    // left out; a Line Manager does not assign them clients.
+    queryKey: ["team", "members", "assignable"],
+    queryFn: () => userService.getMyTeamMembers({ excludeManagers: true }),
   });
   const { data: clients = [], isLoading: clientsLoading } = useQuery({
     queryKey: ["overtime", "available-clients"],

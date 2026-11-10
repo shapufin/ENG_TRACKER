@@ -1460,3 +1460,41 @@ class TestSetTeamLeaderHRAssignment(APITestCase):
             format='json',
         )
         self.assertEqual(response.status_code, 200)
+
+
+class TestClientAssignmentExcludesManagers(APITestCase):
+    """A Line Manager's client roster leaves Managers out (2026-11-10)."""
+
+    def setUp(self):
+        self.lm = User.objects.create_user(username='lm', password='testpass123')
+        self.member = User.objects.create_user(username='mem2', password='testpass123')
+        self.manager = User.objects.create_user(username='mgr', password='testpass123')
+        self.member.profile.albanian_tl = self.lm
+        self.member.profile.save()
+        self.manager.profile.albanian_tl = self.lm
+        self.manager.profile.is_italian_tl_role = True
+        self.manager.profile.save()
+        self.client_a = Client.objects.create(name='Client A', code='A', is_active=True)
+        self.client.force_authenticate(user=self.lm)
+
+    def test_roster_can_exclude_managers(self):
+        url = '/api/users/users/my_team_members/'
+        ids = {row['user']['id'] for row in self.client.get(url).data}
+        self.assertEqual(ids, {self.member.id, self.manager.id})
+        ids = {row['user']['id'] for row in self.client.get(url, {'exclude_managers': 'true'}).data}
+        self.assertEqual(ids, {self.member.id})
+
+    def test_line_manager_cannot_assign_clients_to_a_manager(self):
+        response = self.client.post(
+            f'/api/users/users/{self.manager.id}/assign_member_clients/',
+            {'client_ids': [self.client_a.id]}, format='json',
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(self.manager.profile.clients.count(), 0)
+
+    def test_line_manager_still_assigns_a_member(self):
+        response = self.client.post(
+            f'/api/users/users/{self.member.id}/assign_member_clients/',
+            {'client_ids': [self.client_a.id]}, format='json',
+        )
+        self.assertEqual(response.status_code, 200)

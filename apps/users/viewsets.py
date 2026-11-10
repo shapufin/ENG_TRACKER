@@ -265,6 +265,13 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN,
                 )
         self._forbid_non_superuser_on_superuser(request, target)
+        if not (user.is_staff or user.is_superuser):
+            from apps.users.services.team_leaders import italian_tl_user_ids
+            if target.id in italian_tl_user_ids():
+                return Response(
+                    {'error': 'Managers are not assigned clients by a Line Manager'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         client_ids = request.data.get('client_ids')
         if not isinstance(client_ids, list):
@@ -1205,6 +1212,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 {'error': f'Database error retrieving team members: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+        if request.query_params.get('exclude_managers') == 'true':
+            from apps.users.services.team_leaders import italian_tl_user_ids
+            target_user_ids = set(target_user_ids) - italian_tl_user_ids()
 
         if not target_user_ids:
             return Response([])

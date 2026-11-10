@@ -242,7 +242,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
             )
             if overlap:
                 raise ValidationError(
-                    f'Time range overlaps an existing overtime entry on {date} '
+                    f'Time range overlaps an existing overtime entry on {overlap.date} '
                     f'({overlap.start_time}–{overlap.end_time}).'
                 )
         instance = serializer.save(user=target_user)
@@ -296,7 +296,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
             )
             if overlap:
                 raise ValidationError(
-                    f'Time range overlaps an existing overtime entry on {date} '
+                    f'Time range overlaps an existing overtime entry on {overlap.date} '
                     f'({overlap.start_time}–{overlap.end_time}).'
                 )
         reassign = {'requested_processing_period': None} if date != obj.date else {}

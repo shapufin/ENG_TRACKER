@@ -46,5 +46,8 @@ describe("PayrollCalculationInfoDialog", () => {
     expect(within(dialog).getByText("Overtime pay by time of day")).toBeInTheDocument();
     expect(within(dialog).getByText("145%")).toBeInTheDocument();
     expect(within(dialog).getByText("200%")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/public holiday that falls on a Saturday uses the Sunday \/ holiday/)
+    ).toBeInTheDocument();
   });
 });

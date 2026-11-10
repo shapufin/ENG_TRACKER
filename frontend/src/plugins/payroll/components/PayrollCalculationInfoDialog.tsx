@@ -304,7 +304,8 @@ export const PayrollCalculationInfoDialog: React.FC<PayrollCalculationInfoDialog
                 </li>
                 <li>
                   Saturday is a normal day. Sundays and public holidays use the Sunday / holiday
-                  column; after midnight the next day&apos;s type applies.
+                  column; a public holiday that falls on a Saturday uses the Sunday / holiday
+                  column too. After midnight the next day&apos;s type applies.
                 </li>
                 <li>
                   Entries that start in the same paid hour share that hour, so it is paid once.

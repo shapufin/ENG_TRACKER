@@ -277,6 +277,15 @@ class BandedCalculatorTests(SimpleTestCase):
         result = _calc([entry], holidays={MONDAY})
         self.assertEqual([b.code for b in result.overtime_breakdown], ['wh_ot_day'])
 
+    def test_holiday_on_a_saturday_gets_the_sunday_holiday_rate(self):
+        saturday = date(2026, 1, 3)
+        entry = OvertimeEntryInput(saturday, Decimal('4'), time(9), time(13), source_id=1)
+        plain = _calc([entry])
+        holiday = _calc([entry], holidays={saturday})
+        self.assertEqual(plain.overtime_breakdown[0].multiplier, Decimal('1.25'))
+        self.assertEqual(holiday.overtime_breakdown[0].multiplier, Decimal('1.50'))
+        self.assertEqual([b.code for b in holiday.overtime_breakdown], ['wh_ot_day'])
+
     def test_saturday_night_shift_wiring_uses_next_day_for_sunday_part(self):
         entry = OvertimeEntryInput(date(2026, 1, 3), Decimal('6'), time(22), time(4), source_id=1)
         result = _calc([entry])

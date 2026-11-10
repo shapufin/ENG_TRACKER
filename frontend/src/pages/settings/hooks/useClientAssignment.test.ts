@@ -38,6 +38,11 @@ const setup = (members: any[]) => {
 beforeEach(() => vi.clearAllMocks());
 
 describe("useClientAssignment", () => {
+  it("asks for a roster without Managers", async () => {
+    setup([profile(1, "alice", [])]);
+    await waitFor(() => expect(userService.getMyTeamMembers).toHaveBeenCalledWith({ excludeManagers: true }));
+  });
+
   it("maps each member's assigned clients to their full id list", async () => {
     const { result } = setup([
       profile(1, "alice", []),

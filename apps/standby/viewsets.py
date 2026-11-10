@@ -142,7 +142,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
             )
             if overlap:
                 raise ValidationError(
-                    f'Time range overlaps an existing standby entry on {date} '
+                    f'Time range overlaps an existing standby entry on {overlap.date} '
                     f'({overlap.start_time}–{overlap.end_time}).'
                 )
         instance = serializer.save(user=target_user)
@@ -210,7 +210,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
             )
             if overlap:
                 raise ValidationError(
-                    f'Time range overlaps an existing standby entry on {date} '
+                    f'Time range overlaps an existing standby entry on {overlap.date} '
                     f'({overlap.start_time}–{overlap.end_time}).'
                 )
         reassign = {'requested_processing_period': None} if date != obj.date else {}
