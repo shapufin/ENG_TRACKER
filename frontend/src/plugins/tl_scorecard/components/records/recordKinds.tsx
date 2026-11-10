@@ -109,7 +109,7 @@ const define = <T extends RecordRow>(config: KindConfig<T>) =>
 
 const name = (value: string | null) => value ?? "Unknown";
 const MEETING_LABELS = {
-  one_on_one: "1-on-1",
+  one_on_one: "1-on-1 (Individual meeting)",
   tl_sync: "TL sync",
   team_meeting: "Team meeting",
 } as const;

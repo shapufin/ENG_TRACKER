@@ -267,7 +267,7 @@ const TLScorecardVisualization: React.FC = () => {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {latest.meetings.one_on_one_compliance_pct !== null && (
               <StatCard
-                label="1:1 compliance"
+                label="1:1 compliance (individual meetings)"
                 value={`${latest.meetings.one_on_one_compliance_pct}%`}
                 icon={CalendarCheck}
                 iconTone="info"
@@ -339,7 +339,7 @@ const TLScorecardVisualization: React.FC = () => {
         {hasOneOnOne && (
           <ChartSection
             id="viz-one-on-one"
-            title="1:1 compliance"
+            title="1:1 compliance (individual meetings)"
             description="Share of planned employee one-on-ones held, with the 100% target"
           >
             <ChartContainer config={oneOnOneConfig} className={CHART_CLASS}>

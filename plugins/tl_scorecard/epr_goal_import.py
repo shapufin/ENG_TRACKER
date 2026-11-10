@@ -29,15 +29,54 @@ _WHITESPACE_RE = re.compile(r'\s+')
 _METADATA_RE = re.compile(
     r'^(?:due\s+date|status|completion\s+date|category|'
     r'organization\s+alignment|weight|manager|location|'
-    r'organization|employee|period|target)\s*:',
+    r'organization|employee|period|target|actual|'
+    r'evaluated\s+by|entered\s+by|rating|date|comment)\s*:',
     re.IGNORECASE,
 )
+_METADATA_LABELS = frozenset({
+    'due date',
+    'status',
+    'completion date',
+    'category',
+    'organization alignment',
+    'weight',
+    'manager',
+    'location',
+    'organization',
+    'employee',
+    'period',
+    'target',
+    'actual',
+    'evaluated by',
+    'entered by',
+    'rating',
+    'date',
+    'comment',
+})
 _SECTION_HEADINGS = {
     'goals',
+    'overall',
+    'acknowledgement',
+    'section summary',
     'workday grading matrix:',
     'workday rating matrix:',
     'target:',
 }
+_EVALUATION_BOILERPLATE_RE = re.compile(
+    r'^(?:'
+    r'(?:manager(?:\s+overall)?|employee|additional\s+manager)\s+evaluation'
+    r'(?:\s+employee\s+evaluation)?'
+    r'|section\s+summary'
+    r'|comment(?:\s*:\s*comment\s*:?)?'
+    r'|behaviou?rs'
+    r'|overall'
+    r'|acknowledgement'
+    r')$',
+    re.IGNORECASE,
+)
+_GOALS_END_RE = re.compile(r'^(?:section\s+summary|behaviou?rs)$', re.IGNORECASE)
+_COLOR_CHROMA_MIN = 0.08
+_TITLE_FONT_SIZE_MIN = 10.5
 
 
 class GoalImportError(ValueError):
@@ -119,10 +158,19 @@ def _title_from_block(lines: Iterable[str]) -> str | None:
             if title:
                 return title
             continue
-        if _METADATA_RE.match(line) or line.casefold() in _SECTION_HEADINGS:
+        if (
+            _METADATA_RE.match(line)
+            or line.casefold() in _SECTION_HEADINGS
+            or _EVALUATION_BOILERPLATE_RE.match(line)
+        ):
             title = finish()
             if title:
                 return title
+            continue
+        if not fragments and len(line) <= TITLE_MAX_CHARS:
+            fragments.append(line)
+            if not _looks_like_title_fragment(line):
+                return finish()
             continue
         if _looks_like_title_fragment(line) and _fits_title(fragments, line):
             fragments.append(line)
@@ -131,6 +179,23 @@ def _title_from_block(lines: Iterable[str]) -> str | None:
         if title:
             return title
     return finish()
+
+
+def _finalize_titles(titles: list[str]) -> list[str]:
+    """Deduplicate extracted goal titles case-insensitively and cap count."""
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for title in titles:
+        key = title.casefold()
+        if key not in seen:
+            seen.add(key)
+            deduped.append(title)
+        if len(deduped) > MAX_GOAL_TITLES:
+            raise GoalImportError('The PDF contains more goal rows than supported.')
+
+    if not deduped:
+        raise GoalImportError('No goal titles could be extracted from the PDF.')
+    return deduped
 
 
 def extract_goal_titles(text: str) -> list[str]:
@@ -153,6 +218,9 @@ def extract_goal_titles(text: str) -> list[str]:
     block_start = start + 1
     weight_blocks = 0
     for index, raw in enumerate(lines[block_start:], start=block_start):
+        cleaned = _clean_line(raw)
+        if _GOALS_END_RE.match(cleaned):
+            break
         if not re.match(r'^\s*weight\s*:', raw, re.IGNORECASE):
             continue
         weight_blocks += 1
@@ -164,19 +232,141 @@ def extract_goal_titles(text: str) -> list[str]:
     if weight_blocks == 0:
         raise GoalImportError('The Workday Goals section has no goal weight blocks.')
 
-    deduped: list[str] = []
-    seen: set[str] = set()
-    for title in titles:
-        key = title.casefold()
-        if key not in seen:
-            seen.add(key)
-            deduped.append(title)
-        if len(deduped) > MAX_GOAL_TITLES:
-            raise GoalImportError('The PDF contains more goal rows than supported.')
+    return _finalize_titles(titles)
 
-    if not deduped:
-        raise GoalImportError('No goal titles could be extracted from the PDF.')
-    return deduped
+
+def _cmyk_to_rgb(c: float, m: float, y: float, k: float) -> tuple[float, float, float]:
+    return (
+        max(0.0, (1.0 - c) * (1.0 - k)),
+        max(0.0, (1.0 - m) * (1.0 - k)),
+        max(0.0, (1.0 - y) * (1.0 - k)),
+    )
+
+
+def _is_colored_goal_heading(
+    rgb: tuple[float, float, float],
+    text: str,
+    font_size: float,
+) -> bool:
+    """Whether a PDF span uses Workday's colored heading styling for a goal title."""
+    if max(rgb) - min(rgb) <= _COLOR_CHROMA_MIN:
+        return False
+    if font_size and font_size < _TITLE_FONT_SIZE_MIN:
+        return False
+    if not any(ch.isalnum() for ch in text):
+        return False
+    if text.lower().startswith(('http://', 'https://')):
+        return False
+    if _METADATA_RE.match(text) or text.casefold() in _METADATA_LABELS:
+        return False
+    if _EVALUATION_BOILERPLATE_RE.match(text):
+        return False
+    return len(text) <= GOAL_TITLE_MAX_LENGTH
+
+
+def _extract_colored_goal_titles(reader: PdfReader) -> list[str] | None:
+    """Extract goal titles using Workday's non-grayscale heading styling.
+
+    Returns ``None`` when the PDF uses monochrome/uniform styling so the
+    caller falls back to plain-text parsing.
+    """
+    in_goals = False
+    goals_ended = False
+    weight_blocks = 0
+    titles: list[str] = []
+    fragments: list[str] = []
+
+    def flush_fragments() -> None:
+        if fragments:
+            combined = _clean_line(' '.join(fragments))
+            fragments.clear()
+            if combined and len(combined) <= GOAL_TITLE_MAX_LENGTH:
+                titles.append(combined)
+
+    for page in reader.pages:
+        if goals_ended:
+            break
+        state_stack: list[tuple[float, float, float]] = [(0.0, 0.0, 0.0)]
+
+        def on_operand_before(op: bytes, args: list, _cm: object, _tm: object) -> None:
+            if op == b'q':
+                state_stack.append(state_stack[-1])
+            elif op == b'Q' and len(state_stack) > 1:
+                state_stack.pop()
+            elif op == b'rg' and len(args) == 3:
+                try:
+                    state_stack[-1] = (float(args[0]), float(args[1]), float(args[2]))
+                except (TypeError, ValueError):
+                    pass
+            elif op == b'g' and len(args) == 1:
+                try:
+                    gray = float(args[0])
+                    state_stack[-1] = (gray, gray, gray)
+                except (TypeError, ValueError):
+                    pass
+            elif op == b'k' and len(args) == 4:
+                try:
+                    state_stack[-1] = _cmyk_to_rgb(*(float(v) for v in args))
+                except (TypeError, ValueError):
+                    pass
+            elif op in (b'sc', b'scn'):
+                nums: list[float] = []
+                for arg in args:
+                    try:
+                        nums.append(float(arg))
+                    except (TypeError, ValueError):
+                        pass
+                if len(nums) == 1:
+                    state_stack[-1] = (nums[0], nums[0], nums[0])
+                elif len(nums) == 3:
+                    state_stack[-1] = (nums[0], nums[1], nums[2])
+                elif len(nums) == 4:
+                    state_stack[-1] = _cmyk_to_rgb(*nums)
+
+        def on_text(
+            text: str,
+            _cm: object,
+            _tm: object,
+            _font_dict: object,
+            font_size: float,
+        ) -> None:
+            nonlocal in_goals, goals_ended, weight_blocks
+            if goals_ended:
+                return
+            clean = _clean_line(text)
+            if not clean:
+                return
+            if not in_goals:
+                if clean.casefold() == 'goals':
+                    in_goals = True
+                return
+            if _GOALS_END_RE.match(clean):
+                flush_fragments()
+                goals_ended = True
+                return
+            if clean.casefold() == 'weight' or re.match(r'^weight\s*:', clean, re.IGNORECASE):
+                flush_fragments()
+                weight_blocks += 1
+                return
+            if _is_colored_goal_heading(state_stack[-1], clean, float(font_size or 0)):
+                candidate = _clean_line(' '.join([*fragments, clean]))
+                if len(candidate) <= GOAL_TITLE_MAX_LENGTH:
+                    fragments.append(clean)
+                    return
+                flush_fragments()
+                fragments.append(clean)
+                return
+            flush_fragments()
+
+        page.extract_text(
+            visitor_operand_before=on_operand_before,
+            visitor_text=on_text,
+        )
+
+    flush_fragments()
+    if weight_blocks > 0 and titles:
+        return _finalize_titles(titles)
+    return None
 
 
 def read_uploaded_pdf(upload) -> bytes:
@@ -218,11 +408,14 @@ def extract_goal_titles_from_pdf(upload) -> list[str]:
                 raise GoalImportError('The PDF contains too much text to be a goal-setting export.')
             chunks.append(chunk)
         text = '\n'.join(chunks)
+        if not text.strip():
+            raise GoalImportError('The PDF has no readable text; OCR is not supported.')
+        colored = _extract_colored_goal_titles(reader)
+        if colored is not None:
+            return colored
     except GoalImportError:
         raise
     except Exception as exc:
         raise GoalImportError('The PDF could not be read.') from exc
 
-    if not text.strip():
-        raise GoalImportError('The PDF has no readable text; OCR is not supported.')
     return extract_goal_titles(text)

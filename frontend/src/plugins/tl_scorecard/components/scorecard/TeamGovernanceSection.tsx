@@ -132,7 +132,7 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
         </ModuleHeader>
         <div className={STAT_GRID}>
           <StatCard
-            label="1-on-1 compliance"
+            label="1-on-1 compliance (individual meetings)"
             labelClassName={MICRO_LABEL}
             value={
               meetings.one_on_one_compliance_pct !== null
