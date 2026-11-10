@@ -6,6 +6,7 @@
  */
 import React from "react";
 import { FilterChipRow } from "@/components/ui/FilterChipRow";
+import { toggleChipSelection } from "@/components/ui/chipSelection";
 import type { Team } from "@/types";
 
 interface TeamFacetFilterProps {
@@ -15,23 +16,21 @@ interface TeamFacetFilterProps {
 }
 
 const ALL = "all";
+const MULTI_HINT = "Click to filter by one team; Ctrl+click to select multiple";
 
 export const TeamFacetFilter: React.FC<TeamFacetFilterProps> = ({
   teams,
   selectedTeamIds,
   onTeamIdsChange,
 }) => {
-  const toggleTeam = (value: string) => {
+  const handleChipClick = (value: string, event: React.MouseEvent<HTMLButtonElement>) => {
     if (value === ALL) {
       onTeamIdsChange([]);
       return;
     }
     const id = Number(value);
-    onTeamIdsChange(
-      selectedTeamIds.includes(id)
-        ? selectedTeamIds.filter((v) => v !== id)
-        : [...selectedTeamIds, id]
-    );
+    const multi = event.ctrlKey || event.metaKey;
+    onTeamIdsChange(toggleChipSelection(selectedTeamIds, id, multi));
   };
 
   if (teams.length === 0) return null;
@@ -42,10 +41,15 @@ export const TeamFacetFilter: React.FC<TeamFacetFilterProps> = ({
         label="Team"
         options={[
           { value: ALL, label: "All teams" },
-          ...teams.map((team) => ({ value: String(team.id), label: team.name })),
+          ...teams.map((team) => ({
+            value: String(team.id),
+            label: team.name,
+            title: MULTI_HINT,
+          })),
         ]}
         selected={selectedTeamIds.length === 0 ? [ALL] : selectedTeamIds.map(String)}
-        onToggle={toggleTeam}
+        onToggle={() => {}}
+        onChipClick={handleChipClick}
       />
     </div>
   );

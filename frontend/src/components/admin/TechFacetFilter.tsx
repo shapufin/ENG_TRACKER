@@ -8,6 +8,7 @@
  */
 import React from "react";
 import { Chip } from "@/components/ui/Chip";
+import { toggleChipSelection } from "@/components/ui/chipSelection";
 import { FacetRow } from "./FacetRow";
 import type { TechFacet } from "@/types";
 
@@ -22,6 +23,8 @@ interface TechFacetFilterProps {
   onNoTechOnlyChange: (value: boolean) => void;
 }
 
+const MULTI_HINT = "Click to filter by one; Ctrl+click to select multiple";
+
 export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
   facets,
   noTechCount,
@@ -32,26 +35,41 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
   onLevelIdsChange,
   onNoTechOnlyChange,
 }) => {
-  const toggleTech = (id: number) => {
-    if (selectedTechIds.includes(id)) {
-      // Deselecting a tech drops its level chips too, so a stale level filter
-      // can never keep narrowing a tech that is no longer selected.
-      const dropped = new Set(
-        (facets.find((facet) => facet.id === id)?.levels ?? []).map((level) => level.id)
-      );
-      onTechIdsChange(selectedTechIds.filter((v) => v !== id));
-      onLevelIdsChange(selectedLevelIds.filter((levelId) => !dropped.has(levelId)));
-    } else {
-      onTechIdsChange([...selectedTechIds, id]);
+  const handleTechClick = (id: number, event: React.MouseEvent<HTMLButtonElement>) => {
+    const multi = event.ctrlKey || event.metaKey;
+    const nextTechIds = toggleChipSelection(selectedTechIds, id, multi);
+
+    if (noTechOnly) {
+      onNoTechOnlyChange(false);
+    }
+
+    // Keep only level chips that belong to techs remaining in the selection so
+    // a stale level filter can never keep narrowing a deselected tech.
+    const allowedLevelIds = new Set(
+      facets
+        .filter((facet) => nextTechIds.includes(facet.id))
+        .flatMap((facet) => (facet.levels ?? []).map((level) => level.id))
+    );
+    const nextLevelIds = selectedLevelIds.filter((levelId) => allowedLevelIds.has(levelId));
+
+    onTechIdsChange(nextTechIds);
+    if (nextLevelIds.length !== selectedLevelIds.length) {
+      onLevelIdsChange(nextLevelIds);
     }
   };
 
-  const toggleLevel = (id: number) => {
-    onLevelIdsChange(
-      selectedLevelIds.includes(id)
-        ? selectedLevelIds.filter((v) => v !== id)
-        : [...selectedLevelIds, id]
-    );
+  const handleNoTechClick = () => {
+    const next = !noTechOnly;
+    if (next) {
+      if (selectedTechIds.length > 0) onTechIdsChange([]);
+      if (selectedLevelIds.length > 0) onLevelIdsChange([]);
+    }
+    onNoTechOnlyChange(next);
+  };
+
+  const handleLevelClick = (id: number, event: React.MouseEvent<HTMLButtonElement>) => {
+    const multi = event.ctrlKey || event.metaKey;
+    onLevelIdsChange(toggleChipSelection(selectedLevelIds, id, multi));
   };
 
   // Level chips only appear for the techs currently selected — showing every
@@ -71,6 +89,7 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
           pressed={isAllActive}
           onClick={() => {
             onTechIdsChange([]);
+            onLevelIdsChange([]);
             onNoTechOnlyChange(false);
           }}
         >
@@ -80,7 +99,8 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
           <Chip
             key={facet.id}
             pressed={selectedTechIds.includes(facet.id)}
-            onClick={() => toggleTech(facet.id)}
+            title={MULTI_HINT}
+            onClick={(event) => handleTechClick(facet.id, event)}
           >
             {facet.name}{" "}
             <span className="font-mono text-xs font-normal tabular-nums">{facet.count}</span>
@@ -88,7 +108,7 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
         ))}
         <Chip
           pressed={noTechOnly}
-          onClick={() => onNoTechOnlyChange(!noTechOnly)}
+          onClick={handleNoTechClick}
           className={noTechOnly ? undefined : "border-dashed"}
         >
           No tech <span className="font-mono text-xs font-normal tabular-nums">{noTechCount}</span>
@@ -100,7 +120,7 @@ export const TechFacetFilter: React.FC<TechFacetFilterProps> = ({
             <Chip
               key={level.id}
               pressed={selectedLevelIds.includes(level.id)}
-              onClick={() => toggleLevel(level.id)}
+              onClick={(event) => handleLevelClick(level.id, event)}
               title={`${facet.name} — ${level.name}`}
             >
               {level.code}{" "}

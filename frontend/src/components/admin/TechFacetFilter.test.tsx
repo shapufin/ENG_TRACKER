@@ -51,7 +51,30 @@ describe("TechFacetFilter", () => {
     expect(onTechIdsChange).toHaveBeenCalledWith([1]);
   });
 
-  it("toggling an already-selected tech chip removes it from the selection", () => {
+  it("plain clicking a tech chip isolates it; Ctrl+click toggles multi-select", () => {
+    const onTechIdsChange = vi.fn();
+    render(
+      <TechFacetFilter
+        facets={facets}
+        noTechCount={25}
+        selectedTechIds={[1]}
+        selectedLevelIds={[]}
+        noTechOnly={false}
+        onTechIdsChange={onTechIdsChange}
+        onLevelIdsChange={vi.fn()}
+        onNoTechOnlyChange={vi.fn()}
+      />
+    );
+    // Plain click on Django replaces [1] with [2]
+    fireEvent.click(screen.getByText("Django"));
+    expect(onTechIdsChange).toHaveBeenLastCalledWith([2]);
+
+    // Ctrl+click on Django adds [1, 2]
+    fireEvent.click(screen.getByText("Django"), { ctrlKey: true });
+    expect(onTechIdsChange).toHaveBeenLastCalledWith([1, 2]);
+  });
+
+  it("Ctrl+clicking an already-selected tech chip removes it from the selection", () => {
     const onTechIdsChange = vi.fn();
     render(
       <TechFacetFilter
@@ -65,7 +88,7 @@ describe("TechFacetFilter", () => {
         onNoTechOnlyChange={vi.fn()}
       />
     );
-    fireEvent.click(screen.getByText("Kubernetes"));
+    fireEvent.click(screen.getByText("Kubernetes"), { ctrlKey: true });
     expect(onTechIdsChange).toHaveBeenCalledWith([2]);
   });
 

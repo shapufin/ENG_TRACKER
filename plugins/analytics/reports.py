@@ -56,9 +56,9 @@ class AnalyticsReportGenerator:
         start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
         end_dt = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
 
-        leave_filters = Q(created_at__gte=start_dt, created_at__lte=end_dt)
-        overtime_filters = Q(date__gte=start_date, date__lte=end_date)
-        standby_filters = Q(date__gte=start_date, date__lte=end_date)
+        leave_filters = Q(created_at__gte=start_dt, created_at__lte=end_dt, is_deleted=False)
+        overtime_filters = Q(date__gte=start_date, date__lte=end_date, is_deleted=False)
+        standby_filters = Q(date__gte=start_date, date__lte=end_date, is_deleted=False)
 
         if teams:
             from apps.users.models.core import UserProfile

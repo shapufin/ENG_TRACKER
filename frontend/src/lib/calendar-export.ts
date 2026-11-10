@@ -1,4 +1,5 @@
 import type { CalendarEvent } from "@/components/calendar/types";
+import { csvCell } from "./csvSafe";
 import { format } from "date-fns";
 
 const downloadBlob = (blob: Blob, filename: string) => {
@@ -14,7 +15,6 @@ const downloadBlob = (blob: Blob, filename: string) => {
 };
 
 export const exportToCSV = (events: CalendarEvent[], filename: string = "calendar-events") => {
-  const csvField = (value: string) => `"${(value || "").replace(/"/g, '""')}"`;
   const headers = [
     "Title",
     "Start Date",
@@ -28,18 +28,18 @@ export const exportToCSV = (events: CalendarEvent[], filename: string = "calenda
   ];
 
   const rows = events.map((event) => [
-    csvField(event.title),
+    event.title || "",
     event.start,
     event.end,
     event.type,
     event.status,
-    csvField(event.userName || ""),
+    event.userName || "",
     event.days || "",
     event.hours || "",
-    csvField(event.description || ""),
+    event.description || "",
   ]);
 
-  const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+  const csvContent = [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   downloadBlob(blob, `${filename}.csv`);

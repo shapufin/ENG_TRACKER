@@ -10,6 +10,7 @@ export interface FilterChipOption<V extends string = string> {
   label: string;
   count?: number;
   icon?: LucideIcon;
+  title?: string;
   /** Dashed outline for "missing data" buckets such as "No tech". */
   emphasis?: "default" | "missing";
 }
@@ -21,6 +22,8 @@ export interface FilterChipRowProps<V extends string = string> {
   /** Single-select callers pass [value]. */
   selected: readonly V[];
   onToggle: (value: V) => void;
+  /** Optional click handler receiving the mouse event (for Ctrl/Cmd multi-select). */
+  onChipClick?: (value: V, event: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 /** A labelled row of toggle chips with optional icon and count. One scrolling row on phones, wraps from `sm`. */
@@ -29,6 +32,7 @@ export function FilterChipRow<V extends string>({
   options,
   selected,
   onToggle,
+  onChipClick,
 }: FilterChipRowProps<V>) {
   return (
     <FacetRow label={label}>
@@ -40,7 +44,10 @@ export function FilterChipRow<V extends string>({
             <Chip
               key={option.value}
               pressed={pressed}
-              onClick={() => onToggle(option.value)}
+              title={option.title}
+              onClick={(event) =>
+                onChipClick ? onChipClick(option.value, event) : onToggle(option.value)
+              }
               className={cn("snap-start", option.emphasis === "missing" && "border-dashed")}
             >
               {Icon && <Icon className="h-3.5 w-3.5" aria-hidden="true" />}

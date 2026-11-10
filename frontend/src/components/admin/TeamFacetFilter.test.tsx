@@ -25,13 +25,36 @@ describe("TeamFacetFilter", () => {
     expect(onTeamIdsChange).toHaveBeenCalledWith([1]);
   });
 
-  it("toggling a selected team chip removes it from the selection", () => {
+  it("plain clicking a team chip replaces the selection; Ctrl+click toggles multiple", () => {
+    const onTeamIdsChange = vi.fn();
+    render(
+      <TeamFacetFilter teams={teams} selectedTeamIds={[1]} onTeamIdsChange={onTeamIdsChange} />
+    );
+    // Plain click on Database isolates [2]
+    fireEvent.click(screen.getByText("Database"));
+    expect(onTeamIdsChange).toHaveBeenLastCalledWith([2]);
+
+    // Ctrl+click on Database adds [1, 2]
+    fireEvent.click(screen.getByText("Database"), { ctrlKey: true });
+    expect(onTeamIdsChange).toHaveBeenLastCalledWith([1, 2]);
+  });
+
+  it("Ctrl+clicking a selected team chip removes it from the selection", () => {
     const onTeamIdsChange = vi.fn();
     render(
       <TeamFacetFilter teams={teams} selectedTeamIds={[1, 2]} onTeamIdsChange={onTeamIdsChange} />
     );
-    fireEvent.click(screen.getByText("Infrastructure"));
+    fireEvent.click(screen.getByText("Infrastructure"), { ctrlKey: true });
     expect(onTeamIdsChange).toHaveBeenCalledWith([2]);
+  });
+
+  it("plain clicking the sole selected team chip clears the selection", () => {
+    const onTeamIdsChange = vi.fn();
+    render(
+      <TeamFacetFilter teams={teams} selectedTeamIds={[1]} onTeamIdsChange={onTeamIdsChange} />
+    );
+    fireEvent.click(screen.getByText("Infrastructure"));
+    expect(onTeamIdsChange).toHaveBeenCalledWith([]);
   });
 
   it("clicking All teams clears the selection", () => {

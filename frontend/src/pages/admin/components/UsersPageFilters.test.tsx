@@ -81,6 +81,26 @@ describe("UsersPageFilters layout", () => {
     fireEvent.click(screen.getByRole("button", { name: "Alpha Team" }));
     expect(state.setTeamIds).toHaveBeenCalledWith([7]);
   });
+
+  it("replaces team selection on plain click and keeps multi-select on Ctrl+click", () => {
+    const state = makeState({ teamIds: [7] });
+    render(
+      <UsersPageFilters
+        state={state as never}
+        teams={
+          [
+            { id: 7, name: "Alpha Team" },
+            { id: 8, name: "Beta Team" },
+          ] as never
+        }
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Beta Team" }));
+    expect(state.setTeamIds).toHaveBeenLastCalledWith([8]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Beta Team" }), { ctrlKey: true });
+    expect(state.setTeamIds).toHaveBeenLastCalledWith([7, 8]);
+  });
 });
 
 describe("UsersPageFilters on phones", () => {
