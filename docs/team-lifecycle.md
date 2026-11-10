@@ -34,8 +34,9 @@ point: `UserProfileSerializer.validate_teams`, `create_user_with_profile`, `upda
 reserved (both are unique) until the team is purged.
 
 **An archived team keeps its leader but confers no TL status:** `UserProfile.is_team_leader` and
-`get_team_member_ids()` only count `led_teams` with `is_active=True`, so unarchiving restores the leadership
-losslessly. A leader of one archived and one active team stays a TL.
+`get_calendar_member_ids()` only count `led_teams` with `is_active=True`, while internal TL scope
+(`get_team_member_ids()`) is link-only since 2026-11-10 (section 3). A leader of one archived and
+one active team stays a TL.
 
 ## 2. What survives a team delete
 

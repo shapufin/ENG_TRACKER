@@ -94,7 +94,7 @@ Tracked documentation lives in `docs/`; `.devin/` (AI context) is local-only and
 ### Plugins
 
 Optional features live in `plugins/` and start disabled after a fresh deploy (enable them in Admin, Plugins, then restart the backend):
-`analytics`, `audit_log`, `control_room`, `data_import`, `engagement`, `notifications`, `onboarding`, `organigrama`, `payroll`, `site_backup`, `skills`, `ticket_kpi`, `tl_scorecard`.
+`analytics`, `audit_log`, `control_room`, `data_import`, `engagement`, `notifications`, `onboarding`, `organigrama`, `payroll`, `site_backup`, `skills`, `ticket_kpi`, `tl_scorecard`, `year_close`.
 
 ## Progressive Web App (PWA)
 
