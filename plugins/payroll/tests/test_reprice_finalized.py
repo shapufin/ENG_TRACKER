@@ -39,7 +39,7 @@ class RepriceFinalizedPayrollTests(TestCase):
             user=cls.employee, gross_monthly_wage=Decimal('70000'),
             effective_from=date(2026, 1, 1), is_active=True,
         )
-        for day, start, end in ((2, time(17), time(19)), (1, time(20), time(0))):
+        for day, start, end in ((2, time(18), time(20)), (1, time(20), time(0))):
             OvertimeLog.objects.create(
                 user=cls.employee, client=client, date=date(2026, 3, day), start_time=start,
                 end_time=end, hours=1, requested_processing_period=date(2026, 3, 1),

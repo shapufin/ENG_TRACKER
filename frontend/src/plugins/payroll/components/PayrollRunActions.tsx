@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { ClosureStatus } from "../types";
+import { PayrollCalculationInfoDialog } from "./PayrollCalculationInfoDialog";
 
 interface PayrollRunActionsProps {
   onBack: () => void;
@@ -23,6 +24,7 @@ interface PayrollRunActionsProps {
   exportLoading: boolean;
   exportPdfLoading: boolean;
   closureStatus?: ClosureStatus;
+  ruleSetId?: number;
 }
 
 export const PayrollRunActions: React.FC<PayrollRunActionsProps> = ({
@@ -41,6 +43,7 @@ export const PayrollRunActions: React.FC<PayrollRunActionsProps> = ({
   exportLoading,
   exportPdfLoading,
   closureStatus,
+  ruleSetId,
 }) => {
   const [confirmFinalize, setConfirmFinalize] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -60,6 +63,7 @@ export const PayrollRunActions: React.FC<PayrollRunActionsProps> = ({
         <Button variant="outline" onClick={onBack}>
           Back
         </Button>
+        <PayrollCalculationInfoDialog ruleSetId={ruleSetId} />
         {isDraft && canManage && (
           <Button
             variant="outline"

@@ -37,6 +37,7 @@ import type { PayrollRun } from "../types";
 import { usePluginPermissions } from "@/hooks/usePluginPermissions";
 import { usePayrollRunScope } from "../hooks/usePayrollRunScope";
 import { AutomatedLifecycleNotice } from "../components/AutomatedLifecycleNotice";
+import { PayrollCalculationInfoDialog } from "../components/PayrollCalculationInfoDialog";
 import { handleApiError } from "@/lib/error-handler";
 import { toast } from "sonner";
 
@@ -183,9 +184,10 @@ export const PayrollRunsPage: React.FC = () => {
       title="Payroll Runs"
       subtitle="Monthly payroll calculation runs"
       actions={
-        canManagePayroll ? (
-          <Button onClick={() => setCreateOpen(true)}>New Payroll Run</Button>
-        ) : undefined
+        <div className="flex flex-wrap items-center gap-2">
+          <PayrollCalculationInfoDialog />
+          {canManagePayroll && <Button onClick={() => setCreateOpen(true)}>New Payroll Run</Button>}
+        </div>
       }
     >
       <AutomatedLifecycleNotice />

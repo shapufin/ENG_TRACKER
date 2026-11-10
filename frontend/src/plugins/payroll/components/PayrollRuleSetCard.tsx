@@ -7,6 +7,7 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { PayrollRuleSet } from "../types";
+import { PayrollCalculationInfoDialog } from "./PayrollCalculationInfoDialog";
 
 const STATUS_TONE_CLASS: Record<PayrollRuleSet["effective_status"], string> = {
   current: "border-success/30 bg-success/10 text-foreground",
@@ -64,6 +65,7 @@ export const PayrollRuleSetCard: React.FC<PayrollRuleSetCardProps> = ({
         {rs.has_payroll_runs && (
           <span className="text-muted-foreground text-xs">Locked — used in payroll runs</span>
         )}
+        <PayrollCalculationInfoDialog ruleSet={rs} />
         {canConfigurePayroll && (
           <div className="flex flex-wrap gap-2">
             <Button

@@ -3,8 +3,13 @@
 The new set is a copy of the source set (brackets, contributions, legacy
 overtime categories) with ``overtime_pricing='banded'`` and the company
 premiums (overtime 25 %, weekend/holiday 25 %, evening 20 %, night 50 %;
-evening from 18:00 (working hours end at 18:00), night 22:00-06:00). It is labelled ``reference`` until
+evening 19:00-22:00, night 22:00-06:00). It is labelled ``reference`` until
 the owner confirms it in writing.
+
+``--code``/``--replaces`` publish a corrected version of an existing banded set
+(e.g. after a band hour changed): the old set is only switched to inactive so
+the new one resolves for new runs; its rows and the runs using it are untouched,
+and ``reprice_finalized_payroll --rule-set <new code>`` moves finalized runs.
 
 The command only ever CREATES a rule set: the source set and any set a run
 references are never modified, and finalized runs are never repriced. Runs
@@ -29,6 +34,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--effective-from', required=True, help='First day of a month, YYYY-MM-01.')
         parser.add_argument('--source-code', default=DEFAULT_SOURCE)
+        parser.add_argument('--code', help='Code of the new set (default AL_BANDED_OT_YYYY_MM).')
+        parser.add_argument('--replaces', help='Code of a banded set to deactivate in favour of the new one.')
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -43,20 +50,32 @@ class Command(BaseCommand):
         if source is None:
             raise CommandError(f'Source rule set "{options["source_code"]}" does not exist.')
 
-        code = f'AL_BANDED_OT_{effective_from:%Y_%m}'
+        code = options['code'] or f'AL_BANDED_OT_{effective_from:%Y_%m}'
         if PayrollRuleSet.objects.filter(code=code).exists():
             self.stdout.write(f'Rule set {code} already exists; nothing to do.')
             return
+        replaced = None
+        if options['replaces']:
+            replaced = PayrollRuleSet.objects.filter(
+                code=options['replaces'], overtime_pricing='banded',
+            ).first()
+            if replaced is None:
+                raise CommandError(f'Banded rule set "{options["replaces"]}" does not exist.')
         if PayrollRuleSet.has_active_effective_date_conflict(
             source.country, source.tax_profile, effective_from,
+            exclude_pk=replaced.pk if replaced else None,
         ):
             raise CommandError(
                 'Another active rule set already uses this effective date for the same '
                 'country and tax profile.'
             )
 
+        if replaced:
+            replaced.is_active = False
+            replaced.save(update_fields=['is_active'])
+
         target = PayrollRuleSet.objects.create(
-            code=code, name=f'{source.name} - banded overtime', version='1.0',
+            code=code, name=f'{source.name} - banded overtime', version='1.1' if replaced else '1.0',
             country=source.country, effective_from=effective_from,
             is_active=True, tax_profile=source.tax_profile,
             source=f'Copy of {source.code}; company overtime schedule',
@@ -65,7 +84,7 @@ class Command(BaseCommand):
             overtime_pricing='banded',
             ot_premium=Decimal('0.25'), weekend_holiday_premium=Decimal('0.25'),
             evening_premium=Decimal('0.20'), night_premium=Decimal('0.50'),
-            evening_start_hour=18, night_start_hour=22, night_end_hour=6,
+            evening_start_hour=19, night_start_hour=22, night_end_hour=6,
         )
         for children in (source.tax_brackets, source.contribution_rates, source.overtime_categories):
             for child in children.all():
