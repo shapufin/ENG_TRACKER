@@ -1041,3 +1041,41 @@ class StandbyPatternViewSetTests(TestCase):
             f'/api/standby/patterns/{pattern.id}/', {'name': 'New Name'}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+
+class StandbyPatchAndInputHardeningTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(username='sb-harden', password='testpass')
+        self.client.force_authenticate(user=self.user)
+
+    def test_patch_half_time_pair_returns_400_and_time_change_updates_hours(self):
+        log = StandbyLog.objects.create(
+            user=self.user, date=date(2026, 12, 9), hours=8
+        )
+        bad = self.client.patch(
+            f'/api/standby/logs/{log.id}/?ignore_date_filter=true',
+            {'start_time': '18:00'},
+            format='json',
+        )
+        self.assertEqual(bad.status_code, status.HTTP_400_BAD_REQUEST)
+
+        good = self.client.patch(
+            f'/api/standby/logs/{log.id}/?ignore_date_filter=true',
+            {'start_time': '18:00', 'end_time': '20:00'},
+            format='json',
+        )
+        self.assertEqual(good.status_code, status.HTTP_200_OK, good.data)
+        log.refresh_from_db()
+        self.assertEqual(float(log.hours), 2.0)
+
+    def test_bulk_delete_malformed_ids_returns_400_not_500(self):
+        for bad in ('abc', ['abc']):
+            r = self.client.post(
+                '/api/standby/logs/bulk_delete/', {'ids': bad}, format='json'
+            )
+            self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST, bad)
+
+    def test_export_malformed_date_returns_400_not_500(self):
+        r = self.client.get('/api/standby/logs/export/', {'date_to': 'not-a-date'})
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)

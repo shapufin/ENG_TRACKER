@@ -25,6 +25,8 @@ class TeamStatsActiveOperatorCountTests(TestCase):
         self.free_user = User.objects.create_user(username="free", password="testpass")
         for user in (self.on_leave_user, self.on_standby_user, self.free_user):
             TeamMembership.objects.create(user_profile=user.profile, team=self.team)
+            user.profile.italian_tl = self.tl
+            user.profile.save(update_fields=["italian_tl"])
 
         LeaveRequest.objects.create(
             user=self.on_leave_user,
@@ -75,6 +77,8 @@ class QueueHighlightsScopeAndTagTests(TestCase):
 
         self.member = User.objects.create_user(username="member", password="testpass")
         TeamMembership.objects.create(user_profile=self.member.profile, team=self.team)
+        self.member.profile.italian_tl = self.tl
+        self.member.profile.save(update_fields=["italian_tl"])
 
         client_obj = Client.objects.create(name="Test Client", code="QH001")
         OvertimeLog.objects.create(

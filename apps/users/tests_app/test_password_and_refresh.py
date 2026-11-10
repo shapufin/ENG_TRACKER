@@ -22,6 +22,17 @@ class RefreshTokenOfDeletedUserTests(APITestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn('access', resp.data)
 
+    def test_refresh_and_logout_reject_non_dict_body_with_400_not_500(self):
+        for bad in ([], 'bad', 123, None):
+            resp = self.client.post('/api/auth/token/refresh/', bad, format='json')
+            self.assertEqual(resp.status_code, 400, bad)
+
+        user = User.objects.create_user(username='logout_bad_body', password=STRONG)
+        self.client.force_authenticate(user)
+        for bad in ([], 'bad', 123, None):
+            resp = self.client.post('/api/auth/token/logout/', bad, format='json')
+            self.assertEqual(resp.status_code, 400, bad)
+
 
 class AdminPasswordPolicyTests(APITestCase):
     @classmethod

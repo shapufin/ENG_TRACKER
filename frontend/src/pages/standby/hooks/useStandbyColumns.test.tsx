@@ -66,3 +66,19 @@ describe("useStandbyColumns actions", () => {
     expect(screen.getByRole("button", { name: "Delete 7" })).toBeEnabled();
   });
 });
+
+describe("useStandbyColumns description", () => {
+  it("renders truncated DescriptionColumn with full text available on click/hover", () => {
+    const longDesc = "Primary on-call rotation covering EU and US handoff escalations";
+    const { result } = renderHook(() =>
+      useStandbyColumns(false, false, vi.fn(), vi.fn(), vi.fn(), vi.fn())
+    );
+    const col = result.current.find((c) => c.id === "description")!;
+    expect(typeof col.cell).toBe("function");
+    render((col.cell as any)({ row: { original: log({ description: longDesc }) } }));
+    const trigger = screen.getByRole("button", { name: longDesc });
+    expect(trigger.className).toContain("truncate");
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog")).toHaveTextContent(longDesc);
+  });
+});

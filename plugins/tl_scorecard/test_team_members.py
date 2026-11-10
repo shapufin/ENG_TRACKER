@@ -223,6 +223,14 @@ class TeamMemberQueryBudgetTests(TeamMembersBase):
     # user_profiles) are shared with every scorecard endpoint and are not counted.
     TEAM_TABLES = ('tl_scorecard_', 'leave_', 'payroll_wageassignment')
 
+    def setUp(self):
+        super().setUp()
+        # business_tz() caches GlobalSettings.business_timezone for 60s; in
+        # serial runs an earlier test warms it, whereas isolated/parallel
+        # workers start with a cold LocMemCache (+1 SELECT on the first call).
+        from core.utils.timezone_local import business_tz
+        business_tz()
+
     def _add_members(self, count):
         for index in range(count):
             member = make_user(f'budget_member_{count}_{index}')

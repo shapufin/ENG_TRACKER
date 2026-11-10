@@ -287,13 +287,15 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
 
     @action(detail=False, methods=['post'])
     def bulk_delete(self, request):
+        from core.mixins.permissions import parse_bulk_ids
+        ids = parse_bulk_ids(request.data.get('ids'))
         try:
             from plugins.payroll.models import PayrollRunEntry
         except ImportError:
             return super().bulk_delete(request)
-        ids = request.data.get('ids', [])
-        if PayrollRunEntry.objects.filter(
-            source_kind='standby', source_id__in=ids, status='finalized',
+        scoped_ids = list(self.get_queryset().filter(id__in=ids).values_list('id', flat=True))
+        if scoped_ids and PayrollRunEntry.objects.filter(
+            source_kind='standby', source_id__in=scoped_ids, status='finalized',
         ).exists():
             from rest_framework.exceptions import ValidationError
             raise ValidationError(

@@ -85,3 +85,8 @@ class AdminRequestsTests(APITestCase):
         for param in ('date_from', 'date_to'):
             r = self.client.get('/api/leave-management/requests/team_pending/', {param: 'nope'})
             self.assertEqual(r.status_code, 400, param)
+
+    def test_malformed_id_filters_are_a_400_not_a_500(self):
+        for param in ('user', 'italian_tl', 'albanian_tl'):
+            r = self.client.get(URL, {param: 'abc'})
+            self.assertEqual(r.status_code, 400, param)

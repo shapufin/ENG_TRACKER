@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
+import { DescriptionColumn } from "@/components/admin/DescriptionColumn";
 import { UserCell } from "@/components/admin/UserCell";
 import { TicketIdBadges } from "@/components/ui/TicketIdBadges";
 import { createCrudActionsColumn } from "@/components/ui/tableColumnHelpers";
@@ -24,7 +25,7 @@ export const useOvertimeColumns = (
       {
         accessorKey: "date",
         header: "Date",
-        size: 80,
+        size: 95,
         cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
       },
       ...(canViewTeamData
@@ -32,31 +33,31 @@ export const useOvertimeColumns = (
             {
               accessorKey: "user_full_name",
               header: "Employee",
-              size: 120,
+              size: 160,
               cell: ({ row }) => (
                 <UserCell name={row.original.user_full_name || row.original.user_name} />
               ),
             } satisfies AppColumnDef<OvertimeLog>,
           ]
         : []),
-      { accessorKey: "client_name", header: "Client", size: 110 },
+      { accessorKey: "client_name", header: "Client", size: 115 },
       {
         id: "ticket_references",
         header: "Ticket ID",
-        size: 130,
+        size: 125,
         accessorFn: (row) => row.ticket_references?.join(", ") ?? "",
         cell: ({ row }) => <TicketIdBadges references={row.original.ticket_references} />,
       },
       {
         accessorKey: "hours",
         header: "Hours",
-        size: 130,
+        size: 145,
         cell: ({ row }) => <OvertimeHoursBadge log={row.original} />,
       },
       {
         id: "payroll_period",
         header: "Payroll",
-        size: 110,
+        size: 105,
         cell: ({ row }) =>
           row.original.is_carried_over ? (
             <Badge
@@ -70,11 +71,17 @@ export const useOvertimeColumns = (
             <span className="text-muted-foreground whitespace-nowrap">Same month</span>
           ),
       },
-      { accessorKey: "description", header: "Description", size: 180 },
+      {
+        id: "description",
+        accessorKey: "description",
+        header: "Description",
+        size: 180,
+        cell: ({ row }) => <DescriptionColumn value={row.original.description} />,
+      },
       {
         accessorKey: "status",
         header: "Status",
-        size: 90,
+        size: 105,
         cell: ({ row }) => <StatusBadge variant={row.original.status as StatusVariant} />,
       },
       {
@@ -87,7 +94,7 @@ export const useOvertimeColumns = (
           canEdit: (row) => isAdmin || !isPastMonth(row.date),
           canDelete: (row) => isSuperuser || row.status === "pending" || !isPastMonth(row.date),
         }),
-        size: 110,
+        size: 108,
       },
     ],
     [canViewTeamData, canApprove, onApprove, onReject, onEdit, onDelete, isAdmin, isSuperuser]

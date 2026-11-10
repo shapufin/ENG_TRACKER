@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { DescriptionColumn } from "@/components/admin/DescriptionColumn";
 import { UserCell } from "@/components/admin/UserCell";
 import { TicketIdBadges } from "@/components/ui/TicketIdBadges";
 import { ApprovalActionsWithView } from "@/components/admin/ApprovalActionsWithView";
@@ -71,9 +72,10 @@ export const useTLApprovalColumns = ({
       {
         accessorKey: "description",
         header: "Description",
-        // Free-text column: the flexible width, truncated with a tooltip. Hidden
-        // by default (see TLApprovalTabPanel) so 8 columns fit 1440px.
+        // Free-text column: the flexible width, truncated with a tooltip/popover.
+        // Hidden by default (see TLApprovalTabPanel) so 8 columns fit 1440px.
         size: 120,
+        cell: ({ row }) => <DescriptionColumn value={row.original.description} />,
       },
       {
         accessorKey: "status",
@@ -150,6 +152,7 @@ export const useTLApprovalColumns = ({
         accessorKey: "description",
         header: "Description",
         size: 120,
+        cell: ({ row }) => <DescriptionColumn value={row.original.description} />,
       },
       {
         accessorKey: "status",
@@ -184,7 +187,12 @@ export const useTLApprovalColumns = ({
   const leaveColumns: AppColumnDef<LeaveRequest>[] = useMemo(
     () => [
       ...leaveRequestBaseColumns<LeaveRequest>(),
-      { accessorKey: "reason", header: "Reason", size: 120 },
+      {
+        accessorKey: "reason",
+        header: "Reason",
+        size: 120,
+        cell: ({ row }) => <DescriptionColumn value={row.original.reason} />,
+      },
       {
         id: "actions",
         meta: { actionsDisplay: "column" },

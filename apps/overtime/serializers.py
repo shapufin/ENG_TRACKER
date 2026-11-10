@@ -82,6 +82,13 @@ class OvertimeLogSerializer(serializers.ModelSerializer):
         new_date = data.get('date')
         if new_date and self.instance and new_date != self.instance.date:
             assert_work_date_open(new_date)
+        start_time = data.get('start_time', self.instance.start_time if self.instance else None)
+        end_time = data.get('end_time', self.instance.end_time if self.instance else None)
+        if bool(start_time) != bool(end_time):
+            raise serializers.ValidationError({
+                'start_time': 'Both start_time and end_time must be provided together.',
+                'end_time': 'Both start_time and end_time must be provided together.',
+            })
         return data
 
     def get_user_full_name(self, obj) -> str:

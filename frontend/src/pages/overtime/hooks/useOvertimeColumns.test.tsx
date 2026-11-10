@@ -136,3 +136,19 @@ describe("useOvertimeColumns payroll_period", () => {
     expect(screen.getByText("Same month")).toBeInTheDocument();
   });
 });
+
+describe("useOvertimeColumns description", () => {
+  it("renders truncated DescriptionColumn with full text available on click/hover", () => {
+    const longDesc = "Extended incident mitigation and deployment verification across regions";
+    const { result } = renderHook(() =>
+      useOvertimeColumns(false, false, vi.fn(), vi.fn(), vi.fn(), vi.fn())
+    );
+    const col = result.current.find((c) => c.id === "description")!;
+    expect(typeof col.cell).toBe("function");
+    render((col.cell as any)({ row: { original: log({ description: longDesc }) } }));
+    const trigger = screen.getByRole("button", { name: longDesc });
+    expect(trigger.className).toContain("truncate");
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog")).toHaveTextContent(longDesc);
+  });
+});

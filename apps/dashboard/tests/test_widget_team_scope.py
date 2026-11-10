@@ -29,11 +29,16 @@ class DashboardWidgetTeamScopeTests(APITestCase):
         cls.own_team = Team.objects.create(name='DW Own', code='DWO', team_leader=cls.tl)
         cls.tl.profile.teams.add(cls.own_team)
         cls.employee.profile.teams.add(cls.own_team)
+        cls.employee.profile.italian_tl = cls.tl
+        cls.employee.profile.save()
+        cls.shared_peer = User.objects.create_user(
+            username='dw_peer', password='x', first_name='Petra', last_name='Peer')
+        cls.shared_peer.profile.teams.add(cls.own_team)
         cls.foreign_team = Team.objects.create(name='DW Foreign', code='DWF')
         cls.victim.profile.teams.add(cls.foreign_team)
 
         client = Client.objects.create(name='DW Client', code='DWC')
-        for user in (cls.employee, cls.victim):
+        for user in (cls.employee, cls.shared_peer, cls.victim):
             OvertimeLog.objects.create(
                 user=user, date=timezone.now().date(), hours=2, status='pending', client=client)
 
@@ -71,6 +76,14 @@ class DashboardWidgetTeamScopeTests(APITestCase):
                 self.assertEqual(resp.status_code, 200)
                 self.assertIn('Olive Own', str(resp.data))
                 self.assertNotIn('Vivian', str(resp.data))
+                self.assertNotIn('Petra Peer', str(resp.data))
+
+    def test_shared_team_without_tl_link_exposes_no_peer_data(self):
+        resp = self._get(self.tl, 'team_stats', team_id=self.own_team.id)
+        self.assertEqual(resp.status_code, 200)
+        # Only linked employee + TL themselves, never shared-team peer.
+        self.assertEqual(resp.data['team_size'], 2)
+        self.assertEqual(resp.data['pending_team_overtime'], 1)
 
     def test_staff_and_hr_can_query_any_team(self):
         for user in (self.admin, self.hr):
@@ -125,11 +138,13 @@ class LedTeamOnlyLeaderTests(APITestCase):
         self.assertFalse(set(profile.role_codes or []) & {'italian_tl', 'albanian_tl'})
 
     def test_gets_own_team_data(self):
+        # Link-only scope (workflow-invariants item 64): Team.team_leader alone
+        # is calendar-only and does not expose another member's pending data.
         for action in ('top_pending_users', 'queue_highlights'):
             with self.subTest(action=action):
                 resp = self.client.get(WIDGET_URL.format(action), {'team_id': self.team_a.id})
                 self.assertEqual(resp.status_code, 200)
-                self.assertIn('Mona Member', str(resp.data))
+                self.assertNotIn('Mona Member', str(resp.data))
                 self.assertNotIn('Orla', str(resp.data))
 
     def test_gets_404_for_other_team(self):

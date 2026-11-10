@@ -2,6 +2,8 @@
 Authentication views for users app.
 """
 
+from collections.abc import Mapping
+
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -470,7 +472,8 @@ class CustomTokenRefreshView(TokenRefreshView):
     throttle_classes = [ScopedRateThrottle]
 
     def post(self, request, *args, **kwargs):
-        data = request.data.copy()
+        raw_data = request.data
+        data = raw_data.copy() if isinstance(raw_data, Mapping) else {}
         data['refresh'] = request.COOKIES.get('refresh_token') or data.get('refresh')
         request._full_data = data
         response = super().post(request, *args, **kwargs)
@@ -515,7 +518,9 @@ class TokenLogoutView(APIView):
         },
     )
     def post(self, request):
-        refresh_token = request.COOKIES.get('refresh_token') or request.data.get('refresh')
+        raw_data = request.data
+        body_refresh = raw_data.get('refresh') if isinstance(raw_data, Mapping) else None
+        refresh_token = request.COOKIES.get('refresh_token') or body_refresh
         if not refresh_token:
             return Response(
                 {'detail': 'refresh token is required'},
