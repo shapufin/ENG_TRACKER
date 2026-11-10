@@ -38,7 +38,7 @@ def generate_snapshot(snapshot_type='daily'):
         now = business_today()
         
         # Leave metrics
-        leave_requests = LeaveRequest.objects.all()
+        leave_requests = LeaveRequest.objects.filter(is_deleted=False)
         leave_approved = leave_requests.filter(status='approved').count()
         leave_pending = leave_requests.filter(status='pending').count()
         leave_rejected = leave_requests.filter(status='rejected').count()
@@ -49,7 +49,7 @@ def generate_snapshot(snapshot_type='daily'):
         leave_days = sum(lr.days_requested for lr in approved_requests)
         
         # Overtime metrics
-        overtime_logs = OvertimeLog.objects.all()
+        overtime_logs = OvertimeLog.objects.filter(is_deleted=False)
         overtime_approved = float(overtime_logs.filter(status='approved').aggregate(
             total=models.Sum('hours')
         )['total'] or 0)
@@ -58,7 +58,7 @@ def generate_snapshot(snapshot_type='daily'):
         )['total'] or 0)
 
         # Standby metrics (map pending→scheduled, approved→completed for Analytics compatibility)
-        standby_logs = StandbyLog.objects.all()
+        standby_logs = StandbyLog.objects.filter(is_deleted=False)
         standby_scheduled = standby_logs.filter(status='pending').count()
         standby_completed = standby_logs.filter(status='approved').count()
         

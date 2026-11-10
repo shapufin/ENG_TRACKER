@@ -72,14 +72,16 @@ def _compute_analytics_filters(request):
         start_date = now - timedelta(days=30)
         end_date = now
 
-    leave_filters = Q(created_at__gte=start_date, created_at__lte=end_date)
+    leave_filters = Q(created_at__gte=start_date, created_at__lte=end_date, is_deleted=False)
     overtime_filters = Q(
         date__gte=start_date.date(),
         date__lte=end_date.date(),
+        is_deleted=False,
     )
     standby_filters = Q(
         date__gte=start_date.date(),
         date__lte=end_date.date(),
+        is_deleted=False,
     )
 
     if teams:
@@ -217,9 +219,21 @@ class AnalyticsMetricViewSet(PluginPermissionMixin,
         # Calculate trends (compare with previous period of equal length)
         period_length = (end_date - start_date).days + 1
         prev_start = start_date - timedelta(days=period_length)
-        prev_leave = LeaveRequest.objects.filter(created_at__gte=prev_start, created_at__lt=start_date).count()
-        prev_overtime = safe_aggregate(OvertimeLog.objects.filter(created_at__gte=prev_start, created_at__lt=start_date), 'hours')
-        prev_standby = safe_aggregate(StandbyLog.objects.filter(created_at__gte=prev_start, created_at__lt=start_date), 'hours')
+        prev_leave = LeaveRequest.objects.filter(
+            created_at__gte=prev_start, created_at__lt=start_date, is_deleted=False
+        ).count()
+        prev_overtime = safe_aggregate(
+            OvertimeLog.objects.filter(
+                date__gte=prev_start.date(), date__lt=start_date.date(), is_deleted=False
+            ),
+            'hours',
+        )
+        prev_standby = safe_aggregate(
+            StandbyLog.objects.filter(
+                date__gte=prev_start.date(), date__lt=start_date.date(), is_deleted=False
+            ),
+            'hours',
+        )
         prev_user_count = User.objects.filter(date_joined__gte=prev_start, date_joined__lt=start_date).count()
         prev_active_user_count = User.objects.filter(date_joined__gte=prev_start, date_joined__lt=start_date, is_active=True).count()
 
@@ -487,14 +501,15 @@ class AnalyticsMetricViewSet(PluginPermissionMixin,
         user_growth = ((current_period_users - prev_period_users) / prev_period_users * 100) if prev_period_users > 0 else 0
         
         # Hours metrics - filter by work date if available, otherwise created_at
-        overtime_logs = OvertimeLog.objects.filter(created_at__gte=start_date)
+        overtime_logs = OvertimeLog.objects.filter(created_at__gte=start_date, is_deleted=False)
         total_hours = safe_aggregate(overtime_logs, 'hours')
         overtime_hours = safe_aggregate(overtime_logs.filter(status='approved'), 'hours')
         
         # Previous period hours for trend
         prev_overtime = safe_aggregate(OvertimeLog.objects.filter(
-            created_at__gte=prev_start, 
-            created_at__lt=start_date
+            created_at__gte=prev_start,
+            created_at__lt=start_date,
+            is_deleted=False,
         ), 'hours')
         hours_trend = ((total_hours - prev_overtime) / prev_overtime * 100) if prev_overtime > 0 else 0
         

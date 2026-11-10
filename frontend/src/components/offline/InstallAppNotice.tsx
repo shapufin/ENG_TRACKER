@@ -12,11 +12,11 @@ export function InstallAppNotice() {
 
   return (
     <aside
-      className="border-primary/30 bg-card fixed inset-x-3 bottom-[calc(var(--bottom-nav-h,var(--safe-area-bottom))+0.75rem)] z-40 rounded-xl border px-4 pb-3 shadow-lg md:bottom-3 md:mb-[var(--safe-area-bottom)]"
+      className="border-primary/30 bg-card fixed inset-x-3 bottom-[calc(var(--bottom-nav-h,var(--safe-area-bottom))+0.75rem)] z-40 rounded-xl border px-4 pb-3 shadow-lg md:right-4 md:bottom-4 md:left-auto md:mb-[var(--safe-area-bottom)] md:w-96"
       role="status"
       aria-live="polite"
     >
-      <div className="mx-auto flex max-w-4xl items-start gap-3 pt-3 text-sm">
+      <div className="flex items-start gap-3 pt-3 text-sm">
         <Download className="text-primary mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className="font-medium">Install Engineering Tracker</p>

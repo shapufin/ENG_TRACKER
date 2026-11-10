@@ -139,22 +139,24 @@ export const AppShell = React.memo(() => {
       />
 
       <main className="admin-canvas flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="border-border/30 bg-card/30 flex items-center justify-between border-b px-3 pt-[calc(0.75rem+var(--safe-area-top))] pb-3 backdrop-blur-sm md:hidden">
-          <div className="flex items-center gap-3">
+        <div className="border-border/30 bg-card/30 flex items-center justify-between gap-2 border-b px-3 pt-[calc(0.75rem+var(--safe-area-top))] pb-3 backdrop-blur-sm md:hidden">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <button
               ref={mobileMenuButtonRef}
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="hover:bg-accent flex h-11 w-11 items-center justify-center rounded-md"
+              className="hover:bg-accent flex h-11 w-11 shrink-0 items-center justify-center rounded-md"
               aria-label="Open menu"
               aria-expanded={mobileOpen}
               aria-controls="app-mobile-sidebar"
             >
               <Menu className="h-5 w-5" />
             </button>
-            <span className="font-semibold">{branding?.site_name || "Engineering Tracker"}</span>
+            <span className="truncate font-semibold">
+              {branding?.site_name || "Engineering Tracker"}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1">
             <PluginSlot slot="header-mobile" />
             <MobileHeaderActions
               user={user}

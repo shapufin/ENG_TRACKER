@@ -972,3 +972,74 @@ class ScheduledReportVisibilityTests(TestCase):
         rows = resp.data['results'] if isinstance(resp.data, dict) else resp.data
         self.assertEqual([r['id'] for r in rows], [self.report.id])
         self.assertEqual(client.get(f'{self.URL}{self.report.id}/').status_code, 200)
+
+
+class SoftDeleteExclusionTests(TestCase):
+    """Soft-deleted requests/logs must never count in analytics metrics,
+    trends, summary, insights, or snapshots."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.leave_management.models import LeaveRequest
+        from apps.overtime.models import Client as OtClient, OvertimeLog
+        from apps.standby.models import StandbyLog
+
+        cls.admin = User.objects.create_user(username='sd_admin', password='x', is_staff=True)
+        cls.member = User.objects.create_user(username='sd_member', password='x')
+        cls.client_obj = OtClient.objects.create(name='SD Client', code='SDC')
+        today = timezone.now().date()
+
+        cls.live_ot = OvertimeLog.objects.create(
+            user=cls.member, client=cls.client_obj, date=today, hours=3, status='approved',
+        )
+        cls.deleted_ot = OvertimeLog.objects.create(
+            user=cls.member, client=cls.client_obj, date=today, hours=9, status='approved',
+            is_deleted=True,
+        )
+        cls.live_sb = StandbyLog.objects.create(
+            user=cls.member, date=today, hours=4, status='approved',
+        )
+        cls.deleted_sb = StandbyLog.objects.create(
+            user=cls.member, date=today, hours=12, status='approved', is_deleted=True,
+        )
+        cls.live_leave = LeaveRequest.objects.create(
+            user=cls.member, request_type='vacation', start_date=today, end_date=today,
+            status='approved', reason='Live',
+        )
+        cls.deleted_leave = LeaveRequest.objects.create(
+            user=cls.member, request_type='vacation', start_date=today, end_date=today,
+            status='approved', reason='Deleted', is_deleted=True,
+        )
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+        _ensure_analytics_urls()
+        self.api = APIClient()
+        self.api.force_authenticate(self.admin)
+
+    def test_metrics_summary_and_trends_exclude_soft_deleted_records(self):
+        metrics_resp = self.api.get('/api/plugins/analytics/metrics/')
+        self.assertEqual(metrics_resp.status_code, 200)
+        by_name = {m['name']: m['value'] for m in metrics_resp.data['metrics']}
+        self.assertEqual(by_name['Leave Requests'], 1)
+        self.assertEqual(by_name['Overtime Hours'], 3.0)
+        self.assertEqual(by_name['Standby Hours'], 4.0)
+
+        summary_resp = self.api.get('/api/plugins/analytics/metrics/summary/')
+        self.assertEqual(summary_resp.status_code, 200)
+        self.assertEqual(summary_resp.data['total_hours'], 3.0)
+        self.assertEqual(summary_resp.data['overtime_hours'], 3.0)
+
+        trends_resp = self.api.get('/api/plugins/analytics/metrics/trends/')
+        self.assertEqual(trends_resp.status_code, 200)
+        self.assertEqual(sum(p['hours'] for p in trends_resp.data['overtime']), 3.0)
+        self.assertEqual(sum(p['hours'] for p in trends_resp.data['standby']), 4.0)
+        self.assertEqual(sum(p['count'] for p in trends_resp.data['leave']), 1.0)
+
+    def test_snapshot_generation_excludes_soft_deleted_records(self):
+        from plugins.analytics.signals import generate_snapshot
+
+        snapshot = generate_snapshot('daily')
+        self.assertEqual(snapshot.leave_approved_count, 1)
+        self.assertEqual(float(snapshot.overtime_approved_hours), 3.0)
+        self.assertEqual(snapshot.standby_completed_count, 1)
