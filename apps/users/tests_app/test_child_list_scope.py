@@ -18,6 +18,8 @@ class ChildListScopeTests(APITestCase):
         for u in (cls.tl, cls.mate):
             u.profile.teams.add(cls.team_a)
         cls.other.profile.teams.add(cls.team_b)
+        cls.mate.profile.albanian_tl = cls.tl  # link-only scope (workflow-invariants item 64)
+        cls.mate.profile.save()
         cls.admin = User.objects.create_user(username='sc_admin', password='x', is_staff=True)
         cls.hr = User.objects.create_user(username='sc_hr', password='x')
         cls.hr.profile.is_hr_user = True

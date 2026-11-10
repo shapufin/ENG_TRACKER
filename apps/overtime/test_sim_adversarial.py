@@ -34,6 +34,8 @@ class OvertimeAbuseTests(APITestCase):
         cls.team = Team.objects.create(name='Sim', code='SIM', team_leader=cls.tl)
         cls.emp.profile.teams.add(cls.team)
         cls.tl.profile.teams.add(cls.team)
+        cls.emp.profile.albanian_tl = cls.tl  # link-only scope (workflow-invariants item 64)
+        cls.emp.profile.save()
         cls.foreign_team = Team.objects.create(name='SimF', code='SIMF')
         cls.other.profile.teams.add(cls.foreign_team)
         cls.client_obj = Client.objects.create(name='SimC', code='SIMC')

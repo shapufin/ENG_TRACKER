@@ -622,20 +622,31 @@ class UserProfile(BaseModel):
 
     def get_team_member_ids(self):
         """
-        Get IDs of all users this user can manage as a team leader.
+        Get IDs of all users whose internal data this user can see as a leader.
 
-        Sources (combined in one query):
-        1. Direct FK assignments (`italian_tl` / `albanian_tl`)
-        2. Members of teams this user belongs to (shared calendar/team M2M)
-        3. Members of teams where this user is `Team.team_leader` (`led_teams`)
-
-        Including Q(italian_tl=...) and Q(albanian_tl=...) unconditionally is
-        safe: if no UserProfile points to this user those conditions simply
-        match zero rows — no .exists() pre-checks needed.
+        Link-only (owner ruling 2026-11-10): the users whose `italian_tl` /
+        `albanian_tl` points at this user. Teams, workspaces and
+        `Team.team_leader` are calendar concepts and never widen this scope;
+        calendar access uses `get_calendar_member_ids()`.
         """
         cached = getattr(self, '_bulk_team_member_ids', None)
         if cached is not None:
             return set(cached)
+        user = self.user
+        return set(
+            UserProfile.objects.filter(Q(italian_tl=user) | Q(albanian_tl=user))
+            .values_list('user_id', flat=True)
+            .distinct()
+        )
+
+    def get_calendar_member_ids(self):
+        """
+        Calendar-only reach: the old three-source scope, used to decide which
+        team workspaces a leader can open. Never use it for internal data.
+
+        Sources: direct FK links, members of teams this user belongs to, and
+        members of teams where this user is `Team.team_leader` (`led_teams`).
+        """
         user = self.user
         membership_team_ids = set(self.teams.values_list('id', flat=True))
         led_team_ids = set(user.led_teams.filter(is_active=True).values_list('id', flat=True))

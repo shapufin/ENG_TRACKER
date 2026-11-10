@@ -30,6 +30,7 @@ from plugins.engagement.services import (
 from core.utils.timezone_local import business_today, business_tz
 from plugins.engagement.sla import deadline_for, responsiveness_score
 from plugins.engagement.test_engagement import (
+    _join,
     _assign_tl_role,
     _make_client,
     _make_overtime,
@@ -98,7 +99,7 @@ class PendingBreachTests(TestCase):
         self.leader = _make_user('sla_leader')
         self.team = _make_team('SLA Team', 'SLA', leader=self.leader)
         self.member = _make_user('sla_member')
-        TeamMembership.objects.create(user_profile=self.member.profile, team=self.team)
+        _join(self.member, self.team)
 
     def _pending_ot(self, day=OCT.replace(day=9)):
         return _make_overtime(self.member, day, _at(day, 10), status='pending', client=self.client_obj)
@@ -178,7 +179,7 @@ class TeamCoverageTests(TestCase):
         self.staff = _make_user('cov_staff')
         self.staff.profile.albanian_tl = self.leader
         self.staff.profile.save(update_fields=['albanian_tl'])
-        TeamMembership.objects.create(user_profile=self.staff.profile, team=self.team_b)
+        _join(self.staff, self.team_b)
 
     def test_fk_managed_staff_creates_a_snapshot_for_their_team(self):
         ensure_current_month_snapshots({self.leader.id})
@@ -202,7 +203,7 @@ class TeamCoverageTests(TestCase):
 
     def test_staff_in_two_teams_counts_in_both(self):
         team_c = _make_team('Cov Team C', 'COVC')
-        TeamMembership.objects.create(user_profile=self.staff.profile, team=team_c)
+        _join(self.staff, team_c)
         snap_b = compute_tl_metric(self.leader, self.team_b, OCT)
         snap_c = compute_tl_metric(self.leader, team_c, OCT)
         self.assertEqual(snap_b.team_size, 1)
@@ -223,7 +224,7 @@ class HolidayEvidenceTests(TestCase):
         self.leader = _make_user('hol_leader')
         self.team = _make_team('Hol Team', 'HOL', leader=self.leader)
         self.member = _make_user('hol_member')
-        TeamMembership.objects.create(user_profile=self.member.profile, team=self.team)
+        _join(self.member, self.team)
         self.holiday = date(2026, 10, 12)
 
     def _decide_on(self, day):
@@ -290,7 +291,7 @@ class StaffReadScalingTests(TestCase):
         _assign_tl_role(leader, 'italian_tl')
         team = _make_team(f'Scale Team {n}', f'SCL{n}', leader=leader)
         member = _make_user(f'scale_member_{n}')
-        TeamMembership.objects.create(user_profile=member.profile, team=team)
+        _join(member, team)
         member.profile.italian_tl = leader
         member.profile.save(update_fields=['italian_tl'])
         return leader
@@ -326,7 +327,7 @@ class ScopeCorrectnessTests(TestCase):
         leader = _make_user('scope_leader')
         team = _make_team('Scope Team', 'SCOPE')
         peer = _make_user('scope_peer')
-        TeamMembership.objects.create(user_profile=peer.profile, team=team)
+        _join(peer, team)
         leftover = TeamMembership.objects.create(user_profile=leader.profile, team=team)
         leftover.soft_delete()
         self.assertNotIn(peer.id, team_member_ids(leader, team))
@@ -344,7 +345,7 @@ class ScopeCorrectnessTests(TestCase):
         leader = _make_user('ghost_team_leader')
         team = _make_team('Ghost Team', 'GHOST')
         staff = _make_user('ghost_team_staff')
-        TeamMembership.objects.create(user_profile=staff.profile, team=team)
+        _join(staff, team)
         staff.profile.italian_tl = leader
         staff.profile.save(update_fields=['italian_tl'])
         team.soft_delete()  # memberships stay live, the team is gone
@@ -379,7 +380,7 @@ class SnapshotCreationQueryTests(TestCase):
         def add_team(n):
             team = _make_team(f'Many Team {n}', f'MANY{n}', leader=leader)
             member = _make_user(f'many_member_{n}')
-            TeamMembership.objects.create(user_profile=member.profile, team=team)
+            _join(member, team)
             member.profile.italian_tl = leader
             member.profile.save(update_fields=['italian_tl'])
 
@@ -409,7 +410,7 @@ class ReadPathTests(TestCase):
         _assign_tl_role(self.leader, 'italian_tl')
         self.team = _make_team('RP Team', 'RP', leader=self.leader)
         self.member = _make_user('rp_member')
-        TeamMembership.objects.create(user_profile=self.member.profile, team=self.team)
+        _join(self.member, self.team)
         self.member.profile.italian_tl = self.leader
         self.member.profile.save(update_fields=['italian_tl'])
         _make_overtime(self.member, OCT.replace(day=9), _at(OCT.replace(day=9), 10), status='pending', client=self.client_obj)
@@ -466,7 +467,7 @@ class FreshnessScopeTests(TestCase):
         leader = _make_user('fresh_leader')
         team = _make_team('Fresh Team', 'FRESH', leader=leader)
         member = _make_user('fresh_member')
-        TeamMembership.objects.create(user_profile=member.profile, team=team)
+        _join(member, team)
         snap = compute_tl_metric(leader, team, OCT)
         old = _make_overtime(member, date(2026, 9, 3), _at(date(2026, 9, 3), 10), status='pending', client=_make_client())
         OvertimeLog.objects.filter(pk=old.pk).update(updated_at=timezone.now() + timedelta(minutes=1))
@@ -502,7 +503,7 @@ class RefreshedOnReadTests(TestCase):
         _assign_tl_role(self.leader, 'italian_tl')
         self.team = _make_team('Read Team', 'READ', leader=self.leader)
         self.member = _make_user('read_member')
-        TeamMembership.objects.create(user_profile=self.member.profile, team=self.team)
+        _join(self.member, self.team)
         call_command('seed_plugin_permissions')
         self.day = date(2026, 10, 9)
         _make_overtime(self.member, self.day, _at(self.day, 10), status='pending', client=self.client_obj)

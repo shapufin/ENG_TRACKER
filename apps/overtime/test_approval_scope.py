@@ -31,6 +31,8 @@ class TeamLeaderApprovalScopeTests(APITestCase):
         for user in (cls.tl, cls.mate):
             user.profile.teams.add(cls.team)
         cls.foreign.profile.teams.add(cls.other_team)
+        cls.mate.profile.albanian_tl = cls.tl  # link-only scope (workflow-invariants item 64)
+        cls.mate.profile.save()
         cls.client_obj = Client.objects.create(name='AP Client', code='APC')
 
     def setUp(self):

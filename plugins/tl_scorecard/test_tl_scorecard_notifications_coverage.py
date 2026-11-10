@@ -155,9 +155,9 @@ class HbprGovernanceCoverageNotificationTests(TestCase):
         self._fire(cycle.save)
         self.assertEqual(len(self._titles(self.hbpr)), 1)
 
-    def test_epr_stage_notifies_hbpr_for_a_member_covered_only_by_a_shared_team(self):
-        # Scope includes members reached through a shared team, not just the direct
-        # FK, so the notification must resolve the owning TL the same way.
+    def test_epr_stage_does_not_notify_hbpr_for_a_member_covered_only_by_a_shared_team(self):
+        # Scope is link-only (workflow-invariants item 64): a shared team grants the Line
+        # Manager nothing, so the HBPR hears nothing about that member.
         from apps.users.models.core import Team, TeamMembership
 
         member = _make_user('shared_team_member')
@@ -173,7 +173,7 @@ class HbprGovernanceCoverageNotificationTests(TestCase):
             cycle.save()
 
         self._fire(complete)
-        self.assertEqual(self._titles(self.hbpr), ['An EPR stage was completed'])
+        self.assertEqual(self._titles(self.hbpr), [])
 
     # --- meetings ---------------------------------------------------------
     def test_team_meeting_create_and_edit_notify_hbpr(self):

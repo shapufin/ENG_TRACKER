@@ -43,6 +43,25 @@ def _assign_tl_role(user, code='italian_tl'):
     UserRole.objects.get_or_create(user=user, role=role, defaults={'is_active': True})
 
 
+def _join(user, team):
+    """Add `user` to `team` and assign them to the team's leader.
+
+    Scope is link-only (workflow-invariants item 64): a team alone grants a leader nothing,
+    so a test that wants "this leader manages this member" must set the italian_tl /
+    albanian_tl link as well.
+    """
+    TeamMembership.objects.create(user_profile=user.profile, team=team)
+    leader = team.team_leader
+    if leader is None or leader.id == user.id:
+        return
+    profile = user.profile
+    if profile.albanian_tl_id in (None, leader.id):
+        profile.albanian_tl = leader
+    else:
+        profile.italian_tl = leader
+    profile.save()
+
+
 def _make_client():
     return Client.objects.create(name='Acme', code='ACME')
 
@@ -100,7 +119,7 @@ class EngagementServiceTests(TestCase):
         self.leader = _make_user('leader1')
         self.team = _make_team('Team A', 'TA', leader=self.leader)
         self.member = _make_user('member1')
-        TeamMembership.objects.create(user_profile=self.member.profile, team=self.team)
+        _join(self.member, self.team)
         self.month = date.today().replace(day=1)
         self.month_start = timezone.make_aware(
             timezone.datetime(self.month.year, self.month.month, 15)
@@ -294,13 +313,13 @@ class EngagementAPITests(TestCase):
         _assign_tl_role(self.leader, 'italian_tl')
         self.team = _make_team('Team B', 'TB', leader=self.leader)
         self.member = _make_user('member2')
-        TeamMembership.objects.create(user_profile=self.member.profile, team=self.team)
+        _join(self.member, self.team)
 
         self.other_leader = _make_user('leader3')
         _assign_tl_role(self.other_leader, 'albanian_tl')
         self.other_team = _make_team('Team C', 'TC', leader=self.other_leader)
         self.other_member = _make_user('member3')
-        TeamMembership.objects.create(user_profile=self.other_member.profile, team=self.other_team)
+        _join(self.other_member, self.other_team)
 
         self.employee = _make_user('employee1')
         self.staff = _make_user('staff1', is_staff=True)

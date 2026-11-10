@@ -62,12 +62,11 @@ def _year_window(year: int) -> tuple[date, date]:
 def managed_member_ids_bulk(leader_ids) -> dict[int, set[int]]:
     """``{leader_id: member_ids}`` in a fixed number of queries.
 
-    Same three sources as ``UserProfile.get_team_member_ids()`` (direct
-    italian/albanian FK, shared team membership, led teams), batched so a year
-    with 30 pairs does not cost 90 queries. ``test_managed_members_match_core``
-    pins the parity.
+    Same source as ``UserProfile.get_team_member_ids()`` (direct italian/albanian
+    FK only; teams are calendar-only), batched so a year with 30 pairs does not
+    cost 60 queries. ``test_managed_members_match_core`` pins the parity.
     """
-    from apps.users.models import TeamMembership, UserProfile
+    from apps.users.models import UserProfile
 
     leader_ids = set(leader_ids)
     result: dict[int, set[int]] = {leader_id: set() for leader_id in leader_ids}
@@ -80,29 +79,6 @@ def managed_member_ids_bulk(leader_ids) -> dict[int, set[int]]:
         ).values_list(field, 'user_id'):
             result[leader_id].add(user_id)
 
-    # Teams the leader belongs to (shared calendar/team M2M) and teams they lead.
-    leader_teams: dict[int, set[int]] = {leader_id: set() for leader_id in leader_ids}
-    for leader_id, team_id in TeamMembership.objects.filter(
-        is_deleted=False, user_profile__user_id__in=leader_ids
-    ).values_list('user_profile__user_id', 'team_id'):
-        leader_teams[leader_id].add(team_id)
-    from apps.users.models import Team
-
-    for leader_id, team_id in Team.objects.filter(
-        is_deleted=False, team_leader_id__in=leader_ids
-    ).values_list('team_leader_id', 'id'):
-        leader_teams[leader_id].add(team_id)
-
-    all_team_ids = set().union(*leader_teams.values()) if leader_teams else set()
-    team_members: dict[int, set[int]] = {}
-    if all_team_ids:
-        for user_id, team_id in TeamMembership.objects.filter(
-            is_deleted=False, team_id__in=all_team_ids
-        ).values_list('user_profile__user_id', 'team_id'):
-            team_members.setdefault(team_id, set()).add(user_id)
-    for leader_id, teams in leader_teams.items():
-        for team_id in teams:
-            result[leader_id] |= team_members.get(team_id, set())
     return result
 
 

@@ -1,7 +1,8 @@
 """TL/HR/Admin scoping helpers for the Skills plugin.
 
-Reuses ``UserProfile.get_team_member_ids()`` (3-source: FK + team M2M +
-led_teams) — never FK-only queries. See CONTEXT.md hot invariant #3.
+Reuses ``UserProfile.get_team_member_ids()`` (link-only: the italian_tl /
+albanian_tl FKs; teams are calendar-only since 2026-11-10, workflow-invariants
+item 64) — never hand-rolled FK queries.
 """
 from django.contrib.auth.models import User
 

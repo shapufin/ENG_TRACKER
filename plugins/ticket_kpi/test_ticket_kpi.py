@@ -410,6 +410,9 @@ class TicketKPIViewSetTests(TestCase):
         cls.team = Team.objects.create(name='Alpha', code='A', team_leader=cls.tl)
         cls.member.profile.teams.add(cls.team)
         cls.tl.profile.teams.add(cls.team)
+        # Scope is link-only (workflow-invariants item 64): the member is assigned to the TL.
+        cls.member.profile.albanian_tl = cls.tl
+        cls.member.profile.save()
 
         # Direct TL assignment for 'other' user
         cls.other.profile.italian_tl = cls.tl
@@ -1098,6 +1101,8 @@ class KPIEvidenceTests(TestCase):
 
         cls.team = Team.objects.create(name='Evidence Team', code='ET', team_leader=cls.tl)
         cls.member.profile.teams.add(cls.team)
+        cls.member.profile.albanian_tl = cls.tl  # link-only scope (item 64)
+        cls.member.profile.save()
 
         cls.client_a = Client.objects.create(name='Evidence Client A', code='ECA')
         cls.member.profile.clients.add(cls.client_a)
@@ -1401,6 +1406,8 @@ class EndToEndUploadFlowTests(TestCase):
         cls.team = Team.objects.create(name='E2E Team', code='E2E', team_leader=cls.tl)
         cls.member.profile.teams.add(cls.team)
         cls.tl.profile.teams.add(cls.team)
+        cls.member.profile.albanian_tl = cls.tl  # link-only scope (item 64)
+        cls.member.profile.save()
 
         # --- Client ---
         cls.client_a = Client.objects.create(name='E2E Client', code='E2EC')

@@ -55,12 +55,14 @@ class TeamScopeParityTests(TestCase):
         expected = set(self.tl.profile.get_team_member_ids()) | {self.tl.id}
         actual = set(_get_tl_team_members(self.tl).values_list('id', flat=True))
         self.assertEqual(actual, expected)
-        self.assertIn(self.peer.id, actual)
+        self.assertIn(self.direct.id, actual)
+        # Link-only scope (workflow-invariants item 64): a shared team grants nothing.
+        self.assertNotIn(self.peer.id, actual)
         self.assertNotIn(self.stranger.id, actual)
 
     def test_is_tl_for_user_agrees_with_scope(self):
         self.assertTrue(_is_tl_for_user(self.tl, self.direct))
-        self.assertTrue(_is_tl_for_user(self.tl, self.peer))
+        self.assertFalse(_is_tl_for_user(self.tl, self.peer))
         self.assertFalse(_is_tl_for_user(self.tl, self.stranger))
         self.assertFalse(_is_tl_for_user(self.tl, self.tl))
 

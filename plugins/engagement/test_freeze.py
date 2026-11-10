@@ -38,6 +38,8 @@ class FreezeBase(TestCase):
         self.m1, self.m2 = make_user('m1'), make_user('m2')
         for member in (self.m1, self.m2):
             member.profile.teams.add(self.team)
+            member.profile.albanian_tl = self.leader  # link-only scope (item 64)
+            member.profile.save()
 
     def compute_at(self, moment):
         with patch('plugins.engagement.services._now', return_value=moment), \
@@ -131,6 +133,9 @@ class ArchivedTeamPairsTests(FreezeBase):
         self.assertIn((self.leader.pk, self.team.pk), [(lead.pk, t.pk) for lead, t in leader_team_pairs()])
         self.m1.profile.teams.clear()
         self.m2.profile.teams.clear()
+        # A leader with assigned staff stays a candidate whatever their team (item 64):
+        # only a leader with no link and an archived team drops out.
+        UserProfile.objects.filter(user__in=(self.m1, self.m2)).update(albanian_tl=None)
         Team.objects.filter(pk=self.team.pk).update(is_active=False)
         self.assertNotIn(self.team.pk, [t.pk for _, t in leader_team_pairs()])
         self.assertNotIn(self.leader.pk, candidate_leader_ids())

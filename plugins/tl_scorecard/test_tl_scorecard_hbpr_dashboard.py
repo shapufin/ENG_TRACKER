@@ -49,17 +49,17 @@ class HbprWorkspaceOverviewTests(HbprScorecardBase):
         self.assertFalse(row['epr_year_end'])
         self.assertEqual(row['evidence_count'], 0)
 
-    def test_team_size_counts_shared_team_members_like_the_scope(self):
-        # `get_team_member_ids()` also returns members of a team the Line Manager
-        # belongs to; such a member is in the read scope, so the count must
-        # include them (counting only the direct FK would understate the team).
+    def test_team_size_ignores_shared_team_members_like_the_scope(self):
+        # Scope is link-only (workflow-invariants item 64): a member who only shares a
+        # team with the Line Manager is not in the read scope, so the count excludes them.
         from apps.users.models.core import Team
 
+        before = self._leader()['team_size']
         team = Team.objects.create(name='Shared team', code='SHARED')
         self.tl.profile.teams.add(team)
         shared = _make_user('shared_team_member')
         shared.profile.teams.add(team)
-        self.assertEqual(self._leader()['team_size'], 2)
+        self.assertEqual(self._leader()['team_size'], before)
 
     def test_unassigned_tl_never_appears(self):
         ids = {r['id'] for r in self._get('overview', self.hbpr).data['leaders']}

@@ -165,6 +165,8 @@ class TeamLeaderEditGuardTests(TestCase):
         self.employee = User.objects.create_user(username='guard-employee', password='pass')
         self.team = Team.objects.create(name='Guard Team', code='GUARD', team_leader=self.tl)
         TeamMembership.objects.create(user_profile=self.employee.profile, team=self.team, is_primary_team=True)
+        self.employee.profile.albanian_tl = self.tl  # link-only scope (workflow-invariants item 64)
+        self.employee.profile.save()
         self.client_obj = Client.objects.create(name='Guard Client', code='GUARD-CLIENT')
         self.entry = OvertimeLog.objects.create(
             user=self.employee, client=self.client_obj, date=date.today().replace(day=1), hours=2,
@@ -227,6 +229,8 @@ class ApprovalPeriodWorkflowTests(TestCase):
             team=self.team,
             is_primary_team=True,
         )
+        self.employee.profile.albanian_tl = self.tl  # link-only scope (workflow-invariants item 64)
+        self.employee.profile.save()
         self.client_obj = Client.objects.create(name='Period Client', code='PERIOD-CLIENT')
         self.client.force_authenticate(user=self.tl)
 
@@ -289,6 +293,8 @@ class ApprovalPeriodWorkflowTests(TestCase):
             team=self.team,
             is_primary_team=True,
         )
+        cr_user.profile.albanian_tl = self.tl  # in the TL's scope, so only the CR-only rule can exclude them
+        cr_user.profile.save()
         ControlRoomAccess.objects.create(user=cr_user, is_active=True)
 
         response = self._finalize('2026-05-01')

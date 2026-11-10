@@ -743,14 +743,13 @@ class CalendarWorkspaceViewSet(HbprBlockedMixin, CacheInvalidationMixin, viewset
                 team_workspaces.extend(calendar_group_workspaces)
 
         # For TLs: add workspaces for teams their managed members belong to.
-        # Uses get_team_member_ids() — the canonical membership source that
-        # combines FK assignments (albanian_tl/italian_tl), shared team M2M,
-        # and led_teams (Team.team_leader). This keeps calendar workspace
-        # visibility consistent with overtime/standby/leave viewsets and
-        # satisfies CONTEXT.md critical rule #9 (no FK-only TL checks).
+        # Calendar-only reach: get_calendar_member_ids() combines FK links,
+        # shared team M2M and led_teams. Internal data scope is link-only
+        # (get_team_member_ids); calendar access deliberately keeps this wider
+        # source so workspace visibility does not change.
         if has_team_leader_role(user):
             from apps.users.models import UserProfile
-            assigned_member_ids = user.profile.get_team_member_ids()
+            assigned_member_ids = user.profile.get_calendar_member_ids()
 
             if assigned_member_ids:
                 # Get teams of assigned members
