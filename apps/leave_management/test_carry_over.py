@@ -351,3 +351,20 @@ class BalanceUpdateBugTests(CarryOverTestBase):
         self.assertEqual(edit.status_code, 200, edit.content)
         row = LeaveBalance.objects.get(user=self.user, year=2026)
         self.assertEqual(row.pending_days, Decimal('4'))
+
+    def test_delete_carry_only_request_without_current_balance_releases_carry(self):
+        carry = self.balance(2026, total=5, carry=True, expires=date(2027, 3, 31))
+        self.balance(2027, total=22)
+        self.set_today(date(2027, 1, 10))
+        response = self.request(date(2027, 1, 11), date(2027, 1, 13))
+        self.assertEqual(response.status_code, 201, response.content)
+        req_id = response.data['id']
+        # Simulate a carry-only request with no current-year balance FK
+        LeaveRequest.objects.filter(pk=req_id).update(balance=None)
+        carry.refresh_from_db()
+        self.assertEqual(carry.pending_days, Decimal('3'))
+        self.api.force_authenticate(user=self.user)
+        deleted = self.api.delete(f'{REQ}{req_id}/')
+        self.assertEqual(deleted.status_code, 204)
+        carry.refresh_from_db()
+        self.assertEqual(carry.pending_days, Decimal('0'))

@@ -642,7 +642,7 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         """
         from django.db.models import Q
         from core.mixins.permissions import has_hr_role
-        from core.utils.admin_logs import parse_iso_date, search_terms
+        from core.utils.admin_logs import parse_int_param, parse_iso_date, search_terms
 
         user = request.user
         if not (user.is_superuser or user.is_staff or has_hr_role(user)):
@@ -656,13 +656,13 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
             'user__profile__team_memberships__team'
         )
         if params.get('user'):
-            queryset = queryset.filter(user_id=params['user'])
+            queryset = queryset.filter(user_id=parse_int_param(params['user'], 'user'))
         if params.get('request_type'):
             queryset = queryset.filter(request_type=params['request_type'])
         if params.get('italian_tl'):
-            queryset = queryset.filter(user__profile__italian_tl_id=params['italian_tl'])
+            queryset = queryset.filter(user__profile__italian_tl_id=parse_int_param(params['italian_tl'], 'italian_tl'))
         if params.get('albanian_tl'):
-            queryset = queryset.filter(user__profile__albanian_tl_id=params['albanian_tl'])
+            queryset = queryset.filter(user__profile__albanian_tl_id=parse_int_param(params['albanian_tl'], 'albanian_tl'))
         if params.get('date_from'):
             queryset = queryset.filter(start_date__gte=parse_iso_date(params['date_from'], 'date_from'))
         if params.get('date_to'):
@@ -695,7 +695,7 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
 
     def perform_destroy(self, instance):
         with transaction.atomic():
-            if instance.request_type == 'vacation' and instance.balance:
+            if instance.request_type == 'vacation' and (instance.balance_id or instance.carry_balance_id):
                 self._release_balance(instance, detach=False)
             super().perform_destroy(instance)
         self.invalidate_related_cache()

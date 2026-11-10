@@ -110,7 +110,8 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Team confidentiality (2026-10-20): teammates' pending counts and
         # statuses are TL management data. Employees get nothing from here.
-        if not (user.is_staff or user.is_superuser or has_hr_role(user) or has_team_leader_role(user)):
+        is_unrestricted = user.is_staff or user.is_superuser or has_hr_role(user)
+        if not (is_unrestricted or has_team_leader_role(user)):
             raise PermissionDenied()
 
         if team_id:
@@ -126,24 +127,27 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
 
         logger.debug(f"[TL Dashboard] user={user.id}, team_id_param={team_id}, team_from_profile={team.id if team else None}")
 
-        # Get members from direct TL assignments
-        albanian_member_ids = set(UserProfile.objects.filter(albanian_tl=user).values_list('user_id', flat=True))
-        italian_member_ids = set(UserProfile.objects.filter(italian_tl=user).values_list('user_id', flat=True))
-        direct_member_ids = albanian_member_ids.union(italian_member_ids)
-
+        # Link-only scope (workflow-invariants item 64): TLs see only users
+        # whose italian_tl/albanian_tl points at them, never shared calendar
+        # team peers or led_teams alone. Staff/HR retain team inspection.
+        direct_member_ids = set(user.profile.get_team_member_ids())
         logger.debug(f"[TL Dashboard] direct_tl_members={direct_member_ids}")
 
         if not team and not direct_member_ids:
             return None, None, 'no_team'
 
-        # Get team members via teams M2M relationship
-        team_member_ids = set()
-        if team:
-            team_member_ids = set(UserProfile.objects.filter(teams=team).values_list('user_id', flat=True))
-            logger.debug(f"[TL Dashboard] team_m2m_members={team_member_ids}")
-
-        # Combine both sources
-        team_member_ids.update(direct_member_ids)
+        if is_unrestricted:
+            team_member_ids = set()
+            if team:
+                team_member_ids = set(UserProfile.objects.filter(teams=team).values_list('user_id', flat=True))
+                logger.debug(f"[TL Dashboard] team_m2m_members={team_member_ids}")
+            team_member_ids.update(direct_member_ids)
+        else:
+            team_member_ids = set(direct_member_ids)
+            if team_id and team:
+                team_member_ids &= set(
+                    UserProfile.objects.filter(teams=team).values_list('user_id', flat=True)
+                )
 
         # Always include the current user so TL can see their own data alongside team members
         team_member_ids.add(user.id)

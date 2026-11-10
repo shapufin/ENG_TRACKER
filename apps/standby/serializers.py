@@ -235,16 +235,22 @@ class StandbyLogUpdateSerializer(serializers.ModelSerializer):
         new_date = data.get('date')
         if new_date and self.instance and new_date != self.instance.date:
             assert_work_date_open(new_date)
-        hours = data.get('hours', self.instance.hours if self.instance else None)
-        start_time = data.get('start_time')
-        end_time = data.get('end_time')
+        start_time = data.get('start_time', self.instance.start_time if self.instance else None)
+        end_time = data.get('end_time', self.instance.end_time if self.instance else None)
+        if bool(start_time) != bool(end_time):
+            raise serializers.ValidationError({
+                'start_time': 'Both start_time and end_time must be provided together.',
+                'end_time': 'Both start_time and end_time must be provided together.',
+            })
+        times_updated = 'start_time' in data or 'end_time' in data
+        if start_time and end_time and (times_updated or data.get('hours') is None):
+            hours = _calculate_hours_from_times(start_time, end_time)
+        else:
+            hours = data.get('hours', self.instance.hours if self.instance else None)
         if hours is None:
-            if start_time and end_time:
-                hours = _calculate_hours_from_times(start_time, end_time)
-            else:
-                raise serializers.ValidationError(
-                    {'hours': 'Hours are required when start/end times are not provided.'}
-                )
+            raise serializers.ValidationError(
+                {'hours': 'Hours are required when start/end times are not provided.'}
+            )
         if hours <= 0:
             raise serializers.ValidationError({'hours': 'Hours must be greater than 0.'})
         if hours > 24:

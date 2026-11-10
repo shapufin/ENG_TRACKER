@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
+import { DescriptionColumn } from "@/components/admin/DescriptionColumn";
 import { UserCell } from "@/components/admin/UserCell";
 import { createCrudActionsColumn } from "@/components/ui/tableColumnHelpers";
 import { formatDateDDMMYYYY, isPastMonth } from "@/lib/date-format-utils";
@@ -22,7 +23,7 @@ export const useStandbyColumns = (
       {
         accessorKey: "date",
         header: "Date",
-        size: 80,
+        size: 95,
         cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
       },
       ...(canViewTeamData
@@ -30,7 +31,7 @@ export const useStandbyColumns = (
             {
               accessorKey: "user_full_name",
               header: "Employee",
-              size: 120,
+              size: 160,
               cell: ({ row }) => (
                 <UserCell name={row.original.user_full_name || row.original.user_name} />
               ),
@@ -50,7 +51,7 @@ export const useStandbyColumns = (
       {
         id: "payroll_period",
         header: "Payroll",
-        size: 110,
+        size: 105,
         cell: ({ row }) =>
           row.original.is_carried_over ? (
             <Badge
@@ -64,11 +65,17 @@ export const useStandbyColumns = (
             <span className="text-muted-foreground whitespace-nowrap">Same month</span>
           ),
       },
-      { accessorKey: "description", header: "Description", size: 180 },
+      {
+        id: "description",
+        accessorKey: "description",
+        header: "Description",
+        size: 180,
+        cell: ({ row }) => <DescriptionColumn value={row.original.description} />,
+      },
       {
         accessorKey: "status",
         header: "Status",
-        size: 90,
+        size: 105,
         cell: ({ row }) => <StatusBadge variant={row.original.status as StatusVariant} />,
       },
       {
@@ -81,7 +88,7 @@ export const useStandbyColumns = (
           canEdit: (row) => isAdmin || !isPastMonth(row.date),
           canDelete: (row) => isSuperuser || row.status === "pending" || !isPastMonth(row.date),
         }),
-        size: 110,
+        size: 108,
       },
     ],
     [canViewTeamData, canApprove, onApprove, onReject, onEdit, onDelete, isAdmin, isSuperuser]

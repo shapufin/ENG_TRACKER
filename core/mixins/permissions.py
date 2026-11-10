@@ -6,7 +6,7 @@ from contextlib import contextmanager
 
 from django.db import IntegrityError, transaction
 from django.utils import timezone
-from rest_framework import permissions, status, decorators
+from rest_framework import permissions, decorators
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from apps.permissions.services import permission_service
@@ -416,15 +416,28 @@ class MonthlyLockMixin:
         return not self._is_month_locked(obj) and not self._is_approval_period_locked(obj)
 
 
+def parse_bulk_ids(raw_ids) -> list[int]:
+    """Validate and coerce ``ids`` for bulk actions; 400 on malformed input."""
+    if not isinstance(raw_ids, list) or not raw_ids:
+        raise ValidationError({'error': 'No IDs provided.'})
+    parsed = []
+    for item in raw_ids:
+        if isinstance(item, bool):
+            raise ValidationError({'error': 'IDs must be integers.'})
+        try:
+            parsed.append(int(item))
+        except (TypeError, ValueError) as exc:
+            raise ValidationError({'error': 'IDs must be integers.'}) from exc
+    return parsed
+
+
 class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePermissionMixin):
     """Mixin to provide common bulk actions: approve, reject, delete."""
 
     @decorators.action(detail=False, methods=['post'])
     def bulk_approve(self, request):
         """Approve multiple entries at once."""
-        ids = request.data.get('ids', [])
-        if not ids:
-            return Response({'error': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        ids = parse_bulk_ids(request.data.get('ids'))
 
         approved_count = 0
         failed_ids = []
@@ -453,10 +466,8 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
     @decorators.action(detail=False, methods=['post'])
     def bulk_reject(self, request):
         """Reject multiple entries at once."""
-        ids = request.data.get('ids', [])
+        ids = parse_bulk_ids(request.data.get('ids'))
         rejection_reason = request.data.get('rejection_reason', '')
-        if not ids:
-            return Response({'error': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
         rejected_count = 0
         failed_ids = []
@@ -493,9 +504,7 @@ class BulkActionMixin(CacheInvalidationMixin, ApprovalPermissionMixin, DeletePer
         adds the record to ``failed_ids`` instead of aborting the entire
         bulk operation.
         """
-        ids = request.data.get('ids', [])
-        if not ids:
-            return Response({'error': 'No IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        ids = parse_bulk_ids(request.data.get('ids'))
 
         deleted_count = 0
         failed_ids = []
@@ -909,17 +918,18 @@ class PersonalOnlyFilterMixin(WorkspaceFilterMixin):
         else:
             return queryset
         
-        # If no date filters provided, default to current month
+        # If no date filters provided, default to current month in business timezone
         if not date_from and not date_to:
-            today = timezone.now()
+            today = business_today()
             queryset = queryset.filter(
                 **{f'{date_field}__year': today.year, f'{date_field}__month': today.month}
             )
         else:
+            from core.utils.admin_logs import parse_iso_date
             if date_from:
-                queryset = queryset.filter(**{f'{date_field}__gte': date_from})
+                queryset = queryset.filter(**{f'{date_field}__gte': parse_iso_date(date_from, 'date_from')})
             if date_to:
-                queryset = queryset.filter(**{f'{date_field}__lte': date_to})
+                queryset = queryset.filter(**{f'{date_field}__lte': parse_iso_date(date_to, 'date_to')})
         
         return queryset
 

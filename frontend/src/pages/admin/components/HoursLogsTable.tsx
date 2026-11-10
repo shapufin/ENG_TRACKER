@@ -127,6 +127,7 @@ export const HoursLogsTable = <T extends HoursLog>({
         id: "user_name",
         accessorKey: "user_name",
         header: "User",
+        size: 175,
         cell: ({ row }) => (
           <UserCell name={row.original.user_name} techLevels={row.original.user_tech_levels} />
         ),
@@ -135,6 +136,7 @@ export const HoursLogsTable = <T extends HoursLog>({
         id: "date",
         accessorKey: "date",
         header: "Date",
+        size: 102,
         cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
       },
       ...extraColumns,
@@ -142,6 +144,7 @@ export const HoursLogsTable = <T extends HoursLog>({
         id: "hours",
         accessorKey: "hours",
         header: "Hours",
+        size: 145,
         cell: ({ row }) =>
           row.original.paid_window_start ? (
             <OvertimeHoursBadge log={row.original} />
@@ -155,18 +158,21 @@ export const HoursLogsTable = <T extends HoursLog>({
         id: "description",
         accessorKey: "description",
         header: "Description",
+        size: 180,
         cell: ({ row }) => <DescriptionColumn value={row.original.description} />,
       },
       {
         id: "status",
         accessorKey: "status",
         header: "Status",
+        size: 112,
         cell: ({ row }) => <StatusBadge variant={row.original.status as StatusVariant} />,
       },
       {
         id: "actions",
         meta: { actionsDisplay: "column" },
         header: "Actions",
+        size: 112,
         cell: ({ row }) => (
           <HoursLogRowActions
             id={row.original.id}

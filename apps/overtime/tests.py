@@ -1034,3 +1034,47 @@ class StructuredTicketReferenceTests(TestCase):
         )
         self.assertEqual(update.status_code, status.HTTP_200_OK, update.data)
         self.assertEqual(update.data['ticket_references'], ['INC-100'])
+
+
+class OvertimePatchAndInputHardeningTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(username='ot-harden', password='testpass')
+        self.client_obj = Client.objects.create(name='OT Harden', code='OTH')
+        self.client.force_authenticate(user=self.user)
+
+    def test_patch_invalid_hours_or_half_time_pair_returns_400_not_500(self):
+        log = OvertimeLog.objects.create(
+            user=self.user, client=self.client_obj, date=date(2026, 12, 9), hours=2
+        )
+        for payload in ({'start_time': '18:00'}, {'end_time': '20:00'}):
+            r = self.client.patch(
+                f'/api/overtime/logs/{log.id}/?ignore_date_filter=true',
+                payload,
+                format='json',
+            )
+            self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST, payload)
+
+    def test_bulk_delete_malformed_ids_returns_400_not_500(self):
+        for bad in ('abc', ['abc']):
+            r = self.client.post(
+                '/api/overtime/logs/bulk_delete/', {'ids': bad}, format='json'
+            )
+            self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST, bad)
+
+    def test_export_malformed_date_returns_400_not_500(self):
+        r = self.client.get('/api/overtime/logs/export/', {'date_from': 'not-a-date'})
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_default_month_filter_uses_business_timezone_at_midnight_boundary(self):
+        from datetime import datetime, timezone as dt_tz
+        OvertimeLog.objects.create(
+            user=self.user, client=self.client_obj, date=date(2026, 12, 1), hours=2
+        )
+        # 2026-11-30 23:30 UTC == 2026-12-01 00:30 Europe/Tirane
+        utc_dt = datetime(2026, 11, 30, 23, 30, tzinfo=dt_tz.utc)
+        with patch('core.utils.timezone_local.datetime') as mock_dt:
+            mock_dt.now.side_effect = lambda tz=None: utc_dt.astimezone(tz) if tz else utc_dt
+            r = self.client.get('/api/overtime/logs/')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r.data['results']), 1)
