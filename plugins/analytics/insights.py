@@ -110,9 +110,9 @@ def generate_insights(start_date, end_date, leave_filters, overtime_filters,
     include_leave = not categories or 'leave' in categories
 
     # Build previous-period Q objects with the same non-date filters
-    prev_ot_filters = Q(date__gte=prev_start.date(), date__lte=prev_end.date())
-    prev_sb_filters = Q(date__gte=prev_start.date(), date__lte=prev_end.date())
-    prev_leave_filters = Q(created_at__gte=prev_start, created_at__lt=start_date)
+    prev_ot_filters = Q(date__gte=prev_start.date(), date__lte=prev_end.date(), is_deleted=False)
+    prev_sb_filters = Q(date__gte=prev_start.date(), date__lte=prev_end.date(), is_deleted=False)
+    prev_leave_filters = Q(created_at__gte=prev_start, created_at__lt=start_date, is_deleted=False)
     if team_user_ids:
         prev_ot_filters &= Q(user_id__in=team_user_ids)
         prev_sb_filters &= Q(user_id__in=team_user_ids)

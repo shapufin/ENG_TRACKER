@@ -72,6 +72,7 @@ class CoreAnalyticsProvider(AnalyticsProvider):
         """Calculates average hours between creation and approval."""
         approved_items = model.objects.filter(
             status='approved',
+            is_deleted=False,
             created_at__gte=start_date,
             approved_at__isnull=False
         ).annotate(
@@ -90,6 +91,7 @@ class CoreAnalyticsProvider(AnalyticsProvider):
         """Identifies teams with overtime exceeding 1.5 standard deviations."""
         
         team_stats = OvertimeLog.objects.filter(
+            is_deleted=False,
             created_at__gte=start_date,
             status='approved'
         ).values('user__profile__teams__name').annotate(
