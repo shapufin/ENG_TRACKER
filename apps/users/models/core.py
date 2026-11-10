@@ -724,6 +724,8 @@ class UserProfile(BaseModel):
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     """Create a UserProfile automatically when a User is created."""
+    if kwargs.get('raw'):
+        return
     if created:
         UserProfile.objects.create(user=instance)
 
@@ -731,6 +733,8 @@ def create_user_profile(sender, instance, created, **kwargs):
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     """Save the UserProfile whenever the User is saved."""
+    if kwargs.get('raw'):
+        return
     if hasattr(instance, 'profile'):
         instance.profile.save()
 

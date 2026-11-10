@@ -467,6 +467,8 @@ class LeaveRequest(BaseModel):
 @receiver(post_save, sender='users.UserProfile')
 def auto_create_leave_balance(sender, instance, created, **kwargs):
     """Auto-create current year leave balance when hire_date is set."""
+    if kwargs.get('raw'):
+        return
     if not instance.hire_date:
         return
     year = timezone.now().year

@@ -409,3 +409,71 @@ class RestoreSequenceResetTests(TestCase):
                     )
 
         self.assertIn(marker, [q['sql'] for q in queries.captured_queries])
+
+
+class RestoreMissingSignalDrivenRowsTests(TestCase):
+    """Restoring deleted Users, UserProfiles (with hire_date), and Teams must
+    not trigger post_save side-effect creation or notification dispatches."""
+
+    def test_restore_deleted_user_profile_team_and_leave_balance_preserves_pks(self):
+        import datetime as dt
+
+        from apps.dashboard.models import CalendarWorkspace
+        from apps.leave_management.models import LeaveBalance
+        from apps.overtime.models.core import Client, OvertimeLog
+        from apps.users.models import Team, UserProfile
+        from plugins.notifications.models import Notification
+
+        admin = User.objects.create_user(username='admin_sb', password='x', is_superuser=True)
+        emp = User.objects.create_user(username='lost_emp', password='x')
+        profile = emp.profile
+        profile.hire_date = dt.date(2025, 1, 15)
+        profile.save()
+        team = Team.objects.create(name='Platform', code='PLAT')
+        workspace = CalendarWorkspace.objects.get(team=team)
+        balance = LeaveBalance.objects.get(user=emp, leave_type='vacation')
+        client_obj = Client.objects.create(name='Restore Client', code='RCLI')
+        ot = OvertimeLog(user=emp, client=client_obj, date=dt.date(2026, 10, 5), hours=2)
+        ot._skip_notifications = True
+        ot.save()
+
+        orig_emp_pk = emp.pk
+        orig_profile_pk = profile.pk
+        orig_team_pk = team.pk
+        orig_workspace_pk = workspace.pk
+        orig_balance_pk = balance.pk
+        orig_ot_pk = ot.pk
+        notif_count_before = Notification.objects.count()
+
+        with tempfile.TemporaryDirectory() as media:
+            with override_settings(MEDIA_ROOT=media):
+                record = backup_service.create_backup(admin, include_media=False)
+
+                ot.delete()
+                balance.delete()
+                workspace.delete()
+                team.delete()
+                emp.delete()
+                self.assertFalse(User.objects.filter(pk=orig_emp_pk).exists())
+                self.assertFalse(UserProfile.objects.filter(pk=orig_profile_pk).exists())
+                self.assertFalse(Team.objects.filter(pk=orig_team_pk).exists())
+
+                with record.file.open('rb') as fh:
+                    with self.captureOnCommitCallbacks(execute=True):
+                        restore_service.commit(
+                            fh,
+                            approved_models=['auth.user', 'users.team'],
+                            confirmed=True,
+                            user=admin,
+                        )
+
+        self.assertTrue(User.objects.filter(pk=orig_emp_pk).exists())
+        self.assertEqual(UserProfile.objects.get(user_id=orig_emp_pk).pk, orig_profile_pk)
+        self.assertTrue(Team.objects.filter(pk=orig_team_pk).exists())
+        self.assertEqual(CalendarWorkspace.objects.get(team_id=orig_team_pk).pk, orig_workspace_pk)
+        self.assertEqual(
+            LeaveBalance.objects.get(user_id=orig_emp_pk, leave_type='vacation').pk,
+            orig_balance_pk,
+        )
+        self.assertTrue(OvertimeLog.objects.filter(pk=orig_ot_pk).exists())
+        self.assertEqual(Notification.objects.count(), notif_count_before)

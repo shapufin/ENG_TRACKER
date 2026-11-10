@@ -22,6 +22,8 @@ def compute_kpi_on_import(sender, instance, created, **kwargs):
     signal would compute KPIs on zero tickets and the viewset would have
     to recompute manually.
     """
+    if kwargs.get('raw'):
+        return
     from .analytics import compute_monthly_kpi
 
     def _compute():
@@ -55,7 +57,7 @@ def delete_kpi_on_batch_remove(sender, instance, **kwargs):
 @receiver(post_save, sender=TicketImportBatch)
 def auto_match_links_on_batch_import(sender, instance, created, **kwargs):
     """Suggest pending links after a newly imported batch commits."""
-    if not created or instance.is_overridden:
+    if kwargs.get('raw') or not created or instance.is_overridden:
         return
 
     def _match():

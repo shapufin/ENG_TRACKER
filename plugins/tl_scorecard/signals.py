@@ -28,6 +28,10 @@ def _notify(notification_cls, **context):
     transaction.on_commit(lambda: notification_cls().dispatch(context))
 
 
+def _skip(instance, kwargs):
+    return bool(kwargs.get('raw') or getattr(instance, '_skip_notifications', False))
+
+
 def _old(instance):
     """Tracked values as of load/last save (see ``TrackedFieldsMixin``), or {}."""
     return getattr(instance, '_old_fields', None) or {}
@@ -41,7 +45,7 @@ def _changed(instance, *fields):
 
 def _on_meeting_saved(sender, instance, created, **kwargs):
     from . import notification_types as types
-    if getattr(instance, '_skip_notifications', False):
+    if _skip(instance, kwargs):
         return
     # Governance meetings only: an employee one-on-one never reaches the HBPR.
     if instance.meeting_type != 'one_on_one' and (
@@ -55,7 +59,7 @@ def _on_meeting_saved(sender, instance, created, **kwargs):
 
 def _on_pip_saved(sender, instance, created, **kwargs):
     from . import notification_types as types
-    if getattr(instance, '_skip_notifications', False):
+    if _skip(instance, kwargs):
         return
     old = _old(instance).get('status')
     if created and instance.status == 'draft':
@@ -71,7 +75,7 @@ def _on_pip_saved(sender, instance, created, **kwargs):
 
 def _on_promotion_saved(sender, instance, created, **kwargs):
     from . import notification_types as types
-    if getattr(instance, '_skip_notifications', False):
+    if _skip(instance, kwargs):
         return
     if created:
         _notify(types.PromotionNominated, instance=instance)
@@ -82,7 +86,7 @@ def _on_promotion_saved(sender, instance, created, **kwargs):
 def _flag_receiver(kind):
     def receiver(sender, instance, created, **kwargs):
         from . import notification_types as types
-        if created and not getattr(instance, '_skip_notifications', False):
+        if created and not _skip(instance, kwargs):
             _notify(types.FlagRaised, instance=instance, kind=kind)
     return receiver
 
@@ -95,7 +99,7 @@ def _on_idle_saved(sender, instance, created, **kwargs):
     from . import notification_types as types
     _raise_idle(sender, instance, created, **kwargs)
     if (
-        not created and not getattr(instance, '_skip_notifications', False)
+        not created and not _skip(instance, kwargs)
         and instance.status == 'resolved' and _changed(instance, 'status')
     ):
         _notify(types.FlagResolved, instance=instance, kind='idle')
@@ -105,7 +109,7 @@ def _on_absence_saved(sender, instance, created, **kwargs):
     from . import notification_types as types
     _raise_absence(sender, instance, created, **kwargs)
     if (
-        not created and not getattr(instance, '_skip_notifications', False)
+        not created and not _skip(instance, kwargs)
         and instance.addressed_on is not None and _changed(instance, 'addressed_on')
     ):
         _notify(types.FlagResolved, instance=instance, kind='absence')
@@ -117,7 +121,7 @@ _EPR_STAGES = ('goal_setting_completed_at', 'mid_year_completed_at', 'final_revi
 def _on_epr_saved(sender, instance, created, **kwargs):
     from . import notification_types as types
     old = _old(instance)
-    if created or getattr(instance, '_skip_notifications', False):
+    if created or _skip(instance, kwargs):
         return
     for stage in _EPR_STAGES:
         if stage in old and old[stage] is None and getattr(instance, stage) is not None:
@@ -128,7 +132,7 @@ def _on_epr_stage_record_saved(sender, instance, created, **kwargs):
     """Tell the employee when a stage summary reaches them — on creation
     with the share flag set, or on a correction that flips it on."""
     from . import notification_types as types
-    if getattr(instance, '_skip_notifications', False):
+    if _skip(instance, kwargs):
         return
     if not instance.shared_with_employee:
         return
@@ -149,7 +153,7 @@ def _on_epr_stage_record_saved(sender, instance, created, **kwargs):
 
 def _on_assignment_saved(sender, instance, created, **kwargs):
     from . import notification_types as types
-    if getattr(instance, '_skip_notifications', False):
+    if _skip(instance, kwargs):
         return
     if created:
         _notify(types.HbprAssignmentChanged, instance=instance, outcome='assigned')
@@ -162,7 +166,7 @@ def _on_assignment_saved(sender, instance, created, **kwargs):
 def _on_hbpr_evidence_saved(sender, instance, created, **kwargs):
     """Tell the assigned HBPR when the Line Manager records governance evidence."""
     from . import notification_types as types
-    if getattr(instance, '_skip_notifications', False):
+    if _skip(instance, kwargs):
         return
     edited = not created and _changed(
         instance, 'occurred_on', 'shared_summary', 'action_items', 'reference_url')
@@ -177,7 +181,7 @@ def _on_hbpr_evidence_saved(sender, instance, created, **kwargs):
 
 def _on_review_delivered(sender, instance, created, **kwargs):
     from . import notification_types as types
-    if created and not getattr(instance, '_skip_notifications', False):
+    if created and not _skip(instance, kwargs):
         _notify(types.HbprReviewDelivered, instance=instance)
 
 
