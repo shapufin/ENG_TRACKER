@@ -1494,11 +1494,11 @@ def _fields_populated(kpi):
 def _get_tl_team_members(user):
     """Return a queryset of Users managed by this team leader.
 
-    Scope comes from core's ``UserProfile.get_team_member_ids()`` (direct
-    italian_tl/albanian_tl FKs, shared team membership, led teams) so KPI can
-    never drift from the rest of the app. Managers are the reporting line
-    above the measured people, so other Managers are left out. Includes the
-    TL themselves so their own data appears in team dashboards/reports.
+    Scope comes from core's ``UserProfile.get_team_member_ids()`` (link-only:
+    direct italian_tl/albanian_tl FKs) so KPI can never drift from the rest of
+    the app. Managers are the reporting line above the measured people, so other
+    Managers are left out. Includes the TL themselves so their own data appears
+    in team dashboards/reports.
     """
     if not hasattr(user, 'profile') or not user.profile.is_team_leader:
         return User.objects.none()
@@ -1657,6 +1657,35 @@ class TicketKPIReportViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets
         'purge_media': 'manage',
     }
 
+    def _parse_report_params(self, request):
+        """Parse and validate common ``year`` and optional ``team_id`` query params."""
+        raw_year = request.query_params.get('year', str(timezone.now().year))
+        try:
+            year = int(raw_year)
+        except (TypeError, ValueError):
+            return None, None, Response(
+                {'error': 'year must be an integer'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if year < 2000 or year > 2100:
+            return None, None, Response(
+                {'error': 'year must be between 2000 and 2100'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        raw_team_id = request.query_params.get('team_id')
+        if raw_team_id is not None:
+            try:
+                team_id = int(raw_team_id)
+            except (TypeError, ValueError):
+                return None, None, Response(
+                    {'error': 'team_id must be an integer'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            team_id = None
+        return year, team_id, None
+
     def _resolve_export_user_ids(self, request, team_id=None):
         """Resolve and authorize requested export user IDs."""
         user = request.user
@@ -1676,7 +1705,15 @@ class TicketKPIReportViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets
                     {'error': 'You can only view your own team'},
                     status=status.HTTP_403_FORBIDDEN,
                 )
-            requested_ids = set(team.members.values_list('user__id', flat=True))
+            team_member_ids = set(team.members.values_list('user__id', flat=True))
+            if is_admin or is_hr:
+                requested_ids = team_member_ids
+            else:
+                # Internal data scope is link-only: a calendar Team member who is
+                # not linked via italian_tl/albanian_tl is excluded rather than
+                # triggering a 403 for the team's own leader.
+                allowed_ids = set(_get_tl_team_members(user).values_list('id', flat=True))
+                requested_ids = team_member_ids & allowed_ids
         else:
             raw_user_ids = request.query_params.get('user_ids')
             if raw_user_ids is None:
@@ -1711,31 +1748,9 @@ class TicketKPIReportViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets
     @action(detail=False, methods=['get'])
     def yearly_summary(self, request):
         """Get aggregated yearly summary."""
-        raw_year = request.query_params.get('year', str(timezone.now().year))
-        try:
-            year = int(raw_year)
-        except (TypeError, ValueError):
-            return Response(
-                {'error': 'year must be an integer'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if year < 2000 or year > 2100:
-            return Response(
-                {'error': 'year must be between 2000 and 2100'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        raw_team_id = request.query_params.get('team_id')
-        if raw_team_id is not None:
-            try:
-                team_id = int(raw_team_id)
-            except (TypeError, ValueError):
-                return Response(
-                    {'error': 'team_id must be an integer'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        else:
-            team_id = None
+        year, team_id, error = self._parse_report_params(request)
+        if error:
+            return error
 
         user_ids, error = self._resolve_export_user_ids(request, team_id=team_id)
         if error:
@@ -1757,20 +1772,10 @@ class TicketKPIReportViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets
         from openpyxl import Workbook
         from core.utils.csv_safe import xlsx_safe_row
 
-        raw_year = request.query_params.get('year', str(timezone.now().year))
-        try:
-            year = int(raw_year)
-        except (TypeError, ValueError):
-            return Response(
-                {'error': 'year must be an integer'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if year < 2000 or year > 2100:
-            return Response(
-                {'error': 'year must be between 2000 and 2100'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        user_ids, error = self._resolve_export_user_ids(request)
+        year, team_id, error = self._parse_report_params(request)
+        if error:
+            return error
+        user_ids, error = self._resolve_export_user_ids(request, team_id=team_id)
         if error:
             return error
 
@@ -1825,20 +1830,10 @@ class TicketKPIReportViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets
         from django.http import HttpResponse
         from core.utils.csv_safe import csv_safe
 
-        raw_year = request.query_params.get('year', str(timezone.now().year))
-        try:
-            year = int(raw_year)
-        except (TypeError, ValueError):
-            return Response(
-                {'error': 'year must be an integer'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if year < 2000 or year > 2100:
-            return Response(
-                {'error': 'year must be between 2000 and 2100'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        user_ids, error = self._resolve_export_user_ids(request)
+        year, team_id, error = self._parse_report_params(request)
+        if error:
+            return error
+        user_ids, error = self._resolve_export_user_ids(request, team_id=team_id)
         if error:
             return error
 

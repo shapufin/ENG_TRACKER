@@ -58,6 +58,20 @@ def parse_int_list(value):
     return result
 
 
+def workspace_user_ids_for_ids(workspace_ids):
+    """Resolve user IDs belonging to the given CalendarWorkspace IDs.
+
+    Shared by UnifiedReportFilter and the standalone export views so
+    team-backed workspaces include their team members (not only allowed_users).
+    """
+    if not workspace_ids:
+        return set()
+    user_ids = set()
+    for workspace in CalendarWorkspace.objects.filter(id__in=workspace_ids):
+        user_ids.update(workspace.get_users_for_workspace().values_list('id', flat=True))
+    return user_ids
+
+
 def apply_team_filter(queryset, raw_team_ids):
     """Limit a user-owned queryset to members of the given teams (no-op when empty).
 
@@ -180,10 +194,4 @@ class UnifiedReportFilter(filters.FilterSet):
         if raw is None:
             return None
         ids = self._parse_int_list(raw)
-        if not ids:
-            return set()
-        user_ids = set()
-        workspaces = CalendarWorkspace.objects.filter(id__in=ids)
-        for workspace in workspaces:
-            user_ids.update(workspace.get_users_for_workspace().values_list('id', flat=True))
-        return user_ids
+        return workspace_user_ids_for_ids(ids)

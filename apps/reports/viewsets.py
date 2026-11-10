@@ -28,7 +28,14 @@ from core.mixins.permissions import (
     is_cr_admin,
 )
 from core.utils.csv_safe import xlsx_safe_row
-from .filters import UnifiedReportFilter, apply_team_filter, apply_visibility_constraints, parse_int_list
+from core.utils.sheet_titles import safe_sheet_title
+from .filters import (
+    UnifiedReportFilter,
+    apply_team_filter,
+    apply_visibility_constraints,
+    parse_int_list,
+    workspace_user_ids_for_ids,
+)
 from .services.export_service import export_service, ExportConfig
 from core.utils.timezone_local import business_today
 from apps.users.services.workforce import workforce_filter
@@ -287,6 +294,7 @@ class DetailedReportView(HbprBlockedMixin, APIView):
             'group_by': request.query_params.get('group_by', 'user'),
             'italian_tl_id': request.query_params.get('italian_tl_id'),
             'albanian_tl_id': request.query_params.get('albanian_tl_id'),
+            'team_ids': request.query_params.get('team_ids'),
             'workspace_ids': request.query_params.get('workspace_ids'),
         }
 
@@ -486,18 +494,20 @@ class ExportExcelView(HbprBlockedMixin, APIView):
                 users_without_tl = users_qs.filter(profile__italian_tl__isnull=True)
                 
                 first = True
+                used_titles: set[str] = set()
                 
                 # Process users with Manager
                 for tl_id in ital_tl_ids:
                     tl_user = tl_users_map.get(tl_id)
                     tl_name = f"{tl_user.first_name} {tl_user.last_name}" if tl_user else "Unknown TL"
+                    title = safe_sheet_title(tl_name, used_titles)
 
                     if first:
                         ws = wb.active
-                        ws.title = tl_name[:31]
+                        ws.title = title
                         first = False
                     else:
-                        ws = wb.create_sheet(title=tl_name[:31])
+                        ws = wb.create_sheet(title=title)
 
                     headers = ['User ID', 'Username', 'Full Name', 'Team', 'Line Manager']
                     headers.extend(['OT Total', 'OT Appr.', 'OT Ent.'])
@@ -525,7 +535,13 @@ class ExportExcelView(HbprBlockedMixin, APIView):
                 
                 # Create sheet for users without Manager if any exist
                 if users_without_tl.exists():
-                    ws = wb.create_sheet(title="No Manager")
+                    no_mgr_title = safe_sheet_title("No Manager", used_titles)
+                    if first:
+                        ws = wb.active
+                        ws.title = no_mgr_title
+                        first = False
+                    else:
+                        ws = wb.create_sheet(title=no_mgr_title)
                     headers = ['User ID', 'Username', 'Full Name', 'Team', 'Line Manager']
                     headers.extend(['OT Total', 'OT Appr.', 'OT Ent.'])
                     headers.extend(['SB Total', 'SB Appr.', 'SB Ent.'])
@@ -689,7 +705,14 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
             logger.info(f"[OT/Standby Export] Starting export - date range: {start_date} to {end_date}, italian_tls: {italian_tl_id_list}, status: {status_filter}, date_mode: {date_mode}")
 
             # Filter OvertimeLog by status (approved by default, pending when requested)
-            ot_qs = OvertimeLog.objects.filter(status=status_filter)
+            base_filters = {'status': status_filter, 'is_deleted': False, **workforce_filter('user__')}
+            workspace_users = (
+                workspace_user_ids_for_ids(workspace_id_list)
+                if workspace_id_list is not None
+                else None
+            )
+
+            ot_qs = OvertimeLog.objects.filter(**base_filters)
             if processing_period_mode:
                 if start_date:
                     # Periods are stored as the 1st of their month: floor the start so a
@@ -706,9 +729,7 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
                 ot_qs = ot_qs.filter(user__profile__italian_tl__in=italian_tl_id_list)
             if albanian_tl_id_list:
                 ot_qs = ot_qs.filter(user__profile__albanian_tl__in=albanian_tl_id_list)
-            if workspace_id_list:
-                from apps.dashboard.models import CalendarWorkspace
-                workspace_users = CalendarWorkspace.objects.filter(id__in=workspace_id_list).values_list('allowed_users__id', flat=True)
+            if workspace_users is not None:
                 ot_qs = ot_qs.filter(user_id__in=workspace_users)
             ot_qs = apply_team_filter(ot_qs, team_ids)
             # Apply role-based visibility (prevents TL/employee from exporting
@@ -716,7 +737,7 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
             ot_qs = apply_visibility_constraints(ot_qs, request.user)
 
             # Filter StandbyLog by status (approved by default, pending when requested)
-            sb_qs = StandbyLog.objects.filter(status=status_filter)
+            sb_qs = StandbyLog.objects.filter(**base_filters)
             if processing_period_mode:
                 if start_date:
                     # Periods are stored as the 1st of their month: floor the start so a
@@ -733,9 +754,7 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
                 sb_qs = sb_qs.filter(user__profile__italian_tl__in=italian_tl_id_list)
             if albanian_tl_id_list:
                 sb_qs = sb_qs.filter(user__profile__albanian_tl__in=albanian_tl_id_list)
-            if workspace_id_list:
-                from apps.dashboard.models import CalendarWorkspace
-                workspace_users = CalendarWorkspace.objects.filter(id__in=workspace_id_list).values_list('allowed_users__id', flat=True)
+            if workspace_users is not None:
                 sb_qs = sb_qs.filter(user_id__in=workspace_users)
             sb_qs = apply_team_filter(sb_qs, team_ids)
             # Apply role-based visibility (same as ot_qs above).
@@ -823,7 +842,9 @@ class ExportLeaveView(HbprBlockedMixin, APIView):
             logger.info(f"[Leave Export] Starting export - date range: {start_date} to {end_date}, italian_tls: {italian_tl_id_list}")
 
             # Filter LeaveRequest - only approved
-            leave_qs = LeaveRequest.objects.filter(status='approved')
+            leave_qs = LeaveRequest.objects.filter(
+                status='approved', is_deleted=False, **workforce_filter('user__')
+            )
             if start_date:
                 leave_qs = leave_qs.filter(start_date__gte=start_date)
             if end_date:
@@ -832,9 +853,8 @@ class ExportLeaveView(HbprBlockedMixin, APIView):
                 leave_qs = leave_qs.filter(user__profile__italian_tl__in=italian_tl_id_list)
             if albanian_tl_id_list:
                 leave_qs = leave_qs.filter(user__profile__albanian_tl__in=albanian_tl_id_list)
-            if workspace_id_list:
-                from apps.dashboard.models import CalendarWorkspace
-                workspace_users = CalendarWorkspace.objects.filter(id__in=workspace_id_list).values_list('allowed_users__id', flat=True)
+            if workspace_id_list is not None:
+                workspace_users = workspace_user_ids_for_ids(workspace_id_list)
                 leave_qs = leave_qs.filter(user_id__in=workspace_users)
             leave_qs = apply_team_filter(leave_qs, team_ids)
             # Apply role-based visibility (prevents TL/employee from exporting

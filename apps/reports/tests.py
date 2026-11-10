@@ -1176,3 +1176,156 @@ class ExportTeamFilterTests(TestCase):
             {'italian_tl_ids': 'foo,bar', 'workspace_ids': '1:2'},
         )
         self.assertEqual(response_leave.status_code, status.HTTP_200_OK)
+
+
+class ExportLinkRemovalAndConsistencyTests(TestCase):
+    """Exports stay accurate when users have no Line Manager or are unlinked,
+    and match UnifiedReportFilter on soft-deletes, inactive users, workspaces, and team_ids.
+    """
+
+    def setUp(self):
+        from apps.dashboard.models.calendar import CalendarWorkspace
+        from apps.users.models import UserProfile
+
+        self.client = APIClient()
+        self.staff = User.objects.create_user(
+            username='cons-staff', password='testpass', is_staff=True,
+        )
+        self.lm = User.objects.create_user(
+            username='cons-lm', password='testpass', first_name='Line', last_name='Manager',
+        )
+        lm_profile = UserProfile.objects.get(user=self.lm)
+        lm_profile.is_albanian_tl_role = True
+        lm_profile.save(update_fields=['is_albanian_tl_role'])
+
+        self.emp = User.objects.create_user(
+            username='cons-emp', password='testpass', first_name='Linked', last_name='Worker',
+        )
+        self.emp.profile.albanian_tl = self.lm
+        self.emp.profile.save(update_fields=['albanian_tl'])
+
+        self.inactive_emp = User.objects.create_user(
+            username='cons-inactive', password='testpass',
+            first_name='Inactive', last_name='Worker', is_active=False,
+        )
+        self.team = Team.objects.create(name='Consistency Team', code='CON', team_leader=self.lm)
+        TeamMembership.objects.create(
+            user_profile=self.emp.profile, team=self.team, is_primary_team=True,
+        )
+        self.workspace = CalendarWorkspace.objects.create(
+            name='Cons WS', code='CWS', team=self.team, is_public=False,
+        )
+
+        self.client_model = Client.objects.create(name='Cons Client', code='CNS')
+        OvertimeLog.objects.create(
+            user=self.emp, client=self.client_model,
+            date=date(2026, 7, 10), hours=4, status='approved',
+        )
+        self.deleted_ot = OvertimeLog.objects.create(
+            user=self.emp, client=self.client_model,
+            date=date(2026, 7, 11), hours=8, status='approved', is_deleted=True,
+        )
+        OvertimeLog.objects.create(
+            user=self.inactive_emp, client=self.client_model,
+            date=date(2026, 7, 12), hours=6, status='approved',
+        )
+        LeaveRequest.objects.create(
+            user=self.emp, request_type='vacation',
+            start_date=date(2026, 7, 20), end_date=date(2026, 7, 21),
+            status='approved', reason='Valid leave',
+        )
+        LeaveRequest.objects.create(
+            user=self.emp, request_type='vacation',
+            start_date=date(2026, 7, 22), end_date=date(2026, 7, 23),
+            status='approved', reason='Deleted leave', is_deleted=True,
+        )
+
+    def _workbook_text(self, response):
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
+        wb = openpyxl.load_workbook(io.BytesIO(response.content))
+        return wb, ' '.join(
+            str(cell.value)
+            for ws in wb.worksheets
+            for row in ws.iter_rows()
+            for cell in row
+            if cell.value is not None
+        )
+
+    def test_removing_line_manager_link_excludes_user_from_lm_exports_while_hr_keeps_them(self):
+        # Before unlinking, LM sees emp even across export endpoints.
+        self.client.force_authenticate(user=self.lm)
+        _, text_before = self._workbook_text(
+            self.client.get('/api/reports/export-ot-standby/', {'start_date': '2026-07-01', 'end_date': '2026-07-31'})
+        )
+        self.assertIn('Linked Worker', text_before)
+
+        # Remove Line Manager link (emp stays in the calendar Team led by LM).
+        self.emp.profile.albanian_tl = None
+        self.emp.profile.save(update_fields=['albanian_tl'])
+
+        # LM exports now exclude emp (returns valid 200 workbook without them).
+        for url in ('/api/reports/export-ot-standby/', '/api/reports/export-leave/', '/api/reports/export-excel/'):
+            _, lm_text = self._workbook_text(
+                self.client.get(url, {'start_date': '2026-07-01', 'end_date': '2026-07-31'})
+            )
+            self.assertNotIn('Linked Worker', lm_text, url)
+
+        # Staff/HR exports still include the unlinked user cleanly under No Team Leader / No Manager.
+        self.client.force_authenticate(user=self.staff)
+        wb_ot, staff_ot_text = self._workbook_text(
+            self.client.get('/api/reports/export-ot-standby/', {'start_date': '2026-07-01', 'end_date': '2026-07-31'})
+        )
+        self.assertIn('Linked Worker', staff_ot_text)
+        self.assertIn('No Team Leader', wb_ot.sheetnames)
+
+        wb_xl, staff_xl_text = self._workbook_text(
+            self.client.get(
+                '/api/reports/export-excel/',
+                {'start_date': '2026-07-01', 'end_date': '2026-07-31', 'group_by_tl': 'true'},
+            )
+        )
+        self.assertIn('Linked Worker', staff_xl_text)
+        self.assertEqual(wb_xl.sheetnames[0], 'No Manager')
+
+    def test_standalone_exports_exclude_soft_deleted_and_inactive_and_honor_team_workspace(self):
+        self.client.force_authenticate(user=self.staff)
+        _, ot_text = self._workbook_text(
+            self.client.get(
+                '/api/reports/export-ot-standby/',
+                {'start_date': '2026-07-01', 'end_date': '2026-07-31', 'workspace_ids': str(self.workspace.id)},
+            )
+        )
+        self.assertIn('Linked Worker', ot_text)
+        self.assertNotIn('Inactive Worker', ot_text)
+        self.assertNotIn('11/07/2026', ot_text)
+
+        _, leave_text = self._workbook_text(
+            self.client.get(
+                '/api/reports/export-leave/',
+                {'start_date': '2026-07-01', 'end_date': '2026-07-31', 'workspace_ids': str(self.workspace.id)},
+            )
+        )
+        self.assertIn('Valid leave', leave_text)
+        self.assertNotIn('Deleted leave', leave_text)
+
+    def test_detailed_report_honors_team_ids_filter(self):
+        other_emp = User.objects.create_user(
+            username='cons-other', password='testpass', first_name='Other', last_name='Worker',
+        )
+        other_team = Team.objects.create(name='Other Cons Team', code='OCT')
+        TeamMembership.objects.create(
+            user_profile=other_emp.profile, team=other_team, is_primary_team=True,
+        )
+        OvertimeLog.objects.create(
+            user=other_emp, client=self.client_model,
+            date=date(2026, 7, 15), hours=3, status='approved',
+        )
+
+        self.client.force_authenticate(user=self.staff)
+        resp = self.client.get(
+            '/api/reports/detailed/',
+            {'start_date': '2026-07-01', 'end_date': '2026-07-31', 'team_ids': str(self.team.id)},
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        usernames = [row['username'] for row in resp.data['users']]
+        self.assertEqual(usernames, ['cons-emp'])

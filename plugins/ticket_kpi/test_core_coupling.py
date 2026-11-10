@@ -66,6 +66,30 @@ class TeamScopeParityTests(TestCase):
         self.assertFalse(_is_tl_for_user(self.tl, self.stranger))
         self.assertFalse(_is_tl_for_user(self.tl, self.tl))
 
+    def test_team_id_report_and_export_intersect_calendar_team_with_link_only_scope(self):
+        """Passing ?team_id= as the team's leader returns only linked members instead of 403ing
+        when a calendar team contains unlinked members."""
+        from plugins.ticket_kpi.viewsets import TicketKPIReportViewSet
+
+        MonthlyKPI.objects.create(user=self.direct, month=date(2026, 3, 1), total_tickets=5)
+        MonthlyKPI.objects.create(user=self.peer, month=date(2026, 3, 1), total_tickets=9)
+        self.shared.team_leader = self.tl
+        self.shared.save(update_fields=['team_leader'])
+        self.shared.members.add(self.direct.profile)
+
+        factory = APIRequestFactory()
+        for action in ('yearly_summary', 'export_excel', 'export_csv'):
+            req = factory.get('/reports/', {'year': 2026, 'team_id': self.shared.id})
+            force_authenticate(req, self.tl)
+            resp = TicketKPIReportViewSet.as_view({'get': action})(req)
+            self.assertEqual(resp.status_code, 200, action)
+            if action == 'yearly_summary':
+                self.assertEqual(resp.data['total_tickets'], 5)
+                self.assertEqual(
+                    [r['username'] for r in resp.data['per_user_summary']],
+                    [self.direct.username],
+                )
+
 
 class ItalianTlScopeTests(TestCase):
     """Managers sit above the people KPI measures: never in a roster, except as the viewer."""

@@ -43,4 +43,21 @@ describe("FilterChipRow", () => {
     fireEvent.click(screen.getByRole("button", { name: /Beta/ }));
     expect(onToggle).toHaveBeenCalledWith("b");
   });
+
+  it("onChipClick receives the value and click event for Ctrl/Cmd multi-select", () => {
+    const onChipClick = vi.fn();
+    render(
+      <FilterChipRow
+        label="Tech"
+        options={options}
+        selected={[]}
+        onToggle={vi.fn()}
+        onChipClick={onChipClick}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Beta/ }), { ctrlKey: true });
+    expect(onChipClick).toHaveBeenCalledTimes(1);
+    expect(onChipClick.mock.calls[0][0]).toBe("b");
+    expect(onChipClick.mock.calls[0][1].ctrlKey).toBe(true);
+  });
 });

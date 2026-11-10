@@ -77,14 +77,14 @@ describe("exportToCSV", () => {
     expect(click).toHaveBeenCalled();
   });
 
-  it("escapes embedded quotes in title and user name", () => {
-    const csv = captureCsv([{ ...baseEvent, title: 'a"b,c', userName: 'D"e,f' } as CalendarEvent]);
-    // Title field must be quoted and inner quotes doubled so the comma
-    // inside the title does not split the column.
+  it("escapes embedded quotes and neutralises formula prefixes in title and user name", () => {
+    const csv = captureCsv([
+      { ...baseEvent, title: 'a"b,c', userName: '=HYPERLINK("x")' } as CalendarEvent,
+    ]);
     const lines = csv.split("\n");
     const dataLine = lines[1];
     expect(dataLine).toContain('"a""b,c"');
-    expect(dataLine).toContain('"D""e,f"');
+    expect(dataLine).toContain('"\'=HYPERLINK(""x"")"');
   });
 });
 
