@@ -125,7 +125,7 @@ multiplier's job, not standby's).
 
 **Banded overtime pricing** (`PayrollRuleSet.overtime_pricing = 'banded'`,
 `services/overtime_bands.py`): instead of one category per entry, each entry is
-sliced at the rule set's band hours (day `[06,18)`, evening `[19,22)`, night
+sliced at the rule set's band hours (day `[06,19)`, evening `[19,22)`, night
 `[22,06)` wrapping midnight; a minute belongs to the band of its starting
 minute) and every slice is priced
 `hours × base_hourly_rate × (1 + ot_premium + weekend_holiday_premium + band premium)`.
@@ -145,6 +145,8 @@ owner-requested exception `manage.py reprice_finalized_payroll --rule-set CODE`:
 dry run by default, `--apply --confirm REPRICE-FINALIZED` to write, JSON backup
 first (`--restore FILE` undoes it), closed years / differing brackets /
 non-reproducible runs skipped, one transaction per run. Never reprice any other way.
+
+**Company overtime schedule (owner-confirmed 2026-11-10).** Everyone works Mon-Fri 09:00-18:00 (40 h/week), which the wage covers; ALL other work is overtime, so a logged entry is always priced as overtime and the regular-hours rows of the company table (100/120/150 %, weekend regular 125/145/175 %) never apply and are not priced. Overtime Mon-Sat: 06-19 125 %, 19-22 145 %, 22-06 175 % (06:00-08:00 and 18:00-19:00 are 125 %). Sunday or public holiday: 150 / 170 / 200 %. Saturday is a normal day; a public holiday on a Saturday uses the Sunday/holiday column. Holidays come from the **Payroll work calendar** (`PayrollWorkday.is_holiday`), not straight from the HR `PublicHoliday` catalog: `seed_payroll_calendar` and the calendar page's "Sync with HR Holidays" copy the catalog in, and `add_holiday` writes both. A holiday present only in the HR catalog is NOT priced until the payroll calendar is synced, and an e2e/dev database with no payroll calendar prices no holidays. A shift over midnight (23:00-01:00) stays ONE record on its start date; payroll splits it by the clock and prices the minutes after midnight with the next day's Sunday/holiday flag. The Calculation information modal (Payroll runs and run detail) shows the same table, derived from the rule set.
 
 **Employment type.** `UserProfile.employment_type` is `full_time` for everyone (read-only, locked checkbox in the user form) and `weekly_contract_hours` is 40. It marks the 40 h contract; an approved overtime request IS the "beyond schedule" declaration, so no weekly accumulator exists and the calculator does not read the field yet. The company table starts the evening band at 19:00 (corrected 2026-11-10 from 18:00). Adding another type (e.g. `half_time`) needs its overtime percentages confirmed first (open question) and a calculator branch.
 
