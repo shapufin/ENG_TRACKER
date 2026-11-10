@@ -118,6 +118,8 @@ def create_user_with_profile(
     archived_message = archived_error_for_refs([*(teams or []), team])
     if archived_message:
         raise UserValidationError('teams', archived_message)
+    if albanian_tl_id and is_line_manager_after(None, roles=roles, flag=is_albanian_tl_role):
+        raise UserValidationError('albanian_tl', LM_ABOVE_LM_ERROR)
 
     user = User.objects.create_user(
         username=username,
@@ -215,6 +217,12 @@ def update_user_profile(
     if code is not None:
         validate_employee_code(code, exclude_profile_id=user.profile.pk)
 
+    # A Line Manager has no Line Manager above them: refuse assigning a different one,
+    # and (below) drop the existing link when the user is or becomes a Line Manager.
+    becomes_lm = is_line_manager_after(user.profile, roles=roles, flag=is_albanian_tl_role)
+    if becomes_lm and albanian_tl_id and albanian_tl_id != user.profile.albanian_tl_id:
+        raise UserValidationError('albanian_tl', LM_ABOVE_LM_ERROR)
+
     if first_name is not None:
         user.first_name = first_name
     if last_name is not None:
@@ -240,6 +248,8 @@ def update_user_profile(
         profile.is_italian_tl_role = bool(is_italian_tl_role)
     if is_albanian_tl_role is not None:
         profile.is_albanian_tl_role = bool(is_albanian_tl_role)
+    if becomes_lm:
+        clear_lm_link_on_promotion(profile)
     profile.save()
 
     if roles is not None:
@@ -284,6 +294,57 @@ def _assign_team_to_profile(profile: UserProfile, team: Team) -> None:
 # point (user form create/edit/bulk, importer) must send ``hbpr`` to keep it.
 # Only staff reach these paths: granting HBPR is never self-service.
 MANAGED_ROLE_CODES = frozenset({'employee', 'italian_tl', 'albanian_tl', 'hr', 'cr_admin', 'hbpr'})
+
+
+LM_ABOVE_LM_ERROR = 'A Line Manager cannot have a Line Manager above them.'
+
+
+def is_line_manager_after(profile, *, roles=None, flag=None) -> bool:
+    """Will this user hold the Line Manager role once the request is applied?
+
+    ``roles`` (the newer array) wins over the legacy ``is_albanian_tl_role`` flag; with
+    neither in the payload the current state stands. ``profile`` may be ``None`` (new user).
+    """
+    if roles is not None:
+        return 'albanian_tl' in set(roles or [])
+    if flag is not None:
+        return bool(flag)
+    return bool(profile is not None and profile.is_albanian_tl)
+
+
+def clear_lm_link_on_promotion(profile, *, request=None, actor=None) -> bool:
+    """A Line Manager has no Line Manager above them: drop their own ``albanian_tl``.
+
+    Only ``albanian_tl`` goes. The Manager link and team membership are untouched.
+    Mutates the in-memory profile (callers save it) and writes one audit row.
+    """
+    from core.services.lifecycle import record_lifecycle_event
+
+    old = profile.albanian_tl_id
+    if old is None:
+        return False
+    profile.albanian_tl_id = None
+    record_lifecycle_event(
+        request, profile.user, 'user', 'UPDATE', 'tl_link_cleared',
+        old={'albanian_tl': old}, new={'albanian_tl': None},
+        extra={'reason': 'promoted_to_line_manager'}, actor=actor,
+    )
+    return True
+
+
+def no_manager_warning(profile) -> dict | None:
+    """Warn when a Line Manager ends up with no Manager: nobody can approve their requests."""
+    if profile.italian_tl_id is not None:
+        return None
+    return {
+        'code': 'no_manager_after_promotion',
+        'member_id': profile.user_id,
+        'member_username': profile.user.username,
+        'message': (
+            f'{profile.user.username} is a Line Manager with no Manager assigned, '
+            f'so nobody can approve their own requests. Assign a Manager.'
+        ),
+    }
 
 
 def _sync_roles(user: User, roles: list[str]) -> None:

@@ -659,7 +659,13 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        from .services.user_creation import _sync_legacy_roles
+        from .services.user_creation import (
+            LM_ABOVE_LM_ERROR,
+            _sync_legacy_roles,
+            clear_lm_link_on_promotion,
+            is_line_manager_after,
+            no_manager_warning,
+        )
         from apps.permissions.models import Role
         from apps.permissions.services.role_service import (
             assign_role,
@@ -793,8 +799,25 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     )
                 if 'italian_tl' in leader_ids:
                     profile.italian_tl_id = leader_ids['italian_tl']
+                was_lm = profile.is_albanian_tl
+                becomes_lm = is_line_manager_after(
+                    profile, flag=data['is_albanian_tl_role'] if 'is_albanian_tl_role' in data else None,
+                )
+                new_lm_link = leader_ids.get('albanian_tl')
+                if becomes_lm and new_lm_link and new_lm_link != profile.albanian_tl_id:
+                    transaction.set_rollback(True)
+                    return Response(
+                        {'error': f'{profile.user.username}: {LM_ABOVE_LM_ERROR}'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
                 if 'albanian_tl' in leader_ids:
                     profile.albanian_tl_id = leader_ids['albanian_tl']
+                if becomes_lm:
+                    clear_lm_link_on_promotion(profile, request=request, actor=request.user)
+                    if not was_lm:
+                        warning = no_manager_warning(profile)
+                        if warning:
+                            bulk_warnings.append(warning)
                 if 'is_hr' in data:
                     profile.is_hr_user = data['is_hr']
                 if 'is_italian_tl_role' in data:
@@ -987,7 +1010,15 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         Admin updates a user and their profile in one call.
         Payload: any of {email, first_name, last_name, phone, team, add_teams, albanian_tl, italian_tl, is_hr, is_italian_tl_role, is_albanian_tl_role, is_cr_admin}
         """
-        from .services.user_creation import _set_cr_admin_role, _sync_legacy_roles, _sync_roles
+        from .services.user_creation import (
+            LM_ABOVE_LM_ERROR,
+            _set_cr_admin_role,
+            _sync_legacy_roles,
+            _sync_roles,
+            clear_lm_link_on_promotion,
+            is_line_manager_after,
+            no_manager_warning,
+        )
         from apps.permissions.services.role_service import find_blocked_tl_revocations
         from .services.hbpr_assignments import hbpr_revocation_refusal
         user = self.get_object()
@@ -1049,6 +1080,23 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 leader_error = self._invalid_leader_error(leader_field, data[leader_field])
                 if leader_error:
                     return Response({'error': leader_error}, status=status.HTTP_400_BAD_REQUEST)
+
+        # A Line Manager has no Line Manager above them (2026-11-10). Re-sending the link
+        # the profile already has is tolerated (the form echoes it) and is cleared below;
+        # assigning a different one is refused.
+        was_lm = bool(profile_for_check and profile_for_check.is_albanian_tl)
+        becomes_lm = is_line_manager_after(
+            profile_for_check,
+            roles=data['roles'] if 'roles' in data else None,
+            flag=data['is_albanian_tl_role'] if 'is_albanian_tl_role' in data else None,
+        )
+        if becomes_lm and data.get('albanian_tl') and str(data['albanian_tl']) != str(
+            getattr(profile_for_check, 'albanian_tl_id', None)
+        ):
+            return Response(
+                {'error': LM_ABOVE_LM_ERROR, 'albanian_tl': [LM_ABOVE_LM_ERROR]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if 'code' in data:
             from .services.user_creation import UserValidationError, validate_employee_code
@@ -1129,6 +1177,13 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             profile.albanian_tl_id = data['albanian_tl'] if data['albanian_tl'] else None
         if 'italian_tl' in data:
             profile.italian_tl_id = data['italian_tl'] if data['italian_tl'] else None
+        promotion_warnings = []
+        if becomes_lm:
+            clear_lm_link_on_promotion(profile, request=request, actor=request.user)
+            if not was_lm:
+                warning = no_manager_warning(profile)
+                if warning:
+                    promotion_warnings.append(warning)
         if 'hire_date' in data:
             profile.hire_date = data['hire_date'] or None
         tl_warnings, removed_leaders = ([], [])
@@ -1173,8 +1228,12 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         elif 'is_cr_admin' in data:
             _set_cr_admin_role(user, active=bool(data['is_cr_admin']))
         body = UserSerializer(user).data
-        if team_change:
-            body = {**body, 'warnings': tl_warnings, 'removed_team_leaders': removed_leaders}
+        if team_change or promotion_warnings:
+            body = {
+                **body,
+                'warnings': [*tl_warnings, *promotion_warnings],
+                'removed_team_leaders': removed_leaders,
+            }
         return Response(body, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated()])
@@ -1656,6 +1715,11 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if role == 'albanian_tl' and profile.is_albanian_tl:
+            return Response(
+                {'error': 'A Line Manager cannot have a Line Manager above them.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         setattr(profile, f'{role}_id', leader_id)
         profile.save(update_fields=[f'{role}_id'])
         return Response(UserProfileSerializer(profile).data)
