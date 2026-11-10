@@ -35,12 +35,12 @@ describe("InstallAppNotice", () => {
     expect(dismiss).toHaveBeenCalledOnce();
   });
 
-  it("sits at the bottom so it never covers the app header or its menu button", () => {
+  it("docks cleanly at the bottom-right on desktop and clears phone tabs without covering the header", () => {
     render(<InstallAppNotice />);
 
     const notice = screen.getByRole("status");
     expect(notice).not.toHaveClass("top-0");
-    expect(notice).toHaveClass("md:bottom-3");
+    expect(notice).toHaveClass("md:bottom-4", "md:right-4", "md:left-auto", "md:w-96");
     // Sits above the phone tab bar whenever one is mounted.
     expect(notice.className).toContain("var(--bottom-nav-h");
   });

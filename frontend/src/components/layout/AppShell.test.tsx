@@ -124,4 +124,11 @@ describe("AppShell command palette", () => {
     expect(screen.getByText(/Maintenance mode is ON/)).toBeInTheDocument();
     maintenance.active = false;
   });
+
+  it("truncates the mobile header title inside a shrinking wrapper so header actions never clip", () => {
+    renderShell();
+    const title = screen.getByText("Engineering Tracker");
+    expect(title).toHaveClass("truncate");
+    expect(title.parentElement).toHaveClass("min-w-0", "flex-1");
+  });
 });
