@@ -205,7 +205,7 @@ beforeEach(() => {
 describe("RecordsTab URL state", () => {
   it("defaults to meetings and falls back to it for an invalid kind", async () => {
     renderTab("?tab=records&kind=nonsense");
-    expect(await screen.findByText("1-on-1")).toBeInTheDocument();
+    expect(await screen.findByText("1-on-1 (Individual meeting)")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /meetings/i })).toHaveAttribute("aria-selected", "true");
   });
 
@@ -217,7 +217,7 @@ describe("RecordsTab URL state", () => {
 
   it("writes the kind to the URL when another kind is chosen", async () => {
     renderTab();
-    await screen.findByText("1-on-1");
+    await screen.findByText("1-on-1 (Individual meeting)");
     fireEvent.mouseDown(screen.getByRole("tab", { name: /idle flags/i }), { button: 0 });
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("kind=idle"));
     expect(await screen.findByText("Docs")).toBeInTheDocument();
@@ -273,7 +273,9 @@ describe("RecordsTab mockup layout", () => {
     expect(await screen.findByText("Docs")).toBeInTheDocument();
     expect(await screen.findByText("Timeframe")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search records or members…")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Export summary" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Export visible records (CSV)" })
+    ).toBeInTheDocument();
     expect(screen.getByText("Record Categories")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Resolved records" })).toBeInTheDocument();
     expect(screen.getAllByTitle("Jane").length).toBeGreaterThan(0);
@@ -334,7 +336,7 @@ describe("RecordsTab create entry point", () => {
 
 describe("RecordsTab panels", () => {
   it.each([
-    ["meetings", "1-on-1", "Not shared"],
+    ["meetings", "1-on-1 (Individual meeting)", "Not shared"],
     ["idle", "Docs", "Open"],
     ["absences", "Sick", "Over 5 working days open"],
     ["reviews", "GM", "Delivered"],
@@ -375,7 +377,7 @@ describe("RecordsTab panels", () => {
 
   it("filters the visible rows by search text", async () => {
     renderTab();
-    await screen.findByText("1-on-1");
+    await screen.findByText("1-on-1 (Individual meeting)");
     fireEvent.change(screen.getByRole("searchbox", { name: "Search records or members" }), {
       target: { value: "zzz" },
     });
@@ -398,7 +400,7 @@ describe("RecordsTab ownership", () => {
   it("hides row actions for records the viewer does not own", async () => {
     svc.listMeetings.mockResolvedValue([{ ...MEETING, organizer: 99 }]);
     renderTab();
-    await screen.findByText("1-on-1");
+    await screen.findByText("1-on-1 (Individual meeting)");
     expect(screen.queryByRole("button", { name: /^Actions for/ })).not.toBeInTheDocument();
   });
 
@@ -421,8 +423,8 @@ describe("RecordsTab ownership", () => {
 describe("RecordsTab state actions", () => {
   it("shares a meeting summary", async () => {
     renderTab();
-    await screen.findByText("1-on-1");
-    openAction("1-on-1 on 2026-09-02", "Share summary");
+    await screen.findByText("1-on-1 (Individual meeting)");
+    openAction("1-on-1 (Individual meeting) on 2026-09-02", "Share summary");
     fireEvent.change(await screen.findByLabelText(/^Summary for the team member/), {
       target: { value: "Agreed goals" },
     });
@@ -578,7 +580,7 @@ describe("RecordsTab scope", () => {
     // The picker (and the `tl=` URL param) belonged to the HBPR branch of this
     // shared tab; Phase 8 moved HBPR to /hbpr and removed it here.
     renderTab();
-    await screen.findByText("1-on-1");
+    await screen.findByText("1-on-1 (Individual meeting)");
     expect(screen.queryByLabelText("Team leader")).not.toBeInTheDocument();
     expect(svc.listMeetings).toHaveBeenCalled();
   });

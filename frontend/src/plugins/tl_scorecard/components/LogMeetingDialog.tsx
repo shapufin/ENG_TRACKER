@@ -133,7 +133,7 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Edit meeting" : "Log a meeting"}
-      description="Logs a 1-on-1, TL sync or team meeting — private notes stay visible only to you and staff."
+      description="Logs a 1-on-1 (individual meeting), TL sync or team meeting — private notes stay visible only to you and staff."
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
       submitLabel={isEdit ? "Save changes" : "Log meeting"}
@@ -171,7 +171,7 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="one_on_one">1-on-1</SelectItem>
+                  <SelectItem value="one_on_one">1-on-1 (Individual meeting)</SelectItem>
                   <SelectItem value="tl_sync">TL sync (Technical Lead in Italy)</SelectItem>
                   <SelectItem value="team_meeting">Team meeting</SelectItem>
                 </SelectContent>

@@ -101,7 +101,7 @@ describe("TLScorecardVisualizationPage", () => {
     );
     for (const title of [
       "Meeting cadence",
-      "1:1 compliance",
+      "1:1 compliance (individual meetings)",
       "Meeting notes within 24h",
       "Review deliveries vs target",
       "Team risk snapshot (now)",
@@ -160,7 +160,9 @@ describe("TLScorecardVisualizationPage", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Meeting cadence" })).toBeInTheDocument()
     );
-    expect(screen.queryByRole("heading", { name: "1:1 compliance" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "1:1 compliance (individual meetings)" })
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("1:1 compliance %")).not.toBeInTheDocument();
   });
 

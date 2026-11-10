@@ -196,6 +196,88 @@ Weight: 60
             extract_goal_titles(text_for(51))
         self.assertEqual(len(extract_goal_titles(text_for(50))), 50)
 
+    def test_extracts_mid_year_check_goals_and_skips_evaluation_boilerplate(self):
+        text = '''
+Kambo, Ersi                                Mid Year Check - In 2026
+Manager: Enri Demnushi
+Overall
+Manager Overall Evaluation
+Rating: On-Track
+Comment: On track
+Acknowledgement
+Employee
+Entered by: Ersi Kambo                     Date: 20/07/2026
+Status: Acknowledge Review
+Comment:
+
+Goals
+Acquire the basic certifications required by the Commvault partner program
+
+SaaS MSP Specialist - Cyber Resilience - learning path
+Due Date: 31/12/2026
+Weight: 20
+Target: 0.00%
+Actual: 33.00%
+
+Manager Evaluation                         Employee Evaluation
+Comment:                                   Comment:
+Additional Manager Evaluation
+
+become independent in managing MSC customer-related backup issues.
+
+It is necessary that your profile acquires vertical knowledge on the MSC customer.
+Weight: 25
+\f
+Manager Evaluation                         Employee Evaluation
+Comment:                                   Comment:
+Additional Manager Evaluation
+
+become independent in managing Piaggio customer-related backup issues.
+
+Vertical knowledge of Piaggio customer backup issues.
+Weight: 25
+
+Manager Evaluation                         Employee Evaluation
+Comment:                                   Comment:
+Additional Manager Evaluation
+
+FIRST LEVEL involvement in backup area activities
+
+Drafting of documentation and FIRST LEVEL support.
+Weight: 10
+
+Manager Evaluation                         Employee Evaluation
+Comment:                                   Comment:
+Additional Manager Evaluation
+
+Handle at least 6% of tickets on an annual basis
+
+Meet High Expectations = at least 6% of tickets.
+Weight: 20
+
+Manager Evaluation                         Employee Evaluation
+Comment:                                   Comment:
+Additional Manager Evaluation
+
+Section Summary
+Manager Evaluation                         Employee Evaluation
+Comment: Reliable performance.             Comment: In progress
+
+Behaviours
+Make each other better
+Weight: 25
+'''
+        self.assertEqual(
+            extract_goal_titles(text),
+            [
+                'Acquire the basic certifications required by the Commvault partner program',
+                'become independent in managing MSC customer-related backup issues.',
+                'become independent in managing Piaggio customer-related backup issues.',
+                'FIRST LEVEL involvement in backup area activities',
+                'Handle at least 6% of tickets on an annual basis',
+            ],
+        )
+
     def test_normalize_collapses_whitespace_and_preserves_order(self):
         self.assertEqual(
             normalize_goal_titles(
@@ -235,6 +317,60 @@ class ParseGoalPdfEndpointTests(TestCase):
         self.assertEqual(EPRStageRecord.objects.count(), 0)
         self.cycle.refresh_from_db()
         self.assertIsNone(self.cycle.goal_setting_completed_at)
+
+    def test_uses_workday_heading_color_to_isolate_mid_year_goals(self):
+        """Colored Workday headings cleanly separate titles from unpunctuated
+        descriptions, filled evaluation comments, and trailing Behaviours."""
+        buffer = BytesIO()
+        pdf = canvas.Canvas(buffer, pagesize=letter)
+        pdf.setFillColorRGB(0.102, 0.227, 0.404)
+        pdf.setFont('Helvetica', 15)
+        pdf.drawString(72, 750, 'Mid Year Check - In 2026')
+        pdf.setFillColorRGB(0, 0, 0)
+        pdf.setFont('Helvetica', 15)
+        pdf.drawString(72, 720, 'Goals')
+
+        y = 690
+        for index, title in enumerate(EXPECTED_TITLES, start=1):
+            pdf.setFillColorRGB(0.102, 0.227, 0.404)
+            pdf.setFont('Helvetica', 12)
+            pdf.drawString(72, y, title)
+            y -= 18
+            pdf.setFillColorRGB(0, 0, 0)
+            pdf.setFont('Helvetica', 10)
+            # Unpunctuated short description lines right under the title.
+            pdf.drawString(72, y, f'Short unpunctuated line for goal {index}')
+            y -= 16
+            pdf.setFillColorRGB(0.404, 0.404, 0.404)
+            pdf.drawString(72, y, f'Weight: {index * 10}')
+            y -= 14
+            pdf.drawString(72, y, 'Actual: 33.00%')
+            y -= 14
+            pdf.drawString(72, y, 'Manager Evaluation Employee Evaluation')
+            y -= 14
+            pdf.setFillColorRGB(0, 0, 0)
+            pdf.drawString(72, y, 'Good progress so far')
+            y -= 24
+
+        pdf.setFillColorRGB(0.404, 0.404, 0.404)
+        pdf.setFont('Helvetica', 9)
+        pdf.drawString(72, y, 'Section Summary')
+        y -= 18
+        pdf.setFillColorRGB(0, 0, 0)
+        pdf.setFont('Helvetica', 15)
+        pdf.drawString(72, y, 'Behaviours')
+        y -= 18
+        pdf.setFillColorRGB(0.102, 0.227, 0.404)
+        pdf.setFont('Helvetica', 12)
+        pdf.drawString(72, y, 'Make each other better')
+        pdf.save()
+
+        resp = self._parse(
+            stage='mid_year',
+            upload=_pdf_upload(name='mid-year.pdf', content=buffer.getvalue()),
+        )
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(resp.data['goal_titles'], EXPECTED_TITLES)
 
     def test_rejects_missing_file(self):
         resp = self._parse()

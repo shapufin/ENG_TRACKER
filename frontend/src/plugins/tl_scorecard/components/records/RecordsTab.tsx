@@ -19,7 +19,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toneTextClass } from "@/components/ui/tone";
 import { usePermissions } from "@/context/PermissionContext";
 import { useAuth } from "@/hooks/useAuth";
-import { ExportButton } from "../ExportButton";
 import {
   KIND_ICONS,
   RECORD_CONFIGS,
@@ -195,22 +194,70 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
     <div className="space-y-6">
       {/* Filter toolbar */}
       <GlassCard animateOnMount={false} className="p-4">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <Label
-              htmlFor="records-month"
-              className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-            >
-              Timeframe
-            </Label>
-            <Input
-              id="records-month"
-              type="month"
-              className="w-48"
-              value={month.slice(0, 7)}
-              onChange={(e) => setParam("month", e.target.value ? `${e.target.value}-01` : null)}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <SearchField
+              id="records-search"
+              className="w-full sm:max-w-sm"
+              aria-label="Search records or members"
+              placeholder="Search records or members…"
+              value={params.get("q") ?? ""}
+              onChange={(v) => setParam("q", v || null)}
             />
-            <span className="bg-border hidden h-6 w-px sm:block" aria-hidden="true" />
+            <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+              <Button
+                variant="outline"
+                className="shrink-0"
+                aria-label="Export visible records (CSV)"
+                title="Export visible records (CSV)"
+                onClick={() => {
+                  const stamp = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+                  downloadBlobResponse(
+                    new Blob([recordsToCsv(RECORD_CONFIGS[activeIndex], activeRows ?? [])], {
+                      type: "text/csv",
+                    }),
+                    `tl-${kind}-records-${stamp}.csv`
+                  );
+                }}
+              >
+                <FileSpreadsheet className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                Export CSV
+              </Button>
+              {onCreateRecord && (
+                <Button onClick={() => onCreateRecord(kind)} className="shrink-0">
+                  <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                  {CREATE_LABELS[kind]}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Label
+                htmlFor="records-month"
+                className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
+              >
+                Timeframe
+              </Label>
+              <Input
+                id="records-month"
+                type="month"
+                className="w-44"
+                value={month.slice(0, 7)}
+                onChange={(e) => setParam("month", e.target.value ? `${e.target.value}-01` : null)}
+              />
+              {month && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setParam("month", null)}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
             <div
               className="flex flex-wrap items-center gap-1.5"
               role="group"
@@ -224,7 +271,7 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
                     type="button"
                     aria-pressed={active}
                     onClick={() => setParam("state", pill.value === "all" ? null : pill.value)}
-                    className={`min-h-8 rounded-full px-3 text-xs font-semibold transition-colors ${
+                    className={`min-h-8 rounded-full px-3 text-xs font-semibold whitespace-nowrap transition-colors ${
                       active
                         ? "bg-foreground text-background"
                         : "bg-muted text-muted-foreground hover:text-foreground"
@@ -235,40 +282,6 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
                 );
               })}
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <SearchField
-              id="records-search"
-              className="sm:w-64 sm:flex-none"
-              aria-label="Search records or members"
-              placeholder="Search records or members…"
-              value={params.get("q") ?? ""}
-              onChange={(v) => setParam("q", v || null)}
-            />
-            {onCreateRecord && (
-              <Button onClick={() => onCreateRecord(kind)} className="shrink-0">
-                <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                {CREATE_LABELS[kind]}
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Export visible records (CSV)"
-              title="Export visible records (CSV)"
-              onClick={() => {
-                const stamp = new Date().toISOString().slice(0, 10).replaceAll("-", "");
-                downloadBlobResponse(
-                  new Blob([recordsToCsv(RECORD_CONFIGS[activeIndex], activeRows ?? [])], {
-                    type: "text/csv",
-                  }),
-                  `tl-${kind}-records-${stamp}.csv`
-                );
-              }}
-            >
-              <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
-            </Button>
-            <ExportButton iconOnly month={month || undefined} />
           </div>
         </div>
       </GlassCard>

@@ -315,7 +315,7 @@ export const TeamMemberDetailPanel: React.FC<TeamMemberDetailPanelProps> = ({
 
           {/* Meetings */}
           <DetailDrawerSection id="team-panel-meetings" title="Meetings" icon={Clock}>
-            <DetailDrawerRow label="Last 1:1">
+            <DetailDrawerRow label="Last 1:1 (individual meeting)">
               {meetings.last_one_on_one_on ? (
                 formatDateDDMMYYYY(meetings.last_one_on_one_on)
               ) : (
