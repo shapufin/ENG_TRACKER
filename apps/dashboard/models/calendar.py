@@ -114,7 +114,7 @@ class CalendarWorkspace(BaseModel):
             if has_team_leader_role(user):
                 from apps.users.models import UserProfile
 
-                member_ids = profile.get_team_member_ids()
+                member_ids = profile.get_calendar_member_ids()
                 if member_ids:
                     member_team_ids = set(
                         UserProfile.objects.filter(user_id__in=member_ids)

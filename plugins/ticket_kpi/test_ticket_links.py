@@ -32,6 +32,8 @@ class TicketOvertimeLinkTests(TestCase):
             name='Link Team', code='LINK', team_leader=cls.tl
         )
         cls.team.members.add(cls.tl.profile, cls.member.profile)
+        cls.member.profile.albanian_tl = cls.tl  # link-only scope (item 64)
+        cls.member.profile.save(update_fields=['albanian_tl'])
         cls.hr.profile.is_hr_user = True
         cls.hr.profile.save(update_fields=['is_hr_user'])
 

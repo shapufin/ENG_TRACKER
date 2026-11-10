@@ -35,7 +35,7 @@ class MyTeamMembersTests(APITestCase):
     def _member(self, name, ot=(), standby=()):
         user = User.objects.create_user(username=name, password='x')
         prof = user.profile
-        prof.albanian_tl = self.al_tl
+        prof.albanian_tl = self.tl  # link-only scope (workflow-invariants item 64)
         prof.italian_tl = self.al_tl
         prof.save()
         TeamMembership.objects.create(user_profile=prof, team=self.team, is_primary_team=True)

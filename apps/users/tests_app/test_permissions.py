@@ -36,9 +36,10 @@ class UserProfileTeamMemberTests(TestCase):
         self.italian_direct = User.objects.create_user(username='italian', password='testpass')
         self.albanian_direct = User.objects.create_user(username='albanian', password='testpass')
 
-    def test_get_team_member_ids_includes_team_members(self):
+    def test_get_team_member_ids_excludes_team_only_members(self):
+        # Link-only scope (workflow-invariants item 64): sharing a team grants nothing.
         ids = self.tl.profile.get_team_member_ids()
-        self.assertIn(self.team_member.id, ids)
+        self.assertNotIn(self.team_member.id, ids)
 
     def test_get_team_member_ids_includes_direct_tl_assignments(self):
         profile = self.tl.profile
@@ -60,8 +61,8 @@ class UserProfileTeamMemberTests(TestCase):
         outsider = User.objects.create_user(username='outsider', password='testpass')
         self.assertEqual(outsider.profile.get_team_member_ids(), set())
 
-    def test_get_team_member_ids_includes_led_teams_members(self):
-        """TLs set only via Team.team_leader must still see team members."""
+    def test_get_team_member_ids_excludes_led_teams_members(self):
+        """Team.team_leader still makes a TL, but grants no internal-data scope (item 64)."""
         leader = User.objects.create_user(username='led-tl', password='testpass')
         member = User.objects.create_user(username='led-member', password='testpass')
         team = Team.objects.create(name='Led Team', code='LED', team_leader=leader)
@@ -70,7 +71,7 @@ class UserProfileTeamMemberTests(TestCase):
 
         self.assertTrue(leader.profile.is_team_leader)
         ids = leader.profile.get_team_member_ids()
-        self.assertIn(member.id, ids)
+        self.assertNotIn(member.id, ids)
 
     def test_team_traversal_stops_on_parent_cycle(self):
         first = Team.objects.create(name='Cycle First', code='CYCLE-1')
@@ -141,7 +142,7 @@ class WorkspaceFilterMixinTests(TestCase):
         filtered = view._apply_workspace_filter(LeaveBalance.objects.all())
         self.assertEqual(filtered.count(), 0)
 
-    def test_filter_for_team_leader_always_includes_self(self):
+    def test_filter_for_team_leader_always_includes_self_and_not_team_only_members(self):
         tl = User.objects.create_user(username='ws-tl', password='testpass')
         member = User.objects.create_user(username='ws-member', password='testpass')
         team = Team.objects.create(name='WS Team', code='WST')
@@ -160,10 +161,10 @@ class WorkspaceFilterMixinTests(TestCase):
         filtered = view.filter_for_team_leader(LeaveBalance.objects.all(), tl)
         ids = set(filtered.values_list('id', flat=True))
         self.assertIn(self_balance.id, ids)
-        self.assertIn(member_balance.id, ids)
+        self.assertNotIn(member_balance.id, ids)
 
-    def test_filter_team_leader_queryset_includes_led_teams_members(self):
-        """team_logs / team_pending must resolve members via Team.team_leader."""
+    def test_filter_team_leader_queryset_excludes_led_teams_members(self):
+        """team_logs / team_pending are link-only: Team.team_leader grants nothing (item 64)."""
         leader = User.objects.create_user(username='qs-tl', password='testpass')
         member = User.objects.create_user(username='qs-member', password='testpass')
         team = Team.objects.create(name='QS Team', code='QST', team_leader=leader)
@@ -181,7 +182,7 @@ class WorkspaceFilterMixinTests(TestCase):
         filtered = view._filter_team_leader_queryset(LeaveBalance.objects.all(), leader)
         ids = set(filtered.values_list('id', flat=True))
         self.assertIn(self_balance.id, ids)
-        self.assertIn(member_balance.id, ids)
+        self.assertNotIn(member_balance.id, ids)
 
 
 class MultiRoleHRPermissionTests(TestCase):
@@ -244,7 +245,7 @@ class MultiRoleHRPermissionTests(TestCase):
 
 
 class LedTeamApprovePermissionTests(TestCase):
-    """Regression: led_teams TLs must approve, not only FK-assigned TLs."""
+    """led_teams TLs are TLs but approve only FK-assigned people (item 64, 2026-11-10)."""
 
     def setUp(self):
         self.client_obj = Client.objects.create(name='Led Co', code='LEDCO')
@@ -274,10 +275,11 @@ class LedTeamApprovePermissionTests(TestCase):
         )
         self.approver = ApprovalPermissionMixin()
 
-    def test_led_team_tl_can_approve_member_entry(self):
+    def test_led_team_tl_cannot_approve_team_only_member_entry(self):
+        # Link-only scope (workflow-invariants item 64): leading a team is not an assignment.
         self.assertTrue(self.leader.profile.is_team_leader)
-        self.assertTrue(permission_service.can_approve(self.leader, self.member_log))
-        self.assertTrue(self.approver._can_approve(self.leader, self.member_log))
+        self.assertFalse(permission_service.can_approve(self.leader, self.member_log))
+        self.assertFalse(self.approver._can_approve(self.leader, self.member_log))
 
     def test_led_team_tl_cannot_approve_outsider_entry(self):
         self.assertFalse(permission_service.can_approve(self.leader, self.outsider_log))

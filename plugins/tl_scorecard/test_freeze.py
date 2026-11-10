@@ -36,6 +36,8 @@ class ScorecardFreezeTests(TestCase):
         self.m1, self.m2 = make_user('m1'), make_user('m2')
         for member in (self.m1, self.m2):
             member.profile.teams.add(self.team)
+            member.profile.albanian_tl = self.leader  # link-only scope (item 64)
+            member.profile.save()
 
     def at(self, moment):
         # fresh user object each time: scoreable_member_ids caches on the profile
@@ -69,6 +71,8 @@ class ScorecardFreezeTests(TestCase):
         other_team = Team.objects.create(name='Beta', code='BET', team_leader=other)
         member = make_user('m3')
         member.profile.teams.add(other_team)
+        member.profile.albanian_tl = other  # link-only scope (item 64)
+        member.profile.save()
         # The first run wrote one leader and then died: the next run must finish the rest.
         ScorecardMonthSnapshot.objects.create(
             leader=self.leader, month=SEPT, member_ids=[self.m1.pk, self.m2.pk],
@@ -81,6 +85,7 @@ class ScorecardFreezeTests(TestCase):
     def test_a_frozen_month_ignores_later_membership_changes_but_other_months_stay_live(self):
         freeze_scorecard_months(now=AFTER)
         self.m2.profile.teams.clear()
+        UserProfile.objects.filter(pk=self.m2.profile.pk).update(albanian_tl=None)  # leaves the scope (item 64)
         user = self.at(AFTER)
         self.assertEqual(build_scorecard(user, SEPT)['team_size'], 2)
         self.assertTrue(build_scorecard(user, SEPT)['frozen'])
@@ -94,6 +99,7 @@ class ScorecardFreezeTests(TestCase):
         self.assertEqual(payload['team_size'], 2)
         self.assertFalse(payload['frozen'])
         self.m2.profile.teams.clear()
+        UserProfile.objects.filter(pk=self.m2.profile.pk).update(albanian_tl=None)  # leaves the scope (item 64)
         self.assertEqual(build_scorecard(User.objects.select_related('profile').get(pk=self.leader.pk), SEPT)['team_size'], 1)
 
     def test_a_snapshot_written_before_the_freeze_is_not_trusted(self):
@@ -125,6 +131,7 @@ class ScorecardFreezeTests(TestCase):
     def test_trend_agrees_with_the_scorecard_for_frozen_months(self):
         freeze_scorecard_months(now=AFTER)
         self.m2.profile.teams.clear()
+        UserProfile.objects.filter(pk=self.m2.profile.pk).update(albanian_tl=None)  # leaves the scope (item 64)
         user = self.at(AFTER)
         points = scorecard_trend(user, 3, date(2026, 10, 1))
         self.assertEqual([p['month'] for p in points], ['2026-08-01', '2026-09-01', '2026-10-01'])

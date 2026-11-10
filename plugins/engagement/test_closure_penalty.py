@@ -7,14 +7,13 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.overtime.models.core import OvertimeLog
-from apps.users.models import TeamMembership
 from apps.users.services.approval_periods import (
     LATE_CLOSURE_PENALTY_POINTS,
     auto_finalize_approval_periods,
     finalize_period,
 )
 from plugins.engagement.services import compute_engagement_score, compute_tl_metric, is_stale
-from plugins.engagement.test_engagement import _make_client, _make_overtime, _make_team, _make_user
+from plugins.engagement.test_engagement import _join, _make_client, _make_overtime, _make_team, _make_user
 from plugins.engagement.test_engagement_sla import _at
 
 User = get_user_model()
@@ -33,7 +32,7 @@ class ClosurePenaltyTests(TestCase):
         self.leader = _make_user('pen_leader')
         self.team = _make_team('Pen Team', 'PEN', leader=self.leader)
         self.member = _make_user('pen_member')
-        TeamMembership.objects.create(user_profile=self.member.profile, team=self.team)
+        _join(self.member, self.team)
         # An approved, on-time decision so the leader has a real score to deduct from.
         day = OCT.replace(day=9)
         _make_overtime(self.member, day, _at(day, 10), status='approved', client=_make_client(),
@@ -74,9 +73,9 @@ class ClosurePenaltyTests(TestCase):
 
     def test_superusers_and_inactive_users_are_never_expected_to_be_closed(self):
         boss = User.objects.create_superuser('pen_boss', password='x')
-        TeamMembership.objects.create(user_profile=boss.profile, team=self.team)
+        _join(boss, self.team)
         gone = _make_user('pen_gone')
-        TeamMembership.objects.create(user_profile=gone.profile, team=self.team)
+        _join(gone, self.team)
         User.objects.filter(pk=gone.pk).update(is_active=False)
         with patch('django.utils.timezone.now', return_value=BEFORE_CUTOFF):
             finalize_period(self.leader, OCT)

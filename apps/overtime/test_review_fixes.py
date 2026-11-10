@@ -37,6 +37,8 @@ class ReviewFixesTests(TestCase):
         team = Team.objects.create(name=f'T{uuid4().hex[:6]}', code=f'T{uuid4().hex[:6]}')
         TeamMembership.objects.create(user_profile=self.tl.profile, team=team, is_primary_team=True)
         TeamMembership.objects.create(user_profile=self.emp.profile, team=team)
+        self.emp.profile.italian_tl = self.tl  # link-only scope (workflow-invariants item 64)
+        self.emp.profile.save()
 
     def _entry(self, day, **kwargs):
         defaults = dict(user=self.emp, client=self.client_obj, date=day, hours=Decimal('2'), status='approved')
@@ -98,12 +100,13 @@ class ReviewFixesTests(TestCase):
         entry.refresh_from_db()
         self.assertEqual(entry.requested_processing_period, self.next_month)
 
-    # 4b. A TL whose authority comes only from led_teams still carries their own late entry over.
-    def test_finalize_includes_led_teams_tl_own_entries(self):
+    # 4b. A TL whose only authority is an assigned employee still carries their own late entry over.
+    def test_finalize_includes_linked_tl_own_entries(self):
         leader = User.objects.create_user(username=f'led{uuid4().hex[:6]}', password='x')
         assign_role(leader, 'italian_tl')
-        team = Team.objects.create(name=f'L{uuid4().hex[:6]}', code=f'L{uuid4().hex[:6]}', team_leader=leader)
-        TeamMembership.objects.create(user_profile=self.emp.profile, team=team)
+        other_emp = User.objects.create_user(username=f'oe{uuid4().hex[:6]}', password='x')
+        other_emp.profile.italian_tl = leader
+        other_emp.profile.save()
         finalize_period(leader, self.month)
         entry = self._entry(self.month, user=leader)
         self.assertEqual(entry.requested_processing_period, self.next_month)

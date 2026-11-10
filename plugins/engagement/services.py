@@ -120,9 +120,9 @@ def percentile(sorted_values, p):
 def _managed_map(leader_ids):
     """{leader_id: active user ids the leader manages}, in a fixed number of queries.
 
-    A leader manages: FK-assigned staff (`italian_tl`/`albanian_tl`), members of
-    the teams they belong to, and members of the teams they lead. Soft-deleted
-    memberships are ignored everywhere. The leader is excluded: their own
+    A leader manages the staff assigned to them by FK (`italian_tl`/`albanian_tl`);
+    teams are calendar-only and never widen scope (same rule as core
+    `get_team_member_ids`). The leader is excluded: their own
     requests are decided by someone else. This is the only definition of
     scope in this plugin; per-leader callers must go through it too.
     """
@@ -130,19 +130,6 @@ def _managed_map(leader_ids):
     managed = {lid: set() for lid in leader_ids}
     if not leader_ids:
         return managed
-
-    leader_teams = defaultdict(set)
-    for user_id, team_id in TeamMembership.objects.filter(
-        is_deleted=False, user_profile__user_id__in=leader_ids
-    ).values_list('user_profile__user_id', 'team_id'):
-        leader_teams[user_id].add(team_id)
-    for leader_id, team_id in Team.objects.filter(is_deleted=False, team_leader_id__in=leader_ids).values_list('team_leader_id', 'id'):
-        leader_teams[leader_id].add(team_id)
-
-    team_members = _team_members({t for teams in leader_teams.values() for t in teams})
-    for leader_id in leader_ids:
-        for team_id in leader_teams.get(leader_id, ()):
-            managed[leader_id] |= team_members[team_id]
 
     for user_id, italian, albanian in UserProfile.objects.filter(
         Q(italian_tl__in=leader_ids) | Q(albanian_tl__in=leader_ids)

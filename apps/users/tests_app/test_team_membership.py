@@ -156,12 +156,12 @@ class ArchivedTeamLeaderTests(APITestCase):
         Team.objects.create(name='B', code='BBB', team_leader=tl)
         self.assertTrue(User.objects.get(pk=tl.pk).profile.is_team_leader)
 
-    def test_archived_team_leader_stops_counting_for_team_scope_but_restore_brings_it_back(self):
+    def test_archived_team_leader_stops_being_a_team_leader_but_restore_brings_it_back(self):
         tl = make_user('tl')
         member = make_user('mem')
         team = Team.objects.create(name='A', code='AAA', team_leader=tl)
         member.profile.teams.add(team)
-        self.assertIn(member.pk, tl.profile.get_team_member_ids())
+        self.assertNotIn(member.pk, tl.profile.get_team_member_ids())  # teams grant no scope (item 64)
         team.is_active = False
         team.save()
         TeamMembership.objects.filter(team=team).delete()

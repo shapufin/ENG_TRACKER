@@ -65,8 +65,9 @@ create, importer, `_assign_team_to_profile`):
 - It writes `TeamMembershipHistory` for removed teams and an audit row per add/remove
   (`model_name='team'`, `operation` `member_add` / `member_remove`, `extra_data` has `user_id`, `username`).
 - Nothing changed means nothing written. Overtime, standby, leave and KPI records are never touched.
-- `italian_tl` / `albanian_tl` are a **separate** path in `get_team_member_ids()`, so removing a user from a
-  team does not remove their TL. `tl_link_followup` returns `warnings` (shape
+- `italian_tl` / `albanian_tl` are the **only** source of `get_team_member_ids()` (link-only since 2026-11-10,
+  workflow-invariants item 64): team membership never grants a leader internal data, so removing a user from a
+  team does not remove their TL and adding one grants nothing. `tl_link_followup` returns `warnings` (shape
   `{code:'tl_link_remains', field, user_id, leader_username, member_id, member_username, teams, message}`) and
   `removed_team_leaders` for links that still point at a leader of a removed team. Send
   `unassign_removed_tl: true` (update_user, bulk_update) to clear exactly those links in the same save

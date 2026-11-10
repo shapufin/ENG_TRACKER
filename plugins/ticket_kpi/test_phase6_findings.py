@@ -33,6 +33,8 @@ class Phase6Base(TestCase):
         cls.outsider = User.objects.create_user(username='p6_outsider', password='x')
         cls.team = Team.objects.create(name='P6 Team', code='P6', team_leader=cls.tl)
         cls.team.members.add(cls.tl.profile, cls.member.profile)
+        cls.member.profile.albanian_tl = cls.tl  # link-only scope (item 64)
+        cls.member.profile.save(update_fields=['albanian_tl'])
 
     def get(self, viewset, action, user, params=None):
         request = self.factory.get('/x/', params or {})

@@ -29,6 +29,8 @@ class ApproveInClosedPeriodTests(TestCase):
         self.emp = User.objects.create_user(username='ap-emp', password='pass')
         team = Team.objects.create(name='AP', code='AP', team_leader=self.tl)
         TeamMembership.objects.create(user_profile=self.emp.profile, team=team, is_primary_team=True)
+        self.emp.profile.albanian_tl = self.tl  # link-only scope (workflow-invariants item 64)
+        self.emp.profile.save()
         self.cl = Client.objects.create(name='C', code='C')
         self.api.force_authenticate(user=self.tl)
         r = self.api.post('/api/users/approval-periods/finalize/',

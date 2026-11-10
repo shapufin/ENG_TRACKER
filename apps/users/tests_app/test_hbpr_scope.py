@@ -120,10 +120,11 @@ class GetHbprScopeTests(HbprScopeTestBase):
         self.assertIn(self.al_tl.id, scope.tl_ids)
         self.assertTrue(scope.has_tl(self.al_tl.id))
 
-    def test_includes_fk_reports_and_team_members(self):
+    def test_includes_fk_reports_but_not_team_only_members(self):
+        # Link-only scope (workflow-invariants item 64): a shared team grants nothing.
         scope = get_hbpr_scope(self.hbpr)
         self.assertIn(self.fk_report.id, scope.member_ids)
-        self.assertIn(self.team_member.id, scope.member_ids)
+        self.assertNotIn(self.team_member.id, scope.member_ids)
         self.assertTrue(scope.has_user(self.fk_report.id))
 
     def test_excludes_unassigned_tl_and_their_reports(self):
@@ -301,8 +302,7 @@ class HbprUserListScopeTests(HbprScopeTestBase):
         self.assertIn(self.hbpr.id, ids)
         self.assertIn(self.al_tl.id, ids)
         self.assertIn(self.fk_report.id, ids)
-        self.assertIn(self.team_member.id, ids)
-        for uid in (self.other_al_tl.id, self.other_report.id, self.outsider.id):
+        for uid in (self.team_member.id, self.other_al_tl.id, self.other_report.id, self.outsider.id):
             self.assertNotIn(uid, ids)
 
     def test_profiles_endpoint_scoped_to_assignment_and_self(self):
