@@ -105,6 +105,27 @@ reacts only to create/end). Domain `ValidationError`s are 400 on this action and
 create/PATCH, never 500. `CadenceScheduleFields` is core (`components/hbpr/`); the plugin
 imports it, never the reverse.
 
+**Optional cadence (2026-11-11).** `HbprAlbanianTlAssignment.cadence` is nullable (migration
+`users` 0028, relaxing only). The admin may create an assignment without one ("Set later by the
+Line Manager" in the dialog; the API accepts a missing, `null` or blank `cadence`, and then
+`cadence_day_of_week` / `cadence_nth_week` must be null). While it is NULL: `cadence_status` is
+`cadence_not_set` (checked after `ended`, before `not_started`), `cadence_display` is "Not set",
+`next_due_on` / `next_due_slot` are `None` (never a crash), the reminder job skips the row, and the
+year-end pack reports `cadence_expected` 0. `cadence_missing` (boolean) is on `partnership.assignment`,
+`overview.leaders[]` and `year_end_pack.assignment`; `overview.needs_attention.cadence_missing`
+counts them. The scorecard payload carries `hbpr_cadence {assignment_id, cadence_missing,
+can_edit_cadence}` (`services_hbpr.cadence_banner`, null without an open assignment). Only the
+assigned Line Manager (and staff) set it, through `POST partnership/cadence/`; the Line Manager sees
+`HbprCadenceMissingBanner` on the scorecard overview and the Evidence tab until it is set, and the
+HBPR sees "Cadence not set". Admin `reassign` still requires a cadence. An admin PATCH with an explicit
+`cadence: null` clears it back to "not set" (weekday and nth week are nulled in the same save); an
+omitted key leaves it unchanged (`update_assignment` `_UNSET` sentinel), and the Line Manager
+endpoint cannot clear. Tests:
+`apps/users/tests_app/test_hbpr_assignments.py` (`OptionalCadenceTests`),
+`plugins/tl_scorecard/test_tl_scorecard_actions.py` (`NoCadenceAssignmentTests`),
+`plugins/site_backup/tests/test_restore.py` (`HbprAssignmentNullCadenceRestoreTests`),
+`frontend/e2e/hbpr-optional-cadence.spec.ts`.
+
 ## Architecture guardrails (added by the 2026-10-02 hardening pass)
 
 - **Fail-closed scoping.** HBPR-readable scorecard viewsets subclass

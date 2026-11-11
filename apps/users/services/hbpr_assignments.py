@@ -43,7 +43,7 @@ def _validate_participants(hbpr, albanian_tl):
 
 
 def _validate_cadence(cadence):
-    if cadence not in CADENCES:
+    if cadence is not None and cadence not in CADENCES:
         raise AssignmentError(f"cadence must be one of {sorted(CADENCES)}.")
 
 
@@ -62,8 +62,8 @@ def create_assignment(
     *,
     hbpr,
     albanian_tl,
-    cadence,
     effective_from,
+    cadence=None,
     cadence_day_of_week=None,
     cadence_nth_week=None,
     assigned_by=None,
@@ -108,7 +108,7 @@ def create_assignment(
 def update_assignment(
     *,
     assignment: HbprAlbanianTlAssignment,
-    cadence: str | None = None,
+    cadence=_UNSET,
     cadence_day_of_week=_UNSET,
     cadence_nth_week=_UNSET,
     effective_from: date | None = None,
@@ -120,18 +120,25 @@ def update_assignment(
     )
     update_fields = ["updated_at"]
 
-    if cadence is not None:
+    if cadence is not _UNSET:
+        # Explicit None/"" clears the cadence; a weekday on no cadence is invalid.
+        cadence = cadence or None
         _validate_cadence(cadence)
         assignment.cadence = cadence
         update_fields.append("cadence")
+        if cadence is None:
+            assignment.cadence_day_of_week = None
+            assignment.cadence_nth_week = None
+            update_fields += ["cadence_day_of_week", "cadence_nth_week"]
 
-    if cadence_day_of_week is not _UNSET:
-        assignment.cadence_day_of_week = cadence_day_of_week
-        update_fields.append("cadence_day_of_week")
+    if cadence is not None or cadence is _UNSET:
+        if cadence_day_of_week is not _UNSET:
+            assignment.cadence_day_of_week = cadence_day_of_week
+            update_fields.append("cadence_day_of_week")
 
-    if cadence_nth_week is not _UNSET:
-        assignment.cadence_nth_week = cadence_nth_week
-        update_fields.append("cadence_nth_week")
+        if cadence_nth_week is not _UNSET:
+            assignment.cadence_nth_week = cadence_nth_week
+            update_fields.append("cadence_nth_week")
 
     if effective_from is not None and effective_from != assignment.effective_from:
         _validate_dates(effective_from, assignment.effective_to)
@@ -174,8 +181,8 @@ def reassign_assignment(
     *,
     albanian_tl,
     new_hbpr,
-    cadence,
     effective_from,
+    cadence=None,
     cadence_day_of_week=None,
     cadence_nth_week=None,
     actor=None,
@@ -293,6 +300,8 @@ def cadence_status(assignment, *, last_meeting_on, on_date=None) -> str:
     """
     if not assignment.is_current:
         return "ended"
+    if not assignment.cadence:
+        return "cadence_not_set"
     if last_meeting_on is None:
         return "not_started"
     on_date = on_date or today()

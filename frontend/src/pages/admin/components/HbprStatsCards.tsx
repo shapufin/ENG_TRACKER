@@ -13,6 +13,7 @@ export const HbprStatsCards: React.FC<HbprStatsCardsProps> = ({ assignments }) =
   const attentionCount = activeAssignments.filter(
     (a) => a.cadence_status === "due" || a.cadence_status === "overdue"
   ).length;
+  const notSetCount = activeAssignments.filter((a) => a.cadence_missing).length;
   const endedCount = assignments.filter((a) => !a.is_current).length;
 
   return (
@@ -38,7 +39,13 @@ export const HbprStatsCards: React.FC<HbprStatsCardsProps> = ({ assignments }) =
         icon={AlertCircle}
         iconTone={attentionCount > 0 ? "warning" : "neutral"}
         delay={0.1}
-        trend={attentionCount > 0 ? "Meetings due or overdue" : "All active cadences on track"}
+        trend={
+          attentionCount > 0
+            ? "Meetings due or overdue"
+            : notSetCount > 0
+              ? `${notSetCount} cadence${notSetCount === 1 ? "" : "s"} not set yet`
+              : "All active cadences on track"
+        }
       />
       <StatCard
         label="Ended / Archived"

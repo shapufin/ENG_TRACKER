@@ -173,13 +173,14 @@ def overview(scope, *, reporting_year=None):
             'assignment_id': assignment.id,
             'cadence': assignment.cadence,
             'cadence_display': assignment.cadence_display,
+            'cadence_missing': not assignment.cadence,
             'cadence_day_of_week': assignment.cadence_day_of_week,
             'cadence_nth_week': assignment.cadence_nth_week,
             'team_size': team_sizes.get(assignment.albanian_tl_id, 0),
             'last_meeting_on': last_held.get(assignment.id),
             'next_due_on': (
                 assignment.next_due_on(last_meeting_on=last_meeting_on)
-                if assignment.is_current else None
+                if assignment.is_current and assignment.cadence else None
             ),
             'cadence_status': cadence_status(assignment, last_meeting_on=last_meeting_on, on_date=today),
             'epr_mid_year': 'epr_mid_year' in epr.get(assignment.id, ()),
@@ -197,6 +198,7 @@ def overview(scope, *, reporting_year=None):
         'reporting_year': year,
         'recent_evidence_days': RECENT_EVIDENCE_DAYS,
         'needs_attention': {
+            'cadence_missing': sum(1 for r in leaders if r['cadence_missing']),
             'cadence_overdue': sum(1 for r in leaders if r['cadence_status'] == 'overdue'),
             'cadence_due': sum(1 for r in leaders if r['cadence_status'] == 'due'),
             'missing_mid_year_evidence': sum(1 for r in leaders if not r['epr_mid_year']),
@@ -204,6 +206,24 @@ def overview(scope, *, reporting_year=None):
             'recent_evidence': recent_evidence,
         },
         'leaders': leaders,
+    }
+
+
+def cadence_banner(leader, viewer):
+    """The scorecard's cadence prompt: one assignment query, or None without an open assignment.
+
+    ``can_edit_cadence`` is the same decision ``partnership`` makes: the assigned
+    Line Manager and staff only (an HBPR never edits).
+    """
+    from apps.users.services.hbpr_assignments import active_assignment_for_tl
+
+    assignment = active_assignment_for_tl(leader.id, on_date=app_today())
+    if assignment is None:
+        return None
+    return {
+        'assignment_id': assignment.id,
+        'cadence_missing': not assignment.cadence,
+        'can_edit_cadence': is_staff_user(viewer) or viewer.id == assignment.albanian_tl_id,
     }
 
 
@@ -227,7 +247,7 @@ def partnership(leader, *, reporting_year=None, viewer=None):
     last_meeting_on = last_cadence.get(assignment.id)
     next_slot = (
         assignment.next_due_slot(last_meeting_on=last_meeting_on)
-        if assignment.is_current else (None, None)
+        if assignment.is_current and assignment.cadence else (None, None)
     )
     return {
         'reporting_year': year,
@@ -236,6 +256,7 @@ def partnership(leader, *, reporting_year=None, viewer=None):
             'hbpr': _person(assignment.hbpr),
             'cadence': assignment.cadence,
             'cadence_display': assignment.cadence_display,
+            'cadence_missing': not assignment.cadence,
             'cadence_day_of_week': assignment.cadence_day_of_week,
             'cadence_nth_week': assignment.cadence_nth_week,
             'can_edit_cadence': viewer is not None and (

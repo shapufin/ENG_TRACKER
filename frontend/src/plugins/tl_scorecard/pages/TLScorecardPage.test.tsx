@@ -151,6 +151,47 @@ describe("TLScorecardPage", () => {
     expect(screen.getByText("4")).toBeInTheDocument();
   });
 
+  describe("HBPR cadence banner on the overview", () => {
+    const withBanner = (hbpr_cadence: Scorecard["hbpr_cadence"]) => {
+      mockDefaults();
+      (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: { ...SCORECARD, hbpr_cadence },
+      });
+    };
+    const BANNER = /set your hbpr meeting cadence/i;
+
+    it("shows one banner when the cadence is missing and editable, without fetching the partnership", async () => {
+      withBanner({ assignment_id: 11, cadence_missing: true, can_edit_cadence: true });
+
+      renderPage();
+
+      expect(await screen.findAllByText(BANNER)).toHaveLength(1);
+      expect(tlScorecardService.getPartnership).not.toHaveBeenCalled();
+    });
+
+    it("opens the cadence dialog from the banner", async () => {
+      withBanner({ assignment_id: 11, cadence_missing: true, can_edit_cadence: true });
+
+      renderPage();
+      fireEvent.click(await screen.findByRole("button", { name: /set cadence/i }));
+
+      expect(await screen.findByText("Set meeting schedule")).toBeInTheDocument();
+    });
+
+    it.each([
+      ["the cadence is set", { assignment_id: 11, cadence_missing: false, can_edit_cadence: true }],
+      ["the viewer cannot edit", { assignment_id: 11, cadence_missing: true, can_edit_cadence: false }],
+      ["there is no assignment", null],
+    ])("is hidden when %s", async (_label, payload) => {
+      withBanner(payload);
+
+      renderPage();
+
+      await waitFor(() => expect(screen.getByText("66.7%")).toBeInTheDocument());
+      expect(screen.queryByText(BANNER)).not.toBeInTheDocument();
+    });
+  });
+
   it("labels the approval-behavior engagement score as a proxy, not the sentiment KPI", async () => {
     mockDefaults();
 

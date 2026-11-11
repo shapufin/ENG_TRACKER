@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { CADENCE_LABELS, CADENCE_STATUS_LABELS } from "@/types/hbprAssignment";
-import type { HbprCadenceStatus, HbprEvidenceKind } from "../../types/tlScorecard";
+import type { HbprCadence, HbprCadenceStatus, HbprEvidenceKind } from "../../types/tlScorecard";
 import type { HbprRecordResource } from "../../hooks/useHbprWorkspaceQueries";
 import type { Tone } from "@/components/ui/tone";
 
@@ -24,7 +24,12 @@ export const CADENCE_STATUS_TONE: Record<
   overdue: "destructive",
   not_started: "neutral",
   ended: "neutral",
+  cadence_not_set: "warning",
 };
+
+/** "Weekly" etc., or "Cadence not set" while the Line Manager has not chosen a schedule. */
+export const cadenceLabel = (cadence: HbprCadence | null, display?: string): string =>
+  cadence ? display || CADENCE_LABELS[cadence] : "Cadence not set";
 
 export const EVIDENCE_KIND_LABELS: Record<HbprEvidenceKind, string> = {
   cadence_meeting: "Cadence meeting",

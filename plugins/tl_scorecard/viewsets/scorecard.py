@@ -183,7 +183,11 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         data = build_scorecard(leader, month or business_today())
         self._mask_one_on_one(request, leader, data)
         self._mask_hbpr_only(request, leader, data)
-        return Response(ScorecardSerializer(data).data)
+        from .. import services_hbpr
+
+        payload = dict(ScorecardSerializer(data).data)
+        payload['hbpr_cadence'] = services_hbpr.cadence_banner(leader, request.user)
+        return Response(payload)
 
     @action(detail=False, methods=['get'])
     def trend(self, request):

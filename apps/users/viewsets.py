@@ -2554,7 +2554,7 @@ class HbprAssignmentViewSet(viewsets.ModelViewSet):
             assignment = create_assignment(
                 hbpr=data["hbpr"],
                 albanian_tl=data["albanian_tl"],
-                cadence=data["cadence"],
+                cadence=data.get("cadence") or None,
                 cadence_day_of_week=data.get("cadence_day_of_week"),
                 cadence_nth_week=data.get("cadence_nth_week"),
                 effective_from=data["effective_from"],

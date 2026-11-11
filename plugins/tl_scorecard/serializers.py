@@ -483,7 +483,7 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
         source='assignment.albanian_tl_id', read_only=True
     )
     hbpr = serializers.IntegerField(source='assignment.hbpr_id', read_only=True)
-    cadence = serializers.CharField(source='assignment.cadence', read_only=True)
+    cadence = serializers.CharField(source='assignment.cadence', read_only=True, allow_null=True)
     next_due_on = serializers.SerializerMethodField()
     next_due_moved_from = serializers.SerializerMethodField()
     cadence_status = serializers.SerializerMethodField()
@@ -528,7 +528,7 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
 
     def get_next_due_on(self, obj):
         assignment = obj.assignment
-        if not assignment.is_current:
+        if not assignment.is_current or not assignment.cadence:
             return None
         # The raw cadence date, matching the admin assignment serializer and the
         # HBPR overview. Lateness is carried by `cadence_status`, not by
@@ -537,7 +537,7 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
 
     def get_next_due_moved_from(self, obj):
         assignment = obj.assignment
-        if not assignment.is_current:
+        if not assignment.is_current or not assignment.cadence:
             return None
         moved = assignment.next_due_slot(last_meeting_on=self._last_cadence_on(obj))[1]
         return str(moved) if moved else None

@@ -22,15 +22,16 @@ import type {
   YearEndEvidencePack,
 } from "../../types/tlScorecard";
 import {
-  CADENCE_LABELS,
   CADENCE_STATUS_LABELS,
   CADENCE_STATUS_TONE,
   EVIDENCE_KIND_LABELS,
+  cadenceLabel,
   formatDate,
 } from "../hbpr/hbprMeta";
 import { GroupedEvidenceList } from "../partnership/GroupedEvidenceList";
 import { EvidencePackDialog } from "./EvidencePackDialog";
 import { HbprCadenceDialog } from "./HbprCadenceDialog";
+import { HbprCadenceMissingBanner } from "./HbprCadenceMissingBanner";
 import { HbprEvidenceDialog } from "./HbprEvidenceDialog";
 
 interface HbprPartnershipSectionProps {
@@ -112,7 +113,7 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
             {assignment.can_edit_cadence && (
               <Button variant="outline" size="sm" onClick={() => setCadenceOpen(true)}>
                 <CalendarClock className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                Change schedule
+                {assignment.cadence ? "Change schedule" : "Set schedule"}
               </Button>
             )}
             {canAuthor && (
@@ -144,13 +145,14 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
         </GlassCard>
       ) : (
         <>
+          <HbprCadenceMissingBanner assignment={assignment} onSetUp={() => setCadenceOpen(true)} />
           <GlassCard animateOnMount={false} className="p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-muted-foreground text-xs">HR business partner</p>
                 <p className="truncate font-semibold">{assignment.hbpr.name}</p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  {assignment.cadence_display || CADENCE_LABELS[assignment.cadence]} · paired since{" "}
+                  {cadenceLabel(assignment.cadence, assignment.cadence_display)} · paired since{" "}
                   {formatDate(assignment.effective_from)}
                 </p>
               </div>

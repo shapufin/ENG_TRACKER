@@ -19,7 +19,8 @@ import { CadenceScheduleFields } from "@/components/hbpr/CadenceScheduleFields";
 export interface HbprAssignmentForm {
   hbpr: number | null;
   albanian_tl: number | null;
-  cadence: HbprCadence;
+  /** Null = the Line Manager sets the schedule later. */
+  cadence: HbprCadence | null;
   cadence_day_of_week: number | null;
   cadence_nth_week: number | null;
   effective_from: string;
@@ -108,7 +109,7 @@ export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
       mode === "edit" && editingAssignment?.last_meeting_on
         ? editingAssignment.last_meeting_on
         : form.effective_from;
-    if (!anchor) return "";
+    if (!anchor || !form.cadence) return "";
     return calculateNextCadenceOccurrence({
       cadence: form.cadence,
       cadenceDayOfWeek: form.cadence_day_of_week,
@@ -189,11 +190,18 @@ export const HbprAssignmentDialog: React.FC<HbprAssignmentDialogProps> = ({
 
         <CadenceScheduleFields
           idPrefix="hbpr-assignment"
+          allowUnset
           value={form}
           onFieldChange={(key, value) =>
             onFieldChange(key, value as HbprAssignmentForm[typeof key])
           }
         />
+        {form.cadence === null && (
+          <p className="text-muted-foreground text-xs">
+            The Line Manager is asked to set their meeting schedule; until then the cadence shows as
+            not set.
+          </p>
+        )}
 
         {/* Live Calculated Date Callout */}
         {calculatedDate && (

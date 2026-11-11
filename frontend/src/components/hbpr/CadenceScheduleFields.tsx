@@ -13,7 +13,8 @@ import { CADENCE_LABELS, NTH_WEEK_OPTIONS, WEEKDAY_OPTIONS } from "@/types/hbprA
 import type { HbprCadence } from "@/types/hbprAssignment";
 
 export interface CadenceScheduleValue {
-  cadence: HbprCadence;
+  /** Null = no schedule chosen yet. */
+  cadence: HbprCadence | null;
   cadence_day_of_week: number | null;
   cadence_nth_week: number | null;
 }
@@ -21,12 +22,16 @@ export interface CadenceScheduleValue {
 interface CadenceScheduleFieldsProps {
   /** Prefix for the control ids, so two dialogs never share an id. */
   idPrefix: string;
+  /** Offer "Set later by the Line Manager" (admin create). Otherwise a choice is required. */
+  allowUnset?: boolean;
   value: CadenceScheduleValue;
   onFieldChange: <K extends keyof CadenceScheduleValue>(
     key: K,
     value: CadenceScheduleValue[K]
   ) => void;
 }
+
+const UNSET = "unset";
 
 /**
  * The HBPR meeting schedule controls: cadence, weekday, and the monthly
@@ -35,6 +40,7 @@ interface CadenceScheduleFieldsProps {
  */
 export const CadenceScheduleFields: React.FC<CadenceScheduleFieldsProps> = ({
   idPrefix,
+  allowUnset = false,
   value,
   onFieldChange,
 }) => {
@@ -47,8 +53,14 @@ export const CadenceScheduleFields: React.FC<CadenceScheduleFieldsProps> = ({
       <div className="space-y-2">
         <Label htmlFor={`${idPrefix}-cadence`}>Meeting cadence</Label>
         <Select
-          value={value.cadence}
+          value={value.cadence ?? (allowUnset ? UNSET : undefined)}
           onValueChange={(v) => {
+            if (v === UNSET) {
+              onFieldChange("cadence", null);
+              onFieldChange("cadence_day_of_week", null);
+              onFieldChange("cadence_nth_week", null);
+              return;
+            }
             const newCadence = v as HbprCadence;
             onFieldChange("cadence", newCadence);
             if (newCadence !== "monthly") {
@@ -57,9 +69,10 @@ export const CadenceScheduleFields: React.FC<CadenceScheduleFieldsProps> = ({
           }}
         >
           <SelectTrigger id={`${idPrefix}-cadence`} aria-label="Meeting cadence" className="w-full">
-            <SelectValue />
+            <SelectValue placeholder="Choose a cadence" />
           </SelectTrigger>
           <SelectContent>
+            {allowUnset && <SelectItem value={UNSET}>Set later by the Line Manager</SelectItem>}
             {(Object.keys(CADENCE_LABELS) as HbprCadence[]).map((cadence) => (
               <SelectItem key={cadence} value={cadence}>
                 {CADENCE_LABELS[cadence]}

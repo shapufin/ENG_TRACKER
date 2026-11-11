@@ -79,7 +79,9 @@ class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
         on_delete=models.PROTECT,
         related_name="hbpr_assignments",
     )
-    cadence = models.CharField(max_length=20, choices=CADENCE_CHOICES)
+    cadence = models.CharField(
+        max_length=20, choices=CADENCE_CHOICES, null=True, blank=True
+    )
     cadence_day_of_week = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
@@ -136,7 +138,7 @@ class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
         ]
 
     def __str__(self):
-        return f"{self.hbpr} ↔ {self.albanian_tl} ({self.cadence})"
+        return f"{self.hbpr} ↔ {self.albanian_tl} ({self.cadence or 'no cadence'})"
 
     def clean(self):
         from apps.permissions.services.role_service import has_role
@@ -147,7 +149,12 @@ class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
             raise ValidationError(
                 {"albanian_tl": "User must hold the albanian_tl role."}
             )
-        if self.cadence not in dict(CADENCE_CHOICES):
+        if self.cadence is None:
+            if self.cadence_day_of_week is not None or self.cadence_nth_week is not None:
+                raise ValidationError(
+                    {"cadence": "Set a cadence before choosing a weekday or week."}
+                )
+        elif self.cadence not in dict(CADENCE_CHOICES):
             raise ValidationError(
                 {"cadence": f"cadence must be one of {sorted(dict(CADENCE_CHOICES))}."}
             )
@@ -177,6 +184,8 @@ class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
     @property
     def cadence_display(self) -> str:
         """Human-readable description of cadence frequency and schedule."""
+        if not self.cadence:
+            return "Not set"
         weekday_name = (
             WEEKDAY_NAMES[self.cadence_day_of_week]
             if self.cadence_day_of_week is not None and 0 <= self.cadence_day_of_week <= 6
@@ -194,11 +203,13 @@ class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
     # Holiday pushes stop here: a run of holidays longer than this never loops forever.
     _MAX_HOLIDAY_PUSHES = 6
 
-    def next_due_on(self, *, last_meeting_on: date | None) -> date:
+    def next_due_on(self, *, last_meeting_on: date | None) -> date | None:
         """Next cadence date after the last slot, moved past public holidays."""
         return self.next_due_slot(last_meeting_on=last_meeting_on)[0]
 
-    def next_due_slot(self, *, last_meeting_on: date | None) -> tuple[date, date | None]:
+    def next_due_slot(
+        self, *, last_meeting_on: date | None
+    ) -> tuple[date, date | None] | tuple[None, None]:
         """``(due, moved_from)``: the next slot, and the holiday date it replaced.
 
         A due date that is a global public holiday moves to the following slot of
@@ -208,6 +219,8 @@ class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
         """
         from apps.leave_management.models.core import global_holiday_dates
 
+        if not self.cadence:
+            return None, None
         due = self._raw_next_due(last_meeting_on=last_meeting_on)
         holidays = global_holiday_dates(due, due + timedelta(days=366))
         moved_from = None

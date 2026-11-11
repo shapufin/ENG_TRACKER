@@ -48,7 +48,16 @@ export interface PromotionRatio {
   target_pct: number;
 }
 
+/** Cadence prompt carried by the scorecard payload; null when the leader has no open HBPR assignment. */
+export interface HbprCadenceBanner {
+  assignment_id: number;
+  cadence_missing: boolean;
+  /** Server-decided: the assigned Line Manager (and staff) only, never the HBPR. */
+  can_edit_cadence: boolean;
+}
+
 export interface Scorecard {
+  hbpr_cadence?: HbprCadenceBanner | null;
   month: string;
   team_size: number;
   leave: LeaveSla;
@@ -310,8 +319,9 @@ export interface YearEndEvidencePack {
     id: number;
     albanian_tl_name: string | null;
     hbpr_name: string | null;
-    cadence: HbprCadence;
+    cadence: HbprCadence | null;
     cadence_display?: string;
+    cadence_missing?: boolean;
     effective_from: string;
     effective_to: string | null;
   };
@@ -362,6 +372,8 @@ export type HbprEvidenceKind = "cadence_meeting" | "epr_mid_year" | "epr_year_en
 export interface HbprNeedsAttention {
   cadence_overdue: number;
   cadence_due: number;
+  /** Assignments whose Line Manager has not set a meeting schedule yet. */
+  cadence_missing: number;
   missing_mid_year_evidence: number;
   missing_year_end_evidence: number;
   /** Evidence rows recorded within `recent_evidence_days`. */
@@ -371,8 +383,9 @@ export interface HbprNeedsAttention {
 /** One assigned Line Manager, with cadence and EPR governance state. */
 export interface HbprLeaderRow extends PersonRef {
   assignment_id: number;
-  cadence: HbprCadence;
+  cadence: HbprCadence | null;
   cadence_display?: string;
+  cadence_missing: boolean;
   team_size: number;
   last_meeting_on: string | null;
   next_due_on: string | null;
@@ -398,7 +411,7 @@ export interface HbprEvidence {
   assignment: number;
   albanian_tl: number;
   hbpr: number;
-  cadence: HbprCadence;
+  cadence: HbprCadence | null;
   cadence_display?: string;
   kind: HbprEvidenceKind;
   kind_display: string;
@@ -428,8 +441,10 @@ export interface HbprEvidence {
 export interface HbprPartnershipAssignment {
   id: number;
   hbpr: PersonRef;
-  cadence: HbprCadence;
+  /** Null until the Line Manager sets the schedule. */
+  cadence: HbprCadence | null;
   cadence_display?: string;
+  cadence_missing: boolean;
   cadence_day_of_week: number | null;
   cadence_nth_week: number | null;
   /** Server-decided: the assigned Line Manager (and staff) may change the schedule. */

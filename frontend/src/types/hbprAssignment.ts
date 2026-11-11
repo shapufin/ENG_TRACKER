@@ -5,7 +5,7 @@ export interface HbprPersonRef {
 
 export type HbprCadence = "weekly" | "biweekly" | "monthly";
 
-export type HbprCadenceStatus = "not_started" | "on_track" | "due" | "overdue" | "ended";
+export type HbprCadenceStatus = "not_started" | "on_track" | "due" | "overdue" | "ended" | "cadence_not_set";
 
 /**
  * An explicit, dated HBPR ↔ Line Manager assignment. One open row per Line
@@ -17,10 +17,12 @@ export interface HbprAssignment {
   albanian_tl: number;
   hbpr_detail: HbprPersonRef;
   albanian_tl_detail: HbprPersonRef;
-  cadence: HbprCadence;
+  /** Null until the Line Manager sets the schedule. */
+  cadence: HbprCadence | null;
   cadence_display?: string;
   cadence_day_of_week?: number | null;
   cadence_nth_week?: number | null;
+  cadence_missing?: boolean;
   effective_from: string;
   effective_to: string | null;
   is_current: boolean;
@@ -33,14 +35,15 @@ export interface HbprAssignment {
 export interface HbprAssignmentPayload {
   hbpr: number;
   albanian_tl: number;
-  cadence: HbprCadence;
+  /** Omit (or null) to let the Line Manager set the schedule later. */
+  cadence?: HbprCadence | null;
   cadence_day_of_week?: number | null;
   cadence_nth_week?: number | null;
   effective_from: string;
 }
 
 export interface HbprUpdateAssignmentPayload {
-  cadence?: HbprCadence;
+  cadence?: HbprCadence | null;
   cadence_day_of_week?: number | null;
   cadence_nth_week?: number | null;
   effective_from?: string;
@@ -84,6 +87,7 @@ export const CADENCE_STATUS_LABELS: Record<HbprCadenceStatus, string> = {
   due: "Due",
   overdue: "Overdue",
   ended: "Ended",
+  cadence_not_set: "Not set",
 };
 
 /**

@@ -36,6 +36,7 @@ const LEADER_A = {
   name: "Alb TL",
   assignment_id: 11,
   cadence: "weekly" as const,
+  cadence_missing: false,
   team_size: 4,
   last_meeting_on: `${YEAR}-03-01`,
   next_due_on: `${YEAR}-03-08`,
@@ -50,6 +51,7 @@ const LEADER_B = {
   name: "Second TL",
   assignment_id: 12,
   cadence: "monthly" as const,
+  cadence_missing: false,
   team_size: 2,
   last_meeting_on: null,
   next_due_on: `${YEAR}-01-31`,
@@ -66,6 +68,7 @@ const OVERVIEW: HbprOverview = {
   needs_attention: {
     cadence_overdue: 1,
     cadence_due: 0,
+    cadence_missing: 0,
     missing_mid_year_evidence: 1,
     missing_year_end_evidence: 1,
     recent_evidence: 1,
@@ -245,6 +248,34 @@ describe("HbprWorkspacePage", () => {
     );
     renderPage();
     expect(await screen.findByRole("status", { name: "Cadence on track" })).toBeInTheDocument();
+  });
+
+  it("shows Cadence not set read-only and counts it in the attention summary", async () => {
+    svc.getHbprOverview.mockResolvedValue(
+      ok({
+        ...OVERVIEW,
+        needs_attention: {
+          ...OVERVIEW.needs_attention,
+          cadence_overdue: 0,
+          cadence_due: 0,
+          cadence_missing: 1,
+        },
+        leaders: [
+          {
+            ...LEADER_A,
+            cadence: null,
+            cadence_display: "Not set",
+            cadence_missing: true,
+            next_due_on: null,
+            cadence_status: "cadence_not_set" as const,
+          },
+        ],
+      })
+    );
+    renderPage();
+    expect((await screen.findAllByText("Cadence not set")).length).toBeGreaterThan(1);
+    expect(screen.getByRole("status", { name: "1 cadence not set" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /set cadence|set schedule/i })).toBeNull();
   });
 
   it("shows the roster count in the table card header", async () => {

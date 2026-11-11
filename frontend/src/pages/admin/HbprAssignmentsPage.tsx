@@ -63,11 +63,21 @@ const todayIso = () => new Date().toLocaleDateString("en-CA");
 const emptyForm = (): HbprAssignmentForm => ({
   hbpr: null,
   albanian_tl: null,
-  cadence: "weekly",
+  cadence: null,
   cadence_day_of_week: null,
   cadence_nth_week: null,
   effective_from: todayIso(),
 });
+
+/** An unset cadence is omitted entirely, so the server stores no schedule at all. */
+const cadenceFields = (form: HbprAssignmentForm) =>
+  form.cadence
+    ? {
+        cadence: form.cadence,
+        cadence_day_of_week: form.cadence_day_of_week,
+        cadence_nth_week: form.cadence_nth_week,
+      }
+    : {};
 
 /**
  * Admin management for explicit HBPR ↔ Line Manager assignments.
@@ -186,9 +196,8 @@ export const HbprAssignmentsPage: React.FC = () => {
       updateMutation.mutate({
         id: editing.id,
         data: {
-          cadence: form.cadence,
-          cadence_day_of_week: form.cadence_day_of_week,
-          cadence_nth_week: form.cadence_nth_week,
+          // On edit, "not set" is sent as an explicit null so the server clears it.
+          ...(form.cadence ? cadenceFields(form) : { cadence: null }),
           effective_from: form.effective_from,
         },
       });
@@ -196,9 +205,7 @@ export const HbprAssignmentsPage: React.FC = () => {
       createMutation.mutate({
         hbpr: form.hbpr as number,
         albanian_tl: form.albanian_tl as number,
-        cadence: form.cadence,
-        cadence_day_of_week: form.cadence_day_of_week,
-        cadence_nth_week: form.cadence_nth_week,
+        ...cadenceFields(form),
         effective_from: form.effective_from,
       });
     }

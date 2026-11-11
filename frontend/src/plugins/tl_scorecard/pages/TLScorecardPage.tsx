@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { usePermissions } from "@/context/PermissionContext";
 import { EvidenceExportSection } from "../components/scorecard/EvidenceExportSection";
+import { HbprCadenceDialog } from "../components/scorecard/HbprCadenceDialog";
+import { HbprCadenceMissingBanner } from "../components/scorecard/HbprCadenceMissingBanner";
 import { HbprPartnershipSection } from "../components/scorecard/HbprPartnershipSection";
 import { ScorecardOverview } from "../components/scorecard/ScorecardOverview";
 import { TeamGovernanceSection } from "../components/scorecard/TeamGovernanceSection";
@@ -74,6 +76,7 @@ const TLScorecardAuthoring: React.FC = () => {
   const [promotionDialogOpen, setPromotionDialogOpen] = useState(false);
   const [pipDialogOpen, setPipDialogOpen] = useState(false);
   const [eprDialogOpen, setEprDialogOpen] = useState(false);
+  const [cadenceDialogOpen, setCadenceDialogOpen] = useState(false);
 
   const invalidateScorecard = () =>
     queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "scorecard"] });
@@ -156,6 +159,7 @@ const TLScorecardAuthoring: React.FC = () => {
     onSuccess: (response) => {
       queryClient.setQueryData(["tl-scorecard", "partnership", year], response.data);
       invalidatePartnership();
+      invalidateScorecard();
       // The staff assignments list shows the same schedule.
       queryClient.invalidateQueries({ queryKey: ["admin", "hbpr-assignments"] });
     },
@@ -380,6 +384,20 @@ const TLScorecardAuthoring: React.FC = () => {
       onTabChange={setTab}
       month={scorecard.month}
     >
+      <HbprCadenceMissingBanner
+        assignment={scorecard.hbpr_cadence}
+        onSetUp={() => setCadenceDialogOpen(true)}
+      />
+      {scorecard.hbpr_cadence?.can_edit_cadence && cadenceDialogOpen && (
+        <HbprCadenceDialog
+          open
+          onOpenChange={setCadenceDialogOpen}
+          assignment={{ cadence: null, cadence_day_of_week: null, cadence_nth_week: null }}
+          onSave={async (data) => {
+            await updateCadenceMutation.mutateAsync(data);
+          }}
+        />
+      )}
       <ScorecardOverview
         scorecard={scorecard}
         engagement={engagementQuery.data}

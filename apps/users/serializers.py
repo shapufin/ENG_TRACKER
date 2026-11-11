@@ -934,6 +934,8 @@ class HbprAlbanianTlAssignmentSerializer(serializers.ModelSerializer):
         last = getattr(obj, "last_meeting_on", None)
         if last is None and not obj.is_current:
             return None
+        if not obj.cadence:
+            return None
         return obj.next_due_on(last_meeting_on=last)
 
     def get_evidence_count(self, obj) -> int:

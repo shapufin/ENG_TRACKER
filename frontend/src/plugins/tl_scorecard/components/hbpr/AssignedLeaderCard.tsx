@@ -7,7 +7,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { UserAvatar } from "@/components/calendar/UserAvatar";
 import type { HbprLeaderRow } from "../../types/tlScorecard";
 import { avatarSeed } from "../avatarSeed";
-import { CADENCE_LABELS, CADENCE_STATUS_LABELS, CADENCE_STATUS_TONE, formatDate } from "./hbprMeta";
+import { CADENCE_STATUS_LABELS, CADENCE_STATUS_TONE, cadenceLabel, formatDate } from "./hbprMeta";
 
 const EprPill: React.FC<{ label: string; recorded: boolean }> = ({ label, recorded }) => (
   <Badge variant={recorded ? "success" : "warning"}>
@@ -33,7 +33,7 @@ export const AssignedLeaderCard: React.FC<AssignedLeaderCardProps> = ({ leader, 
           <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
             <UsersRound className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             {leader.team_size} {leader.team_size === 1 ? "member" : "members"} ·{" "}
-            {leader.cadence_display || CADENCE_LABELS[leader.cadence]}
+            {cadenceLabel(leader.cadence, leader.cadence_display)}
           </p>
         </div>
       </div>

@@ -18,6 +18,7 @@ const STATUS_TONE: Record<HbprCadenceStatus, "success" | "warning" | "destructiv
   overdue: "destructive",
   not_started: "neutral",
   ended: "neutral",
+  cadence_not_set: "warning",
 };
 
 export const useHbprAssignmentColumns = (
@@ -55,9 +56,15 @@ export const useHbprAssignmentColumns = (
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5 text-xs">
             <Calendar className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span className="font-medium">
-              {row.original.cadence_display || CADENCE_LABELS[row.original.cadence]}
-            </span>
+            {row.original.cadence ? (
+              <span className="font-medium">
+                {row.original.cadence_display || CADENCE_LABELS[row.original.cadence]}
+              </span>
+            ) : (
+              <Badge variant="warning" className="whitespace-nowrap">
+                Not set
+              </Badge>
+            )}
           </div>
         ),
       },

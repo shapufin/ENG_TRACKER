@@ -51,6 +51,8 @@ const statusForAttention = (
       tone: "danger",
     };
   if (attention.cadence_due > 0) return { label: `${attention.cadence_due} due`, tone: "warning" };
+  if (attention.cadence_missing > 0)
+    return { label: `${attention.cadence_missing} cadence not set`, tone: "warning" };
   return { label: "Cadence on track", tone: "success" };
 };
 

@@ -52,6 +52,15 @@ const buildCards = (n: HbprNeedsAttention, year: number): Card[] => {
       to: `/hbpr?view=leaders&year=${year}`,
     },
     {
+      key: "cadence_missing",
+      icon: CalendarClock,
+      tone: "warning",
+      count: n.cadence_missing,
+      title: "Cadence not set",
+      action: `Review ${plural(n.cadence_missing, "team leader", "team leaders")}`,
+      to: `/hbpr?view=leaders&year=${year}`,
+    },
+    {
       key: "missing_mid_year",
       icon: FileClock,
       tone: "info",

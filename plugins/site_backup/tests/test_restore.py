@@ -477,3 +477,43 @@ class RestoreMissingSignalDrivenRowsTests(TestCase):
         )
         self.assertTrue(OvertimeLog.objects.filter(pk=orig_ot_pk).exists())
         self.assertEqual(Notification.objects.count(), notif_count_before)
+
+
+class HbprAssignmentNullCadenceRestoreTests(TestCase):
+    """An HBPR assignment without a cadence (set later by the Line Manager)
+    must come back from a backup with cadence still NULL, not a default."""
+
+    def test_null_cadence_assignment_round_trips(self):
+        import datetime as dt
+
+        from apps.users.models.hbpr import HbprAlbanianTlAssignment
+
+        admin = User.objects.create_user(username='admin_hb', password='x', is_superuser=True)
+        hbpr = User.objects.create_user(username='hbpr_hb', password='x')
+        lm = User.objects.create_user(username='lm_hb', password='x')
+        row = HbprAlbanianTlAssignment.objects.create(
+            hbpr=hbpr, albanian_tl=lm, effective_from=dt.date(2026, 1, 1))
+        self.assertIsNone(row.cadence)
+        pk = row.pk
+
+        with tempfile.TemporaryDirectory() as media:
+            with override_settings(MEDIA_ROOT=media):
+                record = backup_service.create_backup(admin, include_media=False)
+                HbprAlbanianTlAssignment.objects.filter(pk=pk).delete()
+                with record.file.open('rb') as fh:
+                    preview = restore_service.preview(fh)
+                self.assertTrue(preview['schema_compatible'])
+                with record.file.open('rb') as fh:
+                    restore_service.commit(
+                        fh,
+                        approved_models=['users.hbpralbaniantlassignment'],
+                        confirmed=True,
+                        user=admin,
+                    )
+
+        restored = HbprAlbanianTlAssignment.objects.get(pk=pk)
+        self.assertIsNone(restored.cadence)
+        self.assertIsNone(restored.cadence_day_of_week)
+        self.assertIsNone(restored.cadence_nth_week)
+        self.assertEqual(restored.cadence_display, 'Not set')
+        self.assertIsNone(restored.effective_to)

@@ -34,6 +34,8 @@ def process_cadence_reminders(today=None) -> int:
 
     notified = 0
     for assignment in assignments:
+        if not assignment.cadence:
+            continue
         due = assignment.next_due_on(last_meeting_on=last_slot.get(assignment.id))
         if due > today:
             continue

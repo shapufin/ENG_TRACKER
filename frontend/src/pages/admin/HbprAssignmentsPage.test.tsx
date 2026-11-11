@@ -191,6 +191,27 @@ describe("HbprAssignmentsPage", () => {
     });
   });
 
+  it("lets an admin clear an existing cadence back to not set", async () => {
+    vi.mocked(hbprAssignmentService.list).mockResolvedValue({
+      data: [{ ...assignment, last_meeting_on: null }],
+    } as never);
+    vi.mocked(hbprAssignmentService.update).mockResolvedValue({
+      data: { ...assignment, cadence: null },
+    } as never);
+
+    Element.prototype.scrollIntoView = vi.fn();
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /edit assignment for enri leader/i }));
+    fireEvent.click(await screen.findByRole("combobox", { name: "Meeting cadence" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Set later by the Line Manager" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(hbprAssignmentService.update).toHaveBeenCalled());
+    const [id, payload] = vi.mocked(hbprAssignmentService.update).mock.calls[0];
+    expect(id).toBe(1);
+    expect(payload).toHaveProperty("cadence", null);
+  });
+
   it("blocks setting start date after an already recorded meeting", async () => {
     vi.mocked(hbprAssignmentService.list).mockResolvedValue({
       data: [{ ...assignment, last_meeting_on: "2026-09-01" }],

@@ -17,9 +17,9 @@ import type { HbprLeaderRow } from "../../types/tlScorecard";
 import { avatarSeed } from "../avatarSeed";
 import { AssignedLeaderCard } from "./AssignedLeaderCard";
 import {
-  CADENCE_LABELS,
   CADENCE_STATUS_LABELS,
   CADENCE_STATUS_TONE,
+  cadenceLabel,
   formatDate,
   plural,
 } from "./hbprMeta";
@@ -129,7 +129,7 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
                   </th>
                   <td className={cn(BODY_CELL, "tabular-nums")}>{leader.team_size}</td>
                   <td className={BODY_CELL}>
-                    {leader.cadence_display || CADENCE_LABELS[leader.cadence]}
+                    {cadenceLabel(leader.cadence, leader.cadence_display)}
                   </td>
                   <td className={cn(BODY_CELL, "whitespace-nowrap tabular-nums")}>
                     {formatDate(leader.last_meeting_on)}

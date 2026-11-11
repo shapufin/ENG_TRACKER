@@ -4,13 +4,19 @@ import { CadenceScheduleFields } from "@/components/hbpr/CadenceScheduleFields";
 import type { CadenceScheduleValue } from "@/components/hbpr/CadenceScheduleFields";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { calculateNextCadenceOccurrence } from "@/types/hbprAssignment";
+import type { HbprCadence } from "@/types/hbprAssignment";
 import type { HbprCadencePayload, HbprPartnershipAssignment } from "../../types/tlScorecard";
 import { formatDate } from "../hbpr/hbprMeta";
 
 interface HbprCadenceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  assignment: HbprPartnershipAssignment;
+  /** The overview only knows the schedule; the anchors feed the next-meeting preview when present. */
+  assignment: Pick<
+    HbprPartnershipAssignment,
+    "cadence" | "cadence_day_of_week" | "cadence_nth_week"
+  > &
+    Partial<Pick<HbprPartnershipAssignment, "last_meeting_on" | "effective_from">>;
   onSave: (data: HbprCadencePayload) => Promise<void>;
 }
 
@@ -36,7 +42,7 @@ export const HbprCadenceDialog: React.FC<HbprCadenceDialogProps> = ({
 
   // A monthly "day of month" schedule has no weekday; drop a stale one left
   // over from a weekly pattern so the server never stores a dangling value.
-  const payload: HbprCadencePayload = {
+  const payload = {
     ...schedule,
     cadence_day_of_week:
       schedule.cadence === "monthly" && schedule.cadence_nth_week === null
@@ -46,12 +52,14 @@ export const HbprCadenceDialog: React.FC<HbprCadenceDialogProps> = ({
 
   const preview = useMemo(
     () =>
-      calculateNextCadenceOccurrence({
-        cadence: payload.cadence,
-        cadenceDayOfWeek: payload.cadence_day_of_week,
-        cadenceNthWeek: payload.cadence_nth_week,
-        anchorDate: assignment.last_meeting_on ?? assignment.effective_from,
-      }),
+      payload.cadence && (assignment.last_meeting_on ?? assignment.effective_from)
+        ? calculateNextCadenceOccurrence({
+            cadence: payload.cadence,
+            cadenceDayOfWeek: payload.cadence_day_of_week,
+            cadenceNthWeek: payload.cadence_nth_week,
+            anchorDate: (assignment.last_meeting_on ?? assignment.effective_from) as string,
+          })
+        : null,
     [
       payload.cadence,
       payload.cadence_day_of_week,
@@ -63,9 +71,10 @@ export const HbprCadenceDialog: React.FC<HbprCadenceDialogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!payload.cadence) return;
     setIsSubmitting(true);
     try {
-      await onSave(payload);
+      await onSave({ ...payload, cadence: payload.cadence as HbprCadence });
       onOpenChange(false);
     } catch {
       // The caller reports the failure; keep the dialog open for a retry.
@@ -79,11 +88,12 @@ export const HbprCadenceDialog: React.FC<HbprCadenceDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       size="md"
-      title="Change meeting schedule"
+      title={assignment.cadence ? "Change meeting schedule" : "Set meeting schedule"}
       description="How often you meet your HR business partner. Past log entries keep their dates; the change is recorded."
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
       submitLabel="Save schedule"
+      submitDisabled={!schedule.cadence}
     >
       <div className="space-y-4">
         <CadenceScheduleFields idPrefix="hbpr-cadence" value={schedule} onFieldChange={setField} />

@@ -405,7 +405,7 @@ def build_year_end_pack(assignment, year: int, evidence_qs) -> dict:
         date(year, 12, 31),
         business_today(),
     )
-    if window_end < window_start:
+    if not assignment.cadence or window_end < window_start:
         expected = 0
     else:
         days = (window_end - window_start).days + 1
@@ -438,6 +438,7 @@ def build_year_end_pack(assignment, year: int, evidence_qs) -> dict:
             'hbpr_name': _pack_name(assignment.hbpr),
             'cadence': assignment.cadence,
             'cadence_display': assignment.cadence_display,
+            'cadence_missing': not assignment.cadence,
             'effective_from': assignment.effective_from.isoformat(),
             'effective_to': assignment.effective_to.isoformat()
             if assignment.effective_to else None,

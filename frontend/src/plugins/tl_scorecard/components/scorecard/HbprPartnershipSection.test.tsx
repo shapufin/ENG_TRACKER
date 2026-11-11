@@ -39,6 +39,7 @@ const PARTNERSHIP: HbprPartnership = {
     id: 11,
     hbpr: { id: 5, name: "Elda Partner" },
     cadence: "weekly",
+    cadence_missing: false,
     cadence_day_of_week: null,
     cadence_nth_week: null,
     can_edit_cadence: true,
@@ -133,6 +134,53 @@ describe("HbprPartnershipSection", () => {
     expect(screen.getByText("On track")).toBeInTheDocument();
     expect(screen.getByText("Mid-year EPR: not logged")).toBeInTheDocument();
     expect(screen.getByText("Year-end EPR: not logged")).toBeInTheDocument();
+  });
+
+  const MISSING: HbprPartnership = {
+    ...PARTNERSHIP,
+    assignment: {
+      ...PARTNERSHIP.assignment!,
+      cadence: null,
+      cadence_display: "Not set",
+      cadence_missing: true,
+      next_due_on: null,
+      last_meeting_on: null,
+      cadence_status: "cadence_not_set",
+    },
+  };
+
+  it("asks the Line Manager to set a missing cadence and requires a choice", async () => {
+    const { onUpdateCadence } = renderSection({ partnership: MISSING });
+    expect(screen.getByText("Set your HBPR meeting cadence")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Set cadence" }));
+    const save = await screen.findByRole("button", { name: /save schedule/i });
+    expect(save).toBeDisabled();
+    fireEvent.click(screen.getByRole("option", { name: "Weekly" }));
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(onUpdateCadence).toHaveBeenCalledWith({
+        cadence: "weekly",
+        cadence_day_of_week: null,
+        cadence_nth_week: null,
+      })
+    );
+  });
+
+  it("hides the banner once the cadence is set", () => {
+    renderSection();
+    expect(screen.queryByText("Set your HBPR meeting cadence")).toBeNull();
+  });
+
+  it("hides the banner from a viewer who cannot edit the cadence", () => {
+    renderSection({
+      partnership: {
+        ...MISSING,
+        assignment: { ...MISSING.assignment!, can_edit_cadence: false },
+      },
+    });
+    expect(screen.queryByText("Set your HBPR meeting cadence")).toBeNull();
+    expect(screen.getByText(/Cadence not set/)).toBeInTheDocument();
   });
 
   it("changes the meeting schedule", async () => {

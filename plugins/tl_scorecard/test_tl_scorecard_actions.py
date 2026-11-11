@@ -427,6 +427,8 @@ class CadenceEditTests(ActionsBase):
     def test_invalid_cadence_is_rejected(self):
         self.assertEqual(self.post(self.tl, {'cadence': 'daily'}).status_code, 400)
         self.assertEqual(self.post(self.tl, {}).status_code, 400)
+        self.assertEqual(self.post(self.tl, {'cadence': None}).status_code, 400)
+        self.assertEqual(HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl).cadence, 'weekly')
         self.assertEqual(self.post(self.tl, {'cadence': 'weekly', 'cadence_day_of_week': 9}).status_code, 400)
 
     def test_nth_week_rules_are_400_not_500(self):
@@ -561,3 +563,90 @@ class CadenceEditTests(ActionsBase):
                 if 'UnorderedObjectListWarning' in str(w.category)
             ]
             self.assertEqual(pagination_warnings, [], f"Unexpected pagination warning: {pagination_warnings}")
+
+
+class NoCadenceAssignmentTests(ActionsBase):
+    """An assignment created without a schedule, until the Line Manager sets one."""
+
+    def post(self, user, data, query=''):
+        from .viewsets import TLScorecardViewSet
+        request = self.factory.post(f'/x/{query}', data, format='json')
+        force_authenticate(request, user=user)
+        return TLScorecardViewSet.as_view({'post': 'change_cadence'})(request)
+
+    def setUp(self):
+        super().setUp()
+        HbprAlbanianTlAssignment.objects.filter(albanian_tl=self.tl).update(cadence=None)
+
+    def test_partnership_reports_missing_cadence(self):
+        from . import services_hbpr
+        data = services_hbpr.partnership(self.tl, viewer=self.tl)['assignment']
+        self.assertIsNone(data['cadence'])
+        self.assertIs(data['cadence_missing'], True)
+        self.assertEqual(data['cadence_status'], 'cadence_not_set')
+        self.assertIsNone(data['next_due_on'])
+        self.assertEqual(data['cadence_display'], 'Not set')
+
+    def test_reminders_skip_it(self):
+        from .reminders import process_cadence_reminders
+        self.assertEqual(process_cadence_reminders(today=self.today), 0)
+
+    def test_expected_meetings_not_computed(self):
+        from .models import HbprGovernanceEvidence
+        from .services import build_year_end_pack
+        assignment = HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl)
+        pack = build_year_end_pack(
+            assignment, self.today.year,
+            HbprGovernanceEvidence.objects.filter(assignment=assignment))
+        self.assertEqual(pack['cadence_expected'], 0)
+        self.assertIs(pack['assignment']['cadence_missing'], True)
+
+    def test_overview_counts_ignore_it(self):
+        from . import services_hbpr
+        from apps.users.services.hbpr_scope import get_hbpr_scope
+        overview = services_hbpr.overview(get_hbpr_scope(self.hbpr))
+        self.assertEqual(overview['needs_attention']['cadence_missing'], 1)
+        self.assertEqual(overview['needs_attention']['cadence_overdue'], 0)
+        self.assertIsNone(overview['leaders'][0]['next_due_on'])
+
+    def scorecard_banner(self, user, query=''):
+        from .viewsets import TLScorecardViewSet
+        request = self.factory.get(f'/x/{query}')
+        force_authenticate(request, user=user)
+        return TLScorecardViewSet.as_view({'get': 'scorecard'})(request).data['hbpr_cadence']
+
+    def test_scorecard_carries_cadence_banner_for_the_line_manager(self):
+        banner = self.scorecard_banner(self.tl)
+        self.assertIs(banner['cadence_missing'], True)
+        self.assertIs(banner['can_edit_cadence'], True)
+        self.assertEqual(
+            banner['assignment_id'], HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl).id)
+
+    def test_scorecard_banner_clears_once_cadence_is_set(self):
+        HbprAlbanianTlAssignment.objects.filter(albanian_tl=self.tl).update(cadence='weekly')
+        self.assertIs(self.scorecard_banner(self.tl)['cadence_missing'], False)
+
+    def test_scorecard_banner_is_read_only_for_the_hbpr(self):
+        banner = self.scorecard_banner(self.hbpr, f'?leader_id={self.tl.id}')
+        self.assertIs(banner['can_edit_cadence'], False)
+
+    def test_scorecard_banner_is_null_without_an_open_assignment(self):
+        HbprAlbanianTlAssignment.objects.filter(albanian_tl=self.tl).delete()
+        self.assertIsNone(self.scorecard_banner(self.tl))
+
+    def test_scorecard_banner_costs_one_query(self):
+        from . import services_hbpr
+        with self.assertNumQueries(1):
+            services_hbpr.cadence_banner(self.tl, self.tl)
+
+    def test_line_manager_sets_it_later(self):
+        resp = self.post(self.tl, {'cadence': 'weekly', 'cadence_day_of_week': 2})
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(resp.data['assignment']['cadence'], 'weekly')
+        self.assertIs(resp.data['assignment']['cadence_missing'], False)
+        self.assertEqual(resp.data['assignment']['cadence_status'], 'not_started')
+
+    def test_others_still_cannot_set_it(self):
+        self.assertEqual(self.post(self.hbpr, {'cadence': 'monthly'}, f'?leader_id={self.tl.id}').status_code, 403)
+        self.assertEqual(self.post(self.other_tl, {'cadence': 'monthly'}, f'?leader_id={self.tl.id}').status_code, 403)
+        self.assertIsNone(HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl).cadence)

@@ -16,7 +16,7 @@ import type {
   YearEndEmployeeStage,
   YearEndEvidencePack,
 } from "../../types/tlScorecard";
-import { CADENCE_LABELS, formatDate } from "../hbpr/hbprMeta";
+import { cadenceLabel, formatDate } from "../hbpr/hbprMeta";
 
 interface EvidencePackDialogProps {
   open: boolean;
@@ -114,7 +114,8 @@ const PackBody: React.FC<{ pack: YearEndEvidencePack }> = ({ pack }) => (
         <span className="font-medium">{pack.assignment.hbpr_name}</span>
       </p>
       <p className="text-muted-foreground mt-0.5 text-xs">
-        {CADENCE_LABELS[pack.assignment.cadence]} cadence · since{" "}
+        {cadenceLabel(pack.assignment.cadence)}
+        {pack.assignment.cadence && " cadence"} · since{" "}
         {formatDate(pack.assignment.effective_from)}
         {pack.assignment.effective_to && ` · ended ${formatDate(pack.assignment.effective_to)}`}
       </p>

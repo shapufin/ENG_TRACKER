@@ -792,6 +792,51 @@ class AssignmentApiTests(HbprAssignmentTestBase):
         assignment.refresh_from_db()
         self.assertEqual(assignment.cadence, "biweekly")
 
+    def test_admin_patch_null_cadence_clears_schedule(self):
+        assignment = create_assignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl,
+            cadence="monthly", cadence_day_of_week=3, cadence_nth_week=2,
+            effective_from=date(2026, 10, 1), assigned_by=self.admin,
+        )
+        response = self.client.patch(
+            self._detail_url(assignment.pk), {"cadence": None}, format="json"
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        assignment.refresh_from_db()
+        self.assertIsNone(assignment.cadence)
+        self.assertIsNone(assignment.cadence_day_of_week)
+        self.assertIsNone(assignment.cadence_nth_week)
+        self.assertEqual(response.data["cadence_status"], "cadence_not_set")
+
+    def test_patch_without_cadence_key_leaves_it_unchanged(self):
+        assignment = create_assignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl,
+            cadence="weekly", effective_from=date(2026, 10, 1),
+            assigned_by=self.admin,
+        )
+        response = self.client.patch(
+            self._detail_url(assignment.pk),
+            {"effective_from": "2026-10-05"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.cadence, "weekly")
+
+    def test_non_admin_cannot_clear_cadence(self):
+        assignment = create_assignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl,
+            cadence="weekly", effective_from=date(2026, 10, 1),
+            assigned_by=self.admin,
+        )
+        self.client.force_authenticate(user=self.plain)
+        response = self.client.patch(
+            self._detail_url(assignment.pk), {"cadence": None}, format="json"
+        )
+        self.assertEqual(response.status_code, 403)
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.cadence, "weekly")
+
     def test_patch_can_change_effective_from(self):
         assignment = create_assignment(
             hbpr=self.hbpr, albanian_tl=self.al_tl,
@@ -921,3 +966,73 @@ class CadenceHolidayPushTests(HbprAssignmentTestBase):
     def test_non_holiday_due_date_is_unchanged(self):
         a = self._assignment(cadence='weekly', cadence_day_of_week=2)
         self.assertEqual(a.next_due_slot(last_meeting_on=date(2026, 3, 4)), (date(2026, 3, 11), None))
+
+
+class OptionalCadenceTests(HbprAssignmentTestBase):
+    """An assignment may be created without a schedule (the Line Manager sets it)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin)
+        self.url = reverse("hbpr-assignment-list")
+
+    def _payload(self, **overrides):
+        data = {
+            "hbpr": self.hbpr.id,
+            "albanian_tl": self.al_tl.id,
+            "effective_from": "2026-10-01",
+        }
+        data.update(overrides)
+        return data
+
+    def test_admin_creates_without_cadence(self):
+        for extra in ({}, {"cadence": None}, {"cadence": ""}):
+            HbprAlbanianTlAssignment.objects.all().delete()
+            response = self.client.post(self.url, self._payload(**extra), format="json")
+            self.assertEqual(response.status_code, 201, response.data)
+            self.assertIsNone(response.data["cadence"])
+            self.assertEqual(response.data["cadence_display"], "Not set")
+            self.assertEqual(response.data["cadence_status"], "cadence_not_set")
+            self.assertIsNone(response.data["next_due_on"])
+
+    def test_one_open_assignment_per_line_manager_still_enforced(self):
+        self.assertEqual(self.client.post(self.url, self._payload()).status_code, 201)
+        response = self.client.post(self.url, self._payload(hbpr=self.hbpr2.id))
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_cadence_value_still_rejected(self):
+        response = self.client.post(self.url, self._payload(cadence="daily"))
+        self.assertEqual(response.status_code, 400)
+
+    def test_weekday_without_cadence_rejected(self):
+        response = self.client.post(self.url, self._payload(cadence_day_of_week=2))
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(HbprAlbanianTlAssignment.objects.exists())
+
+    def test_model_helpers_are_none_safe(self):
+        row = create_assignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl, effective_from=date(2026, 10, 1)
+        )
+        self.assertIsNone(row.cadence)
+        self.assertEqual(row.cadence_display, "Not set")
+        self.assertIsNone(row.next_due_on(last_meeting_on=None))
+        self.assertEqual(row.next_due_slot(last_meeting_on=None), (None, None))
+
+    def test_cadence_can_be_set_later_and_status_normalises(self):
+        row = create_assignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl, effective_from=date(2026, 10, 1)
+        )
+        row = update_assignment(assignment=row, cadence="weekly")
+        self.assertEqual(row.cadence, "weekly")
+        from apps.users.services.hbpr_assignments import cadence_status
+
+        self.assertEqual(cadence_status(row, last_meeting_on=None), "not_started")
+
+    def test_existing_cadence_unchanged(self):
+        row = create_assignment(
+            hbpr=self.hbpr, albanian_tl=self.al_tl, cadence="biweekly",
+            effective_from=date(2026, 10, 1),
+        )
+        row.refresh_from_db()
+        self.assertEqual(row.cadence, "biweekly")
+        self.assertEqual(row.cadence_display, "Biweekly")
