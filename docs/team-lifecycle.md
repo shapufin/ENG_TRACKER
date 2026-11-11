@@ -151,8 +151,10 @@ After pulling: `py -3.14 manage.py migrate` (users 0024-0025, dashboard 0013, an
   warning messages on save (`LeaderAwareUserAdmin`, 2026-10-31), and notification recipients skip
   inactive users. The `update_user` API action cannot deactivate. Revoking a TL *role* is a different path: it is
   refused while members still point at the user, and the admin UI answers with `TlRevokeBlockedDialog`.
+- **Leader moves, Ticket KPI (2026-11-11):** moving a member to another Manager or Line Manager needs no repair. KPI data stays with the member and every read is scoped by the member's current links, so the old leader loses the view and the new one gains it immediately (`docs/workflow-invariants.md` item 69, `plugins/ticket_kpi/test_team_moves.py`).
 - **Checked 2026-10-31, harmless by construction:** the notification recipient lookup and the Ticket KPI
   team export both resolve members through `Team.members`, which an archive empties, so an archived team's
+
   leader reaches nobody through them. They still read archived rows; add `is_active=True` only if a path appears
   that does not go through membership.
 - **Data check** (`/admin/data-check`, `GET users/teams/orphans/`): people in no active team, active teams without

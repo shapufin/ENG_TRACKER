@@ -48,3 +48,6 @@
 ## Task 6: Browser verification and docs
 - [ ] Seed employee + LM + tickets + documents (script in scratchpad, not committed); screenshot employee and LM at 1440 and 280px; check console and network 2xx.
 - [ ] Update `03-ticket-kpi.md`, write `.devin/audits/ticket-kpi-2026-11-11/round-1.md`; full backend + frontend suite once. Commit.
+
+## Status (2026-11-11)
+Tasks 1-6 done on `audit/ticket-kpi-2026-11-11`. Added after review: page-through in `getEvidence`, own docs off squad list, `exact` nav, `test_team_moves.py`, backup file-model guard, docs (workflow-invariants 69). Task 1 scope finding was disproved (404 already).

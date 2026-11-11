@@ -45,6 +45,22 @@ class BackupCoverageGuardTests(TestCase):
             'REVIEWED_SECRET_LOOKALIKES with a reason.',
         )
 
+    def test_models_that_store_uploaded_files_are_in_the_backup(self):
+        """Rows and their files travel together: the DB dump holds the row, the media zip the file.
+
+        Ticket KPI documents (``KPIEvidence.file``) and import files (``raw_file``) are the
+        case this was added for; excluding such a model would leave orphan files or dangling rows.
+        """
+        for model in django_apps.get_models():
+            if any(f.get_internal_type() in ('FileField', 'ImageField') for f in model._meta.get_fields()
+                   if hasattr(f, 'get_internal_type')):
+                label = f'{model._meta.app_label}.{model._meta.model_name}'
+                if model._meta.app_label in ('site_backup', 'year_close'):
+                    continue  # their files are the archives themselves, never part of one
+                self.assertFalse(is_excluded(model), f'{label} stores files but is excluded from backup')
+        kpi = {m for m in backup_service.dumpable_model_labels() if m.startswith('ticket_kpi.')}
+        self.assertTrue({'ticket_kpi.kpievidence', 'ticket_kpi.ticketimportbatch'} <= kpi)
+
     def test_every_backed_up_model_has_a_save_order(self):
         labels = set(backup_service.dumpable_model_labels())
         order = set(topological_save_order(labels, build_dependents_map()))
