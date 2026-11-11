@@ -96,10 +96,10 @@ export const TicketKPIEvidenceSection: React.FC<TicketKPIEvidenceSectionProps> =
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">KPI Evidence</CardTitle>
+            <CardTitle className="text-lg">Documents</CardTitle>
             {isOwnView && (
               <Button size="sm" onClick={() => setIsUploadOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Add Evidence
+                <Plus className="mr-2 h-4 w-4" /> Add Document
               </Button>
             )}
           </div>
@@ -121,7 +121,7 @@ export const TicketKPIEvidenceSection: React.FC<TicketKPIEvidenceSectionProps> =
       <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
         <DialogContent size="md">
           <DialogHeader className="shrink-0">
-            <DialogTitle>Upload KPI Evidence</DialogTitle>
+            <DialogTitle>Upload Document</DialogTitle>
             <DialogDescription>
               Attach supporting documents, certificates, screenshots, or email threads for this
               month.

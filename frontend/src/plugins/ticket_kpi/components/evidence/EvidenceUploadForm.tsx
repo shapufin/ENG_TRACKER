@@ -59,7 +59,7 @@ export const EvidenceUploadForm: React.FC<EvidenceUploadFormProps> = ({
     </div>
 
     <div className="space-y-2">
-      <Label>Evidence Type</Label>
+      <Label>Document Type</Label>
       <Select value={selectedType} onValueChange={(v) => onTypeChange(v as EvidenceType)}>
         <SelectTrigger>
           <SelectValue />
@@ -84,7 +84,7 @@ export const EvidenceUploadForm: React.FC<EvidenceUploadFormProps> = ({
       <Textarea
         value={description}
         onChange={(e) => onDescriptionChange(e.target.value)}
-        placeholder="Add context for this evidence"
+        placeholder="Add context for this document"
         rows={3}
       />
     </div>
@@ -105,7 +105,7 @@ export const EvidenceUploadForm: React.FC<EvidenceUploadFormProps> = ({
       }
       className="w-full"
     >
-      {isPending ? "Uploading..." : "Upload Evidence"}
+      {isPending ? "Uploading..." : "Upload Document"}
     </Button>
     {!description.trim() && file && (
       <p className="text-xs text-muted-foreground">A description is required.</p>

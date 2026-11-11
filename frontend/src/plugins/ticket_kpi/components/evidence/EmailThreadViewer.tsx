@@ -37,7 +37,7 @@ export const EmailThreadViewer: React.FC<EmailThreadViewerProps> = ({
             <Mail className="h-5 w-5" />
             {email?.subject || "Email Thread"}
           </DialogTitle>
-          <DialogDescription>Parsed email preview for this evidence item.</DialogDescription>
+          <DialogDescription>Parsed email preview for this document.</DialogDescription>
         </DialogHeader>
 
         <DialogBody>
