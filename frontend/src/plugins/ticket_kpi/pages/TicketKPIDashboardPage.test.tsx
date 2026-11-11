@@ -91,8 +91,8 @@ describe("TicketKPIDashboardPage", () => {
         <TicketKPIDashboardPage />
       </MemoryRouter>
     );
-    expect(screen.getByText("No ticket data uploaded yet")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Upload Ticket Data"));
+    expect(screen.getByText("No ticket data imported yet")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Import Tickets"));
     expect(mockNavigate).toHaveBeenCalledWith("/ticket-kpi/upload");
   });
 

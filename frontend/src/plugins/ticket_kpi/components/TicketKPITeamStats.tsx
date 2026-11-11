@@ -26,7 +26,7 @@ export const TicketKPITeamStats: React.FC<TicketKPITeamStatsProps> = ({
     <KPICard
       title="Team Members"
       value={uniqueUsers}
-      subtitle="With uploads"
+      subtitle="With imports"
       icon={Users}
       progressPercent={uniqueUsers > 0 ? 100 : 0}
       progressColorClass={toneFillClass.accent}

@@ -39,7 +39,7 @@ export const AutoMatchReview: React.FC = () => {
           <li key={link.id} className="flex items-center justify-between gap-3 text-sm">
             <span>
               <strong>{link.ticket_id}</strong>
-              <span className="ml-2 text-muted-foreground">
+              <span className="text-muted-foreground ml-2">
                 {link.overtime_user} · {link.overtime_date} · {link.overtime_hours}h
               </span>
             </span>

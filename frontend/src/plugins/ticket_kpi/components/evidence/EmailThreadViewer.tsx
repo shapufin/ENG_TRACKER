@@ -41,11 +41,11 @@ export const EmailThreadViewer: React.FC<EmailThreadViewerProps> = ({
         </DialogHeader>
 
         <DialogBody>
-          {isLoading && <p className="text-sm text-muted-foreground">Loading preview...</p>}
+          {isLoading && <p className="text-muted-foreground text-sm">Loading preview...</p>}
 
           {!isLoading && !email && (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">No parsed preview available.</p>
+              <p className="text-muted-foreground text-sm">No parsed preview available.</p>
               {onRefresh && (
                 <Button variant="outline" size="sm" onClick={onRefresh}>
                   Try Parse
@@ -58,32 +58,32 @@ export const EmailThreadViewer: React.FC<EmailThreadViewerProps> = ({
             <div className="space-y-4">
               <div className="space-y-1 text-sm">
                 {email.from && (
-                  <p className="flex items-center gap-2 text-muted-foreground">
+                  <p className="text-muted-foreground flex items-center gap-2">
                     <User className="h-4 w-4" />{" "}
                     <span className="text-foreground">{email.from}</span>
                   </p>
                 )}
                 {email.date && (
-                  <p className="flex items-center gap-2 text-muted-foreground">
+                  <p className="text-muted-foreground flex items-center gap-2">
                     <Calendar className="h-4 w-4" />{" "}
                     <span>{new Date(email.date).toLocaleString()}</span>
                   </p>
                 )}
                 {email.to && email.to.length > 0 && (
-                  <p className="text-xs text-muted-foreground">To: {email.to.join(", ")}</p>
+                  <p className="text-muted-foreground text-xs">To: {email.to.join(", ")}</p>
                 )}
                 {email.cc && email.cc.length > 0 && (
-                  <p className="text-xs text-muted-foreground">CC: {email.cc.join(", ")}</p>
+                  <p className="text-muted-foreground text-xs">CC: {email.cc.join(", ")}</p>
                 )}
               </div>
 
               {safeBodyHtml ? (
                 <div
-                  className="prose max-w-none break-words text-sm"
+                  className="prose max-w-none text-sm break-words"
                   dangerouslySetInnerHTML={{ __html: safeBodyHtml }}
                 />
               ) : email.body_plain ? (
-                <div className="whitespace-pre-wrap break-words rounded-md bg-muted p-3 text-sm">
+                <div className="bg-muted rounded-md p-3 text-sm break-words whitespace-pre-wrap">
                   {email.body_plain}
                 </div>
               ) : null}
@@ -95,7 +95,7 @@ export const EmailThreadViewer: React.FC<EmailThreadViewerProps> = ({
                     {email.attachments.map((att, i) => (
                       <span
                         key={i}
-                        className="flex items-center gap-1 break-words rounded-md border px-2 py-1 text-xs"
+                        className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs break-words"
                       >
                         <Paperclip className="h-3 w-3 shrink-0" />
                         {att.filename} ({(att.size / 1024).toFixed(1)} KB)

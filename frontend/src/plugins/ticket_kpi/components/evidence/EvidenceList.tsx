@@ -58,9 +58,9 @@ export const EvidenceList: React.FC<EvidenceListProps> = ({
     [evidence, filter]
   );
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading documents...</p>;
+  if (isLoading) return <p className="text-muted-foreground text-sm">Loading documents...</p>;
   if (evidence.length === 0)
-    return <p className="text-sm text-muted-foreground">No documents added for this month.</p>;
+    return <p className="text-muted-foreground text-sm">No documents added for this month.</p>;
 
   return (
     <div className="space-y-3">
@@ -77,7 +77,7 @@ export const EvidenceList: React.FC<EvidenceListProps> = ({
       )}
 
       {filteredEvidence.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           No {FILTER_LABELS[filter].toLowerCase()} documents for this month.
         </p>
       ) : (

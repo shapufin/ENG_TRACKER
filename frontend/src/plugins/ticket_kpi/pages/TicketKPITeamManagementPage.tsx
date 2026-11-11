@@ -51,7 +51,7 @@ export const TicketKPITeamManagementPage: React.FC = () => {
   return (
     <PageShell
       title="KPI Team Management"
-      subtitle="Review and manage your team members' ticket uploads."
+      subtitle="Review and manage your team members' ticket imports."
     >
       <div className="space-y-6">
         <TicketKPITeamControls selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
@@ -63,7 +63,7 @@ export const TicketKPITeamManagementPage: React.FC = () => {
         <BulkActionBar
           selectedCount={selectedBatchIds.length}
           onClear={() => setRowSelection({})}
-          entityName="uploads"
+          entityName="imports"
           actions={[
             {
               label: bulkReviewMutation.isPending ? "Reviewing..." : "Review Selected",
@@ -85,10 +85,10 @@ export const TicketKPITeamManagementPage: React.FC = () => {
       <ConfirmDialog
         open={!!batchToDelete}
         onOpenChange={(open) => !open && setBatchToDelete(null)}
-        title="Delete Upload"
+        title="Delete Import"
         description={
           batchToDelete
-            ? `Remove the upload for ${batchToDelete.username || `User ${batchToDelete.user}`} for ${formatMonthLabel(batchToDelete.month)}? This will delete ${batchToDelete.record_count} records and allow the user to re-upload.`
+            ? `Remove the import for ${batchToDelete.username || `User ${batchToDelete.user}`} for ${formatMonthLabel(batchToDelete.month)}? This will delete ${batchToDelete.record_count} records and allow the user to re-upload.`
             : ""
         }
         onConfirm={() => batchToDelete && deleteMutation.mutate(batchToDelete.id)}

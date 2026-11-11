@@ -87,7 +87,7 @@ describe("TicketKPITeamManagementPage — bulk review", () => {
     // via AnimatedNumber in its own badge, separate from the "upload
     // selected" text node — not one concatenated string.
     expect(screen.getByLabelText("1 selected")).toBeInTheDocument();
-    expect(screen.getByText("upload selected")).toBeInTheDocument();
+    expect(screen.getByText("import selected")).toBeInTheDocument();
   });
 
   it("bulk-reviews every checked batch and clears selection on success", async () => {
@@ -104,7 +104,7 @@ describe("TicketKPITeamManagementPage — bulk review", () => {
     });
 
     expect(ticketKPIService.bulkReviewBatches).toHaveBeenCalledWith([1, 2]);
-    expect(toast.success).toHaveBeenCalledWith("Reviewed 2 upload(s).");
+    expect(toast.success).toHaveBeenCalledWith("Reviewed 2 import(s).");
     // Selection is cleared from the mutation's onSuccess, which react-query delivers on its
     // own scheduler tick — not necessarily inside the act() above under load.
     await waitFor(() => expect(screen.queryByText("Review Selected")).not.toBeInTheDocument());
@@ -124,7 +124,7 @@ describe("TicketKPITeamManagementPage — bulk review", () => {
     });
 
     expect(toast.warning).toHaveBeenCalledWith(
-      "Reviewed 1 upload(s); skipped 1 (Batch not found.)."
+      "Reviewed 1 import(s); skipped 1 (Batch not found.)."
     );
   });
 });

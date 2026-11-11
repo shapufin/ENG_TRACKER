@@ -38,9 +38,7 @@ export const downloadTeamCSV = (month: string, summary?: TeamSummary) => {
       m.sla_compliance_pct ?? "N/A",
     ]),
   ];
-  const csv = rows
-    .map((r) => r.map(csvCell).join(","))
-    .join("\n");
+  const csv = rows.map((r) => r.map(csvCell).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");

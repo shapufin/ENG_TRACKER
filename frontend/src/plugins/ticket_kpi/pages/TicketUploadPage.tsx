@@ -205,9 +205,9 @@ export const TicketUploadPage: React.FC = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       if (err.response?.status === 403) {
-        toast.error(err.response?.data?.error || "Only administrators can override uploads.");
+        toast.error(err.response?.data?.error || "Only administrators can override imports.");
       } else if (err.response?.status === 409) {
-        toast.error("Upload exists. Only administrators can override.");
+        toast.error("Import exists. Only administrators can override.");
       } else {
         toast.error(err.response?.data?.error || "Import failed");
       }
@@ -217,7 +217,7 @@ export const TicketUploadPage: React.FC = () => {
   };
 
   return (
-    <PageShell title="Ticket Upload" subtitle="Upload your monthly ticket export file.">
+    <PageShell title="Import Tickets" subtitle="Import your monthly ticket export file.">
       <div className="mx-auto max-w-4xl space-y-6">
         <UploadForm
           month={month}

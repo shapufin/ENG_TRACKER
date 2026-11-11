@@ -124,7 +124,7 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
                   onCheckedChange={(checked) => onSaveMappingOverridesChange(checked === true)}
                 />
                 <Label htmlFor="save-mapping-overrides" className="text-xs font-normal">
-                  Save this mapping to the profile for future uploads
+                  Save this mapping to the profile for future imports
                 </Label>
               </div>
             )}

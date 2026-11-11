@@ -55,7 +55,7 @@ export const EvidenceUploadForm: React.FC<EvidenceUploadFormProps> = ({
   <div className="space-y-4">
     <div className="space-y-1">
       <Label>Month</Label>
-      <p className="text-sm text-foreground">{formatMonthLabel(month)}</p>
+      <p className="text-foreground text-sm">{formatMonthLabel(month)}</p>
     </div>
 
     <div className="space-y-2">
@@ -108,10 +108,10 @@ export const EvidenceUploadForm: React.FC<EvidenceUploadFormProps> = ({
       {isPending ? "Uploading..." : "Upload Document"}
     </Button>
     {!description.trim() && file && (
-      <p className="text-xs text-muted-foreground">A description is required.</p>
+      <p className="text-muted-foreground text-xs">A description is required.</p>
     )}
     {availableClients.length > 0 && selectedClientIds.length === 0 && file && (
-      <p className="text-xs text-muted-foreground">Select at least one client.</p>
+      <p className="text-muted-foreground text-xs">Select at least one client.</p>
     )}
   </div>
 );

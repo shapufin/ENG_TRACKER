@@ -35,7 +35,7 @@ export const TicketLinkSection: React.FC<TicketLinkSectionProps> = ({ overtimeLo
           placeholder="Search ticket reference"
           aria-label="Search KPI tickets"
         />
-        {isSearching && <p className="text-xs text-muted-foreground">Searching...</p>}
+        {isSearching && <p className="text-muted-foreground text-xs">Searching...</p>}
         {searchResults.length > 0 && (
           <div className="space-y-1" role="listbox" aria-label="KPI ticket results">
             {searchResults.map((ticket) => (
@@ -49,7 +49,7 @@ export const TicketLinkSection: React.FC<TicketLinkSectionProps> = ({ overtimeLo
               >
                 <span>
                   <strong>{ticket.ticket_id}</strong>
-                  <span className="ml-2 text-muted-foreground">{ticket.title}</span>
+                  <span className="text-muted-foreground ml-2">{ticket.title}</span>
                 </span>
               </Button>
             ))}
@@ -64,7 +64,7 @@ export const TicketLinkSection: React.FC<TicketLinkSectionProps> = ({ overtimeLo
             <li key={link.id} className="flex items-center justify-between gap-2 text-sm">
               <span>
                 <strong>{link.ticket_id}</strong>
-                <span className="ml-2 text-muted-foreground">{link.ticket_title}</span>
+                <span className="text-muted-foreground ml-2">{link.ticket_title}</span>
               </span>
               <Button
                 type="button"
@@ -80,7 +80,7 @@ export const TicketLinkSection: React.FC<TicketLinkSectionProps> = ({ overtimeLo
           ))}
         </ul>
       ) : (
-        <p className="text-xs text-muted-foreground">No KPI tickets linked yet.</p>
+        <p className="text-muted-foreground text-xs">No KPI tickets linked yet.</p>
       )}
     </section>
   );

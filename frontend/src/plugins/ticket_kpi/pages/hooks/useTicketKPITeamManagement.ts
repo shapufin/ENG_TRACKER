@@ -17,7 +17,10 @@ export const useTicketKPITeamManagement = (isTeamLeader: boolean) => {
   // only thing stable across sorting, search, and pagination.
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const selectedBatchIds = useMemo(
-    () => Object.keys(rowSelection).filter((id) => rowSelection[id]).map(Number),
+    () =>
+      Object.keys(rowSelection)
+        .filter((id) => rowSelection[id])
+        .map(Number),
     [rowSelection]
   );
 
@@ -47,16 +50,16 @@ export const useTicketKPITeamManagement = (isTeamLeader: boolean) => {
       qc.invalidateQueries({ queryKey: ["ticket_kpi", "team_batches"] });
       setRowSelection({});
       if (data.skipped.length === 0) {
-        toast.success(`Reviewed ${data.reviewed.length} upload(s).`);
+        toast.success(`Reviewed ${data.reviewed.length} import(s).`);
       } else {
         toast.warning(
-          `Reviewed ${data.reviewed.length} upload(s); skipped ${data.skipped.length} ` +
+          `Reviewed ${data.reviewed.length} import(s); skipped ${data.skipped.length} ` +
             `(${data.skipped[0].reason}${data.skipped.length > 1 ? "…" : ""}).`
         );
       }
     },
     onError: () => {
-      toast.error("Failed to review the selected uploads.");
+      toast.error("Failed to review the selected imports.");
     },
   });
 

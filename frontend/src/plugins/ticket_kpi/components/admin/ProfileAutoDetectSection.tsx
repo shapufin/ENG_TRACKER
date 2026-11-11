@@ -17,12 +17,12 @@ export const ProfileAutoDetectSection: React.FC<ProfileAutoDetectSectionProps> =
   isAutoDetecting,
   onAutoDetect,
 }) => (
-  <div className="space-y-3 rounded-md border border-dashed border-border p-4">
+  <div className="border-border space-y-3 rounded-md border border-dashed p-4">
     <div className="flex items-center justify-between">
       <Label className="text-sm font-medium">Auto-detect from sample file</Label>
-      <Sparkles className="h-4 w-4 text-muted-foreground" />
+      <Sparkles className="text-muted-foreground h-4 w-4" />
     </div>
-    <p className="text-xs text-muted-foreground">
+    <p className="text-muted-foreground text-xs">
       Upload a sample export file and we will suggest column mappings automatically.
     </p>
     <div className="flex items-center gap-3">

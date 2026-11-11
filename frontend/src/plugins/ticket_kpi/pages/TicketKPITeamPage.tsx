@@ -132,7 +132,7 @@ export const TicketKPITeamPage: React.FC = () => {
             <KPICard
               title="Members with Data"
               value={stats.members}
-              subtitle="Uploaded this month"
+              subtitle="Imported this month"
               icon={Users}
               progressPercent={stats.members > 0 ? 100 : 0}
               progressColorClass="bg-purple-500"
