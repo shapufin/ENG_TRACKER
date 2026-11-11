@@ -56,7 +56,7 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
       },
       {
         accessorKey: "created_at",
-        header: "Uploaded",
+        header: "Imported",
         cell: ({ row }) =>
           row.original.created_at
             ? formatDateDDMMYYYY(row.original.created_at.slice(0, 10))
@@ -108,7 +108,7 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Team Uploads</CardTitle>
+        <CardTitle>Team Imports</CardTitle>
       </CardHeader>
       <CardContent>
         <DataTable
@@ -117,7 +117,7 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
           searchColumn="user_name"
           searchPlaceholder="Search team member..."
           pageSize={10}
-          emptyMessage={isLoading ? "Loading..." : "No team uploads found."}
+          emptyMessage={isLoading ? "Loading..." : "No team imports found."}
           getRowId={(row) => String(row.id)}
           enableRowSelection
           rowSelection={rowSelection}

@@ -150,7 +150,7 @@ export const ProfileDialog: React.FC<ProfileDialogProps> = ({
 
           <div className="space-y-2" role="group" aria-labelledby="profile-mapping-label">
             <Label id="profile-mapping-label">Field Mapping</Label>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Map our fields to the column names in user exports.
             </p>
             <FieldMappingGrid

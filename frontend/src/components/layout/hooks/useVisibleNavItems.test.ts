@@ -7,7 +7,7 @@ const labels = (result: ReturnType<typeof useVisibleNavItems>) => result.map((it
 describe("useVisibleNavItems", () => {
   it("returns all items for a superuser", () => {
     const { result } = renderHook(() => useVisibleNavItems(false, false, false, false, true));
-    expect(result.current).toHaveLength(19);
+    expect(result.current).toHaveLength(20);
   });
 
   it("returns only public items for an employee", () => {
@@ -26,7 +26,7 @@ describe("useVisibleNavItems", () => {
     expect(visible).toContain("Pending Approvals");
     expect(visible).toContain("Team Overview");
     expect(visible).toContain("Team Performance");
-    expect(visible).toContain("Upload Management");
+    expect(visible).toContain("Imports Review");
   });
 
   it("includes HR items", () => {
@@ -105,7 +105,7 @@ describe("useVisibleNavItems", () => {
 
   it("superuser sees all items regardless of other role flags", () => {
     const { result } = renderHook(() => useVisibleNavItems(false, false, false, false, true));
-    expect(result.current).toHaveLength(19);
+    expect(result.current).toHaveLength(20);
   });
 
   it("admin + HR combo sees both admin and HR items", () => {
@@ -268,8 +268,9 @@ describe("useVisibleNavItems", () => {
       Plugins: "system",
       Admin: "system",
       "Ticket KPI": "skills-kpi",
+      "Import Tickets": "skills-kpi",
       "Team Performance": "leadership",
-      "Upload Management": "leadership",
+      "Imports Review": "leadership",
       Settings: "system",
     });
   });
@@ -359,7 +360,15 @@ describe("useVisibleNavItems pure HR", () => {
 });
 
 describe("useVisibleNavItems plugin gating", () => {
-  const kpiLabels = ["Team Performance", "Upload Management", "Ticket KPI"];
+  it("keeps Team Performance exact so it is not also active on Imports Review", () => {
+    const { result } = renderHook(() =>
+      useVisibleNavItems(false, false, false, false, true, false, false, false, ["ticket_kpi"])
+    );
+    const item = result.current.find((i) => i.path === "/ticket-kpi/team");
+    expect(item?.exact).toBe(true);
+  });
+
+  const kpiLabels = ["Team Performance", "Imports Review", "Ticket KPI", "Import Tickets"];
 
   it("hides ticket_kpi links when the plugin is not active", () => {
     const { result } = renderHook(() =>

@@ -55,7 +55,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
   <Card>
     <CardHeader>
       <CardTitle className="flex items-center gap-2 text-lg">
-        <Calendar className="h-5 w-5 text-primary" />
+        <Calendar className="text-primary h-5 w-5" />
         Select Month & File
       </CardTitle>
     </CardHeader>
@@ -104,10 +104,8 @@ export const UploadForm: React.FC<UploadFormProps> = ({
       <Button onClick={onAnalyze} disabled={!file || isAnalyzing} className="w-full">
         {isAnalyzing ? "Analyzing..." : "Analyze & Preview"}
       </Button>
-      <p className="text-xs text-muted-foreground">
-        {month
-          ? null
-          : "No month selected yet — Analyze first, it usually finds one in the file."}
+      <p className="text-muted-foreground text-xs">
+        {month ? null : "No month selected yet — Analyze first, it usually finds one in the file."}
       </p>
     </CardContent>
   </Card>

@@ -1191,6 +1191,36 @@ class KPIEvidenceTests(TestCase):
             kwargs['pk'] = pk
         return view(request, **kwargs)
 
+    def test_tl_cannot_reach_a_managers_document(self):
+        manager = User.objects.create_user(username='evidence_manager', password='testpass123')
+        manager.profile.is_italian_tl_role = True
+        manager.profile.albanian_tl = self.tl
+        manager.profile.save()
+        evidence_id = self._create_evidence(manager).data['id']
+
+        for action, data in (('retrieve', None), ('review', {'status': 'approved'})):
+            response = self._evidence_view(action, self.tl, pk=evidence_id, data=data)
+            self.assertEqual(response.status_code, 404, action)
+
+    def test_employee_user_id_filter_never_returns_a_colleague(self):
+        colleague = User.objects.create_user(username='evidence_colleague', password='testpass123')
+        self._create_evidence(colleague)
+        from plugins.ticket_kpi.viewsets import KPIEvidenceViewSet
+
+        request = self.factory.get('/evidence/', {'user_id': colleague.id})
+        force_authenticate(request, self.member)
+        response = KPIEvidenceViewSet.as_view({'get': 'list'})(request)
+        rows = response.data['results'] if isinstance(response.data, dict) else response.data
+        self.assertEqual(len(rows), 0)
+
+    def test_permission_messages_say_document(self):
+        evidence_id = self._create_evidence(self.member).data['id']
+        self._evidence_view('review', self.tl, pk=evidence_id, data={'status': 'approved'})
+        response = self._evidence_view('partial_update', self.member, pk=evidence_id, data={'description': 'x'})
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('document', str(response.data['detail']).lower())
+        self.assertNotIn('evidence', str(response.data['detail']).lower())
+
     def test_member_can_delete_own_unreviewed_evidence(self):
         response = self._create_evidence(self.member, client_ids=[self.client_a.id])
         evidence_id = response.data['id']

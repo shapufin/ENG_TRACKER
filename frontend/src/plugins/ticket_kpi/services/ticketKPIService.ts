@@ -339,11 +339,19 @@ export const ticketKPIService = {
     status?: string;
     user_id?: number;
   }): Promise<KPIEvidence[]> {
-    const { data } = await api.get<KPIEvidence[] | PaginatedResponse<KPIEvidence>>(
-      "/plugins/ticket_kpi/evidence/",
-      { params }
-    );
-    return normalizeList(data);
+    const url = "/plugins/ticket_kpi/evidence/";
+    const { data } = await api.get<KPIEvidence[] | PaginatedResponse<KPIEvidence>>(url, { params });
+    const rows = normalizeList(data);
+    // The API pages at 50; follow `next` so a big squad is never silently cut off.
+    let next = !Array.isArray(data) && data?.next ? 2 : 0;
+    while (next && next <= 50) {
+      const res = await api.get<PaginatedResponse<KPIEvidence>>(url, {
+        params: { ...params, page: next },
+      });
+      rows.push(...normalizeList(res.data));
+      next = res.data.next ? next + 1 : 0;
+    }
+    return rows;
   },
   getEvidenceDetail: (id: number) => api.get<KPIEvidence>(`/plugins/ticket_kpi/evidence/${id}/`),
   createEvidence: (form: FormData) =>

@@ -51,7 +51,7 @@ describe("TicketKPIEvidenceSection upload dialog scroll contract", () => {
     // NOTE: the hook mock reports isUploadOpen: true so the dialog renders
     // open without driving the Add-Evidence button through the real hook.
     renderSection();
-    expect(screen.getByText("Upload KPI Evidence")).toBeInTheDocument();
+    expect(screen.getByText("Upload Document")).toBeInTheDocument();
     const dlg = document.querySelector("[role='dialog']") as HTMLElement | null;
     expect(dlg).not.toBeNull();
     expect(dlg!.className).toContain("flex-col");

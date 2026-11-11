@@ -23,12 +23,12 @@ export const ProfileClientAssignment: React.FC<ProfileClientAssignmentProps> = (
   return (
     <div className="space-y-2">
       <Label>Assigned Clients</Label>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         If empty, this profile is available to all users. Select clients to restrict access.
       </p>
       <div className="max-h-32 space-y-1 overflow-y-auto rounded-md border p-2">
         {!clients || clients.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No clients available.</p>
+          <p className="text-muted-foreground text-xs">No clients available.</p>
         ) : (
           clients.map((client) => (
             <div key={client.id} className="flex items-center gap-2">

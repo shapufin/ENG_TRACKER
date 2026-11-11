@@ -96,11 +96,11 @@ export const TicketKPIDashboardPage: React.FC = () => {
         {!hasData ? (
           <SharedEmptyState
             icon={Ticket}
-            title={isFilteredView ? "No KPI data for this member" : "No ticket data uploaded yet"}
+            title={isFilteredView ? "No KPI data for this member" : "No ticket data imported yet"}
             description={
               isFilteredView
-                ? "This member has no ticket KPI data for the selected month. Try a different month or check back after they upload."
-                : "Upload your ticket data to see KPIs, trends, and analytics on this dashboard."
+                ? "This member has no ticket KPI data for the selected month. Try a different month or check back after they import."
+                : "Import your ticket data to see KPIs, trends, and analytics on this dashboard."
             }
             action={
               isFilteredView ? (
@@ -110,7 +110,7 @@ export const TicketKPIDashboardPage: React.FC = () => {
               ) : (
                 <Button onClick={() => navigate("/ticket-kpi/upload")}>
                   <Upload className="mr-2 h-4 w-4" />
-                  Upload Ticket Data
+                  Import Tickets
                 </Button>
               )
             }

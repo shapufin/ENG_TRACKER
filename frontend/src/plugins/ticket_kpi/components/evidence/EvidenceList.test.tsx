@@ -50,12 +50,12 @@ const defaultProps = {
 describe("EvidenceList", () => {
   it("shows loading state", () => {
     render(<EvidenceList evidence={[]} isLoading={true} {...defaultProps} />);
-    expect(screen.getByText("Loading evidence...")).toBeInTheDocument();
+    expect(screen.getByText("Loading documents...")).toBeInTheDocument();
   });
 
   it("shows empty state when no evidence", () => {
     render(<EvidenceList evidence={[]} isLoading={false} {...defaultProps} />);
-    expect(screen.getByText("No evidence uploaded for this month.")).toBeInTheDocument();
+    expect(screen.getByText("No documents added for this month.")).toBeInTheDocument();
   });
 
   it("renders all items without filter tabs when only one type is present", () => {

@@ -14,6 +14,19 @@ const BASE = "/plugins/ticket_kpi";
 
 beforeEach(() => vi.clearAllMocks());
 
+describe("getEvidence pagination", () => {
+  it("follows every page so a large squad is not cut at the page size", async () => {
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({ data: { next: "x?page=2", results: [{ id: 1 }] } } as any)
+      .mockResolvedValueOnce({ data: { next: null, results: [{ id: 2 }] } } as any);
+    const rows = await ticketKPIService.getEvidence({ month: "2026-01-01" });
+    expect(rows.map((r) => r.id)).toEqual([1, 2]);
+    expect(api.get).toHaveBeenLastCalledWith(`${BASE}/evidence/`, {
+      params: { month: "2026-01-01", page: 2 },
+    });
+  });
+});
+
 describe("ticketKPIService URL contracts", () => {
   it("getProfiles calls /plugins/ticket_kpi/profiles/", async () => {
     vi.mocked(api.get).mockResolvedValue({ data: [] } as any);

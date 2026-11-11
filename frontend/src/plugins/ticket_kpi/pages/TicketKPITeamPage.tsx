@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { PageShell } from "@/components/layout/PageShell";
+import { toneFillClass } from "@/components/ui/tone";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { formatMonthLabel } from "@/lib/monthOptions";
 import { downloadTeamCSV } from "../utils/teamCSVExport";
 import { useTicketKPITeamPage } from "./hooks/useTicketKPITeamPage";
 import { usePermissions } from "@/context/PermissionContext";
+import { TeamDocumentsPanel } from "../components/evidence/TeamDocumentsPanel";
 import { Users, Clock, Ticket, CheckCircle, Calendar, Download, ShieldAlert } from "lucide-react";
 
 export const TicketKPITeamPage: React.FC = () => {
@@ -99,6 +101,7 @@ export const TicketKPITeamPage: React.FC = () => {
         <TabsList>
           <TabsTrigger value="monthly">Monthly</TabsTrigger>
           <TabsTrigger value="yearly">Yearly</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="monthly" className="space-y-6">
@@ -127,15 +130,15 @@ export const TicketKPITeamPage: React.FC = () => {
               subtitle="This month"
               icon={Ticket}
               progressPercent={stats.total > 0 ? 100 : 0}
-              progressColorClass="bg-indigo-500"
+              progressColorClass={toneFillClass.accent}
             />
             <KPICard
               title="Members with Data"
               value={stats.members}
-              subtitle="Uploaded this month"
+              subtitle="Imported this month"
               icon={Users}
               progressPercent={stats.members > 0 ? 100 : 0}
-              progressColorClass="bg-purple-500"
+              progressColorClass={toneFillClass.neutral}
             />
             <KPICard
               title="Avg Resolution"
@@ -143,7 +146,7 @@ export const TicketKPITeamPage: React.FC = () => {
               subtitle="Per ticket"
               icon={Clock}
               progressPercent={stats.avgRes != null && stats.avgRes > 0 ? 100 : 0}
-              progressColorClass="bg-blue-500"
+              progressColorClass={toneFillClass.info}
             />
             <KPICard
               title="SLA Compliance"
@@ -151,7 +154,7 @@ export const TicketKPITeamPage: React.FC = () => {
               subtitle="Team average"
               icon={CheckCircle}
               progressPercent={stats.sla ?? undefined}
-              progressColorClass="bg-emerald-500"
+              progressColorClass={toneFillClass.success}
             />
           </div>
 
@@ -205,6 +208,24 @@ export const TicketKPITeamPage: React.FC = () => {
             yearlyTrendChartData={yearlyTrendChartData}
             loading={yearlyLoading}
           />
+        </TabsContent>
+        <TabsContent value="documents" className="space-y-6">
+          <div className="flex items-center gap-3">
+            <Calendar className="text-muted-foreground h-5 w-5" />
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {formatMonthLabel(m)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <TeamDocumentsPanel month={selectedMonth} />
         </TabsContent>
       </Tabs>
     </PageShell>

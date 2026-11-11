@@ -24,7 +24,7 @@ export const TicketKPITeamControls: React.FC<TicketKPITeamControlsProps> = ({
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <Calendar className="h-5 w-5 text-muted-foreground" />
+        <Calendar className="text-muted-foreground h-5 w-5" />
         <Select value={selectedMonth} onValueChange={onMonthChange}>
           <SelectTrigger className="w-[220px]">
             <SelectValue placeholder="All months" />

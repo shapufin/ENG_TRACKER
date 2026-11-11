@@ -43,7 +43,11 @@ export const FieldMappingGrid: React.FC<FieldMappingGridProps> = ({
           onChange={(e) => onChange({ ...mapping, [f.key]: e.target.value })}
           placeholder="Column name"
           className="text-sm"
-          list={detectedColumns && detectedColumns.length > 0 ? "ticket-kpi-detected-columns" : undefined}
+          list={
+            detectedColumns && detectedColumns.length > 0
+              ? "ticket-kpi-detected-columns"
+              : undefined
+          }
         />
       </div>
     ))}

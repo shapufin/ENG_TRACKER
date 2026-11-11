@@ -42,6 +42,11 @@ vi.mock("../components/TicketKPITeamYearlyTab", () => ({
 vi.mock("../components/links/AutoMatchReview", () => ({
   AutoMatchReview: () => null,
 }));
+vi.mock("../components/evidence/TeamDocumentsPanel", () => ({
+  TeamDocumentsPanel: ({ month }: { month: string }) => (
+    <div data-testid="team-documents">{month}</div>
+  ),
+}));
 vi.mock("@/components/ui/tabs", () => ({
   Tabs: ({ children }: any) => <div data-testid="tabs">{children}</div>,
   TabsList: ({ children }: any) => <div>{children}</div>,
@@ -178,6 +183,8 @@ describe("TicketKPITeamPage", () => {
     );
     expect(screen.getByTestId("trigger-monthly")).toBeInTheDocument();
     expect(screen.getByTestId("trigger-yearly")).toBeInTheDocument();
+    expect(screen.getByTestId("trigger-documents")).toBeInTheDocument();
+    expect(screen.getByTestId("team-documents")).toBeInTheDocument();
   });
 
   it("hides export button on yearly tab", () => {
@@ -203,7 +210,7 @@ describe("TicketKPITeamPage", () => {
     expect(container.querySelector(".shadow-card")).toBeInTheDocument();
   });
 
-  it("renders Avg Resolution bar in mockup blue (not amber)", () => {
+  it("renders Avg Resolution bar in the info tone (not a raw palette colour)", () => {
     vi.mocked(useTicketKPITeamPage.useTicketKPITeamPage).mockReturnValue({ ...baseHook } as any);
     render(
       <MemoryRouter>
@@ -214,6 +221,6 @@ describe("TicketKPITeamPage", () => {
     const avgCard = cards.find((c) => c.getAttribute("data-title") === "Avg Resolution");
     expect(avgCard).toBeDefined();
     // TL/team-performance.html:84 + TL/ticket-kpi.html:75 both use bg-blue-500.
-    expect(avgCard!.getAttribute("data-color")).toBe("bg-blue-500");
+    expect(avgCard!.getAttribute("data-color")).toBe("bg-tone-info-text");
   });
 });

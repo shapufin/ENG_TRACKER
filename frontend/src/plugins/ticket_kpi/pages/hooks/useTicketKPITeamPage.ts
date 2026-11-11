@@ -6,7 +6,7 @@ import { ticketKPIService } from "../../services/ticketKPIService";
 import { generateMonthOptions } from "@/lib/monthOptions";
 import type { TeamSummary } from "../../utils/teamCSVExport";
 
-type TeamTab = "monthly" | "yearly";
+type TeamTab = "monthly" | "yearly" | "documents";
 
 export interface YearlyMemberRow {
   user_id: number;

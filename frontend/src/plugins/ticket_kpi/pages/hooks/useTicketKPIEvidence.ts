@@ -9,16 +9,18 @@ import type { EvidenceType } from "../../types/ticketKPI";
 import type { Client } from "@/types";
 
 export interface UseTicketKPIEvidenceOptions {
+  /** Line Manager squad view: no user filter, the API scopes to the team. */
+  squad?: boolean;
   month: string;
   userId?: number;
 }
 
-export const useTicketKPIEvidence = ({ month, userId }: UseTicketKPIEvidenceOptions) => {
+export const useTicketKPIEvidence = ({ month, userId, squad }: UseTicketKPIEvidenceOptions) => {
   const { user } = useAuth();
   const { isTeamLeader, isAdmin, isSuperuser } = usePermissions();
   const queryClient = useQueryClient();
 
-  const effectiveUserId = userId ?? user?.id;
+  const effectiveUserId = squad ? undefined : (userId ?? user?.id);
 
   const canReview = isAdmin || isSuperuser || isTeamLeader;
 
@@ -33,7 +35,7 @@ export const useTicketKPIEvidence = ({ month, userId }: UseTicketKPIEvidenceOpti
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ["ticket_kpi", "evidence", month, effectiveUserId],
+    queryKey: ["ticket_kpi", "evidence", month, squad ? "squad" : effectiveUserId],
     queryFn: () =>
       ticketKPIService.getEvidence({
         month,

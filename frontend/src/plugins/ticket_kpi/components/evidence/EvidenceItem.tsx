@@ -106,7 +106,7 @@ export const EvidenceItem = memo(function EvidenceItem({
         // Trigger download for office docs, email files, etc.
         const a = document.createElement("a");
         a.href = url;
-        a.download = item.file_name ?? item.file ?? `evidence_${item.id}`;
+        a.download = item.file_name ?? item.file ?? `document_${item.id}`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -130,8 +130,8 @@ export const EvidenceItem = memo(function EvidenceItem({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="text-muted-foreground">
               {typeIcons[item.evidence_type] || typeIcons.other}
             </span>
@@ -169,7 +169,7 @@ export const EvidenceItem = memo(function EvidenceItem({
                 className="h-8 w-8"
                 onClick={handleApprove}
                 disabled={isProcessing}
-                aria-label="Approve evidence"
+                aria-label="Approve document"
               >
                 <CheckCircle className="text-tone-success-text h-4 w-4" />
               </Button>
@@ -181,7 +181,7 @@ export const EvidenceItem = memo(function EvidenceItem({
                 className="h-8 w-8"
                 onClick={handleReject}
                 disabled={isProcessing}
-                aria-label="Reject evidence"
+                aria-label="Reject document"
               >
                 <XCircle className="text-destructive h-4 w-4" />
               </Button>
@@ -193,7 +193,7 @@ export const EvidenceItem = memo(function EvidenceItem({
                 className="h-8 w-8"
                 onClick={handleUnreview}
                 disabled={isProcessing}
-                aria-label="Reset evidence to pending"
+                aria-label="Reset document to pending"
               >
                 <RotateCcw className="h-4 w-4" />
               </Button>
@@ -204,7 +204,7 @@ export const EvidenceItem = memo(function EvidenceItem({
               className="h-8 w-8"
               onClick={handleDelete}
               disabled={isProcessing}
-              aria-label="Delete evidence"
+              aria-label="Delete document"
             >
               <Trash2 className="text-destructive h-4 w-4" />
             </Button>

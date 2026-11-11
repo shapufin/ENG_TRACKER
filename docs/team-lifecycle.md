@@ -151,8 +151,10 @@ After pulling: `py -3.14 manage.py migrate` (users 0024-0025, dashboard 0013, an
   warning messages on save (`LeaderAwareUserAdmin`, 2026-10-31), and notification recipients skip
   inactive users. The `update_user` API action cannot deactivate. Revoking a TL *role* is a different path: it is
   refused while members still point at the user, and the admin UI answers with `TlRevokeBlockedDialog`.
+- **Leader moves, Ticket KPI (2026-11-11):** moving a member to another Manager or Line Manager needs no repair. KPI data stays with the member and every read is scoped by the member's current links, so the old leader loses the view and the new one gains it immediately (`docs/workflow-invariants.md` item 69, `plugins/ticket_kpi/test_team_moves.py`).
 - **Checked 2026-10-31, harmless by construction:** the notification recipient lookup and the Ticket KPI
   team export both resolve members through `Team.members`, which an archive empties, so an archived team's
+
   leader reaches nobody through them. They still read archived rows; add `is_active=True` only if a path appears
   that does not go through membership.
 - **Data check** (`/admin/data-check`, `GET users/teams/orphans/`): people in no active team, active teams without
@@ -208,3 +210,18 @@ change a payslip. Client relations: `OvertimeLog.client` PROTECT (a client with 
 Frontend: `TeamLifecycleDialog.test.tsx`, `UserEditFormDialog.test.tsx`, `UserBulkCommandDrawer.test.tsx`,
 `useTeamsPageUI.test.ts`, `useUsersPage.test.ts`; end to end `frontend/e2e/team-archive-lifecycle.spec.ts`
 (owns a probe team and member; run with the runbook in the e2e memory/README: `prepare_e2e_db` first).
+
+## Moving a member to another Manager or Line Manager: what stays, what follows (2026-11-11)
+
+A move is one write (`italian_tl`/`albanian_tl` on the member's profile). It never deletes, re-owners or copies a row. After it, each kind of data behaves by its own scope rule, and that rule is the contract: do not "fix" a move by bulk-updating `flagged_by`/`organizer`/`tl`/`leader`, by copying rows, or by adding a cascade on the link.
+
+| Data | Keyed by | After the move |
+|---|---|---|
+| Ticket KPI documents, import batches, monthly KPIs | the member | follow the **current** link: the old leader loses the view, the new one gains it. No month freeze, so a past month's team totals shift for both leaders (`plugins/ticket_kpi/test_team_moves.py`) |
+| Idle flags, absences, PIPs, promotion nominations, meetings, review deliveries | the **author** leader (`flagged_by`, `tl`, `nominated_by`, `organizer`, `leader`) | stay with the author; the new leader does not inherit them; the author can still resolve their own open flag (`plugins/tl_scorecard/test_leader_moves.py`) |
+| EPR cycles, goals, stage records | the employee, scoped by the viewer's current team | follow the employee to the new leader; the previous leader keeps no view of them. Stage records keep `recorded_by` (PROTECT) |
+| HBPR governance evidence | the Line Manager's HBPR assignment | stays with that assignment; a successor never receives it (`docs/hbpr-and-scorecard.md`) |
+| Scorecard month numbers | leader and month | live while provisional, then `ScorecardMonthSnapshot` is final after the freeze (day 10 of M+1); a move mid-month shifts that month's provisional numbers to the new leader, frozen months never change |
+| Engagement `TLApprovalMetric` | leader, team, month | same freeze rule; frozen rows are immutable, the old leader's history stays |
+
+Known operational gap, by design today: an **open** item authored by the old leader (idle flag, PIP, absence) is not visible to the new leader and the old leader can no longer open new ones for that member. Hand it over (resolve or recreate) when you move someone; a handover feature is not built.

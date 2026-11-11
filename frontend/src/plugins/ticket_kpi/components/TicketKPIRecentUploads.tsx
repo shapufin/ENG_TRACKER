@@ -7,24 +7,24 @@ import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 export const TicketKPIRecentUploads: React.FC<{ batches: any[] | undefined }> = ({ batches }) => (
   <Card>
     <CardHeader>
-      <CardTitle>Recent Uploads</CardTitle>
+      <CardTitle>Recent Imports</CardTitle>
     </CardHeader>
     <CardContent>
       {!batches || batches.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No uploads yet.</p>
+        <p className="text-muted-foreground text-sm">No imports yet.</p>
       ) : (
         <div className="space-y-3">
           {batches.slice(0, 5).map((batch) => (
             <div key={batch.id} className="flex items-center justify-between rounded-lg border p-3">
               <div>
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-foreground text-sm font-medium">
                   {formatMonthLabel(batch.month)}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {batch.record_count} tickets · {batch.profile_name}
                 </p>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {formatDateDDMMYYYY(batch.created_at?.slice(0, 10))}
               </p>
             </div>

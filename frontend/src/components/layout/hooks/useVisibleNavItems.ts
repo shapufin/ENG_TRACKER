@@ -11,6 +11,7 @@ import {
   Shield,
   Settings,
   Ticket,
+  Upload,
   Users,
   Wallet,
 } from "lucide-react";
@@ -134,11 +135,12 @@ const allNavItems: NavItem[] = [
     icon: Users,
     section: "leadership",
     roles: ["team_leader"],
+    exact: true,
   },
   {
     path: "/ticket-kpi/team-management",
     pluginName: "ticket_kpi",
-    label: "Upload Management",
+    label: "Imports Review",
     icon: Users,
     section: "leadership",
     roles: ["team_leader"],
@@ -199,6 +201,15 @@ const allNavItems: NavItem[] = [
     section: "skills-kpi",
     // The ticket_kpi plugin is denied to an HBPR (`denied_roles`), so its route
     // never registers for them.
+    hbprHidden: true,
+    hrOnlyHidden: true,
+  },
+  {
+    path: "/ticket-kpi/upload",
+    pluginName: "ticket_kpi",
+    label: "Import Tickets",
+    icon: Upload,
+    section: "skills-kpi",
     hbprHidden: true,
     hrOnlyHidden: true,
   },

@@ -39,6 +39,8 @@ Options: `--models a.b,c.d` instead of `--all`; `--delete-missing` removes rows 
 
 `plugins/site_backup/tests/test_backup_coverage_guard.py` runs a full backup-and-restore round trip over every model, checks every model has a save order, and fails if a field named like a secret (`token`, `secret`, `seed`, `password`...) would travel in an archive. When it fails, decide whether the data belongs in an archive: exclude the model in `services/backup.py` (`EXCLUDED_MODELS`) or list the field in `REVIEWED_SECRET_LOOKALIKES` with a reason. `plugins/site_backup/tests/test_restore.py::RestoreMissingSignalDrivenRowsTests` pins raw-restore round-trips after deleting signal-driven models (`User`, `UserProfile`, `Team`, `CalendarWorkspace`, `LeaveBalance`, `OvertimeLog`). Checklist for any change that adds a model, app, volume or secret: `docs/workflow-invariants.md` item 55.
 
+It also fails if a model that stores uploaded files (for example Ticket KPI `KPIEvidence.file` and `TicketImportBatch.raw_file`) is excluded: the database dump carries the row and the media zip carries the file, so both must stay in. Access to restored Ticket KPI data follows the restored `italian_tl`/`albanian_tl` links, nothing extra to repair (`docs/workflow-invariants.md` item 69).
+
 ## Caveats
 
 - `--delete-missing` on `auth.user` can remove the superuser you are signed in as when restoring through the UI. The CLI has no session, so use it for provisioning.
