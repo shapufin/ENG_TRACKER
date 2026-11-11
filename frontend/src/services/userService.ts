@@ -282,9 +282,15 @@ export const userService = {
     return data;
   },
 
-  async getMyTeamMembers(options?: { excludeManagers?: boolean }): Promise<UserProfile[]> {
+  async getMyTeamMembers(options?: {
+    excludeManagers?: boolean;
+    excludeLeaders?: boolean;
+  }): Promise<UserProfile[]> {
+    const params: Record<string, string> = {};
+    if (options?.excludeManagers) params.exclude_managers = "true";
+    if (options?.excludeLeaders) params.exclude_leaders = "true";
     const { data } = await api.get<UserProfile[]>("/users/users/my_team_members/", {
-      params: options?.excludeManagers ? { exclude_managers: "true" } : undefined,
+      params: Object.keys(params).length ? params : undefined,
     });
     return data;
   },

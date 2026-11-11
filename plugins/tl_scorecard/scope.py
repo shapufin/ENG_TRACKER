@@ -1,13 +1,13 @@
 """Who a team leader may score in this plugin."""
-from apps.users.models.core import UserProfile
+from apps.users.services.team_leaders import albanian_tl_user_ids, italian_tl_user_ids
 
 
 def scoreable_member_ids(user):
-    """`get_team_member_ids()` minus Line Managers.
+    """`get_team_member_ids()` minus Managers and Line Managers.
 
-    A Line Manager is governed by their HBPR through evidence; a Manager who
-    shares a team with one (or is their direct `italian_tl`) must not open PIPs,
-    EPR cycles, flags or nominations on them, nor have them in team metrics.
+    Leaders are governed through evidence (a Line Manager by their HBPR), never
+    scored: a Manager or Line Manager who reports to the viewer must not be the
+    subject of PIPs, EPR cycles, flags or nominations, nor sit in team metrics.
     """
     profile = user.profile
     cached = getattr(profile, '_scoreable_ids', None)
@@ -16,11 +16,5 @@ def scoreable_member_ids(user):
     ids = profile.get_team_member_ids()
     if not ids:
         return ids
-    al_tl_ids = {
-        user_id
-        for user_id, codes in UserProfile.objects.filter(user_id__in=ids)
-        .values_list('user_id', 'role_codes')
-        if 'albanian_tl' in (codes or [])
-    }
-    profile._scoreable_ids = ids - al_tl_ids
+    profile._scoreable_ids = ids - albanian_tl_user_ids(among=ids) - italian_tl_user_ids(among=ids)
     return profile._scoreable_ids

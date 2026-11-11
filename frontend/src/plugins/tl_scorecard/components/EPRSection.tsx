@@ -3,6 +3,7 @@ import { ChevronRight, ClipboardCheck, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Progress } from "@/components/ui/progress";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { SearchField } from "@/components/ui/SearchField";
 import { toneTextClass } from "@/components/ui/tone";
@@ -25,6 +26,8 @@ const stageLabel = (stage: EPRStage) => STAGES.find((s) => s.field === stage)?.l
 
 interface EPRSectionProps {
   cycles: EPRCycle[];
+  /** Employees the leader can score; the tracker denominator. Falls back to started cycles. */
+  teamSize?: number;
   onParseGoals: (cycleId: number, stage: EPRStage, file: File) => Promise<string[]>;
   onCompleteStage: (cycleId: number, data: CompleteEprStagePayload) => Promise<void>;
 }
@@ -304,8 +307,41 @@ const FILTERS: { value: PhaseFilter; label: string }[] = [
   { value: "complete", label: "Complete" },
 ];
 
+const StageTracker: React.FC<{ cycles: EPRCycle[]; teamSize: number }> = ({ cycles, teamSize }) => {
+  const total = Math.max(teamSize, cycles.length);
+  return (
+    <div role="group" aria-label="EPR stage tracker" className="mt-3 space-y-2">
+      <div className="grid gap-3 sm:grid-cols-3">
+        {STAGES.map(({ field, label }) => {
+          const count = cycles.filter((cycle) => cycle[`${field}_completed_at` as const]).length;
+          return (
+            <div key={field} className="space-y-1">
+              <div className="flex items-baseline justify-between text-xs">
+                <span className="text-muted-foreground">{label}</span>
+                <span className="font-semibold tabular-nums">
+                  {count}/{total}
+                </span>
+              </div>
+              <Progress
+                value={total ? (count / total) * 100 : 0}
+                aria-label={`${label}: ${count} of ${total} done`}
+                className="h-1.5"
+                indicatorClassName="bg-tone-success-text"
+              />
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-muted-foreground text-xs">
+        {cycles.length} of {total} employees have a cycle started.
+      </p>
+    </div>
+  );
+};
+
 export const EPRSection: React.FC<EPRSectionProps> = ({
   cycles,
+  teamSize = 0,
   onParseGoals,
   onCompleteStage,
 }) => {
@@ -331,6 +367,7 @@ export const EPRSection: React.FC<EPRSectionProps> = ({
         <EmptyState icon={ClipboardCheck} title="No EPR cycles started" className="py-6" />
       ) : (
         <>
+          <StageTracker cycles={cycles} teamSize={teamSize} />
           {cycles.length > 3 && (
             <div className="mt-3 space-y-2">
               <SearchField

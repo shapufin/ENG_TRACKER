@@ -40,7 +40,7 @@ const CREATE_LABELS: Record<RecordKind, string> = {
   meetings: "Log meeting",
   idle: "Flag idle",
   absences: "Flag absence",
-  reviews: "Log management review",
+  reviews: "Log monthly management review",
   promotions: "Nominate",
   pips: "Open PIP",
 };

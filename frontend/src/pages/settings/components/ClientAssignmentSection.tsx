@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SearchField } from "@/components/ui/SearchField";
 import { ClientMultiSelect } from "./ClientMultiSelect";
 import { Building2, Save, Users } from "lucide-react";
 import { useClientAssignment } from "../hooks/useClientAssignment";
@@ -26,6 +27,20 @@ const displayName = (m: UserProfile): string => {
 export const ClientAssignmentSection: React.FC = () => {
   const { members, clients, effective, setDraft, saveAll, isSaving, isDirty, isLoading } =
     useClientAssignment();
+  const [query, setQuery] = useState("");
+
+  // Matches the member (name or username) or any client currently assigned to them.
+  const needle = query.trim().toLowerCase();
+  const visibleMembers = needle
+    ? members.filter((m) => {
+        const assigned = clients
+          .filter((c) => (effective[m.user.id] ?? []).includes(c.id))
+          .map((c) => c.name);
+        return [displayName(m), m.user.username, ...assigned].some((s) =>
+          s.toLowerCase().includes(needle)
+        );
+      })
+    : members;
 
   return (
     <GlassCard delay={0.08}>
@@ -46,42 +61,53 @@ export const ClientAssignmentSection: React.FC = () => {
           <EmptyState icon={Users} title="No team members found" />
         ) : (
           <>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className={TABLE_HEAD_ROW_CLASS}>
-                  <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-0 py-0 pr-2 pb-2")}>
-                    Member
-                  </th>
-                  <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-0 py-0 pb-2")}>
-                    Client
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-border/50 divide-y">
-                {members.map((m) => {
-                  const name = displayName(m);
-                  const draft = effective[m.user.id] ?? [];
-                  return (
-                    <tr key={m.user.id}>
-                      <td className="py-2 pr-2">
-                        <span className="block font-medium">{name}</span>
-                        <span className="text-muted-foreground block text-xs">
-                          @{m.user.username}
-                        </span>
-                      </td>
-                      <td className="py-2">
-                        <ClientMultiSelect
-                          clients={clients}
-                          value={draft}
-                          onChange={(ids) => setDraft(m.user.id, ids)}
-                          triggerLabel={`Client for ${name}`}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <SearchField
+              value={query}
+              onChange={setQuery}
+              placeholder="Search members or clients"
+              aria-label="Search members or clients"
+              className="sm:max-w-xs"
+            />
+            {visibleMembers.length === 0 ? (
+              <EmptyState icon={Users} title="No members or clients match your search" />
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className={TABLE_HEAD_ROW_CLASS}>
+                    <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-0 py-0 pr-2 pb-2")}>
+                      Member
+                    </th>
+                    <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-0 py-0 pb-2")}>
+                      Client
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-border/50 divide-y">
+                  {visibleMembers.map((m) => {
+                    const name = displayName(m);
+                    const draft = effective[m.user.id] ?? [];
+                    return (
+                      <tr key={m.user.id}>
+                        <td className="py-2 pr-2">
+                          <span className="block font-medium">{name}</span>
+                          <span className="text-muted-foreground block text-xs">
+                            @{m.user.username}
+                          </span>
+                        </td>
+                        <td className="py-2">
+                          <ClientMultiSelect
+                            clients={clients}
+                            value={draft}
+                            onChange={(ids) => setDraft(m.user.id, ids)}
+                            triggerLabel={`Client for ${name}`}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
 
             <div className="flex items-center gap-3 pt-1">
               <Button onClick={saveAll} disabled={!isDirty || isSaving}>

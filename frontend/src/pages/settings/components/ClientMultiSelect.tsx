@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ChevronsUpDown, Check } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { SearchField } from "@/components/ui/SearchField";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { Client } from "@/types";
@@ -26,6 +27,9 @@ export const ClientMultiSelect: React.FC<ClientMultiSelectProps> = ({
   triggerLabel,
 }) => {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const shown = needle ? clients.filter((c) => c.name.toLowerCase().includes(needle)) : clients;
 
   const toggle = (id: number) => {
     onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
@@ -40,7 +44,13 @@ export const ClientMultiSelect: React.FC<ClientMultiSelectProps> = ({
         : `${selectedNames.length} clients`;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setQuery("");
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -57,13 +67,29 @@ export const ClientMultiSelect: React.FC<ClientMultiSelectProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-1" align="start">
+        {clients.length > 6 && (
+          <div className="p-1 pb-2">
+            <SearchField
+              value={query}
+              onChange={setQuery}
+              placeholder="Search clients"
+              aria-label="Search clients"
+              controlSize="sm"
+              autoFocus
+            />
+          </div>
+        )}
         <div className="max-h-60 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
           {clients.length === 0 ? (
             <div className="text-muted-foreground px-2 py-3 text-center text-xs">
               No clients available.
             </div>
+          ) : shown.length === 0 ? (
+            <div className="text-muted-foreground px-2 py-3 text-center text-xs">
+              No clients match.
+            </div>
           ) : (
-            clients.map((c) => {
+            shown.map((c) => {
               const checked = value.includes(c.id);
               return (
                 <div

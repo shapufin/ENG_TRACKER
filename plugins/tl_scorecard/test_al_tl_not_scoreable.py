@@ -85,3 +85,40 @@ class AlTlNotScoreableTests(TestCase):
         self.assertEqual(self._post(MeetingViewSet, self.it_tl, data).status_code, 400)
         data['counterparty'] = self.member.id
         self.assertEqual(self._post(MeetingViewSet, self.it_tl, data).status_code, 201)
+
+
+    def test_manager_in_a_line_managers_roster_is_not_scoreable(self):
+        manager = make_user('manager_in_roster')
+        assign_role(manager, 'italian_tl')
+        manager.profile.albanian_tl = self.al_tl
+        manager.profile.save()
+        regular = make_user('regular_in_roster')
+        regular.profile.albanian_tl = self.al_tl
+        regular.profile.save()
+        ids = scoreable_member_ids(self.al_tl)
+        self.assertIn(regular.id, ids)
+        self.assertNotIn(manager.id, ids)
+        self.assertEqual(build_scorecard(self.al_tl, date.today())['team_size'], 1)
+        data = {'user': manager.id, 'year': date.today().year}
+        self.assertEqual(self._post(EPRCycleViewSet, self.al_tl, data).status_code, 400)
+
+    def test_picker_roster_can_drop_every_leader(self):
+        from apps.users.viewsets import UserViewSet
+        manager = make_user('manager_pick')
+        assign_role(manager, 'italian_tl')
+        manager.profile.albanian_tl = self.al_tl
+        manager.profile.save()
+        regular = make_user('regular_pick')
+        regular.profile.albanian_tl = self.al_tl
+        regular.profile.italian_tl = self.it_tl
+        regular.profile.save()
+
+        def ids(viewer, query):
+            request = self.factory.get('/x/', query)
+            force_authenticate(request, user=viewer)
+            resp = UserViewSet.as_view({'get': 'my_team_members'})(request)
+            return {row['user']['id'] for row in resp.data}
+
+        self.assertEqual(ids(self.al_tl, {'exclude_leaders': 'true'}), {regular.id})
+        self.assertEqual(ids(self.it_tl, {'exclude_leaders': 'true'}), {self.member.id, regular.id})
+        self.assertIn(manager.id, ids(self.al_tl, {}))

@@ -222,3 +222,23 @@ describe("EPRSection", () => {
     expect(screen.queryByText(/Person 12/)).not.toBeInTheDocument();
   });
 });
+
+describe("EPRSection stage tracker", () => {
+  const done = "2026-03-01T10:00:00Z";
+  const cycles: EPRCycle[] = [
+    { ...cycleWithFiveGoals, id: 10, goal_setting_completed_at: done, mid_year_completed_at: done },
+    { ...cycleWithFiveGoals, id: 11, goal_setting_completed_at: done },
+    { ...cycleWithFewGoals, id: 12 },
+  ];
+
+  it("counts completed stages out of the whole team, not only started cycles", () => {
+    render(
+      <EPRSection cycles={cycles} teamSize={7} onParseGoals={vi.fn()} onCompleteStage={vi.fn()} />
+    );
+    const tracker = screen.getByRole("group", { name: "EPR stage tracker" });
+    expect(tracker).toHaveTextContent(/Goal Setting\s*2\/7/);
+    expect(tracker).toHaveTextContent(/Mid-year\s*1\/7/);
+    expect(tracker).toHaveTextContent(/Final Review\s*0\/7/);
+    expect(tracker).toHaveTextContent("3 of 7 employees have a cycle");
+  });
+});

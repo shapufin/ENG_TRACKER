@@ -72,7 +72,7 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
     const load: Promise<SelectOption[]> =
       meetingType === "one_on_one"
         ? userService
-            .getMyTeamMembers()
+            .getMyTeamMembers({ excludeLeaders: true })
             .then((profiles) =>
               profiles.map((p) => ({ id: p.user.id, label: p.user.full_name || p.user.username }))
             )

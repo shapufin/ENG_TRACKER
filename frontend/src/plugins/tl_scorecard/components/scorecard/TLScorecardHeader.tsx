@@ -32,13 +32,13 @@ const TAB_TRIGGER_CLASS =
 /**
  * Overlapping direct-report avatar stack for the header meta line. Decorative:
  * renders nothing while loading, on error, or when the team is empty, so the
- * layout never shifts. Shares the ["team", "members"] query key, so it costs
- * no extra request when the team roster is already cached.
+ * layout never shifts. Lists only people the leader can score (no Managers or Line Managers),
+ * so it has its own key under ["team", "members"].
  */
 const DirectReportStack: React.FC = () => {
   const { data: members } = useQuery({
-    queryKey: ["team", "members"],
-    queryFn: () => userService.getMyTeamMembers(),
+    queryKey: ["team", "members", "scoreable"],
+    queryFn: () => userService.getMyTeamMembers({ excludeLeaders: true }),
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
